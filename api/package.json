@@ -3,8 +3,17 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
     "test": "conc pnpm:test:type pnpm:test:unit",
     "test:type": "tsc --noEmit",
     "test:unit": "vitest run"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.3",
+    "hono": "^4.7.10"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.4"
   }
 }
