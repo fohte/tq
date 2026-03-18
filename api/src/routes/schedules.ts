@@ -50,7 +50,7 @@ const updateScheduleSchema = z.object({
   startTime: z.string().regex(timePattern).optional(),
   endTime: z.string().regex(timePattern).optional(),
   recurrence: recurrenceRuleSchema.nullable().optional(),
-  context: z.enum(['work', 'personal', 'dev']).optional(),
+  context: z.enum(['work', 'personal', 'dev']).nullable().optional(),
   color: z.string().nullable().optional(),
 })
 

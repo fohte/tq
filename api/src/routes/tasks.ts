@@ -24,7 +24,7 @@ const updateTaskSchema = z.object({
   estimatedMinutes: z.number().int().positive().nullable().optional(),
   parentId: z.string().uuid().nullable().optional(),
   projectId: z.string().uuid().nullable().optional(),
-  context: context.optional(),
+  context: context.nullable().optional(),
 })
 
 const updateStatusSchema = z.object({
