@@ -11,7 +11,7 @@ import {
 } from 'drizzle-orm/pg-core'
 
 export const projects = pgTable(
-  'tq_projects',
+  'projects',
   {
     id: text('id')
       .primaryKey()
@@ -40,7 +40,7 @@ export const projects = pgTable(
   ],
 )
 
-export const recurrenceRules = pgTable('tq_recurrence_rules', {
+export const recurrenceRules = pgTable('recurrence_rules', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -59,7 +59,7 @@ export const recurrenceRules = pgTable('tq_recurrence_rules', {
 })
 
 export const tasks = pgTable(
-  'tq_tasks',
+  'tasks',
   {
     id: text('id')
       .primaryKey()
@@ -107,7 +107,7 @@ export const tasks = pgTable(
   ],
 )
 
-export const labels = pgTable('tq_labels', {
+export const labels = pgTable('labels', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -119,7 +119,7 @@ export const labels = pgTable('tq_labels', {
 })
 
 export const taskLabels = pgTable(
-  'tq_task_labels',
+  'task_labels',
   {
     taskId: text('task_id')
       .notNull()
@@ -136,7 +136,7 @@ export const taskLabels = pgTable(
 )
 
 export const timeBlocks = pgTable(
-  'tq_time_blocks',
+  'time_blocks',
   {
     id: text('id')
       .primaryKey()
@@ -161,7 +161,7 @@ export const timeBlocks = pgTable(
 )
 
 export const schedules = pgTable(
-  'tq_schedules',
+  'schedules',
   {
     id: text('id')
       .primaryKey()
@@ -192,7 +192,7 @@ export const schedules = pgTable(
   ],
 )
 
-export const todayTasks = pgTable('tq_today_tasks', {
+export const todayTasks = pgTable('today_tasks', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -210,7 +210,7 @@ export const todayTasks = pgTable('tq_today_tasks', {
 })
 
 export const taskPages = pgTable(
-  'tq_task_pages',
+  'task_pages',
   {
     id: text('id')
       .primaryKey()
@@ -232,7 +232,7 @@ export const taskPages = pgTable(
 )
 
 export const taskComments = pgTable(
-  'tq_task_comments',
+  'task_comments',
   {
     id: text('id')
       .primaryKey()
@@ -255,7 +255,7 @@ export const taskComments = pgTable(
 )
 
 export const images = pgTable(
-  'tq_images',
+  'images',
   {
     id: text('id')
       .primaryKey()
@@ -270,7 +270,7 @@ export const images = pgTable(
   (table) => [index('idx_images_r2_key').on(table.r2Key)],
 )
 
-export const oauthTokens = pgTable('tq_oauth_tokens', {
+export const oauthTokens = pgTable('oauth_tokens', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
