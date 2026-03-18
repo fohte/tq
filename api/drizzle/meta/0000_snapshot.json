@@ -4,8 +4,8 @@
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.tq_images": {
-      "name": "tq_images",
+    "public.images": {
+      "name": "images",
       "schema": "",
       "columns": {
         "id": {
@@ -60,8 +60,8 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "tq_images_r2_key_unique": {
-          "name": "tq_images_r2_key_unique",
+        "images_r2_key_unique": {
+          "name": "images_r2_key_unique",
           "nullsNotDistinct": false,
           "columns": ["r2_key"]
         }
@@ -70,8 +70,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.tq_labels": {
-      "name": "tq_labels",
+    "public.labels": {
+      "name": "labels",
       "schema": "",
       "columns": {
         "id": {
@@ -104,8 +104,8 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "tq_labels_name_unique": {
-          "name": "tq_labels_name_unique",
+        "labels_name_unique": {
+          "name": "labels_name_unique",
           "nullsNotDistinct": false,
           "columns": ["name"]
         }
@@ -114,8 +114,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.tq_oauth_tokens": {
-      "name": "tq_oauth_tokens",
+    "public.oauth_tokens": {
+      "name": "oauth_tokens",
       "schema": "",
       "columns": {
         "id": {
@@ -172,8 +172,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.tq_projects": {
-      "name": "tq_projects",
+    "public.projects": {
+      "name": "projects",
       "schema": "",
       "columns": {
         "id": {
@@ -280,8 +280,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.tq_recurrence_rules": {
-      "name": "tq_recurrence_rules",
+    "public.recurrence_rules": {
+      "name": "recurrence_rules",
       "schema": "",
       "columns": {
         "id": {
@@ -338,8 +338,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.tq_schedules": {
-      "name": "tq_schedules",
+    "public.schedules": {
+      "name": "schedules",
       "schema": "",
       "columns": {
         "id": {
@@ -433,10 +433,10 @@
         }
       },
       "foreignKeys": {
-        "tq_schedules_recurrence_rule_id_tq_recurrence_rules_id_fk": {
-          "name": "tq_schedules_recurrence_rule_id_tq_recurrence_rules_id_fk",
-          "tableFrom": "tq_schedules",
-          "tableTo": "tq_recurrence_rules",
+        "schedules_recurrence_rule_id_recurrence_rules_id_fk": {
+          "name": "schedules_recurrence_rule_id_recurrence_rules_id_fk",
+          "tableFrom": "schedules",
+          "tableTo": "recurrence_rules",
           "columnsFrom": ["recurrence_rule_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
@@ -449,8 +449,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.tq_task_comments": {
-      "name": "tq_task_comments",
+    "public.task_comments": {
+      "name": "task_comments",
       "schema": "",
       "columns": {
         "id": {
@@ -525,10 +525,10 @@
         }
       },
       "foreignKeys": {
-        "tq_task_comments_task_id_tq_tasks_id_fk": {
-          "name": "tq_task_comments_task_id_tq_tasks_id_fk",
-          "tableFrom": "tq_task_comments",
-          "tableTo": "tq_tasks",
+        "task_comments_task_id_tasks_id_fk": {
+          "name": "task_comments_task_id_tasks_id_fk",
+          "tableFrom": "task_comments",
+          "tableTo": "tasks",
           "columnsFrom": ["task_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
@@ -541,8 +541,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.tq_task_labels": {
-      "name": "tq_task_labels",
+    "public.task_labels": {
+      "name": "task_labels",
       "schema": "",
       "columns": {
         "task_id": {
@@ -591,19 +591,19 @@
         }
       },
       "foreignKeys": {
-        "tq_task_labels_task_id_tq_tasks_id_fk": {
-          "name": "tq_task_labels_task_id_tq_tasks_id_fk",
-          "tableFrom": "tq_task_labels",
-          "tableTo": "tq_tasks",
+        "task_labels_task_id_tasks_id_fk": {
+          "name": "task_labels_task_id_tasks_id_fk",
+          "tableFrom": "task_labels",
+          "tableTo": "tasks",
           "columnsFrom": ["task_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "tq_task_labels_label_id_tq_labels_id_fk": {
-          "name": "tq_task_labels_label_id_tq_labels_id_fk",
-          "tableFrom": "tq_task_labels",
-          "tableTo": "tq_labels",
+        "task_labels_label_id_labels_id_fk": {
+          "name": "task_labels_label_id_labels_id_fk",
+          "tableFrom": "task_labels",
+          "tableTo": "labels",
           "columnsFrom": ["label_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
@@ -611,8 +611,8 @@
         }
       },
       "compositePrimaryKeys": {
-        "tq_task_labels_task_id_label_id_pk": {
-          "name": "tq_task_labels_task_id_label_id_pk",
+        "task_labels_task_id_label_id_pk": {
+          "name": "task_labels_task_id_label_id_pk",
           "columns": ["task_id", "label_id"]
         }
       },
@@ -621,8 +621,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.tq_task_pages": {
-      "name": "tq_task_pages",
+    "public.task_pages": {
+      "name": "task_pages",
       "schema": "",
       "columns": {
         "id": {
@@ -690,10 +690,10 @@
         }
       },
       "foreignKeys": {
-        "tq_task_pages_task_id_tq_tasks_id_fk": {
-          "name": "tq_task_pages_task_id_tq_tasks_id_fk",
-          "tableFrom": "tq_task_pages",
-          "tableTo": "tq_tasks",
+        "task_pages_task_id_tasks_id_fk": {
+          "name": "task_pages_task_id_tasks_id_fk",
+          "tableFrom": "task_pages",
+          "tableTo": "tasks",
           "columnsFrom": ["task_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
@@ -706,8 +706,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.tq_tasks": {
-      "name": "tq_tasks",
+    "public.tasks": {
+      "name": "tasks",
       "schema": "",
       "columns": {
         "id": {
@@ -899,28 +899,28 @@
         }
       },
       "foreignKeys": {
-        "tq_tasks_parent_id_tq_tasks_id_fk": {
-          "name": "tq_tasks_parent_id_tq_tasks_id_fk",
-          "tableFrom": "tq_tasks",
-          "tableTo": "tq_tasks",
+        "tasks_parent_id_tasks_id_fk": {
+          "name": "tasks_parent_id_tasks_id_fk",
+          "tableFrom": "tasks",
+          "tableTo": "tasks",
           "columnsFrom": ["parent_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "tq_tasks_project_id_tq_projects_id_fk": {
-          "name": "tq_tasks_project_id_tq_projects_id_fk",
-          "tableFrom": "tq_tasks",
-          "tableTo": "tq_projects",
+        "tasks_project_id_projects_id_fk": {
+          "name": "tasks_project_id_projects_id_fk",
+          "tableFrom": "tasks",
+          "tableTo": "projects",
           "columnsFrom": ["project_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "tq_tasks_recurrence_rule_id_tq_recurrence_rules_id_fk": {
-          "name": "tq_tasks_recurrence_rule_id_tq_recurrence_rules_id_fk",
-          "tableFrom": "tq_tasks",
-          "tableTo": "tq_recurrence_rules",
+        "tasks_recurrence_rule_id_recurrence_rules_id_fk": {
+          "name": "tasks_recurrence_rule_id_recurrence_rules_id_fk",
+          "tableFrom": "tasks",
+          "tableTo": "recurrence_rules",
           "columnsFrom": ["recurrence_rule_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
@@ -933,8 +933,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.tq_time_blocks": {
-      "name": "tq_time_blocks",
+    "public.time_blocks": {
+      "name": "time_blocks",
       "schema": "",
       "columns": {
         "id": {
@@ -1022,10 +1022,10 @@
         }
       },
       "foreignKeys": {
-        "tq_time_blocks_task_id_tq_tasks_id_fk": {
-          "name": "tq_time_blocks_task_id_tq_tasks_id_fk",
-          "tableFrom": "tq_time_blocks",
-          "tableTo": "tq_tasks",
+        "time_blocks_task_id_tasks_id_fk": {
+          "name": "time_blocks_task_id_tasks_id_fk",
+          "tableFrom": "time_blocks",
+          "tableTo": "tasks",
           "columnsFrom": ["task_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
@@ -1038,8 +1038,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.tq_today_tasks": {
-      "name": "tq_today_tasks",
+    "public.today_tasks": {
+      "name": "today_tasks",
       "schema": "",
       "columns": {
         "id": {
@@ -1084,10 +1084,10 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "tq_today_tasks_task_id_tq_tasks_id_fk": {
-          "name": "tq_today_tasks_task_id_tq_tasks_id_fk",
-          "tableFrom": "tq_today_tasks",
-          "tableTo": "tq_tasks",
+        "today_tasks_task_id_tasks_id_fk": {
+          "name": "today_tasks_task_id_tasks_id_fk",
+          "tableFrom": "today_tasks",
+          "tableTo": "tasks",
           "columnsFrom": ["task_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
