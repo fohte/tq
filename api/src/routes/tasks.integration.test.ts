@@ -1,10 +1,6 @@
 import { app } from '@api/app'
 import { setupTestDb } from '@api/testing'
-import { describe, expect, it, vi } from 'vitest'
-
-vi.mock('@api/db/connection', () => {
-  return import('@api/testing').then((m) => ({ db: m.testDb }))
-})
+import { describe, expect, it } from 'vitest'
 
 setupTestDb()
 

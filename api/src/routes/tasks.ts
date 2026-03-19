@@ -88,40 +88,49 @@ function taskToResponse(task: typeof tasks.$inferSelect) {
   }
 }
 
-// db.execute returns raw rows with snake_case column names
-interface RawTaskRow {
-  id: string
-  title: string
-  description: string | null
-  status: 'todo' | 'in_progress' | 'completed'
-  context: 'work' | 'personal' | 'dev'
-  start_date: string | null
-  due_date: string | null
-  estimated_minutes: number | null
-  parent_id: string | null
-  project_id: string | null
-  sort_order: number
-  created_at: string
-  updated_at: string
-  depth: number
+type TaskResponseData = ReturnType<typeof taskToResponse>
+
+type TreeNode = TaskResponseData & {
+  children: TreeNode[]
+  childCompletionCount: { completed: number; total: number }
 }
 
-function rawRowToResponse(row: RawTaskRow) {
-  return {
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    status: row.status,
-    context: row.context,
-    startDate: row.start_date,
-    dueDate: row.due_date,
-    estimatedMinutes: row.estimated_minutes,
-    parentId: row.parent_id,
-    projectId: row.project_id,
-    sortOrder: row.sort_order,
-    createdAt: new Date(row.created_at).toISOString(),
-    updatedAt: new Date(row.updated_at).toISOString(),
+function buildTree(
+  allTasks: Array<typeof tasks.$inferSelect>,
+  rootId?: string,
+): TreeNode[] {
+  const nodeMap = new Map<string, TreeNode>()
+
+  for (const task of allTasks) {
+    nodeMap.set(task.id, {
+      ...taskToResponse(task),
+      children: [],
+      childCompletionCount: { completed: 0, total: 0 },
+    })
   }
+
+  const roots: TreeNode[] = []
+
+  for (const task of allTasks) {
+    const node = nodeMap.get(task.id)!
+    const parentNode = task.parentId ? nodeMap.get(task.parentId) : null
+
+    if (parentNode) {
+      parentNode.children.push(node)
+      parentNode.childCompletionCount.total++
+      if (task.status === 'completed') {
+        parentNode.childCompletionCount.completed++
+      }
+    } else if (!rootId || task.id === rootId) {
+      roots.push(node)
+    }
+  }
+
+  if (rootId) {
+    return nodeMap.has(rootId) ? [nodeMap.get(rootId)!] : []
+  }
+
+  return roots
 }
 
 export const tasksApp = new Hono()
@@ -179,63 +188,12 @@ export const tasksApp = new Hono()
   .get('/tree', zValidator('query', treeQuerySchema), async (c) => {
     const { rootId } = c.req.valid('query')
 
-    // Use recursive CTE to fetch task tree
-    const rootCondition = rootId
-      ? sql`${tasks.id} = ${rootId}`
-      : sql`${tasks.parentId} IS NULL`
+    const allTasks = await db
+      .select()
+      .from(tasks)
+      .orderBy(tasks.sortOrder, tasks.createdAt)
 
-    const treeQuery = sql`
-      WITH RECURSIVE task_tree AS (
-        SELECT *, 0 AS depth
-        FROM ${tasks}
-        WHERE ${rootCondition}
-
-        UNION ALL
-
-        SELECT t.*, tt.depth + 1
-        FROM ${tasks} t
-        INNER JOIN task_tree tt ON t.parent_id = tt.id
-      )
-      SELECT * FROM task_tree ORDER BY depth, sort_order, created_at
-    `
-
-    const result = await db.execute(treeQuery)
-    const rows = result as unknown as RawTaskRow[]
-
-    // Build tree structure
-    type TreeNode = ReturnType<typeof rawRowToResponse> & {
-      children: TreeNode[]
-      childCompletionCount: { completed: number; total: number }
-    }
-
-    const nodeMap = new Map<string, TreeNode>()
-    const roots: TreeNode[] = []
-
-    for (const row of rows) {
-      const node: TreeNode = {
-        ...rawRowToResponse(row),
-        children: [],
-        childCompletionCount: { completed: 0, total: 0 },
-      }
-      nodeMap.set(row.id, node)
-    }
-
-    for (const row of rows) {
-      const node = nodeMap.get(row.id)!
-      const parentNode = row.parent_id ? nodeMap.get(row.parent_id) : null
-
-      if (parentNode) {
-        parentNode.children.push(node)
-        parentNode.childCompletionCount.total++
-        if (row.status === 'completed') {
-          parentNode.childCompletionCount.completed++
-        }
-      } else {
-        roots.push(node)
-      }
-    }
-
-    return c.json(roots, 200)
+    return c.json(buildTree(allTasks, rootId), 200)
   })
   .get('/search', zValidator('query', searchQuerySchema), async (c) => {
     const query = c.req.valid('query')
@@ -405,7 +363,6 @@ export const tasksApp = new Hono()
     }
 
     if (parentId) {
-      // Check parent exists
       const parent = await db.query.tasks.findFirst({
         where: eq(tasks.id, parentId),
       })
@@ -413,11 +370,11 @@ export const tasksApp = new Hono()
         return c.json({ error: 'Parent task not found' }, 404)
       }
 
-      // Check for circular reference using recursive CTE
       if (parentId === id) {
         return c.json({ error: 'A task cannot be its own parent' }, 409)
       }
 
+      // Check for circular reference by walking ancestors
       const ancestors = await db.execute(sql`
         WITH RECURSIVE ancestors AS (
           SELECT id, parent_id FROM ${tasks} WHERE id = ${parentId}

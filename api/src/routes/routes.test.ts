@@ -1,15 +1,20 @@
 import { app } from '@api/app'
-import { describe, expect, it, vi } from 'vitest'
+import { setupTestDb } from '@api/testing'
+import { describe, expect, it } from 'vitest'
 
-vi.mock('@api/db/connection', () => ({
-  db: {},
-}))
+setupTestDb()
 
 // RFC 4122 compliant UUIDs for testing
 const TEST_ID_1 = '550e8400-e29b-41d4-a716-446655440000'
+const TEST_ID_2 = 'f47ac10b-58cc-4372-a567-0d02b2c3d479'
 
 describe('sub-app routing', () => {
   describe('tasks sub-app', () => {
+    it('GET /api/tasks returns 200', async () => {
+      const res = await app.request('/api/tasks')
+      expect(res.status).toBe(200)
+    })
+
     it('POST /api/tasks validates request body', async () => {
       const res = await app.request('/api/tasks', {
         method: 'POST',
@@ -17,6 +22,25 @@ describe('sub-app routing', () => {
         body: JSON.stringify({}),
       })
       expect(res.status).toBe(400)
+    })
+
+    it('POST /api/tasks with valid body returns 201', async () => {
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Test task' }),
+      })
+      expect(res.status).toBe(201)
+    })
+
+    it('GET /api/tasks/tree returns 200', async () => {
+      const res = await app.request('/api/tasks/tree')
+      expect(res.status).toBe(200)
+    })
+
+    it('GET /api/tasks/search returns 200', async () => {
+      const res = await app.request('/api/tasks/search')
+      expect(res.status).toBe(200)
     })
 
     it('GET /api/tasks/search/suggest validates prefix', async () => {
@@ -29,6 +53,11 @@ describe('sub-app routing', () => {
       expect(res.status).toBe(200)
     })
 
+    it('GET /api/tasks/:id returns 404 for non-existent task', async () => {
+      const res = await app.request(`/api/tasks/${TEST_ID_1}`)
+      expect(res.status).toBe(404)
+    })
+
     it('PATCH /api/tasks/:id/status validates status', async () => {
       const res = await app.request(`/api/tasks/${TEST_ID_1}/status`, {
         method: 'PATCH',
@@ -36,6 +65,22 @@ describe('sub-app routing', () => {
         body: JSON.stringify({ status: 'invalid' }),
       })
       expect(res.status).toBe(400)
+    })
+
+    it('PATCH /api/tasks/:id/parent returns 404 for non-existent task', async () => {
+      const res = await app.request(`/api/tasks/${TEST_ID_1}/parent`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: TEST_ID_2 }),
+      })
+      expect(res.status).toBe(404)
+    })
+
+    it('DELETE /api/tasks/:id returns 404 for non-existent task', async () => {
+      const res = await app.request(`/api/tasks/${TEST_ID_1}`, {
+        method: 'DELETE',
+      })
+      expect(res.status).toBe(404)
     })
   })
 
