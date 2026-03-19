@@ -1,8 +1,7 @@
-import type { LucideIcon } from 'lucide-react'
 import { Link, useMatchRoute } from '@tanstack/react-router'
-import { Calendar, CheckSquare, FolderKanban, Sun } from 'lucide-react'
-
 import { cn } from '@web/lib/utils'
+import type { LucideIcon } from 'lucide-react'
+import { Calendar, CheckSquare, FolderKanban, Sun } from 'lucide-react'
 
 interface TabItem {
   to: string

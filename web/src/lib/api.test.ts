@@ -1,7 +1,6 @@
+import type { AppType } from 'api/types'
 import type { hc } from 'hono/client'
 import { describe, expectTypeOf, it } from 'vitest'
-
-import type { AppType } from 'api/types'
 
 type Client = ReturnType<typeof hc<AppType>>
 

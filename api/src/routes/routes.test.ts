@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest'
-
 import { app } from '@api/app'
+import { describe, expect, it } from 'vitest'
 
 // RFC 4122 compliant UUIDs for testing
 const TEST_ID_1 = '550e8400-e29b-41d4-a716-446655440000'
