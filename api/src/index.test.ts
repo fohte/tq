@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest'
-
 import { app } from '@api/app'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('@api/db/connection', () => ({
+  db: {},
+}))
 
 describe('GET /health', () => {
   it('ステータス ok を返す', async () => {

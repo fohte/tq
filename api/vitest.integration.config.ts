@@ -9,6 +9,6 @@ export default defineConfig({
     },
   },
   test: {
-    exclude: ['**/*.integration.test.ts', 'node_modules/**'],
+    include: ['**/*.integration.test.ts'],
   },
 })
