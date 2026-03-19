@@ -8,7 +8,4 @@ export default defineConfig({
       '@api': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
-  test: {
-    fileParallelism: false,
-  },
 })
