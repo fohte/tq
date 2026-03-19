@@ -45,9 +45,6 @@ jspm_packages/
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 
-# TanStack Router generated route tree
-routeTree.gen.ts
-
 # TypeScript cache
 *.tsbuildinfo
 
