@@ -1,10 +1,10 @@
 import { Hono } from 'hono'
 
-import { calendarApp } from '@/routes/calendar'
-import { imagesApp } from '@/routes/images'
-import { projectsApp } from '@/routes/projects'
-import { schedulesApp } from '@/routes/schedules'
-import { tasksApp } from '@/routes/tasks'
+import { calendarApp } from '@api/routes/calendar'
+import { imagesApp } from '@api/routes/images'
+import { projectsApp } from '@api/routes/projects'
+import { schedulesApp } from '@api/routes/schedules'
+import { tasksApp } from '@api/routes/tasks'
 
 const app = new Hono()
   .get('/health', (c) => {

@@ -1,33 +1,28 @@
 import type { hc } from 'hono/client'
 import { describe, expectTypeOf, it } from 'vitest'
 
-import type { AppType } from '@api/app'
+import type { AppType } from 'api/types'
 
-// Verify that AppType can be used with Hono RPC client
 type Client = ReturnType<typeof hc<AppType>>
 
-describe('AppType for Hono RPC', () => {
-  it('exports AppType that is usable with hc client', () => {
-    expectTypeOf<Client>().toBeObject()
-  })
-
-  it('has api.tasks route', () => {
+describe('API client type inference', () => {
+  it('resolves api.tasks route type', () => {
     expectTypeOf<Client['api']['tasks']>().toBeObject()
   })
 
-  it('has api.projects route', () => {
+  it('resolves api.projects route type', () => {
     expectTypeOf<Client['api']['projects']>().toBeObject()
   })
 
-  it('has api.schedule route', () => {
+  it('resolves api.schedule route type', () => {
     expectTypeOf<Client['api']['schedule']>().toBeObject()
   })
 
-  it('has api.calendar route', () => {
+  it('resolves api.calendar route type', () => {
     expectTypeOf<Client['api']['calendar']>().toBeObject()
   })
 
-  it('has api.images route', () => {
+  it('resolves api.images route type', () => {
     expectTypeOf<Client['api']['images']>().toBeObject()
   })
 })
