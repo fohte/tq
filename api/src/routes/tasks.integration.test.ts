@@ -10,8 +10,23 @@ setupTestDb()
 
 const TEST_UUID = '550e8400-e29b-41d4-a716-446655440000'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Any = any
+interface TaskResponse {
+  id: string
+  title: string
+  description: string | null
+  status: 'todo' | 'in_progress' | 'completed'
+  context: 'work' | 'personal' | 'dev'
+  startDate: string | null
+  dueDate: string | null
+  estimatedMinutes: number | null
+  parentId: string | null
+  projectId: string | null
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+  childCompletionCount?: { completed: number; total: number }
+  children?: TaskResponse[]
+}
 
 describe('tasks API', () => {
   describe('POST /api/tasks', () => {
@@ -23,7 +38,7 @@ describe('tasks API', () => {
       })
 
       expect(res.status).toBe(201)
-      const body = (await res.json()) as Any
+      const body = (await res.json()) as TaskResponse
       expect(body.title).toBe('Buy groceries')
       expect(body.status).toBe('todo')
       expect(body.context).toBe('personal')
@@ -45,7 +60,7 @@ describe('tasks API', () => {
       })
 
       expect(res.status).toBe(201)
-      const body = (await res.json()) as Any
+      const body = (await res.json()) as TaskResponse
       expect(body.title).toBe('Deploy app')
       expect(body.description).toBe('Deploy to production')
       expect(body.startDate).toBe('2026-03-20')
@@ -93,7 +108,7 @@ describe('tasks API', () => {
       const res = await app.request('/api/tasks')
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as Any
+      const body = (await res.json()) as TaskResponse[]
       expect(body).toHaveLength(2)
     })
 
@@ -110,9 +125,9 @@ describe('tasks API', () => {
       const res = await app.request('/api/tasks?status=todo')
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as Any
+      const body = (await res.json()) as TaskResponse[]
       expect(body).toHaveLength(1)
-      expect(body[0].title).toBe('Task B')
+      expect(body[0]!.title).toBe('Task B')
     })
   })
 
@@ -123,7 +138,7 @@ describe('tasks API', () => {
       const res = await app.request(`/api/tasks/${created.id}`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as Any
+      const body = (await res.json()) as TaskResponse
       expect(body.title).toBe('My task')
       expect(body.childCompletionCount).toEqual({ completed: 0, total: 0 })
     })
@@ -148,7 +163,7 @@ describe('tasks API', () => {
       const res = await app.request(`/api/tasks/${parent.id}`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as Any
+      const body = (await res.json()) as TaskResponse
       expect(body.childCompletionCount).toEqual({ completed: 1, total: 2 })
     })
   })
@@ -164,7 +179,7 @@ describe('tasks API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as Any
+      const body = (await res.json()) as TaskResponse
       expect(body.title).toBe('Updated')
       expect(body.description).toBe('New desc')
     })
@@ -179,6 +194,23 @@ describe('tasks API', () => {
       expect(res.status).toBe(404)
     })
 
+    it('ignores parentId in general update', async () => {
+      const parent = await createTask('Parent')
+      const child = await createTask('Child')
+
+      const res = await app.request(`/api/tasks/${child.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Updated', parentId: parent.id }),
+      })
+
+      // parentId is stripped by Zod and not applied
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as TaskResponse
+      expect(body.title).toBe('Updated')
+      expect(body.parentId).toBeNull()
+    })
+
     it('sets nullable fields to null', async () => {
       const created = await createTask('Task', {
         description: 'Some desc',
@@ -191,7 +223,7 @@ describe('tasks API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as Any
+      const body = (await res.json()) as TaskResponse
       expect(body.description).toBeNull()
     })
   })
@@ -207,7 +239,7 @@ describe('tasks API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as Any
+      const body = (await res.json()) as TaskResponse
       expect(body.status).toBe('in_progress')
     })
 
@@ -246,7 +278,7 @@ describe('tasks API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as Any
+      const body = (await res.json()) as TaskResponse
       expect(body.parentId).toBe(parent.id)
     })
 
@@ -261,7 +293,7 @@ describe('tasks API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as Any
+      const body = (await res.json()) as TaskResponse
       expect(body.parentId).toBeNull()
     })
 
@@ -338,7 +370,7 @@ describe('tasks API', () => {
 
       const res = await app.request(`/api/tasks/${child.id}`)
       expect(res.status).toBe(200)
-      const body = (await res.json()) as Any
+      const body = (await res.json()) as TaskResponse
       expect(body.parentId).toBeNull()
     })
   })
@@ -359,11 +391,11 @@ describe('tasks API', () => {
       const res = await app.request('/api/tasks/tree')
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as Any
+      const body = (await res.json()) as TaskResponse[]
       expect(body).toHaveLength(1)
-      expect(body[0].title).toBe('Parent')
-      expect(body[0].children).toHaveLength(2)
-      expect(body[0].childCompletionCount.total).toBe(2)
+      expect(body[0]!.title).toBe('Parent')
+      expect(body[0]!.children).toHaveLength(2)
+      expect(body[0]!.childCompletionCount!.total).toBe(2)
     })
   })
 
@@ -372,11 +404,13 @@ describe('tasks API', () => {
       const res = await app.request('/api/tasks/search/suggest?prefix=is:')
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as Any
+      const body = (await res.json()) as Array<{
+        value: string
+        display: string
+        category: string
+      }>
       expect(body.length).toBeGreaterThan(0)
-      expect(body.every((s: { category: string }) => s.category === 'is')).toBe(
-        true,
-      )
+      expect(body.every((s) => s.category === 'is')).toBe(true)
     })
   })
 })

@@ -25,9 +25,8 @@ const updateTaskSchema = z.object({
   startDate: z.string().nullable().optional(),
   dueDate: z.string().nullable().optional(),
   estimatedMinutes: z.number().int().positive().nullable().optional(),
-  parentId: z.string().uuid().nullable().optional(),
   projectId: z.string().uuid().nullable().optional(),
-  context: context.nullable().optional(),
+  context: context.optional(),
 })
 
 const updateStatusSchema = z.object({
@@ -287,86 +286,35 @@ export const tasksApp = new Hono()
     return c.json(result.map(taskToResponse), 200)
   })
   .get('/search/suggest', zValidator('query', suggestQuerySchema), (c) => {
-    // Return static suggestions for now
     const { prefix, category } = c.req.valid('query')
 
-    const suggestions: Array<{
-      value: string
-      display: string
-      category: string
-    }> = []
-
-    if (!category || category === 'is') {
-      if ('is:todo'.startsWith(prefix)) {
-        suggestions.push({
-          value: 'is:todo',
-          display: 'Todo',
-          category: 'is',
-        })
-      }
-      if ('is:in_progress'.startsWith(prefix)) {
-        suggestions.push({
-          value: 'is:in_progress',
-          display: 'In Progress',
-          category: 'is',
-        })
-      }
-      if ('is:completed'.startsWith(prefix)) {
-        suggestions.push({
-          value: 'is:completed',
-          display: 'Completed',
-          category: 'is',
-        })
-      }
+    const allSuggestions: Record<
+      string,
+      Array<{ value: string; display: string }>
+    > = {
+      is: [
+        { value: 'is:todo', display: 'Todo' },
+        { value: 'is:in_progress', display: 'In Progress' },
+        { value: 'is:completed', display: 'Completed' },
+      ],
+      context: [
+        { value: 'context:work', display: 'Work' },
+        { value: 'context:personal', display: 'Personal' },
+        { value: 'context:dev', display: 'Dev' },
+      ],
+      sort: [
+        { value: 'sort:due', display: 'Sort by due date' },
+        { value: 'sort:created', display: 'Sort by creation date' },
+        { value: 'sort:estimate', display: 'Sort by estimate' },
+      ],
     }
 
-    if (!category || category === 'context') {
-      if ('context:work'.startsWith(prefix)) {
-        suggestions.push({
-          value: 'context:work',
-          display: 'Work',
-          category: 'context',
-        })
-      }
-      if ('context:personal'.startsWith(prefix)) {
-        suggestions.push({
-          value: 'context:personal',
-          display: 'Personal',
-          category: 'context',
-        })
-      }
-      if ('context:dev'.startsWith(prefix)) {
-        suggestions.push({
-          value: 'context:dev',
-          display: 'Dev',
-          category: 'context',
-        })
-      }
-    }
-
-    if (!category || category === 'sort') {
-      if ('sort:due'.startsWith(prefix)) {
-        suggestions.push({
-          value: 'sort:due',
-          display: 'Sort by due date',
-          category: 'sort',
-        })
-      }
-      if ('sort:created'.startsWith(prefix)) {
-        suggestions.push({
-          value: 'sort:created',
-          display: 'Sort by creation date',
-          category: 'sort',
-        })
-      }
-      if ('sort:estimate'.startsWith(prefix)) {
-        suggestions.push({
-          value: 'sort:estimate',
-          display: 'Sort by estimate',
-          category: 'sort',
-        })
-      }
-    }
+    const categories = category ? [category] : Object.keys(allSuggestions)
+    const suggestions = categories.flatMap((cat) =>
+      (allSuggestions[cat] ?? [])
+        .filter((s) => s.value.startsWith(prefix))
+        .map((s) => ({ ...s, category: cat })),
+    )
 
     return c.json(suggestions, 200)
   })
@@ -414,24 +362,9 @@ export const tasksApp = new Hono()
       return c.json({ error: 'Task not found' }, 404)
     }
 
-    const updateData: Record<string, unknown> = {
-      updatedAt: new Date(),
-    }
-
-    if (input.title !== undefined) updateData['title'] = input.title
-    if (input.description !== undefined)
-      updateData['description'] = input.description
-    if (input.startDate !== undefined) updateData['startDate'] = input.startDate
-    if (input.dueDate !== undefined) updateData['dueDate'] = input.dueDate
-    if (input.estimatedMinutes !== undefined)
-      updateData['estimatedMinutes'] = input.estimatedMinutes
-    if (input.parentId !== undefined) updateData['parentId'] = input.parentId
-    if (input.projectId !== undefined) updateData['projectId'] = input.projectId
-    if (input.context !== undefined) updateData['context'] = input.context
-
     const [updated] = await db
       .update(tasks)
-      .set(updateData)
+      .set({ ...input, updatedAt: new Date() })
       .where(eq(tasks.id, id))
       .returning()
 

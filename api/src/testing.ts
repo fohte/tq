@@ -15,21 +15,6 @@ const migrationDb = drizzle(migrationClient)
 const queryClient = postgres(TEST_DATABASE_URL)
 export const testDb = drizzle(queryClient, { schema })
 
-const tableNames = [
-  'today_tasks',
-  'time_blocks',
-  'task_comments',
-  'task_pages',
-  'task_labels',
-  'tasks',
-  'labels',
-  'schedules',
-  'recurrence_rules',
-  'projects',
-  'oauth_tokens',
-  'images',
-] as const
-
 export function setupTestDb() {
   beforeAll(async () => {
     await migrate(migrationDb, {
@@ -38,8 +23,16 @@ export function setupTestDb() {
   })
 
   afterEach(async () => {
-    for (const table of tableNames) {
-      await testDb.execute(sql.raw(`DELETE FROM "${table}"`))
+    const res = await testDb.execute(
+      sql`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename NOT LIKE 'drizzle_%'`,
+    )
+    const tables = (res as unknown as Array<{ tablename: string }>).map(
+      (t) => `"${t.tablename}"`,
+    )
+    if (tables.length > 0) {
+      await testDb.execute(
+        sql.raw(`TRUNCATE TABLE ${tables.join(', ')} RESTART IDENTITY CASCADE`),
+      )
     }
   })
 
