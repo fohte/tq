@@ -399,6 +399,27 @@ describe('tasks API', () => {
     })
   })
 
+  describe('GET /api/tasks/search', () => {
+    it('filters tasks without estimates when hasEstimate=false', async () => {
+      await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'With estimate',
+          estimatedMinutes: 60,
+        }),
+      })
+      await createTask('Without estimate')
+
+      const res = await app.request('/api/tasks/search?hasEstimate=false')
+
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as TaskResponse[]
+      expect(body).toHaveLength(1)
+      expect(body[0]!.title).toBe('Without estimate')
+    })
+  })
+
   describe('GET /api/tasks/search/suggest', () => {
     it('returns suggestions for prefix', async () => {
       const res = await app.request('/api/tasks/search/suggest?prefix=is:')
