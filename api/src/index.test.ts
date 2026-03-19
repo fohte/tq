@@ -1,5 +1,8 @@
 import { app } from '@api/app'
+import { setupTestDb } from '@api/testing'
 import { describe, expect, it } from 'vitest'
+
+setupTestDb()
 
 describe('GET /health', () => {
   it('ステータス ok を返す', async () => {

@@ -8,4 +8,7 @@ export default defineConfig({
       '@api': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  test: {
+    globalSetup: ['./src/global-setup.ts'],
+  },
 })

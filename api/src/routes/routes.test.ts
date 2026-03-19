@@ -1,5 +1,8 @@
 import { app } from '@api/app'
+import { setupTestDb } from '@api/testing'
 import { describe, expect, it } from 'vitest'
+
+setupTestDb()
 
 // RFC 4122 compliant UUIDs for testing
 const TEST_ID_1 = '550e8400-e29b-41d4-a716-446655440000'
@@ -21,13 +24,13 @@ describe('sub-app routing', () => {
       expect(res.status).toBe(400)
     })
 
-    it('POST /api/tasks with valid body returns 501 (skeleton)', async () => {
+    it('POST /api/tasks with valid body returns 201', async () => {
       const res = await app.request('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'Test task' }),
       })
-      expect(res.status).toBe(501)
+      expect(res.status).toBe(201)
     })
 
     it('GET /api/tasks/tree returns 200', async () => {
@@ -50,9 +53,9 @@ describe('sub-app routing', () => {
       expect(res.status).toBe(200)
     })
 
-    it('GET /api/tasks/:id returns 501 (skeleton)', async () => {
+    it('GET /api/tasks/:id returns 404 for non-existent task', async () => {
       const res = await app.request(`/api/tasks/${TEST_ID_1}`)
-      expect(res.status).toBe(501)
+      expect(res.status).toBe(404)
     })
 
     it('PATCH /api/tasks/:id/status validates status', async () => {
@@ -64,20 +67,20 @@ describe('sub-app routing', () => {
       expect(res.status).toBe(400)
     })
 
-    it('PATCH /api/tasks/:id/parent accepts valid parentId', async () => {
+    it('PATCH /api/tasks/:id/parent returns 404 for non-existent task', async () => {
       const res = await app.request(`/api/tasks/${TEST_ID_1}/parent`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parentId: TEST_ID_2 }),
       })
-      expect(res.status).toBe(501)
+      expect(res.status).toBe(404)
     })
 
-    it('DELETE /api/tasks/:id returns 501 (skeleton)', async () => {
+    it('DELETE /api/tasks/:id returns 404 for non-existent task', async () => {
       const res = await app.request(`/api/tasks/${TEST_ID_1}`, {
         method: 'DELETE',
       })
-      expect(res.status).toBe(501)
+      expect(res.status).toBe(404)
     })
   })
 
