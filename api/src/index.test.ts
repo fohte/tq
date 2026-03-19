@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest'
-
 import { app } from '@api/app'
+import { describe, expect, it } from 'vitest'
 
 describe('GET /health', () => {
   it('ステータス ok を返す', async () => {
