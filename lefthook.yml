@@ -3,3 +3,9 @@ remotes:
     ref: v0.1.15 # renovate: datasource=github-tags depName=fohte/lefthook-config
     configs:
       - base.yml
+
+pre-commit:
+  commands:
+    eslint:
+      glob: '*.{js,cjs,mjs,ts,tsx}'
+      run: npx eslint --fix {staged_files} && git add {staged_files}
