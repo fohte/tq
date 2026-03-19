@@ -1,7 +1,6 @@
-import type { ReactNode } from 'react'
-
 import { BottomTabBar } from '@web/components/layout/bottom-tab-bar'
 import { Sidebar } from '@web/components/layout/sidebar'
+import type { ReactNode } from 'react'
 
 export function AppLayout({ children }: { children: ReactNode }) {
   return (
