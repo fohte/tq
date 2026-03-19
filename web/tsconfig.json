@@ -13,7 +13,8 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@web/*": ["src/*"],
+      "@api/*": ["../api/src/*"]
     }
   }
 }
