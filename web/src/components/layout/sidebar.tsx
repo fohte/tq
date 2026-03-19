@@ -15,7 +15,7 @@ const navItems: NavItem[] = [
   { to: '/search', icon: Search, label: 'Search' },
   { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
   { to: '/', icon: Calendar, label: 'Calendar', exact: true },
-  { to: '/', icon: Sun, label: 'Today', exact: true },
+  { to: '/today', icon: Sun, label: 'Today' },
 ]
 
 function NavLink({ item }: { item: NavItem }) {

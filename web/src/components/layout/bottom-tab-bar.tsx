@@ -15,7 +15,7 @@ const tabs: TabItem[] = [
   { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
   { to: '/', icon: Calendar, label: 'Calendar', exact: true },
   { to: '/projects', icon: FolderKanban, label: 'Projects' },
-  { to: '/', icon: Sun, label: 'Today', exact: true },
+  { to: '/today', icon: Sun, label: 'Today' },
 ]
 
 function Tab({ tab }: { tab: TabItem }) {
