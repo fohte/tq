@@ -18,18 +18,10 @@ type Tab = 'today' | 'all'
 function DayView() {
   const [activeTab, setActiveTab] = useState<Tab>('today')
   const [isCreating, setIsCreating] = useState(false)
-  const { data: tasks = [], isLoading } = useTaskList()
+  const { isLoading, categorized } = useTaskList()
 
-  const backlogTasks = tasks.filter(
-    (t) => t.status === 'todo' && !t.dueDate && !t.startDate,
-  )
-  const backlogIds = new Set(backlogTasks.map((t) => t.id))
-  // Today tab: non-completed tasks excluding backlog (shown separately in BacklogPreview)
-  const todayTasks = tasks.filter(
-    (t) => t.status !== 'completed' && !backlogIds.has(t.id),
-  )
-
-  const displayTasks: Task[] = activeTab === 'today' ? todayTasks : tasks
+  const displayTasks: Task[] =
+    activeTab === 'today' ? categorized.today : categorized.all
 
   return (
     <div className="flex h-full">
@@ -67,9 +59,7 @@ function DayView() {
         {/* Summary header */}
         {activeTab === 'today' && (
           <div className="py-2">
-            <TaskListHeader
-              tasks={tasks.filter((t) => !backlogIds.has(t.id))}
-            />
+            <TaskListHeader tasks={categorized.nonBacklog} />
           </div>
         )}
 
@@ -102,7 +92,7 @@ function DayView() {
         {/* Backlog preview (Today tab only) */}
         {activeTab === 'today' && (
           <BacklogPreview
-            tasks={backlogTasks}
+            tasks={categorized.backlog}
             onViewAll={() => setActiveTab('all')}
           />
         )}

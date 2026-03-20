@@ -19,28 +19,18 @@ type Tab = 'today' | 'all' | 'backlog'
 function TaskList() {
   const [activeTab, setActiveTab] = useState<Tab>('today')
   const [isCreating, setIsCreating] = useState(false)
-  const { data: tasks = [], isLoading } = useTaskList()
-
-  const backlogTasks = tasks.filter(
-    (t) => t.status === 'todo' && !t.dueDate && !t.startDate,
-  )
-  const backlogIds = new Set(backlogTasks.map((t) => t.id))
-  const todayTasks = tasks.filter(
-    (t) => t.status !== 'completed' && !backlogIds.has(t.id),
-  )
+  const { isLoading, categorized } = useTaskList()
 
   const displayTasks: Task[] = (() => {
     switch (activeTab) {
       case 'today':
-        return todayTasks
+        return categorized.today
       case 'all':
-        return tasks
+        return categorized.all
       case 'backlog':
-        return backlogTasks
+        return categorized.backlog
     }
   })()
-
-  const backlogCount = backlogTasks.length
 
   return (
     <div className="flex h-full flex-col">
@@ -59,9 +49,9 @@ function TaskList() {
             )}
           >
             {tab === 'today' ? 'Today' : tab === 'all' ? 'All' : 'Backlog'}
-            {tab === 'backlog' && backlogCount > 0 && (
+            {tab === 'backlog' && categorized.backlog.length > 0 && (
               <span className="ml-1.5 rounded-full bg-muted-foreground/20 px-1.5 py-0.5 text-xs">
-                {backlogCount}
+                {categorized.backlog.length}
               </span>
             )}
           </button>
@@ -71,7 +61,7 @@ function TaskList() {
       {/* Summary header (Today tab) */}
       {activeTab === 'today' && (
         <div className="py-2">
-          <TaskListHeader tasks={tasks.filter((t) => !backlogIds.has(t.id))} />
+          <TaskListHeader tasks={categorized.nonBacklog} />
         </div>
       )}
 

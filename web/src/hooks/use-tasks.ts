@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@web/lib/api'
 import type { InferResponseType } from 'hono/client'
+import { useMemo } from 'react'
 
 type Task = InferResponseType<typeof api.api.tasks.$get>[number]
 
@@ -14,8 +15,23 @@ export type { Task }
 
 type TaskStatus = 'todo' | 'in_progress' | 'completed'
 
+function isBacklog(t: Task): boolean {
+  return t.status === 'todo' && !t.dueDate && !t.startDate
+}
+
+export interface CategorizedTasks {
+  /** All tasks from the API */
+  all: Task[]
+  /** Non-completed, non-backlog tasks (the "today" queue) */
+  today: Task[]
+  /** Tasks with no date and status=todo */
+  backlog: Task[]
+  /** Non-backlog tasks (for header stats: includes completed) */
+  nonBacklog: Task[]
+}
+
 export function useTaskList(filter?: { status?: TaskStatus }) {
-  return useQuery({
+  const query = useQuery({
     queryKey: taskKeys.list(filter),
     queryFn: async () => {
       const res = await api.api.tasks.$get({
@@ -25,6 +41,19 @@ export function useTaskList(filter?: { status?: TaskStatus }) {
       return res.json()
     },
   })
+
+  const categorized = useMemo((): CategorizedTasks => {
+    const all = query.data ?? []
+    const backlog = all.filter(isBacklog)
+    const backlogIds = new Set(backlog.map((t) => t.id))
+    const today = all.filter(
+      (t) => t.status !== 'completed' && !backlogIds.has(t.id),
+    )
+    const nonBacklog = all.filter((t) => !backlogIds.has(t.id))
+    return { all, today, backlog, nonBacklog }
+  }, [query.data])
+
+  return { ...query, categorized }
 }
 
 export function useCreateTask() {
