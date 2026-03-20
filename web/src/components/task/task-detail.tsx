@@ -12,8 +12,8 @@ import {
   Circle,
   Clock,
   Layers,
+  Network,
   Play,
-  TreePine,
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -412,7 +412,7 @@ function SidebarDateField({
 
 function SidebarParentField({ parentId }: { parentId: string | null }) {
   return (
-    <SidebarField label="Parent" icon={<TreePine className="size-3.5" />}>
+    <SidebarField label="Parent" icon={<Network className="size-3.5" />}>
       {parentId ? (
         <Link
           to="/tasks/$taskId"
