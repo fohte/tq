@@ -66,7 +66,12 @@ function DayView() {
         {/* Inline create */}
         {isCreating && (
           <div className="border-b border-border">
-            <CreateTaskInline onClose={() => setIsCreating(false)} />
+            <CreateTaskInline
+              onClose={() => setIsCreating(false)}
+              {...(activeTab === 'today'
+                ? { defaultStartDate: new Date().toISOString().slice(0, 10) }
+                : {})}
+            />
           </div>
         )}
 

@@ -62,6 +62,7 @@ export function useCreateTask() {
   return useMutation({
     mutationFn: async (input: {
       title: string
+      startDate?: string
       context?: 'work' | 'personal' | 'dev'
     }) => {
       const res = await api.api.tasks.$post({

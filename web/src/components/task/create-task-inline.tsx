@@ -3,7 +3,13 @@ import { useCreateTask } from '@web/hooks/use-tasks'
 import { Plus, X } from 'lucide-react'
 import { useState } from 'react'
 
-export function CreateTaskInline({ onClose }: { onClose: () => void }) {
+export function CreateTaskInline({
+  onClose,
+  defaultStartDate,
+}: {
+  onClose: () => void
+  defaultStartDate?: string
+}) {
   const [title, setTitle] = useState('')
   const createTask = useCreateTask()
 
@@ -12,7 +18,10 @@ export function CreateTaskInline({ onClose }: { onClose: () => void }) {
     if (!title.trim() || createTask.isPending) return
 
     createTask.mutate(
-      { title: title.trim() },
+      {
+        title: title.trim(),
+        ...(defaultStartDate != null ? { startDate: defaultStartDate } : {}),
+      },
       {
         onSuccess: () => {
           setTitle('')
