@@ -132,8 +132,10 @@ function EditableTitle({
   }, [defaultValue, isEditing])
 
   const save = useCallback(() => {
-    if (savingRef.current) return
-    savingRef.current = true
+    if (savingRef.current) {
+      savingRef.current = false
+      return
+    }
     const trimmed = value.trim()
     if (trimmed && trimmed !== defaultValue) {
       updateTask.mutate({ id: taskId, input: { title: trimmed } })
@@ -141,15 +143,7 @@ function EditableTitle({
       setValue(defaultValue)
     }
     setIsEditing(false)
-    savingRef.current = false
   }, [value, defaultValue, taskId, updateTask])
-
-  const cancel = useCallback(() => {
-    savingRef.current = true
-    setValue(defaultValue)
-    setIsEditing(false)
-    savingRef.current = false
-  }, [defaultValue])
 
   if (isEditing) {
     return (
@@ -160,7 +154,11 @@ function EditableTitle({
         onBlur={save}
         onKeyDown={(e) => {
           if (e.key === 'Enter') e.currentTarget.blur()
-          if (e.key === 'Escape') cancel()
+          if (e.key === 'Escape') {
+            savingRef.current = true
+            setValue(defaultValue)
+            setIsEditing(false)
+          }
         }}
         autoFocus
         className="flex-1 bg-transparent text-2xl font-bold text-foreground outline-none"
@@ -344,8 +342,10 @@ function SidebarEstimateField({
   }, [estimatedMinutes, isEditing])
 
   const save = () => {
-    if (savingRef.current) return
-    savingRef.current = true
+    if (savingRef.current) {
+      savingRef.current = false
+      return
+    }
     const parsed = parseDurationToMinutes(input)
     if (parsed !== estimatedMinutes) {
       updateTask.mutate({
@@ -354,14 +354,6 @@ function SidebarEstimateField({
       })
     }
     setIsEditing(false)
-    savingRef.current = false
-  }
-
-  const cancel = () => {
-    savingRef.current = true
-    setInput(estimatedMinutes != null ? formatMinutes(estimatedMinutes) : '')
-    setIsEditing(false)
-    savingRef.current = false
   }
 
   return (
@@ -374,7 +366,13 @@ function SidebarEstimateField({
           onBlur={save}
           onKeyDown={(e) => {
             if (e.key === 'Enter') e.currentTarget.blur()
-            if (e.key === 'Escape') cancel()
+            if (e.key === 'Escape') {
+              savingRef.current = true
+              setInput(
+                estimatedMinutes != null ? formatMinutes(estimatedMinutes) : '',
+              )
+              setIsEditing(false)
+            }
           }}
           placeholder="1h30m"
           autoFocus
