@@ -1,0 +1,30 @@
+# インフラ (DB) 専用 Compose ファイル
+# 全 worktree で共有する。1 回だけ起動すればよい:
+#   docker compose -f docker-compose.infra.yml up -d
+name: tq-infra
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tq}
+      POSTGRES_DB: ${POSTGRES_DB:-tq_dev}
+    ports:
+      - '127.0.0.1:${DB_PORT:-5432}:5432'
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-tq}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tq-net
+
+volumes:
+  db_data:
+
+networks:
+  tq-net:
+    name: tq-net

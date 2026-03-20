@@ -5,7 +5,7 @@
 ## Prerequisites
 
 - [mise](https://mise.jdx.dev/) (manages Node.js, pnpm, and other tool versions via `.mise.toml`)
-- [Docker](https://www.docker.com/) (for PostgreSQL)
+- Docker + docker compose plugin ([Docker Desktop](https://www.docker.com/) or [Colima](https://github.com/abiosoft/colima))
 
 ## Getting Started
 
@@ -17,13 +17,13 @@ scripts/bootstrap
 
 This installs tool versions (via mise), git hooks (via lefthook), and Node.js dependencies (via pnpm).
 
-### 2. Start PostgreSQL
+### 2. Start the DB (once per machine)
 
 ```sh
-docker compose up -d
+docker compose -f docker-compose.infra.yml up -d
 ```
 
-This starts a PostgreSQL 17 container (`localhost:5432`, user: `tq`, password: `tq`, database: `tq_dev`).
+This starts a PostgreSQL 17 container on `localhost:5432`. The DB is shared across all worktrees.
 
 ### 3. Run database migrations
 
@@ -43,6 +43,28 @@ Web dev server:
 
 ```sh
 pnpm --filter web run dev
+```
+
+### Run the full stack with Docker Compose
+
+```sh
+# DB must be running (step 2)
+docker compose up --build
+```
+
+Run DB migrations and open `http://localhost:5173` in a browser:
+
+```sh
+DATABASE_URL=postgres://tq:tq@localhost:5432/tq_dev pnpm --filter api run db:migrate
+open http://localhost:5173
+```
+
+### Git worktree parallel development
+
+The DB runs once via `docker-compose.infra.yml` and is shared across worktrees. Set `APP_PORT` and `WEB_PORT` in each worktree to avoid port conflicts:
+
+```sh
+APP_PORT=3002 WEB_PORT=5174 docker compose up --build
 ```
 
 ## Scripts

@@ -36,5 +36,8 @@ if [ "$worktree" = false ] && command -v lefthook > /dev/null 2>&1; then
   lefthook install
 fi
 
+# Enable corepack so pnpm version from package.json's packageManager is used
+corepack enable
+
 # Install Node.js dependencies (workspace)
 pnpm install
