@@ -1,7 +1,11 @@
+.milkdown-wrapper {
+  overflow: hidden;
+}
+
 .milkdown-wrapper .milkdown {
   --crepe-color-background: transparent;
   --crepe-color-on-background: var(--foreground);
-  --crepe-color-surface: transparent;
+  --crepe-color-surface: var(--card);
   --crepe-color-surface-low: var(--card);
   --crepe-color-on-surface: var(--foreground);
   --crepe-color-on-surface-variant: var(--muted-foreground);
@@ -23,13 +27,51 @@
 
   --crepe-shadow-1: none;
   --crepe-shadow-2: none;
+
+  caret-color: var(--foreground);
+  color: var(--foreground);
 }
 
 .milkdown-wrapper .milkdown .ProseMirror {
   padding: 0.5rem;
   min-height: inherit;
+  caret-color: var(--foreground);
 }
 
+/* Block handle (drag grip) — keep inside the container */
+.milkdown-wrapper .milkdown [data-crepe-block-handle] {
+  color: var(--muted-foreground);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.milkdown-wrapper .milkdown .ProseMirror:hover [data-crepe-block-handle],
+.milkdown-wrapper .milkdown [data-crepe-block-handle]:hover {
+  opacity: 1;
+}
+
+/* All SVG icons in toolbar and block handles */
+.milkdown-wrapper .milkdown svg {
+  color: var(--foreground);
+  fill: currentColor;
+}
+
+/* Toolbar background */
+.milkdown-wrapper .milkdown [data-crepe-toolbar] {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.milkdown-wrapper .milkdown [data-crepe-toolbar] button {
+  color: var(--foreground);
+}
+
+.milkdown-wrapper .milkdown [data-crepe-toolbar] button:hover {
+  background: var(--accent);
+}
+
+/* Headings */
 .milkdown-wrapper .milkdown .ProseMirror h1,
 .milkdown-wrapper .milkdown .ProseMirror h2,
 .milkdown-wrapper .milkdown .ProseMirror h3 {
@@ -54,4 +96,10 @@
 .milkdown-wrapper .milkdown .ProseMirror p {
   font-size: 0.875rem;
   line-height: 1.5;
+}
+
+/* List bullet/number color */
+.milkdown-wrapper .milkdown .ProseMirror ul li::marker,
+.milkdown-wrapper .milkdown .ProseMirror ol li::marker {
+  color: var(--muted-foreground);
 }
