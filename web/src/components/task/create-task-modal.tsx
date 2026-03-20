@@ -6,7 +6,7 @@ import { useCreateTask } from '@web/hooks/use-tasks'
 import { formatMinutes, parseDurationToMinutes } from '@web/lib/parse-duration'
 import { cn } from '@web/lib/utils'
 import { Calendar, CalendarPlus, Clock, Layers, X } from 'lucide-react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface CreateTaskModalProps {
   open: boolean
@@ -37,6 +37,13 @@ export function CreateTaskModal({
   const [estimateInput, setEstimateInput] = useState('')
   const [context, setContext] = useState<ContextValue | ''>('')
   const createTask = useCreateTask()
+
+  // Sync startDate when defaultStartDate prop changes (e.g. tab switch)
+  useEffect(() => {
+    if (!open) {
+      setStartDate(defaultStartDate ?? '')
+    }
+  }, [defaultStartDate, open])
 
   const parsedMinutes = parseDurationToMinutes(estimateInput)
 
@@ -93,6 +100,17 @@ export function CreateTaskModal({
       ? formatMinutes(parsedMinutes)
       : estimateInput || 'Estimate'
 
+  const descriptionEditor = (
+    <MarkdownEditor
+      key={editorKey}
+      defaultValue={defaultDescription ?? '## Why\n\n## What'}
+      placeholder="Add description..."
+      onChange={(md) => {
+        descriptionRef.current = md
+      }}
+    />
+  )
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogPortal>
@@ -131,14 +149,7 @@ export function CreateTaskModal({
 
               {/* Description (WYSIWYG) */}
               <div className="max-h-[40vh] min-h-[160px] overflow-y-auto rounded-lg border border-border p-1 text-sm focus-within:border-primary/50">
-                <MarkdownEditor
-                  key={`pc-${editorKey}`}
-                  defaultValue={defaultDescription ?? '## Why\n\n## What'}
-                  placeholder="Add description..."
-                  onChange={(md) => {
-                    descriptionRef.current = md
-                  }}
-                />
+                {descriptionEditor}
               </div>
 
               {/* Option fields */}
@@ -251,38 +262,27 @@ export function CreateTaskModal({
 
               {/* Description (WYSIWYG) */}
               <div className="max-h-[30vh] min-h-[80px] overflow-y-auto text-[15px]">
-                <MarkdownEditor
-                  key={`sp-${editorKey}`}
-                  {...(defaultDescription != null
-                    ? { defaultValue: defaultDescription }
-                    : {})}
-                  placeholder="詳細を追加..."
-                  onChange={(md) => {
-                    descriptionRef.current = md
-                  }}
-                />
+                {descriptionEditor}
               </div>
 
               <div className="h-px bg-border" />
 
               {/* Chip row */}
               <div className="flex gap-2 overflow-x-auto">
-                {startDate && (
-                  <SpChip
-                    icon={<CalendarPlus className="size-3.5" />}
-                    label={startDate}
-                    active
-                    expanded={
-                      <input
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        autoFocus
-                        className="w-28 bg-transparent text-xs outline-none"
-                      />
-                    }
-                  />
-                )}
+                <SpChip
+                  icon={<CalendarPlus className="size-3.5" />}
+                  label={startDate || 'Start'}
+                  active={!!startDate}
+                  expanded={
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      autoFocus
+                      className="w-28 bg-transparent text-xs outline-none"
+                    />
+                  }
+                />
                 <SpChip
                   icon={<Clock className="size-3.5" />}
                   label={estimateLabel}
