@@ -54,7 +54,12 @@ Build and run the API server with the bundled frontend in a container:
 docker compose up --build
 ```
 
-This builds the frontend, serves it from the Hono API server, and exposes the app on `http://localhost:3001`.
+Run DB migrations and open `http://localhost:3001` in a browser:
+
+```sh
+DATABASE_URL=postgres://tq:tq@localhost:5432/tq_dev pnpm --filter api run db:migrate
+open http://localhost:3001
+```
 
 ### Git worktree parallel development
 
