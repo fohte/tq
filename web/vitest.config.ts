@@ -9,4 +9,8 @@ export default defineConfig({
       '@api': fileURLToPath(new URL('../api/src', import.meta.url)),
     },
   },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test-setup.ts'],
+  },
 })
