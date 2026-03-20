@@ -19,6 +19,12 @@ describe('parseDurationToMinutes', () => {
 
   it('parses minutes only with suffix', () => {
     expect(parseDurationToMinutes('45m')).toBe(45)
+    expect(parseDurationToMinutes('0m')).toBe(0)
+  })
+
+  it('parses zero hours', () => {
+    expect(parseDurationToMinutes('0h')).toBe(0)
+    expect(parseDurationToMinutes('0h0m')).toBe(0)
   })
 
   it('parses decimal hours', () => {
