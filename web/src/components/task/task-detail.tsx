@@ -231,14 +231,18 @@ function TaskDescription({
 }) {
   const updateTask = useUpdateTask()
   const pendingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingSaveRef = useRef<(() => void) | null>(null)
 
   const handleChange = useCallback(
     (markdown: string) => {
       if (pendingRef.current) clearTimeout(pendingRef.current)
-      pendingRef.current = setTimeout(() => {
+      const doSave = () => {
         const desc = markdown.trim() || null
         updateTask.mutate({ id: taskId, input: { description: desc } })
-      }, 1000)
+        pendingSaveRef.current = null
+      }
+      pendingSaveRef.current = doSave
+      pendingRef.current = setTimeout(doSave, 1000)
     },
     [taskId, updateTask],
   )
@@ -246,6 +250,7 @@ function TaskDescription({
   useEffect(() => {
     return () => {
       if (pendingRef.current) clearTimeout(pendingRef.current)
+      pendingSaveRef.current?.()
     }
   }, [])
 
