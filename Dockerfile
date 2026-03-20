@@ -19,18 +19,13 @@ COPY web/ web/
 RUN pnpm --filter web build
 
 # -- Production stage --
-FROM base AS production
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY api/package.json api/
-COPY web/package.json web/
-RUN pnpm install --frozen-lockfile
+FROM deps AS production
 
 COPY api/ api/
 COPY --from=web-build /app/web/dist/ api/public/
-COPY docker-entrypoint.sh .
 
 ENV NODE_ENV=production
 ENV PORT=3001
 EXPOSE 3001
 
-ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["pnpm", "--filter", "api", "start"]

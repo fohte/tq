@@ -18,7 +18,7 @@ const app = new Hono()
 
 // Serve frontend static files when available (production/Docker)
 app.use('*', serveStatic({ root: './public' }))
-app.use('*', serveStatic({ root: './public', path: 'index.html' }))
+app.get('*', serveStatic({ root: './public', path: 'index.html' }))
 
 export { app }
 
