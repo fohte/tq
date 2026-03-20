@@ -1,11 +1,18 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+      target: dev
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-tq}:${POSTGRES_PASSWORD:-tq}@db:5432/${POSTGRES_DB:-tq_dev}
       PORT: '3001'
     ports:
       - '127.0.0.1:${APP_PORT:-3001}:3001'
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/api/node_modules
     networks:
       - tq-net
 
