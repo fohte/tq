@@ -9,7 +9,7 @@ export function CreateTaskInline({ onClose }: { onClose: () => void }) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim()) return
+    if (!title.trim() || createTask.isPending) return
 
     createTask.mutate(
       { title: title.trim() },
