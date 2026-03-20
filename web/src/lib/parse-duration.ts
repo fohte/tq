@@ -20,7 +20,7 @@ export function parseDurationToMinutes(input: string): number | null {
 
   // Hours and/or minutes: "1h30m", "1h", "30m"
   const hmMatch = trimmed.match(/^(?:(\d+)h)?(?:(\d+)m)?$/i)
-  if (hmMatch && (hmMatch[1] || hmMatch[2])) {
+  if (hmMatch && (hmMatch[1] != null || hmMatch[2] != null)) {
     const hours = Number(hmMatch[1] ?? 0)
     const minutes = Number(hmMatch[2] ?? 0)
     return hours * 60 + minutes
