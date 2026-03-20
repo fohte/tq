@@ -29,6 +29,7 @@ FROM base AS runtime
 ENV NODE_ENV=production
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY api/package.json api/
+COPY web/package.json web/
 RUN pnpm install --frozen-lockfile --prod
 COPY --from=builder /app/api/dist ./api/dist
 EXPOSE 3001
