@@ -47,26 +47,24 @@ pnpm --filter web run dev
 
 ### Run the full stack with Docker Compose
 
-Build and run the API server with the bundled frontend in a container:
-
 ```sh
 # DB must be running (step 2)
 docker compose up --build
 ```
 
-Run DB migrations and open `http://localhost:3001` in a browser:
+Run DB migrations and open `http://localhost:5173` in a browser:
 
 ```sh
 DATABASE_URL=postgres://tq:tq@localhost:5432/tq_dev pnpm --filter api run db:migrate
-open http://localhost:3001
+open http://localhost:5173
 ```
 
 ### Git worktree parallel development
 
-The DB runs once via `docker-compose.infra.yml` and is shared across worktrees. Set `APP_PORT` in each worktree to avoid port conflicts:
+The DB runs once via `docker-compose.infra.yml` and is shared across worktrees. Set `APP_PORT` and `WEB_PORT` in each worktree to avoid port conflicts:
 
 ```sh
-APP_PORT=3002 docker compose up --build
+APP_PORT=3002 WEB_PORT=5174 docker compose up --build
 ```
 
 ## Scripts

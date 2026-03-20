@@ -12,17 +12,10 @@ COPY api/package.json api/
 COPY web/package.json web/
 RUN pnpm install --frozen-lockfile
 
-# -- Build frontend --
-FROM deps AS web-build
-COPY api/ api/
-COPY web/ web/
-RUN pnpm --filter web build
-
 # -- Production stage --
 FROM deps AS production
 
 COPY api/ api/
-COPY --from=web-build /app/web/dist/ api/public/
 
 ENV NODE_ENV=production
 ENV PORT=3001
