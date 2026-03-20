@@ -11,6 +11,8 @@ services:
       - '127.0.0.1:${APP_PORT:-3001}:3001'
     volumes:
       - .:/app
+      - /app/node_modules
+      - /app/api/node_modules
     networks:
       - tq-net
 
