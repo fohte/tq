@@ -5,13 +5,16 @@ import { useMemo } from 'react'
 
 type Task = InferResponseType<typeof api.api.tasks.$get>[number]
 
+type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
+
 const taskKeys = {
   all: ['tasks'] as const,
   list: (filter?: { status?: string }) =>
     [...taskKeys.all, 'list', filter] as const,
+  detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
 }
 
-export type { Task }
+export type { Task, TaskDetail }
 
 type TaskStatus = 'todo' | 'in_progress' | 'completed'
 
@@ -159,6 +162,94 @@ export function useUpdateTaskStatus() {
       }
     },
     onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.all })
+    },
+  })
+}
+
+export function useTask(id: string) {
+  return useQuery({
+    queryKey: taskKeys.detail(id),
+    queryFn: async () => {
+      const res = await api.api.tasks[':id'].$get({
+        param: { id },
+      })
+      if (!res.ok) throw new Error('Failed to fetch task')
+      return res.json()
+    },
+  })
+}
+
+export interface UpdateTaskInput {
+  title?: string
+  description?: string | null
+  startDate?: string | null
+  dueDate?: string | null
+  estimatedMinutes?: number | null
+  projectId?: string | null
+  context?: 'work' | 'personal' | 'dev'
+}
+
+export function useUpdateTask() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      input,
+    }: {
+      id: string
+      input: UpdateTaskInput
+    }) => {
+      const res = await api.api.tasks[':id'].$patch({
+        param: { id },
+        json: input,
+      })
+      if (!res.ok) throw new Error('Failed to update task')
+      return res.json()
+    },
+    onMutate: async ({ id, input }) => {
+      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
+      await queryClient.cancelQueries({ queryKey: taskKeys.all })
+
+      const previousDetail = queryClient.getQueryData<TaskDetail>(
+        taskKeys.detail(id),
+      )
+      const previousLists = queryClient.getQueriesData<Task[]>({
+        queryKey: taskKeys.all,
+      })
+
+      if (previousDetail) {
+        queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
+          ...previousDetail,
+          ...input,
+          updatedAt: new Date().toISOString(),
+        })
+      }
+
+      queryClient.setQueriesData<Task[]>({ queryKey: taskKeys.all }, (old) => {
+        if (!old) return old
+        return old.map((task) =>
+          task.id === id
+            ? { ...task, ...input, updatedAt: new Date().toISOString() }
+            : task,
+        )
+      })
+
+      return { previousDetail, previousLists }
+    },
+    onError: (_err, { id }, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
+      }
+      if (context?.previousLists) {
+        for (const [key, data] of context.previousLists) {
+          queryClient.setQueryData(key, data)
+        }
+      }
+    },
+    onSettled: (_data, _err, { id }) => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
       queryClient.invalidateQueries({ queryKey: taskKeys.all })
     },
   })
