@@ -3,8 +3,9 @@ import { Dialog, DialogOverlay, DialogPortal } from '@web/components/ui/dialog'
 import { MarkdownEditor } from '@web/components/ui/markdown-editor'
 import type { CreateTaskInput } from '@web/hooks/use-tasks'
 import { useCreateTask } from '@web/hooks/use-tasks'
+import { formatMinutes, parseDurationToMinutes } from '@web/lib/parse-duration'
 import { cn } from '@web/lib/utils'
-import { Calendar, Clock, Layers, X } from 'lucide-react'
+import { Calendar, CalendarPlus, Clock, Layers, X } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 
 interface CreateTaskModalProps {
@@ -29,19 +30,23 @@ export function CreateTaskModal({
   const [title, setTitle] = useState('')
   const descriptionRef = useRef('')
   const [editorKey, setEditorKey] = useState(0)
+  const [startDate, setStartDate] = useState(defaultStartDate ?? '')
   const [dueDate, setDueDate] = useState('')
-  const [estimatedMinutes, setEstimatedMinutes] = useState('')
+  const [estimateInput, setEstimateInput] = useState('')
   const [context, setContext] = useState<ContextValue | ''>('')
   const createTask = useCreateTask()
+
+  const parsedMinutes = parseDurationToMinutes(estimateInput)
 
   const resetForm = useCallback(() => {
     setTitle('')
     descriptionRef.current = ''
     setEditorKey((k) => k + 1)
+    setStartDate(defaultStartDate ?? '')
     setDueDate('')
-    setEstimatedMinutes('')
+    setEstimateInput('')
     setContext('')
-  }, [])
+  }, [defaultStartDate])
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -60,11 +65,9 @@ export function CreateTaskModal({
     const input: CreateTaskInput = {
       title: title.trim(),
       ...(desc ? { description: desc } : {}),
-      ...(defaultStartDate ? { startDate: defaultStartDate } : {}),
+      ...(startDate ? { startDate } : {}),
       ...(dueDate ? { dueDate } : {}),
-      ...(estimatedMinutes
-        ? { estimatedMinutes: Number(estimatedMinutes) }
-        : {}),
+      ...(parsedMinutes != null ? { estimatedMinutes: parsedMinutes } : {}),
       ...(context ? { context } : {}),
     }
 
@@ -83,18 +86,23 @@ export function CreateTaskModal({
     }
   }
 
+  const estimateLabel =
+    parsedMinutes != null
+      ? formatMinutes(parsedMinutes)
+      : estimateInput || 'Estimate'
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogPortal>
         <DialogOverlay className="bg-black/40" />
         {/* PC Modal */}
         <div
-          className="fixed inset-0 z-50 hidden items-center justify-center md:flex"
+          className="fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex"
           onKeyDown={handleKeyDown}
         >
-          <div className="w-full max-w-[600px] overflow-hidden rounded-2xl bg-card shadow-2xl ring-1 ring-foreground/10">
+          <div className="flex max-h-full w-full max-w-[600px] flex-col overflow-hidden rounded-2xl bg-card shadow-2xl ring-1 ring-foreground/10">
             {/* Header */}
-            <div className="flex h-14 items-center justify-between border-b border-border px-6">
+            <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-6">
               <span className="text-base font-semibold text-foreground">
                 New Task
               </span>
@@ -107,8 +115,8 @@ export function CreateTaskModal({
               </button>
             </div>
 
-            {/* Body */}
-            <div className="flex flex-col gap-5 p-6">
+            {/* Body (scrollable) */}
+            <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
               {/* Title */}
               <input
                 type="text"
@@ -134,17 +142,29 @@ export function CreateTaskModal({
               {/* Option chips */}
               <div className="flex flex-wrap gap-3">
                 <OptionChip
-                  icon={<Clock className="size-3.5" />}
-                  label={estimatedMinutes ? `${estimatedMinutes}m` : 'Estimate'}
-                  active={!!estimatedMinutes}
+                  icon={<CalendarPlus className="size-3.5" />}
+                  label={startDate || 'Start date'}
+                  active={!!startDate}
                 >
                   <input
-                    type="number"
-                    value={estimatedMinutes}
-                    onChange={(e) => setEstimatedMinutes(e.target.value)}
-                    placeholder="Minutes"
-                    min={1}
-                    className="w-20 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-32 bg-transparent text-xs outline-none"
+                  />
+                </OptionChip>
+
+                <OptionChip
+                  icon={<Clock className="size-3.5" />}
+                  label={estimateLabel}
+                  active={parsedMinutes != null}
+                >
+                  <input
+                    type="text"
+                    value={estimateInput}
+                    onChange={(e) => setEstimateInput(e.target.value)}
+                    placeholder="1h30m"
+                    className="w-16 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
                   />
                 </OptionChip>
 
@@ -183,7 +203,7 @@ export function CreateTaskModal({
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-3">
+            <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-3">
               <button
                 type="button"
                 onClick={() => handleOpenChange(false)}
@@ -207,9 +227,9 @@ export function CreateTaskModal({
           className="fixed inset-0 z-50 flex items-end md:hidden"
           onKeyDown={handleKeyDown}
         >
-          <div className="w-full rounded-t-xl bg-card pb-5 shadow-2xl ring-1 ring-foreground/10">
+          <div className="max-h-[85vh] w-full overflow-y-auto rounded-t-xl bg-card pb-5 shadow-2xl ring-1 ring-foreground/10">
             {/* Header */}
-            <div className="flex h-12 items-center justify-between border-b border-border px-4">
+            <div className="sticky top-0 z-10 flex h-12 items-center justify-between border-b border-border bg-card px-4">
               <span className="text-base font-semibold text-foreground">
                 New Task
               </span>
@@ -249,19 +269,34 @@ export function CreateTaskModal({
 
               {/* Chip row */}
               <div className="flex gap-2 overflow-x-auto">
+                {startDate && (
+                  <SpChip
+                    icon={<CalendarPlus className="size-3.5" />}
+                    label={startDate}
+                    active
+                    expanded={
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        autoFocus
+                        className="w-28 bg-transparent text-xs outline-none"
+                      />
+                    }
+                  />
+                )}
                 <SpChip
                   icon={<Clock className="size-3.5" />}
-                  label={estimatedMinutes ? `${estimatedMinutes}m` : 'Estimate'}
-                  active={!!estimatedMinutes}
+                  label={estimateLabel}
+                  active={parsedMinutes != null}
                   expanded={
                     <input
-                      type="number"
-                      value={estimatedMinutes}
-                      onChange={(e) => setEstimatedMinutes(e.target.value)}
-                      placeholder="min"
-                      min={1}
+                      type="text"
+                      value={estimateInput}
+                      onChange={(e) => setEstimateInput(e.target.value)}
+                      placeholder="1h30m"
                       autoFocus
-                      className="w-12 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+                      className="w-14 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
                     />
                   }
                 />
