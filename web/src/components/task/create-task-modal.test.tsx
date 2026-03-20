@@ -4,6 +4,22 @@ import userEvent from '@testing-library/user-event'
 import { CreateTaskModal } from '@web/components/task/create-task-modal'
 import { describe, expect, it, vi } from 'vitest'
 
+vi.mock('@web/components/ui/markdown-editor', () => ({
+  MarkdownEditor: ({
+    placeholder,
+    onChange,
+  }: {
+    placeholder?: string
+    onChange?: (md: string) => void
+  }) => (
+    <textarea
+      data-testid="mock-markdown-editor"
+      placeholder={placeholder}
+      onChange={(e) => onChange?.(e.target.value)}
+    />
+  ),
+}))
+
 function renderModal(
   props: { open?: boolean; onOpenChange?: () => void } = {},
 ) {

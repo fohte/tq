@@ -1,10 +1,11 @@
 import { Button } from '@web/components/ui/button'
 import { Dialog, DialogOverlay, DialogPortal } from '@web/components/ui/dialog'
+import { MarkdownEditor } from '@web/components/ui/markdown-editor'
 import type { CreateTaskInput } from '@web/hooks/use-tasks'
 import { useCreateTask } from '@web/hooks/use-tasks'
 import { cn } from '@web/lib/utils'
 import { Calendar, Clock, Layers, X } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 interface CreateTaskModalProps {
   open: boolean
@@ -26,7 +27,8 @@ export function CreateTaskModal({
   defaultStartDate,
 }: CreateTaskModalProps) {
   const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
+  const descriptionRef = useRef('')
+  const [editorKey, setEditorKey] = useState(0)
   const [dueDate, setDueDate] = useState('')
   const [estimatedMinutes, setEstimatedMinutes] = useState('')
   const [context, setContext] = useState<ContextValue | ''>('')
@@ -34,7 +36,8 @@ export function CreateTaskModal({
 
   const resetForm = useCallback(() => {
     setTitle('')
-    setDescription('')
+    descriptionRef.current = ''
+    setEditorKey((k) => k + 1)
     setDueDate('')
     setEstimatedMinutes('')
     setContext('')
@@ -53,9 +56,10 @@ export function CreateTaskModal({
   const handleSubmit = () => {
     if (!title.trim() || createTask.isPending) return
 
+    const desc = descriptionRef.current.trim()
     const input: CreateTaskInput = {
       title: title.trim(),
-      ...(description.trim() ? { description: description.trim() } : {}),
+      ...(desc ? { description: desc } : {}),
       ...(defaultStartDate ? { startDate: defaultStartDate } : {}),
       ...(dueDate ? { dueDate } : {}),
       ...(estimatedMinutes
@@ -115,14 +119,17 @@ export function CreateTaskModal({
                 className="w-full bg-transparent text-xl font-medium text-foreground outline-none placeholder:text-muted-foreground"
               />
 
-              {/* Description */}
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder={'## Why\n\n## What'}
-                rows={5}
-                className="w-full resize-none rounded-lg border border-border bg-transparent p-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/50"
-              />
+              {/* Description (WYSIWYG) */}
+              <div className="min-h-[160px] rounded-lg border border-border p-1 text-sm focus-within:border-primary/50">
+                <MarkdownEditor
+                  key={`pc-${editorKey}`}
+                  defaultValue="## Why\n\n## What"
+                  placeholder="Add description..."
+                  onChange={(md) => {
+                    descriptionRef.current = md
+                  }}
+                />
+              </div>
 
               {/* Option chips */}
               <div className="flex flex-wrap gap-3">
@@ -227,14 +234,16 @@ export function CreateTaskModal({
                 className="w-full bg-transparent text-lg font-medium text-foreground outline-none placeholder:text-muted-foreground"
               />
 
-              {/* Description */}
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="詳細を追加..."
-                rows={3}
-                className="w-full resize-none bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground/60"
-              />
+              {/* Description (WYSIWYG) */}
+              <div className="min-h-[80px] text-[15px]">
+                <MarkdownEditor
+                  key={`sp-${editorKey}`}
+                  placeholder="詳細を追加..."
+                  onChange={(md) => {
+                    descriptionRef.current = md
+                  }}
+                />
+              </div>
 
               <div className="h-px bg-border" />
 
