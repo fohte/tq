@@ -1,7 +1,7 @@
 import { db } from '@api/db/connection'
 import { labels, taskLabels, tasks } from '@api/db/schema'
 import { zValidator } from '@hono/zod-validator'
-import { and, count, eq, isNotNull, sql } from 'drizzle-orm'
+import { and, count, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -166,7 +166,7 @@ export const tasksApp = new Hono()
       const matchedLabels = await db
         .select()
         .from(labels)
-        .where(sql`${labels.name} IN ${input.labels}`)
+        .where(inArray(labels.name, input.labels))
 
       if (matchedLabels.length > 0) {
         await db.insert(taskLabels).values(
