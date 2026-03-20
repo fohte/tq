@@ -66,6 +66,7 @@ export interface CreateTaskInput {
   dueDate?: string
   estimatedMinutes?: number
   context?: 'work' | 'personal' | 'dev'
+  labels?: string[]
 }
 
 export function useCreateTask() {

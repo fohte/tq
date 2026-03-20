@@ -1,5 +1,5 @@
 import { db } from '@api/db/connection'
-import { tasks } from '@api/db/schema'
+import { labels, taskLabels, tasks } from '@api/db/schema'
 import { zValidator } from '@hono/zod-validator'
 import { and, count, eq, isNotNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -17,6 +17,7 @@ const createTaskSchema = z.object({
   parentId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
   context: context.optional(),
+  labels: z.array(z.string()).optional(),
 })
 
 const updateTaskSchema = z.object({
@@ -160,6 +161,22 @@ export const tasksApp = new Hono()
         context: input.context ?? 'personal',
       })
       .returning()
+
+    if (input.labels && input.labels.length > 0) {
+      const matchedLabels = await db
+        .select()
+        .from(labels)
+        .where(sql`${labels.name} IN ${input.labels}`)
+
+      if (matchedLabels.length > 0) {
+        await db.insert(taskLabels).values(
+          matchedLabels.map((label) => ({
+            taskId: task!.id,
+            labelId: label.id,
+          })),
+        )
+      }
+    }
 
     return c.json(taskToResponse(task!), 201)
   })

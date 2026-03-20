@@ -7,10 +7,11 @@ import {
   getSuggestions,
   parseTaskInput,
   type SuggestionItem,
+  type TriggerChar,
 } from '@web/lib/task-input-parser'
 import { cn } from '@web/lib/utils'
 import { Plus, X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
 export function CreateTaskInline({
   onClose,
@@ -22,6 +23,11 @@ export function CreateTaskInline({
   const [input, setInput] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [cursorTrigger, setCursorTrigger] = useState<{
+    trigger: TriggerChar
+    partial: string
+    tokenStart: number
+  } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
@@ -35,43 +41,51 @@ export function CreateTaskInline({
 
   const parsed = useMemo(() => parseTaskInput(input), [input])
 
-  const triggerInfo = useMemo(() => {
-    const el = inputRef.current
-    if (!el) return null
-    return detectTrigger(input, el.selectionStart ?? input.length)
-  }, [input])
-
   const suggestions = useMemo(() => {
-    if (!triggerInfo) return []
+    if (!cursorTrigger) return []
     return getSuggestions(
-      triggerInfo.trigger,
-      triggerInfo.partial,
+      cursorTrigger.trigger,
+      cursorTrigger.partial,
       availableLabels,
     )
-  }, [triggerInfo, availableLabels])
+  }, [cursorTrigger, availableLabels])
 
-  useEffect(() => {
-    setShowSuggestions(suggestions.length > 0)
-    setSelectedIndex(0)
-  }, [suggestions])
+  const updateTrigger = useCallback(
+    (value: string, cursorPos: number) => {
+      const info = detectTrigger(value, cursorPos)
+      setCursorTrigger(info)
+      if (info) {
+        const items = getSuggestions(
+          info.trigger,
+          info.partial,
+          availableLabels,
+        )
+        setShowSuggestions(items.length > 0)
+        setSelectedIndex(0)
+      } else {
+        setShowSuggestions(false)
+      }
+    },
+    [availableLabels],
+  )
 
   const applySuggestion = useCallback(
     (item: SuggestionItem) => {
-      if (!triggerInfo) return
+      if (!cursorTrigger) return
 
-      const before = input.slice(0, triggerInfo.tokenStart)
+      const before = input.slice(0, cursorTrigger.tokenStart)
       const after = input.slice(
-        triggerInfo.tokenStart +
+        cursorTrigger.tokenStart +
           1 + // trigger char
-          triggerInfo.partial.length,
+          cursorTrigger.partial.length,
       )
 
-      const trigger = triggerInfo.trigger
+      const trigger = cursorTrigger.trigger
       const newInput = `${before}${trigger}${item.value}${after ? '' : ' '}${after}`
       setInput(newInput)
       setShowSuggestions(false)
+      setCursorTrigger(null)
 
-      // Refocus and set cursor position
       requestAnimationFrame(() => {
         const el = inputRef.current
         if (el) {
@@ -81,7 +95,7 @@ export function CreateTaskInline({
         }
       })
     },
-    [input, triggerInfo],
+    [input, cursorTrigger],
   )
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -116,6 +130,8 @@ export function CreateTaskInline({
 
     if (!parsed.title.trim() || createTask.isPending) return
 
+    const startDate = parsed.startDate ?? defaultStartDate
+
     createTask.mutate(
       {
         title: parsed.title.trim(),
@@ -123,12 +139,9 @@ export function CreateTaskInline({
           ? { estimatedMinutes: parsed.estimatedMinutes }
           : {}),
         ...(parsed.dueDate != null ? { dueDate: parsed.dueDate } : {}),
-        ...(parsed.startDate != null
-          ? { startDate: parsed.startDate }
-          : defaultStartDate != null
-            ? { startDate: defaultStartDate }
-            : {}),
+        ...(startDate != null ? { startDate } : {}),
         ...(parsed.context != null ? { context: parsed.context } : {}),
+        ...(parsed.labels.length > 0 ? { labels: parsed.labels } : {}),
       },
       {
         onSuccess: () => {
@@ -140,7 +153,14 @@ export function CreateTaskInline({
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value)
+    const value = e.target.value
+    setInput(value)
+    updateTrigger(value, e.target.selectionStart ?? value.length)
+  }
+
+  const handleSelect = (e: React.SyntheticEvent<HTMLInputElement>) => {
+    const el = e.currentTarget
+    updateTrigger(el.value, el.selectionStart ?? el.value.length)
   }
 
   // Preview chips for parsed fields
@@ -174,6 +194,8 @@ export function CreateTaskInline({
             value={input}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
+            onSelect={handleSelect}
+            onClick={handleSelect}
             placeholder="New task... (@30m @tomorrow #label %work)"
             autoFocus
             className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
@@ -200,7 +222,7 @@ export function CreateTaskInline({
                     applySuggestion(item)
                   }}
                 >
-                  {triggerInfo?.trigger}
+                  {cursorTrigger?.trigger}
                   {item.display}
                 </button>
               ))}
@@ -223,9 +245,9 @@ export function CreateTaskInline({
       {/* Preview chips */}
       {previewChips.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2">
-          {previewChips.map((chip) => (
+          {previewChips.map((chip, index) => (
             <span
-              key={chip}
+              key={`${chip}-${index}`}
               className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
             >
               {chip}
