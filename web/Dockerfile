@@ -17,6 +17,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/api/node_modules ./api/node_modules
 COPY --from=deps /app/web/node_modules ./web/node_modules
 COPY . .
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
 RUN pnpm --filter web build
 
 # Production runtime: serve static files with nginx

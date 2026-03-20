@@ -21,6 +21,7 @@ CMD ["pnpm", "dev"]
 
 # Production runtime
 FROM base AS runtime
+ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/api/node_modules ./api/node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./

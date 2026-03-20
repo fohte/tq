@@ -53,6 +53,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.component }}
           cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+          build-args: ${{ matrix.component == 'web' && format('VITE_API_URL={0}', secrets.VITE_API_URL) || '' }}
           # Disable provenance to avoid ghcr.io permission_denied errors on private packages
           # ref: https://github.com/docker/build-push-action/issues/981
           provenance: false
