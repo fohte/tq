@@ -2,7 +2,7 @@
 
 # -- Base stage --
 FROM node:24-slim AS base
-RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
+RUN corepack enable
 WORKDIR /app
 
 # -- Dependencies stage --
