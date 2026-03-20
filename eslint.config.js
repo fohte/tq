@@ -1,3 +1,5 @@
+import storybook from 'eslint-plugin-storybook'
+
 import { mainConfig, typescriptConfig } from '@fohte/eslint-config'
 
 const config = [
@@ -19,6 +21,7 @@ const config = [
       ],
     },
   },
+  ...storybook.configs['flat/recommended'],
 ]
 
 export default config
