@@ -21,15 +21,18 @@ function TaskList() {
   const [isCreating, setIsCreating] = useState(false)
   const { data: tasks = [], isLoading } = useTaskList()
 
-  const activeTasks = tasks.filter((t) => t.status !== 'completed')
   const backlogTasks = tasks.filter(
     (t) => t.status === 'todo' && !t.dueDate && !t.startDate,
+  )
+  const backlogIds = new Set(backlogTasks.map((t) => t.id))
+  const todayTasks = tasks.filter(
+    (t) => t.status !== 'completed' && !backlogIds.has(t.id),
   )
 
   const displayTasks: Task[] = (() => {
     switch (activeTab) {
       case 'today':
-        return activeTasks
+        return todayTasks
       case 'all':
         return tasks
       case 'backlog':

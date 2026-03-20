@@ -32,7 +32,11 @@ export function CreateTaskInline({ onClose }: { onClose: () => void }) {
         autoFocus
         className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
       />
-      <Button type="submit" size="icon-xs" disabled={!title.trim()}>
+      <Button
+        type="submit"
+        size="icon-xs"
+        disabled={!title.trim() || createTask.isPending}
+      >
         <Plus className="h-3 w-3" />
       </Button>
       <Button type="button" variant="ghost" size="icon-xs" onClick={onClose}>
