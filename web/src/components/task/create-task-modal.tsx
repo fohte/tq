@@ -3,7 +3,7 @@ import { Dialog, DialogOverlay, DialogPortal } from '@web/components/ui/dialog'
 import type { CreateTaskInput } from '@web/hooks/use-tasks'
 import { useCreateTask } from '@web/hooks/use-tasks'
 import { cn } from '@web/lib/utils'
-import { Calendar, Clock, GitBranch, Layers, Tag, X } from 'lucide-react'
+import { Calendar, Clock, Layers, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
 interface CreateTaskModalProps {
@@ -40,6 +40,16 @@ export function CreateTaskModal({
     setContext('')
   }, [])
 
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen) {
+        resetForm()
+      }
+      onOpenChange(nextOpen)
+    },
+    [onOpenChange, resetForm],
+  )
+
   const handleSubmit = () => {
     if (!title.trim() || createTask.isPending) return
 
@@ -70,7 +80,7 @@ export function CreateTaskModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogPortal>
         <DialogOverlay className="bg-black/40" />
         {/* PC Modal */}
@@ -86,7 +96,7 @@ export function CreateTaskModal({
               </span>
               <button
                 type="button"
-                onClick={() => onOpenChange(false)}
+                onClick={() => handleOpenChange(false)}
                 className="text-muted-foreground transition-colors hover:text-foreground"
               >
                 <X className="size-5" />
@@ -169,7 +179,7 @@ export function CreateTaskModal({
             <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-3">
               <button
                 type="button"
-                onClick={() => onOpenChange(false)}
+                onClick={() => handleOpenChange(false)}
                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 Cancel
@@ -198,7 +208,7 @@ export function CreateTaskModal({
               </span>
               <button
                 type="button"
-                onClick={() => onOpenChange(false)}
+                onClick={() => handleOpenChange(false)}
                 className="text-muted-foreground transition-colors hover:text-foreground"
               >
                 <X className="size-5" />
@@ -218,12 +228,12 @@ export function CreateTaskModal({
               />
 
               {/* Description */}
-              <input
-                type="text"
+              <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="詳細を追加..."
-                className="w-full bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground/60"
+                rows={3}
+                className="w-full resize-none bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground/60"
               />
 
               <div className="h-px bg-border" />
@@ -231,28 +241,55 @@ export function CreateTaskModal({
               {/* Chip row */}
               <div className="flex gap-2 overflow-x-auto">
                 <SpChip
-                  icon={<GitBranch className="size-3.5" />}
-                  label="Parent"
-                />
-                <SpChip
                   icon={<Clock className="size-3.5" />}
                   label={estimatedMinutes ? `${estimatedMinutes}m` : 'Estimate'}
                   active={!!estimatedMinutes}
-                  onClick={() => {
-                    const val = prompt('Estimated minutes:')
-                    if (val) setEstimatedMinutes(val)
-                  }}
+                  expanded={
+                    <input
+                      type="number"
+                      value={estimatedMinutes}
+                      onChange={(e) => setEstimatedMinutes(e.target.value)}
+                      placeholder="min"
+                      min={1}
+                      autoFocus
+                      className="w-12 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+                    />
+                  }
                 />
                 <SpChip
                   icon={<Calendar className="size-3.5" />}
                   label={dueDate || 'Due'}
                   active={!!dueDate}
-                  onClick={() => {
-                    const val = prompt('Due date (YYYY-MM-DD):')
-                    if (val) setDueDate(val)
-                  }}
+                  expanded={
+                    <input
+                      type="date"
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
+                      autoFocus
+                      className="w-28 bg-transparent text-xs outline-none"
+                    />
+                  }
                 />
-                <SpChip icon={<Tag className="size-3.5" />} label="Label" />
+                <SpChip
+                  icon={<Layers className="size-3.5" />}
+                  label={context ? contextLabels[context] : 'Context'}
+                  active={!!context}
+                  expanded={
+                    <select
+                      value={context}
+                      onChange={(e) =>
+                        setContext(e.target.value as ContextValue | '')
+                      }
+                      autoFocus
+                      className="bg-transparent text-xs outline-none"
+                    >
+                      <option value="">None</option>
+                      <option value="work">Work</option>
+                      <option value="personal">Personal</option>
+                      <option value="dev">Dev</option>
+                    </select>
+                  }
+                />
               </div>
 
               {/* Create button */}
@@ -313,17 +350,17 @@ function SpChip({
   icon,
   label,
   active,
-  onClick,
+  expanded,
 }: {
   icon: React.ReactNode
   label: string
   active?: boolean
-  onClick?: () => void
+  expanded?: React.ReactNode
 }) {
+  const [isEditing, setIsEditing] = useState(false)
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <div
       className={cn(
         'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors',
         active
@@ -332,7 +369,17 @@ function SpChip({
       )}
     >
       {icon}
-      {label}
-    </button>
+      {isEditing && expanded ? (
+        <div onBlur={() => setIsEditing(false)}>{expanded}</div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsEditing(true)}
+          className="outline-none"
+        >
+          {label}
+        </button>
+      )}
+    </div>
   )
 }
