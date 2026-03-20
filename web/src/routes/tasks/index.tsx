@@ -71,7 +71,7 @@ function TaskList() {
       {/* Summary header (Today tab) */}
       {activeTab === 'today' && (
         <div className="py-2">
-          <TaskListHeader tasks={tasks} />
+          <TaskListHeader tasks={tasks.filter((t) => !backlogIds.has(t.id))} />
         </div>
       )}
 
