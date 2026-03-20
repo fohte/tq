@@ -4,4 +4,3 @@ dist
 .worktrees
 *.log
 .env*
-.z/
