@@ -52,5 +52,6 @@ pnpm --filter web run dev
 | `pnpm run lint`                     | Run ESLint                           |
 | `pnpm run format`                   | Auto-fix lint issues and format code |
 | `pnpm run test`                     | Run all tests across workspaces      |
+| `pnpm --filter web run storybook`   | Start Storybook dev server           |
 | `pnpm --filter api run db:generate` | Generate a new DB migration          |
 | `pnpm --filter api run db:migrate`  | Apply DB migrations                  |
