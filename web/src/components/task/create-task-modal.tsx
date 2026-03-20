@@ -123,7 +123,7 @@ export function CreateTaskModal({
               <div className="min-h-[160px] rounded-lg border border-border p-1 text-sm focus-within:border-primary/50">
                 <MarkdownEditor
                   key={`pc-${editorKey}`}
-                  defaultValue="## Why\n\n## What"
+                  defaultValue={'## Why\n\n## What'}
                   placeholder="Add description..."
                   onChange={(md) => {
                     descriptionRef.current = md

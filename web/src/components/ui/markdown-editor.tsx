@@ -1,9 +1,10 @@
 import '@milkdown/crepe/theme/common/style.css'
-import '@milkdown/crepe/theme/frame.css'
+import '@milkdown/crepe/theme/frame-dark.css'
+import '@web/components/ui/markdown-editor.css'
 
 import { Crepe } from '@milkdown/crepe'
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
-import { useCallback, useRef } from 'react'
+import { useRef } from 'react'
 
 interface MarkdownEditorProps {
   defaultValue?: string
@@ -43,17 +44,9 @@ function CrepeEditor({
 export function MarkdownEditor(props: MarkdownEditorProps) {
   return (
     <MilkdownProvider>
-      <CrepeEditor {...props} />
+      <div className="milkdown-wrapper">
+        <CrepeEditor {...props} />
+      </div>
     </MilkdownProvider>
   )
-}
-
-export function useMarkdownEditorRef() {
-  const crepeRef = useRef<Crepe | null>(null)
-
-  const getMarkdown = useCallback(() => {
-    return crepeRef.current?.getMarkdown() ?? ''
-  }, [])
-
-  return { crepeRef, getMarkdown }
 }

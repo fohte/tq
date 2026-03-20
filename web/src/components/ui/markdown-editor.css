@@ -1,0 +1,57 @@
+.milkdown-wrapper .milkdown {
+  --crepe-color-background: transparent;
+  --crepe-color-on-background: var(--foreground);
+  --crepe-color-surface: transparent;
+  --crepe-color-surface-low: var(--card);
+  --crepe-color-on-surface: var(--foreground);
+  --crepe-color-on-surface-variant: var(--muted-foreground);
+  --crepe-color-outline: var(--border);
+  --crepe-color-primary: var(--primary);
+  --crepe-color-secondary: var(--secondary);
+  --crepe-color-on-secondary: var(--secondary-foreground);
+  --crepe-color-inverse: var(--foreground);
+  --crepe-color-on-inverse: var(--background);
+  --crepe-color-inline-code: var(--primary);
+  --crepe-color-error: var(--destructive);
+  --crepe-color-hover: var(--accent);
+  --crepe-color-selected: var(--accent);
+  --crepe-color-inline-area: var(--secondary);
+
+  --crepe-font-title: 'Geist Variable', sans-serif;
+  --crepe-font-default: 'Geist Variable', sans-serif;
+  --crepe-font-code: 'JetBrains Mono Variable', monospace;
+
+  --crepe-shadow-1: none;
+  --crepe-shadow-2: none;
+}
+
+.milkdown-wrapper .milkdown .ProseMirror {
+  padding: 0.5rem;
+  min-height: inherit;
+}
+
+.milkdown-wrapper .milkdown .ProseMirror h1,
+.milkdown-wrapper .milkdown .ProseMirror h2,
+.milkdown-wrapper .milkdown .ProseMirror h3 {
+  font-family: 'Geist Variable', sans-serif;
+}
+
+.milkdown-wrapper .milkdown .ProseMirror h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.milkdown-wrapper .milkdown .ProseMirror h2 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.milkdown-wrapper .milkdown .ProseMirror h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.milkdown-wrapper .milkdown .ProseMirror p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
