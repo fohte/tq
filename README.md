@@ -5,7 +5,7 @@
 ## Prerequisites
 
 - [mise](https://mise.jdx.dev/) (manages Node.js, pnpm, and other tool versions via `.mise.toml`)
-- [Docker](https://www.docker.com/) (for PostgreSQL)
+- Docker + docker compose plugin ([Docker Desktop](https://www.docker.com/) or [Colima](https://github.com/abiosoft/colima))
 
 ## Getting Started
 
@@ -17,13 +17,13 @@ scripts/bootstrap
 
 This installs tool versions (via mise), git hooks (via lefthook), and Node.js dependencies (via pnpm).
 
-### 2. Start PostgreSQL
+### 2. Start the DB (once per machine)
 
 ```sh
-docker compose up -d
+docker compose -f docker-compose.infra.yml up -d
 ```
 
-This starts a PostgreSQL 17 container (`localhost:5432`, user: `tq`, password: `tq`, database: `tq_dev`).
+This starts a PostgreSQL 17 container on `localhost:5432`. The DB is shared across all worktrees.
 
 ### 3. Run database migrations
 
@@ -43,6 +43,25 @@ Web dev server:
 
 ```sh
 pnpm --filter web run dev
+```
+
+### Run with Docker Compose (production build)
+
+Build and run the full stack (API + frontend) in a container:
+
+```sh
+# DB must be running (step 2)
+docker compose up --build
+```
+
+This builds the frontend, serves it from the Hono API server, and exposes the app on `http://localhost:3001`.
+
+### Git worktree parallel development
+
+The DB runs once via `docker-compose.infra.yml` and is shared across worktrees. Set `APP_PORT` in each worktree to avoid port conflicts:
+
+```sh
+APP_PORT=3002 docker compose up --build
 ```
 
 ## Scripts
