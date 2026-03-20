@@ -6,6 +6,7 @@
     "web",
     "api"
   ],
+  "packageManager": "pnpm@10.30.3",
   "type": "module",
   "scripts": {
     "lint": "eslint .",
