@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-router'
 import { TaskRow } from '@web/components/task/task-row'
 import type { Task } from '@web/hooks/use-tasks'
+import type { ReactNode } from 'react'
 
 const baseTask: Task = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -26,16 +27,12 @@ const baseTask: Task = {
   updatedAt: '2026-03-20T00:00:00.000Z',
 }
 
-function TaskRowWithProviders({ task }: { task: Task }) {
+function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   const rootRoute = createRootRoute({
-    component: () => (
-      <div className="w-96">
-        <TaskRow task={task} />
-      </div>
-    ),
+    component: () => <>{children}</>,
   })
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -58,6 +55,16 @@ function TaskRowWithProviders({ task }: { task: Task }) {
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
     </QueryClientProvider>
+  )
+}
+
+function TaskRowWithProviders({ task }: { task: Task }) {
+  return (
+    <Providers>
+      <div className="w-96">
+        <TaskRow task={task} />
+      </div>
+    </Providers>
   )
 }
 
@@ -136,15 +143,65 @@ export const WithParent: Story = {
   },
 }
 
-export const AllFeatures: Story = {
-  args: {
-    task: {
-      ...baseTask,
-      title: 'Implement authentication flow',
-      status: 'in_progress',
-      context: 'work',
-      estimatedMinutes: 180,
-      parentId: 'abcd0000-0000-0000-0000-000000000000',
-    },
+export const AllVariants: Story = {
+  args: { task: baseTask },
+  render: () => {
+    const tasks: Task[] = [
+      { ...baseTask, id: '1', title: 'Todo task (personal)' },
+      {
+        ...baseTask,
+        id: '2',
+        title: 'In progress task',
+        status: 'in_progress',
+        estimatedMinutes: 60,
+      },
+      {
+        ...baseTask,
+        id: '3',
+        title: 'Completed task',
+        status: 'completed',
+        estimatedMinutes: 30,
+      },
+      {
+        ...baseTask,
+        id: '4',
+        title: 'Work context with estimate',
+        context: 'work',
+        estimatedMinutes: 120,
+      },
+      {
+        ...baseTask,
+        id: '5',
+        title: 'Dev context with estimate',
+        context: 'dev',
+        estimatedMinutes: 90,
+      },
+      {
+        ...baseTask,
+        id: '6',
+        title: 'Task with parent reference',
+        parentId: 'abcd0000-0000-0000-0000-000000000000',
+        estimatedMinutes: 45,
+      },
+      {
+        ...baseTask,
+        id: '7',
+        title: 'All features combined',
+        status: 'in_progress',
+        context: 'work',
+        estimatedMinutes: 180,
+        parentId: 'abcd0000-0000-0000-0000-000000000000',
+      },
+    ]
+
+    return (
+      <Providers>
+        <div className="w-96 divide-y divide-border">
+          {tasks.map((task) => (
+            <TaskRow key={task.id} task={task} />
+          ))}
+        </div>
+      </Providers>
+    )
   },
 }
