@@ -12,6 +12,7 @@ interface CreateTaskModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   defaultStartDate?: string
+  defaultDescription?: string
 }
 
 type ContextValue = 'work' | 'personal' | 'dev'
@@ -26,6 +27,7 @@ export function CreateTaskModal({
   open,
   onOpenChange,
   defaultStartDate,
+  defaultDescription,
 }: CreateTaskModalProps) {
   const [title, setTitle] = useState('')
   const descriptionRef = useRef('')
@@ -128,10 +130,10 @@ export function CreateTaskModal({
               />
 
               {/* Description (WYSIWYG) */}
-              <div className="min-h-[160px] rounded-lg border border-border p-1 text-sm focus-within:border-primary/50">
+              <div className="max-h-[40vh] min-h-[160px] overflow-y-auto rounded-lg border border-border p-1 text-sm focus-within:border-primary/50">
                 <MarkdownEditor
                   key={`pc-${editorKey}`}
-                  defaultValue={'## Why\n\n## What'}
+                  defaultValue={defaultDescription ?? '## Why\n\n## What'}
                   placeholder="Add description..."
                   onChange={(md) => {
                     descriptionRef.current = md
@@ -139,66 +141,59 @@ export function CreateTaskModal({
                 />
               </div>
 
-              {/* Option chips */}
-              <div className="flex flex-wrap gap-3">
-                <OptionChip
+              {/* Option fields */}
+              <div className="flex flex-wrap items-end gap-4">
+                <FieldGroup
+                  label="Start"
                   icon={<CalendarPlus className="size-3.5" />}
-                  label={startDate || 'Start date'}
-                  active={!!startDate}
                 >
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-32 bg-transparent text-xs outline-none"
+                    className="w-32 bg-transparent text-xs text-foreground outline-none"
                   />
-                </OptionChip>
-
-                <OptionChip
+                </FieldGroup>
+                <FieldGroup
+                  label="Due"
+                  icon={<Calendar className="size-3.5" />}
+                >
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="w-32 bg-transparent text-xs text-foreground outline-none"
+                  />
+                </FieldGroup>
+                <FieldGroup
+                  label="Estimate"
                   icon={<Clock className="size-3.5" />}
-                  label={estimateLabel}
-                  active={parsedMinutes != null}
                 >
                   <input
                     type="text"
                     value={estimateInput}
                     onChange={(e) => setEstimateInput(e.target.value)}
                     placeholder="1h30m"
-                    className="w-16 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+                    className="w-16 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
                   />
-                </OptionChip>
-
-                <OptionChip
-                  icon={<Calendar className="size-3.5" />}
-                  label={dueDate || 'Due date'}
-                  active={!!dueDate}
-                >
-                  <input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="w-32 bg-transparent text-xs outline-none"
-                  />
-                </OptionChip>
-
-                <OptionChip
+                </FieldGroup>
+                <FieldGroup
+                  label="Context"
                   icon={<Layers className="size-3.5" />}
-                  label={context ? contextLabels[context] : 'Context'}
-                  active={!!context}
                 >
                   <select
                     value={context}
                     onChange={(e) =>
                       setContext(e.target.value as ContextValue | '')
                     }
-                    className="bg-transparent text-xs outline-none"
+                    className="bg-transparent text-xs text-foreground outline-none"
                   >
-                    <option value="">None</option>
+                    <option value="">—</option>
                     <option value="work">Work</option>
                     <option value="personal">Personal</option>
                     <option value="dev">Dev</option>
                   </select>
-                </OptionChip>
+                </FieldGroup>
               </div>
             </div>
 
@@ -255,9 +250,12 @@ export function CreateTaskModal({
               />
 
               {/* Description (WYSIWYG) */}
-              <div className="min-h-[80px] text-[15px]">
+              <div className="max-h-[30vh] min-h-[80px] overflow-y-auto text-[15px]">
                 <MarkdownEditor
                   key={`sp-${editorKey}`}
+                  {...(defaultDescription != null
+                    ? { defaultValue: defaultDescription }
+                    : {})}
                   placeholder="詳細を追加..."
                   onChange={(md) => {
                     descriptionRef.current = md
@@ -352,40 +350,24 @@ export function CreateTaskModal({
   )
 }
 
-function OptionChip({
-  icon,
+function FieldGroup({
   label,
-  active,
+  icon,
   children,
 }: {
-  icon: React.ReactNode
   label: string
-  active?: boolean
+  icon: React.ReactNode
   children: React.ReactNode
 }) {
-  const [isEditing, setIsEditing] = useState(false)
-
   return (
-    <div
-      className={cn(
-        'flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors',
-        active
-          ? 'border-primary bg-primary/10 text-primary'
-          : 'border-border text-muted-foreground hover:text-foreground',
-      )}
-    >
-      {icon}
-      {isEditing ? (
-        <div onBlur={() => setIsEditing(false)}>{children}</div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setIsEditing(true)}
-          className="outline-none"
-        >
-          {label}
-        </button>
-      )}
+    <div className="flex flex-col gap-1">
+      <span className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+        {icon}
+        {label}
+      </span>
+      <div className="flex h-7 items-center rounded-md border border-border px-2 text-xs focus-within:border-primary/50">
+        {children}
+      </div>
     </div>
   )
 }

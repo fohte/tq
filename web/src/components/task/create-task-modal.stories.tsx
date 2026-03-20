@@ -38,3 +38,31 @@ export const WithDefaultStartDate: Story = {
     defaultStartDate: new Date().toISOString().slice(0, 10),
   },
 }
+
+const longDescription = [
+  '## Why',
+  '',
+  'This is a very long description to test scrolling behavior.',
+  '',
+  '## What',
+  '',
+  ...Array.from(
+    { length: 30 },
+    (_, i) => `- Task item ${i + 1}: do something important`,
+  ),
+  '',
+  '## Notes',
+  '',
+  ...Array.from(
+    { length: 10 },
+    (_, i) =>
+      `Paragraph ${i + 1}: Lorem ipsum dolor sit amet, consectetur adipiscing elit.`,
+  ),
+].join('\n')
+
+export const LongDescription: Story = {
+  args: {
+    defaultDescription: longDescription,
+    defaultStartDate: new Date().toISOString().slice(0, 10),
+  },
+}
