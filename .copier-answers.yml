@@ -7,9 +7,9 @@ monorepo_node_workspace: true
 node_package_manager: pnpm
 project_name: tq
 subpackages:
--   name: web
+  - name: web
     type: node
--   name: api
+  - name: api
     type: node
 type: base
 use_release_please: false
