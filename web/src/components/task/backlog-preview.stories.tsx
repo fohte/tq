@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { fn } from '@storybook/test'
 import { BacklogPreview } from '@web/components/task/backlog-preview'
 import type { Task } from '@web/hooks/use-tasks'
+import { fn } from 'storybook/test'
 
 const makeBacklogTasks = (count: number): Task[] =>
   Array.from({ length: count }, (_, i) => ({
