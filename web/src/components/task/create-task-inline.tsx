@@ -74,11 +74,8 @@ export function CreateTaskInline({
       if (!cursorTrigger) return
 
       const before = input.slice(0, cursorTrigger.tokenStart)
-      const after = input.slice(
-        cursorTrigger.tokenStart +
-          1 + // trigger char
-          cursorTrigger.partial.length,
-      )
+      const tokenEnd = input.indexOf(' ', cursorTrigger.tokenStart)
+      const after = input.slice(tokenEnd === -1 ? input.length : tokenEnd)
 
       const trigger = cursorTrigger.trigger
       const newInput = `${before}${trigger}${item.value}${after ? '' : ' '}${after}`

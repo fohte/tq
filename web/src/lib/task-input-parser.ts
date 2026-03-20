@@ -17,14 +17,18 @@ function isContextValue(value: string): value is TaskContext {
   return (CONTEXT_VALUES as readonly string[]).includes(value)
 }
 
+function formatLocalDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function resolveDateKeyword(keyword: string): string | null {
   if (keyword === 'today') {
-    return new Date().toISOString().slice(0, 10)
+    return formatLocalDate(new Date())
   }
   if (keyword === 'tomorrow') {
     const d = new Date()
     d.setDate(d.getDate() + 1)
-    return d.toISOString().slice(0, 10)
+    return formatLocalDate(d)
   }
   // YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(keyword)) {

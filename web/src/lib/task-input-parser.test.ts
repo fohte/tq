@@ -5,6 +5,10 @@ import {
 } from '@web/lib/task-input-parser'
 import { describe, expect, it } from 'vitest'
 
+function formatLocalDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 describe('parseTaskInput', () => {
   it('parses a plain title', () => {
     const result = parseTaskInput('Buy groceries')
@@ -33,7 +37,7 @@ describe('parseTaskInput', () => {
   })
 
   it('parses dueDate with @today', () => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = formatLocalDate(new Date())
     const result = parseTaskInput('Task @today')
     expect(result.title).toBe('Task')
     expect(result.dueDate).toBe(today)
@@ -42,7 +46,7 @@ describe('parseTaskInput', () => {
   it('parses dueDate with @tomorrow', () => {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
-    const expected = tomorrow.toISOString().slice(0, 10)
+    const expected = formatLocalDate(tomorrow)
 
     const result = parseTaskInput('Task @tomorrow')
     expect(result.title).toBe('Task')
@@ -56,7 +60,7 @@ describe('parseTaskInput', () => {
   })
 
   it('parses startDate with >today', () => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = formatLocalDate(new Date())
     const result = parseTaskInput('Task >today')
     expect(result.title).toBe('Task')
     expect(result.startDate).toBe(today)
@@ -65,7 +69,7 @@ describe('parseTaskInput', () => {
   it('parses startDate with >tomorrow', () => {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
-    const expected = tomorrow.toISOString().slice(0, 10)
+    const expected = formatLocalDate(tomorrow)
 
     const result = parseTaskInput('Task >tomorrow')
     expect(result.title).toBe('Task')
@@ -103,7 +107,7 @@ describe('parseTaskInput', () => {
   })
 
   it('parses a complex input with all fields', () => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = formatLocalDate(new Date())
     const result = parseTaskInput(
       'Buy groceries @30m @tomorrow #food %personal >today',
     )
@@ -115,7 +119,7 @@ describe('parseTaskInput', () => {
 
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
-    expect(result.dueDate).toBe(tomorrow.toISOString().slice(0, 10))
+    expect(result.dueDate).toBe(formatLocalDate(tomorrow))
   })
 
   it('handles empty input', () => {
