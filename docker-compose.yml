@@ -14,7 +14,7 @@ services:
     working_dir: /app
     command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm --filter web dev --host"
     environment:
-      VITE_API_URL: http://app:3001
+      VITE_API_URL: http://localhost:${APP_PORT:-3001}
     ports:
       - '127.0.0.1:${WEB_PORT:-5173}:5173'
     volumes:
