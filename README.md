@@ -45,9 +45,9 @@ Web dev server:
 pnpm --filter web run dev
 ```
 
-### Run with Docker Compose (production build)
+### Run the full stack with Docker Compose
 
-Build and run the full stack (API + frontend) in a container:
+Build and run the API server with the bundled frontend in a container:
 
 ```sh
 # DB must be running (step 2)
