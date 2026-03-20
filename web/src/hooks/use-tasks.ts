@@ -56,22 +56,64 @@ export function useTaskList(filter?: { status?: TaskStatus }) {
   return { ...query, categorized }
 }
 
+export interface CreateTaskInput {
+  title: string
+  description?: string
+  startDate?: string
+  dueDate?: string
+  estimatedMinutes?: number
+  context?: 'work' | 'personal' | 'dev'
+}
+
 export function useCreateTask() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (input: {
-      title: string
-      startDate?: string
-      context?: 'work' | 'personal' | 'dev'
-    }) => {
+    mutationFn: async (input: CreateTaskInput) => {
       const res = await api.api.tasks.$post({
         json: input,
       })
       if (!res.ok) throw new Error('Failed to create task')
       return res.json()
     },
-    onSuccess: () => {
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: taskKeys.all })
+
+      const previousLists = queryClient.getQueriesData<Task[]>({
+        queryKey: taskKeys.all,
+      })
+
+      const optimisticTask: Task = {
+        id: `optimistic-${Date.now()}`,
+        title: input.title,
+        description: input.description ?? null,
+        status: 'todo',
+        context: input.context ?? 'personal',
+        startDate: input.startDate ?? null,
+        dueDate: input.dueDate ?? null,
+        estimatedMinutes: input.estimatedMinutes ?? null,
+        parentId: null,
+        projectId: null,
+        sortOrder: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      queryClient.setQueriesData<Task[]>({ queryKey: taskKeys.all }, (old) => {
+        if (!old) return [optimisticTask]
+        return [optimisticTask, ...old]
+      })
+
+      return { previousLists }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousLists) {
+        for (const [key, data] of context.previousLists) {
+          queryClient.setQueryData(key, data)
+        }
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: taskKeys.all })
     },
   })

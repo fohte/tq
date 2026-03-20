@@ -3,6 +3,7 @@ import {
   CreateTaskInline,
   FloatingActionButton,
 } from '@web/components/task/create-task-inline'
+import { CreateTaskModal } from '@web/components/task/create-task-modal'
 import { TaskListHeader } from '@web/components/task/task-list-header'
 import { TaskRow } from '@web/components/task/task-row'
 import type { Task } from '@web/hooks/use-tasks'
@@ -19,6 +20,7 @@ type Tab = 'today' | 'all' | 'backlog'
 function TaskList() {
   const [activeTab, setActiveTab] = useState<Tab>('today')
   const [isCreating, setIsCreating] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const { isLoading, categorized } = useTaskList()
 
   const displayTasks: Task[] = (() => {
@@ -97,7 +99,16 @@ function TaskList() {
       </div>
 
       {/* FAB (mobile only) */}
-      <FloatingActionButton onClick={() => setIsCreating(true)} />
+      <FloatingActionButton onClick={() => setIsModalOpen(true)} />
+
+      {/* Task create modal */}
+      <CreateTaskModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        {...(activeTab === 'today'
+          ? { defaultStartDate: new Date().toISOString().slice(0, 10) }
+          : {})}
+      />
     </div>
   )
 }
