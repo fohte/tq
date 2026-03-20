@@ -205,12 +205,39 @@ export const tasksApp = new Hono()
   .get('/tree', zValidator('query', treeQuerySchema), async (c) => {
     const { rootId } = c.req.valid('query')
 
-    const allTasks = await db
-      .select()
-      .from(tasks)
-      .orderBy(tasks.sortOrder, tasks.createdAt)
+    let treeTasks: Array<typeof tasks.$inferSelect>
 
-    return c.json(buildTree(allTasks, rootId), 200)
+    if (rootId) {
+      // Use recursive CTE to fetch only IDs in the subtree
+      const subtreeIds = await db.execute<{ id: string }>(sql`
+        WITH RECURSIVE subtree AS (
+          SELECT id FROM ${tasks} WHERE id = ${rootId}
+          UNION ALL
+          SELECT t.id
+          FROM ${tasks} t
+          INNER JOIN subtree s ON t.parent_id = s.id
+        )
+        SELECT id FROM subtree
+      `)
+
+      const ids = (subtreeIds as Array<{ id: string }>).map((r) => r.id)
+      if (ids.length === 0) {
+        return c.json([], 200)
+      }
+
+      treeTasks = await db
+        .select()
+        .from(tasks)
+        .where(inArray(tasks.id, ids))
+        .orderBy(tasks.sortOrder, tasks.createdAt)
+    } else {
+      treeTasks = await db
+        .select()
+        .from(tasks)
+        .orderBy(tasks.sortOrder, tasks.createdAt)
+    }
+
+    return c.json(buildTree(treeTasks, rootId), 200)
   })
   .get('/search', zValidator('query', searchQuerySchema), async (c) => {
     const query = c.req.valid('query')
