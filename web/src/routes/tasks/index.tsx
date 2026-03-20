@@ -21,23 +21,23 @@ function TaskList() {
   const [isCreating, setIsCreating] = useState(false)
   const { data: tasks = [], isLoading } = useTaskList()
 
+  const activeTasks = tasks.filter((t) => t.status !== 'completed')
+  const backlogTasks = tasks.filter(
+    (t) => t.status === 'todo' && !t.dueDate && !t.startDate,
+  )
+
   const displayTasks: Task[] = (() => {
     switch (activeTab) {
       case 'today':
-        return tasks.filter((t) => t.status !== 'completed')
+        return activeTasks
       case 'all':
         return tasks
       case 'backlog':
-        return tasks.filter(
-          (t) => t.status === 'todo' && !t.dueDate && !t.startDate,
-        )
+        return backlogTasks
     }
   })()
 
-  const activeTasks = tasks.filter((t) => t.status !== 'completed')
-  const backlogCount = tasks.filter(
-    (t) => t.status === 'todo' && !t.dueDate && !t.startDate,
-  ).length
+  const backlogCount = backlogTasks.length
 
   return (
     <div className="flex h-full flex-col">
@@ -68,7 +68,7 @@ function TaskList() {
       {/* Summary header (Today tab) */}
       {activeTab === 'today' && (
         <div className="py-2">
-          <TaskListHeader tasks={activeTasks} />
+          <TaskListHeader tasks={tasks} />
         </div>
       )}
 

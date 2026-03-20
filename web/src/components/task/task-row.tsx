@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { Task } from '@web/hooks/use-tasks'
 import { useUpdateTaskStatus } from '@web/hooks/use-tasks'
+import { formatMinutes } from '@web/lib/format'
 import { cn } from '@web/lib/utils'
 import { Check, Circle, Play } from 'lucide-react'
 
@@ -33,15 +34,6 @@ function StatusIcon({
       {status === 'todo' && <Circle className="h-3 w-3" />}
     </button>
   )
-}
-
-function formatEstimate(minutes: number): string {
-  if (minutes >= 60) {
-    const h = Math.floor(minutes / 60)
-    const m = minutes % 60
-    return m > 0 ? `${h}h ${m}m` : `${h}h`
-  }
-  return `${minutes}m`
 }
 
 export function TaskRow({ task }: { task: Task }) {
@@ -96,7 +88,7 @@ export function TaskRow({ task }: { task: Task }) {
 
         {task.estimatedMinutes != null && (
           <span className="font-mono text-xs text-muted-foreground">
-            {formatEstimate(task.estimatedMinutes)}
+            {formatMinutes(task.estimatedMinutes)}
           </span>
         )}
       </div>

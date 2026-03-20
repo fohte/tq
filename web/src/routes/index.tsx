@@ -25,10 +25,7 @@ function DayView() {
     (t) => t.status === 'todo' && !t.dueDate && !t.startDate,
   )
 
-  const displayTasks: Task[] =
-    activeTab === 'today'
-      ? tasks.filter((t) => t.status !== 'completed')
-      : tasks
+  const displayTasks: Task[] = activeTab === 'today' ? activeTasks : tasks
 
   return (
     <div className="flex h-full">
@@ -66,7 +63,7 @@ function DayView() {
         {/* Summary header */}
         {activeTab === 'today' && (
           <div className="py-2">
-            <TaskListHeader tasks={activeTasks} />
+            <TaskListHeader tasks={tasks} />
           </div>
         )}
 

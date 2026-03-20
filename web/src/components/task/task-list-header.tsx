@@ -1,25 +1,20 @@
 import type { Task } from '@web/hooks/use-tasks'
+import { formatMinutes } from '@web/lib/format'
 import { cn } from '@web/lib/utils'
-
-function formatTotalTime(minutes: number): string {
-  if (minutes >= 60) {
-    const h = Math.floor(minutes / 60)
-    const m = minutes % 60
-    return m > 0 ? `${h}h ${m}m` : `${h}h`
-  }
-  return `${minutes}m`
-}
 
 export function TaskListHeader({ tasks }: { tasks: Task[] }) {
   const total = tasks.length
-  const completed = tasks.filter((t) => t.status === 'completed').length
-  const totalEstimate = tasks.reduce(
-    (sum, t) => sum + (t.estimatedMinutes ?? 0),
-    0,
+  const { completed, totalEstimate, completedEstimate } = tasks.reduce(
+    (acc, t) => {
+      if (t.status === 'completed') {
+        acc.completed++
+        acc.completedEstimate += t.estimatedMinutes ?? 0
+      }
+      acc.totalEstimate += t.estimatedMinutes ?? 0
+      return acc
+    },
+    { completed: 0, totalEstimate: 0, completedEstimate: 0 },
   )
-  const completedEstimate = tasks
-    .filter((t) => t.status === 'completed')
-    .reduce((sum, t) => sum + (t.estimatedMinutes ?? 0), 0)
   const progress = total > 0 ? (completed / total) * 100 : 0
 
   return (
@@ -32,8 +27,7 @@ export function TaskListHeader({ tasks }: { tasks: Task[] }) {
           <>
             <span className="text-border">|</span>
             <span className="font-mono">
-              {formatTotalTime(completedEstimate)}/
-              {formatTotalTime(totalEstimate)}
+              {formatMinutes(completedEstimate)}/{formatMinutes(totalEstimate)}
             </span>
           </>
         )}
