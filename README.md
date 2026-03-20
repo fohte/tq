@@ -1,13 +1,6 @@
 # tq
 
-Personal task management tool (task queue).
-
-## Tech Stack
-
-- **Frontend**: React 19 + Vite (SPA), TailwindCSS, TanStack Router / React Query, shadcn/ui
-- **Backend**: Hono + Node.js, Drizzle ORM, PostgreSQL 17
-- **Monorepo**: pnpm workspace (`api/`, `web/`)
-- **Auth**: None (relies on Tailscale VPN for access control)
+**tq** (task queue) is a task management tool for @fohte.
 
 ## Prerequisites
 
