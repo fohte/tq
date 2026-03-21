@@ -8,7 +8,12 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 
 const app = new Hono()
-  .use('*', cors())
+  .use(
+    '*',
+    cors({
+      origin: process.env['CORS_ORIGIN'] ?? '*',
+    }),
+  )
   .get('/health', (c) => {
     return c.json({ status: 'ok' })
   })
