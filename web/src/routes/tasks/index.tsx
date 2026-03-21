@@ -8,15 +8,11 @@ import { CreateTaskModal } from '@web/components/task/create-task-modal'
 import { TaskListHeader } from '@web/components/task/task-list-header'
 import { TaskRow, TreeTaskRow } from '@web/components/task/task-row'
 import {
-  filterByContext,
-  filterModeToApiContext,
-  filterTreeByContext,
-  useContextFilter,
-} from '@web/hooks/use-context-filter'
-import type { Task } from '@web/hooks/use-tasks'
-import { useTaskList, useTaskTree } from '@web/hooks/use-tasks'
+  useFilteredTaskList,
+  useFilteredTaskTree,
+} from '@web/hooks/use-filtered-tasks'
 import { cn } from '@web/lib/utils'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 
 export const Route = createFileRoute('/tasks/')({
   component: TaskList,
@@ -28,42 +24,24 @@ function TaskList() {
   const [activeTab, setActiveTab] = useState<Tab>('today')
   const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const { mode } = useContextFilter()
-  const apiContext = filterModeToApiContext(mode)
-  const { isLoading, categorized } = useTaskList(
-    apiContext ? { context: apiContext } : undefined,
-  )
-  const { data: treeData, isLoading: isTreeLoading } = useTaskTree({
-    enabled: activeTab === 'all',
-  })
 
-  const filteredBacklog = useMemo(
-    () => filterByContext(categorized.backlog, mode),
-    [categorized.backlog, mode],
-  )
-  const filteredNonBacklog = useMemo(
-    () => filterByContext(categorized.nonBacklog, mode),
-    [categorized.nonBacklog, mode],
-  )
+  const tasks = useFilteredTaskList()
+  const { isLoading: isTreeLoading, tree: filteredTreeData } =
+    useFilteredTaskTree({ enabled: activeTab === 'all' })
 
-  const displayTasks = useMemo((): Task[] => {
+  const displayTasks = (() => {
     switch (activeTab) {
       case 'today':
-        return filterByContext(categorized.today, mode)
+        return tasks.today
       case 'all':
-        return filterByContext(categorized.all, mode)
+        return tasks.all
       case 'backlog':
-        return filteredBacklog
+        return tasks.backlog
     }
-  }, [activeTab, categorized, mode])
-
-  const filteredTreeData = useMemo(
-    () => filterTreeByContext(treeData ?? [], mode),
-    [treeData, mode],
-  )
+  })()
 
   const showTree = activeTab === 'all'
-  const loading = showTree ? isTreeLoading : isLoading
+  const loading = showTree ? isTreeLoading : tasks.isLoading
   const isEmpty = showTree
     ? filteredTreeData.length === 0
     : displayTasks.length === 0
@@ -85,9 +63,9 @@ function TaskList() {
             )}
           >
             {tab === 'today' ? 'Today' : tab === 'all' ? 'All' : 'Backlog'}
-            {tab === 'backlog' && filteredBacklog.length > 0 && (
+            {tab === 'backlog' && tasks.backlog.length > 0 && (
               <span className="ml-1.5 rounded-full bg-muted-foreground/20 px-1.5 py-0.5 text-xs">
-                {filteredBacklog.length}
+                {tasks.backlog.length}
               </span>
             )}
           </button>
@@ -100,7 +78,7 @@ function TaskList() {
       {/* Summary header (Today tab) */}
       {activeTab === 'today' && (
         <div className="py-2">
-          <TaskListHeader tasks={filteredNonBacklog} />
+          <TaskListHeader tasks={tasks.nonBacklog} />
         </div>
       )}
 
