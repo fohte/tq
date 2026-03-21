@@ -287,7 +287,7 @@ export function useUpdateTask() {
   })
 }
 
-export function useTaskTree() {
+export function useTaskTree(options: { enabled: boolean }) {
   return useQuery({
     queryKey: taskKeys.tree,
     queryFn: async () => {
@@ -295,6 +295,7 @@ export function useTaskTree() {
       if (!res.ok) throw new Error('Failed to fetch task tree')
       return res.json()
     },
+    enabled: options.enabled,
   })
 }
 

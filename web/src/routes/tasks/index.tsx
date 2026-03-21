@@ -22,7 +22,9 @@ function TaskList() {
   const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { isLoading, categorized } = useTaskList()
-  const { data: treeData, isLoading: isTreeLoading } = useTaskTree()
+  const { data: treeData, isLoading: isTreeLoading } = useTaskTree({
+    enabled: activeTab === 'all',
+  })
 
   const displayTasks: Task[] = (() => {
     switch (activeTab) {
