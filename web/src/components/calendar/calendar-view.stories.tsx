@@ -78,3 +78,29 @@ export const ManualOnly: Story = {
     events: sampleEvents.filter((e) => e.type === 'manual'),
   },
 }
+
+const tomorrow = new Date(today)
+tomorrow.setDate(tomorrow.getDate() + 1)
+const tomorrowStr = tomorrow.toISOString().slice(0, 10)
+
+export const OvernightEvents: Story = {
+  args: {
+    events: [
+      ...sampleEvents,
+      {
+        id: '6',
+        title: 'Overnight deploy',
+        start: `${dateStr}T23:00:00`,
+        end: `${tomorrowStr}T01:00:00`,
+        type: 'manual',
+      },
+      {
+        id: '7',
+        title: 'Sleep schedule',
+        start: `${dateStr}T23:30:00`,
+        end: `${tomorrowStr}T07:00:00`,
+        type: 'schedule',
+      },
+    ],
+  },
+}
