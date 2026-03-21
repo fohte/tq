@@ -3,6 +3,7 @@ import { taskComments, tasks } from '@api/db/schema'
 import { zValidator } from '@hono/zod-validator'
 import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
+import { createFactory } from 'hono/factory'
 import { z } from 'zod'
 
 const createCommentSchema = z.object({
@@ -23,16 +24,26 @@ function commentToResponse(comment: typeof taskComments.$inferSelect) {
   }
 }
 
+const factory = createFactory()
+
+const requireTask = factory.createMiddleware(async (c, next) => {
+  const taskId = c.req.param('taskId')!
+
+  const task = await db.query.tasks.findFirst({
+    where: eq(tasks.id, taskId),
+  })
+  if (!task) {
+    return c.json({ error: 'Task not found' }, 404)
+  }
+
+  return next()
+})
+
 export const taskCommentsApp = new Hono()
+  .use('/:taskId/comments/*', requireTask)
+  .use('/:taskId/comments', requireTask)
   .get('/:taskId/comments', async (c) => {
     const taskId = c.req.param('taskId')
-
-    const task = await db.query.tasks.findFirst({
-      where: eq(tasks.id, taskId),
-    })
-    if (!task) {
-      return c.json({ error: 'Task not found' }, 404)
-    }
 
     const comments = await db
       .select()
@@ -48,13 +59,6 @@ export const taskCommentsApp = new Hono()
     async (c) => {
       const taskId = c.req.param('taskId')
       const input = c.req.valid('json')
-
-      const task = await db.query.tasks.findFirst({
-        where: eq(tasks.id, taskId),
-      })
-      if (!task) {
-        return c.json({ error: 'Task not found' }, 404)
-      }
 
       const [comment] = await db
         .insert(taskComments)

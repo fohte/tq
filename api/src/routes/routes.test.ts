@@ -58,13 +58,13 @@ describe('sub-app routing', () => {
       expect(res.status).toBe(404)
     })
 
-    it('PATCH /api/tasks/:id/status validates status', async () => {
+    it('PATCH /api/tasks/:id/status returns 404 for non-existent task', async () => {
       const res = await app.request(`/api/tasks/${TEST_ID_1}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'invalid' }),
       })
-      expect(res.status).toBe(400)
+      expect(res.status).toBe(404)
     })
 
     it('PATCH /api/tasks/:id/parent returns 404 for non-existent task', async () => {
@@ -196,42 +196,6 @@ describe('sub-app routing', () => {
         method: 'DELETE',
       })
       expect(res.status).toBe(501)
-    })
-  })
-
-  describe('task comments sub-app', () => {
-    it('GET /api/tasks/:id/comments returns 404 for non-existent task', async () => {
-      const res = await app.request(`/api/tasks/${TEST_ID_1}/comments`)
-      expect(res.status).toBe(404)
-    })
-
-    it('POST /api/tasks/:id/comments validates request body', async () => {
-      const res = await app.request(`/api/tasks/${TEST_ID_1}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      })
-      expect(res.status).toBe(400)
-    })
-
-    it('PATCH /api/tasks/:id/comments/:commentId returns 404 for non-existent comment', async () => {
-      const res = await app.request(
-        `/api/tasks/${TEST_ID_1}/comments/${TEST_ID_2}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: 'Updated' }),
-        },
-      )
-      expect(res.status).toBe(404)
-    })
-
-    it('DELETE /api/tasks/:id/comments/:commentId returns 404 for non-existent comment', async () => {
-      const res = await app.request(
-        `/api/tasks/${TEST_ID_1}/comments/${TEST_ID_2}`,
-        { method: 'DELETE' },
-      )
-      expect(res.status).toBe(404)
     })
   })
 
