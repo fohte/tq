@@ -539,6 +539,17 @@ describe('tasks API', () => {
       expect(body.timeBlock.endTime).toBeNull()
     })
 
+    it('returns 409 when task is already in progress', async () => {
+      const task = await createTask('Already started')
+      await app.request(`/api/tasks/${task.id}/start`, { method: 'POST' })
+
+      const res = await app.request(`/api/tasks/${task.id}/start`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(409)
+    })
+
     it('returns 404 for non-existent task', async () => {
       const res = await app.request(`/api/tasks/${TEST_UUID}/start`, {
         method: 'POST',

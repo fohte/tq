@@ -146,6 +146,26 @@ function buildTree(
   return roots
 }
 
+async function updateStatusAndCloseTimeBlocks(
+  taskId: string,
+  status: 'todo' | 'completed',
+) {
+  const now = new Date()
+  const [[updatedTask], closedBlocks] = await Promise.all([
+    db
+      .update(tasks)
+      .set({ status, updatedAt: now })
+      .where(eq(tasks.id, taskId))
+      .returning(),
+    db
+      .update(timeBlocks)
+      .set({ endTime: now, updatedAt: now })
+      .where(and(eq(timeBlocks.taskId, taskId), isNull(timeBlocks.endTime)))
+      .returning(),
+  ])
+  return [updatedTask!, closedBlocks] as const
+}
+
 export const tasksApp = new Hono()
   // Task CRUD
   .post('/', zValidator('json', createTaskSchema), async (c) => {
@@ -473,6 +493,10 @@ export const tasksApp = new Hono()
       return c.json({ error: 'Task not found' }, 404)
     }
 
+    if (existing.status === 'in_progress') {
+      return c.json({ error: 'Task is already in progress' }, 409)
+    }
+
     const now = new Date()
 
     const [[updatedTask], [createdBlock]] = await Promise.all([
@@ -506,24 +530,14 @@ export const tasksApp = new Hono()
       return c.json({ error: 'Task is not in progress' }, 409)
     }
 
-    const now = new Date()
-
-    const [[updatedTask], closedBlocks] = await Promise.all([
-      db
-        .update(tasks)
-        .set({ status: 'todo', updatedAt: now })
-        .where(eq(tasks.id, id))
-        .returning(),
-      db
-        .update(timeBlocks)
-        .set({ endTime: now, updatedAt: now })
-        .where(and(eq(timeBlocks.taskId, id), isNull(timeBlocks.endTime)))
-        .returning(),
-    ])
+    const [updatedTask, closedBlocks] = await updateStatusAndCloseTimeBlocks(
+      id,
+      'todo',
+    )
 
     return c.json(
       {
-        ...taskToResponse(updatedTask!),
+        ...taskToResponse(updatedTask),
         closedTimeBlocks: closedBlocks.map(timeBlockToResponse),
       },
       200,
@@ -539,24 +553,14 @@ export const tasksApp = new Hono()
       return c.json({ error: 'Task not found' }, 404)
     }
 
-    const now = new Date()
-
-    const [[updatedTask], closedBlocks] = await Promise.all([
-      db
-        .update(tasks)
-        .set({ status: 'completed', updatedAt: now })
-        .where(eq(tasks.id, id))
-        .returning(),
-      db
-        .update(timeBlocks)
-        .set({ endTime: now, updatedAt: now })
-        .where(and(eq(timeBlocks.taskId, id), isNull(timeBlocks.endTime)))
-        .returning(),
-    ])
+    const [updatedTask, closedBlocks] = await updateStatusAndCloseTimeBlocks(
+      id,
+      'completed',
+    )
 
     return c.json(
       {
-        ...taskToResponse(updatedTask!),
+        ...taskToResponse(updatedTask),
         closedTimeBlocks: closedBlocks.map(timeBlockToResponse),
       },
       200,
