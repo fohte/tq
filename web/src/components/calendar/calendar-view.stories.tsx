@@ -1,0 +1,138 @@
+import type { Meta, StoryObj } from '@storybook/react-vite'
+import {
+  CalendarView,
+  type TimeBlockEvent,
+} from '@web/components/calendar/calendar-view'
+
+const today = new Date()
+const dateStr = today.toISOString().slice(0, 10)
+
+const sampleEvents: TimeBlockEvent[] = [
+  {
+    id: '1',
+    title: 'API ドキュメント作成',
+    start: `${dateStr}T09:00:00`,
+    end: `${dateStr}T10:00:00`,
+    type: 'manual',
+    duration: '1h',
+    label: 'dev:tq',
+  },
+  {
+    id: '2',
+    title: 'テスト追加',
+    start: `${dateStr}T10:30:00`,
+    end: `${dateStr}T11:30:00`,
+    type: 'auto',
+    duration: '1h',
+    parentRef: '#488 tq 作成',
+  },
+  {
+    id: '3',
+    title: 'Team standup',
+    start: `${dateStr}T11:00:00`,
+    end: `${dateStr}T11:30:00`,
+    type: 'gcal',
+  },
+  {
+    id: '4',
+    title: 'CI パイプライン構築',
+    start: `${dateStr}T14:00:00`,
+    end: `${dateStr}T15:00:00`,
+    type: 'completed',
+    duration: '1h',
+  },
+  {
+    id: '5',
+    title: 'Gym',
+    start: `${dateStr}T07:00:00`,
+    end: `${dateStr}T08:00:00`,
+    type: 'schedule',
+    color: { bg: '#1B4332', accent: '#52B788' },
+    icon: 'dumbbell',
+  },
+  {
+    id: '6',
+    title: 'Lunch',
+    start: `${dateStr}T12:00:00`,
+    end: `${dateStr}T13:00:00`,
+    type: 'gcal',
+  },
+  {
+    id: '9',
+    title: 'Quick sync',
+    start: `${dateStr}T15:00:00`,
+    end: `${dateStr}T15:15:00`,
+    type: 'gcal',
+  },
+  {
+    id: '10',
+    title: 'PR レビュー',
+    start: `${dateStr}T16:00:00`,
+    end: `${dateStr}T16:30:00`,
+    type: 'manual',
+    duration: '30m',
+  },
+]
+
+const meta = {
+  title: 'Calendar/CalendarView',
+  component: CalendarView,
+  parameters: {
+    layout: 'fullscreen',
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ height: '100vh' }}>
+        <Story />
+      </div>
+    ),
+  ],
+} satisfies Meta<typeof CalendarView>
+
+export default meta
+type Story = StoryObj<typeof meta>
+
+export const Empty: Story = {
+  args: {},
+}
+
+export const WithEvents: Story = {
+  args: {
+    events: sampleEvents,
+  },
+}
+
+export const ManualOnly: Story = {
+  args: {
+    events: sampleEvents.filter((e) => e.type === 'manual'),
+  },
+}
+
+const tomorrow = new Date(today)
+tomorrow.setDate(tomorrow.getDate() + 1)
+const tomorrowStr = tomorrow.toISOString().slice(0, 10)
+
+export const OvernightEvents: Story = {
+  args: {
+    events: [
+      ...sampleEvents,
+      {
+        id: '7',
+        title: 'Overnight deploy',
+        start: `${dateStr}T23:00:00`,
+        end: `${tomorrowStr}T01:00:00`,
+        type: 'manual',
+        duration: '2h',
+      },
+      {
+        id: '8',
+        title: 'Sleep',
+        start: `${dateStr}T23:30:00`,
+        end: `${tomorrowStr}T07:00:00`,
+        type: 'schedule',
+        color: { bg: '#2D2B55', accent: '#6C63FF' },
+        icon: 'moon',
+      },
+    ],
+  },
+}

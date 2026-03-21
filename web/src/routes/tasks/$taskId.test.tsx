@@ -20,16 +20,21 @@ const mockTask = {
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
   childCompletionCount: { completed: 0, total: 0 },
+  timeBlocks: [],
 }
 
 const mockUseTask = vi.fn()
 const mockUpdateMutate = vi.fn()
 const mockStatusMutate = vi.fn()
 
+const mockParentMutate = vi.fn()
+
 vi.mock('@web/hooks/use-tasks', () => ({
   useTask: (...args: unknown[]) => mockUseTask(...args),
   useUpdateTask: () => ({ mutate: mockUpdateMutate }),
   useUpdateTaskStatus: () => ({ mutate: mockStatusMutate }),
+  useTaskList: () => ({ categorized: { all: [] } }),
+  useUpdateTaskParent: () => ({ mutate: mockParentMutate }),
 }))
 
 vi.mock('@web/components/ui/markdown-editor', () => ({

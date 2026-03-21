@@ -1,13 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { ContextFilterInline } from '@web/components/context-filter'
 import {
   CreateTaskInline,
   FloatingActionButton,
 } from '@web/components/task/create-task-inline'
 import { CreateTaskModal } from '@web/components/task/create-task-modal'
 import { TaskListHeader } from '@web/components/task/task-list-header'
-import { TaskRow } from '@web/components/task/task-row'
-import type { Task } from '@web/hooks/use-tasks'
-import { useTaskList } from '@web/hooks/use-tasks'
+import { TaskRow, TreeTaskRow } from '@web/components/task/task-row'
+import {
+  useFilteredTaskList,
+  useFilteredTaskTree,
+} from '@web/hooks/use-filtered-tasks'
 import { cn } from '@web/lib/utils'
 import { useState } from 'react'
 
@@ -21,23 +24,32 @@ function TaskList() {
   const [activeTab, setActiveTab] = useState<Tab>('today')
   const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const { isLoading, categorized } = useTaskList()
 
-  const displayTasks: Task[] = (() => {
+  const tasks = useFilteredTaskList()
+  const { isLoading: isTreeLoading, tree: filteredTreeData } =
+    useFilteredTaskTree({ enabled: activeTab === 'all' })
+
+  const displayTasks = (() => {
     switch (activeTab) {
       case 'today':
-        return categorized.today
+        return tasks.today
       case 'all':
-        return categorized.all
+        return tasks.all
       case 'backlog':
-        return categorized.backlog
+        return tasks.backlog
     }
   })()
+
+  const showTree = activeTab === 'all'
+  const loading = showTree ? isTreeLoading : tasks.isLoading
+  const isEmpty = showTree
+    ? filteredTreeData.length === 0
+    : displayTasks.length === 0
 
   return (
     <div className="flex h-full flex-col">
       {/* Tab bar */}
-      <div className="flex gap-1 border-b border-border px-3 py-2">
+      <div className="flex items-center gap-1 border-b border-border px-3 py-2">
         {(['today', 'all', 'backlog'] as const).map((tab) => (
           <button
             key={tab}
@@ -51,19 +63,22 @@ function TaskList() {
             )}
           >
             {tab === 'today' ? 'Today' : tab === 'all' ? 'All' : 'Backlog'}
-            {tab === 'backlog' && categorized.backlog.length > 0 && (
+            {tab === 'backlog' && tasks.backlog.length > 0 && (
               <span className="ml-1.5 rounded-full bg-muted-foreground/20 px-1.5 py-0.5 text-xs">
-                {categorized.backlog.length}
+                {tasks.backlog.length}
               </span>
             )}
           </button>
         ))}
+        <div className="ml-auto">
+          <ContextFilterInline />
+        </div>
       </div>
 
       {/* Summary header (Today tab) */}
       {activeTab === 'today' && (
         <div className="py-2">
-          <TaskListHeader tasks={categorized.nonBacklog} />
+          <TaskListHeader tasks={tasks.nonBacklog} />
         </div>
       )}
 
@@ -81,13 +96,19 @@ function TaskList() {
 
       {/* Task list */}
       <div className="flex-1 overflow-auto">
-        {isLoading ? (
+        {loading ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             Loading...
           </div>
-        ) : displayTasks.length === 0 ? (
+        ) : isEmpty ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             {activeTab === 'backlog' ? 'No backlog tasks' : 'No tasks yet'}
+          </div>
+        ) : showTree ? (
+          <div className="py-1" data-testid="task-tree">
+            {filteredTreeData.map((node) => (
+              <TreeTaskRow key={node.id} node={node} />
+            ))}
           </div>
         ) : (
           <div className="py-1">

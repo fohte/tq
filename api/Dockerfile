@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1
 
 FROM node:24-slim AS base
-RUN corepack enable
 WORKDIR /app
+COPY package.json ./
+RUN corepack enable && corepack prepare --activate
 
 # Install dependencies
 FROM base AS deps

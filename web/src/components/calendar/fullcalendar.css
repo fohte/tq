@@ -1,0 +1,63 @@
+/* FullCalendar theme overrides for tq design system */
+
+.tq-calendar {
+  --fc-border-color: var(--border);
+  --fc-page-bg-color: var(--background);
+  --fc-neutral-bg-color: var(--secondary);
+  --fc-today-bg-color: transparent;
+  --fc-now-indicator-color: #e53e3e;
+  --fc-event-border-color: transparent;
+  --fc-event-bg-color: transparent;
+  --fc-small-font-size: 0.8rem;
+}
+
+/* Time slot labels */
+.tq-calendar .fc-timegrid-slot-label-cushion {
+  font-family: 'JetBrains Mono Variable', monospace;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+/* Slot lanes */
+.tq-calendar .fc-timegrid-slot {
+  height: 2.5rem;
+}
+
+.tq-calendar .fc-timegrid-slot-lane {
+  border-color: var(--border);
+}
+
+/* Now indicator — red dot + red line */
+.tq-calendar .fc-timegrid-now-indicator-line {
+  border-color: #e53e3e;
+  border-width: 2px;
+}
+
+.tq-calendar .fc-timegrid-now-indicator-arrow {
+  /* Replace default arrow with a circle dot */
+  border: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #e53e3e;
+  margin-top: -4px;
+  left: -1px;
+}
+
+/* Remove day header since we have our own */
+.tq-calendar .fc-col-header {
+  display: none;
+}
+
+/* Scrollbar styling */
+.tq-calendar .fc-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+/* Event container — remove FullCalendar default styling, let eventContent handle it */
+.tq-calendar .fc-event {
+  border: none;
+  box-shadow: none;
+  cursor: pointer;
+}

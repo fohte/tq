@@ -1,8 +1,14 @@
 import { db } from '@api/db/connection'
-import { labels, taskLabels, taskPages, tasks } from '@api/db/schema'
+import {
+  labels,
+  taskLabels,
+  taskPages,
+  tasks,
+  timeBlocks,
+} from '@api/db/schema'
 import { pageToResponse } from '@api/routes/task-pages'
 import { zValidator } from '@hono/zod-validator'
-import { and, count, eq, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, count, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -43,6 +49,7 @@ const listQuerySchema = z.object({
   status: taskStatus.optional(),
   projectId: z.string().uuid().optional(),
   parentId: z.string().uuid().optional(),
+  context: context.optional(),
 })
 
 const treeQuerySchema = z.object({
@@ -90,6 +97,18 @@ function taskToResponse(task: typeof tasks.$inferSelect) {
   }
 }
 
+function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
+  return {
+    id: block.id,
+    taskId: block.taskId,
+    startTime: block.startTime.toISOString(),
+    endTime: block.endTime?.toISOString() ?? null,
+    isAutoScheduled: block.isAutoScheduled,
+    createdAt: block.createdAt.toISOString(),
+    updatedAt: block.updatedAt.toISOString(),
+  }
+}
+
 type TaskResponseData = ReturnType<typeof taskToResponse>
 
 type TreeNode = TaskResponseData & {
@@ -133,6 +152,26 @@ function buildTree(
   }
 
   return roots
+}
+
+async function updateStatusAndCloseTimeBlocks(
+  taskId: string,
+  status: 'todo' | 'completed',
+) {
+  const now = new Date()
+  const [[updatedTask], closedBlocks] = await Promise.all([
+    db
+      .update(tasks)
+      .set({ status, updatedAt: now })
+      .where(eq(tasks.id, taskId))
+      .returning(),
+    db
+      .update(timeBlocks)
+      .set({ endTime: now, updatedAt: now })
+      .where(and(eq(timeBlocks.taskId, taskId), isNull(timeBlocks.endTime)))
+      .returning(),
+  ])
+  return [updatedTask!, closedBlocks] as const
 }
 
 export const tasksApp = new Hono()
@@ -193,6 +232,9 @@ export const tasksApp = new Hono()
     }
     if (query.parentId) {
       conditions.push(eq(tasks.parentId, query.parentId))
+    }
+    if (query.context) {
+      conditions.push(eq(tasks.context, query.context))
     }
 
     const result = await db
@@ -336,8 +378,8 @@ export const tasksApp = new Hono()
       return c.json({ error: 'Task not found' }, 404)
     }
 
-    // Get child completion count and pages in parallel
-    const [childStats, pages] = await Promise.all([
+    // Get child completion count, pages, and time blocks in parallel
+    const [childStats, pages, taskTimeBlocks] = await Promise.all([
       db
         .select({
           total: count(),
@@ -352,6 +394,11 @@ export const tasksApp = new Hono()
         .from(taskPages)
         .where(eq(taskPages.taskId, id))
         .orderBy(taskPages.sortOrder, taskPages.createdAt),
+      db
+        .select()
+        .from(timeBlocks)
+        .where(eq(timeBlocks.taskId, id))
+        .orderBy(timeBlocks.startTime),
     ])
 
     return c.json(
@@ -362,6 +409,7 @@ export const tasksApp = new Hono()
           completed: childStats[0]?.completed ?? 0,
         },
         pages: pages.map(pageToResponse),
+        timeBlocks: taskTimeBlocks.map(timeBlockToResponse),
       },
       200,
     )
@@ -396,9 +444,19 @@ export const tasksApp = new Hono()
       return c.json({ error: 'Task not found' }, 404)
     }
 
+    const now = new Date()
+
+    // Close open TimeBlocks when transitioning away from in_progress
+    if (existing.status === 'in_progress' && status !== 'in_progress') {
+      await db
+        .update(timeBlocks)
+        .set({ endTime: now, updatedAt: now })
+        .where(and(eq(timeBlocks.taskId, id), isNull(timeBlocks.endTime)))
+    }
+
     const [updated] = await db
       .update(tasks)
-      .set({ status, updatedAt: new Date() })
+      .set({ status, updatedAt: now })
       .where(eq(tasks.id, id))
       .returning()
 
@@ -451,6 +509,89 @@ export const tasksApp = new Hono()
       .returning()
 
     return c.json(taskToResponse(updated!), 200)
+  })
+  .post('/:id/start', async (c) => {
+    const id = c.req.param('id')
+
+    const existing = await db.query.tasks.findFirst({
+      where: eq(tasks.id, id),
+    })
+    if (!existing) {
+      return c.json({ error: 'Task not found' }, 404)
+    }
+
+    if (existing.status === 'in_progress') {
+      return c.json({ error: 'Task is already in progress' }, 409)
+    }
+
+    const now = new Date()
+
+    const [[updatedTask], [createdBlock]] = await Promise.all([
+      db
+        .update(tasks)
+        .set({ status: 'in_progress', updatedAt: now })
+        .where(eq(tasks.id, id))
+        .returning(),
+      db.insert(timeBlocks).values({ taskId: id, startTime: now }).returning(),
+    ])
+
+    return c.json(
+      {
+        ...taskToResponse(updatedTask!),
+        timeBlock: timeBlockToResponse(createdBlock!),
+      },
+      200,
+    )
+  })
+  .post('/:id/stop', async (c) => {
+    const id = c.req.param('id')
+
+    const existing = await db.query.tasks.findFirst({
+      where: eq(tasks.id, id),
+    })
+    if (!existing) {
+      return c.json({ error: 'Task not found' }, 404)
+    }
+
+    if (existing.status !== 'in_progress') {
+      return c.json({ error: 'Task is not in progress' }, 409)
+    }
+
+    const [updatedTask, closedBlocks] = await updateStatusAndCloseTimeBlocks(
+      id,
+      'todo',
+    )
+
+    return c.json(
+      {
+        ...taskToResponse(updatedTask),
+        closedTimeBlocks: closedBlocks.map(timeBlockToResponse),
+      },
+      200,
+    )
+  })
+  .post('/:id/complete', async (c) => {
+    const id = c.req.param('id')
+
+    const existing = await db.query.tasks.findFirst({
+      where: eq(tasks.id, id),
+    })
+    if (!existing) {
+      return c.json({ error: 'Task not found' }, 404)
+    }
+
+    const [updatedTask, closedBlocks] = await updateStatusAndCloseTimeBlocks(
+      id,
+      'completed',
+    )
+
+    return c.json(
+      {
+        ...taskToResponse(updatedTask),
+        closedTimeBlocks: closedBlocks.map(timeBlockToResponse),
+      },
+      200,
+    )
   })
   .delete('/:id', async (c) => {
     const id = c.req.param('id')

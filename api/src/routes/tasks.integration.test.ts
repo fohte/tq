@@ -6,6 +6,16 @@ setupTestDb()
 
 const TEST_UUID = '550e8400-e29b-41d4-a716-446655440000'
 
+interface TimeBlockResponse {
+  id: string
+  taskId: string
+  startTime: string
+  endTime: string | null
+  isAutoScheduled: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 interface TaskResponse {
   id: string
   title: string
@@ -263,6 +273,25 @@ describe('tasks API', () => {
       expect(res.status).toBe(404)
     })
 
+    it('closes open TimeBlocks when status changes away from in_progress', async () => {
+      const task = await createTask('Status change')
+      await app.request(`/api/tasks/${task.id}/start`, { method: 'POST' })
+
+      // Change status via PATCH /status (not /complete)
+      await app.request(`/api/tasks/${task.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      })
+
+      const res = await app.request(`/api/tasks/${task.id}`)
+      const body = (await res.json()) as TaskResponse & {
+        timeBlocks: TimeBlockResponse[]
+      }
+      expect(body.timeBlocks).toHaveLength(1)
+      expect(body.timeBlocks[0]!.endTime).not.toBeNull()
+    })
+
     it('returns 400 for invalid status', async () => {
       const created = await createTask('Task')
 
@@ -508,6 +537,173 @@ describe('tasks API', () => {
       }>
       expect(body.length).toBeGreaterThan(0)
       expect(body.every((s) => s.category === 'is')).toBe(true)
+    })
+  })
+
+  describe('POST /api/tasks/:id/start', () => {
+    it('sets status to in_progress and creates a TimeBlock', async () => {
+      const task = await createTask('Start me')
+
+      const res = await app.request(`/api/tasks/${task.id}/start`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as TaskResponse & {
+        timeBlock: TimeBlockResponse
+      }
+      expect(body.status).toBe('in_progress')
+      expect(body.timeBlock.taskId).toBe(task.id)
+      expect(body.timeBlock.startTime).toBeDefined()
+      expect(body.timeBlock.endTime).toBeNull()
+    })
+
+    it('returns 409 when task is already in progress', async () => {
+      const task = await createTask('Already started')
+      await app.request(`/api/tasks/${task.id}/start`, { method: 'POST' })
+
+      const res = await app.request(`/api/tasks/${task.id}/start`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(409)
+    })
+
+    it('returns 404 for non-existent task', async () => {
+      const res = await app.request(`/api/tasks/${TEST_UUID}/start`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe('POST /api/tasks/:id/stop', () => {
+    it('sets status to todo and closes open TimeBlocks', async () => {
+      const task = await createTask('Stop me')
+      await app.request(`/api/tasks/${task.id}/start`, { method: 'POST' })
+
+      const res = await app.request(`/api/tasks/${task.id}/stop`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as TaskResponse & {
+        closedTimeBlocks: TimeBlockResponse[]
+      }
+      expect(body.status).toBe('todo')
+      expect(body.closedTimeBlocks).toHaveLength(1)
+      expect(body.closedTimeBlocks[0]!.endTime).not.toBeNull()
+    })
+
+    it('returns 409 when task is not in progress', async () => {
+      const task = await createTask('Not started')
+
+      const res = await app.request(`/api/tasks/${task.id}/stop`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(409)
+    })
+
+    it('returns 404 for non-existent task', async () => {
+      const res = await app.request(`/api/tasks/${TEST_UUID}/stop`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe('POST /api/tasks/:id/complete', () => {
+    it('sets status to completed and closes open TimeBlocks', async () => {
+      const task = await createTask('Complete me')
+      await app.request(`/api/tasks/${task.id}/start`, { method: 'POST' })
+
+      const res = await app.request(`/api/tasks/${task.id}/complete`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as TaskResponse & {
+        closedTimeBlocks: TimeBlockResponse[]
+      }
+      expect(body.status).toBe('completed')
+      expect(body.closedTimeBlocks).toHaveLength(1)
+      expect(body.closedTimeBlocks[0]!.endTime).not.toBeNull()
+    })
+
+    it('completes a task that was not started (no open TimeBlocks)', async () => {
+      const task = await createTask('Direct complete')
+
+      const res = await app.request(`/api/tasks/${task.id}/complete`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as TaskResponse & {
+        closedTimeBlocks: TimeBlockResponse[]
+      }
+      expect(body.status).toBe('completed')
+      expect(body.closedTimeBlocks).toHaveLength(0)
+    })
+
+    it('returns 404 for non-existent task', async () => {
+      const res = await app.request(`/api/tasks/${TEST_UUID}/complete`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe('GET /api/tasks/:id with timeBlocks', () => {
+    it('includes timeBlocks in response', async () => {
+      const task = await createTask('With blocks')
+      await app.request(`/api/tasks/${task.id}/start`, { method: 'POST' })
+      await app.request(`/api/tasks/${task.id}/stop`, { method: 'POST' })
+      await app.request(`/api/tasks/${task.id}/start`, { method: 'POST' })
+
+      const res = await app.request(`/api/tasks/${task.id}`)
+
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as TaskResponse & {
+        timeBlocks: TimeBlockResponse[]
+      }
+      expect(body.timeBlocks).toHaveLength(2)
+      // First block is closed, second is open
+      expect(body.timeBlocks[0]!.endTime).not.toBeNull()
+      expect(body.timeBlocks[1]!.endTime).toBeNull()
+    })
+
+    it('returns empty timeBlocks when task has none', async () => {
+      const task = await createTask('No blocks')
+
+      const res = await app.request(`/api/tasks/${task.id}`)
+
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as TaskResponse & {
+        timeBlocks: TimeBlockResponse[]
+      }
+      expect(body.timeBlocks).toEqual([])
+    })
+  })
+
+  describe('parallel task execution', () => {
+    it('allows multiple tasks to be in_progress simultaneously', async () => {
+      const task1 = await createTask('Task 1')
+      const task2 = await createTask('Task 2')
+
+      await app.request(`/api/tasks/${task1.id}/start`, { method: 'POST' })
+      await app.request(`/api/tasks/${task2.id}/start`, { method: 'POST' })
+
+      const res1 = await app.request(`/api/tasks/${task1.id}`)
+      const res2 = await app.request(`/api/tasks/${task2.id}`)
+
+      const body1 = (await res1.json()) as TaskResponse
+      const body2 = (await res2.json()) as TaskResponse
+      expect(body1.status).toBe('in_progress')
+      expect(body2.status).toBe('in_progress')
     })
   })
 })
