@@ -78,3 +78,27 @@ export const ManualOnly: Story = {
     events: sampleEvents.filter((e) => e.type === 'manual'),
   },
 }
+
+export const AutoScheduled: Story = {
+  args: {
+    events: sampleEvents.filter((e) => e.type === 'auto'),
+  },
+}
+
+export const GoogleCalendar: Story = {
+  args: {
+    events: sampleEvents.filter((e) => e.type === 'gcal'),
+  },
+}
+
+export const Completed: Story = {
+  args: {
+    events: sampleEvents.filter((e) => e.type === 'completed'),
+  },
+}
+
+export const Schedule: Story = {
+  args: {
+    events: sampleEvents.filter((e) => e.type === 'schedule'),
+  },
+}
