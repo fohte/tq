@@ -5,8 +5,10 @@ import { projectsApp } from '@api/routes/projects'
 import { schedulesApp } from '@api/routes/schedules'
 import { tasksApp } from '@api/routes/tasks'
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 
 const app = new Hono()
+  .use('*', cors())
   .get('/health', (c) => {
     return c.json({ status: 'ok' })
   })
