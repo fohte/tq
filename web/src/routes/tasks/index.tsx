@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { ContextFilterInline } from '@web/components/context-filter'
 import {
   CreateTaskInline,
   FloatingActionButton,
@@ -6,10 +7,15 @@ import {
 import { CreateTaskModal } from '@web/components/task/create-task-modal'
 import { TaskListHeader } from '@web/components/task/task-list-header'
 import { TaskRow } from '@web/components/task/task-row'
+import {
+  filterModeToApiContext,
+  matchesContextFilter,
+  useContextFilter,
+} from '@web/hooks/use-context-filter'
 import type { Task } from '@web/hooks/use-tasks'
 import { useTaskList } from '@web/hooks/use-tasks'
 import { cn } from '@web/lib/utils'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 export const Route = createFileRoute('/tasks/')({
   component: TaskList,
@@ -21,23 +27,43 @@ function TaskList() {
   const [activeTab, setActiveTab] = useState<Tab>('today')
   const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const { isLoading, categorized } = useTaskList()
+  const { mode } = useContextFilter()
+  const apiContext = filterModeToApiContext(mode)
+  const { isLoading, categorized } = useTaskList(
+    apiContext ? { context: apiContext } : undefined,
+  )
 
-  const displayTasks: Task[] = (() => {
+  // For 'personal' mode, API returns all tasks (no server filter),
+  // so we filter client-side to include both 'personal' and 'dev'.
+  const filterByContext = (tasks: Task[]): Task[] => {
+    if (mode === 'all' || mode === 'work') return tasks
+    return tasks.filter((t) => matchesContextFilter(t.context, mode))
+  }
+
+  const filteredBacklog = useMemo(
+    () => filterByContext(categorized.backlog),
+    [categorized.backlog, mode],
+  )
+  const filteredNonBacklog = useMemo(
+    () => filterByContext(categorized.nonBacklog),
+    [categorized.nonBacklog, mode],
+  )
+
+  const displayTasks = useMemo((): Task[] => {
     switch (activeTab) {
       case 'today':
-        return categorized.today
+        return filterByContext(categorized.today)
       case 'all':
-        return categorized.all
+        return filterByContext(categorized.all)
       case 'backlog':
-        return categorized.backlog
+        return filteredBacklog
     }
-  })()
+  }, [activeTab, categorized, mode])
 
   return (
     <div className="flex h-full flex-col">
       {/* Tab bar */}
-      <div className="flex gap-1 border-b border-border px-3 py-2">
+      <div className="flex items-center gap-1 border-b border-border px-3 py-2">
         {(['today', 'all', 'backlog'] as const).map((tab) => (
           <button
             key={tab}
@@ -51,19 +77,22 @@ function TaskList() {
             )}
           >
             {tab === 'today' ? 'Today' : tab === 'all' ? 'All' : 'Backlog'}
-            {tab === 'backlog' && categorized.backlog.length > 0 && (
+            {tab === 'backlog' && filteredBacklog.length > 0 && (
               <span className="ml-1.5 rounded-full bg-muted-foreground/20 px-1.5 py-0.5 text-xs">
-                {categorized.backlog.length}
+                {filteredBacklog.length}
               </span>
             )}
           </button>
         ))}
+        <div className="ml-auto">
+          <ContextFilterInline />
+        </div>
       </div>
 
       {/* Summary header (Today tab) */}
       {activeTab === 'today' && (
         <div className="py-2">
-          <TaskListHeader tasks={categorized.nonBacklog} />
+          <TaskListHeader tasks={filteredNonBacklog} />
         </div>
       )}
 

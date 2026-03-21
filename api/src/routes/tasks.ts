@@ -42,6 +42,7 @@ const listQuerySchema = z.object({
   status: taskStatus.optional(),
   projectId: z.string().uuid().optional(),
   parentId: z.string().uuid().optional(),
+  context: context.optional(),
 })
 
 const treeQuerySchema = z.object({
@@ -192,6 +193,9 @@ export const tasksApp = new Hono()
     }
     if (query.parentId) {
       conditions.push(eq(tasks.parentId, query.parentId))
+    }
+    if (query.context) {
+      conditions.push(eq(tasks.context, query.context))
     }
 
     const result = await db
