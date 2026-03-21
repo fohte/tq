@@ -5,7 +5,7 @@
   --fc-page-bg-color: var(--background);
   --fc-neutral-bg-color: var(--secondary);
   --fc-today-bg-color: transparent;
-  --fc-now-indicator-color: oklch(0.637 0.237 25.331);
+  --fc-now-indicator-color: #e53e3e;
   --fc-event-border-color: transparent;
   --fc-event-bg-color: transparent;
   --fc-small-font-size: 0.8rem;
@@ -14,7 +14,7 @@
 /* Time slot labels */
 .tq-calendar .fc-timegrid-slot-label-cushion {
   font-family: 'JetBrains Mono Variable', monospace;
-  font-size: 0.7rem;
+  font-size: 11px;
   color: var(--muted-foreground);
 }
 
@@ -27,14 +27,21 @@
   border-color: var(--border);
 }
 
-/* Now indicator */
+/* Now indicator — red dot + red line */
 .tq-calendar .fc-timegrid-now-indicator-line {
-  border-color: oklch(0.637 0.237 25.331);
+  border-color: #e53e3e;
   border-width: 2px;
 }
 
 .tq-calendar .fc-timegrid-now-indicator-arrow {
-  border-color: oklch(0.637 0.237 25.331);
+  /* Replace default arrow with a circle dot */
+  border: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #e53e3e;
+  margin-top: -4px;
+  left: -1px;
 }
 
 /* Remove day header since we have our own */

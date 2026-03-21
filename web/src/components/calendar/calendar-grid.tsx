@@ -21,7 +21,16 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       title: event.title,
       start: event.start,
       end: event.end,
-      extendedProps: { type: event.type },
+      extendedProps: {
+        type: event.type,
+        duration: event.duration,
+        parentRef: event.parentRef,
+        label: event.label,
+        color: event.color,
+        icon: event.icon,
+        // Store original end time for overnight display
+        originalEnd: event.end,
+      },
     }))
 
     return (
@@ -32,7 +41,21 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           initialView="timeGridDay"
           headerToolbar={false}
           events={calendarEvents}
-          eventContent={(arg) => <EventBlock {...arg} />}
+          eventContent={(arg) => {
+            // Override timeText for overnight events to show actual end time
+            const originalEnd = arg.event.extendedProps['originalEnd'] as string
+            if (originalEnd) {
+              const startDate = arg.event.start
+              const endDate = new Date(originalEnd)
+              if (startDate && endDate.getDate() !== startDate.getDate()) {
+                const fmt = (d: Date) =>
+                  `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+                const overrideTimeText = `${fmt(startDate)} - ${fmt(endDate)}`
+                return <EventBlock {...arg} timeText={overrideTimeText} />
+              }
+            }
+            return <EventBlock {...arg} />
+          }}
           nowIndicator={true}
           allDaySlot={false}
           slotMinTime="00:00:00"

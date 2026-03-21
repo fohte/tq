@@ -12,6 +12,19 @@ export interface TimeBlockEvent {
   start: string
   end: string
   type: 'manual' | 'auto' | 'gcal' | 'completed' | 'schedule'
+  /** Duration text (e.g. "1h", "30m") */
+  duration?: string
+  /** Parent task reference (e.g. "#488 tq 作成") */
+  parentRef?: string
+  /** Label (e.g. "dev:armyknife") */
+  label?: string
+  /** Custom color for schedule events */
+  color?: {
+    bg: string
+    accent: string
+  }
+  /** Icon name for schedule events (lucide icon) */
+  icon?: string
 }
 
 interface CalendarViewProps {
