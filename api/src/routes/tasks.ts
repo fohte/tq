@@ -1,5 +1,5 @@
 import { db } from '@api/db/connection'
-import { labels, taskLabels, tasks } from '@api/db/schema'
+import { labels, taskLabels, taskPages, tasks } from '@api/db/schema'
 import { zValidator } from '@hono/zod-validator'
 import { and, count, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -335,16 +335,23 @@ export const tasksApp = new Hono()
       return c.json({ error: 'Task not found' }, 404)
     }
 
-    // Get child completion count
-    const childStats = await db
-      .select({
-        total: count(),
-        completed: count(
-          sql`CASE WHEN ${tasks.status} = 'completed' THEN 1 END`,
-        ),
-      })
-      .from(tasks)
-      .where(eq(tasks.parentId, id))
+    // Get child completion count and pages in parallel
+    const [childStats, pages] = await Promise.all([
+      db
+        .select({
+          total: count(),
+          completed: count(
+            sql`CASE WHEN ${tasks.status} = 'completed' THEN 1 END`,
+          ),
+        })
+        .from(tasks)
+        .where(eq(tasks.parentId, id)),
+      db
+        .select()
+        .from(taskPages)
+        .where(eq(taskPages.taskId, id))
+        .orderBy(taskPages.sortOrder, taskPages.createdAt),
+    ])
 
     return c.json(
       {
@@ -353,6 +360,15 @@ export const tasksApp = new Hono()
           total: childStats[0]?.total ?? 0,
           completed: childStats[0]?.completed ?? 0,
         },
+        pages: pages.map((p) => ({
+          id: p.id,
+          taskId: p.taskId,
+          title: p.title,
+          content: p.content,
+          sortOrder: p.sortOrder,
+          createdAt: p.createdAt.toISOString(),
+          updatedAt: p.updatedAt.toISOString(),
+        })),
       },
       200,
     )
