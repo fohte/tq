@@ -441,8 +441,13 @@ function SidebarParentField({
   const { categorized } = useTaskList()
   const updateParent = useUpdateTaskParent()
 
-  // Exclude self from candidates
-  const candidates = (categorized.all ?? []).filter((t) => t.id !== taskId)
+  const allTasks = categorized.all ?? []
+  const getDescendantIds = (id: string): string[] =>
+    allTasks
+      .filter((t) => t.parentId === id)
+      .flatMap((child) => [child.id, ...getDescendantIds(child.id)])
+  const invalidParentIds = new Set([taskId, ...getDescendantIds(taskId)])
+  const candidates = allTasks.filter((t) => !invalidParentIds.has(t.id))
 
   return (
     <SidebarField label="Parent" icon={<Network className="size-3.5" />}>
