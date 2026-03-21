@@ -273,6 +273,25 @@ describe('tasks API', () => {
       expect(res.status).toBe(404)
     })
 
+    it('closes open TimeBlocks when status changes away from in_progress', async () => {
+      const task = await createTask('Status change')
+      await app.request(`/api/tasks/${task.id}/start`, { method: 'POST' })
+
+      // Change status via PATCH /status (not /complete)
+      await app.request(`/api/tasks/${task.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      })
+
+      const res = await app.request(`/api/tasks/${task.id}`)
+      const body = (await res.json()) as TaskResponse & {
+        timeBlocks: TimeBlockResponse[]
+      }
+      expect(body.timeBlocks).toHaveLength(1)
+      expect(body.timeBlocks[0]!.endTime).not.toBeNull()
+    })
+
     it('returns 400 for invalid status', async () => {
       const created = await createTask('Task')
 

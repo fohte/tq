@@ -427,9 +427,19 @@ export const tasksApp = new Hono()
       return c.json({ error: 'Task not found' }, 404)
     }
 
+    const now = new Date()
+
+    // Close open TimeBlocks when transitioning away from in_progress
+    if (existing.status === 'in_progress' && status !== 'in_progress') {
+      await db
+        .update(timeBlocks)
+        .set({ endTime: now, updatedAt: now })
+        .where(and(eq(timeBlocks.taskId, id), isNull(timeBlocks.endTime)))
+    }
+
     const [updated] = await db
       .update(tasks)
-      .set({ status, updatedAt: new Date() })
+      .set({ status, updatedAt: now })
       .where(eq(tasks.id, id))
       .returning()
 
