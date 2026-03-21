@@ -65,3 +65,35 @@ export function matchesContextFilter(
       return taskContext === 'personal' || taskContext === 'dev'
   }
 }
+
+/**
+ * Filter a flat list of items by context mode.
+ * Items must have a `context` property.
+ */
+export function filterByContext<T extends { context: string }>(
+  items: T[],
+  mode: ContextFilterMode,
+): T[] {
+  if (mode === 'all' || mode === 'work') return items
+  return items.filter((t) => matchesContextFilter(t.context, mode))
+}
+
+/**
+ * Filter a tree of nodes by context mode.
+ * Keeps a node if it matches the filter or any of its descendants match.
+ */
+export function filterTreeByContext<
+  T extends { context: string; children: T[] },
+>(nodes: T[], mode: ContextFilterMode): T[] {
+  if (mode === 'all' || mode === 'work') return nodes
+  return nodes.reduce<T[]>((acc, node) => {
+    const filteredChildren = filterTreeByContext(node.children, mode)
+    if (
+      matchesContextFilter(node.context, mode) ||
+      filteredChildren.length > 0
+    ) {
+      acc.push({ ...node, children: filteredChildren })
+    }
+    return acc
+  }, [])
+}

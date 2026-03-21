@@ -8,11 +8,12 @@ import { CreateTaskModal } from '@web/components/task/create-task-modal'
 import { TaskListHeader } from '@web/components/task/task-list-header'
 import { TaskRow, TreeTaskRow } from '@web/components/task/task-row'
 import {
+  filterByContext,
   filterModeToApiContext,
-  matchesContextFilter,
+  filterTreeByContext,
   useContextFilter,
 } from '@web/hooks/use-context-filter'
-import type { Task, TreeNode } from '@web/hooks/use-tasks'
+import type { Task } from '@web/hooks/use-tasks'
 import { useTaskList, useTaskTree } from '@web/hooks/use-tasks'
 import { cn } from '@web/lib/utils'
 import { useMemo, useState } from 'react'
@@ -36,49 +37,28 @@ function TaskList() {
     enabled: activeTab === 'all',
   })
 
-  // For 'personal' mode, API returns all tasks (no server filter),
-  // so we filter client-side to include both 'personal' and 'dev'.
-  const filterByContext = (tasks: Task[]): Task[] => {
-    if (mode === 'all' || mode === 'work') return tasks
-    return tasks.filter((t) => matchesContextFilter(t.context, mode))
-  }
-
   const filteredBacklog = useMemo(
-    () => filterByContext(categorized.backlog),
+    () => filterByContext(categorized.backlog, mode),
     [categorized.backlog, mode],
   )
   const filteredNonBacklog = useMemo(
-    () => filterByContext(categorized.nonBacklog),
+    () => filterByContext(categorized.nonBacklog, mode),
     [categorized.nonBacklog, mode],
   )
 
   const displayTasks = useMemo((): Task[] => {
     switch (activeTab) {
       case 'today':
-        return filterByContext(categorized.today)
+        return filterByContext(categorized.today, mode)
       case 'all':
-        return filterByContext(categorized.all)
+        return filterByContext(categorized.all, mode)
       case 'backlog':
         return filteredBacklog
     }
   }, [activeTab, categorized, mode])
 
-  const filterTreeByContext = (nodes: TreeNode[]): TreeNode[] => {
-    if (mode === 'all' || mode === 'work') return nodes
-    return nodes.reduce<TreeNode[]>((acc, node) => {
-      const filteredChildren = filterTreeByContext(node.children)
-      if (
-        matchesContextFilter(node.context, mode) ||
-        filteredChildren.length > 0
-      ) {
-        acc.push({ ...node, children: filteredChildren })
-      }
-      return acc
-    }, [])
-  }
-
   const filteredTreeData = useMemo(
-    () => filterTreeByContext(treeData ?? []),
+    () => filterTreeByContext(treeData ?? [], mode),
     [treeData, mode],
   )
 
