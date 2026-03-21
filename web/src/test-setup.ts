@@ -30,3 +30,42 @@ if (typeof Range.prototype.getBoundingClientRect === 'undefined') {
       toJSON: () => ({}),
     }) as DOMRect
 }
+
+// Milkdown throws contextNotFound during async cleanup in jsdom.
+// This is a jsdom limitation, not a real application bug.
+const originalListeners = process.listeners('uncaughtException')
+process.removeAllListeners('uncaughtException')
+process.prependListener('uncaughtException', (error) => {
+  const message = error instanceof Error ? error.message : String(error)
+  const errorObj = error as unknown as Record<string, unknown>
+  const isMilkdownCleanup =
+    'code' in errorObj && errorObj['code'] === 'contextNotFound'
+  const isProsemirrorJsdom = message.includes(
+    'getClientRects is not a function',
+  )
+
+  if (isMilkdownCleanup || isProsemirrorJsdom) {
+    return
+  }
+
+  for (const listener of originalListeners) {
+    listener(error, 'uncaughtException')
+  }
+})
+process.on('unhandledRejection', (reason) => {
+  const message = reason instanceof Error ? reason.message : String(reason)
+  const isMilkdownCleanup =
+    reason != null &&
+    typeof reason === 'object' &&
+    'code' in reason &&
+    (reason as Record<string, unknown>)['code'] === 'contextNotFound'
+  const isProsemirrorJsdom = message.includes(
+    'getClientRects is not a function',
+  )
+
+  if (isMilkdownCleanup || isProsemirrorJsdom) {
+    return
+  }
+
+  throw reason
+})
