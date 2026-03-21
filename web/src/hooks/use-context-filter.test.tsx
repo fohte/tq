@@ -1,10 +1,12 @@
 import { act, renderHook } from '@testing-library/react'
 import {
   ContextFilterProvider,
-  filterModeToApiContext,
-  matchesContextFilter,
   useContextFilter,
 } from '@web/hooks/use-context-filter'
+import {
+  filterModeToApiContext,
+  matchesContextFilter,
+} from '@web/lib/context-filter'
 import type { ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 

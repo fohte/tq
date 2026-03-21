@@ -2,6 +2,12 @@ import '@testing-library/jest-dom/vitest'
 
 import { setProjectAnnotations } from '@storybook/react-vite'
 import * as previewAnnotations from '@storybook-config/preview'
+import { cleanup } from '@testing-library/react'
+import { afterEach } from 'vitest'
+
+afterEach(() => {
+  cleanup()
+})
 
 setProjectAnnotations(previewAnnotations)
 
