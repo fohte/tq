@@ -4,21 +4,16 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
 import { forwardRef } from 'react'
 
+const EVENT_TYPE_CLASSES: Record<TimeBlockEvent['type'], string[]> = {
+  manual: ['tq-event-manual'],
+  auto: ['tq-event-auto'],
+  gcal: ['tq-event-gcal'],
+  completed: ['tq-event-completed'],
+  schedule: ['tq-event-schedule'],
+}
+
 function getEventClassNames(type: TimeBlockEvent['type']): string[] {
-  switch (type) {
-    case 'manual':
-      return ['tq-event-manual']
-    case 'auto':
-      return ['tq-event-auto']
-    case 'gcal':
-      return ['tq-event-gcal']
-    case 'completed':
-      return ['tq-event-completed']
-    case 'schedule':
-      return ['tq-event-schedule']
-    default:
-      return []
-  }
+  return EVENT_TYPE_CLASSES[type]
 }
 
 interface CalendarGridProps {

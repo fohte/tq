@@ -17,6 +17,11 @@ export const Route = createFileRoute('/')({
 type TaskTab = 'today' | 'all'
 type MobileTab = 'calendar' | 'tasks'
 
+const MOBILE_TABS = [
+  { value: 'calendar', label: 'Calendar' },
+  { value: 'tasks', label: 'Tasks' },
+] as const
+
 function DayView() {
   const [activeTab, setActiveTab] = useState<TaskTab>('today')
   const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
@@ -125,12 +130,7 @@ function DayView() {
 
       {/* Mobile tab switcher */}
       <div className="fixed bottom-16 left-1/2 z-10 flex -translate-x-1/2 gap-0.5 rounded-lg bg-secondary p-0.5 shadow-lg md:hidden">
-        {(
-          [
-            { value: 'calendar', label: 'Calendar' },
-            { value: 'tasks', label: 'Tasks' },
-          ] as const
-        ).map((tab) => (
+        {MOBILE_TABS.map((tab) => (
           <button
             key={tab.value}
             type="button"
