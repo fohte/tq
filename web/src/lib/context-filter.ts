@@ -55,7 +55,7 @@ export function filterByContext<T extends { context: string }>(
 export function filterTreeByContext<
   T extends { context: string; children: T[] },
 >(nodes: T[], mode: ContextFilterMode): T[] {
-  if (mode === 'all' || mode === 'work') return nodes
+  if (mode === 'all') return nodes
   return nodes.reduce<T[]>((acc, node) => {
     const filteredChildren = filterTreeByContext(node.children, mode)
     if (
