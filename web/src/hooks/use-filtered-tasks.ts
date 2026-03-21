@@ -1,4 +1,5 @@
 import { useContextFilter } from '@web/hooks/use-context-filter'
+import type { TreeNode } from '@web/hooks/use-tasks'
 import { useTaskList, useTaskTree } from '@web/hooks/use-tasks'
 import {
   filterByContext,
@@ -34,14 +35,28 @@ export function useFilteredTaskList() {
   return { isLoading, today, all, backlog, nonBacklog }
 }
 
+function recalcChildCompletionCount(nodes: TreeNode[]): TreeNode[] {
+  return nodes.map((node) => {
+    const children = recalcChildCompletionCount(node.children)
+    return {
+      ...node,
+      children,
+      childCompletionCount: {
+        total: children.length,
+        completed: children.filter((c) => c.status === 'completed').length,
+      },
+    }
+  })
+}
+
 export function useFilteredTaskTree(options: { enabled: boolean }) {
   const { mode } = useContextFilter()
   const { data, isLoading } = useTaskTree(options)
 
-  const tree = useMemo(
-    () => filterTreeByContext(data ?? [], mode),
-    [data, mode],
-  )
+  const tree = useMemo(() => {
+    const filtered = filterTreeByContext(data ?? [], mode)
+    return mode === 'all' ? filtered : recalcChildCompletionCount(filtered)
+  }, [data, mode])
 
   return { isLoading, tree }
 }
