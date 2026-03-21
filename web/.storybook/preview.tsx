@@ -1,6 +1,7 @@
 import '@web/index.css'
 
 import type { Preview } from '@storybook/react-vite'
+import { ContextFilterProvider } from '@web/hooks/use-context-filter'
 
 const preview: Preview = {
   parameters: {
@@ -32,7 +33,11 @@ const preview: Preview = {
     (Story, context) => {
       const theme = context.globals['theme'] ?? 'dark'
       document.documentElement.classList.toggle('dark', theme === 'dark')
-      return Story()
+      return (
+        <ContextFilterProvider>
+          <Story />
+        </ContextFilterProvider>
+      )
     },
   ],
 }
