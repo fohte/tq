@@ -13,7 +13,7 @@
 
 ```sh
 scripts/bootstrap
-docker compose -f docker-compose.infra.yml up -d
+docker compose up -d
 export DATABASE_URL="postgres://tq:tq@localhost:5432/tq_dev"
 pnpm --filter api run db:migrate
 pnpm dev
