@@ -31,6 +31,7 @@ const baseTask: TaskDetail = {
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
   childCompletionCount: { completed: 1, total: 3 },
+  timeBlocks: [],
 }
 
 function Providers({ children }: { children: ReactNode }) {
