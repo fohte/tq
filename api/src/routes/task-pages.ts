@@ -31,7 +31,7 @@ function pageToResponse(page: typeof taskPages.$inferSelect) {
 
 export const taskPagesApp = new Hono()
   .get('/', async (c) => {
-    const taskId = c.req.param('taskId')
+    const taskId = c.req.param('taskId') as string
 
     const task = await db.query.tasks.findFirst({
       where: eq(tasks.id, taskId),
@@ -49,7 +49,7 @@ export const taskPagesApp = new Hono()
     return c.json(pages.map(pageToResponse), 200)
   })
   .post('/', zValidator('json', createPageSchema), async (c) => {
-    const taskId = c.req.param('taskId')
+    const taskId = c.req.param('taskId') as string
     const input = c.req.valid('json')
 
     const task = await db.query.tasks.findFirst({
@@ -72,8 +72,8 @@ export const taskPagesApp = new Hono()
     return c.json(pageToResponse(page!), 201)
   })
   .patch('/:pageId', zValidator('json', updatePageSchema), async (c) => {
-    const taskId = c.req.param('taskId')
-    const pageId = c.req.param('pageId')
+    const taskId = c.req.param('taskId') as string
+    const pageId = c.req.param('pageId') as string
 
     const existing = await db.query.taskPages.findFirst({
       where: and(eq(taskPages.id, pageId), eq(taskPages.taskId, taskId)),
@@ -91,8 +91,8 @@ export const taskPagesApp = new Hono()
     return c.json(pageToResponse(updated!), 200)
   })
   .delete('/:pageId', async (c) => {
-    const taskId = c.req.param('taskId')
-    const pageId = c.req.param('pageId')
+    const taskId = c.req.param('taskId') as string
+    const pageId = c.req.param('pageId') as string
 
     const existing = await db.query.taskPages.findFirst({
       where: and(eq(taskPages.id, pageId), eq(taskPages.taskId, taskId)),
