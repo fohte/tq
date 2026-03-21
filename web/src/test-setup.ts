@@ -37,9 +37,11 @@ const originalListeners = process.listeners('uncaughtException')
 process.removeAllListeners('uncaughtException')
 process.prependListener('uncaughtException', (error) => {
   const message = error instanceof Error ? error.message : String(error)
-  const errorObj = error as unknown as Record<string, unknown>
   const isMilkdownCleanup =
-    'code' in errorObj && errorObj['code'] === 'contextNotFound'
+    error != null &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error as Record<string, unknown>)['code'] === 'contextNotFound'
   const isProsemirrorJsdom = message.includes(
     'getClientRects is not a function',
   )
