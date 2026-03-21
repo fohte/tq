@@ -45,6 +45,11 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
             minute: '2-digit',
             hour12: false,
           }}
+          eventTimeFormat={{
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          }}
           height="100%"
           expandRows={false}
           editable={true}
