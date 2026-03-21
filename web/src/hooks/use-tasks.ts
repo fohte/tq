@@ -316,7 +316,51 @@ export function useUpdateTaskParent() {
       if (!res.ok) throw new Error('Failed to update task parent')
       return res.json()
     },
-    onSettled: () => {
+    onMutate: async ({ id, parentId }) => {
+      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
+      await queryClient.cancelQueries({ queryKey: taskKeys.lists })
+
+      const previousDetail = queryClient.getQueryData<TaskDetail>(
+        taskKeys.detail(id),
+      )
+      const previousLists = queryClient.getQueriesData<Task[]>({
+        queryKey: taskKeys.lists,
+      })
+
+      if (previousDetail) {
+        queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
+          ...previousDetail,
+          parentId,
+          updatedAt: new Date().toISOString(),
+        })
+      }
+
+      queryClient.setQueriesData<Task[]>(
+        { queryKey: taskKeys.lists },
+        (old) => {
+          if (!old) return old
+          return old.map((task) =>
+            task.id === id
+              ? { ...task, parentId, updatedAt: new Date().toISOString() }
+              : task,
+          )
+        },
+      )
+
+      return { previousDetail, previousLists }
+    },
+    onError: (_err, { id }, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
+      }
+      if (context?.previousLists) {
+        for (const [key, data] of context.previousLists) {
+          queryClient.setQueryData(key, data)
+        }
+      }
+    },
+    onSettled: (_data, _err, { id }) => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
       queryClient.invalidateQueries({ queryKey: taskKeys.all })
     },
   })
