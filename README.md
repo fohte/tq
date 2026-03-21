@@ -14,11 +14,12 @@
 ```sh
 scripts/bootstrap
 docker compose -f docker-compose.infra.yml up -d
-DATABASE_URL=postgres://tq:tq@localhost:5432/tq_dev pnpm --filter api run db:migrate
-DATABASE_URL=postgres://tq:tq@localhost:5432/tq_dev pnpm dev
+export DATABASE_URL="postgres://tq:tq@localhost:5432/tq_dev"
+pnpm --filter api run db:migrate
+pnpm dev
 ```
 
-`pnpm dev` starts both the API server and the Vite dev server concurrently. Environment variables can also be set via a `.env` file in the project root.
+`pnpm dev` starts both the API server and the Vite dev server concurrently.
 
 ### Scripts
 
