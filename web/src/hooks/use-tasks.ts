@@ -12,7 +12,8 @@ type TreeNode = InferResponseType<typeof api.api.tasks.tree.$get, 200>[number]
 const taskKeys = {
   all: ['tasks'] as const,
   lists: ['tasks', 'list'] as const,
-  list: (filter?: { status?: string }) => [...taskKeys.lists, filter] as const,
+  list: (filter?: { status?: string; context?: string }) =>
+    [...taskKeys.lists, filter] as const,
   tree: ['tasks', 'tree'] as const,
   detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
 }
@@ -36,7 +37,12 @@ export interface CategorizedTasks {
   nonBacklog: Task[]
 }
 
-export function useTaskList(filter?: { status?: TaskStatus }) {
+type TaskContext = 'work' | 'personal' | 'dev'
+
+export function useTaskList(filter?: {
+  status?: TaskStatus
+  context?: TaskContext
+}) {
   const query = useQuery({
     queryKey: taskKeys.list(filter),
     queryFn: async () => {

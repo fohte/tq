@@ -1,4 +1,5 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
+import { ContextFilter } from '@web/components/context-filter'
 import { cn } from '@web/lib/utils'
 import type { LucideIcon } from 'lucide-react'
 import { Calendar, CheckSquare, FolderKanban, Search, Sun } from 'lucide-react'
@@ -60,6 +61,10 @@ export function Sidebar() {
 
         <NavLink item={projectNavItem} />
       </nav>
+
+      <div className="mb-4">
+        <ContextFilter />
+      </div>
     </aside>
   )
 }

@@ -82,6 +82,16 @@ describe('sub-app routing', () => {
       })
       expect(res.status).toBe(404)
     })
+
+    it.each(['start', 'stop', 'complete'])(
+      'POST /api/tasks/:id/%s returns 404 for non-existent task',
+      async (action) => {
+        const res = await app.request(`/api/tasks/${TEST_ID_1}/${action}`, {
+          method: 'POST',
+        })
+        expect(res.status).toBe(404)
+      },
+    )
   })
 
   describe('projects sub-app', () => {
