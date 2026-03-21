@@ -83,13 +83,6 @@ APP_PORT=3002 WEB_PORT=5174 docker compose up --build
 | -------------- | -------- | ----------------------- | --------------------------------- |
 | `VITE_API_URL` | No       | `http://localhost:3001` | API base URL used by the frontend |
 
-### Docker Compose (for local development)
-
-| Variable   | Required | Default | Description                                  |
-| ---------- | -------- | ------- | -------------------------------------------- |
-| `APP_PORT` | No       | `3001`  | Host-side port mapping for the API container |
-| `WEB_PORT` | No       | `5173`  | Host-side port mapping for the web container |
-
 ## Scripts
 
 | Command                             | Description                          |
