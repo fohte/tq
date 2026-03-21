@@ -9,25 +9,7 @@
 - [mise](https://mise.jdx.dev/) (manages Node.js, pnpm, and other tool versions via `.mise.toml`)
 - Docker + docker compose plugin ([Docker Desktop](https://www.docker.com/) or [Colima](https://github.com/abiosoft/colima))
 
-### Setup (Docker)
-
-```sh
-scripts/bootstrap
-docker compose -f docker-compose.infra.yml up -d
-DATABASE_URL=postgres://tq:tq@localhost:5432/tq_dev pnpm --filter api run db:migrate
-docker compose up --build
-open http://localhost:5173
-```
-
-Set `APP_PORT` and `WEB_PORT` to avoid port conflicts when using multiple worktrees:
-
-```sh
-APP_PORT=3002 WEB_PORT=5174 docker compose up --build
-```
-
-### Setup (Host, recommended)
-
-DB only runs in Docker. API and Web run on the host for faster hot-reload.
+### Setup
 
 ```sh
 scripts/bootstrap
