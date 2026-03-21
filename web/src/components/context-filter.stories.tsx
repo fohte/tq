@@ -34,7 +34,7 @@ function ContextFilterDemo() {
 }
 
 const meta = {
-  title: 'ContextFilter',
+  title: 'UI/ContextFilter',
   component: ContextFilterDemo,
   parameters: {
     layout: 'centered',
