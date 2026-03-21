@@ -2,6 +2,7 @@ import '@web/index.css'
 
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
+import { ContextFilterProvider } from '@web/hooks/use-context-filter'
 import { queryClient } from '@web/lib/query-client'
 import { routeTree } from '@web/routeTree.gen'
 import { StrictMode } from 'react'
@@ -23,7 +24,9 @@ if (!root) {
 createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <ContextFilterProvider>
+        <RouterProvider router={router} />
+      </ContextFilterProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

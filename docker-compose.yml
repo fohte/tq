@@ -1,44 +1,30 @@
-services:
-  app:
-    build:
-      context: .
-      dockerfile: api/Dockerfile
-      target: dev
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-tq}:${POSTGRES_PASSWORD:-tq}@db:5432/${POSTGRES_DB:-tq_dev}
-      PORT: '3001'
-    ports:
-      - '127.0.0.1:${APP_PORT:-3001}:3001'
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/api/node_modules
-    networks:
-      - tq-net
+# DB 専用 Compose ファイル
+# 全 worktree で共有する。1 回だけ起動すればよい:
+#   docker compose up -d
+name: tq-infra
 
-  web:
-    image: node:24-slim
-    working_dir: /app
-    command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm --filter web dev --host"
+services:
+  db:
+    image: postgres:17
     environment:
-      VITE_API_URL: http://localhost:${APP_PORT:-3001}
+      POSTGRES_USER: ${POSTGRES_USER:-tq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tq}
+      POSTGRES_DB: ${POSTGRES_DB:-tq_dev}
     ports:
-      - '127.0.0.1:${WEB_PORT:-5173}:5173'
+      - '127.0.0.1:${DB_PORT:-5432}:5432'
     volumes:
-      - .:/app
-      - web_node_modules:/app/node_modules
-      - api_node_modules:/app/api/node_modules
-      - web_pkg_node_modules:/app/web/node_modules
-    depends_on:
-      - app
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-tq}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - tq-net
 
 volumes:
-  web_node_modules:
-  api_node_modules:
-  web_pkg_node_modules:
+  db_data:
 
 networks:
   tq-net:
-    external: true
+    name: tq-net

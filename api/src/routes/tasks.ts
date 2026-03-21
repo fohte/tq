@@ -1,7 +1,7 @@
 import { db } from '@api/db/connection'
-import { labels, taskLabels, tasks } from '@api/db/schema'
+import { labels, taskLabels, tasks, timeBlocks } from '@api/db/schema'
 import { zValidator } from '@hono/zod-validator'
-import { and, count, eq, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, count, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { createFactory } from 'hono/factory'
 import { z } from 'zod'
@@ -43,6 +43,7 @@ const listQuerySchema = z.object({
   status: taskStatus.optional(),
   projectId: z.string().uuid().optional(),
   parentId: z.string().uuid().optional(),
+  context: context.optional(),
 })
 
 const treeQuerySchema = z.object({
@@ -87,6 +88,18 @@ function taskToResponse(task: typeof tasks.$inferSelect) {
     sortOrder: task.sortOrder,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
+  }
+}
+
+function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
+  return {
+    id: block.id,
+    taskId: block.taskId,
+    startTime: block.startTime.toISOString(),
+    endTime: block.endTime?.toISOString() ?? null,
+    isAutoScheduled: block.isAutoScheduled,
+    createdAt: block.createdAt.toISOString(),
+    updatedAt: block.updatedAt.toISOString(),
   }
 }
 
@@ -157,6 +170,25 @@ const requireTask = factory.createMiddleware(async (c, next) => {
   return next()
 })
 
+async function updateStatusAndCloseTimeBlocks(
+  taskId: string,
+  status: 'todo' | 'completed',
+) {
+  const now = new Date()
+  const [[updatedTask], closedBlocks] = await Promise.all([
+    db
+      .update(tasks)
+      .set({ status, updatedAt: now })
+      .where(eq(tasks.id, taskId))
+      .returning(),
+    db
+      .update(timeBlocks)
+      .set({ endTime: now, updatedAt: now })
+      .where(and(eq(timeBlocks.taskId, taskId), isNull(timeBlocks.endTime)))
+      .returning(),
+  ])
+  return [updatedTask!, closedBlocks] as const
+}
 export const tasksApp = new Hono()
   // Task CRUD
   .post('/', zValidator('json', createTaskSchema), async (c) => {
@@ -215,6 +247,9 @@ export const tasksApp = new Hono()
     }
     if (query.parentId) {
       conditions.push(eq(tasks.parentId, query.parentId))
+    }
+    if (query.context) {
+      conditions.push(eq(tasks.context, query.context))
     }
 
     const result = await db
@@ -351,16 +386,23 @@ export const tasksApp = new Hono()
     const task = c.get('task')
     const id = task.id
 
-    // Get child completion count
-    const childStats = await db
-      .select({
-        total: count(),
-        completed: count(
-          sql`CASE WHEN ${tasks.status} = 'completed' THEN 1 END`,
-        ),
-      })
-      .from(tasks)
-      .where(eq(tasks.parentId, id))
+    // Get child completion count and time blocks in parallel
+    const [childStats, taskTimeBlocks] = await Promise.all([
+      db
+        .select({
+          total: count(),
+          completed: count(
+            sql`CASE WHEN ${tasks.status} = 'completed' THEN 1 END`,
+          ),
+        })
+        .from(tasks)
+        .where(eq(tasks.parentId, id)),
+      db
+        .select()
+        .from(timeBlocks)
+        .where(eq(timeBlocks.taskId, id))
+        .orderBy(timeBlocks.startTime),
+    ])
 
     return c.json(
       {
@@ -369,6 +411,7 @@ export const tasksApp = new Hono()
           total: childStats[0]?.total ?? 0,
           completed: childStats[0]?.completed ?? 0,
         },
+        timeBlocks: taskTimeBlocks.map(timeBlockToResponse),
       },
       200,
     )
@@ -396,11 +439,22 @@ export const tasksApp = new Hono()
     zValidator('json', updateStatusSchema),
     async (c) => {
       const id = c.req.param('id')
+      const existing = c.get('task')
       const { status } = c.req.valid('json')
+
+      const now = new Date()
+
+      // Close open TimeBlocks when transitioning away from in_progress
+      if (existing.status === 'in_progress' && status !== 'in_progress') {
+        await db
+          .update(timeBlocks)
+          .set({ endTime: now, updatedAt: now })
+          .where(and(eq(timeBlocks.taskId, id), isNull(timeBlocks.endTime)))
+      }
 
       const [updated] = await db
         .update(tasks)
-        .set({ status, updatedAt: new Date() })
+        .set({ status, updatedAt: now })
         .where(eq(tasks.id, id))
         .returning()
 
@@ -453,6 +507,70 @@ export const tasksApp = new Hono()
       return c.json(taskToResponse(updated!), 200)
     },
   )
+  .post('/:id/start', requireTask, async (c) => {
+    const id = c.req.param('id')
+    const existing = c.get('task')
+
+    if (existing.status === 'in_progress') {
+      return c.json({ error: 'Task is already in progress' }, 409)
+    }
+
+    const now = new Date()
+
+    const [[updatedTask], [createdBlock]] = await Promise.all([
+      db
+        .update(tasks)
+        .set({ status: 'in_progress', updatedAt: now })
+        .where(eq(tasks.id, id))
+        .returning(),
+      db.insert(timeBlocks).values({ taskId: id, startTime: now }).returning(),
+    ])
+
+    return c.json(
+      {
+        ...taskToResponse(updatedTask!),
+        timeBlock: timeBlockToResponse(createdBlock!),
+      },
+      200,
+    )
+  })
+  .post('/:id/stop', requireTask, async (c) => {
+    const id = c.req.param('id')
+    const existing = c.get('task')
+
+    if (existing.status !== 'in_progress') {
+      return c.json({ error: 'Task is not in progress' }, 409)
+    }
+
+    const [updatedTask, closedBlocks] = await updateStatusAndCloseTimeBlocks(
+      id,
+      'todo',
+    )
+
+    return c.json(
+      {
+        ...taskToResponse(updatedTask),
+        closedTimeBlocks: closedBlocks.map(timeBlockToResponse),
+      },
+      200,
+    )
+  })
+  .post('/:id/complete', requireTask, async (c) => {
+    const id = c.req.param('id')
+
+    const [updatedTask, closedBlocks] = await updateStatusAndCloseTimeBlocks(
+      id,
+      'completed',
+    )
+
+    return c.json(
+      {
+        ...taskToResponse(updatedTask),
+        closedTimeBlocks: closedBlocks.map(timeBlockToResponse),
+      },
+      200,
+    )
+  })
   .delete('/:id', requireTask, async (c) => {
     const id = c.req.param('id')
 

@@ -7,14 +7,18 @@ type Task = InferResponseType<typeof api.api.tasks.$get>[number]
 
 type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
 
+type TreeNode = InferResponseType<typeof api.api.tasks.tree.$get, 200>[number]
+
 const taskKeys = {
   all: ['tasks'] as const,
   lists: ['tasks', 'list'] as const,
-  list: (filter?: { status?: string }) => [...taskKeys.lists, filter] as const,
+  list: (filter?: { status?: string; context?: string }) =>
+    [...taskKeys.lists, filter] as const,
+  tree: ['tasks', 'tree'] as const,
   detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
 }
 
-export type { Task, TaskDetail }
+export type { Task, TaskDetail, TreeNode }
 
 type TaskStatus = 'todo' | 'in_progress' | 'completed'
 
@@ -33,7 +37,12 @@ export interface CategorizedTasks {
   nonBacklog: Task[]
 }
 
-export function useTaskList(filter?: { status?: TaskStatus }) {
+type TaskContext = 'work' | 'personal' | 'dev'
+
+export function useTaskList(filter?: {
+  status?: TaskStatus
+  context?: TaskContext
+}) {
   const query = useQuery({
     queryKey: taskKeys.list(filter),
     queryFn: async () => {
@@ -260,6 +269,86 @@ export function useUpdateTask() {
           return old.map((task) =>
             task.id === id
               ? { ...task, ...input, updatedAt: optimisticTimestamp }
+              : task,
+          )
+        },
+      )
+
+      return { previousDetail, previousLists }
+    },
+    onError: (_err, { id }, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
+      }
+      if (context?.previousLists) {
+        for (const [key, data] of context.previousLists) {
+          queryClient.setQueryData(key, data)
+        }
+      }
+    },
+    onSettled: (_data, _err, { id }) => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: taskKeys.all })
+    },
+  })
+}
+
+export function useTaskTree(options: { enabled: boolean }) {
+  return useQuery({
+    queryKey: taskKeys.tree,
+    queryFn: async () => {
+      const res = await api.api.tasks.tree.$get({ query: {} })
+      if (!res.ok) throw new Error('Failed to fetch task tree')
+      return res.json()
+    },
+    enabled: options.enabled,
+  })
+}
+
+export function useUpdateTaskParent() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      parentId,
+    }: {
+      id: string
+      parentId: string | null
+    }) => {
+      const res = await api.api.tasks[':id'].parent.$patch({
+        param: { id },
+        json: { parentId },
+      })
+      if (!res.ok) throw new Error('Failed to update task parent')
+      return res.json()
+    },
+    onMutate: async ({ id, parentId }) => {
+      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
+      await queryClient.cancelQueries({ queryKey: taskKeys.lists })
+
+      const previousDetail = queryClient.getQueryData<TaskDetail>(
+        taskKeys.detail(id),
+      )
+      const previousLists = queryClient.getQueriesData<Task[]>({
+        queryKey: taskKeys.lists,
+      })
+
+      if (previousDetail) {
+        queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
+          ...previousDetail,
+          parentId,
+          updatedAt: new Date().toISOString(),
+        })
+      }
+
+      queryClient.setQueriesData<Task[]>(
+        { queryKey: taskKeys.lists },
+        (old) => {
+          if (!old) return old
+          return old.map((task) =>
+            task.id === id
+              ? { ...task, parentId, updatedAt: new Date().toISOString() }
               : task,
           )
         },
