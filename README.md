@@ -13,17 +13,13 @@
 
 ```sh
 scripts/bootstrap
-docker compose -f docker-compose.infra.yml up -d
-DATABASE_URL=postgres://tq:tq@localhost:5432/tq_dev pnpm --filter api run db:migrate
-docker compose up --build
-open http://localhost:5173
+docker compose up -d
+export DATABASE_URL="postgres://tq:tq@localhost:5432/tq_dev"
+pnpm --filter api run db:migrate
+pnpm dev
 ```
 
-Set `APP_PORT` and `WEB_PORT` to avoid port conflicts when using multiple worktrees:
-
-```sh
-APP_PORT=3002 WEB_PORT=5174 docker compose up --build
-```
+`pnpm dev` starts both the API server and the Vite dev server concurrently.
 
 ### Scripts
 
