@@ -1,5 +1,6 @@
 import { db } from '@api/db/connection'
 import { labels, taskLabels, taskPages, tasks } from '@api/db/schema'
+import { pageToResponse } from '@api/routes/task-pages'
 import { zValidator } from '@hono/zod-validator'
 import { and, count, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -360,15 +361,7 @@ export const tasksApp = new Hono()
           total: childStats[0]?.total ?? 0,
           completed: childStats[0]?.completed ?? 0,
         },
-        pages: pages.map((p) => ({
-          id: p.id,
-          taskId: p.taskId,
-          title: p.title,
-          content: p.content,
-          sortOrder: p.sortOrder,
-          createdAt: p.createdAt.toISOString(),
-          updatedAt: p.updatedAt.toISOString(),
-        })),
+        pages: pages.map(pageToResponse),
       },
       200,
     )

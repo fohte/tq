@@ -17,7 +17,7 @@ const updatePageSchema = z.object({
   sortOrder: z.number().int().optional(),
 })
 
-function pageToResponse(page: typeof taskPages.$inferSelect) {
+export function pageToResponse(page: typeof taskPages.$inferSelect) {
   return {
     id: page.id,
     taskId: page.taskId,
@@ -75,33 +75,30 @@ export const taskPagesApp = new Hono()
     const taskId = c.req.param('taskId') as string
     const pageId = c.req.param('pageId') as string
 
-    const existing = await db.query.taskPages.findFirst({
-      where: and(eq(taskPages.id, pageId), eq(taskPages.taskId, taskId)),
-    })
-    if (!existing) {
-      return c.json({ error: 'Page not found' }, 404)
-    }
-
     const [updated] = await db
       .update(taskPages)
       .set({ ...c.req.valid('json'), updatedAt: new Date() })
-      .where(eq(taskPages.id, pageId))
+      .where(and(eq(taskPages.id, pageId), eq(taskPages.taskId, taskId)))
       .returning()
 
-    return c.json(pageToResponse(updated!), 200)
+    if (!updated) {
+      return c.json({ error: 'Page not found' }, 404)
+    }
+
+    return c.json(pageToResponse(updated), 200)
   })
   .delete('/:pageId', async (c) => {
     const taskId = c.req.param('taskId') as string
     const pageId = c.req.param('pageId') as string
 
-    const existing = await db.query.taskPages.findFirst({
-      where: and(eq(taskPages.id, pageId), eq(taskPages.taskId, taskId)),
-    })
-    if (!existing) {
+    const deleted = await db
+      .delete(taskPages)
+      .where(and(eq(taskPages.id, pageId), eq(taskPages.taskId, taskId)))
+      .returning()
+
+    if (deleted.length === 0) {
       return c.json({ error: 'Page not found' }, 404)
     }
-
-    await db.delete(taskPages).where(eq(taskPages.id, pageId))
 
     return c.body(null, 204)
   })
