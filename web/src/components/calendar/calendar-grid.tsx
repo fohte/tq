@@ -41,9 +41,9 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           slotDuration="00:30:00"
           slotLabelInterval="01:00:00"
           slotLabelFormat={{
-            hour: 'numeric',
+            hour: '2-digit',
             minute: '2-digit',
-            meridiem: 'short',
+            hour12: false,
           }}
           height="100%"
           expandRows={false}
