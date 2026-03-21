@@ -38,7 +38,7 @@ export function useContextFilter(): ContextFilterState {
  */
 export function filterModeToApiContext(
   mode: ContextFilterMode,
-): 'work' | 'personal' | 'dev' | undefined {
+): 'work' | undefined {
   switch (mode) {
     case 'work':
       return 'work'
