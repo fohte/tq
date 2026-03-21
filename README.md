@@ -36,10 +36,8 @@ DATABASE_URL=postgres://tq:tq@localhost:5432/tq_dev pnpm --filter api run db:mig
 API server (port 3001):
 
 ```sh
-DATABASE_URL=postgres://tq:tq@localhost:5432/tq_dev CORS_ORIGIN=http://localhost:5173 pnpm --filter api run dev
+DATABASE_URL=postgres://tq:tq@localhost:5432/tq_dev pnpm --filter api run dev
 ```
-
-`CORS_ORIGIN` sets the allowed origin for CORS requests. Defaults to `*` (all origins) if omitted.
 
 Web dev server:
 
@@ -68,6 +66,17 @@ The DB runs once via `docker-compose.infra.yml` and is shared across worktrees. 
 ```sh
 APP_PORT=3002 WEB_PORT=5174 docker compose up --build
 ```
+
+## Environment Variables
+
+| Variable       | Required | Default                 | Description                                                               |
+| -------------- | -------- | ----------------------- | ------------------------------------------------------------------------- |
+| `DATABASE_URL` | Yes      | -                       | PostgreSQL connection URL (e.g. `postgres://tq:tq@localhost:5432/tq_dev`) |
+| `CORS_ORIGIN`  | No       | `*`                     | Allowed origin for CORS requests (e.g. `http://localhost:5173`)           |
+| `PORT`         | No       | `3001`                  | API server listen port                                                    |
+| `APP_PORT`     | No       | `3001`                  | Host-side port mapping for the API container (docker compose)             |
+| `WEB_PORT`     | No       | `5173`                  | Host-side port mapping for the web container (docker compose)             |
+| `VITE_API_URL` | No       | `http://localhost:3001` | API base URL used by the web frontend                                     |
 
 ## Scripts
 
