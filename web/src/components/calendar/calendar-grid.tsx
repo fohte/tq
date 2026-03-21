@@ -2,19 +2,8 @@ import interactionPlugin from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
+import { EventBlock } from '@web/components/calendar/event-block'
 import { forwardRef } from 'react'
-
-const EVENT_TYPE_CLASSES: Record<TimeBlockEvent['type'], string[]> = {
-  manual: ['tq-event-manual'],
-  auto: ['tq-event-auto'],
-  gcal: ['tq-event-gcal'],
-  completed: ['tq-event-completed'],
-  schedule: ['tq-event-schedule'],
-}
-
-function getEventClassNames(type: TimeBlockEvent['type']): string[] {
-  return EVENT_TYPE_CLASSES[type]
-}
 
 interface CalendarGridProps {
   events: TimeBlockEvent[]
@@ -32,7 +21,6 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       title: event.title,
       start: event.start,
       end: event.end,
-      classNames: getEventClassNames(event.type),
       extendedProps: { type: event.type },
     }))
 
@@ -44,6 +32,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           initialView="timeGridDay"
           headerToolbar={false}
           events={calendarEvents}
+          eventContent={(arg) => <EventBlock {...arg} />}
           nowIndicator={true}
           allDaySlot={false}
           slotMinTime="00:00:00"
