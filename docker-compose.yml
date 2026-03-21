@@ -6,6 +6,7 @@ services:
       target: dev
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-tq}:${POSTGRES_PASSWORD:-tq}@db:5432/${POSTGRES_DB:-tq_dev}
+      CORS_ORIGIN: http://localhost:${WEB_PORT:-5173}
       PORT: '3001'
     ports:
       - '127.0.0.1:${APP_PORT:-3001}:3001'

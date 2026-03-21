@@ -14,7 +14,8 @@
     "baseUrl": ".",
     "paths": {
       "@web/*": ["src/*"],
-      "@api/*": ["../api/src/*"]
+      "@api/*": ["../api/src/*"],
+      "@storybook-config/*": [".storybook/*"]
     }
   }
 }
