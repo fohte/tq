@@ -69,14 +69,26 @@ APP_PORT=3002 WEB_PORT=5174 docker compose up --build
 
 ## Environment Variables
 
-| Variable       | Required | Default                 | Description                                                               |
-| -------------- | -------- | ----------------------- | ------------------------------------------------------------------------- |
-| `DATABASE_URL` | Yes      | -                       | PostgreSQL connection URL (e.g. `postgres://tq:tq@localhost:5432/tq_dev`) |
-| `CORS_ORIGIN`  | No       | `*`                     | Allowed origin for CORS requests (e.g. `http://localhost:5173`)           |
-| `PORT`         | No       | `3001`                  | API server listen port                                                    |
-| `APP_PORT`     | No       | `3001`                  | Host-side port mapping for the API container (docker compose)             |
-| `WEB_PORT`     | No       | `5173`                  | Host-side port mapping for the web container (docker compose)             |
-| `VITE_API_URL` | No       | `http://localhost:3001` | API base URL used by the web frontend                                     |
+### API server
+
+| Variable       | Required | Default | Description                                                               |
+| -------------- | -------- | ------- | ------------------------------------------------------------------------- |
+| `DATABASE_URL` | Yes      | -       | PostgreSQL connection URL (e.g. `postgres://tq:tq@localhost:5432/tq_dev`) |
+| `CORS_ORIGIN`  | No       | `*`     | Allowed origin for CORS requests (e.g. `http://localhost:5173`)           |
+| `PORT`         | No       | `3001`  | Listen port                                                               |
+
+### Web frontend (build-time)
+
+| Variable       | Required | Default                 | Description                       |
+| -------------- | -------- | ----------------------- | --------------------------------- |
+| `VITE_API_URL` | No       | `http://localhost:3001` | API base URL used by the frontend |
+
+### Docker Compose
+
+| Variable   | Required | Default | Description                                  |
+| ---------- | -------- | ------- | -------------------------------------------- |
+| `APP_PORT` | No       | `3001`  | Host-side port mapping for the API container |
+| `WEB_PORT` | No       | `5173`  | Host-side port mapping for the web container |
 
 ## Scripts
 
