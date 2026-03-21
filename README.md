@@ -14,13 +14,8 @@
 ```sh
 scripts/bootstrap
 docker compose -f docker-compose.infra.yml up -d
-docker compose up --build
-```
-
-Then run migrations and open the app:
-
-```sh
 DATABASE_URL=postgres://tq:tq@localhost:5432/tq_dev pnpm --filter api run db:migrate
+docker compose up --build
 open http://localhost:5173
 ```
 
