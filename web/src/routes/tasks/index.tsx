@@ -12,7 +12,7 @@ import {
   matchesContextFilter,
   useContextFilter,
 } from '@web/hooks/use-context-filter'
-import type { Task } from '@web/hooks/use-tasks'
+import type { Task, TreeNode } from '@web/hooks/use-tasks'
 import { useTaskList, useTaskTree } from '@web/hooks/use-tasks'
 import { cn } from '@web/lib/utils'
 import { useMemo, useState } from 'react'
@@ -63,10 +63,29 @@ function TaskList() {
     }
   }, [activeTab, categorized, mode])
 
+  const filterTreeByContext = (nodes: TreeNode[]): TreeNode[] => {
+    if (mode === 'all' || mode === 'work') return nodes
+    return nodes.reduce<TreeNode[]>((acc, node) => {
+      const filteredChildren = filterTreeByContext(node.children)
+      if (
+        matchesContextFilter(node.context, mode) ||
+        filteredChildren.length > 0
+      ) {
+        acc.push({ ...node, children: filteredChildren })
+      }
+      return acc
+    }, [])
+  }
+
+  const filteredTreeData = useMemo(
+    () => filterTreeByContext(treeData ?? []),
+    [treeData, mode],
+  )
+
   const showTree = activeTab === 'all'
   const loading = showTree ? isTreeLoading : isLoading
   const isEmpty = showTree
-    ? (treeData ?? []).length === 0
+    ? filteredTreeData.length === 0
     : displayTasks.length === 0
 
   return (
@@ -129,7 +148,7 @@ function TaskList() {
           </div>
         ) : showTree ? (
           <div className="py-1" data-testid="task-tree">
-            {(treeData ?? []).map((node) => (
+            {filteredTreeData.map((node) => (
               <TreeTaskRow key={node.id} node={node} />
             ))}
           </div>
