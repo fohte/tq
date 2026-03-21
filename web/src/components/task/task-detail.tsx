@@ -1,7 +1,12 @@
 import { Link } from '@tanstack/react-router'
 import { MarkdownEditor } from '@web/components/ui/markdown-editor'
 import type { TaskDetail, UpdateTaskInput } from '@web/hooks/use-tasks'
-import { useUpdateTask, useUpdateTaskStatus } from '@web/hooks/use-tasks'
+import {
+  useTaskList,
+  useUpdateTask,
+  useUpdateTaskParent,
+  useUpdateTaskStatus,
+} from '@web/hooks/use-tasks'
 import { formatMinutes, parseDurationToMinutes } from '@web/lib/parse-duration'
 import { cn } from '@web/lib/utils'
 import {
@@ -72,7 +77,7 @@ export function TaskSidebar({ task }: { task: TaskDetail }) {
         icon={<Calendar className="size-3.5" />}
         value={task.dueDate}
       />
-      <SidebarParentField parentId={task.parentId} />
+      <SidebarParentField taskId={task.id} parentId={task.parentId} />
       <SidebarContextField taskId={task.id} context={task.context} />
     </div>
   )
@@ -106,7 +111,7 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
           icon={<Calendar className="size-3.5" />}
           value={task.dueDate}
         />
-        <SidebarParentField parentId={task.parentId} />
+        <SidebarParentField taskId={task.id} parentId={task.parentId} />
         <SidebarContextField taskId={task.id} context={task.context} />
       </div>
     </div>
@@ -426,20 +431,36 @@ function SidebarDateField({
   )
 }
 
-function SidebarParentField({ parentId }: { parentId: string | null }) {
+function SidebarParentField({
+  taskId,
+  parentId,
+}: {
+  taskId: string
+  parentId: string | null
+}) {
+  const { categorized } = useTaskList()
+  const updateParent = useUpdateTaskParent()
+
+  // Exclude self from candidates
+  const candidates = (categorized.all ?? []).filter((t) => t.id !== taskId)
+
   return (
     <SidebarField label="Parent" icon={<Network className="size-3.5" />}>
-      {parentId ? (
-        <Link
-          to="/tasks/$taskId"
-          params={{ taskId: parentId }}
-          className="text-xs text-primary hover:underline"
-        >
-          #{parentId.slice(0, 8)}
-        </Link>
-      ) : (
-        <span className="px-2 py-1 text-xs text-muted-foreground">—</span>
-      )}
+      <select
+        value={parentId ?? ''}
+        onChange={(e) => {
+          const newParentId = e.target.value || null
+          updateParent.mutate({ id: taskId, parentId: newParentId })
+        }}
+        className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-primary/50"
+      >
+        <option value="">None</option>
+        {candidates.map((t) => (
+          <option key={t.id} value={t.id}>
+            #{t.id.slice(0, 8)} {t.title}
+          </option>
+        ))}
+      </select>
     </SidebarField>
   )
 }

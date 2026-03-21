@@ -7,14 +7,17 @@ type Task = InferResponseType<typeof api.api.tasks.$get>[number]
 
 type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
 
+type TreeNode = InferResponseType<typeof api.api.tasks.tree.$get, 200>[number]
+
 const taskKeys = {
   all: ['tasks'] as const,
   lists: ['tasks', 'list'] as const,
   list: (filter?: { status?: string }) => [...taskKeys.lists, filter] as const,
+  tree: ['tasks', 'tree'] as const,
   detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
 }
 
-export type { Task, TaskDetail }
+export type { Task, TaskDetail, TreeNode }
 
 type TaskStatus = 'todo' | 'in_progress' | 'completed'
 
@@ -279,6 +282,41 @@ export function useUpdateTask() {
     },
     onSettled: (_data, _err, { id }) => {
       queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: taskKeys.all })
+    },
+  })
+}
+
+export function useTaskTree() {
+  return useQuery({
+    queryKey: taskKeys.tree,
+    queryFn: async () => {
+      const res = await api.api.tasks.tree.$get({ query: {} })
+      if (!res.ok) throw new Error('Failed to fetch task tree')
+      return res.json()
+    },
+  })
+}
+
+export function useUpdateTaskParent() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      parentId,
+    }: {
+      id: string
+      parentId: string | null
+    }) => {
+      const res = await api.api.tasks[':id'].parent.$patch({
+        param: { id },
+        json: { parentId },
+      })
+      if (!res.ok) throw new Error('Failed to update task parent')
+      return res.json()
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: taskKeys.all })
     },
   })

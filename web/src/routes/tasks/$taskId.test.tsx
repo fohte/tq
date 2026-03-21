@@ -26,10 +26,14 @@ const mockUseTask = vi.fn()
 const mockUpdateMutate = vi.fn()
 const mockStatusMutate = vi.fn()
 
+const mockParentMutate = vi.fn()
+
 vi.mock('@web/hooks/use-tasks', () => ({
   useTask: (...args: unknown[]) => mockUseTask(...args),
   useUpdateTask: () => ({ mutate: mockUpdateMutate }),
   useUpdateTaskStatus: () => ({ mutate: mockStatusMutate }),
+  useTaskList: () => ({ categorized: { all: [] } }),
+  useUpdateTaskParent: () => ({ mutate: mockParentMutate }),
 }))
 
 vi.mock('@web/components/ui/markdown-editor', () => ({

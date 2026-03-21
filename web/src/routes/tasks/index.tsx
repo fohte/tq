@@ -5,9 +5,9 @@ import {
 } from '@web/components/task/create-task-inline'
 import { CreateTaskModal } from '@web/components/task/create-task-modal'
 import { TaskListHeader } from '@web/components/task/task-list-header'
-import { TaskRow } from '@web/components/task/task-row'
+import { TaskRow, TreeTaskRow } from '@web/components/task/task-row'
 import type { Task } from '@web/hooks/use-tasks'
-import { useTaskList } from '@web/hooks/use-tasks'
+import { useTaskList, useTaskTree } from '@web/hooks/use-tasks'
 import { cn } from '@web/lib/utils'
 import { useState } from 'react'
 
@@ -22,6 +22,7 @@ function TaskList() {
   const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { isLoading, categorized } = useTaskList()
+  const { data: treeData, isLoading: isTreeLoading } = useTaskTree()
 
   const displayTasks: Task[] = (() => {
     switch (activeTab) {
@@ -33,6 +34,12 @@ function TaskList() {
         return categorized.backlog
     }
   })()
+
+  const showTree = activeTab === 'all'
+  const loading = showTree ? isTreeLoading : isLoading
+  const isEmpty = showTree
+    ? (treeData ?? []).length === 0
+    : displayTasks.length === 0
 
   return (
     <div className="flex h-full flex-col">
@@ -81,13 +88,19 @@ function TaskList() {
 
       {/* Task list */}
       <div className="flex-1 overflow-auto">
-        {isLoading ? (
+        {loading ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             Loading...
           </div>
-        ) : displayTasks.length === 0 ? (
+        ) : isEmpty ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             {activeTab === 'backlog' ? 'No backlog tasks' : 'No tasks yet'}
+          </div>
+        ) : showTree ? (
+          <div className="py-1" data-testid="task-tree">
+            {(treeData ?? []).map((node) => (
+              <TreeTaskRow key={node.id} node={node} />
+            ))}
           </div>
         ) : (
           <div className="py-1">
