@@ -1,0 +1,103 @@
+/* FullCalendar theme overrides for tq design system */
+
+.tq-calendar {
+  --fc-border-color: var(--border);
+  --fc-page-bg-color: var(--background);
+  --fc-neutral-bg-color: var(--secondary);
+  --fc-today-bg-color: transparent;
+  --fc-now-indicator-color: oklch(0.637 0.237 25.331);
+  --fc-event-border-color: transparent;
+  --fc-small-font-size: 0.8rem;
+}
+
+/* Time slot labels */
+.tq-calendar .fc-timegrid-slot-label-cushion {
+  font-family: 'JetBrains Mono Variable', monospace;
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+}
+
+/* Slot lanes */
+.tq-calendar .fc-timegrid-slot {
+  height: 2.5rem;
+}
+
+.tq-calendar .fc-timegrid-slot-lane {
+  border-color: var(--border);
+}
+
+/* Now indicator */
+.tq-calendar .fc-timegrid-now-indicator-line {
+  border-color: oklch(0.637 0.237 25.331);
+  border-width: 2px;
+}
+
+.tq-calendar .fc-timegrid-now-indicator-arrow {
+  border-color: oklch(0.637 0.237 25.331);
+}
+
+/* Remove day header since we have our own */
+.tq-calendar .fc-col-header {
+  display: none;
+}
+
+/* Scrollbar styling */
+.tq-calendar .fc-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+/* Event base styles */
+.tq-calendar .fc-event {
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.tq-calendar .fc-event-title {
+  font-weight: 500;
+}
+
+.tq-calendar .fc-event-time {
+  font-family: 'JetBrains Mono Variable', monospace;
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+/* Manual placement (primary) */
+.tq-calendar .tq-event-manual {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* Auto-scheduled (light orange + dashed border) */
+.tq-calendar .tq-event-auto {
+  background-color: color-mix(in srgb, var(--primary) 20%, transparent);
+  color: var(--primary);
+  border: 1px dashed var(--primary) !important;
+}
+
+/* Google Calendar events (secondary) */
+.tq-calendar .tq-event-gcal {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+/* Completed tasks (muted) */
+.tq-calendar .tq-event-completed {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  opacity: 0.7;
+}
+
+.tq-calendar .tq-event-completed .fc-event-title {
+  text-decoration: line-through;
+}
+
+/* Recurring schedule (secondary + left color bar) */
+.tq-calendar .tq-event-schedule {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  border-left: 3px solid var(--primary) !important;
+}

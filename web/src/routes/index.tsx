@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { CalendarView } from '@web/components/calendar/calendar-view'
 import { BacklogPreview } from '@web/components/task/backlog-preview'
 import { CreateTaskInline } from '@web/components/task/create-task-inline'
 import { TaskListHeader } from '@web/components/task/task-list-header'
@@ -13,10 +14,12 @@ export const Route = createFileRoute('/')({
   component: DayView,
 })
 
-type Tab = 'today' | 'all'
+type TaskTab = 'today' | 'all'
+type MobileTab = 'calendar' | 'tasks'
 
 function DayView() {
-  const [activeTab, setActiveTab] = useState<Tab>('today')
+  const [activeTab, setActiveTab] = useState<TaskTab>('today')
+  const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
   const [isCreating, setIsCreating] = useState(false)
   const { isLoading, categorized } = useTaskList()
 
@@ -25,8 +28,13 @@ function DayView() {
 
   return (
     <div className="flex h-full">
-      {/* Left panel: Today's Queue */}
-      <div className="flex w-full flex-col border-r border-border md:w-80 lg:w-96">
+      {/* Left panel: Today's Queue - hidden on mobile when calendar tab is active */}
+      <div
+        className={cn(
+          'flex w-full flex-col border-r border-border md:w-80 lg:w-96',
+          mobileTab === 'calendar' ? 'hidden md:flex' : 'flex md:flex',
+        )}
+      >
         {/* Tab bar */}
         <div className="flex items-center justify-between border-b border-border px-3 py-2">
           <div className="flex gap-1">
@@ -103,12 +111,40 @@ function DayView() {
         )}
       </div>
 
-      {/* Right panel: Calendar placeholder */}
-      <div className="hidden flex-1 items-center justify-center md:flex">
-        <div className="text-center text-muted-foreground">
-          <p className="text-lg font-medium">Calendar</p>
-          <p className="text-sm">Coming soon</p>
+      {/* Right panel: Calendar */}
+      <div
+        className={cn(
+          'flex-1',
+          mobileTab === 'tasks' ? 'hidden md:flex' : 'flex md:flex',
+        )}
+      >
+        <div className="flex h-full w-full flex-col">
+          <CalendarView />
         </div>
+      </div>
+
+      {/* Mobile tab switcher */}
+      <div className="fixed bottom-16 left-1/2 z-10 flex -translate-x-1/2 gap-0.5 rounded-lg bg-secondary p-0.5 shadow-lg md:hidden">
+        {(
+          [
+            { value: 'calendar', label: 'Calendar' },
+            { value: 'tasks', label: 'Tasks' },
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            onClick={() => setMobileTab(tab.value)}
+            className={cn(
+              'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+              mobileTab === tab.value
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
     </div>
   )
