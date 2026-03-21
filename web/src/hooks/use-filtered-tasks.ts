@@ -1,10 +1,10 @@
+import { useContextFilter } from '@web/hooks/use-context-filter'
+import { useTaskList, useTaskTree } from '@web/hooks/use-tasks'
 import {
   filterByContext,
   filterModeToApiContext,
   filterTreeByContext,
-  useContextFilter,
-} from '@web/hooks/use-context-filter'
-import { useTaskList, useTaskTree } from '@web/hooks/use-tasks'
+} from '@web/lib/context-filter'
 import { useMemo } from 'react'
 
 export function useFilteredTaskList() {
