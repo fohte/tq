@@ -274,7 +274,7 @@ export const oauthTokens = pgTable('oauth_tokens', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  provider: text('provider').notNull().default('google_calendar'),
+  provider: text('provider').notNull().default('google_calendar').unique(),
   accessToken: text('access_token').notNull(),
   refreshToken: text('refresh_token').notNull(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
