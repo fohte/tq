@@ -6,9 +6,15 @@ import type { TreeNode } from '@web/hooks/use-tasks'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockStatusMutate = vi.fn()
+const mockStartMutate = vi.fn()
+const mockStopMutate = vi.fn()
+const mockCompleteMutate = vi.fn()
 
 vi.mock('@web/hooks/use-tasks', () => ({
   useUpdateTaskStatus: () => ({ mutate: mockStatusMutate }),
+  useStartTask: () => ({ mutate: mockStartMutate }),
+  useStopTask: () => ({ mutate: mockStopMutate }),
+  useCompleteTask: () => ({ mutate: mockCompleteMutate }),
 }))
 
 vi.mock('@tanstack/react-router', () => ({

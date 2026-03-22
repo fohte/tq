@@ -373,6 +373,177 @@ export function useUpdateTaskParent() {
   })
 }
 
+export function useStartTask() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.api.tasks[':id'].start.$post({
+        param: { id },
+      })
+      if (!res.ok) throw new Error('Failed to start task')
+      return res.json()
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: taskKeys.lists })
+      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
+
+      const previousLists = queryClient.getQueriesData<Task[]>({
+        queryKey: taskKeys.lists,
+      })
+      const previousDetail = queryClient.getQueryData<TaskDetail>(
+        taskKeys.detail(id),
+      )
+
+      queryClient.setQueriesData<Task[]>(
+        { queryKey: taskKeys.lists },
+        (old) => {
+          if (!old) return old
+          return old.map((task) =>
+            task.id === id ? { ...task, status: 'in_progress' as const } : task,
+          )
+        },
+      )
+
+      if (previousDetail) {
+        queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
+          ...previousDetail,
+          status: 'in_progress',
+        })
+      }
+
+      return { previousLists, previousDetail }
+    },
+    onError: (_err, id, context) => {
+      if (context?.previousLists) {
+        for (const [key, data] of context.previousLists) {
+          queryClient.setQueryData(key, data)
+        }
+      }
+      if (context?.previousDetail) {
+        queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.all })
+    },
+  })
+}
+
+export function useStopTask() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.api.tasks[':id'].stop.$post({
+        param: { id },
+      })
+      if (!res.ok) throw new Error('Failed to stop task')
+      return res.json()
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: taskKeys.lists })
+      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
+
+      const previousLists = queryClient.getQueriesData<Task[]>({
+        queryKey: taskKeys.lists,
+      })
+      const previousDetail = queryClient.getQueryData<TaskDetail>(
+        taskKeys.detail(id),
+      )
+
+      queryClient.setQueriesData<Task[]>(
+        { queryKey: taskKeys.lists },
+        (old) => {
+          if (!old) return old
+          return old.map((task) =>
+            task.id === id ? { ...task, status: 'todo' as const } : task,
+          )
+        },
+      )
+
+      if (previousDetail) {
+        queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
+          ...previousDetail,
+          status: 'todo',
+        })
+      }
+
+      return { previousLists, previousDetail }
+    },
+    onError: (_err, id, context) => {
+      if (context?.previousLists) {
+        for (const [key, data] of context.previousLists) {
+          queryClient.setQueryData(key, data)
+        }
+      }
+      if (context?.previousDetail) {
+        queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.all })
+    },
+  })
+}
+
+export function useCompleteTask() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.api.tasks[':id'].complete.$post({
+        param: { id },
+      })
+      if (!res.ok) throw new Error('Failed to complete task')
+      return res.json()
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: taskKeys.lists })
+      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
+
+      const previousLists = queryClient.getQueriesData<Task[]>({
+        queryKey: taskKeys.lists,
+      })
+      const previousDetail = queryClient.getQueryData<TaskDetail>(
+        taskKeys.detail(id),
+      )
+
+      queryClient.setQueriesData<Task[]>(
+        { queryKey: taskKeys.lists },
+        (old) => {
+          if (!old) return old
+          return old.map((task) =>
+            task.id === id ? { ...task, status: 'completed' as const } : task,
+          )
+        },
+      )
+
+      if (previousDetail) {
+        queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
+          ...previousDetail,
+          status: 'completed',
+        })
+      }
+
+      return { previousLists, previousDetail }
+    },
+    onError: (_err, id, context) => {
+      if (context?.previousLists) {
+        for (const [key, data] of context.previousLists) {
+          queryClient.setQueryData(key, data)
+        }
+      }
+      if (context?.previousDetail) {
+        queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.all })
+    },
+  })
+}
+
 export function useDeleteTask() {
   const queryClient = useQueryClient()
 
