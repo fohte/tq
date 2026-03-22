@@ -49,7 +49,7 @@ export function useCreateComment(taskId: string) {
 
       const now = new Date().toISOString()
       const optimistic: Comment = {
-        id: `optimistic-${Date.now()}`,
+        id: `optimistic-${crypto.randomUUID()}`,
         taskId,
         content,
         createdAt: now,

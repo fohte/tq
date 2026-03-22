@@ -7,7 +7,7 @@ import {
 } from '@web/hooks/use-task-comments'
 import { cn } from '@web/lib/utils'
 import { MessageSquare, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 // --- Public API ---
 
@@ -70,6 +70,21 @@ function CommentCard({
   const updateComment = useUpdateComment(taskId)
   const deleteComment = useDeleteComment(taskId)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showMenu) return
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showMenu])
 
   const handleSave = useCallback(() => {
     const trimmed = editContent.trim()
@@ -218,7 +233,7 @@ function CommentInput({ taskId }: { taskId: string }) {
           disabled={!content.trim() || createComment.isPending}
           className={cn(
             'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium',
-            content.trim()
+            content.trim() && !createComment.isPending
               ? 'bg-primary text-primary-foreground hover:bg-primary/90'
               : 'cursor-not-allowed bg-primary/50 text-primary-foreground/50',
           )}
