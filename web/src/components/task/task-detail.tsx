@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { TaskActivity } from '@web/components/task/task-activity'
 import { MarkdownEditor } from '@web/components/ui/markdown-editor'
 import type { TaskDetail, UpdateTaskInput } from '@web/hooks/use-tasks'
 import {
@@ -46,6 +47,11 @@ export function TaskMainContent({ task }: { task: TaskDetail }) {
 
       {/* Description */}
       <TaskDescription taskId={task.id} defaultValue={task.description} />
+
+      {/* Activity */}
+      <div className="border-t border-border pt-4">
+        <TaskActivity taskId={task.id} />
+      </div>
     </div>
   )
 }
