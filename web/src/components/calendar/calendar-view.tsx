@@ -3,6 +3,7 @@ import { CalendarGrid } from '@web/components/calendar/calendar-grid'
 import {
   CalendarHeader,
   type CalendarViewType,
+  FULLCALENDAR_VIEW_MAP,
 } from '@web/components/calendar/calendar-header'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -30,12 +31,6 @@ export interface TimeBlockEvent {
 interface CalendarViewProps {
   events?: TimeBlockEvent[]
   initialView?: CalendarViewType
-}
-
-const VIEW_TYPE_MAP: Record<CalendarViewType, string> = {
-  day: 'timeGridDay',
-  week: 'timeGridWeek',
-  month: 'dayGridMonth',
 }
 
 export function CalendarView({
@@ -73,7 +68,7 @@ export function CalendarView({
   const handleViewChange = useCallback((view: CalendarViewType) => {
     const api = calendarRef.current?.getApi()
     if (api) {
-      api.changeView(VIEW_TYPE_MAP[view])
+      api.changeView(FULLCALENDAR_VIEW_MAP[view])
       setActiveView(view)
       setCurrentDate(api.getDate())
     }
@@ -100,7 +95,7 @@ export function CalendarView({
     const api = calendarRef.current?.getApi()
     if (api) {
       const currentFcView = api.view.type
-      const expectedFcView = VIEW_TYPE_MAP[activeView]
+      const expectedFcView = FULLCALENDAR_VIEW_MAP[activeView]
       if (currentFcView !== expectedFcView) {
         api.changeView(expectedFcView)
       }

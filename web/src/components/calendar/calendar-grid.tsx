@@ -2,16 +2,13 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
-import type { CalendarViewType } from '@web/components/calendar/calendar-header'
+import {
+  type CalendarViewType,
+  FULLCALENDAR_VIEW_MAP,
+} from '@web/components/calendar/calendar-header'
 import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
 import { EventBlock } from '@web/components/calendar/event-block'
 import { forwardRef } from 'react'
-
-const VIEW_TYPE_MAP: Record<CalendarViewType, string> = {
-  day: 'timeGridDay',
-  week: 'timeGridWeek',
-  month: 'dayGridMonth',
-}
 
 interface CalendarGridProps {
   events: TimeBlockEvent[]
@@ -50,7 +47,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         <FullCalendar
           ref={ref}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-          initialView={VIEW_TYPE_MAP[activeView]}
+          initialView={FULLCALENDAR_VIEW_MAP[activeView]}
           headerToolbar={false}
           events={calendarEvents}
           eventContent={(arg) => {
