@@ -129,7 +129,7 @@ export function TaskRow({ task }: { task: Task }) {
         {task.status === 'in_progress' && (
           <>
             <LiveTimer
-              startTime={task.updatedAt}
+              startTime={task.activeTimeBlockStartTime ?? task.updatedAt}
               estimatedMinutes={task.estimatedMinutes}
             />
             <CompleteButton onClick={handleComplete} />
@@ -227,7 +227,7 @@ export function TreeTaskRow({
           {node.status === 'in_progress' && (
             <>
               <LiveTimer
-                startTime={node.updatedAt}
+                startTime={node.activeTimeBlockStartTime ?? node.updatedAt}
                 estimatedMinutes={node.estimatedMinutes}
               />
               <CompleteButton onClick={handleComplete} />

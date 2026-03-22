@@ -111,6 +111,7 @@ export function useCreateTask() {
         sortOrder: 0,
         createdAt: now,
         updatedAt: now,
+        activeTimeBlockStartTime: null,
       }
 
       queryClient.setQueriesData<Task[]>(
@@ -398,6 +399,8 @@ function useTaskActionMutation(
       )
 
       const now = new Date().toISOString()
+      const activeTimeBlockStartTime =
+        optimisticStatus === 'in_progress' ? now : null
 
       queryClient.setQueriesData<Task[]>(
         { queryKey: taskKeys.lists },
@@ -405,7 +408,12 @@ function useTaskActionMutation(
           if (!old) return old
           return old.map((task) =>
             task.id === id
-              ? { ...task, status: optimisticStatus, updatedAt: now }
+              ? {
+                  ...task,
+                  status: optimisticStatus,
+                  updatedAt: now,
+                  activeTimeBlockStartTime,
+                }
               : task,
           )
         },

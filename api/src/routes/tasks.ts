@@ -113,12 +113,14 @@ function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
 type TaskResponseData = ReturnType<typeof taskToResponse>
 
 type TreeNode = TaskResponseData & {
+  activeTimeBlockStartTime: string | null
   children: TreeNode[]
   childCompletionCount: { completed: number; total: number }
 }
 
 function buildTree(
   allTasks: Array<typeof tasks.$inferSelect>,
+  activeStartTimes: Map<string, string>,
   rootId?: string,
 ): TreeNode[] {
   const nodeMap = new Map<string, TreeNode>()
@@ -126,6 +128,7 @@ function buildTree(
   for (const task of allTasks) {
     nodeMap.set(task.id, {
       ...taskToResponse(task),
+      activeTimeBlockStartTime: activeStartTimes.get(task.id) ?? null,
       children: [],
       childCompletionCount: { completed: 0, total: 0 },
     })
@@ -260,12 +263,30 @@ export const tasksApp = new Hono()
     }
 
     const result = await db
-      .select()
+      .select({
+        task: tasks,
+        activeTimeBlockStartTime: sql<string | null>`(
+          select ${timeBlocks.startTime}
+          from ${timeBlocks}
+          where ${timeBlocks.taskId} = ${tasks.id}
+            and ${timeBlocks.endTime} is null
+          order by ${timeBlocks.startTime} desc
+          limit 1
+        )`.as('active_time_block_start_time'),
+      })
       .from(tasks)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(tasks.sortOrder, tasks.createdAt)
 
-    return c.json(result.map(taskToResponse), 200)
+    return c.json(
+      result.map((r) => ({
+        ...taskToResponse(r.task),
+        activeTimeBlockStartTime: r.activeTimeBlockStartTime
+          ? new Date(r.activeTimeBlockStartTime).toISOString()
+          : null,
+      })),
+      200,
+    )
   })
   .get('/tree', zValidator('query', treeQuerySchema), async (c) => {
     const { rootId } = c.req.valid('query')
@@ -302,7 +323,29 @@ export const tasksApp = new Hono()
         .orderBy(tasks.sortOrder, tasks.createdAt)
     }
 
-    return c.json(buildTree(treeTasks, rootId), 200)
+    const taskIds = treeTasks.map((t) => t.id)
+    const activeBlocks =
+      taskIds.length > 0
+        ? await db
+            .select({
+              taskId: timeBlocks.taskId,
+              startTime: timeBlocks.startTime,
+            })
+            .from(timeBlocks)
+            .where(
+              and(
+                inArray(timeBlocks.taskId, taskIds),
+                isNull(timeBlocks.endTime),
+              ),
+            )
+        : []
+
+    const activeStartTimes = new Map<string, string>()
+    for (const block of activeBlocks) {
+      activeStartTimes.set(block.taskId, block.startTime.toISOString())
+    }
+
+    return c.json(buildTree(treeTasks, activeStartTimes, rootId), 200)
   })
   .get('/search', zValidator('query', searchQuerySchema), async (c) => {
     const query = c.req.valid('query')

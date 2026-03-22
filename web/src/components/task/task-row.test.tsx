@@ -39,6 +39,7 @@ function makeNode(overrides: Partial<TreeNode> = {}): TreeNode {
     sortOrder: 0,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
+    activeTimeBlockStartTime: null,
     children: [],
     childCompletionCount: { completed: 0, total: 0 },
     ...overrides,
