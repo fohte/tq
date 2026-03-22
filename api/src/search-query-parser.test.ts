@@ -62,6 +62,7 @@ describe('parseSearchQuery', () => {
     expect(parseSearchQuery('sort:due').sortBy).toBe('due')
     expect(parseSearchQuery('sort:created').sortBy).toBe('created')
     expect(parseSearchQuery('sort:updated').sortBy).toBe('updated')
+    expect(parseSearchQuery('sort:estimate').sortBy).toBe('estimate')
   })
 
   it('treats invalid sort: value as free text', () => {

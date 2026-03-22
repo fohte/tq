@@ -396,12 +396,12 @@ export const tasksApp = new Hono()
     if (query.hasEstimate === true) {
       conditions.push(isNotNull(tasks.estimatedMinutes))
     } else if (query.hasEstimate === false) {
-      conditions.push(sql`${tasks.estimatedMinutes} IS NULL`)
+      conditions.push(isNull(tasks.estimatedMinutes))
     }
     if (query.hasDue === true) {
       conditions.push(isNotNull(tasks.dueDate))
     } else if (query.hasDue === false) {
-      conditions.push(sql`${tasks.dueDate} IS NULL`)
+      conditions.push(isNull(tasks.dueDate))
     }
 
     // Sort order: from parsed query or explicit param

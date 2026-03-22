@@ -7,12 +7,12 @@ export interface ParsedQuery {
   hasComments?: boolean
   parentId?: string
   projectId?: string
-  sortBy?: 'due' | 'created' | 'updated'
+  sortBy?: 'due' | 'created' | 'updated' | 'estimate'
 }
 
 const STATUS_VALUES = new Set(['todo', 'in_progress', 'completed'])
 const CONTEXT_VALUES = new Set(['work', 'personal', 'dev'])
-const SORT_VALUES = new Set(['due', 'created', 'updated'])
+const SORT_VALUES = new Set(['due', 'created', 'updated', 'estimate'])
 
 export function parseSearchQuery(q: string): ParsedQuery {
   const result: ParsedQuery = { freeText: '' }
@@ -71,7 +71,7 @@ export function parseSearchQuery(q: string): ParsedQuery {
         break
       case 'sort':
         if (SORT_VALUES.has(value)) {
-          result.sortBy = value as 'due' | 'created' | 'updated'
+          result.sortBy = value as 'due' | 'created' | 'updated' | 'estimate'
         } else {
           freeTextParts.push(token)
         }
