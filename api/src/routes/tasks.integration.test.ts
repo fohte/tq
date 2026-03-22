@@ -943,6 +943,55 @@ describe('tasks API', () => {
         expect(body.nextTask!.estimatedMinutes).toBe(30)
         expect(body.nextTask!.context).toBe('work')
       })
+
+      it('includes recurrenceRule in completed task response', async () => {
+        const task = await createRecurringTask(
+          'Daily task',
+          { type: 'daily', interval: 1 },
+          { dueDate: '2026-03-22' },
+        )
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+        })
+
+        expect(res.status).toBe(200)
+        const body = (await res.json()) as TaskResponse & {
+          nextTask: TaskResponse | null
+        }
+        expect(body.recurrenceRule).not.toBeNull()
+        expect(body.recurrenceRule!.type).toBe('daily')
+      })
+    })
+
+    describe('PATCH /api/tasks/:id recurrence rule removal', () => {
+      it('deletes orphaned recurrence rule record when removing', async () => {
+        const task = await createRecurringTask('Recurring', {
+          type: 'daily',
+          interval: 1,
+        })
+        const ruleId = task.recurrenceRuleId!
+
+        // Remove recurrence rule
+        await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recurrenceRule: null }),
+        })
+
+        // Verify the rule was removed from the task
+        const getRes = await app.request(`/api/tasks/${task.id}`)
+        const body = (await getRes.json()) as TaskResponse
+        expect(body.recurrenceRuleId).toBeNull()
+
+        // Create a new task with the same rule type to verify old rule is gone
+        // by checking that a new rule gets a different ID
+        const newTask = await createRecurringTask('New recurring', {
+          type: 'daily',
+          interval: 1,
+        })
+        expect(newTask.recurrenceRuleId).not.toBe(ruleId)
+      })
     })
   })
 

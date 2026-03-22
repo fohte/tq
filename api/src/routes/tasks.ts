@@ -492,8 +492,13 @@ export const tasksApp = new Hono()
       let updatedRule: typeof recurrenceRules.$inferSelect | null = null
 
       if (recurrenceRuleInput === null) {
-        // Remove recurrence rule association
+        // Remove recurrence rule association and delete the orphaned rule
         recurrenceRuleId = null
+        if (existing.recurrenceRuleId) {
+          await db
+            .delete(recurrenceRules)
+            .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
+        }
       } else if (recurrenceRuleInput !== undefined) {
         if (existing.recurrenceRuleId) {
           // Update existing rule
@@ -678,21 +683,23 @@ export const tasksApp = new Hono()
 
     // Generate next recurring task if recurrence rule is set
     let nextTask: ReturnType<typeof taskToResponse> | null = null
+    let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
     if (updatedTask.recurrenceRuleId) {
-      const rule = await db.query.recurrenceRules.findFirst({
-        where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
-      })
+      completedTaskRule =
+        (await db.query.recurrenceRules.findFirst({
+          where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
+        })) ?? null
 
-      if (rule) {
-        const nextData = buildNextTaskData(updatedTask, rule)
+      if (completedTaskRule) {
+        const nextData = buildNextTaskData(updatedTask, completedTaskRule)
         const [created] = await db.insert(tasks).values(nextData).returning()
-        nextTask = taskToResponse(created!, rule)
+        nextTask = taskToResponse(created!, completedTaskRule)
       }
     }
 
     return c.json(
       {
-        ...taskToResponse(updatedTask),
+        ...taskToResponse(updatedTask, completedTaskRule),
         closedTimeBlocks: closedBlocks.map(timeBlockToResponse),
         nextTask,
       },
