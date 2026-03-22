@@ -492,12 +492,25 @@ export const tasksApp = new Hono()
       let updatedRule: typeof recurrenceRules.$inferSelect | null = null
 
       if (recurrenceRuleInput === null) {
-        // Remove recurrence rule association and delete the orphaned rule
+        // Remove recurrence rule association
         recurrenceRuleId = null
         if (existing.recurrenceRuleId) {
-          await db
-            .delete(recurrenceRules)
-            .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
+          // Only delete the rule if no other task references it
+          const [otherRef] = await db
+            .select({ id: tasks.id })
+            .from(tasks)
+            .where(
+              and(
+                eq(tasks.recurrenceRuleId, existing.recurrenceRuleId),
+                sql`${tasks.id} != ${id}`,
+              ),
+            )
+            .limit(1)
+          if (!otherRef) {
+            await db
+              .delete(recurrenceRules)
+              .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
+          }
         }
       } else if (recurrenceRuleInput !== undefined) {
         if (existing.recurrenceRuleId) {

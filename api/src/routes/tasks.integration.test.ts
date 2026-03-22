@@ -965,7 +965,7 @@ describe('tasks API', () => {
     })
 
     describe('PATCH /api/tasks/:id recurrence rule removal', () => {
-      it('deletes orphaned recurrence rule record when removing', async () => {
+      it('deletes orphaned recurrence rule record when no other task uses it', async () => {
         const task = await createRecurringTask('Recurring', {
           type: 'daily',
           interval: 1,
@@ -991,6 +991,38 @@ describe('tasks API', () => {
           interval: 1,
         })
         expect(newTask.recurrenceRuleId).not.toBe(ruleId)
+      })
+
+      it('does not delete shared recurrence rule when another task uses it', async () => {
+        // Create a recurring task and complete it to generate next instance
+        const task = await createRecurringTask(
+          'Shared rule task',
+          { type: 'daily', interval: 1 },
+          { dueDate: '2026-03-22' },
+        )
+
+        const completeRes = await app.request(
+          `/api/tasks/${task.id}/complete`,
+          { method: 'POST' },
+        )
+        const completeBody = (await completeRes.json()) as TaskResponse & {
+          nextTask: TaskResponse | null
+        }
+        const nextTask = completeBody.nextTask!
+        expect(nextTask.recurrenceRuleId).toBe(task.recurrenceRuleId)
+
+        // Remove recurrence from the completed task
+        await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recurrenceRule: null }),
+        })
+
+        // The next active task should still have its recurrence rule intact
+        const nextRes = await app.request(`/api/tasks/${nextTask.id}`)
+        const nextBody = (await nextRes.json()) as TaskResponse
+        expect(nextBody.recurrenceRuleId).toBe(task.recurrenceRuleId)
+        expect(nextBody.recurrenceRule).not.toBeNull()
       })
     })
   })
