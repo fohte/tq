@@ -1,12 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useLiveTimer } from '@web/hooks/use-live-timer'
 import type { Task, TreeNode } from '@web/hooks/use-tasks'
-import {
-  useCompleteTask,
-  useStartTask,
-  useStopTask,
-  useUpdateTaskStatus,
-} from '@web/hooks/use-tasks'
+import { useTaskActions } from '@web/hooks/use-tasks'
 import { formatMinutes } from '@web/lib/format'
 import { cn } from '@web/lib/utils'
 import { Check, ChevronDown, ChevronRight, Play, Square } from 'lucide-react'
@@ -96,25 +91,10 @@ export function LiveTimer({
 }
 
 export function TaskRow({ task }: { task: Task }) {
-  const startTask = useStartTask()
-  const stopTask = useStopTask()
-  const completeTask = useCompleteTask()
-  const updateStatus = useUpdateTaskStatus()
-
-  const handleStatusAction = () => {
-    if (task.status === 'todo') {
-      startTask.mutate(task.id)
-    } else if (task.status === 'in_progress') {
-      stopTask.mutate(task.id)
-    } else {
-      // completed -> reopen as todo
-      updateStatus.mutate({ id: task.id, status: 'todo' })
-    }
-  }
-
-  const handleComplete = () => {
-    completeTask.mutate(task.id)
-  }
+  const { handleStatusAction, handleComplete } = useTaskActions(
+    task.id,
+    task.status,
+  )
 
   return (
     <Link
@@ -188,25 +168,11 @@ export function TreeTaskRow({
   defaultExpanded?: boolean
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded)
-  const startTask = useStartTask()
-  const stopTask = useStopTask()
-  const completeTask = useCompleteTask()
-  const updateStatus = useUpdateTaskStatus()
+  const { handleStatusAction, handleComplete } = useTaskActions(
+    node.id,
+    node.status,
+  )
   const hasChildren = node.children.length > 0
-
-  const handleStatusAction = () => {
-    if (node.status === 'todo') {
-      startTask.mutate(node.id)
-    } else if (node.status === 'in_progress') {
-      stopTask.mutate(node.id)
-    } else {
-      updateStatus.mutate({ id: node.id, status: 'todo' })
-    }
-  }
-
-  const handleComplete = () => {
-    completeTask.mutate(node.id)
-  }
 
   const handleExpand = (e: React.MouseEvent) => {
     e.preventDefault()

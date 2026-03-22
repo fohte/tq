@@ -373,15 +373,17 @@ export function useUpdateTaskParent() {
   })
 }
 
-export function useStartTask() {
+function useTaskActionMutation(
+  apiCall: (id: string) => Promise<Response>,
+  optimisticStatus: TaskStatus,
+  errorMsg: string,
+) {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await api.api.tasks[':id'].start.$post({
-        param: { id },
-      })
-      if (!res.ok) throw new Error('Failed to start task')
+      const res = await apiCall(id)
+      if (!res.ok) throw new Error(errorMsg)
       return res.json()
     },
     onMutate: async (id) => {
@@ -395,12 +397,16 @@ export function useStartTask() {
         taskKeys.detail(id),
       )
 
+      const now = new Date().toISOString()
+
       queryClient.setQueriesData<Task[]>(
         { queryKey: taskKeys.lists },
         (old) => {
           if (!old) return old
           return old.map((task) =>
-            task.id === id ? { ...task, status: 'in_progress' as const } : task,
+            task.id === id
+              ? { ...task, status: optimisticStatus, updatedAt: now }
+              : task,
           )
         },
       )
@@ -408,7 +414,8 @@ export function useStartTask() {
       if (previousDetail) {
         queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
           ...previousDetail,
-          status: 'in_progress',
+          status: optimisticStatus,
+          updatedAt: now,
         })
       }
 
@@ -428,120 +435,53 @@ export function useStartTask() {
       queryClient.invalidateQueries({ queryKey: taskKeys.all })
     },
   })
+}
+
+export function useStartTask() {
+  return useTaskActionMutation(
+    (id) => api.api.tasks[':id'].start.$post({ param: { id } }),
+    'in_progress',
+    'Failed to start task',
+  )
 }
 
 export function useStopTask() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const res = await api.api.tasks[':id'].stop.$post({
-        param: { id },
-      })
-      if (!res.ok) throw new Error('Failed to stop task')
-      return res.json()
-    },
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: taskKeys.lists })
-      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
-
-      const previousLists = queryClient.getQueriesData<Task[]>({
-        queryKey: taskKeys.lists,
-      })
-      const previousDetail = queryClient.getQueryData<TaskDetail>(
-        taskKeys.detail(id),
-      )
-
-      queryClient.setQueriesData<Task[]>(
-        { queryKey: taskKeys.lists },
-        (old) => {
-          if (!old) return old
-          return old.map((task) =>
-            task.id === id ? { ...task, status: 'todo' as const } : task,
-          )
-        },
-      )
-
-      if (previousDetail) {
-        queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
-          ...previousDetail,
-          status: 'todo',
-        })
-      }
-
-      return { previousLists, previousDetail }
-    },
-    onError: (_err, id, context) => {
-      if (context?.previousLists) {
-        for (const [key, data] of context.previousLists) {
-          queryClient.setQueryData(key, data)
-        }
-      }
-      if (context?.previousDetail) {
-        queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all })
-    },
-  })
+  return useTaskActionMutation(
+    (id) => api.api.tasks[':id'].stop.$post({ param: { id } }),
+    'todo',
+    'Failed to stop task',
+  )
 }
 
 export function useCompleteTask() {
-  const queryClient = useQueryClient()
+  return useTaskActionMutation(
+    (id) => api.api.tasks[':id'].complete.$post({ param: { id } }),
+    'completed',
+    'Failed to complete task',
+  )
+}
 
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const res = await api.api.tasks[':id'].complete.$post({
-        param: { id },
-      })
-      if (!res.ok) throw new Error('Failed to complete task')
-      return res.json()
-    },
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: taskKeys.lists })
-      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
+export function useTaskActions(id: string, status: TaskStatus) {
+  const startTask = useStartTask()
+  const stopTask = useStopTask()
+  const completeTask = useCompleteTask()
+  const updateStatus = useUpdateTaskStatus()
 
-      const previousLists = queryClient.getQueriesData<Task[]>({
-        queryKey: taskKeys.lists,
-      })
-      const previousDetail = queryClient.getQueryData<TaskDetail>(
-        taskKeys.detail(id),
-      )
+  const handleStatusAction = () => {
+    if (status === 'todo') {
+      startTask.mutate(id)
+    } else if (status === 'in_progress') {
+      stopTask.mutate(id)
+    } else {
+      updateStatus.mutate({ id, status: 'todo' })
+    }
+  }
 
-      queryClient.setQueriesData<Task[]>(
-        { queryKey: taskKeys.lists },
-        (old) => {
-          if (!old) return old
-          return old.map((task) =>
-            task.id === id ? { ...task, status: 'completed' as const } : task,
-          )
-        },
-      )
+  const handleComplete = () => {
+    completeTask.mutate(id)
+  }
 
-      if (previousDetail) {
-        queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
-          ...previousDetail,
-          status: 'completed',
-        })
-      }
-
-      return { previousLists, previousDetail }
-    },
-    onError: (_err, id, context) => {
-      if (context?.previousLists) {
-        for (const [key, data] of context.previousLists) {
-          queryClient.setQueryData(key, data)
-        }
-      }
-      if (context?.previousDetail) {
-        queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all })
-    },
-  })
+  return { handleStatusAction, handleComplete }
 }
 
 export function useDeleteTask() {
