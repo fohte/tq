@@ -338,8 +338,10 @@ export const tasksApp = new Hono()
                 isNull(timeBlocks.endTime),
               ),
             )
+            .orderBy(timeBlocks.startTime)
         : []
 
+    // Use the most recent open time block per task (last in ASC order)
     const activeStartTimes = new Map<string, string>()
     for (const block of activeBlocks) {
       activeStartTimes.set(block.taskId, block.startTime.toISOString())
