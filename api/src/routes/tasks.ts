@@ -1,12 +1,15 @@
 import { db } from '@api/db/connection'
 import {
   labels,
+  recurrenceRules,
   taskLabels,
   taskPages,
   tasks,
   timeBlocks,
 } from '@api/db/schema'
 import { pageToResponse } from '@api/routes/task-pages'
+import { recurrenceRuleSchema } from '@api/schemas/recurrence-rule'
+import { buildNextTaskData } from '@api/services/recurrence'
 import { zValidator } from '@hono/zod-validator'
 import { and, count, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -26,6 +29,7 @@ const createTaskSchema = z.object({
   projectId: z.string().uuid().optional(),
   context: context.optional(),
   labels: z.array(z.string()).optional(),
+  recurrenceRule: recurrenceRuleSchema.optional(),
 })
 
 const updateTaskSchema = z.object({
@@ -36,6 +40,7 @@ const updateTaskSchema = z.object({
   estimatedMinutes: z.number().int().positive().nullable().optional(),
   projectId: z.string().uuid().nullable().optional(),
   context: context.optional(),
+  recurrenceRule: recurrenceRuleSchema.nullable().optional(),
 })
 
 const updateStatusSchema = z.object({
@@ -80,7 +85,20 @@ const suggestQuerySchema = z.object({
   category: z.string().optional(),
 })
 
-function taskToResponse(task: typeof tasks.$inferSelect) {
+function recurrenceRuleToResponse(rule: typeof recurrenceRules.$inferSelect) {
+  return {
+    id: rule.id,
+    type: rule.type,
+    interval: rule.interval,
+    daysOfWeek: rule.daysOfWeek,
+    dayOfMonth: rule.dayOfMonth,
+  }
+}
+
+function taskToResponse(
+  task: typeof tasks.$inferSelect,
+  rule?: typeof recurrenceRules.$inferSelect | null,
+) {
   return {
     id: task.id,
     title: task.title,
@@ -92,6 +110,8 @@ function taskToResponse(task: typeof tasks.$inferSelect) {
     estimatedMinutes: task.estimatedMinutes,
     parentId: task.parentId,
     projectId: task.projectId,
+    recurrenceRuleId: task.recurrenceRuleId,
+    recurrenceRule: rule ? recurrenceRuleToResponse(rule) : null,
     sortOrder: task.sortOrder,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
@@ -210,6 +230,23 @@ export const tasksApp = new Hono()
       }
     }
 
+    // Create recurrence rule if provided
+    let recurrenceRuleId: string | null = null
+    let createdRule: typeof recurrenceRules.$inferSelect | null = null
+    if (input.recurrenceRule) {
+      const [rule] = await db
+        .insert(recurrenceRules)
+        .values({
+          type: input.recurrenceRule.type,
+          interval: input.recurrenceRule.interval,
+          daysOfWeek: input.recurrenceRule.daysOfWeek ?? null,
+          dayOfMonth: input.recurrenceRule.dayOfMonth ?? null,
+        })
+        .returning()
+      recurrenceRuleId = rule!.id
+      createdRule = rule!
+    }
+
     const [task] = await db
       .insert(tasks)
       .values({
@@ -221,6 +258,7 @@ export const tasksApp = new Hono()
         parentId: input.parentId ?? null,
         projectId: input.projectId ?? null,
         context: input.context ?? 'personal',
+        recurrenceRuleId,
       })
       .returning()
 
@@ -240,7 +278,7 @@ export const tasksApp = new Hono()
       }
     }
 
-    return c.json(taskToResponse(task!), 201)
+    return c.json(taskToResponse(task!, createdRule), 201)
   })
   .get('/', zValidator('query', listQuerySchema), async (c) => {
     const query = c.req.valid('query')
@@ -265,7 +303,10 @@ export const tasksApp = new Hono()
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(tasks.sortOrder, tasks.createdAt)
 
-    return c.json(result.map(taskToResponse), 200)
+    return c.json(
+      result.map((t) => taskToResponse(t)),
+      200,
+    )
   })
   .get('/tree', zValidator('query', treeQuerySchema), async (c) => {
     const { rootId } = c.req.valid('query')
@@ -354,7 +395,10 @@ export const tasksApp = new Hono()
       .limit(limit)
       .offset(offset)
 
-    return c.json(result.map(taskToResponse), 200)
+    return c.json(
+      result.map((t) => taskToResponse(t)),
+      200,
+    )
   })
   .get('/search/suggest', zValidator('query', suggestQuerySchema), (c) => {
     const { prefix, category } = c.req.valid('query')
@@ -393,8 +437,8 @@ export const tasksApp = new Hono()
     const task = c.get('task')
     const id = task.id
 
-    // Get child completion count, pages, and time blocks in parallel
-    const [childStats, pages, taskTimeBlocks] = await Promise.all([
+    // Get child completion count, pages, time blocks, and recurrence rule in parallel
+    const [childStats, pages, taskTimeBlocks, rule] = await Promise.all([
       db
         .select({
           total: count(),
@@ -414,11 +458,16 @@ export const tasksApp = new Hono()
         .from(timeBlocks)
         .where(eq(timeBlocks.taskId, id))
         .orderBy(timeBlocks.startTime),
+      task.recurrenceRuleId
+        ? db.query.recurrenceRules.findFirst({
+            where: eq(recurrenceRules.id, task.recurrenceRuleId),
+          })
+        : Promise.resolve(null),
     ])
 
     return c.json(
       {
-        ...taskToResponse(task),
+        ...taskToResponse(task, rule),
         childCompletionCount: {
           total: childStats[0]?.total ?? 0,
           completed: childStats[0]?.completed ?? 0,
@@ -435,15 +484,84 @@ export const tasksApp = new Hono()
     zValidator('json', updateTaskSchema),
     async (c) => {
       const id = c.req.param('id')
-      const input = c.req.valid('json')
+      const existing = c.get('task')
+      const { recurrenceRule: recurrenceRuleInput, ...taskFields } =
+        c.req.valid('json')
+
+      let recurrenceRuleId: string | null | undefined = undefined
+      let updatedRule: typeof recurrenceRules.$inferSelect | null = null
+
+      if (recurrenceRuleInput === null) {
+        // Remove recurrence rule association
+        recurrenceRuleId = null
+        if (existing.recurrenceRuleId) {
+          // Only delete the rule if no other task references it
+          const [otherRef] = await db
+            .select({ id: tasks.id })
+            .from(tasks)
+            .where(
+              and(
+                eq(tasks.recurrenceRuleId, existing.recurrenceRuleId),
+                sql`${tasks.id} != ${id}`,
+              ),
+            )
+            .limit(1)
+          if (!otherRef) {
+            await db
+              .delete(recurrenceRules)
+              .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
+          }
+        }
+      } else if (recurrenceRuleInput !== undefined) {
+        if (existing.recurrenceRuleId) {
+          // Update existing rule
+          const [rule] = await db
+            .update(recurrenceRules)
+            .set({
+              type: recurrenceRuleInput.type,
+              interval: recurrenceRuleInput.interval,
+              daysOfWeek: recurrenceRuleInput.daysOfWeek ?? null,
+              dayOfMonth: recurrenceRuleInput.dayOfMonth ?? null,
+              updatedAt: new Date(),
+            })
+            .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
+            .returning()
+          updatedRule = rule!
+        } else {
+          // Create new rule
+          const [rule] = await db
+            .insert(recurrenceRules)
+            .values({
+              type: recurrenceRuleInput.type,
+              interval: recurrenceRuleInput.interval,
+              daysOfWeek: recurrenceRuleInput.daysOfWeek ?? null,
+              dayOfMonth: recurrenceRuleInput.dayOfMonth ?? null,
+            })
+            .returning()
+          recurrenceRuleId = rule!.id
+          updatedRule = rule!
+        }
+      }
 
       const [updated] = await db
         .update(tasks)
-        .set({ ...input, updatedAt: new Date() })
+        .set({
+          ...taskFields,
+          ...(recurrenceRuleId !== undefined ? { recurrenceRuleId } : {}),
+          updatedAt: new Date(),
+        })
         .where(eq(tasks.id, id))
         .returning()
 
-      return c.json(taskToResponse(updated!), 200)
+      // Fetch rule if we didn't just create/update one but the task has one
+      if (!updatedRule && updated!.recurrenceRuleId) {
+        updatedRule =
+          (await db.query.recurrenceRules.findFirst({
+            where: eq(recurrenceRules.id, updated!.recurrenceRuleId),
+          })) ?? null
+      }
+
+      return c.json(taskToResponse(updated!, updatedRule), 200)
     },
   )
   .patch(
@@ -576,10 +694,27 @@ export const tasksApp = new Hono()
       'completed',
     )
 
+    // Generate next recurring task if recurrence rule is set
+    let nextTask: ReturnType<typeof taskToResponse> | null = null
+    let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
+    if (updatedTask.recurrenceRuleId) {
+      completedTaskRule =
+        (await db.query.recurrenceRules.findFirst({
+          where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
+        })) ?? null
+
+      if (completedTaskRule) {
+        const nextData = buildNextTaskData(updatedTask, completedTaskRule)
+        const [created] = await db.insert(tasks).values(nextData).returning()
+        nextTask = taskToResponse(created!, completedTaskRule)
+      }
+    }
+
     return c.json(
       {
-        ...taskToResponse(updatedTask),
+        ...taskToResponse(updatedTask, completedTaskRule),
         closedTimeBlocks: closedBlocks.map(timeBlockToResponse),
+        nextTask,
       },
       200,
     )

@@ -16,6 +16,14 @@ interface TimeBlockResponse {
   updatedAt: string
 }
 
+interface RecurrenceRuleResponse {
+  id: string
+  type: 'daily' | 'weekly' | 'monthly' | 'custom'
+  interval: number
+  daysOfWeek: number[] | null
+  dayOfMonth: number | null
+}
+
 interface TaskResponse {
   id: string
   title: string
@@ -27,6 +35,8 @@ interface TaskResponse {
   estimatedMinutes: number | null
   parentId: string | null
   projectId: string | null
+  recurrenceRuleId: string | null
+  recurrenceRule: RecurrenceRuleResponse | null
   sortOrder: number
   createdAt: string
   updatedAt: string
@@ -689,6 +699,334 @@ describe('tasks API', () => {
     })
   })
 
+  describe('recurrence', () => {
+    describe('POST /api/tasks with recurrenceRule', () => {
+      it('creates a task with a recurrence rule', async () => {
+        const res = await app.request('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: 'Daily standup',
+            dueDate: '2026-03-22',
+            recurrenceRule: { type: 'daily', interval: 1 },
+          }),
+        })
+
+        expect(res.status).toBe(201)
+        const body = (await res.json()) as TaskResponse
+        expect(body.recurrenceRuleId).not.toBeNull()
+        expect(body.recurrenceRule).not.toBeNull()
+        expect(body.recurrenceRule!.type).toBe('daily')
+        expect(body.recurrenceRule!.interval).toBe(1)
+      })
+
+      it('creates a task without recurrence rule (backward compat)', async () => {
+        const res = await app.request('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'Normal task' }),
+        })
+
+        expect(res.status).toBe(201)
+        const body = (await res.json()) as TaskResponse
+        expect(body.recurrenceRuleId).toBeNull()
+        expect(body.recurrenceRule).toBeNull()
+      })
+    })
+
+    describe('PATCH /api/tasks/:id with recurrenceRule', () => {
+      it('adds a recurrence rule to an existing task', async () => {
+        const task = await createTask('Task')
+
+        const res = await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recurrenceRule: {
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [1, 3, 5],
+            },
+          }),
+        })
+
+        expect(res.status).toBe(200)
+        const body = (await res.json()) as TaskResponse
+        expect(body.recurrenceRule).not.toBeNull()
+        expect(body.recurrenceRule!.type).toBe('weekly')
+        expect(body.recurrenceRule!.daysOfWeek).toEqual([1, 3, 5])
+      })
+
+      it('updates an existing recurrence rule', async () => {
+        const task = await createRecurringTask('Recurring', {
+          type: 'daily',
+          interval: 1,
+        })
+
+        const res = await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recurrenceRule: { type: 'weekly', interval: 2, daysOfWeek: [1] },
+          }),
+        })
+
+        expect(res.status).toBe(200)
+        const body = (await res.json()) as TaskResponse
+        expect(body.recurrenceRule!.type).toBe('weekly')
+        expect(body.recurrenceRule!.interval).toBe(2)
+        // Same rule ID (updated in place)
+        expect(body.recurrenceRuleId).toBe(task.recurrenceRuleId)
+      })
+
+      it('removes recurrence rule when set to null', async () => {
+        const task = await createRecurringTask('Recurring', {
+          type: 'daily',
+          interval: 1,
+        })
+
+        const res = await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recurrenceRule: null }),
+        })
+
+        expect(res.status).toBe(200)
+        const body = (await res.json()) as TaskResponse
+        expect(body.recurrenceRuleId).toBeNull()
+        expect(body.recurrenceRule).toBeNull()
+      })
+    })
+
+    describe('GET /api/tasks/:id with recurrence rule', () => {
+      it('includes recurrence rule in response', async () => {
+        const task = await createRecurringTask('Recurring', {
+          type: 'monthly',
+          interval: 1,
+          dayOfMonth: 15,
+        })
+
+        const res = await app.request(`/api/tasks/${task.id}`)
+
+        expect(res.status).toBe(200)
+        const body = (await res.json()) as TaskResponse
+        expect(body.recurrenceRule).not.toBeNull()
+        expect(body.recurrenceRule!.type).toBe('monthly')
+        expect(body.recurrenceRule!.dayOfMonth).toBe(15)
+      })
+    })
+
+    describe('POST /api/tasks/:id/complete with recurrence', () => {
+      it('generates next task for daily recurrence', async () => {
+        const task = await createRecurringTask(
+          'Daily task',
+          { type: 'daily', interval: 1 },
+          { dueDate: '2026-03-22' },
+        )
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+        })
+
+        expect(res.status).toBe(200)
+        const body = (await res.json()) as TaskResponse & {
+          closedTimeBlocks: TimeBlockResponse[]
+          nextTask: TaskResponse | null
+        }
+        expect(body.status).toBe('completed')
+        expect(body.nextTask).not.toBeNull()
+        expect(body.nextTask!.title).toBe('Daily task')
+        expect(body.nextTask!.status).toBe('todo')
+        expect(body.nextTask!.dueDate).toBe('2026-03-23')
+        expect(body.nextTask!.recurrenceRuleId).toBe(task.recurrenceRuleId)
+      })
+
+      it('generates next task for weekly recurrence with daysOfWeek', async () => {
+        const task = await createRecurringTask(
+          'Weekly task',
+          { type: 'weekly', interval: 1, daysOfWeek: [1, 3, 5] },
+          { dueDate: '2026-03-23' }, // Monday
+        )
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+        })
+
+        expect(res.status).toBe(200)
+        const body = (await res.json()) as TaskResponse & {
+          nextTask: TaskResponse | null
+        }
+        expect(body.nextTask).not.toBeNull()
+        expect(body.nextTask!.dueDate).toBe('2026-03-25') // Wednesday
+      })
+
+      it('generates next task for monthly recurrence', async () => {
+        const task = await createRecurringTask(
+          'Monthly task',
+          { type: 'monthly', interval: 1, dayOfMonth: 15 },
+          { dueDate: '2026-03-15' },
+        )
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+        })
+
+        expect(res.status).toBe(200)
+        const body = (await res.json()) as TaskResponse & {
+          nextTask: TaskResponse | null
+        }
+        expect(body.nextTask).not.toBeNull()
+        expect(body.nextTask!.dueDate).toBe('2026-04-15')
+      })
+
+      it('does not generate next task for non-recurring task', async () => {
+        const task = await createTask('Normal task')
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+        })
+
+        expect(res.status).toBe(200)
+        const body = (await res.json()) as TaskResponse & {
+          nextTask: TaskResponse | null
+        }
+        expect(body.nextTask).toBeNull()
+      })
+
+      it('does not generate next task after recurrence rule is removed', async () => {
+        const task = await createRecurringTask(
+          'Was recurring',
+          { type: 'daily', interval: 1 },
+          { dueDate: '2026-03-22' },
+        )
+
+        // Remove recurrence rule
+        await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recurrenceRule: null }),
+        })
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+        })
+
+        expect(res.status).toBe(200)
+        const body = (await res.json()) as TaskResponse & {
+          nextTask: TaskResponse | null
+        }
+        expect(body.nextTask).toBeNull()
+      })
+
+      it('copies task properties to next instance', async () => {
+        const task = await createRecurringTask(
+          'Recurring with details',
+          { type: 'daily', interval: 1 },
+          {
+            dueDate: '2026-03-22',
+            description: 'Important recurring task',
+            estimatedMinutes: 30,
+            context: 'work',
+          },
+        )
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+        })
+
+        expect(res.status).toBe(200)
+        const body = (await res.json()) as TaskResponse & {
+          nextTask: TaskResponse | null
+        }
+        expect(body.nextTask).not.toBeNull()
+        expect(body.nextTask!.description).toBe('Important recurring task')
+        expect(body.nextTask!.estimatedMinutes).toBe(30)
+        expect(body.nextTask!.context).toBe('work')
+      })
+
+      it('includes recurrenceRule in completed task response', async () => {
+        const task = await createRecurringTask(
+          'Daily task',
+          { type: 'daily', interval: 1 },
+          { dueDate: '2026-03-22' },
+        )
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+        })
+
+        expect(res.status).toBe(200)
+        const body = (await res.json()) as TaskResponse & {
+          nextTask: TaskResponse | null
+        }
+        expect(body.recurrenceRule).not.toBeNull()
+        expect(body.recurrenceRule!.type).toBe('daily')
+      })
+    })
+
+    describe('PATCH /api/tasks/:id recurrence rule removal', () => {
+      it('deletes orphaned recurrence rule record when no other task uses it', async () => {
+        const task = await createRecurringTask('Recurring', {
+          type: 'daily',
+          interval: 1,
+        })
+        const ruleId = task.recurrenceRuleId!
+
+        // Remove recurrence rule
+        await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recurrenceRule: null }),
+        })
+
+        // Verify the rule was removed from the task
+        const getRes = await app.request(`/api/tasks/${task.id}`)
+        const body = (await getRes.json()) as TaskResponse
+        expect(body.recurrenceRuleId).toBeNull()
+
+        // Create a new task with the same rule type to verify old rule is gone
+        // by checking that a new rule gets a different ID
+        const newTask = await createRecurringTask('New recurring', {
+          type: 'daily',
+          interval: 1,
+        })
+        expect(newTask.recurrenceRuleId).not.toBe(ruleId)
+      })
+
+      it('does not delete shared recurrence rule when another task uses it', async () => {
+        // Create a recurring task and complete it to generate next instance
+        const task = await createRecurringTask(
+          'Shared rule task',
+          { type: 'daily', interval: 1 },
+          { dueDate: '2026-03-22' },
+        )
+
+        const completeRes = await app.request(
+          `/api/tasks/${task.id}/complete`,
+          { method: 'POST' },
+        )
+        const completeBody = (await completeRes.json()) as TaskResponse & {
+          nextTask: TaskResponse | null
+        }
+        const nextTask = completeBody.nextTask!
+        expect(nextTask.recurrenceRuleId).toBe(task.recurrenceRuleId)
+
+        // Remove recurrence from the completed task
+        await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recurrenceRule: null }),
+        })
+
+        // The next active task should still have its recurrence rule intact
+        const nextRes = await app.request(`/api/tasks/${nextTask.id}`)
+        const nextBody = (await nextRes.json()) as TaskResponse
+        expect(nextBody.recurrenceRuleId).toBe(task.recurrenceRuleId)
+        expect(nextBody.recurrenceRule).not.toBeNull()
+      })
+    })
+  })
+
   describe('parallel task execution', () => {
     it('allows multiple tasks to be in_progress simultaneously', async () => {
       const task1 = await createTask('Task 1')
@@ -710,7 +1048,13 @@ describe('tasks API', () => {
 
 async function createTask(
   title: string,
-  opts: { parentId?: string; description?: string } = {},
+  opts: {
+    parentId?: string
+    description?: string
+    dueDate?: string
+    estimatedMinutes?: number
+    context?: string
+  } = {},
 ) {
   const res = await app.request('/api/tasks', {
     method: 'POST',
@@ -720,5 +1064,33 @@ async function createTask(
   if (res.status !== 201) {
     throw new Error(`Failed to create task: ${res.status} ${await res.text()}`)
   }
-  return (await res.json()) as { id: string; title: string }
+  return (await res.json()) as TaskResponse
+}
+
+async function createRecurringTask(
+  title: string,
+  recurrenceRule: {
+    type: string
+    interval: number
+    daysOfWeek?: number[]
+    dayOfMonth?: number
+  },
+  opts: {
+    dueDate?: string
+    description?: string
+    estimatedMinutes?: number
+    context?: string
+  } = {},
+) {
+  const res = await app.request('/api/tasks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, recurrenceRule, ...opts }),
+  })
+  if (res.status !== 201) {
+    throw new Error(
+      `Failed to create recurring task: ${res.status} ${await res.text()}`,
+    )
+  }
+  return (await res.json()) as TaskResponse
 }

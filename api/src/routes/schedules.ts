@@ -1,15 +1,9 @@
+import { recurrenceRuleSchema } from '@api/schemas/recurrence-rule'
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
 const timePattern = /^\d{2}:\d{2}$/
-
-const recurrenceRuleSchema = z.object({
-  type: z.enum(['daily', 'weekly', 'monthly', 'custom']),
-  interval: z.number().int().positive(),
-  daysOfWeek: z.array(z.number().int().min(0).max(6)).optional(),
-  dayOfMonth: z.number().int().min(1).max(31).optional(),
-})
 
 const createTimeBlockSchema = z.object({
   taskId: z.string().uuid(),
