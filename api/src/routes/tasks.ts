@@ -80,7 +80,7 @@ const suggestQuerySchema = z.object({
   category: z.string().optional(),
 })
 
-function taskToResponse(task: typeof tasks.$inferSelect) {
+export function taskToResponse(task: typeof tasks.$inferSelect) {
   return {
     id: task.id,
     title: task.title,

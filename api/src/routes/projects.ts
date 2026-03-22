@@ -1,5 +1,6 @@
 import { db } from '@api/db/connection'
 import { projects, tasks } from '@api/db/schema'
+import { taskToResponse } from '@api/routes/tasks'
 import { zValidator } from '@hono/zod-validator'
 import { and, count, eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -46,24 +47,6 @@ function projectToResponse(project: typeof projects.$inferSelect) {
   }
 }
 
-function taskToResponse(task: typeof tasks.$inferSelect) {
-  return {
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    status: task.status,
-    context: task.context,
-    startDate: task.startDate,
-    dueDate: task.dueDate,
-    estimatedMinutes: task.estimatedMinutes,
-    parentId: task.parentId,
-    projectId: task.projectId,
-    sortOrder: task.sortOrder,
-    createdAt: task.createdAt.toISOString(),
-    updatedAt: task.updatedAt.toISOString(),
-  }
-}
-
 export const projectsApp = new Hono()
   .post('/', zValidator('json', createProjectSchema), async (c) => {
     const input = c.req.valid('json')
@@ -81,7 +64,11 @@ export const projectsApp = new Hono()
       })
       .returning()
 
-    return c.json(projectToResponse(project!), 201)
+    if (!project) {
+      return c.json({ error: 'Failed to create project' }, 500)
+    }
+
+    return c.json(projectToResponse(project), 201)
   })
   .get('/', zValidator('query', listQuerySchema), async (c) => {
     const query = c.req.valid('query')
@@ -167,7 +154,11 @@ export const projectsApp = new Hono()
       .where(eq(projects.id, id))
       .returning()
 
-    return c.json(projectToResponse(updated!), 200)
+    if (!updated) {
+      return c.json({ error: 'Project not found' }, 404)
+    }
+
+    return c.json(projectToResponse(updated), 200)
   })
   .delete('/:id', async (c) => {
     const id = c.req.param('id')
