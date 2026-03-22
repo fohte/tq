@@ -1,14 +1,24 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { CalendarView } from '@web/components/calendar/calendar-view'
+import type { CalendarDndCallbacks } from '@web/components/calendar/calendar-grid'
+import {
+  CalendarView,
+  type TimeBlockEvent,
+} from '@web/components/calendar/calendar-view'
 import { BacklogPreview } from '@web/components/task/backlog-preview'
 import { CreateTaskInline } from '@web/components/task/create-task-inline'
 import { TaskListHeader } from '@web/components/task/task-list-header'
 import { TaskRow } from '@web/components/task/task-row'
 import type { Task } from '@web/hooks/use-tasks'
 import { useTaskList } from '@web/hooks/use-tasks'
+import {
+  useCreateTimeBlock,
+  useTimeBlocks,
+  useUpdateTimeBlock,
+} from '@web/hooks/use-time-blocks'
+import { formatMinutes } from '@web/lib/format'
 import { cn } from '@web/lib/utils'
 import { Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
 export const Route = createFileRoute('/')({
   component: DayView,
@@ -27,6 +37,86 @@ function DayView() {
   const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
   const [isCreating, setIsCreating] = useState(false)
   const { isLoading, categorized } = useTaskList()
+  const taskListRef = useRef<HTMLDivElement>(null)
+
+  const todayStr = useMemo(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  }, [])
+  const { data: timeBlocksData } = useTimeBlocks(todayStr)
+  const updateTimeBlock = useUpdateTimeBlock()
+  const createTimeBlock = useCreateTimeBlock()
+
+  // Build a task lookup for mapping timeBlocks to events
+  const taskMap = useMemo(() => {
+    const map = new Map<string, Task>()
+    for (const task of categorized.all) {
+      map.set(task.id, task)
+    }
+    return map
+  }, [categorized.all])
+
+  // Convert TimeBlocks to CalendarView events
+  const calendarEvents: TimeBlockEvent[] = useMemo(() => {
+    if (!timeBlocksData) return []
+    return timeBlocksData
+      .filter((block) => block.endTime !== null)
+      .map((block) => {
+        const task = taskMap.get(block.taskId)
+        const durationMs = block.endTime
+          ? new Date(block.endTime).getTime() -
+            new Date(block.startTime).getTime()
+          : 0
+        const durationMinutes = Math.round(durationMs / 60000)
+        const durationStr = formatMinutes(durationMinutes)
+
+        return {
+          id: block.id,
+          title: task?.title ?? 'Unknown task',
+          start: block.startTime,
+          end: block.endTime!,
+          type: (task?.status === 'completed'
+            ? 'completed'
+            : block.isAutoScheduled
+              ? 'auto'
+              : 'manual') as TimeBlockEvent['type'],
+          duration: durationStr,
+        }
+      })
+  }, [timeBlocksData, taskMap])
+
+  const dndCallbacks: CalendarDndCallbacks = useMemo(
+    () => ({
+      onEventDrop: ({ eventId, newStart, newEnd, revert }) => {
+        updateTimeBlock.mutate(
+          {
+            id: eventId,
+            startTime: newStart.toISOString(),
+            endTime: newEnd.toISOString(),
+          },
+          { onError: () => revert() },
+        )
+      },
+      onEventResize: ({ eventId, newStart, newEnd, revert }) => {
+        updateTimeBlock.mutate(
+          {
+            id: eventId,
+            startTime: newStart.toISOString(),
+            endTime: newEnd.toISOString(),
+          },
+          { onError: () => revert() },
+        )
+      },
+      onExternalDrop: ({ taskId, start, end }) => {
+        createTimeBlock.mutate({
+          taskId,
+          startTime: start.toISOString(),
+          endTime: end.toISOString(),
+        })
+      },
+    }),
+    [updateTimeBlock, createTimeBlock],
+  )
 
   const displayTasks: Task[] =
     activeTab === 'today' ? categorized.today : categorized.all
@@ -35,6 +125,7 @@ function DayView() {
     <div className="flex h-full">
       {/* Left panel: Today's Queue - hidden on mobile when calendar tab is active */}
       <div
+        ref={taskListRef}
         className={cn(
           'flex w-full flex-col border-r border-border md:w-80 lg:w-96',
           mobileTab === 'calendar' ? 'hidden md:flex' : 'flex md:flex',
@@ -101,7 +192,11 @@ function DayView() {
           ) : (
             <div className="py-1">
               {displayTasks.map((task) => (
-                <TaskRow key={task.id} task={task} />
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  draggable={task.status !== 'completed'}
+                />
               ))}
             </div>
           )}
@@ -124,7 +219,11 @@ function DayView() {
         )}
       >
         <div className="flex h-full w-full flex-col">
-          <CalendarView />
+          <CalendarView
+            events={calendarEvents}
+            dndCallbacks={dndCallbacks}
+            externalDragContainerRef={taskListRef}
+          />
         </div>
       </div>
 
