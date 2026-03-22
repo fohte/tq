@@ -1,21 +1,31 @@
+import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
+import type { CalendarViewType } from '@web/components/calendar/calendar-header'
 import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
 import { EventBlock } from '@web/components/calendar/event-block'
 import { forwardRef } from 'react'
 
+const VIEW_TYPE_MAP: Record<CalendarViewType, string> = {
+  day: 'timeGridDay',
+  week: 'timeGridWeek',
+  month: 'dayGridMonth',
+}
+
 interface CalendarGridProps {
   events: TimeBlockEvent[]
+  activeView: CalendarViewType
   onDatesSet?: (info: {
     start: Date
     end: Date
     view: { currentStart: Date }
   }) => void
+  onDateClick?: (date: Date) => void
 }
 
 export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
-  function CalendarGrid({ events, onDatesSet }, ref) {
+  function CalendarGrid({ events, activeView, onDatesSet, onDateClick }, ref) {
     const calendarEvents = events.map((event) => ({
       id: event.id,
       title: event.title,
@@ -33,15 +43,21 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       },
     }))
 
+    const isMonthView = activeView === 'month'
+
     return (
       <div className="tq-calendar h-full">
         <FullCalendar
           ref={ref}
-          plugins={[timeGridPlugin, interactionPlugin]}
-          initialView="timeGridDay"
+          plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
+          initialView={VIEW_TYPE_MAP[activeView]}
           headerToolbar={false}
           events={calendarEvents}
           eventContent={(arg) => {
+            // In month view, render dot indicators instead of full event blocks
+            if (isMonthView) {
+              return null
+            }
             // Override timeText for overnight events to show actual end time
             const originalEnd = arg.event.extendedProps['originalEnd'] as string
             if (originalEnd) {
@@ -75,9 +91,20 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           }}
           height="100%"
           expandRows={false}
-          editable={true}
-          selectable={true}
-          dayHeaders={false}
+          editable={!isMonthView}
+          selectable={!isMonthView}
+          dayHeaders={activeView !== 'day'}
+          {...(activeView === 'week'
+            ? {
+                dayHeaderFormat: {
+                  weekday: 'short' as const,
+                  day: 'numeric' as const,
+                },
+              }
+            : {})}
+          {...(onDateClick
+            ? { dateClick: (info: { date: Date }) => onDateClick(info.date) }
+            : {})}
           {...(onDatesSet ? { datesSet: onDatesSet } : {})}
         />
       </div>

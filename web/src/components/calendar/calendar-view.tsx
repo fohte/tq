@@ -4,7 +4,7 @@ import {
   CalendarHeader,
   type CalendarViewType,
 } from '@web/components/calendar/calendar-header'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export interface TimeBlockEvent {
   id: string
@@ -29,12 +29,22 @@ export interface TimeBlockEvent {
 
 interface CalendarViewProps {
   events?: TimeBlockEvent[]
+  initialView?: CalendarViewType
 }
 
-export function CalendarView({ events = [] }: CalendarViewProps) {
+const VIEW_TYPE_MAP: Record<CalendarViewType, string> = {
+  day: 'timeGridDay',
+  week: 'timeGridWeek',
+  month: 'dayGridMonth',
+}
+
+export function CalendarView({
+  events = [],
+  initialView = 'day',
+}: CalendarViewProps) {
   const calendarRef = useRef<FullCalendarType>(null)
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [activeView, setActiveView] = useState<CalendarViewType>('day')
+  const [activeView, setActiveView] = useState<CalendarViewType>(initialView)
 
   const handlePrev = useCallback(() => {
     const api = calendarRef.current?.getApi()
@@ -61,9 +71,41 @@ export function CalendarView({ events = [] }: CalendarViewProps) {
   }, [])
 
   const handleViewChange = useCallback((view: CalendarViewType) => {
-    setActiveView(view)
-    // Week/Month views will be implemented in a future PR
+    const api = calendarRef.current?.getApi()
+    if (api) {
+      api.changeView(VIEW_TYPE_MAP[view])
+      setActiveView(view)
+      setCurrentDate(api.getDate())
+    }
   }, [])
+
+  const handleDateClick = useCallback(
+    (date: Date) => {
+      // In month view, clicking a date navigates to day view for that date
+      if (activeView === 'month') {
+        const api = calendarRef.current?.getApi()
+        if (api) {
+          api.gotoDate(date)
+          api.changeView('timeGridDay')
+          setActiveView('day')
+          setCurrentDate(date)
+        }
+      }
+    },
+    [activeView],
+  )
+
+  // Sync FullCalendar view when activeView changes from external source (e.g. initialView)
+  useEffect(() => {
+    const api = calendarRef.current?.getApi()
+    if (api) {
+      const currentFcView = api.view.type
+      const expectedFcView = VIEW_TYPE_MAP[activeView]
+      if (currentFcView !== expectedFcView) {
+        api.changeView(expectedFcView)
+      }
+    }
+  }, [activeView])
 
   const handleDatesSet = useCallback(
     (info: { start: Date; end: Date; view: { currentStart: Date } }) => {
@@ -86,7 +128,9 @@ export function CalendarView({ events = [] }: CalendarViewProps) {
         <CalendarGrid
           ref={calendarRef}
           events={events}
+          activeView={activeView}
           onDatesSet={handleDatesSet}
+          onDateClick={handleDateClick}
         />
       </div>
     </div>
