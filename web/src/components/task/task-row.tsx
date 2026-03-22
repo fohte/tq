@@ -1,9 +1,10 @@
 import { Link } from '@tanstack/react-router'
+import { useLiveTimer } from '@web/hooks/use-live-timer'
 import type { Task, TreeNode } from '@web/hooks/use-tasks'
-import { useUpdateTaskStatus } from '@web/hooks/use-tasks'
+import { useTaskActions } from '@web/hooks/use-tasks'
 import { formatMinutes } from '@web/lib/format'
 import { cn } from '@web/lib/utils'
-import { Check, ChevronDown, ChevronRight, Circle, Play } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, Play, Square } from 'lucide-react'
 import { useState } from 'react'
 
 function StatusIcon({
@@ -25,25 +26,75 @@ function StatusIcon({
         'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors',
         status === 'completed' &&
           'border-primary bg-primary text-primary-foreground',
-        status === 'in_progress' && 'border-primary text-primary',
+        status === 'in_progress' &&
+          'border-primary text-primary hover:border-destructive hover:text-destructive',
         status === 'todo' &&
-          'border-muted-foreground/40 text-muted-foreground/40 hover:border-muted-foreground hover:text-muted-foreground',
+          'border-muted-foreground/40 text-muted-foreground/40 hover:border-primary hover:text-primary',
       )}
+      aria-label={
+        status === 'todo'
+          ? 'Start task'
+          : status === 'in_progress'
+            ? 'Stop task'
+            : 'Reopen task'
+      }
     >
       {status === 'completed' && <Check className="h-3 w-3" />}
-      {status === 'in_progress' && <Play className="h-3 w-3 fill-current" />}
-      {status === 'todo' && <Circle className="h-3 w-3" />}
+      {status === 'in_progress' && (
+        <Square className="h-2.5 w-2.5 fill-current" />
+      )}
+      {status === 'todo' && <Play className="h-3 w-3 fill-current" />}
     </button>
   )
 }
 
-export function TaskRow({ task }: { task: Task }) {
-  const updateStatus = useUpdateTaskStatus()
+function CompleteButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        onClick()
+      }}
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-muted-foreground/40 text-muted-foreground/40 transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+      aria-label="Complete task"
+    >
+      <Check className="h-3 w-3" />
+    </button>
+  )
+}
 
-  const handleToggle = () => {
-    const nextStatus = task.status === 'completed' ? 'todo' : 'completed'
-    updateStatus.mutate({ id: task.id, status: nextStatus })
-  }
+export function LiveTimer({
+  startTime,
+  estimatedMinutes,
+}: {
+  startTime: string | null | undefined
+  estimatedMinutes: number | null | undefined
+}) {
+  const { formatted, isOverEstimate } = useLiveTimer(
+    startTime,
+    estimatedMinutes,
+  )
+
+  return (
+    <span
+      className={cn(
+        'font-mono text-xs tabular-nums',
+        isOverEstimate ? 'text-destructive' : 'text-primary',
+      )}
+      data-testid="live-timer"
+    >
+      {formatted}
+    </span>
+  )
+}
+
+export function TaskRow({ task }: { task: Task }) {
+  const { handleStatusAction, handleComplete } = useTaskActions(
+    task.id,
+    task.status,
+  )
 
   return (
     <Link
@@ -55,7 +106,7 @@ export function TaskRow({ task }: { task: Task }) {
         task.status === 'completed' && 'opacity-50',
       )}
     >
-      <StatusIcon status={task.status} onToggle={handleToggle} />
+      <StatusIcon status={task.status} onToggle={handleStatusAction} />
 
       <div className="min-w-0 flex-1">
         <span
@@ -75,6 +126,16 @@ export function TaskRow({ task }: { task: Task }) {
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
+        {task.status === 'in_progress' && (
+          <>
+            <LiveTimer
+              startTime={task.activeTimeBlockStartTime ?? task.updatedAt}
+              estimatedMinutes={task.estimatedMinutes}
+            />
+            <CompleteButton onClick={handleComplete} />
+          </>
+        )}
+
         {task.context !== 'personal' && (
           <span
             className={cn(
@@ -87,7 +148,7 @@ export function TaskRow({ task }: { task: Task }) {
           </span>
         )}
 
-        {task.estimatedMinutes != null && (
+        {task.estimatedMinutes != null && task.status !== 'in_progress' && (
           <span className="font-mono text-xs text-muted-foreground">
             {formatMinutes(task.estimatedMinutes)}
           </span>
@@ -107,13 +168,11 @@ export function TreeTaskRow({
   defaultExpanded?: boolean
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded)
-  const updateStatus = useUpdateTaskStatus()
+  const { handleStatusAction, handleComplete } = useTaskActions(
+    node.id,
+    node.status,
+  )
   const hasChildren = node.children.length > 0
-
-  const handleToggle = () => {
-    const nextStatus = node.status === 'completed' ? 'todo' : 'completed'
-    updateStatus.mutate({ id: node.id, status: nextStatus })
-  }
 
   const handleExpand = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -151,7 +210,7 @@ export function TreeTaskRow({
           <span className="w-5 shrink-0" />
         )}
 
-        <StatusIcon status={node.status} onToggle={handleToggle} />
+        <StatusIcon status={node.status} onToggle={handleStatusAction} />
 
         <div className="min-w-0 flex-1">
           <span
@@ -165,6 +224,16 @@ export function TreeTaskRow({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
+          {node.status === 'in_progress' && (
+            <>
+              <LiveTimer
+                startTime={node.activeTimeBlockStartTime ?? node.updatedAt}
+                estimatedMinutes={node.estimatedMinutes}
+              />
+              <CompleteButton onClick={handleComplete} />
+            </>
+          )}
+
           {/* Child completion count */}
           {node.childCompletionCount.total > 0 && (
             <span
@@ -188,7 +257,7 @@ export function TreeTaskRow({
             </span>
           )}
 
-          {node.estimatedMinutes != null && (
+          {node.estimatedMinutes != null && node.status !== 'in_progress' && (
             <span className="font-mono text-xs text-muted-foreground">
               {formatMinutes(node.estimatedMinutes)}
             </span>
