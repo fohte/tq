@@ -90,10 +90,13 @@ describe('handleOAuthCallback', () => {
       .where(eq(oauthTokens.provider, 'google_calendar'))
       .limit(1)
 
-    expect(savedToken).toBeDefined()
-    expect(savedToken!.accessToken).toBe('new-access-token')
-    expect(savedToken!.refreshToken).toBe('new-refresh-token')
-    expect(savedToken!.expiresAt.getTime()).toBeGreaterThan(Date.now())
+    expect(savedToken).toEqual(
+      expect.objectContaining({
+        accessToken: 'new-access-token',
+        refreshToken: 'new-refresh-token',
+      }),
+    )
+    expect(savedToken?.expiresAt.getTime()).toBeGreaterThan(Date.now())
   })
 
   it('throws when token exchange fails', async () => {
@@ -153,7 +156,9 @@ describe('refreshTokenIfNeeded', () => {
       .from(oauthTokens)
       .where(eq(oauthTokens.provider, 'google_calendar'))
       .limit(1)
-    expect(updated!.accessToken).toBe('refreshed-token')
+    expect(updated).toEqual(
+      expect.objectContaining({ accessToken: 'refreshed-token' }),
+    )
   })
 
   it('throws when no token exists', async () => {
@@ -271,6 +276,6 @@ describe('getEvents', () => {
       '2026-03-23T00:00:00Z',
     )
 
-    expect(events[0]!.summary).toBe('(No title)')
+    expect(events).toEqual([expect.objectContaining({ summary: '(No title)' })])
   })
 })
