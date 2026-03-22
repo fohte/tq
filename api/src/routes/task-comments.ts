@@ -40,7 +40,7 @@ const requireTask = factory.createMiddleware(async (c, next) => {
 })
 
 export const taskCommentsApp = new Hono()
-  .use('/:taskId/comments', requireTask)
+  .use('/:taskId/comments/*', requireTask)
   .get('/:taskId/comments', async (c) => {
     const taskId = c.req.param('taskId')
 
