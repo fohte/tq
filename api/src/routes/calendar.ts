@@ -2,6 +2,7 @@ import {
   getAuthUrl,
   getEvents,
   handleOAuthCallback,
+  OAuthTokenMissingError,
 } from '@api/services/google-calendar'
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
@@ -25,13 +26,12 @@ export const calendarApp = new Hono()
       const events = await getEvents(calendarId, timeMin, timeMax)
       return c.json(events, 200)
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unknown error occurred'
-
-      if (message.includes('No OAuth token found')) {
-        return c.json({ error: message }, 401)
+      if (error instanceof OAuthTokenMissingError) {
+        return c.json({ error: error.message }, 401)
       }
 
+      const message =
+        error instanceof Error ? error.message : 'Unknown error occurred'
       return c.json({ error: message }, 500)
     }
   })

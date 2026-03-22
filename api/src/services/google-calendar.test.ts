@@ -24,6 +24,20 @@ function clearEnv() {
   }
 }
 
+async function upsertToken(values: {
+  accessToken: string
+  refreshToken: string
+  expiresAt: Date
+}) {
+  await db
+    .insert(oauthTokens)
+    .values({ provider: 'google_calendar', ...values })
+    .onConflictDoUpdate({
+      target: oauthTokens.provider,
+      set: { ...values, updatedAt: new Date() },
+    })
+}
+
 beforeEach(() => {
   setEnv()
 })
@@ -116,11 +130,10 @@ describe('refreshTokenIfNeeded', () => {
   it('returns existing token when not expired', async () => {
     const { refreshTokenIfNeeded } = await importService()
 
-    await db.insert(oauthTokens).values({
-      provider: 'google_calendar',
+    await upsertToken({
       accessToken: 'valid-token',
       refreshToken: 'refresh-token',
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     })
 
     const token = await refreshTokenIfNeeded()
@@ -130,11 +143,10 @@ describe('refreshTokenIfNeeded', () => {
   it('refreshes token when close to expiry', async () => {
     const { refreshTokenIfNeeded } = await importService()
 
-    await db.insert(oauthTokens).values({
-      provider: 'google_calendar',
+    await upsertToken({
       accessToken: 'expired-token',
       refreshToken: 'refresh-token',
-      expiresAt: new Date(Date.now() + 60 * 1000), // 1 minute from now (within 5-min buffer)
+      expiresAt: new Date(Date.now() + 60 * 1000), // within 5-min buffer
     })
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
@@ -150,7 +162,6 @@ describe('refreshTokenIfNeeded', () => {
     const token = await refreshTokenIfNeeded()
     expect(token).toBe('refreshed-token')
 
-    // Verify DB was updated
     const [updated] = await db
       .select()
       .from(oauthTokens)
@@ -161,20 +172,25 @@ describe('refreshTokenIfNeeded', () => {
     )
   })
 
-  it('throws when no token exists', async () => {
-    const { refreshTokenIfNeeded } = await importService()
+  it('throws OAuthTokenMissingError when no token exists', async () => {
+    const { refreshTokenIfNeeded, OAuthTokenMissingError } =
+      await importService()
 
-    await expect(refreshTokenIfNeeded()).rejects.toThrow('No OAuth token found')
+    // Ensure no token exists by deleting any leftover
+    await db
+      .delete(oauthTokens)
+      .where(eq(oauthTokens.provider, 'google_calendar'))
+
+    await expect(refreshTokenIfNeeded()).rejects.toThrow(OAuthTokenMissingError)
   })
 
   it('throws when refresh request fails', async () => {
     const { refreshTokenIfNeeded } = await importService()
 
-    await db.insert(oauthTokens).values({
-      provider: 'google_calendar',
+    await upsertToken({
       accessToken: 'expired-token',
       refreshToken: 'bad-refresh-token',
-      expiresAt: new Date(Date.now() - 1000), // already expired
+      expiresAt: new Date(Date.now() - 1000),
     })
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
@@ -189,9 +205,7 @@ describe('getEvents', () => {
   it('fetches and transforms Google Calendar events', async () => {
     const { getEvents } = await importService()
 
-    // Insert a valid token
-    await db.insert(oauthTokens).values({
-      provider: 'google_calendar',
+    await upsertToken({
       accessToken: 'valid-token',
       refreshToken: 'refresh-token',
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
@@ -248,8 +262,7 @@ describe('getEvents', () => {
   it('handles events without summary', async () => {
     const { getEvents } = await importService()
 
-    await db.insert(oauthTokens).values({
-      provider: 'google_calendar',
+    await upsertToken({
       accessToken: 'valid-token',
       refreshToken: 'refresh-token',
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),

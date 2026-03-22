@@ -1,6 +1,7 @@
 import { db } from '@api/db/connection'
 import { oauthTokens } from '@api/db/schema'
 import { eq } from 'drizzle-orm'
+import { z } from 'zod'
 
 const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
@@ -10,6 +11,41 @@ const PROVIDER = 'google_calendar'
 
 // Token refresh buffer: refresh 5 minutes before expiry
 const REFRESH_BUFFER_MS = 5 * 60 * 1000
+
+export class OAuthTokenMissingError extends Error {
+  constructor() {
+    super('No OAuth token found. Please authenticate first.')
+    this.name = 'OAuthTokenMissingError'
+  }
+}
+
+const tokenResponseSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string(),
+  expires_in: z.number(),
+})
+
+const refreshTokenResponseSchema = z.object({
+  access_token: z.string(),
+  expires_in: z.number(),
+})
+
+const googleCalendarEventSchema = z.object({
+  id: z.string(),
+  summary: z.string().optional(),
+  start: z.object({
+    dateTime: z.string().optional(),
+    date: z.string().optional(),
+  }),
+  end: z.object({
+    dateTime: z.string().optional(),
+    date: z.string().optional(),
+  }),
+})
+
+const googleCalendarEventsResponseSchema = z.object({
+  items: z.array(googleCalendarEventSchema).optional(),
+})
 
 function getConfig() {
   const clientId = process.env['GOOGLE_CLIENT_ID']
@@ -60,22 +96,26 @@ export async function handleOAuthCallback(code: string): Promise<void> {
     throw new Error(`Token exchange failed: ${error}`)
   }
 
-  const data = (await response.json()) as {
-    access_token: string
-    refresh_token: string
-    expires_in: number
-  }
-
+  const data = tokenResponseSchema.parse(await response.json())
   const expiresAt = new Date(Date.now() + data.expires_in * 1000)
 
-  // Upsert: delete existing token for this provider, then insert new one
-  await db.delete(oauthTokens).where(eq(oauthTokens.provider, PROVIDER))
-  await db.insert(oauthTokens).values({
-    provider: PROVIDER,
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-    expiresAt,
-  })
+  await db
+    .insert(oauthTokens)
+    .values({
+      provider: PROVIDER,
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      expiresAt,
+    })
+    .onConflictDoUpdate({
+      target: oauthTokens.provider,
+      set: {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresAt,
+        updatedAt: new Date(),
+      },
+    })
 }
 
 export async function refreshTokenIfNeeded(): Promise<string> {
@@ -86,7 +126,7 @@ export async function refreshTokenIfNeeded(): Promise<string> {
     .limit(1)
 
   if (!token) {
-    throw new Error('No OAuth token found. Please authenticate first.')
+    throw new OAuthTokenMissingError()
   }
 
   // Return existing token if not expired
@@ -113,11 +153,7 @@ export async function refreshTokenIfNeeded(): Promise<string> {
     throw new Error(`Token refresh failed: ${error}`)
   }
 
-  const data = (await response.json()) as {
-    access_token: string
-    expires_in: number
-  }
-
+  const data = refreshTokenResponseSchema.parse(await response.json())
   const expiresAt = new Date(Date.now() + data.expires_in * 1000)
 
   await db
@@ -139,17 +175,6 @@ export interface ExternalEvent {
   endTime: string
   isAllDay: boolean
   source: 'google_calendar'
-}
-
-interface GoogleCalendarEvent {
-  id: string
-  summary?: string
-  start: { dateTime?: string; date?: string }
-  end: { dateTime?: string; date?: string }
-}
-
-interface GoogleCalendarEventsResponse {
-  items?: GoogleCalendarEvent[]
 }
 
 export async function getEvents(
@@ -179,7 +204,7 @@ export async function getEvents(
     throw new Error(`Google Calendar API error: ${error}`)
   }
 
-  const data = (await response.json()) as GoogleCalendarEventsResponse
+  const data = googleCalendarEventsResponseSchema.parse(await response.json())
 
   return (data.items ?? []).map((event) => {
     const isAllDay = !event.start.dateTime
