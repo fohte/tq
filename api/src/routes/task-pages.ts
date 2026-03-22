@@ -71,6 +71,20 @@ export const taskPagesApp = new Hono()
 
     return c.json(pageToResponse(page!), 201)
   })
+  .get('/:pageId', async (c) => {
+    const taskId = c.req.param('taskId') as string
+    const pageId = c.req.param('pageId') as string
+
+    const page = await db.query.taskPages.findFirst({
+      where: and(eq(taskPages.id, pageId), eq(taskPages.taskId, taskId)),
+    })
+
+    if (!page) {
+      return c.json({ error: 'Page not found' }, 404)
+    }
+
+    return c.json(pageToResponse(page), 200)
+  })
   .patch('/:pageId', zValidator('json', updatePageSchema), async (c) => {
     const taskId = c.req.param('taskId') as string
     const pageId = c.req.param('pageId') as string
