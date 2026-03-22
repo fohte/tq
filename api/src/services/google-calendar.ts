@@ -27,6 +27,7 @@ const tokenResponseSchema = z.object({
 
 const refreshTokenResponseSchema = z.object({
   access_token: z.string(),
+  refresh_token: z.string().optional(),
   expires_in: z.number(),
 })
 
@@ -162,6 +163,7 @@ export async function refreshTokenIfNeeded(): Promise<string> {
       accessToken: data.access_token,
       expiresAt,
       updatedAt: new Date(),
+      ...(data.refresh_token ? { refreshToken: data.refresh_token } : {}),
     })
     .where(eq(oauthTokens.id, token.id))
 

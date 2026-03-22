@@ -172,6 +172,41 @@ describe('refreshTokenIfNeeded', () => {
     )
   })
 
+  it('persists rotated refresh token when Google returns one', async () => {
+    const { refreshTokenIfNeeded } = await importService()
+
+    await upsertToken({
+      accessToken: 'old-token',
+      refreshToken: 'old-refresh-token',
+      expiresAt: new Date(Date.now() - 1000),
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          access_token: 'new-access',
+          refresh_token: 'rotated-refresh-token',
+          expires_in: 3600,
+        }),
+        { status: 200 },
+      ),
+    )
+
+    await refreshTokenIfNeeded()
+
+    const [updated] = await db
+      .select()
+      .from(oauthTokens)
+      .where(eq(oauthTokens.provider, 'google_calendar'))
+      .limit(1)
+    expect(updated).toEqual(
+      expect.objectContaining({
+        accessToken: 'new-access',
+        refreshToken: 'rotated-refresh-token',
+      }),
+    )
+  })
+
   it('throws OAuthTokenMissingError when no token exists', async () => {
     const { refreshTokenIfNeeded, OAuthTokenMissingError } =
       await importService()
