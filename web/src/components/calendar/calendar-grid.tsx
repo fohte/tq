@@ -1,5 +1,8 @@
 import type { EventDropArg } from '@fullcalendar/core'
-import type { EventResizeDoneArg } from '@fullcalendar/interaction'
+import type {
+  EventReceiveArg,
+  EventResizeDoneArg,
+} from '@fullcalendar/interaction'
 import interactionPlugin, { Draggable } from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -81,7 +84,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         draggable.destroy()
         draggableInitialized.current = false
       }
-    }, [externalDragContainerRef])
+    }, [externalDragContainerRef, externalDragContainerRef?.current])
 
     const calendarEvents = events.map((event) => ({
       id: event.id,
@@ -130,9 +133,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       })
     }
 
-    const handleReceive = (info: {
-      event: import('@fullcalendar/core').EventApi
-    }) => {
+    const handleReceive = (info: EventReceiveArg) => {
       if (!dndCallbacks?.onExternalDrop) return
       const { event } = info
       const taskId = event.extendedProps['taskId'] as string

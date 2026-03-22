@@ -1,7 +1,7 @@
 import { db } from '@api/db/connection'
 import { tasks, timeBlocks } from '@api/db/schema'
 import { zValidator } from '@hono/zod-validator'
-import { and, eq, gte, lte, or } from 'drizzle-orm'
+import { and, eq, gte, isNull, lte, or } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -118,10 +118,7 @@ export const schedulesApp = new Hono()
         .where(
           and(
             lte(timeBlocks.startTime, dayEnd),
-            or(
-              gte(timeBlocks.endTime, dayStart),
-              eq(timeBlocks.endTime, null as unknown as Date),
-            ),
+            or(gte(timeBlocks.endTime, dayStart), isNull(timeBlocks.endTime)),
           ),
         )
         .orderBy(timeBlocks.startTime)
@@ -142,22 +139,26 @@ export const schedulesApp = new Hono()
         return c.json({ error: 'Time block not found' }, 404)
       }
 
-      const updates: Record<string, unknown> = { updatedAt: new Date() }
       const input = c.req.valid('json')
+      const updates: Partial<typeof timeBlocks.$inferInsert> = {}
 
       if (input.startTime !== undefined) {
-        updates['startTime'] = new Date(input.startTime)
+        updates.startTime = new Date(input.startTime)
       }
       if (input.endTime !== undefined) {
-        updates['endTime'] = input.endTime ? new Date(input.endTime) : null
+        updates.endTime = input.endTime ? new Date(input.endTime) : null
       }
       if (input.isAutoScheduled !== undefined) {
-        updates['isAutoScheduled'] = input.isAutoScheduled
+        updates.isAutoScheduled = input.isAutoScheduled
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return c.json(timeBlockToResponse(existing), 200)
       }
 
       const [updated] = await db
         .update(timeBlocks)
-        .set(updates)
+        .set({ ...updates, updatedAt: new Date() })
         .where(eq(timeBlocks.id, id))
         .returning()
 

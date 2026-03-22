@@ -15,6 +15,7 @@ import {
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '@web/hooks/use-time-blocks'
+import { formatMinutes } from '@web/lib/format'
 import { cn } from '@web/lib/utils'
 import { Plus } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
@@ -64,10 +65,7 @@ function DayView() {
             new Date(block.startTime).getTime()
           : 0
         const durationMinutes = Math.round(durationMs / 60000)
-        const durationStr =
-          durationMinutes >= 60
-            ? `${Math.floor(durationMinutes / 60)}h${durationMinutes % 60 > 0 ? `${durationMinutes % 60}m` : ''}`
-            : `${durationMinutes}m`
+        const durationStr = formatMinutes(durationMinutes)
 
         return {
           id: block.id,

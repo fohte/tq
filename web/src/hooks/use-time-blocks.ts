@@ -48,11 +48,12 @@ export function useCreateTimeBlock() {
       return res.json()
     },
     onMutate: async (input) => {
-      await queryClient.cancelQueries({ queryKey: timeBlockKeys.all })
+      const date = input.startTime.slice(0, 10)
+      const queryKey = timeBlockKeys.list(date)
 
-      const previousData = queryClient.getQueriesData<TimeBlock[]>({
-        queryKey: timeBlockKeys.all,
-      })
+      await queryClient.cancelQueries({ queryKey })
+
+      const previousData = queryClient.getQueryData<TimeBlock[]>(queryKey)
 
       const now = new Date().toISOString()
       const optimisticBlock: TimeBlock = {
@@ -65,21 +66,18 @@ export function useCreateTimeBlock() {
         updatedAt: now,
       }
 
-      queryClient.setQueriesData<TimeBlock[]>(
-        { queryKey: timeBlockKeys.all },
-        (old) => {
-          if (!old) return [optimisticBlock]
-          return [...old, optimisticBlock]
-        },
+      queryClient.setQueryData<TimeBlock[]>(queryKey, (old = []) =>
+        [...old, optimisticBlock].sort(
+          (a, b) =>
+            new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+        ),
       )
 
-      return { previousData }
+      return { previousData, queryKey }
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousData) {
-        for (const [key, data] of context.previousData) {
-          queryClient.setQueryData(key, data)
-        }
+      if (context?.previousData !== undefined && context?.queryKey) {
+        queryClient.setQueryData(context.queryKey, context.previousData)
       }
     },
     onSettled: () => {
