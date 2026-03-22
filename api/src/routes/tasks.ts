@@ -10,6 +10,7 @@ import { pageToResponse } from '@api/routes/task-pages'
 import { zValidator } from '@hono/zod-validator'
 import { and, count, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
+import { createFactory } from 'hono/factory'
 import { z } from 'zod'
 
 const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
@@ -154,6 +155,28 @@ function buildTree(
   return roots
 }
 
+type TaskEnv = {
+  Variables: {
+    task: typeof tasks.$inferSelect
+  }
+}
+
+const factory = createFactory<TaskEnv>()
+
+const requireTask = factory.createMiddleware(async (c, next) => {
+  const id = c.req.param('id')!
+
+  const task = await db.query.tasks.findFirst({
+    where: eq(tasks.id, id),
+  })
+  if (!task) {
+    return c.json({ error: 'Task not found' }, 404)
+  }
+
+  c.set('task', task)
+  return next()
+})
+
 async function updateStatusAndCloseTimeBlocks(
   taskId: string,
   status: 'todo' | 'completed',
@@ -173,7 +196,6 @@ async function updateStatusAndCloseTimeBlocks(
   ])
   return [updatedTask!, closedBlocks] as const
 }
-
 export const tasksApp = new Hono()
   // Task CRUD
   .post('/', zValidator('json', createTaskSchema), async (c) => {
@@ -367,16 +389,9 @@ export const tasksApp = new Hono()
 
     return c.json(suggestions, 200)
   })
-  .get('/:id', async (c) => {
-    const id = c.req.param('id')
-
-    const task = await db.query.tasks.findFirst({
-      where: eq(tasks.id, id),
-    })
-
-    if (!task) {
-      return c.json({ error: 'Task not found' }, 404)
-    }
+  .get('/:id', requireTask, async (c) => {
+    const task = c.get('task')
+    const id = task.id
 
     // Get child completion count, pages, and time blocks in parallel
     const [childStats, pages, taskTimeBlocks] = await Promise.all([
@@ -414,79 +429,73 @@ export const tasksApp = new Hono()
       200,
     )
   })
-  .patch('/:id', zValidator('json', updateTaskSchema), async (c) => {
-    const id = c.req.param('id')
-    const input = c.req.valid('json')
+  .patch(
+    '/:id',
+    requireTask,
+    zValidator('json', updateTaskSchema),
+    async (c) => {
+      const id = c.req.param('id')
+      const input = c.req.valid('json')
 
-    const existing = await db.query.tasks.findFirst({
-      where: eq(tasks.id, id),
-    })
-    if (!existing) {
-      return c.json({ error: 'Task not found' }, 404)
-    }
+      const [updated] = await db
+        .update(tasks)
+        .set({ ...input, updatedAt: new Date() })
+        .where(eq(tasks.id, id))
+        .returning()
 
-    const [updated] = await db
-      .update(tasks)
-      .set({ ...input, updatedAt: new Date() })
-      .where(eq(tasks.id, id))
-      .returning()
+      return c.json(taskToResponse(updated!), 200)
+    },
+  )
+  .patch(
+    '/:id/status',
+    requireTask,
+    zValidator('json', updateStatusSchema),
+    async (c) => {
+      const id = c.req.param('id')
+      const existing = c.get('task')
+      const { status } = c.req.valid('json')
 
-    return c.json(taskToResponse(updated!), 200)
-  })
-  .patch('/:id/status', zValidator('json', updateStatusSchema), async (c) => {
-    const id = c.req.param('id')
-    const { status } = c.req.valid('json')
+      const now = new Date()
 
-    const existing = await db.query.tasks.findFirst({
-      where: eq(tasks.id, id),
-    })
-    if (!existing) {
-      return c.json({ error: 'Task not found' }, 404)
-    }
-
-    const now = new Date()
-
-    // Close open TimeBlocks when transitioning away from in_progress
-    if (existing.status === 'in_progress' && status !== 'in_progress') {
-      await db
-        .update(timeBlocks)
-        .set({ endTime: now, updatedAt: now })
-        .where(and(eq(timeBlocks.taskId, id), isNull(timeBlocks.endTime)))
-    }
-
-    const [updated] = await db
-      .update(tasks)
-      .set({ status, updatedAt: now })
-      .where(eq(tasks.id, id))
-      .returning()
-
-    return c.json(taskToResponse(updated!), 200)
-  })
-  .patch('/:id/parent', zValidator('json', updateParentSchema), async (c) => {
-    const id = c.req.param('id')
-    const { parentId } = c.req.valid('json')
-
-    const existing = await db.query.tasks.findFirst({
-      where: eq(tasks.id, id),
-    })
-    if (!existing) {
-      return c.json({ error: 'Task not found' }, 404)
-    }
-
-    if (parentId) {
-      const parent = await db.query.tasks.findFirst({
-        where: eq(tasks.id, parentId),
-      })
-      if (!parent) {
-        return c.json({ error: 'Parent task not found' }, 404)
+      // Close open TimeBlocks when transitioning away from in_progress
+      if (existing.status === 'in_progress' && status !== 'in_progress') {
+        await db
+          .update(timeBlocks)
+          .set({ endTime: now, updatedAt: now })
+          .where(and(eq(timeBlocks.taskId, id), isNull(timeBlocks.endTime)))
       }
 
-      if (parentId === id) {
-        return c.json({ error: 'A task cannot be its own parent' }, 409)
-      }
+      const [updated] = await db
+        .update(tasks)
+        .set({ status, updatedAt: now })
+        .where(eq(tasks.id, id))
+        .returning()
 
-      // Check for circular reference by walking ancestors
-      const ancestors = await db.execute(sql`
+      return c.json(taskToResponse(updated!), 200)
+    },
+  )
+  .patch(
+    '/:id/parent',
+    requireTask,
+    zValidator('json', updateParentSchema),
+    async (c) => {
+      const id = c.req.param('id')
+      const { parentId } = c.req.valid('json')
+
+      if (parentId) {
+        const parent = await db.query.tasks.findFirst({
+          where: eq(tasks.id, parentId),
+        })
+        if (!parent) {
+          return c.json({ error: 'Parent task not found' }, 404)
+        }
+
+        if (parentId === id) {
+          return c.json({ error: 'A task cannot be its own parent' }, 409)
+        }
+
+        // Check for circular reference by walking ancestors
+        const ancestors = await db.execute(sql`
         WITH RECURSIVE ancestors AS (
           SELECT id, parent_id FROM ${tasks} WHERE id = ${parentId}
           UNION ALL
@@ -497,28 +506,23 @@ export const tasksApp = new Hono()
         SELECT id FROM ancestors WHERE id = ${id}
       `)
 
-      if ((ancestors as unknown[]).length > 0) {
-        return c.json({ error: 'Circular reference detected' }, 409)
+        if ((ancestors as unknown[]).length > 0) {
+          return c.json({ error: 'Circular reference detected' }, 409)
+        }
       }
-    }
 
-    const [updated] = await db
-      .update(tasks)
-      .set({ parentId, updatedAt: new Date() })
-      .where(eq(tasks.id, id))
-      .returning()
+      const [updated] = await db
+        .update(tasks)
+        .set({ parentId, updatedAt: new Date() })
+        .where(eq(tasks.id, id))
+        .returning()
 
-    return c.json(taskToResponse(updated!), 200)
-  })
-  .post('/:id/start', async (c) => {
+      return c.json(taskToResponse(updated!), 200)
+    },
+  )
+  .post('/:id/start', requireTask, async (c) => {
     const id = c.req.param('id')
-
-    const existing = await db.query.tasks.findFirst({
-      where: eq(tasks.id, id),
-    })
-    if (!existing) {
-      return c.json({ error: 'Task not found' }, 404)
-    }
+    const existing = c.get('task')
 
     if (existing.status === 'in_progress') {
       return c.json({ error: 'Task is already in progress' }, 409)
@@ -543,15 +547,9 @@ export const tasksApp = new Hono()
       200,
     )
   })
-  .post('/:id/stop', async (c) => {
+  .post('/:id/stop', requireTask, async (c) => {
     const id = c.req.param('id')
-
-    const existing = await db.query.tasks.findFirst({
-      where: eq(tasks.id, id),
-    })
-    if (!existing) {
-      return c.json({ error: 'Task not found' }, 404)
-    }
+    const existing = c.get('task')
 
     if (existing.status !== 'in_progress') {
       return c.json({ error: 'Task is not in progress' }, 409)
@@ -570,15 +568,8 @@ export const tasksApp = new Hono()
       200,
     )
   })
-  .post('/:id/complete', async (c) => {
+  .post('/:id/complete', requireTask, async (c) => {
     const id = c.req.param('id')
-
-    const existing = await db.query.tasks.findFirst({
-      where: eq(tasks.id, id),
-    })
-    if (!existing) {
-      return c.json({ error: 'Task not found' }, 404)
-    }
 
     const [updatedTask, closedBlocks] = await updateStatusAndCloseTimeBlocks(
       id,
@@ -593,15 +584,8 @@ export const tasksApp = new Hono()
       200,
     )
   })
-  .delete('/:id', async (c) => {
+  .delete('/:id', requireTask, async (c) => {
     const id = c.req.param('id')
-
-    const existing = await db.query.tasks.findFirst({
-      where: eq(tasks.id, id),
-    })
-    if (!existing) {
-      return c.json({ error: 'Task not found' }, 404)
-    }
 
     // Set children's parentId to null before deleting
     await db

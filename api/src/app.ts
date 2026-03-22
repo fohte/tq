@@ -3,6 +3,7 @@ import { imagesApp } from '@api/routes/images'
 import { labelsApp } from '@api/routes/labels'
 import { projectsApp } from '@api/routes/projects'
 import { schedulesApp } from '@api/routes/schedules'
+import { taskCommentsApp } from '@api/routes/task-comments'
 import { taskPagesApp } from '@api/routes/task-pages'
 import { tasksApp } from '@api/routes/tasks'
 import { Hono } from 'hono'
@@ -19,6 +20,7 @@ const app = new Hono()
     return c.json({ status: 'ok' })
   })
   .route('/api/tasks', tasksApp)
+  .route('/api/tasks', taskCommentsApp)
   .route('/api/tasks/:taskId/pages', taskPagesApp)
   .route('/api/projects', projectsApp)
   .route('/api/schedule', schedulesApp)
