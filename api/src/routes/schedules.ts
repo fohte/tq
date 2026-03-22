@@ -278,8 +278,8 @@ export const schedulesApp = new Hono()
             ? { startTime: input.startTime }
             : {}),
           ...(input.endTime !== undefined ? { endTime: input.endTime } : {}),
-          ...(input.context !== undefined && input.context !== null
-            ? { context: input.context }
+          ...(input.context !== undefined
+            ? { context: input.context ?? 'personal' }
             : {}),
           ...(input.color !== undefined ? { color: input.color } : {}),
           recurrenceRuleId,
