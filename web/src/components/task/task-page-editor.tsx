@@ -1,5 +1,5 @@
 import { MarkdownEditor } from '@web/components/ui/markdown-editor'
-import { useTaskPages, useUpdateTaskPage } from '@web/hooks/use-task-pages'
+import { useTaskPage, useUpdateTaskPage } from '@web/hooks/use-task-pages'
 import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -10,8 +10,7 @@ export function TaskPageEditor({
   taskId: string
   pageId: string
 }) {
-  const { data: pages, isLoading } = useTaskPages(taskId)
-  const page = pages?.find((p) => p.id === pageId)
+  const { data: page, isLoading } = useTaskPage(taskId, pageId)
 
   if (isLoading) {
     return (

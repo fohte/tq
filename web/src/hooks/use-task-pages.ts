@@ -9,6 +9,8 @@ export type TaskPage = InferResponseType<
 
 const taskPageKeys = {
   all: (taskId: string) => ['tasks', 'detail', taskId, 'pages'] as const,
+  detail: (taskId: string, pageId: string) =>
+    ['tasks', 'detail', taskId, 'pages', pageId] as const,
 }
 
 export function useTaskPages(taskId: string) {
@@ -19,6 +21,19 @@ export function useTaskPages(taskId: string) {
         param: { taskId },
       })
       if (!res.ok) throw new Error('Failed to fetch task pages')
+      return res.json()
+    },
+  })
+}
+
+export function useTaskPage(taskId: string, pageId: string) {
+  return useQuery({
+    queryKey: taskPageKeys.detail(taskId, pageId),
+    queryFn: async () => {
+      const res = await api.api.tasks[':taskId'].pages[':pageId'].$get({
+        param: { taskId, pageId },
+      })
+      if (!res.ok) throw new Error('Failed to fetch task page')
       return res.json()
     },
   })
@@ -69,35 +84,59 @@ export function useUpdateTaskPage(taskId: string) {
       await queryClient.cancelQueries({
         queryKey: taskPageKeys.all(taskId),
       })
+      await queryClient.cancelQueries({
+        queryKey: taskPageKeys.detail(taskId, pageId),
+      })
 
       const previousPages = queryClient.getQueryData<TaskPage[]>(
         taskPageKeys.all(taskId),
       )
+      const previousPage = queryClient.getQueryData<TaskPage>(
+        taskPageKeys.detail(taskId, pageId),
+      )
+
+      const optimisticTimestamp = new Date().toISOString()
 
       if (previousPages) {
         queryClient.setQueryData<TaskPage[]>(
           taskPageKeys.all(taskId),
           previousPages.map((page) =>
             page.id === pageId
-              ? { ...page, ...input, updatedAt: new Date().toISOString() }
+              ? { ...page, ...input, updatedAt: optimisticTimestamp }
               : page,
           ),
         )
       }
 
-      return { previousPages }
+      if (previousPage) {
+        queryClient.setQueryData<TaskPage>(
+          taskPageKeys.detail(taskId, pageId),
+          { ...previousPage, ...input, updatedAt: optimisticTimestamp },
+        )
+      }
+
+      return { previousPages, previousPage }
     },
-    onError: (_err, _vars, context) => {
+    onError: (_err, { pageId }, context) => {
       if (context?.previousPages) {
         queryClient.setQueryData(
           taskPageKeys.all(taskId),
           context.previousPages,
         )
       }
+      if (context?.previousPage) {
+        queryClient.setQueryData(
+          taskPageKeys.detail(taskId, pageId),
+          context.previousPage,
+        )
+      }
     },
-    onSettled: () => {
+    onSettled: (_data, _err, { pageId }) => {
       queryClient.invalidateQueries({
         queryKey: taskPageKeys.all(taskId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: taskPageKeys.detail(taskId, pageId),
       })
       queryClient.invalidateQueries({
         queryKey: ['tasks', 'detail', taskId],

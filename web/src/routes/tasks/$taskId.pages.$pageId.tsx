@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { TaskPageEditor } from '@web/components/task/task-page-editor'
-import { useTaskPages } from '@web/hooks/use-task-pages'
+import { useTaskPage } from '@web/hooks/use-task-pages'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 
 export const Route = createFileRoute('/tasks/$taskId/pages/$pageId')({
@@ -33,13 +33,11 @@ function TaskPageView() {
 }
 
 function PageTitle({ taskId, pageId }: { taskId: string; pageId: string }) {
-  const { data: pages, isLoading } = useTaskPages(taskId)
+  const { data: page, isLoading } = useTaskPage(taskId, pageId)
 
   if (isLoading) {
     return <Loader2 className="size-4 animate-spin text-muted-foreground" />
   }
-
-  const page = pages?.find((p) => p.id === pageId)
 
   if (!page) {
     return <span className="text-muted-foreground">Page not found</span>
