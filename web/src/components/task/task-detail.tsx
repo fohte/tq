@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { TaskPagesSection } from '@web/components/task/task-pages-section'
 import { MarkdownEditor } from '@web/components/ui/markdown-editor'
 import type { TaskDetail, UpdateTaskInput } from '@web/hooks/use-tasks'
 import {
@@ -46,6 +47,9 @@ export function TaskMainContent({ task }: { task: TaskDetail }) {
 
       {/* Description */}
       <TaskDescription taskId={task.id} defaultValue={task.description} />
+
+      {/* Pages */}
+      <TaskPagesSection taskId={task.id} />
     </div>
   )
 }

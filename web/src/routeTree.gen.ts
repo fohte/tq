@@ -16,6 +16,7 @@ import { Route as TasksIndexRouteImport } from './routes/tasks/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks/$taskId'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
+import { Route as TasksTaskIdPagesPageIdRouteImport } from './routes/tasks/$taskId.pages.$pageId'
 
 const TodayRoute = TodayRouteImport.update({
   id: '/today',
@@ -52,24 +53,31 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   path: '/projects/$projectId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TasksTaskIdPagesPageIdRoute = TasksTaskIdPagesPageIdRouteImport.update({
+  id: '/pages/$pageId',
+  path: '/pages/$pageId',
+  getParentRoute: () => TasksTaskIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/search': typeof SearchRoute
   '/today': typeof TodayRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
-  '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/tasks/$taskId': typeof TasksTaskIdRouteWithChildren
   '/projects/': typeof ProjectsIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/tasks/$taskId/pages/$pageId': typeof TasksTaskIdPagesPageIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/search': typeof SearchRoute
   '/today': typeof TodayRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
-  '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/tasks/$taskId': typeof TasksTaskIdRouteWithChildren
   '/projects': typeof ProjectsIndexRoute
   '/tasks': typeof TasksIndexRoute
+  '/tasks/$taskId/pages/$pageId': typeof TasksTaskIdPagesPageIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,9 +85,10 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/today': typeof TodayRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
-  '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/tasks/$taskId': typeof TasksTaskIdRouteWithChildren
   '/projects/': typeof ProjectsIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/tasks/$taskId/pages/$pageId': typeof TasksTaskIdPagesPageIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,6 +100,7 @@ export interface FileRouteTypes {
     | '/tasks/$taskId'
     | '/projects/'
     | '/tasks/'
+    | '/tasks/$taskId/pages/$pageId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
     | '/tasks/$taskId'
     | '/projects'
     | '/tasks'
+    | '/tasks/$taskId/pages/$pageId'
   id:
     | '__root__'
     | '/'
@@ -109,6 +120,7 @@ export interface FileRouteTypes {
     | '/tasks/$taskId'
     | '/projects/'
     | '/tasks/'
+    | '/tasks/$taskId/pages/$pageId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -116,7 +128,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   TodayRoute: typeof TodayRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
-  TasksTaskIdRoute: typeof TasksTaskIdRoute
+  TasksTaskIdRoute: typeof TasksTaskIdRouteWithChildren
   ProjectsIndexRoute: typeof ProjectsIndexRoute
   TasksIndexRoute: typeof TasksIndexRoute
 }
@@ -172,15 +184,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tasks/$taskId/pages/$pageId': {
+      id: '/tasks/$taskId/pages/$pageId'
+      path: '/pages/$pageId'
+      fullPath: '/tasks/$taskId/pages/$pageId'
+      preLoaderRoute: typeof TasksTaskIdPagesPageIdRouteImport
+      parentRoute: typeof TasksTaskIdRoute
+    }
   }
 }
+
+interface TasksTaskIdRouteChildren {
+  TasksTaskIdPagesPageIdRoute: typeof TasksTaskIdPagesPageIdRoute
+}
+
+const TasksTaskIdRouteChildren: TasksTaskIdRouteChildren = {
+  TasksTaskIdPagesPageIdRoute: TasksTaskIdPagesPageIdRoute,
+}
+
+const TasksTaskIdRouteWithChildren = TasksTaskIdRoute._addFileChildren(
+  TasksTaskIdRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SearchRoute: SearchRoute,
   TodayRoute: TodayRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
-  TasksTaskIdRoute: TasksTaskIdRoute,
+  TasksTaskIdRoute: TasksTaskIdRouteWithChildren,
   ProjectsIndexRoute: ProjectsIndexRoute,
   TasksIndexRoute: TasksIndexRoute,
 }
