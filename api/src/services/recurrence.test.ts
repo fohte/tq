@@ -46,14 +46,39 @@ describe('computeNextDate', () => {
     })
 
     it('skips weeks with interval > 1', () => {
-      // 2026-03-22 is a Sunday (day 0), interval=2, daysOfWeek=[1]
+      // 2026-03-23 is Monday (day 1), interval=2, daysOfWeek=[1]
+      // No remaining days this week (Monday is the only day and it's the base)
       expect(
-        computeNextDate('2026-03-22', {
+        computeNextDate('2026-03-23', {
           type: 'weekly',
           interval: 2,
           daysOfWeek: [1],
         }),
       ).toBe('2026-04-06') // 2 weeks later Monday
+    })
+
+    it('finds remaining day in current week with interval > 1', () => {
+      // 2026-03-23 is Monday (day 1), interval=2, daysOfWeek=[1, 3, 5]
+      // Should return Wednesday (day 3) of the same week, not jump 2 weeks
+      expect(
+        computeNextDate('2026-03-23', {
+          type: 'weekly',
+          interval: 2,
+          daysOfWeek: [1, 3, 5],
+        }),
+      ).toBe('2026-03-25') // Wednesday of same week
+    })
+
+    it('skips to interval-th week when no remaining days with interval > 1', () => {
+      // 2026-03-27 is Friday (day 5), interval=2, daysOfWeek=[1, 3, 5]
+      // No remaining days this week, skip 2 weeks to Monday
+      expect(
+        computeNextDate('2026-03-27', {
+          type: 'weekly',
+          interval: 2,
+          daysOfWeek: [1, 3, 5],
+        }),
+      ).toBe('2026-04-06') // Monday 2 weeks later
     })
 
     it('advances by interval weeks when no daysOfWeek', () => {

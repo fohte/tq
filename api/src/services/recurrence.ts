@@ -79,8 +79,17 @@ function computeNextWeeklyDate(
     return formatDate(next)
   }
 
-  // interval > 1: skip (interval - 1) weeks, then find first matching day
-  // Start from the beginning of the next interval-th week
+  // interval > 1: first check remaining days in current week
+  for (const dow of sorted) {
+    if (dow > currentDay) {
+      const diff = dow - currentDay
+      const next = new Date(base)
+      next.setDate(next.getDate() + diff)
+      return formatDate(next)
+    }
+  }
+
+  // No remaining days this week: skip to the interval-th week's first matching day
   const daysUntilNextWeekStart = 7 - currentDay + 7 * (interval - 1)
   const weekStart = new Date(base)
   weekStart.setDate(weekStart.getDate() + daysUntilNextWeekStart) // This is a Sunday
