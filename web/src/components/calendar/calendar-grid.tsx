@@ -8,7 +8,7 @@ import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
 import { EventBlock } from '@web/components/calendar/event-block'
-import { forwardRef, useEffect, useRef } from 'react'
+import { forwardRef, useEffect } from 'react'
 
 export interface CalendarDndCallbacks {
   onEventDrop?: (info: {
@@ -47,12 +47,9 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     { events, onDatesSet, dndCallbacks, externalDragContainerRef },
     ref,
   ) {
-    const draggableInitialized = useRef(false)
-
     // Initialize external draggable for Today's Queue
     useEffect(() => {
-      if (!externalDragContainerRef?.current || draggableInitialized.current)
-        return
+      if (!externalDragContainerRef?.current) return
 
       const draggable = new Draggable(externalDragContainerRef.current, {
         itemSelector: '[data-task-id]',
@@ -78,13 +75,10 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         },
       })
 
-      draggableInitialized.current = true
-
       return () => {
         draggable.destroy()
-        draggableInitialized.current = false
       }
-    }, [externalDragContainerRef, externalDragContainerRef?.current])
+    }, [externalDragContainerRef])
 
     const calendarEvents = events.map((event) => ({
       id: event.id,
