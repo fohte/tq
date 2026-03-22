@@ -102,6 +102,7 @@ function PageEditorInner({
           if (e.key === 'Escape') {
             titleSavingRef.current = true
             setTitle(defaultTitle)
+            e.currentTarget.blur()
           }
         }}
         className="bg-transparent text-2xl font-bold text-foreground outline-none placeholder:text-muted-foreground"

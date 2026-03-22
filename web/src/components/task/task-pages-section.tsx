@@ -131,7 +131,8 @@ function PageCard({ taskId, page }: { taskId: string; page: TaskPage }) {
           <p className="line-clamp-3 text-xs text-muted-foreground">
             {previewLines}
           </p>
-          {page.content.split('\n').length > 3 && (
+          {page.content.split('\n').filter((line) => line.trim()).length >
+            3 && (
             <button
               type="button"
               onClick={() => setIsExpanded(true)}
