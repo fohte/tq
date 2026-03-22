@@ -44,8 +44,99 @@
   left: -1px;
 }
 
-/* Remove day header since we have our own */
-.tq-calendar .fc-col-header {
+/* Hide day header in day view (we use our own header) */
+.tq-calendar .fc-timeGridDay-view .fc-col-header {
+  display: none;
+}
+
+/* Week view day headers */
+.tq-calendar .fc-timeGridWeek-view .fc-col-header-cell {
+  padding: 6px 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+/* Highlight today's column header in week view */
+.tq-calendar .fc-timeGridWeek-view .fc-day-today .fc-col-header-cell-cushion {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Month view styles */
+.tq-calendar .fc-dayGridMonth-view .fc-daygrid-day {
+  cursor: pointer;
+  min-height: 80px;
+}
+
+.tq-calendar .fc-dayGridMonth-view .fc-daygrid-day:hover {
+  background-color: var(--secondary);
+}
+
+.tq-calendar .fc-dayGridMonth-view .fc-daygrid-day-number {
+  font-size: 13px;
+  padding: 4px 8px;
+  color: var(--foreground);
+}
+
+.tq-calendar .fc-dayGridMonth-view .fc-day-today .fc-daygrid-day-number {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* Show events as dot indicators in month view */
+.tq-calendar .fc-dayGridMonth-view .fc-daygrid-event {
+  margin: 0 2px;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.tq-calendar .fc-dayGridMonth-view .fc-daygrid-event-harness {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 1px;
+}
+
+.tq-calendar .fc-dayGridMonth-view .fc-daygrid-event-harness .fc-event {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  padding: 0;
+  min-height: 0;
+}
+
+.tq-calendar .fc-dayGridMonth-view .fc-daygrid-event-dot {
+  display: none;
+}
+
+.tq-calendar .fc-dayGridMonth-view .fc-event-title,
+.tq-calendar .fc-dayGridMonth-view .fc-event-time {
+  display: none;
+}
+
+/* Month view day cell event container */
+.tq-calendar .fc-dayGridMonth-view .fc-daygrid-day-events {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 2px 4px;
+  min-height: 14px;
+}
+
+/* Month view header */
+.tq-calendar .fc-dayGridMonth-view .fc-col-header-cell {
+  padding: 8px 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+}
+
+/* Hide "more" link bottom padding */
+.tq-calendar .fc-dayGridMonth-view .fc-daygrid-day-bottom {
   display: none;
 }
 
