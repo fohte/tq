@@ -2,7 +2,7 @@ import { db } from '@api/db/connection'
 import { recurrenceRules, schedules } from '@api/db/schema'
 import { expandScheduleForDate } from '@api/routes/schedule-expansion'
 import { zValidator } from '@hono/zod-validator'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { createFactory } from 'hono/factory'
 import { z } from 'zod'
@@ -151,7 +151,7 @@ export const schedulesApp = new Hono()
   .post('/recurring', zValidator('json', createScheduleSchema), async (c) => {
     const input = c.req.valid('json')
 
-    let recurrenceRuleId: string | null = null
+    let newRule: typeof recurrenceRules.$inferSelect | null = null
 
     if (input.recurrence) {
       const [rule] = await db
@@ -163,7 +163,7 @@ export const schedulesApp = new Hono()
           dayOfMonth: input.recurrence.dayOfMonth ?? null,
         })
         .returning()
-      recurrenceRuleId = rule!.id
+      newRule = rule!
     }
 
     const [schedule] = await db
@@ -172,19 +172,13 @@ export const schedulesApp = new Hono()
         title: input.title,
         startTime: input.startTime,
         endTime: input.endTime,
-        recurrenceRuleId,
+        recurrenceRuleId: newRule?.id ?? null,
         context: input.context ?? 'personal',
         color: input.color ?? null,
       })
       .returning()
 
-    const rule = recurrenceRuleId
-      ? ((await db.query.recurrenceRules.findFirst({
-          where: eq(recurrenceRules.id, recurrenceRuleId),
-        })) ?? null)
-      : null
-
-    return c.json(scheduleToResponse(schedule!, rule), 201)
+    return c.json(scheduleToResponse(schedule!, newRule), 201)
   })
   .get(
     '/recurring',
@@ -204,7 +198,12 @@ export const schedulesApp = new Hono()
       ]
 
       const rules =
-        ruleIds.length > 0 ? await db.select().from(recurrenceRules) : []
+        ruleIds.length > 0
+          ? await db
+              .select()
+              .from(recurrenceRules)
+              .where(inArray(recurrenceRules.id, ruleIds))
+          : []
 
       const ruleMap = new Map(rules.map((r) => [r.id, r]))
 

@@ -17,11 +17,11 @@ export function matchesDate(
     case 'daily':
       return true
     case 'weekly': {
-      if (!rule.daysOfWeek || rule.daysOfWeek.length === 0) return true
+      if (!rule.daysOfWeek || rule.daysOfWeek.length === 0) return false
       return rule.daysOfWeek.includes(date.getDay())
     }
     case 'monthly': {
-      if (rule.dayOfMonth == null) return true
+      if (rule.dayOfMonth == null) return false
       return date.getDate() === rule.dayOfMonth
     }
     case 'custom':
