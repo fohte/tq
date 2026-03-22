@@ -1,4 +1,7 @@
+import { db } from '@api/db/connection'
+import { tasks, timeBlocks } from '@api/db/schema'
 import { zValidator } from '@hono/zod-validator'
+import { and, eq, gte, lte, or } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -58,25 +61,122 @@ const scheduleDateQuerySchema = z.object({
   date: z.string(),
 })
 
+function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
+  return {
+    id: block.id,
+    taskId: block.taskId,
+    startTime: block.startTime.toISOString(),
+    endTime: block.endTime?.toISOString() ?? null,
+    isAutoScheduled: block.isAutoScheduled,
+    createdAt: block.createdAt.toISOString(),
+    updatedAt: block.updatedAt.toISOString(),
+  }
+}
+
 export const schedulesApp = new Hono()
   // TimeBlock endpoints
-  .post('/time-blocks', zValidator('json', createTimeBlockSchema), (c) => {
-    // TODO: implement time block creation
-    return c.json({ message: 'not implemented' }, 501)
-  })
-  .get('/time-blocks', zValidator('query', timeBlockDateQuerySchema), (c) => {
-    // TODO: implement time block listing by date
-    return c.json([], 200)
-  })
-  .patch('/time-blocks/:id', zValidator('json', updateTimeBlockSchema), (c) => {
-    // TODO: implement time block update
-    void c.req.param('id')
-    return c.json({ message: 'not implemented' }, 501)
-  })
-  .delete('/time-blocks/:id', (c) => {
-    // TODO: implement time block deletion
-    void c.req.param('id')
-    return c.json(null, 501)
+  .post(
+    '/time-blocks',
+    zValidator('json', createTimeBlockSchema),
+    async (c) => {
+      const input = c.req.valid('json')
+
+      // Verify task exists
+      const task = await db.query.tasks.findFirst({
+        where: eq(tasks.id, input.taskId),
+      })
+      if (!task) {
+        return c.json({ error: 'Task not found' }, 404)
+      }
+
+      const [block] = await db
+        .insert(timeBlocks)
+        .values({
+          taskId: input.taskId,
+          startTime: new Date(input.startTime),
+          endTime: input.endTime ? new Date(input.endTime) : null,
+          isAutoScheduled: input.isAutoScheduled ?? false,
+        })
+        .returning()
+
+      return c.json(timeBlockToResponse(block!), 201)
+    },
+  )
+  .get(
+    '/time-blocks',
+    zValidator('query', timeBlockDateQuerySchema),
+    async (c) => {
+      const { date } = c.req.valid('query')
+
+      // Get all time blocks that overlap with the given date
+      const dayStart = new Date(`${date}T00:00:00.000Z`)
+      const dayEnd = new Date(`${date}T23:59:59.999Z`)
+
+      const blocks = await db
+        .select()
+        .from(timeBlocks)
+        .where(
+          and(
+            lte(timeBlocks.startTime, dayEnd),
+            or(
+              gte(timeBlocks.endTime, dayStart),
+              eq(timeBlocks.endTime, null as unknown as Date),
+            ),
+          ),
+        )
+        .orderBy(timeBlocks.startTime)
+
+      return c.json(blocks.map(timeBlockToResponse), 200)
+    },
+  )
+  .patch(
+    '/time-blocks/:id',
+    zValidator('json', updateTimeBlockSchema),
+    async (c) => {
+      const id = c.req.param('id')
+
+      const existing = await db.query.timeBlocks.findFirst({
+        where: eq(timeBlocks.id, id),
+      })
+      if (!existing) {
+        return c.json({ error: 'Time block not found' }, 404)
+      }
+
+      const updates: Record<string, unknown> = { updatedAt: new Date() }
+      const input = c.req.valid('json')
+
+      if (input.startTime !== undefined) {
+        updates['startTime'] = new Date(input.startTime)
+      }
+      if (input.endTime !== undefined) {
+        updates['endTime'] = input.endTime ? new Date(input.endTime) : null
+      }
+      if (input.isAutoScheduled !== undefined) {
+        updates['isAutoScheduled'] = input.isAutoScheduled
+      }
+
+      const [updated] = await db
+        .update(timeBlocks)
+        .set(updates)
+        .where(eq(timeBlocks.id, id))
+        .returning()
+
+      return c.json(timeBlockToResponse(updated!), 200)
+    },
+  )
+  .delete('/time-blocks/:id', async (c) => {
+    const id = c.req.param('id')
+
+    const existing = await db.query.timeBlocks.findFirst({
+      where: eq(timeBlocks.id, id),
+    })
+    if (!existing) {
+      return c.json({ error: 'Time block not found' }, 404)
+    }
+
+    await db.delete(timeBlocks).where(eq(timeBlocks.id, id))
+
+    return c.body(null, 204)
   })
   // Today tasks endpoints
   .put('/today-tasks', zValidator('json', todayTasksSchema), (c) => {

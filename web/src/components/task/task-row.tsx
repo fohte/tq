@@ -37,7 +37,13 @@ function StatusIcon({
   )
 }
 
-export function TaskRow({ task }: { task: Task }) {
+export function TaskRow({
+  task,
+  draggable = false,
+}: {
+  task: Task
+  draggable?: boolean
+}) {
   const updateStatus = useUpdateTaskStatus()
 
   const handleToggle = () => {
@@ -53,7 +59,17 @@ export function TaskRow({ task }: { task: Task }) {
         'flex items-center gap-3 rounded-lg px-3 py-2 transition-colors',
         'hover:bg-secondary/50',
         task.status === 'completed' && 'opacity-50',
+        draggable && 'cursor-grab active:cursor-grabbing',
       )}
+      {...(draggable
+        ? {
+            'data-task-id': task.id,
+            'data-task-title': task.title,
+            ...(task.estimatedMinutes != null
+              ? { 'data-estimated-minutes': String(task.estimatedMinutes) }
+              : {}),
+          }
+        : {})}
     >
       <StatusIcon status={task.status} onToggle={handleToggle} />
 

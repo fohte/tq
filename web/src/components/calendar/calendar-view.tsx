@@ -1,5 +1,8 @@
 import type FullCalendarType from '@fullcalendar/react'
-import { CalendarGrid } from '@web/components/calendar/calendar-grid'
+import {
+  type CalendarDndCallbacks,
+  CalendarGrid,
+} from '@web/components/calendar/calendar-grid'
 import {
   CalendarHeader,
   type CalendarViewType,
@@ -29,9 +32,15 @@ export interface TimeBlockEvent {
 
 interface CalendarViewProps {
   events?: TimeBlockEvent[]
+  dndCallbacks?: CalendarDndCallbacks
+  externalDragContainerRef?: React.RefObject<HTMLElement | null>
 }
 
-export function CalendarView({ events = [] }: CalendarViewProps) {
+export function CalendarView({
+  events = [],
+  dndCallbacks,
+  externalDragContainerRef,
+}: CalendarViewProps) {
   const calendarRef = useRef<FullCalendarType>(null)
   const [currentDate, setCurrentDate] = useState(new Date())
   const [activeView, setActiveView] = useState<CalendarViewType>('day')
@@ -87,6 +96,8 @@ export function CalendarView({ events = [] }: CalendarViewProps) {
           ref={calendarRef}
           events={events}
           onDatesSet={handleDatesSet}
+          dndCallbacks={dndCallbacks}
+          externalDragContainerRef={externalDragContainerRef}
         />
       </div>
     </div>
