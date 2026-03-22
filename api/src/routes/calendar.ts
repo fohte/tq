@@ -1,3 +1,8 @@
+import {
+  getAuthUrl,
+  getEvents,
+  handleOAuthCallback,
+} from '@api/services/google-calendar'
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { z } from 'zod'
@@ -8,17 +13,51 @@ const eventsQuerySchema = z.object({
   timeMax: z.string().datetime(),
 })
 
+const callbackQuerySchema = z.object({
+  code: z.string(),
+})
+
 export const calendarApp = new Hono()
-  .get('/events', zValidator('query', eventsQuerySchema), (c) => {
-    // TODO: implement Google Calendar events retrieval
-    return c.json([], 200)
+  .get('/events', zValidator('query', eventsQuerySchema), async (c) => {
+    const { calendarId, timeMin, timeMax } = c.req.valid('query')
+
+    try {
+      const events = await getEvents(calendarId, timeMin, timeMax)
+      return c.json(events, 200)
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown error occurred'
+
+      if (message.includes('No OAuth token found')) {
+        return c.json({ error: message }, 401)
+      }
+
+      return c.json({ error: message }, 500)
+    }
   })
   .get('/auth-url', (c) => {
-    // TODO: implement OAuth auth URL generation
-    return c.json({ message: 'not implemented' }, 501)
+    try {
+      const url = getAuthUrl()
+      return c.json({ url }, 200)
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown error occurred'
+      return c.json({ error: message }, 500)
+    }
   })
-  .get('/oauth-callback', (c) => {
-    // TODO: implement OAuth callback handling
-    void c.req.query('code')
-    return c.json({ message: 'not implemented' }, 501)
-  })
+  .get(
+    '/oauth-callback',
+    zValidator('query', callbackQuerySchema),
+    async (c) => {
+      const { code } = c.req.valid('query')
+
+      try {
+        await handleOAuthCallback(code)
+        return c.json({ message: 'Authentication successful' }, 200)
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unknown error occurred'
+        return c.json({ error: message }, 400)
+      }
+    },
+  )
