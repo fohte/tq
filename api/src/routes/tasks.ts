@@ -1,5 +1,12 @@
 import { db } from '@api/db/connection'
-import { labels, taskLabels, tasks, timeBlocks } from '@api/db/schema'
+import {
+  labels,
+  taskLabels,
+  taskPages,
+  tasks,
+  timeBlocks,
+} from '@api/db/schema'
+import { pageToResponse } from '@api/routes/task-pages'
 import { zValidator } from '@hono/zod-validator'
 import { and, count, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -386,8 +393,8 @@ export const tasksApp = new Hono()
     const task = c.get('task')
     const id = task.id
 
-    // Get child completion count and time blocks in parallel
-    const [childStats, taskTimeBlocks] = await Promise.all([
+    // Get child completion count, pages, and time blocks in parallel
+    const [childStats, pages, taskTimeBlocks] = await Promise.all([
       db
         .select({
           total: count(),
@@ -397,6 +404,11 @@ export const tasksApp = new Hono()
         })
         .from(tasks)
         .where(eq(tasks.parentId, id)),
+      db
+        .select()
+        .from(taskPages)
+        .where(eq(taskPages.taskId, id))
+        .orderBy(taskPages.sortOrder, taskPages.createdAt),
       db
         .select()
         .from(timeBlocks)
@@ -411,6 +423,7 @@ export const tasksApp = new Hono()
           total: childStats[0]?.total ?? 0,
           completed: childStats[0]?.completed ?? 0,
         },
+        pages: pages.map(pageToResponse),
         timeBlocks: taskTimeBlocks.map(timeBlockToResponse),
       },
       200,

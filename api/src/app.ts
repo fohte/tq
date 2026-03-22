@@ -4,6 +4,7 @@ import { labelsApp } from '@api/routes/labels'
 import { projectsApp } from '@api/routes/projects'
 import { schedulesApp } from '@api/routes/schedules'
 import { taskCommentsApp } from '@api/routes/task-comments'
+import { taskPagesApp } from '@api/routes/task-pages'
 import { tasksApp } from '@api/routes/tasks'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
@@ -20,6 +21,7 @@ const app = new Hono()
   })
   .route('/api/tasks', tasksApp)
   .route('/api/tasks', taskCommentsApp)
+  .route('/api/tasks/:taskId/pages', taskPagesApp)
   .route('/api/projects', projectsApp)
   .route('/api/schedule', schedulesApp)
   .route('/api/calendar', calendarApp)
