@@ -74,6 +74,58 @@ export function TaskPagesSection({ taskId }: { taskId: string }) {
   )
 }
 
+// --- Pages List (pure presentation, for Storybook) ---
+
+export function TaskPagesList({
+  taskId,
+  pages,
+  onAddPage,
+  isAddingPage,
+}: {
+  taskId: string
+  pages: TaskPage[]
+  onAddPage?: () => void
+  isAddingPage?: boolean
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <FileText className="size-3.5" />
+          Pages
+        </h3>
+        {onAddPage && (
+          <button
+            type="button"
+            onClick={onAddPage}
+            disabled={isAddingPage}
+            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            {isAddingPage ? (
+              <Loader2 className="size-3 animate-spin" />
+            ) : (
+              <Plus className="size-3" />
+            )}
+            Add page
+          </button>
+        )}
+      </div>
+
+      {pages.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {pages.map((page) => (
+            <PageCard key={page.id} taskId={taskId} page={page} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          No pages yet. Add a page to keep notes and documentation.
+        </p>
+      )}
+    </div>
+  )
+}
+
 // --- Page Card (collapsible preview) ---
 
 function PageCard({ taskId, page }: { taskId: string; page: TaskPage }) {

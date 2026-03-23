@@ -38,7 +38,7 @@ export function TaskPageEditor({
   )
 }
 
-function PageEditorInner({
+export function PageEditorInner({
   taskId,
   pageId,
   defaultTitle,
