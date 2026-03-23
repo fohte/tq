@@ -44,6 +44,11 @@
   left: -1px;
 }
 
+/* Hide now indicator arrow in week view — line only, no dot overlapping time labels */
+.tq-calendar .fc-timeGridWeek-view .fc-timegrid-now-indicator-arrow {
+  display: none;
+}
+
 /* Hide day header in day view (we use our own header) */
 .tq-calendar .fc-timeGridDay-view .fc-col-header {
   display: none;
@@ -58,15 +63,24 @@
 }
 
 /* Highlight today's column header in week view */
+.tq-calendar .fc-timeGridWeek-view .fc-col-header-cell-cushion {
+  padding: 4px 8px;
+}
+
 .tq-calendar .fc-timeGridWeek-view .fc-day-today .fc-col-header-cell-cushion {
   color: var(--primary);
   font-weight: 600;
 }
 
+/* Highlight today's column in week view */
+.tq-calendar .fc-timeGridWeek-view .fc-day-today {
+  background-color: #1f1a14;
+}
+
 /* Month view styles */
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-day {
   cursor: pointer;
-  min-height: 80px;
+  border-color: #2e2e2e44;
 }
 
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-day:hover {
@@ -74,36 +88,54 @@
 }
 
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-day-number {
-  font-size: 13px;
-  padding: 4px 8px;
+  font-family: 'JetBrains Mono Variable', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 6px;
   color: var(--foreground);
 }
 
-.tq-calendar .fc-dayGridMonth-view .fc-day-today .fc-daygrid-day-number {
-  color: var(--primary);
-  font-weight: 700;
+/* Other-month dates are muted */
+.tq-calendar .fc-dayGridMonth-view .fc-day-other .fc-daygrid-day-number {
+  color: var(--muted-foreground);
+  font-weight: normal;
 }
 
-/* Show events as dot indicators in month view */
+/* Today's date: primary circle background with white text */
+.tq-calendar .fc-dayGridMonth-view .fc-day-today {
+  background-color: #1f1a14;
+}
+
+.tq-calendar .fc-dayGridMonth-view .fc-day-today .fc-daygrid-day-number {
+  background-color: var(--primary);
+  color: white;
+  font-weight: 700;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 4px 4px 0;
+}
+
+/* Events as horizontal bars in month view */
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-event {
-  margin: 0 2px;
+  margin: 1px 2px;
   padding: 0;
   border: none;
   background: none;
 }
 
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-event-harness {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin: 1px;
+  margin: 1px 0;
 }
 
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-event-harness .fc-event {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--primary);
+  height: 4px;
+  border-radius: 2px;
+  background-color: #ff8400;
   padding: 0;
   min-height: 0;
 }
@@ -120,9 +152,9 @@
 /* Month view day cell event container */
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-day-events {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  padding: 2px 4px;
+  flex-direction: column;
+  padding: 2px 6px;
+  gap: 1px;
   min-height: 14px;
 }
 
@@ -132,7 +164,6 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--muted-foreground);
-  text-transform: uppercase;
 }
 
 /* Hide "more" link bottom padding */
