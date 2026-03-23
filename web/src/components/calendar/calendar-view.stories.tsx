@@ -4,6 +4,7 @@ import {
   CalendarView,
   type TimeBlockEvent,
 } from '@web/components/calendar/calendar-view'
+import { useRef } from 'react'
 import { fn } from 'storybook/test'
 
 const today = new Date()
@@ -114,6 +115,13 @@ const tomorrow = new Date(today)
 tomorrow.setDate(tomorrow.getDate() + 1)
 const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
 
+const sampleTasks = [
+  { id: 'task-1', title: 'Deploy to staging', estimatedMinutes: 30 },
+  { id: 'task-2', title: 'Write unit tests', estimatedMinutes: 60 },
+  { id: 'task-3', title: 'Fix CI pipeline', estimatedMinutes: null },
+  { id: 'task-4', title: 'Review PR', estimatedMinutes: 45 },
+]
+
 const dndCallbacks: CalendarDndCallbacks = {
   onEventDrop: fn(),
   onEventResize: fn(),
@@ -124,6 +132,47 @@ export const WithDragAndDrop: Story = {
   args: {
     events: sampleEvents,
     dndCallbacks,
+  },
+  render: (args) => {
+    const taskListRef = useRef<HTMLDivElement>(null)
+
+    return (
+      <div className="flex h-full">
+        <div
+          ref={taskListRef}
+          className="flex w-80 flex-col border-r border-border"
+        >
+          <div className="border-b border-border px-3 py-2 text-sm font-medium">
+            Today
+          </div>
+          <div className="flex-1 overflow-auto py-1">
+            {sampleTasks.map((task) => (
+              <div
+                key={task.id}
+                data-task-id={task.id}
+                data-task-title={task.title}
+                {...(task.estimatedMinutes != null
+                  ? {
+                      'data-estimated-minutes': String(task.estimatedMinutes),
+                    }
+                  : {})}
+                className="cursor-grab px-3 py-2 text-sm hover:bg-secondary/50 active:cursor-grabbing"
+              >
+                <span>{task.title}</span>
+                {task.estimatedMinutes != null && (
+                  <span className="ml-2 font-mono text-xs text-muted-foreground">
+                    {task.estimatedMinutes}m
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex-1">
+          <CalendarView {...args} externalDragContainerRef={taskListRef} />
+        </div>
+      </div>
+    )
   },
 }
 
