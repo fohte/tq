@@ -208,9 +208,19 @@
   color: var(--muted-foreground);
 }
 
-/* Hide "more" link bottom padding */
+/* "+N more" link in month view */
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-day-bottom {
-  display: none;
+  padding: 0 4px 2px;
+  font-size: 10px;
+}
+
+.tq-calendar .fc-dayGridMonth-view .fc-daygrid-more-link {
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.tq-calendar .fc-dayGridMonth-view .fc-daygrid-more-link:hover {
+  color: var(--foreground);
 }
 
 /* Scrollbar styling */

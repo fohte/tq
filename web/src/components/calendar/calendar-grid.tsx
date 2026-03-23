@@ -93,6 +93,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           }}
           height="100%"
           expandRows={false}
+          dayMaxEvents={3}
           editable={activeView !== 'month'}
           selectable={activeView !== 'month'}
           dayHeaders={activeView !== 'day'}
