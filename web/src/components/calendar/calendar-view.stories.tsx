@@ -7,7 +7,7 @@ import {
 import { fn } from 'storybook/test'
 
 const today = new Date()
-const dateStr = today.toISOString().slice(0, 10)
+const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
 const sampleEvents: TimeBlockEvent[] = [
   {
@@ -112,7 +112,7 @@ export const ManualOnly: Story = {
 
 const tomorrow = new Date(today)
 tomorrow.setDate(tomorrow.getDate() + 1)
-const tomorrowStr = tomorrow.toISOString().slice(0, 10)
+const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
 
 const dndCallbacks: CalendarDndCallbacks = {
   onEventDrop: fn(),
