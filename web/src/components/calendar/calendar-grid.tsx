@@ -49,9 +49,16 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           headerToolbar={false}
           events={calendarEvents}
           eventContent={(arg) => {
-            // In month view, hide event content — CSS handles bar indicators
+            // In month view, render compact event pill with title
             if (arg.view.type === 'dayGridMonth') {
-              return null
+              const type = arg.event.extendedProps['type'] as string
+              return (
+                <div className="tq-month-event" data-event-type={type}>
+                  <span className="tq-month-event-title">
+                    {arg.event.title}
+                  </span>
+                </div>
+              )
             }
             // Override timeText for overnight events to show actual end time
             const originalEnd = arg.event.extendedProps['originalEnd'] as string

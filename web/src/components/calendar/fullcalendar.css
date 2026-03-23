@@ -120,7 +120,7 @@
   margin: 4px 4px 0;
 }
 
-/* Events as horizontal bars in month view */
+/* Month view events — compact pills with title */
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-event {
   margin: 1px 2px;
   padding: 0;
@@ -133,27 +133,69 @@
 }
 
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-event-harness .fc-event {
-  height: 4px;
-  border-radius: 2px;
-  background-color: #ff8400;
+  border-radius: 3px;
   padding: 0;
   min-height: 0;
+  background-color: transparent;
 }
 
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-event-dot {
   display: none;
 }
 
+/* Hide FullCalendar's default title/time — we render our own */
 .tq-calendar .fc-dayGridMonth-view .fc-event-title,
 .tq-calendar .fc-dayGridMonth-view .fc-event-time {
   display: none;
+}
+
+/* Custom month event pill */
+.tq-month-event {
+  display: flex;
+  align-items: center;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background-color: #ff840026;
+  border-left: 2px solid #ff8400;
+  overflow: hidden;
+}
+
+.tq-month-event[data-event-type='gcal'] {
+  background-color: #3b82f626;
+  border-left-color: #3b82f6;
+}
+
+.tq-month-event[data-event-type='auto'] {
+  background-color: #ff840012;
+  border-left-color: #ff8400;
+  border-left-style: dashed;
+}
+
+.tq-month-event[data-event-type='completed'] {
+  background-color: #22c55e1a;
+  border-left-color: #22c55e;
+  opacity: 0.7;
+}
+
+.tq-month-event[data-event-type='schedule'] {
+  background-color: #8b5cf626;
+  border-left-color: #8b5cf6;
+}
+
+.tq-month-event-title {
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Month view day cell event container */
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-day-events {
   display: flex;
   flex-direction: column;
-  padding: 2px 6px;
+  padding: 1px 2px;
   gap: 1px;
   min-height: 14px;
 }
