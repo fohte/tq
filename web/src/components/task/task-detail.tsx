@@ -1,5 +1,10 @@
 import { Link } from '@tanstack/react-router'
+import {
+  TaskPagesList,
+  TaskPagesSection,
+} from '@web/components/task/task-pages-section'
 import { MarkdownEditor } from '@web/components/ui/markdown-editor'
+import type { TaskPage } from '@web/hooks/use-task-pages'
 import type { TaskDetail, UpdateTaskInput } from '@web/hooks/use-tasks'
 import {
   useTaskList,
@@ -24,7 +29,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 // --- Main Content ---
 
-export function TaskMainContent({ task }: { task: TaskDetail }) {
+export function TaskMainContent({
+  task,
+  pages,
+}: {
+  task: TaskDetail
+  pages?: TaskPage[]
+}) {
   return (
     <div className="flex flex-col gap-4">
       {/* Breadcrumb */}
@@ -46,6 +57,13 @@ export function TaskMainContent({ task }: { task: TaskDetail }) {
 
       {/* Description */}
       <TaskDescription taskId={task.id} defaultValue={task.description} />
+
+      {/* Pages */}
+      {pages ? (
+        <TaskPagesList taskId={task.id} pages={pages} />
+      ) : (
+        <TaskPagesSection taskId={task.id} />
+      )}
     </div>
   )
 }

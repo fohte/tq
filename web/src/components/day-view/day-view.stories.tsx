@@ -29,6 +29,7 @@ const baseTask: Task = {
   projectId: null,
   sortOrder: 0,
   createdAt: '2026-03-20T00:00:00.000Z',
+  activeTimeBlockStartTime: null,
   updatedAt: '2026-03-20T00:00:00.000Z',
 }
 
