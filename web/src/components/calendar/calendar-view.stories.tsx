@@ -1,9 +1,20 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
 import type { CalendarDndCallbacks } from '@web/components/calendar/calendar-grid'
 import {
   CalendarView,
   type TimeBlockEvent,
 } from '@web/components/calendar/calendar-view'
+import { TaskRow } from '@web/components/task/task-row'
+import type { Task } from '@web/hooks/use-tasks'
+import type { ReactNode } from 'react'
 import { useRef } from 'react'
 import { fn } from 'storybook/test'
 
@@ -115,12 +126,76 @@ const tomorrow = new Date(today)
 tomorrow.setDate(tomorrow.getDate() + 1)
 const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
 
-const sampleTasks = [
-  { id: 'task-1', title: 'Deploy to staging', estimatedMinutes: 30 },
-  { id: 'task-2', title: 'Write unit tests', estimatedMinutes: 60 },
-  { id: 'task-3', title: 'Fix CI pipeline', estimatedMinutes: null },
-  { id: 'task-4', title: 'Review PR', estimatedMinutes: 45 },
+const baseTask: Task = {
+  id: '00000000-0000-0000-0000-000000000001',
+  title: 'Deploy to staging',
+  description: null,
+  status: 'todo',
+  context: 'work',
+  startDate: dateStr,
+  dueDate: null,
+  estimatedMinutes: 30,
+  parentId: null,
+  projectId: null,
+  sortOrder: 0,
+  createdAt: '2026-03-20T00:00:00.000Z',
+  updatedAt: '2026-03-20T00:00:00.000Z',
+}
+
+const sampleTasks: Task[] = [
+  { ...baseTask },
+  {
+    ...baseTask,
+    id: '00000000-0000-0000-0000-000000000002',
+    title: 'Write unit tests',
+    estimatedMinutes: 60,
+    context: 'dev',
+  },
+  {
+    ...baseTask,
+    id: '00000000-0000-0000-0000-000000000003',
+    title: 'Fix CI pipeline',
+    estimatedMinutes: null,
+    context: 'personal',
+  },
+  {
+    ...baseTask,
+    id: '00000000-0000-0000-0000-000000000004',
+    title: 'Review PR',
+    estimatedMinutes: 45,
+  },
 ]
+
+function Providers({ children }: { children: ReactNode }) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  const rootRoute = createRootRoute({
+    component: () => <>{children}</>,
+  })
+  const indexRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/',
+    component: () => null,
+  })
+  const taskRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/tasks/$taskId',
+    component: () => null,
+  })
+  rootRoute.addChildren([indexRoute, taskRoute])
+
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  })
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  )
+}
 
 const dndCallbacks: CalendarDndCallbacks = {
   onEventDrop: fn(),
@@ -137,41 +212,26 @@ export const WithDragAndDrop: Story = {
     const taskListRef = useRef<HTMLDivElement>(null)
 
     return (
-      <div className="flex h-full">
-        <div
-          ref={taskListRef}
-          className="flex w-80 flex-col border-r border-border"
-        >
-          <div className="border-b border-border px-3 py-2 text-sm font-medium">
-            Today
+      <Providers>
+        <div className="flex h-full">
+          <div
+            ref={taskListRef}
+            className="flex w-80 flex-col border-r border-border"
+          >
+            <div className="border-b border-border px-3 py-2 text-sm font-medium">
+              Today
+            </div>
+            <div className="flex-1 overflow-auto py-1">
+              {sampleTasks.map((task) => (
+                <TaskRow key={task.id} task={task} draggable />
+              ))}
+            </div>
           </div>
-          <div className="flex-1 overflow-auto py-1">
-            {sampleTasks.map((task) => (
-              <div
-                key={task.id}
-                data-task-id={task.id}
-                data-task-title={task.title}
-                {...(task.estimatedMinutes != null
-                  ? {
-                      'data-estimated-minutes': String(task.estimatedMinutes),
-                    }
-                  : {})}
-                className="cursor-grab px-3 py-2 text-sm hover:bg-secondary/50 active:cursor-grabbing"
-              >
-                <span>{task.title}</span>
-                {task.estimatedMinutes != null && (
-                  <span className="ml-2 font-mono text-xs text-muted-foreground">
-                    {task.estimatedMinutes}m
-                  </span>
-                )}
-              </div>
-            ))}
+          <div className="flex-1">
+            <CalendarView {...args} externalDragContainerRef={taskListRef} />
           </div>
         </div>
-        <div className="flex-1">
-          <CalendarView {...args} externalDragContainerRef={taskListRef} />
-        </div>
-      </div>
+      </Providers>
     )
   },
 }
