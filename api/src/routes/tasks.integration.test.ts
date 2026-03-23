@@ -1011,6 +1011,45 @@ describe('tasks API', () => {
         expect(body.recurrenceRuleId).toBeNull()
         expect(body.recurrenceRule).toBeNull()
       })
+
+      it('creates new rule instead of mutating shared rule', async () => {
+        // Create a recurring task and complete it so both tasks share the rule
+        const task = await createRecurringTask(
+          'Shared rule update test',
+          { type: 'daily', interval: 1 },
+          { dueDate: '2026-03-22' },
+        )
+
+        const completeRes = await app.request(
+          `/api/tasks/${task.id}/complete`,
+          { method: 'POST' },
+        )
+        const completeBody = (await completeRes.json()) as TaskResponse & {
+          nextTask: TaskResponse | null
+        }
+        const nextTask = completeBody.nextTask!
+        const originalRuleId = task.recurrenceRuleId!
+
+        // Update the recurrence rule on the next task
+        const patchRes = await app.request(`/api/tasks/${nextTask.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recurrenceRule: { type: 'weekly', interval: 1, daysOfWeek: [1] },
+          }),
+        })
+
+        expect(patchRes.status).toBe(200)
+        const patchBody = (await patchRes.json()) as TaskResponse
+        // Should get a NEW rule ID since the old one was shared
+        expect(patchBody.recurrenceRuleId).not.toBe(originalRuleId)
+        expect(patchBody.recurrenceRule!.type).toBe('weekly')
+
+        // The completed task should still reference the original rule
+        const origRes = await app.request(`/api/tasks/${task.id}`)
+        const origBody = (await origRes.json()) as TaskResponse
+        expect(origBody.recurrenceRuleId).toBe(originalRuleId)
+      })
     })
 
     describe('GET /api/tasks/:id with recurrence rule', () => {

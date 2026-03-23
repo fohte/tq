@@ -597,19 +597,46 @@ export const tasksApp = new Hono()
         }
       } else if (recurrenceRuleInput !== undefined) {
         if (existing.recurrenceRuleId) {
-          // Update existing rule
-          const [rule] = await db
-            .update(recurrenceRules)
-            .set({
-              type: recurrenceRuleInput.type,
-              interval: recurrenceRuleInput.interval,
-              daysOfWeek: recurrenceRuleInput.daysOfWeek ?? null,
-              dayOfMonth: recurrenceRuleInput.dayOfMonth ?? null,
-              updatedAt: new Date(),
-            })
-            .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
-            .returning()
-          updatedRule = rule!
+          // Check if the rule is shared with other tasks
+          const [otherRef] = await db
+            .select({ id: tasks.id })
+            .from(tasks)
+            .where(
+              and(
+                eq(tasks.recurrenceRuleId, existing.recurrenceRuleId),
+                sql`${tasks.id} != ${id}`,
+              ),
+            )
+            .limit(1)
+
+          if (otherRef) {
+            // Shared rule: create a new one to avoid mutating other tasks
+            const [rule] = await db
+              .insert(recurrenceRules)
+              .values({
+                type: recurrenceRuleInput.type,
+                interval: recurrenceRuleInput.interval,
+                daysOfWeek: recurrenceRuleInput.daysOfWeek ?? null,
+                dayOfMonth: recurrenceRuleInput.dayOfMonth ?? null,
+              })
+              .returning()
+            recurrenceRuleId = rule!.id
+            updatedRule = rule!
+          } else {
+            // Not shared: update in place
+            const [rule] = await db
+              .update(recurrenceRules)
+              .set({
+                type: recurrenceRuleInput.type,
+                interval: recurrenceRuleInput.interval,
+                daysOfWeek: recurrenceRuleInput.daysOfWeek ?? null,
+                dayOfMonth: recurrenceRuleInput.dayOfMonth ?? null,
+                updatedAt: new Date(),
+              })
+              .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
+              .returning()
+            updatedRule = rule!
+          }
         } else {
           // Create new rule
           const [rule] = await db
