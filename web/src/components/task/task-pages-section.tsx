@@ -129,14 +129,48 @@ export function TaskPagesList({
 // --- Page Card (collapsible preview) ---
 
 function PageCard({ taskId, page }: { taskId: string; page: TaskPage }) {
-  const [isExpanded, setIsExpanded] = useState(false)
   const deletePage = useDeleteTaskPage(taskId)
+
+  return (
+    <PageCardPresentation
+      taskId={taskId}
+      page={page}
+      onDelete={() => deletePage.mutate(page.id)}
+      isDeleting={deletePage.isPending}
+      renderEditor={(defaultValue) => (
+        <PageInlineEditor
+          taskId={taskId}
+          pageId={page.id}
+          defaultValue={defaultValue}
+        />
+      )}
+    />
+  )
+}
+
+export function PageCardPresentation({
+  taskId,
+  page,
+  onDelete,
+  isDeleting,
+  isExpanded: controlledExpanded,
+  renderEditor,
+}: {
+  taskId: string
+  page: TaskPage
+  onDelete?: () => void
+  isDeleting?: boolean
+  isExpanded?: boolean
+  renderEditor?: (defaultValue: string) => React.ReactNode
+}) {
+  const [internalExpanded, setInternalExpanded] = useState(false)
+  const isExpanded = controlledExpanded ?? internalExpanded
 
   const previewLines = getPreviewLines(page.content, 3)
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
-    deletePage.mutate(page.id)
+    onDelete?.()
   }
 
   return (
@@ -145,7 +179,7 @@ function PageCard({ taskId, page }: { taskId: string; page: TaskPage }) {
       <div className="flex items-center gap-2 px-3 py-2">
         <button
           type="button"
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={() => setInternalExpanded(!isExpanded)}
           className="flex flex-1 items-center gap-2 text-left"
         >
           <ChevronDown
@@ -169,7 +203,7 @@ function PageCard({ taskId, page }: { taskId: string; page: TaskPage }) {
           <button
             type="button"
             onClick={handleDelete}
-            disabled={deletePage.isPending}
+            disabled={isDeleting}
             className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           >
             <Trash2 className="size-3.5" />
@@ -187,7 +221,7 @@ function PageCard({ taskId, page }: { taskId: string; page: TaskPage }) {
             3 && (
             <button
               type="button"
-              onClick={() => setIsExpanded(true)}
+              onClick={() => setInternalExpanded(true)}
               className="mt-1 text-xs text-primary hover:underline"
             >
               Show more
@@ -197,13 +231,9 @@ function PageCard({ taskId, page }: { taskId: string; page: TaskPage }) {
       )}
 
       {/* Expanded editor */}
-      {isExpanded && (
+      {isExpanded && renderEditor && (
         <div className="border-t border-border p-1">
-          <PageInlineEditor
-            taskId={taskId}
-            pageId={page.id}
-            defaultValue={page.content}
-          />
+          {renderEditor(page.content)}
         </div>
       )}
     </div>

@@ -74,7 +74,15 @@ function Providers({ children }: { children: ReactNode }) {
   )
 }
 
-function Story({ taskId, pages }: { taskId: string; pages: TaskPage[] }) {
+// --- Section Stories ---
+
+function SectionStory({
+  taskId,
+  pages,
+}: {
+  taskId: string
+  pages: TaskPage[]
+}) {
   return (
     <Providers>
       <div className="max-w-2xl p-6">
@@ -86,23 +94,23 @@ function Story({ taskId, pages }: { taskId: string; pages: TaskPage[] }) {
 
 const meta = {
   title: 'Task/TaskPages/Section',
-  component: Story,
+  component: SectionStory,
   parameters: {
     layout: 'padded',
   },
-} satisfies Meta<typeof Story>
+} satisfies Meta<typeof SectionStory>
 
 export default meta
-type PageStory = StoryObj<typeof meta>
+type SectionStoryType = StoryObj<typeof meta>
 
-export const WithPages: PageStory = {
+export const WithPages: SectionStoryType = {
   args: { taskId: 'task-001', pages: samplePages },
 }
 
-export const Empty: PageStory = {
+export const Empty: SectionStoryType = {
   args: { taskId: 'task-empty', pages: [] },
 }
 
-export const SinglePage: PageStory = {
+export const SinglePage: SectionStoryType = {
   args: { taskId: 'task-single', pages: [samplePages[0]!] },
 }
