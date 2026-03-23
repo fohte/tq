@@ -64,7 +64,15 @@ function Providers({ children }: { children: ReactNode }) {
   )
 }
 
-function Story({ page, isExpanded }: { page: TaskPage; isExpanded: boolean }) {
+function Story({
+  page,
+  isExpanded,
+  isDeleting,
+}: {
+  page: TaskPage
+  isExpanded: boolean
+  isDeleting: boolean
+}) {
   return (
     <Providers>
       <div className="max-w-2xl p-6">
@@ -72,6 +80,7 @@ function Story({ page, isExpanded }: { page: TaskPage; isExpanded: boolean }) {
           taskId={page.taskId}
           page={page}
           onDelete={() => {}}
+          isDeleting={isDeleting}
           isExpanded={isExpanded}
           renderEditor={(defaultValue) => (
             <div className="min-h-[80px] text-sm">
@@ -99,13 +108,17 @@ export default meta
 type CardStory = StoryObj<typeof meta>
 
 export const Collapsed: CardStory = {
-  args: { page: samplePage, isExpanded: false },
+  args: { page: samplePage, isExpanded: false, isDeleting: false },
 }
 
 export const Expanded: CardStory = {
-  args: { page: samplePage, isExpanded: true },
+  args: { page: samplePage, isExpanded: true, isDeleting: false },
+}
+
+export const Deleting: CardStory = {
+  args: { page: samplePage, isExpanded: false, isDeleting: true },
 }
 
 export const EmptyContent: CardStory = {
-  args: { page: emptyPage, isExpanded: false },
+  args: { page: emptyPage, isExpanded: false, isDeleting: false },
 }
