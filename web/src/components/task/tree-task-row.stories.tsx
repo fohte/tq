@@ -25,6 +25,7 @@ const baseTreeNode: TreeNode = {
   sortOrder: 0,
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
+  activeTimeBlockStartTime: null,
   children: [],
   childCompletionCount: { completed: 0, total: 0 },
 }
