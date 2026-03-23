@@ -10,7 +10,6 @@ import {
   ChevronRight,
   CircleCheckBig,
   CircleDot,
-  EllipsisVertical,
   Play,
   Square,
   Timer,
@@ -87,22 +86,6 @@ function ActionArea({
         </button>
       )}
     </div>
-  )
-}
-
-function MenuButton() {
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
-      }}
-      className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground"
-      aria-label="More options"
-    >
-      <EllipsisVertical className="h-4 w-4" />
-    </button>
   )
 }
 
@@ -244,8 +227,6 @@ function TaskRowContent({
         onStop={handleStatusAction}
         onComplete={handleComplete}
       />
-
-      <MenuButton />
     </div>
   )
 }
@@ -382,8 +363,6 @@ export function TreeTaskRow({
             onStop={handleStatusAction}
             onComplete={handleComplete}
           />
-
-          <MenuButton />
         </div>
       </Link>
 
