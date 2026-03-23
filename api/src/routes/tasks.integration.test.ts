@@ -424,6 +424,49 @@ describe('tasks API', () => {
       const body = (await res.json()) as TaskResponse
       expect(body.parentId).toBeNull()
     })
+
+    it('cleans up orphaned recurrence rule on delete', async () => {
+      const task = await createRecurringTask('Recurring to delete', {
+        type: 'daily',
+        interval: 1,
+      })
+      const ruleId = task.recurrenceRuleId!
+
+      await app.request(`/api/tasks/${task.id}`, { method: 'DELETE' })
+
+      // Creating a new recurring task should get a different rule ID
+      const newTask = await createRecurringTask('New recurring', {
+        type: 'daily',
+        interval: 1,
+      })
+      expect(newTask.recurrenceRuleId).not.toBe(ruleId)
+    })
+
+    it('does not delete shared recurrence rule when deleting task', async () => {
+      // Create a recurring task and complete it to generate next instance
+      const task = await createRecurringTask(
+        'Shared rule delete test',
+        { type: 'daily', interval: 1 },
+        { dueDate: '2026-03-22' },
+      )
+
+      const completeRes = await app.request(`/api/tasks/${task.id}/complete`, {
+        method: 'POST',
+      })
+      const completeBody = (await completeRes.json()) as TaskResponse & {
+        nextTask: TaskResponse | null
+      }
+      const nextTask = completeBody.nextTask!
+
+      // Delete the completed task
+      await app.request(`/api/tasks/${task.id}`, { method: 'DELETE' })
+
+      // The next active task should still have its recurrence rule intact
+      const nextRes = await app.request(`/api/tasks/${nextTask.id}`)
+      const nextBody = (await nextRes.json()) as TaskResponse
+      expect(nextBody.recurrenceRuleId).toBe(task.recurrenceRuleId)
+      expect(nextBody.recurrenceRule).not.toBeNull()
+    })
   })
 
   describe('GET /api/tasks/tree', () => {

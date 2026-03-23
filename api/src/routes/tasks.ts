@@ -804,6 +804,7 @@ export const tasksApp = new Hono()
   })
   .delete('/:id', requireTask, async (c) => {
     const id = c.req.param('id')
+    const existing = c.get('task')
 
     // Set children's parentId to null before deleting
     await db
@@ -812,6 +813,20 @@ export const tasksApp = new Hono()
       .where(eq(tasks.parentId, id))
 
     await db.delete(tasks).where(eq(tasks.id, id))
+
+    // Clean up orphaned recurrence rule if no other task references it
+    if (existing.recurrenceRuleId) {
+      const [otherRef] = await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(eq(tasks.recurrenceRuleId, existing.recurrenceRuleId))
+        .limit(1)
+      if (!otherRef) {
+        await db
+          .delete(recurrenceRules)
+          .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
+      }
+    }
 
     return c.body(null, 204)
   })
