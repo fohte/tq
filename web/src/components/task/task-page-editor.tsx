@@ -1,6 +1,7 @@
+import { Link } from '@tanstack/react-router'
 import { MarkdownEditor } from '@web/components/ui/markdown-editor'
 import { useTaskPage, useUpdateTaskPage } from '@web/hooks/use-task-pages'
-import { Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 export function TaskPageEditor({
@@ -116,6 +117,34 @@ export function PageEditorInner({
           onChange={handleContentChange}
         />
       </div>
+    </div>
+  )
+}
+
+// --- Subpage View (header + editor, for Storybook) ---
+
+export function SubpageViewPresentation({
+  taskId,
+  pageTitle,
+  children,
+}: {
+  taskId: string
+  pageTitle: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+        <Link
+          to="/tasks/$taskId"
+          params={{ taskId }}
+          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <ArrowLeft className="size-5" />
+        </Link>
+        <span className="text-sm font-medium text-foreground">{pageTitle}</span>
+      </div>
+      <div className="flex-1 overflow-y-auto">{children}</div>
     </div>
   )
 }

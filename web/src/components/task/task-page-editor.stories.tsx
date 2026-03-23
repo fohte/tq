@@ -7,7 +7,10 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { PageEditorInner } from '@web/components/task/task-page-editor'
+import {
+  PageEditorInner,
+  SubpageViewPresentation,
+} from '@web/components/task/task-page-editor'
 import type { ReactNode } from 'react'
 
 function Providers({ children }: { children: ReactNode }) {
@@ -22,7 +25,12 @@ function Providers({ children }: { children: ReactNode }) {
     path: '/',
     component: () => null,
   })
-  rootRoute.addChildren([indexRoute])
+  const taskRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/tasks/$taskId',
+    component: () => null,
+  })
+  rootRoute.addChildren([indexRoute, taskRoute])
 
   const router = createRouter({
     routeTree: rootRoute,
@@ -50,19 +58,21 @@ function Story({
   return (
     <Providers>
       <div className="h-screen">
-        <PageEditorInner
-          taskId={taskId}
-          pageId={pageId}
-          defaultTitle={defaultTitle}
-          defaultContent={defaultContent}
-        />
+        <SubpageViewPresentation taskId={taskId} pageTitle={defaultTitle}>
+          <PageEditorInner
+            taskId={taskId}
+            pageId={pageId}
+            defaultTitle={defaultTitle}
+            defaultContent={defaultContent}
+          />
+        </SubpageViewPresentation>
       </div>
     </Providers>
   )
 }
 
 const meta = {
-  title: 'Task/TaskPages/Editor',
+  title: 'Task/TaskPages/SubpageView',
   component: Story,
   parameters: {
     layout: 'fullscreen',
@@ -70,9 +80,9 @@ const meta = {
 } satisfies Meta<typeof Story>
 
 export default meta
-type EditorStory = StoryObj<typeof meta>
+type SubpageStory = StoryObj<typeof meta>
 
-export const Default: EditorStory = {
+export const Default: SubpageStory = {
   args: {
     taskId: 'task-001',
     pageId: 'page-001',
@@ -82,7 +92,7 @@ export const Default: EditorStory = {
   },
 }
 
-export const Empty: EditorStory = {
+export const Empty: SubpageStory = {
   args: {
     taskId: 'task-001',
     pageId: 'page-002',
