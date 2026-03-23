@@ -67,11 +67,11 @@ function Providers({ children }: { children: ReactNode }) {
 function Story({
   page,
   isExpanded,
-  isDeleting,
+  deleteDialogOpen,
 }: {
   page: TaskPage
   isExpanded: boolean
-  isDeleting: boolean
+  deleteDialogOpen: boolean
 }) {
   return (
     <Providers>
@@ -80,8 +80,8 @@ function Story({
           taskId={page.taskId}
           page={page}
           onDelete={() => {}}
-          isDeleting={isDeleting}
           isExpanded={isExpanded}
+          deleteDialogOpen={deleteDialogOpen}
           renderEditor={(defaultValue) => (
             <div className="min-h-[80px] text-sm">
               <MarkdownEditor
@@ -108,17 +108,17 @@ export default meta
 type CardStory = StoryObj<typeof meta>
 
 export const Collapsed: CardStory = {
-  args: { page: samplePage, isExpanded: false, isDeleting: false },
+  args: { page: samplePage, isExpanded: false, deleteDialogOpen: false },
 }
 
 export const Expanded: CardStory = {
-  args: { page: samplePage, isExpanded: true, isDeleting: false },
+  args: { page: samplePage, isExpanded: true, deleteDialogOpen: false },
 }
 
-export const Deleting: CardStory = {
-  args: { page: samplePage, isExpanded: false, isDeleting: true },
+export const DeleteConfirmation: CardStory = {
+  args: { page: samplePage, isExpanded: false, deleteDialogOpen: true },
 }
 
 export const EmptyContent: CardStory = {
-  args: { page: emptyPage, isExpanded: false, isDeleting: false },
+  args: { page: emptyPage, isExpanded: false, deleteDialogOpen: false },
 }

@@ -165,6 +165,7 @@ export function PageCardPresentation({
   onDelete,
   isDeleting,
   isExpanded: controlledExpanded,
+  deleteDialogOpen,
   renderEditor,
 }: {
   taskId: string
@@ -172,6 +173,7 @@ export function PageCardPresentation({
   onDelete?: () => void
   isDeleting?: boolean
   isExpanded?: boolean
+  deleteDialogOpen?: boolean
   renderEditor?: (defaultValue: string) => React.ReactNode
 }) {
   const [internalExpanded, setInternalExpanded] = useState(false)
@@ -206,7 +208,7 @@ export function PageCardPresentation({
           >
             <ExternalLink className="size-3.5" />
           </Link>
-          <Dialog>
+          <Dialog open={deleteDialogOpen}>
             <DialogTrigger
               render={
                 <button
