@@ -40,8 +40,6 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       },
     }))
 
-    const isMonthView = activeView === 'month'
-
     return (
       <div className="tq-calendar h-full">
         <FullCalendar
@@ -51,8 +49,8 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           headerToolbar={false}
           events={calendarEvents}
           eventContent={(arg) => {
-            // In month view, render dot indicators instead of full event blocks
-            if (isMonthView) {
+            // In month view, hide event content — CSS handles bar indicators
+            if (arg.view.type === 'dayGridMonth') {
               return null
             }
             // Override timeText for overnight events to show actual end time
@@ -88,8 +86,8 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           }}
           height="100%"
           expandRows={false}
-          editable={!isMonthView}
-          selectable={!isMonthView}
+          editable={activeView !== 'month'}
+          selectable={activeView !== 'month'}
           dayHeaders={activeView !== 'day'}
           {...(activeView === 'week'
             ? {
