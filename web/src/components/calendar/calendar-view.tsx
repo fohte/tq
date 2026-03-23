@@ -32,8 +32,8 @@ export interface TimeBlockEvent {
 
 interface CalendarViewProps {
   events?: TimeBlockEvent[]
-  dndCallbacks?: CalendarDndCallbacks
-  externalDragContainerRef?: React.RefObject<HTMLElement | null>
+  dndCallbacks?: CalendarDndCallbacks | undefined
+  externalDragContainerRef?: React.RefObject<HTMLElement | null> | undefined
 }
 
 export function CalendarView({
