@@ -880,6 +880,17 @@ describe('tasks API', () => {
 
       expect(res.status).toBe(404)
     })
+
+    it('returns 409 when task is already completed', async () => {
+      const task = await createTask('Already done')
+      await app.request(`/api/tasks/${task.id}/complete`, { method: 'POST' })
+
+      const res = await app.request(`/api/tasks/${task.id}/complete`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(409)
+    })
   })
 
   describe('GET /api/tasks/:id with timeBlocks', () => {

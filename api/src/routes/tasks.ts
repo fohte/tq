@@ -798,6 +798,11 @@ export const tasksApp = new Hono()
   })
   .post('/:id/complete', requireTask, async (c) => {
     const id = c.req.param('id')
+    const existing = c.get('task')
+
+    if (existing.status === 'completed') {
+      return c.json({ error: 'Task is already completed' }, 409)
+    }
 
     const [updatedTask, closedBlocks] = await updateStatusAndCloseTimeBlocks(
       id,
