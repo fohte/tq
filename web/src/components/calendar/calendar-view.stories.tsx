@@ -1,8 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { CalendarDndCallbacks } from '@web/components/calendar/calendar-grid'
 import {
   CalendarView,
   type TimeBlockEvent,
 } from '@web/components/calendar/calendar-view'
+import { fn } from 'storybook/test'
 
 const today = new Date()
 const dateStr = today.toISOString().slice(0, 10)
@@ -111,6 +113,19 @@ export const ManualOnly: Story = {
 const tomorrow = new Date(today)
 tomorrow.setDate(tomorrow.getDate() + 1)
 const tomorrowStr = tomorrow.toISOString().slice(0, 10)
+
+const dndCallbacks: CalendarDndCallbacks = {
+  onEventDrop: fn(),
+  onEventResize: fn(),
+  onExternalDrop: fn(),
+}
+
+export const WithDragAndDrop: Story = {
+  args: {
+    events: sampleEvents,
+    dndCallbacks,
+  },
+}
 
 export const OvernightEvents: Story = {
   args: {
