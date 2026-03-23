@@ -48,7 +48,8 @@ export function useCreateTimeBlock() {
       return res.json()
     },
     onMutate: async (input) => {
-      const date = input.startTime.slice(0, 10)
+      const d = new Date(input.startTime)
+      const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       const queryKey = timeBlockKeys.list(date)
 
       await queryClient.cancelQueries({ queryKey })
