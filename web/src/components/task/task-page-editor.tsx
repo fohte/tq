@@ -31,6 +31,7 @@ export function TaskPageEditor({
 
   return (
     <PageEditorInner
+      key={pageId}
       taskId={taskId}
       pageId={pageId}
       defaultTitle={page.title}
@@ -55,6 +56,10 @@ export function PageEditorInner({
   const pendingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingSaveRef = useRef<(() => void) | null>(null)
   const titleSavingRef = useRef(false)
+
+  useEffect(() => {
+    setTitle(defaultTitle)
+  }, [defaultTitle])
 
   const handleTitleBlur = useCallback(() => {
     if (titleSavingRef.current) {
