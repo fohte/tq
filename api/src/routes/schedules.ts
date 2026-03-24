@@ -31,6 +31,7 @@ const updateTimeBlockSchema = z.object({
 
 const timeBlockDateQuerySchema = z.object({
   date: z.string(),
+  tzOffset: z.coerce.number().int().optional(),
 })
 
 const todayTasksSchema = z.object({
@@ -168,11 +169,15 @@ export const schedulesApp = new Hono()
     '/time-blocks',
     zValidator('query', timeBlockDateQuerySchema),
     async (c) => {
-      const { date } = c.req.valid('query')
+      const { date, tzOffset } = c.req.valid('query')
 
-      // Get all time blocks that overlap with the given date
+      // Build day boundaries in the client's local timezone
+      // tzOffset is minutes from UTC (e.g. UTC+9 = -540), matching getTimezoneOffset()
+      const offsetMs = (tzOffset ?? 0) * 60 * 1000
       const dayStart = new Date(`${date}T00:00:00.000Z`)
+      dayStart.setTime(dayStart.getTime() + offsetMs)
       const dayEnd = new Date(`${date}T23:59:59.999Z`)
+      dayEnd.setTime(dayEnd.getTime() + offsetMs)
 
       const blocks = await db
         .select()

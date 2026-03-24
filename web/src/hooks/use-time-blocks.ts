@@ -18,7 +18,10 @@ export function useTimeBlocks(date: string) {
     queryKey: timeBlockKeys.list(date),
     queryFn: async () => {
       const res = await api.api.schedule['time-blocks'].$get({
-        query: { date },
+        query: {
+          date,
+          tzOffset: String(new Date().getTimezoneOffset()),
+        },
       })
       if (!res.ok) throw new Error('Failed to fetch time blocks')
       return res.json()
