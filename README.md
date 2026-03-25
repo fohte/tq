@@ -63,6 +63,10 @@ pnpm --filter web run test
 | `pnpm --filter api run db:generate` | Generate a new DB migration          |
 | `pnpm --filter api run db:migrate`  | Apply DB migrations                  |
 
+## License
+
+[AGPL-3.0](LICENSE)
+
 ## Environment Variables
 
 The API server and web frontend are configured via environment variables.
