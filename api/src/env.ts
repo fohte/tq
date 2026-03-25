@@ -1,7 +1,21 @@
 type AppEnv = 'development' | 'test' | 'production'
 
-export const APP_ENV: AppEnv =
-  (process.env['APP_ENV'] as AppEnv | undefined) ?? 'development'
+const validAppEnvs: readonly string[] = [
+  'development',
+  'test',
+  'production',
+] satisfies readonly AppEnv[]
+
+function resolveAppEnv(): AppEnv {
+  const env = process.env['APP_ENV']
+  if (env === undefined) return 'development'
+  if (validAppEnvs.includes(env)) return env as AppEnv
+  throw new Error(
+    `Invalid APP_ENV: "${env}". Must be one of: ${validAppEnvs.join(', ')}`,
+  )
+}
+
+export const APP_ENV: AppEnv = resolveAppEnv()
 
 function resolveDatabaseUrl(): string {
   const explicit = process.env['DATABASE_URL']
@@ -16,6 +30,10 @@ function resolveDatabaseUrl(): string {
       throw new Error(
         'DATABASE_URL environment variable is required in production',
       )
+    default: {
+      const exhaustiveCheck: never = APP_ENV
+      throw new Error(`Unhandled APP_ENV: ${String(exhaustiveCheck)}`)
+    }
   }
 }
 
