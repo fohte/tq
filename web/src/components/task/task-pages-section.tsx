@@ -1,15 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Button } from '@web/components/ui/button'
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@web/components/ui/dialog'
+import { DeleteConfirmButton } from '@web/components/ui/delete-confirm-button'
 import { MarkdownEditor } from '@web/components/ui/markdown-editor'
 import type { TaskPage } from '@web/hooks/use-task-pages'
 import {
@@ -25,7 +15,6 @@ import {
   FileText,
   Loader2,
   Plus,
-  Trash2,
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -208,40 +197,13 @@ export function PageCardPresentation({
           >
             <ExternalLink className="size-3.5" />
           </Link>
-          <Dialog open={deleteDialogOpen}>
-            <DialogTrigger
-              render={
-                <button
-                  type="button"
-                  disabled={isDeleting}
-                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                />
-              }
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Trash2 className="size-3.5" />
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Delete page</DialogTitle>
-                <DialogDescription>
-                  Are you sure you want to delete "{page.title}"? This action
-                  cannot be undone.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <DialogClose render={<Button variant="outline" />}>
-                  Cancel
-                </DialogClose>
-                <DialogClose
-                  render={<Button variant="destructive" />}
-                  onClick={() => onDelete?.()}
-                >
-                  Delete
-                </DialogClose>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <DeleteConfirmButton
+            title="Delete page"
+            description={`Are you sure you want to delete "${page.title}"? This action cannot be undone.`}
+            onDelete={() => onDelete?.()}
+            disabled={isDeleting}
+            open={deleteDialogOpen}
+          />
         </div>
       </div>
 

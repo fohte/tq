@@ -1,3 +1,4 @@
+import { DeleteConfirmButton } from '@web/components/ui/delete-confirm-button'
 import { MarkdownEditor } from '@web/components/ui/markdown-editor'
 import type { Comment } from '@web/hooks/use-task-comments'
 import {
@@ -7,7 +8,6 @@ import {
   useUpdateComment,
 } from '@web/hooks/use-task-comments'
 import { cn } from '@web/lib/utils'
-import { Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 // --- Public API ---
@@ -113,13 +113,12 @@ function CommentCard({
             {isEdited && ' (edited)'}
           </span>
 
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-          >
-            <Trash2 className="size-3" />
-          </button>
+          <DeleteConfirmButton
+            title="Delete comment"
+            description="Are you sure you want to delete this comment? This action cannot be undone."
+            onDelete={handleDelete}
+            iconClassName="size-3"
+          />
         </div>
 
         {/* Body - inline editable with debounced auto-save */}
