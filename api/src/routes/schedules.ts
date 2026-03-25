@@ -1,9 +1,9 @@
 import { db } from '@api/db/connection'
-import { recurrenceRules, schedules } from '@api/db/schema'
+import { recurrenceRules, schedules, tasks, timeBlocks } from '@api/db/schema'
 import { expandScheduleForDate } from '@api/routes/schedule-expansion'
 import { recurrenceRuleSchema } from '@api/schemas/recurrence-rule'
 import { zValidator } from '@hono/zod-validator'
-import { eq, inArray } from 'drizzle-orm'
+import { and, eq, gte, inArray, isNull, lte, or } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { createFactory } from 'hono/factory'
 import { z } from 'zod'
@@ -25,6 +25,7 @@ const updateTimeBlockSchema = z.object({
 
 const timeBlockDateQuerySchema = z.object({
   date: z.string(),
+  tzOffset: z.coerce.number().int().optional(),
 })
 
 const todayTasksSchema = z.object({
@@ -56,6 +57,18 @@ const updateScheduleSchema = z.object({
 const scheduleDateQuerySchema = z.object({
   date: z.string(),
 })
+
+function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
+  return {
+    id: block.id,
+    taskId: block.taskId,
+    startTime: block.startTime.toISOString(),
+    endTime: block.endTime?.toISOString() ?? null,
+    isAutoScheduled: block.isAutoScheduled,
+    createdAt: block.createdAt.toISOString(),
+    updatedAt: block.updatedAt.toISOString(),
+  }
+}
 
 function recurrenceRuleToResponse(
   rule: typeof recurrenceRules.$inferSelect | null,
@@ -118,20 +131,114 @@ const requireSchedule = factory.createMiddleware(async (c, next) => {
 })
 
 export const schedulesApp = new Hono()
-  // TimeBlock endpoints (not yet implemented)
-  .post('/time-blocks', zValidator('json', createTimeBlockSchema), (c) => {
-    return c.json({ message: 'not implemented' }, 501)
-  })
-  .get('/time-blocks', zValidator('query', timeBlockDateQuerySchema), (c) => {
-    return c.json([], 200)
-  })
-  .patch('/time-blocks/:id', zValidator('json', updateTimeBlockSchema), (c) => {
-    void c.req.param('id')
-    return c.json({ message: 'not implemented' }, 501)
-  })
-  .delete('/time-blocks/:id', (c) => {
-    void c.req.param('id')
-    return c.json(null, 501)
+  // TimeBlock endpoints
+  .post(
+    '/time-blocks',
+    zValidator('json', createTimeBlockSchema),
+    async (c) => {
+      const input = c.req.valid('json')
+
+      // Verify task exists
+      const task = await db.query.tasks.findFirst({
+        where: eq(tasks.id, input.taskId),
+      })
+      if (!task) {
+        return c.json({ error: 'Task not found' }, 404)
+      }
+
+      const [block] = await db
+        .insert(timeBlocks)
+        .values({
+          taskId: input.taskId,
+          startTime: new Date(input.startTime),
+          endTime: input.endTime ? new Date(input.endTime) : null,
+          isAutoScheduled: input.isAutoScheduled ?? false,
+        })
+        .returning()
+
+      return c.json(timeBlockToResponse(block!), 201)
+    },
+  )
+  .get(
+    '/time-blocks',
+    zValidator('query', timeBlockDateQuerySchema),
+    async (c) => {
+      const { date, tzOffset } = c.req.valid('query')
+
+      // Build day boundaries in the client's local timezone
+      // tzOffset is minutes from UTC (e.g. UTC+9 = -540), matching getTimezoneOffset()
+      const offsetMs = (tzOffset ?? 0) * 60 * 1000
+      const dayStart = new Date(`${date}T00:00:00.000Z`)
+      dayStart.setTime(dayStart.getTime() + offsetMs)
+      const dayEnd = new Date(`${date}T23:59:59.999Z`)
+      dayEnd.setTime(dayEnd.getTime() + offsetMs)
+
+      const blocks = await db
+        .select()
+        .from(timeBlocks)
+        .where(
+          and(
+            lte(timeBlocks.startTime, dayEnd),
+            or(gte(timeBlocks.endTime, dayStart), isNull(timeBlocks.endTime)),
+          ),
+        )
+        .orderBy(timeBlocks.startTime)
+
+      return c.json(blocks.map(timeBlockToResponse), 200)
+    },
+  )
+  .patch(
+    '/time-blocks/:id',
+    zValidator('json', updateTimeBlockSchema),
+    async (c) => {
+      const id = c.req.param('id')
+
+      const existing = await db.query.timeBlocks.findFirst({
+        where: eq(timeBlocks.id, id),
+      })
+      if (!existing) {
+        return c.json({ error: 'Time block not found' }, 404)
+      }
+
+      const input = c.req.valid('json')
+      const updates: Partial<typeof timeBlocks.$inferInsert> = {}
+
+      if (input.startTime !== undefined) {
+        updates.startTime = new Date(input.startTime)
+      }
+      if (input.endTime !== undefined) {
+        updates.endTime = input.endTime ? new Date(input.endTime) : null
+      }
+      if (input.isAutoScheduled !== undefined) {
+        updates.isAutoScheduled = input.isAutoScheduled
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return c.json(timeBlockToResponse(existing), 200)
+      }
+
+      const [updated] = await db
+        .update(timeBlocks)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(timeBlocks.id, id))
+        .returning()
+
+      return c.json(timeBlockToResponse(updated!), 200)
+    },
+  )
+  .delete('/time-blocks/:id', async (c) => {
+    const id = c.req.param('id')
+
+    const existing = await db.query.timeBlocks.findFirst({
+      where: eq(timeBlocks.id, id),
+    })
+    if (!existing) {
+      return c.json({ error: 'Time block not found' }, 404)
+    }
+
+    await db.delete(timeBlocks).where(eq(timeBlocks.id, id))
+
+    return c.body(null, 204)
   })
   // Today tasks endpoints (not yet implemented)
   .put('/today-tasks', zValidator('json', todayTasksSchema), (c) => {

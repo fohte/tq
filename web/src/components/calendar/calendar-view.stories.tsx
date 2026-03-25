@@ -5,7 +5,7 @@ import {
 } from '@web/components/calendar/calendar-view'
 
 const today = new Date()
-const dateStr = today.toISOString().slice(0, 10)
+const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
 // Generate events spread across the week for week/month views
 function generateWeekEvents(): TimeBlockEvent[] {
@@ -215,7 +215,7 @@ export const MonthViewEmpty: Story = {
 
 const tomorrow = new Date(today)
 tomorrow.setDate(tomorrow.getDate() + 1)
-const tomorrowStr = tomorrow.toISOString().slice(0, 10)
+const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
 
 export const OvernightEvents: Story = {
   args: {

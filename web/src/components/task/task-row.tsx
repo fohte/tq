@@ -231,12 +231,30 @@ function TaskRowContent({
   )
 }
 
-export function TaskRow({ task }: { task: Task }) {
+export function TaskRow({
+  task,
+  draggable = false,
+}: {
+  task: Task
+  draggable?: boolean
+}) {
   return (
     <Link
       to="/tasks/$taskId"
       params={{ taskId: task.id }}
-      className="block transition-colors hover:bg-secondary/30"
+      className={cn(
+        'block transition-colors hover:bg-secondary/30',
+        draggable && 'cursor-grab active:cursor-grabbing',
+      )}
+      {...(draggable
+        ? {
+            'data-task-id': task.id,
+            'data-task-title': task.title,
+            ...(task.estimatedMinutes != null
+              ? { 'data-estimated-minutes': String(task.estimatedMinutes) }
+              : {}),
+          }
+        : {})}
     >
       <TaskRowContent
         id={task.id}
