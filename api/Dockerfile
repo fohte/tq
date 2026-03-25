@@ -28,6 +28,7 @@ RUN pnpm --filter api build
 # Production runtime
 FROM base AS runtime
 ENV NODE_ENV=production
+ENV APP_ENV=production
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY api/package.json api/
 COPY web/package.json web/
