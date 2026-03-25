@@ -1,4 +1,5 @@
 import type { EventDropArg } from '@fullcalendar/core'
+import dayGridPlugin from '@fullcalendar/daygrid'
 import type {
   EventReceiveArg,
   EventResizeDoneArg,
@@ -6,6 +7,10 @@ import type {
 import interactionPlugin, { Draggable } from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
+import {
+  type CalendarViewType,
+  FULLCALENDAR_VIEW_MAP,
+} from '@web/components/calendar/calendar-header'
 import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
 import { EventBlock } from '@web/components/calendar/event-block'
 import { forwardRef, useEffect } from 'react'
@@ -33,6 +38,7 @@ export interface CalendarDndCallbacks {
 
 interface CalendarGridProps {
   events: TimeBlockEvent[]
+  activeView: CalendarViewType
   onDatesSet?: (info: {
     start: Date
     end: Date
@@ -40,11 +46,19 @@ interface CalendarGridProps {
   }) => void
   dndCallbacks?: CalendarDndCallbacks | undefined
   externalDragContainerRef?: React.RefObject<HTMLElement | null> | undefined
+  onDateClick?: (date: Date) => void
 }
 
 export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
   function CalendarGrid(
-    { events, onDatesSet, dndCallbacks, externalDragContainerRef },
+    {
+      events,
+      activeView,
+      onDatesSet,
+      dndCallbacks,
+      externalDragContainerRef,
+      onDateClick,
+    },
     ref,
   ) {
     // Initialize external draggable for Today's Queue
@@ -147,11 +161,22 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       <div className="tq-calendar h-full">
         <FullCalendar
           ref={ref}
-          plugins={[timeGridPlugin, interactionPlugin]}
-          initialView="timeGridDay"
+          plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
+          initialView={FULLCALENDAR_VIEW_MAP[activeView]}
           headerToolbar={false}
           events={calendarEvents}
           eventContent={(arg) => {
+            // In month view, render compact event pill with title
+            if (arg.view.type === 'dayGridMonth') {
+              const type = arg.event.extendedProps['type'] as string
+              return (
+                <div className="tq-month-event" data-event-type={type}>
+                  <span className="tq-month-event-title">
+                    {arg.event.title}
+                  </span>
+                </div>
+              )
+            }
             // Override timeText for overnight events to show actual end time
             // FullCalendar clips end to midnight for display, so we use the
             // real event.end to show the correct cross-day time range
@@ -187,15 +212,27 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
             hour12: false,
           }}
           height="100%"
-          expandRows={false}
-          editable={true}
-          selectable={true}
-          droppable={true}
-          dayHeaders={false}
+          expandRows={activeView === 'month'}
+          dayMaxEvents={activeView === 'month' ? true : false}
+          editable={activeView !== 'month'}
+          selectable={activeView !== 'month'}
+          droppable={activeView === 'day'}
+          dayHeaders={activeView !== 'day'}
+          {...(activeView === 'week'
+            ? {
+                dayHeaderFormat: {
+                  weekday: 'short' as const,
+                  day: 'numeric' as const,
+                },
+              }
+            : {})}
           eventDrop={handleEventDrop}
           eventResize={handleEventResize}
           eventReceive={handleReceive}
           snapDuration="00:15:00"
+          {...(onDateClick
+            ? { dateClick: (info: { date: Date }) => onDateClick(info.date) }
+            : {})}
           {...(onDatesSet ? { datesSet: onDatesSet } : {})}
         />
       </div>

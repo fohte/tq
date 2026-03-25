@@ -4,6 +4,12 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export type CalendarViewType = 'day' | 'week' | 'month'
 
+export const FULLCALENDAR_VIEW_MAP: Record<CalendarViewType, string> = {
+  day: 'timeGridDay',
+  week: 'timeGridWeek',
+  month: 'dayGridMonth',
+}
+
 interface CalendarHeaderProps {
   currentDate: Date
   activeView: CalendarViewType
