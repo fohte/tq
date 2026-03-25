@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { TaskActivity } from '@web/components/task/task-activity'
 import {
   TaskPagesList,
   TaskPagesSection,
@@ -64,6 +65,11 @@ export function TaskMainContent({
       ) : (
         <TaskPagesSection taskId={task.id} />
       )}
+
+      {/* Activity */}
+      <div className="border-t border-border pt-4">
+        <TaskActivity taskId={task.id} />
+      </div>
     </div>
   )
 }
