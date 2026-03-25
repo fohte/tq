@@ -12,11 +12,11 @@ pnpm --filter web run test # web only
 
 ### API integration tests — database setup
 
-API integration tests require PostgreSQL running via Docker:
+API integration tests require PostgreSQL running via Docker. The Compose file uses a fixed project name (`tq-infra`), so the same container is shared across all worktrees — skip `docker compose up -d` if already running for development.
 
 ```sh
-docker compose up -d
-docker compose exec db createdb -U tq tq_test  # first time only
+docker compose up -d                            # skip if already running
+docker compose exec db createdb -U tq tq_test   # first time only
 ```
 
 **Do NOT set `DATABASE_URL` when running tests.** When unset, tests automatically use `postgresql://tq:tq@localhost:5432/tq_test` (see `api/src/testing.ts`). Using `tq_dev` causes failures due to existing data.
