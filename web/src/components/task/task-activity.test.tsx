@@ -11,6 +11,30 @@ import {
 } from '@web/hooks/use-task-comments'
 import { describe, expect, it, vi } from 'vitest'
 
+vi.mock('@web/components/ui/markdown-editor', () => ({
+  MarkdownEditor: ({
+    defaultValue,
+    placeholder,
+    onChange,
+  }: {
+    defaultValue?: string
+    placeholder?: string
+    onChange?: (md: string) => void
+  }) => {
+    if (onChange) {
+      return (
+        <textarea
+          data-testid="mock-markdown-editor"
+          defaultValue={defaultValue}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )
+    }
+    return <div data-testid="mock-markdown-viewer">{defaultValue}</div>
+  },
+}))
+
 vi.mock('@web/hooks/use-task-comments', async (importOriginal) => {
   const original =
     await importOriginal<typeof import('@web/hooks/use-task-comments')>()
@@ -135,8 +159,8 @@ describe('TaskActivity', () => {
     const { createMutate } = setupMocks({ comments: [] })
     renderActivity()
 
-    const textarea = screen.getByPlaceholderText(/add a comment/i)
-    await user.type(textarea, 'New comment text')
+    const editor = screen.getByPlaceholderText(/add a comment/i)
+    await user.type(editor, 'New comment text')
 
     const submitButton = screen.getByRole('button', { name: /comment/i })
     await user.click(submitButton)

@@ -1,3 +1,4 @@
+import { MarkdownEditor } from '@web/components/ui/markdown-editor'
 import type { Comment } from '@web/hooks/use-task-comments'
 import {
   useCreateComment,
@@ -65,8 +66,8 @@ function CommentCard({
   comment: Comment
 }) {
   const [isEditing, setIsEditing] = useState(false)
-  const [editContent, setEditContent] = useState(comment.content)
   const [showMenu, setShowMenu] = useState(false)
+  const editContentRef = useRef(comment.content)
   const updateComment = useUpdateComment(taskId)
   const deleteComment = useDeleteComment(taskId)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -87,12 +88,12 @@ function CommentCard({
   }, [showMenu])
 
   const handleSave = useCallback(() => {
-    const trimmed = editContent.trim()
+    const trimmed = editContentRef.current.trim()
     if (trimmed && trimmed !== comment.content) {
       updateComment.mutate({ commentId: comment.id, content: trimmed })
     }
     setIsEditing(false)
-  }, [editContent, comment.content, comment.id, updateComment])
+  }, [comment.content, comment.id, updateComment])
 
   const handleDelete = useCallback(() => {
     deleteComment.mutate(comment.id)
@@ -129,7 +130,7 @@ function CommentCard({
                 <button
                   type="button"
                   onClick={() => {
-                    setEditContent(comment.content)
+                    editContentRef.current = comment.content
                     setIsEditing(true)
                     setShowMenu(false)
                   }}
@@ -154,21 +155,14 @@ function CommentCard({
         {/* Body */}
         {isEditing ? (
           <div className="flex flex-col gap-2">
-            <textarea
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                  handleSave()
-                }
-                if (e.key === 'Escape') {
-                  setIsEditing(false)
-                }
-              }}
-              autoFocus
-              rows={3}
-              className="w-full resize-none rounded-md border border-border bg-transparent px-3 py-2 text-[13px] leading-relaxed text-foreground outline-none focus:border-primary/50"
-            />
+            <div className="text-sm">
+              <MarkdownEditor
+                defaultValue={comment.content}
+                onChange={(md) => {
+                  editContentRef.current = md
+                }}
+              />
+            </div>
             <div className="flex justify-end gap-2">
               <button
                 type="button"
@@ -187,9 +181,9 @@ function CommentCard({
             </div>
           </div>
         ) : (
-          <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-foreground">
-            {comment.content}
-          </p>
+          <div className="text-[13px] leading-relaxed text-foreground">
+            <MarkdownEditor defaultValue={comment.content} />
+          </div>
         )}
       </div>
     </div>
@@ -199,38 +193,41 @@ function CommentCard({
 // --- Comment Input ---
 
 function CommentInput({ taskId }: { taskId: string }) {
-  const [content, setContent] = useState('')
+  const contentRef = useRef('')
+  const [canSubmit, setCanSubmit] = useState(false)
+  const [editorKey, setEditorKey] = useState(0)
   const createComment = useCreateComment(taskId)
 
   const handleSubmit = useCallback(() => {
-    const trimmed = content.trim()
+    const trimmed = contentRef.current.trim()
     if (!trimmed) return
     createComment.mutate(trimmed)
-    setContent('')
-  }, [content, createComment])
+    contentRef.current = ''
+    setCanSubmit(false)
+    setEditorKey((k) => k + 1)
+  }, [createComment])
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-card px-3 py-2.5">
-      <textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-            handleSubmit()
-          }
-        }}
-        placeholder="Add a comment..."
-        rows={1}
-        className="w-full resize-none bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground outline-none"
-      />
+      <div className="text-[13px]">
+        <MarkdownEditor
+          key={editorKey}
+          defaultValue=""
+          placeholder="Add a comment..."
+          onChange={(md) => {
+            contentRef.current = md
+            setCanSubmit(!!md.trim())
+          }}
+        />
+      </div>
       <div className="flex justify-end">
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={!content.trim() || createComment.isPending}
+          disabled={!canSubmit || createComment.isPending}
           className={cn(
             'rounded-md px-3 py-1 text-xs font-medium',
-            content.trim() && !createComment.isPending
+            canSubmit && !createComment.isPending
               ? 'bg-orange-500 text-white hover:bg-orange-600'
               : 'cursor-not-allowed bg-orange-500/50 text-white/50',
           )}
