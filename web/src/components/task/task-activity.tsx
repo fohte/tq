@@ -75,7 +75,7 @@ function CommentCard({
       if (pendingRef.current) clearTimeout(pendingRef.current)
       const doSave = () => {
         const trimmed = markdown.trim()
-        if (trimmed && trimmed !== comment.content) {
+        if (trimmed) {
           updateComment.mutate({ commentId: comment.id, content: trimmed })
         }
         pendingSaveRef.current = null
@@ -83,7 +83,7 @@ function CommentCard({
       pendingSaveRef.current = doSave
       pendingRef.current = setTimeout(doSave, 1000)
     },
-    [comment.id, comment.content, updateComment],
+    [comment.id, updateComment],
   )
 
   useEffect(() => {
@@ -94,6 +94,9 @@ function CommentCard({
   }, [])
 
   const handleDelete = useCallback(() => {
+    // Cancel any pending save before deleting
+    if (pendingRef.current) clearTimeout(pendingRef.current)
+    pendingSaveRef.current = null
     deleteComment.mutate(comment.id)
   }, [comment.id, deleteComment])
 
