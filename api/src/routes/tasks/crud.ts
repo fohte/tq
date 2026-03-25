@@ -1,6 +1,7 @@
 import { db } from '@api/db/connection'
 import {
   labels,
+  recurrenceRules,
   taskLabels,
   taskPages,
   tasks,
@@ -14,6 +15,7 @@ import {
   taskToResponse,
   timeBlockToResponse,
 } from '@api/routes/tasks/shared'
+import { recurrenceRuleSchema } from '@api/schemas/recurrence-rule'
 import { zValidator } from '@hono/zod-validator'
 import { and, count, eq, inArray, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -29,6 +31,7 @@ const createTaskSchema = z.object({
   projectId: z.string().uuid().optional(),
   context: contextEnum.optional(),
   labels: z.array(z.string()).optional(),
+  recurrenceRule: recurrenceRuleSchema.optional(),
 })
 
 const updateTaskSchema = z.object({
@@ -39,6 +42,7 @@ const updateTaskSchema = z.object({
   estimatedMinutes: z.number().int().positive().nullable().optional(),
   projectId: z.string().uuid().nullable().optional(),
   context: contextEnum.optional(),
+  recurrenceRule: recurrenceRuleSchema.nullable().optional(),
 })
 
 export const tasksCrudApp = new Hono()
@@ -54,6 +58,23 @@ export const tasksCrudApp = new Hono()
       }
     }
 
+    // Create recurrence rule if provided
+    let recurrenceRuleId: string | null = null
+    let createdRule: typeof recurrenceRules.$inferSelect | null = null
+    if (input.recurrenceRule) {
+      const [rule] = await db
+        .insert(recurrenceRules)
+        .values({
+          type: input.recurrenceRule.type,
+          interval: input.recurrenceRule.interval,
+          daysOfWeek: input.recurrenceRule.daysOfWeek ?? null,
+          dayOfMonth: input.recurrenceRule.dayOfMonth ?? null,
+        })
+        .returning()
+      recurrenceRuleId = rule!.id
+      createdRule = rule!
+    }
+
     const [task] = await db
       .insert(tasks)
       .values({
@@ -65,6 +86,7 @@ export const tasksCrudApp = new Hono()
         parentId: input.parentId ?? null,
         projectId: input.projectId ?? null,
         context: input.context ?? 'personal',
+        recurrenceRuleId,
       })
       .returning()
 
@@ -84,7 +106,7 @@ export const tasksCrudApp = new Hono()
       }
     }
 
-    return c.json(taskToResponse(task!), 201)
+    return c.json(taskToResponse(task!, createdRule), 201)
   })
   .get(
     '/',
@@ -145,7 +167,7 @@ export const tasksCrudApp = new Hono()
     const task = c.get('task')
     const id = task.id
 
-    const [childStats, pages, taskTimeBlocks] = await Promise.all([
+    const [childStats, pages, taskTimeBlocks, rule] = await Promise.all([
       db
         .select({
           total: count(),
@@ -165,11 +187,16 @@ export const tasksCrudApp = new Hono()
         .from(timeBlocks)
         .where(eq(timeBlocks.taskId, id))
         .orderBy(timeBlocks.startTime),
+      task.recurrenceRuleId
+        ? db.query.recurrenceRules.findFirst({
+            where: eq(recurrenceRules.id, task.recurrenceRuleId),
+          })
+        : Promise.resolve(null),
     ])
 
     return c.json(
       {
-        ...taskToResponse(task),
+        ...taskToResponse(task, rule),
         childCompletionCount: {
           total: childStats[0]?.total ?? 0,
           completed: childStats[0]?.completed ?? 0,
@@ -186,19 +213,114 @@ export const tasksCrudApp = new Hono()
     zValidator('json', updateTaskSchema),
     async (c) => {
       const id = c.req.param('id')
-      const input = c.req.valid('json')
+      const existing = c.get('task')
+      const { recurrenceRule: recurrenceRuleInput, ...taskFields } =
+        c.req.valid('json')
+
+      let recurrenceRuleId: string | null | undefined = undefined
+      let updatedRule: typeof recurrenceRules.$inferSelect | null = null
+
+      if (recurrenceRuleInput === null) {
+        // Remove: check shared references before deleting
+        recurrenceRuleId = null
+        if (existing.recurrenceRuleId) {
+          const [otherRef] = await db
+            .select({ id: tasks.id })
+            .from(tasks)
+            .where(
+              and(
+                eq(tasks.recurrenceRuleId, existing.recurrenceRuleId),
+                sql`${tasks.id} != ${id}`,
+              ),
+            )
+            .limit(1)
+          if (!otherRef) {
+            await db
+              .delete(recurrenceRules)
+              .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
+          }
+        }
+      } else if (recurrenceRuleInput !== undefined) {
+        if (existing.recurrenceRuleId) {
+          // Check if shared
+          const [otherRef] = await db
+            .select({ id: tasks.id })
+            .from(tasks)
+            .where(
+              and(
+                eq(tasks.recurrenceRuleId, existing.recurrenceRuleId),
+                sql`${tasks.id} != ${id}`,
+              ),
+            )
+            .limit(1)
+
+          if (otherRef) {
+            // Shared: create new rule
+            const [rule] = await db
+              .insert(recurrenceRules)
+              .values({
+                type: recurrenceRuleInput.type,
+                interval: recurrenceRuleInput.interval,
+                daysOfWeek: recurrenceRuleInput.daysOfWeek ?? null,
+                dayOfMonth: recurrenceRuleInput.dayOfMonth ?? null,
+              })
+              .returning()
+            recurrenceRuleId = rule!.id
+            updatedRule = rule!
+          } else {
+            // Not shared: update in place
+            const [rule] = await db
+              .update(recurrenceRules)
+              .set({
+                type: recurrenceRuleInput.type,
+                interval: recurrenceRuleInput.interval,
+                daysOfWeek: recurrenceRuleInput.daysOfWeek ?? null,
+                dayOfMonth: recurrenceRuleInput.dayOfMonth ?? null,
+                updatedAt: new Date(),
+              })
+              .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
+              .returning()
+            updatedRule = rule!
+          }
+        } else {
+          // Create new rule
+          const [rule] = await db
+            .insert(recurrenceRules)
+            .values({
+              type: recurrenceRuleInput.type,
+              interval: recurrenceRuleInput.interval,
+              daysOfWeek: recurrenceRuleInput.daysOfWeek ?? null,
+              dayOfMonth: recurrenceRuleInput.dayOfMonth ?? null,
+            })
+            .returning()
+          recurrenceRuleId = rule!.id
+          updatedRule = rule!
+        }
+      }
 
       const [updated] = await db
         .update(tasks)
-        .set({ ...input, updatedAt: new Date() })
+        .set({
+          ...taskFields,
+          ...(recurrenceRuleId !== undefined ? { recurrenceRuleId } : {}),
+          updatedAt: new Date(),
+        })
         .where(eq(tasks.id, id))
         .returning()
 
-      return c.json(taskToResponse(updated!), 200)
+      if (!updatedRule && updated!.recurrenceRuleId) {
+        updatedRule =
+          (await db.query.recurrenceRules.findFirst({
+            where: eq(recurrenceRules.id, updated!.recurrenceRuleId),
+          })) ?? null
+      }
+
+      return c.json(taskToResponse(updated!, updatedRule), 200)
     },
   )
   .delete('/:id', requireTask, async (c) => {
     const id = c.req.param('id')
+    const existing = c.get('task')
 
     // Set children's parentId to null before deleting
     await db
@@ -207,6 +329,20 @@ export const tasksCrudApp = new Hono()
       .where(eq(tasks.parentId, id))
 
     await db.delete(tasks).where(eq(tasks.id, id))
+
+    // Clean up orphaned recurrence rule
+    if (existing.recurrenceRuleId) {
+      const [otherRef] = await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(eq(tasks.recurrenceRuleId, existing.recurrenceRuleId))
+        .limit(1)
+      if (!otherRef) {
+        await db
+          .delete(recurrenceRules)
+          .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
+      }
+    }
 
     return c.body(null, 204)
   })

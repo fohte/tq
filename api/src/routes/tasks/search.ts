@@ -158,7 +158,10 @@ export const tasksSearchApp = new Hono()
       .limit(limit)
       .offset(offset)
 
-    return c.json(result.map(taskToResponse), 200)
+    return c.json(
+      result.map((t) => taskToResponse(t)),
+      200,
+    )
   })
   .get('/search/suggest', zValidator('query', suggestQuerySchema), (c) => {
     const { prefix, category } = c.req.valid('query')

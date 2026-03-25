@@ -1,5 +1,5 @@
 import { db } from '@api/db/connection'
-import { tasks, timeBlocks } from '@api/db/schema'
+import { recurrenceRules, tasks, timeBlocks } from '@api/db/schema'
 import {
   requireTask,
   taskStatus,
@@ -7,6 +7,7 @@ import {
   timeBlockToResponse,
   updateStatusAndCloseTimeBlocks,
 } from '@api/routes/tasks/shared'
+import { buildNextTaskData } from '@api/services/recurrence'
 import { zValidator } from '@hono/zod-validator'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -145,16 +146,37 @@ export const tasksActionsApp = new Hono()
   })
   .post('/:id/complete', requireTask, async (c) => {
     const id = c.req.param('id')
+    const existing = c.get('task')
+
+    if (existing.status === 'completed') {
+      return c.json({ error: 'Task is already completed' }, 409)
+    }
 
     const [updatedTask, closedBlocks] = await updateStatusAndCloseTimeBlocks(
       id,
       'completed',
     )
 
+    let nextTask: ReturnType<typeof taskToResponse> | null = null
+    let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
+    if (updatedTask.recurrenceRuleId) {
+      completedTaskRule =
+        (await db.query.recurrenceRules.findFirst({
+          where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
+        })) ?? null
+
+      if (completedTaskRule) {
+        const nextData = buildNextTaskData(updatedTask, completedTaskRule)
+        const [created] = await db.insert(tasks).values(nextData).returning()
+        nextTask = taskToResponse(created!, completedTaskRule)
+      }
+    }
+
     return c.json(
       {
-        ...taskToResponse(updatedTask),
+        ...taskToResponse(updatedTask, completedTaskRule),
         closedTimeBlocks: closedBlocks.map(timeBlockToResponse),
+        nextTask,
       },
       200,
     )

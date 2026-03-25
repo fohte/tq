@@ -1,5 +1,5 @@
 import { db } from '@api/db/connection'
-import { tasks, timeBlocks } from '@api/db/schema'
+import { recurrenceRules, tasks, timeBlocks } from '@api/db/schema'
 import { and, eq, isNull } from 'drizzle-orm'
 import { createFactory } from 'hono/factory'
 import { z } from 'zod'
@@ -7,7 +7,22 @@ import { z } from 'zod'
 export const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
 export const contextEnum = z.enum(['work', 'personal', 'dev'])
 
-export function taskToResponse(task: typeof tasks.$inferSelect) {
+export function recurrenceRuleToResponse(
+  rule: typeof recurrenceRules.$inferSelect,
+) {
+  return {
+    id: rule.id,
+    type: rule.type,
+    interval: rule.interval,
+    daysOfWeek: rule.daysOfWeek,
+    dayOfMonth: rule.dayOfMonth,
+  }
+}
+
+export function taskToResponse(
+  task: typeof tasks.$inferSelect,
+  rule?: typeof recurrenceRules.$inferSelect | null,
+) {
   return {
     id: task.id,
     title: task.title,
@@ -19,6 +34,8 @@ export function taskToResponse(task: typeof tasks.$inferSelect) {
     estimatedMinutes: task.estimatedMinutes,
     parentId: task.parentId,
     projectId: task.projectId,
+    recurrenceRuleId: task.recurrenceRuleId,
+    recurrenceRule: rule ? recurrenceRuleToResponse(rule) : null,
     sortOrder: task.sortOrder,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),

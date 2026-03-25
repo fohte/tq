@@ -109,6 +109,8 @@ export function useCreateTask() {
         parentId: null,
         projectId: null,
         sortOrder: 0,
+        recurrenceRuleId: null,
+        recurrenceRule: null,
         createdAt: now,
         updatedAt: now,
         activeTimeBlockStartTime: null,

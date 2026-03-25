@@ -134,7 +134,10 @@ export const projectsApp = new Hono()
       .where(eq(tasks.projectId, id))
       .orderBy(tasks.sortOrder, tasks.createdAt)
 
-    return c.json(result.map(taskToResponse), 200)
+    return c.json(
+      result.map((t) => taskToResponse(t)),
+      200,
+    )
   })
   .patch('/:id', zValidator('json', updateProjectSchema), async (c) => {
     const id = c.req.param('id')
