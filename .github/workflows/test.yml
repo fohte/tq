@@ -206,4 +206,5 @@ jobs:
         working-directory: api
         run: pnpm run test
         env:
+          APP_ENV: test
           DATABASE_URL: postgresql://tq:tq@localhost:5432/tq_test

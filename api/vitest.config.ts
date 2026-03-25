@@ -10,5 +10,8 @@ export default defineConfig({
   },
   test: {
     globalSetup: ['./src/global-setup.ts'],
+    env: {
+      APP_ENV: 'test',
+    },
   },
 })
