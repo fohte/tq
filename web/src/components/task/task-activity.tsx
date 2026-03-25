@@ -7,7 +7,7 @@ import {
   useUpdateComment,
 } from '@web/hooks/use-task-comments'
 import { cn } from '@web/lib/utils'
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 // --- Public API ---
@@ -65,126 +65,70 @@ function CommentCard({
   taskId: string
   comment: Comment
 }) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [showMenu, setShowMenu] = useState(false)
-  const editContentRef = useRef(comment.content)
   const updateComment = useUpdateComment(taskId)
   const deleteComment = useDeleteComment(taskId)
-  const menuRef = useRef<HTMLDivElement>(null)
+  const pendingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingSaveRef = useRef<(() => void) | null>(null)
+
+  const handleChange = useCallback(
+    (markdown: string) => {
+      if (pendingRef.current) clearTimeout(pendingRef.current)
+      const doSave = () => {
+        const trimmed = markdown.trim()
+        if (trimmed && trimmed !== comment.content) {
+          updateComment.mutate({ commentId: comment.id, content: trimmed })
+        }
+        pendingSaveRef.current = null
+      }
+      pendingSaveRef.current = doSave
+      pendingRef.current = setTimeout(doSave, 1000)
+    },
+    [comment.id, comment.content, updateComment],
+  )
 
   useEffect(() => {
-    if (!showMenu) return
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowMenu(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
+      if (pendingRef.current) clearTimeout(pendingRef.current)
+      pendingSaveRef.current?.()
     }
-  }, [showMenu])
-
-  const handleSave = useCallback(() => {
-    const trimmed = editContentRef.current.trim()
-    if (trimmed && trimmed !== comment.content) {
-      updateComment.mutate({ commentId: comment.id, content: trimmed })
-    }
-    setIsEditing(false)
-  }, [comment.content, comment.id, updateComment])
+  }, [])
 
   const handleDelete = useCallback(() => {
     deleteComment.mutate(comment.id)
-    setShowMenu(false)
   }, [comment.id, deleteComment])
 
   const timestamp = formatRelativeTime(comment.createdAt)
   const isEdited = comment.createdAt !== comment.updatedAt
 
   return (
-    <div className="flex overflow-hidden rounded-md border border-border bg-card">
+    <div className="flex rounded-md border border-border bg-card">
       {/* Orange accent bar */}
-      <div className="w-[3px] shrink-0 bg-orange-500" />
+      <div className="w-[3px] shrink-0 rounded-l-md bg-orange-500" />
 
       <div className="flex min-w-0 flex-1 flex-col gap-1 px-2.5 py-2">
-        {/* Timestamp */}
+        {/* Header */}
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-muted-foreground">
             {timestamp}
             {isEdited && ' (edited)'}
           </span>
 
-          <div className="relative" ref={menuRef}>
-            <button
-              type="button"
-              onClick={() => setShowMenu(!showMenu)}
-              className="rounded p-1 text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-            >
-              <MoreHorizontal className="size-3.5" />
-            </button>
-
-            {showMenu && (
-              <div className="absolute right-0 top-full z-10 mt-1 min-w-[120px] rounded-md border border-border bg-popover p-1 shadow-md">
-                <button
-                  type="button"
-                  onClick={() => {
-                    editContentRef.current = comment.content
-                    setIsEditing(true)
-                    setShowMenu(false)
-                  }}
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs text-foreground hover:bg-secondary"
-                >
-                  <Pencil className="size-3" />
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs text-destructive hover:bg-destructive/10"
-                >
-                  <Trash2 className="size-3" />
-                  Delete
-                </button>
-              </div>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="size-3" />
+          </button>
         </div>
 
-        {/* Body */}
-        {isEditing ? (
-          <div className="flex flex-col gap-2">
-            <div className="text-sm">
-              <MarkdownEditor
-                defaultValue={comment.content}
-                onChange={(md) => {
-                  editContentRef.current = md
-                }}
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                className="rounded-md px-3 py-1 text-xs text-muted-foreground hover:bg-secondary/50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                className="rounded-md bg-orange-500 px-3 py-1 text-xs text-white hover:bg-orange-600"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="text-[13px] leading-relaxed text-foreground">
-            <MarkdownEditor defaultValue={comment.content} />
-          </div>
-        )}
+        {/* Body - inline editable with debounced auto-save */}
+        <div className="text-[13px] leading-relaxed text-foreground">
+          <MarkdownEditor
+            defaultValue={comment.content}
+            onChange={handleChange}
+          />
+        </div>
       </div>
     </div>
   )

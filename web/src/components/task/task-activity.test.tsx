@@ -20,19 +20,14 @@ vi.mock('@web/components/ui/markdown-editor', () => ({
     defaultValue?: string
     placeholder?: string
     onChange?: (md: string) => void
-  }) => {
-    if (onChange) {
-      return (
-        <textarea
-          data-testid="mock-markdown-editor"
-          defaultValue={defaultValue}
-          placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      )
-    }
-    return <div data-testid="mock-markdown-viewer">{defaultValue}</div>
-  },
+  }) => (
+    <textarea
+      data-testid="mock-markdown-editor"
+      defaultValue={defaultValue}
+      placeholder={placeholder}
+      onChange={(e) => onChange?.(e.target.value)}
+    />
+  ),
 }))
 
 vi.mock('@web/hooks/use-task-comments', async (importOriginal) => {
