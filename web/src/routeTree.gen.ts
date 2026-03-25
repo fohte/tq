@@ -16,6 +16,7 @@ import { Route as TasksIndexRouteImport } from './routes/tasks/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks/$taskId'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
+import { Route as TasksTaskIdPagesPageIdRouteImport } from './routes/tasks/$taskId_.pages.$pageId'
 
 const TodayRoute = TodayRouteImport.update({
   id: '/today',
@@ -52,6 +53,11 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   path: '/projects/$projectId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TasksTaskIdPagesPageIdRoute = TasksTaskIdPagesPageIdRouteImport.update({
+  id: '/tasks/$taskId_/pages/$pageId',
+  path: '/tasks/$taskId/pages/$pageId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/projects/': typeof ProjectsIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/tasks/$taskId/pages/$pageId': typeof TasksTaskIdPagesPageIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByTo {
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/projects': typeof ProjectsIndexRoute
   '/tasks': typeof TasksIndexRoute
+  '/tasks/$taskId/pages/$pageId': typeof TasksTaskIdPagesPageIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,6 +88,7 @@ export interface FileRoutesById {
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/projects/': typeof ProjectsIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/tasks/$taskId_/pages/$pageId': typeof TasksTaskIdPagesPageIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,6 +100,7 @@ export interface FileRouteTypes {
     | '/tasks/$taskId'
     | '/projects/'
     | '/tasks/'
+    | '/tasks/$taskId/pages/$pageId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
     | '/tasks/$taskId'
     | '/projects'
     | '/tasks'
+    | '/tasks/$taskId/pages/$pageId'
   id:
     | '__root__'
     | '/'
@@ -109,6 +120,7 @@ export interface FileRouteTypes {
     | '/tasks/$taskId'
     | '/projects/'
     | '/tasks/'
+    | '/tasks/$taskId_/pages/$pageId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -119,6 +131,7 @@ export interface RootRouteChildren {
   TasksTaskIdRoute: typeof TasksTaskIdRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
   TasksIndexRoute: typeof TasksIndexRoute
+  TasksTaskIdPagesPageIdRoute: typeof TasksTaskIdPagesPageIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -172,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tasks/$taskId_/pages/$pageId': {
+      id: '/tasks/$taskId_/pages/$pageId'
+      path: '/tasks/$taskId/pages/$pageId'
+      fullPath: '/tasks/$taskId/pages/$pageId'
+      preLoaderRoute: typeof TasksTaskIdPagesPageIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -183,6 +203,7 @@ const rootRouteChildren: RootRouteChildren = {
   TasksTaskIdRoute: TasksTaskIdRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
   TasksIndexRoute: TasksIndexRoute,
+  TasksTaskIdPagesPageIdRoute: TasksTaskIdPagesPageIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

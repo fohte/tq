@@ -12,8 +12,32 @@ import {
   TaskSidebar,
   TaskSidebarMobile,
 } from '@web/components/task/task-detail'
+import type { TaskPage } from '@web/hooks/use-task-pages'
 import type { TaskDetail } from '@web/hooks/use-tasks'
 import type { ReactNode } from 'react'
+
+const samplePages: TaskPage[] = [
+  {
+    id: 'page-001',
+    taskId: '550e8400-e29b-41d4-a716-446655440000',
+    title: 'Meeting Notes',
+    content:
+      '## Discussion Points\n\n- Architecture review\n- Sprint planning\n- Performance improvements\n\nWe decided to go with option B.',
+    sortOrder: 0,
+    createdAt: '2026-03-20T00:00:00.000Z',
+    updatedAt: '2026-03-20T00:00:00.000Z',
+  },
+  {
+    id: 'page-002',
+    taskId: '550e8400-e29b-41d4-a716-446655440000',
+    title: 'Technical Spec',
+    content:
+      '# API Design\n\nREST endpoints for the task management system.\n\n## Endpoints\n\n- GET /tasks\n- POST /tasks\n- PATCH /tasks/:id',
+    sortOrder: 1,
+    createdAt: '2026-03-21T00:00:00.000Z',
+    updatedAt: '2026-03-21T00:00:00.000Z',
+  },
+]
 
 const baseTask: TaskDetail = {
   id: '550e8400-e29b-41d4-a716-446655440000',
@@ -59,7 +83,12 @@ function Providers({ children }: { children: ReactNode }) {
     path: '/tasks/$taskId',
     component: () => null,
   })
-  rootRoute.addChildren([indexRoute, tasksRoute, taskRoute])
+  const taskPageRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/tasks/$taskId/pages/$pageId',
+    component: () => null,
+  })
+  rootRoute.addChildren([indexRoute, tasksRoute, taskRoute, taskPageRoute])
 
   const router = createRouter({
     routeTree: rootRoute,
@@ -75,11 +104,17 @@ function Providers({ children }: { children: ReactNode }) {
 
 // --- TaskMainContent Stories ---
 
-function MainContentStory({ task }: { task: TaskDetail }) {
+function MainContentStory({
+  task,
+  pages,
+}: {
+  task: TaskDetail
+  pages: TaskPage[]
+}) {
   return (
     <Providers>
       <div className="max-w-2xl p-6">
-        <TaskMainContent task={task} />
+        <TaskMainContent task={task} pages={pages} />
       </div>
     </Providers>
   )
@@ -99,12 +134,14 @@ type Story = StoryObj<typeof mainContentMeta>
 export const Default: Story = {
   args: {
     task: { ...baseTask },
+    pages: [],
   },
 }
 
 export const InProgress: Story = {
   args: {
     task: { ...baseTask, status: 'in_progress', title: 'Review pull request' },
+    pages: [],
   },
 }
 
@@ -115,12 +152,14 @@ export const Completed: Story = {
       status: 'completed',
       title: 'Set up CI pipeline',
     },
+    pages: [],
   },
 }
 
 export const NoDescription: Story = {
   args: {
     task: { ...baseTask, description: null, title: 'Task without description' },
+    pages: [],
   },
 }
 
@@ -131,6 +170,14 @@ export const WithParent: Story = {
       parentId: 'abcd0000-0000-0000-0000-000000000000',
       title: 'Subtask with parent',
     },
+    pages: [],
+  },
+}
+
+export const WithPages: Story = {
+  args: {
+    task: { ...baseTask, title: 'Task with pages' },
+    pages: samplePages,
   },
 }
 
@@ -186,18 +233,19 @@ export const MobileSidebar: StoryObj<{ task: TaskDetail }> = {
 
 // --- Full Page Layout ---
 
-export const FullPagePC: StoryObj<{ task: TaskDetail }> = {
+export const FullPagePC: StoryObj<{ task: TaskDetail; pages: TaskPage[] }> = {
   args: {
     task: { ...baseTask },
+    pages: samplePages,
   },
   parameters: {
     layout: 'fullscreen',
   },
-  render: ({ task }) => (
+  render: ({ task, pages }) => (
     <Providers>
       <div className="flex h-screen">
         <div className="flex-1 overflow-y-auto p-6">
-          <TaskMainContent task={task} />
+          <TaskMainContent task={task} pages={pages} />
         </div>
         <div className="w-60 shrink-0 overflow-y-auto border-l border-border p-4">
           <TaskSidebar task={task} />
@@ -207,19 +255,20 @@ export const FullPagePC: StoryObj<{ task: TaskDetail }> = {
   ),
 }
 
-export const FullPageSP: StoryObj<{ task: TaskDetail }> = {
+export const FullPageSP: StoryObj<{ task: TaskDetail; pages: TaskPage[] }> = {
   args: {
     task: { ...baseTask },
+    pages: samplePages,
   },
   parameters: {
     layout: 'fullscreen',
     viewport: { defaultViewport: 'mobile1' },
   },
-  render: ({ task }) => (
+  render: ({ task, pages }) => (
     <Providers>
       <div className="flex h-screen flex-col overflow-y-auto">
         <div className="p-4">
-          <TaskMainContent task={task} />
+          <TaskMainContent task={task} pages={pages} />
         </div>
         <div className="border-t border-border p-4">
           <TaskSidebarMobile task={task} />
