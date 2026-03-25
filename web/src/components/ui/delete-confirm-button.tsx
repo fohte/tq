@@ -34,7 +34,7 @@ export function DeleteConfirmButton({
           <button
             type="button"
             disabled={disabled}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-50"
           />
         }
         onClick={(e) => e.stopPropagation()}
