@@ -28,6 +28,16 @@ export const SmallIcon: Story = {
   },
 }
 
+export const DialogOpen: Story = {
+  args: {
+    title: 'Delete item',
+    description:
+      'Are you sure you want to delete this item? This action cannot be undone.',
+    onDelete: () => {},
+    open: true,
+  },
+}
+
 export const Disabled: Story = {
   args: {
     title: 'Delete item',
