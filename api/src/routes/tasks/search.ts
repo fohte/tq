@@ -6,7 +6,11 @@ import {
   taskPages,
   tasks,
 } from '@api/db/schema'
-import { taskToResponse } from '@api/routes/tasks/shared'
+import {
+  contextEnum,
+  taskStatus,
+  taskToResponse,
+} from '@api/routes/tasks/shared'
 import { parseSearchQuery } from '@api/search-query-parser'
 import { zValidator } from '@hono/zod-validator'
 import { and, eq, exists, isNotNull, isNull, sql } from 'drizzle-orm'
@@ -15,9 +19,9 @@ import { z } from 'zod'
 
 const searchQuerySchema = z.object({
   q: z.string().optional(),
-  status: z.enum(['todo', 'in_progress', 'completed']).optional(),
+  status: taskStatus.optional(),
   label: z.string().optional(),
-  context: z.enum(['work', 'personal', 'dev']).optional(),
+  context: contextEnum.optional(),
   hasEstimate: z
     .string()
     .transform((v) => v === 'true')

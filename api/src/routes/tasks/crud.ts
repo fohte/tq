@@ -10,6 +10,7 @@ import { pageToResponse } from '@api/routes/task-pages'
 import {
   contextEnum,
   requireTask,
+  taskStatus,
   taskToResponse,
   timeBlockToResponse,
 } from '@api/routes/tasks/shared'
@@ -90,7 +91,7 @@ export const tasksCrudApp = new Hono()
     zValidator(
       'query',
       z.object({
-        status: z.enum(['todo', 'in_progress', 'completed']).optional(),
+        status: taskStatus.optional(),
         projectId: z.string().uuid().optional(),
         parentId: z.string().uuid().optional(),
         context: contextEnum.optional(),
