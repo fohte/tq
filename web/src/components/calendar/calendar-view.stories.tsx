@@ -7,6 +7,83 @@ import {
 const today = new Date()
 const dateStr = today.toISOString().slice(0, 10)
 
+// Generate events spread across the week for week/month views
+function generateWeekEvents(): TimeBlockEvent[] {
+  const events: TimeBlockEvent[] = []
+  for (let dayOffset = -3; dayOffset <= 3; dayOffset++) {
+    const d = new Date(today)
+    d.setDate(d.getDate() + dayOffset)
+    const ds = d.toISOString().slice(0, 10)
+    events.push(
+      {
+        id: `w-${dayOffset}-1`,
+        title: 'Standup',
+        start: `${ds}T09:00:00`,
+        end: `${ds}T09:30:00`,
+        type: 'gcal',
+      },
+      {
+        id: `w-${dayOffset}-2`,
+        title: 'Deep work',
+        start: `${ds}T10:00:00`,
+        end: `${ds}T12:00:00`,
+        type: 'manual',
+        duration: '2h',
+        label: 'dev:tq',
+      },
+    )
+    if (dayOffset % 2 === 0) {
+      events.push({
+        id: `w-${dayOffset}-3`,
+        title: 'Code review',
+        start: `${ds}T14:00:00`,
+        end: `${ds}T15:00:00`,
+        type: 'auto',
+        duration: '1h',
+      })
+    }
+  }
+  return events
+}
+
+// Generate events across a month for month view
+function generateMonthEvents(): TimeBlockEvent[] {
+  const events: TimeBlockEvent[] = []
+  const year = today.getFullYear()
+  const month = today.getMonth()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  for (let day = 1; day <= daysInMonth; day++) {
+    const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    // Add 1-3 events per day
+    events.push({
+      id: `m-${day}-1`,
+      title: 'Task',
+      start: `${ds}T09:00:00`,
+      end: `${ds}T10:00:00`,
+      type: 'manual',
+    })
+    if (day % 2 === 0) {
+      events.push({
+        id: `m-${day}-2`,
+        title: 'Meeting',
+        start: `${ds}T14:00:00`,
+        end: `${ds}T15:00:00`,
+        type: 'gcal',
+      })
+    }
+    if (day % 3 === 0) {
+      events.push({
+        id: `m-${day}-3`,
+        title: 'Review',
+        start: `${ds}T16:00:00`,
+        end: `${ds}T17:00:00`,
+        type: 'auto',
+      })
+    }
+  }
+  return events
+}
+
 const sampleEvents: TimeBlockEvent[] = [
   {
     id: '1',
@@ -105,6 +182,34 @@ export const WithEvents: Story = {
 export const ManualOnly: Story = {
   args: {
     events: sampleEvents.filter((e) => e.type === 'manual'),
+  },
+}
+
+export const WeekView: Story = {
+  args: {
+    events: generateWeekEvents(),
+    initialView: 'week',
+  },
+}
+
+export const MonthView: Story = {
+  args: {
+    events: generateMonthEvents(),
+    initialView: 'month',
+  },
+}
+
+export const WeekViewWithDayEvents: Story = {
+  args: {
+    events: [...sampleEvents, ...generateWeekEvents()],
+    initialView: 'week',
+  },
+}
+
+export const MonthViewEmpty: Story = {
+  args: {
+    events: [],
+    initialView: 'month',
   },
 }
 
