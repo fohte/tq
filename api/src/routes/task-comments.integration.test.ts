@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { app } from '@api/app'
-import { setupTestDb } from '@api/testing'
+import { assertDefined, jsonBody, setupTestDb } from '@api/testing'
 import { describe, expect, it } from 'vitest'
 
 setupTestDb()
@@ -28,7 +26,7 @@ describe('task comments API', () => {
       })
 
       expect(res.status).toBe(201)
-      const body = (await res.json()) as CommentResponse
+      const body = await jsonBody<CommentResponse>(res)
       expect(body.content).toBe('First comment')
       expect(body.taskId).toBe(task.id)
       expect(body.id).toBeDefined()
@@ -77,7 +75,7 @@ describe('task comments API', () => {
       const res = await app.request(`/api/tasks/${task.id}/comments`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as CommentResponse[]
+      const body = await jsonBody<CommentResponse[]>(res)
       expect(body).toHaveLength(3)
       expect(body.map((c) => c.content)).toEqual(['First', 'Second', 'Third'])
     })
@@ -98,9 +96,10 @@ describe('task comments API', () => {
       const res = await app.request(`/api/tasks/${task1.id}/comments`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as CommentResponse[]
+      const body = await jsonBody<CommentResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.content).toBe('Comment on task 1')
+      assertDefined(body[0])
+      expect(body[0].content).toBe('Comment on task 1')
     })
   })
 
@@ -119,7 +118,7 @@ describe('task comments API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as CommentResponse
+      const body = await jsonBody<CommentResponse>(res)
       expect(body.content).toBe('Updated')
     })
 
@@ -169,7 +168,7 @@ describe('task comments API', () => {
       expect(res.status).toBe(204)
 
       const listRes = await app.request(`/api/tasks/${task.id}/comments`)
-      expect((await listRes.json()) as CommentResponse[]).toEqual([])
+      expect(await jsonBody<CommentResponse[]>(listRes)).toEqual([])
     })
 
     it('returns 404 for non-existent comment', async () => {
@@ -196,7 +195,7 @@ async function createTask(title: string) {
       `Failed to create task: ${String(res.status)} ${await res.text()}`,
     )
   }
-  return (await res.json()) as { id: string }
+  return jsonBody<{ id: string }>(res)
 }
 
 async function createComment(taskId: string, content: string) {
@@ -210,5 +209,5 @@ async function createComment(taskId: string, content: string) {
       `Failed to create comment: ${String(res.status)} ${await res.text()}`,
     )
   }
-  return (await res.json()) as CommentResponse
+  return jsonBody<CommentResponse>(res)
 }

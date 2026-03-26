@@ -6,6 +6,8 @@ import { and, inArray, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
+const subtreeIdSchema = z.array(z.object({ id: z.string() }))
+
 const treeQuerySchema = z.object({
   rootId: z.uuid().optional(),
 })
@@ -31,10 +33,7 @@ export const tasksTreeApp = new Hono().get(
         SELECT id FROM subtree
       `)
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- raw SQL result cast
-      const ids = (subtreeIds as unknown as Array<{ id: string }>).map(
-        (r) => r.id,
-      )
+      const ids = subtreeIdSchema.parse(subtreeIds).map((r) => r.id)
       if (ids.length === 0) {
         return c.json([], 200)
       }

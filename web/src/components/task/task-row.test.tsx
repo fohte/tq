@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TreeTaskRow } from '@web/components/task/task-row'
 import type { TreeNode } from '@web/hooks/use-tasks'
+import { atIndex } from '@web/lib/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockHandleStatusAction = vi.fn()
@@ -107,7 +107,7 @@ describe('TreeTaskRow', () => {
     renderTree(node)
     const completions = screen.getAllByTestId('child-completion')
     // Parent node should show 1/3
-    expect(completions[0]).toHaveTextContent('1/3')
+    expect(atIndex(completions, 0)).toHaveTextContent('1/3')
   })
 
   it('does not show child completion count when no children', () => {
@@ -129,7 +129,7 @@ describe('TreeTaskRow', () => {
     expect(screen.getByText('Child Task')).toBeInTheDocument()
 
     // Click collapse button
-    const collapseBtn = screen.getAllByLabelText('Collapse')[0]!
+    const collapseBtn = atIndex(screen.getAllByLabelText('Collapse'), 0)
     await user.click(collapseBtn)
 
     // Children hidden
@@ -147,7 +147,7 @@ describe('TreeTaskRow', () => {
     renderTree(node)
 
     // Collapse
-    await user.click(screen.getAllByLabelText('Collapse')[0]!)
+    await user.click(atIndex(screen.getAllByLabelText('Collapse'), 0))
     expect(screen.queryByText('Child Task')).not.toBeInTheDocument()
 
     // Expand

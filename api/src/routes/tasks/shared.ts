@@ -82,8 +82,8 @@ export function buildTree(
   const roots: TreeNode[] = []
 
   for (const task of allTasks) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- just inserted above
-    const node = nodeMap.get(task.id)!
+    const node = nodeMap.get(task.id)
+    if (!node) throw new Error(`Node not found for task ${task.id}`)
     const parentNode = task.parentId != null ? nodeMap.get(task.parentId) : null
 
     if (parentNode) {

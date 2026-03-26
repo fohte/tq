@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { app } from '@api/app'
 import {
   createComment,
@@ -8,7 +6,7 @@ import {
   createTask,
   TaskResponse,
 } from '@api/routes/tasks/testing'
-import { setupTestDb } from '@api/testing'
+import { assertDefined, jsonBody, setupTestDb } from '@api/testing'
 import { describe, expect, it } from 'vitest'
 
 setupTestDb()
@@ -29,9 +27,10 @@ describe('tasks search API', () => {
       const res = await app.request('/api/tasks/search?hasEstimate=false')
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Without estimate')
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Without estimate')
     })
 
     it('searches free text in title', async () => {
@@ -43,9 +42,10 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Deploy to production')
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Deploy to production')
     })
 
     it('searches free text in description', async () => {
@@ -57,9 +57,10 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Task A')
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Task A')
     })
 
     it('searches free text in task page content', async () => {
@@ -72,9 +73,10 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Task with page')
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Task with page')
     })
 
     it('filters by is: prefix in q parameter', async () => {
@@ -87,9 +89,10 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Completed task')
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Completed task')
     })
 
     it('filters by label: prefix in q parameter', async () => {
@@ -102,9 +105,10 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Dev task')
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Dev task')
     })
 
     it('filters by context: prefix in q parameter', async () => {
@@ -116,9 +120,10 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Work task')
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Work task')
     })
 
     it('filters by has:pages prefix in q parameter', async () => {
@@ -131,9 +136,10 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Has pages')
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Has pages')
     })
 
     it('filters by has:comments prefix in q parameter', async () => {
@@ -146,9 +152,10 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Has comments')
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Has comments')
     })
 
     it('filters by parent: prefix in q parameter', async () => {
@@ -161,9 +168,10 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Child')
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Child')
     })
 
     it('combines free text with prefix filters', async () => {
@@ -176,9 +184,10 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Deploy app')
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Deploy app')
     })
 
     it('returns all tasks when q is empty', async () => {
@@ -188,7 +197,7 @@ describe('tasks search API', () => {
       const res = await app.request('/api/tasks/search')
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(2)
     })
 
@@ -200,7 +209,7 @@ describe('tasks search API', () => {
       const res = await app.request('/api/tasks/search?limit=1&offset=1')
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
     })
   })
@@ -210,11 +219,10 @@ describe('tasks search API', () => {
       const res = await app.request('/api/tasks/search/suggest?prefix=is:')
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as Array<{
-        value: string
-        display: string
-        category: string
-      }>
+      const body =
+        await jsonBody<
+          Array<{ value: string; display: string; category: string }>
+        >(res)
       expect(body.length).toBeGreaterThan(0)
       expect(body.every((s) => s.category === 'is')).toBe(true)
     })

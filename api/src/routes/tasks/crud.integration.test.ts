@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { app } from '@api/app'
 import {
   createRecurringTask,
@@ -8,7 +6,7 @@ import {
   TEST_UUID,
   TimeBlockResponse,
 } from '@api/routes/tasks/testing'
-import { setupTestDb } from '@api/testing'
+import { assertDefined, jsonBody, setupTestDb } from '@api/testing'
 import { describe, expect, it } from 'vitest'
 
 setupTestDb()
@@ -23,7 +21,7 @@ describe('tasks CRUD API', () => {
       })
 
       expect(res.status).toBe(201)
-      const body = (await res.json()) as TaskResponse
+      const body = await jsonBody<TaskResponse>(res)
       expect(body.title).toBe('Buy groceries')
       expect(body.status).toBe('todo')
       expect(body.context).toBe('personal')
@@ -45,7 +43,7 @@ describe('tasks CRUD API', () => {
       })
 
       expect(res.status).toBe(201)
-      const body = (await res.json()) as TaskResponse
+      const body = await jsonBody<TaskResponse>(res)
       expect(body.title).toBe('Deploy app')
       expect(body.description).toBe('Deploy to production')
       expect(body.startDate).toBe('2026-03-20')
@@ -93,7 +91,7 @@ describe('tasks CRUD API', () => {
       const res = await app.request('/api/tasks')
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(2)
     })
 
@@ -106,7 +104,7 @@ describe('tasks CRUD API', () => {
       const res = await app.request(`/api/tasks?parentId=${parent.id}`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(2)
       expect(body.every((t) => t.parentId === parent.id)).toBe(true)
     })
@@ -124,9 +122,10 @@ describe('tasks CRUD API', () => {
       const res = await app.request('/api/tasks?status=todo')
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Task B')
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Task B')
     })
   })
 
@@ -137,7 +136,7 @@ describe('tasks CRUD API', () => {
       const res = await app.request(`/api/tasks/${created.id}`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse
+      const body = await jsonBody<TaskResponse>(res)
       expect(body.title).toBe('My task')
       expect(body.childCompletionCount).toEqual({ completed: 0, total: 0 })
     })
@@ -162,7 +161,7 @@ describe('tasks CRUD API', () => {
       const res = await app.request(`/api/tasks/${parent.id}`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse
+      const body = await jsonBody<TaskResponse>(res)
       expect(body.childCompletionCount).toEqual({ completed: 1, total: 2 })
     })
 
@@ -175,13 +174,15 @@ describe('tasks CRUD API', () => {
       const res = await app.request(`/api/tasks/${task.id}`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse & {
-        timeBlocks: TimeBlockResponse[]
-      }
+      const body = await jsonBody<
+        TaskResponse & { timeBlocks: TimeBlockResponse[] }
+      >(res)
       expect(body.timeBlocks).toHaveLength(2)
       // First block is closed, second is open
-      expect(body.timeBlocks[0]!.endTime).not.toBeNull()
-      expect(body.timeBlocks[1]!.endTime).toBeNull()
+      assertDefined(body.timeBlocks[0])
+      assertDefined(body.timeBlocks[1])
+      expect(body.timeBlocks[0].endTime).not.toBeNull()
+      expect(body.timeBlocks[1].endTime).toBeNull()
     })
 
     it('returns empty timeBlocks when task has none', async () => {
@@ -190,9 +191,9 @@ describe('tasks CRUD API', () => {
       const res = await app.request(`/api/tasks/${task.id}`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse & {
-        timeBlocks: TimeBlockResponse[]
-      }
+      const body = await jsonBody<
+        TaskResponse & { timeBlocks: TimeBlockResponse[] }
+      >(res)
       expect(body.timeBlocks).toEqual([])
     })
   })
@@ -208,7 +209,7 @@ describe('tasks CRUD API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse
+      const body = await jsonBody<TaskResponse>(res)
       expect(body.title).toBe('Updated')
       expect(body.description).toBe('New desc')
     })
@@ -235,7 +236,7 @@ describe('tasks CRUD API', () => {
 
       // parentId is stripped by Zod and not applied
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse
+      const body = await jsonBody<TaskResponse>(res)
       expect(body.title).toBe('Updated')
       expect(body.parentId).toBeNull()
     })
@@ -252,7 +253,7 @@ describe('tasks CRUD API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse
+      const body = await jsonBody<TaskResponse>(res)
       expect(body.description).toBeNull()
     })
   })
@@ -289,7 +290,7 @@ describe('tasks CRUD API', () => {
 
       const res = await app.request(`/api/tasks/${child.id}`)
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse
+      const body = await jsonBody<TaskResponse>(res)
       expect(body.parentId).toBeNull()
     })
 
@@ -298,7 +299,8 @@ describe('tasks CRUD API', () => {
         type: 'daily',
         interval: 1,
       })
-      const ruleId = task.recurrenceRuleId!
+      assertDefined(task.recurrenceRuleId)
+      const ruleId = task.recurrenceRuleId
 
       await app.request(`/api/tasks/${task.id}`, { method: 'DELETE' })
 
@@ -321,17 +323,18 @@ describe('tasks CRUD API', () => {
       const completeRes = await app.request(`/api/tasks/${task.id}/complete`, {
         method: 'POST',
       })
-      const completeBody = (await completeRes.json()) as TaskResponse & {
-        nextTask: TaskResponse | null
-      }
-      const nextTask = completeBody.nextTask!
+      const completeBody = await jsonBody<
+        TaskResponse & { nextTask: TaskResponse | null }
+      >(completeRes)
+      assertDefined(completeBody.nextTask)
+      const nextTask = completeBody.nextTask
 
       // Delete the completed task
       await app.request(`/api/tasks/${task.id}`, { method: 'DELETE' })
 
       // The next active task should still have its recurrence rule intact
       const nextRes = await app.request(`/api/tasks/${nextTask.id}`)
-      const nextBody = (await nextRes.json()) as TaskResponse
+      const nextBody = await jsonBody<TaskResponse>(nextRes)
       expect(nextBody.recurrenceRuleId).toBe(task.recurrenceRuleId)
       expect(nextBody.recurrenceRule).not.toBeNull()
     })
@@ -351,11 +354,11 @@ describe('tasks CRUD API', () => {
         })
 
         expect(res.status).toBe(201)
-        const body = (await res.json()) as TaskResponse
+        const body = await jsonBody<TaskResponse>(res)
         expect(body.recurrenceRuleId).not.toBeNull()
-        expect(body.recurrenceRule).not.toBeNull()
-        expect(body.recurrenceRule!.type).toBe('daily')
-        expect(body.recurrenceRule!.interval).toBe(1)
+        assertDefined(body.recurrenceRule)
+        expect(body.recurrenceRule.type).toBe('daily')
+        expect(body.recurrenceRule.interval).toBe(1)
       })
 
       it('creates a task without recurrence rule (backward compat)', async () => {
@@ -366,7 +369,7 @@ describe('tasks CRUD API', () => {
         })
 
         expect(res.status).toBe(201)
-        const body = (await res.json()) as TaskResponse
+        const body = await jsonBody<TaskResponse>(res)
         expect(body.recurrenceRuleId).toBeNull()
         expect(body.recurrenceRule).toBeNull()
       })
@@ -389,10 +392,10 @@ describe('tasks CRUD API', () => {
         })
 
         expect(res.status).toBe(200)
-        const body = (await res.json()) as TaskResponse
-        expect(body.recurrenceRule).not.toBeNull()
-        expect(body.recurrenceRule!.type).toBe('weekly')
-        expect(body.recurrenceRule!.daysOfWeek).toEqual([1, 3, 5])
+        const body = await jsonBody<TaskResponse>(res)
+        assertDefined(body.recurrenceRule)
+        expect(body.recurrenceRule.type).toBe('weekly')
+        expect(body.recurrenceRule.daysOfWeek).toEqual([1, 3, 5])
       })
 
       it('updates an existing recurrence rule', async () => {
@@ -410,9 +413,10 @@ describe('tasks CRUD API', () => {
         })
 
         expect(res.status).toBe(200)
-        const body = (await res.json()) as TaskResponse
-        expect(body.recurrenceRule!.type).toBe('weekly')
-        expect(body.recurrenceRule!.interval).toBe(2)
+        const body = await jsonBody<TaskResponse>(res)
+        assertDefined(body.recurrenceRule)
+        expect(body.recurrenceRule.type).toBe('weekly')
+        expect(body.recurrenceRule.interval).toBe(2)
         // Same rule ID (updated in place)
         expect(body.recurrenceRuleId).toBe(task.recurrenceRuleId)
       })
@@ -430,7 +434,7 @@ describe('tasks CRUD API', () => {
         })
 
         expect(res.status).toBe(200)
-        const body = (await res.json()) as TaskResponse
+        const body = await jsonBody<TaskResponse>(res)
         expect(body.recurrenceRuleId).toBeNull()
         expect(body.recurrenceRule).toBeNull()
       })
@@ -447,11 +451,13 @@ describe('tasks CRUD API', () => {
           `/api/tasks/${task.id}/complete`,
           { method: 'POST' },
         )
-        const completeBody = (await completeRes.json()) as TaskResponse & {
-          nextTask: TaskResponse | null
-        }
-        const nextTask = completeBody.nextTask!
-        const originalRuleId = task.recurrenceRuleId!
+        const completeBody = await jsonBody<
+          TaskResponse & { nextTask: TaskResponse | null }
+        >(completeRes)
+        assertDefined(completeBody.nextTask)
+        const nextTask = completeBody.nextTask
+        assertDefined(task.recurrenceRuleId)
+        const originalRuleId = task.recurrenceRuleId
 
         // Update the recurrence rule on the next task
         const patchRes = await app.request(`/api/tasks/${nextTask.id}`, {
@@ -463,14 +469,15 @@ describe('tasks CRUD API', () => {
         })
 
         expect(patchRes.status).toBe(200)
-        const patchBody = (await patchRes.json()) as TaskResponse
+        const patchBody = await jsonBody<TaskResponse>(patchRes)
         // Should get a NEW rule ID since the old one was shared
         expect(patchBody.recurrenceRuleId).not.toBe(originalRuleId)
-        expect(patchBody.recurrenceRule!.type).toBe('weekly')
+        assertDefined(patchBody.recurrenceRule)
+        expect(patchBody.recurrenceRule.type).toBe('weekly')
 
         // The completed task should still reference the original rule
         const origRes = await app.request(`/api/tasks/${task.id}`)
-        const origBody = (await origRes.json()) as TaskResponse
+        const origBody = await jsonBody<TaskResponse>(origRes)
         expect(origBody.recurrenceRuleId).toBe(originalRuleId)
       })
     })
@@ -486,10 +493,10 @@ describe('tasks CRUD API', () => {
         const res = await app.request(`/api/tasks/${task.id}`)
 
         expect(res.status).toBe(200)
-        const body = (await res.json()) as TaskResponse
-        expect(body.recurrenceRule).not.toBeNull()
-        expect(body.recurrenceRule!.type).toBe('monthly')
-        expect(body.recurrenceRule!.dayOfMonth).toBe(15)
+        const body = await jsonBody<TaskResponse>(res)
+        assertDefined(body.recurrenceRule)
+        expect(body.recurrenceRule.type).toBe('monthly')
+        expect(body.recurrenceRule.dayOfMonth).toBe(15)
       })
     })
 
@@ -499,7 +506,8 @@ describe('tasks CRUD API', () => {
           type: 'daily',
           interval: 1,
         })
-        const ruleId = task.recurrenceRuleId!
+        assertDefined(task.recurrenceRuleId)
+        const ruleId = task.recurrenceRuleId
 
         // Remove recurrence rule
         await app.request(`/api/tasks/${task.id}`, {
@@ -510,7 +518,7 @@ describe('tasks CRUD API', () => {
 
         // Verify the rule was removed from the task
         const getRes = await app.request(`/api/tasks/${task.id}`)
-        const body = (await getRes.json()) as TaskResponse
+        const body = await jsonBody<TaskResponse>(getRes)
         expect(body.recurrenceRuleId).toBeNull()
 
         // Create a new task with the same rule type to verify old rule is gone
@@ -534,10 +542,11 @@ describe('tasks CRUD API', () => {
           `/api/tasks/${task.id}/complete`,
           { method: 'POST' },
         )
-        const completeBody = (await completeRes.json()) as TaskResponse & {
-          nextTask: TaskResponse | null
-        }
-        const nextTask = completeBody.nextTask!
+        const completeBody = await jsonBody<
+          TaskResponse & { nextTask: TaskResponse | null }
+        >(completeRes)
+        assertDefined(completeBody.nextTask)
+        const nextTask = completeBody.nextTask
         expect(nextTask.recurrenceRuleId).toBe(task.recurrenceRuleId)
 
         // Remove recurrence from the completed task
@@ -549,7 +558,7 @@ describe('tasks CRUD API', () => {
 
         // The next active task should still have its recurrence rule intact
         const nextRes = await app.request(`/api/tasks/${nextTask.id}`)
-        const nextBody = (await nextRes.json()) as TaskResponse
+        const nextBody = await jsonBody<TaskResponse>(nextRes)
         expect(nextBody.recurrenceRuleId).toBe(task.recurrenceRuleId)
         expect(nextBody.recurrenceRule).not.toBeNull()
       })

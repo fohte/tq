@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 import { app } from '@api/app'
-import { setupTestDb } from '@api/testing'
+import { jsonBody, setupTestDb } from '@api/testing'
 import { describe, expect, it } from 'vitest'
 
 setupTestDb()
@@ -37,7 +36,7 @@ describe('task pages API', () => {
       const res = await app.request(`/api/tasks/${task.id}/pages`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as PageResponse[]
+      const body = await jsonBody<PageResponse[]>(res)
       expect(body).toHaveLength(3)
       expect(body.map((p) => p.title)).toEqual(['Page A', 'Page B', 'Page C'])
     })
@@ -60,7 +59,7 @@ describe('task pages API', () => {
       })
 
       expect(res.status).toBe(201)
-      const body = (await res.json()) as PageResponse
+      const body = await jsonBody<PageResponse>(res)
       expect(body.title).toBe('My Page')
       expect(body.content).toBe('')
       expect(body.sortOrder).toBe(0)
@@ -82,7 +81,7 @@ describe('task pages API', () => {
       })
 
       expect(res.status).toBe(201)
-      const body = (await res.json()) as PageResponse
+      const body = await jsonBody<PageResponse>(res)
       expect(body.title).toBe('Detailed Page')
       expect(body.content).toBe('# Hello\nWorld')
       expect(body.sortOrder).toBe(5)
@@ -123,7 +122,7 @@ describe('task pages API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as PageResponse
+      const body = await jsonBody<PageResponse>(res)
       expect(body.title).toBe('Updated')
     })
 
@@ -138,7 +137,7 @@ describe('task pages API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as PageResponse
+      const body = await jsonBody<PageResponse>(res)
       expect(body.content).toBe('New content')
     })
 
@@ -153,7 +152,7 @@ describe('task pages API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as PageResponse
+      const body = await jsonBody<PageResponse>(res)
       expect(body.sortOrder).toBe(10)
     })
 
@@ -200,7 +199,7 @@ describe('task pages API', () => {
 
       // Verify page is gone
       const listRes = await app.request(`/api/tasks/${task.id}/pages`)
-      const pages = (await listRes.json()) as PageResponse[]
+      const pages = await jsonBody<PageResponse[]>(listRes)
       expect(pages).toHaveLength(0)
     })
 
@@ -237,9 +236,7 @@ describe('task pages API', () => {
       const res = await app.request(`/api/tasks/${task.id}`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as {
-        pages: PageResponse[]
-      }
+      const body = await jsonBody<{ pages: PageResponse[] }>(res)
       expect(body.pages).toHaveLength(2)
       expect(body.pages.map((p) => p.title)).toEqual(['Page 1', 'Page 2'])
     })
@@ -250,7 +247,7 @@ describe('task pages API', () => {
       const res = await app.request(`/api/tasks/${task.id}`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as { pages: PageResponse[] }
+      const body = await jsonBody<{ pages: PageResponse[] }>(res)
       expect(body.pages).toEqual([])
     })
   })
@@ -267,7 +264,7 @@ async function createTask(title: string) {
       `Failed to create task: ${String(res.status)} ${await res.text()}`,
     )
   }
-  return (await res.json()) as { id: string; title: string }
+  return jsonBody<{ id: string; title: string }>(res)
 }
 
 async function createPage(
@@ -284,5 +281,5 @@ async function createPage(
       `Failed to create page: ${String(res.status)} ${await res.text()}`,
     )
   }
-  return (await res.json()) as PageResponse
+  return jsonBody<PageResponse>(res)
 }

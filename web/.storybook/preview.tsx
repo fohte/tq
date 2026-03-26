@@ -31,9 +31,9 @@ const preview: Preview = {
   },
   decorators: [
     (Story, context) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Storybook globals typing is `any`
-      const theme = context.globals['theme'] ?? 'dark'
-      document.documentElement.classList.toggle('dark', theme === 'dark')
+      const theme: unknown = context.globals['theme']
+      const themeValue = typeof theme === 'string' ? theme : 'dark'
+      document.documentElement.classList.toggle('dark', themeValue === 'dark')
       return (
         <ContextFilterProvider>
           <Story />

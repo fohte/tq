@@ -4,7 +4,7 @@ import { DATABASE_URL } from '@api/env'
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
-import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, expect } from 'vitest'
 
 // Single connection to ensure BEGIN/ROLLBACK operate on the same connection
 const testClient = postgres(DATABASE_URL, { max: 1 })
@@ -32,4 +32,27 @@ export function setupTestDb() {
   afterAll(async () => {
     await testClient.end()
   })
+}
+
+/**
+ * Parse a JSON response body as a typed value.
+ * Centralizes the unavoidable `unknown -> T` cast for API test responses,
+ * since `Response.json()` returns `unknown` and runtime validation (e.g. Zod)
+ * is impractical in integration tests.
+ */
+export async function jsonBody<T>(res: Response): Promise<T> {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  return (await res.json()) as T
+}
+
+/**
+ * Assert that a value is defined (not null/undefined), narrowing its type.
+ * Replaces non-null assertions (`!`) in tests with a proper Vitest assertion
+ * that produces clear error messages on failure.
+ */
+export function assertDefined<T>(
+  value: T | null | undefined,
+  msg?: string,
+): asserts value is T {
+  expect(value, msg ?? 'Expected value to be defined').toBeDefined()
 }

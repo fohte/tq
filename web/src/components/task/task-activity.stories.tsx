@@ -97,10 +97,11 @@ export const WithComments: Story = {
   },
 }
 
+const [firstComment] = baseComments
+
 export const SingleComment: Story = {
   args: {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- test data known to exist
-    comments: [baseComments[0]!],
+    comments: firstComment ? [firstComment] : [],
   },
 }
 

@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-non-null-assertion */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { atIndex } from '@web/lib/test-utils'
 // Import after mocks
 import { Route } from '@web/routes/tasks/$taskId'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -97,6 +97,7 @@ vi.mock('@tanstack/react-router', () => {
   }
 })
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- extracting component from mocked Route object
 const TaskPage = (Route as unknown as { component: React.ComponentType })
   .component
 
@@ -167,7 +168,9 @@ describe('TaskPage', () => {
     renderTaskPage()
     const editors = screen.getAllByTestId('mock-markdown-editor')
     const editorWithDescription = editors.find(
-      (e) => (e as HTMLTextAreaElement).defaultValue === mockTask.description,
+      (e) =>
+        e instanceof HTMLTextAreaElement &&
+        e.defaultValue === mockTask.description,
     )
     expect(editorWithDescription).toBeTruthy()
   })
@@ -194,7 +197,7 @@ describe('TaskPage', () => {
     const user = userEvent.setup()
 
     const titleButtons = screen.getAllByText('Test task title')
-    await user.click(titleButtons[0]!)
+    await user.click(atIndex(titleButtons, 0))
 
     const input = screen.getByDisplayValue('Test task title')
     expect(input).toBeInTheDocument()

@@ -109,6 +109,10 @@ function isShortEvent(event: EventContentArg['event']): boolean {
   return durationMs <= 30 * 60 * 1000 // 30 minutes or less
 }
 
+function isIconName(value: string): value is keyof typeof icons {
+  return value in icons
+}
+
 function resolveIcon(name: string | undefined) {
   if (name == null || name === '') return null
   // Convert kebab-case to PascalCase: "dumbbell" -> "Dumbbell", "arrow-left" -> "ArrowLeft"
@@ -116,9 +120,8 @@ function resolveIcon(name: string | undefined) {
     .split('-')
     .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
     .join('')
-  if (!(pascalCase in icons)) return null
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated by `in` check above
-  return icons[pascalCase as keyof typeof icons]
+  if (!isIconName(pascalCase)) return null
+  return icons[pascalCase]
 }
 
 function ScheduleBlock({

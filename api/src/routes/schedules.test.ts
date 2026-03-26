@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { expandScheduleForDate } from '@api/routes/schedule-expansion'
 import { describe, expect, it } from 'vitest'
 
@@ -149,14 +148,16 @@ describe('expandScheduleForDate', () => {
       // Monday has start portion (23:00->midnight)
       // Previous day (Sunday=0) is NOT in daysOfWeek, so no end portion
       expect(mondayBlocks).toHaveLength(1)
-      expect(mondayBlocks[0]!.start).toBe('2026-03-23T23:00:00')
+      expect(mondayBlocks[0]).toBeDefined()
+      expect(mondayBlocks[0]?.start).toBe('2026-03-23T23:00:00')
 
       // 2026-03-24 is Tuesday - not in daysOfWeek
       // But Monday (previous day) IS in daysOfWeek, so end portion should appear
       const tuesdayBlocks = expandScheduleForDate(schedule, rule, '2026-03-24')
       expect(tuesdayBlocks).toHaveLength(1)
-      expect(tuesdayBlocks[0]!.start).toBe('2026-03-24T00:00:00')
-      expect(tuesdayBlocks[0]!.end).toBe('2026-03-24T07:00:00')
+      expect(tuesdayBlocks[0]).toBeDefined()
+      expect(tuesdayBlocks[0]?.start).toBe('2026-03-24T00:00:00')
+      expect(tuesdayBlocks[0]?.end).toBe('2026-03-24T07:00:00')
     })
   })
 

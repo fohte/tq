@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
   CalendarHeader,
   type CalendarViewType,
 } from '@web/components/calendar/calendar-header'
+import { atIndex } from '@web/lib/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 
 function renderHeader(
@@ -29,7 +29,7 @@ describe('CalendarHeader', () => {
     renderHeader()
     const dateTexts = screen.getAllByText(/March 7, 2025/)
     expect(dateTexts.length).toBeGreaterThan(0)
-    expect(dateTexts[0]!.textContent).toContain('Fri')
+    expect(atIndex(dateTexts, 0).textContent).toContain('Fri')
   })
 
   it('calls onPrev when previous button is clicked', async () => {
@@ -38,7 +38,7 @@ describe('CalendarHeader', () => {
 
     const prevButtons = within(container).getAllByLabelText('Previous')
     // Base-UI renders duplicate elements; click the last one which is the visible button
-    await user.click(prevButtons[prevButtons.length - 1]!)
+    await user.click(atIndex(prevButtons, prevButtons.length - 1))
     expect(props.onPrev).toHaveBeenCalledOnce()
   })
 
@@ -47,7 +47,7 @@ describe('CalendarHeader', () => {
     const { props, container } = renderHeader()
 
     const nextButtons = within(container).getAllByLabelText('Next')
-    await user.click(nextButtons[nextButtons.length - 1]!)
+    await user.click(atIndex(nextButtons, nextButtons.length - 1))
     expect(props.onNext).toHaveBeenCalledOnce()
   })
 
@@ -56,7 +56,7 @@ describe('CalendarHeader', () => {
     const { props, container } = renderHeader()
 
     const todayButtons = within(container).getAllByText('Today')
-    await user.click(todayButtons[todayButtons.length - 1]!)
+    await user.click(atIndex(todayButtons, todayButtons.length - 1))
     expect(props.onToday).toHaveBeenCalledOnce()
   })
 
@@ -64,7 +64,7 @@ describe('CalendarHeader', () => {
     renderHeader({ activeView: 'week' })
     const weekButtons = screen.getAllByText('Week')
     // The last element is the visible one rendered by Base-UI
-    expect(weekButtons[weekButtons.length - 1]!.className).toContain(
+    expect(atIndex(weekButtons, weekButtons.length - 1).className).toContain(
       'bg-background',
     )
   })
@@ -74,7 +74,7 @@ describe('CalendarHeader', () => {
     const { props } = renderHeader({ activeView: 'day' })
 
     const monthButtons = screen.getAllByText('Month')
-    await user.click(monthButtons[monthButtons.length - 1]!)
+    await user.click(atIndex(monthButtons, monthButtons.length - 1))
     expect(props.onViewChange).toHaveBeenCalledWith('month')
   })
 

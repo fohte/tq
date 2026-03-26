@@ -85,8 +85,10 @@ export const tasksActionsApp = new Hono()
         SELECT id FROM ancestors WHERE id = ${id}
       `)
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- raw SQL result cast
-        if ((ancestors as unknown as unknown[]).length > 0) {
+        const ancestorRows = z
+          .array(z.object({ id: z.string() }))
+          .parse(ancestors)
+        if (ancestorRows.length > 0) {
           return c.json({ error: 'Circular reference detected' }, 409)
         }
       }
