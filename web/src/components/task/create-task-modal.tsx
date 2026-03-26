@@ -3,6 +3,7 @@ import { Dialog, DialogOverlay, DialogPortal } from '@web/components/ui/dialog'
 import { MarkdownEditor } from '@web/components/ui/markdown-editor'
 import type { CreateTaskInput } from '@web/hooks/use-tasks'
 import { useCreateTask } from '@web/hooks/use-tasks'
+import { selectHandler } from '@web/lib/form-utils'
 import { formatMinutes, parseDurationToMinutes } from '@web/lib/parse-duration'
 import { cn } from '@web/lib/utils'
 import { Calendar, CalendarPlus, Clock, Layers, X } from 'lucide-react'
@@ -204,12 +205,7 @@ export function CreateTaskModal({
                 >
                   <select
                     value={context}
-                    onChange={(e) => {
-                      setContext(
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- controlled select
-                        e.target.value as ContextValue | '',
-                      )
-                    }}
+                    onChange={selectHandler(setContext)}
                     className="bg-transparent text-xs text-foreground outline-none"
                   >
                     <option value="">—</option>
@@ -344,12 +340,7 @@ export function CreateTaskModal({
                   expanded={
                     <select
                       value={context}
-                      onChange={(e) => {
-                        setContext(
-                          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- controlled select
-                          e.target.value as ContextValue | '',
-                        )
-                      }}
+                      onChange={selectHandler(setContext)}
                       autoFocus
                       className="bg-transparent text-xs outline-none"
                     >

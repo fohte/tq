@@ -73,8 +73,11 @@ function computeNextWeeklyDate(
       }
     }
     // Wrap to next week, first matching day
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- sorted is guaranteed non-empty (checked by caller)
-    const diff = 7 - currentDay + sorted[0]!
+    const firstDay = sorted[0]
+    if (firstDay === undefined) {
+      throw new Error('daysOfWeek must be non-empty')
+    }
+    const diff = 7 - currentDay + firstDay
     const next = new Date(base)
     next.setDate(next.getDate() + diff)
     return formatDate(next)

@@ -1,22 +1,17 @@
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- FullCalendar extendedProps is Record<string, any> */
 import type { EventContentArg } from '@fullcalendar/core'
-import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
+import { getEventProps } from '@web/lib/calendar-utils'
 import { cn } from '@web/lib/utils'
 import { Check, icons, Repeat, Sparkles } from 'lucide-react'
 
-type EventType = TimeBlockEvent['type']
-
 export function EventBlock(arg: EventContentArg) {
   const { event, timeText } = arg
-  const type =
-    (event.extendedProps['type'] as EventType | undefined) ?? 'manual'
-  const duration = event.extendedProps['duration'] as string | undefined
-  const parentRef = event.extendedProps['parentRef'] as string | undefined
-  const label = event.extendedProps['label'] as string | undefined
-  const color = event.extendedProps['color'] as
-    | { bg: string; accent: string }
-    | undefined
-  const iconName = event.extendedProps['icon'] as string | undefined
+  const props = getEventProps(event)
+  const type = props.type ?? 'manual'
+  const duration = props.duration
+  const parentRef = props.parentRef
+  const label = props.label
+  const color = props.color
+  const iconName = props.icon
 
   const isShort = arg.isStart && isShortEvent(event)
 
@@ -121,8 +116,9 @@ function resolveIcon(name: string | undefined) {
     .split('-')
     .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
     .join('')
-  const key = pascalCase as keyof typeof icons
-  return key in icons ? icons[key] : null
+  if (!(pascalCase in icons)) return null
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated by `in` check above
+  return icons[pascalCase as keyof typeof icons]
 }
 
 function ScheduleBlock({

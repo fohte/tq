@@ -7,6 +7,7 @@ import {
   tasks,
   timeBlocks,
 } from '@api/db/schema'
+import { firstOrThrow } from '@api/lib/drizzle-utils'
 import { pageToResponse } from '@api/routes/task-pages'
 import {
   contextEnum,
@@ -62,35 +63,37 @@ export const tasksCrudApp = new Hono()
     let recurrenceRuleId: string | null = null
     let createdRule: typeof recurrenceRules.$inferSelect | null = null
     if (input.recurrenceRule != null) {
-      const [rule] = await db
-        .insert(recurrenceRules)
-        .values({
-          type: input.recurrenceRule.type,
-          interval: input.recurrenceRule.interval,
-          daysOfWeek: input.recurrenceRule.daysOfWeek ?? null,
-          dayOfMonth: input.recurrenceRule.dayOfMonth ?? null,
-        })
-        .returning()
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-      recurrenceRuleId = rule!.id
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-      createdRule = rule!
+      const rule = firstOrThrow(
+        await db
+          .insert(recurrenceRules)
+          .values({
+            type: input.recurrenceRule.type,
+            interval: input.recurrenceRule.interval,
+            daysOfWeek: input.recurrenceRule.daysOfWeek ?? null,
+            dayOfMonth: input.recurrenceRule.dayOfMonth ?? null,
+          })
+          .returning(),
+      )
+      recurrenceRuleId = rule.id
+      createdRule = rule
     }
 
-    const [task] = await db
-      .insert(tasks)
-      .values({
-        title: input.title,
-        description: input.description ?? null,
-        startDate: input.startDate ?? null,
-        dueDate: input.dueDate ?? null,
-        estimatedMinutes: input.estimatedMinutes ?? null,
-        parentId: input.parentId ?? null,
-        projectId: input.projectId ?? null,
-        context: input.context ?? 'personal',
-        recurrenceRuleId,
-      })
-      .returning()
+    const task = firstOrThrow(
+      await db
+        .insert(tasks)
+        .values({
+          title: input.title,
+          description: input.description ?? null,
+          startDate: input.startDate ?? null,
+          dueDate: input.dueDate ?? null,
+          estimatedMinutes: input.estimatedMinutes ?? null,
+          parentId: input.parentId ?? null,
+          projectId: input.projectId ?? null,
+          context: input.context ?? 'personal',
+          recurrenceRuleId,
+        })
+        .returning(),
+    )
 
     if (input.labels != null && input.labels.length > 0) {
       const matchedLabels = await db
@@ -101,16 +104,14 @@ export const tasksCrudApp = new Hono()
       if (matchedLabels.length > 0) {
         await db.insert(taskLabels).values(
           matchedLabels.map((label) => ({
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-            taskId: task!.id,
+            taskId: task.id,
             labelId: label.id,
           })),
         )
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-    return c.json(taskToResponse(task!, createdRule), 201)
+    return c.json(taskToResponse(task, createdRule), 201)
   })
   .get(
     '/',
@@ -261,7 +262,39 @@ export const tasksCrudApp = new Hono()
 
           if (otherRef) {
             // Shared: create new rule
-            const [rule] = await db
+            const rule = firstOrThrow(
+              await db
+                .insert(recurrenceRules)
+                .values({
+                  type: recurrenceRuleInput.type,
+                  interval: recurrenceRuleInput.interval,
+                  daysOfWeek: recurrenceRuleInput.daysOfWeek ?? null,
+                  dayOfMonth: recurrenceRuleInput.dayOfMonth ?? null,
+                })
+                .returning(),
+            )
+            recurrenceRuleId = rule.id
+            updatedRule = rule
+          } else {
+            // Not shared: update in place
+            updatedRule = firstOrThrow(
+              await db
+                .update(recurrenceRules)
+                .set({
+                  type: recurrenceRuleInput.type,
+                  interval: recurrenceRuleInput.interval,
+                  daysOfWeek: recurrenceRuleInput.daysOfWeek ?? null,
+                  dayOfMonth: recurrenceRuleInput.dayOfMonth ?? null,
+                  updatedAt: new Date(),
+                })
+                .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
+                .returning(),
+            )
+          }
+        } else {
+          // Create new rule
+          const rule = firstOrThrow(
+            await db
               .insert(recurrenceRules)
               .values({
                 type: recurrenceRuleInput.type,
@@ -269,57 +302,24 @@ export const tasksCrudApp = new Hono()
                 daysOfWeek: recurrenceRuleInput.daysOfWeek ?? null,
                 dayOfMonth: recurrenceRuleInput.dayOfMonth ?? null,
               })
-              .returning()
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-            recurrenceRuleId = rule!.id
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-            updatedRule = rule!
-          } else {
-            // Not shared: update in place
-            const [rule] = await db
-              .update(recurrenceRules)
-              .set({
-                type: recurrenceRuleInput.type,
-                interval: recurrenceRuleInput.interval,
-                daysOfWeek: recurrenceRuleInput.daysOfWeek ?? null,
-                dayOfMonth: recurrenceRuleInput.dayOfMonth ?? null,
-                updatedAt: new Date(),
-              })
-              .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
-              .returning()
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- update on existing row always returns
-            updatedRule = rule!
-          }
-        } else {
-          // Create new rule
-          const [rule] = await db
-            .insert(recurrenceRules)
-            .values({
-              type: recurrenceRuleInput.type,
-              interval: recurrenceRuleInput.interval,
-              daysOfWeek: recurrenceRuleInput.daysOfWeek ?? null,
-              dayOfMonth: recurrenceRuleInput.dayOfMonth ?? null,
-            })
-            .returning()
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-          recurrenceRuleId = rule!.id
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-          updatedRule = rule!
+              .returning(),
+          )
+          recurrenceRuleId = rule.id
+          updatedRule = rule
         }
       }
 
-      const [updated] = await db
-        .update(tasks)
-        .set({
-          ...taskFields,
-          ...(recurrenceRuleId !== undefined ? { recurrenceRuleId } : {}),
-          updatedAt: new Date(),
-        })
-        .where(eq(tasks.id, id))
-        .returning()
-
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- update on existing row always returns
-      const updatedTask = updated!
+      const updatedTask = firstOrThrow(
+        await db
+          .update(tasks)
+          .set({
+            ...taskFields,
+            ...(recurrenceRuleId !== undefined ? { recurrenceRuleId } : {}),
+            updatedAt: new Date(),
+          })
+          .where(eq(tasks.id, id))
+          .returning(),
+      )
       if (updatedRule == null && updatedTask.recurrenceRuleId != null) {
         updatedRule =
           (await db.query.recurrenceRules.findFirst({

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@web/lib/api'
+import { assertOk } from '@web/lib/assert-response'
 import type { InferResponseType } from 'hono/client'
 import { useMemo } from 'react'
 
@@ -49,7 +50,7 @@ export function useTaskList(filter?: {
       const res = await api.api.tasks.$get({
         query: filter ?? {},
       })
-      if (!res.ok) throw new Error('Failed to fetch tasks') // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- runtime safety guard
+      assertOk(res)
       return res.json()
     },
   })
@@ -301,7 +302,7 @@ export function useTaskTree(options: { enabled: boolean }) {
     queryKey: taskKeys.tree,
     queryFn: async () => {
       const res = await api.api.tasks.tree.$get({ query: {} })
-      if (!res.ok) throw new Error('Failed to fetch task tree') // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- runtime safety guard
+      assertOk(res)
       return res.json()
     },
     enabled: options.enabled,

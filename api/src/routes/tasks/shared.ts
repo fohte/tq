@@ -1,5 +1,6 @@
 import { db } from '@api/db/connection'
 import { recurrenceRules, tasks, timeBlocks } from '@api/db/schema'
+import { firstOrThrow } from '@api/lib/drizzle-utils'
 import { and, eq, isNull } from 'drizzle-orm'
 import { createFactory } from 'hono/factory'
 import { z } from 'zod'
@@ -110,11 +111,10 @@ type TaskEnv = {
   }
 }
 
-const factory = createFactory<TaskEnv>()
+const factory = createFactory<TaskEnv, '/:id'>()
 
 export const requireTask = factory.createMiddleware(async (c, next) => {
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed by route param
-  const id = c.req.param('id')!
+  const id = c.req.param('id')
 
   const task = await db.query.tasks.findFirst({
     where: eq(tasks.id, id),
@@ -132,7 +132,7 @@ export async function updateStatusAndCloseTimeBlocks(
   status: 'todo' | 'completed',
 ) {
   const now = new Date()
-  const [[updatedTask], closedBlocks] = await Promise.all([
+  const [taskRows, closedBlocks] = await Promise.all([
     db
       .update(tasks)
       .set({ status, updatedAt: now })
@@ -144,6 +144,5 @@ export async function updateStatusAndCloseTimeBlocks(
       .where(and(eq(timeBlocks.taskId, taskId), isNull(timeBlocks.endTime)))
       .returning(),
   ])
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- update on existing row always returns
-  return [updatedTask!, closedBlocks] as const
+  return [firstOrThrow(taskRows), closedBlocks] as const
 }

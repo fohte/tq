@@ -13,6 +13,7 @@ import {
 } from '@web/components/calendar/calendar-header'
 import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
 import { EventBlock } from '@web/components/calendar/event-block'
+import { getEventProps } from '@web/lib/calendar-utils'
 import { forwardRef, useEffect } from 'react'
 
 export interface CalendarDndCallbacks {
@@ -143,9 +144,8 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     const handleReceive = (info: EventReceiveArg) => {
       if (!dndCallbacks?.onExternalDrop) return
       const { event } = info
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- FullCalendar extendedProps is Record<string, any>
-      const taskId = event.extendedProps['taskId'] as string
-      if (!event.start || !event.end || !taskId) {
+      const taskId = getEventProps(event).taskId
+      if (!event.start || !event.end || taskId == null) {
         event.remove()
         return
       }
@@ -170,8 +170,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           eventContent={(arg) => {
             // In month view, render compact event pill with title
             if (arg.view.type === 'dayGridMonth') {
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- FullCalendar extendedProps is Record<string, any>
-              const type = arg.event.extendedProps['type'] as string
+              const type = getEventProps(arg.event).type
               return (
                 <div className="tq-month-event" data-event-type={type}>
                   <span className="tq-month-event-title">

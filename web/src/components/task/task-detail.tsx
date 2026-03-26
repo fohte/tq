@@ -13,6 +13,7 @@ import {
   useUpdateTaskParent,
   useUpdateTaskStatus,
 } from '@web/hooks/use-tasks'
+import { selectHandler } from '@web/lib/form-utils'
 import { formatMinutes, parseDurationToMinutes } from '@web/lib/parse-duration'
 import { cn } from '@web/lib/utils'
 import {
@@ -337,13 +338,11 @@ function SidebarStatusField({
     <SidebarField label="Status" icon={<Circle className="size-3.5" />}>
       <select
         value={status}
-        onChange={(e) => {
-          updateStatus.mutate({
-            id: taskId,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- controlled select
-            status: e.target.value as 'todo' | 'in_progress' | 'completed',
-          })
-        }}
+        onChange={selectHandler(
+          (value: 'todo' | 'in_progress' | 'completed') => {
+            updateStatus.mutate({ id: taskId, status: value })
+          },
+        )}
         className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-primary/50"
       >
         {statusOptions.map((opt) => (
@@ -516,15 +515,9 @@ function SidebarContextField({
     <SidebarField label="Context" icon={<Layers className="size-3.5" />}>
       <select
         value={context}
-        onChange={(e) => {
-          updateTask.mutate({
-            id: taskId,
-            input: {
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- controlled select
-              context: e.target.value as 'work' | 'personal' | 'dev',
-            },
-          })
-        }}
+        onChange={selectHandler((value: 'work' | 'personal' | 'dev') => {
+          updateTask.mutate({ id: taskId, input: { context: value } })
+        })}
         className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-primary/50"
       >
         <option value="personal">Personal</option>

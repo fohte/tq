@@ -1,6 +1,7 @@
 import { app } from '@api/app'
 import { db } from '@api/db/connection'
 import { labels } from '@api/db/schema'
+import { firstOrThrow } from '@api/lib/drizzle-utils'
 
 export interface TimeBlockResponse {
   id: string
@@ -131,7 +132,5 @@ export async function createComment(taskId: string, content: string) {
 }
 
 export async function createLabel(name: string) {
-  const [label] = await db.insert(labels).values({ name }).returning()
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-  return label!
+  return firstOrThrow(await db.insert(labels).values({ name }).returning())
 }

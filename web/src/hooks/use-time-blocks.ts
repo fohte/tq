@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@web/lib/api'
+import { assertOk } from '@web/lib/assert-response'
 import type { InferResponseType } from 'hono/client'
 
 type TimeBlock = InferResponseType<
@@ -23,7 +24,7 @@ export function useTimeBlocks(date: string) {
           tzOffset: String(new Date().getTimezoneOffset()),
         },
       })
-      if (!res.ok) throw new Error('Failed to fetch time blocks') // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- runtime safety guard
+      assertOk(res)
       return res.json()
     },
   })

@@ -2,6 +2,7 @@ import { Button } from '@web/components/ui/button'
 import { Dialog, DialogOverlay, DialogPortal } from '@web/components/ui/dialog'
 import type { CreateScheduleInput } from '@web/hooks/use-schedules'
 import { useCreateSchedule } from '@web/hooks/use-schedules'
+import { selectHandler } from '@web/lib/form-utils'
 import { cn } from '@web/lib/utils'
 import { Clock, Layers, Palette, Repeat, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
@@ -195,12 +196,7 @@ export function CreateScheduleModal({
                 >
                   <select
                     value={recurrenceType}
-                    onChange={(e) => {
-                      setRecurrenceType(
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- controlled select
-                        e.target.value as RecurrenceType | '',
-                      )
-                    }}
+                    onChange={selectHandler(setRecurrenceType)}
                     className="bg-transparent text-xs text-foreground outline-none"
                   >
                     <option value="">None</option>
@@ -257,12 +253,7 @@ export function CreateScheduleModal({
                 >
                   <select
                     value={context}
-                    onChange={(e) => {
-                      setContext(
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- controlled select
-                        e.target.value as ContextValue | '',
-                      )
-                    }}
+                    onChange={selectHandler(setContext)}
                     className="bg-transparent text-xs text-foreground outline-none"
                   >
                     <option value="">—</option>
@@ -400,12 +391,7 @@ export function CreateScheduleModal({
                   expanded={
                     <select
                       value={recurrenceType}
-                      onChange={(e) => {
-                        setRecurrenceType(
-                          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- controlled select
-                          e.target.value as RecurrenceType | '',
-                        )
-                      }}
+                      onChange={selectHandler(setRecurrenceType)}
                       autoFocus
                       className="bg-transparent text-xs outline-none"
                     >
@@ -423,12 +409,7 @@ export function CreateScheduleModal({
                   expanded={
                     <select
                       value={context}
-                      onChange={(e) => {
-                        setContext(
-                          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- controlled select
-                          e.target.value as ContextValue | '',
-                        )
-                      }}
+                      onChange={selectHandler(setContext)}
                       autoFocus
                       className="bg-transparent text-xs outline-none"
                     >

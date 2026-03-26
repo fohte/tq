@@ -1,5 +1,6 @@
 import { db } from '@api/db/connection'
 import { recurrenceRules, tasks, timeBlocks } from '@api/db/schema'
+import { firstOrThrow } from '@api/lib/drizzle-utils'
 import {
   requireTask,
   taskStatus,
@@ -41,14 +42,15 @@ export const tasksActionsApp = new Hono()
           .where(and(eq(timeBlocks.taskId, id), isNull(timeBlocks.endTime)))
       }
 
-      const [updated] = await db
-        .update(tasks)
-        .set({ status, updatedAt: now })
-        .where(eq(tasks.id, id))
-        .returning()
+      const updated = firstOrThrow(
+        await db
+          .update(tasks)
+          .set({ status, updatedAt: now })
+          .where(eq(tasks.id, id))
+          .returning(),
+      )
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- update on existing row always returns
-      return c.json(taskToResponse(updated!), 200)
+      return c.json(taskToResponse(updated), 200)
     },
   )
   .patch(
@@ -89,14 +91,15 @@ export const tasksActionsApp = new Hono()
         }
       }
 
-      const [updated] = await db
-        .update(tasks)
-        .set({ parentId, updatedAt: new Date() })
-        .where(eq(tasks.id, id))
-        .returning()
+      const updated = firstOrThrow(
+        await db
+          .update(tasks)
+          .set({ parentId, updatedAt: new Date() })
+          .where(eq(tasks.id, id))
+          .returning(),
+      )
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- update on existing row always returns
-      return c.json(taskToResponse(updated!), 200)
+      return c.json(taskToResponse(updated), 200)
     },
   )
   .post('/:id/start', requireTask, async (c) => {
@@ -109,7 +112,7 @@ export const tasksActionsApp = new Hono()
 
     const now = new Date()
 
-    const [[updatedTask], [createdBlock]] = await Promise.all([
+    const [taskRows, blockRows] = await Promise.all([
       db
         .update(tasks)
         .set({ status: 'in_progress', updatedAt: now })
@@ -120,10 +123,8 @@ export const tasksActionsApp = new Hono()
 
     return c.json(
       {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- update/insert always returns a row
-        ...taskToResponse(updatedTask!),
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-        timeBlock: timeBlockToResponse(createdBlock!),
+        ...taskToResponse(firstOrThrow(taskRows)),
+        timeBlock: timeBlockToResponse(firstOrThrow(blockRows)),
       },
       200,
     )
@@ -172,9 +173,10 @@ export const tasksActionsApp = new Hono()
 
       if (completedTaskRule) {
         const nextData = buildNextTaskData(updatedTask, completedTaskRule)
-        const [created] = await db.insert(tasks).values(nextData).returning()
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-        nextTask = taskToResponse(created!, completedTaskRule)
+        const created = firstOrThrow(
+          await db.insert(tasks).values(nextData).returning(),
+        )
+        nextTask = taskToResponse(created, completedTaskRule)
       }
     }
 

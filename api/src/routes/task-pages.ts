@@ -1,5 +1,6 @@
 import { db } from '@api/db/connection'
 import { taskPages, tasks } from '@api/db/schema'
+import { firstOrThrow } from '@api/lib/drizzle-utils'
 import { zValidator } from '@hono/zod-validator'
 import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -29,10 +30,23 @@ export function pageToResponse(page: typeof taskPages.$inferSelect) {
   }
 }
 
-export const taskPagesApp = new Hono()
+type TaskPagesEnv = {
+  Variables: {
+    taskId: string
+  }
+}
+
+export const taskPagesApp = new Hono<TaskPagesEnv>()
+  .use('*', async (c, next): Promise<Response | undefined> => {
+    const taskId = c.req.param('taskId')
+    if (taskId == null) {
+      return c.json({ error: 'taskId is required' }, 400)
+    }
+    c.set('taskId', taskId)
+    await next()
+  })
   .get('/', async (c) => {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed by route param
-    const taskId = c.req.param('taskId')!
+    const taskId = c.get('taskId')
 
     const task = await db.query.tasks.findFirst({
       where: eq(tasks.id, taskId),
@@ -50,8 +64,7 @@ export const taskPagesApp = new Hono()
     return c.json(pages.map(pageToResponse), 200)
   })
   .post('/', zValidator('json', createPageSchema), async (c) => {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed by route param
-    const taskId = c.req.param('taskId')!
+    const taskId = c.get('taskId')
     const input = c.req.valid('json')
 
     const task = await db.query.tasks.findFirst({
@@ -61,22 +74,22 @@ export const taskPagesApp = new Hono()
       return c.json({ error: 'Task not found' }, 404)
     }
 
-    const [page] = await db
-      .insert(taskPages)
-      .values({
-        taskId,
-        title: input.title,
-        content: input.content ?? '',
-        sortOrder: input.sortOrder ?? 0,
-      })
-      .returning()
+    const page = firstOrThrow(
+      await db
+        .insert(taskPages)
+        .values({
+          taskId,
+          title: input.title,
+          content: input.content ?? '',
+          sortOrder: input.sortOrder ?? 0,
+        })
+        .returning(),
+    )
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-    return c.json(pageToResponse(page!), 201)
+    return c.json(pageToResponse(page), 201)
   })
   .get('/:pageId', async (c) => {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed by route param
-    const taskId = c.req.param('taskId')!
+    const taskId = c.get('taskId')
     const pageId = c.req.param('pageId')
 
     const page = await db.query.taskPages.findFirst({
@@ -90,8 +103,7 @@ export const taskPagesApp = new Hono()
     return c.json(pageToResponse(page), 200)
   })
   .patch('/:pageId', zValidator('json', updatePageSchema), async (c) => {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed by route param
-    const taskId = c.req.param('taskId')!
+    const taskId = c.get('taskId')
     const pageId = c.req.param('pageId')
 
     const [updated] = await db
@@ -107,8 +119,7 @@ export const taskPagesApp = new Hono()
     return c.json(pageToResponse(updated), 200)
   })
   .delete('/:pageId', async (c) => {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed by route param
-    const taskId = c.req.param('taskId')!
+    const taskId = c.get('taskId')
     const pageId = c.req.param('pageId')
 
     const deleted = await db

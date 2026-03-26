@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@web/lib/api'
+import { assertOk } from '@web/lib/assert-response'
 import type { InferResponseType } from 'hono/client'
 
 type Comment = InferResponseType<
@@ -20,7 +21,7 @@ export function useTaskComments(taskId: string) {
       const res = await api.api.tasks[':taskId'].comments.$get({
         param: { taskId },
       })
-      if (!res.ok) throw new Error('Failed to fetch comments') // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- runtime safety guard
+      assertOk(res)
       return res.json()
     },
   })
@@ -35,7 +36,7 @@ export function useCreateComment(taskId: string) {
         param: { taskId },
         json: { content },
       })
-      if (!res.ok) throw new Error('Failed to create comment') // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- runtime safety guard
+      assertOk(res)
       return res.json()
     },
     onMutate: async (content) => {

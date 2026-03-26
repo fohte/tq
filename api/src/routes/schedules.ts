@@ -1,5 +1,6 @@
 import { db } from '@api/db/connection'
 import { recurrenceRules, schedules, tasks, timeBlocks } from '@api/db/schema'
+import { firstOrThrow } from '@api/lib/drizzle-utils'
 import { expandScheduleForDate } from '@api/routes/schedule-expansion'
 import { recurrenceRuleSchema } from '@api/schemas/recurrence-rule'
 import { zValidator } from '@hono/zod-validator'
@@ -107,11 +108,10 @@ type ScheduleEnv = {
   }
 }
 
-const factory = createFactory<ScheduleEnv>()
+const factory = createFactory<ScheduleEnv, '/:id'>()
 
 const requireSchedule = factory.createMiddleware(async (c, next) => {
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed by route param
-  const id = c.req.param('id')!
+  const id = c.req.param('id')
 
   const schedule = await db.query.schedules.findFirst({
     where: eq(schedules.id, id),
@@ -148,18 +148,19 @@ export const schedulesApp = new Hono()
         return c.json({ error: 'Task not found' }, 404)
       }
 
-      const [block] = await db
-        .insert(timeBlocks)
-        .values({
-          taskId: input.taskId,
-          startTime: new Date(input.startTime),
-          endTime: input.endTime != null ? new Date(input.endTime) : null,
-          isAutoScheduled: input.isAutoScheduled ?? false,
-        })
-        .returning()
+      const block = firstOrThrow(
+        await db
+          .insert(timeBlocks)
+          .values({
+            taskId: input.taskId,
+            startTime: new Date(input.startTime),
+            endTime: input.endTime != null ? new Date(input.endTime) : null,
+            isAutoScheduled: input.isAutoScheduled ?? false,
+          })
+          .returning(),
+      )
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-      return c.json(timeBlockToResponse(block!), 201)
+      return c.json(timeBlockToResponse(block), 201)
     },
   )
   .get(
@@ -220,14 +221,15 @@ export const schedulesApp = new Hono()
         return c.json(timeBlockToResponse(existing), 200)
       }
 
-      const [updated] = await db
-        .update(timeBlocks)
-        .set({ ...updates, updatedAt: new Date() })
-        .where(eq(timeBlocks.id, id))
-        .returning()
+      const updated = firstOrThrow(
+        await db
+          .update(timeBlocks)
+          .set({ ...updates, updatedAt: new Date() })
+          .where(eq(timeBlocks.id, id))
+          .returning(),
+      )
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- update with where clause on existing row always returns
-      return c.json(timeBlockToResponse(updated!), 200)
+      return c.json(timeBlockToResponse(updated), 200)
     },
   )
   .delete('/time-blocks/:id', async (c) => {
@@ -259,33 +261,34 @@ export const schedulesApp = new Hono()
     let newRule: typeof recurrenceRules.$inferSelect | null = null
 
     if (input.recurrence != null) {
-      const [rule] = await db
-        .insert(recurrenceRules)
-        .values({
-          type: input.recurrence.type,
-          interval: input.recurrence.interval,
-          daysOfWeek: input.recurrence.daysOfWeek ?? null,
-          dayOfMonth: input.recurrence.dayOfMonth ?? null,
-        })
-        .returning()
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-      newRule = rule!
+      newRule = firstOrThrow(
+        await db
+          .insert(recurrenceRules)
+          .values({
+            type: input.recurrence.type,
+            interval: input.recurrence.interval,
+            daysOfWeek: input.recurrence.daysOfWeek ?? null,
+            dayOfMonth: input.recurrence.dayOfMonth ?? null,
+          })
+          .returning(),
+      )
     }
 
-    const [schedule] = await db
-      .insert(schedules)
-      .values({
-        title: input.title,
-        startTime: input.startTime,
-        endTime: input.endTime,
-        recurrenceRuleId: newRule?.id ?? null,
-        context: input.context ?? 'personal',
-        color: input.color ?? null,
-      })
-      .returning()
+    const schedule = firstOrThrow(
+      await db
+        .insert(schedules)
+        .values({
+          title: input.title,
+          startTime: input.startTime,
+          endTime: input.endTime,
+          recurrenceRuleId: newRule?.id ?? null,
+          context: input.context ?? 'personal',
+          color: input.color ?? null,
+        })
+        .returning(),
+    )
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-    return c.json(scheduleToResponse(schedule!, newRule), 201)
+    return c.json(scheduleToResponse(schedule, newRule), 201)
   })
   .get(
     '/recurring',
@@ -365,37 +368,40 @@ export const schedulesApp = new Hono()
             .where(eq(recurrenceRules.id, recurrenceRuleId))
         } else {
           // Create new rule
-          const [rule] = await db
-            .insert(recurrenceRules)
-            .values({
-              type: input.recurrence.type,
-              interval: input.recurrence.interval,
-              daysOfWeek: input.recurrence.daysOfWeek ?? null,
-              dayOfMonth: input.recurrence.dayOfMonth ?? null,
-            })
-            .returning()
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
-          recurrenceRuleId = rule!.id
+          const rule = firstOrThrow(
+            await db
+              .insert(recurrenceRules)
+              .values({
+                type: input.recurrence.type,
+                interval: input.recurrence.interval,
+                daysOfWeek: input.recurrence.daysOfWeek ?? null,
+                dayOfMonth: input.recurrence.dayOfMonth ?? null,
+              })
+              .returning(),
+          )
+          recurrenceRuleId = rule.id
         }
       }
 
-      const [updated] = await db
-        .update(schedules)
-        .set({
-          ...(input.title !== undefined ? { title: input.title } : {}),
-          ...(input.startTime !== undefined
-            ? { startTime: input.startTime }
-            : {}),
-          ...(input.endTime !== undefined ? { endTime: input.endTime } : {}),
-          ...(input.context !== undefined
-            ? { context: input.context ?? 'personal' }
-            : {}),
-          ...(input.color !== undefined ? { color: input.color } : {}),
-          recurrenceRuleId,
-          updatedAt: now,
-        })
-        .where(eq(schedules.id, id))
-        .returning()
+      const updated = firstOrThrow(
+        await db
+          .update(schedules)
+          .set({
+            ...(input.title !== undefined ? { title: input.title } : {}),
+            ...(input.startTime !== undefined
+              ? { startTime: input.startTime }
+              : {}),
+            ...(input.endTime !== undefined ? { endTime: input.endTime } : {}),
+            ...(input.context !== undefined
+              ? { context: input.context ?? 'personal' }
+              : {}),
+            ...(input.color !== undefined ? { color: input.color } : {}),
+            recurrenceRuleId,
+            updatedAt: now,
+          })
+          .where(eq(schedules.id, id))
+          .returning(),
+      )
 
       const rule =
         recurrenceRuleId != null
@@ -404,8 +410,7 @@ export const schedulesApp = new Hono()
             })) ?? null)
           : null
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- update on existing row always returns
-      return c.json(scheduleToResponse(updated!, rule), 200)
+      return c.json(scheduleToResponse(updated, rule), 200)
     },
   )
   .delete('/recurring/:id', requireSchedule, async (c) => {

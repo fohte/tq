@@ -10,9 +10,22 @@ export interface ParsedQuery {
   sortBy?: 'due' | 'created' | 'updated' | 'estimate'
 }
 
-const STATUS_VALUES = new Set(['todo', 'in_progress', 'completed'])
-const CONTEXT_VALUES = new Set(['work', 'personal', 'dev'])
-const SORT_VALUES = new Set(['due', 'created', 'updated', 'estimate'])
+const STATUS_VALUES: ReadonlySet<'todo' | 'in_progress' | 'completed'> =
+  new Set(['todo', 'in_progress', 'completed'])
+const CONTEXT_VALUES: ReadonlySet<'work' | 'personal' | 'dev'> = new Set([
+  'work',
+  'personal',
+  'dev',
+])
+const SORT_VALUES: ReadonlySet<'due' | 'created' | 'updated' | 'estimate'> =
+  new Set(['due', 'created', 'updated', 'estimate'])
+
+function isOneOf<T extends string>(
+  value: string,
+  set: ReadonlySet<T>,
+): value is T {
+  return (set as ReadonlySet<string>).has(value)
+}
 
 export function parseSearchQuery(q: string): ParsedQuery {
   const result: ParsedQuery = { freeText: '' }
@@ -38,9 +51,8 @@ export function parseSearchQuery(q: string): ParsedQuery {
 
     switch (prefix) {
       case 'is':
-        if (STATUS_VALUES.has(value)) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated by Set.has() above
-          result.status = value as 'todo' | 'in_progress' | 'completed'
+        if (isOneOf(value, STATUS_VALUES)) {
+          result.status = value
         } else {
           freeTextParts.push(token)
         }
@@ -49,9 +61,8 @@ export function parseSearchQuery(q: string): ParsedQuery {
         result.label = value
         break
       case 'context':
-        if (CONTEXT_VALUES.has(value)) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated by Set.has() above
-          result.context = value as 'work' | 'personal' | 'dev'
+        if (isOneOf(value, CONTEXT_VALUES)) {
+          result.context = value
         } else {
           freeTextParts.push(token)
         }
@@ -72,9 +83,8 @@ export function parseSearchQuery(q: string): ParsedQuery {
         result.projectId = value
         break
       case 'sort':
-        if (SORT_VALUES.has(value)) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated by Set.has() above
-          result.sortBy = value as 'due' | 'created' | 'updated' | 'estimate'
+        if (isOneOf(value, SORT_VALUES)) {
+          result.sortBy = value
         } else {
           freeTextParts.push(token)
         }
