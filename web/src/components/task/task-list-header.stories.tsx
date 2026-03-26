@@ -4,8 +4,8 @@ import type { Task } from '@web/hooks/use-tasks'
 
 const makeTasks = (overrides: Array<Partial<Task>>): Task[] =>
   overrides.map((o, i) => ({
-    id: `00000000-0000-0000-0000-00000000000${i}`,
-    title: `Task ${i + 1}`,
+    id: `00000000-0000-0000-0000-00000000000${String(i)}`,
+    title: `Task ${String(i + 1)}`,
     description: null,
     status: 'todo' as const,
     context: 'personal' as const,

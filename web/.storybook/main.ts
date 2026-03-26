@@ -15,7 +15,8 @@ const config: StorybookConfig = {
   viteFinal(config) {
     config.resolve ??= {}
     config.resolve.alias = {
-      ...((config.resolve.alias as Record<string, string>) ?? {}),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- FullCalendar alias config uses Record shape
+      ...(config.resolve.alias as Record<string, string>),
       '@web': fileURLToPath(new URL('../src', import.meta.url)),
     }
     return config

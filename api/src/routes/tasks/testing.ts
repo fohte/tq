@@ -59,8 +59,11 @@ export async function createTask(
     body: JSON.stringify({ title, ...opts }),
   })
   if (res.status !== 201) {
-    throw new Error(`Failed to create task: ${res.status} ${await res.text()}`)
+    throw new Error(
+      `Failed to create task: ${String(res.status)} ${await res.text()}`,
+    )
   }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test helper
   return (await res.json()) as TaskResponse
 }
 
@@ -86,9 +89,10 @@ export async function createRecurringTask(
   })
   if (res.status !== 201) {
     throw new Error(
-      `Failed to create recurring task: ${res.status} ${await res.text()}`,
+      `Failed to create recurring task: ${String(res.status)} ${await res.text()}`,
     )
   }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test helper
   return (await res.json()) as TaskResponse
 }
 
@@ -103,8 +107,11 @@ export async function createPage(
     body: JSON.stringify({ title, content }),
   })
   if (res.status !== 201) {
-    throw new Error(`Failed to create page: ${res.status} ${await res.text()}`)
+    throw new Error(
+      `Failed to create page: ${String(res.status)} ${await res.text()}`,
+    )
   }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test helper
   return (await res.json()) as { id: string }
 }
 
@@ -116,13 +123,15 @@ export async function createComment(taskId: string, content: string) {
   })
   if (res.status !== 201) {
     throw new Error(
-      `Failed to create comment: ${res.status} ${await res.text()}`,
+      `Failed to create comment: ${String(res.status)} ${await res.text()}`,
     )
   }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test helper
   return (await res.json()) as { id: string }
 }
 
 export async function createLabel(name: string) {
   const [label] = await db.insert(labels).values({ name }).returning()
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
   return label!
 }

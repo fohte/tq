@@ -43,10 +43,10 @@ const originalListeners = process.listeners('uncaughtException')
 process.removeAllListeners('uncaughtException')
 process.prependListener('uncaughtException', (error) => {
   const message = error instanceof Error ? error.message : String(error)
+
   const isMilkdownCleanup =
-    error != null &&
-    typeof error === 'object' &&
     'code' in error &&
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- narrowing unknown error object
     (error as Record<string, unknown>)['code'] === 'contextNotFound'
   const isProsemirrorJsdom = message.includes(
     'getClientRects is not a function',

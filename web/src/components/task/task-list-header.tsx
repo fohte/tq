@@ -38,7 +38,7 @@ export function TaskListHeader({ tasks }: { tasks: Task[] }) {
           className={cn(
             'h-full rounded-full bg-primary transition-all duration-300',
           )}
-          style={{ width: `${progress}%` }}
+          style={{ width: `${String(progress)}%` }}
         />
       </div>
     </div>

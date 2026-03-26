@@ -76,7 +76,9 @@ export function CalendarHeader({
           <button
             key={option.value}
             type="button"
-            onClick={() => onViewChange(option.value)}
+            onClick={() => {
+              onViewChange(option.value)
+            }}
             className={cn(
               'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
               activeView === option.value

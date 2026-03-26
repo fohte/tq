@@ -37,7 +37,9 @@ export function DeleteConfirmButton({
             className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-50"
           />
         }
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation()
+        }}
       >
         <Trash2 className={cn('size-3.5', iconClassName)} />
       </DialogTrigger>

@@ -5,7 +5,7 @@ import {
 } from '@web/components/calendar/calendar-view'
 
 const today = new Date()
-const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
 // Generate events spread across the week for week/month views
 function generateWeekEvents(): TimeBlockEvent[] {
@@ -16,14 +16,14 @@ function generateWeekEvents(): TimeBlockEvent[] {
     const ds = d.toISOString().slice(0, 10)
     events.push(
       {
-        id: `w-${dayOffset}-1`,
+        id: `w-${String(dayOffset)}-1`,
         title: 'Standup',
         start: `${ds}T09:00:00`,
         end: `${ds}T09:30:00`,
         type: 'gcal',
       },
       {
-        id: `w-${dayOffset}-2`,
+        id: `w-${String(dayOffset)}-2`,
         title: 'Deep work',
         start: `${ds}T10:00:00`,
         end: `${ds}T12:00:00`,
@@ -34,7 +34,7 @@ function generateWeekEvents(): TimeBlockEvent[] {
     )
     if (dayOffset % 2 === 0) {
       events.push({
-        id: `w-${dayOffset}-3`,
+        id: `w-${String(dayOffset)}-3`,
         title: 'Code review',
         start: `${ds}T14:00:00`,
         end: `${ds}T15:00:00`,
@@ -53,10 +53,10 @@ function generateMonthEvents(): TimeBlockEvent[] {
   const month = today.getMonth()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   for (let day = 1; day <= daysInMonth; day++) {
-    const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    const ds = `${String(year)}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     // Add 1-3 events per day
     events.push({
-      id: `m-${day}-1`,
+      id: `m-${String(day)}-1`,
       title: 'Task',
       start: `${ds}T09:00:00`,
       end: `${ds}T10:00:00`,
@@ -64,7 +64,7 @@ function generateMonthEvents(): TimeBlockEvent[] {
     })
     if (day % 2 === 0) {
       events.push({
-        id: `m-${day}-2`,
+        id: `m-${String(day)}-2`,
         title: 'Meeting',
         start: `${ds}T14:00:00`,
         end: `${ds}T15:00:00`,
@@ -73,7 +73,7 @@ function generateMonthEvents(): TimeBlockEvent[] {
     }
     if (day % 3 === 0) {
       events.push({
-        id: `m-${day}-3`,
+        id: `m-${String(day)}-3`,
         title: 'Review',
         start: `${ds}T16:00:00`,
         end: `${ds}T17:00:00`,
@@ -215,7 +215,7 @@ export const MonthViewEmpty: Story = {
 
 const tomorrow = new Date(today)
 tomorrow.setDate(tomorrow.getDate() + 1)
-const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+const tomorrowStr = `${String(tomorrow.getFullYear())}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
 
 export const OvernightEvents: Story = {
   args: {

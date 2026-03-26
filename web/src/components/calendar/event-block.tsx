@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- FullCalendar extendedProps is Record<string, any> */
 import type { EventContentArg } from '@fullcalendar/core'
 import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
 import { cn } from '@web/lib/utils'
@@ -7,7 +8,8 @@ type EventType = TimeBlockEvent['type']
 
 export function EventBlock(arg: EventContentArg) {
   const { event, timeText } = arg
-  const type = (event.extendedProps['type'] as EventType) ?? 'manual'
+  const type =
+    (event.extendedProps['type'] as EventType | undefined) ?? 'manual'
   const duration = event.extendedProps['duration'] as string | undefined
   const parentRef = event.extendedProps['parentRef'] as string | undefined
   const label = event.extendedProps['label'] as string | undefined
@@ -16,13 +18,13 @@ export function EventBlock(arg: EventContentArg) {
     | undefined
   const iconName = event.extendedProps['icon'] as string | undefined
 
-  const isShort = arg.isStart !== false && isShortEvent(event)
+  const isShort = arg.isStart && isShortEvent(event)
 
   // Build time detail line: "10:30 - 11:30  ·  1h  ← #488"
   const timeDetails = [
     timeText,
     duration,
-    parentRef ? `← ${parentRef}` : undefined,
+    parentRef != null ? `← ${parentRef}` : undefined,
   ]
     .filter(Boolean)
     .join('  ·  ')
@@ -33,8 +35,8 @@ export function EventBlock(arg: EventContentArg) {
         event={event}
         timeDetails={timeDetails}
         isShort={isShort}
-        {...(color ? { color } : {})}
-        {...(iconName ? { iconName } : {})}
+        {...(color != null ? { color } : {})}
+        {...(iconName != null ? { iconName } : {})}
       />
     )
   }
@@ -97,7 +99,7 @@ export function EventBlock(arg: EventContentArg) {
           <div className="font-mono text-[10px] text-white/70">
             {timeDetails}
           </div>
-          {label && (
+          {label != null && (
             <div className="text-[7px] font-medium text-white/70">{label}</div>
           )}
         </>
@@ -113,13 +115,14 @@ function isShortEvent(event: EventContentArg['event']): boolean {
 }
 
 function resolveIcon(name: string | undefined) {
-  if (!name) return null
+  if (name == null || name === '') return null
   // Convert kebab-case to PascalCase: "dumbbell" -> "Dumbbell", "arrow-left" -> "ArrowLeft"
   const pascalCase = name
     .split('-')
     .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
     .join('')
-  return icons[pascalCase as keyof typeof icons] ?? null
+  const key = pascalCase as keyof typeof icons
+  return key in icons ? icons[key] : null
 }
 
 function ScheduleBlock({

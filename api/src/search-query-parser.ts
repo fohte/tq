@@ -31,7 +31,7 @@ export function parseSearchQuery(q: string): ParsedQuery {
     const prefix = token.slice(0, colonIndex).toLowerCase()
     const value = token.slice(colonIndex + 1)
 
-    if (!value) {
+    if (value === '') {
       freeTextParts.push(token)
       continue
     }
@@ -39,6 +39,7 @@ export function parseSearchQuery(q: string): ParsedQuery {
     switch (prefix) {
       case 'is':
         if (STATUS_VALUES.has(value)) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated by Set.has() above
           result.status = value as 'todo' | 'in_progress' | 'completed'
         } else {
           freeTextParts.push(token)
@@ -49,6 +50,7 @@ export function parseSearchQuery(q: string): ParsedQuery {
         break
       case 'context':
         if (CONTEXT_VALUES.has(value)) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated by Set.has() above
           result.context = value as 'work' | 'personal' | 'dev'
         } else {
           freeTextParts.push(token)
@@ -71,6 +73,7 @@ export function parseSearchQuery(q: string): ParsedQuery {
         break
       case 'sort':
         if (SORT_VALUES.has(value)) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated by Set.has() above
           result.sortBy = value as 'due' | 'created' | 'updated' | 'estimate'
         } else {
           freeTextParts.push(token)
@@ -102,7 +105,7 @@ function tokenize(input: string): string[] {
       inQuote = true
       quoteChar = ch
     } else if (ch === ' ' || ch === '\t') {
-      if (current) {
+      if (current !== '') {
         tokens.push(current)
         current = ''
       }
@@ -111,7 +114,7 @@ function tokenize(input: string): string[] {
     }
   }
 
-  if (current) {
+  if (current !== '') {
     tokens.push(current)
   }
 

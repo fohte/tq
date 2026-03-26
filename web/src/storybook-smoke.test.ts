@@ -42,7 +42,9 @@ describe('Storybook Smoke Tests', () => {
           story: story as { run: () => Promise<void> },
         }))
       } catch (e) {
-        throw new Error(`Failed to compose stories for ${filePath}: ${e}`)
+        throw new Error(
+          `Failed to compose stories for ${filePath}: ${String(e)}`,
+        )
       }
 
       if (stories.length === 0) {

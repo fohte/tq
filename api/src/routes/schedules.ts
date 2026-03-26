@@ -11,15 +11,15 @@ import { z } from 'zod'
 const timePattern = /^\d{2}:\d{2}$/
 
 const createTimeBlockSchema = z.object({
-  taskId: z.string().uuid(),
-  startTime: z.string().datetime(),
-  endTime: z.string().datetime().nullable().optional(),
+  taskId: z.uuid(),
+  startTime: z.iso.datetime(),
+  endTime: z.iso.datetime().nullable().optional(),
   isAutoScheduled: z.boolean().optional(),
 })
 
 const updateTimeBlockSchema = z.object({
-  startTime: z.string().datetime().optional(),
-  endTime: z.string().datetime().nullable().optional(),
+  startTime: z.iso.datetime().optional(),
+  endTime: z.iso.datetime().nullable().optional(),
   isAutoScheduled: z.boolean().optional(),
 })
 
@@ -29,7 +29,7 @@ const timeBlockDateQuerySchema = z.object({
 })
 
 const todayTasksSchema = z.object({
-  taskIds: z.array(z.string().uuid()),
+  taskIds: z.array(z.uuid()),
 })
 
 const autoAssignSchema = z.object({
@@ -110,6 +110,7 @@ type ScheduleEnv = {
 const factory = createFactory<ScheduleEnv>()
 
 const requireSchedule = factory.createMiddleware(async (c, next) => {
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed by route param
   const id = c.req.param('id')!
 
   const schedule = await db.query.schedules.findFirst({
@@ -119,11 +120,12 @@ const requireSchedule = factory.createMiddleware(async (c, next) => {
     return c.json({ error: 'Schedule not found' }, 404)
   }
 
-  const rule = schedule.recurrenceRuleId
-    ? ((await db.query.recurrenceRules.findFirst({
-        where: eq(recurrenceRules.id, schedule.recurrenceRuleId),
-      })) ?? null)
-    : null
+  const rule =
+    schedule.recurrenceRuleId != null
+      ? ((await db.query.recurrenceRules.findFirst({
+          where: eq(recurrenceRules.id, schedule.recurrenceRuleId),
+        })) ?? null)
+      : null
 
   c.set('schedule', schedule)
   c.set('recurrenceRule', rule)
@@ -151,11 +153,12 @@ export const schedulesApp = new Hono()
         .values({
           taskId: input.taskId,
           startTime: new Date(input.startTime),
-          endTime: input.endTime ? new Date(input.endTime) : null,
+          endTime: input.endTime != null ? new Date(input.endTime) : null,
           isAutoScheduled: input.isAutoScheduled ?? false,
         })
         .returning()
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
       return c.json(timeBlockToResponse(block!), 201)
     },
   )
@@ -207,7 +210,7 @@ export const schedulesApp = new Hono()
         updates.startTime = new Date(input.startTime)
       }
       if (input.endTime !== undefined) {
-        updates.endTime = input.endTime ? new Date(input.endTime) : null
+        updates.endTime = input.endTime != null ? new Date(input.endTime) : null
       }
       if (input.isAutoScheduled !== undefined) {
         updates.isAutoScheduled = input.isAutoScheduled
@@ -223,6 +226,7 @@ export const schedulesApp = new Hono()
         .where(eq(timeBlocks.id, id))
         .returning()
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- update with where clause on existing row always returns
       return c.json(timeBlockToResponse(updated!), 200)
     },
   )
@@ -254,7 +258,7 @@ export const schedulesApp = new Hono()
 
     let newRule: typeof recurrenceRules.$inferSelect | null = null
 
-    if (input.recurrence) {
+    if (input.recurrence != null) {
       const [rule] = await db
         .insert(recurrenceRules)
         .values({
@@ -264,6 +268,7 @@ export const schedulesApp = new Hono()
           dayOfMonth: input.recurrence.dayOfMonth ?? null,
         })
         .returning()
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
       newRule = rule!
     }
 
@@ -279,6 +284,7 @@ export const schedulesApp = new Hono()
       })
       .returning()
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
     return c.json(scheduleToResponse(schedule!, newRule), 201)
   })
   .get(
@@ -310,9 +316,10 @@ export const schedulesApp = new Hono()
 
       // Expand schedules for the requested date
       const expanded = allSchedules.flatMap((schedule) => {
-        const rule = schedule.recurrenceRuleId
-          ? (ruleMap.get(schedule.recurrenceRuleId) ?? null)
-          : null
+        const rule =
+          schedule.recurrenceRuleId != null
+            ? (ruleMap.get(schedule.recurrenceRuleId) ?? null)
+            : null
         return expandScheduleForDate(schedule, rule, date).map((block) => ({
           ...block,
           recurrence: recurrenceRuleToResponse(rule),
@@ -338,13 +345,13 @@ export const schedulesApp = new Hono()
       if (input.recurrence !== undefined) {
         if (input.recurrence === null) {
           // Remove recurrence: delete old rule if exists
-          if (recurrenceRuleId) {
+          if (recurrenceRuleId != null) {
             await db
               .delete(recurrenceRules)
               .where(eq(recurrenceRules.id, recurrenceRuleId))
           }
           recurrenceRuleId = null
-        } else if (recurrenceRuleId) {
+        } else if (recurrenceRuleId != null) {
           // Update existing rule
           await db
             .update(recurrenceRules)
@@ -367,6 +374,7 @@ export const schedulesApp = new Hono()
               dayOfMonth: input.recurrence.dayOfMonth ?? null,
             })
             .returning()
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
           recurrenceRuleId = rule!.id
         }
       }
@@ -389,12 +397,14 @@ export const schedulesApp = new Hono()
         .where(eq(schedules.id, id))
         .returning()
 
-      const rule = recurrenceRuleId
-        ? ((await db.query.recurrenceRules.findFirst({
-            where: eq(recurrenceRules.id, recurrenceRuleId),
-          })) ?? null)
-        : null
+      const rule =
+        recurrenceRuleId != null
+          ? ((await db.query.recurrenceRules.findFirst({
+              where: eq(recurrenceRules.id, recurrenceRuleId),
+            })) ?? null)
+          : null
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- update on existing row always returns
       return c.json(scheduleToResponse(updated!, rule), 200)
     },
   )
@@ -406,7 +416,7 @@ export const schedulesApp = new Hono()
     await db.delete(schedules).where(eq(schedules.id, id))
 
     // Clean up orphaned recurrence rule
-    if (existingSchedule.recurrenceRuleId) {
+    if (existingSchedule.recurrenceRuleId != null) {
       await db
         .delete(recurrenceRules)
         .where(eq(recurrenceRules.id, existingSchedule.recurrenceRuleId))

@@ -54,7 +54,9 @@ function TaskList() {
           <button
             key={tab}
             type="button"
-            onClick={() => setActiveTab(tab)}
+            onClick={() => {
+              setActiveTab(tab)
+            }}
             className={cn(
               'rounded-md px-3 py-1 text-sm font-medium transition-colors',
               activeTab === tab
@@ -86,7 +88,9 @@ function TaskList() {
       {isCreating && (
         <div className="border-b border-border">
           <CreateTaskInline
-            onClose={() => setIsCreating(false)}
+            onClose={() => {
+              setIsCreating(false)
+            }}
             {...(activeTab === 'today'
               ? { defaultStartDate: new Date().toISOString().slice(0, 10) }
               : {})}
@@ -120,7 +124,11 @@ function TaskList() {
       </div>
 
       {/* FAB (mobile only) */}
-      <FloatingActionButton onClick={() => setIsModalOpen(true)} />
+      <FloatingActionButton
+        onClick={() => {
+          setIsModalOpen(true)
+        }}
+      />
 
       {/* Task create modal */}
       <CreateTaskModal

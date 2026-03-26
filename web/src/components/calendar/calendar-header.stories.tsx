@@ -22,21 +22,23 @@ function CalendarHeaderStateful({
       <CalendarHeader
         currentDate={currentDate}
         activeView={activeView}
-        onPrev={() =>
+        onPrev={() => {
           setCurrentDate((d) => {
             const newDate = new Date(d)
             newDate.setDate(newDate.getDate() - 1)
             return newDate
           })
-        }
-        onNext={() =>
+        }}
+        onNext={() => {
           setCurrentDate((d) => {
             const newDate = new Date(d)
             newDate.setDate(newDate.getDate() + 1)
             return newDate
           })
-        }
-        onToday={() => setCurrentDate(new Date())}
+        }}
+        onToday={() => {
+          setCurrentDate(new Date())
+        }}
         onViewChange={setActiveView}
       />
     </div>

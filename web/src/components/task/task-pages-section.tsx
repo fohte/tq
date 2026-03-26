@@ -101,7 +101,7 @@ export function TaskPagesList({
             disabled={isAddingPage}
             className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
-            {isAddingPage ? (
+            {isAddingPage === true ? (
               <Loader2 className="size-3 animate-spin" />
             ) : (
               <Plus className="size-3" />
@@ -135,7 +135,9 @@ function PageCard({ taskId, page }: { taskId: string; page: TaskPage }) {
     <PageCardPresentation
       taskId={taskId}
       page={page}
-      onDelete={() => deletePage.mutate(page.id)}
+      onDelete={() => {
+        deletePage.mutate(page.id)
+      }}
       isDeleting={deletePage.isPending}
       renderEditor={(defaultValue) => (
         <PageInlineEditor
@@ -176,7 +178,9 @@ export function PageCardPresentation({
       <div className="flex items-center gap-2 px-3 py-2">
         <button
           type="button"
-          onClick={() => setInternalExpanded(!isExpanded)}
+          onClick={() => {
+            setInternalExpanded(!isExpanded)
+          }}
           className="flex flex-1 items-center gap-2 text-left"
         >
           <ChevronDown
@@ -193,7 +197,9 @@ export function PageCardPresentation({
             to="/tasks/$taskId/pages/$pageId"
             params={{ taskId, pageId: page.id }}
             className="rounded p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+            }}
           >
             <ExternalLink className="size-3.5" />
           </Link>
@@ -208,7 +214,7 @@ export function PageCardPresentation({
       </div>
 
       {/* Preview (collapsed) */}
-      {!isExpanded && previewLines && (
+      {!isExpanded && previewLines != null && (
         <div className="border-t border-border px-3 py-2">
           <p className="line-clamp-3 text-xs text-muted-foreground">
             {previewLines}
@@ -217,7 +223,9 @@ export function PageCardPresentation({
             3 && (
             <button
               type="button"
-              onClick={() => setInternalExpanded(true)}
+              onClick={() => {
+                setInternalExpanded(true)
+              }}
               className="mt-1 text-xs text-primary hover:underline"
             >
               Show more

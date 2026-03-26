@@ -31,6 +31,7 @@ const preview: Preview = {
   },
   decorators: [
     (Story, context) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Storybook globals typing is `any`
       const theme = context.globals['theme'] ?? 'dark'
       document.documentElement.classList.toggle('dark', theme === 'dark')
       return (

@@ -19,14 +19,14 @@ const tabs: TabItem[] = [
 
 function Tab({ tab }: { tab: TabItem }) {
   const matchRoute = useMatchRoute()
-  const isActive = matchRoute({ to: tab.to, fuzzy: !tab.exact })
+  const isActive = matchRoute({ to: tab.to, fuzzy: tab.exact !== true })
 
   return (
     <Link
       to={tab.to}
       className={cn(
         'flex flex-col items-center justify-center gap-0.5 px-3 py-1',
-        isActive ? 'text-primary' : 'text-muted-foreground',
+        isActive !== false ? 'text-primary' : 'text-muted-foreground',
       )}
     >
       <tab.icon className="h-5 w-5" />

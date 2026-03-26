@@ -5,8 +5,8 @@ import { fn } from 'storybook/test'
 
 const makeBacklogTasks = (count: number): Task[] =>
   Array.from({ length: count }, (_, i) => ({
-    id: `00000000-0000-0000-0000-00000000000${i}`,
-    title: `Backlog task ${i + 1}`,
+    id: `00000000-0000-0000-0000-00000000000${String(i)}`,
+    title: `Backlog task ${String(i + 1)}`,
     description: null,
     status: 'todo' as const,
     context: 'personal' as const,

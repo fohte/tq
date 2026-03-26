@@ -128,7 +128,9 @@ export function CreateTaskModal({
               </span>
               <button
                 type="button"
-                onClick={() => handleOpenChange(false)}
+                onClick={() => {
+                  handleOpenChange(false)
+                }}
                 className="text-muted-foreground transition-colors hover:text-foreground"
               >
                 <X className="size-5" />
@@ -141,7 +143,9 @@ export function CreateTaskModal({
               <input
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  setTitle(e.target.value)
+                }}
                 placeholder="Task title"
                 autoFocus
                 className="w-full bg-transparent text-xl font-medium text-foreground outline-none placeholder:text-muted-foreground"
@@ -161,7 +165,9 @@ export function CreateTaskModal({
                   <input
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={(e) => {
+                      setStartDate(e.target.value)
+                    }}
                     className="w-32 bg-transparent text-xs text-foreground outline-none"
                   />
                 </FieldGroup>
@@ -172,7 +178,9 @@ export function CreateTaskModal({
                   <input
                     type="date"
                     value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
+                    onChange={(e) => {
+                      setDueDate(e.target.value)
+                    }}
                     className="w-32 bg-transparent text-xs text-foreground outline-none"
                   />
                 </FieldGroup>
@@ -183,7 +191,9 @@ export function CreateTaskModal({
                   <input
                     type="text"
                     value={estimateInput}
-                    onChange={(e) => setEstimateInput(e.target.value)}
+                    onChange={(e) => {
+                      setEstimateInput(e.target.value)
+                    }}
                     placeholder="1h30m"
                     className="w-16 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
                   />
@@ -194,9 +204,12 @@ export function CreateTaskModal({
                 >
                   <select
                     value={context}
-                    onChange={(e) =>
-                      setContext(e.target.value as ContextValue | '')
-                    }
+                    onChange={(e) => {
+                      setContext(
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- controlled select
+                        e.target.value as ContextValue | '',
+                      )
+                    }}
                     className="bg-transparent text-xs text-foreground outline-none"
                   >
                     <option value="">—</option>
@@ -212,7 +225,9 @@ export function CreateTaskModal({
             <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-3">
               <button
                 type="button"
-                onClick={() => handleOpenChange(false)}
+                onClick={() => {
+                  handleOpenChange(false)
+                }}
                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 Cancel
@@ -241,7 +256,9 @@ export function CreateTaskModal({
               </span>
               <button
                 type="button"
-                onClick={() => handleOpenChange(false)}
+                onClick={() => {
+                  handleOpenChange(false)
+                }}
                 className="text-muted-foreground transition-colors hover:text-foreground"
               >
                 <X className="size-5" />
@@ -254,7 +271,9 @@ export function CreateTaskModal({
               <input
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  setTitle(e.target.value)
+                }}
                 placeholder="タスクのタイトル"
                 autoFocus
                 className="w-full bg-transparent text-lg font-medium text-foreground outline-none placeholder:text-muted-foreground"
@@ -277,7 +296,9 @@ export function CreateTaskModal({
                     <input
                       type="date"
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      onChange={(e) => {
+                        setStartDate(e.target.value)
+                      }}
                       autoFocus
                       className="w-28 bg-transparent text-xs outline-none"
                     />
@@ -291,7 +312,9 @@ export function CreateTaskModal({
                     <input
                       type="text"
                       value={estimateInput}
-                      onChange={(e) => setEstimateInput(e.target.value)}
+                      onChange={(e) => {
+                        setEstimateInput(e.target.value)
+                      }}
                       placeholder="1h30m"
                       autoFocus
                       className="w-14 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
@@ -306,7 +329,9 @@ export function CreateTaskModal({
                     <input
                       type="date"
                       value={dueDate}
-                      onChange={(e) => setDueDate(e.target.value)}
+                      onChange={(e) => {
+                        setDueDate(e.target.value)
+                      }}
                       autoFocus
                       className="w-28 bg-transparent text-xs outline-none"
                     />
@@ -319,9 +344,12 @@ export function CreateTaskModal({
                   expanded={
                     <select
                       value={context}
-                      onChange={(e) =>
-                        setContext(e.target.value as ContextValue | '')
-                      }
+                      onChange={(e) => {
+                        setContext(
+                          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- controlled select
+                          e.target.value as ContextValue | '',
+                        )
+                      }}
                       autoFocus
                       className="bg-transparent text-xs outline-none"
                     >
@@ -389,18 +417,26 @@ function SpChip({
     <div
       className={cn(
         'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors',
-        active
+        active === true
           ? 'bg-primary/10 text-primary'
           : 'bg-secondary text-muted-foreground',
       )}
     >
       {icon}
-      {isEditing && expanded ? (
-        <div onBlur={() => setIsEditing(false)}>{expanded}</div>
+      {isEditing && expanded != null ? (
+        <div
+          onBlur={() => {
+            setIsEditing(false)
+          }}
+        >
+          {expanded}
+        </div>
       ) : (
         <button
           type="button"
-          onClick={() => setIsEditing(true)}
+          onClick={() => {
+            setIsEditing(true)
+          }}
           className="outline-none"
         >
           {label}

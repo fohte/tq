@@ -112,5 +112,6 @@ export const Empty: SectionStoryType = {
 }
 
 export const SinglePage: SectionStoryType = {
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- test data known to exist
   args: { taskId: 'task-single', pages: [samplePages[0]!] },
 }

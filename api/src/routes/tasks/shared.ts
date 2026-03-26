@@ -81,8 +81,9 @@ export function buildTree(
   const roots: TreeNode[] = []
 
   for (const task of allTasks) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- just inserted above
     const node = nodeMap.get(task.id)!
-    const parentNode = task.parentId ? nodeMap.get(task.parentId) : null
+    const parentNode = task.parentId != null ? nodeMap.get(task.parentId) : null
 
     if (parentNode) {
       parentNode.children.push(node)
@@ -90,13 +91,14 @@ export function buildTree(
       if (task.status === 'completed') {
         parentNode.childCompletionCount.completed++
       }
-    } else if (!rootId || task.id === rootId) {
+    } else if (rootId == null || task.id === rootId) {
       roots.push(node)
     }
   }
 
-  if (rootId) {
-    return nodeMap.has(rootId) ? [nodeMap.get(rootId)!] : []
+  if (rootId != null) {
+    const rootNode = nodeMap.get(rootId)
+    return rootNode != null ? [rootNode] : []
   }
 
   return roots
@@ -111,6 +113,7 @@ type TaskEnv = {
 const factory = createFactory<TaskEnv>()
 
 export const requireTask = factory.createMiddleware(async (c, next) => {
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed by route param
   const id = c.req.param('id')!
 
   const task = await db.query.tasks.findFirst({
@@ -141,5 +144,6 @@ export async function updateStatusAndCloseTimeBlocks(
       .where(and(eq(timeBlocks.taskId, taskId), isNull(timeBlocks.endTime)))
       .returning(),
   ])
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- update on existing row always returns
   return [updatedTask!, closedBlocks] as const
 }

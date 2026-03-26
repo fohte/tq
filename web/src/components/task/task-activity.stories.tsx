@@ -99,6 +99,7 @@ export const WithComments: Story = {
 
 export const SingleComment: Story = {
   args: {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- test data known to exist
     comments: [baseComments[0]!],
   },
 }
@@ -106,9 +107,9 @@ export const SingleComment: Story = {
 export const ManyComments: Story = {
   args: {
     comments: Array.from({ length: 10 }, (_, i) => ({
-      id: `comment-${i}`,
+      id: `comment-${String(i)}`,
       taskId: 'task-1',
-      content: `Comment #${i + 1}: This is a sample comment for testing scroll behavior and layout with many items.`,
+      content: `Comment #${String(i + 1)}: This is a sample comment for testing scroll behavior and layout with many items.`,
       createdAt: new Date(Date.now() - 3_600_000 * (10 - i)).toISOString(),
       updatedAt: new Date(Date.now() - 3_600_000 * (10 - i)).toISOString(),
     })),

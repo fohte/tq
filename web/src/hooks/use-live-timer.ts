@@ -20,17 +20,19 @@ export function useLiveTimer(
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
-    if (!startTime) return
+    if (startTime == null || startTime === '') return
 
     setNow(Date.now())
     const interval = setInterval(() => {
       setNow(Date.now())
     }, 1000)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+    }
   }, [startTime])
 
-  if (!startTime) {
+  if (startTime == null || startTime === '') {
     return { elapsedSeconds: 0, formatted: '00:00', isOverEstimate: false }
   }
 
@@ -44,7 +46,7 @@ export function useLiveTimer(
   const pad = (n: number) => n.toString().padStart(2, '0')
   const formatted =
     hours > 0
-      ? `${hours}:${pad(minutes)}:${pad(seconds)}`
+      ? `${String(hours)}:${pad(minutes)}:${pad(seconds)}`
       : `${pad(minutes)}:${pad(seconds)}`
 
   const isOverEstimate =

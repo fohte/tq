@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-non-null-assertion */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -31,6 +32,7 @@ const mockStatusMutate = vi.fn()
 const mockParentMutate = vi.fn()
 
 vi.mock('@web/hooks/use-tasks', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useTask: (...args: unknown[]) => mockUseTask(...args),
   useUpdateTask: () => ({ mutate: mockUpdateMutate }),
   useUpdateTaskStatus: () => ({ mutate: mockStatusMutate }),
@@ -88,7 +90,9 @@ vi.mock('@tanstack/react-router', () => {
       children,
       ...props
     }: { children: React.ReactNode } & Record<string, unknown>) => (
-      <a href={String(props['to'] ?? '#')}>{children}</a>
+      <a href={typeof props['to'] === 'string' ? props['to'] : '#'}>
+        {children}
+      </a>
     ),
   }
 })

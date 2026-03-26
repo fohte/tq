@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -130,6 +131,7 @@ describe('TaskActivity', () => {
     expect(screen.getByText('Third comment')).toBeInTheDocument()
 
     // Verify order: First should appear before Second, which appears before Third
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- textContent can be null at runtime
     const allText = document.body.textContent ?? ''
     const firstIdx = allText.indexOf('First comment')
     const secondIdx = allText.indexOf('Second comment')

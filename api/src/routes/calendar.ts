@@ -4,8 +4,8 @@ import { z } from 'zod'
 
 const eventsQuerySchema = z.object({
   calendarId: z.string(),
-  timeMin: z.string().datetime(),
-  timeMax: z.string().datetime(),
+  timeMin: z.iso.datetime(),
+  timeMax: z.iso.datetime(),
 })
 
 export const calendarApp = new Hono()

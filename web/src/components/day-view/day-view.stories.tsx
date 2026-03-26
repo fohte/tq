@@ -14,7 +14,7 @@ import type { ReactNode } from 'react'
 import { fn } from 'storybook/test'
 
 const today = new Date()
-const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
 const baseTask: Task = {
   id: '00000000-0000-0000-0000-000000000001',

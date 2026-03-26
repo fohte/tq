@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { app } from '@api/app'
 import { setupTestDb } from '@api/testing'
 import { describe, expect, it } from 'vitest'
@@ -308,7 +310,7 @@ async function createProject(
   })
   if (res.status !== 201) {
     throw new Error(
-      `Failed to create project: ${res.status} ${await res.text()}`,
+      `Failed to create project: ${String(res.status)} ${await res.text()}`,
     )
   }
   return (await res.json()) as ProjectResponse
@@ -321,7 +323,9 @@ async function createTask(title: string, opts: { projectId?: string } = {}) {
     body: JSON.stringify({ title, ...opts }),
   })
   if (res.status !== 201) {
-    throw new Error(`Failed to create task: ${res.status} ${await res.text()}`)
+    throw new Error(
+      `Failed to create task: ${String(res.status)} ${await res.text()}`,
+    )
   }
   return (await res.json()) as TaskResponse
 }

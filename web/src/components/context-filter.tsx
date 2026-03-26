@@ -27,7 +27,9 @@ export function ContextFilter() {
         <button
           key={option.mode}
           type="button"
-          onClick={() => setMode(option.mode)}
+          onClick={() => {
+            setMode(option.mode)
+          }}
           title={option.label}
           className={cn(
             'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
@@ -56,7 +58,9 @@ export function ContextFilterInline() {
         <button
           key={option.mode}
           type="button"
-          onClick={() => setMode(option.mode)}
+          onClick={() => {
+            setMode(option.mode)
+          }}
           className={cn(
             'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
             mode === option.mode

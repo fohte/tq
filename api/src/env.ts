@@ -9,6 +9,7 @@ const validAppEnvs: readonly string[] = [
 function resolveAppEnv(): AppEnv {
   const env = process.env['APP_ENV']
   if (env === undefined) return 'development'
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated by includes() above
   if (validAppEnvs.includes(env)) return env as AppEnv
   throw new Error(
     `Invalid APP_ENV: "${env}". Must be one of: ${validAppEnvs.join(', ')}`,
@@ -19,7 +20,7 @@ export const APP_ENV: AppEnv = resolveAppEnv()
 
 function resolveDatabaseUrl(): string {
   const explicit = process.env['DATABASE_URL']
-  if (explicit) return explicit
+  if (explicit != null && explicit !== '') return explicit
 
   switch (APP_ENV) {
     case 'development':

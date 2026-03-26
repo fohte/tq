@@ -27,6 +27,7 @@ function commentToResponse(comment: typeof taskComments.$inferSelect) {
 const factory = createFactory()
 
 const requireTask = factory.createMiddleware(async (c, next) => {
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed by route param
   const taskId = c.req.param('taskId')!
 
   const task = await db.query.tasks.findFirst({
@@ -67,6 +68,7 @@ export const taskCommentsApp = new Hono()
         })
         .returning()
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
       return c.json(commentToResponse(comment!), 201)
     },
   )
@@ -95,6 +97,7 @@ export const taskCommentsApp = new Hono()
         .where(eq(taskComments.id, commentId))
         .returning()
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- update on existing row always returns
       return c.json(commentToResponse(updated!), 200)
     },
   )

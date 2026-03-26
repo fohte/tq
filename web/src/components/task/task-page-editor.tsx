@@ -100,7 +100,9 @@ export function PageEditorInner({
       <input
         type="text"
         value={title}
-        onChange={(e) => setTitle(e.target.value)}
+        onChange={(e) => {
+          setTitle(e.target.value)
+        }}
         onBlur={handleTitleBlur}
         onKeyDown={(e) => {
           if (e.key === 'Enter') e.currentTarget.blur()

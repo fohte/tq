@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
 import { app } from '@api/app'
 import { setupTestDb } from '@api/testing'
 import { describe, expect, it } from 'vitest'
@@ -262,7 +263,9 @@ async function createTask(title: string) {
     body: JSON.stringify({ title }),
   })
   if (res.status !== 201) {
-    throw new Error(`Failed to create task: ${res.status} ${await res.text()}`)
+    throw new Error(
+      `Failed to create task: ${String(res.status)} ${await res.text()}`,
+    )
   }
   return (await res.json()) as { id: string; title: string }
 }
@@ -277,7 +280,9 @@ async function createPage(
     body: JSON.stringify(opts),
   })
   if (res.status !== 201) {
-    throw new Error(`Failed to create page: ${res.status} ${await res.text()}`)
+    throw new Error(
+      `Failed to create page: ${String(res.status)} ${await res.text()}`,
+    )
   }
   return (await res.json()) as PageResponse
 }

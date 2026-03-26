@@ -22,7 +22,7 @@ export function useScheduleList(date: string) {
       const res = await api.api.schedule.recurring.$get({
         query: { date },
       })
-      if (!res.ok) throw new Error('Failed to fetch schedules')
+      if (!res.ok) throw new Error('Failed to fetch schedules') // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- runtime safety guard
       return res.json()
     },
   })
@@ -50,11 +50,11 @@ export function useCreateSchedule() {
       const res = await api.api.schedule.recurring.$post({
         json: input,
       })
-      if (!res.ok) throw new Error('Failed to create schedule')
+      if (!res.ok) throw new Error('Failed to create schedule') // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- runtime safety guard
       return res.json()
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
+      void queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
     },
   })
 }
@@ -92,7 +92,7 @@ export function useUpdateSchedule() {
       return res.json()
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
+      void queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
     },
   })
 }
@@ -132,7 +132,7 @@ export function useDeleteSchedule() {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
+      void queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
     },
   })
 }

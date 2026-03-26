@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -20,7 +21,7 @@ vi.mock('@tanstack/react-router', () => ({
     children,
     ...props
   }: { children: React.ReactNode } & Record<string, unknown>) => (
-    <a href={String(props['to'] ?? '#')}>{children}</a>
+    <a href={typeof props['to'] === 'string' ? props['to'] : '#'}>{children}</a>
   ),
 }))
 

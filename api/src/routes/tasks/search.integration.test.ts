@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { app } from '@api/app'
 import {
   createComment,

@@ -20,7 +20,7 @@ const navItems: NavItem[] = [
 
 function NavLink({ item }: { item: NavItem }) {
   const matchRoute = useMatchRoute()
-  const isActive = matchRoute({ to: item.to, fuzzy: !item.exact })
+  const isActive = matchRoute({ to: item.to, fuzzy: item.exact !== true })
 
   return (
     <Link
@@ -28,7 +28,7 @@ function NavLink({ item }: { item: NavItem }) {
       className={cn(
         'flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
         'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-        isActive
+        isActive !== false
           ? 'bg-sidebar-accent text-primary'
           : 'text-sidebar-foreground/60',
       )}

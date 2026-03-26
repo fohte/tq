@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
@@ -35,9 +36,7 @@ describe('CalendarHeader', () => {
     const user = userEvent.setup()
     const { props, container } = renderHeader()
 
-    const prevButtons = within(container as HTMLElement).getAllByLabelText(
-      'Previous',
-    )
+    const prevButtons = within(container).getAllByLabelText('Previous')
     // Base-UI renders duplicate elements; click the last one which is the visible button
     await user.click(prevButtons[prevButtons.length - 1]!)
     expect(props.onPrev).toHaveBeenCalledOnce()
@@ -47,9 +46,7 @@ describe('CalendarHeader', () => {
     const user = userEvent.setup()
     const { props, container } = renderHeader()
 
-    const nextButtons = within(container as HTMLElement).getAllByLabelText(
-      'Next',
-    )
+    const nextButtons = within(container).getAllByLabelText('Next')
     await user.click(nextButtons[nextButtons.length - 1]!)
     expect(props.onNext).toHaveBeenCalledOnce()
   })
@@ -58,7 +55,7 @@ describe('CalendarHeader', () => {
     const user = userEvent.setup()
     const { props, container } = renderHeader()
 
-    const todayButtons = within(container as HTMLElement).getAllByText('Today')
+    const todayButtons = within(container).getAllByText('Today')
     await user.click(todayButtons[todayButtons.length - 1]!)
     expect(props.onToday).toHaveBeenCalledOnce()
   })

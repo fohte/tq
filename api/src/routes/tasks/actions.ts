@@ -18,7 +18,7 @@ const updateStatusSchema = z.object({
 })
 
 const updateParentSchema = z.object({
-  parentId: z.string().uuid().nullable(),
+  parentId: z.uuid().nullable(),
 })
 
 export const tasksActionsApp = new Hono()
@@ -47,6 +47,7 @@ export const tasksActionsApp = new Hono()
         .where(eq(tasks.id, id))
         .returning()
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- update on existing row always returns
       return c.json(taskToResponse(updated!), 200)
     },
   )
@@ -58,7 +59,7 @@ export const tasksActionsApp = new Hono()
       const id = c.req.param('id')
       const { parentId } = c.req.valid('json')
 
-      if (parentId) {
+      if (parentId != null) {
         const parent = await db.query.tasks.findFirst({
           where: eq(tasks.id, parentId),
         })
@@ -82,7 +83,8 @@ export const tasksActionsApp = new Hono()
         SELECT id FROM ancestors WHERE id = ${id}
       `)
 
-        if ((ancestors as unknown[]).length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- raw SQL result cast
+        if ((ancestors as unknown as unknown[]).length > 0) {
           return c.json({ error: 'Circular reference detected' }, 409)
         }
       }
@@ -93,6 +95,7 @@ export const tasksActionsApp = new Hono()
         .where(eq(tasks.id, id))
         .returning()
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- update on existing row always returns
       return c.json(taskToResponse(updated!), 200)
     },
   )
@@ -117,7 +120,9 @@ export const tasksActionsApp = new Hono()
 
     return c.json(
       {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- update/insert always returns a row
         ...taskToResponse(updatedTask!),
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
         timeBlock: timeBlockToResponse(createdBlock!),
       },
       200,
@@ -159,7 +164,7 @@ export const tasksActionsApp = new Hono()
 
     let nextTask: ReturnType<typeof taskToResponse> | null = null
     let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
-    if (updatedTask.recurrenceRuleId) {
+    if (updatedTask.recurrenceRuleId != null) {
       completedTaskRule =
         (await db.query.recurrenceRules.findFirst({
           where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
@@ -168,6 +173,7 @@ export const tasksActionsApp = new Hono()
       if (completedTaskRule) {
         const nextData = buildNextTaskData(updatedTask, completedTaskRule)
         const [created] = await db.insert(tasks).values(nextData).returning()
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- insert always returns a row
         nextTask = taskToResponse(created!, completedTaskRule)
       }
     }

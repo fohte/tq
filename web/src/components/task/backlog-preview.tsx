@@ -18,7 +18,9 @@ export function BacklogPreview({
     <div className="border-t border-border px-3 py-2">
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          setIsOpen(!isOpen)
+        }}
         className="flex w-full items-center gap-2 py-1 text-sm text-muted-foreground hover:text-foreground"
       >
         {isOpen ? (

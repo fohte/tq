@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { expandScheduleForDate } from '@api/routes/schedule-expansion'
 import { describe, expect, it } from 'vitest'
 

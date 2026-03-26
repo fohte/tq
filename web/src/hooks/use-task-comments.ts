@@ -20,7 +20,7 @@ export function useTaskComments(taskId: string) {
       const res = await api.api.tasks[':taskId'].comments.$get({
         param: { taskId },
       })
-      if (!res.ok) throw new Error('Failed to fetch comments')
+      if (!res.ok) throw new Error('Failed to fetch comments') // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- runtime safety guard
       return res.json()
     },
   })
@@ -35,7 +35,7 @@ export function useCreateComment(taskId: string) {
         param: { taskId },
         json: { content },
       })
-      if (!res.ok) throw new Error('Failed to create comment')
+      if (!res.ok) throw new Error('Failed to create comment') // eslint-disable-line @typescript-eslint/no-unnecessary-condition -- runtime safety guard
       return res.json()
     },
     onMutate: async (content) => {
@@ -69,7 +69,7 @@ export function useCreateComment(taskId: string) {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: commentKeys.all(taskId) })
+      void queryClient.invalidateQueries({ queryKey: commentKeys.all(taskId) })
     },
   })
 }
@@ -119,7 +119,7 @@ export function useUpdateComment(taskId: string) {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: commentKeys.all(taskId) })
+      void queryClient.invalidateQueries({ queryKey: commentKeys.all(taskId) })
     },
   })
 }
@@ -158,7 +158,7 @@ export function useDeleteComment(taskId: string) {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: commentKeys.all(taskId) })
+      void queryClient.invalidateQueries({ queryKey: commentKeys.all(taskId) })
     },
   })
 }

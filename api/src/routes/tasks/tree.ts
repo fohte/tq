@@ -7,7 +7,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 const treeQuerySchema = z.object({
-  rootId: z.string().uuid().optional(),
+  rootId: z.uuid().optional(),
 })
 
 export const tasksTreeApp = new Hono().get(
@@ -18,7 +18,7 @@ export const tasksTreeApp = new Hono().get(
 
     let treeTasks: Array<typeof tasks.$inferSelect>
 
-    if (rootId) {
+    if (rootId != null) {
       // Use recursive CTE to fetch only IDs in the subtree
       const subtreeIds = await db.execute<{ id: string }>(sql`
         WITH RECURSIVE subtree AS (
@@ -31,7 +31,10 @@ export const tasksTreeApp = new Hono().get(
         SELECT id FROM subtree
       `)
 
-      const ids = (subtreeIds as Array<{ id: string }>).map((r) => r.id)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- raw SQL result cast
+      const ids = (subtreeIds as unknown as Array<{ id: string }>).map(
+        (r) => r.id,
+      )
       if (ids.length === 0) {
         return c.json([], 200)
       }

@@ -71,9 +71,10 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           const taskId = el.getAttribute('data-task-id') ?? ''
           const taskTitle = el.getAttribute('data-task-title') ?? ''
           const estimatedMinutes = el.getAttribute('data-estimated-minutes')
-          const durationMinutes = estimatedMinutes
-            ? Number.parseInt(estimatedMinutes, 10)
-            : 30
+          const durationMinutes =
+            estimatedMinutes != null && estimatedMinutes !== ''
+              ? Number.parseInt(estimatedMinutes, 10)
+              : 30
 
           return {
             id: `external-${taskId}`,
@@ -142,6 +143,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     const handleReceive = (info: EventReceiveArg) => {
       if (!dndCallbacks?.onExternalDrop) return
       const { event } = info
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- FullCalendar extendedProps is Record<string, any>
       const taskId = event.extendedProps['taskId'] as string
       if (!event.start || !event.end || !taskId) {
         event.remove()
@@ -168,6 +170,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           eventContent={(arg) => {
             // In month view, render compact event pill with title
             if (arg.view.type === 'dayGridMonth') {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- FullCalendar extendedProps is Record<string, any>
               const type = arg.event.extendedProps['type'] as string
               return (
                 <div className="tq-month-event" data-event-type={type}>
@@ -231,7 +234,11 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           eventReceive={handleReceive}
           snapDuration="00:15:00"
           {...(onDateClick
-            ? { dateClick: (info: { date: Date }) => onDateClick(info.date) }
+            ? {
+                dateClick: (info: { date: Date }) => {
+                  onDateClick(info.date)
+                },
+              }
             : {})}
           {...(onDatesSet ? { datesSet: onDatesSet } : {})}
         />

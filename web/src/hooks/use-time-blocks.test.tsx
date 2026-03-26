@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-type-assertion */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import {
@@ -90,7 +91,9 @@ describe('useTimeBlocks', () => {
       wrapper,
     })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
     expect(result.current.data).toEqual([sampleBlock])
   })
 })
@@ -112,7 +115,9 @@ describe('useCreateTimeBlock', () => {
       () => useTimeBlocks('2026-03-22'),
       { wrapper },
     )
-    await waitFor(() => expect(queryResult.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(queryResult.current.isSuccess).toBe(true)
+    })
 
     // Now create
     const { result } = renderHook(() => useCreateTimeBlock(), { wrapper })
@@ -126,7 +131,9 @@ describe('useCreateTimeBlock', () => {
     })
 
     // Check optimistic update was applied (cache should now have the block)
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
   })
 })
 
@@ -153,7 +160,9 @@ describe('useUpdateTimeBlock', () => {
       () => useTimeBlocks('2026-03-22'),
       { wrapper },
     )
-    await waitFor(() => expect(queryResult.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(queryResult.current.isSuccess).toBe(true)
+    })
 
     // Update
     const { result } = renderHook(() => useUpdateTimeBlock(), { wrapper })
@@ -166,7 +175,9 @@ describe('useUpdateTimeBlock', () => {
       })
     })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
   })
 
   it('rolls back on error', async () => {
@@ -186,7 +197,9 @@ describe('useUpdateTimeBlock', () => {
       () => useTimeBlocks('2026-03-22'),
       { wrapper },
     )
-    await waitFor(() => expect(queryResult.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(queryResult.current.isSuccess).toBe(true)
+    })
 
     // Try to update (should fail and rollback)
     const { result } = renderHook(() => useUpdateTimeBlock(), { wrapper })
@@ -199,7 +212,9 @@ describe('useUpdateTimeBlock', () => {
       })
     })
 
-    await waitFor(() => expect(result.current.isError).toBe(true))
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true)
+    })
 
     // After rollback + invalidation, the cache should be restored
     // The invalidation will re-fetch which returns original block
@@ -233,7 +248,9 @@ describe('useDeleteTimeBlock', () => {
       () => useTimeBlocks('2026-03-22'),
       { wrapper },
     )
-    await waitFor(() => expect(queryResult.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(queryResult.current.isSuccess).toBe(true)
+    })
 
     // Delete
     const { result } = renderHook(() => useDeleteTimeBlock(), { wrapper })
@@ -242,6 +259,8 @@ describe('useDeleteTimeBlock', () => {
       result.current.mutate('block-1')
     })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
   })
 })
