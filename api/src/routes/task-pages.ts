@@ -37,13 +37,13 @@ type TaskPagesEnv = {
 }
 
 export const taskPagesApp = new Hono<TaskPagesEnv>()
-  .use('*', async (c, next): Promise<Response | undefined> => {
+  .use('*', async (c, next) => {
     const taskId = c.req.param('taskId')
     if (taskId == null) {
       return c.json({ error: 'taskId is required' }, 400)
     }
     c.set('taskId', taskId)
-    await next()
+    return next()
   })
   .get('/', async (c) => {
     const taskId = c.get('taskId')
