@@ -13,7 +13,20 @@ interface CreateScheduleModalProps {
 }
 
 type ContextValue = 'work' | 'personal' | 'dev'
+const contextValues = [
+  '',
+  'work',
+  'personal',
+  'dev',
+] as const satisfies readonly (ContextValue | '')[]
 type RecurrenceType = 'daily' | 'weekly' | 'monthly' | 'custom'
+const recurrenceValues = [
+  '',
+  'daily',
+  'weekly',
+  'monthly',
+  'custom',
+] as const satisfies readonly (RecurrenceType | '')[]
 
 const contextLabels: Record<ContextValue, string> = {
   work: 'Work',
@@ -196,7 +209,10 @@ export function CreateScheduleModal({
                 >
                   <select
                     value={recurrenceType}
-                    onChange={selectHandler(setRecurrenceType)}
+                    onChange={selectHandler(
+                      setRecurrenceType,
+                      recurrenceValues,
+                    )}
                     className="bg-transparent text-xs text-foreground outline-none"
                   >
                     <option value="">None</option>
@@ -253,7 +269,7 @@ export function CreateScheduleModal({
                 >
                   <select
                     value={context}
-                    onChange={selectHandler(setContext)}
+                    onChange={selectHandler(setContext, contextValues)}
                     className="bg-transparent text-xs text-foreground outline-none"
                   >
                     <option value="">—</option>
@@ -391,7 +407,10 @@ export function CreateScheduleModal({
                   expanded={
                     <select
                       value={recurrenceType}
-                      onChange={selectHandler(setRecurrenceType)}
+                      onChange={selectHandler(
+                        setRecurrenceType,
+                        recurrenceValues,
+                      )}
                       autoFocus
                       className="bg-transparent text-xs outline-none"
                     >
@@ -409,7 +428,7 @@ export function CreateScheduleModal({
                   expanded={
                     <select
                       value={context}
-                      onChange={selectHandler(setContext)}
+                      onChange={selectHandler(setContext, contextValues)}
                       autoFocus
                       className="bg-transparent text-xs outline-none"
                     >

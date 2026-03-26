@@ -17,6 +17,12 @@ interface CreateTaskModalProps {
 }
 
 type ContextValue = 'work' | 'personal' | 'dev'
+const contextValues = [
+  '',
+  'work',
+  'personal',
+  'dev',
+] as const satisfies readonly (ContextValue | '')[]
 
 const contextLabels: Record<ContextValue, string> = {
   work: 'Work',
@@ -205,7 +211,7 @@ export function CreateTaskModal({
                 >
                   <select
                     value={context}
-                    onChange={selectHandler(setContext)}
+                    onChange={selectHandler(setContext, contextValues)}
                     className="bg-transparent text-xs text-foreground outline-none"
                   >
                     <option value="">—</option>
@@ -340,7 +346,7 @@ export function CreateTaskModal({
                   expanded={
                     <select
                       value={context}
-                      onChange={selectHandler(setContext)}
+                      onChange={selectHandler(setContext, contextValues)}
                       autoFocus
                       className="bg-transparent text-xs outline-none"
                     >

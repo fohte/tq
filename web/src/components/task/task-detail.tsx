@@ -342,6 +342,7 @@ function SidebarStatusField({
           (value: 'todo' | 'in_progress' | 'completed') => {
             updateStatus.mutate({ id: taskId, status: value })
           },
+          ['todo', 'in_progress', 'completed'],
         )}
         className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-primary/50"
       >
@@ -515,9 +516,12 @@ function SidebarContextField({
     <SidebarField label="Context" icon={<Layers className="size-3.5" />}>
       <select
         value={context}
-        onChange={selectHandler((value: 'work' | 'personal' | 'dev') => {
-          updateTask.mutate({ id: taskId, input: { context: value } })
-        })}
+        onChange={selectHandler(
+          (value: 'work' | 'personal' | 'dev') => {
+            updateTask.mutate({ id: taskId, input: { context: value } })
+          },
+          ['work', 'personal', 'dev'],
+        )}
         className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-primary/50"
       >
         <option value="personal">Personal</option>
