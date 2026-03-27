@@ -41,10 +41,15 @@ if (typeof Range.prototype.getBoundingClientRect === 'undefined') {
 // This is a jsdom limitation, not a real application bug.
 const originalListeners = process.listeners('uncaughtException')
 process.removeAllListeners('uncaughtException')
-process.prependListener('uncaughtException', (error) => {
+// Type as unknown because JS allows throwing any value, not just Error
+process.prependListener('uncaughtException', (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error)
 
-  const isMilkdownCleanup = 'code' in error && error.code === 'contextNotFound'
+  const isMilkdownCleanup =
+    typeof error === 'object' &&
+    error != null &&
+    'code' in error &&
+    error.code === 'contextNotFound'
   const isProsemirrorJsdom = message.includes(
     'getClientRects is not a function',
   )
