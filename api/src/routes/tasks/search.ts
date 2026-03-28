@@ -46,10 +46,10 @@ export const tasksSearchApp = new Hono()
     const conditions = []
 
     // Parse q parameter for prefix-based filters and free text
-    const parsed = query.q ? parseSearchQuery(query.q) : null
+    const parsed = query.q != null ? parseSearchQuery(query.q) : null
 
     // Free text search across title, description, and task_pages.content
-    if (parsed?.freeText) {
+    if (parsed?.freeText != null && parsed.freeText !== '') {
       const pattern = `%${parsed.freeText}%`
       conditions.push(
         sql`(${tasks.title} ILIKE ${pattern} OR ${tasks.description} ILIKE ${pattern} OR EXISTS (SELECT 1 FROM ${taskPages} WHERE ${taskPages.taskId} = ${tasks.id} AND ${taskPages.content} ILIKE ${pattern}))`,
@@ -58,19 +58,19 @@ export const tasksSearchApp = new Hono()
 
     // Status filter: from parsed query or explicit param
     const status = parsed?.status ?? query.status
-    if (status) {
+    if (status != null) {
       conditions.push(eq(tasks.status, status))
     }
 
     // Context filter: from parsed query or explicit param
     const context = parsed?.context ?? query.context
-    if (context) {
+    if (context != null) {
       conditions.push(eq(tasks.context, context))
     }
 
     // Label filter: from parsed query or explicit param
     const labelName = parsed?.label ?? query.label
-    if (labelName) {
+    if (labelName != null) {
       conditions.push(
         exists(
           db
@@ -85,7 +85,7 @@ export const tasksSearchApp = new Hono()
     }
 
     // has:pages filter
-    if (parsed?.hasPages) {
+    if (parsed?.hasPages === true) {
       conditions.push(
         exists(
           db
@@ -97,7 +97,7 @@ export const tasksSearchApp = new Hono()
     }
 
     // has:comments filter
-    if (parsed?.hasComments) {
+    if (parsed?.hasComments === true) {
       conditions.push(
         exists(
           db
@@ -109,12 +109,12 @@ export const tasksSearchApp = new Hono()
     }
 
     // parent: filter
-    if (parsed?.parentId) {
+    if (parsed?.parentId != null) {
       conditions.push(eq(tasks.parentId, parsed.parentId))
     }
 
     // project: filter
-    if (parsed?.projectId) {
+    if (parsed?.projectId != null) {
       conditions.push(eq(tasks.projectId, parsed.projectId))
     }
 
@@ -192,7 +192,8 @@ export const tasksSearchApp = new Hono()
       ],
     }
 
-    const categories = category ? [category] : Object.keys(allSuggestions)
+    const categories =
+      category != null ? [category] : Object.keys(allSuggestions)
     const suggestions = categories.flatMap((cat) =>
       (allSuggestions[cat] ?? [])
         .filter((s) => s.value.startsWith(prefix))

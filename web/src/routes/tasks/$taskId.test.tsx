@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { atIndex } from '@web/lib/test-utils'
 // Import after mocks
 import { Route } from '@web/routes/tasks/$taskId'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -31,6 +32,7 @@ const mockStatusMutate = vi.fn()
 const mockParentMutate = vi.fn()
 
 vi.mock('@web/hooks/use-tasks', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useTask: (...args: unknown[]) => mockUseTask(...args),
   useUpdateTask: () => ({ mutate: mockUpdateMutate }),
   useUpdateTaskStatus: () => ({ mutate: mockStatusMutate }),
@@ -88,11 +90,14 @@ vi.mock('@tanstack/react-router', () => {
       children,
       ...props
     }: { children: React.ReactNode } & Record<string, unknown>) => (
-      <a href={String(props['to'] ?? '#')}>{children}</a>
+      <a href={typeof props['to'] === 'string' ? props['to'] : '#'}>
+        {children}
+      </a>
     ),
   }
 })
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- extracting component from mocked Route object
 const TaskPage = (Route as unknown as { component: React.ComponentType })
   .component
 
@@ -163,7 +168,9 @@ describe('TaskPage', () => {
     renderTaskPage()
     const editors = screen.getAllByTestId('mock-markdown-editor')
     const editorWithDescription = editors.find(
-      (e) => (e as HTMLTextAreaElement).defaultValue === mockTask.description,
+      (e) =>
+        e instanceof HTMLTextAreaElement &&
+        e.defaultValue === mockTask.description,
     )
     expect(editorWithDescription).toBeTruthy()
   })
@@ -190,7 +197,7 @@ describe('TaskPage', () => {
     const user = userEvent.setup()
 
     const titleButtons = screen.getAllByText('Test task title')
-    await user.click(titleButtons[0]!)
+    await user.click(atIndex(titleButtons, 0))
 
     const input = screen.getByDisplayValue('Test task title')
     expect(input).toBeInTheDocument()

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@web/lib/api'
+import { assertOk } from '@web/lib/assert-response'
 import type { InferResponseType } from 'hono/client'
 import { useMemo } from 'react'
 
@@ -23,7 +24,7 @@ export type { Task, TaskDetail, TreeNode }
 type TaskStatus = 'todo' | 'in_progress' | 'completed'
 
 function isBacklog(t: Task): boolean {
-  return t.status === 'todo' && !t.dueDate && !t.startDate
+  return t.status === 'todo' && t.dueDate == null && t.startDate == null
 }
 
 export interface CategorizedTasks {
@@ -49,7 +50,7 @@ export function useTaskList(filter?: {
       const res = await api.api.tasks.$get({
         query: filter ?? {},
       })
-      if (!res.ok) throw new Error('Failed to fetch tasks')
+      assertOk(res)
       return res.json()
     },
   })
@@ -98,7 +99,7 @@ export function useCreateTask() {
 
       const now = new Date().toISOString()
       const optimisticTask: Task = {
-        id: `optimistic-${Date.now()}`,
+        id: `optimistic-${String(Date.now())}`,
         title: input.title,
         description: input.description ?? null,
         status: 'todo',
@@ -134,7 +135,7 @@ export function useCreateTask() {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
     },
   })
 }
@@ -198,7 +199,7 @@ export function useUpdateTaskStatus() {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
     },
   })
 }
@@ -290,8 +291,8 @@ export function useUpdateTask() {
       }
     },
     onSettled: (_data, _err, { id }) => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
-      queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
+      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
     },
   })
 }
@@ -301,7 +302,7 @@ export function useTaskTree(options: { enabled: boolean }) {
     queryKey: taskKeys.tree,
     queryFn: async () => {
       const res = await api.api.tasks.tree.$get({ query: {} })
-      if (!res.ok) throw new Error('Failed to fetch task tree')
+      assertOk(res)
       return res.json()
     },
     enabled: options.enabled,
@@ -370,8 +371,8 @@ export function useUpdateTaskParent() {
       }
     },
     onSettled: (_data, _err, { id }) => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
-      queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
+      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
     },
   })
 }
@@ -387,7 +388,7 @@ function useTaskActionMutation(
     mutationFn: async (id: string) => {
       const res = await apiCall(id)
       if (!res.ok) throw new Error(errorMsg)
-      return res.json()
+      return res.json() as Promise<unknown>
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists })
@@ -442,7 +443,7 @@ function useTaskActionMutation(
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
     },
   })
 }
@@ -529,7 +530,7 @@ export function useDeleteTask() {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
     },
   })
 }

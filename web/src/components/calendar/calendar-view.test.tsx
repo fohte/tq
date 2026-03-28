@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CalendarView } from '@web/components/calendar/calendar-view'
+import { atIndex } from '@web/lib/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Mock FullCalendar to avoid complex DOM rendering
@@ -29,15 +30,16 @@ vi.mock('@fullcalendar/react', async () => {
           view: { type: 'timeGridDay' },
         }),
       }))
+      const initialView =
+        typeof props['initialView'] === 'string' ? props['initialView'] : ''
       return (
         <div
           data-testid="fullcalendar"
-          data-view={props['initialView'] as string}
+          data-view={initialView}
           onClick={() => {
-            const dateClick = props['dateClick'] as
-              | ((info: { date: Date }) => void)
-              | undefined
-            if (dateClick) {
+            const dateClick = props['dateClick']
+            if (typeof dateClick === 'function') {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- calling mock dateClick prop
               dateClick({ date: new Date(2025, 2, 15) })
             }
           }}
@@ -85,7 +87,7 @@ describe('CalendarView', () => {
     render(<CalendarView />)
 
     const weekButtons = screen.getAllByText('Week')
-    await user.click(weekButtons[weekButtons.length - 1]!)
+    await user.click(atIndex(weekButtons, weekButtons.length - 1))
 
     expect(mockChangeView).toHaveBeenCalledWith('timeGridWeek')
   })
@@ -95,7 +97,7 @@ describe('CalendarView', () => {
     render(<CalendarView />)
 
     const monthButtons = screen.getAllByText('Month')
-    await user.click(monthButtons[monthButtons.length - 1]!)
+    await user.click(atIndex(monthButtons, monthButtons.length - 1))
 
     expect(mockChangeView).toHaveBeenCalledWith('dayGridMonth')
   })
@@ -105,7 +107,7 @@ describe('CalendarView', () => {
     render(<CalendarView initialView="week" />)
 
     const dayButtons = screen.getAllByText('Day')
-    await user.click(dayButtons[dayButtons.length - 1]!)
+    await user.click(atIndex(dayButtons, dayButtons.length - 1))
 
     expect(mockChangeView).toHaveBeenCalledWith('timeGridDay')
   })
@@ -125,7 +127,7 @@ describe('CalendarView', () => {
     render(<CalendarView initialView="week" />)
 
     const weekButtons = screen.getAllByText('Week')
-    const activeWeekButton = weekButtons[weekButtons.length - 1]!
+    const activeWeekButton = atIndex(weekButtons, weekButtons.length - 1)
     expect(activeWeekButton.className).toContain('bg-background')
   })
 })

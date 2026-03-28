@@ -1,6 +1,6 @@
 import { app } from '@api/app'
 import { createTask, TaskResponse, TEST_UUID } from '@api/routes/tasks/testing'
-import { setupTestDb } from '@api/testing'
+import { assertDefined, jsonBody, setupTestDb } from '@api/testing'
 import { describe, expect, it } from 'vitest'
 
 setupTestDb()
@@ -22,11 +22,13 @@ describe('tasks tree API', () => {
       const res = await app.request('/api/tasks/tree')
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Parent')
-      expect(body[0]!.children).toHaveLength(2)
-      expect(body[0]!.childCompletionCount!.total).toBe(2)
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Parent')
+      expect(body[0].children).toHaveLength(2)
+      assertDefined(body[0].childCompletionCount)
+      expect(body[0].childCompletionCount.total).toBe(2)
     })
 
     it('returns subtree for rootId', async () => {
@@ -38,13 +40,18 @@ describe('tasks tree API', () => {
       const res = await app.request(`/api/tasks/tree?rootId=${root.id}`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Root')
-      expect(body[0]!.children).toHaveLength(1)
-      expect(body[0]!.children![0]!.title).toBe('Child')
-      expect(body[0]!.children![0]!.children).toHaveLength(1)
-      expect(body[0]!.children![0]!.children![0]!.title).toBe('Grandchild')
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Root')
+      assertDefined(body[0].children)
+      expect(body[0].children).toHaveLength(1)
+      assertDefined(body[0].children[0])
+      expect(body[0].children[0].title).toBe('Child')
+      assertDefined(body[0].children[0].children)
+      expect(body[0].children[0].children).toHaveLength(1)
+      assertDefined(body[0].children[0].children[0])
+      expect(body[0].children[0].children[0].title).toBe('Grandchild')
     })
 
     it('returns deeply nested tree (3+ levels)', async () => {
@@ -56,12 +63,17 @@ describe('tasks tree API', () => {
       const res = await app.request('/api/tasks/tree')
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.children![0]!.children![0]!.children).toHaveLength(1)
-      expect(body[0]!.children![0]!.children![0]!.children![0]!.title).toBe(
-        'Level 4',
-      )
+      assertDefined(body[0])
+      assertDefined(body[0].children)
+      assertDefined(body[0].children[0])
+      assertDefined(body[0].children[0].children)
+      assertDefined(body[0].children[0].children[0])
+      assertDefined(body[0].children[0].children[0].children)
+      expect(body[0].children[0].children[0].children).toHaveLength(1)
+      assertDefined(body[0].children[0].children[0].children[0])
+      expect(body[0].children[0].children[0].children[0].title).toBe('Level 4')
     })
 
     it('returns empty array for non-existent rootId', async () => {
@@ -88,8 +100,9 @@ describe('tasks tree API', () => {
       const res = await app.request('/api/tasks/tree')
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
-      expect(body[0]!.childCompletionCount).toEqual({
+      const body = await jsonBody<TaskResponse[]>(res)
+      assertDefined(body[0])
+      expect(body[0].childCompletionCount).toEqual({
         completed: 1,
         total: 3,
       })

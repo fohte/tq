@@ -1,5 +1,5 @@
 import { app } from '@api/app'
-import { setupTestDb } from '@api/testing'
+import { assertDefined, jsonBody, setupTestDb } from '@api/testing'
 import { describe, expect, it } from 'vitest'
 
 setupTestDb()
@@ -50,7 +50,7 @@ async function createTask(title: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title }),
   })
-  return (await res.json()) as { id: string }
+  return jsonBody<{ id: string }>(res)
 }
 
 async function createTimeBlock(
@@ -63,7 +63,7 @@ async function createTimeBlock(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ taskId, startTime, endTime }),
   })
-  return { res, body: (await res.json()) as TimeBlockResponse }
+  return { res, body: await jsonBody<TimeBlockResponse>(res) }
 }
 
 async function createSchedule(body: Record<string, unknown>) {
@@ -72,7 +72,7 @@ async function createSchedule(body: Record<string, unknown>) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  return { res, body: (await res.json()) as ScheduleResponse }
+  return { res, body: await jsonBody<ScheduleResponse>(res) }
 }
 
 describe('schedule/time-blocks API', () => {
@@ -136,16 +136,17 @@ describe('schedule/time-blocks API', () => {
       const res = await app.request('/api/schedule/time-blocks?date=2026-03-22')
       expect(res.status).toBe(200)
 
-      const blocks = (await res.json()) as TimeBlockResponse[]
+      const blocks = await jsonBody<TimeBlockResponse[]>(res)
       expect(blocks.length).toBe(2)
-      expect(blocks[0]!.startTime).toBe('2026-03-22T09:00:00.000Z')
+      assertDefined(blocks[0])
+      expect(blocks[0].startTime).toBe('2026-03-22T09:00:00.000Z')
     })
 
     it('returns empty array when no blocks exist', async () => {
       const res = await app.request('/api/schedule/time-blocks?date=2026-03-22')
       expect(res.status).toBe(200)
 
-      const blocks = (await res.json()) as TimeBlockResponse[]
+      const blocks = await jsonBody<TimeBlockResponse[]>(res)
       expect(blocks.length).toBe(0)
     })
   })
@@ -169,7 +170,7 @@ describe('schedule/time-blocks API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TimeBlockResponse
+      const body = await jsonBody<TimeBlockResponse>(res)
       expect(body.startTime).toBe('2026-03-22T11:00:00.000Z')
       expect(body.endTime).toBe('2026-03-22T12:00:00.000Z')
     })
@@ -191,7 +192,7 @@ describe('schedule/time-blocks API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TimeBlockResponse
+      const body = await jsonBody<TimeBlockResponse>(res)
       expect(body.startTime).toBe('2026-03-22T09:00:00.000Z')
       expect(body.endTime).toBe('2026-03-22T11:30:00.000Z')
     })
@@ -228,7 +229,7 @@ describe('schedule/time-blocks API', () => {
       const listRes = await app.request(
         '/api/schedule/time-blocks?date=2026-03-22',
       )
-      const blocks = (await listRes.json()) as TimeBlockResponse[]
+      const blocks = await jsonBody<TimeBlockResponse[]>(listRes)
       expect(blocks.length).toBe(0)
     })
 
@@ -275,9 +276,9 @@ describe('schedules API', () => {
 
       expect(res.status).toBe(201)
       expect(body.title).toBe('Gym')
-      expect(body.recurrence).not.toBeNull()
-      expect(body.recurrence!.type).toBe('weekly')
-      expect(body.recurrence!.daysOfWeek).toEqual([1, 3, 5])
+      assertDefined(body.recurrence)
+      expect(body.recurrence.type).toBe('weekly')
+      expect(body.recurrence.daysOfWeek).toEqual([1, 3, 5])
       expect(body.color).toBe('#FF6B6B')
     })
 
@@ -318,11 +319,12 @@ describe('schedules API', () => {
       const res = await app.request('/api/schedule/recurring?date=2026-03-22')
       expect(res.status).toBe(200)
 
-      const blocks = (await res.json()) as ExpandedBlock[]
+      const blocks = await jsonBody<ExpandedBlock[]>(res)
       expect(blocks).toHaveLength(1)
-      expect(blocks[0]!.title).toBe('Morning Routine')
-      expect(blocks[0]!.start).toBe('2026-03-22T06:00:00')
-      expect(blocks[0]!.end).toBe('2026-03-22T07:00:00')
+      assertDefined(blocks[0])
+      expect(blocks[0].title).toBe('Morning Routine')
+      expect(blocks[0].start).toBe('2026-03-22T06:00:00')
+      expect(blocks[0].end).toBe('2026-03-22T07:00:00')
     })
 
     it('returns cross-midnight blocks correctly', async () => {
@@ -335,16 +337,16 @@ describe('schedules API', () => {
       const res = await app.request('/api/schedule/recurring?date=2026-03-22')
       expect(res.status).toBe(200)
 
-      const blocks = (await res.json()) as ExpandedBlock[]
+      const blocks = await jsonBody<ExpandedBlock[]>(res)
       expect(blocks).toHaveLength(2)
 
       const startBlock = blocks.find((b) => b.start.includes('T23:00'))
-      expect(startBlock).toBeDefined()
-      expect(startBlock!.end).toBe('2026-03-23T00:00:00')
+      assertDefined(startBlock)
+      expect(startBlock.end).toBe('2026-03-23T00:00:00')
 
       const endBlock = blocks.find((b) => b.start.includes('T00:00'))
-      expect(endBlock).toBeDefined()
-      expect(endBlock!.end).toBe('2026-03-22T07:00:00')
+      assertDefined(endBlock)
+      expect(endBlock.end).toBe('2026-03-22T07:00:00')
     })
 
     it('filters by weekly recurrence rule', async () => {
@@ -363,14 +365,14 @@ describe('schedules API', () => {
       const mondayRes = await app.request(
         '/api/schedule/recurring?date=2026-03-23',
       )
-      const mondayBlocks = (await mondayRes.json()) as ExpandedBlock[]
+      const mondayBlocks = await jsonBody<ExpandedBlock[]>(mondayRes)
       expect(mondayBlocks).toHaveLength(1)
 
       // 2026-03-24 is Tuesday
       const tuesdayRes = await app.request(
         '/api/schedule/recurring?date=2026-03-24',
       )
-      const tuesdayBlocks = (await tuesdayRes.json()) as ExpandedBlock[]
+      const tuesdayBlocks = await jsonBody<ExpandedBlock[]>(tuesdayRes)
       expect(tuesdayBlocks).toHaveLength(0)
     })
   })
@@ -390,7 +392,7 @@ describe('schedules API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as ScheduleResponse
+      const body = await jsonBody<ScheduleResponse>(res)
       expect(body.title).toBe('Deep Sleep')
     })
 
@@ -414,9 +416,9 @@ describe('schedules API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as ScheduleResponse
-      expect(body.recurrence).not.toBeNull()
-      expect(body.recurrence!.type).toBe('weekly')
+      const body = await jsonBody<ScheduleResponse>(res)
+      assertDefined(body.recurrence)
+      expect(body.recurrence.type).toBe('weekly')
     })
 
     it('removes recurrence from a schedule', async () => {
@@ -434,7 +436,7 @@ describe('schedules API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as ScheduleResponse
+      const body = await jsonBody<ScheduleResponse>(res)
       expect(body.recurrence).toBeNull()
     })
 
@@ -465,7 +467,7 @@ describe('schedules API', () => {
       const getRes = await app.request(
         '/api/schedule/recurring?date=2026-03-22',
       )
-      const blocks = (await getRes.json()) as ExpandedBlock[]
+      const blocks = await jsonBody<ExpandedBlock[]>(getRes)
       expect(blocks).toHaveLength(0)
     })
 

@@ -1,5 +1,6 @@
 import { db } from '@api/db/connection'
 import { recurrenceRules, tasks, timeBlocks } from '@api/db/schema'
+import { firstOrThrow } from '@api/lib/drizzle-utils'
 import {
   requireTask,
   taskStatus,
@@ -18,7 +19,7 @@ const updateStatusSchema = z.object({
 })
 
 const updateParentSchema = z.object({
-  parentId: z.string().uuid().nullable(),
+  parentId: z.uuid().nullable(),
 })
 
 export const tasksActionsApp = new Hono()
@@ -41,13 +42,15 @@ export const tasksActionsApp = new Hono()
           .where(and(eq(timeBlocks.taskId, id), isNull(timeBlocks.endTime)))
       }
 
-      const [updated] = await db
-        .update(tasks)
-        .set({ status, updatedAt: now })
-        .where(eq(tasks.id, id))
-        .returning()
+      const updated = firstOrThrow(
+        await db
+          .update(tasks)
+          .set({ status, updatedAt: now })
+          .where(eq(tasks.id, id))
+          .returning(),
+      )
 
-      return c.json(taskToResponse(updated!), 200)
+      return c.json(taskToResponse(updated), 200)
     },
   )
   .patch(
@@ -58,7 +61,7 @@ export const tasksActionsApp = new Hono()
       const id = c.req.param('id')
       const { parentId } = c.req.valid('json')
 
-      if (parentId) {
+      if (parentId != null) {
         const parent = await db.query.tasks.findFirst({
           where: eq(tasks.id, parentId),
         })
@@ -82,18 +85,23 @@ export const tasksActionsApp = new Hono()
         SELECT id FROM ancestors WHERE id = ${id}
       `)
 
-        if ((ancestors as unknown[]).length > 0) {
+        const ancestorRows = z
+          .array(z.object({ id: z.string() }))
+          .parse(ancestors)
+        if (ancestorRows.length > 0) {
           return c.json({ error: 'Circular reference detected' }, 409)
         }
       }
 
-      const [updated] = await db
-        .update(tasks)
-        .set({ parentId, updatedAt: new Date() })
-        .where(eq(tasks.id, id))
-        .returning()
+      const updated = firstOrThrow(
+        await db
+          .update(tasks)
+          .set({ parentId, updatedAt: new Date() })
+          .where(eq(tasks.id, id))
+          .returning(),
+      )
 
-      return c.json(taskToResponse(updated!), 200)
+      return c.json(taskToResponse(updated), 200)
     },
   )
   .post('/:id/start', requireTask, async (c) => {
@@ -106,7 +114,7 @@ export const tasksActionsApp = new Hono()
 
     const now = new Date()
 
-    const [[updatedTask], [createdBlock]] = await Promise.all([
+    const [taskRows, blockRows] = await Promise.all([
       db
         .update(tasks)
         .set({ status: 'in_progress', updatedAt: now })
@@ -117,8 +125,8 @@ export const tasksActionsApp = new Hono()
 
     return c.json(
       {
-        ...taskToResponse(updatedTask!),
-        timeBlock: timeBlockToResponse(createdBlock!),
+        ...taskToResponse(firstOrThrow(taskRows)),
+        timeBlock: timeBlockToResponse(firstOrThrow(blockRows)),
       },
       200,
     )
@@ -159,7 +167,7 @@ export const tasksActionsApp = new Hono()
 
     let nextTask: ReturnType<typeof taskToResponse> | null = null
     let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
-    if (updatedTask.recurrenceRuleId) {
+    if (updatedTask.recurrenceRuleId != null) {
       completedTaskRule =
         (await db.query.recurrenceRules.findFirst({
           where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
@@ -167,8 +175,10 @@ export const tasksActionsApp = new Hono()
 
       if (completedTaskRule) {
         const nextData = buildNextTaskData(updatedTask, completedTaskRule)
-        const [created] = await db.insert(tasks).values(nextData).returning()
-        nextTask = taskToResponse(created!, completedTaskRule)
+        const created = firstOrThrow(
+          await db.insert(tasks).values(nextData).returning(),
+        )
+        nextTask = taskToResponse(created, completedTaskRule)
       }
     }
 

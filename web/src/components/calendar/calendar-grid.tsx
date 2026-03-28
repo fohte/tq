@@ -13,6 +13,7 @@ import {
 } from '@web/components/calendar/calendar-header'
 import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
 import { EventBlock } from '@web/components/calendar/event-block'
+import { getEventProps } from '@web/lib/calendar-utils'
 import { forwardRef, useEffect } from 'react'
 
 export interface CalendarDndCallbacks {
@@ -71,9 +72,10 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           const taskId = el.getAttribute('data-task-id') ?? ''
           const taskTitle = el.getAttribute('data-task-title') ?? ''
           const estimatedMinutes = el.getAttribute('data-estimated-minutes')
-          const durationMinutes = estimatedMinutes
-            ? Number.parseInt(estimatedMinutes, 10)
-            : 30
+          const durationMinutes =
+            estimatedMinutes != null && estimatedMinutes !== ''
+              ? Number.parseInt(estimatedMinutes, 10)
+              : 30
 
           return {
             id: `external-${taskId}`,
@@ -142,8 +144,8 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     const handleReceive = (info: EventReceiveArg) => {
       if (!dndCallbacks?.onExternalDrop) return
       const { event } = info
-      const taskId = event.extendedProps['taskId'] as string
-      if (!event.start || !event.end || !taskId) {
+      const taskId = getEventProps(event).taskId
+      if (!event.start || !event.end || taskId == null) {
         event.remove()
         return
       }
@@ -168,7 +170,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           eventContent={(arg) => {
             // In month view, render compact event pill with title
             if (arg.view.type === 'dayGridMonth') {
-              const type = arg.event.extendedProps['type'] as string
+              const type = getEventProps(arg.event).type
               return (
                 <div className="tq-month-event" data-event-type={type}>
                   <span className="tq-month-event-title">
@@ -231,7 +233,11 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           eventReceive={handleReceive}
           snapDuration="00:15:00"
           {...(onDateClick
-            ? { dateClick: (info: { date: Date }) => onDateClick(info.date) }
+            ? {
+                dateClick: (info: { date: Date }) => {
+                  onDateClick(info.date)
+                },
+              }
             : {})}
           {...(onDatesSet ? { datesSet: onDatesSet } : {})}
         />

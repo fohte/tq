@@ -4,6 +4,7 @@ import {
   CalendarHeader,
   type CalendarViewType,
 } from '@web/components/calendar/calendar-header'
+import { atIndex } from '@web/lib/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 
 function renderHeader(
@@ -28,18 +29,16 @@ describe('CalendarHeader', () => {
     renderHeader()
     const dateTexts = screen.getAllByText(/March 7, 2025/)
     expect(dateTexts.length).toBeGreaterThan(0)
-    expect(dateTexts[0]!.textContent).toContain('Fri')
+    expect(atIndex(dateTexts, 0).textContent).toContain('Fri')
   })
 
   it('calls onPrev when previous button is clicked', async () => {
     const user = userEvent.setup()
     const { props, container } = renderHeader()
 
-    const prevButtons = within(container as HTMLElement).getAllByLabelText(
-      'Previous',
-    )
+    const prevButtons = within(container).getAllByLabelText('Previous')
     // Base-UI renders duplicate elements; click the last one which is the visible button
-    await user.click(prevButtons[prevButtons.length - 1]!)
+    await user.click(atIndex(prevButtons, prevButtons.length - 1))
     expect(props.onPrev).toHaveBeenCalledOnce()
   })
 
@@ -47,10 +46,8 @@ describe('CalendarHeader', () => {
     const user = userEvent.setup()
     const { props, container } = renderHeader()
 
-    const nextButtons = within(container as HTMLElement).getAllByLabelText(
-      'Next',
-    )
-    await user.click(nextButtons[nextButtons.length - 1]!)
+    const nextButtons = within(container).getAllByLabelText('Next')
+    await user.click(atIndex(nextButtons, nextButtons.length - 1))
     expect(props.onNext).toHaveBeenCalledOnce()
   })
 
@@ -58,8 +55,8 @@ describe('CalendarHeader', () => {
     const user = userEvent.setup()
     const { props, container } = renderHeader()
 
-    const todayButtons = within(container as HTMLElement).getAllByText('Today')
-    await user.click(todayButtons[todayButtons.length - 1]!)
+    const todayButtons = within(container).getAllByText('Today')
+    await user.click(atIndex(todayButtons, todayButtons.length - 1))
     expect(props.onToday).toHaveBeenCalledOnce()
   })
 
@@ -67,7 +64,7 @@ describe('CalendarHeader', () => {
     renderHeader({ activeView: 'week' })
     const weekButtons = screen.getAllByText('Week')
     // The last element is the visible one rendered by Base-UI
-    expect(weekButtons[weekButtons.length - 1]!.className).toContain(
+    expect(atIndex(weekButtons, weekButtons.length - 1).className).toContain(
       'bg-background',
     )
   })
@@ -77,7 +74,7 @@ describe('CalendarHeader', () => {
     const { props } = renderHeader({ activeView: 'day' })
 
     const monthButtons = screen.getAllByText('Month')
-    await user.click(monthButtons[monthButtons.length - 1]!)
+    await user.click(atIndex(monthButtons, monthButtons.length - 1))
     expect(props.onViewChange).toHaveBeenCalledWith('month')
   })
 

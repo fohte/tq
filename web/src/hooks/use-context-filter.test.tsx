@@ -22,7 +22,9 @@ describe('useContextFilter', () => {
 
   it('updates mode', () => {
     const { result } = renderHook(() => useContextFilter(), { wrapper })
-    act(() => result.current.setMode('work'))
+    act(() => {
+      result.current.setMode('work')
+    })
     expect(result.current.mode).toBe('work')
   })
 

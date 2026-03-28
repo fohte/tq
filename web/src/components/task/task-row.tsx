@@ -195,7 +195,7 @@ function TaskRowContent({
           >
             {title}
           </span>
-          {parentId && (
+          {parentId != null && (
             <span className="shrink-0 text-xs text-muted-foreground">
               ← #{parentId.slice(0, 4)}
             </span>
@@ -309,7 +309,7 @@ export function TreeTaskRow({
             !isInProgress && 'border-b border-b-border',
             isCompleted && 'opacity-50',
           )}
-          style={{ paddingLeft: `${depth * 24 + 12}px` }}
+          style={{ paddingLeft: `${String(depth * 24 + 12)}px` }}
         >
           {/* Expand/collapse toggle */}
           {hasChildren ? (

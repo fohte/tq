@@ -48,7 +48,7 @@ const longDescription = [
   '',
   ...Array.from(
     { length: 30 },
-    (_, i) => `- Task item ${i + 1}: do something important`,
+    (_, i) => `- Task item ${String(i + 1)}: do something important`,
   ),
   '',
   '## Notes',
@@ -56,7 +56,7 @@ const longDescription = [
   ...Array.from(
     { length: 10 },
     (_, i) =>
-      `Paragraph ${i + 1}: Lorem ipsum dolor sit amet, consectetur adipiscing elit.`,
+      `Paragraph ${String(i + 1)}: Lorem ipsum dolor sit amet, consectetur adipiscing elit.`,
   ),
 ].join('\n')
 

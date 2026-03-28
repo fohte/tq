@@ -6,6 +6,7 @@ import {
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '@web/hooks/use-time-blocks'
+import { assertDefined } from '@web/lib/test-utils'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -38,9 +39,11 @@ vi.mock('@web/lib/api', () => {
 // Access mocks
 async function getMocks() {
   const mod = await import('@web/lib/api')
-  return (
-    mod as unknown as { __mocks: Record<string, ReturnType<typeof vi.fn>> }
-  ).__mocks
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- accessing test-only __mocks property injected by vi.mock
+  const typed = mod as unknown as {
+    __mocks: Record<string, ReturnType<typeof vi.fn>>
+  }
+  return typed.__mocks
 }
 
 let queryClient: QueryClient
@@ -81,7 +84,7 @@ const sampleBlock = {
 describe('useTimeBlocks', () => {
   it('fetches time blocks for a date', async () => {
     const mocks = await getMocks()
-    mocks['mockGet']!.mockResolvedValue({
+    assertDefined(mocks['mockGet']).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve([sampleBlock]),
     })
@@ -90,7 +93,9 @@ describe('useTimeBlocks', () => {
       wrapper,
     })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
     expect(result.current.data).toEqual([sampleBlock])
   })
 })
@@ -98,11 +103,11 @@ describe('useTimeBlocks', () => {
 describe('useCreateTimeBlock', () => {
   it('creates a time block with optimistic update', async () => {
     const mocks = await getMocks()
-    mocks['mockGet']!.mockResolvedValue({
+    assertDefined(mocks['mockGet']).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve([]),
     })
-    mocks['mockPost']!.mockResolvedValue({
+    assertDefined(mocks['mockPost']).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(sampleBlock),
     })
@@ -112,7 +117,9 @@ describe('useCreateTimeBlock', () => {
       () => useTimeBlocks('2026-03-22'),
       { wrapper },
     )
-    await waitFor(() => expect(queryResult.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(queryResult.current.isSuccess).toBe(true)
+    })
 
     // Now create
     const { result } = renderHook(() => useCreateTimeBlock(), { wrapper })
@@ -126,7 +133,9 @@ describe('useCreateTimeBlock', () => {
     })
 
     // Check optimistic update was applied (cache should now have the block)
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
   })
 })
 
@@ -139,11 +148,11 @@ describe('useUpdateTimeBlock', () => {
       endTime: '2026-03-22T12:00:00.000Z',
     }
 
-    mocks['mockGet']!.mockResolvedValue({
+    assertDefined(mocks['mockGet']).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve([sampleBlock]),
     })
-    mocks['mockPatch']!.mockResolvedValue({
+    assertDefined(mocks['mockPatch']).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(updatedBlock),
     })
@@ -153,7 +162,9 @@ describe('useUpdateTimeBlock', () => {
       () => useTimeBlocks('2026-03-22'),
       { wrapper },
     )
-    await waitFor(() => expect(queryResult.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(queryResult.current.isSuccess).toBe(true)
+    })
 
     // Update
     const { result } = renderHook(() => useUpdateTimeBlock(), { wrapper })
@@ -166,17 +177,19 @@ describe('useUpdateTimeBlock', () => {
       })
     })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
   })
 
   it('rolls back on error', async () => {
     const mocks = await getMocks()
 
-    mocks['mockGet']!.mockResolvedValue({
+    assertDefined(mocks['mockGet']).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve([sampleBlock]),
     })
-    mocks['mockPatch']!.mockResolvedValue({
+    assertDefined(mocks['mockPatch']).mockResolvedValue({
       ok: false,
       json: () => Promise.resolve({ error: 'Server error' }),
     })
@@ -186,7 +199,9 @@ describe('useUpdateTimeBlock', () => {
       () => useTimeBlocks('2026-03-22'),
       { wrapper },
     )
-    await waitFor(() => expect(queryResult.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(queryResult.current.isSuccess).toBe(true)
+    })
 
     // Try to update (should fail and rollback)
     const { result } = renderHook(() => useUpdateTimeBlock(), { wrapper })
@@ -199,11 +214,13 @@ describe('useUpdateTimeBlock', () => {
       })
     })
 
-    await waitFor(() => expect(result.current.isError).toBe(true))
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true)
+    })
 
     // After rollback + invalidation, the cache should be restored
     // The invalidation will re-fetch which returns original block
-    mocks['mockGet']!.mockResolvedValue({
+    assertDefined(mocks['mockGet']).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve([sampleBlock]),
     })
@@ -222,18 +239,20 @@ describe('useUpdateTimeBlock', () => {
 describe('useDeleteTimeBlock', () => {
   it('deletes a time block with optimistic update', async () => {
     const mocks = await getMocks()
-    mocks['mockGet']!.mockResolvedValue({
+    assertDefined(mocks['mockGet']).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve([sampleBlock]),
     })
-    mocks['mockDelete']!.mockResolvedValue({ ok: true })
+    assertDefined(mocks['mockDelete']).mockResolvedValue({ ok: true })
 
     // Populate cache
     const { result: queryResult } = renderHook(
       () => useTimeBlocks('2026-03-22'),
       { wrapper },
     )
-    await waitFor(() => expect(queryResult.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(queryResult.current.isSuccess).toBe(true)
+    })
 
     // Delete
     const { result } = renderHook(() => useDeleteTimeBlock(), { wrapper })
@@ -242,6 +261,8 @@ describe('useDeleteTimeBlock', () => {
       result.current.mutate('block-1')
     })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
   })
 })

@@ -2,6 +2,7 @@ import { Button } from '@web/components/ui/button'
 import { Dialog, DialogOverlay, DialogPortal } from '@web/components/ui/dialog'
 import type { CreateScheduleInput } from '@web/hooks/use-schedules'
 import { useCreateSchedule } from '@web/hooks/use-schedules'
+import { selectHandler } from '@web/lib/form-utils'
 import { cn } from '@web/lib/utils'
 import { Clock, Layers, Palette, Repeat, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
@@ -12,7 +13,20 @@ interface CreateScheduleModalProps {
 }
 
 type ContextValue = 'work' | 'personal' | 'dev'
+const contextValues = [
+  '',
+  'work',
+  'personal',
+  'dev',
+] as const satisfies readonly (ContextValue | '')[]
 type RecurrenceType = 'daily' | 'weekly' | 'monthly' | 'custom'
+const recurrenceValues = [
+  '',
+  'daily',
+  'weekly',
+  'monthly',
+  'custom',
+] as const satisfies readonly (RecurrenceType | '')[]
 
 const contextLabels: Record<ContextValue, string> = {
   work: 'Work',
@@ -134,7 +148,9 @@ export function CreateScheduleModal({
               </span>
               <button
                 type="button"
-                onClick={() => handleOpenChange(false)}
+                onClick={() => {
+                  handleOpenChange(false)
+                }}
                 className="text-muted-foreground transition-colors hover:text-foreground"
               >
                 <X className="size-5" />
@@ -147,7 +163,9 @@ export function CreateScheduleModal({
               <input
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  setTitle(e.target.value)
+                }}
                 placeholder="Schedule title"
                 autoFocus
                 className="w-full bg-transparent text-xl font-medium text-foreground outline-none placeholder:text-muted-foreground"
@@ -159,7 +177,9 @@ export function CreateScheduleModal({
                   <input
                     type="time"
                     value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
+                    onChange={(e) => {
+                      setStartTime(e.target.value)
+                    }}
                     className="w-24 bg-transparent text-xs text-foreground outline-none"
                   />
                 </FieldGroup>
@@ -167,7 +187,9 @@ export function CreateScheduleModal({
                   <input
                     type="time"
                     value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
+                    onChange={(e) => {
+                      setEndTime(e.target.value)
+                    }}
                     className="w-24 bg-transparent text-xs text-foreground outline-none"
                   />
                 </FieldGroup>
@@ -187,9 +209,10 @@ export function CreateScheduleModal({
                 >
                   <select
                     value={recurrenceType}
-                    onChange={(e) =>
-                      setRecurrenceType(e.target.value as RecurrenceType | '')
-                    }
+                    onChange={selectHandler(
+                      setRecurrenceType,
+                      recurrenceValues,
+                    )}
                     className="bg-transparent text-xs text-foreground outline-none"
                   >
                     <option value="">None</option>
@@ -205,7 +228,9 @@ export function CreateScheduleModal({
                       <button
                         key={label}
                         type="button"
-                        onClick={() => toggleDay(idx)}
+                        onClick={() => {
+                          toggleDay(idx)
+                        }}
                         className={cn(
                           'flex size-8 items-center justify-center rounded-full text-xs font-medium transition-colors',
                           daysOfWeek.includes(idx)
@@ -226,7 +251,9 @@ export function CreateScheduleModal({
                       min="1"
                       max="31"
                       value={dayOfMonth}
-                      onChange={(e) => setDayOfMonth(e.target.value)}
+                      onChange={(e) => {
+                        setDayOfMonth(e.target.value)
+                      }}
                       placeholder="1-31"
                       className="w-16 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
                     />
@@ -242,9 +269,7 @@ export function CreateScheduleModal({
                 >
                   <select
                     value={context}
-                    onChange={(e) =>
-                      setContext(e.target.value as ContextValue | '')
-                    }
+                    onChange={selectHandler(setContext, contextValues)}
                     className="bg-transparent text-xs text-foreground outline-none"
                   >
                     <option value="">—</option>
@@ -264,7 +289,9 @@ export function CreateScheduleModal({
                       <button
                         key={c}
                         type="button"
-                        onClick={() => setColor(color === c ? '' : c)}
+                        onClick={() => {
+                          setColor(color === c ? '' : c)
+                        }}
                         className={cn(
                           'size-6 rounded-full border-2 transition-all',
                           color === c
@@ -283,7 +310,9 @@ export function CreateScheduleModal({
             <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-3">
               <button
                 type="button"
-                onClick={() => handleOpenChange(false)}
+                onClick={() => {
+                  handleOpenChange(false)
+                }}
                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 Cancel
@@ -312,7 +341,9 @@ export function CreateScheduleModal({
               </span>
               <button
                 type="button"
-                onClick={() => handleOpenChange(false)}
+                onClick={() => {
+                  handleOpenChange(false)
+                }}
                 className="text-muted-foreground transition-colors hover:text-foreground"
               >
                 <X className="size-5" />
@@ -325,7 +356,9 @@ export function CreateScheduleModal({
               <input
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  setTitle(e.target.value)
+                }}
                 placeholder="Schedule title"
                 autoFocus
                 className="w-full bg-transparent text-lg font-medium text-foreground outline-none placeholder:text-muted-foreground"
@@ -343,7 +376,9 @@ export function CreateScheduleModal({
                     <input
                       type="time"
                       value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
+                      onChange={(e) => {
+                        setStartTime(e.target.value)
+                      }}
                       autoFocus
                       className="w-24 bg-transparent text-xs outline-none"
                     />
@@ -357,7 +392,9 @@ export function CreateScheduleModal({
                     <input
                       type="time"
                       value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
+                      onChange={(e) => {
+                        setEndTime(e.target.value)
+                      }}
                       autoFocus
                       className="w-24 bg-transparent text-xs outline-none"
                     />
@@ -370,9 +407,10 @@ export function CreateScheduleModal({
                   expanded={
                     <select
                       value={recurrenceType}
-                      onChange={(e) =>
-                        setRecurrenceType(e.target.value as RecurrenceType | '')
-                      }
+                      onChange={selectHandler(
+                        setRecurrenceType,
+                        recurrenceValues,
+                      )}
                       autoFocus
                       className="bg-transparent text-xs outline-none"
                     >
@@ -390,9 +428,7 @@ export function CreateScheduleModal({
                   expanded={
                     <select
                       value={context}
-                      onChange={(e) =>
-                        setContext(e.target.value as ContextValue | '')
-                      }
+                      onChange={selectHandler(setContext, contextValues)}
                       autoFocus
                       className="bg-transparent text-xs outline-none"
                     >
@@ -411,7 +447,9 @@ export function CreateScheduleModal({
                     <button
                       key={label}
                       type="button"
-                      onClick={() => toggleDay(idx)}
+                      onClick={() => {
+                        toggleDay(idx)
+                      }}
                       className={cn(
                         'flex size-8 items-center justify-center rounded-full text-xs font-medium transition-colors',
                         daysOfWeek.includes(idx)
@@ -439,7 +477,9 @@ export function CreateScheduleModal({
                     <button
                       key={c}
                       type="button"
-                      onClick={() => setColor(color === c ? '' : c)}
+                      onClick={() => {
+                        setColor(color === c ? '' : c)
+                      }}
                       className={cn(
                         'size-6 rounded-full border-2 transition-all',
                         color === c
@@ -507,18 +547,26 @@ function SpChip({
     <div
       className={cn(
         'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors',
-        active
+        active === true
           ? 'bg-primary/10 text-primary'
           : 'bg-secondary text-muted-foreground',
       )}
     >
       {icon}
-      {isEditing && expanded ? (
-        <div onBlur={() => setIsEditing(false)}>{expanded}</div>
+      {isEditing && expanded != null ? (
+        <div
+          onBlur={() => {
+            setIsEditing(false)
+          }}
+        >
+          {expanded}
+        </div>
       ) : (
         <button
           type="button"
-          onClick={() => setIsEditing(true)}
+          onClick={() => {
+            setIsEditing(true)
+          }}
           className="outline-none"
         >
           {label}

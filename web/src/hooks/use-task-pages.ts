@@ -52,10 +52,10 @@ export function useCreateTaskPage(taskId: string) {
       return res.json()
     },
     onSettled: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: taskPageKeys.all(taskId),
       })
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tasks', 'detail', taskId],
       })
     },
@@ -132,13 +132,13 @@ export function useUpdateTaskPage(taskId: string) {
       }
     },
     onSettled: (_data, _err, { pageId }) => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: taskPageKeys.all(taskId),
       })
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: taskPageKeys.detail(taskId, pageId),
       })
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tasks', 'detail', taskId],
       })
     },
@@ -182,10 +182,10 @@ export function useDeleteTaskPage(taskId: string) {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: taskPageKeys.all(taskId),
       })
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ['tasks', 'detail', taskId],
       })
     },

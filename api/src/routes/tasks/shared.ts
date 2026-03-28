@@ -1,5 +1,6 @@
 import { db } from '@api/db/connection'
 import { recurrenceRules, tasks, timeBlocks } from '@api/db/schema'
+import { firstOrThrow } from '@api/lib/drizzle-utils'
 import { and, eq, isNull } from 'drizzle-orm'
 import { createFactory } from 'hono/factory'
 import { z } from 'zod'
@@ -81,8 +82,9 @@ export function buildTree(
   const roots: TreeNode[] = []
 
   for (const task of allTasks) {
-    const node = nodeMap.get(task.id)!
-    const parentNode = task.parentId ? nodeMap.get(task.parentId) : null
+    const node = nodeMap.get(task.id)
+    if (!node) throw new Error(`Node not found for task ${task.id}`)
+    const parentNode = task.parentId != null ? nodeMap.get(task.parentId) : null
 
     if (parentNode) {
       parentNode.children.push(node)
@@ -90,13 +92,14 @@ export function buildTree(
       if (task.status === 'completed') {
         parentNode.childCompletionCount.completed++
       }
-    } else if (!rootId || task.id === rootId) {
+    } else if (rootId == null || task.id === rootId) {
       roots.push(node)
     }
   }
 
-  if (rootId) {
-    return nodeMap.has(rootId) ? [nodeMap.get(rootId)!] : []
+  if (rootId != null) {
+    const rootNode = nodeMap.get(rootId)
+    return rootNode != null ? [rootNode] : []
   }
 
   return roots
@@ -108,10 +111,10 @@ type TaskEnv = {
   }
 }
 
-const factory = createFactory<TaskEnv>()
+const factory = createFactory<TaskEnv, '/:id'>()
 
 export const requireTask = factory.createMiddleware(async (c, next) => {
-  const id = c.req.param('id')!
+  const id = c.req.param('id')
 
   const task = await db.query.tasks.findFirst({
     where: eq(tasks.id, id),
@@ -129,7 +132,7 @@ export async function updateStatusAndCloseTimeBlocks(
   status: 'todo' | 'completed',
 ) {
   const now = new Date()
-  const [[updatedTask], closedBlocks] = await Promise.all([
+  const [taskRows, closedBlocks] = await Promise.all([
     db
       .update(tasks)
       .set({ status, updatedAt: now })
@@ -141,5 +144,5 @@ export async function updateStatusAndCloseTimeBlocks(
       .where(and(eq(timeBlocks.taskId, taskId), isNull(timeBlocks.endTime)))
       .returning(),
   ])
-  return [updatedTask!, closedBlocks] as const
+  return [firstOrThrow(taskRows), closedBlocks] as const
 }

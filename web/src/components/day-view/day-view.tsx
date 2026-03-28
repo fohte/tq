@@ -58,7 +58,9 @@ export function DayViewPresentation({
               <button
                 key={tab}
                 type="button"
-                onClick={() => setActiveTab(tab)}
+                onClick={() => {
+                  setActiveTab(tab)
+                }}
                 className={cn(
                   'rounded-md px-3 py-1 text-sm font-medium transition-colors',
                   activeTab === tab
@@ -73,7 +75,9 @@ export function DayViewPresentation({
 
           <button
             type="button"
-            onClick={() => setIsCreating(true)}
+            onClick={() => {
+              setIsCreating(true)
+            }}
             className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <Plus className="h-4 w-4" />
@@ -91,7 +95,9 @@ export function DayViewPresentation({
         {isCreating && (
           <div className="border-b border-border">
             <CreateTaskInline
-              onClose={() => setIsCreating(false)}
+              onClose={() => {
+                setIsCreating(false)
+              }}
               {...(activeTab === 'today'
                 ? { defaultStartDate: new Date().toISOString().slice(0, 10) }
                 : {})}
@@ -126,7 +132,9 @@ export function DayViewPresentation({
         {activeTab === 'today' && (
           <BacklogPreview
             tasks={categorized.backlog}
-            onViewAll={() => setActiveTab('all')}
+            onViewAll={() => {
+              setActiveTab('all')
+            }}
           />
         )}
       </div>
@@ -153,7 +161,9 @@ export function DayViewPresentation({
           <button
             key={tab.value}
             type="button"
-            onClick={() => setMobileTab(tab.value)}
+            onClick={() => {
+              setMobileTab(tab.value)
+            }}
             className={cn(
               'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
               mobileTab === tab.value

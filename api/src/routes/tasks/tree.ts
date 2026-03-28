@@ -6,8 +6,10 @@ import { and, inArray, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
+const subtreeIdSchema = z.array(z.object({ id: z.string() }))
+
 const treeQuerySchema = z.object({
-  rootId: z.string().uuid().optional(),
+  rootId: z.uuid().optional(),
 })
 
 export const tasksTreeApp = new Hono().get(
@@ -18,7 +20,7 @@ export const tasksTreeApp = new Hono().get(
 
     let treeTasks: Array<typeof tasks.$inferSelect>
 
-    if (rootId) {
+    if (rootId != null) {
       // Use recursive CTE to fetch only IDs in the subtree
       const subtreeIds = await db.execute<{ id: string }>(sql`
         WITH RECURSIVE subtree AS (
@@ -31,7 +33,7 @@ export const tasksTreeApp = new Hono().get(
         SELECT id FROM subtree
       `)
 
-      const ids = (subtreeIds as Array<{ id: string }>).map((r) => r.id)
+      const ids = subtreeIdSchema.parse(subtreeIds).map((r) => r.id)
       if (ids.length === 0) {
         return c.json([], 200)
       }

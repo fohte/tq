@@ -6,7 +6,7 @@ import {
   TEST_UUID,
   TimeBlockResponse,
 } from '@api/routes/tasks/testing'
-import { setupTestDb } from '@api/testing'
+import { assertDefined, jsonBody, setupTestDb } from '@api/testing'
 import { describe, expect, it } from 'vitest'
 
 setupTestDb()
@@ -23,7 +23,7 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse
+      const body = await jsonBody<TaskResponse>(res)
       expect(body.status).toBe('in_progress')
     })
 
@@ -49,11 +49,12 @@ describe('tasks actions API', () => {
       })
 
       const res = await app.request(`/api/tasks/${task.id}`)
-      const body = (await res.json()) as TaskResponse & {
-        timeBlocks: TimeBlockResponse[]
-      }
+      const body = await jsonBody<
+        TaskResponse & { timeBlocks: TimeBlockResponse[] }
+      >(res)
       expect(body.timeBlocks).toHaveLength(1)
-      expect(body.timeBlocks[0]!.endTime).not.toBeNull()
+      assertDefined(body.timeBlocks[0])
+      expect(body.timeBlocks[0].endTime).not.toBeNull()
     })
 
     it('returns 400 for invalid status', async () => {
@@ -81,7 +82,7 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse
+      const body = await jsonBody<TaskResponse>(res)
       expect(body.parentId).toBe(parent.id)
     })
 
@@ -96,7 +97,7 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse
+      const body = await jsonBody<TaskResponse>(res)
       expect(body.parentId).toBeNull()
     })
 
@@ -150,9 +151,9 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse & {
-        timeBlock: TimeBlockResponse
-      }
+      const body = await jsonBody<
+        TaskResponse & { timeBlock: TimeBlockResponse }
+      >(res)
       expect(body.status).toBe('in_progress')
       expect(body.timeBlock.taskId).toBe(task.id)
       expect(body.timeBlock.startTime).toBeDefined()
@@ -189,12 +190,13 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse & {
-        closedTimeBlocks: TimeBlockResponse[]
-      }
+      const body = await jsonBody<
+        TaskResponse & { closedTimeBlocks: TimeBlockResponse[] }
+      >(res)
       expect(body.status).toBe('todo')
       expect(body.closedTimeBlocks).toHaveLength(1)
-      expect(body.closedTimeBlocks[0]!.endTime).not.toBeNull()
+      assertDefined(body.closedTimeBlocks[0])
+      expect(body.closedTimeBlocks[0].endTime).not.toBeNull()
     })
 
     it('returns 409 when task is not in progress', async () => {
@@ -226,12 +228,13 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse & {
-        closedTimeBlocks: TimeBlockResponse[]
-      }
+      const body = await jsonBody<
+        TaskResponse & { closedTimeBlocks: TimeBlockResponse[] }
+      >(res)
       expect(body.status).toBe('completed')
       expect(body.closedTimeBlocks).toHaveLength(1)
-      expect(body.closedTimeBlocks[0]!.endTime).not.toBeNull()
+      assertDefined(body.closedTimeBlocks[0])
+      expect(body.closedTimeBlocks[0].endTime).not.toBeNull()
     })
 
     it('completes a task that was not started (no open TimeBlocks)', async () => {
@@ -242,9 +245,9 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse & {
-        closedTimeBlocks: TimeBlockResponse[]
-      }
+      const body = await jsonBody<
+        TaskResponse & { closedTimeBlocks: TimeBlockResponse[] }
+      >(res)
       expect(body.status).toBe('completed')
       expect(body.closedTimeBlocks).toHaveLength(0)
     })
@@ -282,16 +285,18 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse & {
-        closedTimeBlocks: TimeBlockResponse[]
-        nextTask: TaskResponse | null
-      }
+      const body = await jsonBody<
+        TaskResponse & {
+          closedTimeBlocks: TimeBlockResponse[]
+          nextTask: TaskResponse | null
+        }
+      >(res)
       expect(body.status).toBe('completed')
-      expect(body.nextTask).not.toBeNull()
-      expect(body.nextTask!.title).toBe('Daily task')
-      expect(body.nextTask!.status).toBe('todo')
-      expect(body.nextTask!.dueDate).toBe('2026-03-23')
-      expect(body.nextTask!.recurrenceRuleId).toBe(task.recurrenceRuleId)
+      assertDefined(body.nextTask)
+      expect(body.nextTask.title).toBe('Daily task')
+      expect(body.nextTask.status).toBe('todo')
+      expect(body.nextTask.dueDate).toBe('2026-03-23')
+      expect(body.nextTask.recurrenceRuleId).toBe(task.recurrenceRuleId)
     })
 
     it('generates next task for weekly recurrence with daysOfWeek', async () => {
@@ -306,11 +311,11 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse & {
-        nextTask: TaskResponse | null
-      }
-      expect(body.nextTask).not.toBeNull()
-      expect(body.nextTask!.dueDate).toBe('2026-03-25') // Wednesday
+      const body = await jsonBody<
+        TaskResponse & { nextTask: TaskResponse | null }
+      >(res)
+      assertDefined(body.nextTask)
+      expect(body.nextTask.dueDate).toBe('2026-03-25') // Wednesday
     })
 
     it('generates next task for monthly recurrence', async () => {
@@ -325,11 +330,11 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse & {
-        nextTask: TaskResponse | null
-      }
-      expect(body.nextTask).not.toBeNull()
-      expect(body.nextTask!.dueDate).toBe('2026-04-15')
+      const body = await jsonBody<
+        TaskResponse & { nextTask: TaskResponse | null }
+      >(res)
+      assertDefined(body.nextTask)
+      expect(body.nextTask.dueDate).toBe('2026-04-15')
     })
 
     it('does not generate next task for non-recurring task', async () => {
@@ -340,9 +345,9 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse & {
-        nextTask: TaskResponse | null
-      }
+      const body = await jsonBody<
+        TaskResponse & { nextTask: TaskResponse | null }
+      >(res)
       expect(body.nextTask).toBeNull()
     })
 
@@ -365,9 +370,9 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse & {
-        nextTask: TaskResponse | null
-      }
+      const body = await jsonBody<
+        TaskResponse & { nextTask: TaskResponse | null }
+      >(res)
       expect(body.nextTask).toBeNull()
     })
 
@@ -388,13 +393,13 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse & {
-        nextTask: TaskResponse | null
-      }
-      expect(body.nextTask).not.toBeNull()
-      expect(body.nextTask!.description).toBe('Important recurring task')
-      expect(body.nextTask!.estimatedMinutes).toBe(30)
-      expect(body.nextTask!.context).toBe('work')
+      const body = await jsonBody<
+        TaskResponse & { nextTask: TaskResponse | null }
+      >(res)
+      assertDefined(body.nextTask)
+      expect(body.nextTask.description).toBe('Important recurring task')
+      expect(body.nextTask.estimatedMinutes).toBe(30)
+      expect(body.nextTask.context).toBe('work')
     })
 
     it('includes recurrenceRule in completed task response', async () => {
@@ -409,11 +414,11 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse & {
-        nextTask: TaskResponse | null
-      }
-      expect(body.recurrenceRule).not.toBeNull()
-      expect(body.recurrenceRule!.type).toBe('daily')
+      const body = await jsonBody<
+        TaskResponse & { nextTask: TaskResponse | null }
+      >(res)
+      assertDefined(body.recurrenceRule)
+      expect(body.recurrenceRule.type).toBe('daily')
     })
   })
 
@@ -428,8 +433,8 @@ describe('tasks actions API', () => {
       const res1 = await app.request(`/api/tasks/${task1.id}`)
       const res2 = await app.request(`/api/tasks/${task2.id}`)
 
-      const body1 = (await res1.json()) as TaskResponse
-      const body2 = (await res2.json()) as TaskResponse
+      const body1 = await jsonBody<TaskResponse>(res1)
+      const body2 = await jsonBody<TaskResponse>(res2)
       expect(body1.status).toBe('in_progress')
       expect(body2.status).toBe('in_progress')
     })

@@ -1,5 +1,5 @@
 import { app } from '@api/app'
-import { setupTestDb } from '@api/testing'
+import { assertDefined, jsonBody, setupTestDb } from '@api/testing'
 import { describe, expect, it } from 'vitest'
 
 setupTestDb()
@@ -40,7 +40,7 @@ describe('projects API', () => {
       })
 
       expect(res.status).toBe(201)
-      const body = (await res.json()) as ProjectResponse
+      const body = await jsonBody<ProjectResponse>(res)
       expect(body.title).toBe('ISUCON 2025')
       expect(body.status).toBe('active')
       expect(body.sortOrder).toBe(0)
@@ -62,7 +62,7 @@ describe('projects API', () => {
       })
 
       expect(res.status).toBe(201)
-      const body = (await res.json()) as ProjectResponse
+      const body = await jsonBody<ProjectResponse>(res)
       expect(body.title).toBe('RubyKaigi')
       expect(body.description).toBe('Prepare for RubyKaigi')
       expect(body.status).toBe('paused')
@@ -98,7 +98,7 @@ describe('projects API', () => {
       const res = await app.request('/api/projects')
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as ProjectResponse[]
+      const body = await jsonBody<ProjectResponse[]>(res)
       expect(body).toHaveLength(2)
     })
 
@@ -109,9 +109,10 @@ describe('projects API', () => {
       const res = await app.request('/api/projects?status=active')
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as ProjectResponse[]
+      const body = await jsonBody<ProjectResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Active')
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Active')
     })
   })
 
@@ -122,7 +123,7 @@ describe('projects API', () => {
       const res = await app.request(`/api/projects/${project.id}`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as ProjectDetailResponse
+      const body = await jsonBody<ProjectDetailResponse>(res)
       expect(body.title).toBe('Empty project')
       expect(body.completionRate).toBe(0)
       expect(body.taskCount).toEqual({ total: 0, completed: 0 })
@@ -145,7 +146,7 @@ describe('projects API', () => {
       const res = await app.request(`/api/projects/${project.id}`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as ProjectDetailResponse
+      const body = await jsonBody<ProjectDetailResponse>(res)
       expect(body.completionRate).toBeCloseTo(1 / 3)
       expect(body.taskCount).toEqual({ total: 3, completed: 1 })
     })
@@ -166,9 +167,10 @@ describe('projects API', () => {
       const res = await app.request(`/api/projects/${project.id}/tasks`)
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse[]
+      const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
-      expect(body[0]!.title).toBe('Task in project')
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Task in project')
     })
 
     it('returns 404 for non-existent project', async () => {
@@ -189,7 +191,7 @@ describe('projects API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as ProjectResponse
+      const body = await jsonBody<ProjectResponse>(res)
       expect(body.title).toBe('Updated')
       expect(body.status).toBe('completed')
     })
@@ -206,7 +208,7 @@ describe('projects API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as ProjectResponse
+      const body = await jsonBody<ProjectResponse>(res)
       expect(body.description).toBeNull()
     })
 
@@ -245,7 +247,7 @@ describe('projects API', () => {
 
       const taskRes = await app.request(`/api/tasks/${task.id}`)
       expect(taskRes.status).toBe(200)
-      const taskBody = (await taskRes.json()) as TaskResponse
+      const taskBody = await jsonBody<TaskResponse>(taskRes)
       expect(taskBody.projectId).toBeNull()
     })
 
@@ -270,7 +272,7 @@ describe('projects API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse
+      const body = await jsonBody<TaskResponse>(res)
       expect(body.projectId).toBe(project.id)
     })
 
@@ -285,7 +287,7 @@ describe('projects API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = (await res.json()) as TaskResponse
+      const body = await jsonBody<TaskResponse>(res)
       expect(body.projectId).toBeNull()
     })
   })
@@ -308,10 +310,10 @@ async function createProject(
   })
   if (res.status !== 201) {
     throw new Error(
-      `Failed to create project: ${res.status} ${await res.text()}`,
+      `Failed to create project: ${String(res.status)} ${await res.text()}`,
     )
   }
-  return (await res.json()) as ProjectResponse
+  return jsonBody<ProjectResponse>(res)
 }
 
 async function createTask(title: string, opts: { projectId?: string } = {}) {
@@ -321,7 +323,9 @@ async function createTask(title: string, opts: { projectId?: string } = {}) {
     body: JSON.stringify({ title, ...opts }),
   })
   if (res.status !== 201) {
-    throw new Error(`Failed to create task: ${res.status} ${await res.text()}`)
+    throw new Error(
+      `Failed to create task: ${String(res.status)} ${await res.text()}`,
+    )
   }
-  return (await res.json()) as TaskResponse
+  return jsonBody<TaskResponse>(res)
 }

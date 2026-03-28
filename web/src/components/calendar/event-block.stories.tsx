@@ -32,6 +32,7 @@ function EventBlockPreview({
   return (
     <div className="w-72">
       <div className="h-20">
+        {/* eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- story mock data doesn't match full EventContentArg */}
         <EventBlock {...(arg as unknown as Parameters<typeof EventBlock>[0])} />
       </div>
     </div>

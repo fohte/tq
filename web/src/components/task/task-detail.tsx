@@ -13,6 +13,7 @@ import {
   useUpdateTaskParent,
   useUpdateTaskStatus,
 } from '@web/hooks/use-tasks'
+import { selectHandler } from '@web/lib/form-utils'
 import { formatMinutes, parseDurationToMinutes } from '@web/lib/parse-duration'
 import { cn } from '@web/lib/utils'
 import {
@@ -179,7 +180,9 @@ function EditableTitle({
       <input
         type="text"
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => {
+          setValue(e.target.value)
+        }}
         onBlur={save}
         onKeyDown={(e) => {
           if (e.key === 'Enter') e.currentTarget.blur()
@@ -198,7 +201,9 @@ function EditableTitle({
   return (
     <button
       type="button"
-      onClick={() => setIsEditing(true)}
+      onClick={() => {
+        setIsEditing(true)
+      }}
       className="flex-1 cursor-text text-left text-2xl font-bold text-foreground"
     >
       {value}
@@ -333,12 +338,12 @@ function SidebarStatusField({
     <SidebarField label="Status" icon={<Circle className="size-3.5" />}>
       <select
         value={status}
-        onChange={(e) =>
-          updateStatus.mutate({
-            id: taskId,
-            status: e.target.value as 'todo' | 'in_progress' | 'completed',
-          })
-        }
+        onChange={selectHandler(
+          (value: 'todo' | 'in_progress' | 'completed') => {
+            updateStatus.mutate({ id: taskId, status: value })
+          },
+          ['todo', 'in_progress', 'completed'],
+        )}
         className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-primary/50"
       >
         {statusOptions.map((opt) => (
@@ -391,7 +396,9 @@ function SidebarEstimateField({
         <input
           type="text"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            setInput(e.target.value)
+          }}
           onBlur={save}
           onKeyDown={(e) => {
             if (e.key === 'Enter') e.currentTarget.blur()
@@ -410,7 +417,9 @@ function SidebarEstimateField({
       ) : (
         <button
           type="button"
-          onClick={() => setIsEditing(true)}
+          onClick={() => {
+            setIsEditing(true)
+          }}
           className="w-full cursor-text rounded-md px-2 py-1 text-left font-mono text-xs text-muted-foreground hover:bg-secondary/50"
         >
           {estimatedMinutes != null ? formatMinutes(estimatedMinutes) : '—'}
@@ -465,7 +474,7 @@ function SidebarParentField({
   const { categorized } = useTaskList()
   const updateParent = useUpdateTaskParent()
 
-  const allTasks = categorized.all ?? []
+  const allTasks = categorized.all
   const getDescendantIds = (id: string): string[] =>
     allTasks
       .filter((t) => t.parentId === id)
@@ -507,14 +516,12 @@ function SidebarContextField({
     <SidebarField label="Context" icon={<Layers className="size-3.5" />}>
       <select
         value={context}
-        onChange={(e) =>
-          updateTask.mutate({
-            id: taskId,
-            input: {
-              context: e.target.value as 'work' | 'personal' | 'dev',
-            },
-          })
-        }
+        onChange={selectHandler(
+          (value: 'work' | 'personal' | 'dev') => {
+            updateTask.mutate({ id: taskId, input: { context: value } })
+          },
+          ['work', 'personal', 'dev'],
+        )}
         className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-primary/50"
       >
         <option value="personal">Personal</option>

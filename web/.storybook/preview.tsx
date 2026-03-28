@@ -31,8 +31,9 @@ const preview: Preview = {
   },
   decorators: [
     (Story, context) => {
-      const theme = context.globals['theme'] ?? 'dark'
-      document.documentElement.classList.toggle('dark', theme === 'dark')
+      const theme: unknown = context.globals['theme']
+      const themeValue = typeof theme === 'string' ? theme : 'dark'
+      document.documentElement.classList.toggle('dark', themeValue === 'dark')
       return (
         <ContextFilterProvider>
           <Story />

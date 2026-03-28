@@ -97,18 +97,20 @@ export const WithComments: Story = {
   },
 }
 
+const [firstComment] = baseComments
+
 export const SingleComment: Story = {
   args: {
-    comments: [baseComments[0]!],
+    comments: firstComment ? [firstComment] : [],
   },
 }
 
 export const ManyComments: Story = {
   args: {
     comments: Array.from({ length: 10 }, (_, i) => ({
-      id: `comment-${i}`,
+      id: `comment-${String(i)}`,
       taskId: 'task-1',
-      content: `Comment #${i + 1}: This is a sample comment for testing scroll behavior and layout with many items.`,
+      content: `Comment #${String(i + 1)}: This is a sample comment for testing scroll behavior and layout with many items.`,
       createdAt: new Date(Date.now() - 3_600_000 * (10 - i)).toISOString(),
       updatedAt: new Date(Date.now() - 3_600_000 * (10 - i)).toISOString(),
     })),

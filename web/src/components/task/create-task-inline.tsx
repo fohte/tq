@@ -112,7 +112,10 @@ export function CreateTaskInline({
       case 'Enter':
       case 'Tab':
         e.preventDefault()
-        applySuggestion(suggestions[selectedIndex]!)
+        {
+          const suggestion = suggestions[selectedIndex]
+          if (suggestion != null) applySuggestion(suggestion)
+        }
         break
       case 'Escape':
         e.preventDefault()
@@ -121,7 +124,7 @@ export function CreateTaskInline({
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault()
     if (showSuggestions) return
 
@@ -244,7 +247,7 @@ export function CreateTaskInline({
         <div className="flex flex-wrap gap-1.5 px-3 pb-2">
           {previewChips.map((chip, index) => (
             <span
-              key={`${chip}-${index}`}
+              key={`${chip}-${String(index)}`}
               className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
             >
               {chip}

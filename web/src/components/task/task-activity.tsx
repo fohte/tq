@@ -196,9 +196,9 @@ function formatRelativeTime(isoString: string): string {
   const diffDays = Math.floor(diffMs / 86_400_000)
 
   if (diffMinutes < 1) return 'just now'
-  if (diffMinutes < 60) return `${diffMinutes}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
+  if (diffMinutes < 60) return `${String(diffMinutes)}m ago`
+  if (diffHours < 24) return `${String(diffHours)}h ago`
+  if (diffDays < 7) return `${String(diffDays)}d ago`
 
   return date.toLocaleDateString('en-US', {
     month: 'short',

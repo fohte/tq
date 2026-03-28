@@ -1,5 +1,6 @@
 import { db } from '@api/db/connection'
 import { taskComments, tasks } from '@api/db/schema'
+import { firstOrThrow } from '@api/lib/drizzle-utils'
 import { zValidator } from '@hono/zod-validator'
 import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -24,10 +25,10 @@ function commentToResponse(comment: typeof taskComments.$inferSelect) {
   }
 }
 
-const factory = createFactory()
+const factory = createFactory<object, '/:taskId/comments'>()
 
 const requireTask = factory.createMiddleware(async (c, next) => {
-  const taskId = c.req.param('taskId')!
+  const taskId = c.req.param('taskId')
 
   const task = await db.query.tasks.findFirst({
     where: eq(tasks.id, taskId),
@@ -59,15 +60,17 @@ export const taskCommentsApp = new Hono()
       const taskId = c.req.param('taskId')
       const input = c.req.valid('json')
 
-      const [comment] = await db
-        .insert(taskComments)
-        .values({
-          taskId,
-          content: input.content,
-        })
-        .returning()
+      const comment = firstOrThrow(
+        await db
+          .insert(taskComments)
+          .values({
+            taskId,
+            content: input.content,
+          })
+          .returning(),
+      )
 
-      return c.json(commentToResponse(comment!), 201)
+      return c.json(commentToResponse(comment), 201)
     },
   )
   .patch(
@@ -89,13 +92,15 @@ export const taskCommentsApp = new Hono()
 
       const input = c.req.valid('json')
 
-      const [updated] = await db
-        .update(taskComments)
-        .set({ content: input.content, updatedAt: new Date() })
-        .where(eq(taskComments.id, commentId))
-        .returning()
+      const updated = firstOrThrow(
+        await db
+          .update(taskComments)
+          .set({ content: input.content, updatedAt: new Date() })
+          .where(eq(taskComments.id, commentId))
+          .returning(),
+      )
 
-      return c.json(commentToResponse(updated!), 200)
+      return c.json(commentToResponse(updated), 200)
     },
   )
   .delete('/:taskId/comments/:commentId', async (c) => {

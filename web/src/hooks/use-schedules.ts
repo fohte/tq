@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@web/lib/api'
+import { assertOk } from '@web/lib/assert-response'
 import type { InferResponseType } from 'hono/client'
 
 type Schedule = InferResponseType<
@@ -22,7 +23,7 @@ export function useScheduleList(date: string) {
       const res = await api.api.schedule.recurring.$get({
         query: { date },
       })
-      if (!res.ok) throw new Error('Failed to fetch schedules')
+      assertOk(res)
       return res.json()
     },
   })
@@ -50,11 +51,11 @@ export function useCreateSchedule() {
       const res = await api.api.schedule.recurring.$post({
         json: input,
       })
-      if (!res.ok) throw new Error('Failed to create schedule')
+      assertOk(res)
       return res.json()
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
+      void queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
     },
   })
 }
@@ -92,7 +93,7 @@ export function useUpdateSchedule() {
       return res.json()
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
+      void queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
     },
   })
 }
@@ -132,7 +133,7 @@ export function useDeleteSchedule() {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
+      void queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
     },
   })
 }

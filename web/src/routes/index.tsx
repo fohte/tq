@@ -21,7 +21,7 @@ function DayView() {
 
   const todayStr = useMemo(() => {
     const now = new Date()
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    return `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   }, [])
   const { data: timeBlocksData } = useTimeBlocks(todayStr)
   const updateTimeBlock = useUpdateTimeBlock()
@@ -38,13 +38,15 @@ function DayView() {
   const calendarEvents: TimeBlockEvent[] = useMemo(() => {
     if (!timeBlocksData) return []
     return timeBlocksData
-      .filter((block) => block.endTime !== null)
+      .filter(
+        (block): block is typeof block & { endTime: string } =>
+          block.endTime !== null,
+      )
       .map((block) => {
         const task = taskMap.get(block.taskId)
-        const durationMs = block.endTime
-          ? new Date(block.endTime).getTime() -
-            new Date(block.startTime).getTime()
-          : 0
+        const durationMs =
+          new Date(block.endTime).getTime() -
+          new Date(block.startTime).getTime()
         const durationMinutes = Math.round(durationMs / 60000)
         const durationStr = formatMinutes(durationMinutes)
 
@@ -52,7 +54,7 @@ function DayView() {
           id: block.id,
           title: task?.title ?? 'Unknown task',
           start: block.startTime,
-          end: block.endTime!,
+          end: block.endTime,
           type: (task?.status === 'completed'
             ? 'completed'
             : block.isAutoScheduled
@@ -72,7 +74,11 @@ function DayView() {
             startTime: newStart.toISOString(),
             endTime: newEnd.toISOString(),
           },
-          { onError: () => revert() },
+          {
+            onError: () => {
+              revert()
+            },
+          },
         )
       },
       onEventResize: ({ eventId, newStart, newEnd, revert }) => {
@@ -82,7 +88,11 @@ function DayView() {
             startTime: newStart.toISOString(),
             endTime: newEnd.toISOString(),
           },
-          { onError: () => revert() },
+          {
+            onError: () => {
+              revert()
+            },
+          },
         )
       },
       onExternalDrop: ({ taskId, start, end }) => {

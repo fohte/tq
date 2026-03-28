@@ -111,6 +111,8 @@ export const Empty: SectionStoryType = {
   args: { taskId: 'task-empty', pages: [] },
 }
 
+const [firstPage] = samplePages
+
 export const SinglePage: SectionStoryType = {
-  args: { taskId: 'task-single', pages: [samplePages[0]!] },
+  args: { taskId: 'task-single', pages: firstPage ? [firstPage] : [] },
 }

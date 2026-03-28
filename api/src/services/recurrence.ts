@@ -73,7 +73,11 @@ function computeNextWeeklyDate(
       }
     }
     // Wrap to next week, first matching day
-    const diff = 7 - currentDay + sorted[0]!
+    const firstDay = sorted[0]
+    if (firstDay === undefined) {
+      throw new Error('daysOfWeek must be non-empty')
+    }
+    const diff = 7 - currentDay + firstDay
     const next = new Date(base)
     next.setDate(next.getDate() + diff)
     return formatDate(next)
@@ -106,7 +110,7 @@ function computeNextWeeklyDate(
 }
 
 function formatDate(d: Date): string {
-  const year = d.getFullYear()
+  const year = String(d.getFullYear())
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
@@ -135,7 +139,7 @@ export function buildNextTaskData(
   const baseDate = completedTask.dueDate ?? today
 
   const nextDueDate = computeNextDate(baseDate, {
-    type: rule.type as 'daily' | 'weekly' | 'monthly' | 'custom',
+    type: rule.type,
     interval: rule.interval,
     daysOfWeek: rule.daysOfWeek,
     dayOfMonth: rule.dayOfMonth,
@@ -143,7 +147,7 @@ export function buildNextTaskData(
 
   // Shift startDate by the same offset if both startDate and dueDate exist
   let nextStartDate: string | null = null
-  if (completedTask.startDate && completedTask.dueDate) {
+  if (completedTask.startDate != null && completedTask.dueDate != null) {
     const startMs = new Date(completedTask.startDate + 'T00:00:00').getTime()
     const dueMs = new Date(completedTask.dueDate + 'T00:00:00').getTime()
     const offsetDays = Math.round((dueMs - startMs) / (1000 * 60 * 60 * 24))
@@ -162,7 +166,7 @@ export function buildNextTaskData(
     parentId: completedTask.parentId,
     projectId: completedTask.projectId,
     recurrenceRuleId: rule.id,
-    context: completedTask.context as 'work' | 'personal' | 'dev',
+    context: completedTask.context,
     sortOrder: completedTask.sortOrder,
   }
 }

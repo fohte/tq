@@ -1,5 +1,6 @@
 import { db } from '@api/db/connection'
 import { recurrenceRules, schedules, tasks, timeBlocks } from '@api/db/schema'
+import { firstOrThrow } from '@api/lib/drizzle-utils'
 import { expandScheduleForDate } from '@api/routes/schedule-expansion'
 import { recurrenceRuleSchema } from '@api/schemas/recurrence-rule'
 import { zValidator } from '@hono/zod-validator'
@@ -11,15 +12,15 @@ import { z } from 'zod'
 const timePattern = /^\d{2}:\d{2}$/
 
 const createTimeBlockSchema = z.object({
-  taskId: z.string().uuid(),
-  startTime: z.string().datetime(),
-  endTime: z.string().datetime().nullable().optional(),
+  taskId: z.uuid(),
+  startTime: z.iso.datetime(),
+  endTime: z.iso.datetime().nullable().optional(),
   isAutoScheduled: z.boolean().optional(),
 })
 
 const updateTimeBlockSchema = z.object({
-  startTime: z.string().datetime().optional(),
-  endTime: z.string().datetime().nullable().optional(),
+  startTime: z.iso.datetime().optional(),
+  endTime: z.iso.datetime().nullable().optional(),
   isAutoScheduled: z.boolean().optional(),
 })
 
@@ -29,7 +30,7 @@ const timeBlockDateQuerySchema = z.object({
 })
 
 const todayTasksSchema = z.object({
-  taskIds: z.array(z.string().uuid()),
+  taskIds: z.array(z.uuid()),
 })
 
 const autoAssignSchema = z.object({
@@ -107,10 +108,10 @@ type ScheduleEnv = {
   }
 }
 
-const factory = createFactory<ScheduleEnv>()
+const factory = createFactory<ScheduleEnv, '/:id'>()
 
 const requireSchedule = factory.createMiddleware(async (c, next) => {
-  const id = c.req.param('id')!
+  const id = c.req.param('id')
 
   const schedule = await db.query.schedules.findFirst({
     where: eq(schedules.id, id),
@@ -119,11 +120,12 @@ const requireSchedule = factory.createMiddleware(async (c, next) => {
     return c.json({ error: 'Schedule not found' }, 404)
   }
 
-  const rule = schedule.recurrenceRuleId
-    ? ((await db.query.recurrenceRules.findFirst({
-        where: eq(recurrenceRules.id, schedule.recurrenceRuleId),
-      })) ?? null)
-    : null
+  const rule =
+    schedule.recurrenceRuleId != null
+      ? ((await db.query.recurrenceRules.findFirst({
+          where: eq(recurrenceRules.id, schedule.recurrenceRuleId),
+        })) ?? null)
+      : null
 
   c.set('schedule', schedule)
   c.set('recurrenceRule', rule)
@@ -146,17 +148,19 @@ export const schedulesApp = new Hono()
         return c.json({ error: 'Task not found' }, 404)
       }
 
-      const [block] = await db
-        .insert(timeBlocks)
-        .values({
-          taskId: input.taskId,
-          startTime: new Date(input.startTime),
-          endTime: input.endTime ? new Date(input.endTime) : null,
-          isAutoScheduled: input.isAutoScheduled ?? false,
-        })
-        .returning()
+      const block = firstOrThrow(
+        await db
+          .insert(timeBlocks)
+          .values({
+            taskId: input.taskId,
+            startTime: new Date(input.startTime),
+            endTime: input.endTime != null ? new Date(input.endTime) : null,
+            isAutoScheduled: input.isAutoScheduled ?? false,
+          })
+          .returning(),
+      )
 
-      return c.json(timeBlockToResponse(block!), 201)
+      return c.json(timeBlockToResponse(block), 201)
     },
   )
   .get(
@@ -207,7 +211,7 @@ export const schedulesApp = new Hono()
         updates.startTime = new Date(input.startTime)
       }
       if (input.endTime !== undefined) {
-        updates.endTime = input.endTime ? new Date(input.endTime) : null
+        updates.endTime = input.endTime != null ? new Date(input.endTime) : null
       }
       if (input.isAutoScheduled !== undefined) {
         updates.isAutoScheduled = input.isAutoScheduled
@@ -217,13 +221,15 @@ export const schedulesApp = new Hono()
         return c.json(timeBlockToResponse(existing), 200)
       }
 
-      const [updated] = await db
-        .update(timeBlocks)
-        .set({ ...updates, updatedAt: new Date() })
-        .where(eq(timeBlocks.id, id))
-        .returning()
+      const updated = firstOrThrow(
+        await db
+          .update(timeBlocks)
+          .set({ ...updates, updatedAt: new Date() })
+          .where(eq(timeBlocks.id, id))
+          .returning(),
+      )
 
-      return c.json(timeBlockToResponse(updated!), 200)
+      return c.json(timeBlockToResponse(updated), 200)
     },
   )
   .delete('/time-blocks/:id', async (c) => {
@@ -254,32 +260,35 @@ export const schedulesApp = new Hono()
 
     let newRule: typeof recurrenceRules.$inferSelect | null = null
 
-    if (input.recurrence) {
-      const [rule] = await db
-        .insert(recurrenceRules)
-        .values({
-          type: input.recurrence.type,
-          interval: input.recurrence.interval,
-          daysOfWeek: input.recurrence.daysOfWeek ?? null,
-          dayOfMonth: input.recurrence.dayOfMonth ?? null,
-        })
-        .returning()
-      newRule = rule!
+    if (input.recurrence != null) {
+      newRule = firstOrThrow(
+        await db
+          .insert(recurrenceRules)
+          .values({
+            type: input.recurrence.type,
+            interval: input.recurrence.interval,
+            daysOfWeek: input.recurrence.daysOfWeek ?? null,
+            dayOfMonth: input.recurrence.dayOfMonth ?? null,
+          })
+          .returning(),
+      )
     }
 
-    const [schedule] = await db
-      .insert(schedules)
-      .values({
-        title: input.title,
-        startTime: input.startTime,
-        endTime: input.endTime,
-        recurrenceRuleId: newRule?.id ?? null,
-        context: input.context ?? 'personal',
-        color: input.color ?? null,
-      })
-      .returning()
+    const schedule = firstOrThrow(
+      await db
+        .insert(schedules)
+        .values({
+          title: input.title,
+          startTime: input.startTime,
+          endTime: input.endTime,
+          recurrenceRuleId: newRule?.id ?? null,
+          context: input.context ?? 'personal',
+          color: input.color ?? null,
+        })
+        .returning(),
+    )
 
-    return c.json(scheduleToResponse(schedule!, newRule), 201)
+    return c.json(scheduleToResponse(schedule, newRule), 201)
   })
   .get(
     '/recurring',
@@ -310,9 +319,10 @@ export const schedulesApp = new Hono()
 
       // Expand schedules for the requested date
       const expanded = allSchedules.flatMap((schedule) => {
-        const rule = schedule.recurrenceRuleId
-          ? (ruleMap.get(schedule.recurrenceRuleId) ?? null)
-          : null
+        const rule =
+          schedule.recurrenceRuleId != null
+            ? (ruleMap.get(schedule.recurrenceRuleId) ?? null)
+            : null
         return expandScheduleForDate(schedule, rule, date).map((block) => ({
           ...block,
           recurrence: recurrenceRuleToResponse(rule),
@@ -338,13 +348,13 @@ export const schedulesApp = new Hono()
       if (input.recurrence !== undefined) {
         if (input.recurrence === null) {
           // Remove recurrence: delete old rule if exists
-          if (recurrenceRuleId) {
+          if (recurrenceRuleId != null) {
             await db
               .delete(recurrenceRules)
               .where(eq(recurrenceRules.id, recurrenceRuleId))
           }
           recurrenceRuleId = null
-        } else if (recurrenceRuleId) {
+        } else if (recurrenceRuleId != null) {
           // Update existing rule
           await db
             .update(recurrenceRules)
@@ -358,44 +368,49 @@ export const schedulesApp = new Hono()
             .where(eq(recurrenceRules.id, recurrenceRuleId))
         } else {
           // Create new rule
-          const [rule] = await db
-            .insert(recurrenceRules)
-            .values({
-              type: input.recurrence.type,
-              interval: input.recurrence.interval,
-              daysOfWeek: input.recurrence.daysOfWeek ?? null,
-              dayOfMonth: input.recurrence.dayOfMonth ?? null,
-            })
-            .returning()
-          recurrenceRuleId = rule!.id
+          const rule = firstOrThrow(
+            await db
+              .insert(recurrenceRules)
+              .values({
+                type: input.recurrence.type,
+                interval: input.recurrence.interval,
+                daysOfWeek: input.recurrence.daysOfWeek ?? null,
+                dayOfMonth: input.recurrence.dayOfMonth ?? null,
+              })
+              .returning(),
+          )
+          recurrenceRuleId = rule.id
         }
       }
 
-      const [updated] = await db
-        .update(schedules)
-        .set({
-          ...(input.title !== undefined ? { title: input.title } : {}),
-          ...(input.startTime !== undefined
-            ? { startTime: input.startTime }
-            : {}),
-          ...(input.endTime !== undefined ? { endTime: input.endTime } : {}),
-          ...(input.context !== undefined
-            ? { context: input.context ?? 'personal' }
-            : {}),
-          ...(input.color !== undefined ? { color: input.color } : {}),
-          recurrenceRuleId,
-          updatedAt: now,
-        })
-        .where(eq(schedules.id, id))
-        .returning()
+      const updated = firstOrThrow(
+        await db
+          .update(schedules)
+          .set({
+            ...(input.title !== undefined ? { title: input.title } : {}),
+            ...(input.startTime !== undefined
+              ? { startTime: input.startTime }
+              : {}),
+            ...(input.endTime !== undefined ? { endTime: input.endTime } : {}),
+            ...(input.context !== undefined
+              ? { context: input.context ?? 'personal' }
+              : {}),
+            ...(input.color !== undefined ? { color: input.color } : {}),
+            recurrenceRuleId,
+            updatedAt: now,
+          })
+          .where(eq(schedules.id, id))
+          .returning(),
+      )
 
-      const rule = recurrenceRuleId
-        ? ((await db.query.recurrenceRules.findFirst({
-            where: eq(recurrenceRules.id, recurrenceRuleId),
-          })) ?? null)
-        : null
+      const rule =
+        recurrenceRuleId != null
+          ? ((await db.query.recurrenceRules.findFirst({
+              where: eq(recurrenceRules.id, recurrenceRuleId),
+            })) ?? null)
+          : null
 
-      return c.json(scheduleToResponse(updated!, rule), 200)
+      return c.json(scheduleToResponse(updated, rule), 200)
     },
   )
   .delete('/recurring/:id', requireSchedule, async (c) => {
@@ -406,7 +421,7 @@ export const schedulesApp = new Hono()
     await db.delete(schedules).where(eq(schedules.id, id))
 
     // Clean up orphaned recurrence rule
-    if (existingSchedule.recurrenceRuleId) {
+    if (existingSchedule.recurrenceRuleId != null) {
       await db
         .delete(recurrenceRules)
         .where(eq(recurrenceRules.id, existingSchedule.recurrenceRuleId))

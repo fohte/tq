@@ -1,17 +1,16 @@
-type AppEnv = 'development' | 'test' | 'production'
+const APP_ENVS = ['development', 'test', 'production'] as const
+type AppEnv = (typeof APP_ENVS)[number]
 
-const validAppEnvs: readonly string[] = [
-  'development',
-  'test',
-  'production',
-] satisfies readonly AppEnv[]
+function isAppEnv(value: string): value is AppEnv {
+  return (APP_ENVS as readonly string[]).includes(value)
+}
 
 function resolveAppEnv(): AppEnv {
   const env = process.env['APP_ENV']
   if (env === undefined) return 'development'
-  if (validAppEnvs.includes(env)) return env as AppEnv
+  if (isAppEnv(env)) return env
   throw new Error(
-    `Invalid APP_ENV: "${env}". Must be one of: ${validAppEnvs.join(', ')}`,
+    `Invalid APP_ENV: "${env}". Must be one of: ${APP_ENVS.join(', ')}`,
   )
 }
 
@@ -19,7 +18,7 @@ export const APP_ENV: AppEnv = resolveAppEnv()
 
 function resolveDatabaseUrl(): string {
   const explicit = process.env['DATABASE_URL']
-  if (explicit) return explicit
+  if (explicit != null && explicit !== '') return explicit
 
   switch (APP_ENV) {
     case 'development':

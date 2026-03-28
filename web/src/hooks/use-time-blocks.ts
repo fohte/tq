@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@web/lib/api'
+import { assertOk } from '@web/lib/assert-response'
 import type { InferResponseType } from 'hono/client'
 
 type TimeBlock = InferResponseType<
@@ -23,7 +24,7 @@ export function useTimeBlocks(date: string) {
           tzOffset: String(new Date().getTimezoneOffset()),
         },
       })
-      if (!res.ok) throw new Error('Failed to fetch time blocks')
+      assertOk(res)
       return res.json()
     },
   })
@@ -52,7 +53,7 @@ export function useCreateTimeBlock() {
     },
     onMutate: async (input) => {
       const d = new Date(input.startTime)
-      const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const date = `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       const queryKey = timeBlockKeys.list(date)
 
       await queryClient.cancelQueries({ queryKey })
@@ -61,7 +62,7 @@ export function useCreateTimeBlock() {
 
       const now = new Date().toISOString()
       const optimisticBlock: TimeBlock = {
-        id: `optimistic-${Date.now()}`,
+        id: `optimistic-${String(Date.now())}`,
         taskId: input.taskId,
         startTime: input.startTime,
         endTime: input.endTime,
@@ -80,12 +81,12 @@ export function useCreateTimeBlock() {
       return { previousData, queryKey }
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousData !== undefined && context?.queryKey) {
+      if (context?.previousData !== undefined) {
         queryClient.setQueryData(context.queryKey, context.previousData)
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: timeBlockKeys.all })
+      void queryClient.invalidateQueries({ queryKey: timeBlockKeys.all })
     },
   })
 }
@@ -146,7 +147,7 @@ export function useUpdateTimeBlock() {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: timeBlockKeys.all })
+      void queryClient.invalidateQueries({ queryKey: timeBlockKeys.all })
     },
   })
 }
@@ -186,7 +187,7 @@ export function useDeleteTimeBlock() {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: timeBlockKeys.all })
+      void queryClient.invalidateQueries({ queryKey: timeBlockKeys.all })
     },
   })
 }

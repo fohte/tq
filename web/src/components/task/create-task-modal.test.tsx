@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CreateTaskModal } from '@web/components/task/create-task-modal'
+import { atIndex } from '@web/lib/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@web/components/ui/markdown-editor', () => ({
@@ -55,7 +56,7 @@ describe('CreateTaskModal', () => {
 
     const titleInputs =
       screen.getAllByPlaceholderText(/task title|タスクのタイトル/i)
-    await user.type(titleInputs[0]!, 'Test task')
+    await user.type(atIndex(titleInputs, 0), 'Test task')
 
     const createButtons = screen.getAllByRole('button', { name: /create/i })
     const enabledButton = createButtons.find(

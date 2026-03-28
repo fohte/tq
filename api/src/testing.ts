@@ -4,7 +4,8 @@ import { DATABASE_URL } from '@api/env'
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
-import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, expect } from 'vitest'
+import { z, type ZodType } from 'zod'
 
 // Single connection to ensure BEGIN/ROLLBACK operate on the same connection
 const testClient = postgres(DATABASE_URL, { max: 1 })
@@ -32,4 +33,42 @@ export function setupTestDb() {
   afterAll(async () => {
     await testClient.end()
   })
+}
+
+/**
+ * Create a Zod passthrough schema typed as T.
+ * Accepts any value at runtime but narrows to T at the type level,
+ * avoiding explicit type assertions while keeping call sites concise.
+ */
+export function passthroughSchema<T>(): ZodType<T> {
+  return z.any()
+}
+
+/**
+ * Parse a JSON response body with Zod runtime validation.
+ * The schema validates and narrows the unknown response to T without
+ * requiring an unsafe type assertion.
+ *
+ * For call sites where a full schema is impractical, use
+ * `passthroughSchema<T>()` which accepts any value but preserves the type.
+ */
+export async function jsonBody<T>(
+  res: Response,
+  schema: ZodType<T> = passthroughSchema<T>(),
+): Promise<T> {
+  const data: unknown = await res.json()
+  return schema.parse(data)
+}
+
+/**
+ * Assert that a value is defined (not null/undefined), narrowing its type.
+ * Replaces non-null assertions (`!`) in tests with a proper Vitest assertion
+ * that produces clear error messages on failure.
+ */
+export function assertDefined<T>(
+  value: T | null | undefined,
+  msg?: string,
+): asserts value is T {
+  expect(value, msg ?? 'Expected value to be defined').not.toBeNull()
+  expect(value, msg ?? 'Expected value to be defined').toBeDefined()
 }

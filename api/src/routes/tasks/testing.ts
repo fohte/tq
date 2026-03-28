@@ -1,6 +1,9 @@
 import { app } from '@api/app'
 import { db } from '@api/db/connection'
 import { labels } from '@api/db/schema'
+import { firstOrThrow } from '@api/lib/drizzle-utils'
+import { jsonBody } from '@api/testing'
+import { z } from 'zod'
 
 export interface TimeBlockResponse {
   id: string
@@ -40,6 +43,38 @@ export interface TaskResponse {
   children?: TaskResponse[]
 }
 
+const recurrenceRuleResponseSchema = z.object({
+  id: z.string(),
+  type: z.enum(['daily', 'weekly', 'monthly', 'custom']),
+  interval: z.number(),
+  daysOfWeek: z.array(z.number()).nullable(),
+  dayOfMonth: z.number().nullable(),
+})
+
+const taskResponseSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  status: z.enum(['todo', 'in_progress', 'completed']),
+  context: z.enum(['work', 'personal', 'dev']),
+  startDate: z.string().nullable(),
+  dueDate: z.string().nullable(),
+  estimatedMinutes: z.number().nullable(),
+  parentId: z.string().nullable(),
+  projectId: z.string().nullable(),
+  recurrenceRuleId: z.string().nullable(),
+  recurrenceRule: recurrenceRuleResponseSchema.nullable(),
+  sortOrder: z.number(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  childCompletionCount: z
+    .object({ completed: z.number(), total: z.number() })
+    .optional(),
+  children: z.array(z.any()).optional(),
+})
+
+const idResponseSchema = z.object({ id: z.string() })
+
 export const TEST_UUID = '550e8400-e29b-41d4-a716-446655440000'
 
 export async function createTask(
@@ -59,9 +94,11 @@ export async function createTask(
     body: JSON.stringify({ title, ...opts }),
   })
   if (res.status !== 201) {
-    throw new Error(`Failed to create task: ${res.status} ${await res.text()}`)
+    throw new Error(
+      `Failed to create task: ${String(res.status)} ${await res.text()}`,
+    )
   }
-  return (await res.json()) as TaskResponse
+  return jsonBody(res, taskResponseSchema)
 }
 
 export async function createRecurringTask(
@@ -86,10 +123,10 @@ export async function createRecurringTask(
   })
   if (res.status !== 201) {
     throw new Error(
-      `Failed to create recurring task: ${res.status} ${await res.text()}`,
+      `Failed to create recurring task: ${String(res.status)} ${await res.text()}`,
     )
   }
-  return (await res.json()) as TaskResponse
+  return jsonBody(res, taskResponseSchema)
 }
 
 export async function createPage(
@@ -103,9 +140,11 @@ export async function createPage(
     body: JSON.stringify({ title, content }),
   })
   if (res.status !== 201) {
-    throw new Error(`Failed to create page: ${res.status} ${await res.text()}`)
+    throw new Error(
+      `Failed to create page: ${String(res.status)} ${await res.text()}`,
+    )
   }
-  return (await res.json()) as { id: string }
+  return jsonBody(res, idResponseSchema)
 }
 
 export async function createComment(taskId: string, content: string) {
@@ -116,13 +155,12 @@ export async function createComment(taskId: string, content: string) {
   })
   if (res.status !== 201) {
     throw new Error(
-      `Failed to create comment: ${res.status} ${await res.text()}`,
+      `Failed to create comment: ${String(res.status)} ${await res.text()}`,
     )
   }
-  return (await res.json()) as { id: string }
+  return jsonBody(res, idResponseSchema)
 }
 
 export async function createLabel(name: string) {
-  const [label] = await db.insert(labels).values({ name }).returning()
-  return label!
+  return firstOrThrow(await db.insert(labels).values({ name }).returning())
 }

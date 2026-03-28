@@ -64,20 +64,24 @@ function setupMocks({
 }: { comments?: Comment[]; isLoading?: boolean } = {}) {
   const mutateFn = vi.fn()
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
   mockUseTaskComments.mockReturnValue({
     data: comments,
     isLoading,
   } as ReturnType<typeof useTaskComments>)
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
   mockUseCreateComment.mockReturnValue({
     mutate: mutateFn,
     isPending: false,
   } as unknown as ReturnType<typeof useCreateComment>)
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
   mockUseUpdateComment.mockReturnValue({
     mutate: vi.fn(),
   } as unknown as ReturnType<typeof useUpdateComment>)
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
   mockUseDeleteComment.mockReturnValue({
     mutate: vi.fn(),
   } as unknown as ReturnType<typeof useDeleteComment>)
@@ -130,6 +134,7 @@ describe('TaskActivity', () => {
     expect(screen.getByText('Third comment')).toBeInTheDocument()
 
     // Verify order: First should appear before Second, which appears before Third
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- textContent can be null at runtime
     const allText = document.body.textContent ?? ''
     const firstIdx = allText.indexOf('First comment')
     const secondIdx = allText.indexOf('Second comment')
