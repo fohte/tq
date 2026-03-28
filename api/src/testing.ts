@@ -69,5 +69,6 @@ export function assertDefined<T>(
   value: T | null | undefined,
   msg?: string,
 ): asserts value is T {
+  expect(value, msg ?? 'Expected value to be defined').not.toBeNull()
   expect(value, msg ?? 'Expected value to be defined').toBeDefined()
 }

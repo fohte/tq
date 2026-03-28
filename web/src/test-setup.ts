@@ -59,7 +59,10 @@ process.prependListener('uncaughtException', (error: unknown) => {
   }
 
   for (const listener of originalListeners) {
-    listener(error, 'uncaughtException')
+    listener(
+      error instanceof Error ? error : new Error(String(error)),
+      'uncaughtException',
+    )
   }
 })
 process.on('unhandledRejection', (reason) => {
