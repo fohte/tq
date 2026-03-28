@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:24-slim AS base
+FROM node:24.14.1-slim AS base
 WORKDIR /app
 COPY package.json ./
 RUN corepack enable && corepack prepare --activate
