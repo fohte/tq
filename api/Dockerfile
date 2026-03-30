@@ -34,6 +34,7 @@ COPY api/package.json api/
 COPY web/package.json web/
 RUN pnpm install --frozen-lockfile --prod
 COPY --from=builder /app/api/dist ./api/dist
+COPY api/drizzle ./api/drizzle
 EXPOSE 3001
 WORKDIR /app/api
 CMD ["node", "dist/index.js"]
