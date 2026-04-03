@@ -62,6 +62,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  const lastMousePos = useRef({ x: 0, y: 0 })
   const navigate = useNavigate()
 
   const { data: tasks, isFetching } = useSearchTasks(query)
@@ -86,7 +87,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
 
   useEffect(() => {
     setSelectedIndex(0)
-  }, [items.length])
+  }, [items])
 
   useEffect(() => {
     if (open) {
@@ -165,7 +166,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
 
   const hasSuggestions =
     suggestions != null && suggestions.length > 0 && currentPrefix.length > 0
-  const hasTasks = tasks != null && tasks.length > 0
+  const hasTasks = query.length > 0 && tasks != null && tasks.length > 0
 
   if (!open) return null
 
@@ -238,8 +239,17 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                       onClick={() => {
                         applySuggestion(suggestion)
                       }}
-                      onMouseEnter={() => {
-                        setSelectedIndex(globalIndex)
+                      onMouseMove={(e) => {
+                        if (
+                          e.clientX !== lastMousePos.current.x ||
+                          e.clientY !== lastMousePos.current.y
+                        ) {
+                          lastMousePos.current = {
+                            x: e.clientX,
+                            y: e.clientY,
+                          }
+                          setSelectedIndex(globalIndex)
+                        }
                       }}
                       className={cn(
                         'flex w-full items-center gap-2 px-4 py-2 text-left',
@@ -284,8 +294,17 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                       onClick={() => {
                         openTask(task)
                       }}
-                      onMouseEnter={() => {
-                        setSelectedIndex(globalIndex)
+                      onMouseMove={(e) => {
+                        if (
+                          e.clientX !== lastMousePos.current.x ||
+                          e.clientY !== lastMousePos.current.y
+                        ) {
+                          lastMousePos.current = {
+                            x: e.clientX,
+                            y: e.clientY,
+                          }
+                          setSelectedIndex(globalIndex)
+                        }
                       }}
                       className={cn(
                         'flex w-full items-center gap-3 px-4 py-3 text-left',
