@@ -90,7 +90,11 @@ function ProjectDetail() {
       />
 
       {/* Task create modal */}
-      <CreateTaskModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+      <CreateTaskModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        projectId={projectId}
+      />
     </div>
   )
 }

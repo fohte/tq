@@ -77,6 +77,7 @@ export interface CreateTaskInput {
   estimatedMinutes?: number
   context?: 'work' | 'personal' | 'dev'
   labels?: string[]
+  projectId?: string
 }
 
 export function useCreateTask() {
