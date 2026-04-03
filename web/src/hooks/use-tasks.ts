@@ -110,7 +110,7 @@ export function useCreateTask() {
         dueDate: input.dueDate ?? null,
         estimatedMinutes: input.estimatedMinutes ?? null,
         parentId: null,
-        projectId: null,
+        projectId: input.projectId ?? null,
         sortOrder: 0,
         recurrenceRuleId: null,
         recurrenceRule: null,
