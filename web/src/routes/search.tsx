@@ -1,14 +1,20 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { SearchView } from '@web/components/search/search-view'
 
 export const Route = createFileRoute('/search')({
   component: Search,
 })
 
 function Search() {
+  const navigate = useNavigate()
+
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold">Search</h1>
-      <p className="text-muted-foreground">Search tasks</p>
+    <div className="h-[calc(100dvh-56px)] md:h-dvh">
+      <SearchView
+        onBack={() => {
+          void navigate({ to: '/' })
+        }}
+      />
     </div>
   )
 }
