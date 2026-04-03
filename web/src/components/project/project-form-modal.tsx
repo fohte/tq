@@ -72,9 +72,7 @@ export function ProjectFormModal({
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
-      if (!nextOpen) {
-        resetForm()
-      }
+      resetForm()
       onOpenChange(nextOpen)
     },
     [onOpenChange, resetForm],
@@ -83,18 +81,19 @@ export function ProjectFormModal({
   const handleSubmit = () => {
     if (!title.trim() || isPending) return
 
-    const input = {
-      title: title.trim(),
-      ...(description.trim() ? { description: description.trim() } : {}),
-      status,
-      ...(startDate ? { startDate } : {}),
-      ...(targetDate ? { targetDate } : {}),
-      color,
-    }
-
     if (isEditing) {
       updateProject.mutate(
-        { id: project.id, input },
+        {
+          id: project.id,
+          input: {
+            title: title.trim(),
+            description: description.trim() || null,
+            status,
+            startDate: startDate || null,
+            targetDate: targetDate || null,
+            color,
+          },
+        },
         {
           onSuccess: () => {
             onOpenChange(false)
@@ -102,12 +101,22 @@ export function ProjectFormModal({
         },
       )
     } else {
-      createProject.mutate(input, {
-        onSuccess: () => {
-          resetForm()
-          onOpenChange(false)
+      createProject.mutate(
+        {
+          title: title.trim(),
+          ...(description.trim() ? { description: description.trim() } : {}),
+          status,
+          ...(startDate ? { startDate } : {}),
+          ...(targetDate ? { targetDate } : {}),
+          color,
         },
-      })
+        {
+          onSuccess: () => {
+            resetForm()
+            onOpenChange(false)
+          },
+        },
+      )
     }
   }
 
@@ -128,7 +137,6 @@ export function ProjectFormModal({
           setTitle(e.target.value)
         }}
         placeholder="Project name"
-        autoFocus
         className="w-full bg-transparent text-xl font-medium text-foreground outline-none placeholder:text-muted-foreground"
       />
 

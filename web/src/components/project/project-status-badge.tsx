@@ -1,6 +1,6 @@
 import { cn } from '@web/lib/utils'
 
-type ProjectStatus = 'active' | 'paused' | 'completed' | 'archived'
+export type ProjectStatus = 'active' | 'paused' | 'completed' | 'archived'
 
 const statusConfig: Record<
   ProjectStatus,
