@@ -27,7 +27,7 @@ export function scheduleColorToEventColor(color: string | null): {
 /**
  * Darken a hex color by mixing it with black.
  * @param hex - Hex color string (e.g., "#52B788")
- * @param factor - How much to darken (0 = black, 1 = original)
+ * @param factor - How much to darken (0 = original, 1 = black)
  */
 function darkenHex(hex: string, factor: number): string {
   const cleaned = hex.replace('#', '')
