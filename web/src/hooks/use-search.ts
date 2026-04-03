@@ -156,6 +156,7 @@ export function useSearch() {
   )
 
   const hasQuery = query.trim() !== ''
+  const isDebouncing = query !== debouncedQuery
 
   const searchQuery = useQuery({
     queryKey: searchKeys.query(debouncedQuery),
@@ -198,7 +199,7 @@ export function useSearch() {
     filters,
     results: searchQuery.data ?? [],
     isLoading: searchQuery.isLoading,
-    isFetching: searchQuery.isFetching,
+    isFetching: searchQuery.isFetching || isDebouncing,
     hasQuery,
     updateFilter,
     clearFilter,
