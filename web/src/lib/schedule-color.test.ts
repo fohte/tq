@@ -8,20 +8,21 @@ describe('scheduleColorToEventColor', () => {
   })
 
   it('uses the custom color as accent and darkens it for bg', () => {
+    // #52B788: R=82, G=183, B=136. With factor=0.7: R=25, G=55, B=41
     const result = scheduleColorToEventColor('#52B788')
-    expect(result.accent).toBe('#52B788')
-    // bg should be darker than the accent
-    expect(result.bg).not.toBe('#52B788')
-    expect(result.bg).toMatch(/^#[0-9a-f]{6}$/)
+    expect(result).toEqual({ accent: '#52B788', bg: '#193729' })
   })
 
-  it('returns a valid hex bg for various colors', () => {
-    const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFFFF', '#000000']
-    for (const color of colors) {
-      const result = scheduleColorToEventColor(color)
-      expect(result.accent).toBe(color)
-      expect(result.bg).toMatch(/^#[0-9a-f]{6}$/)
-    }
+  it('darkens white to 30% brightness', () => {
+    // #FFFFFF with factor=0.7: each channel 255 * 0.3 = 77 = 0x4d
+    const result = scheduleColorToEventColor('#FFFFFF')
+    expect(result).toEqual({ accent: '#FFFFFF', bg: '#4d4d4d' })
+  })
+
+  it('darkens pure red correctly', () => {
+    // #FF0000 with factor=0.7: R=255*0.3=77, G=0, B=0
+    const result = scheduleColorToEventColor('#FF0000')
+    expect(result).toEqual({ accent: '#FF0000', bg: '#4d0000' })
   })
 
   it('darkens black to black', () => {
