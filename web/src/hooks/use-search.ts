@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@web/lib/api'
 import { assertOk } from '@web/lib/assert-response'
 import type { InferResponseType } from 'hono/client'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 type SearchResult = InferResponseType<
   typeof api.api.tasks.search.$get,
@@ -139,6 +139,16 @@ const searchKeys = {
 
 export function useSearch() {
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState(query)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query)
+    }, 300)
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [query])
 
   const { freeText, filters } = useMemo(
     () => parseQueryToFilters(query),
@@ -148,35 +158,30 @@ export function useSearch() {
   const hasQuery = query.trim() !== ''
 
   const searchQuery = useQuery({
-    queryKey: searchKeys.query(query),
+    queryKey: searchKeys.query(debouncedQuery),
     queryFn: async () => {
       const res = await api.api.tasks.search.$get({
-        query: { q: query, limit: '20' },
+        query: { q: debouncedQuery, limit: '20' },
       })
       assertOk(res)
       return res.json()
     },
-    enabled: hasQuery,
+    enabled: debouncedQuery.trim() !== '',
     placeholderData: (prev) => prev,
   })
 
   const updateFilter = useCallback(
     (key: keyof SearchFilters, value: string | undefined) => {
-      const { freeText: currentFreeText, filters: currentFilters } =
-        parseQueryToFilters(query)
-      if (value == null) {
-        const newFilters: SearchFilters = { ...currentFilters }
-        newFilters[key] = undefined
-        setQuery(buildQueryFromFilters(currentFreeText, newFilters))
-        return
-      }
+      const base = Object.fromEntries(
+        Object.entries(filters).filter(([k]) => k !== key),
+      ) as SearchFilters
       const newFilters: SearchFilters = {
-        ...currentFilters,
-        [key]: value,
+        ...base,
+        ...(value !== undefined ? { [key]: value } : {}),
       }
-      setQuery(buildQueryFromFilters(currentFreeText, newFilters))
+      setQuery(buildQueryFromFilters(freeText, newFilters))
     },
-    [query],
+    [freeText, filters],
   )
 
   const clearFilter = useCallback(

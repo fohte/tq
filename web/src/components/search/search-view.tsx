@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import type { SearchFilters, SearchResult } from '@web/hooks/use-search'
 import { useSearch } from '@web/hooks/use-search'
 import { formatMinutes } from '@web/lib/format'
@@ -12,7 +13,7 @@ import {
   Square,
   X,
 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 function StatusIcon({ status }: { status: string }) {
   if (status === 'completed') {
@@ -52,6 +53,23 @@ interface FilterChipProps {
 function FilterChip({ label, value, options, onChange }: FilterChipProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        ref.current &&
+        event.target instanceof Node &&
+        !ref.current.contains(event.target)
+      ) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [open])
 
   return (
     <div className="relative" ref={ref}>
@@ -137,8 +155,9 @@ function SearchResultRow({ task }: { task: SearchResult }) {
   const isCompleted = task.status === 'completed'
 
   return (
-    <a
-      href={`/tasks/${task.id}`}
+    <Link
+      to="/tasks/$taskId"
+      params={{ taskId: task.id }}
       className={cn(
         'flex items-center gap-2 border-b border-border px-3 py-2 transition-colors hover:bg-secondary/30',
         isCompleted && 'opacity-50',
@@ -165,7 +184,7 @@ function SearchResultRow({ task }: { task: SearchResult }) {
           )}
         </div>
       </div>
-    </a>
+    </Link>
   )
 }
 

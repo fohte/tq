@@ -61,6 +61,21 @@ vi.mock('@web/hooks/use-search', () => ({
   useSearch: () => mockSearchReturn,
 }))
 
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({
+    children,
+    ...props
+  }: { children: import('react').ReactNode } & Record<string, unknown>) => {
+    const { to, params, ...rest } = props
+    void params
+    return (
+      <a href={typeof to === 'string' ? to : '#'} {...rest}>
+        {children}
+      </a>
+    )
+  },
+}))
+
 function renderSearchView(onBack?: () => void) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
