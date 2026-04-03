@@ -171,20 +171,16 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
 
   return createPortal(
     <>
-      {/* Backdrop */}
+      {/* Backdrop + Modal wrapper (single layer to avoid z-index stacking issues) */}
       <div
-        className="fixed inset-0 z-50 bg-black/50"
+        className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-[15vh]"
         data-testid="search-overlay"
-        onClick={() => {
-          onOpenChange(false)
-        }}
-      />
-
-      {/* Modal */}
-      <div
-        className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]"
         onKeyDown={handleKeyDown}
-        data-testid="search-modal"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            onOpenChange(false)
+          }
+        }}
       >
         <div
           className="flex max-h-[480px] w-full max-w-[640px] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
