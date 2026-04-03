@@ -5,6 +5,7 @@ import type {
 import { TaskRow } from '@web/components/task/task-row'
 import type { ProjectTask } from '@web/hooks/use-projects'
 import type { Task } from '@web/hooks/use-tasks'
+import { useMemo } from 'react'
 
 interface TreeNode {
   task: ProjectTask
@@ -101,10 +102,12 @@ export function ProjectTaskList({
   statusFilter: StatusFilter
   sortOption: SortOption
 }) {
-  const filtered = filterTasks(tasks, statusFilter)
-  const sorted = sortTasks(filtered, sortOption)
-  const tree = buildTaskTree(sorted)
-  const flat = flattenTree(tree)
+  const flat = useMemo(() => {
+    const filtered = filterTasks(tasks, statusFilter)
+    const sorted = sortTasks(filtered, sortOption)
+    const tree = buildTaskTree(sorted)
+    return flattenTree(tree)
+  }, [tasks, statusFilter, sortOption])
 
   if (flat.length === 0) {
     return (

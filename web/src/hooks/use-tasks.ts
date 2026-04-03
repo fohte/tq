@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { projectKeys } from '@web/hooks/use-projects'
 import { api } from '@web/lib/api'
 import { assertOk } from '@web/lib/assert-response'
 import type { InferResponseType } from 'hono/client'
@@ -137,6 +138,7 @@ export function useCreateTask() {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })
 }
@@ -201,6 +203,7 @@ export function useUpdateTaskStatus() {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })
 }
@@ -294,6 +297,7 @@ export function useUpdateTask() {
     onSettled: (_data, _err, { id }) => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })
 }
@@ -374,6 +378,7 @@ export function useUpdateTaskParent() {
     onSettled: (_data, _err, { id }) => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })
 }
@@ -445,6 +450,7 @@ function useTaskActionMutation(
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })
 }
@@ -532,6 +538,7 @@ export function useDeleteTask() {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })
 }
