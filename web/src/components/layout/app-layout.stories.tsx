@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   createMemoryHistory,
   createRootRoute,
@@ -8,13 +9,19 @@ import {
 } from '@tanstack/react-router'
 import { AppLayout } from '@web/components/layout/app-layout'
 
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+})
+
 function AppLayoutStory() {
   return (
-    <AppLayout>
-      <div className="flex items-center justify-center p-8 text-muted-foreground">
-        Page Content
-      </div>
-    </AppLayout>
+    <QueryClientProvider client={queryClient}>
+      <AppLayout>
+        <div className="flex items-center justify-center p-8 text-muted-foreground">
+          Page Content
+        </div>
+      </AppLayout>
+    </QueryClientProvider>
   )
 }
 
