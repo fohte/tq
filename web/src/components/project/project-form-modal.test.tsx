@@ -22,7 +22,7 @@ function renderModal(
       <ProjectFormModal
         open={props.open ?? true}
         onOpenChange={onOpenChange}
-        project={props.project}
+        {...(props.project != null ? { project: props.project } : {})}
       />
     </QueryClientProvider>,
   )
