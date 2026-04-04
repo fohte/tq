@@ -2,6 +2,17 @@ import '@web/index.css'
 
 import type { Preview } from '@storybook/react-vite'
 import { ContextFilterProvider } from '@web/hooks/use-context-filter'
+import { initialize, mswLoader } from 'msw-storybook-addon'
+
+initialize({
+  onUnhandledRequest: ({ url }, print) => {
+    const pathname = new URL(url).pathname
+    // Only error on API requests; let Storybook assets, HMR, etc. pass through
+    if (pathname.startsWith('/api/')) {
+      print.error()
+    }
+  },
+})
 
 const preview: Preview = {
   parameters: {
@@ -41,6 +52,7 @@ const preview: Preview = {
       )
     },
   ],
+  loaders: [mswLoader],
 }
 
 export default preview
