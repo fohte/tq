@@ -17,15 +17,18 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/api/node_modules ./api/node_modules
 COPY --from=deps /app/web/node_modules ./web/node_modules
 COPY . .
-ARG VITE_API_URL
-ENV VITE_API_URL=${VITE_API_URL}
 RUN pnpm --filter web build
 
 # Production runtime: serve static files with nginx
 FROM nginx:stable-alpine AS runtime
 COPY --from=builder /app/web/dist /usr/share/nginx/html
-COPY web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY web/nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY web/docker-entrypoint.sh /docker-entrypoint.sh
+
+ENV API_BACKEND_URL=http://tq-api:3001
+ENV NGINX_RESOLVER=kube-dns.kube-system.svc.cluster.local
+
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
 
 LABEL org.opencontainers.image.source=https://github.com/fohte/tq
