@@ -7,8 +7,59 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { SearchView } from '@web/components/search/search-view'
+import { SearchViewInner } from '@web/components/search/search-view'
+import type { SearchResult } from '@web/hooks/use-search'
 import type { ReactNode } from 'react'
+import { fn } from 'storybook/test'
+
+const baseTask: SearchResult = {
+  id: '00000000-0000-0000-0000-000000000001',
+  title: 'Implement task list UI',
+  description: null,
+  status: 'todo',
+  context: 'personal',
+  startDate: null,
+  dueDate: null,
+  estimatedMinutes: null,
+  parentId: null,
+  projectId: null,
+  sortOrder: 0,
+  recurrenceRuleId: null,
+  recurrenceRule: null,
+  createdAt: '2026-03-20T00:00:00.000Z',
+  updatedAt: '2026-03-20T00:00:00.000Z',
+}
+
+const mockResults: SearchResult[] = [
+  {
+    ...baseTask,
+    id: '1',
+    title: 'Deploy to production',
+    context: 'work',
+    estimatedMinutes: 120,
+  },
+  {
+    ...baseTask,
+    id: '2',
+    title: 'Fix armyknife build',
+    context: 'dev',
+    estimatedMinutes: 90,
+    status: 'in_progress',
+  },
+  {
+    ...baseTask,
+    id: '3',
+    title: 'Write API documentation',
+    estimatedMinutes: 60,
+  },
+  {
+    ...baseTask,
+    id: '4',
+    title: 'Review pull request',
+    status: 'completed',
+    estimatedMinutes: 30,
+  },
+]
 
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
@@ -43,9 +94,18 @@ function Providers({ children }: { children: ReactNode }) {
 
 const meta = {
   title: 'Search/SearchView',
-  component: SearchView,
+  component: SearchViewInner,
   parameters: {
     layout: 'fullscreen',
+  },
+  args: {
+    query: '',
+    setQuery: fn(),
+    filters: {},
+    results: [],
+    isFetching: false,
+    hasQuery: false,
+    updateFilter: fn(),
   },
   decorators: [
     (Story) => (
@@ -56,20 +116,51 @@ const meta = {
       </Providers>
     ),
   ],
-} satisfies Meta<typeof SearchView>
+} satisfies Meta<typeof SearchViewInner>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   args: {
-    onBack: () => {},
+    onBack: fn(),
   },
 }
 
-export const WithBackButton: Story = {
+export const WithResults: Story = {
   args: {
-    onBack: () => {},
+    query: 'armyknife',
+    hasQuery: true,
+    results: mockResults,
+    onBack: fn(),
+  },
+}
+
+export const WithFilters: Story = {
+  args: {
+    query: 'is:todo context:work',
+    hasQuery: true,
+    filters: { status: 'todo', context: 'work' },
+    results: mockResults.slice(0, 1),
+    onBack: fn(),
+  },
+}
+
+export const Loading: Story = {
+  args: {
+    query: 'searching...',
+    hasQuery: true,
+    isFetching: true,
+    onBack: fn(),
+  },
+}
+
+export const NoResults: Story = {
+  args: {
+    query: 'nonexistent',
+    hasQuery: true,
+    results: [],
+    onBack: fn(),
   },
 }
 

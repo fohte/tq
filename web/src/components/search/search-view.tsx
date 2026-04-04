@@ -188,21 +188,27 @@ function SearchResultRow({ task }: { task: SearchResult }) {
   )
 }
 
-export interface SearchViewProps {
+export interface SearchViewInnerProps {
+  query: string
+  setQuery: (query: string) => void
+  filters: SearchFilters
+  results: SearchResult[]
+  isFetching: boolean
+  hasQuery: boolean
+  updateFilter: (key: keyof SearchFilters, value: string | undefined) => void
   onBack?: (() => void) | undefined
 }
 
-export function SearchView({ onBack }: SearchViewProps) {
-  const {
-    query,
-    setQuery,
-    filters,
-    results,
-    isFetching,
-    hasQuery,
-    updateFilter,
-  } = useSearch()
-
+export function SearchViewInner({
+  query,
+  setQuery,
+  filters,
+  results,
+  isFetching,
+  hasQuery,
+  updateFilter,
+  onBack,
+}: SearchViewInnerProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleFilterChange = (
@@ -271,7 +277,7 @@ export function SearchView({ onBack }: SearchViewProps) {
 
       {/* Filter row */}
       <div
-        className="flex items-center gap-2 overflow-x-auto px-3 py-2"
+        className="flex items-center gap-2 px-3 py-2"
         data-testid="filter-row"
       >
         <FilterChip
@@ -322,5 +328,34 @@ export function SearchView({ onBack }: SearchViewProps) {
         )}
       </div>
     </div>
+  )
+}
+
+export interface SearchViewProps {
+  onBack?: (() => void) | undefined
+}
+
+export function SearchView({ onBack }: SearchViewProps) {
+  const {
+    query,
+    setQuery,
+    filters,
+    results,
+    isFetching,
+    hasQuery,
+    updateFilter,
+  } = useSearch()
+
+  return (
+    <SearchViewInner
+      query={query}
+      setQuery={setQuery}
+      filters={filters}
+      results={results}
+      isFetching={isFetching}
+      hasQuery={hasQuery}
+      updateFilter={updateFilter}
+      onBack={onBack}
+    />
   )
 }
