@@ -24,9 +24,6 @@ FROM nginx:stable-alpine AS runtime
 COPY --from=builder /app/web/dist /usr/share/nginx/html
 COPY web/nginx.conf.template /etc/nginx/templates/default.conf.template
 
-ENV API_BACKEND_URL=http://tq-api:3001
-ENV NGINX_RESOLVER=kube-dns.kube-system.svc.cluster.local
-
 EXPOSE 80
 
 LABEL org.opencontainers.image.source=https://github.com/fohte/tq
