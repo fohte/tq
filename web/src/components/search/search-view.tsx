@@ -4,7 +4,6 @@ import { useSearch } from '@web/hooks/use-search'
 import { formatMinutes } from '@web/lib/format'
 import { cn } from '@web/lib/utils'
 import {
-  ArrowLeft,
   ChevronDown,
   CircleCheckBig,
   CircleDot,
@@ -225,17 +224,6 @@ export function SearchViewInner({
     >
       {/* Search header */}
       <div className="flex items-center gap-2 px-3 py-2">
-        {onBack != null && (
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
-            aria-label="Back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-        )}
-
         <div className="flex flex-1 items-center gap-2 rounded-lg bg-card px-3 py-2">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input
@@ -268,7 +256,7 @@ export function SearchViewInner({
           <button
             type="button"
             onClick={onBack}
-            className="text-xs text-muted-foreground hover:text-foreground"
+            className="text-sm text-primary hover:text-primary/80"
           >
             Cancel
           </button>

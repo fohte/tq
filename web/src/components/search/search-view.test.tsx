@@ -148,23 +148,23 @@ describe('SearchView', () => {
     expect(mockSearchReturn.setQuery).toHaveBeenCalled()
   })
 
-  it('renders back button when onBack is provided', () => {
+  it('renders cancel button when onBack is provided', () => {
     const onBack = vi.fn()
     renderSearchView(onBack)
-    expect(screen.getByLabelText('Back')).toBeInTheDocument()
+    expect(screen.getByText('Cancel')).toBeInTheDocument()
   })
 
-  it('does not render back button when onBack is not provided', () => {
+  it('does not render cancel button when onBack is not provided', () => {
     renderSearchView()
-    expect(screen.queryByLabelText('Back')).not.toBeInTheDocument()
+    expect(screen.queryByText('Cancel')).not.toBeInTheDocument()
   })
 
-  it('calls onBack when back button clicked', async () => {
+  it('calls onBack when cancel button clicked', async () => {
     const user = userEvent.setup()
     const onBack = vi.fn()
     renderSearchView(onBack)
 
-    await user.click(screen.getByLabelText('Back'))
+    await user.click(screen.getByText('Cancel'))
     expect(onBack).toHaveBeenCalledOnce()
   })
 
