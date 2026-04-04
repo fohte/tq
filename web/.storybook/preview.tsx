@@ -5,10 +5,13 @@ import { ContextFilterProvider } from '@web/hooks/use-context-filter'
 import { initialize, mswLoader } from 'msw-storybook-addon'
 
 initialize({
-  onUnhandledRequest: ({ url }, print) => {
-    const pathname = new URL(url).pathname
-    // Only error on API requests; let Storybook assets, HMR, etc. pass through
-    if (pathname.startsWith('/api/')) {
+  onUnhandledRequest: ({ url: requestUrl }, print) => {
+    const url = new URL(requestUrl)
+    // Only error on same-origin API requests; let Storybook assets, HMR, and third-party requests pass through
+    if (
+      url.origin === self.location.origin &&
+      url.pathname.startsWith('/api/')
+    ) {
       print.error()
     }
   },
