@@ -8,6 +8,7 @@ pre-commit:
   commands:
     eslint:
       glob: '**/*.{js,ts,jsx,tsx,mjs,cjs}'
+      exclude: '{web,api}/**'
       run: pnpm exec eslint --fix {staged_files}
       stage_fixed: true
     eslint-web:
