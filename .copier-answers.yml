@@ -6,10 +6,10 @@ is_public: false
 monorepo_node_workspace: true
 project_name: tq
 subpackages:
--   name: web
+  - name: web
     type: node
--   name: api
-    type: node
+  - name: api
+    type: rust
 type: base
 use_release_please: false
 use_storybook: false

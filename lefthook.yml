@@ -7,19 +7,16 @@ remotes:
 pre-commit:
   commands:
     eslint:
-<<<<<<< before updating
-      glob: '**/*.{js,cjs,mjs,ts,tsx}'
+      glob: '*.{js,ts,jsx,tsx,mjs,cjs}'
       run: pnpm exec eslint --fix {staged_files}
       stage_fixed: true
-=======
-      glob: '*.{js,ts,jsx,tsx,mjs,cjs}'
-      run: pnpm exec eslint {staged_files}
     eslint-web:
       glob: '*.{js,ts,jsx,tsx,mjs,cjs}'
       root: 'web/'
-      run: pnpm exec eslint {staged_files}
+      run: pnpm exec eslint --fix {staged_files}
+      stage_fixed: true
     eslint-api:
       glob: '*.{js,ts,jsx,tsx,mjs,cjs}'
       root: 'api/'
-      run: pnpm exec eslint {staged_files}
->>>>>>> after updating
+      run: pnpm exec eslint --fix {staged_files}
+      stage_fixed: true
