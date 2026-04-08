@@ -47,8 +47,8 @@ importers:
   api:
     dependencies:
       '@hono/node-server':
-        specifier: 1.19.11
-        version: 1.19.11(hono@4.12.8)
+        specifier: 1.19.13
+        version: 1.19.13(hono@4.12.8)
       '@hono/zod-validator':
         specifier: 0.7.6
         version: 0.7.6(hono@4.12.8)(zod@4.3.6)
@@ -1762,10 +1762,10 @@ packages:
     peerDependencies:
       '@fullcalendar/core': ~6.1.20
 
-  '@hono/node-server@1.19.11':
+  '@hono/node-server@1.19.13':
     resolution:
       {
-        integrity: sha512-dr8/3zEaB+p0D2n/IUrlPF1HZm586qgJNXK1a9fhg/PzdtkK7Ksd5l312tJX2yBuALqDYBlG20QEbayqPyxn+g==,
+        integrity: sha512-TsQLe4i2gvoTtrHje625ngThGBySOgSK3Xo2XRYOdqGN1teR8+I7vchQC46uLJi8OF62YTYA3AhSpumtkhsaKQ==,
       }
     engines: { node: '>=18.14.1' }
     peerDependencies:
@@ -9025,7 +9025,7 @@ snapshots:
       '@fullcalendar/core': 6.1.20
       '@fullcalendar/daygrid': 6.1.20(@fullcalendar/core@6.1.20)
 
-  '@hono/node-server@1.19.11(hono@4.12.8)':
+  '@hono/node-server@1.19.13(hono@4.12.8)':
     dependencies:
       hono: 4.12.8
 
@@ -9477,7 +9477,7 @@ snapshots:
 
   '@modelcontextprotocol/sdk@1.27.1(zod@3.25.76)':
     dependencies:
-      '@hono/node-server': 1.19.11(hono@4.12.8)
+      '@hono/node-server': 1.19.13(hono@4.12.8)
       ajv: 8.18.0
       ajv-formats: 3.0.1(ajv@8.18.0)
       content-type: 1.0.5
