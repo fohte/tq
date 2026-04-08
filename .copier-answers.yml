@@ -9,7 +9,7 @@ subpackages:
   - name: web
     type: node
   - name: api
-    type: rust
+    type: node
 type: base
 use_release_please: false
 use_storybook: false
