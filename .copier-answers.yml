@@ -12,4 +12,4 @@ subpackages:
     type: node
 type: base
 use_release_please: false
-use_storybook: false
+use_storybook: true
