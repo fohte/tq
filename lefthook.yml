@@ -12,9 +12,4 @@ pre-commit:
     # per-package eslint in parallel would race on --fix / stage_fixed writes.
     eslint:
       glob: '*.{js,ts,jsx,tsx,mjs,cjs}'
-<<<<<<< before updating
-      run: pnpm exec eslint --fix {staged_files}
-      stage_fixed: true
-=======
       run: pnpm exec eslint {staged_files}
->>>>>>> after updating
