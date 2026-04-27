@@ -8,6 +8,13 @@
       "when": 1773756536311,
       "tag": "0000_panoramic_whizzer",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1774163700616,
+      "tag": "0001_lowly_ghost_rider",
+      "breakpoints": true
     }
   ]
 }
