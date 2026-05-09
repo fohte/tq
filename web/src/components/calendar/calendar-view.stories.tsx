@@ -14,6 +14,32 @@ function generateWeekEvents(): TimeBlockEvent[] {
     const d = new Date(today)
     d.setDate(d.getDate() + dayOffset)
     const ds = d.toISOString().slice(0, 10)
+    const nextD = new Date(d)
+    nextD.setDate(nextD.getDate() + 1)
+    const nextDs = nextD.toISOString().slice(0, 10)
+
+    // Daily recurring schedules
+    events.push(
+      {
+        id: `w-${String(dayOffset)}-sleep-pm`,
+        title: 'Sleep',
+        start: `${ds}T23:00:00`,
+        end: `${nextDs}T00:00:00`,
+        type: 'schedule',
+        color: { bg: '#2D2B55', accent: '#6C63FF' },
+        icon: 'moon',
+      },
+      {
+        id: `w-${String(dayOffset)}-sleep-am`,
+        title: 'Sleep',
+        start: `${ds}T00:00:00`,
+        end: `${ds}T07:00:00`,
+        type: 'schedule',
+        color: { bg: '#2D2B55', accent: '#6C63FF' },
+        icon: 'moon',
+      },
+    )
+
     events.push(
       {
         id: `w-${String(dayOffset)}-1`,
@@ -40,6 +66,18 @@ function generateWeekEvents(): TimeBlockEvent[] {
         end: `${ds}T15:00:00`,
         type: 'auto',
         duration: '1h',
+      })
+    }
+    // Gym schedule on weekdays only (Mon-Fri)
+    if (d.getDay() >= 1 && d.getDay() <= 5) {
+      events.push({
+        id: `w-${String(dayOffset)}-gym`,
+        title: 'Gym',
+        start: `${ds}T18:00:00`,
+        end: `${ds}T19:00:00`,
+        type: 'schedule',
+        color: { bg: '#1B4332', accent: '#52B788' },
+        icon: 'dumbbell',
       })
     }
   }
@@ -83,6 +121,10 @@ function generateMonthEvents(): TimeBlockEvent[] {
   }
   return events
 }
+
+const tomorrow = new Date(today)
+tomorrow.setDate(tomorrow.getDate() + 1)
+const tomorrowStr = `${String(tomorrow.getFullYear())}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
 
 const sampleEvents: TimeBlockEvent[] = [
   {
@@ -206,16 +248,58 @@ export const WeekViewWithDayEvents: Story = {
   },
 }
 
+export const SchedulesOnly: Story = {
+  args: {
+    events: [
+      {
+        id: 'sched-sleep-am',
+        title: 'Sleep',
+        start: `${dateStr}T00:00:00`,
+        end: `${dateStr}T07:00:00`,
+        type: 'schedule',
+        duration: '7h',
+        color: { bg: '#2D2B55', accent: '#6C63FF' },
+        icon: 'moon',
+      },
+      {
+        id: 'sched-gym',
+        title: 'Gym',
+        start: `${dateStr}T07:00:00`,
+        end: `${dateStr}T08:00:00`,
+        type: 'schedule',
+        duration: '1h',
+        color: { bg: '#1B4332', accent: '#52B788' },
+        icon: 'dumbbell',
+      },
+      {
+        id: 'sched-lunch',
+        title: 'Lunch',
+        start: `${dateStr}T12:00:00`,
+        end: `${dateStr}T13:00:00`,
+        type: 'schedule',
+        duration: '1h',
+        color: { bg: '#4D1A00', accent: '#FF8400' },
+      },
+      {
+        id: 'sched-sleep-pm',
+        title: 'Sleep',
+        start: `${dateStr}T23:00:00`,
+        end: `${tomorrowStr}T00:00:00`,
+        type: 'schedule',
+        duration: '1h',
+        color: { bg: '#2D2B55', accent: '#6C63FF' },
+        icon: 'moon',
+      },
+    ],
+  },
+}
+
 export const MonthViewEmpty: Story = {
   args: {
     events: [],
     initialView: 'month',
   },
 }
-
-const tomorrow = new Date(today)
-tomorrow.setDate(tomorrow.getDate() + 1)
-const tomorrowStr = `${String(tomorrow.getFullYear())}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
 
 export const OvernightEvents: Story = {
   args: {
