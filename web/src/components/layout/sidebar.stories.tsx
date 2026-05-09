@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   createMemoryHistory,
   createRootRoute,
@@ -7,12 +8,19 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { Sidebar } from '@web/components/layout/sidebar'
+import { fn } from 'storybook/test'
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+})
 
 function SidebarStory() {
   return (
-    <div className="h-screen md:flex">
-      <Sidebar />
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <div className="h-screen md:flex">
+        <Sidebar onNewProject={fn()} />
+      </div>
+    </QueryClientProvider>
   )
 }
 
@@ -65,5 +73,11 @@ export const TasksActive: Story = {
 export const SearchActive: Story = {
   args: {
     currentPath: '/search',
+  },
+}
+
+export const ProjectsActive: Story = {
+  args: {
+    currentPath: '/projects',
   },
 }
