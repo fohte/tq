@@ -9,7 +9,12 @@ type SearchResult = InferResponseType<
   200
 >[number]
 
-export type { SearchResult }
+type Suggestion = InferResponseType<
+  (typeof api.api.tasks.search)['suggest']['$get'],
+  200
+>[number]
+
+export type { SearchResult, Suggestion }
 
 export type StatusFilter = 'todo' | 'in_progress' | 'completed'
 export type ContextFilter = 'work' | 'personal' | 'dev'
@@ -135,8 +140,29 @@ export function buildQueryFromFilters(
 const searchKeys = {
   all: ['search'] as const,
   query: (q: string) => [...searchKeys.all, q] as const,
+  results: (q: string) => [...searchKeys.all, 'results', q] as const,
+  suggestions: (prefix: string) =>
+    [...searchKeys.all, 'suggestions', prefix] as const,
 }
 
+function useDebounce<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebounced(value)
+    }, delayMs)
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [value, delayMs])
+
+  return debounced
+}
+
+/**
+ * Hook for the SP full-screen search view.
+ */
 export function useSearch() {
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState(query)
@@ -204,4 +230,40 @@ export function useSearch() {
     updateFilter,
     clearFilter,
   }
+}
+
+/**
+ * Hook for the command palette search modal (Cmd+K).
+ */
+export function useSearchTasks(query: string) {
+  const debouncedQuery = useDebounce(query, 200)
+
+  return useQuery({
+    queryKey: searchKeys.results(debouncedQuery),
+    queryFn: async () => {
+      const res = await api.api.tasks.search.$get({
+        query: { q: debouncedQuery, limit: '20' },
+      })
+      assertOk(res)
+      return res.json()
+    },
+    enabled: debouncedQuery.length > 0,
+    placeholderData: (prev) => prev,
+  })
+}
+
+export function useSearchSuggestions(prefix: string) {
+  const debouncedPrefix = useDebounce(prefix, 150)
+
+  return useQuery({
+    queryKey: searchKeys.suggestions(debouncedPrefix),
+    queryFn: async () => {
+      const res = await api.api.tasks.search.suggest.$get({
+        query: { prefix: debouncedPrefix },
+      })
+      assertOk(res)
+      return res.json()
+    },
+    enabled: debouncedPrefix.length > 0,
+  })
 }
