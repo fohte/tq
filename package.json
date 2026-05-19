@@ -12,10 +12,7 @@
     "format:eslint": "eslint --fix .",
     "format:prettier": "prettier --write .",
     "format": "conc -m 1 pnpm:format:eslint pnpm:format:prettier",
-<<<<<<< before updating
     "dev": "concurrently -n api,web -c blue,green \"pnpm --filter api dev\" \"pnpm --filter web dev\"",
-=======
->>>>>>> after updating
     "test": "pnpm -r run test"
   },
   "devDependencies": {
