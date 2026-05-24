@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { ProjectCard } from '@web/components/project/project-card'
 import { ProjectFormModal } from '@web/components/project/project-form-modal'
 import { Button } from '@web/components/ui/button'
-import { useProjectList } from '@web/hooks/use-projects'
+import { useProjects } from '@web/hooks/use-projects'
 import { cn } from '@web/lib/utils'
 import { FolderKanban, Plus } from 'lucide-react'
 import { useState } from 'react'
@@ -17,7 +17,7 @@ function ProjectList() {
   const [filter, setFilter] = useState<FilterTab>('active')
   const [showCreate, setShowCreate] = useState(false)
 
-  const { data: projects, isLoading } = useProjectList(
+  const { data: projects, isLoading } = useProjects(
     filter === 'active' ? { status: 'active' } : undefined,
   )
 

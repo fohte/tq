@@ -10,7 +10,12 @@ type ProjectDetail = InferResponseType<
   200
 >
 
-export type { Project, ProjectDetail }
+type ProjectTask = InferResponseType<
+  (typeof api.api.projects)[':id']['tasks']['$get'],
+  200
+>[number]
+
+export type { Project, ProjectDetail, ProjectTask }
 
 type ProjectStatus = 'active' | 'paused' | 'completed' | 'archived'
 
@@ -31,9 +36,10 @@ export const projectKeys = {
   list: (filter?: { status?: string }) =>
     [...projectKeys.lists, filter] as const,
   detail: (id: string) => [...projectKeys.all, 'detail', id] as const,
+  tasks: (id: string) => [...projectKeys.all, 'tasks', id] as const,
 }
 
-export function useProjectList(filter?: { status?: ProjectStatus }) {
+export function useProjects(filter?: { status?: ProjectStatus }) {
   return useQuery({
     queryKey: projectKeys.list(filter),
     queryFn: async () => {
@@ -54,6 +60,19 @@ export function useProject(id: string) {
         param: { id },
       })
       if (!res.ok) throw new Error('Failed to fetch project')
+      return res.json()
+    },
+  })
+}
+
+export function useProjectTasks(id: string) {
+  return useQuery({
+    queryKey: projectKeys.tasks(id),
+    queryFn: async () => {
+      const res = await api.api.projects[':id'].tasks.$get({
+        param: { id },
+      })
+      if (!res.ok) throw new Error('Failed to fetch project tasks')
       return res.json()
     },
   })

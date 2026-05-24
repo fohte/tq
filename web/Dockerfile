@@ -17,15 +17,13 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/api/node_modules ./api/node_modules
 COPY --from=deps /app/web/node_modules ./web/node_modules
 COPY . .
-ARG VITE_API_URL
-ENV VITE_API_URL=${VITE_API_URL}
 RUN pnpm --filter web build
 
 # Production runtime: serve static files with nginx
 FROM nginx:stable-alpine AS runtime
 COPY --from=builder /app/web/dist /usr/share/nginx/html
-COPY web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY web/nginx.conf.template /etc/nginx/templates/default.conf.template
+
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
 
 LABEL org.opencontainers.image.source=https://github.com/fohte/tq

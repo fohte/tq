@@ -77,3 +77,12 @@ The API server and web frontend are configured via environment variables.
 | `CORS_ORIGIN`  | No              | `*`                                                                | Allowed origin for CORS requests                            |
 | `PORT`         | No              | `3001`                                                             | API server listen port                                      |
 | `VITE_API_URL` | No              | `http://localhost:3001`                                            | API base URL used by the web frontend (Vite build-time)     |
+
+### Web (nginx runtime)
+
+The production web image serves static files via nginx and reverse-proxies `/api` requests to the API backend. These variables are required at container runtime (no defaults in the image):
+
+| Variable          | Required | Description                                                                   |
+| ----------------- | -------- | ----------------------------------------------------------------------------- |
+| `API_BACKEND_URL` | Yes      | API backend URL for nginx reverse proxy                                       |
+| `NGINX_RESOLVER`  | Yes      | DNS resolver for nginx (e.g. `kube-dns.kube-system.svc.cluster.local` in k8s) |

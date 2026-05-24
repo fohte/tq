@@ -1,7 +1,7 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
 import { ContextFilter } from '@web/components/context-filter'
 import { ColorDot } from '@web/components/project/color-dot'
-import { useProjectList } from '@web/hooks/use-projects'
+import { useProjects } from '@web/hooks/use-projects'
 import { cn } from '@web/lib/utils'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -73,7 +73,7 @@ function ExpandedNavLink({ item }: { item: NavItem }) {
 }
 
 function ProjectsSection({ onNewProject }: { onNewProject: () => void }) {
-  const { data: projects } = useProjectList({ status: 'active' })
+  const { data: projects } = useProjects({ status: 'active' })
 
   return (
     <div className="flex flex-col gap-1">
