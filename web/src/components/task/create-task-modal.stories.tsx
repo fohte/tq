@@ -49,7 +49,8 @@ export const Default: Story = {
     }
 
     // Enables create button after entering a title
-    const titleInputs = body.getAllByPlaceholderText(/task title/i)
+    const titleInputs =
+      body.getAllByPlaceholderText(/task title|タスクのタイトル/i)
     const titleInput = titleInputs[0]
     if (titleInput == null) throw new Error('Title input not found')
     await userEvent.type(titleInput, 'Test task')
