@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { projectKeys } from '@web/hooks/use-projects'
 import { api } from '@web/lib/api'
 import { assertOk } from '@web/lib/assert-response'
 import type { InferResponseType } from 'hono/client'
@@ -77,6 +78,7 @@ export interface CreateTaskInput {
   estimatedMinutes?: number
   context?: 'work' | 'personal' | 'dev'
   labels?: string[]
+  projectId?: string
 }
 
 export function useCreateTask() {
@@ -108,7 +110,7 @@ export function useCreateTask() {
         dueDate: input.dueDate ?? null,
         estimatedMinutes: input.estimatedMinutes ?? null,
         parentId: null,
-        projectId: null,
+        projectId: input.projectId ?? null,
         sortOrder: 0,
         recurrenceRuleId: null,
         recurrenceRule: null,
@@ -136,6 +138,7 @@ export function useCreateTask() {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })
 }
@@ -200,6 +203,7 @@ export function useUpdateTaskStatus() {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })
 }
@@ -293,6 +297,7 @@ export function useUpdateTask() {
     onSettled: (_data, _err, { id }) => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })
 }
@@ -373,6 +378,7 @@ export function useUpdateTaskParent() {
     onSettled: (_data, _err, { id }) => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })
 }
@@ -444,6 +450,7 @@ function useTaskActionMutation(
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })
 }
@@ -531,6 +538,7 @@ export function useDeleteTask() {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })
 }
