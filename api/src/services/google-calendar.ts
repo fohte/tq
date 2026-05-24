@@ -53,7 +53,14 @@ function getConfig() {
   const clientSecret = process.env['GOOGLE_CLIENT_SECRET']
   const redirectUri = process.env['GOOGLE_REDIRECT_URI']
 
-  if (!clientId || !clientSecret || !redirectUri) {
+  if (
+    clientId == null ||
+    clientId === '' ||
+    clientSecret == null ||
+    clientSecret === '' ||
+    redirectUri == null ||
+    redirectUri === ''
+  ) {
     throw new Error(
       'GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI environment variables are required',
     )
@@ -163,7 +170,9 @@ export async function refreshTokenIfNeeded(): Promise<string> {
       accessToken: data.access_token,
       expiresAt,
       updatedAt: new Date(),
-      ...(data.refresh_token ? { refreshToken: data.refresh_token } : {}),
+      ...(data.refresh_token != null && data.refresh_token !== ''
+        ? { refreshToken: data.refresh_token }
+        : {}),
     })
     .where(eq(oauthTokens.id, token.id))
 
@@ -209,7 +218,7 @@ export async function getEvents(
   const data = googleCalendarEventsResponseSchema.parse(await response.json())
 
   return (data.items ?? []).map((event) => {
-    const isAllDay = !event.start.dateTime
+    const isAllDay = event.start.dateTime == null
     return {
       id: event.id,
       summary: event.summary ?? '(No title)',
