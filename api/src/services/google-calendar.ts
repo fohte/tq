@@ -218,7 +218,7 @@ export async function getEvents(
   const data = googleCalendarEventsResponseSchema.parse(await response.json())
 
   return (data.items ?? []).map((event) => {
-    const isAllDay = event.start.dateTime == null || event.start.dateTime === ''
+    const isAllDay = event.start.dateTime == null
     return {
       id: event.id,
       summary: event.summary ?? '(No title)',
