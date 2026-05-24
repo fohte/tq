@@ -3,6 +3,7 @@ import storybook from 'eslint-plugin-storybook'
 
 export default config(
   { typescript: { typeChecked: true } },
+  ...storybook.configs['flat/recommended'],
   {
     rules: {
       'no-restricted-imports': [
@@ -19,5 +20,11 @@ export default config(
       ],
     },
   },
-  ...storybook.configs['flat/recommended'],
+  // .storybook/ is outside src/ where @ alias is unavailable
+  {
+    files: ['**/.storybook/**/*.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
 )

@@ -5,7 +5,7 @@
     "web",
     "api"
   ],
-  "packageManager": "pnpm@10.30.3",
+  "packageManager": "pnpm@10.33.0",
   "type": "module",
   "scripts": {
     "lint": "eslint .",
@@ -16,17 +16,17 @@
     "test": "pnpm -r run test"
   },
   "devDependencies": {
-    "@commitlint/cli": "20.4.4",
+    "@commitlint/cli": "20.5.0",
     "@eslint/eslintrc": "3.3.5",
     "@fohte/eslint-config": "0.3.1",
     "@tsconfig/node-lts": "24.0.0",
     "@tsconfig/strictest": "2.0.8",
     "@types/node": "24.12.0",
     "concurrently": "9.2.1",
-    "eslint": "10.0.3",
-    "eslint-plugin-storybook": "10.3.1",
+    "eslint": "10.1.0",
+    "eslint-plugin-storybook": "10.3.3",
     "prettier": "3.8.1",
     "typescript": "5.9.3",
-    "vitest": "4.1.0"
+    "vitest": "4.1.2"
   }
 }
