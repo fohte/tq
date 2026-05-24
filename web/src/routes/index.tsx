@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import type { CalendarDndCallbacks } from '@web/components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
 import { DayViewPresentation } from '@web/components/day-view/day-view'
+import { useScheduleList } from '@web/hooks/use-schedules'
 import type { Task } from '@web/hooks/use-tasks'
 import { useTaskList } from '@web/hooks/use-tasks'
 import {
@@ -10,6 +11,7 @@ import {
   useUpdateTimeBlock,
 } from '@web/hooks/use-time-blocks'
 import { formatMinutes } from '@web/lib/format'
+import { scheduleColorToEventColor } from '@web/lib/schedule-color'
 import { useMemo } from 'react'
 
 export const Route = createFileRoute('/')({
@@ -24,6 +26,7 @@ function DayView() {
     return `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   }, [])
   const { data: timeBlocksData } = useTimeBlocks(todayStr)
+  const { data: schedulesData } = useScheduleList(todayStr)
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
 
@@ -35,7 +38,7 @@ function DayView() {
     return map
   }, [categorized.all])
 
-  const calendarEvents: TimeBlockEvent[] = useMemo(() => {
+  const taskEvents: TimeBlockEvent[] = useMemo(() => {
     if (!timeBlocksData) return []
     return timeBlocksData
       .filter(
@@ -64,6 +67,31 @@ function DayView() {
         }
       })
   }, [timeBlocksData, taskMap])
+
+  const scheduleEvents: TimeBlockEvent[] = useMemo(() => {
+    if (!schedulesData) return []
+    return schedulesData.map((schedule) => {
+      const durationMs =
+        new Date(schedule.end).getTime() - new Date(schedule.start).getTime()
+      const durationMinutes = Math.round(durationMs / 60000)
+      const durationStr = formatMinutes(durationMinutes)
+
+      return {
+        id: `schedule-${schedule.scheduleId}-${schedule.start}`,
+        title: schedule.title,
+        start: schedule.start,
+        end: schedule.end,
+        type: 'schedule' as const,
+        duration: durationStr,
+        color: scheduleColorToEventColor(schedule.color),
+      }
+    })
+  }, [schedulesData])
+
+  const calendarEvents: TimeBlockEvent[] = useMemo(
+    () => [...taskEvents, ...scheduleEvents],
+    [taskEvents, scheduleEvents],
+  )
 
   const dndCallbacks: CalendarDndCallbacks = useMemo(
     () => ({

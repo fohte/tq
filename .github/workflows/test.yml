@@ -11,33 +11,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/create-github-app-token@v3
+      - uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
         id: app-token
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           fetch-depth: 2
 
-      - name: Check if previous commit is auto-format by bot
-        id: check-prev
+      - name: Check if current commit is auto-format by bot
+        id: check-auto-format
         run: |
-          prev_commit_message=$(git log -1 --skip=1 --format=%s)
-          prev_commit_author=$(git log -1 --skip=1 --format=%an)
-          echo "Previous commit message: $prev_commit_message"
-          echo "Previous commit author: $prev_commit_author"
+          commit_message=$(git log -1 --format=%s)
+          commit_author=$(git log -1 --format=%an)
+          echo "Current commit message: $commit_message"
+          echo "Current commit author: $commit_author"
 
-          # Skip auto-format commit if previous commit is auto-format by a bot
-          if [ "$prev_commit_message" = "style: auto-format" ] && [[ "$prev_commit_author" == *"[bot]"* ]]; then
+          # Skip if the current commit is an auto-format commit by a bot
+          # to prevent infinite loop: auto-format push -> CI -> auto-format push -> ...
+          if [ "$commit_message" = "style: auto-format" ] && [[ "$commit_author" == *"[bot]"* ]]; then
             echo "skip_commit=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip_commit=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
 
       - run: corepack enable
 
@@ -46,7 +47,7 @@ jobs:
         run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: |
             ${{ steps.pnpm-store.outputs.path }}
@@ -63,8 +64,8 @@ jobs:
         continue-on-error: true
         run: lefthook run pre-commit --all-files
 
-      # lefthook-config's formatters run `git add` after formatting, which stages the changes.
-      # https://github.com/fohte/lefthook-config/blob/v0.1.7/base.yml
+      # Formatters configured with `stage_fixed: true` run `git add` after formatting,
+      # which stages the changes.
       # commit-action uses `git ls-files --modified` which only detects unstaged changes.
       # https://github.com/suzuki-shunsuke/commit-action/blob/87b297f0ce551411b43d1880f4fb3cbc60381055/action.yaml#L57
       # We need to unstage the changes so commit-action can detect them.
@@ -72,8 +73,8 @@ jobs:
         run: git restore --staged .
 
       - name: Commit formatted files
-        if: ${{ !cancelled() && steps.check-prev.outputs.skip_commit != 'true' }}
-        uses: suzuki-shunsuke/commit-action@v0.1.1
+        if: ${{ !cancelled() && steps.check-auto-format.outputs.skip_commit != 'true' }}
+        uses: suzuki-shunsuke/commit-action@f12e2d628a4ab72dcefe7890ae07e8dbf1e201b9 # v0.1.1
         with:
           commit_message: 'style: auto-format'
           workflow: deny
@@ -91,30 +92,30 @@ jobs:
       workflow: ${{ steps.changes-workflow.outputs.any_changed }}
       root-lockfile: ${{ steps.changes-root-lockfile.outputs.any_changed }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 2
 
       - name: Check for web changes
-        uses: tj-actions/changed-files@v47
+        uses: tj-actions/changed-files@22103cc46bda19c2b464ffe86db46df6922fd323 # v47.0.5
         id: changes-web
         with:
           files: web/**
 
       - name: Check for api changes
-        uses: tj-actions/changed-files@v47
+        uses: tj-actions/changed-files@22103cc46bda19c2b464ffe86db46df6922fd323 # v47.0.5
         id: changes-api
         with:
           files: api/**
 
       - name: Check for workflow changes
-        uses: tj-actions/changed-files@v47
+        uses: tj-actions/changed-files@22103cc46bda19c2b464ffe86db46df6922fd323 # v47.0.5
         id: changes-workflow
         with:
           files: .github/workflows/test.yml
 
       - name: Check for root lockfile changes
-        uses: tj-actions/changed-files@v47
+        uses: tj-actions/changed-files@22103cc46bda19c2b464ffe86db46df6922fd323 # v47.0.5
         id: changes-root-lockfile
         with:
           files: |
@@ -130,9 +131,9 @@ jobs:
       needs.detect-changes.outputs.root-lockfile == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
 
       - run: corepack enable
 
@@ -141,7 +142,7 @@ jobs:
         run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: |
             ${{ steps.pnpm-store.outputs.path }}
@@ -179,9 +180,9 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
 
       - run: corepack enable
 
@@ -190,7 +191,7 @@ jobs:
         run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pnpm store
-        uses: actions/cache@v5
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: |
             ${{ steps.pnpm-store.outputs.path }}

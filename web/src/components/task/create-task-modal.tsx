@@ -14,6 +14,7 @@ interface CreateTaskModalProps {
   onOpenChange: (open: boolean) => void
   defaultStartDate?: string
   defaultDescription?: string
+  projectId?: string
 }
 
 type ContextValue = 'work' | 'personal' | 'dev'
@@ -35,6 +36,7 @@ export function CreateTaskModal({
   onOpenChange,
   defaultStartDate,
   defaultDescription,
+  projectId,
 }: CreateTaskModalProps) {
   const [title, setTitle] = useState('')
   const descriptionRef = useRef('')
@@ -85,6 +87,7 @@ export function CreateTaskModal({
       ...(dueDate ? { dueDate } : {}),
       ...(parsedMinutes != null ? { estimatedMinutes: parsedMinutes } : {}),
       ...(context ? { context } : {}),
+      ...(projectId != null ? { projectId } : {}),
     }
 
     createTask.mutate(input, {
