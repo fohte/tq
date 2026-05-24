@@ -20,7 +20,7 @@ function setEnv() {
 
 function clearEnv() {
   for (const key of Object.keys(MOCK_ENV)) {
-    delete process.env[key]
+    Reflect.deleteProperty(process.env, key)
   }
 }
 
