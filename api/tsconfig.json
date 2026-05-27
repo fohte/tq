@@ -8,9 +8,12 @@
     "module": "preserve",
     "moduleResolution": "bundler",
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
+<<<<<<< before updating
       "@api/*": ["src/*"]
+=======
+      "@/*": ["./src/*"]
+>>>>>>> after updating
     }
   }
 }
