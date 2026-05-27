@@ -2,8 +2,24 @@ packages:
   - 'web'
   - 'api'
 
+# @fohte/eslint-config 0.3.1 pins @typescript-eslint/* to 8.57.1, whose scope-manager
+# lacks `es2025.iterator` and fails when @tsconfig/node-lts (TypeScript 6) expands
+# `ESNext.Iterator` to that lib. Bump to 8.60.0 across the tree.
+overrides:
+  '@typescript-eslint/eslint-plugin': 8.60.0
+  '@typescript-eslint/parser': 8.60.0
+  '@typescript-eslint/scope-manager': 8.60.0
+  '@typescript-eslint/type-utils': 8.60.0
+  '@typescript-eslint/types': 8.60.0
+  '@typescript-eslint/typescript-estree': 8.60.0
+  '@typescript-eslint/utils': 8.60.0
+  '@typescript-eslint/visitor-keys': 8.60.0
+
 allowBuilds:
   # required by vitest's transformer
   esbuild: true
+  # msw is only used as a transitive dependency; the postinstall sets up a browser
+  # service worker that we don't need
+  msw: false
   # required by @fohte/eslint-config -> eslint-plugin-import-x for "@/*" resolution
   unrs-resolver: true

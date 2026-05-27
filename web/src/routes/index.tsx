@@ -58,11 +58,12 @@ function DayView() {
           title: task?.title ?? 'Unknown task',
           start: block.startTime,
           end: block.endTime,
-          type: (task?.status === 'completed'
-            ? 'completed'
-            : block.isAutoScheduled
-              ? 'auto'
-              : 'manual') as TimeBlockEvent['type'],
+          type:
+            task?.status === 'completed'
+              ? 'completed'
+              : block.isAutoScheduled
+                ? 'auto'
+                : 'manual',
           duration: durationStr,
         }
       })

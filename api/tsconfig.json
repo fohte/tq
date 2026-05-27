@@ -9,11 +9,7 @@
     "moduleResolution": "bundler",
     "noEmit": true,
     "paths": {
-<<<<<<< before updating
-      "@api/*": ["src/*"]
-=======
-      "@/*": ["./src/*"]
->>>>>>> after updating
+      "@api/*": ["./src/*"]
     }
   }
 }

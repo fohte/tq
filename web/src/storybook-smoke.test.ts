@@ -39,7 +39,7 @@ describe('Storybook Smoke Tests', () => {
         const composed = composeStories(storyFile)
         stories = Object.entries(composed).map(([name, story]) => ({
           name,
-          story: story as { run: () => Promise<void> },
+          story: story,
         }))
       } catch (e) {
         throw new Error(
