@@ -18,7 +18,7 @@
   "devDependencies": {
     "@commitlint/cli": "21.0.1",
     "@eslint/eslintrc": "3.3.5",
-    "@fohte/eslint-config": "0.3.1",
+    "@fohte/eslint-config": "0.3.2",
     "@tsconfig/node-lts": "24.0.0",
     "@tsconfig/strictest": "2.0.8",
     "@types/node": "24.12.4",
