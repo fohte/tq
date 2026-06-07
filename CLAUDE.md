@@ -1,6 +1,5 @@
 # CLAUDE.md
 
-<<<<<<< before updating
 ## Testing
 
 ### Running tests
@@ -25,7 +24,7 @@ The Compose file uses a fixed project name (`tq-infra`), so the same PostgreSQL 
 **Do NOT set `DATABASE_URL` when running tests.** `APP_ENV=test` is set automatically by `vitest.config.ts`, so `DATABASE_URL` defaults to `postgresql://tq:tq@localhost:5432/tq_test` via `api/src/env.ts`. Using `tq_dev` causes failures due to existing data.
 
 Migrations are applied automatically by `api/src/global-setup.ts`.
-=======
+
 ## Test code rules
 
 ### Assert on the whole output with a single equality check
@@ -48,4 +47,3 @@ expect(run()).toEqual({
 ```
 
 For dynamic fields (timestamps, UUIDs, random IDs), normalize them in a helper before the comparison (e.g. replace with a fixed placeholder) so the full output can still be asserted in one equality check. Do not weaken the assertion to dodge the dynamic value.
->>>>>>> after updating

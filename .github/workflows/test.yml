@@ -147,43 +147,9 @@ jobs:
         package: ${{ fromJSON(needs.setup.outputs.packages) }}
     name: 'unit-test (${{ matrix.package }})'
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
-
-      - run: corepack enable
-
-      - name: Get pnpm store directory
-        id: pnpm-store
-        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: |
-            ${{ steps.pnpm-store.outputs.path }}
-            node_modules
-            */node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-
-      # Install only the matrix package and its workspace dependencies, not the
-      # whole workspace, so each parallel leg skips unrelated packages' installs.
-      - run: pnpm install --filter ./${{ matrix.package }}... --frozen-lockfile
-
-      - name: Run tests
-        working-directory: ${{ matrix.package }}
-        run: pnpm run test
-
-<<<<<<< before updating
-  unit-test-api:
-    needs: detect-changes
-    if: >-
-      needs.detect-changes.outputs.api == 'true' ||
-      needs.detect-changes.outputs.workflow == 'true' ||
-      needs.detect-changes.outputs.root-lockfile == 'true'
-    runs-on: ubuntu-latest
+    # The `api` package's integration tests need PostgreSQL. The matrix legs share
+    # one job definition, so this service starts for every package — harmless idle
+    # cost for the `web` leg, but avoids forking the job.
     services:
       postgres:
         image: postgres:17
@@ -215,20 +181,18 @@ jobs:
           path: |
             ${{ steps.pnpm-store.outputs.path }}
             node_modules
-            web/node_modules
-            api/node_modules
+            */node_modules
           key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
 
-      - run: pnpm install --frozen-lockfile
+      # Install only the matrix package and its workspace dependencies, not the
+      # whole workspace, so each parallel leg skips unrelated packages' installs.
+      - run: pnpm install --filter ./${{ matrix.package }}... --frozen-lockfile
 
       - name: Run tests
-        working-directory: api
+        working-directory: ${{ matrix.package }}
         run: pnpm run test
-        env:
-          APP_ENV: test
-          DATABASE_URL: postgresql://tq:tq@localhost:5432/tq_test
-=======
+
   # Aggregation gate for the unit-test matrix. Matrix leg names are dynamic and
   # cannot be pinned as a required status check, so this single fixed-name job is
   # the branch protection gate instead. It fails only when a needed job failed;
@@ -242,4 +206,3 @@ jobs:
     if: failure()
     steps:
       - run: exit 1
->>>>>>> after updating
