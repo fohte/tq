@@ -185,9 +185,10 @@ jobs:
           key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
 
-      # Install only the matrix package and its workspace dependencies, not the
-      # whole workspace, so each parallel leg skips unrelated packages' installs.
-      - run: pnpm install --filter ./${{ matrix.package }}... --frozen-lockfile
+      # Install the full workspace: `web`'s `tsc --noEmit` reads `api`'s source for
+      # cross-package types, so a `--filter ./web...` install leaves it unable to
+      # resolve `api`'s `node_modules` and the type-check step fails.
+      - run: pnpm install --frozen-lockfile
 
       - name: Run tests
         working-directory: ${{ matrix.package }}
