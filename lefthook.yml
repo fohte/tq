@@ -7,7 +7,7 @@ pre-commit:
       stage_fixed: true
 
     prettier:
-      run: pnpm exec prettier --write --ignore-unknown --no-error-on-unmatched-pattern {staged_files}
+      run: mise x -- prettier --write --ignore-unknown --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
 
     shellcheck:
@@ -57,15 +57,7 @@ pre-commit:
           esac
         done
 
-    # lefthook's default glob uses gobwas/glob without a delimiter, so
-    # '*.{js,ts,...}' also matches nested paths (e.g. frontend/src/foo.ts).
-    # A single root-level eslint covers every workspace package, and running
-    # per-package eslint in parallel would race on --fix / stage_fixed writes.
-    eslint:
-      glob: '*.{js,ts,jsx,tsx,mjs,cjs}'
-      run: pnpm exec eslint {staged_files}
-
 commit-msg:
   commands:
     commitlint:
-      run: pnpm exec commitlint --edit {1}
+      run: mise x -- commitlint --edit {1}
