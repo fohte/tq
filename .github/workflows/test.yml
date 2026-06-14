@@ -55,15 +55,8 @@ jobs:
         with:
           path: |
             ${{ steps.pnpm-store.outputs.path }}
-<<<<<<< before updating
-            node_modules
-            */node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-=======
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-store-
->>>>>>> after updating
 
       - run: pnpm install --frozen-lockfile
 
