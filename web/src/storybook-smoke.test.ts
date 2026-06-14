@@ -1,4 +1,3 @@
-/* eslint-disable vitest/no-standalone-expect, vitest/valid-title, vitest/expect-expect -- dynamic vitest patterns: titles are computed from story metadata, assertions live inside Storybook's story.run(), and the storyFiles length is checked at the describe-block level to surface "no stories" misconfigurations early. */
 import path from 'node:path'
 
 import type { Meta, StoryFn } from '@storybook/react-vite'
@@ -28,12 +27,15 @@ function getAllStoryFiles() {
 describe('Storybook Smoke Tests', () => {
   const storyFiles = getAllStoryFiles()
 
-  expect(storyFiles.length).toBeGreaterThan(0)
+  test('has stories', () => {
+    expect(storyFiles.length).toBeGreaterThan(0)
+  })
 
   for (const { storyFile, componentName, filePath } of storyFiles) {
     const meta = storyFile.default
     const title = meta.title ?? componentName
 
+    // eslint-disable-next-line vitest/valid-title -- title comes from story metadata
     describe(title, () => {
       let stories: { name: string; story: { run: () => Promise<void> } }[]
       try {
@@ -55,6 +57,7 @@ describe('Storybook Smoke Tests', () => {
       }
 
       for (const { name, story } of stories) {
+        // eslint-disable-next-line vitest/valid-title, vitest/expect-expect -- name is the story export; assertions live inside story.run()
         test(name, async () => {
           await story.run()
         })
