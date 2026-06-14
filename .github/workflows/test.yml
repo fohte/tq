@@ -41,6 +41,8 @@ jobs:
           fi
 
       - uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
+        with:
+          version: 2026.6.6
 
       # lefthook hooks (eslint, prettier, etc.) shell out to `pnpm`, so corepack
       # must activate and dependencies must be installed before lefthook runs.
@@ -167,6 +169,8 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
+        with:
+          version: 2026.6.6
 
       - run: corepack enable
 
