@@ -1,7 +1,7 @@
 // Dynamic vitest patterns: titles are computed from story metadata, assertions
 // live inside Storybook's `story.run()`, and the storyFiles length is checked
 // at the describe-block level to surface "no stories" misconfigurations early.
-/* eslint-disable vitest/no-standalone-expect, vitest/valid-title, vitest/expect-expect */
+/* eslint-disable vitest/no-standalone-expect, vitest/valid-title, vitest/expect-expect -- see comment above */
 import path from 'node:path'
 
 import type { Meta, StoryFn } from '@storybook/react-vite'
