@@ -40,7 +40,7 @@ jobs:
             echo "skip_commit=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+      - uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
 
       # lefthook hooks (eslint, prettier, etc.) shell out to `pnpm`, so corepack
       # must activate and dependencies must be installed before lefthook runs.
@@ -55,10 +55,8 @@ jobs:
         with:
           path: |
             ${{ steps.pnpm-store.outputs.path }}
-            node_modules
-            */node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-store-
 
       - run: pnpm install --frozen-lockfile
 
@@ -168,7 +166,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+      - uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
 
       - run: corepack enable
 
@@ -181,10 +179,8 @@ jobs:
         with:
           path: |
             ${{ steps.pnpm-store.outputs.path }}
-            node_modules
-            */node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-store-
 
       # Install the full workspace: `web`'s `tsc --noEmit` reads `api`'s source for
       # cross-package types, so a `--filter ./web...` install leaves it unable to
