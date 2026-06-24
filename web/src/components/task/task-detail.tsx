@@ -6,7 +6,7 @@ import {
 } from '@web/components/task/task-pages-section'
 import { MarkdownEditor } from '@web/components/ui/markdown-editor'
 import type { TaskPage } from '@web/hooks/use-task-pages'
-import type { TaskDetail, UpdateTaskInput } from '@web/hooks/use-tasks'
+import type { TaskDetail } from '@web/hooks/use-tasks'
 import {
   useTaskList,
   useUpdateTask,
@@ -226,7 +226,7 @@ function TaskStatusIcon({
     const nextStatus = status === 'completed' ? 'todo' : 'completed'
     updateStatus.mutate({
       id: taskId,
-      status: nextStatus as 'todo' | 'in_progress' | 'completed',
+      status: nextStatus,
     })
   }
 
@@ -448,7 +448,7 @@ function SidebarDateField({
     const newValue = e.target.value || null
     updateTask.mutate({
       id: taskId,
-      input: { [field]: newValue } as UpdateTaskInput,
+      input: { [field]: newValue },
     })
   }
 

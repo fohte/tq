@@ -4,20 +4,22 @@ on:
   push:
 
 permissions:
-  contents: write
+  contents: read
+  id-token: write
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
-        id: app-token
+      - uses: octo-sts/action@f603d3be9d8dd9871a265776e625a27b00effe05 # v1.1.1
+        id: octo-sts
         with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          scope: fohte
+          identity: ${{ github.event.repository.name }}
+          domain: octo-sts.fohte.net
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           fetch-depth: 2
@@ -38,8 +40,12 @@ jobs:
             echo "skip_commit=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+      - uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
+        with:
+          version: 2026.6.6
 
+      # lefthook hooks (eslint, prettier, etc.) shell out to `pnpm`, so corepack
+      # must activate and dependencies must be installed before lefthook runs.
       - run: corepack enable
 
       - name: Get pnpm store directory
@@ -47,21 +53,22 @@ jobs:
         run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pnpm store
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: |
             ${{ steps.pnpm-store.outputs.path }}
-            node_modules
-            web/node_modules
-            api/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-store-
 
       - run: pnpm install --frozen-lockfile
 
       - name: Run lefthook
         id: lefthook
         continue-on-error: true
+        env:
+          # pinact's min-age check calls the GitHub API; without a token it hits
+          # the 60 req/h unauthenticated limit shared per IP and fails on CI.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: lefthook run pre-commit --all-files
 
       # Formatters configured with `stage_fixed: true` run `git add` after formatting,
@@ -74,97 +81,76 @@ jobs:
 
       - name: Commit formatted files
         if: ${{ !cancelled() && steps.check-auto-format.outputs.skip_commit != 'true' }}
-        uses: suzuki-shunsuke/commit-action@f12e2d628a4ab72dcefe7890ae07e8dbf1e201b9 # v0.1.1
+        uses: suzuki-shunsuke/commit-action@06e3b49d4706498d325d29bd85adc82ecf2f5d8f # v1.0.0
         with:
           commit_message: 'style: auto-format'
           workflow: deny
-          github_token: ${{ steps.app-token.outputs.token }}
+          github_token: ${{ steps.octo-sts.outputs.token }}
 
       - name: Fail if lefthook failed
         if: steps.lefthook.outcome == 'failure'
         run: exit 1
 
-  detect-changes:
+  # Build the unit-test matrix at runtime: branch protection pins the fixed-name
+  # `unit-test` gate below, so the per-package legs are enumerated here instead.
+  setup:
     runs-on: ubuntu-slim
     outputs:
-      web: ${{ steps.changes-web.outputs.any_changed }}
-      api: ${{ steps.changes-api.outputs.any_changed }}
-      workflow: ${{ steps.changes-workflow.outputs.any_changed }}
-      root-lockfile: ${{ steps.changes-root-lockfile.outputs.any_changed }}
+      packages: ${{ steps.set-packages.outputs.packages }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 2
 
-      - name: Check for web changes
-        uses: tj-actions/changed-files@22103cc46bda19c2b464ffe86db46df6922fd323 # v47.0.5
-        id: changes-web
+      - name: Detect changed files
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        id: changed
         with:
-          files: web/**
+          json: true
+          # Emit valid JSON; the default escapes quotes and breaks jq parsing.
+          escape_json: false
 
-      - name: Check for api changes
-        uses: tj-actions/changed-files@22103cc46bda19c2b464ffe86db46df6922fd323 # v47.0.5
-        id: changes-api
-        with:
-          files: api/**
+      - name: Build package matrix
+        id: set-packages
+        env:
+          # Changes to these files affect every package, so they trigger the full matrix.
+          GLOBAL_PATHS_REGEX: '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.github/workflows/test\.yml)$'
+          CHANGED_FILES: ${{ steps.changed.outputs.all_changed_files }}
+        run: |
+          # Workspace packages are the directories holding a non-root package.json.
+          mapfile -t pkgs < <(git ls-files '*/package.json' | grep -v node_modules | sed 's#/package.json$##' | sort -u)
 
-      - name: Check for workflow changes
-        uses: tj-actions/changed-files@22103cc46bda19c2b464ffe86db46df6922fd323 # v47.0.5
-        id: changes-workflow
-        with:
-          files: .github/workflows/test.yml
+          if echo "$CHANGED_FILES" | jq -r '.[]' | grep -qE "$GLOBAL_PATHS_REGEX"; then
+            selected=("${pkgs[@]}")
+          else
+            selected=()
+            for dir in "${pkgs[@]}"; do
+              if echo "$CHANGED_FILES" | jq -e --arg d "${dir}/" 'any(.[]; startswith($d))' >/dev/null; then
+                selected+=("$dir")
+              fi
+            done
+          fi
 
-      - name: Check for root lockfile changes
-        uses: tj-actions/changed-files@22103cc46bda19c2b464ffe86db46df6922fd323 # v47.0.5
-        id: changes-root-lockfile
-        with:
-          files: |
-            package.json
-            pnpm-lock.yaml
-            pnpm-workspace.yaml
+          if [ ${#selected[@]} -eq 0 ]; then
+            packages='[]'
+          else
+            packages=$(printf '%s\n' "${selected[@]}" | jq -R . | jq -sc .)
+          fi
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+          echo "Selected packages: $packages"
 
-  unit-test-web:
-    needs: detect-changes
-    if: >-
-      needs.detect-changes.outputs.web == 'true' ||
-      needs.detect-changes.outputs.workflow == 'true' ||
-      needs.detect-changes.outputs.root-lockfile == 'true'
+  unit-test-run:
+    needs: setup
+    if: ${{ needs.setup.outputs.packages != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.setup.outputs.packages) }}
+    name: 'unit-test (${{ matrix.package }})'
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
-
-      - run: corepack enable
-
-      - name: Get pnpm store directory
-        id: pnpm-store
-        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          path: |
-            ${{ steps.pnpm-store.outputs.path }}
-            node_modules
-            web/node_modules
-            api/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Run tests
-        working-directory: web
-        run: pnpm run test
-
-  unit-test-api:
-    needs: detect-changes
-    if: >-
-      needs.detect-changes.outputs.api == 'true' ||
-      needs.detect-changes.outputs.workflow == 'true' ||
-      needs.detect-changes.outputs.root-lockfile == 'true'
-    runs-on: ubuntu-latest
+    # The `api` package's integration tests need PostgreSQL. The matrix legs share
+    # one job definition, so this service starts for every package — harmless idle
+    # cost for the `web` leg, but avoids forking the job.
     services:
       postgres:
         image: postgres:17
@@ -182,7 +168,9 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+      - uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
+        with:
+          version: 2026.6.6
 
       - run: corepack enable
 
@@ -191,21 +179,32 @@ jobs:
         run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pnpm store
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: |
             ${{ steps.pnpm-store.outputs.path }}
-            node_modules
-            web/node_modules
-            api/node_modules
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-store-
 
+      # Install the full workspace: `web`'s `tsc --noEmit` reads `api`'s source for
+      # cross-package types, so a `--filter ./web...` install leaves it unable to
+      # resolve `api`'s `node_modules` and the type-check step fails.
       - run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        working-directory: api
+        working-directory: ${{ matrix.package }}
         run: pnpm run test
-        env:
-          APP_ENV: test
-          DATABASE_URL: postgresql://tq:tq@localhost:5432/tq_test
+
+  # Aggregation gate for the unit-test matrix. Matrix leg names are dynamic and
+  # cannot be pinned as a required status check, so this single fixed-name job is
+  # the branch protection gate instead. It fails only when a needed job failed;
+  # when every leg succeeds (or the matrix is skipped because nothing changed) it
+  # is skipped, and a skipped required check counts as success.
+  unit-test:
+    runs-on: ubuntu-slim
+    needs:
+      - setup
+      - unit-test-run
+    if: failure()
+    steps:
+      - run: exit 1

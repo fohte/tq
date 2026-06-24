@@ -3,6 +3,9 @@ import storybook from 'eslint-plugin-storybook'
 
 export default config(
   { typescript: { typeChecked: true } },
+  {
+    ignores: ['**/routeTree.gen.ts'],
+  },
   ...storybook.configs['flat/recommended'],
   {
     rules: {
