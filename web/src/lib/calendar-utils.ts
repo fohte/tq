@@ -17,5 +17,5 @@ export interface CalendarEventProps {
 export function getEventProps(event: EventApi): CalendarEventProps {
   // FullCalendar types extendedProps as Record<string, any>
 
-  return event.extendedProps as CalendarEventProps
+  return event.extendedProps
 }
