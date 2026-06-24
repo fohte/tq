@@ -6,7 +6,7 @@ function hasCode(value: unknown, code: string): boolean {
     return false
   }
 
-  return (value as { code: unknown }).code === code
+  return value.code === code
 }
 
 window.addEventListener('error', (event) => {
