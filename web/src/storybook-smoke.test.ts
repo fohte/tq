@@ -27,19 +27,22 @@ function getAllStoryFiles() {
 describe('Storybook Smoke Tests', () => {
   const storyFiles = getAllStoryFiles()
 
-  expect(storyFiles.length).toBeGreaterThan(0)
+  test('has stories', () => {
+    expect(storyFiles.length).toBeGreaterThan(0)
+  })
 
   for (const { storyFile, componentName, filePath } of storyFiles) {
     const meta = storyFile.default
     const title = meta.title ?? componentName
 
+    // eslint-disable-next-line vitest/valid-title -- title comes from story metadata
     describe(title, () => {
       let stories: { name: string; story: { run: () => Promise<void> } }[]
       try {
         const composed = composeStories(storyFile)
         stories = Object.entries(composed).map(([name, story]) => ({
           name,
-          story: story as { run: () => Promise<void> },
+          story: story,
         }))
       } catch (e) {
         throw new Error(
@@ -54,6 +57,7 @@ describe('Storybook Smoke Tests', () => {
       }
 
       for (const { name, story } of stories) {
+        // eslint-disable-next-line vitest/valid-title, vitest/expect-expect -- name is the story export; assertions live inside story.run()
         test(name, async () => {
           await story.run()
         })

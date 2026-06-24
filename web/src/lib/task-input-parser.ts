@@ -171,7 +171,7 @@ export function detectTrigger(
     firstChar === '%'
   ) {
     return {
-      trigger: firstChar as TriggerChar,
+      trigger: firstChar,
       partial: token.slice(1),
       tokenStart: start,
     }
