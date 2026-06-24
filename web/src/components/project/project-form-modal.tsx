@@ -296,7 +296,7 @@ export function ProjectFormModal({
               disabled={!title.trim() || isPending}
               size="sm"
             >
-              Save
+              {isEditing ? 'Save' : 'Create'}
             </Button>
           </div>
 
