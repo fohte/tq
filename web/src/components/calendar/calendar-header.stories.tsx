@@ -4,6 +4,7 @@ import {
   type CalendarViewType,
 } from '@web/components/calendar/calendar-header'
 import { useState } from 'react'
+import { expect, fn } from 'storybook/test'
 
 function CalendarHeaderStateful({
   initialDate,
@@ -69,5 +70,60 @@ export const WeekView: Story = {
 export const MonthView: Story = {
   args: {
     initialView: 'month',
+  },
+}
+
+type InteractionTestStory = StoryObj<{
+  currentDate: Date
+  activeView: CalendarViewType
+  onPrev: () => void
+  onNext: () => void
+  onToday: () => void
+  onViewChange: (view: CalendarViewType) => void
+}>
+
+export const InteractionTest: InteractionTestStory = {
+  args: {
+    currentDate: new Date(2025, 2, 7),
+    activeView: 'day',
+    onPrev: fn(),
+    onNext: fn(),
+    onToday: fn(),
+    onViewChange: fn(),
+  },
+  render: (args) => (
+    <div className="w-[600px]">
+      <CalendarHeader {...args} />
+    </div>
+  ),
+  play: async ({ canvas, args, userEvent }) => {
+    // Displays the formatted date with day of week
+    await expect(canvas.getByText(/March 7, 2025/)).toBeVisible()
+    await expect(canvas.getByText(/Fri/)).toBeVisible()
+
+    // Renders all three view options
+    await expect(canvas.getByText('Day')).toBeVisible()
+    await expect(canvas.getByText('Week')).toBeVisible()
+    await expect(canvas.getByText('Month')).toBeVisible()
+
+    // Calls onPrev when previous button is clicked
+    await userEvent.click(canvas.getByLabelText('Previous'))
+    await expect(args.onPrev).toHaveBeenCalledOnce()
+
+    // Calls onNext when next button is clicked
+    await userEvent.click(canvas.getByLabelText('Next'))
+    await expect(args.onNext).toHaveBeenCalledOnce()
+
+    // Calls onToday when Today button is clicked
+    await userEvent.click(canvas.getByText('Today'))
+    await expect(args.onToday).toHaveBeenCalledOnce()
+
+    // Calls onViewChange when a view button is clicked
+    await userEvent.click(canvas.getByText('Month'))
+    await expect(args.onViewChange).toHaveBeenCalledWith('month')
+
+    // Highlights the active view (Day is active)
+    const dayButton = canvas.getByText('Day')
+    await expect(dayButton.className).toContain('bg-background')
   },
 }

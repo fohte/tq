@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CreateTaskModal } from '@web/components/task/create-task-modal'
-import { fn } from 'storybook/test'
+import { expect, fn, within } from 'storybook/test'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -31,7 +31,36 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  play: async ({ canvasElement, userEvent }) => {
+    // Modal renders via portal, so query the entire document body
+    const body = within(canvasElement.ownerDocument.body)
+
+    // Renders the modal title when open
+    // Base-UI renders duplicate elements; check that at least one is visible
+    const titles = body.getAllByText('New Task')
+    await expect(titles.length).toBeGreaterThan(0)
+
+    // Create button is disabled when title is empty
+    // Base-UI duplicates buttons too; find visible ones
+    const createButtons = body.getAllByRole('button', { name: /create/i })
+    for (const btn of createButtons) {
+      await expect(btn).toBeDisabled()
+    }
+
+    // Enables create button after entering a title
+    const titleInputs =
+      body.getAllByPlaceholderText(/task title|タスクのタイトル/i)
+    const titleInput = titleInputs[0]
+    if (titleInput == null) throw new Error('Title input not found')
+    await userEvent.type(titleInput, 'Test task')
+
+    const enabledButton = body
+      .getAllByRole('button', { name: /create/i })
+      .find((btn) => !btn.hasAttribute('disabled'))
+    await expect(enabledButton).toBeDefined()
+  },
+}
 
 export const WithDefaultStartDate: Story = {
   args: {
