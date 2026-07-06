@@ -4,6 +4,8 @@
 @import '@fontsource-variable/geist';
 @import '@fontsource-variable/jetbrains-mono';
 @import '@web/components/calendar/fullcalendar.css';
+@import '@svar-ui/react-gantt/all.css';
+@import '@web/components/project/project-gantt.css';
 
 @custom-variant dark (&:is(.dark *));
 

@@ -1,3 +1,5 @@
+import type { ProjectView } from '@web/components/project/project-view-tabs'
+import { ProjectViewTabs } from '@web/components/project/project-view-tabs'
 import type { ProjectDetail } from '@web/hooks/use-projects'
 import { cn } from '@web/lib/utils'
 
@@ -25,7 +27,15 @@ function formatDate(dateStr: string | null): string | null {
   })
 }
 
-export function ProjectBoardHeader({ project }: { project: ProjectDetail }) {
+export function ProjectBoardHeader({
+  project,
+  view,
+  onViewChange,
+}: {
+  project: ProjectDetail
+  view: ProjectView
+  onViewChange: (view: ProjectView) => void
+}) {
   const progress =
     project.taskCount.total > 0
       ? (project.taskCount.completed / project.taskCount.total) * 100
@@ -56,6 +66,9 @@ export function ProjectBoardHeader({ project }: { project: ProjectDetail }) {
         >
           {statusLabels[project.status]}
         </span>
+        <div className="ml-auto">
+          <ProjectViewTabs view={view} onViewChange={onViewChange} />
+        </div>
       </div>
 
       {/* Progress section */}

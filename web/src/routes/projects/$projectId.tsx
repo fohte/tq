@@ -5,7 +5,9 @@ import {
   type SortOption,
   type StatusFilter,
 } from '@web/components/project/project-filter-bar'
+import { ProjectGanttView } from '@web/components/project/project-gantt-view'
 import { ProjectTaskList } from '@web/components/project/project-task-list'
+import type { ProjectView } from '@web/components/project/project-view-tabs'
 import { FloatingActionButton } from '@web/components/task/create-task-inline'
 import { CreateTaskModal } from '@web/components/task/create-task-modal'
 import { useProject, useProjectTasks } from '@web/hooks/use-projects'
@@ -24,6 +26,7 @@ function ProjectDetail() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [sortOption, setSortOption] = useState<SortOption>('manual')
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [view, setView] = useState<ProjectView>('list')
 
   const isLoading = isProjectLoading || isTasksLoading
 
@@ -60,27 +63,39 @@ function ProjectDetail() {
       </div>
 
       {/* Header */}
-      <ProjectBoardHeader project={project} />
-
-      {/* Filter bar */}
-      <ProjectFilterBar
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        sortOption={sortOption}
-        onSortOptionChange={setSortOption}
-        onAddTask={() => {
-          setIsModalOpen(true)
-        }}
+      <ProjectBoardHeader
+        project={project}
+        view={view}
+        onViewChange={setView}
       />
 
-      {/* Task list */}
-      <div className="flex-1 overflow-auto">
-        <ProjectTaskList
-          tasks={tasks ?? []}
-          statusFilter={statusFilter}
-          sortOption={sortOption}
-        />
-      </div>
+      {view === 'list' ? (
+        <>
+          {/* Filter bar */}
+          <ProjectFilterBar
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            sortOption={sortOption}
+            onSortOptionChange={setSortOption}
+            onAddTask={() => {
+              setIsModalOpen(true)
+            }}
+          />
+
+          {/* Task list */}
+          <div className="flex-1 overflow-auto">
+            <ProjectTaskList
+              tasks={tasks ?? []}
+              statusFilter={statusFilter}
+              sortOption={sortOption}
+            />
+          </div>
+        </>
+      ) : (
+        <div className="min-h-0 flex-1">
+          <ProjectGanttView tasks={tasks ?? []} />
+        </div>
+      )}
 
       {/* FAB (mobile only) */}
       <FloatingActionButton

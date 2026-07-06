@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { ProjectBoardHeader } from '@web/components/project/project-board-header'
 import type { ProjectDetail } from '@web/hooks/use-projects'
+import { fn } from 'storybook/test'
 
 const baseProject: ProjectDetail = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -30,6 +31,10 @@ const meta = {
       </div>
     ),
   ],
+  args: {
+    view: 'list',
+    onViewChange: fn(),
+  },
 } satisfies Meta<typeof ProjectBoardHeader>
 
 export default meta

@@ -1,0 +1,40 @@
+/* SVAR Gantt theme overrides for tq design system */
+
+.tq-gantt {
+  --wx-background: var(--background);
+  --wx-background-alt: var(--secondary);
+  --wx-border-color: var(--border);
+  height: 100%;
+}
+
+.tq-gantt .wx-bar.wx-task.todo {
+  background-color: var(--muted-foreground);
+  border-color: var(--muted-foreground);
+}
+
+.tq-gantt .wx-bar.wx-task.in_progress {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.tq-gantt .wx-bar.wx-task.completed {
+  background-color: #4caf50;
+  border-color: #4caf50;
+  opacity: 0.6;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.3) 0,
+    rgba(255, 255, 255, 0.3) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+}
+
+.tq-gantt .wx-bar.wx-task.summary {
+  opacity: 0.5;
+}
+
+.tq-gantt .tq-today-marker {
+  background-color: #e53e3e;
+  width: 2px;
+}
