@@ -1,8 +1,23 @@
 import { db } from '@api/db/connection'
-import { recurrenceRules, schedules, tasks, timeBlocks } from '@api/db/schema'
+import {
+  recurrenceRules,
+  schedules,
+  tasks,
+  timeBlocks,
+  todayTasks,
+} from '@api/db/schema'
 import { firstOrThrow } from '@api/lib/drizzle-utils'
+import {
+  localDateBoundsToUtc,
+  localNaiveDateTimeToUtc,
+} from '@api/lib/timezone'
 import { expandScheduleForDate } from '@api/routes/schedule-expansion'
 import { recurrenceRuleSchema } from '@api/schemas/recurrence-rule'
+import { autoAssign, calculateFreeSlots } from '@api/services/auto-scheduler'
+import {
+  getEvents,
+  OAuthTokenMissingError,
+} from '@api/services/google-calendar'
 import { zValidator } from '@hono/zod-validator'
 import { and, eq, gte, inArray, isNull, lte, or } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -29,12 +44,18 @@ const timeBlockDateQuerySchema = z.object({
   tzOffset: z.coerce.number().int().optional(),
 })
 
+const todayTasksDateQuerySchema = z.object({
+  date: z.string(),
+})
+
 const todayTasksSchema = z.object({
   taskIds: z.array(z.uuid()),
+  date: z.string(),
 })
 
 const autoAssignSchema = z.object({
   date: z.string(),
+  tzOffset: z.coerce.number().int().optional(),
 })
 
 const createScheduleSchema = z.object({
@@ -68,6 +89,17 @@ function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
     isAutoScheduled: block.isAutoScheduled,
     createdAt: block.createdAt.toISOString(),
     updatedAt: block.updatedAt.toISOString(),
+  }
+}
+
+function todayTaskToResponse(row: typeof todayTasks.$inferSelect) {
+  return {
+    id: row.id,
+    taskId: row.taskId,
+    date: row.date,
+    sortOrder: row.sortOrder,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   }
 }
 
@@ -168,14 +200,7 @@ export const schedulesApp = new Hono()
     zValidator('query', timeBlockDateQuerySchema),
     async (c) => {
       const { date, tzOffset } = c.req.valid('query')
-
-      // Build day boundaries in the client's local timezone
-      // tzOffset is minutes from UTC (e.g. UTC+9 = -540), matching getTimezoneOffset()
-      const offsetMs = (tzOffset ?? 0) * 60 * 1000
-      const dayStart = new Date(`${date}T00:00:00.000Z`)
-      dayStart.setTime(dayStart.getTime() + offsetMs)
-      const dayEnd = new Date(`${date}T23:59:59.999Z`)
-      dayEnd.setTime(dayEnd.getTime() + offsetMs)
+      const { dayStart, dayEnd } = localDateBoundsToUtc(date, tzOffset ?? 0)
 
       const blocks = await db
         .select()
@@ -246,13 +271,180 @@ export const schedulesApp = new Hono()
 
     return c.body(null, 204)
   })
-  // Today tasks endpoints (not yet implemented)
-  .put('/today-tasks', zValidator('json', todayTasksSchema), (c) => {
-    return c.json([], 200)
+  // Today tasks endpoints
+  .get(
+    '/today-tasks',
+    zValidator('query', todayTasksDateQuerySchema),
+    async (c) => {
+      const { date } = c.req.valid('query')
+
+      const rows = await db
+        .select()
+        .from(todayTasks)
+        .where(eq(todayTasks.date, date))
+        .orderBy(todayTasks.sortOrder)
+
+      return c.json(rows.map(todayTaskToResponse), 200)
+    },
+  )
+  .put('/today-tasks', zValidator('json', todayTasksSchema), async (c) => {
+    const { taskIds, date } = c.req.valid('json')
+
+    if (taskIds.length > 0) {
+      const existingTasks = await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(inArray(tasks.id, taskIds))
+      const existingIds = new Set(existingTasks.map((t) => t.id))
+      const missing = taskIds.filter((id) => !existingIds.has(id))
+      if (missing.length > 0) {
+        return c.json({ error: 'Task not found' }, 404)
+      }
+    }
+
+    await db.delete(todayTasks).where(eq(todayTasks.date, date))
+
+    if (taskIds.length === 0) {
+      return c.json([], 200)
+    }
+
+    const inserted = await db
+      .insert(todayTasks)
+      .values(
+        taskIds.map((taskId, index) => ({ taskId, date, sortOrder: index })),
+      )
+      .returning()
+
+    return c.json(
+      inserted
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map(todayTaskToResponse),
+      200,
+    )
   })
-  // Auto-assign endpoint (not yet implemented)
-  .post('/auto-assign', zValidator('json', autoAssignSchema), (c) => {
-    return c.json([], 200)
+  // Auto-assign endpoint
+  .post('/auto-assign', zValidator('json', autoAssignSchema), async (c) => {
+    const { date, tzOffset } = c.req.valid('json')
+    const offset = tzOffset ?? 0
+    const { dayStart, dayEnd } = localDateBoundsToUtc(date, offset)
+
+    const queueRows = await db
+      .select({ task: tasks })
+      .from(todayTasks)
+      .innerJoin(tasks, eq(todayTasks.taskId, tasks.id))
+      .where(eq(todayTasks.date, date))
+      .orderBy(todayTasks.sortOrder)
+
+    const schedulableTasks = queueRows
+      .filter(
+        (r): r is typeof r & { task: { estimatedMinutes: number } } =>
+          r.task.status !== 'completed' && r.task.estimatedMinutes != null,
+      )
+      .map((r) => ({
+        taskId: r.task.id,
+        estimatedMinutes: r.task.estimatedMinutes,
+      }))
+
+    let externalEvents: Awaited<ReturnType<typeof getEvents>> = []
+    try {
+      externalEvents = await getEvents(
+        'primary',
+        dayStart.toISOString(),
+        dayEnd.toISOString(),
+      )
+    } catch (error) {
+      if (!(error instanceof OAuthTokenMissingError)) throw error
+    }
+
+    const allSchedules = await db.select().from(schedules)
+    const ruleIds = [
+      ...new Set(
+        allSchedules
+          .map((s) => s.recurrenceRuleId)
+          .filter((id): id is string => id != null),
+      ),
+    ]
+    const rules =
+      ruleIds.length > 0
+        ? await db
+            .select()
+            .from(recurrenceRules)
+            .where(inArray(recurrenceRules.id, ruleIds))
+        : []
+    const ruleMap = new Map(rules.map((r) => [r.id, r]))
+    const expandedScheduleBlocks = allSchedules.flatMap((schedule) => {
+      const rule =
+        schedule.recurrenceRuleId != null
+          ? (ruleMap.get(schedule.recurrenceRuleId) ?? null)
+          : null
+      return expandScheduleForDate(schedule, rule, date)
+    })
+
+    const manualBlocks = await db
+      .select()
+      .from(timeBlocks)
+      .where(
+        and(
+          eq(timeBlocks.isAutoScheduled, false),
+          lte(timeBlocks.startTime, dayEnd),
+          or(gte(timeBlocks.endTime, dayStart), isNull(timeBlocks.endTime)),
+        ),
+      )
+
+    const staleAutoBlocks = await db
+      .select({ id: timeBlocks.id })
+      .from(timeBlocks)
+      .where(
+        and(
+          eq(timeBlocks.isAutoScheduled, true),
+          gte(timeBlocks.startTime, dayStart),
+          lte(timeBlocks.startTime, dayEnd),
+        ),
+      )
+    if (staleAutoBlocks.length > 0) {
+      await db.delete(timeBlocks).where(
+        inArray(
+          timeBlocks.id,
+          staleAutoBlocks.map((b) => b.id),
+        ),
+      )
+    }
+
+    const busyRanges = [
+      ...externalEvents.map((event) => ({
+        start: new Date(event.startTime),
+        end: new Date(event.endTime),
+      })),
+      ...manualBlocks.map((block) => ({
+        start: block.startTime,
+        end: block.endTime ?? dayEnd,
+      })),
+      ...expandedScheduleBlocks.map((block) => ({
+        start: localNaiveDateTimeToUtc(block.start, offset),
+        end: localNaiveDateTimeToUtc(block.end, offset),
+      })),
+    ]
+
+    const freeSlots = calculateFreeSlots(dayStart, dayEnd, busyRanges)
+    const assigned = autoAssign(schedulableTasks, freeSlots)
+
+    if (assigned.length === 0) {
+      return c.json([], 200)
+    }
+
+    const inserted = await db
+      .insert(timeBlocks)
+      .values(
+        assigned.map((block) => ({
+          taskId: block.taskId,
+          startTime: block.startTime,
+          endTime: block.endTime,
+          isAutoScheduled: true,
+        })),
+      )
+      .returning()
+
+    return c.json(inserted.map(timeBlockToResponse), 200)
   })
   // Recurring schedule (ScheduleBlock) CRUD
   .post('/recurring', zValidator('json', createScheduleSchema), async (c) => {

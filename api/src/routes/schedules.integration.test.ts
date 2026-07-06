@@ -44,13 +44,39 @@ interface ExpandedBlock {
   recurrence: ScheduleResponse['recurrence']
 }
 
-async function createTask(title: string) {
+interface TodayTaskResponse {
+  id: string
+  taskId: string
+  date: string
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+async function createTask(title: string, extra: Record<string, unknown> = {}) {
   const res = await app.request('/api/tasks', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title }),
+    body: JSON.stringify({ title, ...extra }),
   })
   return jsonBody<{ id: string }>(res)
+}
+
+async function completeTask(taskId: string) {
+  await app.request(`/api/tasks/${taskId}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'completed' }),
+  })
+}
+
+async function putTodayTasks(taskIds: string[], date: string) {
+  const res = await app.request('/api/schedule/today-tasks', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ taskIds, date }),
+  })
+  return { res, body: await jsonBody<TodayTaskResponse[]>(res) }
 }
 
 async function createTimeBlock(
@@ -490,6 +516,197 @@ describe('schedules API', () => {
         method: 'DELETE',
       })
       expect(res.status).toBe(404)
+    })
+  })
+})
+
+describe('schedule/today-tasks API', () => {
+  describe('PUT /api/schedule/today-tasks', () => {
+    it('persists the selection and order, and GET returns it back', async () => {
+      const taskA = await createTask('Task A')
+      const taskB = await createTask('Task B')
+
+      const { res, body } = await putTodayTasks(
+        [taskB.id, taskA.id],
+        '2026-03-22',
+      )
+
+      expect(res.status).toBe(200)
+      expect(body.map((t) => t.taskId)).toEqual([taskB.id, taskA.id])
+      expect(body.map((t) => t.sortOrder)).toEqual([0, 1])
+
+      const getRes = await app.request(
+        '/api/schedule/today-tasks?date=2026-03-22',
+      )
+      expect(getRes.status).toBe(200)
+      const getBody = await jsonBody<TodayTaskResponse[]>(getRes)
+      expect(getBody.map((t) => t.taskId)).toEqual([taskB.id, taskA.id])
+    })
+
+    it('fully replaces the previous selection (reorder, add, remove)', async () => {
+      const taskA = await createTask('Task A')
+      const taskB = await createTask('Task B')
+      const taskC = await createTask('Task C')
+
+      await putTodayTasks([taskA.id, taskB.id], '2026-03-22')
+      const { body } = await putTodayTasks([taskC.id, taskA.id], '2026-03-22')
+
+      expect(body.map((t) => t.taskId)).toEqual([taskC.id, taskA.id])
+    })
+
+    it('clears the queue when given an empty list', async () => {
+      const taskA = await createTask('Task A')
+      await putTodayTasks([taskA.id], '2026-03-22')
+
+      const { res, body } = await putTodayTasks([], '2026-03-22')
+
+      expect(res.status).toBe(200)
+      expect(body).toEqual([])
+    })
+
+    it('returns 404 for a non-existent task id', async () => {
+      const { res } = await putTodayTasks([TEST_UUID], '2026-03-22')
+      expect(res.status).toBe(404)
+    })
+  })
+})
+
+describe('schedule/auto-assign API', () => {
+  describe('POST /api/schedule/auto-assign', () => {
+    it('assigns queued tasks back-to-back starting at the day boundary', async () => {
+      const taskA = await createTask('Task A', { estimatedMinutes: 30 })
+      const taskB = await createTask('Task B', { estimatedMinutes: 60 })
+      await putTodayTasks([taskA.id, taskB.id], '2026-03-22')
+
+      const res = await app.request('/api/schedule/auto-assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: '2026-03-22', tzOffset: 0 }),
+      })
+
+      expect(res.status).toBe(200)
+      const blocks = await jsonBody<TimeBlockResponse[]>(res)
+      expect(
+        blocks.map((b) => ({
+          taskId: b.taskId,
+          startTime: b.startTime,
+          endTime: b.endTime,
+          isAutoScheduled: b.isAutoScheduled,
+        })),
+      ).toEqual([
+        {
+          taskId: taskA.id,
+          startTime: '2026-03-22T00:00:00.000Z',
+          endTime: '2026-03-22T00:30:00.000Z',
+          isAutoScheduled: true,
+        },
+        {
+          taskId: taskB.id,
+          startTime: '2026-03-22T00:30:00.000Z',
+          endTime: '2026-03-22T01:30:00.000Z',
+          isAutoScheduled: true,
+        },
+      ])
+    })
+
+    it('schedules around an existing manual time block', async () => {
+      const busyTask = await createTask('Busy task')
+      await createTimeBlock(
+        busyTask.id,
+        '2026-03-22T00:00:00.000Z',
+        '2026-03-22T01:00:00.000Z',
+      )
+
+      const queuedTask = await createTask('Queued task', {
+        estimatedMinutes: 30,
+      })
+      await putTodayTasks([queuedTask.id], '2026-03-22')
+
+      const res = await app.request('/api/schedule/auto-assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: '2026-03-22', tzOffset: 0 }),
+      })
+
+      const blocks = await jsonBody<TimeBlockResponse[]>(res)
+      expect(blocks).toHaveLength(1)
+      assertDefined(blocks[0])
+      expect(blocks[0].startTime).toBe('2026-03-22T01:00:00.000Z')
+      expect(blocks[0].endTime).toBe('2026-03-22T01:30:00.000Z')
+    })
+
+    it('excludes tasks without an estimate', async () => {
+      const noEstimateTask = await createTask('No estimate')
+      const withEstimateTask = await createTask('With estimate', {
+        estimatedMinutes: 30,
+      })
+      await putTodayTasks(
+        [noEstimateTask.id, withEstimateTask.id],
+        '2026-03-22',
+      )
+
+      const res = await app.request('/api/schedule/auto-assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: '2026-03-22', tzOffset: 0 }),
+      })
+
+      const blocks = await jsonBody<TimeBlockResponse[]>(res)
+      expect(blocks.map((b) => b.taskId)).toEqual([withEstimateTask.id])
+    })
+
+    it('excludes completed tasks', async () => {
+      const completedTask = await createTask('Completed', {
+        estimatedMinutes: 30,
+      })
+      await completeTask(completedTask.id)
+      const pendingTask = await createTask('Pending', { estimatedMinutes: 30 })
+      await putTodayTasks([completedTask.id, pendingTask.id], '2026-03-22')
+
+      const res = await app.request('/api/schedule/auto-assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: '2026-03-22', tzOffset: 0 }),
+      })
+
+      const blocks = await jsonBody<TimeBlockResponse[]>(res)
+      expect(blocks.map((b) => b.taskId)).toEqual([pendingTask.id])
+    })
+
+    it('replaces the previous auto-assigned blocks on re-run (idempotent)', async () => {
+      const taskA = await createTask('Task A', { estimatedMinutes: 30 })
+      await putTodayTasks([taskA.id], '2026-03-22')
+
+      const requestAutoAssign = () =>
+        app.request('/api/schedule/auto-assign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: '2026-03-22', tzOffset: 0 }),
+        })
+
+      await requestAutoAssign()
+
+      const taskB = await createTask('Task B', { estimatedMinutes: 30 })
+      await putTodayTasks([taskB.id, taskA.id], '2026-03-22')
+      await requestAutoAssign()
+
+      const listRes = await app.request(
+        '/api/schedule/time-blocks?date=2026-03-22',
+      )
+      const blocks = await jsonBody<TimeBlockResponse[]>(listRes)
+      expect(blocks.map((b) => b.taskId)).toEqual([taskB.id, taskA.id])
+    })
+
+    it('does not schedule anything when the queue is empty', async () => {
+      const res = await app.request('/api/schedule/auto-assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: '2026-03-22', tzOffset: 0 }),
+      })
+
+      expect(res.status).toBe(200)
+      const blocks = await jsonBody<TimeBlockResponse[]>(res)
+      expect(blocks).toEqual([])
     })
   })
 })
