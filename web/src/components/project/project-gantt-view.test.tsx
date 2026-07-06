@@ -27,7 +27,7 @@ interface MockGanttProps {
   onSelectTask?: (ev: { id: string | number }) => void
   onUpdateTask?: (ev: {
     id: string | number
-    task: { start?: Date; end?: Date }
+    task?: { start?: Date; end?: Date }
     inProgress?: boolean
   }) => void
 }
@@ -162,6 +162,14 @@ describe('ProjectGanttView', () => {
       id: 'task-1',
       input: { dueDate: '2026-03-12' },
     })
+  })
+
+  it('ignores update-task events without a task payload', () => {
+    render(<ProjectGanttView tasks={[]} />)
+
+    mockGanttProps.current.onUpdateTask?.({ id: 'task-1' })
+
+    expect(mockUpdateTaskMutate).not.toHaveBeenCalled()
   })
 
   it('ignores in-progress drag updates', () => {
