@@ -10,6 +10,11 @@ import {
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '@web/hooks/use-time-blocks'
+import {
+  useAutoAssign,
+  useSetTodayTasks,
+  useTodayTasks,
+} from '@web/hooks/use-today-tasks'
 import { formatMinutes } from '@web/lib/format'
 import { scheduleColorToEventColor } from '@web/lib/schedule-color'
 import { useMemo } from 'react'
@@ -27,8 +32,11 @@ function DayView() {
   }, [])
   const { data: timeBlocksData } = useTimeBlocks(todayStr)
   const { data: schedulesData } = useScheduleList(todayStr)
+  const { data: todayTasksData } = useTodayTasks(todayStr)
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
+  const setTodayTasks = useSetTodayTasks()
+  const autoAssign = useAutoAssign()
 
   const taskMap = useMemo(() => {
     const map = new Map<string, Task>()
@@ -37,6 +45,19 @@ function DayView() {
     }
     return map
   }, [categorized.all])
+
+  const queueTaskIds = useMemo(
+    () => (todayTasksData ?? []).map((t) => t.taskId),
+    [todayTasksData],
+  )
+  const queueTasks = useMemo(
+    () =>
+      queueTaskIds
+        .map((id) => taskMap.get(id))
+        .filter((t): t is Task => t != null),
+    [queueTaskIds, taskMap],
+  )
+  const queueTaskIdSet = useMemo(() => new Set(queueTaskIds), [queueTaskIds])
 
   const taskEvents: TimeBlockEvent[] = useMemo(() => {
     if (!timeBlocksData) return []
@@ -135,12 +156,37 @@ function DayView() {
     [updateTimeBlock, createTimeBlock],
   )
 
+  const handleReorderQueue = (taskIds: string[]) => {
+    setTodayTasks.mutate({ date: todayStr, taskIds })
+  }
+
+  const handleToggleQueueTask = (taskId: string) => {
+    const taskIds = queueTaskIdSet.has(taskId)
+      ? queueTaskIds.filter((id) => id !== taskId)
+      : [...queueTaskIds, taskId]
+    setTodayTasks.mutate({ date: todayStr, taskIds })
+  }
+
+  const handleAutoAssign = () => {
+    autoAssign.mutate({
+      date: todayStr,
+      tzOffset: new Date().getTimezoneOffset(),
+    })
+  }
+
   return (
     <DayViewPresentation
       isLoading={isLoading}
       categorized={categorized}
       calendarEvents={calendarEvents}
       dndCallbacks={dndCallbacks}
+      queueTasks={queueTasks}
+      queueTaskIds={queueTaskIdSet}
+      onReorderQueue={handleReorderQueue}
+      onToggleQueueTask={handleToggleQueueTask}
+      onRemoveFromQueue={handleToggleQueueTask}
+      onAutoAssign={handleAutoAssign}
+      isAutoAssigning={autoAssign.isPending}
     />
   )
 }

@@ -235,6 +235,9 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+const queuedTasks = sampleTasks.slice(0, 4)
+const queuedTaskIds = new Set(queuedTasks.map((t) => t.id))
+
 export const Default: Story = {
   args: {
     isLoading: false,
@@ -245,6 +248,13 @@ export const Default: Story = {
       onEventResize: fn(),
       onExternalDrop: fn(),
     },
+    queueTasks: queuedTasks,
+    queueTaskIds: queuedTaskIds,
+    onReorderQueue: fn(),
+    onToggleQueueTask: fn(),
+    onRemoveFromQueue: fn(),
+    onAutoAssign: fn(),
+    isAutoAssigning: false,
   },
 }
 
@@ -253,6 +263,13 @@ export const Loading: Story = {
     isLoading: true,
     categorized: { all: [], today: [], backlog: [], nonBacklog: [] },
     calendarEvents: [],
+    queueTasks: [],
+    queueTaskIds: new Set(),
+    onReorderQueue: fn(),
+    onToggleQueueTask: fn(),
+    onRemoveFromQueue: fn(),
+    onAutoAssign: fn(),
+    isAutoAssigning: false,
   },
 }
 
@@ -261,5 +278,12 @@ export const Empty: Story = {
     isLoading: false,
     categorized: { all: [], today: [], backlog: [], nonBacklog: [] },
     calendarEvents: [],
+    queueTasks: [],
+    queueTaskIds: new Set(),
+    onReorderQueue: fn(),
+    onToggleQueueTask: fn(),
+    onRemoveFromQueue: fn(),
+    onAutoAssign: fn(),
+    isAutoAssigning: false,
   },
 }
