@@ -25,6 +25,8 @@ export interface DayViewPresentationProps {
   categorized: CategorizedTasks
   calendarEvents: TimeBlockEvent[]
   dndCallbacks?: CalendarDndCallbacks
+  /** Google OAuth consent URL, present when Google Calendar is not connected */
+  gcalAuthUrl?: string
 }
 
 export function DayViewPresentation({
@@ -32,6 +34,7 @@ export function DayViewPresentation({
   categorized,
   calendarEvents,
   dndCallbacks,
+  gcalAuthUrl,
 }: DayViewPresentationProps) {
   const [activeTab, setActiveTab] = useState<TaskTab>('today')
   const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
@@ -147,6 +150,19 @@ export function DayViewPresentation({
         )}
       >
         <div className="flex h-full w-full flex-col">
+          {gcalAuthUrl != null && (
+            <div className="flex items-center justify-between gap-2 border-b border-border bg-secondary px-3 py-2 text-sm">
+              <span className="text-muted-foreground">
+                Google Calendar が連携されていません
+              </span>
+              <a
+                href={gcalAuthUrl}
+                className="font-medium text-primary hover:underline"
+              >
+                連携する
+              </a>
+            </div>
+          )}
           <CalendarView
             events={calendarEvents}
             dndCallbacks={dndCallbacks}

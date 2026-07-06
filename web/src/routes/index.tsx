@@ -2,6 +2,12 @@ import { createFileRoute } from '@tanstack/react-router'
 import type { CalendarDndCallbacks } from '@web/components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
 import { DayViewPresentation } from '@web/components/day-view/day-view'
+import { useContextFilter } from '@web/hooks/use-context-filter'
+import {
+  GcalAuthRequiredError,
+  useGcalAuthUrl,
+  useGcalEvents,
+} from '@web/hooks/use-gcal-events'
 import { useScheduleList } from '@web/hooks/use-schedules'
 import type { Task } from '@web/hooks/use-tasks'
 import { useTaskList } from '@web/hooks/use-tasks'
@@ -10,6 +16,7 @@ import {
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '@web/hooks/use-time-blocks'
+import { matchesContextFilter } from '@web/lib/context-filter'
 import { formatMinutes } from '@web/lib/format'
 import { scheduleColorToEventColor } from '@web/lib/schedule-color'
 import { useMemo } from 'react'
@@ -29,6 +36,12 @@ function DayView() {
   const { data: schedulesData } = useScheduleList(todayStr)
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
+  const { mode: contextMode } = useContextFilter()
+
+  const gcalEventsQuery = useGcalEvents(todayStr)
+  const gcalAuthRequired =
+    gcalEventsQuery.error instanceof GcalAuthRequiredError
+  const gcalAuthUrlQuery = useGcalAuthUrl(gcalAuthRequired)
 
   const taskMap = useMemo(() => {
     const map = new Map<string, Task>()
@@ -65,9 +78,13 @@ function DayView() {
                 ? 'auto'
                 : 'manual',
           duration: durationStr,
+          redacted: !matchesContextFilter(
+            task?.context ?? 'personal',
+            contextMode,
+          ),
         }
       })
-  }, [timeBlocksData, taskMap])
+  }, [timeBlocksData, taskMap, contextMode])
 
   const scheduleEvents: TimeBlockEvent[] = useMemo(() => {
     if (!schedulesData) return []
@@ -85,13 +102,29 @@ function DayView() {
         type: 'schedule' as const,
         duration: durationStr,
         color: scheduleColorToEventColor(schedule.color),
+        redacted: !matchesContextFilter(schedule.context, contextMode),
       }
     })
-  }, [schedulesData])
+  }, [schedulesData, contextMode])
+
+  const gcalEvents: TimeBlockEvent[] = useMemo(() => {
+    if (!gcalEventsQuery.data) return []
+    // Google Calendar has no work/personal/dev context, so these are never
+    // redacted by the context filter.
+    return gcalEventsQuery.data
+      .filter((event) => !event.isAllDay)
+      .map((event) => ({
+        id: `gcal-${event.id}`,
+        title: event.summary,
+        start: event.startTime,
+        end: event.endTime,
+        type: 'gcal' as const,
+      }))
+  }, [gcalEventsQuery.data])
 
   const calendarEvents: TimeBlockEvent[] = useMemo(
-    () => [...taskEvents, ...scheduleEvents],
-    [taskEvents, scheduleEvents],
+    () => [...taskEvents, ...scheduleEvents, ...gcalEvents],
+    [taskEvents, scheduleEvents, gcalEvents],
   )
 
   const dndCallbacks: CalendarDndCallbacks = useMemo(
@@ -141,6 +174,9 @@ function DayView() {
       categorized={categorized}
       calendarEvents={calendarEvents}
       dndCallbacks={dndCallbacks}
+      {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
+        ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
+        : {})}
     />
   )
 }

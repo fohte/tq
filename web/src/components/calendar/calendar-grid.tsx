@@ -101,7 +101,10 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       title: event.title,
       start: event.start,
       end: event.end,
-      editable: event.type !== 'schedule',
+      editable:
+        event.type !== 'schedule' &&
+        event.type !== 'gcal' &&
+        event.redacted !== true,
       extendedProps: {
         type: event.type,
         duration: event.duration,
@@ -109,6 +112,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         label: event.label,
         color: event.color,
         icon: event.icon,
+        redacted: event.redacted,
       },
     }))
 

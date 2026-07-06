@@ -29,6 +29,8 @@ export interface TimeBlockEvent {
   }
   /** Icon name for schedule events (lucide icon) */
   icon?: string
+  /** When true, content is hidden and rendered as a generic "busy" block */
+  redacted?: boolean
 }
 
 interface CalendarViewProps {

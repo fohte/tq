@@ -8,6 +8,7 @@ export interface CalendarEventProps {
   color?: { bg: string; accent: string }
   icon?: string
   taskId?: string
+  redacted?: boolean
 }
 
 /**
