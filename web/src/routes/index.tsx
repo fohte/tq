@@ -16,6 +16,11 @@ import {
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '@web/hooks/use-time-blocks'
+import {
+  useAutoAssign,
+  useSetTodayTasks,
+  useTodayTasks,
+} from '@web/hooks/use-today-tasks'
 import { matchesContextFilter } from '@web/lib/context-filter'
 import { formatMinutes } from '@web/lib/format'
 import { scheduleColorToEventColor } from '@web/lib/schedule-color'
@@ -34,6 +39,7 @@ function DayView() {
   }, [])
   const { data: timeBlocksData } = useTimeBlocks(todayStr)
   const { data: schedulesData } = useScheduleList(todayStr)
+  const { data: todayTasksData } = useTodayTasks(todayStr)
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
   const { mode: contextMode } = useContextFilter()
@@ -52,6 +58,9 @@ function DayView() {
     }
   }, [gcalEventsQuery.error, gcalAuthRequired])
 
+  const setTodayTasks = useSetTodayTasks()
+  const autoAssign = useAutoAssign()
+
   const taskMap = useMemo(() => {
     const map = new Map<string, Task>()
     for (const task of categorized.all) {
@@ -59,6 +68,19 @@ function DayView() {
     }
     return map
   }, [categorized.all])
+
+  const queueTaskIds = useMemo(
+    () => (todayTasksData ?? []).map((t) => t.taskId),
+    [todayTasksData],
+  )
+  const queueTasks = useMemo(
+    () =>
+      queueTaskIds
+        .map((id) => taskMap.get(id))
+        .filter((t): t is Task => t != null),
+    [queueTaskIds, taskMap],
+  )
+  const queueTaskIdSet = useMemo(() => new Set(queueTaskIds), [queueTaskIds])
 
   const taskEvents: TimeBlockEvent[] = useMemo(() => {
     if (!timeBlocksData) return []
@@ -177,6 +199,26 @@ function DayView() {
     [updateTimeBlock, createTimeBlock],
   )
 
+  const handleReorderQueue = (taskIds: string[]) => {
+    if (setTodayTasks.isPending) return
+    setTodayTasks.mutate({ date: todayStr, taskIds })
+  }
+
+  const handleToggleQueueTask = (taskId: string) => {
+    if (setTodayTasks.isPending) return
+    const taskIds = queueTaskIdSet.has(taskId)
+      ? queueTaskIds.filter((id) => id !== taskId)
+      : [...queueTaskIds, taskId]
+    setTodayTasks.mutate({ date: todayStr, taskIds })
+  }
+
+  const handleAutoAssign = () => {
+    autoAssign.mutate({
+      date: todayStr,
+      tzOffset: new Date().getTimezoneOffset(),
+    })
+  }
+
   return (
     <DayViewPresentation
       isLoading={isLoading}
@@ -186,6 +228,13 @@ function DayView() {
       {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
         ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
         : {})}
+      queueTasks={queueTasks}
+      queueTaskIds={queueTaskIdSet}
+      onReorderQueue={handleReorderQueue}
+      onToggleQueueTask={handleToggleQueueTask}
+      onRemoveFromQueue={handleToggleQueueTask}
+      onAutoAssign={handleAutoAssign}
+      isAutoAssigning={autoAssign.isPending}
     />
   )
 }

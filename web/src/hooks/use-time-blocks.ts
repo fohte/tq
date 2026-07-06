@@ -9,7 +9,7 @@ type TimeBlock = InferResponseType<
 
 export type { TimeBlock }
 
-const timeBlockKeys = {
+export const timeBlockKeys = {
   all: ['time-blocks'] as const,
   list: (date: string) => [...timeBlockKeys.all, 'list', date] as const,
 }
