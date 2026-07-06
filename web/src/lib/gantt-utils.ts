@@ -22,7 +22,7 @@ function parseDateOnly(value: string): Date {
   return new Date(`${value}T00:00:00`)
 }
 
-function addDays(date: Date, days: number): Date {
+export function addDays(date: Date, days: number): Date {
   const result = new Date(date)
   result.setDate(result.getDate() + days)
   return result

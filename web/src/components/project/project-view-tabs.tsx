@@ -1,4 +1,4 @@
-import { cn } from '@web/lib/utils'
+import { SegmentedControl } from '@web/components/ui/segmented-control'
 
 export type ProjectView = 'list' | 'gantt'
 
@@ -15,24 +15,13 @@ export function ProjectViewTabs({
   onViewChange: (view: ProjectView) => void
 }) {
   return (
-    <div className="flex items-center gap-1 rounded-md bg-secondary p-0.5">
-      {VIEW_OPTIONS.map(({ value, label }) => (
-        <button
-          key={value}
-          type="button"
-          onClick={() => {
-            onViewChange(value)
-          }}
-          className={cn(
-            'rounded px-2.5 py-1 text-xs font-medium transition-colors',
-            view === value
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground',
-          )}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
+    <SegmentedControl
+      value={view}
+      options={VIEW_OPTIONS}
+      onChange={onViewChange}
+      containerClassName="rounded-md bg-secondary p-0.5"
+      activeClassName="bg-background text-foreground shadow-sm"
+      inactiveClassName="text-muted-foreground hover:text-foreground"
+    />
   )
 }

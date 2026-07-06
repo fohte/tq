@@ -21,7 +21,7 @@ const mockGanttApi = {
 interface MockGanttProps {
   init?: (api: typeof mockGanttApi) => void
   tasks?: unknown
-  scales?: Array<{ unit: string }>
+  scales?: Array<{ unit: string; step: number }>
   readonly?: boolean
   gridWidth?: number
   onSelectTask?: (ev: { id: string | number }) => void
@@ -99,8 +99,14 @@ describe('ProjectGanttView', () => {
   it('defaults to the week scale', () => {
     render(<ProjectGanttView tasks={[]} />)
 
-    const units = mockGanttProps.current.scales?.map((s) => s.unit)
-    expect(units).toEqual(['month', 'week'])
+    const scales = mockGanttProps.current.scales?.map((s) => ({
+      unit: s.unit,
+      step: s.step,
+    }))
+    expect(scales).toEqual([
+      { unit: 'month', step: 1 },
+      { unit: 'week', step: 1 },
+    ])
   })
 
   it('switches scale when a scale button is clicked', async () => {
@@ -109,8 +115,11 @@ describe('ProjectGanttView', () => {
 
     await user.click(screen.getByRole('button', { name: 'Month' }))
 
-    const units = mockGanttProps.current.scales?.map((s) => s.unit)
-    expect(units).toEqual(['month'])
+    const scales = mockGanttProps.current.scales?.map((s) => ({
+      unit: s.unit,
+      step: s.step,
+    }))
+    expect(scales).toEqual([{ unit: 'month', step: 1 }])
   })
 
   it('navigates to the task page when a task is selected', () => {
@@ -141,6 +150,20 @@ describe('ProjectGanttView', () => {
     })
   })
 
+  it('updates only dueDate when a due-date-edge drag only changes the end', () => {
+    render(<ProjectGanttView tasks={[]} />)
+
+    mockGanttProps.current.onUpdateTask?.({
+      id: 'task-1',
+      task: { end: new Date('2026-03-13T00:00:00') },
+    })
+
+    expect(mockUpdateTaskMutate).toHaveBeenCalledWith({
+      id: 'task-1',
+      input: { dueDate: '2026-03-12' },
+    })
+  })
+
   it('ignores in-progress drag updates', () => {
     render(<ProjectGanttView tasks={[]} />)
 
@@ -154,15 +177,21 @@ describe('ProjectGanttView', () => {
   })
 
   it('scrolls to today when the Today button is clicked', async () => {
-    const user = userEvent.setup()
-    render(<ProjectGanttView tasks={[]} />)
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-03-15T00:00:00'))
 
-    await user.click(screen.getByRole('button', { name: 'Today' }))
+    try {
+      const user = userEvent.setup()
+      render(<ProjectGanttView tasks={[]} />)
 
-    expect(mockGanttApi.exec).toHaveBeenCalledTimes(1)
-    const [action, params] = mockGanttApi.exec.mock.calls[0] ?? []
-    expect(action).toBe('scroll-chart')
-    expect(params?.date).toBeInstanceOf(Date)
+      await user.click(screen.getByRole('button', { name: 'Today' }))
+
+      expect(mockGanttApi.exec).toHaveBeenCalledWith('scroll-chart', {
+        date: new Date('2026-03-15T00:00:00'),
+      })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('is readonly with a narrower grid on mobile viewports', () => {

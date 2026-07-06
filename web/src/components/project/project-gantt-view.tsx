@@ -1,16 +1,17 @@
 import type { IApi } from '@svar-ui/react-gantt'
 import { Gantt } from '@svar-ui/react-gantt'
 import { useNavigate } from '@tanstack/react-router'
+import { SegmentedControl } from '@web/components/ui/segmented-control'
 import type { ProjectTask } from '@web/hooks/use-projects'
 import { useUpdateTask } from '@web/hooks/use-tasks'
 import {
+  addDays,
   buildGanttTasks,
   GANTT_TASK_TYPES,
   type GanttScale,
   getScaleConfig,
   toDateOnlyString,
 } from '@web/lib/gantt-utils'
-import { cn } from '@web/lib/utils'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 const DESKTOP_QUERY = '(min-width: 768px)'
@@ -77,9 +78,7 @@ export function ProjectGanttView({ tasks }: { tasks: ProjectTask[] }) {
       const input: { startDate?: string; dueDate?: string } = {}
       if (ev.task.start) input.startDate = toDateOnlyString(ev.task.start)
       if (ev.task.end)
-        input.dueDate = toDateOnlyString(
-          new Date(ev.task.end.getTime() - 24 * 60 * 60 * 1000),
-        )
+        input.dueDate = toDateOnlyString(addDays(ev.task.end, -1))
       if (input.startDate == null && input.dueDate == null) return
 
       updateTask.mutate({ id: String(ev.id), input })
@@ -101,25 +100,13 @@ export function ProjectGanttView({ tasks }: { tasks: ProjectTask[] }) {
         >
           Today
         </button>
-        <div className="flex items-center gap-1">
-          {SCALE_OPTIONS.map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => {
-                setScale(value)
-              }}
-              className={cn(
-                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                scale === value
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          value={scale}
+          options={SCALE_OPTIONS}
+          onChange={setScale}
+          activeClassName="bg-primary text-primary-foreground"
+          inactiveClassName="text-muted-foreground hover:bg-secondary hover:text-foreground"
+        />
       </div>
 
       <div className="min-h-0 flex-1">

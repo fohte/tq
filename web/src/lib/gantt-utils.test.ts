@@ -117,56 +117,55 @@ describe('buildGanttTasks', () => {
 })
 
 describe('toDateOnlyString', () => {
-  it('formats a Date as YYYY-MM-DD in local time', () => {
-    expect(toDateOnlyString(new Date('2026-03-05T00:00:00'))).toBe('2026-03-05')
-  })
-
   it('zero-pads single digit month and day', () => {
     expect(toDateOnlyString(new Date('2026-01-02T00:00:00'))).toBe('2026-01-02')
   })
+
+  it('does not pad double digit month and day', () => {
+    expect(toDateOnlyString(new Date('2026-12-25T00:00:00'))).toBe('2026-12-25')
+  })
 })
+
+function describeScales(
+  scales: ReturnType<typeof getScaleConfig>,
+  date: Date,
+  next?: Date,
+): Array<{ unit: string; step: number; label: string | undefined }> {
+  return scales.map((s) => ({
+    unit: s.unit,
+    step: s.step,
+    label: typeof s.format === 'function' ? s.format(date, next) : s.format,
+  }))
+}
 
 describe('getScaleConfig', () => {
   it('formats the day scale as month header + M/D day cells', () => {
     const scales = getScaleConfig('day')
-    expect(scales).toHaveLength(2)
-    const [monthScale, dayScale] = scales
+    const date = new Date('2026-03-07T00:00:00')
 
-    expect(
-      typeof monthScale?.format === 'function'
-        ? monthScale.format(new Date('2026-03-07T00:00:00'))
-        : monthScale?.format,
-    ).toBe('March 2026')
-    expect(
-      typeof dayScale?.format === 'function'
-        ? dayScale.format(new Date('2026-03-07T00:00:00'))
-        : dayScale?.format,
-    ).toBe('3/7')
+    expect(describeScales(scales, date)).toEqual([
+      { unit: 'month', step: 1, label: 'March 2026' },
+      { unit: 'day', step: 1, label: '3/7' },
+    ])
   })
 
-  it('formats the week scale as "W<n> (M/D-M/D)"', () => {
+  it('formats the week scale as month header + "W<n> (M/D-M/D)" week cells', () => {
     const scales = getScaleConfig('week')
-    expect(scales).toHaveLength(2)
-    const weekScale = scales[1]
+    const start = new Date('2026-03-02T00:00:00')
+    const next = new Date('2026-03-09T00:00:00')
 
-    const format = weekScale?.format
-    expect(typeof format).toBe('function')
-    if (typeof format !== 'function') throw new Error('unreachable')
-
-    expect(
-      format(new Date('2026-03-02T00:00:00'), new Date('2026-03-09T00:00:00')),
-    ).toBe('W10 (3/2-3/8)')
+    expect(describeScales(scales, start, next)).toEqual([
+      { unit: 'month', step: 1, label: 'March 2026' },
+      { unit: 'week', step: 1, label: 'W10 (3/2-3/8)' },
+    ])
   })
 
   it('formats the month scale as short month + year', () => {
     const scales = getScaleConfig('month')
-    expect(scales).toHaveLength(1)
-    const format = scales[0]?.format
+    const date = new Date('2026-03-07T00:00:00')
 
-    expect(
-      typeof format === 'function'
-        ? format(new Date('2026-03-07T00:00:00'))
-        : format,
-    ).toBe('Mar 2026')
+    expect(describeScales(scales, date)).toEqual([
+      { unit: 'month', step: 1, label: 'Mar 2026' },
+    ])
   })
 })
