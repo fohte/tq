@@ -5,7 +5,7 @@ import type { Task } from '@web/hooks/use-tasks'
 import { useUpdateTask } from '@web/hooks/use-tasks'
 import { formatMinutes, parseDurationToMinutes } from '@web/lib/parse-duration'
 import { GripVertical, X } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 export function TodayQueueRow({
   task,
@@ -25,6 +25,7 @@ export function TodayQueueRow({
   const updateTask = useUpdateTask()
   const [isEditingEstimate, setIsEditingEstimate] = useState(false)
   const [estimateInput, setEstimateInput] = useState('')
+  const cancelingRef = useRef(false)
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -33,6 +34,10 @@ export function TodayQueueRow({
   }
 
   const commitEstimate = () => {
+    if (cancelingRef.current) {
+      cancelingRef.current = false
+      return
+    }
     const parsed = parseDurationToMinutes(estimateInput)
     if (parsed != null) {
       updateTask.mutate({ id: task.id, input: { estimatedMinutes: parsed } })
@@ -72,7 +77,10 @@ export function TodayQueueRow({
             onBlur={commitEstimate}
             onKeyDown={(e) => {
               if (e.key === 'Enter') e.currentTarget.blur()
-              if (e.key === 'Escape') setIsEditingEstimate(false)
+              if (e.key === 'Escape') {
+                cancelingRef.current = true
+                setIsEditingEstimate(false)
+              }
             }}
             placeholder={formatMinutes(30)}
             className="w-16 shrink-0 rounded border border-border bg-transparent px-1 py-0.5 font-mono text-xs outline-none focus:border-primary/50"

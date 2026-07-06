@@ -157,10 +157,12 @@ function DayView() {
   )
 
   const handleReorderQueue = (taskIds: string[]) => {
+    if (setTodayTasks.isPending) return
     setTodayTasks.mutate({ date: todayStr, taskIds })
   }
 
   const handleToggleQueueTask = (taskId: string) => {
+    if (setTodayTasks.isPending) return
     const taskIds = queueTaskIdSet.has(taskId)
       ? queueTaskIds.filter((id) => id !== taskId)
       : [...queueTaskIds, taskId]
