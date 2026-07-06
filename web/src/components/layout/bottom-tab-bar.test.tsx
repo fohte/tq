@@ -13,7 +13,7 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 
 describe('BottomTabBar', () => {
-  it('is hidden above the md breakpoint so the sidebar takes over navigation', () => {
+  it('is hidden above the md breakpoint', () => {
     render(<BottomTabBar />)
     expect(screen.getByRole('navigation').className).toBe(
       'fixed bottom-0 left-0 right-0 z-50 flex h-14 items-center justify-around border-t border-border bg-background md:hidden',

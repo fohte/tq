@@ -13,12 +13,8 @@ vi.mock('@tanstack/react-router', () => ({
   useMatchRoute: () => () => false,
 }))
 
-vi.mock('@web/hooks/use-projects', () => ({
-  useProjects: () => ({ data: undefined }),
-}))
-
 describe('Sidebar', () => {
-  it('is hidden below the md breakpoint so the bottom tab bar takes over navigation', () => {
+  it('is hidden below the md breakpoint in its default collapsed state', () => {
     render(
       <ContextFilterProvider>
         <Sidebar />

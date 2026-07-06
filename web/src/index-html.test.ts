@@ -34,7 +34,7 @@ function readIndexHtmlHead() {
 }
 
 describe('index.html', () => {
-  it('declares the meta/link tags required for standalone home screen installs on iOS', () => {
+  it('declares the favicon and the Apple home screen meta/link tags', () => {
     expect(readIndexHtmlHead()).toEqual({
       themeColor: pwaManifest.theme_color,
       appleMobileWebAppCapable: 'yes',
