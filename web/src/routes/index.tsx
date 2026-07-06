@@ -2,6 +2,12 @@ import { createFileRoute } from '@tanstack/react-router'
 import type { CalendarDndCallbacks } from '@web/components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
 import { DayViewPresentation } from '@web/components/day-view/day-view'
+import { useContextFilter } from '@web/hooks/use-context-filter'
+import {
+  GcalAuthRequiredError,
+  useGcalAuthUrl,
+  useGcalEvents,
+} from '@web/hooks/use-gcal-events'
 import { useScheduleList } from '@web/hooks/use-schedules'
 import type { Task } from '@web/hooks/use-tasks'
 import { useTaskList } from '@web/hooks/use-tasks'
@@ -15,9 +21,10 @@ import {
   useSetTodayTasks,
   useTodayTasks,
 } from '@web/hooks/use-today-tasks'
+import { matchesContextFilter } from '@web/lib/context-filter'
 import { formatMinutes } from '@web/lib/format'
 import { scheduleColorToEventColor } from '@web/lib/schedule-color'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 
 export const Route = createFileRoute('/')({
   component: DayView,
@@ -35,6 +42,22 @@ function DayView() {
   const { data: todayTasksData } = useTodayTasks(todayStr)
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
+  const { mode: contextMode } = useContextFilter()
+
+  const gcalEventsQuery = useGcalEvents(todayStr)
+  const gcalAuthRequired =
+    gcalEventsQuery.error instanceof GcalAuthRequiredError
+  const gcalAuthUrlQuery = useGcalAuthUrl(gcalAuthRequired)
+
+  useEffect(() => {
+    if (gcalEventsQuery.error != null && !gcalAuthRequired) {
+      console.error(
+        'Failed to fetch Google Calendar events',
+        gcalEventsQuery.error,
+      )
+    }
+  }, [gcalEventsQuery.error, gcalAuthRequired])
+
   const setTodayTasks = useSetTodayTasks()
   const autoAssign = useAutoAssign()
 
@@ -86,9 +109,13 @@ function DayView() {
                 ? 'auto'
                 : 'manual',
           duration: durationStr,
+          redacted: !matchesContextFilter(
+            task?.context ?? 'personal',
+            contextMode,
+          ),
         }
       })
-  }, [timeBlocksData, taskMap])
+  }, [timeBlocksData, taskMap, contextMode])
 
   const scheduleEvents: TimeBlockEvent[] = useMemo(() => {
     if (!schedulesData) return []
@@ -106,13 +133,29 @@ function DayView() {
         type: 'schedule' as const,
         duration: durationStr,
         color: scheduleColorToEventColor(schedule.color),
+        redacted: !matchesContextFilter(schedule.context, contextMode),
       }
     })
-  }, [schedulesData])
+  }, [schedulesData, contextMode])
+
+  const gcalEvents: TimeBlockEvent[] = useMemo(() => {
+    if (!gcalEventsQuery.data) return []
+    // Google Calendar has no work/personal/dev context, so these are never
+    // redacted by the context filter.
+    return gcalEventsQuery.data
+      .filter((event) => !event.isAllDay)
+      .map((event) => ({
+        id: `gcal-${event.id}`,
+        title: event.summary,
+        start: event.startTime,
+        end: event.endTime,
+        type: 'gcal' as const,
+      }))
+  }, [gcalEventsQuery.data])
 
   const calendarEvents: TimeBlockEvent[] = useMemo(
-    () => [...taskEvents, ...scheduleEvents],
-    [taskEvents, scheduleEvents],
+    () => [...taskEvents, ...scheduleEvents, ...gcalEvents],
+    [taskEvents, scheduleEvents, gcalEvents],
   )
 
   const dndCallbacks: CalendarDndCallbacks = useMemo(
@@ -182,6 +225,9 @@ function DayView() {
       categorized={categorized}
       calendarEvents={calendarEvents}
       dndCallbacks={dndCallbacks}
+      {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
+        ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
+        : {})}
       queueTasks={queueTasks}
       queueTaskIds={queueTaskIdSet}
       onReorderQueue={handleReorderQueue}

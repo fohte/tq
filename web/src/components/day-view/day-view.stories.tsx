@@ -182,6 +182,15 @@ const sampleEvents: TimeBlockEvent[] = [
     color: { bg: '#1B4332', accent: '#52B788' },
     icon: 'dumbbell',
   },
+  {
+    id: 'tb-9',
+    title: '#511 通院の準備',
+    start: `${dateStr}T15:00:00`,
+    end: `${dateStr}T16:00:00`,
+    type: 'manual',
+    duration: '1h',
+    redacted: true,
+  },
 ]
 
 function Providers({ children }: { children: ReactNode }) {

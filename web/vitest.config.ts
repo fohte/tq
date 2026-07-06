@@ -23,6 +23,10 @@ export default defineConfig({
           name: 'unit',
           environment: 'jsdom',
           setupFiles: ['./src/test-setup.ts'],
+          // Pin a non-UTC offset so tests asserting local<->UTC conversion
+          // (e.g. date-range.test.ts) can't pass by accident when the host
+          // machine happens to run in UTC.
+          env: { TZ: 'Asia/Tokyo' },
         },
       },
       {

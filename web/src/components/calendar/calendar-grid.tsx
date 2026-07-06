@@ -101,7 +101,10 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       title: event.title,
       start: event.start,
       end: event.end,
-      editable: event.type !== 'schedule',
+      editable:
+        event.type !== 'schedule' &&
+        event.type !== 'gcal' &&
+        event.redacted !== true,
       extendedProps: {
         type: event.type,
         duration: event.duration,
@@ -109,6 +112,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         label: event.label,
         color: event.color,
         icon: event.icon,
+        redacted: event.redacted,
       },
     }))
 
@@ -171,11 +175,11 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           eventContent={(arg) => {
             // In month view, render compact event pill with title
             if (arg.view.type === 'dayGridMonth') {
-              const type = getEventProps(arg.event).type
+              const { type, redacted } = getEventProps(arg.event)
               return (
                 <div className="tq-month-event" data-event-type={type}>
                   <span className="tq-month-event-title">
-                    {arg.event.title}
+                    {redacted === true ? '予定あり' : arg.event.title}
                   </span>
                 </div>
               )
