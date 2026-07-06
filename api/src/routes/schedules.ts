@@ -7,13 +7,16 @@ import {
   todayTasks,
 } from '@api/db/schema'
 import { firstOrThrow } from '@api/lib/drizzle-utils'
-import {
-  localDateBoundsToUtc,
-  localNaiveDateTimeToUtc,
-} from '@api/lib/timezone'
+import { localDateBoundsToUtc } from '@api/lib/timezone'
 import { expandScheduleForDate } from '@api/routes/schedule-expansion'
 import { recurrenceRuleSchema } from '@api/schemas/recurrence-rule'
-import { autoAssign, calculateFreeSlots } from '@api/services/auto-scheduler'
+import {
+  autoAssign,
+  calculateFreeSlots,
+  expandedScheduleBlocksToBusyRanges,
+  externalEventsToBusyRanges,
+  manualBlocksToBusyRanges,
+} from '@api/services/auto-scheduler'
 import {
   getEvents,
   OAuthTokenMissingError,
@@ -131,6 +134,33 @@ function scheduleToResponse(
     createdAt: schedule.createdAt.toISOString(),
     updatedAt: schedule.updatedAt.toISOString(),
   }
+}
+
+async function loadSchedulesWithRules() {
+  const allSchedules = await db.select().from(schedules)
+  const ruleIds = [
+    ...new Set(
+      allSchedules
+        .map((s) => s.recurrenceRuleId)
+        .filter((id): id is string => id != null),
+    ),
+  ]
+  const rules =
+    ruleIds.length > 0
+      ? await db
+          .select()
+          .from(recurrenceRules)
+          .where(inArray(recurrenceRules.id, ruleIds))
+      : []
+  const ruleMap = new Map(rules.map((r) => [r.id, r]))
+
+  return allSchedules.map((schedule) => ({
+    schedule,
+    rule:
+      schedule.recurrenceRuleId != null
+        ? (ruleMap.get(schedule.recurrenceRuleId) ?? null)
+        : null,
+  }))
 }
 
 type ScheduleEnv = {
@@ -354,31 +384,16 @@ export const schedulesApp = new Hono()
       )
     } catch (error) {
       if (!(error instanceof OAuthTokenMissingError)) throw error
+      console.warn(
+        '[auto-assign] Google Calendar unavailable, scheduling without external events:',
+        error.message,
+      )
     }
 
-    const allSchedules = await db.select().from(schedules)
-    const ruleIds = [
-      ...new Set(
-        allSchedules
-          .map((s) => s.recurrenceRuleId)
-          .filter((id): id is string => id != null),
-      ),
-    ]
-    const rules =
-      ruleIds.length > 0
-        ? await db
-            .select()
-            .from(recurrenceRules)
-            .where(inArray(recurrenceRules.id, ruleIds))
-        : []
-    const ruleMap = new Map(rules.map((r) => [r.id, r]))
-    const expandedScheduleBlocks = allSchedules.flatMap((schedule) => {
-      const rule =
-        schedule.recurrenceRuleId != null
-          ? (ruleMap.get(schedule.recurrenceRuleId) ?? null)
-          : null
-      return expandScheduleForDate(schedule, rule, date)
-    })
+    const scheduleRules = await loadSchedulesWithRules()
+    const expandedScheduleBlocks = scheduleRules.flatMap(({ schedule, rule }) =>
+      expandScheduleForDate(schedule, rule, date),
+    )
 
     const manualBlocks = await db
       .select()
@@ -411,18 +426,9 @@ export const schedulesApp = new Hono()
     }
 
     const busyRanges = [
-      ...externalEvents.map((event) => ({
-        start: new Date(event.startTime),
-        end: new Date(event.endTime),
-      })),
-      ...manualBlocks.map((block) => ({
-        start: block.startTime,
-        end: block.endTime ?? dayEnd,
-      })),
-      ...expandedScheduleBlocks.map((block) => ({
-        start: localNaiveDateTimeToUtc(block.start, offset),
-        end: localNaiveDateTimeToUtc(block.end, offset),
-      })),
+      ...externalEventsToBusyRanges(externalEvents),
+      ...manualBlocksToBusyRanges(manualBlocks, dayEnd),
+      ...expandedScheduleBlocksToBusyRanges(expandedScheduleBlocks, offset),
     ]
 
     const freeSlots = calculateFreeSlots(dayStart, dayEnd, busyRanges)
@@ -488,38 +494,14 @@ export const schedulesApp = new Hono()
     async (c) => {
       const { date } = c.req.valid('query')
 
-      const allSchedules = await db.select().from(schedules)
+      const scheduleRules = await loadSchedulesWithRules()
 
-      // Fetch all referenced recurrence rules
-      const ruleIds = [
-        ...new Set(
-          allSchedules
-            .map((s) => s.recurrenceRuleId)
-            .filter((id): id is string => id != null),
-        ),
-      ]
-
-      const rules =
-        ruleIds.length > 0
-          ? await db
-              .select()
-              .from(recurrenceRules)
-              .where(inArray(recurrenceRules.id, ruleIds))
-          : []
-
-      const ruleMap = new Map(rules.map((r) => [r.id, r]))
-
-      // Expand schedules for the requested date
-      const expanded = allSchedules.flatMap((schedule) => {
-        const rule =
-          schedule.recurrenceRuleId != null
-            ? (ruleMap.get(schedule.recurrenceRuleId) ?? null)
-            : null
-        return expandScheduleForDate(schedule, rule, date).map((block) => ({
+      const expanded = scheduleRules.flatMap(({ schedule, rule }) =>
+        expandScheduleForDate(schedule, rule, date).map((block) => ({
           ...block,
           recurrence: recurrenceRuleToResponse(rule),
-        }))
-      })
+        })),
+      )
 
       return c.json(expanded, 200)
     },

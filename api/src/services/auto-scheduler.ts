@@ -1,6 +1,39 @@
+import { localNaiveDateTimeToUtc } from '@api/lib/timezone'
+
 export interface BusyRange {
   start: Date
   end: Date
+}
+
+export function externalEventsToBusyRanges(
+  events: { startTime: string; endTime: string; isAllDay: boolean }[],
+): BusyRange[] {
+  return events
+    .filter((event) => !event.isAllDay)
+    .map((event) => ({
+      start: new Date(event.startTime),
+      end: new Date(event.endTime),
+    }))
+}
+
+export function manualBlocksToBusyRanges(
+  blocks: { startTime: Date; endTime: Date | null }[],
+  fallbackEnd: Date,
+): BusyRange[] {
+  return blocks.map((block) => ({
+    start: block.startTime,
+    end: block.endTime ?? fallbackEnd,
+  }))
+}
+
+export function expandedScheduleBlocksToBusyRanges(
+  blocks: { start: string; end: string }[],
+  tzOffsetMinutes: number,
+): BusyRange[] {
+  return blocks.map((block) => ({
+    start: localNaiveDateTimeToUtc(block.start, tzOffsetMinutes),
+    end: localNaiveDateTimeToUtc(block.end, tzOffsetMinutes),
+  }))
 }
 
 export interface FreeSlot {
