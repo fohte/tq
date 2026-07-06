@@ -70,10 +70,10 @@ export function ProjectGanttView({ tasks }: { tasks: ProjectTask[] }) {
   const handleUpdateTask = useCallback(
     (ev: {
       id: string | number
-      task: { start?: Date; end?: Date }
+      task?: { start?: Date; end?: Date }
       inProgress?: boolean
     }) => {
-      if (ev.inProgress === true) return
+      if (ev.inProgress === true || !ev.task) return
 
       const input: { startDate?: string; dueDate?: string } = {}
       if (ev.task.start) input.startDate = toDateOnlyString(ev.task.start)

@@ -160,6 +160,16 @@ describe('getScaleConfig', () => {
     ])
   })
 
+  it('falls back to a full 7-day range for the week scale when next is undefined', () => {
+    const scales = getScaleConfig('week')
+    const start = new Date('2026-03-02T00:00:00')
+
+    expect(describeScales(scales, start)).toEqual([
+      { unit: 'month', step: 1, label: 'March 2026' },
+      { unit: 'week', step: 1, label: 'W10 (3/2-3/8)' },
+    ])
+  })
+
   it('formats the month scale as short month + year', () => {
     const scales = getScaleConfig('month')
     const date = new Date('2026-03-07T00:00:00')

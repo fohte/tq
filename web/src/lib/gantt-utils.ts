@@ -86,7 +86,7 @@ function formatMonthYearShort(date: Date): string {
 }
 
 function formatWeekRange(start: Date, next?: Date): string {
-  const lastDay = next ? addDays(next, -1) : start
+  const lastDay = next ? addDays(next, -1) : addDays(start, 6)
   return `W${String(getISOWeek(start))} (${formatMonthDay(start)}-${formatMonthDay(lastDay)})`
 }
 
@@ -104,5 +104,9 @@ export function getScaleConfig(scale: GanttScale): IScaleConfig[] {
       ]
     case 'month':
       return [{ unit: 'month', step: 1, format: formatMonthYearShort }]
+    default: {
+      const exhaustiveCheck: never = scale
+      throw new Error(`Unhandled GanttScale: ${String(exhaustiveCheck)}`)
+    }
   }
 }

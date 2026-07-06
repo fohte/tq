@@ -24,6 +24,7 @@ export function SegmentedControl<T extends string>({
           onClick={() => {
             onChange(option.value)
           }}
+          aria-pressed={value === option.value}
           className={cn(
             'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
             value === option.value ? activeClassName : inactiveClassName,
