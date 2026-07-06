@@ -3,7 +3,7 @@ import { db } from '@api/db/connection'
 import { images } from '@api/db/schema'
 import { MAX_SIZE_BYTES } from '@api/services/images'
 import * as r2 from '@api/services/r2'
-import { jsonBody, setupTestDb } from '@api/testing'
+import { jsonBody, makeFile, setupTestDb } from '@api/testing'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -27,10 +27,6 @@ beforeEach(() => {
   vi.mocked(r2.getObjectSignedUrl).mockReset().mockResolvedValue(SIGNED_URL)
   vi.mocked(r2.deleteObjectByKey).mockReset().mockResolvedValue(undefined)
 })
-
-function makeFile(name: string, type: string, sizeBytes: number): File {
-  return new File([Buffer.alloc(sizeBytes)], name, { type })
-}
 
 function uploadImageRequest(file: File) {
   const form = new FormData()

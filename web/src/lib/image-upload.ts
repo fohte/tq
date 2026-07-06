@@ -1,4 +1,5 @@
 import { api } from '@web/lib/api'
+import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from 'api/constants/images'
 
 const IMAGE_PATH_PATTERN = /^\/api\/images\/([^/]+)$/
 
@@ -6,22 +7,13 @@ export function parseImageId(src: string): string | null {
   return IMAGE_PATH_PATTERN.exec(src)?.[1] ?? null
 }
 
-const ACCEPTED_IMAGE_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-]
-
-const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024
-
 // Refresh signed URLs before the server-issued 1-hour expiry actually lapses.
 const SIGNED_URL_CACHE_TTL_MS = 55 * 60 * 1000
 
 export class UnsupportedImageTypeError extends Error {
   constructor() {
     super(
-      `Unsupported image type. Allowed types: ${ACCEPTED_IMAGE_TYPES.join(', ')}`,
+      `Unsupported image type. Allowed types: ${ALLOWED_CONTENT_TYPES.join(', ')}`,
     )
     this.name = 'UnsupportedImageTypeError'
   }
@@ -29,18 +21,16 @@ export class UnsupportedImageTypeError extends Error {
 
 export class ImageTooLargeError extends Error {
   constructor() {
-    super(
-      `Image too large. Maximum size is ${String(MAX_IMAGE_SIZE_BYTES)} bytes`,
-    )
+    super(`Image too large. Maximum size is ${String(MAX_SIZE_BYTES)} bytes`)
     this.name = 'ImageTooLargeError'
   }
 }
 
 export async function uploadImageFile(file: File): Promise<string> {
-  if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+  if (!(ALLOWED_CONTENT_TYPES as readonly string[]).includes(file.type)) {
     throw new UnsupportedImageTypeError()
   }
-  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+  if (file.size > MAX_SIZE_BYTES) {
     throw new ImageTooLargeError()
   }
 
@@ -48,6 +38,36 @@ export async function uploadImageFile(file: File): Promise<string> {
   if (!res.ok) throw new Error('Failed to upload image')
   const { id } = await res.json()
   return `/api/images/${id}`
+}
+
+/**
+ * Upload every file in a paste/drop FileList in parallel, converting each
+ * successful upload into an editor node via `createNode`. Failed uploads are
+ * logged and skipped rather than failing the whole batch. Generic over the
+ * node type so this module doesn't need to depend on ProseMirror/Milkdown's
+ * internal types.
+ */
+export async function uploadImageFiles<T>(
+  files: FileList,
+  createNode: (src: string, alt: string) => T | null | undefined,
+): Promise<T[]> {
+  const results = await Promise.allSettled(
+    Array.from(files).map(async (file) => ({
+      file,
+      src: await uploadImageFile(file),
+    })),
+  )
+
+  const nodes: T[] = []
+  for (const result of results) {
+    if (result.status === 'rejected') {
+      console.error('Failed to upload pasted/dropped image', result.reason)
+      continue
+    }
+    const node = createNode(result.value.src, result.value.file.name)
+    if (node != null) nodes.push(node)
+  }
+  return nodes
 }
 
 interface CacheEntry {

@@ -1,3 +1,4 @@
+import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from '@api/constants/images'
 import { db } from '@api/db/connection'
 import { images } from '@api/db/schema'
 import { firstOrThrow } from '@api/lib/drizzle-utils'
@@ -8,14 +9,7 @@ import {
 } from '@api/services/r2'
 import { eq } from 'drizzle-orm'
 
-export const ALLOWED_CONTENT_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-] as const
-
-export const MAX_SIZE_BYTES = 10 * 1024 * 1024
+export { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES }
 
 const SIGNED_URL_EXPIRES_IN_SECONDS = 60 * 60
 
@@ -90,6 +84,9 @@ export async function deleteImage(id: string): Promise<void> {
     throw new ImageNotFoundError()
   }
 
-  await deleteObjectByKey(image.r2Key)
+  // Delete the DB row first: if deleteObjectByKey fails afterward, the
+  // orphan is just an unreferenced R2 object, not a DB row pointing at a
+  // now-missing one (which would render as a permanently broken image).
   await db.delete(images).where(eq(images.id, id))
+  await deleteObjectByKey(image.r2Key)
 }

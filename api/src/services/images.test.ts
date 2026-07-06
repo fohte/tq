@@ -10,7 +10,7 @@ import {
   uploadImage,
 } from '@api/services/images'
 import * as r2 from '@api/services/r2'
-import { setupTestDb } from '@api/testing'
+import { makeFile, setupTestDb } from '@api/testing'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -26,10 +26,6 @@ beforeEach(() => {
   vi.mocked(r2.getObjectSignedUrl).mockReset().mockResolvedValue(SIGNED_URL)
   vi.mocked(r2.deleteObjectByKey).mockReset().mockResolvedValue(undefined)
 })
-
-function makeFile(name: string, type: string, sizeBytes: number): File {
-  return new File([Buffer.alloc(sizeBytes)], name, { type })
-}
 
 function normalize(image: typeof images.$inferSelect) {
   return {

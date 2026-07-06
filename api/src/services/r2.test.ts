@@ -1,4 +1,9 @@
 import {
+  deleteObjectByKey,
+  getObjectSignedUrl,
+  putObject,
+} from '@api/services/r2'
+import {
   DeleteObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -36,14 +41,8 @@ afterEach(() => {
   clearEnv()
 })
 
-// Dynamically import to allow env vars to be set before module evaluation
-async function importService() {
-  return await import('@api/services/r2')
-}
-
 describe('putObject', () => {
   it('sends a PutObjectCommand with the given key, body, and content type', async () => {
-    const { putObject } = await importService()
     s3Mock.on(PutObjectCommand).resolves({})
 
     await putObject('images/abc', Buffer.from('hello'), 'image/png')
@@ -61,7 +60,6 @@ describe('putObject', () => {
   })
 
   it('throws when R2 environment variables are missing', async () => {
-    const { putObject } = await importService()
     clearEnv()
 
     await expect(
@@ -72,8 +70,6 @@ describe('putObject', () => {
 
 describe('getObjectSignedUrl', () => {
   it('returns a signed URL scoped to the configured bucket and key', async () => {
-    const { getObjectSignedUrl } = await importService()
-
     const url = await getObjectSignedUrl('images/abc', 3600)
     const parsed = new URL(url)
 
@@ -91,7 +87,6 @@ describe('getObjectSignedUrl', () => {
 
 describe('deleteObjectByKey', () => {
   it('sends a DeleteObjectCommand with the given key', async () => {
-    const { deleteObjectByKey } = await importService()
     s3Mock.on(DeleteObjectCommand).resolves({})
 
     await deleteObjectByKey('images/abc')

@@ -9,6 +9,7 @@ import {
   handleImageLoadError,
   resolveImageSrc,
   uploadImageFile,
+  uploadImageFiles,
 } from '@web/lib/image-upload'
 import { useRef } from 'react'
 
@@ -45,22 +46,10 @@ function CrepeEditor({
     crepe.editor.use(upload).config((ctx) => {
       ctx.update(uploadConfig.key, (prev) => ({
         ...prev,
-        uploader: async (files, schema) => {
-          const nodes = []
-          for (const file of Array.from(files)) {
-            try {
-              const src = await uploadImageFile(file)
-              const node = schema.nodes['image']?.createAndFill({
-                src,
-                alt: file.name,
-              })
-              if (node) nodes.push(node)
-            } catch (error) {
-              console.error('Failed to upload pasted/dropped image', error)
-            }
-          }
-          return nodes
-        },
+        uploader: (files, schema) =>
+          uploadImageFiles(files, (src, alt) =>
+            schema.nodes['image']?.createAndFill({ src, alt }),
+          ),
       }))
     })
 

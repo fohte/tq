@@ -3,6 +3,7 @@ import {
   parseImageId,
   resolveImageSrc,
   uploadImageFile,
+  uploadImageFiles,
 } from '@web/lib/image-upload'
 import { assertDefined } from '@web/lib/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -95,6 +96,66 @@ describe('uploadImageFile', () => {
   })
 })
 
+describe('uploadImageFiles', () => {
+  function fileList(...files: File[]): FileList {
+    // jsdom has no real DataTransfer/FileList constructor; uploadImageFiles
+    // only calls Array.from(files), so a plain array satisfies it at runtime.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test-only array-like stand-in for FileList
+    return files as unknown as FileList
+  }
+
+  it('uploads every file in parallel and builds a node per success', async () => {
+    const mocks = await getMocks()
+    assertDefined(mocks['mockPost'])
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ id: 'id-a' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ id: 'id-b' }),
+      })
+
+    const nodes = await uploadImageFiles(
+      fileList(
+        makeFile('a.png', 'image/png', 10),
+        makeFile('b.png', 'image/png', 10),
+      ),
+      (src, alt) => ({ src, alt }),
+    )
+
+    expect(nodes).toEqual([
+      { src: '/api/images/id-a', alt: 'a.png' },
+      { src: '/api/images/id-b', alt: 'b.png' },
+    ])
+  })
+
+  it('skips files that fail to upload without failing the whole batch', async () => {
+    const mocks = await getMocks()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    assertDefined(mocks['mockPost'])
+      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ id: 'id-b' }),
+      })
+
+    const nodes = await uploadImageFiles(
+      fileList(
+        makeFile('a.png', 'image/png', 10),
+        makeFile('b.png', 'image/png', 10),
+      ),
+      (src, alt) => ({ src, alt }),
+    )
+
+    expect(nodes).toEqual([{ src: '/api/images/id-b', alt: 'b.png' }])
+    expect(consoleError).toHaveBeenCalledTimes(1)
+    consoleError.mockRestore()
+  })
+})
+
+// resolveImageSrc/handleImageLoadError share module-level cache state, so
+// each test below uses its own image id rather than resetting the cache.
 describe('resolveImageSrc', () => {
   it('passes through URLs that are not /api/images/:id paths', async () => {
     const mocks = await getMocks()
