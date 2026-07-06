@@ -5,6 +5,7 @@ import {
   useGcalAuthUrl,
   useGcalEvents,
 } from '@web/hooks/use-gcal-events'
+import { getDayIsoRange } from '@web/lib/date-range'
 import { assertDefined } from '@web/lib/test-utils'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -63,7 +64,7 @@ const sampleEvent = {
 }
 
 describe('useGcalEvents', () => {
-  it('fetches events for the given date', async () => {
+  it('returns the fetched events on success', async () => {
     const mocks = await getMocks()
     assertDefined(mocks['mockEventsGet']).mockResolvedValue({
       status: 200,
@@ -79,16 +80,25 @@ describe('useGcalEvents', () => {
       expect(result.current.isSuccess).toBe(true)
     })
     expect(result.current.data).toEqual([sampleEvent])
+  })
+
+  it('queries the given date range for the primary calendar', async () => {
+    const mocks = await getMocks()
+    assertDefined(mocks['mockEventsGet']).mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: () => Promise.resolve([sampleEvent]),
+    })
+
+    const { result } = renderHook(() => useGcalEvents('2026-07-07'), {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
     expect(assertDefined(mocks['mockEventsGet']).mock.calls).toEqual([
-      [
-        {
-          query: {
-            calendarId: 'primary',
-            timeMin: new Date(2026, 6, 7).toISOString(),
-            timeMax: new Date(2026, 6, 8).toISOString(),
-          },
-        },
-      ],
+      [{ query: { calendarId: 'primary', ...getDayIsoRange('2026-07-07') } }],
     ])
   })
 

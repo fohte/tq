@@ -19,7 +19,7 @@ import {
 import { matchesContextFilter } from '@web/lib/context-filter'
 import { formatMinutes } from '@web/lib/format'
 import { scheduleColorToEventColor } from '@web/lib/schedule-color'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 
 export const Route = createFileRoute('/')({
   component: DayView,
@@ -42,6 +42,15 @@ function DayView() {
   const gcalAuthRequired =
     gcalEventsQuery.error instanceof GcalAuthRequiredError
   const gcalAuthUrlQuery = useGcalAuthUrl(gcalAuthRequired)
+
+  useEffect(() => {
+    if (gcalEventsQuery.error != null && !gcalAuthRequired) {
+      console.error(
+        'Failed to fetch Google Calendar events',
+        gcalEventsQuery.error,
+      )
+    }
+  }, [gcalEventsQuery.error, gcalAuthRequired])
 
   const taskMap = useMemo(() => {
     const map = new Map<string, Task>()

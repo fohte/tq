@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@web/lib/api'
+import { assertStatus } from '@web/lib/assert-response'
 import { getDayIsoRange } from '@web/lib/date-range'
 import type { InferResponseType } from 'hono/client'
 
@@ -33,11 +34,7 @@ export function useGcalEvents(date: string) {
       if (res.status === 401) {
         throw new GcalAuthRequiredError()
       }
-      if (res.status !== 200) {
-        throw new Error(
-          `Failed to fetch Google Calendar events: ${String(res.status)}`,
-        )
-      }
+      assertStatus(res, 200)
       return res.json()
     },
     retry: false,
@@ -49,11 +46,7 @@ export function useGcalAuthUrl(enabled: boolean) {
     queryKey: ['gcal-auth-url'],
     queryFn: async () => {
       const res = await api.api.calendar['auth-url'].$get()
-      if (res.status !== 200) {
-        throw new Error(
-          `Failed to fetch Google Calendar auth URL: ${String(res.status)}`,
-        )
-      }
+      assertStatus(res, 200)
       return res.json()
     },
     enabled,

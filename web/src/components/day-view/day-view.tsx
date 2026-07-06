@@ -157,6 +157,8 @@ export function DayViewPresentation({
               </span>
               <a
                 href={gcalAuthUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="font-medium text-primary hover:underline"
               >
                 連携する

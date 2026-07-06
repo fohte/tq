@@ -184,10 +184,11 @@ const sampleEvents: TimeBlockEvent[] = [
   },
   {
     id: 'tb-9',
-    title: '通院',
+    title: '#511 通院の準備',
     start: `${dateStr}T15:00:00`,
     end: `${dateStr}T16:00:00`,
-    type: 'gcal',
+    type: 'manual',
+    duration: '1h',
     redacted: true,
   },
 ]
