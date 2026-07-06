@@ -137,7 +137,7 @@ export function autoAssign(
 
     if (slotIndex >= freeSlots.length || cursor == null) break
 
-    const startTime = cursor
+    const startTime = new Date(cursor.getTime())
     const endTime = new Date(startTime.getTime() + neededMs)
     blocks.push({ taskId: task.taskId, startTime, endTime })
     cursor = endTime

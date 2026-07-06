@@ -22,7 +22,7 @@ import {
   OAuthTokenMissingError,
 } from '@api/services/google-calendar'
 import { zValidator } from '@hono/zod-validator'
-import { and, eq, gte, inArray, isNull, lte, or } from 'drizzle-orm'
+import { and, eq, gte, inArray, isNull, lte, notInArray, or } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { createFactory } from 'hono/factory'
 import { z } from 'zod'
@@ -47,17 +47,21 @@ const timeBlockDateQuerySchema = z.object({
   tzOffset: z.coerce.number().int().optional(),
 })
 
+const dateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
+
 const todayTasksDateQuerySchema = z.object({
-  date: z.string(),
+  date: dateSchema,
 })
 
 const todayTasksSchema = z.object({
   taskIds: z.array(z.uuid()),
-  date: z.string(),
+  date: dateSchema,
 })
 
 const autoAssignSchema = z.object({
-  date: z.string(),
+  date: dateSchema,
   tzOffset: z.coerce.number().int().optional(),
 })
 
@@ -319,31 +323,47 @@ export const schedulesApp = new Hono()
   )
   .put('/today-tasks', zValidator('json', todayTasksSchema), async (c) => {
     const { taskIds, date } = c.req.valid('json')
+    const uniqueTaskIds = [...new Set(taskIds)]
 
-    if (taskIds.length > 0) {
+    if (uniqueTaskIds.length > 0) {
       const existingTasks = await db
         .select({ id: tasks.id })
         .from(tasks)
-        .where(inArray(tasks.id, taskIds))
+        .where(inArray(tasks.id, uniqueTaskIds))
       const existingIds = new Set(existingTasks.map((t) => t.id))
-      const missing = taskIds.filter((id) => !existingIds.has(id))
+      const missing = uniqueTaskIds.filter((id) => !existingIds.has(id))
       if (missing.length > 0) {
         return c.json({ error: 'Task not found' }, 404)
       }
     }
 
-    await db.delete(todayTasks).where(eq(todayTasks.date, date))
+    // Insert the new rows before deleting the old ones: if the insert fails,
+    // the previous selection is left intact instead of ending up empty.
+    const inserted =
+      uniqueTaskIds.length > 0
+        ? await db
+            .insert(todayTasks)
+            .values(
+              uniqueTaskIds.map((taskId, index) => ({
+                taskId,
+                date,
+                sortOrder: index,
+              })),
+            )
+            .returning()
+        : []
 
-    if (taskIds.length === 0) {
-      return c.json([], 200)
-    }
-
-    const inserted = await db
-      .insert(todayTasks)
-      .values(
-        taskIds.map((taskId, index) => ({ taskId, date, sortOrder: index })),
-      )
-      .returning()
+    await db.delete(todayTasks).where(
+      inserted.length > 0
+        ? and(
+            eq(todayTasks.date, date),
+            notInArray(
+              todayTasks.id,
+              inserted.map((row) => row.id),
+            ),
+          )
+        : eq(todayTasks.date, date),
+    )
 
     return c.json(
       inserted
@@ -416,14 +436,6 @@ export const schedulesApp = new Hono()
           lte(timeBlocks.startTime, dayEnd),
         ),
       )
-    if (staleAutoBlocks.length > 0) {
-      await db.delete(timeBlocks).where(
-        inArray(
-          timeBlocks.id,
-          staleAutoBlocks.map((b) => b.id),
-        ),
-      )
-    }
 
     const busyRanges = [
       ...externalEventsToBusyRanges(externalEvents),
@@ -434,21 +446,32 @@ export const schedulesApp = new Hono()
     const freeSlots = calculateFreeSlots(dayStart, dayEnd, busyRanges)
     const assigned = autoAssign(schedulableTasks, freeSlots)
 
-    if (assigned.length === 0) {
-      return c.json([], 200)
-    }
+    // Insert the newly-assigned blocks before deleting the stale ones: if the
+    // insert fails, the previous auto-scheduled blocks are left in place
+    // instead of ending up with none.
+    const inserted =
+      assigned.length > 0
+        ? await db
+            .insert(timeBlocks)
+            .values(
+              assigned.map((block) => ({
+                taskId: block.taskId,
+                startTime: block.startTime,
+                endTime: block.endTime,
+                isAutoScheduled: true,
+              })),
+            )
+            .returning()
+        : []
 
-    const inserted = await db
-      .insert(timeBlocks)
-      .values(
-        assigned.map((block) => ({
-          taskId: block.taskId,
-          startTime: block.startTime,
-          endTime: block.endTime,
-          isAutoScheduled: true,
-        })),
+    if (staleAutoBlocks.length > 0) {
+      await db.delete(timeBlocks).where(
+        inArray(
+          timeBlocks.id,
+          staleAutoBlocks.map((b) => b.id),
+        ),
       )
-      .returning()
+    }
 
     return c.json(inserted.map(timeBlockToResponse), 200)
   })

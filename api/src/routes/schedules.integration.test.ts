@@ -615,6 +615,33 @@ describe('schedule/today-tasks API', () => {
       const { res } = await putTodayTasks([TEST_UUID], '2026-03-22')
       expect(res.status).toBe(404)
     })
+
+    it('returns 400 for a malformed date', async () => {
+      const taskA = await createTask('Task A')
+      const { res } = await putTodayTasks([taskA.id], '2026/03/22')
+      expect(res.status).toBe(400)
+    })
+
+    it('deduplicates repeated task ids in the selection', async () => {
+      const taskA = await createTask('Task A')
+
+      const { res, body } = await putTodayTasks(
+        [taskA.id, taskA.id],
+        '2026-03-22',
+      )
+
+      expect(res.status).toBe(200)
+      expect(body.map(normalizeTodayTask)).toEqual([
+        {
+          id: 'ID',
+          taskId: taskA.id,
+          date: '2026-03-22',
+          sortOrder: 0,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ])
+    })
   })
 
   describe('GET /api/schedule/today-tasks', () => {
@@ -813,6 +840,11 @@ describe('schedule/auto-assign API', () => {
 
       expect(res.status).toBe(200)
       expect(body).toEqual([])
+    })
+
+    it('returns 400 for a malformed date', async () => {
+      const { res } = await requestAutoAssign('2026/03/22')
+      expect(res.status).toBe(400)
     })
   })
 })
