@@ -23,9 +23,9 @@ export default config(
       ],
     },
   },
-  // .storybook/ is outside src/ where @ alias is unavailable
+  // .storybook/ and vite.config.ts are outside src/ where @ alias is unavailable
   {
-    files: ['**/.storybook/**/*.ts'],
+    files: ['**/.storybook/**/*.ts', '**/vite.config.ts'],
     rules: {
       'no-restricted-imports': 'off',
     },
