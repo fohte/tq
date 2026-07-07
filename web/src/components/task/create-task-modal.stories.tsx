@@ -38,7 +38,9 @@ export const Default: Story = {
 
     // Renders the modal title when open
     // Base-UI renders duplicate elements; check that at least one is visible
-    const titles = body.getAllByText('New Task')
+    // The dialog content mounts into the portal asynchronously, so poll with
+    // findAllByText instead of racing it with a synchronous getAllByText
+    const titles = await body.findAllByText('New Task')
     await expect(titles.length).toBeGreaterThan(0)
 
     // Create button is disabled when title is empty

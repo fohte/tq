@@ -98,7 +98,8 @@ export const InteractionTest: InteractionTestStory = {
   ),
   play: async ({ canvas, args, userEvent }) => {
     // Displays the formatted date with day of week
-    await expect(canvas.getByText(/March 7, 2025/)).toBeVisible()
+    // findByText polls, unlike getByText, so this doesn't race the initial React commit
+    await expect(await canvas.findByText(/March 7, 2025/)).toBeVisible()
     await expect(canvas.getByText(/Fri/)).toBeVisible()
 
     // Renders all three view options
