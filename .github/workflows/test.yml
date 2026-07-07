@@ -191,6 +191,13 @@ jobs:
       # resolve `api`'s `node_modules` and the type-check step fails.
       - run: pnpm install --frozen-lockfile
 
+      # `web`'s `test:storybook` runs Storybook stories through a headless
+      # Playwright chromium browser, which isn't preinstalled on the runner.
+      - name: Install Playwright chromium
+        if: matrix.package == 'web'
+        working-directory: web
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Run tests
         working-directory: ${{ matrix.package }}
         run: pnpm run test
