@@ -70,6 +70,16 @@ export function useTaskList(filter?: {
   return { ...query, categorized }
 }
 
+export function useTaskMap(tasks: Task[]): Map<string, Task> {
+  return useMemo(() => {
+    const map = new Map<string, Task>()
+    for (const task of tasks) {
+      map.set(task.id, task)
+    }
+    return map
+  }, [tasks])
+}
+
 export interface CreateTaskInput {
   title: string
   description?: string

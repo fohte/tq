@@ -10,7 +10,7 @@ import {
 } from '@web/hooks/use-gcal-events'
 import { useScheduleList } from '@web/hooks/use-schedules'
 import type { Task } from '@web/hooks/use-tasks'
-import { useTaskList } from '@web/hooks/use-tasks'
+import { useTaskList, useTaskMap } from '@web/hooks/use-tasks'
 import {
   useCreateTimeBlock,
   useTimeBlocks,
@@ -22,6 +22,7 @@ import {
   useTodayTasks,
 } from '@web/hooks/use-today-tasks'
 import { matchesContextFilter } from '@web/lib/context-filter'
+import { formatLocalDate } from '@web/lib/date-range'
 import { formatMinutes } from '@web/lib/format'
 import { scheduleColorToEventColor } from '@web/lib/schedule-color'
 import { useEffect, useMemo } from 'react'
@@ -33,10 +34,7 @@ export const Route = createFileRoute('/')({
 function DayView() {
   const { isLoading, categorized } = useTaskList()
 
-  const todayStr = useMemo(() => {
-    const now = new Date()
-    return `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  }, [])
+  const todayStr = useMemo(() => formatLocalDate(new Date()), [])
   const { data: timeBlocksData } = useTimeBlocks(todayStr)
   const { data: schedulesData } = useScheduleList(todayStr)
   const { data: todayTasksData } = useTodayTasks(todayStr)
@@ -61,13 +59,7 @@ function DayView() {
   const setTodayTasks = useSetTodayTasks()
   const autoAssign = useAutoAssign()
 
-  const taskMap = useMemo(() => {
-    const map = new Map<string, Task>()
-    for (const task of categorized.all) {
-      map.set(task.id, task)
-    }
-    return map
-  }, [categorized.all])
+  const taskMap = useTaskMap(categorized.all)
 
   const queueTaskIds = useMemo(
     () => (todayTasksData ?? []).map((t) => t.taskId),

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useDebounce } from '@web/hooks/use-debounce'
 import { api } from '@web/lib/api'
 import { assertOk } from '@web/lib/assert-response'
 import type { InferResponseType } from 'hono/client'
@@ -143,21 +144,6 @@ const searchKeys = {
   results: (q: string) => [...searchKeys.all, 'results', q] as const,
   suggestions: (prefix: string) =>
     [...searchKeys.all, 'suggestions', prefix] as const,
-}
-
-function useDebounce<T>(value: T, delayMs: number): T {
-  const [debounced, setDebounced] = useState(value)
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebounced(value)
-    }, delayMs)
-    return () => {
-      clearTimeout(timer)
-    }
-  }, [value, delayMs])
-
-  return debounced
 }
 
 /**
