@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { useFocusNotes } from '@web/hooks/use-focus-notes'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 function seedNotes(taskId: string, value: string) {
   localStorage.setItem(`tq:focus-notes:${taskId}`, value)
@@ -8,6 +8,11 @@ function seedNotes(taskId: string, value: string) {
 
 beforeEach(() => {
   localStorage.clear()
+  vi.useFakeTimers()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('useFocusNotes', () => {
@@ -25,11 +30,29 @@ describe('useFocusNotes', () => {
     expect(result.current[0]).toBe('existing notes')
   })
 
-  it('persists updated notes so a new hook instance for the same task sees them', () => {
+  it('does not persist notes until the debounce delay elapses', () => {
     const { result } = renderHook(() => useFocusNotes('task-1'))
 
     act(() => {
       result.current[1]('new notes')
+    })
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
+
+    const { result: reloaded } = renderHook(() => useFocusNotes('task-1'))
+
+    expect(reloaded.current[0]).toBe('')
+  })
+
+  it('persists updated notes once the debounce delay elapses', () => {
+    const { result } = renderHook(() => useFocusNotes('task-1'))
+
+    act(() => {
+      result.current[1]('new notes')
+    })
+    act(() => {
+      vi.advanceTimersByTime(300)
     })
 
     const { result: reloaded } = renderHook(() => useFocusNotes('task-1'))

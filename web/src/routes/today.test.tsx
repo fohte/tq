@@ -47,14 +47,17 @@ function setup({
   all,
   queue,
   isLoading = false,
+  isTodayTasksLoading = false,
 }: {
   all: Task[]
   queue: Task[]
   isLoading?: boolean
+  isTodayTasksLoading?: boolean
 }) {
   mockUseTaskList.mockReturnValue({ isLoading, categorized: { all } })
   mockUseTodayTasks.mockReturnValue({
     data: queue.map((t) => ({ taskId: t.id })),
+    isLoading: isTodayTasksLoading,
   })
 }
 
@@ -147,6 +150,14 @@ describe('TodayFocus', () => {
 
   it('shows a loading spinner while tasks are loading', () => {
     setup({ all: [], queue: [], isLoading: true })
+
+    renderToday()
+
+    expect(document.querySelector('.animate-spin')).toBeTruthy()
+  })
+
+  it("shows a loading spinner while today's queue is still loading even after the task list finishes", () => {
+    setup({ all: [], queue: [], isTodayTasksLoading: true })
 
     renderToday()
 

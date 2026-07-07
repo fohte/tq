@@ -11,11 +11,13 @@ export const Route = createFileRoute('/today')({
 })
 
 export function TodayFocus() {
-  const { isLoading, categorized } = useTaskList()
+  const { isLoading: isTaskListLoading, categorized } = useTaskList()
 
   const todayStr = useMemo(() => formatLocalDate(new Date()), [])
 
-  const { data: todayTasksData } = useTodayTasks(todayStr)
+  const { data: todayTasksData, isLoading: isTodayTasksLoading } =
+    useTodayTasks(todayStr)
+  const isLoading = isTaskListLoading || isTodayTasksLoading
 
   const taskMap = useTaskMap(categorized.all)
 
