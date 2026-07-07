@@ -117,7 +117,7 @@ export const InProgress: Story = {
 export const OverEstimate: Story = {
   args: {
     isLoading: false,
-    queueTasks: [baseTask],
+    queueTasks: [{ ...baseTask, status: 'in_progress', estimatedMinutes: 10 }],
     focusTask: {
       ...baseTask,
       status: 'in_progress',
