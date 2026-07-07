@@ -29,7 +29,7 @@ Migrations are applied automatically by `api/src/global-setup.ts`.
 
 ### Write a story for every presentational component
 
-Every presentational component under `web/src/components/` should have a co-located `.stories.tsx` file matching the component's filename exactly (e.g. `web/src/components/task/task-row.stories.tsx` for `task-row.tsx`). Follow the pattern of existing stories: one story per meaningful state/variant of the component. If a component depends on routing or React Query, wrap it in a local provider helper in the story file (see `task-row.stories.tsx` for a reference implementation).
+Every presentational component under `web/src/components/` should have a co-located `.stories.tsx` file matching the component's filename (e.g. `web/src/components/task/task-row.stories.tsx` for `task-row.tsx`). If a source file exports multiple components, give each one its own `<component-name>.stories.tsx` file instead of matching the source filename (e.g. `task-row.tsx` exports `TaskRow`, `TreeTaskRow`, and `LiveTimer`, backed by `task-row.stories.tsx`, `tree-task-row.stories.tsx`, and `live-timer.stories.tsx` respectively). Follow the pattern of existing stories: one story per meaningful state/variant of the component. If a component depends on routing or React Query, wrap it in a local provider helper in the story file (see `task-row.stories.tsx` for a reference implementation).
 
 Stories aren't just documentation — they run as the `storybook` project in `web/vitest.config.ts` (`@storybook/addon-vitest` + `@vitest/browser-playwright`), rendering each story in a real headless Chromium:
 
