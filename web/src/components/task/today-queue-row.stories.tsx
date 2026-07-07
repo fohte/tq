@@ -1,9 +1,48 @@
 import { closestCenter, DndContext } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
 import { TodayQueueRow } from '@web/components/task/today-queue-row'
 import type { Task } from '@web/hooks/use-tasks'
+import type { ReactNode } from 'react'
 import { fn } from 'storybook/test'
+
+function Providers({ children }: { children: ReactNode }) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  const rootRoute = createRootRoute({
+    component: () => <>{children}</>,
+  })
+  const indexRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/',
+    component: () => null,
+  })
+  const taskRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/tasks/$taskId',
+    component: () => null,
+  })
+  rootRoute.addChildren([indexRoute, taskRoute])
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  })
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  )
+}
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -35,16 +74,18 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="w-96">
-        <DndContext collisionDetection={closestCenter}>
-          <SortableContext
-            items={['00000000-0000-0000-0000-000000000001']}
-            strategy={verticalListSortingStrategy}
-          >
-            <Story />
-          </SortableContext>
-        </DndContext>
-      </div>
+      <Providers>
+        <div className="w-96">
+          <DndContext collisionDetection={closestCenter}>
+            <SortableContext
+              items={['00000000-0000-0000-0000-000000000001']}
+              strategy={verticalListSortingStrategy}
+            >
+              <Story />
+            </SortableContext>
+          </DndContext>
+        </div>
+      </Providers>
     ),
   ],
   args: {
