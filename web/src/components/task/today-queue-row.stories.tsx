@@ -11,30 +11,39 @@ import {
 } from '@tanstack/react-router'
 import { TodayQueueRow } from '@web/components/task/today-queue-row'
 import type { Task } from '@web/hooks/use-tasks'
-import type { ReactNode } from 'react'
+import { type ReactNode, useRef, useState } from 'react'
 import { fn } from 'storybook/test'
 
 function Providers({ children }: { children: ReactNode }) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  const rootRoute = createRootRoute({
-    component: () => <>{children}</>,
-  })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
-  const taskRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/tasks/$taskId',
-    component: () => null,
-  })
-  rootRoute.addChildren([indexRoute, taskRoute])
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
+  const childrenRef = useRef(children)
+  childrenRef.current = children
+
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      }),
+  )
+
+  const [router] = useState(() => {
+    const rootRoute = createRootRoute({
+      component: () => <>{childrenRef.current}</>,
+    })
+    const indexRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/',
+      component: () => null,
+    })
+    const taskRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/tasks/$taskId',
+      component: () => null,
+    })
+    rootRoute.addChildren([indexRoute, taskRoute])
+    return createRouter({
+      routeTree: rootRoute,
+      history: createMemoryHistory({ initialEntries: ['/'] }),
+    })
   })
 
   return (
