@@ -47,7 +47,10 @@ Migrations are applied automatically by the test global setup (`api/src/global-s
 
 #### Web tests
 
+Storybook interaction tests run in a headless Playwright chromium browser, which must be installed once per machine.
+
 ```sh
+pnpm --filter web exec playwright install --with-deps chromium
 pnpm --filter web run test
 ```
 
