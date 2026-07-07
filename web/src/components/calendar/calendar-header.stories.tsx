@@ -98,7 +98,7 @@ export const InteractionTest: InteractionTestStory = {
   ),
   play: async ({ canvas, args, userEvent }) => {
     // Displays the formatted date with day of week
-    // findByText polls, unlike getByText, so this doesn't race the initial React commit
+    // play can run before the component's initial React commit lands
     await expect(await canvas.findByText(/March 7, 2025/)).toBeVisible()
     await expect(canvas.getByText(/Fri/)).toBeVisible()
 
