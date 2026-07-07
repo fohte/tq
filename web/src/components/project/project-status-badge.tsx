@@ -2,7 +2,7 @@ import { cn } from '@web/lib/utils'
 
 export type ProjectStatus = 'active' | 'paused' | 'completed' | 'archived'
 
-const statusConfig: Record<
+export const statusConfig: Record<
   ProjectStatus,
   { label: string; className: string }
 > = {

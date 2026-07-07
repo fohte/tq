@@ -1,3 +1,4 @@
+import { formatLocalDate } from '@web/lib/date-range'
 import { parseDurationToMinutes } from '@web/lib/parse-duration'
 
 export type TaskContext = 'work' | 'personal' | 'dev'
@@ -15,10 +16,6 @@ const CONTEXT_VALUES: readonly TaskContext[] = ['work', 'personal', 'dev']
 
 function isContextValue(value: string): value is TaskContext {
   return (CONTEXT_VALUES as readonly string[]).includes(value)
-}
-
-function formatLocalDate(d: Date): string {
-  return `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function resolveDateKeyword(keyword: string): string | null {
