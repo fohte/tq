@@ -124,11 +124,14 @@ function renderProjectDetailPage() {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
 
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <ProjectDetailPage />
-    </QueryClientProvider>,
-  )
+  return {
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <ProjectDetailPage />
+      </QueryClientProvider>,
+    ),
+    queryClient,
+  }
 }
 
 beforeEach(() => {
@@ -345,7 +348,6 @@ describe('ProjectDetailPage', () => {
     await user.click(atIndex(titleButtons, 0))
     await user.keyboard('{Escape}')
 
-    // Re-enter edit mode and save for real.
     const titleButtonsAfterCancel = screen.getAllByRole('button', {
       name: 'ISUCON14',
     })
@@ -418,18 +420,15 @@ describe('ProjectDetailPage', () => {
     })
   })
 
-  it('remounts the description editor when switching to a different project', () => {
+  it('remounts the description editor in both layouts when switching to a different project', () => {
     mockUseProject.mockReturnValue({
       data: mockProject,
       isLoading: false,
       error: null,
     })
-    const { rerender } = renderProjectDetailPage()
+    const { rerender, queryClient } = renderProjectDetailPage()
 
-    const editorBefore = atIndex(
-      screen.getAllByTestId('mock-markdown-editor'),
-      0,
-    )
+    const editorsBefore = screen.getAllByTestId('mock-markdown-editor')
 
     const otherProject = {
       ...mockProject,
@@ -441,22 +440,16 @@ describe('ProjectDetailPage', () => {
       isLoading: false,
       error: null,
     })
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    })
     rerender(
       <QueryClientProvider client={queryClient}>
         <ProjectDetailPage />
       </QueryClientProvider>,
     )
 
-    const editorAfter = atIndex(
-      screen.getAllByTestId('mock-markdown-editor'),
-      0,
-    )
-    expect(editorAfter).not.toBe(editorBefore)
+    const editorsAfter = screen.getAllByTestId('mock-markdown-editor')
+    expect(editorsAfter).toHaveLength(editorsBefore.length)
+    editorsAfter.forEach((editor, i) => {
+      expect(editor).not.toBe(editorsBefore[i])
+    })
   })
 })
