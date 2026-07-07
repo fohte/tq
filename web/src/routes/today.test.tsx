@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import type { Task } from '@web/hooks/use-tasks'
-import { Route } from '@web/routes/today'
+import { TodayFocus } from '@web/routes/today'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockUseTaskList = vi.fn()
@@ -20,16 +20,6 @@ vi.mock('@web/hooks/use-today-tasks', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useTodayTasks: (...args: unknown[]) => mockUseTodayTasks(...args),
 }))
-
-vi.mock('@tanstack/react-router', () => ({
-  createFileRoute: () => (opts: { component: React.ComponentType }) => ({
-    component: opts.component,
-  }),
-}))
-
-// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- extracting component from mocked Route object
-const TodayFocus = (Route as unknown as { component: React.ComponentType })
-  .component
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {

@@ -1,31 +1,23 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { FocusViewPresentation } from '@web/components/focus/focus-view'
 import type { Task } from '@web/hooks/use-tasks'
-import { useTaskList } from '@web/hooks/use-tasks'
+import { useTaskList, useTaskMap } from '@web/hooks/use-tasks'
 import { useTodayTasks } from '@web/hooks/use-today-tasks'
+import { formatLocalDate } from '@web/lib/date-range'
 import { useMemo } from 'react'
 
 export const Route = createFileRoute('/today')({
   component: TodayFocus,
 })
 
-function TodayFocus() {
+export function TodayFocus() {
   const { isLoading, categorized } = useTaskList()
 
-  const todayStr = useMemo(() => {
-    const now = new Date()
-    return `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  }, [])
+  const todayStr = useMemo(() => formatLocalDate(new Date()), [])
 
   const { data: todayTasksData } = useTodayTasks(todayStr)
 
-  const taskMap = useMemo(() => {
-    const map = new Map<string, Task>()
-    for (const task of categorized.all) {
-      map.set(task.id, task)
-    }
-    return map
-  }, [categorized.all])
+  const taskMap = useTaskMap(categorized.all)
 
   const queueTasks = useMemo(
     () =>

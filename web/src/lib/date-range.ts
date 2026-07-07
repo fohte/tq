@@ -1,3 +1,8 @@
+/** Format a Date as a local "YYYY-MM-DD" string (no UTC conversion). */
+export function formatLocalDate(date: Date): string {
+  return `${String(date.getFullYear())}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
 /**
  * Convert a local "YYYY-MM-DD" date string into the UTC ISO datetime range
  * covering that local day, for querying APIs that take timeMin/timeMax.

@@ -2,6 +2,10 @@ import { act, renderHook } from '@testing-library/react'
 import { useFocusNotes } from '@web/hooks/use-focus-notes'
 import { beforeEach, describe, expect, it } from 'vitest'
 
+function seedNotes(taskId: string, value: string) {
+  localStorage.setItem(`tq:focus-notes:${taskId}`, value)
+}
+
 beforeEach(() => {
   localStorage.clear()
 })
@@ -14,26 +18,27 @@ describe('useFocusNotes', () => {
   })
 
   it('returns previously stored notes for the task', () => {
-    localStorage.setItem('tq:focus-notes:task-1', 'existing notes')
+    seedNotes('task-1', 'existing notes')
 
     const { result } = renderHook(() => useFocusNotes('task-1'))
 
     expect(result.current[0]).toBe('existing notes')
   })
 
-  it('persists updated notes to localStorage', () => {
+  it('persists updated notes so a new hook instance for the same task sees them', () => {
     const { result } = renderHook(() => useFocusNotes('task-1'))
 
     act(() => {
       result.current[1]('new notes')
     })
 
-    expect(result.current[0]).toBe('new notes')
-    expect(localStorage.getItem('tq:focus-notes:task-1')).toBe('new notes')
+    const { result: reloaded } = renderHook(() => useFocusNotes('task-1'))
+
+    expect(reloaded.current[0]).toBe('new notes')
   })
 
   it('loads the new task notes when taskId changes', () => {
-    localStorage.setItem('tq:focus-notes:task-2', 'task 2 notes')
+    seedNotes('task-2', 'task 2 notes')
     const { result, rerender } = renderHook(
       ({ taskId }) => useFocusNotes(taskId),
       { initialProps: { taskId: 'task-1' } },
