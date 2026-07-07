@@ -12,6 +12,7 @@ export function EventBlock(arg: EventContentArg) {
   const label = props.label
   const color = props.color
   const iconName = props.icon
+  const redacted = props.redacted ?? false
 
   const isShort = arg.isStart && isShortEvent(event)
 
@@ -23,6 +24,10 @@ export function EventBlock(arg: EventContentArg) {
   ]
     .filter(Boolean)
     .join('  ·  ')
+
+  if (redacted) {
+    return <HasPlansBlock timeText={timeText} isShort={isShort} />
+  }
 
   if (type === 'schedule') {
     return (
@@ -236,6 +241,38 @@ function AutoBlock({
           </div>
           <div className="font-mono text-[10px] text-muted-foreground">
             {timeDetails}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function HasPlansBlock({
+  timeText,
+  isShort,
+}: {
+  timeText: string
+  isShort: boolean
+}) {
+  return (
+    <div className="h-full overflow-hidden rounded-md bg-muted px-2.5 py-1">
+      {isShort ? (
+        <div className="flex items-center gap-1.5">
+          <span className="truncate text-xs font-medium text-muted-foreground">
+            予定あり
+          </span>
+          <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+            {timeText}
+          </span>
+        </div>
+      ) : (
+        <>
+          <span className="truncate text-[13px] font-medium text-muted-foreground">
+            予定あり
+          </span>
+          <div className="font-mono text-[10px] text-muted-foreground">
+            {timeText}
           </div>
         </>
       )}

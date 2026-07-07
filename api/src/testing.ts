@@ -72,3 +72,11 @@ export function assertDefined<T>(
   expect(value, msg ?? 'Expected value to be defined').not.toBeNull()
   expect(value, msg ?? 'Expected value to be defined').toBeDefined()
 }
+
+/**
+ * Create a File with deterministic (zero-filled) content of the given size,
+ * for tests exercising upload validation without needing real image bytes.
+ */
+export function makeFile(name: string, type: string, sizeBytes: number): File {
+  return new File([Buffer.alloc(sizeBytes)], name, { type })
+}

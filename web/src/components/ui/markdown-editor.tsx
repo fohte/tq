@@ -3,7 +3,14 @@ import '@milkdown/crepe/theme/frame-dark.css'
 import '@web/components/ui/markdown-editor.css'
 
 import { Crepe } from '@milkdown/crepe'
+import { upload, uploadConfig } from '@milkdown/plugin-upload'
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
+import {
+  handleImageLoadError,
+  resolveImageSrc,
+  uploadImageFile,
+  uploadImageFiles,
+} from '@web/lib/image-upload'
 import { useRef } from 'react'
 
 interface MarkdownEditorProps {
@@ -24,6 +31,26 @@ function CrepeEditor({
       root,
       defaultValue: defaultValue ?? '',
       ...(placeholder != null ? { placeholder } : {}),
+      featureConfigs: {
+        [Crepe.Feature.ImageBlock]: {
+          onUpload: uploadImageFile,
+          proxyDomURL: resolveImageSrc,
+          onImageLoadError: handleImageLoadError,
+        },
+      },
+    })
+
+    // Crepe's image-block feature only covers file-picker uploads; wire up
+    // plugin-upload so pasting/dropping an image anywhere in the editor
+    // uploads it too.
+    crepe.editor.use(upload).config((ctx) => {
+      ctx.update(uploadConfig.key, (prev) => ({
+        ...prev,
+        uploader: (files, schema) =>
+          uploadImageFiles(files, (src, alt) =>
+            schema.nodes['image']?.createAndFill({ src, alt }),
+          ),
+      }))
     })
 
     if (onChange) {
