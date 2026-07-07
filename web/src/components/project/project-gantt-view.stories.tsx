@@ -9,7 +9,7 @@ import {
 } from '@tanstack/react-router'
 import { ProjectGanttView } from '@web/components/project/project-gantt-view'
 import type { ProjectTask } from '@web/hooks/use-projects'
-import { createContext, type ReactNode, useContext } from 'react'
+import { createContext, type ReactNode, useContext, useState } from 'react'
 
 function formatDateOffset(days: number): string {
   const d = new Date()
@@ -86,41 +86,46 @@ const sampleTasks: ProjectTask[] = [
   },
 ]
 
-const StoryContext = createContext<ReactNode>(null)
+const ChildrenContext = createContext<ReactNode>(null)
 
-const rootRoute = createRootRoute({
-  component: () => {
-    const children = useContext(StoryContext)
-    return <>{children}</>
-  },
-})
-const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/',
-  component: () => null,
-})
-const taskRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/tasks/$taskId',
-  component: () => null,
-})
-rootRoute.addChildren([indexRoute, taskRoute])
-
-const router = createRouter({
-  routeTree: rootRoute,
-  history: createMemoryHistory({ initialEntries: ['/'] }),
-})
-
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: false } },
-})
+function RootRouteContent() {
+  return <>{useContext(ChildrenContext)}</>
+}
 
 function Providers({ children }: { children: ReactNode }) {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      }),
+  )
+
+  const [router] = useState(() => {
+    const rootRoute = createRootRoute({
+      component: RootRouteContent,
+    })
+    const indexRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/',
+      component: () => null,
+    })
+    const taskRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/tasks/$taskId',
+      component: () => null,
+    })
+    rootRoute.addChildren([indexRoute, taskRoute])
+    return createRouter({
+      routeTree: rootRoute,
+      history: createMemoryHistory({ initialEntries: ['/'] }),
+    })
+  })
+
   return (
     <QueryClientProvider client={queryClient}>
-      <StoryContext.Provider value={children}>
+      <ChildrenContext.Provider value={children}>
         <RouterProvider router={router} />
-      </StoryContext.Provider>
+      </ChildrenContext.Provider>
     </QueryClientProvider>
   )
 }
