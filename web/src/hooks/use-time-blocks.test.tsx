@@ -182,6 +182,126 @@ describe('useUpdateTimeBlock', () => {
     })
   })
 
+  it('sends isAutoScheduled: false when promoting a dragged block to manual', async () => {
+    const mocks = await getMocks()
+    const autoBlock = { ...sampleBlock, isAutoScheduled: true }
+    const promotedBlock = {
+      ...autoBlock,
+      startTime: '2026-03-22T11:00:00.000Z',
+      endTime: '2026-03-22T12:00:00.000Z',
+      isAutoScheduled: false,
+    }
+
+    assertDefined(mocks['mockGet']).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([autoBlock]),
+    })
+    assertDefined(mocks['mockPatch']).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(promotedBlock),
+    })
+
+    // Populate cache
+    const { result: queryResult } = renderHook(
+      () => useTimeBlocks('2026-03-22'),
+      { wrapper },
+    )
+    await waitFor(() => {
+      expect(queryResult.current.isSuccess).toBe(true)
+    })
+
+    // Simulate a drag: the block moves and is promoted to manual
+    const { result } = renderHook(() => useUpdateTimeBlock(), { wrapper })
+
+    act(() => {
+      result.current.mutate({
+        id: 'block-1',
+        startTime: '2026-03-22T11:00:00.000Z',
+        endTime: '2026-03-22T12:00:00.000Z',
+        isAutoScheduled: false,
+      })
+    })
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
+
+    expect(assertDefined(mocks['mockPatch']).mock.calls).toEqual([
+      [
+        {
+          param: { id: 'block-1' },
+          json: {
+            startTime: '2026-03-22T11:00:00.000Z',
+            endTime: '2026-03-22T12:00:00.000Z',
+            isAutoScheduled: false,
+          },
+        },
+      ],
+    ])
+  })
+
+  it('applies the isAutoScheduled promotion optimistically before the request settles', async () => {
+    const mocks = await getMocks()
+    const autoBlock = { ...sampleBlock, isAutoScheduled: true }
+
+    assertDefined(mocks['mockGet']).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([autoBlock]),
+    })
+
+    // Hold the PATCH response so the in-flight optimistic state is
+    // observable before the request settles
+    let resolvePatch: (value: unknown) => void = () => {
+      throw new Error('resolvePatch called before being assigned')
+    }
+    const patchResponsePromise = new Promise((resolve) => {
+      resolvePatch = resolve
+    })
+    assertDefined(mocks['mockPatch']).mockReturnValue(patchResponsePromise)
+
+    // Populate cache
+    const { result: queryResult } = renderHook(
+      () => useTimeBlocks('2026-03-22'),
+      { wrapper },
+    )
+    await waitFor(() => {
+      expect(queryResult.current.isSuccess).toBe(true)
+    })
+
+    // Simulate a drag: the block moves and is promoted to manual
+    const { result } = renderHook(() => useUpdateTimeBlock(), { wrapper })
+
+    act(() => {
+      result.current.mutate({
+        id: 'block-1',
+        startTime: '2026-03-22T11:00:00.000Z',
+        endTime: '2026-03-22T12:00:00.000Z',
+        isAutoScheduled: false,
+      })
+    })
+
+    // Optimistic update applies isAutoScheduled: false immediately, while
+    // the PATCH request is still in flight
+    await waitFor(() => {
+      expect(queryResult.current.data?.[0]?.isAutoScheduled).toBe(false)
+    })
+
+    resolvePatch({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          ...autoBlock,
+          startTime: '2026-03-22T11:00:00.000Z',
+          endTime: '2026-03-22T12:00:00.000Z',
+          isAutoScheduled: false,
+        }),
+    })
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
+  })
+
   it('rolls back on error', async () => {
     const mocks = await getMocks()
 

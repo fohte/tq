@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import {
   GcalAuthRequiredError,
+  useAutoRescheduleOnGcalChange,
   useGcalAuthUrl,
   useGcalEvents,
 } from '@web/hooks/use-gcal-events'
@@ -118,6 +119,110 @@ describe('useGcalEvents', () => {
       expect(result.current.isError).toBe(true)
     })
     expect(result.current.error).toBeInstanceOf(GcalAuthRequiredError)
+  })
+
+  it('polls for external calendar changes while mounted', async () => {
+    vi.useFakeTimers()
+    try {
+      const mocks = await getMocks()
+      assertDefined(mocks['mockEventsGet']).mockResolvedValue({
+        status: 200,
+        ok: true,
+        json: () => Promise.resolve([sampleEvent]),
+      })
+
+      renderHook(() => useGcalEvents('2026-07-07'), { wrapper })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(assertDefined(mocks['mockEventsGet']).mock.calls.length).toBe(1)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000)
+      })
+      expect(assertDefined(mocks['mockEventsGet']).mock.calls.length).toBe(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+describe('useAutoRescheduleOnGcalChange', () => {
+  it('does not call onChange on the first render', () => {
+    const onChange = vi.fn()
+    renderHook(
+      ({ events }) => {
+        useAutoRescheduleOnGcalChange(events, onChange)
+      },
+      { initialProps: { events: [sampleEvent] } },
+    )
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('calls onChange when the events change to a new value', () => {
+    const onChange = vi.fn()
+    const { rerender } = renderHook(
+      ({ events }) => {
+        useAutoRescheduleOnGcalChange(events, onChange)
+      },
+      { initialProps: { events: [sampleEvent] } },
+    )
+
+    rerender({
+      events: [sampleEvent, { ...sampleEvent, id: 'gcal-event-2' }],
+    })
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not call onChange when rerendered with the same reference', () => {
+    const onChange = vi.fn()
+    const events = [sampleEvent]
+    const { rerender } = renderHook(
+      ({ events }) => {
+        useAutoRescheduleOnGcalChange(events, onChange)
+      },
+      { initialProps: { events } },
+    )
+
+    rerender({ events })
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('does not call onChange while events is still undefined', () => {
+    const onChange = vi.fn()
+    const { rerender } = renderHook(
+      ({ events }: { events: (typeof sampleEvent)[] | undefined }) => {
+        useAutoRescheduleOnGcalChange(events, onChange)
+      },
+      { initialProps: { events: undefined } },
+    )
+
+    rerender({ events: undefined })
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('does not call onChange when the initial query load resolves', () => {
+    const onChange = vi.fn()
+    const { rerender } = renderHook(
+      ({ events }: { events: (typeof sampleEvent)[] | undefined }) => {
+        useAutoRescheduleOnGcalChange(events, onChange)
+      },
+      {
+        initialProps: {
+          events: undefined as (typeof sampleEvent)[] | undefined,
+        },
+      },
+    )
+
+    // The query finishes loading and returns data for the first time
+    rerender({ events: [sampleEvent] })
+
+    expect(onChange).not.toHaveBeenCalled()
   })
 })
 

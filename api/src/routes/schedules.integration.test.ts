@@ -100,11 +100,12 @@ async function createTimeBlock(
   taskId: string,
   startTime: string,
   endTime: string | null,
+  isAutoScheduled = false,
 ) {
   const res = await app.request('/api/schedule/time-blocks', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ taskId, startTime, endTime }),
+    body: JSON.stringify({ taskId, startTime, endTime, isAutoScheduled }),
   })
   return { res, body: await jsonBody<TimeBlockResponse>(res) }
 }
@@ -250,6 +251,38 @@ describe('schedule/time-blocks API', () => {
       })
 
       expect(res.status).toBe(404)
+    })
+
+    it('promotes an auto-scheduled block to manual (simulating drag adjustment)', async () => {
+      const task = await createTask('Auto-placed task')
+      const { body: created } = await createTimeBlock(
+        task.id,
+        '2026-03-22T09:00:00.000Z',
+        '2026-03-22T10:00:00.000Z',
+        /* isAutoScheduled */ true,
+      )
+
+      const res = await app.request(`/api/schedule/time-blocks/${created.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startTime: '2026-03-22T11:00:00.000Z',
+          endTime: '2026-03-22T12:00:00.000Z',
+          isAutoScheduled: false,
+        }),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TimeBlockResponse>(res)
+      expect(normalizeTimeBlock(body)).toEqual({
+        id: 'ID',
+        taskId: task.id,
+        startTime: '2026-03-22T11:00:00.000Z',
+        endTime: '2026-03-22T12:00:00.000Z',
+        isAutoScheduled: false,
+        createdAt: 'TIMESTAMP',
+        updatedAt: 'TIMESTAMP',
+      })
     })
   })
 
@@ -840,6 +873,55 @@ describe('schedule/auto-assign API', () => {
 
       expect(res.status).toBe(200)
       expect(body).toEqual([])
+    })
+
+    it('keeps a block promoted to manual instead of overwriting it on re-run', async () => {
+      const taskA = await createTask('Task A', { estimatedMinutes: 30 })
+      await putTodayTasks([taskA.id], '2026-03-22')
+      const { body: firstRun } = await requestAutoAssign('2026-03-22')
+      const dragged = firstRun[0]
+      assertDefined(dragged)
+
+      // Simulate the user dragging the auto-placed block to a new time,
+      // which promotes it to manual.
+      await app.request(`/api/schedule/time-blocks/${dragged.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startTime: '2026-03-22T02:00:00.000Z',
+          endTime: '2026-03-22T02:30:00.000Z',
+          isAutoScheduled: false,
+        }),
+      })
+
+      const taskB = await createTask('Task B', { estimatedMinutes: 30 })
+      await putTodayTasks([taskB.id], '2026-03-22')
+      await requestAutoAssign('2026-03-22')
+
+      const listRes = await app.request(
+        '/api/schedule/time-blocks?date=2026-03-22',
+      )
+      const blocks = await jsonBody<TimeBlockResponse[]>(listRes)
+      expect(blocks.map(normalizeTimeBlock)).toEqual([
+        {
+          id: 'ID',
+          taskId: taskB.id,
+          startTime: '2026-03-22T00:00:00.000Z',
+          endTime: '2026-03-22T00:30:00.000Z',
+          isAutoScheduled: true,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+        {
+          id: 'ID',
+          taskId: taskA.id,
+          startTime: '2026-03-22T02:00:00.000Z',
+          endTime: '2026-03-22T02:30:00.000Z',
+          isAutoScheduled: false,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ])
     })
 
     it('returns 400 for a malformed date', async () => {
