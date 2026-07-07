@@ -9,7 +9,7 @@ import {
 } from '@tanstack/react-router'
 import { ProjectGanttView } from '@web/components/project/project-gantt-view'
 import type { ProjectTask } from '@web/hooks/use-projects'
-import type { ReactNode } from 'react'
+import { createContext, type ReactNode, useContext } from 'react'
 
 function formatDateOffset(days: number): string {
   const d = new Date()
@@ -86,33 +86,41 @@ const sampleTasks: ProjectTask[] = [
   },
 ]
 
+const StoryContext = createContext<ReactNode>(null)
+
+const rootRoute = createRootRoute({
+  component: () => {
+    const children = useContext(StoryContext)
+    return <>{children}</>
+  },
+})
+const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: () => null,
+})
+const taskRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/tasks/$taskId',
+  component: () => null,
+})
+rootRoute.addChildren([indexRoute, taskRoute])
+
+const router = createRouter({
+  routeTree: rootRoute,
+  history: createMemoryHistory({ initialEntries: ['/'] }),
+})
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+})
+
 function Providers({ children }: { children: ReactNode }) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  const rootRoute = createRootRoute({
-    component: () => <>{children}</>,
-  })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
-  const taskRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/tasks/$taskId',
-    component: () => null,
-  })
-  rootRoute.addChildren([indexRoute, taskRoute])
-
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <StoryContext.Provider value={children}>
+        <RouterProvider router={router} />
+      </StoryContext.Provider>
     </QueryClientProvider>
   )
 }
