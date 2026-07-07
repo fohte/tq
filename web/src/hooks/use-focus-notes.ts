@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-const PERSIST_DEBOUNCE_MS = 300
+export const PERSIST_DEBOUNCE_MS = 300
 
 function storageKey(taskId: string): string {
   return `tq:focus-notes:${taskId}`
@@ -14,31 +14,44 @@ function readNotes(taskId: string): string {
   }
 }
 
+function writeNotes(taskId: string, value: string): void {
+  try {
+    localStorage.setItem(storageKey(taskId), value)
+  } catch {
+    // best-effort persistence; keep the in-memory value even if storage write fails
+  }
+}
+
 /**
  * Work notes for Focus mode aren't backed by a DB column (tasks only have a
  * WYSIWYG `description`), so they're persisted client-side per task.
  */
 export function useFocusNotes(taskId: string) {
-  const [notes, setNotes] = useState(() => readNotes(taskId))
+  const [notes, setNotesState] = useState(() => readNotes(taskId))
+  const pendingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingSaveRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    setNotes(readNotes(taskId))
+    setNotesState(readNotes(taskId))
+
+    // Flush the outgoing task's pending edit instead of dropping it.
+    return () => {
+      if (pendingRef.current) clearTimeout(pendingRef.current)
+      pendingSaveRef.current?.()
+      pendingSaveRef.current = null
+    }
   }, [taskId])
 
-  // Debounced so rapid typing doesn't write to localStorage on every keystroke.
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      try {
-        localStorage.setItem(storageKey(taskId), notes)
-      } catch {
-        // best-effort persistence; keep the in-memory value even if storage write fails
-      }
-    }, PERSIST_DEBOUNCE_MS)
-
-    return () => {
-      clearTimeout(timeoutId)
+  const setNotes = (value: string) => {
+    setNotesState(value)
+    if (pendingRef.current) clearTimeout(pendingRef.current)
+    const doSave = () => {
+      writeNotes(taskId, value)
+      pendingSaveRef.current = null
     }
-  }, [notes, taskId])
+    pendingSaveRef.current = doSave
+    pendingRef.current = setTimeout(doSave, PERSIST_DEBOUNCE_MS)
+  }
 
   return [notes, setNotes] as const
 }

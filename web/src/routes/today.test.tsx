@@ -157,7 +157,7 @@ describe('TodayFocus', () => {
   })
 
   it("shows a loading spinner while today's queue is still loading even after the task list finishes", () => {
-    setup({ all: [], queue: [], isTodayTasksLoading: true })
+    setup({ all: [], queue: [], isLoading: false, isTodayTasksLoading: true })
 
     renderToday()
 
