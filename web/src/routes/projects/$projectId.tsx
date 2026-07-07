@@ -13,7 +13,11 @@ export const Route = createFileRoute('/projects/$projectId')({
 
 function ProjectDetailPage() {
   const { projectId } = Route.useParams()
-  const { data: project, isLoading: isProjectLoading } = useProject(projectId)
+  const {
+    data: project,
+    isLoading: isProjectLoading,
+    error,
+  } = useProject(projectId)
   const { data: tasks, isLoading: isTasksLoading } = useProjectTasks(projectId)
 
   const isLoading = isProjectLoading || isTasksLoading
@@ -26,7 +30,7 @@ function ProjectDetailPage() {
     )
   }
 
-  if (!project) {
+  if (error || !project) {
     return (
       <div className="flex h-full items-center justify-center">
         <p className="text-muted-foreground">Project not found</p>

@@ -34,9 +34,14 @@ export function getDaysRemaining(
   now: Date = new Date(),
 ): number {
   const target = new Date(`${targetDate}T00:00:00`)
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const targetUTC = Date.UTC(
+    target.getFullYear(),
+    target.getMonth(),
+    target.getDate(),
+  )
+  const todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
   const msPerDay = 24 * 60 * 60 * 1000
-  return Math.ceil((target.getTime() - today.getTime()) / msPerDay)
+  return Math.round((targetUTC - todayUTC) / msPerDay)
 }
 
 export function summarizeTaskStatus(tasks: ProjectTask[]): {

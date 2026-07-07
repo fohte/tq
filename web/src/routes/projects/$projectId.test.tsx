@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { atIndex } from '@web/lib/test-utils'
+import { assertDefined, atIndex } from '@web/lib/test-utils'
 // Import after mocks
 import { Route } from '@web/routes/projects/$projectId'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -17,8 +17,6 @@ const mockProject = {
   sortOrder: 0,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
-  completionRate: 0.4,
-  taskCount: { total: 5, completed: 2 },
 }
 
 const baseTask = {
@@ -159,7 +157,7 @@ describe('ProjectDetailPage', () => {
     expect(document.querySelector('.animate-spin')).toBeTruthy()
   })
 
-  it('shows error state when project not found', () => {
+  it('shows not-found state when the project request errors', () => {
     mockUseProject.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -169,15 +167,17 @@ describe('ProjectDetailPage', () => {
     expect(screen.getByText('Project not found')).toBeInTheDocument()
   })
 
-  it('renders breadcrumb and title', () => {
+  it('renders breadcrumb and title once per layout (PC + SP)', () => {
     mockUseProject.mockReturnValue({
       data: mockProject,
       isLoading: false,
       error: null,
     })
     renderProjectDetailPage()
-    expect(screen.getAllByText('Projects').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('ISUCON14').length).toBeGreaterThan(0)
+    // breadcrumb "Projects" link (PC + SP) + the SP back-nav "Projects" link
+    expect(screen.getAllByText('Projects')).toHaveLength(3)
+    // breadcrumb leaf + title button, per layout
+    expect(screen.getAllByText('ISUCON14')).toHaveLength(4)
   })
 
   it('renders description editor with project description', () => {
@@ -196,27 +196,52 @@ describe('ProjectDetailPage', () => {
     expect(editorWithDescription).toBeTruthy()
   })
 
-  it('renders task progress summary', () => {
+  it('saves the description after the debounce delay', () => {
     mockUseProject.mockReturnValue({
       data: mockProject,
       isLoading: false,
       error: null,
     })
     renderProjectDetailPage()
-    expect(screen.getAllByText(/2\/5 completed/).length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/\(40%\)/).length).toBeGreaterThan(0)
+
+    const editors = screen.getAllByTestId('mock-markdown-editor')
+    const editor = assertDefined(
+      editors.find(
+        (e) =>
+          e instanceof HTMLTextAreaElement &&
+          e.defaultValue === mockProject.description,
+      ),
+    )
+    fireEvent.change(editor, { target: { value: 'Updated description' } })
+    vi.advanceTimersByTime(1000)
+
+    expect(mockUpdateMutate).toHaveBeenCalledWith({
+      id: mockProject.id,
+      input: { description: 'Updated description' },
+    })
   })
 
-  it('renders status breakdown counts', () => {
+  it('renders task progress summary once per layout (PC + SP)', () => {
     mockUseProject.mockReturnValue({
       data: mockProject,
       isLoading: false,
       error: null,
     })
     renderProjectDetailPage()
-    expect(screen.getAllByText('Todo: 2').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('In Progress: 1').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Completed: 2').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/2\/5 completed/)).toHaveLength(2)
+    expect(screen.getAllByText(/\(40%\)/)).toHaveLength(2)
+  })
+
+  it('renders status breakdown counts once per layout (PC + SP)', () => {
+    mockUseProject.mockReturnValue({
+      data: mockProject,
+      isLoading: false,
+      error: null,
+    })
+    renderProjectDetailPage()
+    expect(screen.getAllByText('Todo: 2')).toHaveLength(2)
+    expect(screen.getAllByText('In Progress: 1')).toHaveLength(2)
+    expect(screen.getAllByText('Completed: 2')).toHaveLength(2)
   })
 
   it('renders a View Board link to the project board route', () => {
@@ -227,35 +252,45 @@ describe('ProjectDetailPage', () => {
     })
     renderProjectDetailPage()
     const links = screen.getAllByText('View Board →')
-    expect(links.length).toBeGreaterThan(0)
-    expect(links[0]?.closest('a')).toHaveAttribute(
-      'href',
-      '/projects/$projectId/board',
-    )
+    expect(links).toHaveLength(2)
+    for (const link of links) {
+      expect(link.closest('a')).toHaveAttribute(
+        'href',
+        '/projects/$projectId/board',
+      )
+    }
   })
 
-  it('renders sidebar field labels', () => {
+  it('renders sidebar field labels once per layout (PC + SP)', () => {
     mockUseProject.mockReturnValue({
       data: mockProject,
       isLoading: false,
       error: null,
     })
     renderProjectDetailPage()
-    expect(screen.getAllByText('Status').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getAllByText('Start date').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getAllByText('Target date').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getAllByText('Color').length).toBeGreaterThanOrEqual(2)
+    const labelCounts = {
+      Status: screen.getAllByText('Status').length,
+      'Start date': screen.getAllByText('Start date').length,
+      'Target date': screen.getAllByText('Target date').length,
+      Color: screen.getAllByText('Color').length,
+    }
+    expect(labelCounts).toEqual({
+      Status: 2,
+      'Start date': 2,
+      'Target date': 2,
+      Color: 2,
+    })
   })
 
-  it('renders remaining days based on the target date', () => {
+  it('renders remaining days based on the target date once per layout (PC + SP)', () => {
     mockUseProject.mockReturnValue({
       data: mockProject,
       isLoading: false,
       error: null,
     })
     renderProjectDetailPage()
-    expect(screen.getAllByText('23 days remaining').length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/Target: Dec 8, 2024/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('23 days remaining')).toHaveLength(2)
+    expect(screen.getAllByText(/Target: Dec 8, 2024/)).toHaveLength(2)
   })
 
   it('does not render remaining days when target date is not set', () => {
