@@ -259,6 +259,7 @@ function EditableProjectTitle({
     <button
       type="button"
       onClick={() => {
+        savingRef.current = false
         setIsEditing(true)
       }}
       className="flex-1 cursor-text text-left text-2xl font-bold text-foreground"

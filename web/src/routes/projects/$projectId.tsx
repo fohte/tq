@@ -43,10 +43,14 @@ function ProjectDetailPage() {
       {/* PC layout */}
       <div className="hidden h-full md:flex">
         <div className="flex-1 overflow-y-auto p-6">
-          <ProjectMainContent project={project} tasks={tasks ?? []} />
+          <ProjectMainContent
+            key={project.id}
+            project={project}
+            tasks={tasks ?? []}
+          />
         </div>
         <div className="w-60 shrink-0 overflow-y-auto border-l border-border p-4">
-          <ProjectSidebar project={project} />
+          <ProjectSidebar key={project.id} project={project} />
         </div>
       </div>
 
@@ -62,10 +66,14 @@ function ProjectDetailPage() {
           </Link>
         </div>
         <div className="p-4">
-          <ProjectMainContent project={project} tasks={tasks ?? []} />
+          <ProjectMainContent
+            key={project.id}
+            project={project}
+            tasks={tasks ?? []}
+          />
         </div>
         <div className="border-t border-border p-4">
-          <ProjectSidebarMobile project={project} />
+          <ProjectSidebarMobile key={project.id} project={project} />
         </div>
       </div>
     </>

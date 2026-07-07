@@ -329,6 +329,38 @@ describe('ProjectDetailPage', () => {
     })
   })
 
+  it('does not swallow the next save after cancelling a title edit with Escape', async () => {
+    mockUseProject.mockReturnValue({
+      data: mockProject,
+      isLoading: false,
+      error: null,
+    })
+    renderProjectDetailPage()
+    vi.useRealTimers()
+    const user = userEvent.setup()
+
+    // Cancel a first edit with Escape without ever blurring the input,
+    // simulating a browser that doesn't synchronously fire blur on unmount.
+    const titleButtons = screen.getAllByRole('button', { name: 'ISUCON14' })
+    await user.click(atIndex(titleButtons, 0))
+    await user.keyboard('{Escape}')
+
+    // Re-enter edit mode and save for real.
+    const titleButtonsAfterCancel = screen.getAllByRole('button', {
+      name: 'ISUCON14',
+    })
+    await user.click(atIndex(titleButtonsAfterCancel, 0))
+    const input = screen.getByDisplayValue('ISUCON14')
+    await user.clear(input)
+    await user.type(input, 'Updated title')
+    await user.keyboard('{Enter}')
+
+    expect(mockUpdateMutate).toHaveBeenCalledWith({
+      id: mockProject.id,
+      input: { title: 'Updated title' },
+    })
+  })
+
   it('updates status via the sidebar select', async () => {
     mockUseProject.mockReturnValue({
       data: mockProject,
@@ -384,5 +416,47 @@ describe('ProjectDetailPage', () => {
       id: mockProject.id,
       input: { color: '#4CAF50' },
     })
+  })
+
+  it('remounts the description editor when switching to a different project', () => {
+    mockUseProject.mockReturnValue({
+      data: mockProject,
+      isLoading: false,
+      error: null,
+    })
+    const { rerender } = renderProjectDetailPage()
+
+    const editorBefore = atIndex(
+      screen.getAllByTestId('mock-markdown-editor'),
+      0,
+    )
+
+    const otherProject = {
+      ...mockProject,
+      id: 'p2',
+      description: 'A different description',
+    }
+    mockUseProject.mockReturnValue({
+      data: otherProject,
+      isLoading: false,
+      error: null,
+    })
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    })
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <ProjectDetailPage />
+      </QueryClientProvider>,
+    )
+
+    const editorAfter = atIndex(
+      screen.getAllByTestId('mock-markdown-editor'),
+      0,
+    )
+    expect(editorAfter).not.toBe(editorBefore)
   })
 })
