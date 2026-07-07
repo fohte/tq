@@ -98,7 +98,8 @@ export const InteractionTest: InteractionTestStory = {
   ),
   play: async ({ canvas, args, userEvent }) => {
     // Displays the formatted date with day of week
-    await expect(canvas.getByText(/March 7, 2025/)).toBeVisible()
+    // play can run before the component's initial React commit lands
+    await expect(await canvas.findByText(/March 7, 2025/)).toBeVisible()
     await expect(canvas.getByText(/Fri/)).toBeVisible()
 
     // Renders all three view options
