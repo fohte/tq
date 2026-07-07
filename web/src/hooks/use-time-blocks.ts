@@ -95,6 +95,7 @@ export interface UpdateTimeBlockInput {
   id: string
   startTime?: string
   endTime?: string | null
+  isAutoScheduled?: boolean
 }
 
 export function useUpdateTimeBlock() {
@@ -130,6 +131,9 @@ export function useUpdateTimeBlock() {
                 : {}),
               ...(input.endTime !== undefined
                 ? { endTime: input.endTime }
+                : {}),
+              ...(input.isAutoScheduled !== undefined
+                ? { isAutoScheduled: input.isAutoScheduled }
                 : {}),
               updatedAt: new Date().toISOString(),
             }

@@ -214,7 +214,7 @@ function AutoBlock({
   isShort: boolean
 }) {
   return (
-    <div className="h-full overflow-hidden rounded-md border border-primary bg-[#2D1F0F] px-2.5 py-1">
+    <div className="h-full overflow-hidden rounded-md border border-dashed border-primary bg-primary/15 px-2.5 py-1">
       {isShort ? (
         <div className="flex items-center gap-1.5">
           <span className="truncate text-xs font-medium text-white">

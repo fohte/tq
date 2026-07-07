@@ -5,6 +5,7 @@ import { DayViewPresentation } from '@web/components/day-view/day-view'
 import { useContextFilter } from '@web/hooks/use-context-filter'
 import {
   GcalAuthRequiredError,
+  useAutoRescheduleOnGcalChange,
   useGcalAuthUrl,
   useGcalEvents,
 } from '@web/hooks/use-gcal-events'
@@ -158,6 +159,7 @@ function DayView() {
             id: eventId,
             startTime: newStart.toISOString(),
             endTime: newEnd.toISOString(),
+            isAutoScheduled: false,
           },
           {
             onError: () => {
@@ -172,6 +174,7 @@ function DayView() {
             id: eventId,
             startTime: newStart.toISOString(),
             endTime: newEnd.toISOString(),
+            isAutoScheduled: false,
           },
           {
             onError: () => {
@@ -205,11 +208,21 @@ function DayView() {
   }
 
   const handleAutoAssign = () => {
-    autoAssign.mutate({
-      date: todayStr,
-      tzOffset: new Date().getTimezoneOffset(),
-    })
+    if (autoAssign.isPending) return
+    autoAssign.mutate(
+      {
+        date: todayStr,
+        tzOffset: new Date().getTimezoneOffset(),
+      },
+      {
+        onError: (error) => {
+          console.error('Failed to auto-assign tasks', error)
+        },
+      },
+    )
   }
+
+  useAutoRescheduleOnGcalChange(gcalEventsQuery.data, handleAutoAssign)
 
   return (
     <DayViewPresentation

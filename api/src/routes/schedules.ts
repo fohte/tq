@@ -465,10 +465,16 @@ export const schedulesApp = new Hono()
         : []
 
     if (staleAutoBlocks.length > 0) {
+      // Re-check isAutoScheduled at delete time (not just at the SELECT
+      // above) so a block promoted to manual between the two doesn't get
+      // deleted underneath a concurrent drag/resize.
       await db.delete(timeBlocks).where(
-        inArray(
-          timeBlocks.id,
-          staleAutoBlocks.map((b) => b.id),
+        and(
+          inArray(
+            timeBlocks.id,
+            staleAutoBlocks.map((b) => b.id),
+          ),
+          eq(timeBlocks.isAutoScheduled, true),
         ),
       )
     }
