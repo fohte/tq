@@ -11,13 +11,16 @@ import {
 } from '@tanstack/react-router'
 import { TodayQueueRow } from '@web/components/task/today-queue-row'
 import type { Task } from '@web/hooks/use-tasks'
-import { type ReactNode, useRef, useState } from 'react'
+import { createContext, type ReactNode, useContext, useState } from 'react'
 import { fn } from 'storybook/test'
 
-function Providers({ children }: { children: ReactNode }) {
-  const childrenRef = useRef(children)
-  childrenRef.current = children
+const ChildrenContext = createContext<ReactNode>(null)
 
+function RootRouteContent() {
+  return <>{useContext(ChildrenContext)}</>
+}
+
+function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -27,7 +30,7 @@ function Providers({ children }: { children: ReactNode }) {
 
   const [router] = useState(() => {
     const rootRoute = createRootRoute({
-      component: () => <>{childrenRef.current}</>,
+      component: RootRouteContent,
     })
     const indexRoute = createRoute({
       getParentRoute: () => rootRoute,
@@ -48,7 +51,9 @@ function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <ChildrenContext.Provider value={children}>
+        <RouterProvider router={router} />
+      </ChildrenContext.Provider>
     </QueryClientProvider>
   )
 }
