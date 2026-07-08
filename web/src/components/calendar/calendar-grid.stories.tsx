@@ -5,10 +5,14 @@ import {
 } from '@web/components/calendar/calendar-grid'
 import type { CalendarViewType } from '@web/components/calendar/calendar-header'
 import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
+import { formatLocalDate } from '@web/lib/date-range'
 import { fn } from 'storybook/test'
 
 const today = new Date()
 const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+const tomorrow = new Date(today)
+tomorrow.setDate(tomorrow.getDate() + 1)
+const tomorrowStr = formatLocalDate(tomorrow)
 
 const sampleEvents: TimeBlockEvent[] = [
   {
@@ -44,6 +48,14 @@ const sampleEvents: TimeBlockEvent[] = [
     type: 'schedule',
     color: { bg: '#1B4332', accent: '#52B788' },
     icon: 'dumbbell',
+  },
+  {
+    id: '5',
+    title: 'Company holiday',
+    start: dateStr,
+    end: tomorrowStr,
+    type: 'gcal',
+    allDay: true,
   },
 ]
 

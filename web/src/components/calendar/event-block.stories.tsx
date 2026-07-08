@@ -12,6 +12,7 @@ function EventBlockPreview({
   parentRef,
   label,
   color,
+  allDay = false,
 }: {
   type?: EventType
   title?: string
@@ -20,13 +21,16 @@ function EventBlockPreview({
   parentRef?: string
   label?: string
   color?: { bg: string; accent: string }
+  allDay?: boolean
 }) {
   const arg = {
     event: {
       title,
+      allDay,
       extendedProps: { type, duration, parentRef, label, color },
     },
     timeText,
+    isStart: true,
   }
 
   return (
@@ -96,6 +100,15 @@ export const GoogleCalendar: Story = {
     type: 'gcal',
     title: 'Team standup',
     timeText: '11:00 - 11:30',
+  },
+}
+
+export const GoogleCalendarAllDay: Story = {
+  args: {
+    type: 'gcal',
+    title: 'Company holiday',
+    timeText: '',
+    allDay: true,
   },
 }
 

@@ -191,6 +191,14 @@ const sampleEvents: TimeBlockEvent[] = [
     type: 'manual',
     duration: '30m',
   },
+  {
+    id: '11',
+    title: 'Company holiday',
+    start: dateStr,
+    end: tomorrowStr,
+    type: 'gcal',
+    allDay: true,
+  },
 ]
 
 const meta = {

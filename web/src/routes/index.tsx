@@ -135,15 +135,14 @@ function DayView() {
     if (!gcalEventsQuery.data) return []
     // Google Calendar has no work/personal/dev context, so these are never
     // redacted by the context filter.
-    return gcalEventsQuery.data
-      .filter((event) => !event.isAllDay)
-      .map((event) => ({
-        id: `gcal-${event.id}`,
-        title: event.summary,
-        start: event.startTime,
-        end: event.endTime,
-        type: 'gcal' as const,
-      }))
+    return gcalEventsQuery.data.map((event) => ({
+      id: `gcal-${event.id}`,
+      title: event.summary,
+      start: event.startTime,
+      end: event.endTime,
+      type: 'gcal' as const,
+      allDay: event.isAllDay,
+    }))
   }, [gcalEventsQuery.data])
 
   const calendarEvents: TimeBlockEvent[] = useMemo(
