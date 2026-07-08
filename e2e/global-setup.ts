@@ -4,12 +4,19 @@ import { fileURLToPath } from 'node:url'
 const repoRoot = fileURLToPath(new URL('..', import.meta.url))
 
 export default function globalSetup(): void {
-  // execFileSync doesn't go through a shell, and on Windows pnpm is a
-  // .cmd/.ps1 script rather than a binary, so the bare command name fails.
-  const pnpmCmd = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
-  execFileSync(pnpmCmd, ['--filter', 'api', 'run', 'db:migrate'], {
-    cwd: repoRoot,
-    stdio: 'inherit',
-    env: { ...process.env, APP_ENV: 'test' },
-  })
+  // On Windows, pnpm is a .cmd script rather than a binary, and since
+  // CVE-2024-27980 Node refuses to spawn .cmd/.bat files without shell:
+  // true (EINVAL). All args here are fixed literals, so shell:true carries
+  // no injection risk.
+  const isWindows = process.platform === 'win32'
+  execFileSync(
+    isWindows ? 'pnpm.cmd' : 'pnpm',
+    ['--filter', 'api', 'run', 'db:migrate'],
+    {
+      cwd: repoRoot,
+      stdio: 'inherit',
+      env: { ...process.env, APP_ENV: 'test' },
+      shell: isWindows,
+    },
+  )
 }
