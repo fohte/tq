@@ -227,12 +227,9 @@ export function ProjectFormModal({
       <DialogPortal>
         <DialogOverlay className="bg-black/40" />
 
-        <DialogPopup>
+        <DialogPopup onKeyDown={handleKeyDown}>
           {/* PC Modal */}
-          <div
-            className="fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex"
-            onKeyDown={handleKeyDown}
-          >
+          <div className="fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex">
             <div className="flex max-h-full w-full max-w-[600px] flex-col overflow-hidden rounded-2xl bg-card shadow-2xl ring-1 ring-foreground/10">
               {/* Header */}
               <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-6">
@@ -279,10 +276,7 @@ export function ProjectFormModal({
           </div>
 
           {/* SP Full-screen form */}
-          <div
-            className="fixed inset-0 z-50 flex flex-col bg-background md:hidden"
-            onKeyDown={handleKeyDown}
-          >
+          <div className="fixed inset-0 z-50 flex flex-col bg-background md:hidden">
             {/* Header */}
             <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
               <button
