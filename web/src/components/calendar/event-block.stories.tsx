@@ -30,6 +30,7 @@ function EventBlockPreview({
       extendedProps: { type, duration, parentRef, label, color },
     },
     timeText,
+    isStart: true,
   }
 
   return (

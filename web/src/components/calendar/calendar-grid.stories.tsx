@@ -5,13 +5,14 @@ import {
 } from '@web/components/calendar/calendar-grid'
 import type { CalendarViewType } from '@web/components/calendar/calendar-header'
 import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
+import { formatLocalDate } from '@web/lib/date-range'
 import { fn } from 'storybook/test'
 
 const today = new Date()
 const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 const tomorrow = new Date(today)
 tomorrow.setDate(tomorrow.getDate() + 1)
-const tomorrowStr = `${String(tomorrow.getFullYear())}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+const tomorrowStr = formatLocalDate(tomorrow)
 
 const sampleEvents: TimeBlockEvent[] = [
   {
