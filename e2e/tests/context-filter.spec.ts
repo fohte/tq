@@ -1,9 +1,4 @@
-import { expect, test, uniqueTitle } from './fixtures'
-
-function todayStr(): string {
-  const d = new Date()
-  return `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+import { expect, test, todayStr, uniqueTitle } from './fixtures'
 
 function isoAt(hour: number): string {
   const d = new Date()

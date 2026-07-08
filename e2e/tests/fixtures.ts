@@ -19,9 +19,11 @@ export const test = base.extend<Fixtures>({
     await use((id) => {
       ids.push(id)
     })
-    for (const id of ids) {
-      await request.delete(`/api/tasks/${id}`)
-    }
+    // allSettled: one failed delete must not abandon cleanup of the rest,
+    // since there's no per-test transaction rollback to fall back on.
+    await Promise.allSettled(
+      ids.map((id) => request.delete(`/api/tasks/${id}`)),
+    )
   },
   createTask: async ({ request, trackTaskId }, use) => {
     await use(async (input) => {
@@ -41,4 +43,9 @@ export { expect } from '@playwright/test'
 
 export function uniqueTitle(prefix: string): string {
   return `${prefix} ${crypto.randomUUID().slice(0, 8)}`
+}
+
+export function todayStr(): string {
+  const d = new Date()
+  return `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }

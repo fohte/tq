@@ -1,9 +1,4 @@
-import { expect, test, uniqueTitle } from './fixtures'
-
-function todayStr(): string {
-  const d = new Date()
-  return `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+import { expect, test, todayStr, uniqueTitle } from './fixtures'
 
 interface TimeBlock {
   id: string
@@ -80,6 +75,11 @@ test('auto-schedules a queued task, then persists a manual drag adjustment', asy
 
   await page.reload()
   const manualBlock = await fetchBlockForTask(request, task.id)
-  expect(manualBlock.isAutoScheduled).toBe(false)
-  expect(manualBlock.startTime).not.toBe(autoBlock.startTime)
+  expect({
+    isAutoScheduled: manualBlock.isAutoScheduled,
+    startTimeChanged: manualBlock.startTime !== autoBlock.startTime,
+  }).toEqual({
+    isAutoScheduled: false,
+    startTimeChanged: true,
+  })
 })

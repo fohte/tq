@@ -25,6 +25,11 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // reuseExistingServer is intentionally always false, unlike the common
+  // `!isCI` convention: a developer's regular `pnpm dev` runs against
+  // tq_dev (no APP_ENV=test), so reusing it would run these tests against
+  // the wrong database instead of tq_test. A port conflict is a louder,
+  // safer failure than silently testing against dev data.
   webServer: [
     {
       command: 'pnpm --filter api run dev',

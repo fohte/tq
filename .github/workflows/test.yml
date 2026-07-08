@@ -148,9 +148,10 @@ jobs:
         package: ${{ fromJSON(needs.setup.outputs.packages) }}
     name: 'unit-test (${{ matrix.package }})'
     runs-on: ubuntu-latest
-    # The `api` package's integration tests need PostgreSQL. The matrix legs share
-    # one job definition, so this service starts for every package — harmless idle
-    # cost for the `web` leg, but avoids forking the job.
+    # The `api` and `e2e` legs need PostgreSQL (e2e's webServer starts api's dev
+    # server against it). The matrix legs share one job definition, so this
+    # service starts for every package — harmless idle cost for the `web` leg,
+    # but avoids forking the job.
     services:
       postgres:
         image: postgres:17
