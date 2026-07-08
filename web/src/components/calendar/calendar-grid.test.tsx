@@ -21,6 +21,25 @@ vi.mock('@fullcalendar/timegrid', () => ({ default: {} }))
 vi.mock('@fullcalendar/daygrid', () => ({ default: {} }))
 vi.mock('@fullcalendar/interaction', () => ({ default: {} }))
 
+function renderAndGetEventDrop(
+  onEventDrop: (info: {
+    eventId: string
+    newStart: Date
+    newEnd: Date
+    revert: () => void
+  }) => void,
+) {
+  render(
+    <CalendarGrid
+      events={[]}
+      activeView="day"
+      dndCallbacks={{ onEventDrop }}
+    />,
+  )
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- captured prop is the real FullCalendar eventDrop handler
+  return capturedProps['eventDrop'] as (info: EventDropArg) => void
+}
+
 describe('CalendarGrid', () => {
   beforeEach(() => {
     capturedProps = {}
@@ -29,16 +48,7 @@ describe('CalendarGrid', () => {
   it('reverts the drag instead of updating the time block when dropped on the all-day row', () => {
     const onEventDrop = vi.fn()
     const revert = vi.fn()
-    render(
-      <CalendarGrid
-        events={[]}
-        activeView="day"
-        dndCallbacks={{ onEventDrop }}
-      />,
-    )
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- captured prop is the real FullCalendar eventDrop handler
-    const eventDrop = capturedProps['eventDrop'] as (info: EventDropArg) => void
+    const eventDrop = renderAndGetEventDrop(onEventDrop)
     const dropInfo = {
       event: {
         id: 'task-1',
@@ -58,16 +68,7 @@ describe('CalendarGrid', () => {
   it('updates the time block with the new start/end when a timed event is dropped', () => {
     const onEventDrop = vi.fn()
     const revert = vi.fn()
-    render(
-      <CalendarGrid
-        events={[]}
-        activeView="day"
-        dndCallbacks={{ onEventDrop }}
-      />,
-    )
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- captured prop is the real FullCalendar eventDrop handler
-    const eventDrop = capturedProps['eventDrop'] as (info: EventDropArg) => void
+    const eventDrop = renderAndGetEventDrop(onEventDrop)
     const newStart = new Date('2026-07-20T09:00:00')
     const newEnd = new Date('2026-07-20T10:00:00')
     const dropInfo = {
