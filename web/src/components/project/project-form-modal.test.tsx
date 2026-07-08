@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ProjectFormModal } from '@web/components/project/project-form-modal'
 import { atIndex } from '@web/lib/test-utils'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 function renderModal(
@@ -24,6 +25,37 @@ function renderModal(
         onOpenChange={onOpenChange}
         {...(props.project != null ? { project: props.project } : {})}
       />
+    </QueryClientProvider>,
+  )
+}
+
+function ControlledProjectFormModal({
+  project,
+}: {
+  project?: React.ComponentProps<typeof ProjectFormModal>['project']
+}) {
+  const [open, setOpen] = useState(true)
+  return (
+    <ProjectFormModal
+      open={open}
+      onOpenChange={setOpen}
+      {...(project != null ? { project } : {})}
+    />
+  )
+}
+
+function renderControlledModal(
+  props: {
+    project?: React.ComponentProps<typeof ProjectFormModal>['project']
+  } = {},
+) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <ControlledProjectFormModal {...props} />
     </QueryClientProvider>,
   )
 }
@@ -107,5 +139,33 @@ describe('ProjectFormModal', () => {
     renderModal()
     const colorButtons = screen.getAllByTitle('Orange')
     expect(colorButtons.length).toBeGreaterThan(0)
+  })
+
+  it('removes the modal from the DOM when the close (X) button is clicked', async () => {
+    const user = userEvent.setup()
+    renderControlledModal()
+
+    const closeButton = document.body
+      .getElementsByClassName('lucide-x')[0]
+      ?.closest('button')
+    if (!(closeButton instanceof HTMLButtonElement)) {
+      throw new Error('close button not found')
+    }
+    await user.click(closeButton)
+
+    await waitFor(() => {
+      expect(screen.queryAllByPlaceholderText('Project name')).toHaveLength(0)
+    })
+  })
+
+  it('removes the modal from the DOM when the Cancel button is clicked', async () => {
+    const user = userEvent.setup()
+    renderControlledModal()
+
+    await user.click(atIndex(screen.getAllByText('Cancel'), 0))
+
+    await waitFor(() => {
+      expect(screen.queryAllByPlaceholderText('Project name')).toHaveLength(0)
+    })
   })
 })

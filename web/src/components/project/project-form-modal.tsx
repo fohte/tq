@@ -1,5 +1,10 @@
 import { Button } from '@web/components/ui/button'
-import { Dialog, DialogOverlay, DialogPortal } from '@web/components/ui/dialog'
+import {
+  Dialog,
+  DialogOverlay,
+  DialogPopup,
+  DialogPortal,
+} from '@web/components/ui/dialog'
 import type { Project } from '@web/hooks/use-projects'
 import {
   PROJECT_COLOR_PRESETS,
@@ -222,89 +227,91 @@ export function ProjectFormModal({
       <DialogPortal>
         <DialogOverlay className="bg-black/40" />
 
-        {/* PC Modal */}
-        <div
-          className="fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex"
-          onKeyDown={handleKeyDown}
-        >
-          <div className="flex max-h-full w-full max-w-[600px] flex-col overflow-hidden rounded-2xl bg-card shadow-2xl ring-1 ring-foreground/10">
+        <DialogPopup>
+          {/* PC Modal */}
+          <div
+            className="fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex"
+            onKeyDown={handleKeyDown}
+          >
+            <div className="flex max-h-full w-full max-w-[600px] flex-col overflow-hidden rounded-2xl bg-card shadow-2xl ring-1 ring-foreground/10">
+              {/* Header */}
+              <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-6">
+                <span className="text-base font-semibold text-foreground">
+                  {isEditing ? 'Edit Project' : 'New Project'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOpenChange(false)
+                  }}
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
+                {formContent}
+              </div>
+
+              {/* Footer */}
+              <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOpenChange(false)
+                  }}
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Cancel
+                </button>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!title.trim() || isPending}
+                  className="h-9 rounded-lg px-4"
+                >
+                  {isEditing ? 'Save' : 'Create Project'}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* SP Full-screen form */}
+          <div
+            className="fixed inset-0 z-50 flex flex-col bg-background md:hidden"
+            onKeyDown={handleKeyDown}
+          >
             {/* Header */}
-            <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-6">
+            <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
+              <button
+                type="button"
+                onClick={() => {
+                  handleOpenChange(false)
+                }}
+                className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ChevronLeft className="size-4" />
+                Back
+              </button>
               <span className="text-base font-semibold text-foreground">
                 {isEditing ? 'Edit Project' : 'New Project'}
               </span>
-              <button
-                type="button"
-                onClick={() => {
-                  handleOpenChange(false)
-                }}
-                className="text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <X className="size-5" />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
-              {formContent}
-            </div>
-
-            {/* Footer */}
-            <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-3">
-              <button
-                type="button"
-                onClick={() => {
-                  handleOpenChange(false)
-                }}
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Cancel
-              </button>
               <Button
                 onClick={handleSubmit}
                 disabled={!title.trim() || isPending}
-                className="h-9 rounded-lg px-4"
+                size="sm"
               >
-                {isEditing ? 'Save' : 'Create Project'}
+                {isEditing ? 'Save' : 'Create'}
               </Button>
             </div>
-          </div>
-        </div>
 
-        {/* SP Full-screen form */}
-        <div
-          className="fixed inset-0 z-50 flex flex-col bg-background md:hidden"
-          onKeyDown={handleKeyDown}
-        >
-          {/* Header */}
-          <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
-            <button
-              type="button"
-              onClick={() => {
-                handleOpenChange(false)
-              }}
-              className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ChevronLeft className="size-4" />
-              Back
-            </button>
-            <span className="text-base font-semibold text-foreground">
-              {isEditing ? 'Edit Project' : 'New Project'}
-            </span>
-            <Button
-              onClick={handleSubmit}
-              disabled={!title.trim() || isPending}
-              size="sm"
-            >
-              {isEditing ? 'Save' : 'Create'}
-            </Button>
+            {/* Body */}
+            <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+              {formContent}
+            </div>
           </div>
-
-          {/* Body */}
-          <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-            {formContent}
-          </div>
-        </div>
+        </DialogPopup>
       </DialogPortal>
     </Dialog>
   )
