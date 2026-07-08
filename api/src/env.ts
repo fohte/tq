@@ -20,6 +20,11 @@ function resolveDatabaseUrl(): string {
   const explicit = process.env['DATABASE_URL']
   if (explicit != null && explicit !== '') return explicit
 
+  if (APP_ENV === 'production') {
+    throw new Error(
+      'DATABASE_URL environment variable is required in production',
+    )
+  }
   throw new Error(
     'DATABASE_URL environment variable is required (run `docker compose port db 5432` for the local Postgres URL)',
   )

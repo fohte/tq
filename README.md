@@ -74,13 +74,13 @@ pnpm --filter web run test
 
 The API server and web frontend are configured via environment variables.
 
-| Variable       | Required | Default                 | Description                                                                                      |
-| -------------- | -------- | ----------------------- | ------------------------------------------------------------------------------------------------ |
-| `APP_ENV`      | No       | `development`           | Application environment (`development`/`test`/`production`)                                      |
-| `DATABASE_URL` | Yes      | —                       | PostgreSQL connection URL. Find the local `db` service's port with `docker compose port db 5432` |
-| `CORS_ORIGIN`  | No       | `*`                     | Allowed origin for CORS requests                                                                 |
-| `PORT`         | No       | `3001`                  | API server listen port                                                                           |
-| `VITE_API_URL` | No       | `http://localhost:3001` | API base URL used by the web frontend (Vite build-time)                                          |
+| Variable       | Required | Default                 | Description                                                 |
+| -------------- | -------- | ----------------------- | ----------------------------------------------------------- |
+| `APP_ENV`      | No       | `development`           | Application environment (`development`/`test`/`production`) |
+| `DATABASE_URL` | Yes      | —                       | PostgreSQL connection URL                                   |
+| `CORS_ORIGIN`  | No       | `*`                     | Allowed origin for CORS requests                            |
+| `PORT`         | No       | `3001`                  | API server listen port                                      |
+| `VITE_API_URL` | No       | `http://localhost:3001` | API base URL used by the web frontend (Vite build-time)     |
 
 ### Web (nginx runtime)
 
