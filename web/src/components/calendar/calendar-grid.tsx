@@ -120,7 +120,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     const handleEventDrop = (info: EventDropArg) => {
       if (!dndCallbacks?.onEventDrop) return
       const { event, revert } = info
-      if (!event.start || !event.end) {
+      if (!event.start || !event.end || event.allDay) {
         revert()
         return
       }
