@@ -1,6 +1,7 @@
 packages:
   - 'web'
   - 'api'
+  - 'e2e'
 
 allowBuilds:
   # required by vitest's transformer

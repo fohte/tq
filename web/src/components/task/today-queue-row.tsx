@@ -49,6 +49,7 @@ export function TodayQueueRow({
     <div
       ref={setNodeRef}
       style={style}
+      data-testid="today-queue-row"
       className="flex items-center gap-1 border-b border-border"
     >
       <button

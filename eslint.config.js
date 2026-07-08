@@ -30,4 +30,12 @@ export default config(
       'no-restricted-imports': 'off',
     },
   },
+  // e2e/ is a small, flat test package with no @ alias, so relative imports
+  // between its config/fixture files are expected.
+  {
+    files: ['e2e/**/*.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
 )

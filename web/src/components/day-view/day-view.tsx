@@ -96,7 +96,7 @@ export function DayViewPresentation({
       >
         {/* Tab bar */}
         <div className="flex items-center justify-between border-b border-border px-3 py-2">
-          <div className="flex gap-1">
+          <div className="flex gap-1" data-testid="queue-tabs">
             {(['today', 'all'] as const).map((tab) => (
               <button
                 key={tab}
@@ -137,6 +137,7 @@ export function DayViewPresentation({
               onClick={() => {
                 setIsCreating(true)
               }}
+              aria-label="Add task"
               className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               <Plus className="h-4 w-4" />
@@ -207,7 +208,11 @@ export function DayViewPresentation({
           ) : (
             <div className="py-1">
               {categorized.all.map((task) => (
-                <div key={task.id} className="flex items-center gap-1">
+                <div
+                  key={task.id}
+                  data-testid="all-task-row"
+                  className="flex items-center gap-1"
+                >
                   <div className="min-w-0 flex-1">
                     <TaskRow
                       task={task}

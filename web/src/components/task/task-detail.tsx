@@ -337,6 +337,7 @@ function SidebarStatusField({
   return (
     <SidebarField label="Status" icon={<Circle className="size-3.5" />}>
       <select
+        aria-label="Status"
         value={status}
         onChange={selectHandler(
           (value: 'todo' | 'in_progress' | 'completed') => {
@@ -395,6 +396,7 @@ function SidebarEstimateField({
       {isEditing ? (
         <input
           type="text"
+          aria-label="Estimate"
           value={input}
           onChange={(e) => {
             setInput(e.target.value)
@@ -417,6 +419,7 @@ function SidebarEstimateField({
       ) : (
         <button
           type="button"
+          aria-label="Estimate"
           onClick={() => {
             setIsEditing(true)
           }}
@@ -485,6 +488,7 @@ function SidebarParentField({
   return (
     <SidebarField label="Parent" icon={<Network className="size-3.5" />}>
       <select
+        aria-label="Parent"
         value={parentId ?? ''}
         onChange={(e) => {
           const newParentId = e.target.value || null
@@ -515,6 +519,7 @@ function SidebarContextField({
   return (
     <SidebarField label="Context" icon={<Layers className="size-3.5" />}>
       <select
+        aria-label="Context"
         value={context}
         onChange={selectHandler(
           (value: 'work' | 'personal' | 'dev') => {

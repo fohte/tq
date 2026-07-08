@@ -1,0 +1,14 @@
+{
+  "name": "e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "conc pnpm:test:type pnpm:test:e2e",
+    "test:type": "tsc --noEmit",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "@types/node": "24.13.2"
+  }
+}

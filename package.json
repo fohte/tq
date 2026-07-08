@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": [
     "web",
-    "api"
+    "api",
+    "e2e"
   ],
   "packageManager": "pnpm@11.7.0",
   "type": "module",
