@@ -247,6 +247,7 @@ export function ProjectFormModal({
                   className="text-muted-foreground transition-colors hover:text-foreground"
                 >
                   <X className="size-5" />
+                  <span className="sr-only">Close</span>
                 </button>
               </div>
 

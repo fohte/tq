@@ -4,48 +4,36 @@ import userEvent from '@testing-library/user-event'
 import { ProjectFormModal } from '@web/components/project/project-form-modal'
 import { atIndex } from '@web/lib/test-utils'
 import { useState } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-function renderModal(
-  props: {
-    open?: boolean
-    onOpenChange?: () => void
-    project?: React.ComponentProps<typeof ProjectFormModal>['project']
-  } = {},
-) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  })
-  const onOpenChange = props.onOpenChange ?? vi.fn()
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <ProjectFormModal
-        open={props.open ?? true}
-        onOpenChange={onOpenChange}
-        {...(props.project != null ? { project: props.project } : {})}
-      />
-    </QueryClientProvider>,
-  )
-}
-
-function ControlledProjectFormModal({
+// Manages `open` as real state (instead of a no-op onOpenChange mock) so tests
+// can verify the modal actually leaves the DOM after a close action.
+function ManagedProjectFormModal({
+  initialOpen,
+  onOpenChange,
   project,
 }: {
+  initialOpen: boolean
+  onOpenChange?: (open: boolean) => void
   project?: React.ComponentProps<typeof ProjectFormModal>['project']
 }) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(initialOpen)
   return (
     <ProjectFormModal
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
+        onOpenChange?.(nextOpen)
+      }}
       {...(project != null ? { project } : {})}
     />
   )
 }
 
-function renderControlledModal(
+function renderModal(
   props: {
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
     project?: React.ComponentProps<typeof ProjectFormModal>['project']
   } = {},
 ) {
@@ -55,7 +43,13 @@ function renderControlledModal(
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <ControlledProjectFormModal {...props} />
+      <ManagedProjectFormModal
+        initialOpen={props.open ?? true}
+        {...(props.onOpenChange != null
+          ? { onOpenChange: props.onOpenChange }
+          : {})}
+        {...(props.project != null ? { project: props.project } : {})}
+      />
     </QueryClientProvider>,
   )
 }
@@ -143,29 +137,27 @@ describe('ProjectFormModal', () => {
 
   it('removes the modal from the DOM when the close (X) button is clicked', async () => {
     const user = userEvent.setup()
-    renderControlledModal()
+    renderModal()
 
-    const closeButton = document.body
-      .getElementsByClassName('lucide-x')[0]
-      ?.closest('button')
-    if (!(closeButton instanceof HTMLButtonElement)) {
-      throw new Error('close button not found')
-    }
-    await user.click(closeButton)
+    await user.click(screen.getByRole('button', { name: 'Close' }))
 
     await waitFor(() => {
-      expect(screen.queryAllByPlaceholderText('Project name')).toHaveLength(0)
+      expect(
+        screen.queryByPlaceholderText('Project name'),
+      ).not.toBeInTheDocument()
     })
   })
 
   it('removes the modal from the DOM when the Cancel button is clicked', async () => {
     const user = userEvent.setup()
-    renderControlledModal()
+    renderModal()
 
-    await user.click(atIndex(screen.getAllByText('Cancel'), 0))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
 
     await waitFor(() => {
-      expect(screen.queryAllByPlaceholderText('Project name')).toHaveLength(0)
+      expect(
+        screen.queryByPlaceholderText('Project name'),
+      ).not.toBeInTheDocument()
     })
   })
 })
