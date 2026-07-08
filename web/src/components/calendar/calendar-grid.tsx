@@ -151,7 +151,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       if (!dndCallbacks?.onExternalDrop) return
       const { event } = info
       const taskId = getEventProps(event).taskId
-      if (!event.start || !event.end || taskId == null) {
+      if (!event.start || !event.end || taskId == null || event.allDay) {
         event.remove()
         return
       }
