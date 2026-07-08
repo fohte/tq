@@ -31,6 +31,8 @@ export interface TimeBlockEvent {
   icon?: string
   /** When true, content is hidden and rendered as a generic "busy" block */
   redacted?: boolean
+  /** When true, rendered in FullCalendar's all-day row instead of a time slot */
+  allDay?: boolean
 }
 
 interface CalendarViewProps {

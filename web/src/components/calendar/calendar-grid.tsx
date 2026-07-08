@@ -101,6 +101,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       title: event.title,
       start: event.start,
       end: event.end,
+      allDay: event.allDay === true,
       editable:
         event.type !== 'schedule' &&
         event.type !== 'gcal' &&
@@ -190,6 +191,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
             const startDate = arg.event.start
             const endDate = arg.event.end
             if (
+              !arg.event.allDay &&
               startDate &&
               endDate &&
               endDate.getDate() !== startDate.getDate()
@@ -202,7 +204,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
             return <EventBlock {...arg} />
           }}
           nowIndicator={true}
-          allDaySlot={false}
+          allDaySlot={true}
           slotMinTime="00:00:00"
           slotMaxTime="24:00:00"
           scrollTime="08:00:00"

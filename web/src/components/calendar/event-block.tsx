@@ -14,7 +14,7 @@ export function EventBlock(arg: EventContentArg) {
   const iconName = props.icon
   const redacted = props.redacted ?? false
 
-  const isShort = arg.isStart && isShortEvent(event)
+  const isShort = arg.isStart && (event.allDay || isShortEvent(event))
 
   // Build time detail line: "10:30 - 11:30  ·  1h  ← #488"
   const timeDetails = [
