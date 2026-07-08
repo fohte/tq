@@ -20,20 +20,15 @@ function resolveDatabaseUrl(): string {
   const explicit = process.env['DATABASE_URL']
   if (explicit != null && explicit !== '') return explicit
 
-  switch (APP_ENV) {
-    case 'development':
-      return 'postgresql://tq:tq@localhost:5432/tq_dev'
-    case 'test':
-      return 'postgresql://tq:tq@localhost:5432/tq_test'
-    case 'production':
-      throw new Error(
-        'DATABASE_URL environment variable is required in production',
-      )
-    default: {
-      const exhaustiveCheck: never = APP_ENV
-      throw new Error(`Unhandled APP_ENV: ${String(exhaustiveCheck)}`)
-    }
+  if (APP_ENV === 'production') {
+    throw new Error(
+      'DATABASE_URL environment variable is required in production',
+    )
   }
+  const dbName = APP_ENV === 'test' ? 'tq_test' : 'tq_dev'
+  throw new Error(
+    `DATABASE_URL environment variable is required (run \`docker compose port db 5432\` and set DATABASE_URL=postgresql://tq:tq@localhost:<port>/${dbName})`,
+  )
 }
 
 export const DATABASE_URL: string = resolveDatabaseUrl()

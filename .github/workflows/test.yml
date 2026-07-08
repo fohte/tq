@@ -200,6 +200,9 @@ jobs:
 
       - name: Run tests
         working-directory: ${{ matrix.package }}
+        env:
+          # The api leg's integration tests need this; harmless no-op for other legs.
+          DATABASE_URL: postgresql://tq:tq@localhost:5432/tq_test
         run: pnpm run test
 
   # Aggregation gate for the unit-test matrix. Matrix leg names are dynamic and
