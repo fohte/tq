@@ -14,11 +14,12 @@
 ```sh
 scripts/bootstrap
 docker compose up -d
+export DATABASE_URL="postgresql://tq:tq@localhost:$(docker compose port db 5432 | cut -d: -f2)/tq_dev"
 pnpm --filter api run db:migrate
 pnpm dev
 ```
 
-`pnpm dev` starts both the API server and the Vite dev server concurrently. No manual `DATABASE_URL` export is needed — the API defaults to `postgresql://tq:tq@localhost:5432/tq_dev` in development.
+`pnpm dev` starts both the API server and the Vite dev server concurrently. The `db` service is published to a random host port to avoid clashing with other projects' Postgres instances — find it with `docker compose port db 5432` and set `DATABASE_URL` accordingly.
 
 ### Testing
 
@@ -41,7 +42,7 @@ pnpm --filter api run test
 
 The Compose file uses a fixed project name (`tq-infra`), so the same PostgreSQL container is shared across all worktrees. Running `docker compose up -d` from any worktree is safe and will not create duplicate containers.
 
-`APP_ENV=test` is set automatically by `vitest.config.ts`, so `DATABASE_URL` defaults to `postgresql://tq:tq@localhost:5432/tq_test` via `api/src/env.ts`. Do **not** set `DATABASE_URL` for testing — using the development database (`tq_dev`) will cause test failures because of existing data.
+The `db` service is published to a random host port to avoid clashing with other projects' Postgres instances — find it with `docker compose port db 5432` and set `DATABASE_URL` accordingly, e.g. `export DATABASE_URL="postgresql://tq:tq@localhost:<port>/tq_test"`. Do **not** point it at the development database (`tq_dev`) — existing data there will cause test failures.
 
 Migrations are applied automatically by the test global setup (`api/src/global-setup.ts`), so there is no need to run `db:migrate` manually for the test database.
 
@@ -73,13 +74,13 @@ pnpm --filter web run test
 
 The API server and web frontend are configured via environment variables.
 
-| Variable       | Required        | Default                                                            | Description                                                 |
-| -------------- | --------------- | ------------------------------------------------------------------ | ----------------------------------------------------------- |
-| `APP_ENV`      | No              | `development`                                                      | Application environment (`development`/`test`/`production`) |
-| `DATABASE_URL` | Production only | dev: `postgresql://tq:tq@localhost:5432/tq_dev`, test: `…/tq_test` | PostgreSQL connection URL                                   |
-| `CORS_ORIGIN`  | No              | `*`                                                                | Allowed origin for CORS requests                            |
-| `PORT`         | No              | `3001`                                                             | API server listen port                                      |
-| `VITE_API_URL` | No              | `http://localhost:3001`                                            | API base URL used by the web frontend (Vite build-time)     |
+| Variable       | Required | Default                 | Description                                                                                      |
+| -------------- | -------- | ----------------------- | ------------------------------------------------------------------------------------------------ |
+| `APP_ENV`      | No       | `development`           | Application environment (`development`/`test`/`production`)                                      |
+| `DATABASE_URL` | Yes      | —                       | PostgreSQL connection URL. Find the local `db` service's port with `docker compose port db 5432` |
+| `CORS_ORIGIN`  | No       | `*`                     | Allowed origin for CORS requests                                                                 |
+| `PORT`         | No       | `3001`                  | API server listen port                                                                           |
+| `VITE_API_URL` | No       | `http://localhost:3001` | API base URL used by the web frontend (Vite build-time)                                          |
 
 ### Web (nginx runtime)
 

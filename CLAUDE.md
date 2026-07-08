@@ -21,7 +21,7 @@ docker compose exec db createdb -U tq tq_test   # first time only
 
 The Compose file uses a fixed project name (`tq-infra`), so the same PostgreSQL container is shared across all worktrees. Running `docker compose up -d` from any worktree is safe and will not create duplicate containers — skip if already running for development.
 
-**Do NOT set `DATABASE_URL` when running tests.** `APP_ENV=test` is set automatically by `vitest.config.ts`, so `DATABASE_URL` defaults to `postgresql://tq:tq@localhost:5432/tq_test` via `api/src/env.ts`. Using `tq_dev` causes failures due to existing data.
+The `db` service publishes Postgres on a random host port to avoid clashing with other projects. Find the assigned port with `docker compose port db 5432`, then set `DATABASE_URL` accordingly, e.g. `DATABASE_URL=postgresql://tq:tq@localhost:<port>/tq_test`. Do not point it at `tq_dev` — existing data there causes test failures.
 
 Migrations are applied automatically by `api/src/global-setup.ts`.
 
