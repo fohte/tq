@@ -1,30 +1,18 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ProjectFormModal } from '@web/components/project/project-form-modal'
+import { renderControlledModal } from '@web/lib/render-controlled-modal'
 import { atIndex } from '@web/lib/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 function renderModal(
   props: {
-    open?: boolean
-    onOpenChange?: () => void
     project?: React.ComponentProps<typeof ProjectFormModal>['project']
   } = {},
 ) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  })
-  const onOpenChange = props.onOpenChange ?? vi.fn()
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <ProjectFormModal
-        open={props.open ?? true}
-        onOpenChange={onOpenChange}
-        {...(props.project != null ? { project: props.project } : {})}
-      />
-    </QueryClientProvider>,
+  return renderControlledModal(
+    ProjectFormModal,
+    props.project != null ? { project: props.project } : {},
   )
 }
 
@@ -107,5 +95,31 @@ describe('ProjectFormModal', () => {
     renderModal()
     const colorButtons = screen.getAllByTitle('Orange')
     expect(colorButtons.length).toBeGreaterThan(0)
+  })
+
+  it('removes the modal from the DOM when the close (X) button is clicked', async () => {
+    const user = userEvent.setup()
+    renderModal()
+
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+
+    await waitFor(() => {
+      expect(
+        screen.queryByPlaceholderText('Project name'),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it('removes the modal from the DOM when the Cancel button is clicked', async () => {
+    const user = userEvent.setup()
+    renderModal()
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    await waitFor(() => {
+      expect(
+        screen.queryByPlaceholderText('Project name'),
+      ).not.toBeInTheDocument()
+    })
   })
 })
