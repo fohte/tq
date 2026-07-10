@@ -211,18 +211,20 @@ describe('ProjectGanttView', () => {
 
     render(<ProjectGanttView tasks={[]} />)
 
-    expect({
+    const props = {
       readonly: mockGanttProps.current.readonly,
       gridWidth: mockGanttProps.current.gridWidth,
-    }).toEqual({ readonly: true, gridWidth: 160 })
+    }
+    expect(props).toEqual({ readonly: true, gridWidth: 160 })
   })
 
   it('is editable with a wider grid on desktop viewports', () => {
     render(<ProjectGanttView tasks={[]} />)
 
-    expect({
+    const props = {
       readonly: mockGanttProps.current.readonly,
       gridWidth: mockGanttProps.current.gridWidth,
-    }).toEqual({ readonly: false, gridWidth: 280 })
+    }
+    expect(props).toEqual({ readonly: false, gridWidth: 280 })
   })
 })

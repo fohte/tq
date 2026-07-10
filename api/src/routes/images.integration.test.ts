@@ -52,11 +52,12 @@ describe('POST /api/images', () => {
 
     expect(res.status).toBe(201)
     const body = await jsonBody<ImageResponse>(res)
-    expect({
+    const normalized = {
       ...body,
       id: 'ID',
       r2Key: body.r2Key.replace(body.id, 'ID'),
-    }).toEqual({
+    }
+    expect(normalized).toEqual({
       id: 'ID',
       r2Key: 'images/ID',
       contentType: 'image/png',
