@@ -68,23 +68,16 @@ describe('putObject', () => {
   })
 })
 
-function normalize(url: URL) {
-  return {
-    origin: url.origin,
-    pathname: url.pathname,
-    expiresIn: url.searchParams.get('X-Amz-Expires'),
-  }
-}
-
 describe('getObjectSignedUrl', () => {
   it('returns a signed URL scoped to the configured bucket and key', async () => {
     const url = await getObjectSignedUrl('images/abc', 3600)
+    const parsed = new URL(url)
 
-    expect(normalize(new URL(url))).toEqual({
-      origin: 'https://test-bucket.test-account-id.r2.cloudflarestorage.com',
-      pathname: '/images/abc',
-      expiresIn: '3600',
-    })
+    expect(parsed.origin).toBe(
+      'https://test-bucket.test-account-id.r2.cloudflarestorage.com',
+    )
+    expect(parsed.pathname).toBe('/images/abc')
+    expect(parsed.searchParams.get('X-Amz-Expires')).toBe('3600')
   })
 })
 

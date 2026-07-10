@@ -44,14 +44,6 @@ async function uploadImage(file: File) {
   return jsonBody<ImageResponse>(res)
 }
 
-function normalize(image: ImageResponse) {
-  return {
-    ...image,
-    id: 'ID',
-    r2Key: image.r2Key.replace(image.id, 'ID'),
-  }
-}
-
 describe('POST /api/images', () => {
   it('uploads an image and returns its metadata with a signed URL', async () => {
     const file = makeFile('photo.png', 'image/png', 1234)
@@ -60,13 +52,11 @@ describe('POST /api/images', () => {
 
     expect(res.status).toBe(201)
     const body = await jsonBody<ImageResponse>(res)
-    expect(normalize(body)).toEqual({
-      id: 'ID',
-      r2Key: 'images/ID',
-      contentType: 'image/png',
-      sizeBytes: 1234,
-      url: SIGNED_URL,
-    })
+    expect(body.id).toBeDefined()
+    expect(body.r2Key).toBe(`images/${body.id}`)
+    expect(body.contentType).toBe('image/png')
+    expect(body.sizeBytes).toBe(1234)
+    expect(body.url).toBe(SIGNED_URL)
 
     const [saved] = await db.select().from(images).where(eq(images.id, body.id))
     expect(saved?.r2Key).toBe(body.r2Key)
