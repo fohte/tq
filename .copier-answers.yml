@@ -7,10 +7,11 @@ monorepo_node_workspace: true
 project_name: tq
 repo_language: ja
 subpackages:
--   name: web
+  - name: web
     type: node
--   name: api
+  - name: api
     type: node
+    web_app: true
 type: base
 use_release_please: false
 use_storybook: true
