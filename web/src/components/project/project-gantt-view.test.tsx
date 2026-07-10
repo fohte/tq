@@ -34,6 +34,13 @@ interface MockGanttProps {
 
 const mockGanttProps: { current: MockGanttProps } = { current: {} }
 
+function normalize(props: MockGanttProps) {
+  return {
+    readonly: props.readonly,
+    gridWidth: props.gridWidth,
+  }
+}
+
 vi.mock('@svar-ui/react-gantt', () => ({
   Gantt: (props: MockGanttProps) => {
     mockGanttProps.current = props
@@ -211,20 +218,18 @@ describe('ProjectGanttView', () => {
 
     render(<ProjectGanttView tasks={[]} />)
 
-    const props = {
-      readonly: mockGanttProps.current.readonly,
-      gridWidth: mockGanttProps.current.gridWidth,
-    }
-    expect(props).toEqual({ readonly: true, gridWidth: 160 })
+    expect(normalize(mockGanttProps.current)).toEqual({
+      readonly: true,
+      gridWidth: 160,
+    })
   })
 
   it('is editable with a wider grid on desktop viewports', () => {
     render(<ProjectGanttView tasks={[]} />)
 
-    const props = {
-      readonly: mockGanttProps.current.readonly,
-      gridWidth: mockGanttProps.current.gridWidth,
-    }
-    expect(props).toEqual({ readonly: false, gridWidth: 280 })
+    expect(normalize(mockGanttProps.current)).toEqual({
+      readonly: false,
+      gridWidth: 280,
+    })
   })
 })

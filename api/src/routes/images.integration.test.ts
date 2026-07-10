@@ -44,6 +44,14 @@ async function uploadImage(file: File) {
   return jsonBody<ImageResponse>(res)
 }
 
+function normalize(image: ImageResponse) {
+  return {
+    ...image,
+    id: 'ID',
+    r2Key: image.r2Key.replace(image.id, 'ID'),
+  }
+}
+
 describe('POST /api/images', () => {
   it('uploads an image and returns its metadata with a signed URL', async () => {
     const file = makeFile('photo.png', 'image/png', 1234)
@@ -52,12 +60,7 @@ describe('POST /api/images', () => {
 
     expect(res.status).toBe(201)
     const body = await jsonBody<ImageResponse>(res)
-    const normalized = {
-      ...body,
-      id: 'ID',
-      r2Key: body.r2Key.replace(body.id, 'ID'),
-    }
-    expect(normalized).toEqual({
+    expect(normalize(body)).toEqual({
       id: 'ID',
       r2Key: 'images/ID',
       contentType: 'image/png',
