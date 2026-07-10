@@ -73,15 +73,11 @@ describe('getObjectSignedUrl', () => {
     const url = await getObjectSignedUrl('images/abc', 3600)
     const parsed = new URL(url)
 
-    expect({
-      origin: parsed.origin,
-      pathname: parsed.pathname,
-      expiresIn: parsed.searchParams.get('X-Amz-Expires'),
-    }).toEqual({
-      origin: 'https://test-bucket.test-account-id.r2.cloudflarestorage.com',
-      pathname: '/images/abc',
-      expiresIn: '3600',
-    })
+    expect(parsed.origin).toBe(
+      'https://test-bucket.test-account-id.r2.cloudflarestorage.com',
+    )
+    expect(parsed.pathname).toBe('/images/abc')
+    expect(parsed.searchParams.get('X-Amz-Expires')).toBe('3600')
   })
 })
 

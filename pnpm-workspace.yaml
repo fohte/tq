@@ -8,6 +8,8 @@ allowBuilds:
   # msw is only used as a transitive dependency; the postinstall sets up a browser
   # service worker that we don't need
   msw: false
+  # required by @opentelemetry/exporter-trace-otlp-proto
+  protobufjs: true
   # required by @fohte/eslint-config -> eslint-plugin-import-x for "@/*" resolution
   unrs-resolver: true
 

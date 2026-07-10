@@ -1,3 +1,5 @@
+import '@api/bootstrap'
+
 import { app } from '@api/app'
 import { serve } from '@hono/node-server'
 

@@ -52,17 +52,11 @@ describe('POST /api/images', () => {
 
     expect(res.status).toBe(201)
     const body = await jsonBody<ImageResponse>(res)
-    expect({
-      ...body,
-      id: 'ID',
-      r2Key: body.r2Key.replace(body.id, 'ID'),
-    }).toEqual({
-      id: 'ID',
-      r2Key: 'images/ID',
-      contentType: 'image/png',
-      sizeBytes: 1234,
-      url: SIGNED_URL,
-    })
+    expect(body.id).toBeDefined()
+    expect(body.r2Key).toBe(`images/${body.id}`)
+    expect(body.contentType).toBe('image/png')
+    expect(body.sizeBytes).toBe(1234)
+    expect(body.url).toBe(SIGNED_URL)
 
     const [saved] = await db.select().from(images).where(eq(images.id, body.id))
     expect(saved?.r2Key).toBe(body.r2Key)
