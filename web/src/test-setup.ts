@@ -50,8 +50,15 @@ process.prependListener('uncaughtException', (error: unknown) => {
   const isProsemirrorJsdom = message.includes(
     'getClientRects is not a function',
   )
+  // @milkdown/ctx's Timer never clears its internal fallback setTimeout
+  // (default 3s), even after the timer resolves normally. If it fires after
+  // this test file's jsdom environment has been torn down, the global
+  // `removeEventListener` is already gone.
+  const isMilkdownTimerCleanup = message.includes(
+    'removeEventListener is not defined',
+  )
 
-  if (isMilkdownCleanup || isProsemirrorJsdom) {
+  if (isMilkdownCleanup || isProsemirrorJsdom || isMilkdownTimerCleanup) {
     return
   }
 
