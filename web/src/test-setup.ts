@@ -34,31 +34,39 @@ if (typeof Range.prototype.getBoundingClientRect === 'undefined') {
   })
 }
 
-// Milkdown throws contextNotFound during async cleanup in jsdom.
-// This is a jsdom limitation, not a real application bug.
+// Milkdown throws contextNotFound during async cleanup in jsdom, and
+// prosemirror-virtual-cursor hits the getClientRects stub above during the
+// same teardown. Both are jsdom limitations, not real application bugs.
+function isKnownMilkdownJsdomNoise(errorLike: unknown): boolean {
+  const message =
+    errorLike instanceof Error ? errorLike.message : String(errorLike)
+
+  const isMilkdownCleanup =
+    typeof errorLike === 'object' &&
+    errorLike != null &&
+    'code' in errorLike &&
+    errorLike.code === 'contextNotFound'
+  const isProsemirrorJsdom = message.includes(
+    'getClientRects is not a function',
+  )
+
+  return isMilkdownCleanup || isProsemirrorJsdom
+}
+
 const originalListeners = process.listeners('uncaughtException')
 process.removeAllListeners('uncaughtException')
 // Type as unknown because JS allows throwing any value, not just Error
 process.prependListener('uncaughtException', (error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error)
-
-  const isMilkdownCleanup =
-    typeof error === 'object' &&
-    error != null &&
-    'code' in error &&
-    error.code === 'contextNotFound'
-  const isProsemirrorJsdom = message.includes(
-    'getClientRects is not a function',
-  )
   // @milkdown/ctx's Timer never clears its internal fallback setTimeout
   // (default 3s), even after the timer resolves normally. If it fires after
   // this test file's jsdom environment has been torn down, the global
   // `removeEventListener` is already gone.
-  const isMilkdownTimerCleanup = message.includes(
-    'removeEventListener is not defined',
-  )
+  const isMilkdownTimerCleanup =
+    error instanceof ReferenceError &&
+    error.message === 'removeEventListener is not defined' &&
+    error.stack?.includes('@milkdown/ctx') === true
 
-  if (isMilkdownCleanup || isProsemirrorJsdom || isMilkdownTimerCleanup) {
+  if (isKnownMilkdownJsdomNoise(error) || isMilkdownTimerCleanup) {
     return
   }
 
@@ -70,17 +78,7 @@ process.prependListener('uncaughtException', (error: unknown) => {
   }
 })
 process.on('unhandledRejection', (reason) => {
-  const message = reason instanceof Error ? reason.message : String(reason)
-  const isMilkdownCleanup =
-    reason != null &&
-    typeof reason === 'object' &&
-    'code' in reason &&
-    (reason as Record<string, unknown>)['code'] === 'contextNotFound'
-  const isProsemirrorJsdom = message.includes(
-    'getClientRects is not a function',
-  )
-
-  if (isMilkdownCleanup || isProsemirrorJsdom) {
+  if (isKnownMilkdownJsdomNoise(reason)) {
     return
   }
 
