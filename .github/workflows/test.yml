@@ -112,6 +112,12 @@ jobs:
           json: true
           # Emit valid JSON; the default escapes quotes and breaks jq parsing.
           escape_json: false
+          # The default sanitizes filenames by backslash-escaping shell
+          # metacharacters (e.g. `$` in TanStack Router's `$param.tsx` files),
+          # which also breaks JSON parsing. CHANGED_FILES below is always
+          # consumed through a quoted env var and jq, never eval'd, so
+          # disabling this is safe here.
+          safe_output: false
 
       - name: Build package matrix
         id: set-packages
