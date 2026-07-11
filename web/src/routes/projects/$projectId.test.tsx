@@ -271,18 +271,10 @@ describe('ProjectDetailPage', () => {
       error: null,
     })
     renderProjectDetailPage()
-    const labelCounts = {
-      Status: screen.getAllByText('Status').length,
-      'Start date': screen.getAllByText('Start date').length,
-      'Target date': screen.getAllByText('Target date').length,
-      Color: screen.getAllByText('Color').length,
-    }
-    expect(labelCounts).toEqual({
-      Status: 2,
-      'Start date': 2,
-      'Target date': 2,
-      Color: 2,
-    })
+    expect(screen.getAllByText('Status')).toHaveLength(2)
+    expect(screen.getAllByText('Start date')).toHaveLength(2)
+    expect(screen.getAllByText('Target date')).toHaveLength(2)
+    expect(screen.getAllByText('Color')).toHaveLength(2)
   })
 
   it('renders remaining days based on the target date once per layout (PC + SP)', () => {
