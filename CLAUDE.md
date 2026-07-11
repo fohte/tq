@@ -1,6 +1,13 @@
 # CLAUDE.md
 
-<<<<<<< before updating
+## Code organization rules
+
+### Split files before they grow past ~500 lines of production code
+
+When a change would push a file's non-test code past ~500 lines, split it along responsibility seams before adding more. Splits must be move-only commits: no logic changes, renames, or reformatting mixed in. Keep external import paths unchanged by keeping the entrypoint file in place and re-exporting the pieces you split out into new files (e.g. `index.ts` re-exports from the new files). Tests move together with the code they verify.
+
+Prefer creating a new focused file over appending to the largest existing one.
+
 ## Testing
 
 ### Running tests
@@ -43,16 +50,6 @@ This is separate from `pnpm --filter web run test`, so writing the story is not 
 ### Prefer Storybook over manual browser checks
 
 When you need to check how a component looks or behaves in a given state, write or update its story and run it via `pnpm --filter web run test:storybook` (or `pnpm --filter web run storybook` for interactive inspection) before starting a dev server and driving a browser manually.
-||||||| last update
-=======
-## Code organization rules
-
-### Split files before they grow past ~500 lines of production code
-
-When a change would push a file's non-test code past ~500 lines, split it along responsibility seams before adding more. Splits must be move-only commits: no logic changes, renames, or reformatting mixed in. Keep external import paths unchanged by keeping the entrypoint file in place and re-exporting the pieces you split out into new files (e.g. `index.ts` re-exports from the new files). Tests move together with the code they verify.
-
-Prefer creating a new focused file over appending to the largest existing one.
->>>>>>> after updating
 
 ## Test code rules
 
