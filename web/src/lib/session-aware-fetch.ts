@@ -9,8 +9,8 @@ export async function sessionAwareFetch(
   init?: RequestInit,
 ): Promise<Response> {
   const res = await fetch(input, { ...init, redirect: 'manual' })
-  if (res.type === 'opaqueredirect') {
-    window.location.reload()
+  if (res.type === 'opaqueredirect' && typeof location !== 'undefined') {
+    location.reload()
     // Never resolve: the page is about to be replaced by the reload.
     return new Promise<Response>(() => {})
   }

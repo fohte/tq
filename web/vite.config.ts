@@ -31,7 +31,7 @@ export default defineConfig({
         runtimeCaching: [
           {
             urlPattern: ({ request, url }) =>
-              request.mode === 'navigate' && !/^\/api\//.test(url.pathname),
+              request.mode === 'navigate' && !/^\/api($|\/)/.test(url.pathname),
             // NetworkFirst fetches navigations from the network first, so a
             // Cloudflare Access session expiry is caught on reload, and
             // falls back to the precached shell once networkTimeoutSeconds
