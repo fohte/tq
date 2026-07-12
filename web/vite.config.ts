@@ -26,19 +26,20 @@ export default defineConfig({
         // navigateFallback NavigationRoute before any runtimeCaching route,
         // so a runtimeCaching rule can never intercept navigations ahead of
         // it. vite-plugin-pwa also defaults navigateFallback to
-        // 'index.html', so it must be explicitly unset here. Route
-        // navigations through runtimeCaching instead: NetworkFirst fetches
-        // navigations from the network first (so a Cloudflare Access
-        // session expiry is caught on reload) and falls back to the
-        // precached shell only when the network is unavailable.
+        // 'index.html', so it must be explicitly unset here.
         navigateFallback: null,
         runtimeCaching: [
           {
             urlPattern: ({ request, url }) =>
               request.mode === 'navigate' && !/^\/api\//.test(url.pathname),
+            // NetworkFirst fetches navigations from the network first, so a
+            // Cloudflare Access session expiry is caught on reload, and
+            // falls back to the precached shell once networkTimeoutSeconds
+            // elapses without a response.
             handler: 'NetworkFirst',
             options: {
               cacheName: 'pages',
+              networkTimeoutSeconds: 3,
               precacheFallback: {
                 fallbackURL: '/index.html',
               },
