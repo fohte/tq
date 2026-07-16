@@ -27,7 +27,7 @@ function resolveDatabaseUrl(): string {
   }
   const dbName = APP_ENV === 'test' ? 'tq_test' : 'tq_dev'
   throw new Error(
-    `DATABASE_URL environment variable is required (run \`docker compose port db 5432\` and set DATABASE_URL=postgresql://tq:tq@localhost:<port>/${dbName})`,
+    `DATABASE_URL environment variable is required (run \`mise run db:up\` to start Postgres and generate .env.runtime, or set DATABASE_URL=postgresql://tq:tq@localhost:<port>/${dbName} manually)`,
   )
 }
 
