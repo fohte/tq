@@ -13,13 +13,12 @@
 
 ```sh
 scripts/bootstrap
-docker compose up -d
-export DATABASE_URL="postgresql://tq:tq@localhost:$(docker compose port db 5432 | cut -d: -f2)/tq_dev"
+mise run db:up
 pnpm --filter api run db:migrate
 pnpm dev
 ```
 
-`pnpm dev` starts both the API server and the Vite dev server concurrently. The `db` service is published to a random host port to avoid clashing with other projects' Postgres instances — find it with `docker compose port db 5432` and set `DATABASE_URL` accordingly.
+`pnpm dev` starts both the API server and the Vite dev server concurrently. The `db` service is published to a random host port to avoid clashing with other projects' Postgres instances — `mise run db:up` resolves it and writes `.env.runtime` with the correct `DATABASE_URL`, which mise loads automatically.
 
 ### Testing
 
@@ -30,8 +29,8 @@ Tests are run with `pnpm run test`, which executes tests across all workspaces.
 API integration tests require a running PostgreSQL instance and a dedicated test database (`tq_test`).
 
 ```sh
-# 1. Start PostgreSQL via Docker (skip if already running for development)
-docker compose up -d
+# 1. Start PostgreSQL via Docker and write .env.runtime (skip if already running for development)
+mise run db:up
 
 # 2. Create the test database (first time only)
 docker compose exec db createdb -U tq tq_test
@@ -40,9 +39,9 @@ docker compose exec db createdb -U tq tq_test
 pnpm --filter api run test
 ```
 
-The Compose file uses a fixed project name (`tq-infra`), so the same PostgreSQL container is shared across all worktrees. Running `docker compose up -d` from any worktree is safe and will not create duplicate containers.
+The Compose file uses a fixed project name (`tq-infra`), so the same PostgreSQL container is shared across all worktrees. Running `mise run db:up` from any worktree is safe and will not create duplicate containers.
 
-The `db` service is published to a random host port to avoid clashing with other projects' Postgres instances — find it with `docker compose port db 5432` and set `DATABASE_URL` accordingly, e.g. `export DATABASE_URL="postgresql://tq:tq@localhost:<port>/tq_test"`. Do **not** point it at the development database (`tq_dev`) — existing data there will cause test failures.
+`mise run db:up` writes `.env.runtime` with both `DATABASE_URL` (pointed at `tq_dev`) and `TEST_DATABASE_URL` (pointed at `tq_test`). mise loads both automatically, and `pnpm --filter api run test` prefers `TEST_DATABASE_URL` on its own — no manual port lookup or `export` needed, and dev data in `tq_dev` is never at risk.
 
 Migrations are applied automatically by the test global setup (`api/src/global-setup.ts`), so there is no need to run `db:migrate` manually for the test database.
 
@@ -74,13 +73,14 @@ pnpm --filter web run test
 
 The API server and web frontend are configured via environment variables.
 
-| Variable       | Required | Default                 | Description                                                 |
-| -------------- | -------- | ----------------------- | ----------------------------------------------------------- |
-| `APP_ENV`      | No       | `development`           | Application environment (`development`/`test`/`production`) |
-| `DATABASE_URL` | Yes      | —                       | PostgreSQL connection URL                                   |
-| `CORS_ORIGIN`  | No       | `*`                     | Allowed origin for CORS requests                            |
-| `PORT`         | No       | `3001`                  | API server listen port                                      |
-| `VITE_API_URL` | No       | `http://localhost:3001` | API base URL used by the web frontend (Vite build-time)     |
+| Variable            | Required | Default                 | Description                                                                                                                        |
+| ------------------- | -------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `APP_ENV`           | No       | `development`           | Application environment (`development`/`test`/`production`)                                                                        |
+| `DATABASE_URL`      | Yes      | —                       | PostgreSQL connection URL                                                                                                          |
+| `TEST_DATABASE_URL` | No       | —                       | PostgreSQL connection URL used for local `api` test runs instead of `DATABASE_URL` (written to `.env.runtime` by `mise run db:up`) |
+| `CORS_ORIGIN`       | No       | `*`                     | Allowed origin for CORS requests                                                                                                   |
+| `PORT`              | No       | `3001`                  | API server listen port                                                                                                             |
+| `VITE_API_URL`      | No       | `http://localhost:3001` | API base URL used by the web frontend (Vite build-time)                                                                            |
 
 ### Web (nginx runtime)
 

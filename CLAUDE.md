@@ -23,13 +23,13 @@ pnpm --filter web run test # web only
 API integration tests require PostgreSQL running via Docker.
 
 ```sh
-docker compose up -d                            # skip if already running
+mise run db:up                                  # skip if already running
 docker compose exec db createdb -U tq tq_test   # first time only
 ```
 
-The Compose file uses a fixed project name (`tq-infra`), so the same PostgreSQL container is shared across all worktrees. Running `docker compose up -d` from any worktree is safe and will not create duplicate containers — skip if already running for development.
+The Compose file uses a fixed project name (`tq-infra`), so the same PostgreSQL container is shared across all worktrees. Running `mise run db:up` from any worktree is safe and will not create duplicate containers — skip if already running for development.
 
-The `db` service publishes Postgres on a random host port to avoid clashing with other projects. Find the assigned port with `docker compose port db 5432`, then set `DATABASE_URL` accordingly, e.g. `DATABASE_URL=postgresql://tq:tq@localhost:<port>/tq_test`. Do not point it at `tq_dev` — existing data there causes test failures.
+The `db` service publishes Postgres on a random host port to avoid clashing with other projects. `mise run db:up` resolves the assigned port and writes it to `.env.runtime` as both `DATABASE_URL` (`tq_dev`) and `TEST_DATABASE_URL` (`tq_test`); mise loads both automatically and `api`'s test runs prefer `TEST_DATABASE_URL`. Do not point `DATABASE_URL` at `tq_dev` for tests — existing data there causes test failures.
 
 Migrations are applied automatically by `api/src/global-setup.ts`.
 

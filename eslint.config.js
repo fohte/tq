@@ -23,9 +23,13 @@ export default config(
       ],
     },
   },
-  // .storybook/ and vite.config.ts are outside src/ where @ alias is unavailable
+  // .storybook/, vite.config.ts, and vitest.config.ts are outside src/ where @ alias is unavailable
   {
-    files: ['**/.storybook/**/*.ts', '**/vite.config.ts'],
+    files: [
+      '**/.storybook/**/*.ts',
+      '**/vite.config.ts',
+      '**/vitest.config.ts',
+    ],
     rules: {
       'no-restricted-imports': 'off',
     },
