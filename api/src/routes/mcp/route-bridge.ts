@@ -14,7 +14,9 @@ const validationErrorBodySchema = z.object({
   error: z.object({ message: z.string() }),
 })
 
-const notFoundBodySchema = z.object({ error: z.string() })
+// Matches routes' hand-written client-error bodies, e.g. `{ error: 'Task not
+// found' }` (404) or `{ error: 'Task is already completed' }` (409).
+const clientErrorBodySchema = z.object({ error: z.string() })
 
 export type RouteCallResult<T> =
   { ok: true; data: T } | { ok: false; result: CallToolResult }
@@ -33,31 +35,32 @@ export async function callInternalRoute<T = unknown>(
   const res = await app.request(path, init)
 
   if (res.ok) {
+    // Routes without a response body (e.g. DELETE endpoints) return 204.
+    const data = res.status === 204 ? undefined : await res.json()
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the caller specifies T based on which route it's calling; the response body isn't validated against it here
-    return { ok: true, data: (await res.json()) as T }
+    return { ok: true, data: data as T }
   }
 
   return { ok: false, result: await toErrorResult(res) }
 }
 
 async function toErrorResult(res: Response): Promise<CallToolResult> {
-  switch (res.status) {
-    case 404:
-      return errorResult(await formatNotFoundMessage(res))
-    case 400:
-      return errorResult(await formatValidationMessage(res))
-    default:
-      return errorResult(
-        'An internal error occurred while processing the request.',
-      )
+  if (res.status === 400) {
+    return errorResult(await formatValidationMessage(res))
   }
+  if (res.status >= 500) {
+    return errorResult(
+      'An internal error occurred while processing the request.',
+    )
+  }
+  return errorResult(await formatClientErrorMessage(res))
 }
 
-async function formatNotFoundMessage(res: Response): Promise<string> {
-  const parsed = notFoundBodySchema.safeParse(await readJson(res))
+async function formatClientErrorMessage(res: Response): Promise<string> {
+  const parsed = clientErrorBodySchema.safeParse(await readJson(res))
   return parsed.success
     ? parsed.data.error
-    : 'The requested resource was not found.'
+    : 'The request could not be completed.'
 }
 
 async function formatValidationMessage(res: Response): Promise<string> {

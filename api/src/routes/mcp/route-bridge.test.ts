@@ -7,7 +7,13 @@ import { z } from 'zod'
 const testApp = new Hono()
   .post(
     '/widgets',
-    zValidator('json', z.object({ title: z.string(), count: z.number() })),
+    zValidator(
+      'json',
+      z.object({
+        title: z.string({ error: 'title must be a string' }),
+        count: z.number({ error: 'count must be a number' }),
+      }),
+    ),
     (c) => c.json({ title: c.req.valid('json').title }, 201),
   )
   .get('/widgets/:id', (c) => {
@@ -16,6 +22,10 @@ const testApp = new Hono()
     }
     return c.json({ id: 'known' })
   })
+  .delete('/widgets/:id', (c) => c.body(null, 204))
+  .post('/widgets/:id/lock', (c) =>
+    c.json({ error: 'Widget is already locked' }, 409),
+  )
   .get('/boom', () => {
     throw new Error('boom')
   })
@@ -25,6 +35,14 @@ describe('callInternalRoute', () => {
     const result = await callInternalRoute(testApp, '/widgets/known')
 
     expect(result).toEqual({ ok: true, data: { id: 'known' } })
+  })
+
+  it('returns undefined data for a 204 response with no body', async () => {
+    const result = await callInternalRoute(testApp, '/widgets/known', {
+      method: 'DELETE',
+    })
+
+    expect(result).toEqual({ ok: true, data: undefined })
   })
 
   it('maps a 400 validation error to a field-level message', async () => {
@@ -41,7 +59,7 @@ describe('callInternalRoute', () => {
         content: [
           {
             type: 'text',
-            text: 'Invalid request: title: Invalid input: expected string, received undefined; count: Invalid input: expected number, received string',
+            text: 'Invalid request: title: title must be a string; count: count must be a number',
           },
         ],
       },
@@ -56,6 +74,20 @@ describe('callInternalRoute', () => {
       result: {
         isError: true,
         content: [{ type: 'text', text: 'Widget not found' }],
+      },
+    })
+  })
+
+  it('maps a 409 to the conflict message from the response body', async () => {
+    const result = await callInternalRoute(testApp, '/widgets/known/lock', {
+      method: 'POST',
+    })
+
+    expect(result).toEqual({
+      ok: false,
+      result: {
+        isError: true,
+        content: [{ type: 'text', text: 'Widget is already locked' }],
       },
     })
   })
