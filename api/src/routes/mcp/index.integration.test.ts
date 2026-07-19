@@ -30,12 +30,15 @@ describe('MCP endpoint', () => {
       // tool group's own tests; this only pins down that every registered
       // tool is reachable through the wire protocol.
       expect(result.tools.map((tool) => tool.name).sort()).toEqual([
+        'create_task',
         'get_task',
         'get_today_tasks',
         'list_labels',
         'list_projects',
         'list_tasks',
         'search_tasks',
+        'update_task',
+        'update_task_status',
       ])
     } finally {
       await client.close()

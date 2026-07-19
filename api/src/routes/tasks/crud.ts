@@ -22,7 +22,7 @@ import { and, count, eq, inArray, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
-const createTaskSchema = z.object({
+export const createTaskSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   startDate: z.string().optional(),
@@ -35,7 +35,7 @@ const createTaskSchema = z.object({
   recurrenceRule: recurrenceRuleSchema.optional(),
 })
 
-const updateTaskSchema = z.object({
+export const updateTaskSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   startDate: z.string().nullable().optional(),
