@@ -1,6 +1,7 @@
 import { calendarApp } from '@api/routes/calendar'
 import { imagesApp } from '@api/routes/images'
 import { labelsApp } from '@api/routes/labels'
+import { mcpApp } from '@api/routes/mcp'
 import { projectsApp } from '@api/routes/projects'
 import { schedulesApp } from '@api/routes/schedules'
 import { taskCommentsApp } from '@api/routes/task-comments'
@@ -27,6 +28,7 @@ const app = new Hono()
   .route('/api/calendar', calendarApp)
   .route('/api/images', imagesApp)
   .route('/api/labels', labelsApp)
+  .route('/api/mcp', mcpApp)
 
 export { app }
 
