@@ -6,7 +6,12 @@ import { and, count, eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
-const projectStatus = z.enum(['active', 'paused', 'completed', 'archived'])
+export const projectStatus = z.enum([
+  'active',
+  'paused',
+  'completed',
+  'archived',
+])
 
 const createProjectSchema = z.object({
   title: z.string().min(1),

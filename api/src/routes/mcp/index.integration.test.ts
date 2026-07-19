@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest'
 // middleware stack, so it runs through the existing OTel HTTP
 // auto-instrumentation exactly like any other route.
 describe('MCP endpoint', () => {
-  it('completes initialize and lists the tool set', async () => {
+  it('completes initialize and lists the registered tools', async () => {
     const client = new Client({ name: 'test-client', version: '1.0.0' })
     const transport = new StreamableHTTPClientTransport(
       new URL('http://localhost/api/mcp'),
@@ -26,8 +26,17 @@ describe('MCP endpoint', () => {
     try {
       const result = await client.listTools()
 
-      expect(result.tools.map((tool) => tool.name)).toEqual([
+      // Per-tool schema/description/annotation detail is covered by each
+      // tool group's own tests; this only pins down that every registered
+      // tool is reachable through the wire protocol.
+      expect(result.tools.map((tool) => tool.name).sort()).toEqual([
         'create_task',
+        'get_task',
+        'get_today_tasks',
+        'list_labels',
+        'list_projects',
+        'list_tasks',
+        'search_tasks',
         'update_task',
         'update_task_status',
       ])
