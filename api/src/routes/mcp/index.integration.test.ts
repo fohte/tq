@@ -26,7 +26,11 @@ describe('MCP endpoint', () => {
     try {
       const result = await client.listTools()
 
-      expect(result).toEqual({ tools: [] })
+      expect(result.tools.map((tool) => tool.name)).toEqual([
+        'create_task',
+        'update_task',
+        'update_task_status',
+      ])
     } finally {
       await client.close()
     }
