@@ -1,12 +1,10 @@
-import type { RouteCallResult } from '@api/routes/mcp/route-bridge'
 import { callInternalRoute } from '@api/routes/mcp/route-bridge'
+import { projectStatus } from '@api/routes/projects'
 import { contextEnum, taskStatus } from '@api/routes/tasks/shared'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import type { Hono } from 'hono'
 import { z } from 'zod'
-
-const projectStatus = z.enum(['active', 'paused', 'completed', 'archived'])
 
 async function resolveApp(): Promise<Hono> {
   // `@api/app` imports `mcpApp` (routes/mcp/index.ts -> server.ts -> this
@@ -26,7 +24,9 @@ function buildQuery(params: Record<string, string | undefined>): string {
   return qs === '' ? '' : `?${qs}`
 }
 
-function toResult<T>(result: RouteCallResult<T>): CallToolResult {
+async function callAsResult(path: string): Promise<CallToolResult> {
+  const app = await resolveApp()
+  const result = await callInternalRoute(app, path)
   return result.ok
     ? { content: [{ type: 'text', text: JSON.stringify(result.data) }] }
     : result.result
@@ -59,15 +59,10 @@ export function registerReadTools(server: McpServer): void {
       },
       annotations: { readOnlyHint: true },
     },
-    async ({ status, projectId, parentId, context }) => {
-      const app = await resolveApp()
-      return toResult(
-        await callInternalRoute(
-          app,
-          `/api/tasks${buildQuery({ status, projectId, parentId, context })}`,
-        ),
-      )
-    },
+    async ({ status, projectId, parentId, context }) =>
+      callAsResult(
+        `/api/tasks${buildQuery({ status, projectId, parentId, context })}`,
+      ),
   )
 
   server.registerTool(
@@ -83,27 +78,30 @@ export function registerReadTools(server: McpServer): void {
     async ({ taskId }) => {
       const app = await resolveApp()
 
-      const taskResult = await callInternalRoute<Record<string, unknown>>(
-        app,
-        `/api/tasks/${taskId}`,
-      )
+      // `/api/tasks/tree` already implements subtree traversal via a
+      // recursive CTE, so this composes it with the detail endpoint instead
+      // of walking `parentId` links here.
+      const [taskResult, treeResult] = await Promise.all([
+        callInternalRoute<Record<string, unknown>>(app, `/api/tasks/${taskId}`),
+        callInternalRoute<Array<{ children: unknown }>>(
+          app,
+          `/api/tasks/tree${buildQuery({ rootId: taskId })}`,
+        ),
+      ])
       if (!taskResult.ok) return taskResult.result
-
-      // Reuses the existing tree endpoint (recursive CTE) instead of
-      // reimplementing subtree traversal here.
-      const treeResult = await callInternalRoute<Array<{ children: unknown }>>(
-        app,
-        `/api/tasks/tree${buildQuery({ rootId: taskId })}`,
-      )
       if (!treeResult.ok) return treeResult.result
 
-      return toResult({
-        ok: true,
-        data: {
-          ...taskResult.data,
-          subtasks: treeResult.data[0]?.children ?? [],
-        },
-      })
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              ...taskResult.data,
+              subtasks: treeResult.data[0]?.children ?? [],
+            }),
+          },
+        ],
+      }
     },
   )
 
@@ -179,53 +177,44 @@ export function registerReadTools(server: McpServer): void {
       sortBy,
       limit,
       offset,
-    }) => {
-      const app = await resolveApp()
-      return toResult(
-        await callInternalRoute(
-          app,
-          `/api/tasks/search${buildQuery({
-            q,
-            status,
-            label,
-            context,
-            hasEstimate: hasEstimate?.toString(),
-            hasDue: hasDue?.toString(),
-            sortBy,
-            limit: limit?.toString(),
-            offset: offset?.toString(),
-          })}`,
-        ),
-      )
-    },
+    }) =>
+      callAsResult(
+        `/api/tasks/search${buildQuery({
+          q,
+          status,
+          label,
+          context,
+          hasEstimate: hasEstimate?.toString(),
+          hasDue: hasDue?.toString(),
+          sortBy,
+          limit: limit?.toString(),
+          offset: offset?.toString(),
+        })}`,
+      ),
   )
 
   server.registerTool(
     'get_today_tasks',
     {
       description:
-        'Get the tasks in the Today queue: the tasks a user has staged to work on for a given day, in queue order. Defaults to the current UTC date when date is omitted.',
+        "Get the tasks in the Today queue: the tasks a user has staged to work on for a given day, in queue order. Omitting date defaults to the server's current UTC date, which may not match the caller's local calendar day; pass an explicit date to get a specific (e.g. the caller's local) day.",
       inputSchema: {
         date: z
           .string()
           .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
           .optional()
           .describe(
-            'Date to fetch the Today queue for, as YYYY-MM-DD. Defaults to the current UTC date.',
+            "Date to fetch the Today queue for, as YYYY-MM-DD. Defaults to the server's current UTC date.",
           ),
       },
       annotations: { readOnlyHint: true },
     },
-    async ({ date }) => {
-      const app = await resolveApp()
-      const resolvedDate = date ?? new Date().toISOString().slice(0, 10)
-      return toResult(
-        await callInternalRoute(
-          app,
-          `/api/schedule/today-tasks${buildQuery({ date: resolvedDate })}`,
-        ),
-      )
-    },
+    async ({ date }) =>
+      callAsResult(
+        `/api/schedule/today-tasks${buildQuery({
+          date: date ?? new Date().toISOString().slice(0, 10),
+        })}`,
+      ),
   )
 
   server.registerTool(
@@ -240,12 +229,8 @@ export function registerReadTools(server: McpServer): void {
       },
       annotations: { readOnlyHint: true },
     },
-    async ({ status }) => {
-      const app = await resolveApp()
-      return toResult(
-        await callInternalRoute(app, `/api/projects${buildQuery({ status })}`),
-      )
-    },
+    async ({ status }) =>
+      callAsResult(`/api/projects${buildQuery({ status })}`),
   )
 
   server.registerTool(
@@ -255,9 +240,6 @@ export function registerReadTools(server: McpServer): void {
         'List all labels available for tagging tasks, with their id, name, and color. Use this to resolve label names before filtering search_tasks by label or attaching labels to a task.',
       annotations: { readOnlyHint: true },
     },
-    async () => {
-      const app = await resolveApp()
-      return toResult(await callInternalRoute(app, '/api/labels'))
-    },
+    async () => callAsResult('/api/labels'),
   )
 }

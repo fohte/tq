@@ -9,6 +9,15 @@ import { describe, expect, it } from 'vitest'
 
 setupTestDb()
 
+const READ_TOOL_NAMES = [
+  'get_task',
+  'get_today_tasks',
+  'list_labels',
+  'list_projects',
+  'list_tasks',
+  'search_tasks',
+]
+
 async function withClient<T>(fn: (client: Client) => Promise<T>): Promise<T> {
   const client = new Client({ name: 'test-client', version: '1.0.0' })
   const transport = new StreamableHTTPClientTransport(
@@ -53,11 +62,12 @@ function parseJson(result: CallToolResult): unknown {
 }
 
 describe('read tools', () => {
-  it('declares every tool as read-only', async () => {
+  it('declares every read tool as read-only', async () => {
     const result = await withClient((client) => client.listTools())
 
     expect(
       result.tools
+        .filter((tool) => READ_TOOL_NAMES.includes(tool.name))
         .map((tool) => ({
           name: tool.name,
           readOnlyHint: tool.annotations?.readOnlyHint,
@@ -80,16 +90,15 @@ describe('read tools', () => {
       expect(result.isError).toBe(true)
     })
 
-    it('matches the REST endpoint result', async () => {
-      await createTask('Work task', { context: 'work' })
+    it('returns tasks matching the given filters', async () => {
+      const task = await createTask('Work task', { context: 'work' })
       await createTask('Personal task')
-
-      const restRes = await app.request('/api/tasks?context=work')
-      const restBody = await jsonBody<Record<string, unknown>[]>(restRes)
 
       const toolResult = await callTool('list_tasks', { context: 'work' })
 
-      expect(parseJson(toolResult)).toEqual(restBody)
+      expect(parseJson(toolResult)).toEqual([
+        { ...task, activeTimeBlockStartTime: null },
+      ])
     })
   })
 
@@ -102,20 +111,23 @@ describe('read tools', () => {
 
     it('merges the task detail with its subtask tree', async () => {
       const parent = await createTask('Parent')
-      await createTask('Child', { parentId: parent.id })
-
-      const [restRes, treeRes] = await Promise.all([
-        app.request(`/api/tasks/${parent.id}`),
-        app.request(`/api/tasks/tree?rootId=${parent.id}`),
-      ])
-      const restBody = await jsonBody<Record<string, unknown>>(restRes)
-      const treeBody = await jsonBody<Array<{ children: unknown }>>(treeRes)
+      const child = await createTask('Child', { parentId: parent.id })
 
       const toolResult = await callTool('get_task', { taskId: parent.id })
 
       expect(parseJson(toolResult)).toEqual({
-        ...restBody,
-        subtasks: treeBody[0]?.children ?? [],
+        ...parent,
+        childCompletionCount: { total: 1, completed: 0 },
+        pages: [],
+        timeBlocks: [],
+        subtasks: [
+          {
+            ...child,
+            activeTimeBlockStartTime: null,
+            children: [],
+            childCompletionCount: { total: 0, completed: 0 },
+          },
+        ],
       })
     })
 
@@ -136,30 +148,33 @@ describe('read tools', () => {
       expect(result.isError).toBe(true)
     })
 
-    it('matches the REST endpoint result', async () => {
-      await createTask('Deploy to production')
+    it('returns tasks matching the free-text query', async () => {
+      const match = await createTask('Deploy to production')
       await createTask('Buy groceries')
-
-      const restRes = await app.request(
-        '/api/tasks/search?q=' + encodeURIComponent('deploy'),
-      )
-      const restBody = await jsonBody<Record<string, unknown>[]>(restRes)
 
       const toolResult = await callTool('search_tasks', { q: 'deploy' })
 
-      expect(parseJson(toolResult)).toEqual(restBody)
+      expect(parseJson(toolResult)).toEqual([match])
     })
 
-    it('translates boolean hasEstimate/hasDue into the REST string params', async () => {
+    it('translates hasEstimate into the REST string param', async () => {
       await createTask('With estimate', { estimatedMinutes: 30 })
-      await createTask('Without estimate')
-
-      const restRes = await app.request('/api/tasks/search?hasEstimate=false')
-      const restBody = await jsonBody<Record<string, unknown>[]>(restRes)
+      const withoutEstimate = await createTask('Without estimate')
 
       const toolResult = await callTool('search_tasks', { hasEstimate: false })
 
-      expect(parseJson(toolResult)).toEqual(restBody)
+      expect(parseJson(toolResult)).toEqual([withoutEstimate])
+    })
+
+    it('translates hasDue into the REST string param', async () => {
+      const withDue = await createTask('With due date', {
+        dueDate: '2026-02-01',
+      })
+      await createTask('Without due date')
+
+      const toolResult = await callTool('search_tasks', { hasDue: true })
+
+      expect(parseJson(toolResult)).toEqual([withDue])
     })
   })
 
@@ -170,43 +185,38 @@ describe('read tools', () => {
       expect(result.isError).toBe(true)
     })
 
-    it('matches the REST endpoint result for an explicit date', async () => {
+    it('returns the queue for an explicit date', async () => {
       const task = await createTask('Queued task')
-      await app.request('/api/schedule/today-tasks', {
+      const putRes = await app.request('/api/schedule/today-tasks', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskIds: [task.id], date: '2026-01-15' }),
       })
-
-      const restRes = await app.request(
-        '/api/schedule/today-tasks?date=2026-01-15',
-      )
-      const restBody = await jsonBody<Record<string, unknown>[]>(restRes)
+      const queued = await jsonBody<Record<string, unknown>[]>(putRes)
 
       const toolResult = await callTool('get_today_tasks', {
         date: '2026-01-15',
       })
 
-      expect(parseJson(toolResult)).toEqual(restBody)
+      expect(parseJson(toolResult)).toEqual(queued)
     })
 
+    // `today` and the tool's own internal `new Date()` call are evaluated a
+    // few milliseconds apart, so this could in principle flake right at a
+    // UTC midnight boundary; accepted as negligible.
     it('defaults to the current UTC date when date is omitted', async () => {
       const today = new Date().toISOString().slice(0, 10)
       const task = await createTask('Queued task')
-      await app.request('/api/schedule/today-tasks', {
+      const putRes = await app.request('/api/schedule/today-tasks', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskIds: [task.id], date: today }),
       })
-
-      const restRes = await app.request(
-        `/api/schedule/today-tasks?date=${today}`,
-      )
-      const restBody = await jsonBody<Record<string, unknown>[]>(restRes)
+      const queued = await jsonBody<Record<string, unknown>[]>(putRes)
 
       const toolResult = await callTool('get_today_tasks')
 
-      expect(parseJson(toolResult)).toEqual(restBody)
+      expect(parseJson(toolResult)).toEqual(queued)
     })
   })
 
@@ -217,32 +227,34 @@ describe('read tools', () => {
       expect(result.isError).toBe(true)
     })
 
-    it('matches the REST endpoint result', async () => {
-      await app.request('/api/projects', {
+    it('returns projects matching the given filter', async () => {
+      const postRes = await app.request('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'Website redesign' }),
       })
-
-      const restRes = await app.request('/api/projects')
-      const restBody = await jsonBody<Record<string, unknown>[]>(restRes)
+      const project = await jsonBody<Record<string, unknown>>(postRes)
 
       const toolResult = await callTool('list_projects')
 
-      expect(parseJson(toolResult)).toEqual(restBody)
+      expect(parseJson(toolResult)).toEqual([project])
     })
   })
 
   describe('list_labels', () => {
-    it('matches the REST endpoint result', async () => {
-      await createLabel('urgent')
-
-      const restRes = await app.request('/api/labels')
-      const restBody = await jsonBody<Record<string, unknown>[]>(restRes)
+    it('returns all labels', async () => {
+      const label = await createLabel('urgent')
 
       const toolResult = await callTool('list_labels')
 
-      expect(parseJson(toolResult)).toEqual(restBody)
+      expect(parseJson(toolResult)).toEqual([
+        {
+          id: label.id,
+          name: 'urgent',
+          color: label.color,
+          createdAt: label.createdAt.toISOString(),
+        },
+      ])
     })
   })
 })
