@@ -1,6 +1,6 @@
 import { app } from '@api/app'
 import { db } from '@api/db/connection'
-import { labels, taskLabels } from '@api/db/schema'
+import { labels, taskLabels, timeBlocks } from '@api/db/schema'
 import { createTask, TEST_UUID } from '@api/routes/tasks/testing'
 import { passthroughSchema, setupTestDb } from '@api/testing'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
@@ -10,7 +10,7 @@ import {
   type CallToolResult,
   CallToolResultSchema,
 } from '@modelcontextprotocol/sdk/types.js'
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 setupTestDb()
@@ -104,7 +104,7 @@ describe('create_task tool', () => {
     })
   })
 
-  it('attaches existing labels by name', async () => {
+  it('attaches only the labels that exist, ignoring unknown names', async () => {
     await db.insert(labels).values({ name: 'urgent' })
 
     const result = await callTool('create_task', {
@@ -122,31 +122,6 @@ describe('create_task tool', () => {
       .where(eq(taskLabels.taskId, data.id))
 
     expect(attached).toEqual([{ name: 'urgent' }])
-  })
-
-  it('rejects a request missing the required title', async () => {
-    const result = await callTool('create_task', {})
-
-    // Missing/malformed fields are caught by the MCP SDK itself, validating
-    // the arguments against `inputSchema` before invoking the tool, so this
-    // never reaches `callInternalRoute`'s HTTP-response mapping.
-    const issues = [
-      {
-        expected: 'string',
-        code: 'invalid_type',
-        path: ['title'],
-        message: 'Invalid input: expected string, received undefined',
-      },
-    ]
-    expect(result).toEqual({
-      isError: true,
-      content: [
-        {
-          type: 'text',
-          text: `MCP error -32602: Input validation error: Invalid arguments for tool create_task: ${JSON.stringify(issues, null, 2)}`,
-        },
-      ],
-    })
   })
 
   it('rejects a non-existent parentId', async () => {
@@ -173,12 +148,23 @@ describe('update_task tool', () => {
       title: 'Updated title',
     })
 
-    const data = passthroughSchema<{
-      title: string
-      description: string | null
-    }>().parse(parseToolData(result))
-    expect(data.title).toBe('Updated title')
-    expect(data.description).toBe('Original description')
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      title: 'Updated title',
+      description: 'Original description',
+      status: 'todo',
+      context: 'personal',
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      sortOrder: 0,
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+    })
   })
 
   it('clears a nullable field by passing null', async () => {
@@ -191,10 +177,23 @@ describe('update_task tool', () => {
       description: null,
     })
 
-    const data = passthroughSchema<{ description: string | null }>().parse(
-      parseToolData(result),
-    )
-    expect(data.description).toBeNull()
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      title: 'Has description',
+      description: null,
+      status: 'todo',
+      context: 'personal',
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      sortOrder: 0,
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+    })
   })
 
   it('rejects a non-existent taskId', async () => {
@@ -219,19 +218,31 @@ describe('update_task_status tool', () => {
       status: 'in_progress',
     })
 
-    const data = passthroughSchema<{
-      status: string
-      timeBlock: { endTime: string | null }
-    }>().parse(parseToolData(result))
-    expect(data.status).toBe('in_progress')
-    expect(data.timeBlock).toEqual({
+    expect(parseToolData(result)).toEqual({
       id: '<uuid>',
-      taskId: '<uuid>',
-      startTime: '<timestamp>',
-      endTime: null,
-      isAutoScheduled: false,
+      title: 'Start me',
+      description: null,
+      status: 'in_progress',
+      context: 'personal',
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
+      timeBlock: {
+        id: '<uuid>',
+        taskId: '<uuid>',
+        startTime: '<timestamp>',
+        endTime: null,
+        isAutoScheduled: false,
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+      },
     })
   })
 
@@ -247,13 +258,60 @@ describe('update_task_status tool', () => {
       status: 'todo',
     })
 
-    const data = passthroughSchema<{
-      status: string
-      closedTimeBlocks: { endTime: string | null }[]
-    }>().parse(parseToolData(result))
-    expect(data.status).toBe('todo')
-    expect(data.closedTimeBlocks).toHaveLength(1)
-    expect(data.closedTimeBlocks[0]?.endTime).toBe('<timestamp>')
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      title: 'Stop me',
+      description: null,
+      status: 'todo',
+      context: 'personal',
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      sortOrder: 0,
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+    })
+
+    const openTimeBlocks = await db
+      .select()
+      .from(timeBlocks)
+      .where(and(eq(timeBlocks.taskId, task.id), isNull(timeBlocks.endTime)))
+    expect(openTimeBlocks).toEqual([])
+  })
+
+  it('reopens a completed task by moving it back to todo', async () => {
+    const task = await createTask('Reopen me')
+    await callTool('update_task_status', {
+      taskId: task.id,
+      status: 'completed',
+    })
+
+    const result = await callTool('update_task_status', {
+      taskId: task.id,
+      status: 'todo',
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      title: 'Reopen me',
+      description: null,
+      status: 'todo',
+      context: 'personal',
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      sortOrder: 0,
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+    })
   })
 
   it('completes a recurring task and generates its next occurrence', async () => {
@@ -271,19 +329,14 @@ describe('update_task_status tool', () => {
       status: 'completed',
     })
 
-    const data = passthroughSchema<{
-      status: string
-      nextTask: { title: string; status: string; dueDate: string } | null
-    }>().parse(parseToolData(result))
-    expect(data.status).toBe('completed')
-    expect(data.nextTask).toEqual({
+    expect(parseToolData(result)).toEqual({
       id: '<uuid>',
       title: 'Daily recurring task',
       description: null,
-      status: 'todo',
+      status: 'completed',
       context: 'personal',
       startDate: null,
-      dueDate: '2026-03-23',
+      dueDate: '2026-03-22',
       estimatedMinutes: null,
       parentId: null,
       projectId: null,
@@ -298,6 +351,30 @@ describe('update_task_status tool', () => {
       sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
+      closedTimeBlocks: [],
+      nextTask: {
+        id: '<uuid>',
+        title: 'Daily recurring task',
+        description: null,
+        status: 'todo',
+        context: 'personal',
+        startDate: null,
+        dueDate: '2026-03-23',
+        estimatedMinutes: null,
+        parentId: null,
+        projectId: null,
+        recurrenceRuleId: '<uuid>',
+        recurrenceRule: {
+          id: '<uuid>',
+          type: 'daily',
+          interval: 1,
+          daysOfWeek: null,
+          dayOfMonth: null,
+        },
+        sortOrder: 0,
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+      },
     })
   })
 

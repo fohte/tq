@@ -6,18 +6,29 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 
-// Starting, stopping, and completing a task each carry side effects (opening
-// or closing a TimeBlock, generating the next occurrence of a recurring task)
-// that a direct status write doesn't, so status changes always go through
-// these action endpoints rather than `PATCH /api/tasks/:id/status`.
-const STATUS_ACTION_PATHS = {
-  todo: 'stop',
+// Starting and completing a task carry side effects (opening a TimeBlock,
+// generating the next occurrence of a recurring task) that a direct status
+// write doesn't, so those two transitions go through their action endpoints.
+// Moving to `todo` goes through `PATCH /api/tasks/:id/status` instead of
+// `POST /:id/stop`: `/stop` requires the task to currently be in_progress,
+// which would reject a legitimate "reopen a completed task" or a no-op
+// todo -> todo call; `PATCH /status` still closes an open TimeBlock when
+// transitioning away from in_progress, just without echoing it back.
+const START_OR_COMPLETE_PATHS = {
   in_progress: 'start',
   completed: 'complete',
 } as const
 
 function toolResult(data: unknown): CallToolResult {
   return { content: [{ type: 'text', text: JSON.stringify(data) }] }
+}
+
+async function callRoute(
+  path: string,
+  init?: RequestInit,
+): Promise<CallToolResult> {
+  const result = await callInternalRoute(app, path, init)
+  return result.ok ? toolResult(result.data) : result.result
 }
 
 /** Write tools: creating, updating, and deleting tasks/projects/labels/etc. */
@@ -35,14 +46,12 @@ export function registerWriteTools(server: McpServer): void {
         'and `dayOfMonth` (1-31) fixes the day for a monthly rule.',
       inputSchema: createTaskSchema.shape,
     },
-    async (input) => {
-      const result = await callInternalRoute(app, '/api/tasks', {
+    async (input) =>
+      callRoute('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
-      })
-      return result.ok ? toolResult(result.data) : result.result
-    },
+      }),
   )
 
   server.registerTool(
@@ -57,14 +66,12 @@ export function registerWriteTools(server: McpServer): void {
         'recurrence from the task.',
       inputSchema: { taskId: z.uuid(), ...updateTaskSchema.shape },
     },
-    async ({ taskId, ...body }) => {
-      const result = await callInternalRoute(app, `/api/tasks/${taskId}`, {
+    async ({ taskId, ...body }) =>
+      callRoute(`/api/tasks/${taskId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-      })
-      return result.ok ? toolResult(result.data) : result.result
-    },
+      }),
   )
 
   server.registerTool(
@@ -78,13 +85,15 @@ export function registerWriteTools(server: McpServer): void {
         'starting a task that is already in_progress) is rejected.',
       inputSchema: { taskId: z.uuid(), status: taskStatus },
     },
-    async ({ taskId, status }) => {
-      const result = await callInternalRoute(
-        app,
-        `/api/tasks/${taskId}/${STATUS_ACTION_PATHS[status]}`,
-        { method: 'POST' },
-      )
-      return result.ok ? toolResult(result.data) : result.result
-    },
+    async ({ taskId, status }) =>
+      status === 'todo'
+        ? callRoute(`/api/tasks/${taskId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status }),
+          })
+        : callRoute(`/api/tasks/${taskId}/${START_OR_COMPLETE_PATHS[status]}`, {
+            method: 'POST',
+          }),
   )
 }
