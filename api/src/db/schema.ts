@@ -1,6 +1,8 @@
+import { sql } from 'drizzle-orm'
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -270,18 +272,29 @@ export const images = pgTable(
   (table) => [index('idx_images_r2_key').on(table.r2Key)],
 )
 
-export const oauthTokens = pgTable('oauth_tokens', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  provider: text('provider').notNull().default('google_calendar').unique(),
-  accessToken: text('access_token').notNull(),
-  refreshToken: text('refresh_token').notNull(),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-})
+export const oauthTokens = pgTable(
+  'oauth_tokens',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    provider: text('provider').notNull().default('google_calendar').unique(),
+    accessToken: text('access_token').notNull(),
+    // Nullable: GitHub OAuth App tokens have neither a refresh token nor an
+    // expiry (see https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/token-expiration-and-revocation).
+    refreshToken: text('refresh_token'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      'oauth_tokens_refresh_metadata_required',
+      sql`${table.provider} = 'github' OR (${table.refreshToken} IS NOT NULL AND ${table.expiresAt} IS NOT NULL)`,
+    ),
+  ],
+)

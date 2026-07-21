@@ -15,6 +15,20 @@
       "when": 1774163700616,
       "tag": "0001_lowly_ghost_rider",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784652041956,
+      "tag": "0002_green_pretty_boy",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784663327656,
+      "tag": "0003_demonic_bullseye",
+      "breakpoints": true
     }
   ]
 }

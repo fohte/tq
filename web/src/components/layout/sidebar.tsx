@@ -12,6 +12,7 @@ import {
   PanelLeftOpen,
   Plus,
   Search,
+  Settings,
   Sun,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -109,6 +110,12 @@ const projectNavItem: NavItem = {
   label: 'Projects',
 }
 
+const settingsNavItem: NavItem = {
+  to: '/settings',
+  icon: Settings,
+  label: 'Settings',
+}
+
 export function Sidebar({ onNewProject }: { onNewProject?: () => void }) {
   const [expanded, setExpanded] = useState(false)
 
@@ -141,8 +148,11 @@ export function Sidebar({ onNewProject }: { onNewProject?: () => void }) {
           <ProjectsSection onNewProject={onNewProject ?? (() => {})} />
         </nav>
 
-        <div className="px-4">
-          <ContextFilter />
+        <div className="flex flex-col gap-2 px-2">
+          <ExpandedNavLink item={settingsNavItem} />
+          <div className="px-2">
+            <ContextFilter />
+          </div>
         </div>
       </aside>
     )
@@ -175,7 +185,8 @@ export function Sidebar({ onNewProject }: { onNewProject?: () => void }) {
         </button>
       </nav>
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-col items-center gap-2">
+        <CollapsedNavLink item={settingsNavItem} />
         <ContextFilter />
       </div>
     </aside>

@@ -1,4 +1,5 @@
 import { calendarApp } from '@api/routes/calendar'
+import { githubApp } from '@api/routes/github'
 import { imagesApp } from '@api/routes/images'
 import { labelsApp } from '@api/routes/labels'
 import { mcpApp } from '@api/routes/mcp'
@@ -26,6 +27,7 @@ const app = new Hono()
   .route('/api/projects', projectsApp)
   .route('/api/schedule', schedulesApp)
   .route('/api/calendar', calendarApp)
+  .route('/api/github', githubApp)
   .route('/api/images', imagesApp)
   .route('/api/labels', labelsApp)
   .route('/api/mcp', mcpApp)

@@ -1,6 +1,6 @@
 import { db } from '@api/db/connection'
 import { oauthTokens } from '@api/db/schema'
-import { setupTestDb } from '@api/testing'
+import { assertDefined, setupTestDb } from '@api/testing'
 import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -110,7 +110,9 @@ describe('handleOAuthCallback', () => {
         refreshToken: 'new-refresh-token',
       }),
     )
-    expect(savedToken?.expiresAt.getTime()).toBeGreaterThan(Date.now())
+    assertDefined(savedToken)
+    assertDefined(savedToken.expiresAt)
+    expect(savedToken.expiresAt.getTime()).toBeGreaterThan(Date.now())
   })
 
   it('throws when token exchange fails', async () => {

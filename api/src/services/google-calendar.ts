@@ -137,8 +137,13 @@ export async function refreshTokenIfNeeded(): Promise<string> {
     throw new OAuthTokenMissingError()
   }
 
+  const { refreshToken, expiresAt: currentExpiresAt } = token
+  if (refreshToken == null || currentExpiresAt == null) {
+    throw new Error('Google Calendar OAuth token is missing refresh metadata')
+  }
+
   // Return existing token if not expired
-  if (token.expiresAt.getTime() > Date.now() + REFRESH_BUFFER_MS) {
+  if (currentExpiresAt.getTime() > Date.now() + REFRESH_BUFFER_MS) {
     return token.accessToken
   }
 
@@ -151,7 +156,7 @@ export async function refreshTokenIfNeeded(): Promise<string> {
     body: new URLSearchParams({
       client_id: clientId,
       client_secret: clientSecret,
-      refresh_token: token.refreshToken,
+      refresh_token: refreshToken,
       grant_type: 'refresh_token',
     }),
   })
