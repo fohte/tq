@@ -1,0 +1,18 @@
+issuer: https://token.actions.githubusercontent.com
+subject_pattern: ^repo:fohte/tq:ref:refs/heads/main$
+claim_pattern:
+  job_workflow_ref: ^fohte/tq/\.github/workflows/renovate\.yml@refs/heads/main$
+# Renovate calls many GitHub APIs, and a single 403 among them aborts the
+# whole repository as integration-unauthorized. Follow the permission set
+# from Renovate's self-hosted GitHub App docs:
+# https://docs.renovatebot.com/modules/platform/github/#running-as-a-github-app
+permissions:
+  checks: write
+  contents: write
+  issues: write
+  pull_requests: write
+  statuses: write
+  workflows: write
+  administration: read
+  members: read
+  vulnerability_alerts: read
