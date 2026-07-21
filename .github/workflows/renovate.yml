@@ -63,7 +63,7 @@ jobs:
           # Some repository aborts (see the "Fail on repository abort" step)
           # log below the JSON report's WARN threshold, so also capture the
           # full log to catch those.
-          LOG_FILE: /tmp/renovate.log
+          RENOVATE_LOG_FILE: /tmp/renovate.log
           LOG_LEVEL: ${{ inputs.logLevel || 'info' }}
 
       - name: Fail on repository abort
