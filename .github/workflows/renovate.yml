@@ -1,0 +1,114 @@
+name: Renovate
+
+on:
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Renovate log level'
+        type: choice
+        default: info
+        options: [debug, info, warn, error]
+  schedule:
+    # Daily at 03:00 JST (18:00 UTC). Run workflow_dispatch manually to apply
+    # a Dependency Dashboard checkbox change immediately.
+    - cron: '0 18 * * *'
+
+# Killing Renovate mid-run can leave half-finished branches/PRs behind, so
+# later runs wait instead of cancelling the one in progress.
+concurrency:
+  group: renovate
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: octo-sts/action@f603d3be9d8dd9871a265776e625a27b00effe05 # v1.1.1
+        id: octo-sts
+        with:
+          scope: fohte/tq
+          identity: tq-renovate
+          domain: octo-sts.fohte.net
+
+      - uses: renovatebot/github-action@22e0a16091fc706b04affe6ae53d5e3358ac4023 # v46.1.19
+        with:
+          token: ${{ steps.octo-sts.outputs.token }}
+          # Renovate runs inside Docker, so share /tmp to let the next step read the report.
+          docker-volumes: /tmp:/tmp
+        env:
+          # renovate.json5 in this repo is the source of truth for config, so
+          # target only this repo instead of autodiscovering others.
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_AUTODISCOVER: 'false'
+          # octo-sts federates the fohte-bot GitHub App's installation token,
+          # so commits/PRs must be attributed to that bot account explicitly.
+          RENOVATE_USERNAME: 'fohte-bot[bot]'
+          RENOVATE_GIT_AUTHOR: 'fohte-bot[bot] <139195068+fohte-bot[bot]@users.noreply.github.com>'
+          # This workflow never configures a local git identity, so committing
+          # via the GitHub API avoids needing one while keeping the commit
+          # author consistent with RENOVATE_USERNAME/RENOVATE_GIT_AUTHOR.
+          RENOVATE_PLATFORM_COMMIT: 'enabled'
+          # Renovate exits 0 with only a log on repository aborts (e.g.
+          # integration-unauthorized), so the next step reads the JSON report
+          # to detect and fail on those cases explicitly.
+          RENOVATE_REPORT_TYPE: file
+          RENOVATE_REPORT_PATH: /tmp/renovate-report.json
+          # Some repository aborts (see the "Fail on repository abort" step)
+          # log below the JSON report's WARN threshold, so also capture the
+          # full log to catch those.
+          LOG_FILE: /tmp/renovate.log
+          LOG_LEVEL: ${{ inputs.logLevel || 'info' }}
+
+      - name: Fail on repository abort
+        if: always()
+        run: |
+          set -euo pipefail
+          report=/tmp/renovate-report.json
+          if [ ! -f "$report" ]; then
+            echo "::error::Renovate report not found at $report."
+            exit 1
+          fi
+          problems=$(jq '
+            # `// []` / `// {}` guard against null iteration when problems/repositories is missing.
+            [(.problems // [])[], ((.repositories // {}) | to_entries[] | .value.problems // [] | .[])]
+            # bunyan levels: 40=WARN, 50=ERROR. error.ts logs most repository
+            # aborts as WARN "<reason> - aborting"; other fatal errors (disk
+            # space / not found / unknown error) use logger.error (level>=50).
+            # Matching all WARNs would also catch benign ones like failed
+            # package lookups, so WARNs are restricted to msgs containing "aborting".
+            | map(select(.level >= 50 or (.level >= 40 and ((.msg // "") | test("aborting"; "i")))))
+          ' "$report")
+          count=$(jq 'length' <<<"$problems")
+          if [ "$count" -gt 0 ]; then
+            echo "::error::Renovate reported ${count} repository-level abort/error(s):"
+            jq -r '.[] | "- [\(.level)] \(.msg // .name // "unknown")"' <<<"$problems"
+            echo
+            echo "Full problems:"
+            jq . <<<"$problems"
+            exit 1
+          fi
+
+          # error.ts logs a few repository aborts (repository changed
+          # mid-run, temporary errors, lock file errors) at INFO level
+          # instead of WARN, so they never reach the JSON report above
+          # (its stream is fixed at level=warn) and must be matched here.
+          log=/tmp/renovate.log
+          if [ ! -f "$log" ]; then
+            echo "::error::Renovate log not found at $log."
+            exit 1
+          fi
+          abort_pattern='Repository has changed during renovation - aborting|Temporary error - aborting|Lock file error - aborting'
+          if grep -qE "$abort_pattern" "$log"; then
+            echo "::error::Renovate log contains an INFO-level repository abort not captured in the JSON report:"
+            grep -E "$abort_pattern" "$log"
+            exit 1
+          fi
+
+          echo "No repository-level abort detected."
