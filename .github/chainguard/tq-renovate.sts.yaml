@@ -16,3 +16,4 @@ permissions:
   administration: read
   members: read
   vulnerability_alerts: read
+  metadata: read

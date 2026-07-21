@@ -51,14 +51,19 @@ jobs:
           # so commits/PRs must be attributed to that bot account explicitly.
           RENOVATE_USERNAME: 'fohte-bot[bot]'
           RENOVATE_GIT_AUTHOR: 'fohte-bot[bot] <139195068+fohte-bot[bot]@users.noreply.github.com>'
-          # Commit via the GitHub API so commits are signed, satisfying the
-          # protected branch's required signature rule.
+          # This workflow never configures a local git identity, so committing
+          # via the GitHub API avoids needing one while keeping the commit
+          # author consistent with RENOVATE_USERNAME/RENOVATE_GIT_AUTHOR.
           RENOVATE_PLATFORM_COMMIT: 'enabled'
-          # Renovate exits 0 with a WARN-level "aborting" log on repository
-          # aborts (e.g. integration-unauthorized), so the next step reads
-          # the JSON report to detect and fail on those cases explicitly.
+          # Renovate exits 0 with only a log on repository aborts (e.g.
+          # integration-unauthorized), so the next step reads the JSON report
+          # to detect and fail on those cases explicitly.
           RENOVATE_REPORT_TYPE: file
           RENOVATE_REPORT_PATH: /tmp/renovate-report.json
+          # Some repository aborts (see the "Fail on repository abort" step)
+          # log below the JSON report's WARN threshold, so also capture the
+          # full log to catch those.
+          LOG_FILE: /tmp/renovate.log
           LOG_LEVEL: ${{ inputs.logLevel || 'info' }}
 
       - name: Fail on repository abort
@@ -70,15 +75,14 @@ jobs:
             echo "::error::Renovate report not found at $report."
             exit 1
           fi
-          # bunyan levels: 40=WARN, 50=ERROR. lib/workers/repository/error.ts
-          # logs repository aborts as a WARN with "<reason> - aborting", while
-          # other fatal errors (disk space / not found / unknown error) use
-          # logger.error, so level>=50 covers those. Matching all WARNs would
-          # also catch benign ones like failed package lookups, so WARNs are
-          # restricted to msgs containing "aborting". `// []` guards against
-          # null iteration when problems/repositories are missing.
           problems=$(jq '
+            # `// []` / `// {}` guard against null iteration when problems/repositories is missing.
             [(.problems // [])[], ((.repositories // {}) | to_entries[] | .value.problems // [] | .[])]
+            # bunyan levels: 40=WARN, 50=ERROR. error.ts logs most repository
+            # aborts as WARN "<reason> - aborting"; other fatal errors (disk
+            # space / not found / unknown error) use logger.error (level>=50).
+            # Matching all WARNs would also catch benign ones like failed
+            # package lookups, so WARNs are restricted to msgs containing "aborting".
             | map(select(.level >= 50 or (.level >= 40 and ((.msg // "") | test("aborting"; "i")))))
           ' "$report")
           count=$(jq 'length' <<<"$problems")
@@ -90,4 +94,21 @@ jobs:
             jq . <<<"$problems"
             exit 1
           fi
+
+          # error.ts logs a few repository aborts (repository changed
+          # mid-run, temporary errors, lock file errors) at INFO level
+          # instead of WARN, so they never reach the JSON report above
+          # (its stream is fixed at level=warn) and must be matched here.
+          log=/tmp/renovate.log
+          if [ ! -f "$log" ]; then
+            echo "::error::Renovate log not found at $log."
+            exit 1
+          fi
+          abort_pattern='Repository has changed during renovation - aborting|Temporary error - aborting|Lock file error - aborting'
+          if grep -qE "$abort_pattern" "$log"; then
+            echo "::error::Renovate log contains an INFO-level repository abort not captured in the JSON report:"
+            grep -E "$abort_pattern" "$log"
+            exit 1
+          fi
+
           echo "No repository-level abort detected."
