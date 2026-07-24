@@ -35,7 +35,7 @@ export const calendarApp = new Hono()
         captureWithFingerprint(error, 'api.calendar.get-events-failed', {
           extras: { calendarId },
         })
-        return c.json({ error: error.message }, 500)
+        return c.json({ error: 'Internal server error' }, 500)
       },
     )
   })
@@ -44,7 +44,7 @@ export const calendarApp = new Hono()
       (url) => c.json({ url }, 200),
       (error) => {
         captureWithFingerprint(error, 'api.calendar.get-auth-url-failed')
-        return c.json({ error: error.message }, 500)
+        return c.json({ error: 'Internal server error' }, 500)
       },
     )
   })
@@ -59,13 +59,16 @@ export const calendarApp = new Hono()
       return result.match(
         () => c.json({ message: 'Authentication successful' }, 200),
         (error) => {
-          // A rejected/invalid code is an expected client-side failure; a
-          // config error means the server itself is misconfigured.
+          // A config error means the server itself is misconfigured, so its
+          // message (which names the missing env vars) must not reach the
+          // client. A rejected code is a normal OAuth-flow outcome, so
+          // relaying the provider's own rejection reason back is fine.
           if (error instanceof GoogleCalendarConfigError) {
             captureWithFingerprint(
               error,
               'api.calendar.oauth-callback-config-error',
             )
+            return c.json({ error: 'Internal server error' }, 500)
           }
           return c.json({ error: error.message }, 400)
         },

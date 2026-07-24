@@ -79,8 +79,7 @@ describe('getAuthUrl', () => {
 
     const error = getAuthUrl()._unsafeUnwrapErr()
 
-    expect(error).toBeInstanceOf(GoogleCalendarConfigError)
-    expect(error.message).toContain('environment variables are required')
+    expect(error).toEqual(new GoogleCalendarConfigError())
   })
 })
 
@@ -117,7 +116,7 @@ describe('handleOAuthCallback', () => {
   })
 
   it('returns a token exchange error when the request fails', async () => {
-    const { handleOAuthCallback } = await importService()
+    const { handleOAuthCallback, TokenExchangeError } = await importService()
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response('invalid_grant', { status: 400 }),
@@ -125,7 +124,7 @@ describe('handleOAuthCallback', () => {
 
     const error = (await handleOAuthCallback('bad-code'))._unsafeUnwrapErr()
 
-    expect(error.message).toContain('Token exchange failed')
+    expect(error).toEqual(new TokenExchangeError('invalid_grant'))
   })
 })
 
@@ -225,7 +224,7 @@ describe('refreshTokenIfNeeded', () => {
   })
 
   it('returns a token refresh error when the request fails', async () => {
-    const { refreshTokenIfNeeded } = await importService()
+    const { refreshTokenIfNeeded, TokenRefreshError } = await importService()
 
     await upsertToken({
       accessToken: 'expired-token',
@@ -239,7 +238,7 @@ describe('refreshTokenIfNeeded', () => {
 
     const error = (await refreshTokenIfNeeded())._unsafeUnwrapErr()
 
-    expect(error.message).toContain('Token refresh failed')
+    expect(error).toEqual(new TokenRefreshError('invalid_grant'))
   })
 })
 

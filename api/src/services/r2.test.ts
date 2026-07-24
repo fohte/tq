@@ -2,6 +2,7 @@ import {
   deleteObjectByKey,
   getObjectSignedUrl,
   putObject,
+  R2ConfigError,
 } from '@api/services/r2'
 import {
   DeleteObjectCommand,
@@ -68,7 +69,7 @@ describe('putObject', () => {
       await putObject('images/abc', Buffer.from('x'), 'image/png')
     )._unsafeUnwrapErr()
 
-    expect(error.message).toContain('environment variables are required')
+    expect(error).toEqual(new R2ConfigError())
   })
 })
 

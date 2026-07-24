@@ -37,22 +37,22 @@ export class GoogleCalendarConfigError extends Error {
 }
 
 export class TokenExchangeError extends Error {
-  constructor(message: string) {
-    super(`Token exchange failed: ${message}`)
+  constructor(message: string, cause?: unknown) {
+    super(`Token exchange failed: ${message}`, { cause })
     this.name = 'TokenExchangeError'
   }
 }
 
 export class TokenRefreshError extends Error {
-  constructor(message: string) {
-    super(`Token refresh failed: ${message}`)
+  constructor(message: string, cause?: unknown) {
+    super(`Token refresh failed: ${message}`, { cause })
     this.name = 'TokenRefreshError'
   }
 }
 
 export class CalendarApiError extends Error {
-  constructor(message: string) {
-    super(`Google Calendar API error: ${message}`)
+  constructor(message: string, cause?: unknown) {
+    super(`Google Calendar API error: ${message}`, { cause })
     this.name = 'CalendarApiError'
   }
 }
@@ -138,23 +138,23 @@ function fetchJson<T, E extends Error>(
   input: string,
   init: RequestInit,
   schema: z.ZodType<T>,
-  wrapError: (message: string) => E,
+  wrapError: (message: string, cause?: unknown) => E,
 ): ResultAsync<T, E> {
   return ResultAsync.fromPromise(fetch(input, init), (cause) =>
-    wrapError(errorMessage(cause)),
+    wrapError(errorMessage(cause), cause),
   ).andThen((res) => {
     if (!res.ok) {
       return ResultAsync.fromPromise(res.text(), (cause) =>
-        wrapError(errorMessage(cause)),
+        wrapError(errorMessage(cause), cause),
       ).andThen((text) => errAsync(wrapError(text)))
     }
     return ResultAsync.fromPromise(res.json(), (cause) =>
-      wrapError(errorMessage(cause)),
+      wrapError(errorMessage(cause), cause),
     ).andThen((data) => {
       const parsed = schema.safeParse(data)
       return parsed.success
         ? okAsync(parsed.data)
-        : errAsync(wrapError(parsed.error.message))
+        : errAsync(wrapError(parsed.error.message, parsed.error))
     })
   })
 }
@@ -178,7 +178,7 @@ export function handleOAuthCallback(
           }),
         },
         tokenResponseSchema,
-        (message) => new TokenExchangeError(message),
+        (message, cause) => new TokenExchangeError(message, cause),
       ),
     )
     .andThen((data) => {
@@ -240,7 +240,7 @@ export function refreshTokenIfNeeded(): ResultAsync<
             }),
           },
           refreshTokenResponseSchema,
-          (message) => new TokenRefreshError(message),
+          (message, cause) => new TokenRefreshError(message, cause),
         ),
       )
       .andThen((data) => {
@@ -298,7 +298,7 @@ export function getEvents(
           headers: { Authorization: `Bearer ${accessToken}` },
         },
         googleCalendarEventsResponseSchema,
-        (message) => new CalendarApiError(message),
+        (message, cause) => new CalendarApiError(message, cause),
       )
     })
     .map((data) =>

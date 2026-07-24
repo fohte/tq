@@ -1,6 +1,5 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import type { Hono } from 'hono'
-import { Result, ResultAsync } from 'neverthrow'
 import { z } from 'zod'
 
 // Matches the shape of an individual Zod issue as embedded in the JSON
@@ -87,16 +86,19 @@ async function formatValidationMessage(res: Response): Promise<string> {
 }
 
 async function readJson(res: Response): Promise<unknown> {
-  return (await ResultAsync.fromPromise(res.json(), () => undefined)).unwrapOr(
-    undefined,
-  )
+  try {
+    return await res.json()
+  } catch {
+    return undefined
+  }
 }
 
 function safeJsonParse(raw: string): unknown {
-  return Result.fromThrowable(
-    () => JSON.parse(raw) as unknown,
-    () => undefined,
-  )().unwrapOr(undefined)
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return undefined
+  }
 }
 
 function errorResult(message: string): CallToolResult {
