@@ -7,6 +7,7 @@ import {
   InvalidImageTypeError,
   uploadImage,
 } from '@api/services/images'
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { z } from 'zod'
@@ -27,43 +28,57 @@ export const imagesApp = new Hono()
   .post('/', zValidator('form', uploadSchema), async (c) => {
     const { file } = c.req.valid('form')
 
-    try {
-      const image = await uploadImage(file)
-      const url = await getImageSignedUrl(image.id)
-      return c.json(imageToResponse(image, url), 201)
-    } catch (error) {
-      if (error instanceof InvalidImageTypeError) {
-        return c.json({ error: error.message }, 400)
-      }
-      if (error instanceof ImageTooLargeError) {
-        return c.json({ error: error.message }, 413)
-      }
-      throw error
-    }
+    const result = await uploadImage(file).andThen((image) =>
+      getImageSignedUrl(image.id).map((url) => imageToResponse(image, url)),
+    )
+
+    return result.match(
+      (body) => c.json(body, 201),
+      (error) => {
+        if (error instanceof InvalidImageTypeError) {
+          return c.json({ error: error.message }, 400)
+        }
+        if (error instanceof ImageTooLargeError) {
+          return c.json({ error: error.message }, 413)
+        }
+        captureWithFingerprint(error, 'api.images.upload-failed')
+        return c.json({ error: 'Internal server error' }, 500)
+      },
+    )
   })
   .get('/:id', async (c) => {
     const id = c.req.param('id')
 
-    try {
-      const url = await getImageSignedUrl(id)
-      return c.json({ url }, 200)
-    } catch (error) {
-      if (error instanceof ImageNotFoundError) {
-        return c.json({ error: error.message }, 404)
-      }
-      throw error
-    }
+    const result = await getImageSignedUrl(id)
+
+    return result.match(
+      (url) => c.json({ url }, 200),
+      (error) => {
+        if (error instanceof ImageNotFoundError) {
+          return c.json({ error: error.message }, 404)
+        }
+        captureWithFingerprint(error, 'api.images.get-signed-url-failed', {
+          extras: { imageId: id },
+        })
+        return c.json({ error: 'Internal server error' }, 500)
+      },
+    )
   })
   .delete('/:id', async (c) => {
     const id = c.req.param('id')
 
-    try {
-      await deleteImage(id)
-      return c.body(null, 204)
-    } catch (error) {
-      if (error instanceof ImageNotFoundError) {
-        return c.json({ error: error.message }, 404)
-      }
-      throw error
-    }
+    const result = await deleteImage(id)
+
+    return result.match(
+      () => c.body(null, 204),
+      (error) => {
+        if (error instanceof ImageNotFoundError) {
+          return c.json({ error: error.message }, 404)
+        }
+        captureWithFingerprint(error, 'api.images.delete-failed', {
+          extras: { imageId: id },
+        })
+        return c.json({ error: 'Internal server error' }, 500)
+      },
+    )
   })

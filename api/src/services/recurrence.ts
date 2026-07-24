@@ -75,6 +75,9 @@ function computeNextWeeklyDate(
     // Wrap to next week, first matching day
     const firstDay = sorted[0]
     if (firstDay === undefined) {
+      // Unreachable: computeNextDate only calls this function after checking
+      // rule.daysOfWeek.length > 0, and sorted is a same-length copy of it.
+      // eslint-disable-next-line no-restricted-syntax -- see comment above
       throw new Error('daysOfWeek must be non-empty')
     }
     const diff = 7 - currentDay + firstDay

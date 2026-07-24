@@ -12,6 +12,7 @@ import {
 import * as r2 from '@api/services/r2'
 import { makeFile, setupTestDb } from '@api/testing'
 import { eq } from 'drizzle-orm'
+import { okAsync } from 'neverthrow'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@api/services/r2')
@@ -22,9 +23,13 @@ const TEST_UUID = '550e8400-e29b-41d4-a716-446655440000'
 const SIGNED_URL = 'https://signed.example.com/images/test'
 
 beforeEach(() => {
-  vi.mocked(r2.putObject).mockReset().mockResolvedValue(undefined)
-  vi.mocked(r2.getObjectSignedUrl).mockReset().mockResolvedValue(SIGNED_URL)
-  vi.mocked(r2.deleteObjectByKey).mockReset().mockResolvedValue(undefined)
+  vi.mocked(r2.putObject).mockReset().mockReturnValue(okAsync(undefined))
+  vi.mocked(r2.getObjectSignedUrl)
+    .mockReset()
+    .mockReturnValue(okAsync(SIGNED_URL))
+  vi.mocked(r2.deleteObjectByKey)
+    .mockReset()
+    .mockReturnValue(okAsync(undefined))
 })
 
 function normalize(image: typeof images.$inferSelect) {
@@ -40,7 +45,7 @@ describe('uploadImage', () => {
   it('stores metadata and uploads the file body to R2', async () => {
     const file = makeFile('photo.png', 'image/png', 1234)
 
-    const image = await uploadImage(file)
+    const image = (await uploadImage(file))._unsafeUnwrap()
 
     expect(normalize(image)).toEqual({
       id: 'ID',
@@ -57,23 +62,29 @@ describe('uploadImage', () => {
   it('rejects unsupported content types', async () => {
     const file = makeFile('doc.pdf', 'application/pdf', 100)
 
-    await expect(uploadImage(file)).rejects.toThrow(InvalidImageTypeError)
+    const error = (await uploadImage(file))._unsafeUnwrapErr()
+
+    expect(error).toBeInstanceOf(InvalidImageTypeError)
     expect(r2.putObject).not.toHaveBeenCalled()
   })
 
   it('rejects files larger than the size limit', async () => {
     const file = makeFile('big.png', 'image/png', MAX_SIZE_BYTES + 1)
 
-    await expect(uploadImage(file)).rejects.toThrow(ImageTooLargeError)
+    const error = (await uploadImage(file))._unsafeUnwrapErr()
+
+    expect(error).toBeInstanceOf(ImageTooLargeError)
     expect(r2.putObject).not.toHaveBeenCalled()
   })
 })
 
 describe('getImageSignedUrl', () => {
   it('returns a signed URL for an existing image', async () => {
-    const image = await uploadImage(makeFile('photo.png', 'image/png', 10))
+    const image = (
+      await uploadImage(makeFile('photo.png', 'image/png', 10))
+    )._unsafeUnwrap()
 
-    const url = await getImageSignedUrl(image.id)
+    const url = (await getImageSignedUrl(image.id))._unsafeUnwrap()
 
     expect(url).toBe(SIGNED_URL)
     expect(vi.mocked(r2.getObjectSignedUrl).mock.calls).toEqual([
@@ -81,25 +92,30 @@ describe('getImageSignedUrl', () => {
     ])
   })
 
-  it('throws ImageNotFoundError for a non-existent image', async () => {
-    await expect(getImageSignedUrl(TEST_UUID)).rejects.toThrow(
-      ImageNotFoundError,
-    )
+  it('returns ImageNotFoundError for a non-existent image', async () => {
+    const error = (await getImageSignedUrl(TEST_UUID))._unsafeUnwrapErr()
+
+    expect(error).toBeInstanceOf(ImageNotFoundError)
   })
 })
 
 describe('deleteImage', () => {
   it('deletes the R2 object and the DB row', async () => {
-    const image = await uploadImage(makeFile('photo.png', 'image/png', 10))
+    const image = (
+      await uploadImage(makeFile('photo.png', 'image/png', 10))
+    )._unsafeUnwrap()
 
-    await deleteImage(image.id)
+    const deleted = await deleteImage(image.id)
+    deleted._unsafeUnwrap()
 
     expect(vi.mocked(r2.deleteObjectByKey).mock.calls).toEqual([[image.r2Key]])
     const rows = await db.select().from(images).where(eq(images.id, image.id))
     expect(rows).toEqual([])
   })
 
-  it('throws ImageNotFoundError for a non-existent image', async () => {
-    await expect(deleteImage(TEST_UUID)).rejects.toThrow(ImageNotFoundError)
+  it('returns ImageNotFoundError for a non-existent image', async () => {
+    const error = (await deleteImage(TEST_UUID))._unsafeUnwrapErr()
+
+    expect(error).toBeInstanceOf(ImageNotFoundError)
   })
 })

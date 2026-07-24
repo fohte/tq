@@ -56,7 +56,7 @@ describe('getAuthUrl', () => {
   it('returns a Google OAuth authorization URL with correct parameters', async () => {
     const { getAuthUrl } = await importService()
 
-    const url = getAuthUrl()
+    const url = getAuthUrl()._unsafeUnwrap()
     const parsed = new URL(url)
 
     expect(parsed.origin + parsed.pathname).toBe(
@@ -73,11 +73,14 @@ describe('getAuthUrl', () => {
     expect(parsed.searchParams.get('response_type')).toBe('code')
   })
 
-  it('throws when environment variables are missing', async () => {
+  it('returns a config error when environment variables are missing', async () => {
     clearEnv()
-    const { getAuthUrl } = await importService()
+    const { getAuthUrl, GoogleCalendarConfigError } = await importService()
 
-    expect(() => getAuthUrl()).toThrow('environment variables are required')
+    const error = getAuthUrl()._unsafeUnwrapErr()
+
+    expect(error).toBeInstanceOf(GoogleCalendarConfigError)
+    expect(error.message).toContain('environment variables are required')
   })
 })
 
@@ -96,7 +99,7 @@ describe('handleOAuthCallback', () => {
       ),
     )
 
-    await handleOAuthCallback('auth-code-123')
+    ;(await handleOAuthCallback('auth-code-123'))._unsafeUnwrap()
 
     const [savedToken] = await db
       .select()
@@ -113,16 +116,16 @@ describe('handleOAuthCallback', () => {
     expect(savedToken?.expiresAt.getTime()).toBeGreaterThan(Date.now())
   })
 
-  it('throws when token exchange fails', async () => {
+  it('returns a token exchange error when the request fails', async () => {
     const { handleOAuthCallback } = await importService()
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response('invalid_grant', { status: 400 }),
     )
 
-    await expect(handleOAuthCallback('bad-code')).rejects.toThrow(
-      'Token exchange failed',
-    )
+    const error = (await handleOAuthCallback('bad-code'))._unsafeUnwrapErr()
+
+    expect(error.message).toContain('Token exchange failed')
   })
 })
 
@@ -136,7 +139,7 @@ describe('refreshTokenIfNeeded', () => {
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     })
 
-    const token = await refreshTokenIfNeeded()
+    const token = (await refreshTokenIfNeeded())._unsafeUnwrap()
     expect(token).toBe('valid-token')
   })
 
@@ -159,7 +162,7 @@ describe('refreshTokenIfNeeded', () => {
       ),
     )
 
-    const token = await refreshTokenIfNeeded()
+    const token = (await refreshTokenIfNeeded())._unsafeUnwrap()
     expect(token).toBe('refreshed-token')
 
     const [updated] = await db
@@ -192,7 +195,7 @@ describe('refreshTokenIfNeeded', () => {
       ),
     )
 
-    await refreshTokenIfNeeded()
+    ;(await refreshTokenIfNeeded())._unsafeUnwrap()
 
     const [updated] = await db
       .select()
@@ -207,7 +210,7 @@ describe('refreshTokenIfNeeded', () => {
     )
   })
 
-  it('throws OAuthTokenMissingError when no token exists', async () => {
+  it('returns OAuthTokenMissingError when no token exists', async () => {
     const { refreshTokenIfNeeded, OAuthTokenMissingError } =
       await importService()
 
@@ -216,10 +219,12 @@ describe('refreshTokenIfNeeded', () => {
       .delete(oauthTokens)
       .where(eq(oauthTokens.provider, 'google_calendar'))
 
-    await expect(refreshTokenIfNeeded()).rejects.toThrow(OAuthTokenMissingError)
+    const error = (await refreshTokenIfNeeded())._unsafeUnwrapErr()
+
+    expect(error).toBeInstanceOf(OAuthTokenMissingError)
   })
 
-  it('throws when refresh request fails', async () => {
+  it('returns a token refresh error when the request fails', async () => {
     const { refreshTokenIfNeeded } = await importService()
 
     await upsertToken({
@@ -232,7 +237,9 @@ describe('refreshTokenIfNeeded', () => {
       new Response('invalid_grant', { status: 400 }),
     )
 
-    await expect(refreshTokenIfNeeded()).rejects.toThrow('Token refresh failed')
+    const error = (await refreshTokenIfNeeded())._unsafeUnwrapErr()
+
+    expect(error.message).toContain('Token refresh failed')
   })
 })
 
@@ -268,11 +275,9 @@ describe('getEvents', () => {
       ),
     )
 
-    const events = await getEvents(
-      'primary',
-      '2026-03-22T00:00:00Z',
-      '2026-03-23T00:00:00Z',
-    )
+    const events = (
+      await getEvents('primary', '2026-03-22T00:00:00Z', '2026-03-23T00:00:00Z')
+    )._unsafeUnwrap()
 
     expect(events).toEqual([
       {
@@ -318,11 +323,9 @@ describe('getEvents', () => {
       ),
     )
 
-    const events = await getEvents(
-      'primary',
-      '2026-03-22T00:00:00Z',
-      '2026-03-23T00:00:00Z',
-    )
+    const events = (
+      await getEvents('primary', '2026-03-22T00:00:00Z', '2026-03-23T00:00:00Z')
+    )._unsafeUnwrap()
 
     expect(events).toEqual([expect.objectContaining({ summary: '(No title)' })])
   })

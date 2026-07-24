@@ -395,20 +395,19 @@ export const schedulesApp = new Hono()
         estimatedMinutes: r.task.estimatedMinutes,
       }))
 
-    let externalEvents: Awaited<ReturnType<typeof getEvents>> = []
-    try {
-      externalEvents = await getEvents(
-        'primary',
-        dayStart.toISOString(),
-        dayEnd.toISOString(),
-      )
-    } catch (error) {
-      if (!(error instanceof OAuthTokenMissingError)) throw error
-      console.warn(
-        '[auto-assign] Google Calendar unavailable, scheduling without external events:',
-        error.message,
-      )
-    }
+    const externalEvents = (
+      await getEvents('primary', dayStart.toISOString(), dayEnd.toISOString())
+    ).match(
+      (events) => events,
+      (error) => {
+        if (!(error instanceof OAuthTokenMissingError)) throw error
+        console.warn(
+          '[auto-assign] Google Calendar unavailable, scheduling without external events:',
+          error.message,
+        )
+        return []
+      },
+    )
 
     const scheduleRules = await loadSchedulesWithRules()
     const expandedScheduleBlocks = scheduleRules.flatMap(({ schedule, rule }) =>
