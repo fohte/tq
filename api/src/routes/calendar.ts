@@ -1,9 +1,11 @@
 import {
   getAuthUrl,
   getEvents,
+  GoogleCalendarConfigError,
   handleOAuthCallback,
   OAuthTokenMissingError,
 } from '@api/services/google-calendar'
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { z } from 'zod'
@@ -22,28 +24,29 @@ export const calendarApp = new Hono()
   .get('/events', zValidator('query', eventsQuerySchema), async (c) => {
     const { calendarId, timeMin, timeMax } = c.req.valid('query')
 
-    try {
-      const events = await getEvents(calendarId, timeMin, timeMax)
-      return c.json(events, 200)
-    } catch (error) {
-      if (error instanceof OAuthTokenMissingError) {
-        return c.json({ error: error.message }, 401)
-      }
+    const result = await getEvents(calendarId, timeMin, timeMax)
 
-      const message =
-        error instanceof Error ? error.message : 'Unknown error occurred'
-      return c.json({ error: message }, 500)
-    }
+    return result.match(
+      (events) => c.json(events, 200),
+      (error) => {
+        if (error instanceof OAuthTokenMissingError) {
+          return c.json({ error: error.message }, 401)
+        }
+        captureWithFingerprint(error, 'api.calendar.get-events-failed', {
+          extras: { calendarId },
+        })
+        return c.json({ error: 'Internal server error' }, 500)
+      },
+    )
   })
   .get('/auth-url', (c) => {
-    try {
-      const url = getAuthUrl()
-      return c.json({ url }, 200)
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unknown error occurred'
-      return c.json({ error: message }, 500)
-    }
+    return getAuthUrl().match(
+      (url) => c.json({ url }, 200),
+      (error) => {
+        captureWithFingerprint(error, 'api.calendar.get-auth-url-failed')
+        return c.json({ error: 'Internal server error' }, 500)
+      },
+    )
   })
   .get(
     '/oauth-callback',
@@ -51,13 +54,24 @@ export const calendarApp = new Hono()
     async (c) => {
       const { code } = c.req.valid('query')
 
-      try {
-        await handleOAuthCallback(code)
-        return c.json({ message: 'Authentication successful' }, 200)
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unknown error occurred'
-        return c.json({ error: message }, 400)
-      }
+      const result = await handleOAuthCallback(code)
+
+      return result.match(
+        () => c.json({ message: 'Authentication successful' }, 200),
+        (error) => {
+          // A config error means the server itself is misconfigured, so its
+          // message (which names the missing env vars) must not reach the
+          // client. A rejected code is a normal OAuth-flow outcome, so
+          // relaying the provider's own rejection reason back is fine.
+          if (error instanceof GoogleCalendarConfigError) {
+            captureWithFingerprint(
+              error,
+              'api.calendar.oauth-callback-config-error',
+            )
+            return c.json({ error: 'Internal server error' }, 500)
+          }
+          return c.json({ error: error.message }, 400)
+        },
+      )
     },
   )

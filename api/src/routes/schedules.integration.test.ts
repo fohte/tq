@@ -718,8 +718,8 @@ describe('schedule/today-tasks API', () => {
 })
 
 // These tests rely on no oauth_tokens row existing in the test DB, so
-// getEvents() always throws OAuthTokenMissingError and auto-assign proceeds
-// as if no Google Calendar events exist.
+// getEvents() always returns an Err(OAuthTokenMissingError) and auto-assign
+// proceeds as if no Google Calendar events exist.
 describe('schedule/auto-assign API', () => {
   describe('POST /api/schedule/auto-assign', () => {
     it('assigns queued tasks back-to-back starting at the day boundary', async () => {
