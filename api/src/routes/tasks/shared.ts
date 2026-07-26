@@ -83,7 +83,8 @@ export function buildTree(
 
   for (const task of allTasks) {
     const node = nodeMap.get(task.id)
-    if (!node) throw new Error(`Node not found for task ${task.id}`)
+    // Every task.id was set as a key in the loop above, so this is always found.
+    if (!node) continue
     const parentNode = task.parentId != null ? nodeMap.get(task.parentId) : null
 
     if (parentNode) {

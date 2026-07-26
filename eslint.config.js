@@ -2,21 +2,16 @@ import { config } from '@fohte/eslint-config'
 import storybook from 'eslint-plugin-storybook'
 
 // Files allowed to use throw/try-catch and to leave a neverthrow Result
-// unconsumed: process bootstrap (env, DB connection/migration, server
-// entrypoint) and the Hono/MCP request-handling layer, whose own
-// throw/reject contract is the boundary api/src/app.ts's onError hooks into
-// to report to Sentry. api/src/lib/drizzle-utils.ts is included because its
-// firstOrThrow helper is a deliberate, always-visible throw-on-missing-row
-// contract used throughout that boundary layer.
+// unconsumed. Every other api/src file must satisfy the rule with zero
+// exceptions.
 const API_INTEROP_BOUNDARY_FILES = [
+  // Throws at module-eval time, before the Hono app (and its app.onError
+  // Sentry hook) exists, so there's no Result to return to.
   'api/src/env.ts',
-  'api/src/bootstrap.ts',
-  'api/src/index.ts',
-  'api/src/testing.ts',
-  'api/src/global-setup.ts',
+  // Its firstOrThrow is still called by routes not yet migrated to
+  // Result (e.g. schedules.ts); firstOrErr is the Result-returning
+  // counterpart for migrated callers.
   'api/src/lib/drizzle-utils.ts',
-  'api/src/db/**/*.ts',
-  'api/src/routes/**/*.ts',
 ]
 
 export default config(

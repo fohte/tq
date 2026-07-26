@@ -21,6 +21,7 @@ import {
   getEvents,
   OAuthTokenMissingError,
 } from '@api/services/google-calendar'
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
 import { and, eq, gte, inArray, isNull, lte, notInArray, or } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -395,12 +396,24 @@ export const schedulesApp = new Hono()
         estimatedMinutes: r.task.estimatedMinutes,
       }))
 
-    const externalEvents = (
-      await getEvents('primary', dayStart.toISOString(), dayEnd.toISOString())
-    ).match(
+    const eventsResult = await getEvents(
+      'primary',
+      dayStart.toISOString(),
+      dayEnd.toISOString(),
+    )
+    if (
+      eventsResult.isErr() &&
+      !(eventsResult.error instanceof OAuthTokenMissingError)
+    ) {
+      captureWithFingerprint(
+        eventsResult.error,
+        'api.schedules.auto-assign-calendar-failed',
+      )
+      return c.json({ error: 'Internal server error' }, 500)
+    }
+    const externalEvents = eventsResult.match(
       (events) => events,
       (error) => {
-        if (!(error instanceof OAuthTokenMissingError)) throw error
         console.warn(
           '[auto-assign] Google Calendar unavailable, scheduling without external events:',
           error.message,

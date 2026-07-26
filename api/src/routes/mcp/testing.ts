@@ -5,11 +5,19 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import {
   type CallToolResult,
   CallToolResultSchema,
+  type TextContent,
 } from '@modelcontextprotocol/sdk/types.js'
+import { expect } from 'vitest'
+
+function assertTextContent(
+  first: CallToolResult['content'][number] | undefined,
+): asserts first is TextContent {
+  expect(first?.type, 'expected text content').toBe('text')
+}
 
 export function parseToolJson(result: CallToolResult): unknown {
   const [first] = result.content
-  if (first?.type !== 'text') throw new Error('expected text content')
+  assertTextContent(first)
   return JSON.parse(first.text)
 }
 
