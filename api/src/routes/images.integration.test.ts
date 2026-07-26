@@ -5,6 +5,7 @@ import { MAX_SIZE_BYTES } from '@api/services/images'
 import * as r2 from '@api/services/r2'
 import { jsonBody, makeFile, setupTestDb } from '@api/testing'
 import { eq } from 'drizzle-orm'
+import { okAsync } from 'neverthrow'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@api/services/r2')
@@ -23,9 +24,13 @@ interface ImageResponse {
 }
 
 beforeEach(() => {
-  vi.mocked(r2.putObject).mockReset().mockResolvedValue(undefined)
-  vi.mocked(r2.getObjectSignedUrl).mockReset().mockResolvedValue(SIGNED_URL)
-  vi.mocked(r2.deleteObjectByKey).mockReset().mockResolvedValue(undefined)
+  vi.mocked(r2.putObject).mockReset().mockReturnValue(okAsync(undefined))
+  vi.mocked(r2.getObjectSignedUrl)
+    .mockReset()
+    .mockReturnValue(okAsync(SIGNED_URL))
+  vi.mocked(r2.deleteObjectByKey)
+    .mockReset()
+    .mockReturnValue(okAsync(undefined))
 })
 
 function uploadImageRequest(file: File) {

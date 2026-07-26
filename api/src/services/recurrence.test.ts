@@ -1,24 +1,34 @@
 import { buildNextTaskData, computeNextDate } from '@api/services/recurrence'
-import { describe, expect, it } from 'vitest'
+import { ok } from 'neverthrow'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 describe('computeNextDate', () => {
   describe('daily', () => {
     it('advances by 1 day with interval=1', () => {
       expect(
-        computeNextDate('2026-03-22', { type: 'daily', interval: 1 }),
-      ).toBe('2026-03-23')
+        computeNextDate('2026-03-22', {
+          type: 'daily',
+          interval: 1,
+        }),
+      ).toEqual(ok('2026-03-23'))
     })
 
     it('advances by N days with interval=N', () => {
       expect(
-        computeNextDate('2026-03-22', { type: 'daily', interval: 3 }),
-      ).toBe('2026-03-25')
+        computeNextDate('2026-03-22', {
+          type: 'daily',
+          interval: 3,
+        }),
+      ).toEqual(ok('2026-03-25'))
     })
 
     it('crosses month boundary', () => {
       expect(
-        computeNextDate('2026-03-31', { type: 'daily', interval: 1 }),
-      ).toBe('2026-04-01')
+        computeNextDate('2026-03-31', {
+          type: 'daily',
+          interval: 1,
+        }),
+      ).toEqual(ok('2026-04-01'))
     })
   })
 
@@ -31,7 +41,7 @@ describe('computeNextDate', () => {
           interval: 1,
           daysOfWeek: [1, 3, 5],
         }),
-      ).toBe('2026-03-23') // Monday
+      ).toEqual(ok('2026-03-23')) // Monday
     })
 
     it('wraps to next week when no remaining days', () => {
@@ -42,7 +52,7 @@ describe('computeNextDate', () => {
           interval: 1,
           daysOfWeek: [1, 3, 5],
         }),
-      ).toBe('2026-03-30') // Next Monday
+      ).toEqual(ok('2026-03-30')) // Next Monday
     })
 
     it('skips weeks with interval > 1', () => {
@@ -54,7 +64,7 @@ describe('computeNextDate', () => {
           interval: 2,
           daysOfWeek: [1],
         }),
-      ).toBe('2026-04-06') // 2 weeks later Monday
+      ).toEqual(ok('2026-04-06')) // 2 weeks later Monday
     })
 
     it('finds remaining day in current week with interval > 1', () => {
@@ -66,7 +76,7 @@ describe('computeNextDate', () => {
           interval: 2,
           daysOfWeek: [1, 3, 5],
         }),
-      ).toBe('2026-03-25') // Wednesday of same week
+      ).toEqual(ok('2026-03-25')) // Wednesday of same week
     })
 
     it('skips to interval-th week when no remaining days with interval > 1', () => {
@@ -78,7 +88,7 @@ describe('computeNextDate', () => {
           interval: 2,
           daysOfWeek: [1, 3, 5],
         }),
-      ).toBe('2026-04-06') // Monday 2 weeks later
+      ).toEqual(ok('2026-04-06')) // Monday 2 weeks later
     })
 
     it('advances by interval weeks when no daysOfWeek', () => {
@@ -87,7 +97,7 @@ describe('computeNextDate', () => {
           type: 'weekly',
           interval: 1,
         }),
-      ).toBe('2026-03-29')
+      ).toEqual(ok('2026-03-29'))
     })
   })
 
@@ -99,7 +109,7 @@ describe('computeNextDate', () => {
           interval: 1,
           dayOfMonth: 15,
         }),
-      ).toBe('2026-04-15')
+      ).toEqual(ok('2026-04-15'))
     })
 
     it('clamps to end of shorter month', () => {
@@ -109,7 +119,7 @@ describe('computeNextDate', () => {
           interval: 1,
           dayOfMonth: 31,
         }),
-      ).toBe('2026-02-28')
+      ).toEqual(ok('2026-02-28'))
     })
 
     it('advances by multiple months', () => {
@@ -119,7 +129,7 @@ describe('computeNextDate', () => {
           interval: 2,
           dayOfMonth: 15,
         }),
-      ).toBe('2026-05-15')
+      ).toEqual(ok('2026-05-15'))
     })
 
     it('uses base date day when dayOfMonth is not specified', () => {
@@ -128,15 +138,18 @@ describe('computeNextDate', () => {
           type: 'monthly',
           interval: 1,
         }),
-      ).toBe('2026-04-10')
+      ).toEqual(ok('2026-04-10'))
     })
   })
 
   describe('custom', () => {
     it('behaves like daily', () => {
       expect(
-        computeNextDate('2026-03-22', { type: 'custom', interval: 5 }),
-      ).toBe('2026-03-27')
+        computeNextDate('2026-03-22', {
+          type: 'custom',
+          interval: 5,
+        }),
+      ).toEqual(ok('2026-03-27'))
     })
   })
 })
@@ -169,21 +182,22 @@ describe('buildNextTaskData', () => {
     updatedAt: new Date('2026-01-01T00:00:00Z'),
   }
 
-  it('copies basic fields and sets status to todo', () => {
-    const result = buildNextTaskData(baseTask, baseRule)
-
-    expect(result.title).toBe('Daily standup')
-    expect(result.description).toBe('Morning standup meeting')
-    expect(result.status).toBe('todo')
-    expect(result.context).toBe('work')
-    expect(result.estimatedMinutes).toBe(15)
-    expect(result.projectId).toBe('proj-1')
-    expect(result.recurrenceRuleId).toBe('rule-1')
-  })
-
-  it('computes next dueDate based on rule', () => {
-    const result = buildNextTaskData(baseTask, baseRule)
-    expect(result.dueDate).toBe('2026-03-23')
+  it('builds the next task data from a completed task', () => {
+    expect(buildNextTaskData(baseTask, baseRule)).toEqual(
+      ok({
+        title: 'Daily standup',
+        description: 'Morning standup meeting',
+        status: 'todo',
+        startDate: null,
+        dueDate: '2026-03-23',
+        estimatedMinutes: 15,
+        parentId: null,
+        projectId: 'proj-1',
+        recurrenceRuleId: 'rule-1',
+        context: 'work',
+        sortOrder: 0,
+      }),
+    )
   })
 
   it('shifts startDate by the same offset when both dates exist', () => {
@@ -192,22 +206,48 @@ describe('buildNextTaskData', () => {
       startDate: '2026-03-20',
       dueDate: '2026-03-22',
     }
-    const result = buildNextTaskData(task, baseRule)
     // dueDate offset is 2 days (22 - 20), next due is 23, so start = 21
-    expect(result.startDate).toBe('2026-03-21')
-    expect(result.dueDate).toBe('2026-03-23')
-  })
-
-  it('sets startDate to null when original has no startDate', () => {
-    const result = buildNextTaskData(baseTask, baseRule)
-    expect(result.startDate).toBeNull()
+    expect(buildNextTaskData(task, baseRule)).toEqual(
+      ok({
+        title: 'Daily standup',
+        description: 'Morning standup meeting',
+        status: 'todo',
+        startDate: '2026-03-21',
+        dueDate: '2026-03-23',
+        estimatedMinutes: 15,
+        parentId: null,
+        projectId: 'proj-1',
+        recurrenceRuleId: 'rule-1',
+        context: 'work',
+        sortOrder: 0,
+      }),
+    )
   })
 
   it('uses today as base when task has no dueDate', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-22T12:00:00Z'))
+
     const task = { ...baseTask, dueDate: null }
-    const result = buildNextTaskData(task, baseRule)
     // Should be tomorrow (today + 1 for daily interval 1)
-    expect(result.dueDate).toBeDefined()
-    expect(result.dueDate).not.toBeNull()
+    expect(buildNextTaskData(task, baseRule)).toEqual(
+      ok({
+        title: 'Daily standup',
+        description: 'Morning standup meeting',
+        status: 'todo',
+        startDate: null,
+        dueDate: '2026-03-23',
+        estimatedMinutes: 15,
+        parentId: null,
+        projectId: 'proj-1',
+        recurrenceRuleId: 'rule-1',
+        context: 'work',
+        sortOrder: 0,
+      }),
+    )
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 })

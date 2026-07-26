@@ -21,10 +21,12 @@ import {
   getEvents,
   OAuthTokenMissingError,
 } from '@api/services/google-calendar'
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
 import { and, eq, gte, inArray, isNull, lte, notInArray, or } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { createFactory } from 'hono/factory'
+import { err, ok } from 'neverthrow'
 import { z } from 'zod'
 
 const timePattern = /^\d{2}:\d{2}$/
@@ -395,20 +397,24 @@ export const schedulesApp = new Hono()
         estimatedMinutes: r.task.estimatedMinutes,
       }))
 
-    let externalEvents: Awaited<ReturnType<typeof getEvents>> = []
-    try {
-      externalEvents = await getEvents(
-        'primary',
-        dayStart.toISOString(),
-        dayEnd.toISOString(),
-      )
-    } catch (error) {
-      if (!(error instanceof OAuthTokenMissingError)) throw error
+    const eventsResult = (
+      await getEvents('primary', dayStart.toISOString(), dayEnd.toISOString())
+    ).orElse((error) => {
+      if (!(error instanceof OAuthTokenMissingError)) return err(error)
       console.warn(
         '[auto-assign] Google Calendar unavailable, scheduling without external events:',
         error.message,
       )
+      return ok([])
+    })
+    if (eventsResult.isErr()) {
+      captureWithFingerprint(
+        eventsResult.error,
+        'api.schedules.auto-assign-calendar-failed',
+      )
+      return c.json({ error: 'Internal server error' }, 500)
     }
+    const externalEvents = eventsResult.value
 
     const scheduleRules = await loadSchedulesWithRules()
     const expandedScheduleBlocks = scheduleRules.flatMap(({ schedule, rule }) =>

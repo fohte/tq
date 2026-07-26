@@ -3,6 +3,7 @@ import { recurrenceRules, tasks, timeBlocks } from '@api/db/schema'
 import { firstOrThrow } from '@api/lib/drizzle-utils'
 import { and, eq, isNull } from 'drizzle-orm'
 import { createFactory } from 'hono/factory'
+import { err, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 export const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
@@ -63,11 +64,18 @@ export type TreeNode = TaskResponseData & {
   childCompletionCount: { completed: number; total: number }
 }
 
+export class TaskTreeConsistencyError extends Error {
+  constructor(taskId: string) {
+    super(`Node not found for task ${taskId}`)
+    this.name = 'TaskTreeConsistencyError'
+  }
+}
+
 export function buildTree(
   allTasks: Array<typeof tasks.$inferSelect>,
   activeStartTimes: Map<string, string>,
   rootId?: string,
-): TreeNode[] {
+): Result<TreeNode[], TaskTreeConsistencyError> {
   const nodeMap = new Map<string, TreeNode>()
 
   for (const task of allTasks) {
@@ -83,7 +91,11 @@ export function buildTree(
 
   for (const task of allTasks) {
     const node = nodeMap.get(task.id)
-    if (!node) throw new Error(`Node not found for task ${task.id}`)
+    if (!node) {
+      // Every task.id was set as a key in the loop above, so this can only
+      // happen if allTasks mutated between the two loops.
+      return err(new TaskTreeConsistencyError(task.id))
+    }
     const parentNode = task.parentId != null ? nodeMap.get(task.parentId) : null
 
     if (parentNode) {
@@ -99,10 +111,10 @@ export function buildTree(
 
   if (rootId != null) {
     const rootNode = nodeMap.get(rootId)
-    return rootNode != null ? [rootNode] : []
+    return ok(rootNode != null ? [rootNode] : [])
   }
 
-  return roots
+  return ok(roots)
 }
 
 type TaskEnv = {

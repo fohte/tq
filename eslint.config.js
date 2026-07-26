@@ -2,7 +2,10 @@ import { config } from '@fohte/eslint-config'
 import storybook from 'eslint-plugin-storybook'
 
 export default config(
-  { typescript: { typeChecked: true } },
+  {
+    typescript: { typeChecked: true },
+    errorHandling: {},
+  },
   {
     ignores: ['**/routeTree.gen.ts'],
   },
@@ -32,6 +35,17 @@ export default config(
     ],
     rules: {
       'no-restricted-imports': 'off',
+    },
+  },
+  // errorHandling only targets api/src; the rest of the repo (web/, config
+  // files at the root) keeps using throw/try-catch and never imports
+  // neverthrow.
+  {
+    files: ['**/*.ts', '**/*.tsx'],
+    ignores: ['api/src/**/*.ts', 'api/src/**/*.tsx'],
+    rules: {
+      'no-restricted-syntax': 'off',
+      'neverthrow/must-use-result': 'off',
     },
   },
 )
