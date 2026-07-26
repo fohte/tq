@@ -7,7 +7,7 @@ import { err, ok, type Result } from 'neverthrow'
 export function firstOrThrow<T>(rows: T[]): T {
   const first = rows[0]
   if (first === undefined) {
-    // eslint-disable-next-line no-restricted-syntax -- still called by routes not yet migrated to Result (e.g. schedules.ts); firstOrErr is the Result-returning counterpart for migrated callers
+    // eslint-disable-next-line no-restricted-syntax -- still depended on by routes outside the Result-returning boundary; firstOrErr is the counterpart for migrated callers
     throw new Error('Expected at least one row from returning(), got none')
   }
   return first
@@ -21,8 +21,8 @@ export class RowNotFoundError extends Error {
 }
 
 /**
- * Result-returning counterpart of `firstOrThrow`, for callers outside the
- * throw-permitted boundary layer.
+ * Result-returning counterpart of `firstOrThrow`, for callers migrated to
+ * neverthrow's `Result`.
  */
 export function firstOrErr<T>(rows: T[]): Result<T, RowNotFoundError> {
   const first = rows[0]
