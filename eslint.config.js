@@ -1,23 +1,10 @@
 import { config } from '@fohte/eslint-config'
 import storybook from 'eslint-plugin-storybook'
 
-// Files allowed to use throw/try-catch and to leave a neverthrow Result
-// unconsumed. Every other api/src file must satisfy the rule with zero
-// exceptions.
-const API_INTEROP_BOUNDARY_FILES = [
-  // Throws at module-eval time, before the Hono app (and its app.onError
-  // Sentry hook) exists, so there's no Result to return to.
-  'api/src/env.ts',
-  // Its firstOrThrow is still called by routes not yet migrated to
-  // Result (e.g. schedules.ts); firstOrErr is the Result-returning
-  // counterpart for migrated callers.
-  'api/src/lib/drizzle-utils.ts',
-]
-
 export default config(
   {
     typescript: { typeChecked: true },
-    errorHandling: { interopBoundaryFiles: API_INTEROP_BOUNDARY_FILES },
+    errorHandling: {},
   },
   {
     ignores: ['**/routeTree.gen.ts'],

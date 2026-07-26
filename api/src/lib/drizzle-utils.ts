@@ -7,6 +7,7 @@ import { err, ok, type Result } from 'neverthrow'
 export function firstOrThrow<T>(rows: T[]): T {
   const first = rows[0]
   if (first === undefined) {
+    // eslint-disable-next-line no-restricted-syntax -- still called by routes not yet migrated to Result (e.g. schedules.ts); firstOrErr is the Result-returning counterpart for migrated callers
     throw new Error('Expected at least one row from returning(), got none')
   }
   return first
