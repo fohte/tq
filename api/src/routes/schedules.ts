@@ -26,6 +26,7 @@ import { zValidator } from '@hono/zod-validator'
 import { and, eq, gte, inArray, isNull, lte, notInArray, or } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { createFactory } from 'hono/factory'
+import { err, ok } from 'neverthrow'
 import { z } from 'zod'
 
 const timePattern = /^\d{2}:\d{2}$/
@@ -396,31 +397,24 @@ export const schedulesApp = new Hono()
         estimatedMinutes: r.task.estimatedMinutes,
       }))
 
-    const eventsResult = await getEvents(
-      'primary',
-      dayStart.toISOString(),
-      dayEnd.toISOString(),
-    )
-    if (
-      eventsResult.isErr() &&
-      !(eventsResult.error instanceof OAuthTokenMissingError)
-    ) {
+    const eventsResult = (
+      await getEvents('primary', dayStart.toISOString(), dayEnd.toISOString())
+    ).orElse((error) => {
+      if (!(error instanceof OAuthTokenMissingError)) return err(error)
+      console.warn(
+        '[auto-assign] Google Calendar unavailable, scheduling without external events:',
+        error.message,
+      )
+      return ok([])
+    })
+    if (eventsResult.isErr()) {
       captureWithFingerprint(
         eventsResult.error,
         'api.schedules.auto-assign-calendar-failed',
       )
       return c.json({ error: 'Internal server error' }, 500)
     }
-    const externalEvents = eventsResult.match(
-      (events) => events,
-      (error) => {
-        console.warn(
-          '[auto-assign] Google Calendar unavailable, scheduling without external events:',
-          error.message,
-        )
-        return []
-      },
-    )
+    const externalEvents = eventsResult.value
 
     const scheduleRules = await loadSchedulesWithRules()
     const expandedScheduleBlocks = scheduleRules.flatMap(({ schedule, rule }) =>
