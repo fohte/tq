@@ -64,7 +64,7 @@ describe('uploadImage', () => {
 
     const error = (await uploadImage(file))._unsafeUnwrapErr()
 
-    expect(error).toBeInstanceOf(InvalidImageTypeError)
+    expect(error).toEqual(new InvalidImageTypeError())
     expect(r2.putObject).not.toHaveBeenCalled()
   })
 
@@ -73,7 +73,7 @@ describe('uploadImage', () => {
 
     const error = (await uploadImage(file))._unsafeUnwrapErr()
 
-    expect(error).toBeInstanceOf(ImageTooLargeError)
+    expect(error).toEqual(new ImageTooLargeError())
     expect(r2.putObject).not.toHaveBeenCalled()
   })
 })
@@ -95,7 +95,7 @@ describe('getImageSignedUrl', () => {
   it('returns ImageNotFoundError for a non-existent image', async () => {
     const error = (await getImageSignedUrl(TEST_UUID))._unsafeUnwrapErr()
 
-    expect(error).toBeInstanceOf(ImageNotFoundError)
+    expect(error).toEqual(new ImageNotFoundError())
   })
 })
 
@@ -116,6 +116,6 @@ describe('deleteImage', () => {
   it('returns ImageNotFoundError for a non-existent image', async () => {
     const error = (await deleteImage(TEST_UUID))._unsafeUnwrapErr()
 
-    expect(error).toBeInstanceOf(ImageNotFoundError)
+    expect(error).toEqual(new ImageNotFoundError())
   })
 })

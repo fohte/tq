@@ -220,7 +220,7 @@ describe('refreshTokenIfNeeded', () => {
 
     const error = (await refreshTokenIfNeeded())._unsafeUnwrapErr()
 
-    expect(error).toBeInstanceOf(OAuthTokenMissingError)
+    expect(error).toEqual(new OAuthTokenMissingError())
   })
 
   it('returns a token refresh error when the request fails', async () => {
