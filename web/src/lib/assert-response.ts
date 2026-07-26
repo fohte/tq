@@ -1,11 +1,13 @@
-import type { ClientResponse } from 'hono/client'
+import type { SuccessStatusCode } from 'hono/utils/http-status'
 
 /**
- * Assert that a Hono client response is successful.
- * TypeScript types the response as always ok, but network errors
- * or server issues could cause failures at runtime.
+ * Assert that a Hono client response is successful, narrowing the response
+ * to its 2xx status variants. Use for endpoints where only the success
+ * shape of `res.json()` is needed and non-2xx responses should throw.
  */
-export function assertOk(res: ClientResponse<unknown>): void {
+export function assertOk<R extends { status: number; ok: boolean }>(
+  res: R,
+): asserts res is Extract<R, { status: SuccessStatusCode }> {
   if (!res.ok) {
     throw new Error(`API request failed: ${String(res.status)}`)
   }
