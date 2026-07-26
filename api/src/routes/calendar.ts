@@ -4,6 +4,7 @@ import {
   GoogleCalendarConfigError,
   handleOAuthCallback,
   OAuthTokenMissingError,
+  TokenExchangeError,
 } from '@api/services/google-calendar'
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
@@ -63,6 +64,8 @@ export const calendarApp = new Hono()
           // message (which names the missing env vars) must not reach the
           // client. A rejected code is a normal OAuth-flow outcome, so
           // relaying the provider's own rejection reason back is fine.
+          // Anything else (network/parse/schema failure) is unexpected and
+          // must be captured rather than relayed.
           if (error instanceof GoogleCalendarConfigError) {
             captureWithFingerprint(
               error,
@@ -70,7 +73,11 @@ export const calendarApp = new Hono()
             )
             return c.json({ error: 'Internal server error' }, 500)
           }
-          return c.json({ error: error.message }, 400)
+          if (error instanceof TokenExchangeError && error.rejected) {
+            return c.json({ error: error.message }, 400)
+          }
+          captureWithFingerprint(error, 'api.calendar.oauth-callback-failed')
+          return c.json({ error: 'Internal server error' }, 500)
         },
       )
     },

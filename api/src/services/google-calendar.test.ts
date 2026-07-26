@@ -124,7 +124,9 @@ describe('handleOAuthCallback', () => {
 
     const error = (await handleOAuthCallback('bad-code'))._unsafeUnwrapErr()
 
-    expect(error).toEqual(new TokenExchangeError('invalid_grant'))
+    expect(error).toEqual(
+      new TokenExchangeError('invalid_grant', undefined, true),
+    )
   })
 })
 

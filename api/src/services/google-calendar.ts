@@ -37,9 +37,18 @@ export class GoogleCalendarConfigError extends Error {
 }
 
 export class TokenExchangeError extends Error {
-  constructor(message: string, cause?: unknown) {
+  /**
+   * True when Google itself rejected the authorization code (a normal
+   * OAuth-flow outcome whose message is safe to relay to the client).
+   * False for a network/parse/schema failure, which must be reported to
+   * Sentry instead of relayed.
+   */
+  readonly rejected: boolean
+
+  constructor(message: string, cause?: unknown, rejected = false) {
     super(`Token exchange failed: ${message}`, { cause })
     this.name = 'TokenExchangeError'
+    this.rejected = rejected
   }
 }
 
@@ -138,7 +147,7 @@ function fetchJson<T, E extends Error>(
   input: string,
   init: RequestInit,
   schema: z.ZodType<T>,
-  wrapError: (message: string, cause?: unknown) => E,
+  wrapError: (message: string, cause?: unknown, rejected?: boolean) => E,
 ): ResultAsync<T, E> {
   return ResultAsync.fromPromise(fetch(input, init), (cause) =>
     wrapError(errorMessage(cause), cause),
@@ -146,7 +155,7 @@ function fetchJson<T, E extends Error>(
     if (!res.ok) {
       return ResultAsync.fromPromise(res.text(), (cause) =>
         wrapError(errorMessage(cause), cause),
-      ).andThen((text) => errAsync(wrapError(text)))
+      ).andThen((text) => errAsync(wrapError(text, undefined, true)))
     }
     return ResultAsync.fromPromise(res.json(), (cause) =>
       wrapError(errorMessage(cause), cause),
@@ -178,7 +187,8 @@ export function handleOAuthCallback(
           }),
         },
         tokenResponseSchema,
-        (message, cause) => new TokenExchangeError(message, cause),
+        (message, cause, rejected) =>
+          new TokenExchangeError(message, cause, rejected),
       ),
     )
     .andThen((data) => {
