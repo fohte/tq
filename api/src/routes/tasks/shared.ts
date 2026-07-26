@@ -83,8 +83,11 @@ export function buildTree(
 
   for (const task of allTasks) {
     const node = nodeMap.get(task.id)
-    // Every task.id was set as a key in the loop above, so this is always found.
-    if (!node) continue
+    if (!node) {
+      // Unreachable: every task.id was set as a key in the loop above.
+      // eslint-disable-next-line no-restricted-syntax -- see comment above
+      throw new Error(`Node not found for task ${task.id}`)
+    }
     const parentNode = task.parentId != null ? nodeMap.get(task.parentId) : null
 
     if (parentNode) {
