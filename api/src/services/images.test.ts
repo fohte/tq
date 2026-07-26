@@ -92,7 +92,7 @@ describe('getImageSignedUrl', () => {
     ])
   })
 
-  it('returns ImageNotFoundError for a non-existent image', async () => {
+  it('returns ImageNotFoundError when getting a signed URL for a non-existent image', async () => {
     const error = (await getImageSignedUrl(TEST_UUID))._unsafeUnwrapErr()
 
     expect(error).toEqual(new ImageNotFoundError())
@@ -113,7 +113,7 @@ describe('deleteImage', () => {
     expect(rows).toEqual([])
   })
 
-  it('returns ImageNotFoundError for a non-existent image', async () => {
+  it('returns ImageNotFoundError when deleting a non-existent image', async () => {
     const error = (await deleteImage(TEST_UUID))._unsafeUnwrapErr()
 
     expect(error).toEqual(new ImageNotFoundError())

@@ -1,6 +1,6 @@
 import { buildNextTaskData, computeNextDate } from '@api/services/recurrence'
 import { ok } from 'neverthrow'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 describe('computeNextDate', () => {
   describe('daily', () => {
@@ -225,13 +225,29 @@ describe('buildNextTaskData', () => {
   })
 
   it('uses today as base when task has no dueDate', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-22T12:00:00Z'))
+
     const task = { ...baseTask, dueDate: null }
-    const result = buildNextTaskData(task, baseRule)
-    if (!result.isOk()) {
-      throw new Error('expected buildNextTaskData to succeed')
-    }
     // Should be tomorrow (today + 1 for daily interval 1)
-    expect(result.value.dueDate).toBeDefined()
-    expect(result.value.dueDate).not.toBeNull()
+    expect(buildNextTaskData(task, baseRule)).toEqual(
+      ok({
+        title: 'Daily standup',
+        description: 'Morning standup meeting',
+        status: 'todo',
+        startDate: null,
+        dueDate: '2026-03-23',
+        estimatedMinutes: 15,
+        parentId: null,
+        projectId: 'proj-1',
+        recurrenceRuleId: 'rule-1',
+        context: 'work',
+        sortOrder: 0,
+      }),
+    )
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 })
