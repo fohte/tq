@@ -1,6 +1,7 @@
 import { db } from '@api/db/connection'
 import { tasks, timeBlocks } from '@api/db/schema'
 import { buildTree } from '@api/routes/tasks/shared'
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
 import { and, inArray, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -74,6 +75,12 @@ export const tasksTreeApp = new Hono().get(
       activeStartTimes.set(block.taskId, block.startTime.toISOString())
     }
 
-    return c.json(buildTree(treeTasks, activeStartTimes, rootId), 200)
+    return buildTree(treeTasks, activeStartTimes, rootId).match(
+      (tree) => c.json(tree, 200),
+      (error) => {
+        captureWithFingerprint(error, 'api.tasks.build-tree-failed')
+        return c.json({ error: 'Internal server error' }, 500)
+      },
+    )
   },
 )
