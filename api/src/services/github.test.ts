@@ -61,7 +61,7 @@ describe('getAuthUrl', () => {
   it('returns a GitHub OAuth authorization URL with correct parameters', async () => {
     const { getAuthUrl } = await importService()
 
-    const url = getAuthUrl()
+    const url = getAuthUrl()._unsafeUnwrap()
     const parsed = new URL(url)
 
     expect(parsed.origin + parsed.pathname).toBe(
@@ -74,11 +74,13 @@ describe('getAuthUrl', () => {
     expect(parsed.searchParams.get('scope')).toBe('repo')
   })
 
-  it('throws when environment variables are missing', async () => {
+  it('returns a config error when environment variables are missing', async () => {
     clearEnv()
-    const { getAuthUrl } = await importService()
+    const { getAuthUrl, GithubConfigError } = await importService()
 
-    expect(() => getAuthUrl()).toThrow('environment variables are required')
+    const error = getAuthUrl()._unsafeUnwrapErr()
+
+    expect(error).toEqual(new GithubConfigError())
   })
 })
 
@@ -97,7 +99,7 @@ describe('handleOAuthCallback', () => {
       ),
     )
 
-    await handleOAuthCallback('auth-code-123')
+    ;(await handleOAuthCallback('auth-code-123'))._unsafeUnwrap()
 
     const [savedToken] = await db
       .select()
@@ -117,20 +119,20 @@ describe('handleOAuthCallback', () => {
     })
   })
 
-  it('throws when the token endpoint returns a non-2xx response', async () => {
-    const { handleOAuthCallback } = await importService()
+  it('returns a token exchange error when the token endpoint returns a non-2xx response', async () => {
+    const { handleOAuthCallback, TokenExchangeError } = await importService()
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response('server error', { status: 500 }),
     )
 
-    await expect(handleOAuthCallback('bad-code')).rejects.toThrow(
-      'Token exchange failed',
-    )
+    const error = (await handleOAuthCallback('bad-code'))._unsafeUnwrapErr()
+
+    expect(error).toEqual(new TokenExchangeError('server error'))
   })
 
-  it('throws when GitHub returns an error payload with 200 status', async () => {
-    const { handleOAuthCallback } = await importService()
+  it('returns a rejected token exchange error when GitHub returns an error payload with 200 status', async () => {
+    const { handleOAuthCallback, TokenExchangeError } = await importService()
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(
@@ -142,8 +144,14 @@ describe('handleOAuthCallback', () => {
       ),
     )
 
-    await expect(handleOAuthCallback('bad-code')).rejects.toThrow(
-      'The code passed is incorrect or expired.',
+    const error = (await handleOAuthCallback('bad-code'))._unsafeUnwrapErr()
+
+    expect(error).toEqual(
+      new TokenExchangeError(
+        'The code passed is incorrect or expired.',
+        undefined,
+        true,
+      ),
     )
   })
 })
@@ -152,7 +160,9 @@ describe('getConnectionStatus', () => {
   it('returns not connected when no token exists', async () => {
     const { getConnectionStatus } = await importService()
 
-    expect(await getConnectionStatus()).toEqual({ connected: false })
+    expect((await getConnectionStatus())._unsafeUnwrap()).toEqual({
+      connected: false,
+    })
   })
 
   it('returns connected with the account login when a token exists', async () => {
@@ -164,14 +174,14 @@ describe('getConnectionStatus', () => {
       new Response(JSON.stringify({ login: 'fohte' }), { status: 200 }),
     )
 
-    expect(await getConnectionStatus()).toEqual({
+    expect((await getConnectionStatus())._unsafeUnwrap()).toEqual({
       connected: true,
       login: 'fohte',
     })
   })
 
-  it('throws when the GitHub API request fails', async () => {
-    const { getConnectionStatus } = await importService()
+  it('returns a GitHub API error when the request fails', async () => {
+    const { getConnectionStatus, GithubApiError } = await importService()
 
     await upsertToken('some-token')
 
@@ -179,7 +189,9 @@ describe('getConnectionStatus', () => {
       new Response('server error', { status: 500 }),
     )
 
-    await expect(getConnectionStatus()).rejects.toThrow('GitHub API error')
+    const error = (await getConnectionStatus())._unsafeUnwrapErr()
+
+    expect(error).toEqual(new GithubApiError('server error'))
   })
 
   it('drops the token and returns not connected when it was revoked on GitHub', async () => {
@@ -191,7 +203,9 @@ describe('getConnectionStatus', () => {
       new Response('Bad credentials', { status: 401 }),
     )
 
-    expect(await getConnectionStatus()).toEqual({ connected: false })
+    expect((await getConnectionStatus())._unsafeUnwrap()).toEqual({
+      connected: false,
+    })
 
     const [remainingToken] = await db
       .select()
@@ -207,14 +221,20 @@ describe('disconnect', () => {
     const { disconnect, getConnectionStatus } = await importService()
 
     await upsertToken('valid-token')
-    await disconnect()
+    ;(await disconnect())._unsafeUnwrap()
 
-    expect(await getConnectionStatus()).toEqual({ connected: false })
+    expect((await getConnectionStatus())._unsafeUnwrap()).toEqual({
+      connected: false,
+    })
   })
 
   it('does nothing when no token exists', async () => {
-    const { disconnect } = await importService()
+    const { disconnect, getConnectionStatus } = await importService()
 
-    await expect(disconnect()).resolves.toBeUndefined()
+    ;(await disconnect())._unsafeUnwrap()
+
+    expect((await getConnectionStatus())._unsafeUnwrap()).toEqual({
+      connected: false,
+    })
   })
 })
