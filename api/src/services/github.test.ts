@@ -229,12 +229,15 @@ describe('disconnect', () => {
   })
 
   it('does nothing when no token exists', async () => {
-    const { disconnect, getConnectionStatus } = await importService()
+    const { disconnect } = await importService()
 
     ;(await disconnect())._unsafeUnwrap()
 
-    expect((await getConnectionStatus())._unsafeUnwrap()).toEqual({
-      connected: false,
-    })
+    const [remainingToken] = await db
+      .select()
+      .from(oauthTokens)
+      .where(eq(oauthTokens.provider, 'github'))
+      .limit(1)
+    expect(remainingToken).toBeUndefined()
   })
 })
