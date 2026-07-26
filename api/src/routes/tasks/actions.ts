@@ -9,6 +9,7 @@ import {
   updateStatusAndCloseTimeBlocks,
 } from '@api/routes/tasks/shared'
 import { buildNextTaskData } from '@api/services/recurrence'
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -174,9 +175,16 @@ export const tasksActionsApp = new Hono()
         })) ?? null
 
       if (completedTaskRule) {
-        const nextData = buildNextTaskData(updatedTask, completedTaskRule)
+        const nextDataResult = buildNextTaskData(updatedTask, completedTaskRule)
+        if (nextDataResult.isErr()) {
+          captureWithFingerprint(
+            nextDataResult.error,
+            'api.tasks.build-next-task-data-failed',
+          )
+          return c.json({ error: 'Internal server error' }, 500)
+        }
         const created = firstOrThrow(
-          await db.insert(tasks).values(nextData).returning(),
+          await db.insert(tasks).values(nextDataResult.value).returning(),
         )
         nextTask = taskToResponse(created, completedTaskRule)
       }

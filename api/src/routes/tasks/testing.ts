@@ -3,6 +3,7 @@ import { db } from '@api/db/connection'
 import { labels } from '@api/db/schema'
 import { firstOrThrow } from '@api/lib/drizzle-utils'
 import { jsonBody } from '@api/testing'
+import { expect } from 'vitest'
 import { z } from 'zod'
 
 export interface TimeBlockResponse {
@@ -77,6 +78,12 @@ const idResponseSchema = z.object({ id: z.string() })
 
 export const TEST_UUID = '550e8400-e29b-41d4-a716-446655440000'
 
+async function assertCreated(res: Response, label: string) {
+  if (res.status !== 201) {
+    expect(res.status, `${label}: ${await res.text()}`).toBe(201)
+  }
+}
+
 export async function createTask(
   title: string,
   opts: {
@@ -93,11 +100,7 @@ export async function createTask(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title, ...opts }),
   })
-  if (res.status !== 201) {
-    throw new Error(
-      `Failed to create task: ${String(res.status)} ${await res.text()}`,
-    )
-  }
+  await assertCreated(res, 'Failed to create task')
   return jsonBody(res, taskResponseSchema)
 }
 
@@ -121,11 +124,7 @@ export async function createRecurringTask(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title, recurrenceRule, ...opts }),
   })
-  if (res.status !== 201) {
-    throw new Error(
-      `Failed to create recurring task: ${String(res.status)} ${await res.text()}`,
-    )
-  }
+  await assertCreated(res, 'Failed to create recurring task')
   return jsonBody(res, taskResponseSchema)
 }
 
@@ -139,11 +138,7 @@ export async function createPage(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title, content }),
   })
-  if (res.status !== 201) {
-    throw new Error(
-      `Failed to create page: ${String(res.status)} ${await res.text()}`,
-    )
-  }
+  await assertCreated(res, 'Failed to create page')
   return jsonBody(res, idResponseSchema)
 }
 
@@ -153,11 +148,7 @@ export async function createComment(taskId: string, content: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content }),
   })
-  if (res.status !== 201) {
-    throw new Error(
-      `Failed to create comment: ${String(res.status)} ${await res.text()}`,
-    )
-  }
+  await assertCreated(res, 'Failed to create comment')
   return jsonBody(res, idResponseSchema)
 }
 

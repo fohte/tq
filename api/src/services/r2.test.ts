@@ -2,6 +2,7 @@ import {
   deleteObjectByKey,
   getObjectSignedUrl,
   putObject,
+  R2ConfigError,
 } from '@api/services/r2'
 import {
   DeleteObjectCommand,
@@ -45,7 +46,9 @@ describe('putObject', () => {
   it('sends a PutObjectCommand with the given key, body, and content type', async () => {
     s3Mock.on(PutObjectCommand).resolves({})
 
-    await putObject('images/abc', Buffer.from('hello'), 'image/png')
+    ;(
+      await putObject('images/abc', Buffer.from('hello'), 'image/png')
+    )._unsafeUnwrap()
 
     expect(
       s3Mock.commandCalls(PutObjectCommand).map((call) => call.args[0].input),
@@ -59,18 +62,20 @@ describe('putObject', () => {
     ])
   })
 
-  it('throws when R2 environment variables are missing', async () => {
+  it('returns a config error when R2 environment variables are missing', async () => {
     clearEnv()
 
-    await expect(
-      putObject('images/abc', Buffer.from('x'), 'image/png'),
-    ).rejects.toThrow('environment variables are required')
+    const error = (
+      await putObject('images/abc', Buffer.from('x'), 'image/png')
+    )._unsafeUnwrapErr()
+
+    expect(error).toEqual(new R2ConfigError())
   })
 })
 
 describe('getObjectSignedUrl', () => {
   it('returns a signed URL scoped to the configured bucket and key', async () => {
-    const url = await getObjectSignedUrl('images/abc', 3600)
+    const url = (await getObjectSignedUrl('images/abc', 3600))._unsafeUnwrap()
     const parsed = new URL(url)
 
     expect(parsed.origin).toBe(
@@ -85,7 +90,7 @@ describe('deleteObjectByKey', () => {
   it('sends a DeleteObjectCommand with the given key', async () => {
     s3Mock.on(DeleteObjectCommand).resolves({})
 
-    await deleteObjectByKey('images/abc')
+    ;(await deleteObjectByKey('images/abc'))._unsafeUnwrap()
 
     expect(
       s3Mock
