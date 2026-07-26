@@ -13,7 +13,8 @@ export class EmptyDaysOfWeekError extends Error {
 
 /**
  * Compute the next occurrence date based on a recurrence rule.
- * Returns a 'YYYY-MM-DD' string.
+ * Returns a 'YYYY-MM-DD' string, or an EmptyDaysOfWeekError if a weekly
+ * rule has no matching days left to search.
  */
 export function computeNextDate(
   baseDate: string,
