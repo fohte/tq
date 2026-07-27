@@ -18,7 +18,7 @@
 //
 // To report a wrapped error under a stable fingerprint (for Sentry
 // grouping) without changing control flow, call `captureWithFingerprint`
-// (from `@fohte/service-kit/observability`, see src/bootstrap.ts) right
+// (from `@fohte/service-kit/observability`, see src/app.ts) right
 // before re-throwing.
 export abstract class BoundaryError extends Error {
   constructor(message: string, cause: unknown) {
