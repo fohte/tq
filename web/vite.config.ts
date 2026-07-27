@@ -1,5 +1,3 @@
-import { fileURLToPath, URL } from 'node:url'
-
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
@@ -55,11 +53,6 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
-    },
-  },
-  resolve: {
-    alias: {
-      '@web': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
 })

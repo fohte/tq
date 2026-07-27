@@ -1,7 +1,6 @@
 import { defineConfig } from 'drizzle-kit'
 
-// eslint-disable-next-line no-restricted-imports -- drizzle-kit does not resolve @api path aliases
-import { DATABASE_URL } from './src/env.js'
+import { DATABASE_URL } from '#env'
 
 export default defineConfig({
   schema: './src/db/schema.ts',

@@ -7,9 +7,10 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { SearchModal } from '@web/components/search/search-modal'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
+
+import { SearchModal } from '#components/search/search-modal'
 
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({

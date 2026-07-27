@@ -1,10 +1,11 @@
-import type { ProjectTask } from '@web/hooks/use-projects'
+import { describe, expect, it } from 'vitest'
+
+import type { ProjectTask } from '#hooks/use-projects'
 import {
   buildGanttTasks,
   getScaleConfig,
   toDateOnlyString,
-} from '@web/lib/gantt-utils'
-import { describe, expect, it } from 'vitest'
+} from '#lib/gantt-utils'
 
 const baseTask: ProjectTask = {
   id: '1',

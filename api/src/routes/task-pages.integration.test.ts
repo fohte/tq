@@ -1,6 +1,7 @@
-import { app } from '@api/app'
-import { jsonBody, setupTestDb } from '@api/testing'
 import { describe, expect, it } from 'vitest'
+
+import { app } from '#app'
+import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 

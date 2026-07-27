@@ -1,6 +1,7 @@
-import { db } from '@api/db/connection'
-import { labels } from '@api/db/schema'
 import { Hono } from 'hono'
+
+import { db } from '#db/connection'
+import { labels } from '#db/schema'
 
 export const labelsApp = new Hono().get('/', async (c) => {
   const result = await db.select().from(labels).orderBy(labels.name)

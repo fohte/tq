@@ -1,17 +1,18 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
 import {
   useCreateTimeBlock,
   useDeleteTimeBlock,
   useTimeBlocks,
   useUpdateTimeBlock,
-} from '@web/hooks/use-time-blocks'
-import { assertDefined } from '@web/lib/test-utils'
-import type { ReactNode } from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+} from '#hooks/use-time-blocks'
+import { assertDefined } from '#lib/test-utils'
 
 // Mock the API module
-vi.mock('@web/lib/api', () => {
+vi.mock('#lib/api', () => {
   const mockGet = vi.fn()
   const mockPost = vi.fn()
   const mockPatch = vi.fn()
@@ -38,7 +39,7 @@ vi.mock('@web/lib/api', () => {
 
 // Access mocks
 async function getMocks() {
-  const mod = await import('@web/lib/api')
+  const mod = await import('#lib/api')
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- accessing test-only __mocks property injected by vi.mock
   const typed = mod as unknown as {
     __mocks: Record<string, ReturnType<typeof vi.fn>>

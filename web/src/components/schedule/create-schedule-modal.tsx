@@ -1,16 +1,17 @@
-import { Button } from '@web/components/ui/button'
+import { Clock, Layers, Palette, Repeat, X } from 'lucide-react'
+import { useCallback, useState } from 'react'
+
+import { Button } from '#components/ui/button'
 import {
   Dialog,
   DialogOverlay,
   DialogPopup,
   DialogPortal,
-} from '@web/components/ui/dialog'
-import type { CreateScheduleInput } from '@web/hooks/use-schedules'
-import { useCreateSchedule } from '@web/hooks/use-schedules'
-import { selectHandler } from '@web/lib/form-utils'
-import { cn } from '@web/lib/utils'
-import { Clock, Layers, Palette, Repeat, X } from 'lucide-react'
-import { useCallback, useState } from 'react'
+} from '#components/ui/dialog'
+import type { CreateScheduleInput } from '#hooks/use-schedules'
+import { useCreateSchedule } from '#hooks/use-schedules'
+import { selectHandler } from '#lib/form-utils'
+import { cn } from '#lib/utils'
 
 interface CreateScheduleModalProps {
   open: boolean

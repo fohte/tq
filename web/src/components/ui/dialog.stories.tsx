@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { Button } from '@web/components/ui/button'
+import { fn } from 'storybook/test'
+
+import { Button } from '#components/ui/button'
 import {
   Dialog,
   DialogClose,
@@ -9,8 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@web/components/ui/dialog'
-import { fn } from 'storybook/test'
+} from '#components/ui/dialog'
 
 function DialogDemo({
   open,

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
-import { BottomTabBar } from '@web/components/layout/bottom-tab-bar'
 import { describe, expect, it, vi } from 'vitest'
+
+import { BottomTabBar } from '#components/layout/bottom-tab-bar'
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({

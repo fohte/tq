@@ -1,10 +1,11 @@
-import { useFocusNotes } from '@web/hooks/use-focus-notes'
-import { useLiveTimer } from '@web/hooks/use-live-timer'
-import type { Task } from '@web/hooks/use-tasks'
-import { useTaskActions, useUpdateTaskStatus } from '@web/hooks/use-tasks'
-import { formatMinutes } from '@web/lib/format'
-import { cn } from '@web/lib/utils'
 import { Check, Loader2, Play, Square } from 'lucide-react'
+
+import { useFocusNotes } from '#hooks/use-focus-notes'
+import { useLiveTimer } from '#hooks/use-live-timer'
+import type { Task } from '#hooks/use-tasks'
+import { useTaskActions, useUpdateTaskStatus } from '#hooks/use-tasks'
+import { formatMinutes } from '#lib/format'
+import { cn } from '#lib/utils'
 
 export interface FocusViewPresentationProps {
   isLoading: boolean

@@ -1,6 +1,7 @@
-import { registerReadTools } from '@api/routes/mcp/tools/read-tools'
-import { registerWriteTools } from '@api/routes/mcp/tools/write-tools'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+
+import { registerReadTools } from '#routes/mcp/tools/read-tools'
+import { registerWriteTools } from '#routes/mcp/tools/write-tools'
 
 export function createMcpServer(): McpServer {
   const server = new McpServer(

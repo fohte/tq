@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { ProjectViewTabs } from '@web/components/project/project-view-tabs'
 import { fn } from 'storybook/test'
+
+import { ProjectViewTabs } from '#components/project/project-view-tabs'
 
 const meta = {
   title: 'Project/ProjectViewTabs',

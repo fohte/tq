@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { timeBlockKeys } from '@web/hooks/use-time-blocks'
-import { api } from '@web/lib/api'
-import { assertOk } from '@web/lib/assert-response'
 import type { InferResponseType } from 'hono/client'
+
+import { timeBlockKeys } from '#hooks/use-time-blocks'
+import { api } from '#lib/api'
+import { assertOk } from '#lib/assert-response'
 
 type TodayTask = InferResponseType<
   (typeof api.api.schedule)['today-tasks']['$get']

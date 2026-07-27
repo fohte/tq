@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { useState } from 'react'
+
 import {
   ProjectFilterBar,
   type SortOption,
   type StatusFilter,
-} from '@web/components/project/project-filter-bar'
-import { useState } from 'react'
+} from '#components/project/project-filter-bar'
 
 function InteractiveFilterBar({
   initialFilter = 'all',

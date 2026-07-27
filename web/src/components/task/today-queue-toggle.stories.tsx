@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { TodayQueueToggle } from '@web/components/task/today-queue-toggle'
 import { fn } from 'storybook/test'
+
+import { TodayQueueToggle } from '#components/task/today-queue-toggle'
 
 const meta = {
   title: 'Task/TodayQueueToggle',

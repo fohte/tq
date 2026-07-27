@@ -1,15 +1,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { TreeTaskRow } from '@web/components/task/task-row'
-import type { TreeNode } from '@web/hooks/use-tasks'
-import { atIndex } from '@web/lib/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { TreeTaskRow } from '#components/task/task-row'
+import type { TreeNode } from '#hooks/use-tasks'
+import { atIndex } from '#lib/test-utils'
 
 const mockHandleStatusAction = vi.fn()
 const mockHandleComplete = vi.fn()
 
-vi.mock('@web/hooks/use-tasks', () => ({
+vi.mock('#hooks/use-tasks', () => ({
   useTaskActions: () => ({
     handleStatusAction: mockHandleStatusAction,
     handleComplete: mockHandleComplete,

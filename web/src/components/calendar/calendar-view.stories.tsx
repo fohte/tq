@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+
 import {
   CalendarView,
   type TimeBlockEvent,
-} from '@web/components/calendar/calendar-view'
+} from '#components/calendar/calendar-view'
 
 const today = new Date()
 const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`

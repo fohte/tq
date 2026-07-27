@@ -1,8 +1,9 @@
-import { callInternalRoute } from '@api/routes/mcp/route-bridge'
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
+
+import { callInternalRoute } from '#routes/mcp/route-bridge'
 
 const testApp = new Hono()
   .post(

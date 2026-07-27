@@ -1,5 +1,6 @@
-import { sessionAwareFetch } from '@web/lib/session-aware-fetch'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import { sessionAwareFetch } from '#lib/session-aware-fetch'
 
 describe('sessionAwareFetch', () => {
   afterEach(() => {

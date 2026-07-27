@@ -1,10 +1,11 @@
-import { db } from '@api/db/connection'
-import { taskPages, tasks } from '@api/db/schema'
-import { firstOrThrow } from '@api/lib/drizzle-utils'
 import { zValidator } from '@hono/zod-validator'
 import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
+
+import { db } from '#db/connection'
+import { taskPages, tasks } from '#db/schema'
+import { firstOrThrow } from '#lib/drizzle-utils'
 
 const createPageSchema = z.object({
   title: z.string().min(1),

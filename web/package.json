@@ -2,6 +2,16 @@
   "name": "web",
   "private": true,
   "type": "module",
+  "imports": {
+    "#*": {
+      "types": [
+        "./src/*.tsx",
+        "./src/*.ts",
+        "./src/*"
+      ],
+      "default": "./src/*"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

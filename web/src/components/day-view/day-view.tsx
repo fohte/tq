@@ -11,21 +11,22 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import type { CalendarDndCallbacks } from '@web/components/calendar/calendar-grid'
+import { Plus } from 'lucide-react'
+import { useRef, useState } from 'react'
+
+import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import {
   CalendarView,
   type TimeBlockEvent,
-} from '@web/components/calendar/calendar-view'
-import { BacklogPreview } from '@web/components/task/backlog-preview'
-import { CreateTaskInline } from '@web/components/task/create-task-inline'
-import { TaskListHeader } from '@web/components/task/task-list-header'
-import { TaskRow } from '@web/components/task/task-row'
-import { TodayQueueRow } from '@web/components/task/today-queue-row'
-import { TodayQueueToggle } from '@web/components/task/today-queue-toggle'
-import type { CategorizedTasks, Task } from '@web/hooks/use-tasks'
-import { cn } from '@web/lib/utils'
-import { Plus } from 'lucide-react'
-import { useRef, useState } from 'react'
+} from '#components/calendar/calendar-view'
+import { BacklogPreview } from '#components/task/backlog-preview'
+import { CreateTaskInline } from '#components/task/create-task-inline'
+import { TaskListHeader } from '#components/task/task-list-header'
+import { TaskRow } from '#components/task/task-row'
+import { TodayQueueRow } from '#components/task/today-queue-row'
+import { TodayQueueToggle } from '#components/task/today-queue-toggle'
+import type { CategorizedTasks, Task } from '#hooks/use-tasks'
+import { cn } from '#lib/utils'
 
 type TaskTab = 'today' | 'all'
 type MobileTab = 'calendar' | 'tasks'

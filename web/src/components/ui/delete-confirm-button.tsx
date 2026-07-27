@@ -1,4 +1,6 @@
-import { Button } from '@web/components/ui/button'
+import { Trash2 } from 'lucide-react'
+
+import { Button } from '#components/ui/button'
 import {
   Dialog,
   DialogClose,
@@ -8,9 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@web/components/ui/dialog'
-import { cn } from '@web/lib/utils'
-import { Trash2 } from 'lucide-react'
+} from '#components/ui/dialog'
+import { cn } from '#lib/utils'
 
 export function DeleteConfirmButton({
   title,

@@ -1,6 +1,7 @@
-import { selectHandler } from '@web/lib/form-utils'
-import { cn } from '@web/lib/utils'
 import { Plus } from 'lucide-react'
+
+import { selectHandler } from '#lib/form-utils'
+import { cn } from '#lib/utils'
 
 export type StatusFilter = 'all' | 'todo' | 'in_progress' | 'completed'
 

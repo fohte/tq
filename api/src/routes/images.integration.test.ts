@@ -1,14 +1,15 @@
-import { app } from '@api/app'
-import { db } from '@api/db/connection'
-import { images } from '@api/db/schema'
-import { MAX_SIZE_BYTES } from '@api/services/images'
-import * as r2 from '@api/services/r2'
-import { jsonBody, makeFile, setupTestDb } from '@api/testing'
 import { eq } from 'drizzle-orm'
 import { okAsync } from 'neverthrow'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@api/services/r2')
+import { app } from '#app'
+import { db } from '#db/connection'
+import { images } from '#db/schema'
+import { MAX_SIZE_BYTES } from '#services/images'
+import * as r2 from '#services/r2'
+import { jsonBody, makeFile, setupTestDb } from '#testing'
+
+vi.mock('#services/r2')
 
 setupTestDb()
 

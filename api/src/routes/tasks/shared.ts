@@ -1,10 +1,11 @@
-import { db } from '@api/db/connection'
-import { recurrenceRules, tasks, timeBlocks } from '@api/db/schema'
-import { firstOrThrow } from '@api/lib/drizzle-utils'
 import { and, eq, isNull } from 'drizzle-orm'
 import { createFactory } from 'hono/factory'
 import { err, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
+
+import { db } from '#db/connection'
+import { recurrenceRules, tasks, timeBlocks } from '#db/schema'
+import { firstOrThrow } from '#lib/drizzle-utils'
 
 export const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
 export const contextEnum = z.enum(['work', 'personal', 'dev'])

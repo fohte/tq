@@ -1,16 +1,17 @@
 import {
-  deleteObjectByKey,
-  getObjectSignedUrl,
-  putObject,
-  R2ConfigError,
-} from '@api/services/r2'
-import {
   DeleteObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3'
 import { mockClient } from 'aws-sdk-client-mock'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+
+import {
+  deleteObjectByKey,
+  getObjectSignedUrl,
+  putObject,
+  R2ConfigError,
+} from '#services/r2'
 
 const MOCK_ENV = {
   R2_ACCOUNT_ID: 'test-account-id',

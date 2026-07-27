@@ -1,5 +1,3 @@
-import { db } from '@api/db/connection'
-import { oauthTokens } from '@api/db/schema'
 import { eq } from 'drizzle-orm'
 import {
   err,
@@ -10,6 +8,9 @@ import {
   ResultAsync,
 } from 'neverthrow'
 import { z } from 'zod'
+
+import { db } from '#db/connection'
+import { oauthTokens } from '#db/schema'
 
 const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { LiveTimer } from '@web/components/task/task-row'
+
+import { LiveTimer } from '#components/task/task-row'
 
 const meta = {
   title: 'Task/LiveTimer',

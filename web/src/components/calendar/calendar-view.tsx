@@ -1,14 +1,15 @@
 import type FullCalendarType from '@fullcalendar/react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
 import {
   type CalendarDndCallbacks,
   CalendarGrid,
-} from '@web/components/calendar/calendar-grid'
+} from '#components/calendar/calendar-grid'
 import {
   CalendarHeader,
   type CalendarViewType,
   FULLCALENDAR_VIEW_MAP,
-} from '@web/components/calendar/calendar-header'
-import { useCallback, useEffect, useRef, useState } from 'react'
+} from '#components/calendar/calendar-header'
 
 export interface TimeBlockEvent {
   id: string

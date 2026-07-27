@@ -6,9 +6,10 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { render, screen, waitFor } from '@testing-library/react'
-import { ProjectCard } from '@web/components/project/project-card'
-import type { Project } from '@web/hooks/use-projects'
 import { describe, expect, it } from 'vitest'
+
+import { ProjectCard } from '#components/project/project-card'
+import type { Project } from '#hooks/use-projects'
 
 function renderCard(project: Project) {
   const rootRoute = createRootRoute({

@@ -1,4 +1,3 @@
-import { app } from '@api/app'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
@@ -8,6 +7,8 @@ import {
   type TextContent,
 } from '@modelcontextprotocol/sdk/types.js'
 import { expect } from 'vitest'
+
+import { app } from '#app'
 
 function assertTextContent(
   first: CallToolResult['content'][number] | undefined,

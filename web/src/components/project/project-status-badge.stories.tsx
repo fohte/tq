@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { ProjectStatusBadge } from '@web/components/project/project-status-badge'
+
+import { ProjectStatusBadge } from '#components/project/project-status-badge'
 
 const meta = {
   title: 'Project/ProjectStatusBadge',

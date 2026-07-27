@@ -7,9 +7,10 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { ProjectTaskList } from '@web/components/project/project-task-list'
-import type { ProjectTask } from '@web/hooks/use-projects'
 import type { ReactNode } from 'react'
+
+import { ProjectTaskList } from '#components/project/project-task-list'
+import type { ProjectTask } from '#hooks/use-projects'
 
 const baseTask: ProjectTask = {
   id: '00000000-0000-0000-0000-000000000001',

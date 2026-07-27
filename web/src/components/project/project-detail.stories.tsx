@@ -7,13 +7,14 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
+import type { ReactNode } from 'react'
+
 import {
   ProjectMainContent,
   ProjectSidebar,
   ProjectSidebarMobile,
-} from '@web/components/project/project-detail'
-import type { ProjectDetail, ProjectTask } from '@web/hooks/use-projects'
-import type { ReactNode } from 'react'
+} from '#components/project/project-detail'
+import type { ProjectDetail, ProjectTask } from '#hooks/use-projects'
 
 const baseProject: ProjectDetail = {
   id: 'proj-001',

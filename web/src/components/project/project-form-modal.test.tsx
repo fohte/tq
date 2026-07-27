@@ -1,9 +1,10 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ProjectFormModal } from '@web/components/project/project-form-modal'
-import { renderControlledModal } from '@web/lib/render-controlled-modal'
-import { atIndex } from '@web/lib/test-utils'
 import { describe, expect, it } from 'vitest'
+
+import { ProjectFormModal } from '#components/project/project-form-modal'
+import { renderControlledModal } from '#lib/render-controlled-modal'
+import { atIndex } from '#lib/test-utils'
 
 function renderModal(
   props: {

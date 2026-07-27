@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { ProjectBoardHeader } from '@web/components/project/project-board-header'
-import type { ProjectDetail } from '@web/hooks/use-projects'
 import { fn } from 'storybook/test'
+
+import { ProjectBoardHeader } from '#components/project/project-board-header'
+import type { ProjectDetail } from '#hooks/use-projects'
 
 const baseProject: ProjectDetail = {
   id: '00000000-0000-0000-0000-000000000001',

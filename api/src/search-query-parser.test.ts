@@ -1,5 +1,6 @@
-import { parseSearchQuery } from '@api/search-query-parser'
 import { describe, expect, it } from 'vitest'
+
+import { parseSearchQuery } from '#search-query-parser'
 
 describe('parseSearchQuery', () => {
   it('extracts free text when no prefixes are present', () => {

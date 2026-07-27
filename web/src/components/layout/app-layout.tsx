@@ -1,8 +1,9 @@
-import { BottomTabBar } from '@web/components/layout/bottom-tab-bar'
-import { Sidebar } from '@web/components/layout/sidebar'
-import { ProjectFormModal } from '@web/components/project/project-form-modal'
-import { SearchModal } from '@web/components/search/search-modal'
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
+
+import { BottomTabBar } from '#components/layout/bottom-tab-bar'
+import { Sidebar } from '#components/layout/sidebar'
+import { ProjectFormModal } from '#components/project/project-form-modal'
+import { SearchModal } from '#components/search/search-modal'
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [showCreateProject, setShowCreateProject] = useState(false)

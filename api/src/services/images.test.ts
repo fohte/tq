@@ -1,5 +1,9 @@
-import { db } from '@api/db/connection'
-import { images } from '@api/db/schema'
+import { eq } from 'drizzle-orm'
+import { okAsync } from 'neverthrow'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { db } from '#db/connection'
+import { images } from '#db/schema'
 import {
   deleteImage,
   getImageSignedUrl,
@@ -8,14 +12,11 @@ import {
   InvalidImageTypeError,
   MAX_SIZE_BYTES,
   uploadImage,
-} from '@api/services/images'
-import * as r2 from '@api/services/r2'
-import { makeFile, setupTestDb } from '@api/testing'
-import { eq } from 'drizzle-orm'
-import { okAsync } from 'neverthrow'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+} from '#services/images'
+import * as r2 from '#services/r2'
+import { makeFile, setupTestDb } from '#testing'
 
-vi.mock('@api/services/r2')
+vi.mock('#services/r2')
 
 setupTestDb()
 

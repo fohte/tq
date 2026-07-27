@@ -7,10 +7,11 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { SearchViewInner } from '@web/components/search/search-view'
-import type { SearchResult } from '@web/hooks/use-search'
 import type { ReactNode } from 'react'
 import { fn } from 'storybook/test'
+
+import { SearchViewInner } from '#components/search/search-view'
+import type { SearchResult } from '#hooks/use-search'
 
 const baseTask: SearchResult = {
   id: '00000000-0000-0000-0000-000000000001',

@@ -7,10 +7,11 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { PageCardPresentation } from '@web/components/task/task-pages-section'
-import { MarkdownEditor } from '@web/components/ui/markdown-editor'
-import type { TaskPage } from '@web/hooks/use-task-pages'
 import type { ReactNode } from 'react'
+
+import { PageCardPresentation } from '#components/task/task-pages-section'
+import { MarkdownEditor } from '#components/ui/markdown-editor'
+import type { TaskPage } from '#hooks/use-task-pages'
 
 const samplePage: TaskPage = {
   id: 'page-001',

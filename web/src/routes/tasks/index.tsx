@@ -1,18 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ContextFilterInline } from '@web/components/context-filter'
+import { useState } from 'react'
+
+import { ContextFilterInline } from '#components/context-filter'
 import {
   CreateTaskInline,
   FloatingActionButton,
-} from '@web/components/task/create-task-inline'
-import { CreateTaskModal } from '@web/components/task/create-task-modal'
-import { TaskListHeader } from '@web/components/task/task-list-header'
-import { TaskRow, TreeTaskRow } from '@web/components/task/task-row'
+} from '#components/task/create-task-inline'
+import { CreateTaskModal } from '#components/task/create-task-modal'
+import { TaskListHeader } from '#components/task/task-list-header'
+import { TaskRow, TreeTaskRow } from '#components/task/task-row'
 import {
   useFilteredTaskList,
   useFilteredTaskTree,
-} from '@web/hooks/use-filtered-tasks'
-import { cn } from '@web/lib/utils'
-import { useState } from 'react'
+} from '#hooks/use-filtered-tasks'
+import { cn } from '#lib/utils'
 
 export const Route = createFileRoute('/tasks/')({
   component: TaskList,

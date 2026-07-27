@@ -1,18 +1,19 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ProjectBoardHeader } from '@web/components/project/project-board-header'
+import { ArrowLeft } from 'lucide-react'
+import { useState } from 'react'
+
+import { ProjectBoardHeader } from '#components/project/project-board-header'
 import {
   ProjectFilterBar,
   type SortOption,
   type StatusFilter,
-} from '@web/components/project/project-filter-bar'
-import { ProjectGanttView } from '@web/components/project/project-gantt-view'
-import { ProjectTaskList } from '@web/components/project/project-task-list'
-import type { ProjectView } from '@web/components/project/project-view-tabs'
-import { FloatingActionButton } from '@web/components/task/create-task-inline'
-import { CreateTaskModal } from '@web/components/task/create-task-modal'
-import { useProject, useProjectTasks } from '@web/hooks/use-projects'
-import { ArrowLeft } from 'lucide-react'
-import { useState } from 'react'
+} from '#components/project/project-filter-bar'
+import { ProjectGanttView } from '#components/project/project-gantt-view'
+import { ProjectTaskList } from '#components/project/project-task-list'
+import type { ProjectView } from '#components/project/project-view-tabs'
+import { FloatingActionButton } from '#components/task/create-task-inline'
+import { CreateTaskModal } from '#components/task/create-task-modal'
+import { useProject, useProjectTasks } from '#hooks/use-projects'
 
 export const Route = createFileRoute('/projects/$projectId_/board')({
   component: ProjectBoardPage,

@@ -1,17 +1,18 @@
-import { callInternalRoute } from '@api/routes/mcp/route-bridge'
-import { projectStatus } from '@api/routes/projects'
-import { contextEnum, taskStatus } from '@api/routes/tasks/shared'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import type { Hono } from 'hono'
 import { z } from 'zod'
 
+import { callInternalRoute } from '#routes/mcp/route-bridge'
+import { projectStatus } from '#routes/projects'
+import { contextEnum, taskStatus } from '#routes/tasks/shared'
+
 async function resolveApp(): Promise<Hono> {
-  // `@api/app` imports `mcpApp` (routes/mcp/index.ts -> server.ts -> this
+  // `#app` imports `mcpApp` (routes/mcp/index.ts -> server.ts -> this
   // file), so importing it at module scope here would form an import cycle.
   // Resolving it lazily inside each handler breaks the cycle: by the time a
   // tool call runs, the module graph has already finished loading.
-  const { app } = await import('@api/app')
+  const { app } = await import('#app')
   return app
 }
 

@@ -6,7 +6,8 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { ProjectCard } from '@web/components/project/project-card'
+
+import { ProjectCard } from '#components/project/project-card'
 
 function ProjectCardStory(props: React.ComponentProps<typeof ProjectCard>) {
   const rootRoute = createRootRoute({

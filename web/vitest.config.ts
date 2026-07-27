@@ -8,8 +8,6 @@ import { defineConfig } from 'vitest/config'
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const alias = {
-  '@web': fileURLToPath(new URL('./src', import.meta.url)),
-  '@api': fileURLToPath(new URL('../api/src', import.meta.url)),
   '@storybook-config': fileURLToPath(new URL('./.storybook', import.meta.url)),
 }
 

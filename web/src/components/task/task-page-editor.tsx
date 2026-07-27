@@ -1,8 +1,9 @@
 import { Link } from '@tanstack/react-router'
-import { MarkdownEditor } from '@web/components/ui/markdown-editor'
-import { useTaskPage, useUpdateTaskPage } from '@web/hooks/use-task-pages'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+
+import { MarkdownEditor } from '#components/ui/markdown-editor'
+import { useTaskPage, useUpdateTaskPage } from '#hooks/use-task-pages'
 
 export function TaskPageEditor({
   taskId,

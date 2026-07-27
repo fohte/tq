@@ -7,9 +7,10 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { TreeTaskRow } from '@web/components/task/task-row'
-import type { TreeNode } from '@web/hooks/use-tasks'
 import type { ReactNode } from 'react'
+
+import { TreeTaskRow } from '#components/task/task-row'
+import type { TreeNode } from '#hooks/use-tasks'
 
 const baseTreeNode: TreeNode = {
   id: '00000000-0000-0000-0000-000000000001',

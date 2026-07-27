@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { SearchView } from '@web/components/search/search-view'
+
+import { SearchView } from '#components/search/search-view'
 
 export const Route = createFileRoute('/search')({
   component: Search,

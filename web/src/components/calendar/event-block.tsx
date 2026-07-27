@@ -1,7 +1,8 @@
 import type { EventContentArg } from '@fullcalendar/core'
-import { getEventProps } from '@web/lib/calendar-utils'
-import { cn } from '@web/lib/utils'
 import { Check, icons, Repeat, Sparkles } from 'lucide-react'
+
+import { getEventProps } from '#lib/calendar-utils'
+import { cn } from '#lib/utils'
 
 export function EventBlock(arg: EventContentArg) {
   const { event, timeText } = arg
