@@ -1,5 +1,6 @@
-import { pwaManifest } from '@web/lib/pwa-manifest'
 import { describe, expect, it } from 'vitest'
+
+import { pwaManifest } from '#lib/pwa-manifest'
 
 describe('pwaManifest', () => {
   it('provides a valid Web App Manifest for standalone home screen installs', () => {

@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { SearchModal } from '@web/components/search/search-modal'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { SearchModal } from '#components/search/search-modal'
 
 const mockTasks = [
   {
@@ -52,7 +53,7 @@ const mockSuggestions = [
 let mockSearchData: typeof mockTasks = []
 let mockSuggestionData: typeof mockSuggestions = []
 
-vi.mock('@web/hooks/use-search', () => ({
+vi.mock('#hooks/use-search', () => ({
   useSearchTasks: () => ({
     data: mockSearchData.length > 0 ? mockSearchData : undefined,
     isFetching: false,

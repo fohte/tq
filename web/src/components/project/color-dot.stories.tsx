@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { ColorDot } from '@web/components/project/color-dot'
+
+import { ColorDot } from '#components/project/color-dot'
 
 const meta = {
   title: 'Project/ColorDot',

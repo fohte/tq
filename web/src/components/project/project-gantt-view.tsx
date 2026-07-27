@@ -1,9 +1,11 @@
 import type { IApi } from '@svar-ui/react-gantt'
 import { Gantt } from '@svar-ui/react-gantt'
 import { useNavigate } from '@tanstack/react-router'
-import { SegmentedControl } from '@web/components/ui/segmented-control'
-import type { ProjectTask } from '@web/hooks/use-projects'
-import { useUpdateTask } from '@web/hooks/use-tasks'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+
+import { SegmentedControl } from '#components/ui/segmented-control'
+import type { ProjectTask } from '#hooks/use-projects'
+import { useUpdateTask } from '#hooks/use-tasks'
 import {
   addDays,
   buildGanttTasks,
@@ -11,8 +13,7 @@ import {
   type GanttScale,
   getScaleConfig,
   toDateOnlyString,
-} from '@web/lib/gantt-utils'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+} from '#lib/gantt-utils'
 
 const DESKTOP_QUERY = '(min-width: 768px)'
 

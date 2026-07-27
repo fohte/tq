@@ -1,4 +1,4 @@
-import { SegmentedControl } from '@web/components/ui/segmented-control'
+import { SegmentedControl } from '#components/ui/segmented-control'
 
 export type ProjectView = 'list' | 'gantt'
 

@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { projectKeys } from '@web/hooks/use-projects'
-import { api } from '@web/lib/api'
-import { assertOk } from '@web/lib/assert-response'
 import type { InferResponseType } from 'hono/client'
 import { useMemo } from 'react'
+
+import { projectKeys } from '#hooks/use-projects'
+import { api } from '#lib/api'
+import { assertOk } from '#lib/assert-response'
 
 type Task = InferResponseType<typeof api.api.tasks.$get>[number]
 

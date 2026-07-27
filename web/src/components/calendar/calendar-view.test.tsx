@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { CalendarView } from '@web/components/calendar/calendar-view'
-import { atIndex } from '@web/lib/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { CalendarView } from '#components/calendar/calendar-view'
+import { atIndex } from '#lib/test-utils'
 
 // Mock FullCalendar to avoid complex DOM rendering
 const mockChangeView = vi.fn()

@@ -1,14 +1,4 @@
 import { Link } from '@tanstack/react-router'
-import { ColorDot } from '@web/components/project/color-dot'
-import { statusConfig } from '@web/components/project/project-status-badge'
-import { MarkdownEditor } from '@web/components/ui/markdown-editor'
-import type { ProjectDetail, ProjectTask } from '@web/hooks/use-projects'
-import {
-  PROJECT_COLOR_PRESETS,
-  useUpdateProject,
-} from '@web/hooks/use-projects'
-import { selectHandler } from '@web/lib/form-utils'
-import { cn } from '@web/lib/utils'
 import {
   Calendar,
   CalendarPlus,
@@ -18,6 +8,14 @@ import {
   Timer,
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+
+import { ColorDot } from '#components/project/color-dot'
+import { statusConfig } from '#components/project/project-status-badge'
+import { MarkdownEditor } from '#components/ui/markdown-editor'
+import type { ProjectDetail, ProjectTask } from '#hooks/use-projects'
+import { PROJECT_COLOR_PRESETS, useUpdateProject } from '#hooks/use-projects'
+import { selectHandler } from '#lib/form-utils'
+import { cn } from '#lib/utils'
 
 function formatDate(dateStr: string | null): string | null {
   if (dateStr == null) return null

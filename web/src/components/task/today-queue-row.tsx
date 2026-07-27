@@ -1,11 +1,12 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { TaskRow } from '@web/components/task/task-row'
-import type { Task } from '@web/hooks/use-tasks'
-import { useUpdateTask } from '@web/hooks/use-tasks'
-import { formatMinutes, parseDurationToMinutes } from '@web/lib/parse-duration'
 import { GripVertical, X } from 'lucide-react'
 import { useRef, useState } from 'react'
+
+import { TaskRow } from '#components/task/task-row'
+import type { Task } from '#hooks/use-tasks'
+import { useUpdateTask } from '#hooks/use-tasks'
+import { formatMinutes, parseDurationToMinutes } from '#lib/parse-duration'
 
 export function TodayQueueRow({
   task,

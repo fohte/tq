@@ -7,9 +7,10 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { ProjectGanttView } from '@web/components/project/project-gantt-view'
-import type { ProjectTask } from '@web/hooks/use-projects'
 import { createContext, type ReactNode, useContext, useState } from 'react'
+
+import { ProjectGanttView } from '#components/project/project-gantt-view'
+import type { ProjectTask } from '#hooks/use-projects'
 
 function formatDateOffset(days: number): string {
   const d = new Date()

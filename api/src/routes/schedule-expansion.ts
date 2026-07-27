@@ -1,4 +1,4 @@
-import type { recurrenceRules, schedules } from '@api/db/schema'
+import type { recurrenceRules, schedules } from '#db/schema'
 
 /**
  * Check if a schedule matches a given date based on its recurrence rule.

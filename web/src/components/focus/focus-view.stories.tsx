@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { FocusViewPresentation } from '@web/components/focus/focus-view'
-import type { Task } from '@web/hooks/use-tasks'
 import type { ReactNode } from 'react'
+
+import { FocusViewPresentation } from '#components/focus/focus-view'
+import type { Task } from '#hooks/use-tasks'
 
 const baseTask: Task = {
   id: '00000000-0000-0000-0000-000000000001',

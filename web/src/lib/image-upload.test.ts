@@ -1,14 +1,15 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
 import {
   handleImageLoadError,
   parseImageId,
   resolveImageSrc,
   uploadImageFile,
   uploadImageFiles,
-} from '@web/lib/image-upload'
-import { assertDefined } from '@web/lib/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+} from '#lib/image-upload'
+import { assertDefined } from '#lib/test-utils'
 
-vi.mock('@web/lib/api', () => {
+vi.mock('#lib/api', () => {
   const mockPost = vi.fn()
   const mockGet = vi.fn()
 
@@ -26,7 +27,7 @@ vi.mock('@web/lib/api', () => {
 })
 
 async function getMocks() {
-  const mod = await import('@web/lib/api')
+  const mod = await import('#lib/api')
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- accessing test-only __mocks property injected by vi.mock
   const typed = mod as unknown as {
     __mocks: Record<string, ReturnType<typeof vi.fn>>

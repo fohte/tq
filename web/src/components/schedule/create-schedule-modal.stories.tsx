@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { CreateScheduleModal } from '@web/components/schedule/create-schedule-modal'
 import { fn } from 'storybook/test'
+
+import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },

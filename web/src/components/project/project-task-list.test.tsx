@@ -1,9 +1,7 @@
-import {
-  filterTasks,
-  sortTasks,
-} from '@web/components/project/project-task-list'
-import type { ProjectTask } from '@web/hooks/use-projects'
 import { describe, expect, it } from 'vitest'
+
+import { filterTasks, sortTasks } from '#components/project/project-task-list'
+import type { ProjectTask } from '#hooks/use-projects'
 
 const baseTask: ProjectTask = {
   id: '1',

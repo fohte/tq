@@ -1,9 +1,10 @@
 import { fileURLToPath } from 'node:url'
 
-import { DATABASE_URL } from '@api/env'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import postgres from 'postgres'
+
+import { DATABASE_URL } from '#env'
 
 export async function setup() {
   const client = postgres(DATABASE_URL, { max: 1 })

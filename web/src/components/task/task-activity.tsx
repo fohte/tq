@@ -1,14 +1,15 @@
-import { DeleteConfirmButton } from '@web/components/ui/delete-confirm-button'
-import { MarkdownEditor } from '@web/components/ui/markdown-editor'
-import type { Comment } from '@web/hooks/use-task-comments'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
+import { MarkdownEditor } from '#components/ui/markdown-editor'
+import type { Comment } from '#hooks/use-task-comments'
 import {
   useCreateComment,
   useDeleteComment,
   useTaskComments,
   useUpdateComment,
-} from '@web/hooks/use-task-comments'
-import { cn } from '@web/lib/utils'
-import { useCallback, useEffect, useRef, useState } from 'react'
+} from '#hooks/use-task-comments'
+import { cn } from '#lib/utils'
 
 // --- Public API ---
 

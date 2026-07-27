@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { api } from '@web/lib/api'
-import { assertStatus } from '@web/lib/assert-response'
-import { getDayIsoRange } from '@web/lib/date-range'
 import type { InferResponseType } from 'hono/client'
 import { useEffect, useRef } from 'react'
+
+import { api } from '#lib/api'
+import { assertStatus } from '#lib/assert-response'
+import { getDayIsoRange } from '#lib/date-range'
 
 export type GcalEvent = InferResponseType<
   typeof api.api.calendar.events.$get,

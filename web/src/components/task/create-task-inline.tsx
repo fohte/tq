@@ -1,17 +1,18 @@
-import { Button } from '@web/components/ui/button'
-import { useLabels } from '@web/hooks/use-labels'
-import { useCreateTask } from '@web/hooks/use-tasks'
-import { formatMinutes } from '@web/lib/format'
+import { Plus, X } from 'lucide-react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+
+import { Button } from '#components/ui/button'
+import { useLabels } from '#hooks/use-labels'
+import { useCreateTask } from '#hooks/use-tasks'
+import { formatMinutes } from '#lib/format'
 import {
   detectTrigger,
   getSuggestions,
   parseTaskInput,
   type SuggestionItem,
   type TriggerChar,
-} from '@web/lib/task-input-parser'
-import { cn } from '@web/lib/utils'
-import { Plus, X } from 'lucide-react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+} from '#lib/task-input-parser'
+import { cn } from '#lib/utils'
 
 export function CreateTaskInline({
   onClose,

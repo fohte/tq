@@ -1,9 +1,10 @@
+import { describe, expect, it } from 'vitest'
+
 import {
   detectTrigger,
   getSuggestions,
   parseTaskInput,
-} from '@web/lib/task-input-parser'
-import { describe, expect, it } from 'vitest'
+} from '#lib/task-input-parser'
 
 function formatLocalDate(d: Date): string {
   return `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`

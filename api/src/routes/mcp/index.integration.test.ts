@@ -1,8 +1,9 @@
-import { app } from '@api/app'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import { describe, expect, it } from 'vitest'
+
+import { app } from '#app'
 
 // `mcpApp` is mounted with `.route()` on the same `app` instance as every
 // other route (see api/src/app.ts) instead of a dedicated server or

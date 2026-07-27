@@ -10,33 +10,6 @@ export default config(
     ignores: ['**/routeTree.gen.ts'],
   },
   ...storybook.configs['flat/recommended'],
-  {
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['./*', '../*'],
-              message:
-                'Please use absolute imports instead of relative imports.',
-            },
-          ],
-        },
-      ],
-    },
-  },
-  // .storybook/, vite.config.ts, and vitest.config.ts are outside src/ where @ alias is unavailable
-  {
-    files: [
-      '**/.storybook/**/*.ts',
-      '**/vite.config.ts',
-      '**/vitest.config.ts',
-    ],
-    rules: {
-      'no-restricted-imports': 'off',
-    },
-  },
   // errorHandling only targets api/src; the rest of the repo (web/, config
   // files at the root) keeps using throw/try-catch and never imports
   // neverthrow.
@@ -46,6 +19,15 @@ export default config(
     rules: {
       'no-restricted-syntax': 'off',
       'neverthrow/must-use-result': 'off',
+    },
+  },
+  // vite.config.ts is loaded through Vite's own esbuild-based config loader,
+  // which doesn't resolve the package.json "imports" field, unlike the
+  // Rollup pipeline that bundles the app itself.
+  {
+    files: ['web/vite.config.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
     },
   },
 )

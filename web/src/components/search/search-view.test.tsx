@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { SearchView } from '@web/components/search/search-view'
-import { atIndex } from '@web/lib/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { SearchView } from '#components/search/search-view'
+import { atIndex } from '#lib/test-utils'
 
 const mockResults = [
   {
@@ -57,7 +58,7 @@ let mockSearchReturn = {
   clearFilter: vi.fn(),
 }
 
-vi.mock('@web/hooks/use-search', () => ({
+vi.mock('#hooks/use-search', () => ({
   useSearch: () => mockSearchReturn,
 }))
 

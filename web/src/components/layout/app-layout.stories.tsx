@@ -7,7 +7,8 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { AppLayout } from '@web/components/layout/app-layout'
+
+import { AppLayout } from '#components/layout/app-layout'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },

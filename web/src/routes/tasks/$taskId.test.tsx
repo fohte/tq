@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { atIndex } from '@web/lib/test-utils'
-// Import after mocks
-import { Route } from '@web/routes/tasks/$taskId'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { atIndex } from '#lib/test-utils'
+// Import after mocks
+import { Route } from '#routes/tasks/$taskId'
 
 const mockTask = {
   id: '550e8400-e29b-41d4-a716-446655440000',
@@ -31,7 +32,7 @@ const mockStatusMutate = vi.fn()
 
 const mockParentMutate = vi.fn()
 
-vi.mock('@web/hooks/use-tasks', () => ({
+vi.mock('#hooks/use-tasks', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useTask: (...args: unknown[]) => mockUseTask(...args),
   useUpdateTask: () => ({ mutate: mockUpdateMutate }),
@@ -40,7 +41,7 @@ vi.mock('@web/hooks/use-tasks', () => ({
   useUpdateTaskParent: () => ({ mutate: mockParentMutate }),
 }))
 
-vi.mock('@web/components/ui/markdown-editor', () => ({
+vi.mock('#components/ui/markdown-editor', () => ({
   MarkdownEditor: ({
     placeholder,
     onChange,

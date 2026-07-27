@@ -1,5 +1,6 @@
-import { cn } from '@web/lib/utils'
 import { Check, Plus } from 'lucide-react'
+
+import { cn } from '#lib/utils'
 
 export function TodayQueueToggle({
   inQueue,

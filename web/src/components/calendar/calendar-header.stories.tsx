@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { useState } from 'react'
+import { expect, fn } from 'storybook/test'
+
 import {
   CalendarHeader,
   type CalendarViewType,
-} from '@web/components/calendar/calendar-header'
-import { useState } from 'react'
-import { expect, fn } from 'storybook/test'
+} from '#components/calendar/calendar-header'
 
 function CalendarHeaderStateful({
   initialDate,

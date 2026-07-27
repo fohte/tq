@@ -1,4 +1,4 @@
-import { localNaiveDateTimeToUtc } from '@api/lib/timezone'
+import { localNaiveDateTimeToUtc } from '#lib/timezone'
 
 export interface BusyRange {
   start: Date

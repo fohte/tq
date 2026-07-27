@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '@web/lib/api'
-import { assertOk } from '@web/lib/assert-response'
 import type { InferResponseType } from 'hono/client'
+
+import { api } from '#lib/api'
+import { assertOk } from '#lib/assert-response'
 
 type Comment = InferResponseType<
   (typeof api.api.tasks)[':taskId']['comments']['$get'],

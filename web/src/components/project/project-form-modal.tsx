@@ -1,20 +1,21 @@
-import { Button } from '@web/components/ui/button'
+import { Calendar, CalendarPlus, ChevronLeft, Palette, X } from 'lucide-react'
+import { useCallback, useState } from 'react'
+
+import { Button } from '#components/ui/button'
 import {
   Dialog,
   DialogOverlay,
   DialogPopup,
   DialogPortal,
-} from '@web/components/ui/dialog'
-import type { Project } from '@web/hooks/use-projects'
+} from '#components/ui/dialog'
+import type { Project } from '#hooks/use-projects'
 import {
   PROJECT_COLOR_PRESETS,
   useCreateProject,
   useUpdateProject,
-} from '@web/hooks/use-projects'
-import { selectHandler } from '@web/lib/form-utils'
-import { cn } from '@web/lib/utils'
-import { Calendar, CalendarPlus, ChevronLeft, Palette, X } from 'lucide-react'
-import { useCallback, useState } from 'react'
+} from '#hooks/use-projects'
+import { selectHandler } from '#lib/form-utils'
+import { cn } from '#lib/utils'
 
 interface ProjectFormModalProps {
   open: boolean

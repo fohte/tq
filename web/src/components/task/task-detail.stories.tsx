@@ -7,14 +7,15 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
+import type { ReactNode } from 'react'
+
 import {
   TaskMainContent,
   TaskSidebar,
   TaskSidebarMobile,
-} from '@web/components/task/task-detail'
-import type { TaskPage } from '@web/hooks/use-task-pages'
-import type { TaskDetail } from '@web/hooks/use-tasks'
-import type { ReactNode } from 'react'
+} from '#components/task/task-detail'
+import type { TaskPage } from '#hooks/use-task-pages'
+import type { TaskDetail } from '#hooks/use-tasks'
 
 const samplePages: TaskPage[] = [
   {

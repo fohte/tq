@@ -1,8 +1,6 @@
-import {
-  buildQueryFromFilters,
-  parseQueryToFilters,
-} from '@web/hooks/use-search'
 import { describe, expect, it } from 'vitest'
+
+import { buildQueryFromFilters, parseQueryToFilters } from '#hooks/use-search'
 
 describe('parseQueryToFilters', () => {
   it('parses free text only', () => {

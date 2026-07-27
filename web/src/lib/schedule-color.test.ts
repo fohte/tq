@@ -1,5 +1,6 @@
-import { scheduleColorToEventColor } from '@web/lib/schedule-color'
 import { describe, expect, it } from 'vitest'
+
+import { scheduleColorToEventColor } from '#lib/schedule-color'
 
 describe('scheduleColorToEventColor', () => {
   it('returns default purple colors when color is null', () => {

@@ -1,8 +1,4 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
-import { ContextFilter } from '@web/components/context-filter'
-import { ColorDot } from '@web/components/project/color-dot'
-import { useProjects } from '@web/hooks/use-projects'
-import { cn } from '@web/lib/utils'
 import type { LucideIcon } from 'lucide-react'
 import {
   Calendar,
@@ -15,6 +11,11 @@ import {
   Sun,
 } from 'lucide-react'
 import { useState } from 'react'
+
+import { ContextFilter } from '#components/context-filter'
+import { ColorDot } from '#components/project/color-dot'
+import { useProjects } from '#hooks/use-projects'
+import { cn } from '#lib/utils'
 
 interface NavItem {
   to: string

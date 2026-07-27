@@ -1,8 +1,4 @@
 import { Link } from '@tanstack/react-router'
-import type { SearchFilters, SearchResult } from '@web/hooks/use-search'
-import { useSearch } from '@web/hooks/use-search'
-import { formatMinutes } from '@web/lib/format'
-import { cn } from '@web/lib/utils'
 import {
   ChevronDown,
   CircleCheckBig,
@@ -13,6 +9,11 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+
+import type { SearchFilters, SearchResult } from '#hooks/use-search'
+import { useSearch } from '#hooks/use-search'
+import { formatMinutes } from '#lib/format'
+import { cn } from '#lib/utils'
 
 function StatusIcon({ status }: { status: string }) {
   if (status === 'completed') {

@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { CreateTaskModal } from '@web/components/task/create-task-modal'
 import { expect, fn, within } from 'storybook/test'
+
+import { CreateTaskModal } from '#components/task/create-task-modal'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
