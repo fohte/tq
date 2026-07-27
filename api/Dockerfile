@@ -35,8 +35,9 @@ COPY web/package.json web/
 RUN pnpm install --frozen-lockfile --prod
 COPY --from=builder /app/api/dist ./api/dist
 COPY api/drizzle ./api/drizzle
+COPY api/otel-register.mjs ./api/
 EXPOSE 3001
 WORKDIR /app/api
-CMD ["node", "dist/index.js"]
+CMD ["node", "--import", "./otel-register.mjs", "dist/index.js"]
 
 LABEL org.opencontainers.image.source=https://github.com/fohte/tq
