@@ -8,25 +8,60 @@ When a change would push a file's non-test code past ~500 lines, split it along 
 
 Prefer creating a new focused file over appending to the largest existing one.
 
+<<<<<<< before updating
 ## Testing
+||||||| last update
+=======
+## Error handling rules
+>>>>>>> after updating
 
+<<<<<<< before updating
 ### Running tests
+||||||| last update
+=======
+### Return a `Result` instead of throwing
+>>>>>>> after updating
 
+<<<<<<< before updating
 ```sh
 pnpm run test              # all workspaces
 pnpm --filter api run test # API only (runs tsc --noEmit + vitest in parallel)
 pnpm --filter web run test # web only
 ```
+||||||| last update
+=======
+`errorHandling` in `eslint.config.js` bans `throw`/`try-catch` in production code and requires every returned `Result` to be consumed (`no-restricted-syntax`, `neverthrow/must-use-result` in `@fohte/eslint-config`). Return a `Result`/`ResultAsync` from [neverthrow](https://github.com/supermacro/neverthrow) instead:
+>>>>>>> after updating
 
+<<<<<<< before updating
 ### API integration tests — database setup
+||||||| last update
+=======
+```ts
+// bad: throws
+function parseConfig(raw: string): Config {
+  if (!isValid(raw)) throw new Error('invalid config')
+  return JSON.parse(raw)
+}
+>>>>>>> after updating
 
+<<<<<<< before updating
 API integration tests require PostgreSQL running via Docker.
 
 ```sh
 mise run db:up                                  # skip if already running
 docker compose exec db createdb -U tq tq_test   # first time only
+||||||| last update
+=======
+// good: returns a Result
+function parseConfig(raw: string): Result<Config, ConfigError> {
+  if (!isValid(raw)) return err(new ConfigError('invalid config'))
+  return ok(JSON.parse(raw))
+}
+>>>>>>> after updating
 ```
 
+<<<<<<< before updating
 The Compose file uses a fixed project name (`tq-infra`), so the same PostgreSQL container is shared across all worktrees. Running `mise run db:up` from any worktree is safe and will not create duplicate containers — skip if already running for development.
 
 The `db` service publishes Postgres on a random host port to avoid clashing with other projects. `mise run db:up` resolves the assigned port and writes it to `.env.runtime` as both `DATABASE_URL` (`tq_dev`) and `TEST_DATABASE_URL` (`tq_test`); mise loads both automatically and `api`'s test runs prefer `TEST_DATABASE_URL`. Do not point `DATABASE_URL` at `tq_dev` for tests — existing data there causes test failures.
@@ -50,6 +85,10 @@ This is separate from `pnpm --filter web run test`, so writing the story is not 
 ### Prefer Storybook over manual browser checks
 
 When you need to check how a component looks or behaves in a given state, write or update its story and run it via `pnpm --filter web run test:storybook` (or `pnpm --filter web run storybook` for interactive inspection) before starting a dev server and driving a browser manually.
+||||||| last update
+=======
+Use `ResultAsync.fromPromise()` or `Result.fromThrowable()` to interop with a throwing API without a local try/catch. If the throw-based contract genuinely can't be wrapped that way, catch the exception, wrap it in a `BoundaryError` subclass (see `src/errors.ts`), and rethrow it — `no-restricted-syntax` bans `try`/`throw` as separate selectors, so both the `try` and the `throw` need their own `eslint-disable-next-line no-restricted-syntax` comment explaining why.
+>>>>>>> after updating
 
 ## Test code rules
 

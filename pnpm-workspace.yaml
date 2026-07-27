@@ -10,7 +10,7 @@ allowBuilds:
   msw: false
   # required by @opentelemetry/exporter-trace-otlp-proto
   protobufjs: true
-  # required by @fohte/eslint-config -> eslint-plugin-import-x for "@/*" resolution
+  # required by @fohte/eslint-config -> eslint-plugin-import-x for module resolution
   unrs-resolver: true
 
 # Dodge short-lived supply-chain attacks (e.g. shai-hulud, tinycolor) by

@@ -6,10 +6,16 @@ export default config(
     typescript: { typeChecked: true },
     errorHandling: {},
   },
+<<<<<<< before updating
   {
     ignores: ['**/routeTree.gen.ts'],
   },
+||||||| last update
+  { typescript: { typeChecked: true } },
+=======
+>>>>>>> after updating
   ...storybook.configs['flat/recommended'],
+<<<<<<< before updating
   {
     rules: {
       'no-restricted-imports': [
@@ -48,4 +54,30 @@ export default config(
       'neverthrow/must-use-result': 'off',
     },
   },
+||||||| last update
+  {
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['./*', '../*'],
+              message:
+                'Please use absolute imports instead of relative imports.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // .storybook/ is outside src/ where @ alias is unavailable
+  {
+    files: ['**/.storybook/**/*.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
+=======
+>>>>>>> after updating
 )
