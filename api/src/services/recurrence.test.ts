@@ -1,6 +1,7 @@
-import { buildNextTaskData, computeNextDate } from '@api/services/recurrence'
 import { ok } from 'neverthrow'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import { buildNextTaskData, computeNextDate } from '#services/recurrence'
 
 describe('computeNextDate', () => {
   describe('daily', () => {

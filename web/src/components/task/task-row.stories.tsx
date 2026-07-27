@@ -7,9 +7,10 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { TaskRow } from '@web/components/task/task-row'
-import type { Task } from '@web/hooks/use-tasks'
 import type { ReactNode } from 'react'
+
+import { TaskRow } from '#components/task/task-row'
+import type { Task } from '#hooks/use-tasks'
 
 const baseTask: Task = {
   id: '00000000-0000-0000-0000-000000000001',

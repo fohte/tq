@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { fn } from 'storybook/test'
+
 import {
   CreateTaskInline,
   FloatingActionButton,
-} from '@web/components/task/create-task-inline'
-import { fn } from 'storybook/test'
+} from '#components/task/create-task-inline'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },

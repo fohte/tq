@@ -1,14 +1,4 @@
 import { Link } from '@tanstack/react-router'
-import { DeleteConfirmButton } from '@web/components/ui/delete-confirm-button'
-import { MarkdownEditor } from '@web/components/ui/markdown-editor'
-import type { TaskPage } from '@web/hooks/use-task-pages'
-import {
-  useCreateTaskPage,
-  useDeleteTaskPage,
-  useTaskPages,
-  useUpdateTaskPage,
-} from '@web/hooks/use-task-pages'
-import { cn } from '@web/lib/utils'
 import {
   ChevronDown,
   ExternalLink,
@@ -17,6 +7,17 @@ import {
   Plus,
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+
+import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
+import { MarkdownEditor } from '#components/ui/markdown-editor'
+import type { TaskPage } from '#hooks/use-task-pages'
+import {
+  useCreateTaskPage,
+  useDeleteTaskPage,
+  useTaskPages,
+  useUpdateTaskPage,
+} from '#hooks/use-task-pages'
+import { cn } from '#lib/utils'
 
 // --- Pages Section (in task detail) ---
 

@@ -1,5 +1,6 @@
-import type { recurrenceRules, tasks } from '@api/db/schema'
 import { err, ok, type Result } from 'neverthrow'
+
+import type { recurrenceRules, tasks } from '#db/schema'
 
 type RecurrenceRule = typeof recurrenceRules.$inferSelect
 type Task = typeof tasks.$inferSelect

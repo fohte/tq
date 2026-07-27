@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
-import { EventBlock } from '@web/components/calendar/event-block'
+
+import type { TimeBlockEvent } from '#components/calendar/calendar-view'
+import { EventBlock } from '#components/calendar/event-block'
 
 type EventType = TimeBlockEvent['type']
 

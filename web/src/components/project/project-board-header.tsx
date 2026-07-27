@@ -1,7 +1,7 @@
-import type { ProjectView } from '@web/components/project/project-view-tabs'
-import { ProjectViewTabs } from '@web/components/project/project-view-tabs'
-import type { ProjectDetail } from '@web/hooks/use-projects'
-import { cn } from '@web/lib/utils'
+import type { ProjectView } from '#components/project/project-view-tabs'
+import { ProjectViewTabs } from '#components/project/project-view-tabs'
+import type { ProjectDetail } from '#hooks/use-projects'
+import { cn } from '#lib/utils'
 
 const statusLabels: Record<ProjectDetail['status'], string> = {
   active: 'Active',

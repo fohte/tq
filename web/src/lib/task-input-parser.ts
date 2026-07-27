@@ -1,5 +1,5 @@
-import { formatLocalDate } from '@web/lib/date-range'
-import { parseDurationToMinutes } from '@web/lib/parse-duration'
+import { formatLocalDate } from '#lib/date-range'
+import { parseDurationToMinutes } from '#lib/parse-duration'
 
 export type TaskContext = 'work' | 'personal' | 'dev'
 

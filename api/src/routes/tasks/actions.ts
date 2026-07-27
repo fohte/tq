@@ -1,19 +1,20 @@
-import { db } from '@api/db/connection'
-import { recurrenceRules, tasks, timeBlocks } from '@api/db/schema'
-import { firstOrThrow } from '@api/lib/drizzle-utils'
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
+import { zValidator } from '@hono/zod-validator'
+import { and, eq, isNull, sql } from 'drizzle-orm'
+import { Hono } from 'hono'
+import { z } from 'zod'
+
+import { db } from '#db/connection'
+import { recurrenceRules, tasks, timeBlocks } from '#db/schema'
+import { firstOrThrow } from '#lib/drizzle-utils'
 import {
   requireTask,
   taskStatus,
   taskToResponse,
   timeBlockToResponse,
   updateStatusAndCloseTimeBlocks,
-} from '@api/routes/tasks/shared'
-import { buildNextTaskData } from '@api/services/recurrence'
-import { captureWithFingerprint } from '@fohte/service-kit/observability'
-import { zValidator } from '@hono/zod-validator'
-import { and, eq, isNull, sql } from 'drizzle-orm'
-import { Hono } from 'hono'
-import { z } from 'zod'
+} from '#routes/tasks/shared'
+import { buildNextTaskData } from '#services/recurrence'
 
 const updateStatusSchema = z.object({
   status: taskStatus,

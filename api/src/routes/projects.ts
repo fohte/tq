@@ -1,10 +1,11 @@
-import { db } from '@api/db/connection'
-import { projects, tasks } from '@api/db/schema'
-import { taskToResponse } from '@api/routes/tasks'
 import { zValidator } from '@hono/zod-validator'
 import { and, count, eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
+
+import { db } from '#db/connection'
+import { projects, tasks } from '#db/schema'
+import { taskToResponse } from '#routes/tasks/index'
 
 export const projectStatus = z.enum([
   'active',

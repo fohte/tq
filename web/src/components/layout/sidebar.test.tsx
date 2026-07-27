@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react'
-import { Sidebar } from '@web/components/layout/sidebar'
-import { ContextFilterProvider } from '@web/hooks/use-context-filter'
 import { describe, expect, it, vi } from 'vitest'
+
+import { Sidebar } from '#components/layout/sidebar'
+import { ContextFilterProvider } from '#hooks/use-context-filter'
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({

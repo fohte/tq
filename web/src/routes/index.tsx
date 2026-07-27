@@ -1,32 +1,33 @@
 import { createFileRoute } from '@tanstack/react-router'
-import type { CalendarDndCallbacks } from '@web/components/calendar/calendar-grid'
-import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
-import { DayViewPresentation } from '@web/components/day-view/day-view'
-import { useContextFilter } from '@web/hooks/use-context-filter'
+import { useEffect, useMemo } from 'react'
+
+import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
+import type { TimeBlockEvent } from '#components/calendar/calendar-view'
+import { DayViewPresentation } from '#components/day-view/day-view'
+import { useContextFilter } from '#hooks/use-context-filter'
 import {
   GcalAuthRequiredError,
   useAutoRescheduleOnGcalChange,
   useGcalAuthUrl,
   useGcalEvents,
-} from '@web/hooks/use-gcal-events'
-import { useScheduleList } from '@web/hooks/use-schedules'
-import type { Task } from '@web/hooks/use-tasks'
-import { useTaskList, useTaskMap } from '@web/hooks/use-tasks'
+} from '#hooks/use-gcal-events'
+import { useScheduleList } from '#hooks/use-schedules'
+import type { Task } from '#hooks/use-tasks'
+import { useTaskList, useTaskMap } from '#hooks/use-tasks'
 import {
   useCreateTimeBlock,
   useTimeBlocks,
   useUpdateTimeBlock,
-} from '@web/hooks/use-time-blocks'
+} from '#hooks/use-time-blocks'
 import {
   useAutoAssign,
   useSetTodayTasks,
   useTodayTasks,
-} from '@web/hooks/use-today-tasks'
-import { matchesContextFilter } from '@web/lib/context-filter'
-import { formatLocalDate } from '@web/lib/date-range'
-import { formatMinutes } from '@web/lib/format'
-import { scheduleColorToEventColor } from '@web/lib/schedule-color'
-import { useEffect, useMemo } from 'react'
+} from '#hooks/use-today-tasks'
+import { matchesContextFilter } from '#lib/context-filter'
+import { formatLocalDate } from '#lib/date-range'
+import { formatMinutes } from '#lib/format'
+import { scheduleColorToEventColor } from '#lib/schedule-color'
 
 export const Route = createFileRoute('/')({
   component: DayView,

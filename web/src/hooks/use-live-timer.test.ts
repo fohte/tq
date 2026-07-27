@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
-import { useLiveTimer } from '@web/hooks/use-live-timer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { useLiveTimer } from '#hooks/use-live-timer'
 
 describe('useLiveTimer', () => {
   beforeEach(() => {

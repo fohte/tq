@@ -1,14 +1,9 @@
-import { app } from '@api/app'
-import { setupTestDb } from '@api/testing'
 import { describe, expect, it } from 'vitest'
 
-<<<<<<< before updating
+import { app } from '#app'
+import { setupTestDb } from '#testing'
+
 setupTestDb()
-||||||| last update
-import { greet } from '@/index'
-=======
-import { greet } from '#index'
->>>>>>> after updating
 
 describe('GET /health', () => {
   it('ステータス ok を返す', async () => {

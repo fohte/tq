@@ -1,4 +1,9 @@
-import { db } from '@api/db/connection'
+import { zValidator } from '@hono/zod-validator'
+import { and, count, eq, inArray, sql } from 'drizzle-orm'
+import { Hono } from 'hono'
+import { z } from 'zod'
+
+import { db } from '#db/connection'
 import {
   labels,
   recurrenceRules,
@@ -6,21 +11,17 @@ import {
   taskPages,
   tasks,
   timeBlocks,
-} from '@api/db/schema'
-import { firstOrThrow } from '@api/lib/drizzle-utils'
-import { pageToResponse } from '@api/routes/task-pages'
+} from '#db/schema'
+import { firstOrThrow } from '#lib/drizzle-utils'
+import { pageToResponse } from '#routes/task-pages'
 import {
   contextEnum,
   requireTask,
   taskStatus,
   taskToResponse,
   timeBlockToResponse,
-} from '@api/routes/tasks/shared'
-import { recurrenceRuleSchema } from '@api/schemas/recurrence-rule'
-import { zValidator } from '@hono/zod-validator'
-import { and, count, eq, inArray, sql } from 'drizzle-orm'
-import { Hono } from 'hono'
-import { z } from 'zod'
+} from '#routes/tasks/shared'
+import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 
 export const createTaskSchema = z.object({
   title: z.string().min(1),

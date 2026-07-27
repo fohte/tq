@@ -1,6 +1,7 @@
-import type { Task } from '@web/hooks/use-tasks'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
+
+import type { Task } from '#hooks/use-tasks'
 
 export function BacklogPreview({
   tasks,

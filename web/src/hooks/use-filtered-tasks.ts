@@ -1,12 +1,13 @@
-import { useContextFilter } from '@web/hooks/use-context-filter'
-import type { TreeNode } from '@web/hooks/use-tasks'
-import { useTaskList, useTaskTree } from '@web/hooks/use-tasks'
+import { useMemo } from 'react'
+
+import { useContextFilter } from '#hooks/use-context-filter'
+import type { TreeNode } from '#hooks/use-tasks'
+import { useTaskList, useTaskTree } from '#hooks/use-tasks'
 import {
   filterByContext,
   filterModeToApiContext,
   filterTreeByContext,
-} from '@web/lib/context-filter'
-import { useMemo } from 'react'
+} from '#lib/context-filter'
 
 export function useFilteredTaskList() {
   const { mode } = useContextFilter()

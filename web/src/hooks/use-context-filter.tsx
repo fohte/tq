@@ -1,6 +1,7 @@
-import type { ContextFilterMode } from '@web/lib/context-filter'
 import type { ReactNode } from 'react'
 import { createContext, useContext, useState } from 'react'
+
+import type { ContextFilterMode } from '#lib/context-filter'
 
 export type { ContextFilterMode }
 

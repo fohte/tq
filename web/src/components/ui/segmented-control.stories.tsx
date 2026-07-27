@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { SegmentedControl } from '@web/components/ui/segmented-control'
 import { fn } from 'storybook/test'
+
+import { SegmentedControl } from '#components/ui/segmented-control'
 
 type Scale = 'day' | 'week' | 'month'
 

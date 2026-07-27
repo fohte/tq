@@ -1,26 +1,3 @@
-import { db } from '@api/db/connection'
-import {
-  recurrenceRules,
-  schedules,
-  tasks,
-  timeBlocks,
-  todayTasks,
-} from '@api/db/schema'
-import { firstOrThrow } from '@api/lib/drizzle-utils'
-import { localDateBoundsToUtc } from '@api/lib/timezone'
-import { expandScheduleForDate } from '@api/routes/schedule-expansion'
-import { recurrenceRuleSchema } from '@api/schemas/recurrence-rule'
-import {
-  autoAssign,
-  calculateFreeSlots,
-  expandedScheduleBlocksToBusyRanges,
-  externalEventsToBusyRanges,
-  manualBlocksToBusyRanges,
-} from '@api/services/auto-scheduler'
-import {
-  getEvents,
-  OAuthTokenMissingError,
-} from '@api/services/google-calendar'
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
 import { and, eq, gte, inArray, isNull, lte, notInArray, or } from 'drizzle-orm'
@@ -28,6 +5,27 @@ import { Hono } from 'hono'
 import { createFactory } from 'hono/factory'
 import { err, ok } from 'neverthrow'
 import { z } from 'zod'
+
+import { db } from '#db/connection'
+import {
+  recurrenceRules,
+  schedules,
+  tasks,
+  timeBlocks,
+  todayTasks,
+} from '#db/schema'
+import { firstOrThrow } from '#lib/drizzle-utils'
+import { localDateBoundsToUtc } from '#lib/timezone'
+import { expandScheduleForDate } from '#routes/schedule-expansion'
+import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
+import {
+  autoAssign,
+  calculateFreeSlots,
+  expandedScheduleBlocksToBusyRanges,
+  externalEventsToBusyRanges,
+  manualBlocksToBusyRanges,
+} from '#services/auto-scheduler'
+import { getEvents, OAuthTokenMissingError } from '#services/google-calendar'
 
 const timePattern = /^\d{2}:\d{2}$/
 

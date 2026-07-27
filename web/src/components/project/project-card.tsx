@@ -1,7 +1,8 @@
 import { Link } from '@tanstack/react-router'
-import { ColorDot } from '@web/components/project/color-dot'
-import { ProjectStatusBadge } from '@web/components/project/project-status-badge'
-import type { Project } from '@web/hooks/use-projects'
+
+import { ColorDot } from '#components/project/color-dot'
+import { ProjectStatusBadge } from '#components/project/project-status-badge'
+import type { Project } from '#hooks/use-projects'
 
 export function ProjectCard({ project }: { project: Project }) {
   return (

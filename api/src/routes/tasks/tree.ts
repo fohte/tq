@@ -1,11 +1,12 @@
-import { db } from '@api/db/connection'
-import { tasks, timeBlocks } from '@api/db/schema'
-import { buildTree } from '@api/routes/tasks/shared'
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
 import { and, inArray, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
+
+import { db } from '#db/connection'
+import { tasks, timeBlocks } from '#db/schema'
+import { buildTree } from '#routes/tasks/shared'
 
 const subtreeIdSchema = z.array(z.object({ id: z.string() }))
 

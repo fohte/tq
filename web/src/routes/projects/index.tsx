@@ -1,11 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ProjectCard } from '@web/components/project/project-card'
-import { ProjectFormModal } from '@web/components/project/project-form-modal'
-import { Button } from '@web/components/ui/button'
-import { useProjects } from '@web/hooks/use-projects'
-import { cn } from '@web/lib/utils'
 import { FolderKanban, Plus } from 'lucide-react'
 import { useState } from 'react'
+
+import { ProjectCard } from '#components/project/project-card'
+import { ProjectFormModal } from '#components/project/project-form-modal'
+import { Button } from '#components/ui/button'
+import { useProjects } from '#hooks/use-projects'
+import { cn } from '#lib/utils'
 
 export const Route = createFileRoute('/projects/')({
   component: ProjectList,

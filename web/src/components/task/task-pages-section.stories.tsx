@@ -7,9 +7,10 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { TaskPagesList } from '@web/components/task/task-pages-section'
-import type { TaskPage } from '@web/hooks/use-task-pages'
 import type { ReactNode } from 'react'
+
+import { TaskPagesList } from '#components/task/task-pages-section'
+import type { TaskPage } from '#hooks/use-task-pages'
 
 const samplePages: TaskPage[] = [
   {

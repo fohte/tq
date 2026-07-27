@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ProjectFormModal } from '@web/components/project/project-form-modal'
 import { fn } from 'storybook/test'
+
+import { ProjectFormModal } from '#components/project/project-form-modal'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },

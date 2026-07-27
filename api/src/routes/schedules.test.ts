@@ -1,5 +1,6 @@
-import { expandScheduleForDate } from '@api/routes/schedule-expansion'
 import { describe, expect, it } from 'vitest'
+
+import { expandScheduleForDate } from '#routes/schedule-expansion'
 
 function makeSchedule(
   overrides: Partial<{

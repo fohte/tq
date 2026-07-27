@@ -1,23 +1,24 @@
-import { app } from '@api/app'
+import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+
+import { app } from '#app'
 import {
   callMcpTool,
   connectMcpClient,
   parseToolJson,
-} from '@api/routes/mcp/testing'
+} from '#routes/mcp/testing'
 import {
   createTask,
   type TaskResponse,
   type TimeBlockResponse,
-} from '@api/routes/tasks/testing'
+} from '#routes/tasks/testing'
 import {
   assertDefined,
   jsonBody,
   passthroughSchema,
   setupTestDb,
-} from '@api/testing'
-import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+} from '#testing'
 
 setupTestDb()
 

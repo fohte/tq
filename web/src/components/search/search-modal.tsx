@@ -1,8 +1,4 @@
 import { useNavigate } from '@tanstack/react-router'
-import type { SearchResult, Suggestion } from '@web/hooks/use-search'
-import { useSearchSuggestions, useSearchTasks } from '@web/hooks/use-search'
-import { formatMinutes } from '@web/lib/format'
-import { cn } from '@web/lib/utils'
 import {
   CircleCheckBig,
   CircleDot,
@@ -12,6 +8,11 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+
+import type { SearchResult, Suggestion } from '#hooks/use-search'
+import { useSearchSuggestions, useSearchTasks } from '#hooks/use-search'
+import { formatMinutes } from '#lib/format'
+import { cn } from '#lib/utils'
 
 interface SearchModalProps {
   open: boolean

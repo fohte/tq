@@ -1,5 +1,6 @@
-import { api } from '@web/lib/api'
 import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from 'api/constants/images'
+
+import { api } from '#lib/api'
 
 const IMAGE_PATH_PATTERN = /^\/api\/images\/([^/]+)$/
 

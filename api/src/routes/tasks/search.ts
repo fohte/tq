@@ -1,21 +1,12 @@
-import { db } from '@api/db/connection'
-import {
-  labels,
-  taskComments,
-  taskLabels,
-  taskPages,
-  tasks,
-} from '@api/db/schema'
-import {
-  contextEnum,
-  taskStatus,
-  taskToResponse,
-} from '@api/routes/tasks/shared'
-import { parseSearchQuery } from '@api/search-query-parser'
 import { zValidator } from '@hono/zod-validator'
 import { and, eq, exists, isNotNull, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
+
+import { db } from '#db/connection'
+import { labels, taskComments, taskLabels, taskPages, tasks } from '#db/schema'
+import { contextEnum, taskStatus, taskToResponse } from '#routes/tasks/shared'
+import { parseSearchQuery } from '#search-query-parser'
 
 const searchQuerySchema = z.object({
   q: z.string().optional(),

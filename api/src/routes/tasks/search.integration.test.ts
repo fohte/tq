@@ -1,13 +1,14 @@
-import { app } from '@api/app'
+import { describe, expect, it } from 'vitest'
+
+import { app } from '#app'
 import {
   createComment,
   createLabel,
   createPage,
   createTask,
   TaskResponse,
-} from '@api/routes/tasks/testing'
-import { assertDefined, jsonBody, setupTestDb } from '@api/testing'
-import { describe, expect, it } from 'vitest'
+} from '#routes/tasks/testing'
+import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 

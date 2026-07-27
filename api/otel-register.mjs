@@ -10,4 +10,10 @@ import { register } from 'node:module'
 // specifier against this parentURL synchronously and throws if it can't, so
 // the resolution must stay anchored to this file regardless of the process's
 // working directory at startup.
+//
+// Registered unconditionally, unlike bootstrap.ts's isObservabilityConfigured
+// guard: gating this the same way would mean importing
+// @fohte/service-kit/observability here too, which loads node:http as a side
+// effect of the import itself — before this hook exists to patch it — which
+// would silently bring back the missing-SERVER-span bug this file fixes.
 register('@opentelemetry/instrumentation/hook.mjs', import.meta.url)

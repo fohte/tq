@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { TaskPageEditor } from '@web/components/task/task-page-editor'
-import { useTaskPage } from '@web/hooks/use-task-pages'
 import { ArrowLeft, Loader2 } from 'lucide-react'
+
+import { TaskPageEditor } from '#components/task/task-page-editor'
+import { useTaskPage } from '#hooks/use-task-pages'
 
 export const Route = createFileRoute('/tasks/$taskId_/pages/$pageId')({
   component: TaskPageView,

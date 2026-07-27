@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { useDebounce } from '@web/hooks/use-debounce'
-import { api } from '@web/lib/api'
-import { assertOk } from '@web/lib/assert-response'
 import type { InferResponseType } from 'hono/client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+
+import { useDebounce } from '#hooks/use-debounce'
+import { api } from '#lib/api'
+import { assertOk } from '#lib/assert-response'
 
 type SearchResult = InferResponseType<
   typeof api.api.tasks.search.$get,

@@ -1,8 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import {
-  ContextFilter,
-  ContextFilterInline,
-} from '@web/components/context-filter'
+
+import { ContextFilter, ContextFilterInline } from '#components/context-filter'
 
 function ContextFilterDemo() {
   return (

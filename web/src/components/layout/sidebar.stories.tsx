@@ -7,8 +7,9 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { Sidebar } from '@web/components/layout/sidebar'
 import { fn } from 'storybook/test'
+
+import { Sidebar } from '#components/layout/sidebar'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },

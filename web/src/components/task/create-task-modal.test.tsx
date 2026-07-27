@@ -1,9 +1,10 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { CreateTaskModal } from '@web/components/task/create-task-modal'
-import { renderControlledModal } from '@web/lib/render-controlled-modal'
-import { atIndex } from '@web/lib/test-utils'
 import { describe, expect, it } from 'vitest'
+
+import { CreateTaskModal } from '#components/task/create-task-modal'
+import { renderControlledModal } from '#lib/render-controlled-modal'
+import { atIndex } from '#lib/test-utils'
 
 describe('CreateTaskModal', () => {
   it('removes the modal from the DOM when the close (X) button is clicked', async () => {

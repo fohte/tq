@@ -1,14 +1,15 @@
 import { act, renderHook } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { describe, expect, it } from 'vitest'
+
 import {
   ContextFilterProvider,
   useContextFilter,
-} from '@web/hooks/use-context-filter'
+} from '#hooks/use-context-filter'
 import {
   filterModeToApiContext,
   matchesContextFilter,
-} from '@web/lib/context-filter'
-import type { ReactNode } from 'react'
-import { describe, expect, it } from 'vitest'
+} from '#lib/context-filter'
 
 function wrapper({ children }: { children: ReactNode }) {
   return <ContextFilterProvider>{children}</ContextFilterProvider>

@@ -1,10 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { FocusViewPresentation } from '@web/components/focus/focus-view'
-import type { Task } from '@web/hooks/use-tasks'
-import { useTaskList, useTaskMap } from '@web/hooks/use-tasks'
-import { useTodayTasks } from '@web/hooks/use-today-tasks'
-import { formatLocalDate } from '@web/lib/date-range'
 import { useMemo } from 'react'
+
+import { FocusViewPresentation } from '#components/focus/focus-view'
+import type { Task } from '#hooks/use-tasks'
+import { useTaskList, useTaskMap } from '#hooks/use-tasks'
+import { useTodayTasks } from '#hooks/use-today-tasks'
+import { formatLocalDate } from '#lib/date-range'
 
 export const Route = createFileRoute('/today')({
   component: TodayFocus,

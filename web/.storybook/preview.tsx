@@ -1,8 +1,9 @@
-import '@web/index.css'
+import '#index.css'
 
 import type { Preview } from '@storybook/react-vite'
-import { ContextFilterProvider } from '@web/hooks/use-context-filter'
 import { initialize, mswLoader } from 'msw-storybook-addon'
+
+import { ContextFilterProvider } from '#hooks/use-context-filter'
 
 initialize({
   onUnhandledRequest: ({ url: requestUrl }, print) => {

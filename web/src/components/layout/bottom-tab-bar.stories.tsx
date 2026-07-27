@@ -6,7 +6,8 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { BottomTabBar } from '@web/components/layout/bottom-tab-bar'
+
+import { BottomTabBar } from '#components/layout/bottom-tab-bar'
 
 function BottomTabBarStory() {
   return (

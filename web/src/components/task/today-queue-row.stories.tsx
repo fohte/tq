@@ -9,10 +9,11 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { TodayQueueRow } from '@web/components/task/today-queue-row'
-import type { Task } from '@web/hooks/use-tasks'
 import { createContext, type ReactNode, useContext, useState } from 'react'
 import { fn } from 'storybook/test'
+
+import { TodayQueueRow } from '#components/task/today-queue-row'
+import type { Task } from '#hooks/use-tasks'
 
 const ChildrenContext = createContext<ReactNode>(null)
 

@@ -6,8 +6,9 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { TaskActivity } from '@web/components/task/task-activity'
 import type { ReactNode } from 'react'
+
+import { TaskActivity } from '#components/task/task-activity'
 
 const baseComments = [
   {

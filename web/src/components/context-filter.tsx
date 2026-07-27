@@ -1,10 +1,11 @@
+import type { LucideIcon } from 'lucide-react'
+import { Briefcase, Globe, User } from 'lucide-react'
+
 import {
   type ContextFilterMode,
   useContextFilter,
-} from '@web/hooks/use-context-filter'
-import { cn } from '@web/lib/utils'
-import type { LucideIcon } from 'lucide-react'
-import { Briefcase, Globe, User } from 'lucide-react'
+} from '#hooks/use-context-filter'
+import { cn } from '#lib/utils'
 
 interface FilterOption {
   mode: ContextFilterMode
