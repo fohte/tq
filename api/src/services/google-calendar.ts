@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 import {
   err,
   errAsync,
+  fromThrowable,
   ok,
   okAsync,
   type Result,
@@ -41,9 +42,18 @@ export class GoogleCalendarConfigError extends Error {
 }
 
 export class TokenRefreshError extends Error {
-  constructor(message: string, cause?: unknown) {
+  /**
+   * True when Google itself rejected the refresh token (e.g. `invalid_grant`
+   * from revocation or expiry) — a normal OAuth outcome the client can
+   * recover from by re-authenticating. False for a network/parse/schema
+   * failure, which must be reported to Sentry instead.
+   */
+  readonly rejected: boolean
+
+  constructor(message: string, cause?: unknown, rejected = false) {
     super(`Token refresh failed: ${message}`, { cause })
     this.name = 'TokenRefreshError'
+    this.rejected = rejected
   }
 }
 
@@ -65,6 +75,26 @@ const refreshTokenResponseSchema = z.object({
   refresh_token: z.string().optional(),
   expires_in: z.number(),
 })
+
+const googleOAuthErrorResponseSchema = z.object({
+  error: z.string(),
+})
+
+const tryParseJson = fromThrowable(
+  (raw: string) => JSON.parse(raw) as unknown,
+  () => undefined,
+)
+
+// Google's refresh-token grant returns other OAuth error codes (e.g.
+// `invalid_client` from a misconfigured client secret) as a 4xx too, so a
+// bare status-code check can't tell a revoked/expired refresh token apart
+// from a server misconfiguration. Only `invalid_grant` is the former.
+function isInvalidGrantResponse(responseText: string): boolean {
+  const parsed = tryParseJson(responseText)
+    .map((data) => googleOAuthErrorResponseSchema.safeParse(data))
+    .unwrapOr(undefined)
+  return parsed?.success === true && parsed.data.error === 'invalid_grant'
+}
 
 const googleCalendarEventSchema = z.object({
   id: z.string(),
@@ -214,7 +244,12 @@ export function refreshTokenIfNeeded(): ResultAsync<
             }),
           },
           refreshTokenResponseSchema,
-          (message, cause) => new TokenRefreshError(message, cause),
+          (message, cause, rejected) =>
+            new TokenRefreshError(
+              message,
+              cause,
+              rejected === true && isInvalidGrantResponse(message),
+            ),
         ),
       )
       .andThen((data) => {

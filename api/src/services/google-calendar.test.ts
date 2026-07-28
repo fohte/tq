@@ -228,7 +228,7 @@ describe('refreshTokenIfNeeded', () => {
     expect(error).toEqual(new OAuthTokenMissingError())
   })
 
-  it('returns a token refresh error when the request fails', async () => {
+  it('marks the error as rejected when Google reports the refresh token as invalid_grant', async () => {
     const { refreshTokenIfNeeded, TokenRefreshError } = await importService()
 
     await upsertToken({
@@ -237,13 +237,57 @@ describe('refreshTokenIfNeeded', () => {
       expiresAt: new Date(Date.now() - 1000),
     })
 
+    const body = JSON.stringify({
+      error: 'invalid_grant',
+      error_description: 'Bad Request',
+    })
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response('invalid_grant', { status: 400 }),
+      new Response(body, { status: 400 }),
     )
 
     const error = (await refreshTokenIfNeeded())._unsafeUnwrapErr()
 
-    expect(error).toEqual(new TokenRefreshError('invalid_grant'))
+    expect(error).toEqual(new TokenRefreshError(body, undefined, true))
+  })
+
+  it('does not mark the error as rejected when Google reports an OAuth error other than invalid_grant', async () => {
+    const { refreshTokenIfNeeded, TokenRefreshError } = await importService()
+
+    await upsertToken({
+      accessToken: 'expired-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() - 1000),
+    })
+
+    const body = JSON.stringify({
+      error: 'invalid_client',
+      error_description: 'Unauthorized',
+    })
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(body, { status: 400 }),
+    )
+
+    const error = (await refreshTokenIfNeeded())._unsafeUnwrapErr()
+
+    expect(error).toEqual(new TokenRefreshError(body, undefined, false))
+  })
+
+  it('does not mark the error as rejected when the request fails with a server error', async () => {
+    const { refreshTokenIfNeeded, TokenRefreshError } = await importService()
+
+    await upsertToken({
+      accessToken: 'expired-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() - 1000),
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response('internal error', { status: 500 }),
+    )
+
+    const error = (await refreshTokenIfNeeded())._unsafeUnwrapErr()
+
+    expect(error).toEqual(new TokenRefreshError('internal error'))
   })
 })
 
