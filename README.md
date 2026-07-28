@@ -73,14 +73,17 @@ pnpm --filter web run test
 
 The API server and web frontend are configured via environment variables.
 
-| Variable            | Required | Default                 | Description                                                                                                                        |
-| ------------------- | -------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `APP_ENV`           | No       | `development`           | Application environment (`development`/`test`/`production`)                                                                        |
-| `DATABASE_URL`      | Yes      | —                       | PostgreSQL connection URL                                                                                                          |
-| `TEST_DATABASE_URL` | No       | —                       | PostgreSQL connection URL used for local `api` test runs instead of `DATABASE_URL` (written to `.env.runtime` by `mise run db:up`) |
-| `CORS_ORIGIN`       | No       | `*`                     | Allowed origin for CORS requests                                                                                                   |
-| `PORT`              | No       | `3001`                  | API server listen port                                                                                                             |
-| `VITE_API_URL`      | No       | `http://localhost:3001` | API base URL used by the web frontend (Vite build-time)                                                                            |
+| Variable               | Required | Default                 | Description                                                                                                                        |
+| ---------------------- | -------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `APP_ENV`              | No       | `development`           | Application environment (`development`/`test`/`production`)                                                                        |
+| `DATABASE_URL`         | Yes      | —                       | PostgreSQL connection URL                                                                                                          |
+| `TEST_DATABASE_URL`    | No       | —                       | PostgreSQL connection URL used for local `api` test runs instead of `DATABASE_URL` (written to `.env.runtime` by `mise run db:up`) |
+| `CORS_ORIGIN`          | No       | `*`                     | Allowed origin for CORS requests                                                                                                   |
+| `PORT`                 | No       | `3001`                  | API server listen port                                                                                                             |
+| `VITE_API_URL`         | No       | `http://localhost:3001` | API base URL used by the web frontend (Vite build-time)                                                                            |
+| `GITHUB_CLIENT_ID`     | No       | —                       | GitHub OAuth App client ID, required to connect a GitHub account                                                                   |
+| `GITHUB_CLIENT_SECRET` | No       | —                       | GitHub OAuth App client secret, required to connect a GitHub account                                                               |
+| `GITHUB_REDIRECT_URI`  | No       | —                       | OAuth callback URL registered on the GitHub OAuth App (`<API base URL>/api/github/oauth-callback`)                                 |
 
 ### Web (nginx runtime)
 

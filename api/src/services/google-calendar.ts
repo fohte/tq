@@ -11,6 +11,9 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { oauthTokens } from '#db/schema'
+import { fetchJson, TokenExchangeError } from '#lib/fetch-json'
+
+export { TokenExchangeError }
 
 const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
@@ -37,22 +40,6 @@ export class GoogleCalendarConfigError extends Error {
   }
 }
 
-export class TokenExchangeError extends Error {
-  /**
-   * True when Google itself rejected the authorization code (a normal
-   * OAuth-flow outcome whose message is safe to relay to the client).
-   * False for a network/parse/schema failure, which must be reported to
-   * Sentry instead of relayed.
-   */
-  readonly rejected: boolean
-
-  constructor(message: string, cause?: unknown, rejected = false) {
-    super(`Token exchange failed: ${message}`, { cause })
-    this.name = 'TokenExchangeError'
-    this.rejected = rejected
-  }
-}
-
 export class TokenRefreshError extends Error {
   constructor(message: string, cause?: unknown) {
     super(`Token refresh failed: ${message}`, { cause })
@@ -65,10 +52,6 @@ export class CalendarApiError extends Error {
     super(`Google Calendar API error: ${message}`, { cause })
     this.name = 'CalendarApiError'
   }
-}
-
-function errorMessage(e: unknown): string {
-  return e instanceof Error ? e.message : String(e)
 }
 
 const tokenResponseSchema = z.object({
@@ -140,39 +123,6 @@ export function getAuthUrl(): Result<string, GoogleCalendarConfigError> {
   })
 }
 
-/**
- * Fetch `input` and parse the JSON response against `schema`, wrapping any
- * fetch failure, non-2xx response, or schema mismatch with `wrapError`.
- */
-function fetchJson<T, E extends Error>(
-  input: string,
-  init: RequestInit,
-  schema: z.ZodType<T>,
-  wrapError: (message: string, cause?: unknown, rejected?: boolean) => E,
-): ResultAsync<T, E> {
-  return ResultAsync.fromPromise(fetch(input, init), (cause) =>
-    wrapError(errorMessage(cause), cause),
-  ).andThen((res) => {
-    if (!res.ok) {
-      // Only a 4xx counts as the provider rejecting the request; a 5xx is a
-      // provider-side failure, not a rejection, even though `wrapError` here
-      // is only actually sensitive to `rejected` for TokenExchangeError.
-      const rejected = res.status >= 400 && res.status < 500
-      return ResultAsync.fromPromise(res.text(), (cause) =>
-        wrapError(errorMessage(cause), cause),
-      ).andThen((text) => errAsync(wrapError(text, undefined, rejected)))
-    }
-    return ResultAsync.fromPromise(res.json(), (cause) =>
-      wrapError(errorMessage(cause), cause),
-    ).andThen((data) => {
-      const parsed = schema.safeParse(data)
-      return parsed.success
-        ? okAsync(parsed.data)
-        : errAsync(wrapError(parsed.error.message, parsed.error))
-    })
-  })
-}
-
 export function handleOAuthCallback(
   code: string,
 ): ResultAsync<void, GoogleCalendarConfigError | TokenExchangeError> {
@@ -235,8 +185,17 @@ export function refreshTokenIfNeeded(): ResultAsync<
       return errAsync(new OAuthTokenMissingError())
     }
 
+    const { refreshToken, expiresAt: currentExpiresAt } = token
+    if (refreshToken == null || currentExpiresAt == null) {
+      return errAsync(
+        new TokenRefreshError(
+          'Google Calendar OAuth token is missing refresh metadata',
+        ),
+      )
+    }
+
     // Return existing token if not expired
-    if (token.expiresAt.getTime() > Date.now() + REFRESH_BUFFER_MS) {
+    if (currentExpiresAt.getTime() > Date.now() + REFRESH_BUFFER_MS) {
       return okAsync(token.accessToken)
     }
 
@@ -250,7 +209,7 @@ export function refreshTokenIfNeeded(): ResultAsync<
             body: new URLSearchParams({
               client_id: clientId,
               client_secret: clientSecret,
-              refresh_token: token.refreshToken,
+              refresh_token: refreshToken,
               grant_type: 'refresh_token',
             }),
           },

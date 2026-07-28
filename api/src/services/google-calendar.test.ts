@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { db } from '#db/connection'
 import { oauthTokens } from '#db/schema'
-import { setupTestDb } from '#testing'
+import { assertDefined, setupTestDb } from '#testing'
 
 setupTestDb()
 
@@ -113,7 +113,9 @@ describe('handleOAuthCallback', () => {
         refreshToken: 'new-refresh-token',
       }),
     )
-    expect(savedToken?.expiresAt.getTime()).toBeGreaterThan(Date.now())
+    assertDefined(savedToken)
+    assertDefined(savedToken.expiresAt)
+    expect(savedToken.expiresAt.getTime()).toBeGreaterThan(Date.now())
   })
 
   it('returns a token exchange error when the request fails', async () => {
