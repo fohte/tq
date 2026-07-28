@@ -1,6 +1,7 @@
-import type { AppType } from '@api/app'
 import type { hc } from 'hono/client'
 import { describe, expectTypeOf, it } from 'vitest'
+
+import type { AppType } from '#app'
 
 // Verify that AppType can be used with Hono RPC client
 type Client = ReturnType<typeof hc<AppType>>

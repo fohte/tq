@@ -1,4 +1,4 @@
-import { Button } from '@web/components/ui/button'
+import { Button } from '#components/ui/button'
 
 // lucide-react's `Github` brand icon is deprecated
 // (https://github.com/lucide-icons/lucide/issues/670), so the mark is

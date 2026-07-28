@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { GithubConnectionCard } from '@web/components/settings/github-connection-card'
+
+import { GithubConnectionCard } from '#components/settings/github-connection-card'
 
 const meta = {
   title: 'Settings/GithubConnectionCard',

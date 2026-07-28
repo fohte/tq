@@ -1,8 +1,3 @@
-import { app } from '@api/app'
-import { db } from '@api/db/connection'
-import { labels, taskLabels, timeBlocks } from '@api/db/schema'
-import { createTask, TEST_UUID } from '@api/routes/tasks/testing'
-import { passthroughSchema, setupTestDb } from '@api/testing'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
@@ -12,6 +7,12 @@ import {
 } from '@modelcontextprotocol/sdk/types.js'
 import { and, eq, isNull } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+
+import { app } from '#app'
+import { db } from '#db/connection'
+import { labels, taskLabels, timeBlocks } from '#db/schema'
+import { createTask, TEST_UUID } from '#routes/tasks/testing'
+import { passthroughSchema, setupTestDb } from '#testing'
 
 setupTestDb()
 

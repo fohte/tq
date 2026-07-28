@@ -1,14 +1,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
-import type { Task } from '@web/hooks/use-tasks'
-import { TodayFocus } from '@web/routes/today'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type { Task } from '#hooks/use-tasks'
+import { TodayFocus } from '#routes/today'
 
 const mockUseTaskList = vi.fn()
 const mockUseTodayTasks = vi.fn()
 
-vi.mock('@web/hooks/use-tasks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@web/hooks/use-tasks')>()
+vi.mock('#hooks/use-tasks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-tasks')>()
   return {
     ...actual,
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
@@ -16,7 +17,7 @@ vi.mock('@web/hooks/use-tasks', async (importOriginal) => {
   }
 })
 
-vi.mock('@web/hooks/use-today-tasks', () => ({
+vi.mock('#hooks/use-today-tasks', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useTodayTasks: (...args: unknown[]) => mockUseTodayTasks(...args),
 }))

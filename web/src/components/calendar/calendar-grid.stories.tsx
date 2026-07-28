@@ -1,12 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { fn } from 'storybook/test'
+
 import {
   type CalendarDndCallbacks,
   CalendarGrid,
-} from '@web/components/calendar/calendar-grid'
-import type { CalendarViewType } from '@web/components/calendar/calendar-header'
-import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
-import { formatLocalDate } from '@web/lib/date-range'
-import { fn } from 'storybook/test'
+} from '#components/calendar/calendar-grid'
+import type { CalendarViewType } from '#components/calendar/calendar-header'
+import type { TimeBlockEvent } from '#components/calendar/calendar-view'
+import { formatLocalDate } from '#lib/date-range'
 
 const today = new Date()
 const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`

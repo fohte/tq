@@ -1,17 +1,18 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
 import {
   GcalAuthRequiredError,
   useAutoRescheduleOnGcalChange,
   useGcalAuthUrl,
   useGcalEvents,
-} from '@web/hooks/use-gcal-events'
-import { getDayIsoRange } from '@web/lib/date-range'
-import { assertDefined } from '@web/lib/test-utils'
-import type { ReactNode } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+} from '#hooks/use-gcal-events'
+import { getDayIsoRange } from '#lib/date-range'
+import { assertDefined } from '#lib/test-utils'
 
-vi.mock('@web/lib/api', () => {
+vi.mock('#lib/api', () => {
   const mockEventsGet = vi.fn()
   const mockAuthUrlGet = vi.fn()
 
@@ -29,7 +30,7 @@ vi.mock('@web/lib/api', () => {
 })
 
 async function getMocks() {
-  const mod = await import('@web/lib/api')
+  const mod = await import('#lib/api')
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- accessing test-only __mocks property injected by vi.mock
   const typed = mod as unknown as {
     __mocks: Record<string, ReturnType<typeof vi.fn>>

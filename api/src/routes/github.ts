@@ -1,3 +1,8 @@
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
+import { zValidator } from '@hono/zod-validator'
+import { Hono } from 'hono'
+import { z } from 'zod'
+
 import {
   disconnect,
   getAuthUrl,
@@ -5,11 +10,7 @@ import {
   GithubConfigError,
   handleOAuthCallback,
   TokenExchangeError,
-} from '@api/services/github'
-import { captureWithFingerprint } from '@fohte/service-kit/observability'
-import { zValidator } from '@hono/zod-validator'
-import { Hono } from 'hono'
-import { z } from 'zod'
+} from '#services/github'
 
 const callbackQuerySchema = z.object({
   code: z.string(),

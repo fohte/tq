@@ -7,11 +7,12 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
+import type { ReactNode } from 'react'
+
 import {
   PageEditorInner,
   SubpageViewPresentation,
-} from '@web/components/task/task-page-editor'
-import type { ReactNode } from 'react'
+} from '#components/task/task-page-editor'
 
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({

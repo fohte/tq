@@ -1,10 +1,11 @@
-import { app } from '@api/app'
-import { db } from '@api/db/connection'
-import { labels } from '@api/db/schema'
-import { firstOrThrow } from '@api/lib/drizzle-utils'
-import { jsonBody } from '@api/testing'
 import { expect } from 'vitest'
 import { z } from 'zod'
+
+import { app } from '#app'
+import { db } from '#db/connection'
+import { labels } from '#db/schema'
+import { firstOrThrow } from '#lib/drizzle-utils'
+import { jsonBody } from '#testing'
 
 export interface TimeBlockResponse {
   id: string

@@ -1,4 +1,9 @@
-import type { images } from '@api/db/schema'
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
+import { zValidator } from '@hono/zod-validator'
+import { Hono } from 'hono'
+import { z } from 'zod'
+
+import type { images } from '#db/schema'
 import {
   deleteImage,
   getImageSignedUrl,
@@ -6,11 +11,7 @@ import {
   ImageTooLargeError,
   InvalidImageTypeError,
   uploadImage,
-} from '@api/services/images'
-import { captureWithFingerprint } from '@fohte/service-kit/observability'
-import { zValidator } from '@hono/zod-validator'
-import { Hono } from 'hono'
-import { z } from 'zod'
+} from '#services/images'
 
 const uploadSchema = z.object({ file: z.instanceof(File) })
 

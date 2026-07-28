@@ -1,17 +1,18 @@
 import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/frame-dark.css'
-import '@web/components/ui/markdown-editor.css'
+import '#components/ui/markdown-editor.css'
 
 import { Crepe } from '@milkdown/crepe'
 import { upload, uploadConfig } from '@milkdown/plugin-upload'
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
+import { useRef } from 'react'
+
 import {
   handleImageLoadError,
   resolveImageSrc,
   uploadImageFile,
   uploadImageFiles,
-} from '@web/lib/image-upload'
-import { useRef } from 'react'
+} from '#lib/image-upload'
 
 interface MarkdownEditorProps {
   defaultValue?: string

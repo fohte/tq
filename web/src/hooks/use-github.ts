@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '@web/lib/api'
-import { assertStatus } from '@web/lib/assert-response'
+
+import { api } from '#lib/api'
+import { assertStatus } from '#lib/assert-response'
 
 const githubKeys = {
   status: ['github-status'] as const,

@@ -7,14 +7,15 @@ import type {
 import interactionPlugin, { Draggable } from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
+import { forwardRef, useEffect } from 'react'
+
 import {
   type CalendarViewType,
   FULLCALENDAR_VIEW_MAP,
-} from '@web/components/calendar/calendar-header'
-import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
-import { EventBlock } from '@web/components/calendar/event-block'
-import { getEventProps } from '@web/lib/calendar-utils'
-import { forwardRef, useEffect } from 'react'
+} from '#components/calendar/calendar-header'
+import type { TimeBlockEvent } from '#components/calendar/calendar-view'
+import { EventBlock } from '#components/calendar/event-block'
+import { getEventProps } from '#lib/calendar-utils'
 
 export interface CalendarDndCallbacks {
   onEventDrop?: (info: {

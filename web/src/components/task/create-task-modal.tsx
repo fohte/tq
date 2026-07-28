@@ -1,18 +1,19 @@
-import { Button } from '@web/components/ui/button'
+import { Calendar, CalendarPlus, Clock, Layers, X } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+import { Button } from '#components/ui/button'
 import {
   Dialog,
   DialogOverlay,
   DialogPopup,
   DialogPortal,
-} from '@web/components/ui/dialog'
-import { MarkdownEditor } from '@web/components/ui/markdown-editor'
-import type { CreateTaskInput } from '@web/hooks/use-tasks'
-import { useCreateTask } from '@web/hooks/use-tasks'
-import { selectHandler } from '@web/lib/form-utils'
-import { formatMinutes, parseDurationToMinutes } from '@web/lib/parse-duration'
-import { cn } from '@web/lib/utils'
-import { Calendar, CalendarPlus, Clock, Layers, X } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+} from '#components/ui/dialog'
+import { MarkdownEditor } from '#components/ui/markdown-editor'
+import type { CreateTaskInput } from '#hooks/use-tasks'
+import { useCreateTask } from '#hooks/use-tasks'
+import { selectHandler } from '#lib/form-utils'
+import { formatMinutes, parseDurationToMinutes } from '#lib/parse-duration'
+import { cn } from '#lib/utils'
 
 interface CreateTaskModalProps {
   open: boolean

@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ProjectGanttView } from '@web/components/project/project-gantt-view'
-import type { ProjectTask } from '@web/hooks/use-projects'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { ProjectGanttView } from '#components/project/project-gantt-view'
+import type { ProjectTask } from '#hooks/use-projects'
 
 const mockNavigate = vi.fn()
 vi.mock('@tanstack/react-router', () => ({
@@ -10,7 +11,7 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 
 const mockUpdateTaskMutate = vi.fn()
-vi.mock('@web/hooks/use-tasks', () => ({
+vi.mock('#hooks/use-tasks', () => ({
   useUpdateTask: () => ({ mutate: mockUpdateTaskMutate }),
 }))
 

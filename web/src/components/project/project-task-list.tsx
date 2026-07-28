@@ -1,11 +1,12 @@
+import { useMemo } from 'react'
+
 import type {
   SortOption,
   StatusFilter,
-} from '@web/components/project/project-filter-bar'
-import { TaskRow } from '@web/components/task/task-row'
-import type { ProjectTask } from '@web/hooks/use-projects'
-import type { Task } from '@web/hooks/use-tasks'
-import { useMemo } from 'react'
+} from '#components/project/project-filter-bar'
+import { TaskRow } from '#components/task/task-row'
+import type { ProjectTask } from '#hooks/use-projects'
+import type { Task } from '#hooks/use-tasks'
 
 interface TreeNode {
   task: ProjectTask

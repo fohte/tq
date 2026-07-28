@@ -1,21 +1,4 @@
 import { Link } from '@tanstack/react-router'
-import { TaskActivity } from '@web/components/task/task-activity'
-import {
-  TaskPagesList,
-  TaskPagesSection,
-} from '@web/components/task/task-pages-section'
-import { MarkdownEditor } from '@web/components/ui/markdown-editor'
-import type { TaskPage } from '@web/hooks/use-task-pages'
-import type { TaskDetail } from '@web/hooks/use-tasks'
-import {
-  useTaskList,
-  useUpdateTask,
-  useUpdateTaskParent,
-  useUpdateTaskStatus,
-} from '@web/hooks/use-tasks'
-import { selectHandler } from '@web/lib/form-utils'
-import { formatMinutes, parseDurationToMinutes } from '@web/lib/parse-duration'
-import { cn } from '@web/lib/utils'
 import {
   Calendar,
   CalendarPlus,
@@ -28,6 +11,24 @@ import {
   Play,
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+
+import { TaskActivity } from '#components/task/task-activity'
+import {
+  TaskPagesList,
+  TaskPagesSection,
+} from '#components/task/task-pages-section'
+import { MarkdownEditor } from '#components/ui/markdown-editor'
+import type { TaskPage } from '#hooks/use-task-pages'
+import type { TaskDetail } from '#hooks/use-tasks'
+import {
+  useTaskList,
+  useUpdateTask,
+  useUpdateTaskParent,
+  useUpdateTaskStatus,
+} from '#hooks/use-tasks'
+import { selectHandler } from '#lib/form-utils'
+import { formatMinutes, parseDurationToMinutes } from '#lib/parse-duration'
+import { cn } from '#lib/utils'
 
 // --- Main Content ---
 

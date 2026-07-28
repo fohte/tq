@@ -7,11 +7,12 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import type { TimeBlockEvent } from '@web/components/calendar/calendar-view'
-import { DayViewPresentation } from '@web/components/day-view/day-view'
-import type { CategorizedTasks, Task } from '@web/hooks/use-tasks'
 import type { ReactNode } from 'react'
 import { fn } from 'storybook/test'
+
+import type { TimeBlockEvent } from '#components/calendar/calendar-view'
+import { DayViewPresentation } from '#components/day-view/day-view'
+import type { CategorizedTasks, Task } from '#hooks/use-tasks'
 
 const today = new Date()
 const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`

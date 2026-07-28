@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '@web/lib/api'
 import type { InferResponseType } from 'hono/client'
+
+import { api } from '#lib/api'
 
 export type TaskPage = InferResponseType<
   (typeof api.api.tasks)[':taskId']['pages']['$get'],

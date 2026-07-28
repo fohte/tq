@@ -1,7 +1,8 @@
 import type { EventDropArg } from '@fullcalendar/core'
 import { render } from '@testing-library/react'
-import { CalendarGrid } from '@web/components/calendar/calendar-grid'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { CalendarGrid } from '#components/calendar/calendar-grid'
 
 let capturedProps: Record<string, unknown> = {}
 

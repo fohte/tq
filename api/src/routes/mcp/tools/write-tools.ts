@@ -1,10 +1,11 @@
-import { app } from '@api/app'
-import { callInternalRoute } from '@api/routes/mcp/route-bridge'
-import { createTaskSchema, updateTaskSchema } from '@api/routes/tasks/crud'
-import { taskStatus } from '@api/routes/tasks/shared'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
+
+import { app } from '#app'
+import { callInternalRoute } from '#routes/mcp/route-bridge'
+import { createTaskSchema, updateTaskSchema } from '#routes/tasks/crud'
+import { taskStatus } from '#routes/tasks/shared'
 
 // Starting and completing a task carry side effects (opening a TimeBlock,
 // generating the next occurrence of a recurring task) that a direct status

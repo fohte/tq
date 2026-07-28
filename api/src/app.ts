@@ -1,16 +1,17 @@
-import { calendarApp } from '@api/routes/calendar'
-import { githubApp } from '@api/routes/github'
-import { imagesApp } from '@api/routes/images'
-import { labelsApp } from '@api/routes/labels'
-import { mcpApp } from '@api/routes/mcp'
-import { projectsApp } from '@api/routes/projects'
-import { schedulesApp } from '@api/routes/schedules'
-import { taskCommentsApp } from '@api/routes/task-comments'
-import { taskPagesApp } from '@api/routes/task-pages'
-import { tasksApp } from '@api/routes/tasks'
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+
+import { calendarApp } from '#routes/calendar'
+import { githubApp } from '#routes/github'
+import { imagesApp } from '#routes/images'
+import { labelsApp } from '#routes/labels'
+import { mcpApp } from '#routes/mcp/index'
+import { projectsApp } from '#routes/projects'
+import { schedulesApp } from '#routes/schedules'
+import { taskCommentsApp } from '#routes/task-comments'
+import { taskPagesApp } from '#routes/task-pages'
+import { tasksApp } from '#routes/tasks/index'
 
 const app = new Hono()
   .use(

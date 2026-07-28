@@ -1,11 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { Loader2 } from 'lucide-react'
+
 import {
   TaskMainContent,
   TaskSidebar,
   TaskSidebarMobile,
-} from '@web/components/task/task-detail'
-import { useTask } from '@web/hooks/use-tasks'
-import { Loader2 } from 'lucide-react'
+} from '#components/task/task-detail'
+import { useTask } from '#hooks/use-tasks'
 
 export const Route = createFileRoute('/tasks/$taskId')({
   component: TaskPage,

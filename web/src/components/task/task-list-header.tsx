@@ -1,6 +1,6 @@
-import type { Task } from '@web/hooks/use-tasks'
-import { formatMinutes } from '@web/lib/format'
-import { cn } from '@web/lib/utils'
+import type { Task } from '#hooks/use-tasks'
+import { formatMinutes } from '#lib/format'
+import { cn } from '#lib/utils'
 
 export function TaskListHeader({ tasks }: { tasks: Task[] }) {
   const total = tasks.length

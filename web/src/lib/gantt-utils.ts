@@ -1,5 +1,6 @@
 import type { IScaleConfig, ITask } from '@svar-ui/react-gantt'
-import type { ProjectTask } from '@web/hooks/use-projects'
+
+import type { ProjectTask } from '#hooks/use-projects'
 
 export type GanttScale = 'day' | 'week' | 'month'
 

@@ -1,16 +1,17 @@
-import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from '@api/constants/images'
-import { db } from '@api/db/connection'
-import { images } from '@api/db/schema'
-import { firstOrErr, type RowNotFoundError } from '@api/lib/drizzle-utils'
+import { eq } from 'drizzle-orm'
+import { errAsync, ResultAsync } from 'neverthrow'
+
+import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from '#constants/images'
+import { db } from '#db/connection'
+import { images } from '#db/schema'
+import { firstOrErr, type RowNotFoundError } from '#lib/drizzle-utils'
 import {
   deleteObjectByKey,
   getObjectSignedUrl,
   putObject,
   type R2ConfigError,
   type R2OperationError,
-} from '@api/services/r2'
-import { eq } from 'drizzle-orm'
-import { errAsync, ResultAsync } from 'neverthrow'
+} from '#services/r2'
 
 export { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES }
 

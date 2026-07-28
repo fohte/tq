@@ -1,7 +1,8 @@
-import '@api/bootstrap'
+import '#bootstrap'
 
-import { app } from '@api/app'
 import { serve } from '@hono/node-server'
+
+import { app } from '#app'
 
 const port = Number(process.env['PORT']) || 3001
 

@@ -1,17 +1,18 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { TaskActivity } from '@web/components/task/task-activity'
-import type { Comment } from '@web/hooks/use-task-comments'
+import { describe, expect, it, vi } from 'vitest'
+
+import { TaskActivity } from '#components/task/task-activity'
+import type { Comment } from '#hooks/use-task-comments'
 import {
   useCreateComment,
   useDeleteComment,
   useTaskComments,
   useUpdateComment,
-} from '@web/hooks/use-task-comments'
-import { describe, expect, it, vi } from 'vitest'
+} from '#hooks/use-task-comments'
 
-vi.mock('@web/components/ui/markdown-editor', () => ({
+vi.mock('#components/ui/markdown-editor', () => ({
   MarkdownEditor: ({
     defaultValue,
     placeholder,
@@ -30,9 +31,9 @@ vi.mock('@web/components/ui/markdown-editor', () => ({
   ),
 }))
 
-vi.mock('@web/hooks/use-task-comments', async (importOriginal) => {
+vi.mock('#hooks/use-task-comments', async (importOriginal) => {
   const original =
-    await importOriginal<typeof import('@web/hooks/use-task-comments')>()
+    await importOriginal<typeof import('#hooks/use-task-comments')>()
   return {
     ...original,
     useTaskComments: vi.fn(),

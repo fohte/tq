@@ -1,9 +1,10 @@
+import { describe, expect, it } from 'vitest'
+
 import {
   getDaysRemaining,
   summarizeTaskStatus,
-} from '@web/components/project/project-detail'
-import type { ProjectTask } from '@web/hooks/use-projects'
-import { describe, expect, it } from 'vitest'
+} from '#components/project/project-detail'
+import type { ProjectTask } from '#hooks/use-projects'
 
 const baseTask: ProjectTask = {
   id: '1',

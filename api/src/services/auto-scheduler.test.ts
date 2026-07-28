@@ -1,11 +1,12 @@
+import { describe, expect, it } from 'vitest'
+
 import {
   autoAssign,
   calculateFreeSlots,
   expandedScheduleBlocksToBusyRanges,
   externalEventsToBusyRanges,
   manualBlocksToBusyRanges,
-} from '@api/services/auto-scheduler'
-import { describe, expect, it } from 'vitest'
+} from '#services/auto-scheduler'
 
 function d(hhmm: string): Date {
   return new Date(`2026-03-22T${hhmm}:00.000Z`)

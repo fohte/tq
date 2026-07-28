@@ -1,5 +1,6 @@
-import { formatMinutes, parseDurationToMinutes } from '@web/lib/parse-duration'
 import { describe, expect, it } from 'vitest'
+
+import { formatMinutes, parseDurationToMinutes } from '#lib/parse-duration'
 
 describe('parseDurationToMinutes', () => {
   it('parses plain minutes', () => {

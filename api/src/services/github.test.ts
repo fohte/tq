@@ -1,8 +1,9 @@
-import { db } from '@api/db/connection'
-import { oauthTokens } from '@api/db/schema'
-import { assertDefined, setupTestDb } from '@api/testing'
 import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { db } from '#db/connection'
+import { oauthTokens } from '#db/schema'
+import { assertDefined, setupTestDb } from '#testing'
 
 setupTestDb()
 
@@ -45,7 +46,7 @@ afterEach(() => {
 
 // Dynamically import to allow env vars to be set before module evaluation
 async function importService() {
-  return await import('@api/services/github')
+  return await import('#services/github')
 }
 
 function normalize(token: typeof oauthTokens.$inferSelect) {

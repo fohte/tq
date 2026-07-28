@@ -1,10 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { GithubConnectionCard } from '@web/components/settings/github-connection-card'
+
+import { GithubConnectionCard } from '#components/settings/github-connection-card'
 import {
   useDisconnectGithub,
   useGithubAuthUrl,
   useGithubStatus,
-} from '@web/hooks/use-github'
+} from '#hooks/use-github'
 
 export const Route = createFileRoute('/settings')({
   component: Settings,

@@ -1,6 +1,7 @@
-import { createMcpServer } from '@api/routes/mcp/server'
 import { StreamableHTTPTransport } from '@hono/mcp'
 import { Hono } from 'hono'
+
+import { createMcpServer } from '#routes/mcp/server'
 
 export const mcpApp = new Hono().all('/', async (c) => {
   // A fresh transport and server per request (rather than sharing a module-scoped

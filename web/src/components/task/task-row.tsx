@@ -1,9 +1,4 @@
 import { Link } from '@tanstack/react-router'
-import { useLiveTimer } from '@web/hooks/use-live-timer'
-import type { Task, TreeNode } from '@web/hooks/use-tasks'
-import { useTaskActions } from '@web/hooks/use-tasks'
-import { formatMinutes } from '@web/lib/format'
-import { cn } from '@web/lib/utils'
 import {
   Check,
   ChevronDown,
@@ -15,6 +10,12 @@ import {
   Timer,
 } from 'lucide-react'
 import { useState } from 'react'
+
+import { useLiveTimer } from '#hooks/use-live-timer'
+import type { Task, TreeNode } from '#hooks/use-tasks'
+import { useTaskActions } from '#hooks/use-tasks'
+import { formatMinutes } from '#lib/format'
+import { cn } from '#lib/utils'
 
 function StatusIcon({ status }: { status: Task['status'] }) {
   if (status === 'completed') {

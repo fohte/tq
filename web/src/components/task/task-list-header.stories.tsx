@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { TaskListHeader } from '@web/components/task/task-list-header'
-import type { Task } from '@web/hooks/use-tasks'
+
+import { TaskListHeader } from '#components/task/task-list-header'
+import type { Task } from '#hooks/use-tasks'
 
 const makeTasks = (overrides: Array<Partial<Task>>): Task[] =>
   overrides.map((o, i) => ({

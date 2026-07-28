@@ -1,6 +1,3 @@
-import { db } from '@api/db/connection'
-import { oauthTokens } from '@api/db/schema'
-import { fetchJson, TokenExchangeError } from '@api/lib/fetch-json'
 import { eq } from 'drizzle-orm'
 import {
   err,
@@ -11,6 +8,10 @@ import {
   ResultAsync,
 } from 'neverthrow'
 import { z } from 'zod'
+
+import { db } from '#db/connection'
+import { oauthTokens } from '#db/schema'
+import { fetchJson, TokenExchangeError } from '#lib/fetch-json'
 
 export { TokenExchangeError }
 

@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { ChevronLeft, Loader2 } from 'lucide-react'
+
 import {
   ProjectMainContent,
   ProjectSidebar,
   ProjectSidebarMobile,
-} from '@web/components/project/project-detail'
-import { useProject, useProjectTasks } from '@web/hooks/use-projects'
-import { ChevronLeft, Loader2 } from 'lucide-react'
+} from '#components/project/project-detail'
+import { useProject, useProjectTasks } from '#hooks/use-projects'
 
 export const Route = createFileRoute('/projects/$projectId')({
   component: ProjectDetailPage,

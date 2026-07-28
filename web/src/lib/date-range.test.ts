@@ -1,5 +1,6 @@
-import { getDayIsoRange } from '@web/lib/date-range'
 import { describe, expect, it } from 'vitest'
+
+import { getDayIsoRange } from '#lib/date-range'
 
 // vitest.config.ts pins TZ to Asia/Tokyo (JST, UTC+9) for the unit project.
 describe('getDayIsoRange', () => {
