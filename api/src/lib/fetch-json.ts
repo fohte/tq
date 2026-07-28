@@ -36,8 +36,8 @@ export function fetchJson<T, E extends Error>(
   ).andThen((res) => {
     if (!res.ok) {
       // Only a 4xx counts as the provider rejecting the request; a 5xx is a
-      // provider-side failure, not a rejection, even though `wrapError` here
-      // is only actually sensitive to `rejected` for TokenExchangeError.
+      // provider-side failure, not a rejection. Both TokenExchangeError and
+      // TokenRefreshError branch on `rejected` to decide 401/400 vs 500.
       const rejected = res.status >= 400 && res.status < 500
       return ResultAsync.fromPromise(res.text(), (cause) =>
         wrapError(errorMessage(cause), cause),
