@@ -228,7 +228,7 @@ describe('refreshTokenIfNeeded', () => {
     expect(error).toEqual(new OAuthTokenMissingError())
   })
 
-  it('returns a token refresh error when the request fails', async () => {
+  it('marks the error as rejected when Google rejects the refresh token', async () => {
     const { refreshTokenIfNeeded, TokenRefreshError } = await importService()
 
     await upsertToken({
@@ -243,7 +243,27 @@ describe('refreshTokenIfNeeded', () => {
 
     const error = (await refreshTokenIfNeeded())._unsafeUnwrapErr()
 
-    expect(error).toEqual(new TokenRefreshError('invalid_grant'))
+    expect(error).toEqual(
+      new TokenRefreshError('invalid_grant', undefined, true),
+    )
+  })
+
+  it('does not mark the error as rejected when the request fails with a server error', async () => {
+    const { refreshTokenIfNeeded, TokenRefreshError } = await importService()
+
+    await upsertToken({
+      accessToken: 'expired-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() - 1000),
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response('internal error', { status: 500 }),
+    )
+
+    const error = (await refreshTokenIfNeeded())._unsafeUnwrapErr()
+
+    expect(error).toEqual(new TokenRefreshError('internal error'))
   })
 })
 

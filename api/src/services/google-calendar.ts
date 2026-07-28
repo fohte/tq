@@ -41,9 +41,18 @@ export class GoogleCalendarConfigError extends Error {
 }
 
 export class TokenRefreshError extends Error {
-  constructor(message: string, cause?: unknown) {
+  /**
+   * True when Google itself rejected the refresh token (e.g. `invalid_grant`
+   * from revocation or expiry) — a normal OAuth outcome the client can
+   * recover from by re-authenticating. False for a network/parse/schema
+   * failure, which must be reported to Sentry instead.
+   */
+  readonly rejected: boolean
+
+  constructor(message: string, cause?: unknown, rejected = false) {
     super(`Token refresh failed: ${message}`, { cause })
     this.name = 'TokenRefreshError'
+    this.rejected = rejected
   }
 }
 
@@ -214,7 +223,8 @@ export function refreshTokenIfNeeded(): ResultAsync<
             }),
           },
           refreshTokenResponseSchema,
-          (message, cause) => new TokenRefreshError(message, cause),
+          (message, cause, rejected) =>
+            new TokenRefreshError(message, cause, rejected),
         ),
       )
       .andThen((data) => {
