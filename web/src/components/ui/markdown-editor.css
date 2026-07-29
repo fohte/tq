@@ -90,9 +90,12 @@
   user-select: none;
 }
 
-/* `#` mention autocomplete popup, positioned by SlashProvider via floating-ui. */
+/* `#` mention autocomplete popup, positioned by SlashProvider via floating-ui.
+   Rendered at document.body with `position: fixed` (see the `root` /
+   `floatingUIOptions.strategy` passed to SlashProvider) so it isn't clipped
+   by `.milkdown-wrapper`'s `overflow: hidden`. */
 .task-mention-autocomplete {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   z-index: 50;
