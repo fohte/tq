@@ -70,7 +70,7 @@ export function registerReadTools(server: McpServer): void {
     'get_task',
     {
       description:
-        'Get the full detail of a single task by id: its attributes, recurrence rule, time blocks, pages, and the nested subtree of its subtasks (as `subtasks`). Does not include labels — no existing TQ endpoint exposes labels for an individual task; use search_tasks with a label: filter to find tasks by label.',
+        'Get the full detail of a single task by id: its attributes, recurrence rule, time blocks, pages, linked tasks (mentions via `#<number>`, as `links.outgoing`/`links.incoming`), and the nested subtree of its subtasks (as `subtasks`). Does not include labels — no existing TQ endpoint exposes labels for an individual task; use search_tasks with a label: filter to find tasks by label.',
       inputSchema: {
         taskId: z.uuid().describe('The task id to look up.'),
       },

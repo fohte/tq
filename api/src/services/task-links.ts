@@ -53,11 +53,11 @@ export async function syncTaskLinks(sourceTaskId: string): Promise<void> {
           .where(inArray(tasks.number, [...mentionedNumbers]))
       : []
 
-  // No transaction here: the codebase has no `db.transaction` usage anywhere
-  // (see other multi-statement routes, e.g. `tasks/crud.ts`'s DELETE
-  // handler), and the test harness (`#testing`) wraps each test in its own
-  // manual BEGIN/ROLLBACK on a single pooled connection, which a nested
-  // `db.transaction` would prematurely commit.
+  // Not wrapped in a transaction: the test harness (`#testing`) runs each
+  // test inside its own manual BEGIN/ROLLBACK on a single pooled connection,
+  // and a nested `db.transaction` here would prematurely commit it. This
+  // also means two concurrent writes to the same task's body can race and
+  // leave a stale link until the next write to that task resyncs it.
   await db.delete(taskLinks).where(eq(taskLinks.sourceTaskId, sourceTaskId))
   if (targets.length > 0) {
     await db
