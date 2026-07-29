@@ -184,83 +184,10 @@ export const WithPages: Story = {
   },
 }
 
-// --- TaskSidebar Stories ---
-
-export const Sidebar: StoryObj<{ task: TaskDetail }> = {
-  args: {
-    task: { ...baseTask },
-  },
-  render: ({ task }) => (
-    <Providers>
-      <div className="w-60 border-l border-border p-4">
-        <TaskSidebar task={task} />
-      </div>
-    </Providers>
-  ),
-}
-
-export const SidebarMinimal: StoryObj<{ task: TaskDetail }> = {
-  args: {
-    task: {
-      ...baseTask,
-      estimatedMinutes: null,
-      startDate: null,
-      dueDate: null,
-      parentId: null,
-      context: 'personal',
-    },
-  },
-  render: ({ task }) => (
-    <Providers>
-      <div className="w-60 border-l border-border p-4">
-        <TaskSidebar task={task} />
-      </div>
-    </Providers>
-  ),
-}
-
-export const SidebarWithGithubLink: StoryObj<{ task: TaskDetail }> = {
-  args: {
-    task: {
-      ...baseTask,
-      githubLink: {
-        id: 'link-1',
-        owner: 'fohte',
-        repo: 'tq',
-        number: 42,
-        kind: 'issue',
-        url: 'https://github.com/fohte/tq/issues/42',
-        state: 'open',
-        title: 'Implement task detail page',
-        lastSyncedAt: '2026-03-20T00:00:00.000Z',
-      },
-    },
-  },
-  render: ({ task }) => (
-    <Providers>
-      <div className="w-60 border-l border-border p-4">
-        <TaskSidebar task={task} />
-      </div>
-    </Providers>
-  ),
-}
-
-// --- TaskSidebarMobile Stories ---
-
-export const MobileSidebar: StoryObj<{ task: TaskDetail }> = {
-  args: {
-    task: { ...baseTask },
-  },
-  render: ({ task }) => (
-    <Providers>
-      <div className="max-w-sm border-t border-border p-4">
-        <TaskSidebarMobile task={task} />
-      </div>
-    </Providers>
-  ),
-}
-
 // --- Full Page Layout ---
+// (Sidebar-only stories live in task-detail-sidebar.stories.tsx, co-located
+// with TaskSidebar/TaskSidebarMobile; these compose them with
+// TaskMainContent to exercise the full page layout.)
 
 export const FullPagePC: StoryObj<{ task: TaskDetail; pages: TaskPage[] }> = {
   args: {
