@@ -14,6 +14,7 @@ import type { Task } from '#hooks/use-tasks'
 
 const baseTask: Task = {
   id: '00000000-0000-0000-0000-000000000001',
+  number: 1,
   title: 'Implement task list UI',
   description: null,
   status: 'todo',
@@ -22,6 +23,7 @@ const baseTask: Task = {
   dueDate: null,
   estimatedMinutes: null,
   parentId: null,
+  parentNumber: null,
   projectId: null,
   sortOrder: 0,
   recurrenceRuleId: null,

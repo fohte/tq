@@ -5,6 +5,7 @@ import type { ProjectTask } from '#hooks/use-projects'
 
 const baseTask: ProjectTask = {
   id: '1',
+  number: 1,
   title: 'Task 1',
   description: null,
   status: 'todo',
@@ -13,6 +14,7 @@ const baseTask: ProjectTask = {
   dueDate: null,
   estimatedMinutes: null,
   parentId: null,
+  parentNumber: null,
   projectId: 'p1',
   sortOrder: 0,
   recurrenceRuleId: null,
@@ -22,22 +24,25 @@ const baseTask: ProjectTask = {
 }
 
 const tasks: ProjectTask[] = [
-  { ...baseTask, id: '1', title: 'Todo task', status: 'todo' },
+  { ...baseTask, id: '1', number: 1, title: 'Todo task', status: 'todo' },
   {
     ...baseTask,
     id: '2',
+    number: 2,
     title: 'In progress task',
     status: 'in_progress',
   },
   {
     ...baseTask,
     id: '3',
+    number: 3,
     title: 'Completed task',
     status: 'completed',
   },
   {
     ...baseTask,
     id: '4',
+    number: 4,
     title: 'Another todo',
     status: 'todo',
     dueDate: '2026-04-01',
@@ -85,16 +90,19 @@ describe('sortTasks', () => {
       {
         ...baseTask,
         id: 'a',
+        number: 1,
         createdAt: '2026-03-22T00:00:00.000Z',
       },
       {
         ...baseTask,
         id: 'b',
+        number: 2,
         createdAt: '2026-03-20T00:00:00.000Z',
       },
       {
         ...baseTask,
         id: 'c',
+        number: 3,
         createdAt: '2026-03-21T00:00:00.000Z',
       },
     ]
@@ -107,16 +115,19 @@ describe('sortTasks', () => {
       {
         ...baseTask,
         id: 'a',
+        number: 1,
         updatedAt: '2026-03-20T00:00:00.000Z',
       },
       {
         ...baseTask,
         id: 'b',
+        number: 2,
         updatedAt: '2026-03-22T00:00:00.000Z',
       },
       {
         ...baseTask,
         id: 'c',
+        number: 3,
         updatedAt: '2026-03-21T00:00:00.000Z',
       },
     ]

@@ -42,6 +42,7 @@ const samplePages: TaskPage[] = [
 
 const baseTask: TaskDetail = {
   id: '550e8400-e29b-41d4-a716-446655440000',
+  number: 1,
   title: 'Implement task detail page',
   description:
     '## Why\n\nThe task detail page is needed.\n\n## What\n\n- Add inline editing\n- Add sidebar fields',

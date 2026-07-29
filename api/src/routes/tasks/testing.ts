@@ -27,6 +27,7 @@ export interface RecurrenceRuleResponse {
 
 export interface TaskResponse {
   id: string
+  number: number
   title: string
   description: string | null
   status: 'todo' | 'in_progress' | 'completed'
@@ -55,6 +56,7 @@ const recurrenceRuleResponseSchema = z.object({
 
 const taskResponseSchema = z.object({
   id: z.string(),
+  number: z.number(),
   title: z.string(),
   description: z.string().nullable(),
   status: z.enum(['todo', 'in_progress', 'completed']),

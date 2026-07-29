@@ -17,9 +17,11 @@ import { diffFields, recordEdit } from '#lib/edits'
 import { pageToResponse } from '#routes/task-pages'
 import {
   contextEnum,
+  parentTasks,
   requireTask,
   taskStatus,
   taskToResponse,
+  taskWithParentNumberToResponse,
   timeBlockToResponse,
 } from '#routes/tasks/shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
@@ -151,13 +153,19 @@ export const tasksCrudApp = new Hono()
       }
 
       const result = await db
-        .select()
+        .select({
+          task: tasks,
+          parentNumber: parentTasks.number,
+        })
         .from(tasks)
+        .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(tasks.sortOrder, tasks.createdAt)
 
       return c.json(
-        result.map((task) => taskToResponse(task)),
+        result.map((r) =>
+          taskWithParentNumberToResponse(r.task, r.parentNumber),
+        ),
         200,
       )
     },
@@ -211,9 +219,9 @@ export const tasksCrudApp = new Hono()
     requireTask,
     zValidator('json', updateTaskSchema),
     async (c) => {
-      const id = c.req.param('id')
       const existing = c.get('task')
       const author = c.get('author')
+      const id = existing.id
       const { recurrenceRule: recurrenceRuleInput, ...taskFields } =
         c.req.valid('json')
 
@@ -343,8 +351,8 @@ export const tasksCrudApp = new Hono()
     },
   )
   .delete('/:id', requireTask, async (c) => {
-    const id = c.req.param('id')
     const existing = c.get('task')
+    const id = existing.id
 
     // Set children's parentId to null before deleting
     await db

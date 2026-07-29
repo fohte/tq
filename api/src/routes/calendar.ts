@@ -3,15 +3,16 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
+import { OAuthTokenMissingError, TokenRefreshError } from '#integrations/errors'
 import {
-  getAuthUrl,
   getEvents,
-  GoogleCalendarConfigError,
-  handleOAuthCallback,
-  OAuthTokenMissingError,
-  TokenExchangeError,
-  TokenRefreshError,
-} from '#services/google-calendar'
+  googleCalendarProvider,
+} from '#integrations/google-calendar/index'
+import {
+  callbackQuerySchema,
+  handleGetAuthUrl,
+  handleOAuthCallbackRoute,
+} from '#routes/integration-handlers'
 
 const eventsQuerySchema = z.object({
   calendarId: z.string(),
@@ -19,10 +20,9 @@ const eventsQuerySchema = z.object({
   timeMax: z.iso.datetime(),
 })
 
-const callbackQuerySchema = z.object({
-  code: z.string(),
-})
-
+// No /status or /token (disconnect) here, unlike routes/github.ts: no
+// client needs them for Google Calendar — /events already surfaces the
+// "needs re-auth" state via 401, and there's no disconnect UI for it.
 export const calendarApp = new Hono()
   .get('/events', zValidator('query', eventsQuerySchema), async (c) => {
     const { calendarId, timeMin, timeMax } = c.req.valid('query')
@@ -50,45 +50,19 @@ export const calendarApp = new Hono()
       },
     )
   })
-  .get('/auth-url', (c) => {
-    return getAuthUrl().match(
-      (url) => c.json({ url }, 200),
-      (error) => {
-        captureWithFingerprint(error, 'api.calendar.get-auth-url-failed')
-        return c.json({ error: 'Internal server error' }, 500)
-      },
-    )
-  })
+  .get('/auth-url', (c) =>
+    handleGetAuthUrl(c, googleCalendarProvider, 'calendar'),
+  )
   .get(
     '/oauth-callback',
     zValidator('query', callbackQuerySchema),
     async (c) => {
       const { code } = c.req.valid('query')
-
-      const result = await handleOAuthCallback(code)
-
-      return result.match(
-        () => c.json({ message: 'Authentication successful' }, 200),
-        (error) => {
-          // A config error means the server itself is misconfigured, so its
-          // message (which names the missing env vars) must not reach the
-          // client. A rejected code is a normal OAuth-flow outcome, so
-          // relaying the provider's own rejection reason back is fine.
-          // Anything else (network/parse/schema failure) is unexpected and
-          // must be captured rather than relayed.
-          if (error instanceof GoogleCalendarConfigError) {
-            captureWithFingerprint(
-              error,
-              'api.calendar.oauth-callback-config-error',
-            )
-            return c.json({ error: 'Internal server error' }, 500)
-          }
-          if (error instanceof TokenExchangeError && error.rejected) {
-            return c.json({ error: error.message }, 400)
-          }
-          captureWithFingerprint(error, 'api.calendar.oauth-callback-failed')
-          return c.json({ error: 'Internal server error' }, 500)
-        },
+      return handleOAuthCallbackRoute(
+        c,
+        googleCalendarProvider,
+        code,
+        'calendar',
       )
     },
   )

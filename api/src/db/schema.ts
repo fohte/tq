@@ -67,6 +67,12 @@ export const tasks = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
+    // Globally unique, human-facing sequential id (e.g. `#123`) for display
+    // and URL lookup; the UUID `id` remains the primary key used internally
+    // and in FKs. `generatedAlwaysAsIdentity` (rather than `serial`) makes
+    // Postgres reject any insert that tries to set this explicitly, keeping
+    // assigned numbers immutable.
+    number: integer('number').notNull().generatedAlwaysAsIdentity().unique(),
     title: text('title').notNull(),
     description: text('description'),
     status: text('status', {
@@ -362,6 +368,9 @@ export const oauthTokens = pgTable(
       .defaultNow(),
   },
   (table) => [
+    // Exempts providers with no `oauth.refresh` in api/src/integrations/
+    // (tokens that never expire, so refresh metadata is meaningless). Add
+    // such a provider's id to this OR clause alongside 'github'.
     check(
       'oauth_tokens_refresh_metadata_required',
       sql`${table.provider} = 'github' OR (${table.refreshToken} IS NOT NULL AND ${table.expiresAt} IS NOT NULL)`,

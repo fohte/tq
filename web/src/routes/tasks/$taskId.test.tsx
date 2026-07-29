@@ -9,6 +9,7 @@ import { Route } from '#routes/tasks/$taskId'
 
 const mockTask = {
   id: '550e8400-e29b-41d4-a716-446655440000',
+  number: 42,
   title: 'Test task title',
   description: 'Some **markdown** description',
   status: 'todo' as const,
@@ -148,7 +149,7 @@ describe('TaskPage', () => {
     expect(screen.getAllByText('Test task title').length).toBeGreaterThan(0)
   })
 
-  it('renders breadcrumb with task short ID', () => {
+  it('renders breadcrumb with task number', () => {
     mockUseTask.mockReturnValue({
       data: mockTask,
       isLoading: false,
@@ -156,7 +157,7 @@ describe('TaskPage', () => {
     })
     renderTaskPage()
     expect(screen.getAllByText('Tasks').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('#550e8400').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('#42').length).toBeGreaterThan(0)
   })
 
   it('renders description editor with task description', () => {
