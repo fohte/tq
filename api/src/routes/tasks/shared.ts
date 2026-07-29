@@ -6,7 +6,6 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { recurrenceRules, taskGithubLinks, tasks, timeBlocks } from '#db/schema'
-import { githubLinkToResponse } from '#routes/task-github-link'
 
 export const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
 export const contextEnum = z.enum(['work', 'personal', 'dev'])
@@ -20,6 +19,22 @@ export function recurrenceRuleToResponse(
     interval: rule.interval,
     daysOfWeek: rule.daysOfWeek,
     dayOfMonth: rule.dayOfMonth,
+  }
+}
+
+export function githubLinkToResponse(
+  link: typeof taskGithubLinks.$inferSelect,
+) {
+  return {
+    id: link.id,
+    owner: link.owner,
+    repo: link.repo,
+    number: link.number,
+    kind: link.kind,
+    url: link.url,
+    state: link.state,
+    title: link.title,
+    lastSyncedAt: link.lastSyncedAt.toISOString(),
   }
 }
 

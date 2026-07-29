@@ -2,28 +2,12 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
-import type { taskGithubLinks } from '#db/schema'
 import { parseGithubIssueUrl } from '#integrations/github/issues'
 import { githubLinkErrorResponse } from '#routes/github-link-error'
+import { githubLinkToResponse } from '#routes/tasks/shared'
 import { linkTaskToGithubUrl, unlinkTask } from '#services/task-github-links'
 
 const linkSchema = z.object({ url: z.string().min(1) })
-
-export function githubLinkToResponse(
-  link: typeof taskGithubLinks.$inferSelect,
-) {
-  return {
-    id: link.id,
-    owner: link.owner,
-    repo: link.repo,
-    number: link.number,
-    kind: link.kind,
-    url: link.url,
-    state: link.state,
-    title: link.title,
-    lastSyncedAt: link.lastSyncedAt.toISOString(),
-  }
-}
 
 type TaskGithubLinkEnv = {
   Variables: {
