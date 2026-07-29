@@ -10,6 +10,20 @@ import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import { cn } from '#lib/utils'
 
+function useHandleStatusChange(id: string, status: Task['status']) {
+  const completeTask = useCompleteTask()
+  const updateStatus = useUpdateTaskStatus()
+
+  return (newStatus: Task['status']) => {
+    if (newStatus === status) return
+    if (newStatus === 'completed') {
+      completeTask.mutate(id)
+    } else {
+      updateStatus.mutate({ id, status: newStatus })
+    }
+  }
+}
+
 function ActionArea({
   status,
   onComplete,
@@ -72,19 +86,9 @@ function TaskRowContent({
   parentNumber,
   githubLink,
 }: TaskRowBaseProps) {
-  const completeTask = useCompleteTask()
-  const updateStatus = useUpdateTaskStatus()
+  const handleStatusChange = useHandleStatusChange(id, status)
   const isInProgress = status === 'in_progress'
   const isCompleted = status === 'completed'
-
-  const handleStatusChange = (newStatus: Task['status']) => {
-    if (newStatus === status) return
-    if (newStatus === 'completed') {
-      completeTask.mutate(id)
-    } else {
-      updateStatus.mutate({ id, status: newStatus })
-    }
-  }
 
   return (
     <div
@@ -133,7 +137,7 @@ function TaskRowContent({
       <ActionArea
         status={status}
         onComplete={() => {
-          completeTask.mutate(id)
+          handleStatusChange('completed')
         }}
       />
     </div>
@@ -188,8 +192,7 @@ export function TreeTaskRow({
   defaultExpanded?: boolean
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded)
-  const completeTask = useCompleteTask()
-  const updateStatus = useUpdateTaskStatus()
+  const handleStatusChange = useHandleStatusChange(node.id, node.status)
   const hasChildren = node.children.length > 0
   const isInProgress = node.status === 'in_progress'
   const isCompleted = node.status === 'completed'
@@ -198,15 +201,6 @@ export function TreeTaskRow({
     e.preventDefault()
     e.stopPropagation()
     setExpanded(!expanded)
-  }
-
-  const handleStatusChange = (newStatus: Task['status']) => {
-    if (newStatus === node.status) return
-    if (newStatus === 'completed') {
-      completeTask.mutate(node.id)
-    } else {
-      updateStatus.mutate({ id: node.id, status: newStatus })
-    }
   }
 
   return (
@@ -291,7 +285,7 @@ export function TreeTaskRow({
           <ActionArea
             status={node.status}
             onComplete={() => {
-              completeTask.mutate(node.id)
+              handleStatusChange('completed')
             }}
           />
         </div>
