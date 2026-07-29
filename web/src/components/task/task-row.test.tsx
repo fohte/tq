@@ -7,14 +7,10 @@ import { TreeTaskRow } from '#components/task/task-row'
 import type { TreeNode } from '#hooks/use-tasks'
 import { atIndex } from '#lib/test-utils'
 
-const mockHandleStatusAction = vi.fn()
-const mockHandleComplete = vi.fn()
+const mockMutate = vi.fn()
 
 vi.mock('#hooks/use-tasks', () => ({
-  useTaskActions: () => ({
-    handleStatusAction: mockHandleStatusAction,
-    handleComplete: mockHandleComplete,
-  }),
+  useCompleteTask: () => ({ mutate: mockMutate }),
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -43,7 +39,6 @@ function makeNode(overrides: Partial<TreeNode> = {}): TreeNode {
     recurrenceRule: null,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
-    activeTimeBlockStartTime: null,
     children: [],
     childCompletionCount: { completed: 0, total: 0 },
     ...overrides,

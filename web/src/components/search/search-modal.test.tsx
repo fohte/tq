@@ -23,7 +23,6 @@ const mockTasks = [
     recurrenceRule: null,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
-    activeTimeBlockStartTime: null,
   },
   {
     id: '00000000-0000-0000-0000-000000000002',
@@ -41,7 +40,6 @@ const mockTasks = [
     recurrenceRule: null,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
-    activeTimeBlockStartTime: null,
   },
 ]
 

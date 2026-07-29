@@ -8,11 +8,7 @@ import {
   connectMcpClient,
   parseToolJson,
 } from '#routes/mcp/testing'
-import {
-  createTask,
-  type TaskResponse,
-  type TimeBlockResponse,
-} from '#routes/tasks/testing'
+import { createTask, type TaskResponse } from '#routes/tasks/testing'
 import {
   assertDefined,
   jsonBody,
@@ -27,9 +23,7 @@ setupTestDb()
 // not the MCP read tools (read-tools.integration.test.ts) and not the write
 // tool's own response (write-tools.integration.test.ts).
 
-type StartedTaskResponse = TaskResponse & { timeBlock: TimeBlockResponse }
 type CompletedTaskResponse = TaskResponse & {
-  closedTimeBlocks: TimeBlockResponse[]
   nextTask: TaskResponse | null
 }
 
@@ -114,9 +108,7 @@ describe('REST/MCP parity', () => {
     const res = await app.request('/api/tasks?context=work')
     expect(res.status).toBe(200)
 
-    expect(await jsonBody<unknown[]>(res)).toEqual([
-      { ...data, activeTimeBlockStartTime: null },
-    ])
+    expect(await jsonBody<unknown[]>(res)).toEqual([data])
   })
 
   it('a title updated via update_task is visible through GET /api/tasks/:id', async () => {
@@ -139,15 +131,14 @@ describe('REST/MCP parity', () => {
     })
   })
 
-  it('starting a task via update_task_status opens a TimeBlock visible through GET /api/tasks/:id', async () => {
+  it('setting a task to in_progress via update_task_status is visible through GET /api/tasks/:id', async () => {
     const task = await createTask('Start via MCP')
 
     const started = await callTool('update_task_status', {
       taskId: task.id,
       status: 'in_progress',
     })
-    const { timeBlock, ...data } =
-      passthroughSchema<StartedTaskResponse>().parse(parseToolJson(started))
+    const data = passthroughSchema<TaskResponse>().parse(parseToolJson(started))
 
     const res = await app.request(`/api/tasks/${task.id}`)
     expect(res.status).toBe(200)
@@ -156,7 +147,7 @@ describe('REST/MCP parity', () => {
       ...data,
       childCompletionCount: { total: 0, completed: 0 },
       pages: [],
-      timeBlocks: [timeBlock],
+      timeBlocks: [],
     })
   })
 
@@ -169,12 +160,8 @@ describe('REST/MCP parity', () => {
     const byId = (a: { id: string }, b: { id: string }) =>
       a.id.localeCompare(b.id)
     const expected = [
-      {
-        ...completedTask,
-        recurrenceRule: null,
-        activeTimeBlockStartTime: null,
-      },
-      { ...nextTask, recurrenceRule: null, activeTimeBlockStartTime: null },
+      { ...completedTask, recurrenceRule: null },
+      { ...nextTask, recurrenceRule: null },
     ]
 
     // GET /api/tasks (list) never hydrates recurrenceRule, unlike the detail

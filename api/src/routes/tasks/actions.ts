@@ -1,19 +1,13 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
-import { recurrenceRules, tasks, timeBlocks } from '#db/schema'
+import { recurrenceRules, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import {
-  requireTask,
-  taskStatus,
-  taskToResponse,
-  timeBlockToResponse,
-  updateStatusAndCloseTimeBlocks,
-} from '#routes/tasks/shared'
+import { requireTask, taskStatus, taskToResponse } from '#routes/tasks/shared'
 import { buildNextTaskData } from '#services/recurrence'
 
 const updateStatusSchema = z.object({
@@ -31,23 +25,12 @@ export const tasksActionsApp = new Hono()
     zValidator('json', updateStatusSchema),
     async (c) => {
       const id = c.req.param('id')
-      const existing = c.get('task')
       const { status } = c.req.valid('json')
-
-      const now = new Date()
-
-      // Close open TimeBlocks when transitioning away from in_progress
-      if (existing.status === 'in_progress' && status !== 'in_progress') {
-        await db
-          .update(timeBlocks)
-          .set({ endTime: now, updatedAt: now })
-          .where(and(eq(timeBlocks.taskId, id), isNull(timeBlocks.endTime)))
-      }
 
       const updated = firstOrThrow(
         await db
           .update(tasks)
-          .set({ status, updatedAt: now })
+          .set({ status, updatedAt: new Date() })
           .where(eq(tasks.id, id))
           .returning(),
       )
@@ -106,54 +89,6 @@ export const tasksActionsApp = new Hono()
       return c.json(taskToResponse(updated), 200)
     },
   )
-  .post('/:id/start', requireTask, async (c) => {
-    const id = c.req.param('id')
-    const existing = c.get('task')
-
-    if (existing.status === 'in_progress') {
-      return c.json({ error: 'Task is already in progress' }, 409)
-    }
-
-    const now = new Date()
-
-    const [taskRows, blockRows] = await Promise.all([
-      db
-        .update(tasks)
-        .set({ status: 'in_progress', updatedAt: now })
-        .where(eq(tasks.id, id))
-        .returning(),
-      db.insert(timeBlocks).values({ taskId: id, startTime: now }).returning(),
-    ])
-
-    return c.json(
-      {
-        ...taskToResponse(firstOrThrow(taskRows)),
-        timeBlock: timeBlockToResponse(firstOrThrow(blockRows)),
-      },
-      200,
-    )
-  })
-  .post('/:id/stop', requireTask, async (c) => {
-    const id = c.req.param('id')
-    const existing = c.get('task')
-
-    if (existing.status !== 'in_progress') {
-      return c.json({ error: 'Task is not in progress' }, 409)
-    }
-
-    const [updatedTask, closedBlocks] = await updateStatusAndCloseTimeBlocks(
-      id,
-      'todo',
-    )
-
-    return c.json(
-      {
-        ...taskToResponse(updatedTask),
-        closedTimeBlocks: closedBlocks.map(timeBlockToResponse),
-      },
-      200,
-    )
-  })
   .post('/:id/complete', requireTask, async (c) => {
     const id = c.req.param('id')
     const existing = c.get('task')
@@ -162,9 +97,12 @@ export const tasksActionsApp = new Hono()
       return c.json({ error: 'Task is already completed' }, 409)
     }
 
-    const [updatedTask, closedBlocks] = await updateStatusAndCloseTimeBlocks(
-      id,
-      'completed',
+    const updatedTask = firstOrThrow(
+      await db
+        .update(tasks)
+        .set({ status: 'completed', updatedAt: new Date() })
+        .where(eq(tasks.id, id))
+        .returning(),
     )
 
     let nextTask: ReturnType<typeof taskToResponse> | null = null
@@ -194,7 +132,6 @@ export const tasksActionsApp = new Hono()
     return c.json(
       {
         ...taskToResponse(updatedTask, completedTaskRule),
-        closedTimeBlocks: closedBlocks.map(timeBlockToResponse),
         nextTask,
       },
       200,

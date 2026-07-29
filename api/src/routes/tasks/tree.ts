@@ -1,11 +1,11 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
-import { and, inArray, isNull, sql } from 'drizzle-orm'
+import { inArray, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
-import { tasks, timeBlocks } from '#db/schema'
+import { tasks } from '#db/schema'
 import { buildTree } from '#routes/tasks/shared'
 
 const subtreeIdSchema = z.array(z.object({ id: z.string() }))
@@ -52,31 +52,7 @@ export const tasksTreeApp = new Hono().get(
         .orderBy(tasks.sortOrder, tasks.createdAt)
     }
 
-    const taskIds = treeTasks.map((t) => t.id)
-    const activeBlocks =
-      taskIds.length > 0
-        ? await db
-            .select({
-              taskId: timeBlocks.taskId,
-              startTime: timeBlocks.startTime,
-            })
-            .from(timeBlocks)
-            .where(
-              and(
-                inArray(timeBlocks.taskId, taskIds),
-                isNull(timeBlocks.endTime),
-              ),
-            )
-            .orderBy(timeBlocks.startTime)
-        : []
-
-    // Use the most recent open time block per task (last in ASC order)
-    const activeStartTimes = new Map<string, string>()
-    for (const block of activeBlocks) {
-      activeStartTimes.set(block.taskId, block.startTime.toISOString())
-    }
-
-    return buildTree(treeTasks, activeStartTimes, rootId).match(
+    return buildTree(treeTasks, rootId).match(
       (tree) => c.json(tree, 200),
       (error) => {
         captureWithFingerprint(error, 'api.tasks.build-tree-failed')

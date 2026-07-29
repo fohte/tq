@@ -7,19 +7,12 @@ import { callInternalRoute } from '#routes/mcp/route-bridge'
 import { createTaskSchema, updateTaskSchema } from '#routes/tasks/crud'
 import { taskStatus } from '#routes/tasks/shared'
 
-// Starting and completing a task carry side effects (opening a TimeBlock,
-// generating the next occurrence of a recurring task) that a direct status
-// write doesn't, so those two transitions go through their action endpoints.
-// Moving to `todo` goes through `PATCH /api/tasks/:id/status` instead of
-// `POST /:id/stop`: `/stop` requires the task to currently be in_progress,
-// which would reject a legitimate "reopen a completed task" or a no-op
-// todo -> todo call; `PATCH /status` still closes an open TimeBlock when
-// transitioning away from in_progress, just without echoing it back.
-const START_OR_COMPLETE_PATHS = {
-  in_progress: 'start',
-  completed: 'complete',
-} as const
-
+// Completing a task carries a side effect (generating the next occurrence of
+// a recurring task) that a direct status write doesn't, so that transition
+// goes through its action endpoint. Moving to `todo` or `in_progress` goes
+// through `PATCH /api/tasks/:id/status` instead: `POST /:id/complete`
+// requires the task not already be completed, which would reject a no-op
+// completed -> completed call.
 function toolResult(data: unknown): CallToolResult {
   return { content: [{ type: 'text', text: JSON.stringify(data) }] }
 }
@@ -79,22 +72,18 @@ export function registerWriteTools(server: McpServer): void {
     'update_task_status',
     {
       description:
-        'Change a task to todo, in_progress, or completed. Moving to ' +
-        'in_progress opens a TimeBlock; moving away from in_progress ' +
-        'closes it. Completing a task that has a recurrenceRule creates ' +
-        'the next occurrence of that task. An invalid transition (e.g. ' +
-        'starting a task that is already in_progress) is rejected.',
+        'Change a task to todo, in_progress, or completed. Completing a ' +
+        'task that has a recurrenceRule creates the next occurrence of ' +
+        'that task. Completing an already-completed task is rejected.',
       inputSchema: { taskId: z.uuid(), status: taskStatus },
     },
     async ({ taskId, status }) =>
-      status === 'todo'
-        ? callRoute(`/api/tasks/${taskId}/status`, {
+      status === 'completed'
+        ? callRoute(`/api/tasks/${taskId}/complete`, { method: 'POST' })
+        : callRoute(`/api/tasks/${taskId}/status`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status }),
-          })
-        : callRoute(`/api/tasks/${taskId}/${START_OR_COMPLETE_PATHS[status]}`, {
-            method: 'POST',
           }),
   )
 }

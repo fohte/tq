@@ -6,7 +6,6 @@ import type {
 } from '#components/project/project-filter-bar'
 import { TaskRow } from '#components/task/task-row'
 import type { ProjectTask } from '#hooks/use-projects'
-import type { Task } from '#hooks/use-tasks'
 
 interface TreeNode {
   task: ProjectTask
@@ -87,13 +86,6 @@ export function sortTasks(
   return sorted
 }
 
-function projectTaskToTask(pt: ProjectTask): Task {
-  return {
-    ...pt,
-    activeTimeBlockStartTime: null,
-  }
-}
-
 export function ProjectTaskList({
   tasks,
   statusFilter,
@@ -122,7 +114,7 @@ export function ProjectTaskList({
     <div className="py-1" data-testid="project-task-list">
       {flat.map(({ task, depth }) => (
         <div key={task.id} style={{ paddingLeft: `${String(depth * 24)}px` }}>
-          <TaskRow task={projectTaskToTask(task)} />
+          <TaskRow task={task} />
         </div>
       ))}
     </div>

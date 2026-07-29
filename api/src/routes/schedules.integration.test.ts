@@ -11,7 +11,7 @@ interface TimeBlockResponse {
   id: string
   taskId: string
   startTime: string
-  endTime: string | null
+  endTime: string
   isAutoScheduled: boolean
   createdAt: string
   updatedAt: string
@@ -100,7 +100,7 @@ function normalizeTimeBlock(block: TimeBlockResponse) {
 async function createTimeBlock(
   taskId: string,
   startTime: string,
-  endTime: string | null,
+  endTime: string,
   isAutoScheduled = false,
 ) {
   const res = await app.request('/api/schedule/time-blocks', {
@@ -137,16 +137,18 @@ describe('schedule/time-blocks API', () => {
       expect(body.isAutoScheduled).toBe(false)
     })
 
-    it('creates a time block with null endTime', async () => {
-      const task = await createTask('In-progress task')
-      const { res, body } = await createTimeBlock(
-        task.id,
-        '2026-03-22T09:00:00.000Z',
-        null,
-      )
+    it('returns 400 when endTime is missing', async () => {
+      const task = await createTask('No end time')
+      const res = await app.request('/api/schedule/time-blocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId: task.id,
+          startTime: '2026-03-22T09:00:00.000Z',
+        }),
+      })
 
-      expect(res.status).toBe(201)
-      expect(body.endTime).toBeNull()
+      expect(res.status).toBe(400)
     })
 
     it('returns 404 for non-existent task', async () => {
