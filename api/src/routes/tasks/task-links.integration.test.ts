@@ -9,11 +9,17 @@ import {
 import {
   createComment,
   createPage,
+  createRecurringTask,
   createTask,
   type LinkedTaskResponse,
   type TaskResponse,
 } from '#routes/tasks/testing'
-import { jsonBody, passthroughSchema, setupTestDb } from '#testing'
+import {
+  assertDefined,
+  jsonBody,
+  passthroughSchema,
+  setupTestDb,
+} from '#testing'
 
 setupTestDb()
 
@@ -81,6 +87,14 @@ describe('task mention links', () => {
       outgoing: [linkSummary(target)],
       incoming: [],
     })
+  })
+
+  it('makes the source visible as an incoming link on the target task', async () => {
+    const source = await createTask('Source')
+    const target = await createTask('Target')
+
+    await patchTask(source.id, { description: `See #${String(target.number)}` })
+
     expect(await getLinks(target.id)).toEqual({
       outgoing: [],
       incoming: [linkSummary(source)],
@@ -187,7 +201,36 @@ describe('task mention links', () => {
     })
   })
 
+  it('orders outgoing links by task number regardless of mention order', async () => {
+    // Created in this order, so `lowerNumber.number < higherNumber.number`.
+    const lowerNumber = await createTask('Lower number')
+    const higherNumber = await createTask('Higher number')
+    const source = await createTask('Source')
+    await patchTask(source.id, {
+      description: `See #${String(higherNumber.number)} and #${String(lowerNumber.number)}`,
+    })
+
+    expect(await getLinks(source.id)).toEqual({
+      outgoing: [linkSummary(lowerNumber), linkSummary(higherNumber)],
+      incoming: [],
+    })
+  })
+
   it('keeps the link while the mention still exists in another field', async () => {
+    const source = await createTask('Source')
+    const target = await createTask('Target')
+    await patchTask(source.id, { description: `See #${String(target.number)}` })
+    await createPage(source.id, 'Notes', `Also #${String(target.number)}`)
+
+    await patchTask(source.id, { description: 'No longer mentions anyone' })
+
+    expect(await getLinks(source.id)).toEqual({
+      outgoing: [linkSummary(target)],
+      incoming: [],
+    })
+  })
+
+  it('removes the link once the mention is gone from every field', async () => {
     const source = await createTask('Source')
     const target = await createTask('Target')
     await patchTask(source.id, { description: `See #${String(target.number)}` })
@@ -196,13 +239,7 @@ describe('task mention links', () => {
       'Notes',
       `Also #${String(target.number)}`,
     )
-
     await patchTask(source.id, { description: 'No longer mentions anyone' })
-
-    expect(await getLinks(source.id)).toEqual({
-      outgoing: [linkSummary(target)],
-      incoming: [],
-    })
 
     await patchPage(source.id, page.id, { content: 'Not anymore either' })
 
@@ -262,6 +299,29 @@ describe('task mention links', () => {
     })
 
     expect(await getLinks(source.id)).toEqual({
+      outgoing: [linkSummary(target)],
+      incoming: [],
+    })
+  })
+
+  it('links the next occurrence generated when a recurring task completes', async () => {
+    const target = await createTask('Target')
+    const source = await createRecurringTask(
+      'Recurring source',
+      { type: 'daily', interval: 1 },
+      { dueDate: '2026-03-22', description: `See #${String(target.number)}` },
+    )
+
+    const res = await app.request(`/api/tasks/${source.id}/complete`, {
+      method: 'POST',
+    })
+    expect(res.status).toBe(200)
+    const body = await jsonBody<
+      TaskResponse & { nextTask: TaskResponse | null }
+    >(res)
+    assertDefined(body.nextTask)
+
+    expect(await getLinks(body.nextTask.id)).toEqual({
       outgoing: [linkSummary(target)],
       incoming: [],
     })
