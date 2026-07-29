@@ -34,7 +34,7 @@ export function useTimeBlocks(date: string) {
 export interface CreateTimeBlockInput {
   taskId: string
   startTime: string
-  endTime: string | null
+  endTime: string
 }
 
 export function useCreateTimeBlock() {
@@ -95,7 +95,7 @@ export function useCreateTimeBlock() {
 export interface UpdateTimeBlockInput {
   id: string
   startTime?: string
-  endTime?: string | null
+  endTime?: string
   isAutoScheduled?: boolean
 }
 

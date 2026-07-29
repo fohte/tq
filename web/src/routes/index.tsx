@@ -78,37 +78,31 @@ function DayView() {
 
   const taskEvents: TimeBlockEvent[] = useMemo(() => {
     if (!timeBlocksData) return []
-    return timeBlocksData
-      .filter(
-        (block): block is typeof block & { endTime: string } =>
-          block.endTime !== null,
-      )
-      .map((block) => {
-        const task = taskMap.get(block.taskId)
-        const durationMs =
-          new Date(block.endTime).getTime() -
-          new Date(block.startTime).getTime()
-        const durationMinutes = Math.round(durationMs / 60000)
-        const durationStr = formatMinutes(durationMinutes)
+    return timeBlocksData.map((block) => {
+      const task = taskMap.get(block.taskId)
+      const durationMs =
+        new Date(block.endTime).getTime() - new Date(block.startTime).getTime()
+      const durationMinutes = Math.round(durationMs / 60000)
+      const durationStr = formatMinutes(durationMinutes)
 
-        return {
-          id: block.id,
-          title: task?.title ?? 'Unknown task',
-          start: block.startTime,
-          end: block.endTime,
-          type:
-            task?.status === 'completed'
-              ? 'completed'
-              : block.isAutoScheduled
-                ? 'auto'
-                : 'manual',
-          duration: durationStr,
-          redacted: !matchesContextFilter(
-            task?.context ?? 'personal',
-            contextMode,
-          ),
-        }
-      })
+      return {
+        id: block.id,
+        title: task?.title ?? 'Unknown task',
+        start: block.startTime,
+        end: block.endTime,
+        type:
+          task?.status === 'completed'
+            ? 'completed'
+            : block.isAutoScheduled
+              ? 'auto'
+              : 'manual',
+        duration: durationStr,
+        redacted: !matchesContextFilter(
+          task?.context ?? 'personal',
+          contextMode,
+        ),
+      }
+    })
   }, [timeBlocksData, taskMap, contextMode])
 
   const scheduleEvents: TimeBlockEvent[] = useMemo(() => {

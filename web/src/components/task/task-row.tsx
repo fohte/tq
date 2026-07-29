@@ -5,15 +5,12 @@ import {
   ChevronRight,
   CircleCheckBig,
   CircleDot,
-  Play,
   Square,
-  Timer,
 } from 'lucide-react'
 import { useState } from 'react'
 
-import { useLiveTimer } from '#hooks/use-live-timer'
 import type { Task, TreeNode } from '#hooks/use-tasks'
-import { useTaskActions } from '#hooks/use-tasks'
+import { useCompleteTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import { cn } from '#lib/utils'
 
@@ -31,101 +28,27 @@ function StatusIcon({ status }: { status: Task['status'] }) {
 
 function ActionArea({
   status,
-  onStart,
-  onStop,
   onComplete,
 }: {
   status: Task['status']
-  onStart: () => void
-  onStop: () => void
   onComplete: () => void
 }) {
   if (status === 'completed') return null
 
   return (
     <div className="flex shrink-0 items-center gap-1.5">
-      {status === 'in_progress' ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            onStop()
-          }}
-          className="flex h-7 w-7 items-center justify-center rounded-full bg-destructive text-white transition-opacity hover:opacity-80"
-          aria-label="Stop task"
-        >
-          <Square className="h-3 w-3 fill-current" />
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            onStart()
-          }}
-          className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white transition-opacity hover:opacity-80"
-          aria-label="Start task"
-        >
-          <Play className="h-3.5 w-3.5 fill-current" />
-        </button>
-      )}
-
-      {status === 'in_progress' && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            onComplete()
-          }}
-          className="flex h-6 w-6 items-center justify-center rounded-full bg-[#2E2E2E] text-white transition-opacity hover:opacity-80"
-          aria-label="Complete task"
-        >
-          <Check className="h-3 w-3" />
-        </button>
-      )}
-    </div>
-  )
-}
-
-export function LiveTimer({
-  startTime,
-  estimatedMinutes,
-}: {
-  startTime: string | null | undefined
-  estimatedMinutes: number | null | undefined
-}) {
-  const { formatted, isOverEstimate } = useLiveTimer(
-    startTime,
-    estimatedMinutes,
-  )
-
-  return (
-    <div className="flex items-center gap-1" data-testid="live-timer">
-      <Timer
-        className={cn(
-          'h-3 w-3',
-          isOverEstimate ? 'text-destructive' : 'text-primary',
-        )}
-      />
-      <span
-        className={cn(
-          'font-mono text-xs tabular-nums',
-          isOverEstimate ? 'text-destructive' : 'text-primary',
-        )}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          onComplete()
+        }}
+        className="flex h-6 w-6 items-center justify-center rounded-full bg-[#2E2E2E] text-white transition-opacity hover:opacity-80"
+        aria-label="Complete task"
       >
-        {formatted}
-      </span>
-      {estimatedMinutes != null && (
-        <>
-          <span className="text-xs text-muted-foreground">·</span>
-          <span className="font-mono text-xs text-muted-foreground">
-            est: {formatMinutes(estimatedMinutes)}
-          </span>
-        </>
-      )}
+        <Check className="h-3 w-3" />
+      </button>
     </div>
   )
 }
@@ -153,8 +76,6 @@ interface TaskRowBaseProps {
   context: Task['context']
   estimatedMinutes: number | null
   parentId: string | null
-  activeTimeBlockStartTime: string | null
-  updatedAt: string
 }
 
 function TaskRowContent({
@@ -164,10 +85,8 @@ function TaskRowContent({
   context,
   estimatedMinutes,
   parentId,
-  activeTimeBlockStartTime,
-  updatedAt,
 }: TaskRowBaseProps) {
-  const { handleStatusAction, handleComplete } = useTaskActions(id, status)
+  const completeTask = useCompleteTask()
   const isInProgress = status === 'in_progress'
   const isCompleted = status === 'completed'
 
@@ -203,14 +122,6 @@ function TaskRowContent({
           )}
         </div>
 
-        {/* TimerRow - only for in_progress */}
-        {isInProgress && (
-          <LiveTimer
-            startTime={activeTimeBlockStartTime ?? updatedAt}
-            estimatedMinutes={estimatedMinutes}
-          />
-        )}
-
         {/* BottomRow */}
         <div className="flex items-center gap-1.5">
           <ContextBadge context={context} />
@@ -224,9 +135,9 @@ function TaskRowContent({
 
       <ActionArea
         status={status}
-        onStart={handleStatusAction}
-        onStop={handleStatusAction}
-        onComplete={handleComplete}
+        onComplete={() => {
+          completeTask.mutate(id)
+        }}
       />
     </div>
   )
@@ -264,8 +175,6 @@ export function TaskRow({
         context={task.context}
         estimatedMinutes={task.estimatedMinutes}
         parentId={task.parentId}
-        activeTimeBlockStartTime={task.activeTimeBlockStartTime}
-        updatedAt={task.updatedAt}
       />
     </Link>
   )
@@ -281,10 +190,7 @@ export function TreeTaskRow({
   defaultExpanded?: boolean
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded)
-  const { handleStatusAction, handleComplete } = useTaskActions(
-    node.id,
-    node.status,
-  )
+  const completeTask = useCompleteTask()
   const hasChildren = node.children.length > 0
   const isInProgress = node.status === 'in_progress'
   const isCompleted = node.status === 'completed'
@@ -347,14 +253,6 @@ export function TreeTaskRow({
               </span>
             </div>
 
-            {/* TimerRow */}
-            {isInProgress && (
-              <LiveTimer
-                startTime={node.activeTimeBlockStartTime ?? node.updatedAt}
-                estimatedMinutes={node.estimatedMinutes}
-              />
-            )}
-
             {/* BottomRow */}
             <div className="flex items-center gap-1.5">
               {/* Child completion count */}
@@ -378,9 +276,9 @@ export function TreeTaskRow({
 
           <ActionArea
             status={node.status}
-            onStart={handleStatusAction}
-            onStop={handleStatusAction}
-            onComplete={handleComplete}
+            onComplete={() => {
+              completeTask.mutate(node.id)
+            }}
           />
         </div>
       </Link>

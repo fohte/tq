@@ -1,9 +1,8 @@
-import { Check, Loader2, Play, Square } from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
 
 import { useFocusNotes } from '#hooks/use-focus-notes'
-import { useLiveTimer } from '#hooks/use-live-timer'
 import type { Task } from '#hooks/use-tasks'
-import { useTaskActions, useUpdateTaskStatus } from '#hooks/use-tasks'
+import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import { cn } from '#lib/utils'
 
@@ -55,59 +54,16 @@ function FocusProgress({ tasks }: { tasks: Task[] }) {
   )
 }
 
-function FocusTimer({ task }: { task: Task }) {
-  const { formatted, isOverEstimate } = useLiveTimer(
-    task.activeTimeBlockStartTime,
-    task.estimatedMinutes,
-  )
-
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <span
-        data-testid="focus-timer"
-        className={cn(
-          'font-mono text-[48px] font-bold leading-none tabular-nums',
-          isOverEstimate ? 'text-destructive' : 'text-primary',
-        )}
-      >
-        {formatted}
-      </span>
-      {task.estimatedMinutes != null && (
-        <span className="text-xs text-muted-foreground">
-          est: {formatMinutes(task.estimatedMinutes)}
-        </span>
-      )}
-    </div>
-  )
-}
-
 function FocusActions({ task }: { task: Task }) {
-  const { handleStatusAction, handleComplete } = useTaskActions(
-    task.id,
-    task.status,
-  )
+  const completeTask = useCompleteTask()
 
   return (
     <div className="flex items-center gap-3">
       <button
         type="button"
-        onClick={handleStatusAction}
-        className={cn(
-          'flex h-12 w-12 items-center justify-center rounded-full text-white transition-opacity hover:opacity-80',
-          task.status === 'in_progress' ? 'bg-destructive' : 'bg-primary',
-        )}
-        aria-label={task.status === 'in_progress' ? 'Stop task' : 'Start task'}
-      >
-        {task.status === 'in_progress' ? (
-          <Square className="h-5 w-5 fill-current" />
-        ) : (
-          <Play className="h-5 w-5 fill-current" />
-        )}
-      </button>
-
-      <button
-        type="button"
-        onClick={handleComplete}
+        onClick={() => {
+          completeTask.mutate(task.id)
+        }}
         className="flex h-12 w-12 items-center justify-center rounded-full bg-[#2E2E2E] text-white transition-opacity hover:opacity-80"
         aria-label="Complete task"
       >
@@ -246,7 +202,6 @@ export function FocusViewPresentation({
 
       <div className="flex w-full max-w-lg flex-col items-center gap-4 text-center">
         <h1 className="text-xl font-semibold">{focusTask.title}</h1>
-        <FocusTimer task={focusTask} />
         <FocusActions task={focusTask} />
       </div>
 

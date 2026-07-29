@@ -21,7 +21,6 @@ const baseTask: Task = {
   recurrenceRule: null,
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
-  activeTimeBlockStartTime: null,
 }
 
 const nextTask: Task = {
@@ -106,29 +105,9 @@ export const InProgress: Story = {
     focusTask: {
       ...baseTask,
       status: 'in_progress',
-      activeTimeBlockStartTime: new Date(
-        Date.now() - 12 * 60 * 1000,
-      ).toISOString(),
     },
     nextTask,
     subtasks,
-  },
-}
-
-export const OverEstimate: Story = {
-  args: {
-    isLoading: false,
-    queueTasks: [{ ...baseTask, status: 'in_progress', estimatedMinutes: 10 }],
-    focusTask: {
-      ...baseTask,
-      status: 'in_progress',
-      estimatedMinutes: 10,
-      activeTimeBlockStartTime: new Date(
-        Date.now() - 25 * 60 * 1000,
-      ).toISOString(),
-    },
-    nextTask: null,
-    subtasks: [],
   },
 }
 

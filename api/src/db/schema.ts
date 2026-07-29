@@ -148,7 +148,7 @@ export const timeBlocks = pgTable(
       .notNull()
       .references(() => tasks.id, { onDelete: 'cascade' }),
     startTime: timestamp('start_time', { withTimezone: true }).notNull(),
-    endTime: timestamp('end_time', { withTimezone: true }),
+    endTime: timestamp('end_time', { withTimezone: true }).notNull(),
     isAutoScheduled: boolean('is_auto_scheduled').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

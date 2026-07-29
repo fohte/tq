@@ -1,9 +1,202 @@
 {
-  "id": "ff589269-1679-439d-ba14-4e4cf0712971",
-  "prevId": "cc736857-a1cf-4be9-a36f-1605b52690b9",
+  "id": "80b4e170-3d6d-4983-9aed-08b1e8899c90",
+  "prevId": "ff589269-1679-439d-ba14-4e4cf0712971",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.edits": {
+      "name": "edits",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "edits_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "page_id": {
+          "name": "page_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "comment_id": {
+          "name": "comment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "field": {
+          "name": "field",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "author_kind": {
+          "name": "author_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "author_agent": {
+          "name": "author_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_edits_task_id_created_at": {
+          "name": "idx_edits_task_id_created_at",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_edits_page_id": {
+          "name": "idx_edits_page_id",
+          "columns": [
+            {
+              "expression": "page_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"edits\".\"page_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_edits_comment_id": {
+          "name": "idx_edits_comment_id",
+          "columns": [
+            {
+              "expression": "comment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"edits\".\"comment_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "edits_task_id_tasks_id_fk": {
+          "name": "edits_task_id_tasks_id_fk",
+          "tableFrom": "edits",
+          "tableTo": "tasks",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "edits_page_id_task_pages_id_fk": {
+          "name": "edits_page_id_task_pages_id_fk",
+          "tableFrom": "edits",
+          "tableTo": "task_pages",
+          "columnsFrom": ["page_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "edits_comment_id_task_comments_id_fk": {
+          "name": "edits_comment_id_task_comments_id_fk",
+          "tableFrom": "edits",
+          "tableTo": "task_comments",
+          "columnsFrom": ["comment_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "edits_action_check": {
+          "name": "edits_action_check",
+          "value": "\"edits\".\"action\" IN ('create', 'update')"
+        },
+        "edits_action_field_check": {
+          "name": "edits_action_field_check",
+          "value": "(\"edits\".\"action\" = 'create' AND \"edits\".\"field\" IS NULL) OR (\"edits\".\"action\" = 'update' AND \"edits\".\"field\" IS NOT NULL)"
+        },
+        "edits_field_target_check": {
+          "name": "edits_field_target_check",
+          "value": "\"edits\".\"field\" IS NULL\n        OR (\"edits\".\"page_id\" IS NULL AND \"edits\".\"comment_id\" IS NULL AND \"edits\".\"field\" IN ('title', 'description'))\n        OR (\"edits\".\"page_id\" IS NOT NULL AND \"edits\".\"field\" IN ('title', 'content'))\n        OR (\"edits\".\"comment_id\" IS NOT NULL AND \"edits\".\"field\" = 'content')"
+        },
+        "edits_target_exclusive_check": {
+          "name": "edits_target_exclusive_check",
+          "value": "NOT (\"edits\".\"page_id\" IS NOT NULL AND \"edits\".\"comment_id\" IS NOT NULL)"
+        },
+        "edits_author_kind_check": {
+          "name": "edits_author_kind_check",
+          "value": "\"edits\".\"author_kind\" IN ('human', 'llm', 'system')"
+        },
+        "edits_author_agent_required_for_llm": {
+          "name": "edits_author_agent_required_for_llm",
+          "value": "(\"edits\".\"author_kind\" = 'llm') = (\"edits\".\"author_agent\" IS NOT NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.images": {
       "name": "images",
       "schema": "",
