@@ -143,29 +143,13 @@ export const tasksCrudApp = new Hono()
       }
 
       const result = await db
-        .select({
-          task: tasks,
-          activeTimeBlockStartTime: sql<string | null>`(
-          select ${timeBlocks.startTime}
-          from ${timeBlocks}
-          where ${timeBlocks.taskId} = ${tasks.id}
-            and ${timeBlocks.endTime} is null
-          order by ${timeBlocks.startTime} desc
-          limit 1
-        )`.as('active_time_block_start_time'),
-        })
+        .select()
         .from(tasks)
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(tasks.sortOrder, tasks.createdAt)
 
       return c.json(
-        result.map((r) => ({
-          ...taskToResponse(r.task),
-          activeTimeBlockStartTime:
-            r.activeTimeBlockStartTime != null
-              ? new Date(r.activeTimeBlockStartTime).toISOString()
-              : null,
-        })),
+        result.map((task) => taskToResponse(task)),
         200,
       )
     },

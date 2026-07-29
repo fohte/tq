@@ -127,7 +127,6 @@ export function useCreateTask() {
         recurrenceRule: null,
         createdAt: now,
         updatedAt: now,
-        activeTimeBlockStartTime: null,
       }
 
       queryClient.setQueriesData<Task[]>(
@@ -419,8 +418,6 @@ function useTaskActionMutation(
       )
 
       const now = new Date().toISOString()
-      const activeTimeBlockStartTime =
-        optimisticStatus === 'in_progress' ? now : null
 
       queryClient.setQueriesData<Task[]>(
         { queryKey: taskKeys.lists },
@@ -428,12 +425,7 @@ function useTaskActionMutation(
           if (!old) return old
           return old.map((task) =>
             task.id === id
-              ? {
-                  ...task,
-                  status: optimisticStatus,
-                  updatedAt: now,
-                  activeTimeBlockStartTime,
-                }
+              ? { ...task, status: optimisticStatus, updatedAt: now }
               : task,
           )
         },
@@ -466,51 +458,12 @@ function useTaskActionMutation(
   })
 }
 
-export function useStartTask() {
-  return useTaskActionMutation(
-    (id) => api.api.tasks[':id'].start.$post({ param: { id } }),
-    'in_progress',
-    'Failed to start task',
-  )
-}
-
-export function useStopTask() {
-  return useTaskActionMutation(
-    (id) => api.api.tasks[':id'].stop.$post({ param: { id } }),
-    'todo',
-    'Failed to stop task',
-  )
-}
-
 export function useCompleteTask() {
   return useTaskActionMutation(
     (id) => api.api.tasks[':id'].complete.$post({ param: { id } }),
     'completed',
     'Failed to complete task',
   )
-}
-
-export function useTaskActions(id: string, status: TaskStatus) {
-  const startTask = useStartTask()
-  const stopTask = useStopTask()
-  const completeTask = useCompleteTask()
-  const updateStatus = useUpdateTaskStatus()
-
-  const handleStatusAction = () => {
-    if (status === 'todo') {
-      startTask.mutate(id)
-    } else if (status === 'in_progress') {
-      stopTask.mutate(id)
-    } else {
-      updateStatus.mutate({ id, status: 'todo' })
-    }
-  }
-
-  const handleComplete = () => {
-    completeTask.mutate(id)
-  }
-
-  return { handleStatusAction, handleComplete }
 }
 
 export function useDeleteTask() {

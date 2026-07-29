@@ -6,22 +6,25 @@ import {
   createTask,
   TaskResponse,
   TEST_UUID,
-  TimeBlockResponse,
 } from '#routes/tasks/testing'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
+
+async function setStatus(taskId: string, status: string) {
+  return app.request(`/api/tasks/${taskId}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+}
 
 describe('tasks actions API', () => {
   describe('PATCH /api/tasks/:id/status', () => {
     it('updates task status', async () => {
       const created = await createTask('Task')
 
-      const res = await app.request(`/api/tasks/${created.id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'in_progress' }),
-      })
+      const res = await setStatus(created.id, 'in_progress')
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
@@ -29,43 +32,15 @@ describe('tasks actions API', () => {
     })
 
     it('returns 404 for non-existent task', async () => {
-      const res = await app.request(`/api/tasks/${TEST_UUID}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'completed' }),
-      })
+      const res = await setStatus(TEST_UUID, 'completed')
 
       expect(res.status).toBe(404)
-    })
-
-    it('closes open TimeBlocks when status changes away from in_progress', async () => {
-      const task = await createTask('Status change')
-      await app.request(`/api/tasks/${task.id}/start`, { method: 'POST' })
-
-      // Change status via PATCH /status (not /complete)
-      await app.request(`/api/tasks/${task.id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'completed' }),
-      })
-
-      const res = await app.request(`/api/tasks/${task.id}`)
-      const body = await jsonBody<
-        TaskResponse & { timeBlocks: TimeBlockResponse[] }
-      >(res)
-      expect(body.timeBlocks).toHaveLength(1)
-      assertDefined(body.timeBlocks[0])
-      expect(body.timeBlocks[0].endTime).not.toBeNull()
     })
 
     it('returns 400 for invalid status', async () => {
       const created = await createTask('Task')
 
-      const res = await app.request(`/api/tasks/${created.id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'invalid' }),
-      })
+      const res = await setStatus(created.id, 'invalid')
 
       expect(res.status).toBe(400)
     })
@@ -143,114 +118,17 @@ describe('tasks actions API', () => {
     })
   })
 
-  describe('POST /api/tasks/:id/start', () => {
-    it('sets status to in_progress and creates a TimeBlock', async () => {
-      const task = await createTask('Start me')
-
-      const res = await app.request(`/api/tasks/${task.id}/start`, {
-        method: 'POST',
-      })
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<
-        TaskResponse & { timeBlock: TimeBlockResponse }
-      >(res)
-      expect(body.status).toBe('in_progress')
-      expect(body.timeBlock.taskId).toBe(task.id)
-      expect(body.timeBlock.startTime).toBeDefined()
-      expect(body.timeBlock.endTime).toBeNull()
-    })
-
-    it('returns 409 when task is already in progress', async () => {
-      const task = await createTask('Already started')
-      await app.request(`/api/tasks/${task.id}/start`, { method: 'POST' })
-
-      const res = await app.request(`/api/tasks/${task.id}/start`, {
-        method: 'POST',
-      })
-
-      expect(res.status).toBe(409)
-    })
-
-    it('returns 404 for non-existent task', async () => {
-      const res = await app.request(`/api/tasks/${TEST_UUID}/start`, {
-        method: 'POST',
-      })
-
-      expect(res.status).toBe(404)
-    })
-  })
-
-  describe('POST /api/tasks/:id/stop', () => {
-    it('sets status to todo and closes open TimeBlocks', async () => {
-      const task = await createTask('Stop me')
-      await app.request(`/api/tasks/${task.id}/start`, { method: 'POST' })
-
-      const res = await app.request(`/api/tasks/${task.id}/stop`, {
-        method: 'POST',
-      })
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<
-        TaskResponse & { closedTimeBlocks: TimeBlockResponse[] }
-      >(res)
-      expect(body.status).toBe('todo')
-      expect(body.closedTimeBlocks).toHaveLength(1)
-      assertDefined(body.closedTimeBlocks[0])
-      expect(body.closedTimeBlocks[0].endTime).not.toBeNull()
-    })
-
-    it('returns 409 when task is not in progress', async () => {
-      const task = await createTask('Not started')
-
-      const res = await app.request(`/api/tasks/${task.id}/stop`, {
-        method: 'POST',
-      })
-
-      expect(res.status).toBe(409)
-    })
-
-    it('returns 404 for non-existent task', async () => {
-      const res = await app.request(`/api/tasks/${TEST_UUID}/stop`, {
-        method: 'POST',
-      })
-
-      expect(res.status).toBe(404)
-    })
-  })
-
   describe('POST /api/tasks/:id/complete', () => {
-    it('sets status to completed and closes open TimeBlocks', async () => {
+    it('sets status to completed', async () => {
       const task = await createTask('Complete me')
-      await app.request(`/api/tasks/${task.id}/start`, { method: 'POST' })
 
       const res = await app.request(`/api/tasks/${task.id}/complete`, {
         method: 'POST',
       })
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<
-        TaskResponse & { closedTimeBlocks: TimeBlockResponse[] }
-      >(res)
+      const body = await jsonBody<TaskResponse>(res)
       expect(body.status).toBe('completed')
-      expect(body.closedTimeBlocks).toHaveLength(1)
-      assertDefined(body.closedTimeBlocks[0])
-      expect(body.closedTimeBlocks[0].endTime).not.toBeNull()
-    })
-
-    it('completes a task that was not started (no open TimeBlocks)', async () => {
-      const task = await createTask('Direct complete')
-
-      const res = await app.request(`/api/tasks/${task.id}/complete`, {
-        method: 'POST',
-      })
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<
-        TaskResponse & { closedTimeBlocks: TimeBlockResponse[] }
-      >(res)
-      expect(body.status).toBe('completed')
-      expect(body.closedTimeBlocks).toHaveLength(0)
     })
 
     it('returns 409 when task is already completed', async () => {
@@ -287,10 +165,7 @@ describe('tasks actions API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<
-        TaskResponse & {
-          closedTimeBlocks: TimeBlockResponse[]
-          nextTask: TaskResponse | null
-        }
+        TaskResponse & { nextTask: TaskResponse | null }
       >(res)
       expect(body.status).toBe('completed')
       assertDefined(body.nextTask)
@@ -428,8 +303,8 @@ describe('tasks actions API', () => {
       const task1 = await createTask('Task 1')
       const task2 = await createTask('Task 2')
 
-      await app.request(`/api/tasks/${task1.id}/start`, { method: 'POST' })
-      await app.request(`/api/tasks/${task2.id}/start`, { method: 'POST' })
+      await setStatus(task1.id, 'in_progress')
+      await setStatus(task2.id, 'in_progress')
 
       const res1 = await app.request(`/api/tasks/${task1.id}`)
       const res2 = await app.request(`/api/tasks/${task2.id}`)

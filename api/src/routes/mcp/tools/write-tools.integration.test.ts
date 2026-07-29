@@ -5,12 +5,12 @@ import {
   type CallToolResult,
   CallToolResultSchema,
 } from '@modelcontextprotocol/sdk/types.js'
-import { and, eq, isNull } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { labels, taskLabels, timeBlocks } from '#db/schema'
+import { labels, taskLabels } from '#db/schema'
 import { createTask, TEST_UUID } from '#routes/tasks/testing'
 import { passthroughSchema, setupTestDb } from '#testing'
 
@@ -211,7 +211,7 @@ describe('update_task tool', () => {
 })
 
 describe('update_task_status tool', () => {
-  it('starts a task, opening a TimeBlock', async () => {
+  it('sets a task to in_progress', async () => {
     const task = await createTask('Start me')
 
     const result = await callTool('update_task_status', {
@@ -235,19 +235,10 @@ describe('update_task_status tool', () => {
       sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
-      timeBlock: {
-        id: '<uuid>',
-        taskId: '<uuid>',
-        startTime: '<timestamp>',
-        endTime: null,
-        isAutoScheduled: false,
-        createdAt: '<timestamp>',
-        updatedAt: '<timestamp>',
-      },
     })
   })
 
-  it('stops a task, closing the open TimeBlock', async () => {
+  it('moves a task back to todo', async () => {
     const task = await createTask('Stop me')
     await callTool('update_task_status', {
       taskId: task.id,
@@ -276,12 +267,6 @@ describe('update_task_status tool', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
-
-    const openTimeBlocks = await db
-      .select()
-      .from(timeBlocks)
-      .where(and(eq(timeBlocks.taskId, task.id), isNull(timeBlocks.endTime)))
-    expect(openTimeBlocks).toEqual([])
   })
 
   it('reopens a completed task by moving it back to todo', async () => {
@@ -352,7 +337,6 @@ describe('update_task_status tool', () => {
       sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
-      closedTimeBlocks: [],
       nextTask: {
         id: '<uuid>',
         title: 'Daily recurring task',
@@ -376,24 +360,6 @@ describe('update_task_status tool', () => {
         createdAt: '<timestamp>',
         updatedAt: '<timestamp>',
       },
-    })
-  })
-
-  it('rejects starting a task that is already in progress', async () => {
-    const task = await createTask('Already started')
-    await callTool('update_task_status', {
-      taskId: task.id,
-      status: 'in_progress',
-    })
-
-    const result = await callTool('update_task_status', {
-      taskId: task.id,
-      status: 'in_progress',
-    })
-
-    expect(result).toEqual({
-      isError: true,
-      content: [{ type: 'text', text: 'Task is already in progress' }],
     })
   })
 })

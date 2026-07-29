@@ -195,21 +195,11 @@ describe('externalEventsToBusyRanges', () => {
 
 describe('manualBlocksToBusyRanges', () => {
   it('converts blocks with a known end time', () => {
-    const ranges = manualBlocksToBusyRanges(
-      [{ startTime: d('09:00'), endTime: d('10:00') }],
-      d('18:00'),
-    )
+    const ranges = manualBlocksToBusyRanges([
+      { startTime: d('09:00'), endTime: d('10:00') },
+    ])
 
     expect(ranges).toEqual([{ start: d('09:00'), end: d('10:00') }])
-  })
-
-  it('falls back to the given end for in-progress blocks (null endTime)', () => {
-    const ranges = manualBlocksToBusyRanges(
-      [{ startTime: d('09:00'), endTime: null }],
-      d('18:00'),
-    )
-
-    expect(ranges).toEqual([{ start: d('09:00'), end: d('18:00') }])
   })
 })
 

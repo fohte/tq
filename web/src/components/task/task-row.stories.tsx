@@ -28,7 +28,6 @@ const baseTask: Task = {
   recurrenceRule: null,
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
-  activeTimeBlockStartTime: null,
 }
 
 function Providers({ children }: { children: ReactNode }) {
@@ -95,10 +94,6 @@ export const InProgress: Story = {
       ...baseTask,
       status: 'in_progress',
       title: 'Review pull request',
-      updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      activeTimeBlockStartTime: new Date(
-        Date.now() - 5 * 60 * 1000,
-      ).toISOString(),
     },
   },
 }
@@ -110,25 +105,6 @@ export const InProgressWithEstimate: Story = {
       status: 'in_progress',
       title: 'Reviewing code changes',
       estimatedMinutes: 30,
-      updatedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-      activeTimeBlockStartTime: new Date(
-        Date.now() - 10 * 60 * 1000,
-      ).toISOString(),
-    },
-  },
-}
-
-export const InProgressOverEstimate: Story = {
-  args: {
-    task: {
-      ...baseTask,
-      status: 'in_progress',
-      title: 'Task running over estimate',
-      estimatedMinutes: 15,
-      updatedAt: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
-      activeTimeBlockStartTime: new Date(
-        Date.now() - 20 * 60 * 1000,
-      ).toISOString(),
     },
   },
 }
@@ -196,10 +172,6 @@ export const AllVariants: Story = {
         title: 'In progress task',
         status: 'in_progress',
         estimatedMinutes: 60,
-        updatedAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-        activeTimeBlockStartTime: new Date(
-          Date.now() - 25 * 60 * 1000,
-        ).toISOString(),
       },
       {
         ...baseTask,
@@ -237,10 +209,6 @@ export const AllVariants: Story = {
         context: 'work',
         estimatedMinutes: 180,
         parentId: 'abcd0000-0000-0000-0000-000000000000',
-        updatedAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-        activeTimeBlockStartTime: new Date(
-          Date.now() - 45 * 60 * 1000,
-        ).toISOString(),
       },
     ]
 

@@ -1,6 +1,6 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
-import { and, eq, gte, inArray, isNull, lte, notInArray, or } from 'drizzle-orm'
+import { and, eq, gte, inArray, lte, notInArray } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { createFactory } from 'hono/factory'
 import { err, ok } from 'neverthrow'
@@ -32,13 +32,13 @@ const timePattern = /^\d{2}:\d{2}$/
 const createTimeBlockSchema = z.object({
   taskId: z.uuid(),
   startTime: z.iso.datetime(),
-  endTime: z.iso.datetime().nullable().optional(),
+  endTime: z.iso.datetime(),
   isAutoScheduled: z.boolean().optional(),
 })
 
 const updateTimeBlockSchema = z.object({
   startTime: z.iso.datetime().optional(),
-  endTime: z.iso.datetime().nullable().optional(),
+  endTime: z.iso.datetime().optional(),
   isAutoScheduled: z.boolean().optional(),
 })
 
@@ -92,7 +92,7 @@ function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
     id: block.id,
     taskId: block.taskId,
     startTime: block.startTime.toISOString(),
-    endTime: block.endTime?.toISOString() ?? null,
+    endTime: block.endTime.toISOString(),
     isAutoScheduled: block.isAutoScheduled,
     createdAt: block.createdAt.toISOString(),
     updatedAt: block.updatedAt.toISOString(),
@@ -220,7 +220,7 @@ export const schedulesApp = new Hono()
           .values({
             taskId: input.taskId,
             startTime: new Date(input.startTime),
-            endTime: input.endTime != null ? new Date(input.endTime) : null,
+            endTime: new Date(input.endTime),
             isAutoScheduled: input.isAutoScheduled ?? false,
           })
           .returning(),
@@ -242,7 +242,7 @@ export const schedulesApp = new Hono()
         .where(
           and(
             lte(timeBlocks.startTime, dayEnd),
-            or(gte(timeBlocks.endTime, dayStart), isNull(timeBlocks.endTime)),
+            gte(timeBlocks.endTime, dayStart),
           ),
         )
         .orderBy(timeBlocks.startTime)
@@ -270,7 +270,7 @@ export const schedulesApp = new Hono()
         updates.startTime = new Date(input.startTime)
       }
       if (input.endTime !== undefined) {
-        updates.endTime = input.endTime != null ? new Date(input.endTime) : null
+        updates.endTime = new Date(input.endTime)
       }
       if (input.isAutoScheduled !== undefined) {
         updates.isAutoScheduled = input.isAutoScheduled
@@ -426,7 +426,7 @@ export const schedulesApp = new Hono()
         and(
           eq(timeBlocks.isAutoScheduled, false),
           lte(timeBlocks.startTime, dayEnd),
-          or(gte(timeBlocks.endTime, dayStart), isNull(timeBlocks.endTime)),
+          gte(timeBlocks.endTime, dayStart),
         ),
       )
 
@@ -443,7 +443,7 @@ export const schedulesApp = new Hono()
 
     const busyRanges = [
       ...externalEventsToBusyRanges(externalEvents),
-      ...manualBlocksToBusyRanges(manualBlocks, dayEnd),
+      ...manualBlocksToBusyRanges(manualBlocks),
       ...expandedScheduleBlocksToBusyRanges(expandedScheduleBlocks, offset),
     ]
 
