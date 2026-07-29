@@ -1,6 +1,6 @@
 {
-  "id": "e7034fd8-8a37-4049-99d1-e5dc967bf3de",
-  "prevId": "f542db8e-c50a-4cf8-902d-f921ea81a221",
+  "id": "a0606eff-d2ce-4e1f-8a9c-461133838cf9",
+  "prevId": "e7034fd8-8a37-4049-99d1-e5dc967bf3de",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -823,6 +823,83 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.task_links": {
+      "name": "task_links",
+      "schema": "",
+      "columns": {
+        "source_task_id": {
+          "name": "source_task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_task_id": {
+          "name": "target_task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_task_links_target_task_id": {
+          "name": "idx_task_links_target_task_id",
+          "columns": [
+            {
+              "expression": "target_task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "task_links_source_task_id_tasks_id_fk": {
+          "name": "task_links_source_task_id_tasks_id_fk",
+          "tableFrom": "task_links",
+          "tableTo": "tasks",
+          "columnsFrom": ["source_task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "task_links_target_task_id_tasks_id_fk": {
+          "name": "task_links_target_task_id_tasks_id_fk",
+          "tableFrom": "task_links",
+          "tableTo": "tasks",
+          "columnsFrom": ["target_task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "task_links_source_task_id_target_task_id_pk": {
+          "name": "task_links_source_task_id_target_task_id_pk",
+          "columns": ["source_task_id", "target_task_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "task_links_no_self_link": {
+          "name": "task_links_no_self_link",
+          "value": "\"task_links\".\"source_task_id\" != \"task_links\".\"target_task_id\""
+        }
+      },
       "isRLSEnabled": false
     },
     "public.task_pages": {

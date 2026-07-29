@@ -47,8 +47,15 @@
     {
       "idx": 6,
       "version": "7",
-      "when": 1785334148628,
-      "tag": "0006_add_task_links",
+      "when": 1785332106875,
+      "tag": "0006_dizzy_vulture",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785336185922,
+      "tag": "0007_panoramic_lucky_pierre",
       "breakpoints": true
     }
   ]
