@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import { taskComments, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
+import { recordEdit } from '#lib/edits'
 
 const createCommentSchema = z.object({
   content: z.string().min(1),
@@ -60,16 +61,28 @@ export const taskCommentsApp = new Hono()
     async (c) => {
       const taskId = c.req.param('taskId')
       const input = c.req.valid('json')
+      const author = c.get('author')
 
-      const comment = firstOrThrow(
-        await db
-          .insert(taskComments)
-          .values({
-            taskId,
-            content: input.content,
-          })
-          .returning(),
-      )
+      const comment = await db.transaction(async (tx) => {
+        const comment = firstOrThrow(
+          await tx
+            .insert(taskComments)
+            .values({
+              taskId,
+              content: input.content,
+            })
+            .returning(),
+        )
+
+        await recordEdit(
+          tx,
+          { taskId, commentId: comment.id },
+          { action: 'create' },
+          author,
+        )
+
+        return comment
+      })
 
       return c.json(commentToResponse(comment), 201)
     },
@@ -80,6 +93,7 @@ export const taskCommentsApp = new Hono()
     async (c) => {
       const taskId = c.req.param('taskId')
       const commentId = c.req.param('commentId')
+      const author = c.get('author')
 
       const existing = await db.query.taskComments.findFirst({
         where: and(
@@ -92,14 +106,28 @@ export const taskCommentsApp = new Hono()
       }
 
       const input = c.req.valid('json')
+      const contentChanged = input.content !== existing.content
 
-      const updated = firstOrThrow(
-        await db
-          .update(taskComments)
-          .set({ content: input.content, updatedAt: new Date() })
-          .where(eq(taskComments.id, commentId))
-          .returning(),
-      )
+      const updated = await db.transaction(async (tx) => {
+        const updated = firstOrThrow(
+          await tx
+            .update(taskComments)
+            .set({ content: input.content, updatedAt: new Date() })
+            .where(eq(taskComments.id, commentId))
+            .returning(),
+        )
+
+        if (contentChanged) {
+          await recordEdit(
+            tx,
+            { taskId, commentId },
+            { action: 'update', field: 'content' },
+            author,
+          )
+        }
+
+        return updated
+      })
 
       return c.json(commentToResponse(updated), 200)
     },

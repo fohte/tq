@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import { recurrenceRules, tasks, timeBlocks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
+import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
 import {
   requireTask,
   taskStatus,
@@ -184,9 +185,18 @@ export const tasksActionsApp = new Hono()
           )
           return c.json({ error: 'Internal server error' }, 500)
         }
-        const created = firstOrThrow(
-          await db.insert(tasks).values(nextDataResult.value).returning(),
-        )
+        const created = await db.transaction(async (tx) => {
+          const created = firstOrThrow(
+            await tx.insert(tasks).values(nextDataResult.value).returning(),
+          )
+          await recordEdit(
+            tx,
+            { taskId: created.id },
+            { action: 'create' },
+            SYSTEM_AUTHOR,
+          )
+          return created
+        })
         nextTask = taskToResponse(created, completedTaskRule)
       }
     }

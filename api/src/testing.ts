@@ -1,34 +1,68 @@
-import { sql } from 'drizzle-orm'
+import { TransactionRollbackError } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
-import { afterAll, afterEach, beforeAll, beforeEach, expect } from 'vitest'
+import { afterAll, afterEach, beforeEach, expect } from 'vitest'
 import { z, type ZodType } from 'zod'
 
 import * as connection from '#db/connection'
 import * as schema from '#db/schema'
 import { DATABASE_URL } from '#env'
 
-// Single connection to ensure BEGIN/ROLLBACK operate on the same connection
+// Single connection so the transaction below and every query issued during
+// a test run on the same underlying Postgres session.
 const testClient = postgres(DATABASE_URL, { max: 1 })
 const testDb = drizzle(testClient, { schema })
 
-export function setupTestDb() {
-  beforeAll(() => {
-    // Replace the db export with our single-connection test db
-    Object.defineProperty(connection, 'db', {
-      value: testDb,
-      writable: true,
-      configurable: true,
-    })
+function setDb(value: unknown) {
+  Object.defineProperty(connection, 'db', {
+    value,
+    writable: true,
+    configurable: true,
   })
+}
 
-  // Transaction strategy: wrap each test in a transaction and rollback after
+export function setupTestDb() {
+  let releaseTransaction: (() => void) | undefined
+  let transactionSettled: Promise<void> | undefined
+
+  // Transaction strategy: hold a real transaction open across the whole test
+  // body (via a gate promise) and roll it back afterward. The db export is
+  // swapped to the `tx` handed to the transaction callback, making it a
+  // PgTransaction; a nested db.transaction() call in application code then
+  // becomes a SAVEPOINT instead of committing the outer test transaction
+  // early.
   beforeEach(async () => {
-    await testDb.execute(sql`BEGIN`)
+    let markReady: () => void
+    const ready = new Promise<void>((resolve) => {
+      markReady = resolve
+    })
+    const released = new Promise<void>((resolve) => {
+      releaseTransaction = resolve
+    })
+
+    transactionSettled = testDb
+      .transaction(async (tx) => {
+        setDb(tx)
+        markReady()
+        await released
+        tx.rollback()
+      })
+      .catch((error: unknown) => {
+        if (error instanceof TransactionRollbackError) {
+          return undefined
+        }
+        return Promise.reject(
+          error instanceof Error ? error : new Error(String(error)),
+        )
+      })
+
+    await ready
   })
 
   afterEach(async () => {
-    await testDb.execute(sql`ROLLBACK`)
+    releaseTransaction?.()
+    await transactionSettled
+    setDb(testDb)
   })
 
   afterAll(async () => {
