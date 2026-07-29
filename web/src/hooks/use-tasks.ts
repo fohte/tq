@@ -113,6 +113,7 @@ export function useCreateTask() {
       const now = new Date().toISOString()
       const optimisticTask: Task = {
         id: `optimistic-${String(Date.now())}`,
+        number: -1,
         title: input.title,
         description: input.description ?? null,
         status: 'todo',
@@ -121,6 +122,7 @@ export function useCreateTask() {
         dueDate: input.dueDate ?? null,
         estimatedMinutes: input.estimatedMinutes ?? null,
         parentId: null,
+        parentNumber: null,
         projectId: input.projectId ?? null,
         sortOrder: 0,
         recurrenceRuleId: null,

@@ -66,6 +66,12 @@ export const tasks = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
+    // Globally unique, human-facing sequential id (e.g. `#123`) for display
+    // and URL lookup; the UUID `id` remains the primary key used internally
+    // and in FKs. `generatedAlwaysAsIdentity` (rather than `serial`) makes
+    // Postgres reject any insert that tries to set this explicitly, keeping
+    // assigned numbers immutable.
+    number: integer('number').notNull().generatedAlwaysAsIdentity().unique(),
     title: text('title').notNull(),
     description: text('description'),
     status: text('status', {

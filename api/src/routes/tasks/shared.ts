@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { createFactory } from 'hono/factory'
 import { err, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
@@ -27,6 +28,7 @@ export function taskToResponse(
 ) {
   return {
     id: task.id,
+    number: task.number,
     title: task.title,
     description: task.description,
     status: task.status,
@@ -42,6 +44,20 @@ export function taskToResponse(
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   }
+}
+
+// Self-join alias resolving a task row's parent's `number`, for list
+// endpoints that render a "← #<parent number>" reference without fetching
+// the whole parent task. Callers add `.leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))`
+// and select `parentTasks.number`, then format the row with
+// `taskWithParentNumberToResponse`.
+export const parentTasks = alias(tasks, 'parent_task')
+
+export function taskWithParentNumberToResponse(
+  task: typeof tasks.$inferSelect,
+  parentNumber: number | null,
+) {
+  return { ...taskToResponse(task), parentNumber }
 }
 
 export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
@@ -122,11 +138,22 @@ type TaskEnv = {
 
 const factory = createFactory<TaskEnv, '/:id'>()
 
-export const requireTask = factory.createMiddleware(async (c, next) => {
-  const id = c.req.param('id')
+const numericIdPattern = /^\d+$/
+// `tasks.number` is a Postgres `integer`; a digit string past this range
+// would make the query itself throw (500) instead of yielding a normal
+// 404, so it's treated as a non-numeric (UUID-lookup, always-empty) id.
+const PG_INTEGER_MAX = 2147483647
 
+export const requireTask = factory.createMiddleware(async (c, next) => {
+  const param = c.req.param('id')
+  const isNumericId =
+    numericIdPattern.test(param) && Number(param) <= PG_INTEGER_MAX
+
+  // Task detail URLs accept either the UUID primary key or the human-facing
+  // sequential number (e.g. `/tasks/123`), so bookmarked UUID links keep
+  // working alongside the new short form.
   const task = await db.query.tasks.findFirst({
-    where: eq(tasks.id, id),
+    where: isNumericId ? eq(tasks.number, Number(param)) : eq(tasks.id, param),
   })
   if (!task) {
     return c.json({ error: 'Task not found' }, 404)

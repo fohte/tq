@@ -20,16 +20,20 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
 
-function normalizeDynamicValues(value: unknown): unknown {
+// `number` is a per-suite-run sequential value (the sequence isn't rolled
+// back with the surrounding test transaction), so it's normalized like the
+// uuid/timestamp fields rather than asserted on directly.
+function normalizeDynamicValues(value: unknown, key?: string): unknown {
+  if (key === 'number' && typeof value === 'number') return '<number>'
   if (typeof value === 'string') {
     if (UUID_PATTERN.test(value)) return '<uuid>'
     if (TIMESTAMP_PATTERN.test(value)) return '<timestamp>'
     return value
   }
-  if (Array.isArray(value)) return value.map(normalizeDynamicValues)
+  if (Array.isArray(value)) return value.map((v) => normalizeDynamicValues(v))
   if (value != null && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value).map(([key, v]) => [key, normalizeDynamicValues(v)]),
+      Object.entries(value).map(([k, v]) => [k, normalizeDynamicValues(v, k)]),
     )
   }
   return value
@@ -88,6 +92,7 @@ describe('create_task tool', () => {
 
     expect(parseToolData(result)).toEqual({
       id: '<uuid>',
+      number: '<number>',
       title: 'Write MCP tools',
       description: null,
       status: 'todo',
@@ -151,6 +156,7 @@ describe('update_task tool', () => {
 
     expect(parseToolData(result)).toEqual({
       id: '<uuid>',
+      number: '<number>',
       title: 'Updated title',
       description: 'Original description',
       status: 'todo',
@@ -180,6 +186,7 @@ describe('update_task tool', () => {
 
     expect(parseToolData(result)).toEqual({
       id: '<uuid>',
+      number: '<number>',
       title: 'Has description',
       description: null,
       status: 'todo',
@@ -221,6 +228,7 @@ describe('update_task_status tool', () => {
 
     expect(parseToolData(result)).toEqual({
       id: '<uuid>',
+      number: '<number>',
       title: 'Start me',
       description: null,
       status: 'in_progress',
@@ -252,6 +260,7 @@ describe('update_task_status tool', () => {
 
     expect(parseToolData(result)).toEqual({
       id: '<uuid>',
+      number: '<number>',
       title: 'Stop me',
       description: null,
       status: 'todo',
@@ -283,6 +292,7 @@ describe('update_task_status tool', () => {
 
     expect(parseToolData(result)).toEqual({
       id: '<uuid>',
+      number: '<number>',
       title: 'Reopen me',
       description: null,
       status: 'todo',
@@ -317,6 +327,7 @@ describe('update_task_status tool', () => {
 
     expect(parseToolData(result)).toEqual({
       id: '<uuid>',
+      number: '<number>',
       title: 'Daily recurring task',
       description: null,
       status: 'completed',
@@ -339,6 +350,7 @@ describe('update_task_status tool', () => {
       updatedAt: '<timestamp>',
       nextTask: {
         id: '<uuid>',
+        number: '<number>',
         title: 'Daily recurring task',
         description: null,
         status: 'todo',

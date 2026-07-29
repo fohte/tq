@@ -75,7 +75,7 @@ interface TaskRowBaseProps {
   status: Task['status']
   context: Task['context']
   estimatedMinutes: number | null
-  parentId: string | null
+  parentNumber: number | null
 }
 
 function TaskRowContent({
@@ -84,7 +84,7 @@ function TaskRowContent({
   status,
   context,
   estimatedMinutes,
-  parentId,
+  parentNumber,
 }: TaskRowBaseProps) {
   const completeTask = useCompleteTask()
   const isInProgress = status === 'in_progress'
@@ -115,9 +115,9 @@ function TaskRowContent({
           >
             {title}
           </span>
-          {parentId != null && (
+          {parentNumber != null && (
             <span className="shrink-0 text-xs text-muted-foreground">
-              ← #{parentId.slice(0, 4)}
+              ← #{parentNumber}
             </span>
           )}
         </div>
@@ -174,7 +174,7 @@ export function TaskRow({
         status={task.status}
         context={task.context}
         estimatedMinutes={task.estimatedMinutes}
-        parentId={task.parentId}
+        parentNumber={task.parentNumber}
       />
     </Link>
   )
