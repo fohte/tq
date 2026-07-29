@@ -5,8 +5,10 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { projects, tasks } from '#db/schema'
-import { taskToResponse } from '#routes/tasks/index'
-import { parentTasks } from '#routes/tasks/shared'
+import {
+  parentTasks,
+  taskWithParentNumberToResponse,
+} from '#routes/tasks/shared'
 
 export const projectStatus = z.enum([
   'active',
@@ -143,10 +145,7 @@ export const projectsApp = new Hono()
       .orderBy(tasks.sortOrder, tasks.createdAt)
 
     return c.json(
-      result.map((r) => ({
-        ...taskToResponse(r.task),
-        parentNumber: r.parentNumber,
-      })),
+      result.map((r) => taskWithParentNumberToResponse(r.task, r.parentNumber)),
       200,
     )
   })

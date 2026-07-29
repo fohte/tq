@@ -1,5 +1,5 @@
 {
-  "id": "7aff0def-82c3-4f45-bab1-8efbf0433b54",
+  "id": "0b369b50-dc34-4a08-ae59-9be421dc56e2",
   "prevId": "cc736857-a1cf-4be9-a36f-1605b52690b9",
   "version": "7",
   "dialect": "postgresql",
@@ -729,9 +729,20 @@
         },
         "number": {
           "name": "number",
-          "type": "serial",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "tasks_number_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
         },
         "title": {
           "name": "title",

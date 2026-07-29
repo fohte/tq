@@ -20,6 +20,7 @@ import {
   requireTask,
   taskStatus,
   taskToResponse,
+  taskWithParentNumberToResponse,
   timeBlockToResponse,
 } from '#routes/tasks/shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
@@ -163,12 +164,11 @@ export const tasksCrudApp = new Hono()
 
       return c.json(
         result.map((r) => ({
-          ...taskToResponse(r.task),
+          ...taskWithParentNumberToResponse(r.task, r.parentNumber),
           activeTimeBlockStartTime:
             r.activeTimeBlockStartTime != null
               ? new Date(r.activeTimeBlockStartTime).toISOString()
               : null,
-          parentNumber: r.parentNumber,
         })),
         200,
       )
