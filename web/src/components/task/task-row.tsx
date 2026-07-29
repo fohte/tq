@@ -1,32 +1,14 @@
 import { Link } from '@tanstack/react-router'
-import {
-  Check,
-  ChevronDown,
-  ChevronRight,
-  CircleCheckBig,
-  CircleDot,
-  Square,
-} from 'lucide-react'
+import { Check, ChevronDown, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 
 import { GithubLinkBadge } from '#components/task/github-link-badge'
+import { TaskStatusPicker } from '#components/task/task-status-picker'
 import type { GithubLink } from '#hooks/use-github-link'
 import type { Task, TreeNode } from '#hooks/use-tasks'
-import { useCompleteTask } from '#hooks/use-tasks'
+import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import { cn } from '#lib/utils'
-
-export function StatusIcon({ status }: { status: Task['status'] }) {
-  if (status === 'completed') {
-    return (
-      <CircleCheckBig className="h-[18px] w-[18px] text-muted-foreground" />
-    )
-  }
-  if (status === 'in_progress') {
-    return <CircleDot className="h-[18px] w-[18px] text-primary" />
-  }
-  return <Square className="h-[18px] w-[18px] text-muted-foreground" />
-}
 
 function ActionArea({
   status,
@@ -91,8 +73,18 @@ function TaskRowContent({
   githubLink,
 }: TaskRowBaseProps) {
   const completeTask = useCompleteTask()
+  const updateStatus = useUpdateTaskStatus()
   const isInProgress = status === 'in_progress'
   const isCompleted = status === 'completed'
+
+  const handleStatusChange = (newStatus: Task['status']) => {
+    if (newStatus === status) return
+    if (newStatus === 'completed') {
+      completeTask.mutate(id)
+    } else {
+      updateStatus.mutate({ id, status: newStatus })
+    }
+  }
 
   return (
     <div
@@ -104,7 +96,7 @@ function TaskRowContent({
         isCompleted && 'opacity-50',
       )}
     >
-      <StatusIcon status={status} />
+      <TaskStatusPicker status={status} onStatusChange={handleStatusChange} />
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         {/* TopRow */}
@@ -197,6 +189,7 @@ export function TreeTaskRow({
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const completeTask = useCompleteTask()
+  const updateStatus = useUpdateTaskStatus()
   const hasChildren = node.children.length > 0
   const isInProgress = node.status === 'in_progress'
   const isCompleted = node.status === 'completed'
@@ -205,6 +198,15 @@ export function TreeTaskRow({
     e.preventDefault()
     e.stopPropagation()
     setExpanded(!expanded)
+  }
+
+  const handleStatusChange = (newStatus: Task['status']) => {
+    if (newStatus === node.status) return
+    if (newStatus === 'completed') {
+      completeTask.mutate(node.id)
+    } else {
+      updateStatus.mutate({ id: node.id, status: newStatus })
+    }
   }
 
   return (
@@ -242,7 +244,10 @@ export function TreeTaskRow({
             <span className="w-5 shrink-0" />
           )}
 
-          <StatusIcon status={node.status} />
+          <TaskStatusPicker
+            status={node.status}
+            onStatusChange={handleStatusChange}
+          />
 
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             {/* TopRow */}

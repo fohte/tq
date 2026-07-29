@@ -8,9 +8,11 @@ import type { TreeNode } from '#hooks/use-tasks'
 import { atIndex } from '#lib/test-utils'
 
 const mockMutate = vi.fn()
+const mockUpdateStatusMutate = vi.fn()
 
 vi.mock('#hooks/use-tasks', () => ({
   useCompleteTask: () => ({ mutate: mockMutate }),
+  useUpdateTaskStatus: () => ({ mutate: mockUpdateStatusMutate }),
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -206,5 +208,10 @@ describe('TreeTaskRow', () => {
     })
     renderTree(node)
     expect(screen.getByText('tq#42')).toBeInTheDocument()
+  })
+
+  it('renders the status picker trigger for the task status', () => {
+    renderTree(makeNode())
+    expect(screen.getByLabelText('Change task status')).toBeInTheDocument()
   })
 })
