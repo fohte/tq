@@ -11,7 +11,7 @@ export interface TimeBlockResponse {
   id: string
   taskId: string
   startTime: string
-  endTime: string | null
+  endTime: string
   isAutoScheduled: boolean
   createdAt: string
   updatedAt: string

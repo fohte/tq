@@ -17,12 +17,11 @@ export function externalEventsToBusyRanges(
 }
 
 export function manualBlocksToBusyRanges(
-  blocks: { startTime: Date; endTime: Date | null }[],
-  fallbackEnd: Date,
+  blocks: { startTime: Date; endTime: Date }[],
 ): BusyRange[] {
   return blocks.map((block) => ({
     start: block.startTime,
-    end: block.endTime ?? fallbackEnd,
+    end: block.endTime,
   }))
 }
 

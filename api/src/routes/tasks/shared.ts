@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { createFactory } from 'hono/factory'
 import { err, ok, type Result } from 'neverthrow'
@@ -6,7 +6,6 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { recurrenceRules, tasks, timeBlocks } from '#db/schema'
-import { firstOrThrow } from '#lib/drizzle-utils'
 
 export const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
 export const contextEnum = z.enum(['work', 'personal', 'dev'])
@@ -66,7 +65,7 @@ export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
     id: block.id,
     taskId: block.taskId,
     startTime: block.startTime.toISOString(),
-    endTime: block.endTime?.toISOString() ?? null,
+    endTime: block.endTime.toISOString(),
     isAutoScheduled: block.isAutoScheduled,
     createdAt: block.createdAt.toISOString(),
     updatedAt: block.updatedAt.toISOString(),
@@ -76,7 +75,6 @@ export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
 export type TaskResponseData = ReturnType<typeof taskToResponse>
 
 export type TreeNode = TaskResponseData & {
-  activeTimeBlockStartTime: string | null
   children: TreeNode[]
   childCompletionCount: { completed: number; total: number }
 }
@@ -90,7 +88,6 @@ export class TaskTreeConsistencyError extends Error {
 
 export function buildTree(
   allTasks: Array<typeof tasks.$inferSelect>,
-  activeStartTimes: Map<string, string>,
   rootId?: string,
 ): Result<TreeNode[], TaskTreeConsistencyError> {
   const nodeMap = new Map<string, TreeNode>()
@@ -98,7 +95,6 @@ export function buildTree(
   for (const task of allTasks) {
     nodeMap.set(task.id, {
       ...taskToResponse(task),
-      activeTimeBlockStartTime: activeStartTimes.get(task.id) ?? null,
       children: [],
       childCompletionCount: { completed: 0, total: 0 },
     })
@@ -166,23 +162,3 @@ export const requireTask = factory.createMiddleware(async (c, next) => {
   c.set('task', task)
   return next()
 })
-
-export async function updateStatusAndCloseTimeBlocks(
-  taskId: string,
-  status: 'todo' | 'completed',
-) {
-  const now = new Date()
-  const [taskRows, closedBlocks] = await Promise.all([
-    db
-      .update(tasks)
-      .set({ status, updatedAt: now })
-      .where(eq(tasks.id, taskId))
-      .returning(),
-    db
-      .update(timeBlocks)
-      .set({ endTime: now, updatedAt: now })
-      .where(and(eq(timeBlocks.taskId, taskId), isNull(timeBlocks.endTime)))
-      .returning(),
-  ])
-  return [firstOrThrow(taskRows), closedBlocks] as const
-}

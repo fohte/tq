@@ -1,6 +1,6 @@
 {
-  "id": "ff589269-1679-439d-ba14-4e4cf0712971",
-  "prevId": "cc736857-a1cf-4be9-a36f-1605b52690b9",
+  "id": "f542db8e-c50a-4cf8-902d-f921ea81a221",
+  "prevId": "ff589269-1679-439d-ba14-4e4cf0712971",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -727,6 +727,23 @@
           "primaryKey": true,
           "notNull": true
         },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "tasks_number_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
         "title": {
           "name": "title",
           "type": "text",
@@ -939,7 +956,13 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "tasks_number_unique": {
+          "name": "tasks_number_unique",
+          "nullsNotDistinct": false,
+          "columns": ["number"]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

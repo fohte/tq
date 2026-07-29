@@ -97,9 +97,7 @@ describe('read tools', () => {
 
       const toolResult = await callTool('list_tasks', { context: 'work' })
 
-      expect(parseJson(toolResult)).toEqual([
-        { ...task, activeTimeBlockStartTime: null, parentNumber: null },
-      ])
+      expect(parseJson(toolResult)).toEqual([{ ...task, parentNumber: null }])
     })
   })
 
@@ -124,7 +122,6 @@ describe('read tools', () => {
         subtasks: [
           {
             ...child,
-            activeTimeBlockStartTime: null,
             children: [],
             childCompletionCount: { total: 0, completed: 0 },
           },

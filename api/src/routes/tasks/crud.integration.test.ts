@@ -12,6 +12,16 @@ import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
+function normalizeTimeBlock(block: TimeBlockResponse) {
+  return {
+    ...block,
+    id: 'ID',
+    taskId: 'TASK',
+    createdAt: 'TIMESTAMP',
+    updatedAt: 'TIMESTAMP',
+  }
+}
+
 describe('tasks CRUD API', () => {
   describe('POST /api/tasks', () => {
     it('creates a task with only title', async () => {
@@ -190,9 +200,15 @@ describe('tasks CRUD API', () => {
 
     it('includes timeBlocks in response', async () => {
       const task = await createTask('With blocks')
-      await app.request(`/api/tasks/${task.id}/start`, { method: 'POST' })
-      await app.request(`/api/tasks/${task.id}/stop`, { method: 'POST' })
-      await app.request(`/api/tasks/${task.id}/start`, { method: 'POST' })
+      await app.request('/api/schedule/time-blocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId: task.id,
+          startTime: '2026-03-22T09:00:00.000Z',
+          endTime: '2026-03-22T10:00:00.000Z',
+        }),
+      })
 
       const res = await app.request(`/api/tasks/${task.id}`)
 
@@ -200,12 +216,17 @@ describe('tasks CRUD API', () => {
       const body = await jsonBody<
         TaskResponse & { timeBlocks: TimeBlockResponse[] }
       >(res)
-      expect(body.timeBlocks).toHaveLength(2)
-      // First block is closed, second is open
-      assertDefined(body.timeBlocks[0])
-      assertDefined(body.timeBlocks[1])
-      expect(body.timeBlocks[0].endTime).not.toBeNull()
-      expect(body.timeBlocks[1].endTime).toBeNull()
+      expect(body.timeBlocks.map(normalizeTimeBlock)).toEqual([
+        {
+          id: 'ID',
+          taskId: 'TASK',
+          startTime: '2026-03-22T09:00:00.000Z',
+          endTime: '2026-03-22T10:00:00.000Z',
+          isAutoScheduled: false,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ])
     })
 
     it('returns empty timeBlocks when task has none', async () => {
