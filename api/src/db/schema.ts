@@ -10,7 +10,6 @@ import {
   primaryKey,
   text,
   timestamp,
-  uniqueIndex,
 } from 'drizzle-orm/pg-core'
 
 export const projects = pgTable(
@@ -269,9 +268,6 @@ export const taskComments = pgTable(
 export const taskLinks = pgTable(
   'task_links',
   {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
     sourceTaskId: text('source_task_id')
       .notNull()
       .references(() => tasks.id, { onDelete: 'cascade' }),
@@ -283,10 +279,7 @@ export const taskLinks = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex('idx_task_links_source_target').on(
-      table.sourceTaskId,
-      table.targetTaskId,
-    ),
+    primaryKey({ columns: [table.sourceTaskId, table.targetTaskId] }),
     index('idx_task_links_target_task_id').on(table.targetTaskId),
     check(
       'task_links_no_self_link',

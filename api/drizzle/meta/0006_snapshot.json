@@ -1,5 +1,5 @@
 {
-  "id": "b0d00fd4-0b0e-41a9-930e-1156a4989bf0",
+  "id": "a6c7b970-db3f-4ecf-acd6-9d31c6e0130c",
   "prevId": "f542db8e-c50a-4cf8-902d-f921ea81a221",
   "version": "7",
   "dialect": "postgresql",
@@ -636,12 +636,6 @@
       "name": "task_links",
       "schema": "",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
         "source_task_id": {
           "name": "source_task_id",
           "type": "text",
@@ -663,27 +657,6 @@
         }
       },
       "indexes": {
-        "idx_task_links_source_target": {
-          "name": "idx_task_links_source_target",
-          "columns": [
-            {
-              "expression": "source_task_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "target_task_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "idx_task_links_target_task_id": {
           "name": "idx_task_links_target_task_id",
           "columns": [
@@ -720,7 +693,12 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "task_links_source_task_id_target_task_id_pk": {
+          "name": "task_links_source_task_id_target_task_id_pk",
+          "columns": ["source_task_id", "target_task_id"]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
