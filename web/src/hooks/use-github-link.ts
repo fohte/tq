@@ -106,8 +106,9 @@ export function useGithubSync() {
 
 // Single-task counterpart of useGithubSync, for an immediate refresh of one
 // task's link when its detail view opens, instead of waiting for the next
-// app-wide sync.
-export function useSyncTaskGithubLink(taskId: string) {
+// app-wide sync. `hasLink` gates the query so an unlinked task's detail view
+// doesn't fire a request the server would just no-op anyway.
+export function useSyncTaskGithubLink(taskId: string, hasLink: boolean) {
   const queryClient = useQueryClient()
 
   return useQuery({
@@ -122,6 +123,7 @@ export function useSyncTaskGithubLink(taskId: string) {
       })
       return null
     },
+    enabled: hasLink,
     staleTime: 0,
     retry: false,
   })

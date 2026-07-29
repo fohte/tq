@@ -142,19 +142,29 @@ describe('fetchGithubIssue', () => {
 })
 
 describe('fetchGithubIssueIfChanged', () => {
-  it('sends the etag as If-None-Match and reports not-modified on a 304', async () => {
+  it('sends the etag as If-None-Match', async () => {
     await upsertGithubToken('valid-token')
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(null, { status: 304 }))
+
+    await fetchGithubIssueIfChanged(ref, '"abc123"')
+
+    const [, init] = fetchSpy.mock.calls[0] ?? []
+    expect(new Headers(init?.headers).get('If-None-Match')).toBe('"abc123"')
+  })
+
+  it('reports not-modified on a 304', async () => {
+    await upsertGithubToken('valid-token')
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(null, { status: 304 }),
+    )
 
     const result = (
       await fetchGithubIssueIfChanged(ref, '"abc123"')
     )._unsafeUnwrap()
 
     expect(result).toEqual({ notModified: true })
-    const [, init] = fetchSpy.mock.calls[0] ?? []
-    expect(new Headers(init?.headers).get('If-None-Match')).toBe('"abc123"')
   })
 
   it('returns the issue and its new etag on a 200', async () => {

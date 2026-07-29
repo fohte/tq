@@ -157,10 +157,7 @@ function isQuietSyncError(error: SyncLinkError): boolean {
   return error instanceof OAuthTokenMissingError
 }
 
-// Syncs every linked task. Triggered by the web client (see
-// routes/github.ts's POST /sync) while it's open and focused — there is no
-// server-side background schedule.
-export async function syncAllGithubLinks(): Promise<void> {
+async function runSync(): Promise<void> {
   const tokenResult = await getValidAccessToken(githubProvider)
   if (tokenResult.isErr()) {
     if (!isQuietSyncError(tokenResult.error)) {
@@ -182,4 +179,19 @@ export async function syncAllGithubLinks(): Promise<void> {
       })
     }
   }
+}
+
+let inFlightSync: Promise<void> | null = null
+
+// Syncs every linked task. Triggered by the web client (see
+// routes/github.ts's POST /sync) while it's open and focused — there is no
+// server-side background schedule. A client with multiple tabs open
+// triggers this concurrently from each one; coalescing into a single
+// in-flight pass keeps that from multiplying the GitHub requests and DB
+// scans by tab count.
+export function syncAllGithubLinks(): Promise<void> {
+  inFlightSync ??= runSync().finally(() => {
+    inFlightSync = null
+  })
+  return inFlightSync
 }

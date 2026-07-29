@@ -207,23 +207,35 @@ describe('syncLinkFromGithub', () => {
     expect(syncedLink.title).toBe('Actual GitHub title')
   })
 
-  it('checks in without diffing when GitHub reports no change via ETag', async () => {
-    const { task, link } = await createSyncedLink()
+  it('stores the returned etag when GitHub responds with a fresh 200', async () => {
+    const { link } = await createSyncedLink()
 
-    // Establish an etag baseline: the fetched content is identical to the
-    // stored snapshot, so this hits the "nothing changed" path, which also
-    // stores the etag for next time.
     mockGithubIssueResponse({}, { headers: { etag: '"abc123"' } })
     ;(await syncLinkFromGithub(link))._unsafeUnwrap()
-    const linkWithEtag = await loadLink(link.id)
-    expect(linkWithEtag.etag).toBe('"abc123"')
+
+    expect(normalizeLink(await loadLink(link.id))).toEqual(
+      normalizeLink({ ...link, etag: '"abc123"' }),
+    )
+  })
+
+  it('checks in without diffing when GitHub reports no change via ETag', async () => {
+    const { task, link } = await createSyncedLink()
+    const linkWithEtag = firstOrThrow(
+      await db
+        .update(taskGithubLinks)
+        .set({ etag: '"abc123"' })
+        .where(eq(taskGithubLinks.id, link.id))
+        .returning(),
+    )
 
     mockGithubNotModifiedResponse()
     ;(await syncLinkFromGithub(linkWithEtag))._unsafeUnwrap()
 
     expect(normalizeTask(await loadTask(task.id))).toEqual(normalizeTask(task))
+    expect(normalizeLink(await loadLink(link.id))).toEqual(
+      normalizeLink(linkWithEtag),
+    )
     expect(await loadEdits(task.id)).toEqual([])
-    expect((await loadLink(link.id)).etag).toBe('"abc123"')
   })
 })
 

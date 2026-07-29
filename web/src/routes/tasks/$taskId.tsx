@@ -16,7 +16,7 @@ export const Route = createFileRoute('/tasks/$taskId')({
 function TaskPage() {
   const { taskId } = Route.useParams()
   const { data: task, isLoading, error } = useTask(taskId)
-  useSyncTaskGithubLink(taskId)
+  useSyncTaskGithubLink(taskId, task?.githubLink != null)
 
   if (isLoading) {
     return (
