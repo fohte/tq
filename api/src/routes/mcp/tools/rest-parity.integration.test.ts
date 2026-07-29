@@ -95,6 +95,7 @@ describe('REST/MCP parity', () => {
       childCompletionCount: { total: 0, completed: 0 },
       pages: [],
       timeBlocks: [],
+      links: { outgoing: [], incoming: [] },
     })
   })
 
@@ -130,6 +131,7 @@ describe('REST/MCP parity', () => {
       childCompletionCount: { total: 0, completed: 0 },
       pages: [],
       timeBlocks: [],
+      links: { outgoing: [], incoming: [] },
     })
   })
 
@@ -150,6 +152,7 @@ describe('REST/MCP parity', () => {
       childCompletionCount: { total: 0, completed: 0 },
       pages: [],
       timeBlocks: [],
+      links: { outgoing: [], incoming: [] },
     })
   })
 
@@ -186,6 +189,7 @@ describe('REST/MCP parity', () => {
       childCompletionCount: { total: 0, completed: 0 },
       pages: [],
       timeBlocks: [],
+      links: { outgoing: [], incoming: [] },
     })
   })
 })

@@ -7,6 +7,7 @@ import { db } from '#db/connection'
 import { taskPages, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { diffFields, recordEdit } from '#lib/edits'
+import { syncTaskLinks } from '#services/task-links'
 
 const createPageSchema = z.object({
   title: z.string().min(1),
@@ -100,6 +101,8 @@ export const taskPagesApp = new Hono<TaskPagesEnv>()
       return page
     })
 
+    await syncTaskLinks(taskId)
+
     return c.json(pageToResponse(page), 201)
   })
   .get('/:pageId', async (c) => {
@@ -157,6 +160,10 @@ export const taskPagesApp = new Hono<TaskPagesEnv>()
       return c.json({ error: 'Page not found' }, 404)
     }
 
+    if ('content' in input) {
+      await syncTaskLinks(taskId)
+    }
+
     return c.json(pageToResponse(updated), 200)
   })
   .delete('/:pageId', async (c) => {
@@ -171,6 +178,8 @@ export const taskPagesApp = new Hono<TaskPagesEnv>()
     if (deleted.length === 0) {
       return c.json({ error: 'Page not found' }, 404)
     }
+
+    await syncTaskLinks(taskId)
 
     return c.body(null, 204)
   })

@@ -26,6 +26,7 @@ import {
   timeBlockToResponse,
 } from '#routes/tasks/shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
+import { getTaskLinks, syncTaskLinks } from '#services/task-links'
 
 export const createTaskSchema = z.object({
   title: z.string().min(1),
@@ -123,6 +124,8 @@ export const tasksCrudApp = new Hono()
       return { task, createdRule }
     })
 
+    await syncTaskLinks(task.id)
+
     return c.json(taskToResponse(task, createdRule), 201)
   })
   .get(
@@ -177,7 +180,7 @@ export const tasksCrudApp = new Hono()
     const task = c.get('task')
     const id = task.id
 
-    const [childStats, pages, taskTimeBlocks, rule, githubLink] =
+    const [childStats, pages, taskTimeBlocks, rule, githubLink, links] =
       await Promise.all([
         db
           .select({
@@ -206,6 +209,7 @@ export const tasksCrudApp = new Hono()
         db.query.taskGithubLinks.findFirst({
           where: eq(taskGithubLinks.taskId, id),
         }),
+        getTaskLinks(id),
       ])
 
     return c.json(
@@ -217,6 +221,7 @@ export const tasksCrudApp = new Hono()
         },
         pages: pages.map(pageToResponse),
         timeBlocks: taskTimeBlocks.map(timeBlockToResponse),
+        links,
       },
       200,
     )
@@ -353,6 +358,10 @@ export const tasksCrudApp = new Hono()
 
         return { updatedTask, updatedRule }
       })
+
+      if ('description' in taskFields) {
+        await syncTaskLinks(id)
+      }
 
       const githubLink = await db.query.taskGithubLinks.findFirst({
         where: eq(taskGithubLinks.taskId, id),

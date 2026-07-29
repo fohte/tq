@@ -72,6 +72,9 @@ export function useCreateComment(taskId: string) {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: commentKeys.all(taskId) })
+      void queryClient.invalidateQueries({
+        queryKey: ['tasks', 'detail', taskId],
+      })
     },
   })
 }
@@ -122,6 +125,9 @@ export function useUpdateComment(taskId: string) {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: commentKeys.all(taskId) })
+      void queryClient.invalidateQueries({
+        queryKey: ['tasks', 'detail', taskId],
+      })
     },
   })
 }
@@ -161,6 +167,9 @@ export function useDeleteComment(taskId: string) {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: commentKeys.all(taskId) })
+      void queryClient.invalidateQueries({
+        queryKey: ['tasks', 'detail', taskId],
+      })
     },
   })
 }

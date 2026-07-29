@@ -1,6 +1,6 @@
 {
-  "id": "98c6f9c3-9a41-4830-b1b6-a3f754d0ba00",
-  "prevId": "f76f5c16-a55b-4725-9657-f13ff771b83c",
+  "id": "8529f61c-e234-4b65-bd38-5f25a7ad9c17",
+  "prevId": "98c6f9c3-9a41-4830-b1b6-a3f754d0ba00",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -802,6 +802,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "last_synced_at": {
           "name": "last_synced_at",

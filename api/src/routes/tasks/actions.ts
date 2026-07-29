@@ -10,6 +10,7 @@ import { firstOrThrow } from '#lib/drizzle-utils'
 import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
 import { requireTask, taskStatus, taskToResponse } from '#routes/tasks/shared'
 import { buildNextTaskData } from '#services/recurrence'
+import { syncTaskLinks } from '#services/task-links'
 
 const updateStatusSchema = z.object({
   status: taskStatus,
@@ -136,6 +137,7 @@ export const tasksActionsApp = new Hono()
           )
           return created
         })
+        await syncTaskLinks(created.id)
         nextTask = taskToResponse(created, completedTaskRule)
       }
     }

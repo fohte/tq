@@ -16,7 +16,7 @@ import { useCompleteTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import { cn } from '#lib/utils'
 
-function StatusIcon({ status }: { status: Task['status'] }) {
+export function StatusIcon({ status }: { status: Task['status'] }) {
   if (status === 'completed') {
     return (
       <CircleCheckBig className="h-[18px] w-[18px] text-muted-foreground" />

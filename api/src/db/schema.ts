@@ -264,6 +264,32 @@ export const taskComments = pgTable(
   ],
 )
 
+// Directed mention link (source task's body text -> `#<target number>`),
+// derived from description/page/comment content by
+// `services/task-links.ts#syncTaskLinks` and re-synced on every body write.
+export const taskLinks = pgTable(
+  'task_links',
+  {
+    sourceTaskId: text('source_task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    targetTaskId: text('target_task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.sourceTaskId, table.targetTaskId] }),
+    index('idx_task_links_target_task_id').on(table.targetTaskId),
+    check(
+      'task_links_no_self_link',
+      sql`${table.sourceTaskId} != ${table.targetTaskId}`,
+    ),
+  ],
+)
+
 export const edits = pgTable(
   'edits',
   {

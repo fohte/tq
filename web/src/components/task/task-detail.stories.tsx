@@ -62,6 +62,7 @@ const baseTask: TaskDetail = {
   childCompletionCount: { completed: 1, total: 3 },
   pages: [],
   timeBlocks: [],
+  links: { outgoing: [], incoming: [] },
 }
 
 function Providers({ children }: { children: ReactNode }) {

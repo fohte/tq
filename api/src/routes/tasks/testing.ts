@@ -25,6 +25,13 @@ export interface RecurrenceRuleResponse {
   dayOfMonth: number | null
 }
 
+export interface LinkedTaskResponse {
+  id: string
+  number: number
+  title: string
+  status: 'todo' | 'in_progress' | 'completed'
+}
+
 export interface GithubLinkResponse {
   id: string
   owner: string
@@ -57,6 +64,7 @@ export interface TaskResponse {
   updatedAt: string
   childCompletionCount?: { completed: number; total: number }
   children?: TaskResponse[]
+  links?: { outgoing: LinkedTaskResponse[]; incoming: LinkedTaskResponse[] }
 }
 
 const recurrenceRuleResponseSchema = z.object({
@@ -65,6 +73,13 @@ const recurrenceRuleResponseSchema = z.object({
   interval: z.number(),
   daysOfWeek: z.array(z.number()).nullable(),
   dayOfMonth: z.number().nullable(),
+})
+
+const linkedTaskResponseSchema = z.object({
+  id: z.string(),
+  number: z.number(),
+  title: z.string(),
+  status: z.enum(['todo', 'in_progress', 'completed']),
 })
 
 const githubLinkResponseSchema = z.object({
@@ -101,6 +116,12 @@ const taskResponseSchema = z.object({
     .object({ completed: z.number(), total: z.number() })
     .optional(),
   children: z.array(z.any()).optional(),
+  links: z
+    .object({
+      outgoing: z.array(linkedTaskResponseSchema),
+      incoming: z.array(linkedTaskResponseSchema),
+    })
+    .optional(),
 })
 
 const idResponseSchema = z.object({ id: z.string() })
