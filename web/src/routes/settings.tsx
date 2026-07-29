@@ -28,7 +28,8 @@ function Settings() {
         <GithubConnectionCard
           isLoading={githubStatus.isLoading}
           connected={githubStatus.data?.connected ?? false}
-          {...(githubStatus.data?.connected === true
+          {...(githubStatus.data?.connected === true &&
+          githubStatus.data.login != null
             ? { login: githubStatus.data.login }
             : {})}
           {...(githubAuthUrl.data?.url != null

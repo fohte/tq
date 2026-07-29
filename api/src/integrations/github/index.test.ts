@@ -3,6 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { db } from '#db/connection'
 import { oauthTokens } from '#db/schema'
+import { IntegrationConfigError } from '#integrations/errors'
+import { GithubApiError, githubProvider } from '#integrations/github/index'
+import {
+  disconnect,
+  getAuthUrl,
+  getConnectionStatus,
+  handleOAuthCallback,
+} from '#integrations/oauth'
+import { TokenExchangeError } from '#lib/fetch-json'
 import { assertDefined, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -44,11 +53,6 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-// Dynamically import to allow env vars to be set before module evaluation
-async function importService() {
-  return await import('#services/github')
-}
-
 function normalize(token: typeof oauthTokens.$inferSelect) {
   return {
     ...token,
@@ -59,10 +63,8 @@ function normalize(token: typeof oauthTokens.$inferSelect) {
 }
 
 describe('getAuthUrl', () => {
-  it('returns a GitHub OAuth authorization URL with correct parameters', async () => {
-    const { getAuthUrl } = await importService()
-
-    const url = getAuthUrl()._unsafeUnwrap()
+  it('returns a GitHub OAuth authorization URL with correct parameters', () => {
+    const url = getAuthUrl(githubProvider)._unsafeUnwrap()
     const parsed = new URL(url)
 
     expect(parsed.origin + parsed.pathname).toBe(
@@ -75,20 +77,21 @@ describe('getAuthUrl', () => {
     expect(parsed.searchParams.get('scope')).toBe('repo')
   })
 
-  it('returns a config error when environment variables are missing', async () => {
+  it('returns a config error when environment variables are missing', () => {
     clearEnv()
-    const { getAuthUrl, GithubConfigError } = await importService()
 
-    const error = getAuthUrl()._unsafeUnwrapErr()
+    const error = getAuthUrl(githubProvider)._unsafeUnwrapErr()
 
-    expect(error).toEqual(new GithubConfigError())
+    expect(error).toEqual(
+      new IntegrationConfigError(
+        'GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, and GITHUB_REDIRECT_URI environment variables are required',
+      ),
+    )
   })
 })
 
 describe('handleOAuthCallback', () => {
   it('exchanges code for a token and saves it to the database', async () => {
-    const { handleOAuthCallback } = await importService()
-
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -100,7 +103,9 @@ describe('handleOAuthCallback', () => {
       ),
     )
 
-    ;(await handleOAuthCallback('auth-code-123'))._unsafeUnwrap()
+    ;(
+      await handleOAuthCallback(githubProvider, 'auth-code-123')
+    )._unsafeUnwrap()
 
     const [savedToken] = await db
       .select()
@@ -121,20 +126,18 @@ describe('handleOAuthCallback', () => {
   })
 
   it('returns a token exchange error when the token endpoint returns a non-2xx response', async () => {
-    const { handleOAuthCallback, TokenExchangeError } = await importService()
-
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response('server error', { status: 500 }),
     )
 
-    const error = (await handleOAuthCallback('bad-code'))._unsafeUnwrapErr()
+    const error = (
+      await handleOAuthCallback(githubProvider, 'bad-code')
+    )._unsafeUnwrapErr()
 
     expect(error).toEqual(new TokenExchangeError('server error'))
   })
 
   it('returns a rejected token exchange error when GitHub returns an error payload with 200 status', async () => {
-    const { handleOAuthCallback, TokenExchangeError } = await importService()
-
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -145,7 +148,9 @@ describe('handleOAuthCallback', () => {
       ),
     )
 
-    const error = (await handleOAuthCallback('bad-code'))._unsafeUnwrapErr()
+    const error = (
+      await handleOAuthCallback(githubProvider, 'bad-code')
+    )._unsafeUnwrapErr()
 
     expect(error).toEqual(
       new TokenExchangeError(
@@ -159,54 +164,52 @@ describe('handleOAuthCallback', () => {
 
 describe('getConnectionStatus', () => {
   it('returns not connected when no token exists', async () => {
-    const { getConnectionStatus } = await importService()
-
-    expect((await getConnectionStatus())._unsafeUnwrap()).toEqual({
-      connected: false,
-    })
+    expect((await getConnectionStatus(githubProvider))._unsafeUnwrap()).toEqual(
+      {
+        connected: false,
+      },
+    )
   })
 
   it('returns connected with the account login when a token exists', async () => {
-    const { getConnectionStatus } = await importService()
-
     await upsertToken('valid-token')
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(JSON.stringify({ login: 'fohte' }), { status: 200 }),
     )
 
-    expect((await getConnectionStatus())._unsafeUnwrap()).toEqual({
-      connected: true,
-      login: 'fohte',
-    })
+    expect((await getConnectionStatus(githubProvider))._unsafeUnwrap()).toEqual(
+      {
+        connected: true,
+        login: 'fohte',
+      },
+    )
   })
 
   it('returns a GitHub API error when the request fails', async () => {
-    const { getConnectionStatus, GithubApiError } = await importService()
-
     await upsertToken('some-token')
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response('server error', { status: 500 }),
     )
 
-    const error = (await getConnectionStatus())._unsafeUnwrapErr()
+    const error = (await getConnectionStatus(githubProvider))._unsafeUnwrapErr()
 
     expect(error).toEqual(new GithubApiError('server error'))
   })
 
   it('drops the token and returns not connected when it was revoked on GitHub', async () => {
-    const { getConnectionStatus } = await importService()
-
     await upsertToken('revoked-token')
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response('Bad credentials', { status: 401 }),
     )
 
-    expect((await getConnectionStatus())._unsafeUnwrap()).toEqual({
-      connected: false,
-    })
+    expect((await getConnectionStatus(githubProvider))._unsafeUnwrap()).toEqual(
+      {
+        connected: false,
+      },
+    )
 
     const [remainingToken] = await db
       .select()
@@ -219,20 +222,18 @@ describe('getConnectionStatus', () => {
 
 describe('disconnect', () => {
   it('deletes the stored token', async () => {
-    const { disconnect, getConnectionStatus } = await importService()
-
     await upsertToken('valid-token')
-    ;(await disconnect())._unsafeUnwrap()
+    ;(await disconnect(githubProvider))._unsafeUnwrap()
 
-    expect((await getConnectionStatus())._unsafeUnwrap()).toEqual({
-      connected: false,
-    })
+    expect((await getConnectionStatus(githubProvider))._unsafeUnwrap()).toEqual(
+      {
+        connected: false,
+      },
+    )
   })
 
   it('does nothing when no token exists', async () => {
-    const { disconnect } = await importService()
-
-    ;(await disconnect())._unsafeUnwrap()
+    ;(await disconnect(githubProvider))._unsafeUnwrap()
 
     const [remainingToken] = await db
       .select()

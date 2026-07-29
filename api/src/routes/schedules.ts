@@ -14,6 +14,8 @@ import {
   timeBlocks,
   todayTasks,
 } from '#db/schema'
+import { OAuthTokenMissingError } from '#integrations/errors'
+import { getEvents } from '#integrations/google-calendar/index'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { localDateBoundsToUtc } from '#lib/timezone'
 import { expandScheduleForDate } from '#routes/schedule-expansion'
@@ -26,7 +28,6 @@ import {
   externalEventsToBusyRanges,
   manualBlocksToBusyRanges,
 } from '#services/auto-scheduler'
-import { getEvents, OAuthTokenMissingError } from '#services/google-calendar'
 
 const timePattern = /^\d{2}:\d{2}$/
 
