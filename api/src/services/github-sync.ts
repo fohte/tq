@@ -10,12 +10,10 @@ import {
   TokenRefreshError,
 } from '#integrations/errors'
 import { GithubApiError, githubProvider } from '#integrations/github/index'
-import { fetchGithubIssue } from '#integrations/github/issues'
+import { fetchGithubIssueIfChanged } from '#integrations/github/issues'
 import { getValidAccessToken } from '#integrations/oauth'
 import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
 import { syncTaskLinks } from '#services/task-links'
-
-const POLL_INTERVAL_MS = 60_000
 
 type LinkRow = typeof taskGithubLinks.$inferSelect
 
@@ -26,25 +24,40 @@ type SyncLinkError =
   | TokenRefreshError
 
 // `link.title`/`link.body`/`link.state` hold the GitHub values as of the
-// last poll (see schema.ts), so diffing a fresh fetch against them tells
+// last sync (see schema.ts), so diffing a fresh fetch against them tells
 // "GitHub changed" apart from "the task was edited in TQ" — only the former
 // should overwrite the task.
 export function syncLinkFromGithub(
   link: LinkRow,
 ): ResultAsync<void, SyncLinkError> {
-  return fetchGithubIssue({
-    owner: link.owner,
-    repo: link.repo,
-    number: link.number,
-  }).andThen((issue) => {
+  return fetchGithubIssueIfChanged(
+    { owner: link.owner, repo: link.repo, number: link.number },
+    link.etag,
+  ).andThen((result) => {
     const now = new Date()
 
+    if (result.notModified) {
+      // GitHub confirmed nothing changed since the stored etag (a bare 304,
+      // no primary-rate-limit cost) — nothing to diff or write beyond the
+      // check itself.
+      return ResultAsync.fromSafePromise(
+        db
+          .update(taskGithubLinks)
+          .set({ lastSyncedAt: now })
+          .where(eq(taskGithubLinks.id, link.id)),
+      ).map(() => undefined)
+    }
+
+    const { issue, etag } = result
+
     // `lastSyncedAt` defaults to the same insert-time value as `createdAt`
-    // and only diverges once a poll actually runs, so equality also means
-    // "never synced by this poller" — true for a link created moments ago,
-    // and for a pre-existing link from before this column/poller existed
-    // (its stored title/body/state can't be trusted as a real baseline).
-    // Either way, the right move is to seed the snapshot, not diff it.
+    // and only diverges once a sync actually runs, so equality also means
+    // "never synced" — true for a link created moments ago, and for a
+    // pre-existing link from before this column existed (its stored
+    // title/body/state can't be trusted as a real baseline). Either way,
+    // the right move is to seed the snapshot, not diff it. `etag` starting
+    // out null guarantees this fetch was unconditional (never a 304), so
+    // this case and the one above are mutually exclusive.
     const isFirstSync = link.lastSyncedAt.getTime() === link.createdAt.getTime()
     const titleChanged = !isFirstSync && issue.title !== link.title
     const bodyChanged = !isFirstSync && issue.body !== link.body
@@ -58,6 +71,7 @@ export function syncLinkFromGithub(
             title: issue.title,
             body: issue.body,
             state: issue.state,
+            etag,
             lastSyncedAt: now,
           })
           .where(eq(taskGithubLinks.id, link.id)),
@@ -78,10 +92,10 @@ export function syncLinkFromGithub(
               .where(eq(tasks.id, link.taskId))
               .returning({ id: tasks.id })
 
-            // The task may have been deleted concurrently between the poll's
-            // link scan and this write; its link row cascade-deletes with
-            // it, so there's nothing left to sync (mirrors syncTaskLinks'
-            // own guard for the same race).
+            // The task may have been deleted concurrently between the
+            // sync's link lookup and this write; its link row
+            // cascade-deletes with it, so there's nothing left to sync
+            // (mirrors syncTaskLinks' own guard for the same race).
             if (updated.length === 0) return
 
             if (titleChanged) {
@@ -108,6 +122,7 @@ export function syncLinkFromGithub(
               title: issue.title,
               body: issue.body,
               state: issue.state,
+              etag,
               lastSyncedAt: now,
             })
             .where(eq(taskGithubLinks.id, link.id))
@@ -129,8 +144,9 @@ export function syncLinkFromGithub(
 // refresh: e.g. the token lost access, or the issue/PR is gone) and a
 // missing token are both normal "not currently syncable" states, not
 // operational failures — skip them quietly so a disconnected or revoked
-// GitHub integration doesn't spam error reporting every poll. Anything else
-// (network/parse/5xx, or a config error) is unexpected and must be captured.
+// GitHub integration doesn't spam error reporting on every sync. Anything
+// else (network/parse/5xx, or a config error) is unexpected and must be
+// captured.
 function isQuietSyncError(error: SyncLinkError): boolean {
   if (error instanceof GithubApiError) {
     return error.rejected
@@ -141,6 +157,9 @@ function isQuietSyncError(error: SyncLinkError): boolean {
   return error instanceof OAuthTokenMissingError
 }
 
+// Syncs every linked task. Triggered by the web client (see
+// routes/github.ts's POST /sync) while it's open and focused — there is no
+// server-side background schedule.
 export async function syncAllGithubLinks(): Promise<void> {
   const tokenResult = await getValidAccessToken(githubProvider)
   if (tokenResult.isErr()) {
@@ -163,23 +182,4 @@ export async function syncAllGithubLinks(): Promise<void> {
       })
     }
   }
-}
-
-export function startGithubSyncPolling(): void {
-  let isSyncing = false
-
-  const tick = () => {
-    if (isSyncing) return
-    isSyncing = true
-    void syncAllGithubLinks()
-      .catch((error: unknown) => {
-        captureWithFingerprint(error, 'api.github-sync.poll-failed')
-      })
-      .finally(() => {
-        isSyncing = false
-      })
-  }
-
-  tick()
-  setInterval(tick, POLL_INTERVAL_MS)
 }

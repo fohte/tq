@@ -1,9 +1,10 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
 import { projectKeys } from '#hooks/use-projects'
 import { taskKeys } from '#hooks/use-tasks'
 import { api } from '#lib/api'
+import { assertOk } from '#lib/assert-response'
 
 export type ResolveGithubUrlResult = InferResponseType<
   typeof api.api.github.resolve.$post,
@@ -75,5 +76,53 @@ export function useUnlinkTaskFromGithub(taskId: string) {
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
       void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
+  })
+}
+
+// There is no server-side background schedule (see api's github-sync
+// service) — GitHub sync only happens while a client triggers it. Mounted
+// once at the app root, this covers "on open" and "on window focus regain"
+// via React Query's refetchOnMount/refetchOnWindowFocus defaults, and
+// "periodically while focused" via refetchInterval, which React Query
+// automatically pauses while the tab isn't visible.
+const GITHUB_SYNC_INTERVAL_MS = 60_000
+
+export function useGithubSync() {
+  const queryClient = useQueryClient()
+
+  return useQuery({
+    queryKey: ['github-sync'],
+    queryFn: async () => {
+      const res = await api.api.github.sync.$post()
+      assertOk(res)
+      await queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      return null
+    },
+    staleTime: 0,
+    retry: false,
+    refetchInterval: GITHUB_SYNC_INTERVAL_MS,
+  })
+}
+
+// Single-task counterpart of useGithubSync, for an immediate refresh of one
+// task's link when its detail view opens, instead of waiting for the next
+// app-wide sync.
+export function useSyncTaskGithubLink(taskId: string) {
+  const queryClient = useQueryClient()
+
+  return useQuery({
+    queryKey: ['github-sync', 'task', taskId],
+    queryFn: async () => {
+      const res = await api.api.tasks[':taskId']['github-link'].sync.$post({
+        param: { taskId },
+      })
+      assertOk(res)
+      await queryClient.invalidateQueries({
+        queryKey: taskKeys.detail(taskId),
+      })
+      return null
+    },
+    staleTime: 0,
+    retry: false,
   })
 }

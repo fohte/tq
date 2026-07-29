@@ -53,3 +53,44 @@ export function fetchJson<T, E extends Error>(
     })
   })
 }
+
+export type ConditionalFetchResult<T> =
+  { notModified: true } | { notModified: false; data: T; etag: string | null }
+
+/**
+ * Like `fetchJson`, but for a conditional GET: pass an `If-None-Match`
+ * header in `init` to have the caller distinguish a 304 (nothing changed)
+ * from a 200 (fresh `data`), instead of `fetchJson`'s single success shape.
+ */
+export function fetchJsonConditional<T, E extends Error>(
+  input: string,
+  init: RequestInit,
+  schema: z.ZodType<T>,
+  wrapError: (message: string, cause?: unknown, rejected?: boolean) => E,
+): ResultAsync<ConditionalFetchResult<T>, E> {
+  return ResultAsync.fromPromise(fetch(input, init), (cause) =>
+    wrapError(errorMessage(cause), cause),
+  ).andThen((res) => {
+    if (res.status === 304) {
+      return okAsync<ConditionalFetchResult<T>, E>({ notModified: true })
+    }
+    if (!res.ok) {
+      const rejected = res.status >= 400 && res.status < 500
+      return ResultAsync.fromPromise(res.text(), (cause) =>
+        wrapError(errorMessage(cause), cause),
+      ).andThen((text) => errAsync(wrapError(text, undefined, rejected)))
+    }
+    return ResultAsync.fromPromise(res.json(), (cause) =>
+      wrapError(errorMessage(cause), cause),
+    ).andThen((data) => {
+      const parsed = schema.safeParse(data)
+      return parsed.success
+        ? okAsync<ConditionalFetchResult<T>, E>({
+            notModified: false,
+            data: parsed.data,
+            etag: res.headers.get('etag'),
+          })
+        : errAsync(wrapError(parsed.error.message, parsed.error))
+    })
+  })
+}

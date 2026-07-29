@@ -5,6 +5,7 @@ import { db } from '#db/connection'
 import { edits, taskGithubLinks, taskLinks, tasks } from '#db/schema'
 import {
   mockGithubIssueResponse,
+  mockGithubNotModifiedResponse,
   upsertGithubToken,
 } from '#integrations/github/testing'
 import { firstOrThrow } from '#lib/drizzle-utils'
@@ -205,6 +206,25 @@ describe('syncLinkFromGithub', () => {
     const syncedLink = await loadLink(link.id)
     expect(syncedLink.title).toBe('Actual GitHub title')
   })
+
+  it('checks in without diffing when GitHub reports no change via ETag', async () => {
+    const { task, link } = await createSyncedLink()
+
+    // Establish an etag baseline: the fetched content is identical to the
+    // stored snapshot, so this hits the "nothing changed" path, which also
+    // stores the etag for next time.
+    mockGithubIssueResponse({}, { headers: { etag: '"abc123"' } })
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+    const linkWithEtag = await loadLink(link.id)
+    expect(linkWithEtag.etag).toBe('"abc123"')
+
+    mockGithubNotModifiedResponse()
+    ;(await syncLinkFromGithub(linkWithEtag))._unsafeUnwrap()
+
+    expect(normalizeTask(await loadTask(task.id))).toEqual(normalizeTask(task))
+    expect(await loadEdits(task.id)).toEqual([])
+    expect((await loadLink(link.id)).etag).toBe('"abc123"')
+  })
 })
 
 describe('syncAllGithubLinks', () => {
@@ -222,13 +242,13 @@ describe('syncAllGithubLinks', () => {
     // syncAllGithubLinks doesn't guarantee link processing order, so both
     // mocked responses use the same new title — this only asserts that
     // every link gets synced in one pass, not which one goes first.
-    mockGithubIssueResponse({ title: 'Synced by poller' })
-    mockGithubIssueResponse({ title: 'Synced by poller' })
+    mockGithubIssueResponse({ title: 'Synced by trigger' })
+    mockGithubIssueResponse({ title: 'Synced by trigger' })
 
     await syncAllGithubLinks()
 
-    expect((await loadTask(first.task.id)).title).toBe('Synced by poller')
-    expect((await loadTask(secondTask.id)).title).toBe('Synced by poller')
+    expect((await loadTask(first.task.id)).title).toBe('Synced by trigger')
+    expect((await loadTask(secondTask.id)).title).toBe('Synced by trigger')
   })
 
   it('skips syncing without error when GitHub is not connected', async () => {

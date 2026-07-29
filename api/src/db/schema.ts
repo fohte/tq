@@ -392,10 +392,15 @@ export const taskGithubLinks = pgTable(
     url: text('url').notNull(),
     state: text('state', { enum: ['open', 'closed', 'merged'] }).notNull(),
     title: text('title').notNull(),
-    // `title`/`body`/`state` hold the GitHub values as of the last poll, not
-    // the task's current values — the sync poller diffs a fresh fetch against
-    // these to tell "GitHub changed" apart from "the task was edited in TQ".
+    // `title`/`body`/`state` hold the GitHub values as of the last sync, not
+    // the task's current values — the sync diffs a fresh fetch against these
+    // to tell "GitHub changed" apart from "the task was edited in TQ".
     body: text('body'),
+    // GitHub's ETag for the last fetch of this issue/PR, sent back as
+    // `If-None-Match` on the next sync so an unchanged resource costs a bare
+    // 304 instead of a full fetch (and doesn't count against GitHub's
+    // primary rate limit).
+    etag: text('etag'),
     lastSyncedAt: timestamp('last_synced_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

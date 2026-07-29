@@ -149,6 +149,44 @@ describe('DELETE /api/tasks/:taskId/github-link', () => {
   })
 })
 
+describe('POST /api/tasks/:taskId/github-link/sync', () => {
+  it('refreshes the linked task from GitHub', async () => {
+    const task = await createTask('My task')
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
+    await app.request(`/api/tasks/${task.id}/github-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/42' }),
+    })
+    // Consume the link's first sync (seed-only, see syncLinkFromGithub).
+    mockGithubIssueResponse()
+    await app.request(`/api/tasks/${task.id}/github-link/sync`, {
+      method: 'POST',
+    })
+
+    mockGithubIssueResponse({ title: 'Renamed on GitHub' })
+    const res = await app.request(`/api/tasks/${task.id}/github-link/sync`, {
+      method: 'POST',
+    })
+
+    expect(res.status).toBe(204)
+    const detailRes = await app.request(`/api/tasks/${task.id}`)
+    const detailBody = await jsonBody<TaskResponse>(detailRes)
+    expect(detailBody.title).toBe('Renamed on GitHub')
+  })
+
+  it('is a no-op when the task has no link', async () => {
+    const task = await createTask('My task')
+
+    const res = await app.request(`/api/tasks/${task.id}/github-link/sync`, {
+      method: 'POST',
+    })
+
+    expect(res.status).toBe(204)
+  })
+})
+
 describe('githubLink embedded in task responses', () => {
   it('is null for a task with no link', async () => {
     const task = await createTask('My task')

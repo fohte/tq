@@ -15,6 +15,7 @@ export async function upsertGithubToken(accessToken: string) {
 
 export function mockGithubIssueResponse(
   overrides: Partial<Record<string, unknown>> = {},
+  responseInit: ResponseInit = {},
 ) {
   vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
     new Response(
@@ -25,7 +26,13 @@ export function mockGithubIssueResponse(
         html_url: 'https://github.com/fohte/tq/issues/42',
         ...overrides,
       }),
-      { status: 200 },
+      { status: 200, ...responseInit },
     ),
+  )
+}
+
+export function mockGithubNotModifiedResponse() {
+  vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+    new Response(null, { status: 304 }),
   )
 }

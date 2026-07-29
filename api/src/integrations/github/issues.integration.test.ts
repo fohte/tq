@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { OAuthTokenMissingError } from '#integrations/errors'
 import { GithubApiError } from '#integrations/github/index'
-import { fetchGithubIssue } from '#integrations/github/issues'
+import {
+  fetchGithubIssue,
+  fetchGithubIssueIfChanged,
+} from '#integrations/github/issues'
 import { upsertGithubToken } from '#integrations/github/testing'
 import { setupTestDb } from '#testing'
 
@@ -135,5 +138,56 @@ describe('fetchGithubIssue', () => {
     const error = (await fetchGithubIssue(ref))._unsafeUnwrapErr()
 
     expect(error).toEqual(new GithubApiError('Not Found', undefined, true))
+  })
+})
+
+describe('fetchGithubIssueIfChanged', () => {
+  it('sends the etag as If-None-Match and reports not-modified on a 304', async () => {
+    await upsertGithubToken('valid-token')
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(null, { status: 304 }))
+
+    const result = (
+      await fetchGithubIssueIfChanged(ref, '"abc123"')
+    )._unsafeUnwrap()
+
+    expect(result).toEqual({ notModified: true })
+    const [, init] = fetchSpy.mock.calls[0] ?? []
+    expect(new Headers(init?.headers).get('If-None-Match')).toBe('"abc123"')
+  })
+
+  it('returns the issue and its new etag on a 200', async () => {
+    await upsertGithubToken('valid-token')
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          title: 'Bug: something broke',
+          body: 'Steps to reproduce...',
+          state: 'open',
+          html_url: 'https://github.com/fohte/tq/issues/42',
+        }),
+        { status: 200, headers: { etag: '"def456"' } },
+      ),
+    )
+
+    const result = (
+      await fetchGithubIssueIfChanged(ref, '"abc123"')
+    )._unsafeUnwrap()
+
+    expect(result).toEqual({
+      notModified: false,
+      issue: {
+        owner: 'fohte',
+        repo: 'tq',
+        number: 42,
+        kind: 'issue',
+        url: 'https://github.com/fohte/tq/issues/42',
+        title: 'Bug: something broke',
+        body: 'Steps to reproduce...',
+        state: 'open',
+      },
+      etag: '"def456"',
+    })
   })
 })

@@ -6,6 +6,7 @@ import {
   TaskSidebar,
   TaskSidebarMobile,
 } from '#components/task/task-detail'
+import { useSyncTaskGithubLink } from '#hooks/use-github-link'
 import { useTask } from '#hooks/use-tasks'
 
 export const Route = createFileRoute('/tasks/$taskId')({
@@ -15,6 +16,7 @@ export const Route = createFileRoute('/tasks/$taskId')({
 function TaskPage() {
   const { taskId } = Route.useParams()
   const { data: task, isLoading, error } = useTask(taskId)
+  useSyncTaskGithubLink(taskId)
 
   if (isLoading) {
     return (
