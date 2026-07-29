@@ -13,6 +13,7 @@ import {
   handleOAuthCallbackRoute,
 } from '#routes/integration-handlers'
 import { taskToResponse } from '#routes/tasks/shared'
+import { syncAllGithubLinks } from '#services/github-sync'
 import { resolveGithubUrl } from '#services/task-github-links'
 
 const resolveSchema = z.object({ url: z.string().min(1) })
@@ -53,4 +54,13 @@ export const githubApp = new Hono()
           : c.json({ linked: false, preview: resolved.preview }, 200),
       (error) => githubLinkErrorResponse(c, error, 'github.resolve'),
     )
+  })
+  // Triggered by the web client while it's open and focused (mount, window
+  // focus regain, and a periodic interval in between) — there is no
+  // server-side background schedule. Syncs every linked task in one pass,
+  // so `lastSyncedAt` also acts as a catch-up cursor for whatever changed on
+  // GitHub while the client was closed.
+  .post('/sync', async (c) => {
+    await syncAllGithubLinks()
+    return c.body(null, 204)
   })

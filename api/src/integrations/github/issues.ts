@@ -8,7 +8,7 @@ import type {
 } from '#integrations/errors'
 import { GithubApiError, githubProvider } from '#integrations/github/index'
 import { getValidAccessToken } from '#integrations/oauth'
-import { fetchJson } from '#lib/fetch-json'
+import { fetchJson, fetchJsonConditional } from '#lib/fetch-json'
 
 const GITHUB_API_BASE = 'https://api.github.com'
 
@@ -80,6 +80,46 @@ function githubHeaders(accessToken: string) {
   }
 }
 
+// Shared by fetchGithubIssue/fetchGithubIssueIfChanged once each has its own
+// issues-API response in hand: resolves the pull_request vs. merged/closed
+// distinction the issues API alone can't make (see the pulls-API fetch
+// below), then shapes the result into GithubIssueData.
+function resolveIssueState(
+  ref: GithubResourceRef,
+  issue: z.infer<typeof issueResponseSchema>,
+  accessToken: string,
+): ResultAsync<GithubIssueData, GithubApiError> {
+  // A PR can only be merged once closed, and the issues API's "closed"
+  // already disambiguates from "open" — the pulls API is only needed to
+  // tell closed-and-merged from closed-and-not-merged.
+  if (issue.pull_request == null || issue.state !== 'closed') {
+    return okAsync<GithubIssueData, GithubApiError>({
+      ...ref,
+      kind: issue.pull_request == null ? 'issue' : 'pull_request',
+      url: issue.html_url,
+      title: issue.title,
+      body: issue.body,
+      state: issue.state,
+    })
+  }
+
+  // The issues API reports a merged PR's state as merely "closed", so the
+  // pulls API must be consulted to distinguish closed from merged.
+  return fetchJson(
+    `${GITHUB_API_BASE}/repos/${ref.owner}/${ref.repo}/pulls/${String(ref.number)}`,
+    { headers: githubHeaders(accessToken) },
+    pullResponseSchema,
+    (message, cause, rejected) => new GithubApiError(message, cause, rejected),
+  ).map((pull) => ({
+    ...ref,
+    kind: 'pull_request' as const,
+    url: issue.html_url,
+    title: issue.title,
+    body: issue.body,
+    state: pull.merged ? ('merged' as const) : issue.state,
+  }))
+}
+
 export function fetchGithubIssue(
   ref: GithubResourceRef,
 ): ResultAsync<
@@ -96,36 +136,54 @@ export function fetchGithubIssue(
       issueResponseSchema,
       (message, cause, rejected) =>
         new GithubApiError(message, cause, rejected),
-    ).andThen((issue) => {
-      // A PR can only be merged once closed, and the issues API's "closed"
-      // already disambiguates from "open" — the pulls API is only needed to
-      // tell closed-and-merged from closed-and-not-merged.
-      if (issue.pull_request == null || issue.state !== 'closed') {
-        return okAsync<GithubIssueData, GithubApiError>({
-          ...ref,
-          kind: issue.pull_request == null ? 'issue' : 'pull_request',
-          url: issue.html_url,
-          title: issue.title,
-          body: issue.body,
-          state: issue.state,
+    ).andThen((issue) => resolveIssueState(ref, issue, accessToken)),
+  )
+}
+
+export type GithubIssueFetchResult =
+  | { notModified: true }
+  | { notModified: false; issue: GithubIssueData; etag: string | null }
+
+/**
+ * Conditional variant of `fetchGithubIssue` for repeat syncs: pass the
+ * `etag` recorded from a previous call to have GitHub answer with a bare 304
+ * (no body) when nothing changed, which doesn't count against the primary
+ * rate limit (see
+ * https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api).
+ * `etag` should be `null` for a resource never fetched before.
+ */
+export function fetchGithubIssueIfChanged(
+  ref: GithubResourceRef,
+  etag: string | null,
+): ResultAsync<
+  GithubIssueFetchResult,
+  | GithubApiError
+  | OAuthTokenMissingError
+  | IntegrationConfigError
+  | TokenRefreshError
+> {
+  return getValidAccessToken(githubProvider).andThen((accessToken) =>
+    fetchJsonConditional(
+      `${GITHUB_API_BASE}/repos/${ref.owner}/${ref.repo}/issues/${String(ref.number)}`,
+      {
+        headers: {
+          ...githubHeaders(accessToken),
+          ...(etag != null ? { 'If-None-Match': etag } : {}),
+        },
+      },
+      issueResponseSchema,
+      (message, cause, rejected) =>
+        new GithubApiError(message, cause, rejected),
+    ).andThen((result) => {
+      if (result.notModified) {
+        return okAsync<GithubIssueFetchResult, GithubApiError>({
+          notModified: true,
         })
       }
-
-      // The issues API reports a merged PR's state as merely "closed", so
-      // the pulls API must be consulted to distinguish closed from merged.
-      return fetchJson(
-        `${GITHUB_API_BASE}/repos/${ref.owner}/${ref.repo}/pulls/${String(ref.number)}`,
-        { headers: githubHeaders(accessToken) },
-        pullResponseSchema,
-        (message, cause, rejected) =>
-          new GithubApiError(message, cause, rejected),
-      ).map((pull) => ({
-        ...ref,
-        kind: 'pull_request' as const,
-        url: issue.html_url,
-        title: issue.title,
-        body: issue.body,
-        state: pull.merged ? ('merged' as const) : issue.state,
+      return resolveIssueState(ref, result.data, accessToken).map((issue) => ({
+        notModified: false,
+        issue,
+        etag: result.etag,
       }))
     }),
   )

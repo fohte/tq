@@ -74,3 +74,34 @@ describe('POST /api/github/resolve', () => {
     expect(res.status).toBe(400)
   })
 })
+
+describe('POST /api/github/sync', () => {
+  it('syncs every linked task', async () => {
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
+    const created = await app.request('/api/tasks/from-github', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/42' }),
+    })
+    const { task } = await jsonBody<{ task: TaskResponse }>(created)
+
+    // Consume the link's first sync (seed-only, see syncLinkFromGithub).
+    mockGithubIssueResponse()
+    await app.request('/api/github/sync', { method: 'POST' })
+
+    mockGithubIssueResponse({ title: 'Renamed on GitHub' })
+    const res = await app.request('/api/github/sync', { method: 'POST' })
+
+    expect(res.status).toBe(204)
+    const detailRes = await app.request(`/api/tasks/${task.id}`)
+    const detailBody = await jsonBody<TaskResponse>(detailRes)
+    expect(detailBody.title).toBe('Renamed on GitHub')
+  })
+
+  it('returns 204 without error when GitHub is not connected', async () => {
+    const res = await app.request('/api/github/sync', { method: 'POST' })
+
+    expect(res.status).toBe(204)
+  })
+})
