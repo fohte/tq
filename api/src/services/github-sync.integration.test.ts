@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { db } from '#db/connection'
-import { edits, taskGithubLinks, tasks } from '#db/schema'
+import { edits, taskGithubLinks, taskLinks, tasks } from '#db/schema'
 import {
   mockGithubIssueResponse,
   upsertGithubToken,
@@ -125,6 +125,20 @@ describe('syncLinkFromGithub', () => {
     expect(updatedTask?.description).toBe(task.description)
 
     expect(await loadEdits(task.id)).toEqual([])
+  })
+
+  it('re-syncs task-link mentions when the GitHub body changed', async () => {
+    const other = await createTask('Other task')
+    const { task, link } = await createLinkedTask()
+
+    mockGithubIssueResponse({ body: `See #${String(other.number)}` })
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    const outgoingLinks = await db
+      .select({ targetTaskId: taskLinks.targetTaskId })
+      .from(taskLinks)
+      .where(eq(taskLinks.sourceTaskId, task.id))
+    expect(outgoingLinks).toEqual([{ targetTaskId: other.id }])
   })
 
   it('does not overwrite a task edited in TQ when GitHub is unchanged', async () => {

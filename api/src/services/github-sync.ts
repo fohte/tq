@@ -13,6 +13,7 @@ import { GithubApiError, githubProvider } from '#integrations/github/index'
 import { fetchGithubIssue } from '#integrations/github/issues'
 import { getValidAccessToken } from '#integrations/oauth'
 import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
+import { syncTaskLinks } from '#services/task-links'
 
 const POLL_INTERVAL_MS = 60_000
 
@@ -51,45 +52,55 @@ export function syncLinkFromGithub(
     }
 
     return ResultAsync.fromSafePromise(
-      db.transaction(async (tx) => {
-        if (titleChanged || bodyChanged) {
+      db
+        .transaction(async (tx) => {
+          if (titleChanged || bodyChanged) {
+            await tx
+              .update(tasks)
+              .set({
+                ...(titleChanged ? { title: issue.title } : {}),
+                ...(bodyChanged ? { description: issue.body } : {}),
+                updatedAt: now,
+              })
+              .where(eq(tasks.id, link.taskId))
+
+            if (titleChanged) {
+              await recordEdit(
+                tx,
+                { taskId: link.taskId },
+                { action: 'update', field: 'title' },
+                SYSTEM_AUTHOR,
+              )
+            }
+            if (bodyChanged) {
+              await recordEdit(
+                tx,
+                { taskId: link.taskId },
+                { action: 'update', field: 'description' },
+                SYSTEM_AUTHOR,
+              )
+            }
+          }
+
           await tx
-            .update(tasks)
+            .update(taskGithubLinks)
             .set({
-              ...(titleChanged ? { title: issue.title } : {}),
-              ...(bodyChanged ? { description: issue.body } : {}),
-              updatedAt: now,
+              title: issue.title,
+              body: issue.body,
+              state: issue.state,
+              lastSyncedAt: now,
             })
-            .where(eq(tasks.id, link.taskId))
-
-          if (titleChanged) {
-            await recordEdit(
-              tx,
-              { taskId: link.taskId },
-              { action: 'update', field: 'title' },
-              SYSTEM_AUTHOR,
-            )
-          }
+            .where(eq(taskGithubLinks.id, link.id))
+        })
+        // Mirrors the task PATCH route: re-scan for `#number` mentions after
+        // a description change commits, so a GitHub-sourced body is treated
+        // the same as a human edit for task-link purposes. Run outside the
+        // transaction — syncTaskLinks isn't tx-aware (see its own comment).
+        .then(async () => {
           if (bodyChanged) {
-            await recordEdit(
-              tx,
-              { taskId: link.taskId },
-              { action: 'update', field: 'description' },
-              SYSTEM_AUTHOR,
-            )
+            await syncTaskLinks(link.taskId)
           }
-        }
-
-        await tx
-          .update(taskGithubLinks)
-          .set({
-            title: issue.title,
-            body: issue.body,
-            state: issue.state,
-            lastSyncedAt: now,
-          })
-          .where(eq(taskGithubLinks.id, link.id))
-      }),
+        }),
     ).map(() => undefined)
   })
 }
