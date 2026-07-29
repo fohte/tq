@@ -366,6 +366,10 @@ export const taskGithubLinks = pgTable(
     url: text('url').notNull(),
     state: text('state', { enum: ['open', 'closed', 'merged'] }).notNull(),
     title: text('title').notNull(),
+    // `title`/`body`/`state` hold the GitHub values as of the last poll, not
+    // the task's current values — the sync poller diffs a fresh fetch against
+    // these to tell "GitHub changed" apart from "the task was edited in TQ".
+    body: text('body'),
     lastSyncedAt: timestamp('last_synced_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
