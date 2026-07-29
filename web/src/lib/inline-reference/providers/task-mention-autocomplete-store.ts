@@ -42,6 +42,18 @@ export function createMentionAutocompleteStore() {
     },
 
     show(query: string, range: MentionRange) {
+      // The plugin calls this on every ProseMirror transaction, including
+      // ones unrelated to this mention (e.g. another mention's preview
+      // resolving elsewhere in the doc forces a redraw); resetting
+      // unconditionally would wipe out an in-progress arrow-key selection.
+      if (
+        state.open &&
+        state.query === query &&
+        state.range?.from === range.from &&
+        state.range.to === range.to
+      ) {
+        return
+      }
       set({ open: true, query, range, items: [], highlightedIndex: 0 })
     },
 

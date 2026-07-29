@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react'
 
-import { StatusIcon } from '#components/task/task-row'
+import { TaskMentionSummary } from '#components/task/task-mention-summary'
 import {
   type MentionSuggestion,
   useTaskMentionSuggestions,
@@ -46,11 +46,11 @@ export function TaskMentionAutocompleteMenu({
                 onSelect(item)
               }}
             >
-              <StatusIcon status={item.status} />
-              <span className="shrink-0 text-muted-foreground">
-                #{item.number}
-              </span>
-              <span className="truncate">{item.title}</span>
+              <TaskMentionSummary
+                status={item.status}
+                number={item.number}
+                title={item.title}
+              />
             </button>
           </li>
         ))

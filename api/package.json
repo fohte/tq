@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     "./types": "./src/app.ts",
-    "./constants/images": "./src/constants/images.ts"
+    "./constants/images": "./src/constants/images.ts",
+    "./constants/mention-pattern": "./src/constants/mention-pattern.ts"
   },
   "imports": {
     "#*": "./src/*.ts"

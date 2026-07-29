@@ -11,10 +11,7 @@ export interface InlineReferenceMatch<TData> {
 
 // A provider bundles everything needed to turn one kind of inline text
 // pattern (e.g. `#123` task mentions) into a live-preview chip: detecting it,
-// resolving its metadata, and rendering it. `createInlineReferencePlugin`
-// takes one provider at a time, so adding another reference kind (e.g. a
-// GitHub URL provider) later means registering another plugin instance
-// rather than teaching this one about multiple pattern kinds.
+// resolving its metadata, and rendering it.
 export interface InlineReferenceProvider<TData> {
   /** Namespaces the ProseMirror plugin key and widget decoration keys. */
   id: string

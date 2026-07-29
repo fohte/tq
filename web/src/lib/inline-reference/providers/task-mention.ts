@@ -1,3 +1,5 @@
+import { MENTION_PATTERN } from 'api/constants/mention-pattern'
+
 import { TaskMentionChip } from '#components/task/task-mention-chip'
 import {
   ensureTaskMentionPreviewLoaded,
@@ -10,13 +12,6 @@ import { queryClient } from '#lib/query-client'
 export interface TaskMentionData {
   number: number
 }
-
-// Must match api/src/services/task-links.ts's MENTION_PATTERN exactly: a
-// non-word, non-`#` character (or string start) before the `#`, and no
-// trailing word character, so `#123` matches but `foo#123`, `##123`, and
-// `#123abc` don't. A chip that appears here but isn't linked server-side (or
-// vice versa) would be a confusing inconsistency.
-const MENTION_PATTERN = /(?<![\w#])#(\d+)(?!\w)/g
 
 export const taskMentionProvider: InlineReferenceProvider<TaskMentionData> = {
   id: 'task-mention',

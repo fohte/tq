@@ -1,6 +1,7 @@
 import { type QueryClient, useQuery } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
+import { useDebounce } from '#hooks/use-debounce'
 import { type TaskDetail, taskKeys } from '#hooks/use-tasks'
 import { api } from '#lib/api'
 
@@ -57,19 +58,29 @@ export function ensureTaskMentionPreviewLoaded(
   queryClient: QueryClient,
   number: number,
 ): void {
+  const queryKey = taskMentionKeys.preview(number)
+  // The decoration plugin calls this on every keystroke throughout the
+  // whole document for every not-yet-ready mention, so a query that's
+  // already failed must not be retried on every single one of those calls.
+  if (queryClient.getQueryState(queryKey)?.status === 'error') return
+
   void queryClient
     .fetchQuery(taskMentionPreviewQueryOptions(number))
-    .catch(() => {
+    .catch((error: unknown) => {
       // Surfaced to callers as a cached `undefined`/never-resolved entry; the
       // mention just stays as plain text.
+      console.error('Failed to load task mention preview', error)
     })
 }
 
 export function useTaskMentionSuggestions(query: string, enabled: boolean) {
+  const debouncedQuery = useDebounce(query, 150)
   return useQuery({
-    queryKey: taskMentionKeys.suggestions(query),
+    queryKey: taskMentionKeys.suggestions(debouncedQuery),
     queryFn: async () => {
-      const res = await api.api.tasks.mentions.$get({ query: { q: query } })
+      const res = await api.api.tasks.mentions.$get({
+        query: { q: debouncedQuery },
+      })
       return res.json()
     },
     enabled,

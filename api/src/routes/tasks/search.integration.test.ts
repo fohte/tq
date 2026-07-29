@@ -237,7 +237,9 @@ describe('tasks search API', () => {
       status: string
     }
 
-    function toMentionSummary(task: TaskResponse): MentionSummary {
+    function toMentionSummary(
+      task: Awaited<ReturnType<typeof createTask>>,
+    ): MentionSummary {
       return {
         id: task.id,
         number: task.number,
@@ -246,7 +248,7 @@ describe('tasks search API', () => {
       }
     }
 
-    it('matches by task number prefix when q is all digits', async () => {
+    it('matches an exact numeric query against that task number', async () => {
       const task1 = await createTask('First task')
       await createTask('Second task')
 
@@ -257,6 +259,33 @@ describe('tasks search API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<MentionSummary[]>(res)
       expect(body).toEqual([toMentionSummary(task1)])
+    })
+
+    it('matches tasks whose number starts with a shorter numeric query', async () => {
+      // Force the sequence to a 2+ digit number so `prefix` below is
+      // genuinely shorter than the full number - this guards against the
+      // endpoint regressing from a LIKE-based prefix match to an
+      // exact-match comparison.
+      const created: Array<Awaited<ReturnType<typeof createTask>>> = []
+      let target: Awaited<ReturnType<typeof createTask>>
+      do {
+        target = await createTask('Number probe')
+        created.push(target)
+      } while (target.number < 10)
+
+      const prefix = String(target.number).slice(0, -1)
+      const expected = created
+        .filter((t) => String(t.number).startsWith(prefix))
+        .map(toMentionSummary)
+        .sort((a, b) => a.number - b.number)
+
+      const res = await app.request(
+        `/api/tasks/mentions?q=${encodeURIComponent(prefix)}`,
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<MentionSummary[]>(res)
+      expect([...body].sort((a, b) => a.number - b.number)).toEqual(expected)
     })
 
     it('matches by title substring when q is not numeric', async () => {
