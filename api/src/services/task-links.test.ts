@@ -19,8 +19,8 @@ describe('extractMentionedNumbers', () => {
     expect(extractMentionedNumbers('no references here')).toEqual([])
   })
 
-  it('ignores a markdown heading marker', () => {
-    expect(extractMentionedNumbers('## Heading')).toEqual([])
+  it('ignores a mention preceded by another hash, e.g. a markdown heading marker', () => {
+    expect(extractMentionedNumbers('##123')).toEqual([])
   })
 
   it('ignores a hash directly preceded by a word character', () => {
