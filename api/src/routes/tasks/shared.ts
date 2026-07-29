@@ -1,4 +1,5 @@
 import { and, eq, isNull } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { createFactory } from 'hono/factory'
 import { err, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
@@ -28,6 +29,7 @@ export function taskToResponse(
 ) {
   return {
     id: task.id,
+    number: task.number,
     title: task.title,
     description: task.description,
     status: task.status,
@@ -44,6 +46,12 @@ export function taskToResponse(
     updatedAt: task.updatedAt.toISOString(),
   }
 }
+
+// Self-join alias resolving a task row's parent's `number`, for list
+// endpoints that render a "← #<parent number>" reference without fetching
+// the whole parent task. Callers add `.leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))`
+// and select `parentTasks.number`.
+export const parentTasks = alias(tasks, 'parent_task')
 
 export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
   return {
@@ -126,11 +134,18 @@ type TaskEnv = {
 
 const factory = createFactory<TaskEnv, '/:id'>()
 
-export const requireTask = factory.createMiddleware(async (c, next) => {
-  const id = c.req.param('id')
+const numericIdPattern = /^\d+$/
 
+export const requireTask = factory.createMiddleware(async (c, next) => {
+  const param = c.req.param('id')
+
+  // Task detail URLs accept either the UUID primary key or the human-facing
+  // sequential number (e.g. `/tasks/123`), so bookmarked UUID links keep
+  // working alongside the new short form.
   const task = await db.query.tasks.findFirst({
-    where: eq(tasks.id, id),
+    where: numericIdPattern.test(param)
+      ? eq(tasks.number, Number(param))
+      : eq(tasks.id, param),
   })
   if (!task) {
     return c.json({ error: 'Task not found' }, 404)

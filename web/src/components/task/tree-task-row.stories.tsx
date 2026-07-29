@@ -14,6 +14,7 @@ import type { TreeNode } from '#hooks/use-tasks'
 
 const baseTreeNode: TreeNode = {
   id: '00000000-0000-0000-0000-000000000001',
+  number: 1,
   title: 'Implement task list UI',
   description: null,
   status: 'todo',

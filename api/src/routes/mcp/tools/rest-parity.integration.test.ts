@@ -115,7 +115,7 @@ describe('REST/MCP parity', () => {
     expect(res.status).toBe(200)
 
     expect(await jsonBody<unknown[]>(res)).toEqual([
-      { ...data, activeTimeBlockStartTime: null },
+      { ...data, activeTimeBlockStartTime: null, parentNumber: null },
     ])
   })
 
@@ -173,8 +173,14 @@ describe('REST/MCP parity', () => {
         ...completedTask,
         recurrenceRule: null,
         activeTimeBlockStartTime: null,
+        parentNumber: null,
       },
-      { ...nextTask, recurrenceRule: null, activeTimeBlockStartTime: null },
+      {
+        ...nextTask,
+        recurrenceRule: null,
+        activeTimeBlockStartTime: null,
+        parentNumber: null,
+      },
     ]
 
     // GET /api/tasks (list) never hydrates recurrenceRule, unlike the detail

@@ -38,6 +38,24 @@ describe('tasks actions API', () => {
       expect(res.status).toBe(404)
     })
 
+    it('accepts the task number in place of the UUID', async () => {
+      const created = await createTask('Task')
+
+      const res = await app.request(
+        `/api/tasks/${String(created.number)}/status`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'in_progress' }),
+        },
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.id).toBe(created.id)
+      expect(body.status).toBe('in_progress')
+    })
+
     it('closes open TimeBlocks when status changes away from in_progress', async () => {
       const task = await createTask('Status change')
       await app.request(`/api/tasks/${task.id}/start`, { method: 'POST' })

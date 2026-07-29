@@ -47,7 +47,7 @@ export function TaskMainContent({
           Tasks
         </Link>
         <ChevronRight className="size-3.5" />
-        <span className="text-foreground">#{task.id.slice(0, 8)}</span>
+        <span className="text-foreground">#{task.number}</span>
       </nav>
 
       {/* Status + Title */}
@@ -496,7 +496,7 @@ function SidebarParentField({
         <option value="">None</option>
         {candidates.map((t) => (
           <option key={t.id} value={t.id}>
-            #{t.id.slice(0, 8)} {t.title}
+            #{t.number} {t.title}
           </option>
         ))}
       </select>

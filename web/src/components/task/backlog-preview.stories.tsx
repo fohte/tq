@@ -7,6 +7,7 @@ import type { Task } from '#hooks/use-tasks'
 const makeBacklogTasks = (count: number): Task[] =>
   Array.from({ length: count }, (_, i) => ({
     id: `00000000-0000-0000-0000-00000000000${String(i)}`,
+    number: i + 1,
     title: `Backlog task ${String(i + 1)}`,
     description: null,
     status: 'todo' as const,
@@ -15,6 +16,7 @@ const makeBacklogTasks = (count: number): Task[] =>
     dueDate: null,
     estimatedMinutes: null,
     parentId: null,
+    parentNumber: null,
     projectId: null,
     sortOrder: i,
     recurrenceRuleId: null,

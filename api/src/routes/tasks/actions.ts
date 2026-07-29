@@ -30,8 +30,8 @@ export const tasksActionsApp = new Hono()
     requireTask,
     zValidator('json', updateStatusSchema),
     async (c) => {
-      const id = c.req.param('id')
       const existing = c.get('task')
+      const id = existing.id
       const { status } = c.req.valid('json')
 
       const now = new Date()
@@ -60,7 +60,7 @@ export const tasksActionsApp = new Hono()
     requireTask,
     zValidator('json', updateParentSchema),
     async (c) => {
-      const id = c.req.param('id')
+      const id = c.get('task').id
       const { parentId } = c.req.valid('json')
 
       if (parentId != null) {
@@ -107,8 +107,8 @@ export const tasksActionsApp = new Hono()
     },
   )
   .post('/:id/start', requireTask, async (c) => {
-    const id = c.req.param('id')
     const existing = c.get('task')
+    const id = existing.id
 
     if (existing.status === 'in_progress') {
       return c.json({ error: 'Task is already in progress' }, 409)
@@ -134,8 +134,8 @@ export const tasksActionsApp = new Hono()
     )
   })
   .post('/:id/stop', requireTask, async (c) => {
-    const id = c.req.param('id')
     const existing = c.get('task')
+    const id = existing.id
 
     if (existing.status !== 'in_progress') {
       return c.json({ error: 'Task is not in progress' }, 409)
@@ -155,8 +155,8 @@ export const tasksActionsApp = new Hono()
     )
   })
   .post('/:id/complete', requireTask, async (c) => {
-    const id = c.req.param('id')
     const existing = c.get('task')
+    const id = existing.id
 
     if (existing.status === 'completed') {
       return c.json({ error: 'Task is already completed' }, 409)

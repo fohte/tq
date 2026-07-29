@@ -8,6 +8,7 @@ import {
   integer,
   pgTable,
   primaryKey,
+  serial,
   text,
   timestamp,
 } from 'drizzle-orm/pg-core'
@@ -66,6 +67,9 @@ export const tasks = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
+    // Globally unique, human-facing sequential id (e.g. `#123`), separate
+    // from the UUID primary key used internally and in URLs/FKs.
+    number: serial('number').unique(),
     title: text('title').notNull(),
     description: text('description'),
     status: text('status', {

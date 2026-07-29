@@ -152,7 +152,7 @@ interface TaskRowBaseProps {
   status: Task['status']
   context: Task['context']
   estimatedMinutes: number | null
-  parentId: string | null
+  parentNumber: number | null
   activeTimeBlockStartTime: string | null
   updatedAt: string
 }
@@ -163,7 +163,7 @@ function TaskRowContent({
   status,
   context,
   estimatedMinutes,
-  parentId,
+  parentNumber,
   activeTimeBlockStartTime,
   updatedAt,
 }: TaskRowBaseProps) {
@@ -196,9 +196,9 @@ function TaskRowContent({
           >
             {title}
           </span>
-          {parentId != null && (
+          {parentNumber != null && (
             <span className="shrink-0 text-xs text-muted-foreground">
-              ← #{parentId.slice(0, 4)}
+              ← #{parentNumber}
             </span>
           )}
         </div>
@@ -263,7 +263,7 @@ export function TaskRow({
         status={task.status}
         context={task.context}
         estimatedMinutes={task.estimatedMinutes}
-        parentId={task.parentId}
+        parentNumber={task.parentNumber}
         activeTimeBlockStartTime={task.activeTimeBlockStartTime}
         updatedAt={task.updatedAt}
       />
