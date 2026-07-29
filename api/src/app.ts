@@ -3,8 +3,8 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 
 import { calendarApp } from '#routes/calendar'
+import { githubApp } from '#routes/github'
 import { imagesApp } from '#routes/images'
-import { integrationsApp } from '#routes/integrations'
 import { labelsApp } from '#routes/labels'
 import { mcpApp } from '#routes/mcp/index'
 import { projectsApp } from '#routes/projects'
@@ -29,7 +29,7 @@ const app = new Hono()
   .route('/api/projects', projectsApp)
   .route('/api/schedule', schedulesApp)
   .route('/api/calendar', calendarApp)
-  .route('/api/integrations', integrationsApp)
+  .route('/api/github', githubApp)
   .route('/api/images', imagesApp)
   .route('/api/labels', labelsApp)
   .route('/api/mcp', mcpApp)

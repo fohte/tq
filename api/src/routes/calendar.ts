@@ -4,7 +4,15 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { OAuthTokenMissingError, TokenRefreshError } from '#integrations/errors'
-import { getEvents } from '#integrations/google-calendar/index'
+import {
+  getEvents,
+  googleCalendarProvider,
+} from '#integrations/google-calendar/index'
+import {
+  callbackQuerySchema,
+  handleGetAuthUrl,
+  handleOAuthCallbackRoute,
+} from '#routes/integration-handlers'
 
 const eventsQuerySchema = z.object({
   calendarId: z.string(),
@@ -12,10 +20,11 @@ const eventsQuerySchema = z.object({
   timeMax: z.iso.datetime(),
 })
 
-export const calendarApp = new Hono().get(
-  '/events',
-  zValidator('query', eventsQuerySchema),
-  async (c) => {
+// No /status or /token (disconnect) here, unlike routes/github.ts: no
+// client needs them for Google Calendar — /events already surfaces the
+// "needs re-auth" state via 401, and there's no disconnect UI for it.
+export const calendarApp = new Hono()
+  .get('/events', zValidator('query', eventsQuerySchema), async (c) => {
     const { calendarId, timeMin, timeMax } = c.req.valid('query')
 
     const result = await getEvents(calendarId, timeMin, timeMax)
@@ -40,5 +49,20 @@ export const calendarApp = new Hono().get(
         return c.json({ error: 'Internal server error' }, 500)
       },
     )
-  },
-)
+  })
+  .get('/auth-url', (c) =>
+    handleGetAuthUrl(c, googleCalendarProvider, 'calendar'),
+  )
+  .get(
+    '/oauth-callback',
+    zValidator('query', callbackQuerySchema),
+    async (c) => {
+      const { code } = c.req.valid('query')
+      return handleOAuthCallbackRoute(
+        c,
+        googleCalendarProvider,
+        code,
+        'calendar',
+      )
+    },
+  )
