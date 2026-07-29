@@ -10,6 +10,8 @@ type Task = InferResponseType<typeof api.api.tasks.$get>[number]
 
 type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
 
+type LinkedTaskSummary = TaskDetail['links']['outgoing'][number]
+
 type TreeNode = InferResponseType<typeof api.api.tasks.tree.$get, 200>[number]
 
 export const taskKeys = {
@@ -21,7 +23,7 @@ export const taskKeys = {
   detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
 }
 
-export type { Task, TaskDetail, TreeNode }
+export type { LinkedTaskSummary, Task, TaskDetail, TreeNode }
 
 type TaskStatus = 'todo' | 'in_progress' | 'completed'
 

@@ -8,6 +8,7 @@ import { db } from '#db/connection'
 import { taskComments, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { recordEdit } from '#lib/edits'
+import { syncTaskLinks } from '#services/task-links'
 
 const createCommentSchema = z.object({
   content: z.string().min(1),
@@ -84,6 +85,8 @@ export const taskCommentsApp = new Hono()
         return comment
       })
 
+      await syncTaskLinks(taskId)
+
       return c.json(commentToResponse(comment), 201)
     },
   )
@@ -129,6 +132,8 @@ export const taskCommentsApp = new Hono()
         return updated
       })
 
+      await syncTaskLinks(taskId)
+
       return c.json(commentToResponse(updated), 200)
     },
   )
@@ -147,6 +152,8 @@ export const taskCommentsApp = new Hono()
     }
 
     await db.delete(taskComments).where(eq(taskComments.id, commentId))
+
+    await syncTaskLinks(taskId)
 
     return c.body(null, 204)
   })
