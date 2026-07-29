@@ -13,6 +13,16 @@ import {
   uploadImageFile,
   uploadImageFiles,
 } from '#lib/image-upload'
+import { createInlineReferencePlugin } from '#lib/inline-reference/plugin'
+import { taskMentionProvider } from '#lib/inline-reference/providers/task-mention'
+import { taskMentionAutocompletePlugin } from '#lib/inline-reference/providers/task-mention-autocomplete-plugin'
+
+// Module-level singletons, reused across every editor instance the same way
+// `upload` below is: each `.use()` call binds it to that specific editor's
+// ctx, so instantiating once and sharing it across the description/pages/
+// comment editors is safe.
+const taskMentionDecorationPlugin =
+  createInlineReferencePlugin(taskMentionProvider)
 
 interface MarkdownEditorProps {
   defaultValue?: string
@@ -44,15 +54,19 @@ function CrepeEditor({
     // Crepe's image-block feature only covers file-picker uploads; wire up
     // plugin-upload so pasting/dropping an image anywhere in the editor
     // uploads it too.
-    crepe.editor.use(upload).config((ctx) => {
-      ctx.update(uploadConfig.key, (prev) => ({
-        ...prev,
-        uploader: (files, schema) =>
-          uploadImageFiles(files, (src, alt) =>
-            schema.nodes['image']?.createAndFill({ src, alt }),
-          ),
-      }))
-    })
+    crepe.editor
+      .use(upload)
+      .config((ctx) => {
+        ctx.update(uploadConfig.key, (prev) => ({
+          ...prev,
+          uploader: (files, schema) =>
+            uploadImageFiles(files, (src, alt) =>
+              schema.nodes['image']?.createAndFill({ src, alt }),
+            ),
+        }))
+      })
+      .use(taskMentionDecorationPlugin)
+      .use(taskMentionAutocompletePlugin)
 
     if (onChange) {
       crepe.on((listener) => {

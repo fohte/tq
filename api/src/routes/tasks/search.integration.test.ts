@@ -228,4 +228,60 @@ describe('tasks search API', () => {
       expect(body.every((s) => s.category === 'is')).toBe(true)
     })
   })
+
+  describe('GET /api/tasks/mentions', () => {
+    type MentionSummary = {
+      id: string
+      number: number
+      title: string
+      status: string
+    }
+
+    function toMentionSummary(task: TaskResponse): MentionSummary {
+      return {
+        id: task.id,
+        number: task.number,
+        title: task.title,
+        status: task.status,
+      }
+    }
+
+    it('matches by task number prefix when q is all digits', async () => {
+      const task1 = await createTask('First task')
+      await createTask('Second task')
+
+      const res = await app.request(
+        `/api/tasks/mentions?q=${encodeURIComponent(String(task1.number))}`,
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<MentionSummary[]>(res)
+      expect(body).toEqual([toMentionSummary(task1)])
+    })
+
+    it('matches by title substring when q is not numeric', async () => {
+      const deploy = await createTask('Deploy to production')
+      await createTask('Buy groceries')
+
+      const res = await app.request(
+        '/api/tasks/mentions?q=' + encodeURIComponent('deploy'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<MentionSummary[]>(res)
+      expect(body).toEqual([toMentionSummary(deploy)])
+    })
+
+    it('returns tasks ordered by number, limited to the requested count', async () => {
+      const task1 = await createTask('Task 1')
+      const task2 = await createTask('Task 2')
+      await createTask('Task 3')
+
+      const res = await app.request('/api/tasks/mentions?limit=2')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<MentionSummary[]>(res)
+      expect(body).toEqual([toMentionSummary(task1), toMentionSummary(task2)])
+    })
+  })
 })
