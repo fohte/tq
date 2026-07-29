@@ -145,7 +145,7 @@ export type GithubIssueFetchResult =
   | { notModified: false; issue: GithubIssueData; etag: string | null }
 
 /**
- * Conditional variant of `fetchGithubIssue` for repeat polling: pass the
+ * Conditional variant of `fetchGithubIssue` for repeat syncs: pass the
  * `etag` recorded from a previous call to have GitHub answer with a bare 304
  * (no body) when nothing changed, which doesn't count against the primary
  * rate limit (see
