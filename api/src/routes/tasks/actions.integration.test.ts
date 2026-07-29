@@ -44,6 +44,17 @@ describe('tasks actions API', () => {
 
       expect(res.status).toBe(400)
     })
+
+    it('succeeds when re-setting the same status (idempotent)', async () => {
+      const created = await createTask('Task')
+      await setStatus(created.id, 'in_progress')
+
+      const res = await setStatus(created.id, 'in_progress')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.status).toBe('in_progress')
+    })
   })
 
   describe('PATCH /api/tasks/:id/parent', () => {

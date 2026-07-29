@@ -393,18 +393,14 @@ export function useUpdateTaskParent() {
   })
 }
 
-function useTaskActionMutation(
-  apiCall: (id: string) => Promise<Response>,
-  optimisticStatus: TaskStatus,
-  errorMsg: string,
-) {
+export function useCompleteTask() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiCall(id)
-      if (!res.ok) throw new Error(errorMsg)
-      return res.json() as Promise<unknown>
+      const res = await api.api.tasks[':id'].complete.$post({ param: { id } })
+      if (!res.ok) throw new Error('Failed to complete task')
+      return res.json()
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists })
@@ -425,7 +421,7 @@ function useTaskActionMutation(
           if (!old) return old
           return old.map((task) =>
             task.id === id
-              ? { ...task, status: optimisticStatus, updatedAt: now }
+              ? { ...task, status: 'completed', updatedAt: now }
               : task,
           )
         },
@@ -434,7 +430,7 @@ function useTaskActionMutation(
       if (previousDetail) {
         queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
           ...previousDetail,
-          status: optimisticStatus,
+          status: 'completed',
           updatedAt: now,
         })
       }
@@ -456,14 +452,6 @@ function useTaskActionMutation(
       void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })
-}
-
-export function useCompleteTask() {
-  return useTaskActionMutation(
-    (id) => api.api.tasks[':id'].complete.$post({ param: { id } }),
-    'completed',
-    'Failed to complete task',
-  )
 }
 
 export function useDeleteTask() {

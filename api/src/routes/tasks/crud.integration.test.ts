@@ -12,6 +12,16 @@ import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
+function normalizeTimeBlock(block: TimeBlockResponse) {
+  return {
+    ...block,
+    id: 'ID',
+    taskId: 'TASK',
+    createdAt: 'TIMESTAMP',
+    updatedAt: 'TIMESTAMP',
+  }
+}
+
 describe('tasks CRUD API', () => {
   describe('POST /api/tasks', () => {
     it('creates a task with only title', async () => {
@@ -184,9 +194,17 @@ describe('tasks CRUD API', () => {
       const body = await jsonBody<
         TaskResponse & { timeBlocks: TimeBlockResponse[] }
       >(res)
-      expect(body.timeBlocks).toHaveLength(1)
-      assertDefined(body.timeBlocks[0])
-      expect(body.timeBlocks[0].endTime).toBe('2026-03-22T10:00:00.000Z')
+      expect(body.timeBlocks.map(normalizeTimeBlock)).toEqual([
+        {
+          id: 'ID',
+          taskId: 'TASK',
+          startTime: '2026-03-22T09:00:00.000Z',
+          endTime: '2026-03-22T10:00:00.000Z',
+          isAutoScheduled: false,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ])
     })
 
     it('returns empty timeBlocks when task has none', async () => {

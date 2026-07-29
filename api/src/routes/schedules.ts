@@ -17,6 +17,7 @@ import {
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { localDateBoundsToUtc } from '#lib/timezone'
 import { expandScheduleForDate } from '#routes/schedule-expansion'
+import { timeBlockToResponse } from '#routes/tasks/shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 import {
   autoAssign,
@@ -86,18 +87,6 @@ const updateScheduleSchema = z.object({
 const scheduleDateQuerySchema = z.object({
   date: z.string(),
 })
-
-function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
-  return {
-    id: block.id,
-    taskId: block.taskId,
-    startTime: block.startTime.toISOString(),
-    endTime: block.endTime.toISOString(),
-    isAutoScheduled: block.isAutoScheduled,
-    createdAt: block.createdAt.toISOString(),
-    updatedAt: block.updatedAt.toISOString(),
-  }
-}
 
 function todayTaskToResponse(row: typeof todayTasks.$inferSelect) {
   return {

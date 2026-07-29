@@ -194,7 +194,7 @@ describe('externalEventsToBusyRanges', () => {
 })
 
 describe('manualBlocksToBusyRanges', () => {
-  it('converts blocks with a known end time', () => {
+  it('converts blocks to busy ranges', () => {
     const ranges = manualBlocksToBusyRanges([
       { startTime: d('09:00'), endTime: d('10:00') },
     ])
