@@ -25,6 +25,18 @@ export interface RecurrenceRuleResponse {
   dayOfMonth: number | null
 }
 
+export interface GithubLinkResponse {
+  id: string
+  owner: string
+  repo: string
+  number: number
+  kind: 'issue' | 'pull_request'
+  url: string
+  state: 'open' | 'closed' | 'merged'
+  title: string
+  lastSyncedAt: string
+}
+
 export interface TaskResponse {
   id: string
   title: string
@@ -38,6 +50,7 @@ export interface TaskResponse {
   projectId: string | null
   recurrenceRuleId: string | null
   recurrenceRule: RecurrenceRuleResponse | null
+  githubLink: GithubLinkResponse | null
   sortOrder: number
   createdAt: string
   updatedAt: string
@@ -53,6 +66,18 @@ const recurrenceRuleResponseSchema = z.object({
   dayOfMonth: z.number().nullable(),
 })
 
+const githubLinkResponseSchema = z.object({
+  id: z.string(),
+  owner: z.string(),
+  repo: z.string(),
+  number: z.number(),
+  kind: z.enum(['issue', 'pull_request']),
+  url: z.string(),
+  state: z.enum(['open', 'closed', 'merged']),
+  title: z.string(),
+  lastSyncedAt: z.string(),
+})
+
 const taskResponseSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -66,6 +91,7 @@ const taskResponseSchema = z.object({
   projectId: z.string().nullable(),
   recurrenceRuleId: z.string().nullable(),
   recurrenceRule: recurrenceRuleResponseSchema.nullable(),
+  githubLink: githubLinkResponseSchema.nullable(),
   sortOrder: z.number(),
   createdAt: z.string(),
   updatedAt: z.string(),

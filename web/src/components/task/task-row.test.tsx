@@ -37,6 +37,7 @@ function makeNode(overrides: Partial<TreeNode> = {}): TreeNode {
     sortOrder: 0,
     recurrenceRuleId: null,
     recurrenceRule: null,
+    githubLink: null,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
     children: [],
@@ -181,5 +182,28 @@ describe('TreeTaskRow', () => {
     renderTree(leaf)
     expect(screen.queryByLabelText('Collapse')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Expand')).not.toBeInTheDocument()
+  })
+
+  it('does not show a GitHub badge when there is no link', () => {
+    renderTree(makeNode())
+    expect(screen.queryByText('tq#42')).not.toBeInTheDocument()
+  })
+
+  it('shows a GitHub badge when linked', () => {
+    const node = makeNode({
+      githubLink: {
+        id: 'link-1',
+        owner: 'fohte',
+        repo: 'tq',
+        number: 42,
+        kind: 'issue',
+        url: 'https://github.com/fohte/tq/issues/42',
+        state: 'open',
+        title: 'Linked issue',
+        lastSyncedAt: '2026-03-20T00:00:00.000Z',
+      },
+    })
+    renderTree(node)
+    expect(screen.getByText('tq#42')).toBeInTheDocument()
   })
 })

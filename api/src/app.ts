@@ -10,6 +10,7 @@ import { mcpApp } from '#routes/mcp/index'
 import { projectsApp } from '#routes/projects'
 import { schedulesApp } from '#routes/schedules'
 import { taskCommentsApp } from '#routes/task-comments'
+import { taskGithubLinkApp } from '#routes/task-github-link'
 import { taskPagesApp } from '#routes/task-pages'
 import { tasksApp } from '#routes/tasks/index'
 
@@ -26,6 +27,7 @@ const app = new Hono()
   .route('/api/tasks', tasksApp)
   .route('/api/tasks', taskCommentsApp)
   .route('/api/tasks/:taskId/pages', taskPagesApp)
+  .route('/api/tasks/:taskId/github-link', taskGithubLinkApp)
   .route('/api/projects', projectsApp)
   .route('/api/schedule', schedulesApp)
   .route('/api/calendar', calendarApp)

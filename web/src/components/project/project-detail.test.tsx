@@ -20,6 +20,7 @@ const baseTask: ProjectTask = {
   sortOrder: 0,
   recurrenceRuleId: null,
   recurrenceRule: null,
+  githubLink: null,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 }

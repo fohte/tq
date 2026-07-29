@@ -4,7 +4,8 @@ import { err, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
-import { recurrenceRules, tasks, timeBlocks } from '#db/schema'
+import { recurrenceRules, taskGithubLinks, tasks, timeBlocks } from '#db/schema'
+import { githubLinkToResponse } from '#routes/task-github-link'
 
 export const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
 export const contextEnum = z.enum(['work', 'personal', 'dev'])
@@ -24,6 +25,7 @@ export function recurrenceRuleToResponse(
 export function taskToResponse(
   task: typeof tasks.$inferSelect,
   rule?: typeof recurrenceRules.$inferSelect | null,
+  githubLink?: typeof taskGithubLinks.$inferSelect | null,
 ) {
   return {
     id: task.id,
@@ -38,6 +40,7 @@ export function taskToResponse(
     projectId: task.projectId,
     recurrenceRuleId: task.recurrenceRuleId,
     recurrenceRule: rule ? recurrenceRuleToResponse(rule) : null,
+    githubLink: githubLink ? githubLinkToResponse(githubLink) : null,
     sortOrder: task.sortOrder,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
@@ -73,12 +76,13 @@ export class TaskTreeConsistencyError extends Error {
 export function buildTree(
   allTasks: Array<typeof tasks.$inferSelect>,
   rootId?: string,
+  linksByTaskId?: Map<string, typeof taskGithubLinks.$inferSelect>,
 ): Result<TreeNode[], TaskTreeConsistencyError> {
   const nodeMap = new Map<string, TreeNode>()
 
   for (const task of allTasks) {
     nodeMap.set(task.id, {
-      ...taskToResponse(task),
+      ...taskToResponse(task, undefined, linksByTaskId?.get(task.id)),
       children: [],
       childCompletionCount: { completed: 0, total: 0 },
     })

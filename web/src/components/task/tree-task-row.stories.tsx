@@ -26,6 +26,7 @@ const baseTreeNode: TreeNode = {
   sortOrder: 0,
   recurrenceRuleId: null,
   recurrenceRule: null,
+  githubLink: null,
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
   children: [],
@@ -138,6 +139,26 @@ export const Nested: Story = {
         },
       ],
       childCompletionCount: { completed: 0, total: 1 },
+    },
+  },
+}
+
+export const WithGithubLink: Story = {
+  args: {
+    node: {
+      ...baseTreeNode,
+      title: 'Fix flaky test',
+      githubLink: {
+        id: 'link-1',
+        owner: 'fohte',
+        repo: 'tq',
+        number: 42,
+        kind: 'pull_request',
+        url: 'https://github.com/fohte/tq/pull/42',
+        state: 'merged',
+        title: 'Fix flaky test',
+        lastSyncedAt: '2026-03-20T00:00:00.000Z',
+      },
     },
   },
 }

@@ -55,6 +55,7 @@ const baseTask: TaskDetail = {
   sortOrder: 0,
   recurrenceRuleId: null,
   recurrenceRule: null,
+  githubLink: null,
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
   childCompletionCount: { completed: 1, total: 3 },
@@ -206,6 +207,32 @@ export const SidebarMinimal: StoryObj<{ task: TaskDetail }> = {
       dueDate: null,
       parentId: null,
       context: 'personal',
+    },
+  },
+  render: ({ task }) => (
+    <Providers>
+      <div className="w-60 border-l border-border p-4">
+        <TaskSidebar task={task} />
+      </div>
+    </Providers>
+  ),
+}
+
+export const SidebarWithGithubLink: StoryObj<{ task: TaskDetail }> = {
+  args: {
+    task: {
+      ...baseTask,
+      githubLink: {
+        id: 'link-1',
+        owner: 'fohte',
+        repo: 'tq',
+        number: 42,
+        kind: 'issue',
+        url: 'https://github.com/fohte/tq/issues/42',
+        state: 'open',
+        title: 'Implement task detail page',
+        lastSyncedAt: '2026-03-20T00:00:00.000Z',
+      },
     },
   },
   render: ({ task }) => (
