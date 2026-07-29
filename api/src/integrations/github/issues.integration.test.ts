@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { db } from '#db/connection'
-import { oauthTokens } from '#db/schema'
 import { OAuthTokenMissingError } from '#integrations/errors'
 import { GithubApiError } from '#integrations/github/index'
 import { fetchGithubIssue } from '#integrations/github/issues'
+import { upsertGithubToken } from '#integrations/github/testing'
 import { setupTestDb } from '#testing'
 
 setupTestDb()
@@ -12,16 +11,6 @@ setupTestDb()
 afterEach(() => {
   vi.restoreAllMocks()
 })
-
-async function upsertToken(accessToken: string) {
-  await db
-    .insert(oauthTokens)
-    .values({ provider: 'github', accessToken })
-    .onConflictDoUpdate({
-      target: oauthTokens.provider,
-      set: { accessToken, updatedAt: new Date() },
-    })
-}
 
 const ref = { owner: 'fohte', repo: 'tq', number: 42 }
 
@@ -33,7 +22,7 @@ describe('fetchGithubIssue', () => {
   })
 
   it('fetches an issue', async () => {
-    await upsertToken('valid-token')
+    await upsertGithubToken('valid-token')
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -61,7 +50,7 @@ describe('fetchGithubIssue', () => {
   })
 
   it('fetches an open pull request', async () => {
-    await upsertToken('valid-token')
+    await upsertGithubToken('valid-token')
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -90,7 +79,7 @@ describe('fetchGithubIssue', () => {
   })
 
   it('reports a merged pull request as state "merged" via the pulls API', async () => {
-    await upsertToken('valid-token')
+    await upsertGithubToken('valid-token')
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(
         new Response(
@@ -114,7 +103,7 @@ describe('fetchGithubIssue', () => {
   })
 
   it('reports a closed-but-not-merged pull request as state "closed"', async () => {
-    await upsertToken('valid-token')
+    await upsertGithubToken('valid-token')
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(
         new Response(
@@ -138,7 +127,7 @@ describe('fetchGithubIssue', () => {
   })
 
   it('returns a rejected GithubApiError when the issue is not found', async () => {
-    await upsertToken('valid-token')
+    await upsertGithubToken('valid-token')
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response('Not Found', { status: 404 }),
     )

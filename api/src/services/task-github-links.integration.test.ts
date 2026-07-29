@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { db } from '#db/connection'
-import { oauthTokens, taskGithubLinks } from '#db/schema'
+import { taskGithubLinks } from '#db/schema'
+import {
+  mockGithubIssueResponse,
+  upsertGithubToken,
+} from '#integrations/github/testing'
 import { createTask, TEST_UUID } from '#routes/tasks/testing'
 import {
   createTaskFromGithubUrl,
@@ -21,31 +24,6 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-async function upsertToken(accessToken: string) {
-  await db
-    .insert(oauthTokens)
-    .values({ provider: 'github', accessToken })
-    .onConflictDoUpdate({
-      target: oauthTokens.provider,
-      set: { accessToken, updatedAt: new Date() },
-    })
-}
-
-function mockIssueResponse(overrides: Partial<Record<string, unknown>> = {}) {
-  vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-    new Response(
-      JSON.stringify({
-        title: 'Bug: something broke',
-        body: 'Steps to reproduce...',
-        state: 'open',
-        html_url: 'https://github.com/fohte/tq/issues/42',
-        ...overrides,
-      }),
-      { status: 200 },
-    ),
-  )
-}
-
 function normalizeLink(link: typeof taskGithubLinks.$inferSelect) {
   return {
     ...link,
@@ -60,8 +38,8 @@ const ref = { owner: 'fohte', repo: 'tq', number: 42 }
 
 describe('resolveGithubUrl', () => {
   it('returns a preview when the issue is not linked to any task', async () => {
-    await upsertToken('valid-token')
-    mockIssueResponse()
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
 
     const resolved = (await resolveGithubUrl(ref))._unsafeUnwrap()
 
@@ -80,13 +58,12 @@ describe('resolveGithubUrl', () => {
   })
 
   it('returns the existing task and link when already linked', async () => {
-    await upsertToken('valid-token')
-    mockIssueResponse()
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
     const created = (await createTaskFromGithubUrl(ref))._unsafeUnwrap()
 
     const resolved = (await resolveGithubUrl(ref))._unsafeUnwrap()
 
-    expect('existingTask' in resolved && 'existingLink' in resolved).toBe(true)
     expect(resolved).toEqual({
       existingTask: created.task,
       existingLink: created.link,
@@ -96,8 +73,8 @@ describe('resolveGithubUrl', () => {
 
 describe('createTaskFromGithubUrl', () => {
   it('creates a task from the issue title/body and links it', async () => {
-    await upsertToken('valid-token')
-    mockIssueResponse()
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
 
     const { task, link, created } = (
       await createTaskFromGithubUrl(ref)
@@ -121,8 +98,8 @@ describe('createTaskFromGithubUrl', () => {
   })
 
   it('returns the existing task instead of creating a duplicate', async () => {
-    await upsertToken('valid-token')
-    mockIssueResponse()
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
     const first = (await createTaskFromGithubUrl(ref))._unsafeUnwrap()
 
     const second = (await createTaskFromGithubUrl(ref))._unsafeUnwrap()
@@ -134,8 +111,8 @@ describe('createTaskFromGithubUrl', () => {
 describe('linkTaskToGithubUrl', () => {
   it('links an existing task to a GitHub issue', async () => {
     const task = await createTask('My task')
-    await upsertToken('valid-token')
-    mockIssueResponse()
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
 
     const link = (await linkTaskToGithubUrl(task.id, ref))._unsafeUnwrap()
 
@@ -163,11 +140,13 @@ describe('linkTaskToGithubUrl', () => {
 
   it('returns a TaskAlreadyLinkedError when the task already has a link', async () => {
     const task = await createTask('My task')
-    await upsertToken('valid-token')
-    mockIssueResponse()
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
     ;(await linkTaskToGithubUrl(task.id, ref))._unsafeUnwrap()
 
-    mockIssueResponse({ html_url: 'https://github.com/fohte/tq/issues/43' })
+    mockGithubIssueResponse({
+      html_url: 'https://github.com/fohte/tq/issues/43',
+    })
     const error = (
       await linkTaskToGithubUrl(task.id, { ...ref, number: 43 })
     )._unsafeUnwrapErr()
@@ -177,8 +156,8 @@ describe('linkTaskToGithubUrl', () => {
 
   it('returns a GithubResourceAlreadyLinkedError when the issue is linked to another task', async () => {
     const linkedTask = await createTask('Already linked')
-    await upsertToken('valid-token')
-    mockIssueResponse()
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
     ;(await linkTaskToGithubUrl(linkedTask.id, ref))._unsafeUnwrap()
 
     const otherTask = await createTask('Another task')
@@ -193,13 +172,13 @@ describe('linkTaskToGithubUrl', () => {
 describe('unlinkTask', () => {
   it('removes the link, leaving the task intact', async () => {
     const task = await createTask('My task')
-    await upsertToken('valid-token')
-    mockIssueResponse()
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
     ;(await linkTaskToGithubUrl(task.id, ref))._unsafeUnwrap()
 
     ;(await unlinkTask(task.id))._unsafeUnwrap()
 
-    mockIssueResponse()
+    mockGithubIssueResponse()
     const resolved = (await resolveGithubUrl(ref))._unsafeUnwrap()
     expect('preview' in resolved).toBe(true)
   })
