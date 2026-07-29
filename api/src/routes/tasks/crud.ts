@@ -24,6 +24,7 @@ import {
   timeBlockToResponse,
 } from '#routes/tasks/shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
+import { getTaskLinks, syncTaskLinks } from '#services/task-links'
 
 export const createTaskSchema = z.object({
   title: z.string().min(1),
@@ -114,6 +115,8 @@ export const tasksCrudApp = new Hono()
       }
     }
 
+    await syncTaskLinks(task.id)
+
     return c.json(taskToResponse(task, createdRule), 201)
   })
   .get(
@@ -166,7 +169,7 @@ export const tasksCrudApp = new Hono()
     const task = c.get('task')
     const id = task.id
 
-    const [childStats, pages, taskTimeBlocks, rule] = await Promise.all([
+    const [childStats, pages, taskTimeBlocks, rule, links] = await Promise.all([
       db
         .select({
           total: count(),
@@ -191,6 +194,7 @@ export const tasksCrudApp = new Hono()
             where: eq(recurrenceRules.id, task.recurrenceRuleId),
           })
         : Promise.resolve(null),
+      getTaskLinks(id),
     ])
 
     return c.json(
@@ -202,6 +206,7 @@ export const tasksCrudApp = new Hono()
         },
         pages: pages.map(pageToResponse),
         timeBlocks: taskTimeBlocks.map(timeBlockToResponse),
+        links,
       },
       200,
     )
@@ -318,6 +323,10 @@ export const tasksCrudApp = new Hono()
           (await db.query.recurrenceRules.findFirst({
             where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
           })) ?? null
+      }
+
+      if ('description' in taskFields) {
+        await syncTaskLinks(id)
       }
 
       return c.json(taskToResponse(updatedTask, updatedRule), 200)

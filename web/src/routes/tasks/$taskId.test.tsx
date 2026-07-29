@@ -24,6 +24,7 @@ const mockTask = {
   updatedAt: '2026-03-20T00:00:00.000Z',
   childCompletionCount: { completed: 0, total: 0 },
   timeBlocks: [],
+  links: { outgoing: [], incoming: [] },
 }
 
 const mockUseTask = vi.fn()

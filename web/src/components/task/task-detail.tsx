@@ -13,6 +13,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { TaskActivity } from '#components/task/task-activity'
+import { TaskLinkedTasksSection } from '#components/task/task-linked-tasks-section'
 import {
   TaskPagesList,
   TaskPagesSection,
@@ -67,6 +68,12 @@ export function TaskMainContent({
       ) : (
         <TaskPagesSection taskId={task.id} />
       )}
+
+      {/* Linked Tasks */}
+      <TaskLinkedTasksSection
+        outgoing={task.links.outgoing}
+        incoming={task.links.incoming}
+      />
 
       {/* Activity */}
       <div className="border-t border-border pt-4">

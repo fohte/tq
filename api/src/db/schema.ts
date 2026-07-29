@@ -10,6 +10,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
 
 export const projects = pgTable(
@@ -259,6 +260,38 @@ export const taskComments = pgTable(
   (table) => [
     index('idx_task_comments_task_id').on(table.taskId),
     index('idx_task_comments_created_at').on(table.taskId, table.createdAt),
+  ],
+)
+
+// Directed mention link (source task's body text -> `#<target number>`),
+// derived from description/page/comment content by
+// `services/task-links.ts#syncTaskLinks` and re-synced on every body write.
+export const taskLinks = pgTable(
+  'task_links',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    sourceTaskId: text('source_task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    targetTaskId: text('target_task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('idx_task_links_source_target').on(
+      table.sourceTaskId,
+      table.targetTaskId,
+    ),
+    index('idx_task_links_target_task_id').on(table.targetTaskId),
+    check(
+      'task_links_no_self_link',
+      sql`${table.sourceTaskId} != ${table.targetTaskId}`,
+    ),
   ],
 )
 
