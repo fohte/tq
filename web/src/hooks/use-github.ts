@@ -12,7 +12,9 @@ export function useGithubStatus() {
   return useQuery({
     queryKey: githubKeys.status,
     queryFn: async () => {
-      const res = await api.api.github.status.$get()
+      const res = await api.api.integrations[':provider'].status.$get({
+        param: { provider: 'github' },
+      })
       assertStatus(res, 200)
       return res.json()
     },
@@ -24,7 +26,9 @@ export function useGithubAuthUrl(enabled: boolean) {
   return useQuery({
     queryKey: githubKeys.authUrl,
     queryFn: async () => {
-      const res = await api.api.github['auth-url'].$get()
+      const res = await api.api.integrations[':provider']['auth-url'].$get({
+        param: { provider: 'github' },
+      })
       assertStatus(res, 200)
       return res.json()
     },
@@ -38,7 +42,9 @@ export function useDisconnectGithub() {
 
   return useMutation({
     mutationFn: async () => {
-      const res = await api.api.github.token.$delete()
+      const res = await api.api.integrations[':provider'].token.$delete({
+        param: { provider: 'github' },
+      })
       assertStatus(res, 200)
       return res.json()
     },

@@ -18,10 +18,12 @@ vi.mock('#lib/api', () => {
   return {
     api: {
       api: {
-        github: {
-          status: { $get: mockStatusGet },
-          'auth-url': { $get: mockAuthUrlGet },
-          token: { $delete: mockTokenDelete },
+        integrations: {
+          ':provider': {
+            status: { $get: mockStatusGet },
+            'auth-url': { $get: mockAuthUrlGet },
+            token: { $delete: mockTokenDelete },
+          },
         },
       },
     },

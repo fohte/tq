@@ -83,7 +83,7 @@ The API server and web frontend are configured via environment variables.
 | `VITE_API_URL`         | No       | `http://localhost:3001` | API base URL used by the web frontend (Vite build-time)                                                                            |
 | `GITHUB_CLIENT_ID`     | No       | —                       | GitHub OAuth App client ID, required to connect a GitHub account                                                                   |
 | `GITHUB_CLIENT_SECRET` | No       | —                       | GitHub OAuth App client secret, required to connect a GitHub account                                                               |
-| `GITHUB_REDIRECT_URI`  | No       | —                       | OAuth callback URL registered on the GitHub OAuth App (`<API base URL>/api/github/oauth-callback`)                                 |
+| `GITHUB_REDIRECT_URI`  | No       | —                       | OAuth callback URL registered on the GitHub OAuth App (`<API base URL>/api/integrations/github/oauth-callback`)                    |
 
 ### Web (nginx runtime)
 

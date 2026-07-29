@@ -292,6 +292,9 @@ export const oauthTokens = pgTable(
       .defaultNow(),
   },
   (table) => [
+    // Exempts providers with no `oauth.refresh` in api/src/integrations/
+    // (tokens that never expire, so refresh metadata is meaningless). Add
+    // such a provider's id to this OR clause alongside 'github'.
     check(
       'oauth_tokens_refresh_metadata_required',
       sql`${table.provider} = 'github' OR (${table.refreshToken} IS NOT NULL AND ${table.expiresAt} IS NOT NULL)`,

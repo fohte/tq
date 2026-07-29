@@ -21,7 +21,11 @@ vi.mock('#lib/api', () => {
       api: {
         calendar: {
           events: { $get: mockEventsGet },
-          'auth-url': { $get: mockAuthUrlGet },
+        },
+        integrations: {
+          ':provider': {
+            'auth-url': { $get: mockAuthUrlGet },
+          },
         },
       },
     },

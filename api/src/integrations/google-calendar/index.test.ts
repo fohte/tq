@@ -3,6 +3,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { db } from '#db/connection'
 import { oauthTokens } from '#db/schema'
+import {
+  IntegrationConfigError,
+  OAuthTokenMissingError,
+  TokenRefreshError,
+} from '#integrations/errors'
+import {
+  getEvents,
+  googleCalendarProvider,
+} from '#integrations/google-calendar/index'
+import {
+  disconnect,
+  getAuthUrl,
+  getConnectionStatus,
+  getValidAccessToken,
+  handleOAuthCallback,
+} from '#integrations/oauth'
+import { TokenExchangeError } from '#lib/fetch-json'
 import { assertDefined, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -39,6 +56,26 @@ async function upsertToken(values: {
     })
 }
 
+// Replaces dynamic fields with fixed placeholders so the full row can still
+// be asserted with a single `toEqual`. `expiresAt` only normalizes when it's
+// strictly after `expiresAfter`, so a stale/missing expiry still fails the
+// comparison instead of silently passing.
+function normalize(
+  token: typeof oauthTokens.$inferSelect,
+  expiresAfter: number,
+) {
+  return {
+    ...token,
+    id: 'ID',
+    createdAt: 'DATE',
+    updatedAt: 'DATE',
+    expiresAt:
+      token.expiresAt != null && token.expiresAt.getTime() > expiresAfter
+        ? 'FUTURE'
+        : token.expiresAt,
+  }
+}
+
 beforeEach(() => {
   setEnv()
 })
@@ -48,16 +85,9 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-// Dynamically import to allow env vars to be set before module evaluation
-async function importService() {
-  return await import('#services/google-calendar')
-}
-
 describe('getAuthUrl', () => {
-  it('returns a Google OAuth authorization URL with correct parameters', async () => {
-    const { getAuthUrl } = await importService()
-
-    const url = getAuthUrl()._unsafeUnwrap()
+  it('returns a Google OAuth authorization URL with correct parameters', () => {
+    const url = getAuthUrl(googleCalendarProvider)._unsafeUnwrap()
     const parsed = new URL(url)
 
     expect(parsed.origin + parsed.pathname).toBe(
@@ -74,19 +104,22 @@ describe('getAuthUrl', () => {
     expect(parsed.searchParams.get('response_type')).toBe('code')
   })
 
-  it('returns a config error when environment variables are missing', async () => {
+  it('returns a config error when environment variables are missing', () => {
     clearEnv()
-    const { getAuthUrl, GoogleCalendarConfigError } = await importService()
 
-    const error = getAuthUrl()._unsafeUnwrapErr()
+    const error = getAuthUrl(googleCalendarProvider)._unsafeUnwrapErr()
 
-    expect(error).toEqual(new GoogleCalendarConfigError())
+    expect(error).toEqual(
+      new IntegrationConfigError(
+        'GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI environment variables are required',
+      ),
+    )
   })
 })
 
 describe('handleOAuthCallback', () => {
   it('exchanges code for tokens and saves them to the database', async () => {
-    const { handleOAuthCallback } = await importService()
+    const beforeCall = Date.now()
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(
@@ -99,33 +132,36 @@ describe('handleOAuthCallback', () => {
       ),
     )
 
-    ;(await handleOAuthCallback('auth-code-123'))._unsafeUnwrap()
+    ;(
+      await handleOAuthCallback(googleCalendarProvider, 'auth-code-123')
+    )._unsafeUnwrap()
 
     const [savedToken] = await db
       .select()
       .from(oauthTokens)
       .where(eq(oauthTokens.provider, 'google_calendar'))
       .limit(1)
-
-    expect(savedToken).toEqual(
-      expect.objectContaining({
-        accessToken: 'new-access-token',
-        refreshToken: 'new-refresh-token',
-      }),
-    )
     assertDefined(savedToken)
-    assertDefined(savedToken.expiresAt)
-    expect(savedToken.expiresAt.getTime()).toBeGreaterThan(Date.now())
+
+    expect(normalize(savedToken, beforeCall)).toEqual({
+      id: 'ID',
+      provider: 'google_calendar',
+      accessToken: 'new-access-token',
+      refreshToken: 'new-refresh-token',
+      expiresAt: 'FUTURE',
+      createdAt: 'DATE',
+      updatedAt: 'DATE',
+    })
   })
 
   it('returns a token exchange error when the request fails', async () => {
-    const { handleOAuthCallback, TokenExchangeError } = await importService()
-
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response('invalid_grant', { status: 400 }),
     )
 
-    const error = (await handleOAuthCallback('bad-code'))._unsafeUnwrapErr()
+    const error = (
+      await handleOAuthCallback(googleCalendarProvider, 'bad-code')
+    )._unsafeUnwrapErr()
 
     expect(error).toEqual(
       new TokenExchangeError('invalid_grant', undefined, true),
@@ -133,29 +169,28 @@ describe('handleOAuthCallback', () => {
   })
 })
 
-describe('refreshTokenIfNeeded', () => {
+describe('getValidAccessToken', () => {
   it('returns existing token when not expired', async () => {
-    const { refreshTokenIfNeeded } = await importService()
-
     await upsertToken({
       accessToken: 'valid-token',
       refreshToken: 'refresh-token',
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     })
 
-    const token = (await refreshTokenIfNeeded())._unsafeUnwrap()
+    const token = (
+      await getValidAccessToken(googleCalendarProvider)
+    )._unsafeUnwrap()
     expect(token).toBe('valid-token')
   })
 
   it('refreshes token when close to expiry', async () => {
-    const { refreshTokenIfNeeded } = await importService()
-
     await upsertToken({
       accessToken: 'expired-token',
       refreshToken: 'refresh-token',
       expiresAt: new Date(Date.now() + 60 * 1000), // within 5-min buffer
     })
 
+    const beforeCall = Date.now()
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -166,7 +201,9 @@ describe('refreshTokenIfNeeded', () => {
       ),
     )
 
-    const token = (await refreshTokenIfNeeded())._unsafeUnwrap()
+    const token = (
+      await getValidAccessToken(googleCalendarProvider)
+    )._unsafeUnwrap()
     expect(token).toBe('refreshed-token')
 
     const [updated] = await db
@@ -174,20 +211,27 @@ describe('refreshTokenIfNeeded', () => {
       .from(oauthTokens)
       .where(eq(oauthTokens.provider, 'google_calendar'))
       .limit(1)
-    expect(updated).toEqual(
-      expect.objectContaining({ accessToken: 'refreshed-token' }),
-    )
+    assertDefined(updated)
+
+    expect(normalize(updated, beforeCall)).toEqual({
+      id: 'ID',
+      provider: 'google_calendar',
+      accessToken: 'refreshed-token',
+      refreshToken: 'refresh-token',
+      expiresAt: 'FUTURE',
+      createdAt: 'DATE',
+      updatedAt: 'DATE',
+    })
   })
 
   it('persists rotated refresh token when Google returns one', async () => {
-    const { refreshTokenIfNeeded } = await importService()
-
     await upsertToken({
       accessToken: 'old-token',
       refreshToken: 'old-refresh-token',
       expiresAt: new Date(Date.now() - 1000),
     })
 
+    const beforeCall = Date.now()
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -199,38 +243,35 @@ describe('refreshTokenIfNeeded', () => {
       ),
     )
 
-    ;(await refreshTokenIfNeeded())._unsafeUnwrap()
+    ;(await getValidAccessToken(googleCalendarProvider))._unsafeUnwrap()
 
     const [updated] = await db
       .select()
       .from(oauthTokens)
       .where(eq(oauthTokens.provider, 'google_calendar'))
       .limit(1)
-    expect(updated).toEqual(
-      expect.objectContaining({
-        accessToken: 'new-access',
-        refreshToken: 'rotated-refresh-token',
-      }),
-    )
+    assertDefined(updated)
+
+    expect(normalize(updated, beforeCall)).toEqual({
+      id: 'ID',
+      provider: 'google_calendar',
+      accessToken: 'new-access',
+      refreshToken: 'rotated-refresh-token',
+      expiresAt: 'FUTURE',
+      createdAt: 'DATE',
+      updatedAt: 'DATE',
+    })
   })
 
   it('returns OAuthTokenMissingError when no token exists', async () => {
-    const { refreshTokenIfNeeded, OAuthTokenMissingError } =
-      await importService()
-
-    // Ensure no token exists by deleting any leftover
-    await db
-      .delete(oauthTokens)
-      .where(eq(oauthTokens.provider, 'google_calendar'))
-
-    const error = (await refreshTokenIfNeeded())._unsafeUnwrapErr()
+    const error = (
+      await getValidAccessToken(googleCalendarProvider)
+    )._unsafeUnwrapErr()
 
     expect(error).toEqual(new OAuthTokenMissingError())
   })
 
   it('marks the error as rejected when Google reports the refresh token as invalid_grant', async () => {
-    const { refreshTokenIfNeeded, TokenRefreshError } = await importService()
-
     await upsertToken({
       accessToken: 'expired-token',
       refreshToken: 'bad-refresh-token',
@@ -245,14 +286,14 @@ describe('refreshTokenIfNeeded', () => {
       new Response(body, { status: 400 }),
     )
 
-    const error = (await refreshTokenIfNeeded())._unsafeUnwrapErr()
+    const error = (
+      await getValidAccessToken(googleCalendarProvider)
+    )._unsafeUnwrapErr()
 
     expect(error).toEqual(new TokenRefreshError(body, undefined, true))
   })
 
   it('does not mark the error as rejected when Google reports an OAuth error other than invalid_grant', async () => {
-    const { refreshTokenIfNeeded, TokenRefreshError } = await importService()
-
     await upsertToken({
       accessToken: 'expired-token',
       refreshToken: 'refresh-token',
@@ -267,14 +308,14 @@ describe('refreshTokenIfNeeded', () => {
       new Response(body, { status: 400 }),
     )
 
-    const error = (await refreshTokenIfNeeded())._unsafeUnwrapErr()
+    const error = (
+      await getValidAccessToken(googleCalendarProvider)
+    )._unsafeUnwrapErr()
 
     expect(error).toEqual(new TokenRefreshError(body, undefined, false))
   })
 
   it('does not mark the error as rejected when the request fails with a server error', async () => {
-    const { refreshTokenIfNeeded, TokenRefreshError } = await importService()
-
     await upsertToken({
       accessToken: 'expired-token',
       refreshToken: 'refresh-token',
@@ -285,16 +326,55 @@ describe('refreshTokenIfNeeded', () => {
       new Response('internal error', { status: 500 }),
     )
 
-    const error = (await refreshTokenIfNeeded())._unsafeUnwrapErr()
+    const error = (
+      await getValidAccessToken(googleCalendarProvider)
+    )._unsafeUnwrapErr()
 
     expect(error).toEqual(new TokenRefreshError('internal error'))
   })
 })
 
+describe('getConnectionStatus / disconnect', () => {
+  it('reports connected without a live check once a token exists', async () => {
+    await upsertToken({
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    expect(
+      (await getConnectionStatus(googleCalendarProvider))._unsafeUnwrap(),
+    ).toEqual({
+      connected: true,
+    })
+  })
+
+  it('reports not connected when no token exists', async () => {
+    expect(
+      (await getConnectionStatus(googleCalendarProvider))._unsafeUnwrap(),
+    ).toEqual({
+      connected: false,
+    })
+  })
+
+  it('deletes the stored token on disconnect', async () => {
+    await upsertToken({
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    ;(await disconnect(googleCalendarProvider))._unsafeUnwrap()
+
+    expect(
+      (await getConnectionStatus(googleCalendarProvider))._unsafeUnwrap(),
+    ).toEqual({
+      connected: false,
+    })
+  })
+})
+
 describe('getEvents', () => {
   it('fetches and transforms Google Calendar events', async () => {
-    const { getEvents } = await importService()
-
     await upsertToken({
       accessToken: 'valid-token',
       refreshToken: 'refresh-token',
@@ -348,8 +428,6 @@ describe('getEvents', () => {
   })
 
   it('handles events without summary', async () => {
-    const { getEvents } = await importService()
-
     await upsertToken({
       accessToken: 'valid-token',
       refreshToken: 'refresh-token',
@@ -375,6 +453,15 @@ describe('getEvents', () => {
       await getEvents('primary', '2026-03-22T00:00:00Z', '2026-03-23T00:00:00Z')
     )._unsafeUnwrap()
 
-    expect(events).toEqual([expect.objectContaining({ summary: '(No title)' })])
+    expect(events).toEqual([
+      {
+        id: 'event-no-title',
+        summary: '(No title)',
+        startTime: '2026-03-22T10:00:00Z',
+        endTime: '2026-03-22T11:00:00Z',
+        isAllDay: false,
+        source: 'google_calendar',
+      },
+    ])
   })
 })
