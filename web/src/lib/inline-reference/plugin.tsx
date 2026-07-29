@@ -90,8 +90,25 @@ export function createInlineReferencePlugin<TData>(
       view(editorView) {
         // Metadata resolves asynchronously, outside of any ProseMirror
         // transaction, so force a redraw to pick it up once it lands.
+        //
+        // The redraw is deferred to a microtask rather than dispatched
+        // inline: `notify` can fire synchronously and re-entrantly out of
+        // `ensureLoaded`'s `queryClient.fetchQuery()` call below (its cache
+        // `added`/fetch-start events are emitted before `fetchQuery` itself
+        // returns). Dispatching synchronously there would re-enter this same
+        // `decorations()` computation from inside itself, unboundedly,
+        // overflowing the call stack. A microtask always runs after the
+        // current synchronous call stack has fully unwound, so it can never
+        // nest inside the call that scheduled it.
+        let redrawScheduled = false
         const unsubscribe = provider.subscribe(() => {
-          editorView.dispatch(editorView.state.tr)
+          if (redrawScheduled) return
+          redrawScheduled = true
+          void Promise.resolve().then(() => {
+            redrawScheduled = false
+            if (editorView.isDestroyed) return
+            editorView.dispatch(editorView.state.tr)
+          })
         })
         return { destroy: unsubscribe }
       },
