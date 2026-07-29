@@ -19,6 +19,7 @@ const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).p
 
 const baseTask: Task = {
   id: '00000000-0000-0000-0000-000000000001',
+  number: 1,
   title: '#506 fohte.net を astro で作る',
   description: null,
   status: 'todo',
@@ -27,6 +28,7 @@ const baseTask: Task = {
   dueDate: null,
   estimatedMinutes: 180,
   parentId: null,
+  parentNumber: null,
   projectId: null,
   sortOrder: 0,
   recurrenceRuleId: null,

@@ -14,6 +14,7 @@ import type { ProjectTask } from '#hooks/use-projects'
 
 const baseTask: ProjectTask = {
   id: '00000000-0000-0000-0000-000000000001',
+  number: 1,
   title: 'Implement task list UI',
   description: null,
   status: 'todo',
@@ -22,6 +23,7 @@ const baseTask: ProjectTask = {
   dueDate: null,
   estimatedMinutes: null,
   parentId: null,
+  parentNumber: null,
   projectId: '00000000-0000-0000-0000-000000000099',
   sortOrder: 0,
   recurrenceRuleId: null,
@@ -62,10 +64,17 @@ function Providers({ children }: { children: ReactNode }) {
 }
 
 const sampleTasks: ProjectTask[] = [
-  { ...baseTask, id: '1', title: 'Design system setup', status: 'completed' },
+  {
+    ...baseTask,
+    id: '1',
+    number: 1,
+    title: 'Design system setup',
+    status: 'completed',
+  },
   {
     ...baseTask,
     id: '2',
+    number: 2,
     title: 'Implement sidebar navigation',
     status: 'completed',
     estimatedMinutes: 60,
@@ -73,6 +82,7 @@ const sampleTasks: ProjectTask[] = [
   {
     ...baseTask,
     id: '3',
+    number: 3,
     title: 'Build project board header',
     status: 'in_progress',
     context: 'work',
@@ -81,6 +91,7 @@ const sampleTasks: ProjectTask[] = [
   {
     ...baseTask,
     id: '4',
+    number: 4,
     title: 'Add filter bar component',
     status: 'todo',
     estimatedMinutes: 45,
@@ -89,6 +100,7 @@ const sampleTasks: ProjectTask[] = [
   {
     ...baseTask,
     id: '5',
+    number: 5,
     title: 'Write unit tests',
     status: 'todo',
     context: 'dev',
@@ -97,17 +109,21 @@ const sampleTasks: ProjectTask[] = [
   {
     ...baseTask,
     id: '6',
+    number: 6,
     title: 'Sub-task of filter bar',
     status: 'todo',
     parentId: '4',
+    parentNumber: 4,
     estimatedMinutes: 30,
   },
   {
     ...baseTask,
     id: '7',
+    number: 7,
     title: 'Another sub-task',
     status: 'completed',
     parentId: '4',
+    parentNumber: 4,
   },
 ]
 

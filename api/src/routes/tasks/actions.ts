@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import { recurrenceRules, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
+import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
 import { requireTask, taskStatus, taskToResponse } from '#routes/tasks/shared'
 import { buildNextTaskData } from '#services/recurrence'
 
@@ -24,7 +25,8 @@ export const tasksActionsApp = new Hono()
     requireTask,
     zValidator('json', updateStatusSchema),
     async (c) => {
-      const id = c.req.param('id')
+      const existing = c.get('task')
+      const id = existing.id
       const { status } = c.req.valid('json')
 
       const updated = firstOrThrow(
@@ -43,7 +45,7 @@ export const tasksActionsApp = new Hono()
     requireTask,
     zValidator('json', updateParentSchema),
     async (c) => {
-      const id = c.req.param('id')
+      const id = c.get('task').id
       const { parentId } = c.req.valid('json')
 
       if (parentId != null) {
@@ -90,8 +92,8 @@ export const tasksActionsApp = new Hono()
     },
   )
   .post('/:id/complete', requireTask, async (c) => {
-    const id = c.req.param('id')
     const existing = c.get('task')
+    const id = existing.id
 
     if (existing.status === 'completed') {
       return c.json({ error: 'Task is already completed' }, 409)
@@ -122,9 +124,18 @@ export const tasksActionsApp = new Hono()
           )
           return c.json({ error: 'Internal server error' }, 500)
         }
-        const created = firstOrThrow(
-          await db.insert(tasks).values(nextDataResult.value).returning(),
-        )
+        const created = await db.transaction(async (tx) => {
+          const created = firstOrThrow(
+            await tx.insert(tasks).values(nextDataResult.value).returning(),
+          )
+          await recordEdit(
+            tx,
+            { taskId: created.id },
+            { action: 'create' },
+            SYSTEM_AUTHOR,
+          )
+          return created
+        })
         nextTask = taskToResponse(created, completedTaskRule)
       }
     }

@@ -33,12 +33,14 @@ const baseProject: ProjectDetail = {
 }
 
 const baseTask: Omit<ProjectTask, 'id' | 'title' | 'status'> = {
+  number: 1,
   description: null,
   context: 'personal',
   startDate: null,
   dueDate: null,
   estimatedMinutes: null,
   parentId: null,
+  parentNumber: null,
   projectId: 'proj-001',
   sortOrder: 0,
   recurrenceRuleId: null,
@@ -52,18 +54,38 @@ const sampleTasks: ProjectTask[] = [
   {
     ...baseTask,
     id: '1',
+    number: 1,
     title: 'Provision benchmark servers',
     status: 'completed',
   },
-  { ...baseTask, id: '2', title: 'Tune MySQL config', status: 'completed' },
+  {
+    ...baseTask,
+    id: '2',
+    number: 2,
+    title: 'Tune MySQL config',
+    status: 'completed',
+  },
   {
     ...baseTask,
     id: '3',
+    number: 3,
     title: 'Profile slow queries',
     status: 'in_progress',
   },
-  { ...baseTask, id: '4', title: 'Add caching layer', status: 'todo' },
-  { ...baseTask, id: '5', title: 'Write final report', status: 'todo' },
+  {
+    ...baseTask,
+    id: '4',
+    number: 4,
+    title: 'Add caching layer',
+    status: 'todo',
+  },
+  {
+    ...baseTask,
+    id: '5',
+    number: 5,
+    title: 'Write final report',
+    status: 'todo',
+  },
 ]
 
 function Providers({ children }: { children: ReactNode }) {

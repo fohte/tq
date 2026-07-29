@@ -2,6 +2,7 @@ import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 
+import { authorMiddleware } from '#lib/author'
 import { calendarApp } from '#routes/calendar'
 import { githubApp } from '#routes/github'
 import { imagesApp } from '#routes/images'
@@ -21,6 +22,7 @@ const app = new Hono()
       origin: process.env['CORS_ORIGIN'] ?? '*',
     }),
   )
+  .use('*', authorMiddleware)
   .get('/health', (c) => {
     return c.json({ status: 'ok' })
   })

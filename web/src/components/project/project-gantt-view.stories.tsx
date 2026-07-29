@@ -20,6 +20,7 @@ function formatDateOffset(days: number): string {
 
 const baseTask: ProjectTask = {
   id: '1',
+  number: 1,
   title: 'Task',
   description: null,
   status: 'todo',
@@ -28,6 +29,7 @@ const baseTask: ProjectTask = {
   dueDate: null,
   estimatedMinutes: null,
   parentId: null,
+  parentNumber: null,
   projectId: 'p1',
   sortOrder: 0,
   recurrenceRuleId: null,
@@ -41,6 +43,7 @@ const sampleTasks: ProjectTask[] = [
   {
     ...baseTask,
     id: '1',
+    number: 1,
     title: 'Design',
     status: 'completed',
     startDate: formatDateOffset(-7),
@@ -49,6 +52,7 @@ const sampleTasks: ProjectTask[] = [
   {
     ...baseTask,
     id: '2',
+    number: 2,
     title: 'Implementation',
     status: 'in_progress',
     startDate: formatDateOffset(-2),
@@ -57,8 +61,10 @@ const sampleTasks: ProjectTask[] = [
   {
     ...baseTask,
     id: '2-1',
+    number: 3,
     title: 'API',
     parentId: '2',
+    parentNumber: 2,
     status: 'in_progress',
     startDate: formatDateOffset(-2),
     dueDate: formatDateOffset(0),
@@ -66,8 +72,10 @@ const sampleTasks: ProjectTask[] = [
   {
     ...baseTask,
     id: '2-2',
+    number: 4,
     title: 'UI',
     parentId: '2',
+    parentNumber: 2,
     status: 'todo',
     startDate: formatDateOffset(0),
     dueDate: formatDateOffset(3),
@@ -75,6 +83,7 @@ const sampleTasks: ProjectTask[] = [
   {
     ...baseTask,
     id: '3',
+    number: 5,
     title: 'Launch',
     status: 'todo',
     startDate: formatDateOffset(5),
@@ -83,6 +92,7 @@ const sampleTasks: ProjectTask[] = [
   {
     ...baseTask,
     id: '4',
+    number: 6,
     title: 'Backlog idea',
     status: 'todo',
   },

@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import { taskPages, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
+import { diffFields, recordEdit } from '#lib/edits'
 
 const createPageSchema = z.object({
   title: z.string().min(1),
@@ -67,6 +68,7 @@ export const taskPagesApp = new Hono<TaskPagesEnv>()
   .post('/', zValidator('json', createPageSchema), async (c) => {
     const taskId = c.get('taskId')
     const input = c.req.valid('json')
+    const author = c.get('author')
 
     const task = await db.query.tasks.findFirst({
       where: eq(tasks.id, taskId),
@@ -75,17 +77,28 @@ export const taskPagesApp = new Hono<TaskPagesEnv>()
       return c.json({ error: 'Task not found' }, 404)
     }
 
-    const page = firstOrThrow(
-      await db
-        .insert(taskPages)
-        .values({
-          taskId,
-          title: input.title,
-          content: input.content ?? '',
-          sortOrder: input.sortOrder ?? 0,
-        })
-        .returning(),
-    )
+    const page = await db.transaction(async (tx) => {
+      const page = firstOrThrow(
+        await tx
+          .insert(taskPages)
+          .values({
+            taskId,
+            title: input.title,
+            content: input.content ?? '',
+            sortOrder: input.sortOrder ?? 0,
+          })
+          .returning(),
+      )
+
+      await recordEdit(
+        tx,
+        { taskId, pageId: page.id },
+        { action: 'create' },
+        author,
+      )
+
+      return page
+    })
 
     return c.json(pageToResponse(page), 201)
   })
@@ -106,12 +119,39 @@ export const taskPagesApp = new Hono<TaskPagesEnv>()
   .patch('/:pageId', zValidator('json', updatePageSchema), async (c) => {
     const taskId = c.get('taskId')
     const pageId = c.req.param('pageId')
+    const input = c.req.valid('json')
+    const author = c.get('author')
 
-    const [updated] = await db
-      .update(taskPages)
-      .set({ ...c.req.valid('json'), updatedAt: new Date() })
-      .where(and(eq(taskPages.id, pageId), eq(taskPages.taskId, taskId)))
-      .returning()
+    const existing = await db.query.taskPages.findFirst({
+      where: and(eq(taskPages.id, pageId), eq(taskPages.taskId, taskId)),
+    })
+    if (!existing) {
+      return c.json({ error: 'Page not found' }, 404)
+    }
+
+    const changedFields = diffFields(existing, input, ['title', 'content'])
+
+    const updated = await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(taskPages)
+        .set({ ...input, updatedAt: new Date() })
+        .where(and(eq(taskPages.id, pageId), eq(taskPages.taskId, taskId)))
+        .returning()
+      if (!updated) {
+        return null
+      }
+
+      for (const field of changedFields) {
+        await recordEdit(
+          tx,
+          { taskId, pageId },
+          { action: 'update', field },
+          author,
+        )
+      }
+
+      return updated
+    })
 
     if (!updated) {
       return c.json({ error: 'Page not found' }, 404)

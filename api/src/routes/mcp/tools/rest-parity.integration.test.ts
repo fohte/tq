@@ -108,7 +108,9 @@ describe('REST/MCP parity', () => {
     const res = await app.request('/api/tasks?context=work')
     expect(res.status).toBe(200)
 
-    expect(await jsonBody<unknown[]>(res)).toEqual([data])
+    expect(await jsonBody<unknown[]>(res)).toEqual([
+      { ...data, parentNumber: null },
+    ])
   })
 
   it('a title updated via update_task is visible through GET /api/tasks/:id', async () => {
@@ -160,8 +162,8 @@ describe('REST/MCP parity', () => {
     const byId = (a: { id: string }, b: { id: string }) =>
       a.id.localeCompare(b.id)
     const expected = [
-      { ...completedTask, recurrenceRule: null },
-      { ...nextTask, recurrenceRule: null },
+      { ...completedTask, recurrenceRule: null, parentNumber: null },
+      { ...nextTask, recurrenceRule: null, parentNumber: null },
     ]
 
     // GET /api/tasks (list) never hydrates recurrenceRule, unlike the detail

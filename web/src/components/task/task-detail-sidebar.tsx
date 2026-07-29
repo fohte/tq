@@ -273,7 +273,7 @@ function SidebarParentField({
         <option value="">None</option>
         {candidates.map((t) => (
           <option key={t.id} value={t.id}>
-            #{t.id.slice(0, 8)} {t.title}
+            #{t.number} {t.title}
           </option>
         ))}
       </select>

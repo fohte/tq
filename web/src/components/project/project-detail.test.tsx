@@ -8,6 +8,7 @@ import type { ProjectTask } from '#hooks/use-projects'
 
 const baseTask: ProjectTask = {
   id: '1',
+  number: 1,
   title: 'Task',
   description: null,
   status: 'todo',
@@ -16,6 +17,7 @@ const baseTask: ProjectTask = {
   dueDate: null,
   estimatedMinutes: null,
   parentId: null,
+  parentNumber: null,
   projectId: 'p1',
   sortOrder: 0,
   recurrenceRuleId: null,
@@ -28,10 +30,10 @@ const baseTask: ProjectTask = {
 describe('summarizeTaskStatus', () => {
   it('counts tasks by status', () => {
     const tasks: ProjectTask[] = [
-      { ...baseTask, id: '1', status: 'todo' },
-      { ...baseTask, id: '2', status: 'todo' },
-      { ...baseTask, id: '3', status: 'in_progress' },
-      { ...baseTask, id: '4', status: 'completed' },
+      { ...baseTask, id: '1', number: 1, status: 'todo' },
+      { ...baseTask, id: '2', number: 2, status: 'todo' },
+      { ...baseTask, id: '3', number: 3, status: 'in_progress' },
+      { ...baseTask, id: '4', number: 4, status: 'completed' },
     ]
     expect(summarizeTaskStatus(tasks)).toEqual({
       total: 4,

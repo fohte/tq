@@ -25,6 +25,7 @@ vi.mock('@tanstack/react-router', () => ({
 function makeNode(overrides: Partial<TreeNode> = {}): TreeNode {
   return {
     id: 'parent-1',
+    number: 1,
     title: 'Parent Task',
     description: null,
     status: 'todo',

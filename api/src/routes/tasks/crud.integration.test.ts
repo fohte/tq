@@ -158,6 +158,28 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(404)
     })
 
+    it('accepts the task number in place of the UUID', async () => {
+      const created = await createTask('Numbered task')
+
+      const res = await app.request(`/api/tasks/${String(created.number)}`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.id).toBe(created.id)
+    })
+
+    it('returns 404 for a non-existent number', async () => {
+      const res = await app.request('/api/tasks/999999999')
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 404 for a number beyond the int4 range', async () => {
+      const res = await app.request('/api/tasks/99999999999')
+
+      expect(res.status).toBe(404)
+    })
+
     it('includes child completion count', async () => {
       const parent = await createTask('Parent')
       await createTask('Child 1', { parentId: parent.id })
@@ -294,6 +316,19 @@ describe('tasks CRUD API', () => {
       expect(getRes.status).toBe(404)
     })
 
+    it('accepts the task number in place of the UUID', async () => {
+      const created = await createTask('Task')
+
+      const res = await app.request(`/api/tasks/${String(created.number)}`, {
+        method: 'DELETE',
+      })
+
+      expect(res.status).toBe(204)
+
+      const getRes = await app.request(`/api/tasks/${created.id}`)
+      expect(getRes.status).toBe(404)
+    })
+
     it('returns 404 for non-existent task', async () => {
       const res = await app.request(`/api/tasks/${TEST_UUID}`, {
         method: 'DELETE',
@@ -359,6 +394,44 @@ describe('tasks CRUD API', () => {
       const nextBody = await jsonBody<TaskResponse>(nextRes)
       expect(nextBody.recurrenceRuleId).toBe(task.recurrenceRuleId)
       expect(nextBody.recurrenceRule).not.toBeNull()
+    })
+  })
+
+  describe('sequential number', () => {
+    it('assigns an increasing number to each created task', async () => {
+      const a = await createTask('Task A')
+      const b = await createTask('Task B')
+
+      expect(b.number).toBeGreaterThan(a.number)
+    })
+
+    it('parentNumber is null for a root task in the list response', async () => {
+      const parent = await createTask('Parent')
+
+      const res = await app.request('/api/tasks')
+      const body =
+        await jsonBody<Array<TaskResponse & { parentNumber: number | null }>>(
+          res,
+        )
+
+      const parentBody = body.find((t) => t.id === parent.id)
+      assertDefined(parentBody)
+      expect(parentBody.parentNumber).toBeNull()
+    })
+
+    it('parentNumber matches the parent task number in the list response', async () => {
+      const parent = await createTask('Parent')
+      const child = await createTask('Child', { parentId: parent.id })
+
+      const res = await app.request('/api/tasks')
+      const body =
+        await jsonBody<Array<TaskResponse & { parentNumber: number | null }>>(
+          res,
+        )
+
+      const childBody = body.find((t) => t.id === child.id)
+      assertDefined(childBody)
+      expect(childBody.parentNumber).toBe(parent.number)
     })
   })
 

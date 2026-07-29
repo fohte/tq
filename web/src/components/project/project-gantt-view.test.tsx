@@ -45,6 +45,7 @@ vi.mock('@svar-ui/react-gantt', () => ({
 
 const baseTask: ProjectTask = {
   id: '1',
+  number: 1,
   title: 'Task 1',
   description: null,
   status: 'todo',
@@ -53,6 +54,7 @@ const baseTask: ProjectTask = {
   dueDate: null,
   estimatedMinutes: null,
   parentId: null,
+  parentNumber: null,
   projectId: 'p1',
   sortOrder: 0,
   recurrenceRuleId: null,

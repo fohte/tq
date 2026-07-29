@@ -158,6 +158,7 @@ describe('computeNextDate', () => {
 describe('buildNextTaskData', () => {
   const baseTask = {
     id: 'task-1',
+    number: 1,
     title: 'Daily standup',
     description: 'Morning standup meeting',
     status: 'completed' as const,

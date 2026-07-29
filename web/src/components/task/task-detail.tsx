@@ -35,7 +35,7 @@ export function TaskMainContent({
           Tasks
         </Link>
         <ChevronRight className="size-3.5" />
-        <span className="text-foreground">#{task.id.slice(0, 8)}</span>
+        <span className="text-foreground">#{task.number}</span>
       </nav>
 
       {/* Status + Title */}

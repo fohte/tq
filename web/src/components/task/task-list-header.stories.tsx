@@ -6,6 +6,7 @@ import type { Task } from '#hooks/use-tasks'
 const makeTasks = (overrides: Array<Partial<Task>>): Task[] =>
   overrides.map((o, i) => ({
     id: `00000000-0000-0000-0000-00000000000${String(i)}`,
+    number: i + 1,
     title: `Task ${String(i + 1)}`,
     description: null,
     status: 'todo' as const,
@@ -14,6 +15,7 @@ const makeTasks = (overrides: Array<Partial<Task>>): Task[] =>
     dueDate: null,
     estimatedMinutes: null,
     parentId: null,
+    parentNumber: null,
     projectId: null,
     sortOrder: i,
     recurrenceRuleId: null,

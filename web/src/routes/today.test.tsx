@@ -25,6 +25,7 @@ vi.mock('#hooks/use-today-tasks', () => ({
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: 'task-1',
+    number: 1,
     title: 'Task 1',
     description: null,
     status: 'todo',
@@ -33,6 +34,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     dueDate: null,
     estimatedMinutes: 30,
     parentId: null,
+    parentNumber: null,
     projectId: null,
     sortOrder: 0,
     recurrenceRuleId: null,

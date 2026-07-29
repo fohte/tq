@@ -62,6 +62,7 @@ function Providers({ children }: { children: ReactNode }) {
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: '00000000-0000-0000-0000-000000000001',
+    number: 1,
     title: 'Write the quarterly report',
     description: null,
     status: 'todo',
@@ -70,6 +71,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     dueDate: null,
     estimatedMinutes: 30,
     parentId: null,
+    parentNumber: null,
     projectId: null,
     sortOrder: 0,
     recurrenceRuleId: null,
