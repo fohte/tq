@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm'
-import { errAsync, okAsync, ResultAsync } from 'neverthrow'
+import { err, errAsync, okAsync, type Result, ResultAsync } from 'neverthrow'
 
 import { db } from '#db/connection'
 import { taskGithubLinks, tasks } from '#db/schema'
@@ -15,6 +15,12 @@ import type {
 } from '#integrations/github/issues'
 import { fetchGithubIssue } from '#integrations/github/issues'
 import { firstOrErr, type RowNotFoundError } from '#lib/drizzle-utils'
+
+function toResultAsync<T, E>(
+  promise: Promise<Result<T, E>>,
+): ResultAsync<T, E> {
+  return ResultAsync.fromSafePromise(promise).andThen((result) => result)
+}
 
 export class TaskNotFoundError extends Error {
   constructor() {
@@ -95,12 +101,41 @@ function findTaskForLink(
   )
 }
 
-function insertLink(
+const UNIQUE_VIOLATION = '23505'
+
+function isUniqueViolation(cause: unknown, constraintName: string): boolean {
+  return (
+    cause instanceof Error &&
+    'code' in cause &&
+    cause.code === UNIQUE_VIOLATION &&
+    'constraint_name' in cause &&
+    cause.constraint_name === constraintName
+  )
+}
+
+// The caller already checked findLinkByTaskId/findLinkByRef before calling
+// this, but that check-then-insert isn't atomic: a concurrent request can
+// insert the conflicting row in between, which the DB's unique constraints
+// (task_github_links_task_id_unique, uq_task_github_links_repo_number) still
+// catch. Converting that race into the same business error the pre-check
+// returns keeps the route's response a 409 instead of an unhandled 500.
+async function insertLink(
   taskId: string,
+  ref: GithubResourceRef,
   issue: GithubIssueData,
-): ResultAsync<LinkRow, RowNotFoundError> {
-  return ResultAsync.fromSafePromise(
-    db
+): Promise<
+  Result<
+    LinkRow,
+    TaskAlreadyLinkedError | GithubResourceAlreadyLinkedError | RowNotFoundError
+  >
+> {
+  // Must catch the unique constraint violation to convert a concurrent
+  // duplicate link into a business error (see comment above); anything else
+  // is rethrown for the app-level error boundary to capture, matching the
+  // throw below.
+  // eslint-disable-next-line no-restricted-syntax -- see comment above
+  try {
+    const rows = await db
       .insert(taskGithubLinks)
       .values({
         taskId,
@@ -112,8 +147,23 @@ function insertLink(
         state: issue.state,
         title: issue.title,
       })
-      .returning(),
-  ).andThen(firstOrErr)
+      .returning()
+    return firstOrErr(rows)
+  } catch (cause) {
+    if (isUniqueViolation(cause, 'task_github_links_task_id_unique')) {
+      return err(new TaskAlreadyLinkedError())
+    }
+    if (isUniqueViolation(cause, 'uq_task_github_links_repo_number')) {
+      const existing = await findLinkByRef(ref).unwrapOr(null)
+      return err(
+        new GithubResourceAlreadyLinkedError(existing?.taskId ?? taskId),
+      )
+    }
+    // Not a recognized conflict; rethrow so the app-level error boundary
+    // reports it.
+    // eslint-disable-next-line no-restricted-syntax -- see comment above
+    throw cause
+  }
 }
 
 export function resolveGithubUrl(
@@ -148,6 +198,8 @@ export function createTaskFromGithubUrl(
   | TokenRefreshError
   | GithubLinkConsistencyError
   | RowNotFoundError
+  | TaskAlreadyLinkedError
+  | GithubResourceAlreadyLinkedError
 > {
   return findLinkByRef(ref).andThen((existing) => {
     if (existing) {
@@ -167,7 +219,7 @@ export function createTaskFromGithubUrl(
       )
         .andThen(firstOrErr)
         .andThen((task) =>
-          insertLink(task.id, issue).map((link) => ({
+          toResultAsync(insertLink(task.id, ref, issue)).map((link) => ({
             task,
             link,
             created: true,
@@ -207,7 +259,7 @@ export function linkTaskToGithubUrl(
         }
 
         return fetchGithubIssue(ref).andThen((issue) =>
-          insertLink(taskId, issue),
+          toResultAsync(insertLink(taskId, ref, issue)),
         )
       })
     })

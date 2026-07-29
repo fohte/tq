@@ -42,8 +42,12 @@ export function parseGithubIssueUrl(
   }
 
   return ok({
-    owner: groups['owner'] ?? '',
-    repo: groups['repo'] ?? '',
+    // GitHub owner/repo names are case-insensitive, but the DB's uniqueness
+    // check on (owner, repo, number) is a plain case-sensitive comparison;
+    // normalizing here keeps two differently-cased URLs for the same
+    // issue/PR from slipping past that check as if they were distinct.
+    owner: (groups['owner'] ?? '').toLowerCase(),
+    repo: (groups['repo'] ?? '').toLowerCase(),
     number: Number(groups['number']),
   })
 }

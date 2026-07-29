@@ -383,6 +383,12 @@ export const taskGithubLinks = pgTable(
       table.repo,
       table.number,
     ),
+    // Only a pull request can be merged; a plain issue's state is always
+    // open or closed.
+    check(
+      'task_github_links_state_kind_check',
+      sql`${table.kind} = 'pull_request' OR ${table.state} <> 'merged'`,
+    ),
   ],
 )
 
