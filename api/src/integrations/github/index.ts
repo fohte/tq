@@ -15,9 +15,17 @@ const SCOPES = 'repo'
 const PROVIDER_ID = 'github'
 
 export class GithubApiError extends Error {
-  constructor(message: string, cause?: unknown) {
+  /**
+   * True when GitHub responded with a 4xx (e.g. issue/PR not found or
+   * inaccessible) — safe to relay to the client. False for a network/parse
+   * failure or a 5xx, which must be reported to Sentry instead.
+   */
+  readonly rejected: boolean
+
+  constructor(message: string, cause?: unknown, rejected = false) {
     super(`GitHub API error: ${message}`, { cause })
     this.name = 'GithubApiError'
+    this.rejected = rejected
   }
 }
 

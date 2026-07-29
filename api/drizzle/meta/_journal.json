@@ -50,6 +50,20 @@
       "when": 1785332106875,
       "tag": "0006_dizzy_vulture",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785333560882,
+      "tag": "0007_adorable_husk",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785334330312,
+      "tag": "0008_gorgeous_pepper_potts",
+      "breakpoints": true
     }
   ]
 }

@@ -4,7 +4,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
-import { projects, tasks } from '#db/schema'
+import { projects, taskGithubLinks, tasks } from '#db/schema'
 import {
   parentTasks,
   taskWithParentNumberToResponse,
@@ -138,14 +138,21 @@ export const projectsApp = new Hono()
     }
 
     const result = await db
-      .select({ task: tasks, parentNumber: parentTasks.number })
+      .select({
+        task: tasks,
+        parentNumber: parentTasks.number,
+        githubLink: taskGithubLinks,
+      })
       .from(tasks)
       .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
+      .leftJoin(taskGithubLinks, eq(tasks.id, taskGithubLinks.taskId))
       .where(eq(tasks.projectId, id))
       .orderBy(tasks.sortOrder, tasks.createdAt)
 
     return c.json(
-      result.map((r) => taskWithParentNumberToResponse(r.task, r.parentNumber)),
+      result.map((r) =>
+        taskWithParentNumberToResponse(r.task, r.parentNumber, r.githubLink),
+      ),
       200,
     )
   })

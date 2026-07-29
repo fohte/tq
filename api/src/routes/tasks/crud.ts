@@ -7,6 +7,7 @@ import { db } from '#db/connection'
 import {
   labels,
   recurrenceRules,
+  taskGithubLinks,
   taskLabels,
   taskPages,
   tasks,
@@ -156,15 +157,17 @@ export const tasksCrudApp = new Hono()
         .select({
           task: tasks,
           parentNumber: parentTasks.number,
+          githubLink: taskGithubLinks,
         })
         .from(tasks)
         .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
+        .leftJoin(taskGithubLinks, eq(tasks.id, taskGithubLinks.taskId))
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(tasks.sortOrder, tasks.createdAt)
 
       return c.json(
         result.map((r) =>
-          taskWithParentNumberToResponse(r.task, r.parentNumber),
+          taskWithParentNumberToResponse(r.task, r.parentNumber, r.githubLink),
         ),
         200,
       )
@@ -174,36 +177,40 @@ export const tasksCrudApp = new Hono()
     const task = c.get('task')
     const id = task.id
 
-    const [childStats, pages, taskTimeBlocks, rule] = await Promise.all([
-      db
-        .select({
-          total: count(),
-          completed: count(
-            sql`CASE WHEN ${tasks.status} = 'completed' THEN 1 END`,
-          ),
-        })
-        .from(tasks)
-        .where(eq(tasks.parentId, id)),
-      db
-        .select()
-        .from(taskPages)
-        .where(eq(taskPages.taskId, id))
-        .orderBy(taskPages.sortOrder, taskPages.createdAt),
-      db
-        .select()
-        .from(timeBlocks)
-        .where(eq(timeBlocks.taskId, id))
-        .orderBy(timeBlocks.startTime),
-      task.recurrenceRuleId != null
-        ? db.query.recurrenceRules.findFirst({
-            where: eq(recurrenceRules.id, task.recurrenceRuleId),
+    const [childStats, pages, taskTimeBlocks, rule, githubLink] =
+      await Promise.all([
+        db
+          .select({
+            total: count(),
+            completed: count(
+              sql`CASE WHEN ${tasks.status} = 'completed' THEN 1 END`,
+            ),
           })
-        : Promise.resolve(null),
-    ])
+          .from(tasks)
+          .where(eq(tasks.parentId, id)),
+        db
+          .select()
+          .from(taskPages)
+          .where(eq(taskPages.taskId, id))
+          .orderBy(taskPages.sortOrder, taskPages.createdAt),
+        db
+          .select()
+          .from(timeBlocks)
+          .where(eq(timeBlocks.taskId, id))
+          .orderBy(timeBlocks.startTime),
+        task.recurrenceRuleId != null
+          ? db.query.recurrenceRules.findFirst({
+              where: eq(recurrenceRules.id, task.recurrenceRuleId),
+            })
+          : Promise.resolve(null),
+        db.query.taskGithubLinks.findFirst({
+          where: eq(taskGithubLinks.taskId, id),
+        }),
+      ])
 
     return c.json(
       {
-        ...taskToResponse(task, rule),
+        ...taskToResponse(task, rule, githubLink),
         childCompletionCount: {
           total: childStats[0]?.total ?? 0,
           completed: childStats[0]?.completed ?? 0,
@@ -347,7 +354,11 @@ export const tasksCrudApp = new Hono()
         return { updatedTask, updatedRule }
       })
 
-      return c.json(taskToResponse(updatedTask, updatedRule), 200)
+      const githubLink = await db.query.taskGithubLinks.findFirst({
+        where: eq(taskGithubLinks.taskId, id),
+      })
+
+      return c.json(taskToResponse(updatedTask, updatedRule, githubLink), 200)
     },
   )
   .delete('/:id', requireTask, async (c) => {

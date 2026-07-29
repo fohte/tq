@@ -11,6 +11,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
 } from 'drizzle-orm/pg-core'
 
 export const projects = pgTable(
@@ -346,6 +347,49 @@ export const images = pgTable(
       .defaultNow(),
   },
   (table) => [index('idx_images_r2_key').on(table.r2Key)],
+)
+
+export const taskGithubLinks = pgTable(
+  'task_github_links',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    taskId: text('task_id')
+      .notNull()
+      .unique()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    owner: text('owner').notNull(),
+    repo: text('repo').notNull(),
+    number: integer('number').notNull(),
+    kind: text('kind', { enum: ['issue', 'pull_request'] }).notNull(),
+    url: text('url').notNull(),
+    state: text('state', { enum: ['open', 'closed', 'merged'] }).notNull(),
+    title: text('title').notNull(),
+    lastSyncedAt: timestamp('last_synced_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // At most one task may link to a given issue/PR.
+    unique('uq_task_github_links_repo_number').on(
+      table.owner,
+      table.repo,
+      table.number,
+    ),
+    // Only a pull request can be merged; a plain issue's state is always
+    // open or closed.
+    check(
+      'task_github_links_state_kind_check',
+      sql`${table.kind} = 'pull_request' OR ${table.state} <> 'merged'`,
+    ),
+  ],
 )
 
 export const oauthTokens = pgTable(
