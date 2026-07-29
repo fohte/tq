@@ -104,11 +104,18 @@ export function createInlineReferencePlugin<TData>(
         const unsubscribe = provider.subscribe(() => {
           if (redrawScheduled) return
           redrawScheduled = true
-          void Promise.resolve().then(() => {
-            redrawScheduled = false
-            if (editorView.isDestroyed) return
-            editorView.dispatch(editorView.state.tr)
-          })
+          void Promise.resolve()
+            .then(() => {
+              redrawScheduled = false
+              if (editorView.isDestroyed) return
+              editorView.dispatch(editorView.state.tr)
+            })
+            .catch((error: unknown) => {
+              console.error(
+                `Failed to redraw inline-reference-${provider.id}`,
+                error,
+              )
+            })
         })
         return { destroy: unsubscribe }
       },

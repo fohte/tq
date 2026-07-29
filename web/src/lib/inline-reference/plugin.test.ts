@@ -2,7 +2,7 @@ import type { Ctx } from '@milkdown/kit/ctx'
 import { Schema } from '@milkdown/kit/prose/model'
 import { EditorState, TextSelection } from '@milkdown/kit/prose/state'
 import { EditorView } from '@milkdown/kit/prose/view'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { createInlineReferencePlugin } from '#lib/inline-reference/plugin'
 import type { InlineReferenceProvider } from '#lib/inline-reference/types'
@@ -132,6 +132,11 @@ describe('createInlineReferencePlugin', () => {
 
     replaceContent(view, docWithText('see @1 here'))
     expect(view.dom.querySelector('.inline-reference-chip')).toBeNull()
+    // Let the redraw scheduled by the initial (not-yet-ready) decorations
+    // pass flush first, so the notify() below schedules a genuinely new
+    // microtask instead of being swallowed by the in-flight guard.
+    await Promise.resolve()
+    expect(view.dom.querySelector('.inline-reference-chip')).toBeNull()
 
     // Simulates the mention's data finishing its load out-of-band, the way
     // a real provider's async fetch resolves after the initial redraw.
@@ -150,11 +155,14 @@ describe('createInlineReferencePlugin', () => {
     const view = await createView(provider)
 
     replaceContent(view, docWithText('see @1 here'))
+    const dispatchSpy = vi.spyOn(view, 'dispatch')
     view.destroy()
 
     // The pending microtask redraw scheduled by ensureLoaded's notify above
     // must see the destroyed view and skip dispatching, rather than
     // throwing on a torn-down EditorView.
-    await expect(Promise.resolve()).resolves.toBeUndefined()
+    await Promise.resolve()
+
+    expect(dispatchSpy).not.toHaveBeenCalled()
   })
 })
