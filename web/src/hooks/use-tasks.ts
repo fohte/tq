@@ -14,7 +14,7 @@ type LinkedTaskSummary = TaskDetail['links']['outgoing'][number]
 
 type TreeNode = InferResponseType<typeof api.api.tasks.tree.$get, 200>[number]
 
-const taskKeys = {
+export const taskKeys = {
   all: ['tasks'] as const,
   lists: ['tasks', 'list'] as const,
   list: (filter?: { status?: string; context?: string }) =>
@@ -129,6 +129,7 @@ export function useCreateTask() {
         sortOrder: 0,
         recurrenceRuleId: null,
         recurrenceRule: null,
+        githubLink: null,
         createdAt: now,
         updatedAt: now,
       }

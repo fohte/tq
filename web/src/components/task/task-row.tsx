@@ -9,6 +9,8 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
+import { GithubLinkBadge } from '#components/task/github-link-badge'
+import type { GithubLink } from '#hooks/use-github-link'
 import type { Task, TreeNode } from '#hooks/use-tasks'
 import { useCompleteTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
@@ -76,6 +78,7 @@ interface TaskRowBaseProps {
   context: Task['context']
   estimatedMinutes: number | null
   parentNumber: number | null
+  githubLink: GithubLink | null
 }
 
 function TaskRowContent({
@@ -85,6 +88,7 @@ function TaskRowContent({
   context,
   estimatedMinutes,
   parentNumber,
+  githubLink,
 }: TaskRowBaseProps) {
   const completeTask = useCompleteTask()
   const isInProgress = status === 'in_progress'
@@ -125,6 +129,7 @@ function TaskRowContent({
         {/* BottomRow */}
         <div className="flex items-center gap-1.5">
           <ContextBadge context={context} />
+          {githubLink != null && <GithubLinkBadge link={githubLink} />}
           {estimatedMinutes != null && (
             <span className="font-mono text-xs text-muted-foreground">
               {formatMinutes(estimatedMinutes)}
@@ -175,6 +180,7 @@ export function TaskRow({
         context={task.context}
         estimatedMinutes={task.estimatedMinutes}
         parentNumber={task.parentNumber}
+        githubLink={task.githubLink}
       />
     </Link>
   )
@@ -266,6 +272,9 @@ export function TreeTaskRow({
                 </span>
               )}
               <ContextBadge context={node.context} />
+              {node.githubLink != null && (
+                <GithubLinkBadge link={node.githubLink} />
+              )}
               {node.estimatedMinutes != null && (
                 <span className="font-mono text-xs text-muted-foreground">
                   {formatMinutes(node.estimatedMinutes)}

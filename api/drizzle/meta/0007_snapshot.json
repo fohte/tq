@@ -1,5 +1,5 @@
 {
-  "id": "a0606eff-d2ce-4e1f-8a9c-461133838cf9",
+  "id": "d9ddc430-1d23-4bed-9351-4653b9825647",
   "prevId": "e7034fd8-8a37-4049-99d1-e5dc967bf3de",
   "version": "7",
   "dialect": "postgresql",
@@ -745,6 +745,115 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.task_github_links": {
+      "name": "task_github_links",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "owner": {
+          "name": "owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "repo": {
+          "name": "repo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_synced_at": {
+          "name": "last_synced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "task_github_links_task_id_tasks_id_fk": {
+          "name": "task_github_links_task_id_tasks_id_fk",
+          "tableFrom": "task_github_links",
+          "tableTo": "tasks",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "task_github_links_task_id_unique": {
+          "name": "task_github_links_task_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id"]
+        },
+        "uq_task_github_links_repo_number": {
+          "name": "uq_task_github_links_repo_number",
+          "nullsNotDistinct": false,
+          "columns": ["owner", "repo", "number"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.task_labels": {
       "name": "task_labels",
       "schema": "",
@@ -823,83 +932,6 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.task_links": {
-      "name": "task_links",
-      "schema": "",
-      "columns": {
-        "source_task_id": {
-          "name": "source_task_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "target_task_id": {
-          "name": "target_task_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "idx_task_links_target_task_id": {
-          "name": "idx_task_links_target_task_id",
-          "columns": [
-            {
-              "expression": "target_task_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "task_links_source_task_id_tasks_id_fk": {
-          "name": "task_links_source_task_id_tasks_id_fk",
-          "tableFrom": "task_links",
-          "tableTo": "tasks",
-          "columnsFrom": ["source_task_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "task_links_target_task_id_tasks_id_fk": {
-          "name": "task_links_target_task_id_tasks_id_fk",
-          "tableFrom": "task_links",
-          "tableTo": "tasks",
-          "columnsFrom": ["target_task_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "task_links_source_task_id_target_task_id_pk": {
-          "name": "task_links_source_task_id_target_task_id_pk",
-          "columns": ["source_task_id", "target_task_id"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "task_links_no_self_link": {
-          "name": "task_links_no_self_link",
-          "value": "\"task_links\".\"source_task_id\" != \"task_links\".\"target_task_id\""
-        }
-      },
       "isRLSEnabled": false
     },
     "public.task_pages": {

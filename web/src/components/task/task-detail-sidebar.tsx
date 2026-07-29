@@ -8,6 +8,8 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { SidebarField } from '#components/task/sidebar-field'
+import { SidebarGithubLinkField } from '#components/task/task-github-link-field'
 import type { TaskDetail } from '#hooks/use-tasks'
 import {
   useTaskList,
@@ -47,6 +49,7 @@ export function TaskSidebar({ task }: { task: TaskDetail }) {
       />
       <SidebarParentField taskId={task.id} parentId={task.parentId} />
       <SidebarContextField taskId={task.id} context={task.context} />
+      <SidebarGithubLinkField taskId={task.id} githubLink={task.githubLink} />
     </div>
   )
 }
@@ -81,32 +84,18 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
         />
         <SidebarParentField taskId={task.id} parentId={task.parentId} />
         <SidebarContextField taskId={task.id} context={task.context} />
+        <div className="col-span-2">
+          <SidebarGithubLinkField
+            taskId={task.id}
+            githubLink={task.githubLink}
+          />
+        </div>
       </div>
     </div>
   )
 }
 
 // --- Sidebar Fields ---
-
-function SidebarField({
-  label,
-  icon,
-  children,
-}: {
-  label: string
-  icon: React.ReactNode
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-        {icon}
-        {label}
-      </span>
-      <div className="text-sm text-foreground">{children}</div>
-    </div>
-  )
-}
 
 function SidebarStatusField({
   taskId,

@@ -7,8 +7,10 @@ import {
   FloatingActionButton,
 } from '#components/task/create-task-inline'
 import { CreateTaskModal } from '#components/task/create-task-modal'
+import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
 import { TaskListHeader } from '#components/task/task-list-header'
 import { TaskRow, TreeTaskRow } from '#components/task/task-row'
+import { GithubMarkIcon } from '#components/ui/github-mark-icon'
 import {
   useFilteredTaskList,
   useFilteredTaskTree,
@@ -25,6 +27,7 @@ function TaskList() {
   const [activeTab, setActiveTab] = useState<Tab>('today')
   const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isGithubModalOpen, setIsGithubModalOpen] = useState(false)
 
   const tasks = useFilteredTaskList()
   const { isLoading: isTreeLoading, tree: filteredTreeData } =
@@ -73,7 +76,17 @@ function TaskList() {
             )}
           </button>
         ))}
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setIsGithubModalOpen(true)
+            }}
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            aria-label="Create task from GitHub"
+          >
+            <GithubMarkIcon className="size-4" />
+          </button>
           <ContextFilterInline />
         </div>
       </div>
@@ -138,6 +151,13 @@ function TaskList() {
         {...(activeTab === 'today'
           ? { defaultStartDate: new Date().toISOString().slice(0, 10) }
           : {})}
+      />
+
+      {/* Create task from GitHub issue/PR modal */}
+      <GithubIssueLinkModal
+        open={isGithubModalOpen}
+        onOpenChange={setIsGithubModalOpen}
+        mode="create"
       />
     </div>
   )

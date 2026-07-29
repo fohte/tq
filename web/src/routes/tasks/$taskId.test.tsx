@@ -96,6 +96,7 @@ vi.mock('@tanstack/react-router', () => {
         {children}
       </a>
     ),
+    useNavigate: () => vi.fn(),
   }
 })
 
