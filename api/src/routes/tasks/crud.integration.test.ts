@@ -240,6 +240,33 @@ describe('tasks CRUD API', () => {
       >(res)
       expect(body.timeBlocks).toEqual([])
     })
+
+    it('tracks title and description authors independently', async () => {
+      const created = await createTask('Original title', {
+        description: 'Original description',
+      })
+
+      await app.request(`/api/tasks/${created.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Author': 'llm:claude-opus-5',
+        },
+        body: JSON.stringify({ title: 'Updated title' }),
+      })
+
+      const res = await app.request(`/api/tasks/${created.id}`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<
+        TaskResponse & {
+          titleAuthor: { kind: string; agent: string | null } | null
+          descriptionAuthor: { kind: string; agent: string | null } | null
+        }
+      >(res)
+      expect(body.titleAuthor).toEqual({ kind: 'llm', agent: 'claude-opus-5' })
+      expect(body.descriptionAuthor).toEqual({ kind: 'human', agent: null })
+    })
   })
 
   describe('PATCH /api/tasks/:id', () => {
