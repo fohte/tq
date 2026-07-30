@@ -60,6 +60,8 @@ const sampleEvent = {
   endTime: '2026-07-07T10:30:00.000Z',
   isAllDay: false,
   source: 'google_calendar' as const,
+  accountId: 'google-sub-1',
+  accountLabel: 'user@example.com',
 }
 
 describe('useGcalEvents', () => {
@@ -81,7 +83,7 @@ describe('useGcalEvents', () => {
     expect(result.current.data).toEqual([sampleEvent])
   })
 
-  it('queries the given date range for the primary calendar', async () => {
+  it('queries the given date range', async () => {
     const mocks = await getMocks()
     assertDefined(mocks['mockEventsGet']).mockResolvedValue({
       status: 200,
@@ -97,7 +99,7 @@ describe('useGcalEvents', () => {
       expect(result.current.isSuccess).toBe(true)
     })
     expect(assertDefined(mocks['mockEventsGet']).mock.calls).toEqual([
-      [{ query: { calendarId: 'primary', ...getDayIsoRange('2026-07-07') } }],
+      [{ query: { ...getDayIsoRange('2026-07-07') } }],
     ])
   })
 

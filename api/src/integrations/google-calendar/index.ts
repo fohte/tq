@@ -1,16 +1,22 @@
-import { fromThrowable } from 'neverthrow'
+import { fromThrowable, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 import { getOAuthEnvConfig } from '#integrations/env-config'
-import { TokenRefreshError } from '#integrations/errors'
-import { getValidAccessToken } from '#integrations/oauth'
+import {
+  AccountIdentityError,
+  type IntegrationConfigError,
+  TokenRefreshError,
+} from '#integrations/errors'
+import { ensureValidAccessToken, listAccountTokens } from '#integrations/oauth'
 import type { ExternalEvent, IntegrationProvider } from '#integrations/types'
 import { fetchJson, TokenExchangeError } from '#lib/fetch-json'
 
 const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
 const GOOGLE_CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3'
-const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
+const GOOGLE_USERINFO_ENDPOINT =
+  'https://openidconnect.googleapis.com/v1/userinfo'
+const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly openid email'
 const PROVIDER_ID = 'google_calendar'
 
 export class CalendarApiError extends Error {
@@ -34,6 +40,11 @@ const refreshTokenResponseSchema = z.object({
 
 const googleOAuthErrorResponseSchema = z.object({
   error: z.string(),
+})
+
+const userInfoResponseSchema = z.object({
+  sub: z.string(),
+  email: z.string(),
 })
 
 const tryParseJson = fromThrowable(
@@ -78,7 +89,7 @@ export const googleCalendarProvider = {
     extraAuthorizationParams: {
       response_type: 'code',
       access_type: 'offline',
-      prompt: 'consent',
+      prompt: 'select_account consent',
     },
     getConfig: () => getOAuthEnvConfig('GOOGLE'),
     exchangeCode: (code, config) =>
@@ -130,6 +141,16 @@ export const googleCalendarProvider = {
           ? { refreshToken: data.refresh_token }
           : {}),
       })),
+    identifyAccount: (accessToken) =>
+      fetchJson(
+        GOOGLE_USERINFO_ENDPOINT,
+        {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${accessToken}` },
+        },
+        userInfoResponseSchema,
+        (message, cause) => new AccountIdentityError(message, cause),
+      ).map((data) => ({ accountId: data.sub, accountLabel: data.email })),
   },
   capabilities: {
     calendarEvents: {
@@ -150,30 +171,66 @@ export const googleCalendarProvider = {
           googleCalendarEventsResponseSchema,
           (message, cause) => new CalendarApiError(message, cause),
         ).map((data) =>
-          (data.items ?? []).map((event): ExternalEvent => ({
-            id: event.id,
-            summary: event.summary ?? '(No title)',
-            startTime: event.start.dateTime ?? event.start.date ?? '',
-            endTime: event.end.dateTime ?? event.end.date ?? '',
-            isAllDay: event.start.dateTime == null,
-            source: PROVIDER_ID,
-          })),
+          (data.items ?? []).map(
+            (event): Omit<ExternalEvent, 'accountId' | 'accountLabel'> => ({
+              id: event.id,
+              summary: event.summary ?? '(No title)',
+              startTime: event.start.dateTime ?? event.start.date ?? '',
+              endTime: event.end.dateTime ?? event.end.date ?? '',
+              isAllDay: event.start.dateTime == null,
+              source: PROVIDER_ID,
+            }),
+          ),
         )
       },
     },
   },
 } satisfies IntegrationProvider
 
-export function getEvents(
-  calendarId: string,
+export type AccountEventsError =
+  IntegrationConfigError | TokenRefreshError | CalendarApiError
+
+export interface AccountEventsResult {
+  accountId: string
+  accountLabel: string | null
+  result: Result<ExternalEvent[], AccountEventsError>
+}
+
+// Resolves to a best-effort per-account result rather than a single Result,
+// mirroring getIntegrationSummary in oauth.ts: one account's failure (e.g.
+// a revoked refresh token) must not prevent the other connected accounts'
+// events from being returned.
+export async function getEvents(
   timeMin: string,
   timeMax: string,
-) {
-  return getValidAccessToken(googleCalendarProvider).andThen((accessToken) =>
-    googleCalendarProvider.capabilities.calendarEvents.getEvents(accessToken, {
-      calendarId,
-      timeMin,
-      timeMax,
-    }),
+): Promise<AccountEventsResult[]> {
+  const tokens = await listAccountTokens(googleCalendarProvider).match(
+    (rows) => rows,
+    () => [],
+  )
+
+  return Promise.all(
+    tokens.map(async (token) => ({
+      accountId: token.accountId,
+      accountLabel: token.accountLabel,
+      result: await ensureValidAccessToken(googleCalendarProvider, token)
+        .andThen((accessToken) =>
+          googleCalendarProvider.capabilities.calendarEvents.getEvents(
+            accessToken,
+            {
+              calendarId: 'primary',
+              timeMin,
+              timeMax,
+            },
+          ),
+        )
+        .map((events) =>
+          events.map((event) => ({
+            ...event,
+            accountId: token.accountId,
+            accountLabel: token.accountLabel,
+          })),
+        ),
+    })),
   )
 }

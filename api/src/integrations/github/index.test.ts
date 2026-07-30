@@ -38,9 +38,9 @@ function clearEnv() {
 async function upsertToken(accessToken: string) {
   await db
     .insert(oauthTokens)
-    .values({ provider: 'github', accessToken })
+    .values({ provider: 'github', accountId: '', accessToken })
     .onConflictDoUpdate({
-      target: oauthTokens.provider,
+      target: [oauthTokens.provider, oauthTokens.accountId],
       set: { accessToken, updatedAt: new Date() },
     })
 }
@@ -118,6 +118,8 @@ describe('handleOAuthCallback', () => {
     expect(normalize(savedToken)).toEqual({
       id: 'ID',
       provider: 'github',
+      accountId: '',
+      accountLabel: null,
       accessToken: 'new-access-token',
       refreshToken: null,
       expiresAt: null,

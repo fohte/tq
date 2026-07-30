@@ -44,9 +44,9 @@ function clearGoogleEnv() {
 async function upsertToken(provider: string, accessToken: string) {
   await db
     .insert(oauthTokens)
-    .values({ provider, accessToken })
+    .values({ provider, accountId: '', accessToken })
     .onConflictDoUpdate({
-      target: oauthTokens.provider,
+      target: [oauthTokens.provider, oauthTokens.accountId],
       set: { accessToken, updatedAt: new Date() },
     })
 }

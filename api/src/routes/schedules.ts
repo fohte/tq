@@ -3,7 +3,6 @@ import { zValidator } from '@hono/zod-validator'
 import { and, eq, gte, inArray, lte, notInArray } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { createFactory } from 'hono/factory'
-import { err, ok } from 'neverthrow'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
@@ -14,8 +13,8 @@ import {
   timeBlocks,
   todayTasks,
 } from '#db/schema'
-import { OAuthTokenMissingError } from '#integrations/errors'
 import { getEvents } from '#integrations/google-calendar/index'
+import type { ExternalEvent } from '#integrations/types'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { localDateBoundsToUtc } from '#lib/timezone'
 import { expandScheduleForDate } from '#routes/schedule-expansion'
@@ -385,24 +384,39 @@ export const schedulesApp = new Hono()
         estimatedMinutes: r.task.estimatedMinutes,
       }))
 
-    const eventsResult = (
-      await getEvents('primary', dayStart.toISOString(), dayEnd.toISOString())
-    ).orElse((error) => {
-      if (!(error instanceof OAuthTokenMissingError)) return err(error)
-      console.warn(
-        '[auto-assign] Google Calendar unavailable, scheduling without external events:',
-        error.message,
+    // No connected account (accounts.length === 0) is a normal, unconfigured
+    // state: auto-assign proceeds as if no Google Calendar events exist. Only
+    // a total wipeout of at least one connected account (every account
+    // errored) is treated as a failure — one account's failure (e.g. a
+    // revoked refresh token) must not block scheduling when another
+    // connected account's events came back fine.
+    const accounts = await getEvents(
+      dayStart.toISOString(),
+      dayEnd.toISOString(),
+    )
+
+    const externalEvents: ExternalEvent[] = []
+    let successCount = 0
+
+    for (const { accountId, result } of accounts) {
+      result.match(
+        (events) => {
+          successCount++
+          externalEvents.push(...events)
+        },
+        (error) => {
+          captureWithFingerprint(
+            error,
+            'api.schedules.auto-assign-calendar-failed',
+            { extras: { accountId } },
+          )
+        },
       )
-      return ok([])
-    })
-    if (eventsResult.isErr()) {
-      captureWithFingerprint(
-        eventsResult.error,
-        'api.schedules.auto-assign-calendar-failed',
-      )
+    }
+
+    if (accounts.length > 0 && successCount === 0) {
       return c.json({ error: 'Internal server error' }, 500)
     }
-    const externalEvents = eventsResult.value
 
     const scheduleRules = await loadSchedulesWithRules()
     const expandedScheduleBlocks = scheduleRules.flatMap(({ schedule, rule }) =>
