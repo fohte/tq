@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db } from '#db/connection'
 import { oauthTokens } from '#db/schema'
 import {
+  AccountIdentityError,
   IntegrationConfigError,
   OAuthTokenMissingError,
   TokenRefreshError,
@@ -14,6 +15,7 @@ import {
   getEvents,
   googleCalendarProvider,
 } from '#integrations/google-calendar/index'
+import { upsertGoogleCalendarToken } from '#integrations/google-calendar/testing'
 import {
   disconnect,
   getAuthUrl,
@@ -43,22 +45,6 @@ function clearEnv() {
   for (const key of Object.keys(MOCK_ENV)) {
     Reflect.deleteProperty(process.env, key)
   }
-}
-
-async function upsertToken(values: {
-  accountId: string
-  accountLabel?: string | null
-  accessToken: string
-  refreshToken: string
-  expiresAt: Date
-}) {
-  await db
-    .insert(oauthTokens)
-    .values({ provider: 'google_calendar', accountLabel: null, ...values })
-    .onConflictDoUpdate({
-      target: [oauthTokens.provider, oauthTokens.accountId],
-      set: { accountLabel: null, ...values, updatedAt: new Date() },
-    })
 }
 
 // Replaces dynamic fields with fixed placeholders so the full row can still
@@ -115,16 +101,14 @@ describe('getAuthUrl', () => {
     expect(parsed.origin + parsed.pathname).toBe(
       'https://accounts.google.com/o/oauth2/v2/auth',
     )
-    expect(parsed.searchParams.get('client_id')).toBe('test-client-id')
-    expect(parsed.searchParams.get('redirect_uri')).toBe(
-      'http://localhost:3001/api/calendar/oauth-callback',
-    )
-    expect(parsed.searchParams.get('scope')).toBe(
-      'https://www.googleapis.com/auth/calendar.readonly openid email',
-    )
-    expect(parsed.searchParams.get('access_type')).toBe('offline')
-    expect(parsed.searchParams.get('response_type')).toBe('code')
-    expect(parsed.searchParams.get('prompt')).toBe('select_account consent')
+    expect(Object.fromEntries(parsed.searchParams)).toEqual({
+      client_id: 'test-client-id',
+      redirect_uri: 'http://localhost:3001/api/calendar/oauth-callback',
+      scope: 'https://www.googleapis.com/auth/calendar.readonly openid email',
+      response_type: 'code',
+      access_type: 'offline',
+      prompt: 'select_account consent',
+    })
   })
 
   it('returns a config error when environment variables are missing', () => {
@@ -198,6 +182,33 @@ describe('handleOAuthCallback', () => {
     expect(error).toEqual(
       new TokenExchangeError('invalid_grant', undefined, true),
     )
+  })
+
+  it('discards the exchanged token when identifying the account fails', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            access_token: 'new-access-token',
+            refresh_token: 'new-refresh-token',
+            expires_in: 3600,
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(new Response('server error', { status: 500 }))
+
+    const error = (
+      await handleOAuthCallback(googleCalendarProvider, 'auth-code-123')
+    )._unsafeUnwrapErr()
+
+    expect(error).toBeInstanceOf(AccountIdentityError)
+
+    const savedTokens = await db
+      .select()
+      .from(oauthTokens)
+      .where(eq(oauthTokens.provider, 'google_calendar'))
+    expect(savedTokens).toEqual([])
   })
 
   it('connecting a second account does not overwrite the first', async () => {
@@ -282,7 +293,7 @@ describe('handleOAuthCallback', () => {
 
 describe('getValidAccessToken', () => {
   it('returns existing token when not expired', async () => {
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accessToken: 'valid-token',
       refreshToken: 'refresh-token',
@@ -296,7 +307,7 @@ describe('getValidAccessToken', () => {
   })
 
   it('refreshes token when close to expiry', async () => {
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accessToken: 'expired-token',
       refreshToken: 'refresh-token',
@@ -340,7 +351,7 @@ describe('getValidAccessToken', () => {
   })
 
   it('persists rotated refresh token when Google returns one', async () => {
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accessToken: 'old-token',
       refreshToken: 'old-refresh-token',
@@ -392,7 +403,7 @@ describe('getValidAccessToken', () => {
   })
 
   it('marks the error as rejected when Google reports the refresh token as invalid_grant', async () => {
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accessToken: 'expired-token',
       refreshToken: 'bad-refresh-token',
@@ -415,7 +426,7 @@ describe('getValidAccessToken', () => {
   })
 
   it('does not mark the error as rejected when Google reports an OAuth error other than invalid_grant', async () => {
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accessToken: 'expired-token',
       refreshToken: 'refresh-token',
@@ -438,7 +449,7 @@ describe('getValidAccessToken', () => {
   })
 
   it('does not mark the error as rejected when the request fails with a server error', async () => {
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accessToken: 'expired-token',
       refreshToken: 'refresh-token',
@@ -459,7 +470,7 @@ describe('getValidAccessToken', () => {
 
 describe('getConnectionStatus / disconnect', () => {
   it('reports connected without a live check once a token exists', async () => {
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accessToken: 'valid-token',
       refreshToken: 'refresh-token',
@@ -482,7 +493,7 @@ describe('getConnectionStatus / disconnect', () => {
   })
 
   it('deletes the stored token on disconnect', async () => {
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accessToken: 'valid-token',
       refreshToken: 'refresh-token',
@@ -520,7 +531,7 @@ describe('getIntegrationSummary', () => {
   })
 
   it('reports connected true once a token exists', async () => {
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accessToken: 'valid-token',
       refreshToken: 'refresh-token',
@@ -538,7 +549,7 @@ describe('getIntegrationSummary', () => {
 
 describe('getEvents', () => {
   it('fetches and transforms Google Calendar events', async () => {
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user@example.com',
       accessToken: 'valid-token',
@@ -605,7 +616,7 @@ describe('getEvents', () => {
   })
 
   it('handles events without summary', async () => {
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user@example.com',
       accessToken: 'valid-token',
@@ -654,15 +665,15 @@ describe('getEvents', () => {
     ])
   })
 
-  it('keeps a working accounts events when a different connected account fails', async () => {
-    await upsertToken({
+  it("keeps a working account's events when a different connected account fails", async () => {
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user1@example.com',
       accessToken: 'valid-token-1',
       refreshToken: 'refresh-token-1',
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     })
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-2',
       accountLabel: 'user2@example.com',
       accessToken: 'valid-token-2',

@@ -13,8 +13,10 @@ import {
   timeBlocks,
   todayTasks,
 } from '#db/schema'
-import { getEvents } from '#integrations/google-calendar/index'
-import type { ExternalEvent } from '#integrations/types'
+import {
+  getEvents,
+  partitionAccountEvents,
+} from '#integrations/google-calendar/index'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { localDateBoundsToUtc } from '#lib/timezone'
 import { expandScheduleForDate } from '#routes/schedule-expansion'
@@ -384,37 +386,33 @@ export const schedulesApp = new Hono()
         estimatedMinutes: r.task.estimatedMinutes,
       }))
 
-    // No connected account (accounts.length === 0) is a normal, unconfigured
-    // state: auto-assign proceeds as if no Google Calendar events exist. Only
-    // a total wipeout of at least one connected account (every account
-    // errored) is treated as a failure — one account's failure (e.g. a
-    // revoked refresh token) must not block scheduling when another
-    // connected account's events came back fine.
+    // No connected account, or every connected account merely needing
+    // re-authentication (an expired/revoked refresh token), is treated the
+    // same as "no calendar constraints" — auto-assign still proceeds without
+    // external events. Only a genuinely unexpected error with zero successful
+    // accounts is a failure worth surfacing.
     const accounts = await getEvents(
       dayStart.toISOString(),
       dayEnd.toISOString(),
     )
 
-    const externalEvents: ExternalEvent[] = []
-    let successCount = 0
-
-    for (const { accountId, result } of accounts) {
-      result.match(
-        (events) => {
-          successCount++
-          externalEvents.push(...events)
-        },
-        (error) => {
-          captureWithFingerprint(
-            error,
-            'api.schedules.auto-assign-calendar-failed',
-            { extras: { accountId } },
-          )
-        },
+    const {
+      events: externalEvents,
+      successCount,
+      authRejectedCount,
+    } = partitionAccountEvents(accounts, (accountId, error) => {
+      captureWithFingerprint(
+        error,
+        'api.schedules.auto-assign-calendar-failed',
+        { extras: { accountId } },
       )
-    }
+    })
 
-    if (accounts.length > 0 && successCount === 0) {
+    if (
+      accounts.length > 0 &&
+      successCount === 0 &&
+      authRejectedCount < accounts.length
+    ) {
       return c.json({ error: 'Internal server error' }, 500)
     }
 

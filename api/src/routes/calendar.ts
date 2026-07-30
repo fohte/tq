@@ -3,12 +3,12 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
-import { OAuthTokenMissingError, TokenRefreshError } from '#integrations/errors'
+import { OAuthTokenMissingError } from '#integrations/errors'
 import {
   getEvents,
   googleCalendarProvider,
+  partitionAccountEvents,
 } from '#integrations/google-calendar/index'
-import type { ExternalEvent } from '#integrations/types'
 import {
   callbackQuerySchema,
   handleOAuthCallbackRoute,
@@ -33,34 +33,16 @@ export const calendarApp = new Hono()
       return c.json({ error: new OAuthTokenMissingError().message }, 401)
     }
 
-    const events: ExternalEvent[] = []
-    let successCount = 0
-    let authRejectedCount = 0
-
-    for (const { accountId, result } of accounts) {
-      result.match(
-        (accountEvents) => {
-          successCount++
-          events.push(...accountEvents)
-        },
-        (error) => {
-          // A refresh token Google itself rejected (e.g. revoked or expired)
-          // means only that one account needs re-authentication, so it's
-          // silently excluded rather than reported. Anything else
-          // (network/parse/schema failure) is unexpected and must be
-          // captured rather than dropped.
-          if (error instanceof TokenRefreshError && error.rejected) {
-            authRejectedCount++
-            return
-          }
-          captureWithFingerprint(
-            error,
-            'api.calendar.get-events-account-failed',
-            { extras: { accountId } },
-          )
-        },
-      )
-    }
+    const { events, successCount, authRejectedCount } = partitionAccountEvents(
+      accounts,
+      (accountId, error) => {
+        captureWithFingerprint(
+          error,
+          'api.calendar.get-events-account-failed',
+          { extras: { accountId } },
+        )
+      },
+    )
 
     // Only a total wipeout (zero successes) can produce a non-200 response,
     // so a live account's events are never hidden just because another

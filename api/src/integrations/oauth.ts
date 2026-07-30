@@ -244,6 +244,10 @@ export async function getIntegrationSummary(
   }
 }
 
+// Deletes every account connected to this provider, not just one — for a
+// provider with multiple connected accounts (e.g. google_calendar), this
+// is a deliberate "disconnect everything" for now. Per-account disconnect
+// is deferred to a follow-up PR alongside the accounts-list UI.
 export function disconnect(
   provider: IntegrationProvider,
 ): ResultAsync<void, never> {

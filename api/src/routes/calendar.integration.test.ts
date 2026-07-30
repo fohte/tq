@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
-import { db } from '#db/connection'
-import { oauthTokens } from '#db/schema'
+import { upsertGoogleCalendarToken } from '#integrations/google-calendar/testing'
 import type { ExternalEvent } from '#integrations/types'
 import { jsonBody, setupTestDb } from '#testing'
 
@@ -24,22 +23,6 @@ function clearGoogleEnv() {
   for (const key of Object.keys(GOOGLE_ENV)) {
     Reflect.deleteProperty(process.env, key)
   }
-}
-
-async function upsertToken(values: {
-  accountId: string
-  accountLabel?: string | null
-  accessToken: string
-  refreshToken: string
-  expiresAt: Date
-}) {
-  await db
-    .insert(oauthTokens)
-    .values({ provider: 'google_calendar', accountLabel: null, ...values })
-    .onConflictDoUpdate({
-      target: [oauthTokens.provider, oauthTokens.accountId],
-      set: { accountLabel: null, ...values, updatedAt: new Date() },
-    })
 }
 
 function requestEvents() {
@@ -87,14 +70,14 @@ describe('GET /api/calendar/events', () => {
   })
 
   it('merges events from every connected account', async () => {
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user1@example.com',
       accessToken: 'valid-token-1',
       refreshToken: 'refresh-token-1',
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     })
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-2',
       accountLabel: 'user2@example.com',
       accessToken: 'valid-token-2',
@@ -175,7 +158,7 @@ describe('GET /api/calendar/events', () => {
   })
 
   it('returns only the live account events when a different connected account has a revoked refresh token', async () => {
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user1@example.com',
       accessToken: 'valid-token-1',
@@ -184,7 +167,7 @@ describe('GET /api/calendar/events', () => {
     })
     // expiresAt in the past forces ensureValidAccessToken to actually
     // attempt a refresh, which is what surfaces a revoked refresh token.
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-2',
       accountLabel: 'user2@example.com',
       accessToken: 'stale-access-token-2',
@@ -239,14 +222,14 @@ describe('GET /api/calendar/events', () => {
   })
 
   it('returns 401 when every connected account has a revoked refresh token', async () => {
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user1@example.com',
       accessToken: 'stale-access-token-1',
       refreshToken: 'revoked-refresh-token-1',
       expiresAt: new Date(Date.now() - 1000),
     })
-    await upsertToken({
+    await upsertGoogleCalendarToken({
       accountId: 'google-sub-2',
       accountLabel: 'user2@example.com',
       accessToken: 'stale-access-token-2',
