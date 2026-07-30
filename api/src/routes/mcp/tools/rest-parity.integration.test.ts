@@ -92,8 +92,8 @@ describe('REST/MCP parity', () => {
 
     expect(await jsonBody(res)).toEqual({
       ...data,
-      titleAuthor: { kind: 'human', agent: null },
-      descriptionAuthor: { kind: 'human', agent: null },
+      titleAuthor: { kind: 'llm', agent: 'mcp' },
+      descriptionAuthor: { kind: 'llm', agent: 'mcp' },
       childCompletionCount: { total: 0, completed: 0 },
       pages: [],
       timeBlocks: [],
@@ -130,7 +130,7 @@ describe('REST/MCP parity', () => {
 
     expect(await jsonBody(res)).toEqual({
       ...data,
-      titleAuthor: { kind: 'human', agent: null },
+      titleAuthor: { kind: 'llm', agent: 'mcp' },
       descriptionAuthor: { kind: 'human', agent: null },
       childCompletionCount: { total: 0, completed: 0 },
       pages: [],
