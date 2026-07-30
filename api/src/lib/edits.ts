@@ -120,73 +120,67 @@ function toAuthorInfo(row: {
 }
 
 /**
- * Author of each page's current content: the most recent edits row for that
- * pageId across create/update and any field, so an unedited page falls back
- * to its create row. Pages with no edits row (predating the edits table)
- * are absent from the returned map.
+ * Shared by {@link getPageAuthors} and {@link getCommentAuthors}: the latest
+ * edits row per distinct value of `targetColumn` (`edits.pageId` or
+ * `edits.commentId`), via `DISTINCT ON` so Postgres returns one row per
+ * target instead of the full history.
  */
-export async function getPageAuthors(
-  pageIds: string[],
+async function getTargetAuthors(
+  targetColumn: typeof edits.pageId | typeof edits.commentId,
+  targetIds: string[],
 ): Promise<Map<string, EditAuthorInfo>> {
-  if (pageIds.length === 0) return new Map()
+  if (targetIds.length === 0) return new Map()
 
   const rows = await db
-    .select({
-      pageId: edits.pageId,
+    .selectDistinctOn([targetColumn], {
+      targetId: targetColumn,
       authorKind: edits.authorKind,
       authorAgent: edits.authorAgent,
     })
     .from(edits)
-    .where(inArray(edits.pageId, pageIds))
-    .orderBy(desc(edits.updatedAt))
+    .where(inArray(targetColumn, targetIds))
+    .orderBy(targetColumn, desc(edits.updatedAt))
 
   const authors = new Map<string, EditAuthorInfo>()
   for (const row of rows) {
-    if (row.pageId != null && !authors.has(row.pageId)) {
-      authors.set(row.pageId, toAuthorInfo(row))
-    }
-  }
-  return authors
-}
-
-/** Author of each comment's current content. Same rule as {@link getPageAuthors}. */
-export async function getCommentAuthors(
-  commentIds: string[],
-): Promise<Map<string, EditAuthorInfo>> {
-  if (commentIds.length === 0) return new Map()
-
-  const rows = await db
-    .select({
-      commentId: edits.commentId,
-      authorKind: edits.authorKind,
-      authorAgent: edits.authorAgent,
-    })
-    .from(edits)
-    .where(inArray(edits.commentId, commentIds))
-    .orderBy(desc(edits.updatedAt))
-
-  const authors = new Map<string, EditAuthorInfo>()
-  for (const row of rows) {
-    if (row.commentId != null && !authors.has(row.commentId)) {
-      authors.set(row.commentId, toAuthorInfo(row))
-    }
+    if (row.targetId != null) authors.set(row.targetId, toAuthorInfo(row))
   }
   return authors
 }
 
 /**
+ * Author of each page's current content: the most recent edits row for that
+ * pageId across create/update and any field, so an unedited page falls back
+ * to its create row. Pages with no edits row (predating the edits table)
+ * are absent from the returned map.
+ */
+export function getPageAuthors(
+  pageIds: string[],
+): Promise<Map<string, EditAuthorInfo>> {
+  return getTargetAuthors(edits.pageId, pageIds)
+}
+
+/** Author of each comment's current content. Same rule as {@link getPageAuthors}. */
+export function getCommentAuthors(
+  commentIds: string[],
+): Promise<Map<string, EditAuthorInfo>> {
+  return getTargetAuthors(edits.commentId, commentIds)
+}
+
+/**
  * Per-field author for a task's title/description: the most recent `update`
- * row naming that field, falling back to the task's `create` row when the
- * field was never updated after creation. A field is `null` here only when
- * it predates the edits table.
+ * row naming that field, falling back to the task's `create` row (recorded
+ * with `field = null`) when the field was never updated after creation.
+ * `DISTINCT ON (edits.field)` returns at most 3 rows (one each for `null`,
+ * `'title'`, `'description'` — `'content'` never applies to a task-level
+ * row), replacing a scan of the full history.
  */
 export async function getTaskFieldAuthors(taskId: string): Promise<{
   title: EditAuthorInfo | null
   description: EditAuthorInfo | null
 }> {
   const rows = await db
-    .select({
-      action: edits.action,
+    .selectDistinctOn([edits.field], {
       field: edits.field,
       authorKind: edits.authorKind,
       authorAgent: edits.authorAgent,
@@ -199,24 +193,13 @@ export async function getTaskFieldAuthors(taskId: string): Promise<{
         isNull(edits.commentId),
       ),
     )
-    .orderBy(desc(edits.updatedAt))
+    .orderBy(edits.field, desc(edits.updatedAt))
 
-  let title: EditAuthorInfo | null = null
-  let description: EditAuthorInfo | null = null
-  let createAuthor: EditAuthorInfo | null = null
-
-  for (const row of rows) {
-    if (row.field === 'title' && title == null) title = toAuthorInfo(row)
-    if (row.field === 'description' && description == null) {
-      description = toAuthorInfo(row)
-    }
-    if (row.action === 'create' && createAuthor == null) {
-      createAuthor = toAuthorInfo(row)
-    }
-  }
+  const byField = new Map(rows.map((row) => [row.field, toAuthorInfo(row)]))
+  const createAuthor = byField.get(null) ?? null
 
   return {
-    title: title ?? createAuthor,
-    description: description ?? createAuthor,
+    title: byField.get('title') ?? createAuthor,
+    description: byField.get('description') ?? createAuthor,
   }
 }
