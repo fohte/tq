@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { fn } from 'storybook/test'
 
 import { Chip } from '#components/ui/chip'
 
@@ -58,6 +59,7 @@ export const Interactive: Story = {
     as: 'button',
     size: 'md',
     children: 'filter',
+    onClick: fn(),
   },
 }
 

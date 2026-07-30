@@ -1,6 +1,14 @@
-import type { ReactNode } from 'react'
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react'
 
 import { cn } from '#lib/utils'
+
+type ChipOwnProps = {
+  as?: 'span' | 'button'
+  size?: 'sm' | 'md'
+  active?: boolean
+  className?: string
+  children: ReactNode
+}
 
 export function Chip({
   as = 'span',
@@ -8,13 +16,10 @@ export function Chip({
   active = false,
   className,
   children,
-}: {
-  as?: 'span' | 'button'
-  size?: 'sm' | 'md'
-  active?: boolean
-  className?: string
-  children: ReactNode
-}) {
+  ...rest
+}: ChipOwnProps &
+  Omit<ButtonHTMLAttributes<HTMLButtonElement>, keyof ChipOwnProps> &
+  Omit<HTMLAttributes<HTMLSpanElement>, keyof ChipOwnProps>) {
   const classes = cn(
     'inline-flex items-center gap-1 border font-mono',
     size === 'sm'
@@ -29,11 +34,15 @@ export function Chip({
 
   if (as === 'button') {
     return (
-      <button type="button" className={classes}>
+      <button type="button" className={classes} {...rest}>
         {children}
       </button>
     )
   }
 
-  return <span className={classes}>{children}</span>
+  return (
+    <span className={classes} {...rest}>
+      {children}
+    </span>
+  )
 }
