@@ -1,0 +1,418 @@
+# Design system
+
+Contract reference for tq's web UI design system: a near-monochrome dark
+palette with one red accent used only as punctuation, zero border-radius, 1px
+borders, and monospace UI chrome. Modeled on the
+[fohte.net](https://fohte.net) design system.
+
+Source of truth for every value in this doc:
+
+- Tokens: `web/src/index.css` (`:root` and `@theme inline` blocks)
+- Primitives: `web/src/components/ui/{section-heading,screen-header-bar,tab-strip,chip,keybind-hint,panel,progress-bar,button}.tsx`
+
+If this doc and the source ever disagree, the source wins — but please fix
+the doc in the same PR.
+
+## Design tokens
+
+All tokens live directly on `:root` (there is no `.dark` block — the app
+always renders with `class="dark"` and has no theme toggle, so a single dark
+palette is the only palette).
+
+### Surfaces
+
+| Token              | Value     | Tailwind utility    | Usage                                                                                     |
+| ------------------ | --------- | ------------------- | ----------------------------------------------------------------------------------------- |
+| `--background`     | `#0a0a0a` | `bg-background`     | Page background                                                                           |
+| `--card`           | `#141414` | `bg-card`           | Raised surface (cards, popovers)                                                          |
+| `--popover`        | `#141414` | `bg-popover`        | Popover/menu surface (same value as `--card`)                                             |
+| `--secondary`      | `#141414` | `bg-secondary`      | Secondary fill (e.g. `PanelHeader` background)                                            |
+| `--muted`          | `#141414` | `bg-muted`          | Muted fill (e.g. button hover background)                                                 |
+| `--accent`         | `#141414` | `bg-accent`         | Accent fill (menu item hover, etc.)                                                       |
+| `--surface-strong` | `#1f1f1f` | `bg-surface-strong` | Emphasized _enabled_ surface fill — active tab, primary button, progress track background |
+
+### Text
+
+| Token                       | Value     | Tailwind utility               | Usage                                                                                       |
+| --------------------------- | --------- | ------------------------------ | ------------------------------------------------------------------------------------------- |
+| `--foreground`              | `#fafafa` | `text-foreground`              | Primary text                                                                                |
+| `--muted-foreground-strong` | `#a1a1aa` | `text-muted-foreground-strong` | Brighter secondary text — between `--foreground` and `--muted-foreground`                   |
+| `--muted-foreground`        | `#71717a` | `text-muted-foreground`        | Standard secondary/muted text                                                               |
+| `--muted-foreground-faint`  | `#52525b` | `text-muted-foreground-faint`  | Dim tertiary text — e.g. `PanelHeader` label, completed-task `[x]`                          |
+| `--muted-foreground-ghost`  | `#3f3f46` | `text-muted-foreground-ghost`  | Dimmest tier — e.g. tree-line glyphs, sidebar keybind hints (`KeybindHint` `plain` variant) |
+| `--card-foreground`         | `#fafafa` | `text-card-foreground`         | Text on `--card` surface                                                                    |
+| `--popover-foreground`      | `#fafafa` | `text-popover-foreground`      | Text on `--popover` surface                                                                 |
+| `--secondary-foreground`    | `#fafafa` | `text-secondary-foreground`    | Text on `--secondary` surface                                                               |
+| `--accent-foreground`       | `#fafafa` | `text-accent-foreground`       | Text on `--accent` surface                                                                  |
+
+**Gray-tier ladder, brightest to dimmest:**
+
+```
+--foreground → --muted-foreground-strong → --muted-foreground → --muted-foreground-faint → --muted-foreground-ghost
+   #fafafa    →      #a1a1aa             →      #71717a        →      #52525b            →      #3f3f46
+```
+
+When a screen needs a text color and it's not obvious which tier, pick by
+how much attention the text should draw relative to `--foreground` — do not
+introduce a new gray value; use the nearest existing tier.
+
+### Borders
+
+| Token             | Value     | Tailwind utility       | Usage                                              |
+| ----------------- | --------- | ---------------------- | -------------------------------------------------- |
+| `--border`        | `#2a2a2a` | `border-border`        | Standard 1px border (default for everything)       |
+| `--border-strong` | `#71717a` | `border-border-strong` | Emphasized 1px border — active tab, primary button |
+| `--input`         | `#2a2a2a` | `border-input`         | Form input border (same value as `--border`)       |
+
+### Accent (the one color)
+
+| Token                  | Value     | Tailwind utility                                 | Usage                                                                                                                                                                                                                        |
+| ---------------------- | --------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--primary`            | `#ef4444` | `text-primary` / `bg-primary` / `border-primary` | The one red accent. Used broadly across existing components as punctuation: active nav state, links, focus borders, status icons, in-progress `[~]` status text. **Not** reused by `Button`'s primary look — see note below. |
+| `--primary-foreground` | `#fafafa` | `text-primary-foreground`                        | Text on `bg-primary`                                                                                                                                                                                                         |
+| `--destructive`        | `#ef4444` | `text-destructive` / `border-destructive`        | Same red value as `--primary` — this design has one hue for both "accent" and "danger", not two                                                                                                                              |
+| `--ring`               | `#ef4444` | `ring-ring`                                      | Focus ring color                                                                                                                                                                                                             |
+
+> **Why `Button`'s primary variant doesn't use `--primary`:** `--primary` is
+> consumed by dozens of existing components (active nav state, links, focus
+> borders, status icons, etc.) that assume it's a bright accent color used as
+> punctuation — a small amount of red among mostly gray. `Button`'s own
+> "primary" look is a full bordered/filled box (`--border-strong` +
+> `--surface-strong`, i.e. gray, not red), so it doesn't reuse `--primary`.
+> Making the whole button red would break the "red is punctuation, not fill"
+> rule. Follow the same reasoning in screen PRs: reach for `--primary` when
+> you want a small red accent, and for `--border-strong`/`--surface-strong`
+> when you want an emphasized gray surface.
+
+### Sidebar
+
+| Token                          | Value     | Tailwind utility                              |
+| ------------------------------ | --------- | --------------------------------------------- |
+| `--sidebar`                    | `#0a0a0a` | `bg-sidebar`                                  |
+| `--sidebar-foreground`         | `#fafafa` | `text-sidebar-foreground`                     |
+| `--sidebar-primary`            | `#ef4444` | `bg-sidebar-primary` / `text-sidebar-primary` |
+| `--sidebar-primary-foreground` | `#fafafa` | `text-sidebar-primary-foreground`             |
+| `--sidebar-accent`             | `#141414` | `bg-sidebar-accent`                           |
+| `--sidebar-accent-foreground`  | `#fafafa` | `text-sidebar-accent-foreground`              |
+| `--sidebar-border`             | `#2a2a2a` | `border-sidebar-border`                       |
+| `--sidebar-ring`               | `#ef4444` | `ring-sidebar-ring`                           |
+
+### Radius
+
+| Token      | Value  |
+| ---------- | ------ |
+| `--radius` | `0rem` |
+
+See [Radius policy](#radius-policy) below — every `--radius-*` Tailwind scale
+value (`radius-sm`, `radius-md`, `radius-lg`, `radius-xl`, `radius-2xl`,
+`radius-3xl`, `radius-4xl`) is derived from `--radius` via `calc()`, so they
+all resolve to `0rem` too.
+
+## Fonts
+
+Three font roles, each its own CSS custom property in the `@theme inline`
+block. **Do not conflate "monospace UI chrome" with "monospace editor
+content"** — `--font-mono` and `--font-editor` are deliberately different
+stacks (JetBrains-Mono-first vs. IBM-Plex-Mono-first) even though both
+eventually fall back to similar faces.
+
+| Role             | CSS variable    | Font stack                                                                          | Tailwind utility                                                                | Use for                                                                                          |
+| ---------------- | --------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Sans (default)   | `--font-sans`   | Helvetica Neue, Arial, Hiragino Kaku Gothic ProN, Hiragino Sans, Meiryo, sans-serif | `font-sans` (applied at `html` level, so this is the default — no class needed) | Reading content: task titles, descriptions, prose                                                |
+| Mono (UI chrome) | `--font-mono`   | JetBrains Mono Variable, IBM Plex Mono, monospace                                   | `font-mono`                                                                     | ALL UI chrome: nav labels, tabs, section headings, badges/chips, keybind hints, numeric counters |
+| Editor           | `--font-editor` | IBM Plex Mono, monospace                                                            | `font-editor`                                                                   | Markdown/page editor body text and textareas ONLY — not general UI chrome                        |
+
+Examples:
+
+- Task title → `font-sans` (default, no class needed)
+- Nav label / tab / badge / keybind hint → `font-mono`
+- Markdown editor textarea → `font-editor`
+
+## Radius policy
+
+`--radius` is `0rem` globally — every corner in the app is square by
+default, including every Tailwind `rounded-*` utility that derives from the
+`--radius-*` scale.
+
+There are exactly **two** sanctioned exceptions, both **hardcoded** (not
+derived from the `--radius` token):
+
+| Exception                     | Where                                                                                    |
+| ----------------------------- | ---------------------------------------------------------------------------------------- |
+| `KeybindHint` `boxed` variant | `rounded-[4px]` in `web/src/components/ui/keybind-hint.tsx`                              |
+| Inline `<code>` elements      | Not yet built — future PRs styling inline code should also use hardcoded `rounded-[4px]` |
+
+**Do not introduce new radius exceptions without updating this doc.** If a
+screen PR believes it needs a third exception, add it here in the same PR.
+
+Note: `Button`'s size variants use `rounded-lg` / `rounded-[min(var(--radius-md),10px)]`
+etc. — these are still driven by the `--radius` token chain (they resolve to
+`0rem` because `--radius` is `0rem`), so they are **not** exceptions to this
+policy.
+
+## Status convention
+
+Task status is expressed as literal bracket text in `font-mono`, not a
+colored icon or fill.
+
+| Symbol | Meaning     | Color token                     | Extra styling                                                                   |
+| ------ | ----------- | ------------------------------- | ------------------------------------------------------------------------------- |
+| `[ ]`  | todo        | `text-muted-foreground`         | —                                                                               |
+| `[~]`  | in_progress | `text-primary` (the red accent) | One of the few places red fill/text is used — marks "the one thing in progress" |
+| `[x]`  | completed   | `text-muted-foreground-faint`   | Accompanying title text gets `line-through` + `text-muted-foreground`           |
+
+This replaces the old lucide-icon-based `status-icon.tsx`. Swapping that
+component's implementation is a different PR's job — this table is the
+contract it should implement against.
+
+## Primitives
+
+All primitives live in `web/src/components/ui/` and are imported via the
+`#components/ui/<file>` path alias.
+
+### `SectionHeading`
+
+`web/src/components/ui/section-heading.tsx`
+
+```ts
+function SectionHeading(props: {
+  level: 2 | 3
+  children: ReactNode
+  className?: string
+}): JSX.Element
+```
+
+Renders a `##`/`###`-prefixed inline heading (the `#`/`##` glyph in
+`text-primary`, label in `font-mono`). Use for section labels inside a
+screen (e.g. "tasks", "subtasks") — not a page title (see
+`ScreenHeaderBar` for that).
+
+```tsx
+<SectionHeading level={2}>tasks</SectionHeading>
+```
+
+### `ScreenHeaderBar`
+
+`web/src/components/ui/screen-header-bar.tsx`
+
+```ts
+function ScreenHeaderBar(props: {
+  children: React.ReactNode
+  className?: string
+}): JSX.Element
+```
+
+A fixed-height (`h-[41px]`) bottom-bordered bar for a screen's or panel's
+top header row. Compose it with a `SectionHeading` / plain label plus
+trailing actions (e.g. `ml-auto` button).
+
+```tsx
+<ScreenHeaderBar>
+  <span className="font-mono text-xs font-bold">tasks</span>
+</ScreenHeaderBar>
+```
+
+### `TabStrip`
+
+`web/src/components/ui/tab-strip.tsx`
+
+```ts
+function TabStrip<T extends string>(props: {
+  value: T
+  options: ReadonlyArray<{ value: T; label: React.ReactNode }>
+  onChange: (value: T) => void
+  className?: string
+}): JSX.Element
+```
+
+A row of adjoining bordered tab buttons (borders collapse between tabs via
+`border-l-0` on all but the first). The active tab gets `border-border-strong`
+plus `bg-surface-strong`; inactive tabs get `border-border` plus
+`text-muted-foreground`. Use for switching between a small, fixed set of
+views (e.g. Today/All/Backlog, Day/Week/Month) — this is a plain presentation
+component, not an ARIA tablist.
+
+```tsx
+<TabStrip
+  value={value}
+  options={[
+    { value: 'today', label: 'Today' },
+    { value: 'all', label: 'All' },
+  ]}
+  onChange={setValue}
+/>
+```
+
+### `Chip`
+
+`web/src/components/ui/chip.tsx`
+
+```ts
+function Chip(props: {
+  as?: 'span' | 'button'
+  size?: 'sm' | 'md'
+  active?: boolean
+  className?: string
+  children: ReactNode
+}): JSX.Element
+```
+
+A small bordered label. `size="sm"` for dense inline context (e.g. a
+context tag, a `tq#212` GitHub link chip); `size="md"` for a standalone
+badge or interactive filter chip (`as="button"`). `active` swaps to
+`border-border-strong` + `text-foreground`.
+
+```tsx
+<Chip>work</Chip>
+<Chip size="md" active>
+  <span className="text-primary font-bold">#</span>dev:tq
+</Chip>
+<Chip as="button" size="md">filter</Chip>
+```
+
+### `KeybindHint`
+
+`web/src/components/ui/keybind-hint.tsx`
+
+```ts
+function KeybindHint(props: {
+  variant?: 'plain' | 'boxed'
+  className?: string
+  children: React.ReactNode
+}): JSX.Element
+```
+
+Renders a keybinding label. `plain` (default) is dim, unboxed text
+(`text-muted-foreground-ghost`) — used for e.g. sidebar nav hints; override
+the color via `className` for brighter contexts (e.g. the status line's
+`⌘K search`) rather than adding a new variant. `boxed` renders a bordered
+key-cap look (`rounded-[4px]`, one of the two [radius exceptions](#radius-policy)).
+
+```tsx
+<KeybindHint>g t</KeybindHint>
+<KeybindHint className="text-muted-foreground-strong">⌘K</KeybindHint>
+<KeybindHint variant="boxed">⌘K</KeybindHint>
+```
+
+### `Panel` / `PanelHeader`
+
+`web/src/components/ui/panel.tsx`
+
+```ts
+function Panel(props: { children: ReactNode; className?: string }): JSX.Element
+function PanelHeader(props: {
+  children: ReactNode
+  className?: string
+}): JSX.Element
+```
+
+`Panel` is a bordered container (`border border-border`). `PanelHeader` is
+an optional bottom-bordered header row inside it
+(`bg-secondary`, `font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint`)
+for an uppercase-style label + trailing action. Use for grouped list/board
+sections (e.g. an "OPEN TASKS" panel with rows below the header).
+
+```tsx
+<Panel>
+  <PanelHeader>
+    OPEN TASKS
+    <span className="ml-auto text-[10px] tracking-normal">view board →</span>
+  </PanelHeader>
+  <div className="border-b border-border px-3 py-2 text-sm last:border-b-0">
+    Set up CI pipeline
+  </div>
+</Panel>
+```
+
+### `ProgressBar`
+
+`web/src/components/ui/progress-bar.tsx`
+
+```ts
+function ProgressBar(props: {
+  percent: number
+  fillClassName?: string // default: 'bg-foreground'
+  className?: string
+}): JSX.Element
+```
+
+A thin (`h-0.5`) track (`bg-surface-strong`) with a filled bar
+(`percent` clamped to 0-100). Default fill is `bg-foreground`; pass
+`fillClassName` to use a different fill color (e.g. `bg-muted-foreground`
+for a dimmer/secondary progress indicator).
+
+```tsx
+<ProgressBar percent={39} />
+<ProgressBar percent={39} fillClassName="bg-muted-foreground" />
+```
+
+### `Button` (redesigned)
+
+`web/src/components/ui/button.tsx`
+
+```ts
+function Button(
+  props: ButtonPrimitive.Props & {
+    variant?:
+      'default' | 'outline' | 'secondary' | 'ghost' | 'destructive' | 'link'
+    size?:
+      | 'default'
+      | 'xs'
+      | 'sm'
+      | 'lg'
+      | 'icon'
+      | 'icon-xs'
+      | 'icon-sm'
+      | 'icon-lg'
+  },
+): JSX.Element
+```
+
+Built on `@base-ui/react/button` + `cva`. Variant looks:
+
+| Variant       | Look                                                                                                                                                      |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `default`     | Emphasized bordered box: `border-border-strong` + `bg-surface-strong` (does **not** use `--primary` — see the [accent token note](#accent-the-one-color)) |
+| `outline`     | `border-border` + `bg-background`, `bg-muted` on hover                                                                                                    |
+| `secondary`   | `border-border`, transparent, `border-border-strong` on hover                                                                                             |
+| `ghost`       | No border, `bg-muted` on hover                                                                                                                            |
+| `destructive` | `border-border`, transparent, `border-destructive`/`text-destructive` on hover                                                                            |
+| `link`        | `text-primary`, underline on hover                                                                                                                        |
+
+Use `default` for the primary action on a screen, `outline`/`secondary` for
+secondary actions, `ghost` for low-emphasis icon-only actions, `destructive`
+for delete/remove actions, `link` for inline text-styled actions.
+
+```tsx
+<Button>Add Task</Button>
+<Button variant="destructive">Delete</Button>
+<Button size="icon" aria-label="Tasks"><CheckSquare /></Button>
+```
+
+## Relationship to the parallel shadcn primitives PR
+
+A separate, parallel PR adds shadcn-derived `badge.tsx`, `kbd.tsx`,
+`progress.tsx`, `tabs.tsx` — full Base UI primitives with ARIA semantics,
+built for form-control use cases.
+
+This PR's `Chip`, `KeybindHint`, `ProgressBar`, `TabStrip` are **not**
+replacements for those. They are lighter-weight, non-form-control,
+presentation-only components solving the same visual patterns, built to be
+available immediately for the 11 screen PRs. **Both sets are expected to
+coexist.** Pick whichever fits a given usage:
+
+| Need                                         | Reach for                                                          |
+| -------------------------------------------- | ------------------------------------------------------------------ |
+| Static/simple bordered label, no ARIA needed | `Chip` (this PR)                                                   |
+| Full variant system, ARIA semantics needed   | Future shadcn `Badge`/`Kbd`/`Progress`/`Tabs` (once that PR lands) |
+
+Screens may adopt the shadcn primitives once that PR lands, or keep using
+these lightweight ones — there is no requirement to migrate.
+
+## Non-goals
+
+This PR does not restyle any existing screen. It ships tokens and
+primitives only. Token-driven color/radius drift in existing screens (e.g.
+components still using pre-redesign colors or `rounded-*` values) is
+expected until each screen-specific PR lands — cleaning that up is those
+PRs' job, not this one's.
