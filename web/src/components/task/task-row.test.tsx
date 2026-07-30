@@ -8,9 +8,11 @@ import type { TreeNode } from '#hooks/use-tasks'
 import { atIndex } from '#lib/test-utils'
 
 const mockMutate = vi.fn()
+const mockUpdateStatusMutate = vi.fn()
 
 vi.mock('#hooks/use-tasks', () => ({
   useCompleteTask: () => ({ mutate: mockMutate }),
+  useUpdateTaskStatus: () => ({ mutate: mockUpdateStatusMutate }),
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -19,6 +21,43 @@ vi.mock('@tanstack/react-router', () => ({
     ...props
   }: { children: React.ReactNode } & Record<string, unknown>) => (
     <a href={typeof props['to'] === 'string' ? props['to'] : '#'}>{children}</a>
+  ),
+}))
+
+// Base UI's Menu relies on pointer events that jsdom does not implement
+// reliably, so the picker is stubbed here to exercise TreeTaskRow's status
+// change wiring directly. The real menu interaction is covered by
+// task-status-picker.stories.tsx (runs in a real browser via Storybook).
+vi.mock('#components/task/task-status-picker', () => ({
+  TaskStatusPicker: ({
+    onStatusChange,
+  }: {
+    status: string
+    onStatusChange: (status: string) => void
+  }) => (
+    <div>
+      <button
+        onClick={() => {
+          onStatusChange('todo')
+        }}
+      >
+        Set Todo
+      </button>
+      <button
+        onClick={() => {
+          onStatusChange('in_progress')
+        }}
+      >
+        Set In Progress
+      </button>
+      <button
+        onClick={() => {
+          onStatusChange('completed')
+        }}
+      >
+        Set Completed
+      </button>
+    </div>
   ),
 }))
 
@@ -206,5 +245,38 @@ describe('TreeTaskRow', () => {
     })
     renderTree(node)
     expect(screen.getByText('tq#42')).toBeInTheDocument()
+  })
+
+  it('updates the status via useUpdateTaskStatus when a non-completed status is selected', async () => {
+    const user = userEvent.setup()
+    renderTree(makeNode({ status: 'todo' }))
+
+    await user.click(screen.getByText('Set In Progress'))
+
+    expect(mockUpdateStatusMutate).toHaveBeenCalledWith({
+      id: 'parent-1',
+      status: 'in_progress',
+    })
+    expect(mockMutate).not.toHaveBeenCalled()
+  })
+
+  it('completes the task via useCompleteTask when completed is selected', async () => {
+    const user = userEvent.setup()
+    renderTree(makeNode({ status: 'todo' }))
+
+    await user.click(screen.getByText('Set Completed'))
+
+    expect(mockMutate).toHaveBeenCalledWith('parent-1')
+    expect(mockUpdateStatusMutate).not.toHaveBeenCalled()
+  })
+
+  it('does nothing when the currently selected status is chosen again', async () => {
+    const user = userEvent.setup()
+    renderTree(makeNode({ status: 'todo' }))
+
+    await user.click(screen.getByText('Set Todo'))
+
+    expect(mockMutate).not.toHaveBeenCalled()
+    expect(mockUpdateStatusMutate).not.toHaveBeenCalled()
   })
 })

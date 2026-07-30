@@ -1,31 +1,12 @@
 import { Link } from '@tanstack/react-router'
-import {
-  ChevronDown,
-  CircleCheckBig,
-  CircleDot,
-  Loader2,
-  Search,
-  Square,
-  X,
-} from 'lucide-react'
+import { ChevronDown, Loader2, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { StatusIcon } from '#components/task/status-icon'
 import type { SearchFilters, SearchResult } from '#hooks/use-search'
 import { useSearch } from '#hooks/use-search'
 import { formatMinutes } from '#lib/format'
 import { cn } from '#lib/utils'
-
-function StatusIcon({ status }: { status: string }) {
-  if (status === 'completed') {
-    return (
-      <CircleCheckBig className="h-[18px] w-[18px] shrink-0 text-muted-foreground" />
-    )
-  }
-  if (status === 'in_progress') {
-    return <CircleDot className="h-[18px] w-[18px] shrink-0 text-primary" />
-  }
-  return <Square className="h-[18px] w-[18px] shrink-0 text-muted-foreground" />
-}
 
 function ContextBadge({ context }: { context: string }) {
   if (context === 'personal') return null

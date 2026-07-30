@@ -1,14 +1,9 @@
 import { useNavigate } from '@tanstack/react-router'
-import {
-  CircleCheckBig,
-  CircleDot,
-  Loader2,
-  Search,
-  Square,
-} from 'lucide-react'
+import { Loader2, Search } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+import { StatusIcon } from '#components/task/status-icon'
 import type { SearchResult, Suggestion } from '#hooks/use-search'
 import { useSearchSuggestions, useSearchTasks } from '#hooks/use-search'
 import { formatMinutes } from '#lib/format'
@@ -22,18 +17,6 @@ interface SearchModalProps {
 type ListItem =
   | { type: 'suggestion'; data: Suggestion }
   | { type: 'task'; data: SearchResult }
-
-function StatusIcon({ status }: { status: SearchResult['status'] }) {
-  if (status === 'completed') {
-    return (
-      <CircleCheckBig className="h-[18px] w-[18px] shrink-0 text-muted-foreground" />
-    )
-  }
-  if (status === 'in_progress') {
-    return <CircleDot className="h-[18px] w-[18px] shrink-0 text-primary" />
-  }
-  return <Square className="h-[18px] w-[18px] shrink-0 text-muted-foreground" />
-}
 
 function ContextBadge({ context }: { context: SearchResult['context'] }) {
   if (context === 'personal') return null

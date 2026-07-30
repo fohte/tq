@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { Link2 } from 'lucide-react'
 
-import { StatusIcon } from '#components/task/task-row'
+import { StatusIcon } from '#components/task/status-icon'
 import type { LinkedTaskSummary } from '#hooks/use-tasks'
 
 function LinkedTaskRow({ task }: { task: LinkedTaskSummary }) {
