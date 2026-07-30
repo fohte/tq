@@ -76,3 +76,31 @@
 .milkdown-wrapper .milkdown .ProseMirror ol li::marker {
   color: var(--muted-foreground);
 }
+
+/* Inline reference live preview (e.g. #123 task mentions): the raw source
+   text is hidden and replaced by a chip widget wherever the selection isn't
+   touching it. */
+.inline-reference-source {
+  display: none;
+}
+
+.inline-reference-chip {
+  display: inline-flex;
+  vertical-align: middle;
+  user-select: none;
+}
+
+/* `#` mention autocomplete popup, positioned by SlashProvider via floating-ui.
+   Rendered at document.body with `position: fixed` (see the `root` /
+   `floatingUIOptions.strategy` passed to SlashProvider) so it isn't clipped
+   by `.milkdown-wrapper`'s `overflow: hidden`. */
+.task-mention-autocomplete {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+}
+
+.task-mention-autocomplete[data-show='false'] {
+  display: none;
+}

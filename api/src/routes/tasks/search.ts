@@ -1,5 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, eq, exists, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, eq, exists, ilike, isNotNull, isNull, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -29,6 +29,11 @@ const searchQuerySchema = z.object({
 const suggestQuerySchema = z.object({
   prefix: z.string(),
   category: z.string().optional(),
+})
+
+const mentionsQuerySchema = z.object({
+  q: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(50).optional(),
 })
 
 export const tasksSearchApp = new Hono()
@@ -192,4 +197,32 @@ export const tasksSearchApp = new Hono()
     )
 
     return c.json(suggestions, 200)
+  })
+  // Backs the editor's `#` mention autocomplete: a digit query matches by
+  // task number prefix (so `#12` surfaces #12, #120, #123, ...), anything
+  // else matches by title substring.
+  .get('/mentions', zValidator('query', mentionsQuerySchema), async (c) => {
+    const { q, limit } = c.req.valid('query')
+    const trimmed = q?.trim() ?? ''
+
+    const condition =
+      trimmed === ''
+        ? undefined
+        : /^\d+$/.test(trimmed)
+          ? sql`CAST(${tasks.number} AS TEXT) LIKE ${`${trimmed}%`}`
+          : ilike(tasks.title, `%${trimmed}%`)
+
+    const result = await db
+      .select({
+        id: tasks.id,
+        number: tasks.number,
+        title: tasks.title,
+        status: tasks.status,
+      })
+      .from(tasks)
+      .where(condition)
+      .orderBy(tasks.number)
+      .limit(limit ?? 10)
+
+    return c.json(result, 200)
   })
