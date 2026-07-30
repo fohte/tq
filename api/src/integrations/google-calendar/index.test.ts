@@ -16,6 +16,7 @@ import {
   disconnect,
   getAuthUrl,
   getConnectionStatus,
+  getIntegrationSummary,
   getValidAccessToken,
   handleOAuthCallback,
 } from '#integrations/oauth'
@@ -369,6 +370,43 @@ describe('getConnectionStatus / disconnect', () => {
       (await getConnectionStatus(googleCalendarProvider))._unsafeUnwrap(),
     ).toEqual({
       connected: false,
+    })
+  })
+})
+
+describe('getIntegrationSummary', () => {
+  it('reports configured true and connected false when no token exists', async () => {
+    expect(await getIntegrationSummary(googleCalendarProvider)).toEqual({
+      id: 'google_calendar',
+      displayName: 'Google Calendar',
+      configured: true,
+      connected: false,
+    })
+  })
+
+  it('reports configured false when environment variables are missing', async () => {
+    clearEnv()
+
+    expect(await getIntegrationSummary(googleCalendarProvider)).toEqual({
+      id: 'google_calendar',
+      displayName: 'Google Calendar',
+      configured: false,
+      connected: false,
+    })
+  })
+
+  it('reports connected true once a token exists', async () => {
+    await upsertToken({
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    expect(await getIntegrationSummary(googleCalendarProvider)).toEqual({
+      id: 'google_calendar',
+      displayName: 'Google Calendar',
+      configured: true,
+      connected: true,
     })
   })
 })

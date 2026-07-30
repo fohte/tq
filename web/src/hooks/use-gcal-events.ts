@@ -76,16 +76,3 @@ export function useAutoRescheduleOnGcalChange(
     }
   }, [gcalEvents])
 }
-
-export function useGcalAuthUrl(enabled: boolean) {
-  return useQuery({
-    queryKey: ['gcal-auth-url'],
-    queryFn: async () => {
-      const res = await api.api.calendar['auth-url'].$get()
-      assertStatus(res, 200)
-      return res.json()
-    },
-    enabled,
-    retry: false,
-  })
-}

@@ -7,9 +7,6 @@ import { parseGithubIssueUrl } from '#integrations/github/issues'
 import { githubLinkErrorResponse } from '#routes/github-link-error'
 import {
   callbackQuerySchema,
-  handleConnectionStatus,
-  handleDisconnect,
-  handleGetAuthUrl,
   handleOAuthCallbackRoute,
 } from '#routes/integration-handlers'
 import { taskToResponse } from '#routes/tasks/shared'
@@ -18,9 +15,11 @@ import { resolveGithubUrl } from '#services/task-github-links'
 
 const resolveSchema = z.object({ url: z.string().min(1) })
 
+// Connection status/auth-url/disconnect are handled generically by
+// routes/integrations.ts. This file only keeps the OAuth callback (its URL
+// path is an external contract registered with the GitHub OAuth App) and
+// GitHub-specific operations (resolve/sync).
 export const githubApp = new Hono()
-  .get('/status', (c) => handleConnectionStatus(c, githubProvider, 'github'))
-  .get('/auth-url', (c) => handleGetAuthUrl(c, githubProvider, 'github'))
   .get(
     '/oauth-callback',
     zValidator('query', callbackQuerySchema),
@@ -29,7 +28,6 @@ export const githubApp = new Hono()
       return handleOAuthCallbackRoute(c, githubProvider, code, 'github')
     },
   )
-  .delete('/token', (c) => handleDisconnect(c, githubProvider))
   .post('/resolve', zValidator('json', resolveSchema), async (c) => {
     const { url } = c.req.valid('json')
 

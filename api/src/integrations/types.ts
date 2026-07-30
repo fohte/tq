@@ -24,6 +24,20 @@ export interface OAuthTokenPayload {
 export type ConnectionStatus =
   { connected: false } | { connected: true; login?: string }
 
+/**
+ * One row of `GET /api/integrations`. `configured` reflects whether the
+ * provider's OAuth env vars are currently set; `connected` reflects whether
+ * a token is stored (and, for a provider with `checkConnection`, still
+ * valid). The two are independent: a token stored while env vars were set
+ * can outlive their removal, so `connected: true, configured: false` is
+ * possible for a provider with no `checkConnection` (e.g. Google Calendar).
+ */
+export type IntegrationListItem = ConnectionStatus & {
+  id: string
+  displayName: string
+  configured: boolean
+}
+
 export interface IntegrationOAuth {
   authorizationEndpoint: string
   scope: string

@@ -6,7 +6,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   GcalAuthRequiredError,
   useAutoRescheduleOnGcalChange,
-  useGcalAuthUrl,
   useGcalEvents,
 } from '#hooks/use-gcal-events'
 import { getDayIsoRange } from '#lib/date-range'
@@ -14,18 +13,16 @@ import { assertDefined } from '#lib/test-utils'
 
 vi.mock('#lib/api', () => {
   const mockEventsGet = vi.fn()
-  const mockAuthUrlGet = vi.fn()
 
   return {
     api: {
       api: {
         calendar: {
           events: { $get: mockEventsGet },
-          'auth-url': { $get: mockAuthUrlGet },
         },
       },
     },
-    __mocks: { mockEventsGet, mockAuthUrlGet },
+    __mocks: { mockEventsGet },
   }
 })
 
@@ -224,36 +221,5 @@ describe('useAutoRescheduleOnGcalChange', () => {
     rerender({ events: [sampleEvent] })
 
     expect(onChange).not.toHaveBeenCalled()
-  })
-})
-
-describe('useGcalAuthUrl', () => {
-  it('fetches the auth URL when enabled', async () => {
-    const mocks = await getMocks()
-    assertDefined(mocks['mockAuthUrlGet']).mockResolvedValue({
-      status: 200,
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          url: 'https://accounts.google.com/o/oauth2/v2/auth',
-        }),
-    })
-
-    const { result } = renderHook(() => useGcalAuthUrl(true), { wrapper })
-
-    await waitFor(() => {
-      expect(result.current.isSuccess).toBe(true)
-    })
-    expect(result.current.data).toEqual({
-      url: 'https://accounts.google.com/o/oauth2/v2/auth',
-    })
-  })
-
-  it('does not fetch when disabled', async () => {
-    const mocks = await getMocks()
-
-    renderHook(() => useGcalAuthUrl(false), { wrapper })
-
-    expect(assertDefined(mocks['mockAuthUrlGet'])).not.toHaveBeenCalled()
   })
 })

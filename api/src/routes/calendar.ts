@@ -10,7 +10,6 @@ import {
 } from '#integrations/google-calendar/index'
 import {
   callbackQuerySchema,
-  handleGetAuthUrl,
   handleOAuthCallbackRoute,
 } from '#routes/integration-handlers'
 
@@ -20,9 +19,10 @@ const eventsQuerySchema = z.object({
   timeMax: z.iso.datetime(),
 })
 
-// No /status or /token (disconnect) here, unlike routes/github.ts: no
-// client needs them for Google Calendar — /events already surfaces the
-// "needs re-auth" state via 401, and there's no disconnect UI for it.
+// Connection status/auth-url/disconnect are handled generically by
+// routes/integrations.ts. This file only keeps /events and the OAuth
+// callback (its URL path is an external contract registered with the
+// Google Cloud OAuth client).
 export const calendarApp = new Hono()
   .get('/events', zValidator('query', eventsQuerySchema), async (c) => {
     const { calendarId, timeMin, timeMax } = c.req.valid('query')
@@ -50,9 +50,6 @@ export const calendarApp = new Hono()
       },
     )
   })
-  .get('/auth-url', (c) =>
-    handleGetAuthUrl(c, googleCalendarProvider, 'calendar'),
-  )
   .get(
     '/oauth-callback',
     zValidator('query', callbackQuerySchema),
