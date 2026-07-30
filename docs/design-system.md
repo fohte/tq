@@ -137,13 +137,12 @@ default, including every Tailwind `rounded-*` utility that derives from the
 There are exactly **two** sanctioned exceptions, both **hardcoded** (not
 derived from the `--radius` token):
 
-| Exception                     | Where                                                                                    |
-| ----------------------------- | ---------------------------------------------------------------------------------------- |
-| `KeybindHint` `boxed` variant | `rounded-[4px]` in `web/src/components/ui/keybind-hint.tsx`                              |
-| Inline `<code>` elements      | Not yet built — future PRs styling inline code should also use hardcoded `rounded-[4px]` |
+| Exception                     | Where                                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------------- |
+| `KeybindHint` `boxed` variant | `rounded-[4px]` in `web/src/components/ui/keybind-hint.tsx`                            |
+| Inline `<code>` elements      | Not yet styled anywhere in the codebase; when it is, use hardcoded `rounded-[4px]` too |
 
-**Do not introduce new radius exceptions without updating this doc.** If a
-screen PR believes it needs a third exception, add it here in the same PR.
+**Do not introduce new radius exceptions without updating this doc.**
 
 Note: `Button`'s size variants use `rounded-lg` / `rounded-[min(var(--radius-md),10px)]`
 etc. — these are still driven by the `--radius` token chain (they resolve to
@@ -161,9 +160,9 @@ colored icon or fill.
 | `[~]`  | in_progress | `text-primary` (the red accent) | One of the few places red fill/text is used — marks "the one thing in progress" |
 | `[x]`  | completed   | `text-muted-foreground-faint`   | Accompanying title text gets `line-through` + `text-muted-foreground`           |
 
-This replaces the old lucide-icon-based `status-icon.tsx`. Swapping that
-component's implementation is a different PR's job — this table is the
-contract it should implement against.
+`web/src/components/task/status-icon.tsx` still renders the old
+lucide-icon-based status indicator; this table is the contract its
+implementation should be brought in line with.
 
 ## Primitives
 
@@ -231,6 +230,14 @@ plus `bg-surface-strong`; inactive tabs get `border-border` plus
 `text-muted-foreground`. Use for switching between a small, fixed set of
 views (e.g. Today/All/Backlog, Day/Week/Month) — this is a plain presentation
 component, not an ARIA tablist.
+
+`web/src/components/ui/segmented-control.tsx` has a near-identical generic
+shape (`value`/`options`/`onChange`) but takes its active/inactive styling as
+`className` props instead of baking in this design's connected-border look.
+Use `TabStrip` for the joined-mono-tabs pattern described above; keep using
+`SegmentedControl` where a caller needs a different visual (e.g. the rounded
+pill look in `project-view-tabs.tsx`). Don't add a third tab-switcher
+component — extend one of these two.
 
 ```tsx
 <TabStrip
@@ -389,30 +396,29 @@ for delete/remove actions, `link` for inline text-styled actions.
 <Button size="icon" aria-label="Tasks"><CheckSquare /></Button>
 ```
 
-## Relationship to the parallel shadcn primitives PR
+## Naming boundary with shadcn primitives
 
-A separate, parallel PR adds shadcn-derived `badge.tsx`, `kbd.tsx`,
-`progress.tsx`, `tabs.tsx` — full Base UI primitives with ARIA semantics,
-built for form-control use cases.
+`web/src/components/ui/` is expected to eventually also hold shadcn-derived
+`badge.tsx`, `kbd.tsx`, `progress.tsx`, `tabs.tsx` — full Base UI primitives
+with ARIA semantics, built for form-control use cases. `Chip`, `KeybindHint`,
+`ProgressBar`, `TabStrip` are deliberately named to avoid colliding with
+those filenames/exports.
 
-This PR's `Chip`, `KeybindHint`, `ProgressBar`, `TabStrip` are **not**
-replacements for those. They are lighter-weight, non-form-control,
-presentation-only components solving the same visual patterns, built to be
-available immediately for the 11 screen PRs. **Both sets are expected to
-coexist.** Pick whichever fits a given usage:
+They are **not** replacements for the shadcn primitives: they're
+lighter-weight, non-form-control, presentation-only components for the same
+visual patterns. Both sets are meant to coexist — pick whichever fits a
+given usage:
 
-| Need                                         | Reach for                                                          |
-| -------------------------------------------- | ------------------------------------------------------------------ |
-| Static/simple bordered label, no ARIA needed | `Chip` (this PR)                                                   |
-| Full variant system, ARIA semantics needed   | Future shadcn `Badge`/`Kbd`/`Progress`/`Tabs` (once that PR lands) |
+| Need                                         | Reach for                                           |
+| -------------------------------------------- | --------------------------------------------------- |
+| Static/simple bordered label, no ARIA needed | `Chip` / `KeybindHint` / `ProgressBar` / `TabStrip` |
+| Full variant system, ARIA semantics needed   | shadcn `Badge` / `Kbd` / `Progress` / `Tabs`        |
 
-Screens may adopt the shadcn primitives once that PR lands, or keep using
-these lightweight ones — there is no requirement to migrate.
+There is no requirement to migrate a screen from one set to the other.
 
 ## Non-goals
 
-This PR does not restyle any existing screen. It ships tokens and
-primitives only. Token-driven color/radius drift in existing screens (e.g.
-components still using pre-redesign colors or `rounded-*` values) is
-expected until each screen-specific PR lands — cleaning that up is those
-PRs' job, not this one's.
+This doc ships tokens and primitives, not a restyle of every existing
+screen. Existing components that haven't been updated yet to use these
+tokens/primitives will keep looking visually inconsistent with the rest of
+the app until they are — that inconsistency is expected, not a bug.
