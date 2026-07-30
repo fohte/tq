@@ -6,6 +6,7 @@ import { authorMiddleware } from '#lib/author'
 import { calendarApp } from '#routes/calendar'
 import { githubApp } from '#routes/github'
 import { imagesApp } from '#routes/images'
+import { integrationsApp } from '#routes/integrations'
 import { labelsApp } from '#routes/labels'
 import { mcpApp } from '#routes/mcp/index'
 import { projectsApp } from '#routes/projects'
@@ -35,6 +36,7 @@ const app = new Hono()
   .route('/api/calendar', calendarApp)
   .route('/api/github', githubApp)
   .route('/api/images', imagesApp)
+  .route('/api/integrations', integrationsApp)
   .route('/api/labels', labelsApp)
   .route('/api/mcp', mcpApp)
   // Final safety net: any error that escapes a route handler without being

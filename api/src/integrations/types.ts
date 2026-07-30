@@ -24,6 +24,18 @@ export interface OAuthTokenPayload {
 export type ConnectionStatus =
   { connected: false } | { connected: true; login?: string }
 
+/**
+ * One row of `GET /api/integrations`. `configured` reflects whether the
+ * provider's OAuth env vars are set, independent of `connected` (a
+ * configured provider can still be disconnected, and vice versa isn't
+ * possible but both are surfaced as plain facts for the client to render).
+ */
+export type IntegrationListItem = ConnectionStatus & {
+  id: string
+  displayName: string
+  configured: boolean
+}
+
 export interface IntegrationOAuth {
   authorizationEndpoint: string
   scope: string

@@ -4,28 +4,30 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  useDisconnectGithub,
-  useGithubAuthUrl,
-  useGithubStatus,
-} from '#hooks/use-github'
+  useDisconnectIntegration,
+  useIntegrationAuthUrl,
+  useIntegrationsList,
+} from '#hooks/use-integrations'
 import { assertDefined } from '#lib/test-utils'
 
 vi.mock('#lib/api', () => {
-  const mockStatusGet = vi.fn()
+  const mockListGet = vi.fn()
   const mockAuthUrlGet = vi.fn()
-  const mockTokenDelete = vi.fn()
+  const mockDelete = vi.fn()
 
   return {
     api: {
       api: {
-        github: {
-          status: { $get: mockStatusGet },
-          'auth-url': { $get: mockAuthUrlGet },
-          token: { $delete: mockTokenDelete },
+        integrations: {
+          $get: mockListGet,
+          ':id': {
+            'auth-url': { $get: mockAuthUrlGet },
+            $delete: mockDelete,
+          },
         },
       },
     },
-    __mocks: { mockStatusGet, mockAuthUrlGet, mockTokenDelete },
+    __mocks: { mockListGet, mockAuthUrlGet, mockDelete },
   }
 })
 
@@ -56,41 +58,54 @@ beforeEach(async () => {
   }
 })
 
-describe('useGithubStatus', () => {
-  it('returns disconnected status', async () => {
+describe('useIntegrationsList', () => {
+  it('returns the list of integrations', async () => {
     const mocks = await getMocks()
-    assertDefined(mocks['mockStatusGet']).mockResolvedValue({
+    assertDefined(mocks['mockListGet']).mockResolvedValue({
       status: 200,
       ok: true,
-      json: () => Promise.resolve({ connected: false }),
+      json: () =>
+        Promise.resolve([
+          {
+            id: 'github',
+            displayName: 'GitHub',
+            configured: true,
+            connected: true,
+            login: 'fohte',
+          },
+          {
+            id: 'google_calendar',
+            displayName: 'Google Calendar',
+            configured: true,
+            connected: false,
+          },
+        ]),
     })
 
-    const { result } = renderHook(() => useGithubStatus(), { wrapper })
+    const { result } = renderHook(() => useIntegrationsList(), { wrapper })
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
     })
-    expect(result.current.data).toEqual({ connected: false })
-  })
-
-  it('returns connected status with login', async () => {
-    const mocks = await getMocks()
-    assertDefined(mocks['mockStatusGet']).mockResolvedValue({
-      status: 200,
-      ok: true,
-      json: () => Promise.resolve({ connected: true, login: 'fohte' }),
-    })
-
-    const { result } = renderHook(() => useGithubStatus(), { wrapper })
-
-    await waitFor(() => {
-      expect(result.current.isSuccess).toBe(true)
-    })
-    expect(result.current.data).toEqual({ connected: true, login: 'fohte' })
+    expect(result.current.data).toEqual([
+      {
+        id: 'github',
+        displayName: 'GitHub',
+        configured: true,
+        connected: true,
+        login: 'fohte',
+      },
+      {
+        id: 'google_calendar',
+        displayName: 'Google Calendar',
+        configured: true,
+        connected: false,
+      },
+    ])
   })
 })
 
-describe('useGithubAuthUrl', () => {
+describe('useIntegrationAuthUrl', () => {
   it('fetches the auth URL when enabled', async () => {
     const mocks = await getMocks()
     assertDefined(mocks['mockAuthUrlGet']).mockResolvedValue({
@@ -100,7 +115,9 @@ describe('useGithubAuthUrl', () => {
         Promise.resolve({ url: 'https://github.com/login/oauth/authorize' }),
     })
 
-    const { result } = renderHook(() => useGithubAuthUrl(true), { wrapper })
+    const { result } = renderHook(() => useIntegrationAuthUrl('github', true), {
+      wrapper,
+    })
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -108,35 +125,40 @@ describe('useGithubAuthUrl', () => {
     expect(result.current.data).toEqual({
       url: 'https://github.com/login/oauth/authorize',
     })
+    expect(assertDefined(mocks['mockAuthUrlGet']).mock.calls).toEqual([
+      [{ param: { id: 'github' } }],
+    ])
   })
 
   it('does not fetch when disabled', async () => {
     const mocks = await getMocks()
 
-    renderHook(() => useGithubAuthUrl(false), { wrapper })
+    renderHook(() => useIntegrationAuthUrl('github', false), { wrapper })
 
     expect(assertDefined(mocks['mockAuthUrlGet'])).not.toHaveBeenCalled()
   })
 })
 
-describe('useDisconnectGithub', () => {
-  it('invalidates the status query on success', async () => {
+describe('useDisconnectIntegration', () => {
+  it('invalidates the list query on success', async () => {
     const mocks = await getMocks()
-    assertDefined(mocks['mockTokenDelete']).mockResolvedValue({
+    assertDefined(mocks['mockDelete']).mockResolvedValue({
       status: 200,
       ok: true,
       json: () => Promise.resolve({ message: 'Disconnected' }),
     })
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
 
-    const { result } = renderHook(() => useDisconnectGithub(), { wrapper })
+    const { result } = renderHook(() => useDisconnectIntegration('github'), {
+      wrapper,
+    })
     result.current.mutate()
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
     })
     expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: ['github-status'],
+      queryKey: ['integrations'],
     })
   })
 })

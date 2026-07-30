@@ -6,39 +6,22 @@ import { IntegrationConfigError } from '#integrations/errors'
 import {
   disconnect,
   getAuthUrl,
-  getConnectionStatus,
   handleOAuthCallback,
 } from '#integrations/oauth'
 import type { IntegrationProvider } from '#integrations/types'
 import { TokenExchangeError } from '#lib/fetch-json'
 
 // Shared route-level wiring (Result -> HTTP status/body, Sentry capture) for
-// the connection endpoints every integration exposes. Each provider keeps
-// its own route file/URL paths — see routes/calendar.ts and routes/github.ts
-// — since those paths are external contracts (e.g. registered as the OAuth
-// App's callback URL) that must not shift as a side effect of this sharing.
+// the connection endpoints every integration exposes. Status/auth-url/
+// disconnect are exposed generically through routes/integrations.ts; the
+// OAuth callback stays in each provider's own route file (routes/calendar.ts,
+// routes/github.ts) since its URL is an external contract (e.g. registered
+// as the OAuth App's callback URL) that must not shift as a side effect of
+// this sharing.
 
 export const callbackQuerySchema = z.object({
   code: z.string(),
 })
-export async function handleConnectionStatus(
-  c: Context,
-  provider: IntegrationProvider,
-  fingerprintPrefix: string,
-) {
-  const result = await getConnectionStatus(provider)
-
-  return result.match(
-    (status) => c.json(status, 200),
-    (error) => {
-      captureWithFingerprint(
-        error,
-        `api.${fingerprintPrefix}.get-status-failed`,
-      )
-      return c.json({ error: 'Internal server error' }, 500)
-    },
-  )
-}
 
 export function handleGetAuthUrl(
   c: Context,

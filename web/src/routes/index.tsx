@@ -8,9 +8,9 @@ import { useContextFilter } from '#hooks/use-context-filter'
 import {
   GcalAuthRequiredError,
   useAutoRescheduleOnGcalChange,
-  useGcalAuthUrl,
   useGcalEvents,
 } from '#hooks/use-gcal-events'
+import { useIntegrationAuthUrl } from '#hooks/use-integrations'
 import { useScheduleList } from '#hooks/use-schedules'
 import type { Task } from '#hooks/use-tasks'
 import { useTaskList, useTaskMap } from '#hooks/use-tasks'
@@ -47,7 +47,10 @@ function DayView() {
   const gcalEventsQuery = useGcalEvents(todayStr)
   const gcalAuthRequired =
     gcalEventsQuery.error instanceof GcalAuthRequiredError
-  const gcalAuthUrlQuery = useGcalAuthUrl(gcalAuthRequired)
+  const gcalAuthUrlQuery = useIntegrationAuthUrl(
+    'google_calendar',
+    gcalAuthRequired,
+  )
 
   useEffect(() => {
     if (gcalEventsQuery.error != null && !gcalAuthRequired) {

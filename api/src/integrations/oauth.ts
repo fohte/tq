@@ -8,7 +8,11 @@ import {
   OAuthTokenMissingError,
   TokenRefreshError,
 } from '#integrations/errors'
-import type { ConnectionStatus, IntegrationProvider } from '#integrations/types'
+import type {
+  ConnectionStatus,
+  IntegrationListItem,
+  IntegrationProvider,
+} from '#integrations/types'
 import type { TokenExchangeError } from '#lib/fetch-json'
 
 // Token refresh buffer: refresh 5 minutes before expiry
@@ -150,6 +154,22 @@ export function getConnectionStatus(
           })),
     )
   })
+}
+
+export function getIntegrationSummary(
+  provider: IntegrationProvider,
+): ResultAsync<IntegrationListItem, Error> {
+  const configured = provider.oauth.getConfig().match(
+    () => true,
+    () => false,
+  )
+
+  return getConnectionStatus(provider).map((status) => ({
+    id: provider.id,
+    displayName: provider.displayName,
+    configured,
+    ...status,
+  }))
 }
 
 export function disconnect(
