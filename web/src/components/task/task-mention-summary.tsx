@@ -1,4 +1,4 @@
-import { StatusIcon } from '#components/task/task-row'
+import { StatusIcon } from '#components/task/status-icon'
 import type { Task } from '#hooks/use-tasks'
 import { cn } from '#lib/utils'
 
