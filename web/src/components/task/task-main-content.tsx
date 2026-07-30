@@ -109,9 +109,9 @@ function EditableTitle({
     setIsEditing(false)
   }, [value, defaultValue, taskId, updateTask])
 
-  if (isEditing) {
-    return (
-      <>
+  return (
+    <>
+      {isEditing ? (
         <input
           type="text"
           value={value}
@@ -130,24 +130,17 @@ function EditableTitle({
           autoFocus
           className="flex-1 bg-transparent text-2xl font-bold text-foreground outline-none"
         />
-        <span className="mt-2">
-          <LlmAuthorLabel author={author} />
-        </span>
-      </>
-    )
-  }
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => {
-          setIsEditing(true)
-        }}
-        className="flex-1 cursor-text text-left text-2xl font-bold text-foreground"
-      >
-        {value}
-      </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setIsEditing(true)
+          }}
+          className="flex-1 cursor-text text-left text-2xl font-bold text-foreground"
+        >
+          {value}
+        </button>
+      )}
       <span className="mt-2">
         <LlmAuthorLabel author={author} />
       </span>
