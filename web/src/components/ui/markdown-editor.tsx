@@ -14,6 +14,7 @@ import {
   uploadImageFiles,
 } from '#lib/image-upload'
 import { createInlineReferencePlugin } from '#lib/inline-reference/plugin'
+import { githubUrlProvider } from '#lib/inline-reference/providers/github-url'
 import { taskMentionProvider } from '#lib/inline-reference/providers/task-mention'
 import { taskMentionAutocompletePlugin } from '#lib/inline-reference/providers/task-mention-autocomplete-plugin'
 
@@ -23,6 +24,7 @@ import { taskMentionAutocompletePlugin } from '#lib/inline-reference/providers/t
 // comment editors is safe.
 const taskMentionDecorationPlugin =
   createInlineReferencePlugin(taskMentionProvider)
+const githubUrlDecorationPlugin = createInlineReferencePlugin(githubUrlProvider)
 
 interface MarkdownEditorProps {
   defaultValue?: string
@@ -67,6 +69,7 @@ function CrepeEditor({
       })
       .use(taskMentionDecorationPlugin)
       .use(taskMentionAutocompletePlugin)
+      .use(githubUrlDecorationPlugin)
 
     if (onChange) {
       crepe.on((listener) => {
