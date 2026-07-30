@@ -56,6 +56,21 @@ export const WithError: Story = {
   ),
 }
 
+export const WithMultipleErrors: Story = {
+  render: () => (
+    <Field className="w-80" data-invalid="true">
+      <FieldLabel htmlFor="field-story-password">Password</FieldLabel>
+      <Input id="field-story-password" type="password" aria-invalid />
+      <FieldError
+        errors={[
+          { message: 'Must be at least 8 characters.' },
+          { message: 'Must contain a number.' },
+        ]}
+      />
+    </Field>
+  ),
+}
+
 export const Horizontal: Story = {
   render: () => (
     <Field orientation="horizontal" className="w-80">

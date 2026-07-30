@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { fn } from 'storybook/test'
 
 import {
   Select,
@@ -11,12 +12,21 @@ import {
 function SelectDemo({
   defaultValue,
   disabled,
+  open,
+  onOpenChange,
 }: {
   defaultValue?: string
   disabled?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   return (
-    <Select defaultValue={defaultValue} disabled={disabled}>
+    <Select
+      defaultValue={defaultValue}
+      disabled={disabled}
+      open={open}
+      onOpenChange={onOpenChange}
+    >
       <SelectTrigger>
         <SelectValue placeholder="Select status" />
       </SelectTrigger>
@@ -34,6 +44,9 @@ const meta = {
   component: SelectDemo,
   parameters: {
     layout: 'centered',
+  },
+  args: {
+    onOpenChange: fn(),
   },
 } satisfies Meta<typeof SelectDemo>
 
@@ -53,5 +66,12 @@ export const WithValue: Story = {
 export const Disabled: Story = {
   args: {
     disabled: true,
+  },
+}
+
+export const Open: Story = {
+  args: {
+    open: true,
+    defaultValue: 'in_progress',
   },
 }
