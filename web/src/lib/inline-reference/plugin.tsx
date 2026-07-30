@@ -53,6 +53,20 @@ function createChipWidget<TData>(
     () => {
       const container = document.createElement('span')
       container.className = 'inline-reference-chip'
+      // The raw source text this chip covers is hidden but still in the doc
+      // (see the .inline-reference-source CSS), so it can still carry marks
+      // like `link`. Milkdown's own link-hover-preview plugin resolves mouse
+      // coordinates to a doc position via `posAtCoords` on every mousemove
+      // bubbling up to the ProseMirror view, and shows its own tooltip for
+      // any mark it finds there — including this chip's hidden source.
+      // Stopping propagation here keeps that plugin-internal (and any
+      // similar mark-driven) mousemove handling from ever seeing the event.
+      container.addEventListener('mousemove', (e) => {
+        e.stopPropagation()
+      })
+      container.addEventListener('mouseleave', (e) => {
+        e.stopPropagation()
+      })
       root = createRoot(container)
       root.render(
         <QueryClientProvider client={queryClient}>
