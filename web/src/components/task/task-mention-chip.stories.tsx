@@ -26,6 +26,8 @@ const baseTask: TaskDetail = {
   sortOrder: 0,
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
+  titleAuthor: null,
+  descriptionAuthor: null,
   childCompletionCount: { completed: 0, total: 0 },
   pages: [],
   timeBlocks: [],

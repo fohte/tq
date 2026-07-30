@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import type { Comment } from '#hooks/use-task-comments'
@@ -112,10 +113,13 @@ function CommentCard({
       <div className="flex min-w-0 flex-1 flex-col gap-1 px-2.5 py-2">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-muted-foreground">
-            {timestamp}
-            {isEdited && ' (edited)'}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-muted-foreground">
+              {timestamp}
+              {isEdited && ' (edited)'}
+            </span>
+            <LlmAuthorLabel author={comment.author} />
+          </div>
 
           <DeleteConfirmButton
             title="Delete comment"

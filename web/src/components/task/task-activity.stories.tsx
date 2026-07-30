@@ -9,14 +9,16 @@ import {
 import type { ReactNode } from 'react'
 
 import { TaskActivity } from '#components/task/task-activity'
+import type { Comment } from '#hooks/use-task-comments'
 
-const baseComments = [
+const baseComments: Comment[] = [
   {
     id: 'comment-1',
     taskId: 'task-1',
     content: 'Started working on this. The API layer looks straightforward.',
     createdAt: new Date(Date.now() - 3_600_000 * 2).toISOString(),
     updatedAt: new Date(Date.now() - 3_600_000 * 2).toISOString(),
+    author: null,
   },
   {
     id: 'comment-2',
@@ -25,6 +27,7 @@ const baseComments = [
       'Found an edge case with empty strings. Need to add validation on the frontend too.',
     createdAt: new Date(Date.now() - 3_600_000).toISOString(),
     updatedAt: new Date(Date.now() - 1_800_000).toISOString(),
+    author: null,
   },
   {
     id: 'comment-3',
@@ -32,6 +35,7 @@ const baseComments = [
     content: 'All tests passing now. Ready for review.',
     createdAt: new Date(Date.now() - 600_000).toISOString(),
     updatedAt: new Date(Date.now() - 600_000).toISOString(),
+    author: null,
   },
 ]
 
@@ -40,7 +44,7 @@ function Providers({
   comments = [],
 }: {
   children: ReactNode
-  comments?: typeof baseComments
+  comments?: Comment[]
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -114,6 +118,23 @@ export const ManyComments: Story = {
       content: `Comment #${String(i + 1)}: This is a sample comment for testing scroll behavior and layout with many items.`,
       createdAt: new Date(Date.now() - 3_600_000 * (10 - i)).toISOString(),
       updatedAt: new Date(Date.now() - 3_600_000 * (10 - i)).toISOString(),
+      author: null,
     })),
+  },
+}
+
+export const LlmAuthored: Story = {
+  args: {
+    comments: [
+      ...baseComments,
+      {
+        id: 'comment-4',
+        taskId: 'task-1',
+        content: 'Applied the suggested fix and re-ran the test suite.',
+        createdAt: new Date(Date.now() - 300_000).toISOString(),
+        updatedAt: new Date(Date.now() - 300_000).toISOString(),
+        author: { kind: 'llm', agent: 'claude-opus-5' },
+      },
+    ],
   },
 }

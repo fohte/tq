@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import { taskComments, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import { recordEdit } from '#lib/edits'
+import { type EditAuthorInfo, getCommentAuthors, recordEdit } from '#lib/edits'
 import { syncTaskLinks } from '#services/task-links'
 
 const createCommentSchema = z.object({
@@ -18,13 +18,17 @@ const updateCommentSchema = z.object({
   content: z.string().min(1),
 })
 
-function commentToResponse(comment: typeof taskComments.$inferSelect) {
+function commentToResponse(
+  comment: typeof taskComments.$inferSelect,
+  author: EditAuthorInfo | null = null,
+) {
   return {
     id: comment.id,
     taskId: comment.taskId,
     content: comment.content,
     createdAt: comment.createdAt.toISOString(),
     updatedAt: comment.updatedAt.toISOString(),
+    author,
   }
 }
 
@@ -54,7 +58,12 @@ export const taskCommentsApp = new Hono()
       .where(eq(taskComments.taskId, taskId))
       .orderBy(taskComments.createdAt)
 
-    return c.json(comments.map(commentToResponse), 200)
+    const authors = await getCommentAuthors(comments.map((c) => c.id))
+
+    return c.json(
+      comments.map((c) => commentToResponse(c, authors.get(c.id) ?? null)),
+      200,
+    )
   })
   .post(
     '/:taskId/comments',
@@ -87,7 +96,7 @@ export const taskCommentsApp = new Hono()
 
       await syncTaskLinks(taskId)
 
-      return c.json(commentToResponse(comment), 201)
+      return c.json(commentToResponse(comment, author), 201)
     },
   )
   .patch(
@@ -134,7 +143,12 @@ export const taskCommentsApp = new Hono()
 
       await syncTaskLinks(taskId)
 
-      return c.json(commentToResponse(updated), 200)
+      const authors = await getCommentAuthors([commentId])
+
+      return c.json(
+        commentToResponse(updated, authors.get(commentId) ?? null),
+        200,
+      )
     },
   )
   .delete('/:taskId/comments/:commentId', async (c) => {

@@ -27,6 +27,7 @@ const samplePages: TaskPage[] = [
     sortOrder: 0,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
+    author: null,
   },
   {
     id: 'page-002',
@@ -37,6 +38,7 @@ const samplePages: TaskPage[] = [
     sortOrder: 1,
     createdAt: '2026-03-21T00:00:00.000Z',
     updatedAt: '2026-03-21T00:00:00.000Z',
+    author: null,
   },
 ]
 
@@ -59,6 +61,8 @@ const baseTask: TaskDetail = {
   githubLink: null,
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
+  titleAuthor: null,
+  descriptionAuthor: null,
   childCompletionCount: { completed: 1, total: 3 },
   pages: [],
   timeBlocks: [],
@@ -182,6 +186,18 @@ export const WithPages: Story = {
   args: {
     task: { ...baseTask, title: 'Task with pages' },
     pages: samplePages,
+  },
+}
+
+export const LlmAuthored: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Refactor the auth middleware',
+      titleAuthor: { kind: 'llm', agent: 'claude-opus-5' },
+      descriptionAuthor: { kind: 'llm', agent: 'claude-opus-5' },
+    },
+    pages: [],
   },
 }
 

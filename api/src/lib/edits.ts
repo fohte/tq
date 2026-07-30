@@ -1,12 +1,17 @@
-import { and, desc, eq, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 
-import type { DbTransaction } from '#db/connection'
+import { db, type DbTransaction } from '#db/connection'
 import { edits } from '#db/schema'
 import type { Author } from '#lib/author'
 
 export type EditAuthor = Author | { kind: 'system'; agent: null }
 
 export const SYSTEM_AUTHOR: EditAuthor = { kind: 'system', agent: null }
+
+// What GET responses expose: who most recently wrote the current content.
+// Unlike `EditAuthor`, callers never construct this directly — it's always
+// read back from an `edits` row via the lookups below.
+export type EditAuthorInfo = { kind: EditAuthor['kind']; agent: string | null }
 
 export type EditTarget = {
   taskId: string
@@ -105,4 +110,113 @@ export async function recordEdit(
     authorKind: author.kind,
     authorAgent: author.agent,
   })
+}
+
+function toAuthorInfo(row: {
+  authorKind: EditAuthor['kind']
+  authorAgent: string | null
+}): EditAuthorInfo {
+  return { kind: row.authorKind, agent: row.authorAgent }
+}
+
+/**
+ * Author of each page's current content: the most recent edits row for that
+ * pageId across create/update and any field, so an unedited page falls back
+ * to its create row. Pages with no edits row (predating the edits table)
+ * are absent from the returned map.
+ */
+export async function getPageAuthors(
+  pageIds: string[],
+): Promise<Map<string, EditAuthorInfo>> {
+  if (pageIds.length === 0) return new Map()
+
+  const rows = await db
+    .select({
+      pageId: edits.pageId,
+      authorKind: edits.authorKind,
+      authorAgent: edits.authorAgent,
+    })
+    .from(edits)
+    .where(inArray(edits.pageId, pageIds))
+    .orderBy(desc(edits.updatedAt))
+
+  const authors = new Map<string, EditAuthorInfo>()
+  for (const row of rows) {
+    if (row.pageId != null && !authors.has(row.pageId)) {
+      authors.set(row.pageId, toAuthorInfo(row))
+    }
+  }
+  return authors
+}
+
+/** Author of each comment's current content. Same rule as {@link getPageAuthors}. */
+export async function getCommentAuthors(
+  commentIds: string[],
+): Promise<Map<string, EditAuthorInfo>> {
+  if (commentIds.length === 0) return new Map()
+
+  const rows = await db
+    .select({
+      commentId: edits.commentId,
+      authorKind: edits.authorKind,
+      authorAgent: edits.authorAgent,
+    })
+    .from(edits)
+    .where(inArray(edits.commentId, commentIds))
+    .orderBy(desc(edits.updatedAt))
+
+  const authors = new Map<string, EditAuthorInfo>()
+  for (const row of rows) {
+    if (row.commentId != null && !authors.has(row.commentId)) {
+      authors.set(row.commentId, toAuthorInfo(row))
+    }
+  }
+  return authors
+}
+
+/**
+ * Per-field author for a task's title/description: the most recent `update`
+ * row naming that field, falling back to the task's `create` row when the
+ * field was never updated after creation. A field is `null` here only when
+ * it predates the edits table.
+ */
+export async function getTaskFieldAuthors(taskId: string): Promise<{
+  title: EditAuthorInfo | null
+  description: EditAuthorInfo | null
+}> {
+  const rows = await db
+    .select({
+      action: edits.action,
+      field: edits.field,
+      authorKind: edits.authorKind,
+      authorAgent: edits.authorAgent,
+    })
+    .from(edits)
+    .where(
+      and(
+        eq(edits.taskId, taskId),
+        isNull(edits.pageId),
+        isNull(edits.commentId),
+      ),
+    )
+    .orderBy(desc(edits.updatedAt))
+
+  let title: EditAuthorInfo | null = null
+  let description: EditAuthorInfo | null = null
+  let createAuthor: EditAuthorInfo | null = null
+
+  for (const row of rows) {
+    if (row.field === 'title' && title == null) title = toAuthorInfo(row)
+    if (row.field === 'description' && description == null) {
+      description = toAuthorInfo(row)
+    }
+    if (row.action === 'create' && createAuthor == null) {
+      createAuthor = toAuthorInfo(row)
+    }
+  }
+
+  return {
+    title: title ?? createAuthor,
+    description: description ?? createAuthor,
+  }
 }
