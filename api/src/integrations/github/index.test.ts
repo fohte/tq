@@ -223,9 +223,7 @@ describe('getConnectionStatus', () => {
 
 describe('getIntegrationSummary', () => {
   it('reports configured true and connected false when no token exists', async () => {
-    expect(
-      (await getIntegrationSummary(githubProvider))._unsafeUnwrap(),
-    ).toEqual({
+    expect(await getIntegrationSummary(githubProvider)).toEqual({
       id: 'github',
       displayName: 'GitHub',
       configured: true,
@@ -236,9 +234,7 @@ describe('getIntegrationSummary', () => {
   it('reports configured false when environment variables are missing', async () => {
     clearEnv()
 
-    expect(
-      (await getIntegrationSummary(githubProvider))._unsafeUnwrap(),
-    ).toEqual({
+    expect(await getIntegrationSummary(githubProvider)).toEqual({
       id: 'github',
       displayName: 'GitHub',
       configured: false,
@@ -253,14 +249,27 @@ describe('getIntegrationSummary', () => {
       new Response(JSON.stringify({ login: 'fohte' }), { status: 200 }),
     )
 
-    expect(
-      (await getIntegrationSummary(githubProvider))._unsafeUnwrap(),
-    ).toEqual({
+    expect(await getIntegrationSummary(githubProvider)).toEqual({
       id: 'github',
       displayName: 'GitHub',
       configured: true,
       connected: true,
       login: 'fohte',
+    })
+  })
+
+  it('degrades to connected false instead of rejecting when the GitHub API call fails', async () => {
+    await upsertToken('some-token')
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response('server error', { status: 500 }),
+    )
+
+    expect(await getIntegrationSummary(githubProvider)).toEqual({
+      id: 'github',
+      displayName: 'GitHub',
+      configured: true,
+      connected: false,
     })
   })
 })

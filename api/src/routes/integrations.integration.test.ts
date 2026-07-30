@@ -14,6 +14,12 @@ const GITHUB_ENV = {
   GITHUB_REDIRECT_URI: 'http://localhost:3001/api/github/oauth-callback',
 }
 
+const GOOGLE_ENV_KEYS = [
+  'GOOGLE_CLIENT_ID',
+  'GOOGLE_CLIENT_SECRET',
+  'GOOGLE_REDIRECT_URI',
+]
+
 function setGithubEnv() {
   for (const [key, value] of Object.entries(GITHUB_ENV)) {
     process.env[key] = value
@@ -22,6 +28,15 @@ function setGithubEnv() {
 
 function clearGithubEnv() {
   for (const key of Object.keys(GITHUB_ENV)) {
+    Reflect.deleteProperty(process.env, key)
+  }
+}
+
+// Google Calendar is never configured in this file — its provider is only
+// used here as "the other, unconfigured registry entry" — so its env vars
+// are cleared explicitly rather than relying on them being ambiently unset.
+function clearGoogleEnv() {
+  for (const key of GOOGLE_ENV_KEYS) {
     Reflect.deleteProperty(process.env, key)
   }
 }
@@ -38,12 +53,14 @@ async function upsertToken(provider: string, accessToken: string) {
 
 afterEach(() => {
   clearGithubEnv()
+  clearGoogleEnv()
   vi.restoreAllMocks()
 })
 
 describe('GET /api/integrations', () => {
   it('lists every registered provider with its connection and config state', async () => {
     setGithubEnv()
+    clearGoogleEnv()
     await upsertToken('github', 'valid-token')
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(JSON.stringify({ login: 'fohte' }), { status: 200 }),
@@ -58,6 +75,33 @@ describe('GET /api/integrations', () => {
         displayName: 'GitHub',
         connected: true,
         login: 'fohte',
+        configured: true,
+      },
+      {
+        id: 'google_calendar',
+        displayName: 'Google Calendar',
+        connected: false,
+        configured: false,
+      },
+    ])
+  })
+
+  it('degrades a single provider to connected false instead of failing the whole list', async () => {
+    setGithubEnv()
+    clearGoogleEnv()
+    await upsertToken('github', 'some-token')
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response('server error', { status: 500 }),
+    )
+
+    const res = await app.request('/api/integrations')
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual([
+      {
+        id: 'github',
+        displayName: 'GitHub',
+        connected: false,
         configured: true,
       },
       {

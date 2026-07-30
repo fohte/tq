@@ -376,9 +376,7 @@ describe('getConnectionStatus / disconnect', () => {
 
 describe('getIntegrationSummary', () => {
   it('reports configured true and connected false when no token exists', async () => {
-    expect(
-      (await getIntegrationSummary(googleCalendarProvider))._unsafeUnwrap(),
-    ).toEqual({
+    expect(await getIntegrationSummary(googleCalendarProvider)).toEqual({
       id: 'google_calendar',
       displayName: 'Google Calendar',
       configured: true,
@@ -389,9 +387,7 @@ describe('getIntegrationSummary', () => {
   it('reports configured false when environment variables are missing', async () => {
     clearEnv()
 
-    expect(
-      (await getIntegrationSummary(googleCalendarProvider))._unsafeUnwrap(),
-    ).toEqual({
+    expect(await getIntegrationSummary(googleCalendarProvider)).toEqual({
       id: 'google_calendar',
       displayName: 'Google Calendar',
       configured: false,
@@ -406,9 +402,7 @@ describe('getIntegrationSummary', () => {
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     })
 
-    expect(
-      (await getIntegrationSummary(googleCalendarProvider))._unsafeUnwrap(),
-    ).toEqual({
+    expect(await getIntegrationSummary(googleCalendarProvider)).toEqual({
       id: 'google_calendar',
       displayName: 'Google Calendar',
       configured: true,

@@ -125,6 +125,24 @@ describe('useIntegrationAuthUrl', () => {
     expect(result.current.data).toEqual({
       url: 'https://github.com/login/oauth/authorize',
     })
+  })
+
+  it('requests the auth URL for the given provider id', async () => {
+    const mocks = await getMocks()
+    assertDefined(mocks['mockAuthUrlGet']).mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: () =>
+        Promise.resolve({ url: 'https://github.com/login/oauth/authorize' }),
+    })
+
+    const { result } = renderHook(() => useIntegrationAuthUrl('github', true), {
+      wrapper,
+    })
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
     expect(assertDefined(mocks['mockAuthUrlGet']).mock.calls).toEqual([
       [{ param: { id: 'github' } }],
     ])

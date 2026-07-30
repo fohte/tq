@@ -32,12 +32,16 @@ function Settings() {
       <div className="flex-1 overflow-y-auto p-4">
         {integrationsList.isLoading ? (
           <p className="text-sm text-muted-foreground">読み込み中...</p>
-        ) : (
+        ) : integrationsList.isSuccess ? (
           <div className="flex flex-col gap-3">
-            {(integrationsList.data ?? []).map((summary) => (
+            {integrationsList.data.map((summary) => (
               <SettingsIntegrationRow key={summary.id} summary={summary} />
             ))}
           </div>
+        ) : (
+          <p className="text-sm text-destructive">
+            連携状態の取得に失敗しました
+          </p>
         )}
       </div>
     </div>

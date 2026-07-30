@@ -1,3 +1,4 @@
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { eq } from 'drizzle-orm'
 import { errAsync, okAsync, type Result, ResultAsync } from 'neverthrow'
 
@@ -156,20 +157,34 @@ export function getConnectionStatus(
   })
 }
 
-export function getIntegrationSummary(
+// Resolves to a best-effort summary rather than a Result: one provider's
+// checkConnection failure (e.g. a GitHub API hiccup) must not take down the
+// whole `GET /api/integrations` list, so the error is captured and degraded
+// to `connected: false` here instead of propagating.
+export async function getIntegrationSummary(
   provider: IntegrationProvider,
-): ResultAsync<IntegrationListItem, Error> {
+): Promise<IntegrationListItem> {
   const configured = provider.oauth.getConfig().match(
     () => true,
     () => false,
   )
 
-  return getConnectionStatus(provider).map((status) => ({
+  const status = await getConnectionStatus(provider).match(
+    (status) => status,
+    (error): ConnectionStatus => {
+      captureWithFingerprint(error, 'api.integrations.get-summary-failed', {
+        extras: { provider: provider.id },
+      })
+      return { connected: false }
+    },
+  )
+
+  return {
     id: provider.id,
     displayName: provider.displayName,
     configured,
     ...status,
-  }))
+  }
 }
 
 export function disconnect(
