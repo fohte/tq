@@ -64,6 +64,12 @@ describe('githubUrlProvider.findMatches', () => {
     ).toEqual(['https://github.com/fohte/tq/issues/123'])
   })
 
+  it('stops before a fragment, leaving it as trailing text', () => {
+    expect(
+      urls('see https://github.com/fohte/tq/issues/123#issuecomment-1'),
+    ).toEqual(['https://github.com/fohte/tq/issues/123'])
+  })
+
   it('finds a URL wrapped in punctuation', () => {
     expect(urls('(https://github.com/fohte/tq/issues/7)')).toEqual([
       'https://github.com/fohte/tq/issues/7',
