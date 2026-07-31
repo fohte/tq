@@ -1,8 +1,9 @@
 import type { Ctx } from '@milkdown/kit/ctx'
 import { Schema } from '@milkdown/kit/prose/model'
 import { EditorState, TextSelection } from '@milkdown/kit/prose/state'
-import { EditorView } from '@milkdown/kit/prose/view'
-import { describe, expect, it, vi } from 'vitest'
+import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
+import type { CreateReactWidgetView } from '@prosemirror-adapter/react'
+import { describe, expect, it } from 'vitest'
 
 import { createInlineReferencePlugin } from '#lib/inline-reference/plugin'
 import type { InlineReferenceProvider } from '#lib/inline-reference/types'
@@ -20,26 +21,36 @@ const schema = new Schema({
   marks: {},
 })
 
-// `createInlineReferencePlugin` wraps a plain `prosemirror-state` `Plugin` in
-// Milkdown's `$prose` lifecycle, which needs a real `Ctx` to resolve schema
-// timing and register the plugin. The wrapped callback itself never reads
-// `ctx`, so a stub satisfying only the two methods `$prose` calls is enough
-// to unwrap the underlying `Plugin` for a plain `prosemirror-view` test.
-async function buildProsePlugin<TData>(
-  provider: InlineReferenceProvider<TData>,
-) {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- stub only exercises .wait/.update, see comment above
-  const fakeCtx = {
-    wait: async () => {},
-    update: () => {},
-  } as unknown as Ctx
-  const wrapped = createInlineReferencePlugin(provider)
-  await wrapped(fakeCtx)()
-  return wrapped.plugin()
+interface FakeData {
+  n: number
 }
 
-function emptyDoc() {
-  return schema.node('doc', null, [schema.node('paragraph', null, [])])
+const fakeProvider: InlineReferenceProvider<FakeData> = {
+  id: 'fake',
+  findMatches(text) {
+    return [...text.matchAll(/@(\d+)/g)].map((match) => {
+      const digits = match[1]
+      if (digits == null) throw new Error('capture group 1 always matches \\d+')
+      return {
+        start: match.index,
+        end: match.index + match[0].length,
+        raw: match[0],
+        data: { n: Number(digits) },
+      }
+    })
+  },
+  Chip: () => null,
+}
+
+// This file only exercises `createInlineReferencePlugin`'s own decoration
+// wiring (matching, selection suppression, and passing each match's data/raw
+// through to the widget). Actually rendering a widget as a React portal is
+// @prosemirror-adapter/react's own tested responsibility, so this fake
+// factory skips it and just returns a Decoration carrying the spec it was
+// given, the same shape the real widgetViewFactory produces.
+function fakeWidgetViewFactory(): CreateReactWidgetView {
+  return () => (pos, spec) =>
+    Decoration.widget(pos, () => document.createElement('span'), spec)
 }
 
 function docWithText(text: string) {
@@ -48,121 +59,103 @@ function docWithText(text: string) {
   ])
 }
 
-function createView(provider: InlineReferenceProvider<{ n: number }>) {
-  return buildProsePlugin(provider).then(
-    (prosePlugin) =>
-      new EditorView(document.createElement('div'), {
-        state: EditorState.create({
-          doc: emptyDoc(),
-          schema,
-          plugins: [prosePlugin],
-        }),
-      }),
+async function buildPlugin() {
+  // `createInlineReferencePlugin` wraps a plain `prosemirror-state` `Plugin`
+  // in Milkdown's `$prose` lifecycle, which needs a real `Ctx` to resolve
+  // schema timing and register the plugin. The wrapped callback itself never
+  // reads `ctx`, so a stub satisfying only the two methods `$prose` calls is
+  // enough to unwrap the underlying `Plugin`.
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- stub only exercises .wait/.update, see comment above
+  const fakeCtx = {
+    wait: async () => {},
+    update: () => {},
+  } as unknown as Ctx
+  const wrapped = createInlineReferencePlugin(
+    fakeProvider,
+    fakeWidgetViewFactory(),
   )
+  await wrapped(fakeCtx)()
+  return wrapped.plugin()
 }
 
-// Mirrors `queryClient.fetchQuery()`'s real behavior (see
-// `use-task-mentions.ts`'s `ensureTaskMentionPreviewLoaded`): it can notify
-// subscribers synchronously, more than once, before `ensureLoaded` itself
-// returns to its caller.
-function createReentrantProvider() {
-  const ready = new Set<number>()
-  let notify: (() => void) | undefined
-
-  const provider: InlineReferenceProvider<{ n: number }> = {
-    id: 'reentrant-fake',
-    findMatches(text) {
-      return [...text.matchAll(/@(\d+)/g)].map((match) => ({
-        start: match.index,
-        end: match.index + match[0].length,
-        raw: match[0],
-        data: { n: Number(match[1]) },
-      }))
-    },
-    isReady: (data) => ready.has(data.n),
-    ensureLoaded: () => {
-      notify?.()
-      notify?.()
-    },
-    subscribe: (fn) => {
-      notify = fn
-      return () => {
-        notify = undefined
-      }
-    },
-    Chip: () => null,
-  }
-
-  return { provider, ready }
-}
-
-// Replaces the whole doc and moves the selection out of the way, since a
+// Defaults the selection to the doc's end, away from any match, since a
 // decoration is suppressed wherever the selection touches it (see
-// `selection-overlap.ts`) — the tests here care about the chip widget, not
-// the raw-text editing behavior.
-function replaceContent(view: EditorView, doc: ReturnType<typeof docWithText>) {
-  const tr = view.state.tr.replaceWith(
-    0,
-    view.state.doc.content.size,
-    doc.content,
+// selection-overlap.ts) — most cases here care about the decorations
+// themselves, not that suppression rule.
+async function decorationsFor(
+  text: string,
+  selection?: { from: number; to: number },
+) {
+  const plugin = await buildPlugin()
+  const doc = docWithText(text)
+  const sel = selection ?? {
+    from: TextSelection.atEnd(doc).from,
+    to: TextSelection.atEnd(doc).to,
+  }
+  const initialState = EditorState.create({ doc, schema })
+  const state = initialState.apply(
+    initialState.tr.setSelection(TextSelection.create(doc, sel.from, sel.to)),
   )
-  tr.setSelection(TextSelection.atStart(tr.doc))
-  view.dispatch(tr)
+
+  const decorationsProp = plugin.props.decorations
+  if (decorationsProp == null)
+    throw new Error('plugin always defines decorations')
+  const source = decorationsProp.call(plugin, state)
+  if (!(source instanceof DecorationSet))
+    throw new Error('plugin always builds decorations via DecorationSet.create')
+  return source.find()
+}
+
+// Reduces a Decoration to the fields these tests assert on. Decoration
+// instances also hold a closure-based `type` (the widget's `toDOM`/inline
+// `toDOM`), which can't be compared by value, so it's deliberately excluded.
+function normalize(decorations: readonly Decoration[]) {
+  return decorations
+    .map((d) => ({ from: d.from, to: d.to, spec: d.spec as unknown }))
+    .sort((a, b) => a.from - b.from || a.to - b.to)
 }
 
 describe('createInlineReferencePlugin', () => {
-  it('does not recurse into dispatch() when a provider notifies synchronously and reentrantly from ensureLoaded', async () => {
-    const { provider } = createReentrantProvider()
-    // Mount with an empty doc first so the plugin's view() subscription is
-    // already active by the time a match is introduced (mirrors a real
-    // editor: content is set via a transaction after the view exists, not
-    // synchronously during EditorView construction).
-    const view = await createView(provider)
+  it('hides the raw match and creates a widget carrying its data and raw text', async () => {
+    const decorations = await decorationsFor('see @1 here')
 
-    expect(() => {
-      replaceContent(view, docWithText('see @1 here'))
-    }).not.toThrow()
-
-    view.destroy()
+    expect(normalize(decorations)).toEqual([
+      {
+        from: 5,
+        to: 5,
+        spec: { key: 'fake:@1:5', side: 1, data: { n: 1 }, raw: '@1' },
+      },
+      { from: 5, to: 7, spec: {} },
+    ])
   })
 
-  it('redraws once the provider becomes ready, without dispatching reentrantly', async () => {
-    const { provider, ready } = createReentrantProvider()
-    const view = await createView(provider)
+  it('creates a decoration pair for each of multiple matches', async () => {
+    const decorations = await decorationsFor('see @1 and @2 here')
 
-    replaceContent(view, docWithText('see @1 here'))
-    expect(view.dom.querySelector('.inline-reference-chip')).toBeNull()
-    // Let the redraw scheduled by the initial (not-yet-ready) decorations
-    // pass flush first, so the notify() below schedules a genuinely new
-    // microtask instead of being swallowed by the in-flight guard.
-    await Promise.resolve()
-    expect(view.dom.querySelector('.inline-reference-chip')).toBeNull()
-
-    // Simulates the mention's data finishing its load out-of-band, the way
-    // a real provider's async fetch resolves after the initial redraw.
-    ready.add(1)
-    provider.ensureLoaded({ n: 1 })
-    // The redraw is deferred to a microtask (see plugin.tsx); let it run.
-    await Promise.resolve()
-
-    expect(view.dom.querySelector('.inline-reference-chip')).not.toBeNull()
-
-    view.destroy()
+    expect(normalize(decorations)).toEqual([
+      {
+        from: 5,
+        to: 5,
+        spec: { key: 'fake:@1:5', side: 1, data: { n: 1 }, raw: '@1' },
+      },
+      { from: 5, to: 7, spec: {} },
+      {
+        from: 12,
+        to: 12,
+        spec: { key: 'fake:@2:12', side: 1, data: { n: 2 }, raw: '@2' },
+      },
+      { from: 12, to: 14, spec: {} },
+    ])
   })
 
-  it('does not dispatch on a view that was destroyed before a deferred redraw runs', async () => {
-    const { provider } = createReentrantProvider()
-    const view = await createView(provider)
+  it('suppresses the decoration pair for a match the selection touches', async () => {
+    // "see @1 here": the match spans doc positions [5, 7); a collapsed
+    // selection at 6 sits inside it.
+    const decorations = await decorationsFor('see @1 here', {
+      from: 6,
+      to: 6,
+    })
 
-    replaceContent(view, docWithText('see @1 here'))
-    const dispatchSpy = vi.spyOn(view, 'dispatch')
-    view.destroy()
-
-    // The pending microtask redraw scheduled by ensureLoaded's notify above
-    // must see the destroyed view and skip dispatching, rather than
-    // throwing on a torn-down EditorView.
-    await Promise.resolve()
-
-    expect(dispatchSpy).not.toHaveBeenCalled()
+    expect(decorations).toEqual([])
   })
 })

@@ -10,19 +10,14 @@ export interface InlineReferenceMatch<TData> {
 }
 
 // A provider bundles everything needed to turn one kind of inline text
-// pattern (e.g. `#123` task mentions) into a live-preview chip: detecting it,
-// resolving its metadata, and rendering it.
+// pattern (e.g. `#123` task mentions) into a live-preview chip: detecting it
+// and rendering it. Resolving the match's metadata is the Chip's own
+// responsibility (it renders `raw` as a fallback until its data loads).
 export interface InlineReferenceProvider<TData> {
   /** Namespaces the ProseMirror plugin key and widget decoration keys. */
   id: string
   /** Finds every match within a single textblock's flattened text. */
   findMatches: (text: string) => Array<InlineReferenceMatch<TData>>
-  /** True only when `data`'s metadata is already resolved and can be rendered synchronously. */
-  isReady: (data: TData) => boolean
-  /** Fire-and-forget: starts loading `data`'s metadata if not already loading or loaded. */
-  ensureLoaded: (data: TData) => void
-  /** Subscribes to metadata changes; the plugin calls `notify` to redraw. Returns an unsubscribe function. */
-  subscribe: (notify: () => void) => () => void
-  /** Renders the chip that replaces the raw text once `isReady(data)` is true. */
-  Chip: ComponentType<{ data: TData }>
+  /** Renders the chip that replaces the raw text; falls back to rendering `raw` while its data is unresolved. */
+  Chip: ComponentType<{ data: TData; raw: string }>
 }

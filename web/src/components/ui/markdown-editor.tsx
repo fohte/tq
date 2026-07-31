@@ -5,6 +5,10 @@ import '#components/ui/markdown-editor.css'
 import { Crepe } from '@milkdown/crepe'
 import { upload, uploadConfig } from '@milkdown/plugin-upload'
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
+import {
+  ProsemirrorAdapterProvider,
+  useWidgetViewFactory,
+} from '@prosemirror-adapter/react'
 import { useRef } from 'react'
 
 import {
@@ -18,14 +22,6 @@ import { githubUrlProvider } from '#lib/inline-reference/providers/github-url'
 import { taskMentionProvider } from '#lib/inline-reference/providers/task-mention'
 import { taskMentionAutocompletePlugin } from '#lib/inline-reference/providers/task-mention-autocomplete-plugin'
 
-// Module-level singletons, reused across every editor instance the same way
-// `upload` below is: each `.use()` call binds it to that specific editor's
-// ctx, so instantiating once and sharing it across the description/pages/
-// comment editors is safe.
-const taskMentionDecorationPlugin =
-  createInlineReferencePlugin(taskMentionProvider)
-const githubUrlDecorationPlugin = createInlineReferencePlugin(githubUrlProvider)
-
 interface MarkdownEditorProps {
   defaultValue?: string
   onChange?: (markdown: string) => void
@@ -38,6 +34,7 @@ function CrepeEditor({
   placeholder,
 }: MarkdownEditorProps) {
   const crepeRef = useRef<Crepe | null>(null)
+  const widgetViewFactory = useWidgetViewFactory()
 
   useEditor((root) => {
     const crepe = new Crepe({
@@ -67,9 +64,9 @@ function CrepeEditor({
             ),
         }))
       })
-      .use(taskMentionDecorationPlugin)
+      .use(createInlineReferencePlugin(taskMentionProvider, widgetViewFactory))
       .use(taskMentionAutocompletePlugin)
-      .use(githubUrlDecorationPlugin)
+      .use(createInlineReferencePlugin(githubUrlProvider, widgetViewFactory))
 
     if (onChange) {
       crepe.on((listener) => {
@@ -89,9 +86,11 @@ function CrepeEditor({
 export function MarkdownEditor(props: MarkdownEditorProps) {
   return (
     <MilkdownProvider>
-      <div className="milkdown-wrapper">
-        <CrepeEditor {...props} />
-      </div>
+      <ProsemirrorAdapterProvider>
+        <div className="milkdown-wrapper">
+          <CrepeEditor {...props} />
+        </div>
+      </ProsemirrorAdapterProvider>
     </MilkdownProvider>
   )
 }
