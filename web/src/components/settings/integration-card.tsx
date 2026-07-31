@@ -68,7 +68,9 @@ export function IntegrationCard({
           {accounts.map((account) => (
             <li
               key={account.id}
-              className="flex items-center justify-between gap-4 py-2 pr-4 pl-[50px]"
+              // Left padding lines the label up with the header's name text:
+              // header p-4 (1rem) + icon size-5 (1.25rem) + gap-3.5 (0.875rem).
+              className="flex items-center justify-between gap-4 py-2 pr-4 pl-[calc(1rem+1.25rem+0.875rem)]"
             >
               <span className="min-w-0 truncate text-xs text-muted-foreground">
                 {account.label ?? '連携中'}
