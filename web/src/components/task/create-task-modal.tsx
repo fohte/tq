@@ -8,10 +8,18 @@ import {
   DialogPopup,
   DialogPortal,
 } from '#components/ui/dialog'
+import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#components/ui/select'
 import type { CreateTaskInput } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
-import { selectHandler } from '#lib/form-utils'
+import { selectValueHandler } from '#lib/form-utils'
 import { formatMinutes, parseDurationToMinutes } from '#lib/parse-duration'
 import { cn } from '#lib/utils'
 
@@ -140,22 +148,24 @@ export function CreateTaskModal({
                 <span className="text-base font-semibold text-foreground">
                   New Task
                 </span>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => {
                     handleOpenChange(false)
                   }}
-                  className="text-muted-foreground transition-colors hover:text-foreground"
+                  className="text-muted-foreground"
                 >
                   <X className="size-5" />
                   <span className="sr-only">Close</span>
-                </button>
+                </Button>
               </div>
 
               {/* Body (scrollable) */}
               <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
                 {/* Title */}
-                <input
+                <Input
                   type="text"
                   value={title}
                   onChange={(e) => {
@@ -163,7 +173,7 @@ export function CreateTaskModal({
                   }}
                   placeholder="Task title"
                   autoFocus
-                  className="w-full bg-transparent text-xl font-medium text-foreground outline-none placeholder:text-muted-foreground"
+                  className="h-auto border-0 bg-transparent p-0 text-xl font-medium text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0 md:text-xl"
                 />
 
                 {/* Description (WYSIWYG) */}
@@ -177,71 +187,82 @@ export function CreateTaskModal({
                     label="Start"
                     icon={<CalendarPlus className="size-3.5" />}
                   >
-                    <input
+                    <Input
                       type="date"
                       value={startDate}
                       onChange={(e) => {
                         setStartDate(e.target.value)
                       }}
-                      className="w-32 bg-transparent text-xs text-foreground outline-none"
+                      className="h-auto w-32 border-0 bg-transparent p-0 text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
                     />
                   </FieldGroup>
                   <FieldGroup
                     label="Due"
                     icon={<Calendar className="size-3.5" />}
                   >
-                    <input
+                    <Input
                       type="date"
                       value={dueDate}
                       onChange={(e) => {
                         setDueDate(e.target.value)
                       }}
-                      className="w-32 bg-transparent text-xs text-foreground outline-none"
+                      className="h-auto w-32 border-0 bg-transparent p-0 text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
                     />
                   </FieldGroup>
                   <FieldGroup
                     label="Estimate"
                     icon={<Clock className="size-3.5" />}
                   >
-                    <input
+                    <Input
                       type="text"
                       value={estimateInput}
                       onChange={(e) => {
                         setEstimateInput(e.target.value)
                       }}
                       placeholder="1h30m"
-                      className="w-16 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+                      className="h-auto w-16 border-0 bg-transparent p-0 text-xs text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
                     />
                   </FieldGroup>
                   <FieldGroup
                     label="Context"
                     icon={<Layers className="size-3.5" />}
                   >
-                    <select
+                    <Select
                       value={context}
-                      onChange={selectHandler(setContext, contextValues)}
-                      className="bg-transparent text-xs text-foreground outline-none"
+                      onValueChange={selectValueHandler(
+                        setContext,
+                        contextValues,
+                      )}
                     >
-                      <option value="">—</option>
-                      <option value="work">Work</option>
-                      <option value="personal">Personal</option>
-                      <option value="dev">Dev</option>
-                    </select>
+                      <SelectTrigger
+                        size="sm"
+                        className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                      >
+                        <SelectValue placeholder="—" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">—</SelectItem>
+                        <SelectItem value="work">Work</SelectItem>
+                        <SelectItem value="personal">Personal</SelectItem>
+                        <SelectItem value="dev">Dev</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </FieldGroup>
                 </div>
               </div>
 
               {/* Footer */}
               <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-3">
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
                   onClick={() => {
                     handleOpenChange(false)
                   }}
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  className="text-muted-foreground"
                 >
                   Cancel
-                </button>
+                </Button>
                 <Button
                   onClick={handleSubmit}
                   disabled={!title.trim() || createTask.isPending}
@@ -261,22 +282,24 @@ export function CreateTaskModal({
                 <span className="text-base font-semibold text-foreground">
                   New Task
                 </span>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => {
                     handleOpenChange(false)
                   }}
-                  className="text-muted-foreground transition-colors hover:text-foreground"
+                  className="text-muted-foreground"
                 >
                   <X className="size-5" />
                   <span className="sr-only">Close</span>
-                </button>
+                </Button>
               </div>
 
               {/* Content */}
               <div className="flex flex-col gap-4 px-5 pt-4">
                 {/* Title */}
-                <input
+                <Input
                   type="text"
                   value={title}
                   onChange={(e) => {
@@ -284,7 +307,7 @@ export function CreateTaskModal({
                   }}
                   placeholder="タスクのタイトル"
                   autoFocus
-                  className="w-full bg-transparent text-lg font-medium text-foreground outline-none placeholder:text-muted-foreground"
+                  className="h-auto border-0 bg-transparent p-0 text-lg font-medium text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
                 />
 
                 {/* Description (WYSIWYG) */}
@@ -301,14 +324,14 @@ export function CreateTaskModal({
                     label={startDate || 'Start'}
                     active={!!startDate}
                     expanded={
-                      <input
+                      <Input
                         type="date"
                         value={startDate}
                         onChange={(e) => {
                           setStartDate(e.target.value)
                         }}
                         autoFocus
-                        className="w-28 bg-transparent text-xs outline-none"
+                        className="h-auto w-28 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:border-0 focus-visible:ring-0"
                       />
                     }
                   />
@@ -317,7 +340,7 @@ export function CreateTaskModal({
                     label={estimateLabel}
                     active={parsedMinutes != null}
                     expanded={
-                      <input
+                      <Input
                         type="text"
                         value={estimateInput}
                         onChange={(e) => {
@@ -325,7 +348,7 @@ export function CreateTaskModal({
                         }}
                         placeholder="1h30m"
                         autoFocus
-                        className="w-14 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+                        className="h-auto w-14 border-0 bg-transparent p-0 text-xs shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
                       />
                     }
                   />
@@ -334,14 +357,14 @@ export function CreateTaskModal({
                     label={dueDate || 'Due'}
                     active={!!dueDate}
                     expanded={
-                      <input
+                      <Input
                         type="date"
                         value={dueDate}
                         onChange={(e) => {
                           setDueDate(e.target.value)
                         }}
                         autoFocus
-                        className="w-28 bg-transparent text-xs outline-none"
+                        className="h-auto w-28 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:border-0 focus-visible:ring-0"
                       />
                     }
                   />
@@ -350,17 +373,27 @@ export function CreateTaskModal({
                     label={context ? contextLabels[context] : 'Context'}
                     active={!!context}
                     expanded={
-                      <select
+                      <Select
                         value={context}
-                        onChange={selectHandler(setContext, contextValues)}
-                        autoFocus
-                        className="bg-transparent text-xs outline-none"
+                        onValueChange={selectValueHandler(
+                          setContext,
+                          contextValues,
+                        )}
                       >
-                        <option value="">None</option>
-                        <option value="work">Work</option>
-                        <option value="personal">Personal</option>
-                        <option value="dev">Dev</option>
-                      </select>
+                        <SelectTrigger
+                          autoFocus
+                          size="sm"
+                          className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                        >
+                          <SelectValue placeholder="None" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="work">Work</SelectItem>
+                          <SelectItem value="personal">Personal</SelectItem>
+                          <SelectItem value="dev">Dev</SelectItem>
+                        </SelectContent>
+                      </Select>
                     }
                   />
                 </div>
@@ -393,11 +426,11 @@ function FieldGroup({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+      <span className="flex items-center gap-1 font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint">
         {icon}
         {label}
       </span>
-      <div className="flex h-7 items-center rounded-md border border-border px-2 text-xs focus-within:border-primary/50">
+      <div className="flex h-7 items-center border border-border px-2 text-xs focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/50">
         {children}
       </div>
     </div>
@@ -420,16 +453,26 @@ function SpChip({
   return (
     <div
       className={cn(
-        'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors',
+        'inline-flex shrink-0 items-center gap-1.5 border px-2.5 py-1.5 text-xs font-mono transition-colors',
         active === true
-          ? 'bg-primary/10 text-primary'
-          : 'bg-secondary text-muted-foreground',
+          ? 'border-border-strong text-foreground'
+          : 'border-border text-muted-foreground',
       )}
     >
       {icon}
       {isEditing && expanded != null ? (
         <div
-          onBlur={() => {
+          onBlur={(e) => {
+            // A Select's popup mounts in a portal, so it sits outside this
+            // div in the DOM — ignore blur events caused by focus moving
+            // into it, or picking an option would collapse the field back
+            // to its static label before the value change is committed.
+            if (
+              e.relatedTarget instanceof Element &&
+              e.relatedTarget.closest('[data-slot="select-content"]')
+            ) {
+              return
+            }
             setIsEditing(false)
           }}
         >
