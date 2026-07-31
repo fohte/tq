@@ -1,10 +1,11 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
 import { oauthTokens } from '#db/schema'
-import { jsonBody, setupTestDb } from '#testing'
+import { upsertGoogleCalendarToken } from '#integrations/google-calendar/testing'
+import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
@@ -42,13 +43,56 @@ function clearGoogleEnv() {
 }
 
 async function upsertToken(provider: string, accessToken: string) {
-  await db
+  const [token] = await db
     .insert(oauthTokens)
     .values({ provider, accountId: '', accessToken })
     .onConflictDoUpdate({
       target: [oauthTokens.provider, oauthTokens.accountId],
       set: { accessToken, updatedAt: new Date() },
     })
+    .returning()
+  assertDefined(token)
+  return token
+}
+
+// disconnectAccount takes oauthTokens.id (a surrogate key), which
+// upsertGoogleCalendarToken doesn't return, so tests that need it re-select
+// the row by the provider-specific accountId instead.
+async function selectGoogleTokenByAccountId(accountId: string) {
+  const [token] = await db
+    .select()
+    .from(oauthTokens)
+    .where(
+      and(
+        eq(oauthTokens.provider, 'google_calendar'),
+        eq(oauthTokens.accountId, accountId),
+      ),
+    )
+    .limit(1)
+  assertDefined(token)
+  return token
+}
+
+interface IntegrationEntry {
+  id: string
+  displayName: string
+  configured: boolean
+  supportsMultipleAccounts: boolean
+  accounts: { id: string; label: string | null }[]
+}
+
+// Normalizes the surrogate row ids to a fixed placeholder (mirroring the
+// normalize() helpers in the provider test files) and sorts accounts by
+// label, since GET /api/integrations makes no promise about account order,
+// so the full entry can still be asserted with a single toEqual despite the
+// ids being unknown ahead of time.
+function normalizeIntegrationEntry(entry: IntegrationEntry) {
+  return {
+    ...entry,
+    accounts: entry.accounts
+      .map((account) => ({ ...account, id: 'ID' }))
+      .sort((a, b) => (a.label ?? '').localeCompare(b.label ?? '')),
+  }
 }
 
 afterEach(() => {
@@ -58,10 +102,10 @@ afterEach(() => {
 })
 
 describe('GET /api/integrations', () => {
-  it('lists every registered provider with its connection and config state', async () => {
+  it('lists every registered provider with its connected accounts and config state', async () => {
     setGithubEnv()
     clearGoogleEnv()
-    await upsertToken('github', 'valid-token')
+    const token = await upsertToken('github', 'valid-token')
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(JSON.stringify({ login: 'fohte' }), { status: 200 }),
     )
@@ -73,20 +117,21 @@ describe('GET /api/integrations', () => {
       {
         id: 'github',
         displayName: 'GitHub',
-        connected: true,
-        login: 'fohte',
         configured: true,
+        supportsMultipleAccounts: false,
+        accounts: [{ id: token.id, label: 'fohte' }],
       },
       {
         id: 'google_calendar',
         displayName: 'Google Calendar',
-        connected: false,
         configured: false,
+        supportsMultipleAccounts: true,
+        accounts: [],
       },
     ])
   })
 
-  it('degrades a single provider to connected false instead of failing the whole list', async () => {
+  it('degrades a single provider to an empty accounts list instead of failing the whole list', async () => {
     setGithubEnv()
     clearGoogleEnv()
     await upsertToken('github', 'some-token')
@@ -101,16 +146,55 @@ describe('GET /api/integrations', () => {
       {
         id: 'github',
         displayName: 'GitHub',
-        connected: false,
         configured: true,
+        supportsMultipleAccounts: false,
+        accounts: [],
       },
       {
         id: 'google_calendar',
         displayName: 'Google Calendar',
-        connected: false,
         configured: false,
+        supportsMultipleAccounts: true,
+        accounts: [],
       },
     ])
+  })
+
+  it('lists both accounts for a provider with multiple connected accounts', async () => {
+    clearGithubEnv()
+    clearGoogleEnv()
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user1@example.com',
+      accessToken: 'access-token-1',
+      refreshToken: 'refresh-token-1',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-2',
+      accountLabel: 'user2@example.com',
+      accessToken: 'access-token-2',
+      refreshToken: 'refresh-token-2',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    const res = await app.request('/api/integrations')
+    expect(res.status).toBe(200)
+
+    const body = await jsonBody<IntegrationEntry[]>(res)
+    const googleCalendar = body.find((item) => item.id === 'google_calendar')
+    assertDefined(googleCalendar)
+
+    expect(normalizeIntegrationEntry(googleCalendar)).toEqual({
+      id: 'google_calendar',
+      displayName: 'Google Calendar',
+      configured: false,
+      supportsMultipleAccounts: true,
+      accounts: [
+        { id: 'ID', label: 'user1@example.com' },
+        { id: 'ID', label: 'user2@example.com' },
+      ],
+    })
   })
 })
 
@@ -136,31 +220,75 @@ describe('GET /api/integrations/:id/auth-url', () => {
   })
 })
 
-describe('DELETE /api/integrations/:id', () => {
-  it('disconnects a connected provider', async () => {
-    await upsertToken('github', 'valid-token')
-
-    const res = await app.request('/api/integrations/github', {
-      method: 'DELETE',
+describe('DELETE /api/integrations/:id/accounts/:accountId', () => {
+  it('disconnects the targeted account only, leaving a sibling account for the same provider connected', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user1@example.com',
+      accessToken: 'access-token-1',
+      refreshToken: 'refresh-token-1',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     })
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-2',
+      accountLabel: 'user2@example.com',
+      accessToken: 'access-token-2',
+      refreshToken: 'refresh-token-2',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const target = await selectGoogleTokenByAccountId('google-sub-1')
+
+    const res = await app.request(
+      `/api/integrations/google_calendar/accounts/${target.id}`,
+      { method: 'DELETE' },
+    )
 
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ message: 'Disconnected' })
+
+    const remaining = await db
+      .select({ accountId: oauthTokens.accountId })
+      .from(oauthTokens)
+      .where(eq(oauthTokens.provider, 'google_calendar'))
+    expect(remaining).toEqual([{ accountId: 'google-sub-2' }])
+  })
+
+  it('returns 404 for a nonexistent account id under a valid provider id', async () => {
+    const res = await app.request(
+      '/api/integrations/google_calendar/accounts/nonexistent-id',
+      { method: 'DELETE' },
+    )
+
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ error: 'Not found' })
+  })
+
+  it('returns 404 for an unregistered provider id', async () => {
+    const res = await app.request(
+      '/api/integrations/unknown/accounts/some-id',
+      { method: 'DELETE' },
+    )
+
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ error: 'Not found' })
+  })
+
+  it('returns 404 when the account id belongs to a different provider than the one in the path', async () => {
+    const token = await upsertToken('github', 'valid-token')
+
+    const res = await app.request(
+      `/api/integrations/google_calendar/accounts/${token.id}`,
+      { method: 'DELETE' },
+    )
+
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ error: 'Not found' })
 
     const [remaining] = await db
       .select()
       .from(oauthTokens)
       .where(eq(oauthTokens.provider, 'github'))
       .limit(1)
-    expect(remaining).toBeUndefined()
-  })
-
-  it('returns 404 for an unregistered provider id', async () => {
-    const res = await app.request('/api/integrations/unknown', {
-      method: 'DELETE',
-    })
-
-    expect(res.status).toBe(404)
-    expect(await res.json()).toEqual({ error: 'Not found' })
+    expect(remaining).toBeDefined()
   })
 })

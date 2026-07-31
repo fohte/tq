@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { db } from '#db/connection'
@@ -17,12 +17,12 @@ import {
 } from '#integrations/google-calendar/index'
 import { upsertGoogleCalendarToken } from '#integrations/google-calendar/testing'
 import {
-  disconnect,
+  disconnectAccount,
   getAuthUrl,
-  getConnectionStatus,
   getIntegrationSummary,
   getValidAccessToken,
   handleOAuthCallback,
+  listConnectedAccounts,
 } from '#integrations/oauth'
 import { TokenExchangeError } from '#lib/fetch-json'
 import { assertDefined, setupTestDb } from '#testing'
@@ -82,6 +82,44 @@ function normalizeAccountResults(results: AccountEventsResult[]) {
         : r.result._unsafeUnwrapErr(),
     }))
     .sort((a, b) => a.accountId.localeCompare(b.accountId))
+}
+
+// Replaces the surrogate row id with a fixed placeholder, same idea as
+// normalize() above, so an IntegrationAccount[] can still be asserted with a
+// single toEqual.
+function normalizeAccounts(accounts: { id: string; label: string | null }[]) {
+  return accounts.map((account) => ({ ...account, id: 'ID' }))
+}
+
+// Also sorts accounts by label since getIntegrationSummary makes no promise
+// about account order.
+function normalizeSummary(
+  summary: Awaited<ReturnType<typeof getIntegrationSummary>>,
+) {
+  return {
+    ...summary,
+    accounts: normalizeAccounts(summary.accounts).sort((a, b) =>
+      (a.label ?? '').localeCompare(b.label ?? ''),
+    ),
+  }
+}
+
+// disconnectAccount takes oauthTokens.id (a surrogate key), which
+// upsertGoogleCalendarToken doesn't return, so tests that need it re-select
+// the row by the provider-specific accountId instead.
+async function selectTokenByAccountId(accountId: string) {
+  const [token] = await db
+    .select()
+    .from(oauthTokens)
+    .where(
+      and(
+        eq(oauthTokens.provider, 'google_calendar'),
+        eq(oauthTokens.accountId, accountId),
+      ),
+    )
+    .limit(1)
+  assertDefined(token)
+  return token
 }
 
 beforeEach(() => {
@@ -468,54 +506,87 @@ describe('getValidAccessToken', () => {
   })
 })
 
-describe('getConnectionStatus / disconnect', () => {
-  it('reports connected without a live check once a token exists', async () => {
+describe('listConnectedAccounts', () => {
+  it('returns no accounts when no token exists', async () => {
+    expect(
+      (await listConnectedAccounts(googleCalendarProvider))._unsafeUnwrap(),
+    ).toEqual([])
+  })
+
+  it('returns the stored account without a live check once a token exists', async () => {
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
       accessToken: 'valid-token',
       refreshToken: 'refresh-token',
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     })
 
-    expect(
-      (await getConnectionStatus(googleCalendarProvider))._unsafeUnwrap(),
-    ).toEqual({
-      connected: true,
-    })
-  })
+    const accounts = (
+      await listConnectedAccounts(googleCalendarProvider)
+    )._unsafeUnwrap()
 
-  it('reports not connected when no token exists', async () => {
-    expect(
-      (await getConnectionStatus(googleCalendarProvider))._unsafeUnwrap(),
-    ).toEqual({
-      connected: false,
-    })
+    expect(normalizeAccounts(accounts)).toEqual([
+      { id: 'ID', label: 'user@example.com' },
+    ])
   })
+})
 
-  it('deletes the stored token on disconnect', async () => {
+describe('disconnectAccount', () => {
+  it('deletes the targeted account and leaves the sibling account connected', async () => {
+    const beforeCall = Date.now()
+
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
-      accessToken: 'valid-token',
-      refreshToken: 'refresh-token',
+      accountLabel: 'user1@example.com',
+      accessToken: 'access-token-1',
+      refreshToken: 'refresh-token-1',
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     })
-    ;(await disconnect(googleCalendarProvider))._unsafeUnwrap()
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-2',
+      accountLabel: 'user2@example.com',
+      accessToken: 'access-token-2',
+      refreshToken: 'refresh-token-2',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const target = await selectTokenByAccountId('google-sub-1')
 
     expect(
-      (await getConnectionStatus(googleCalendarProvider))._unsafeUnwrap(),
-    ).toEqual({
-      connected: false,
-    })
+      (
+        await disconnectAccount(googleCalendarProvider, target.id)
+      )._unsafeUnwrap(),
+    ).toBe(true)
+
+    const remaining = await db
+      .select()
+      .from(oauthTokens)
+      .where(eq(oauthTokens.provider, 'google_calendar'))
+
+    expect(remaining.map((token) => normalize(token, beforeCall))).toEqual([
+      {
+        id: 'ID',
+        provider: 'google_calendar',
+        accountId: 'google-sub-2',
+        accountLabel: 'user2@example.com',
+        accessToken: 'access-token-2',
+        refreshToken: 'refresh-token-2',
+        expiresAt: 'FUTURE',
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+      },
+    ])
   })
 })
 
 describe('getIntegrationSummary', () => {
-  it('reports configured true and connected false when no token exists', async () => {
+  it('reports configured true and no accounts when no token exists', async () => {
     expect(await getIntegrationSummary(googleCalendarProvider)).toEqual({
       id: 'google_calendar',
       displayName: 'Google Calendar',
       configured: true,
-      connected: false,
+      supportsMultipleAccounts: true,
+      accounts: [],
     })
   })
 
@@ -526,11 +597,12 @@ describe('getIntegrationSummary', () => {
       id: 'google_calendar',
       displayName: 'Google Calendar',
       configured: false,
-      connected: false,
+      supportsMultipleAccounts: true,
+      accounts: [],
     })
   })
 
-  it('reports connected true once a token exists', async () => {
+  it('reports the connected account once a token exists', async () => {
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accessToken: 'valid-token',
@@ -538,11 +610,44 @@ describe('getIntegrationSummary', () => {
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     })
 
-    expect(await getIntegrationSummary(googleCalendarProvider)).toEqual({
+    const summary = await getIntegrationSummary(googleCalendarProvider)
+
+    expect(normalizeSummary(summary)).toEqual({
       id: 'google_calendar',
       displayName: 'Google Calendar',
       configured: true,
-      connected: true,
+      supportsMultipleAccounts: true,
+      accounts: [{ id: 'ID', label: null }],
+    })
+  })
+
+  it('reports both accounts when two are connected', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user1@example.com',
+      accessToken: 'access-token-1',
+      refreshToken: 'refresh-token-1',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-2',
+      accountLabel: 'user2@example.com',
+      accessToken: 'access-token-2',
+      refreshToken: 'refresh-token-2',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    const summary = await getIntegrationSummary(googleCalendarProvider)
+
+    expect(normalizeSummary(summary)).toEqual({
+      id: 'google_calendar',
+      displayName: 'Google Calendar',
+      configured: true,
+      supportsMultipleAccounts: true,
+      accounts: [
+        { id: 'ID', label: 'user1@example.com' },
+        { id: 'ID', label: 'user2@example.com' },
+      ],
     })
   })
 })

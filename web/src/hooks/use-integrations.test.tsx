@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  useDisconnectIntegration,
+  useDisconnectIntegrationAccount,
   useIntegrationAuthUrl,
   useIntegrationsList,
 } from '#hooks/use-integrations'
@@ -13,7 +13,7 @@ import { assertDefined } from '#lib/test-utils'
 vi.mock('#lib/api', () => {
   const mockListGet = vi.fn()
   const mockAuthUrlGet = vi.fn()
-  const mockDelete = vi.fn()
+  const mockDeleteAccount = vi.fn()
 
   return {
     api: {
@@ -22,12 +22,14 @@ vi.mock('#lib/api', () => {
           $get: mockListGet,
           ':id': {
             'auth-url': { $get: mockAuthUrlGet },
-            $delete: mockDelete,
+            accounts: {
+              ':accountId': { $delete: mockDeleteAccount },
+            },
           },
         },
       },
     },
-    __mocks: { mockListGet, mockAuthUrlGet, mockDelete },
+    __mocks: { mockListGet, mockAuthUrlGet, mockDeleteAccount },
   }
 })
 
@@ -70,14 +72,15 @@ describe('useIntegrationsList', () => {
             id: 'github',
             displayName: 'GitHub',
             configured: true,
-            connected: true,
-            login: 'fohte',
+            supportsMultipleAccounts: false,
+            accounts: [{ id: 'token-1', label: 'fohte' }],
           },
           {
             id: 'google_calendar',
             displayName: 'Google Calendar',
             configured: true,
-            connected: false,
+            supportsMultipleAccounts: true,
+            accounts: [],
           },
         ]),
     })
@@ -92,14 +95,15 @@ describe('useIntegrationsList', () => {
         id: 'github',
         displayName: 'GitHub',
         configured: true,
-        connected: true,
-        login: 'fohte',
+        supportsMultipleAccounts: false,
+        accounts: [{ id: 'token-1', label: 'fohte' }],
       },
       {
         id: 'google_calendar',
         displayName: 'Google Calendar',
         configured: true,
-        connected: false,
+        supportsMultipleAccounts: true,
+        accounts: [],
       },
     ])
   })
@@ -157,20 +161,43 @@ describe('useIntegrationAuthUrl', () => {
   })
 })
 
-describe('useDisconnectIntegration', () => {
+describe('useDisconnectIntegrationAccount', () => {
+  it('calls the disconnect endpoint with the provider and account ids', async () => {
+    const mocks = await getMocks()
+    assertDefined(mocks['mockDeleteAccount']).mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: () => Promise.resolve({ message: 'Disconnected' }),
+    })
+
+    const { result } = renderHook(
+      () => useDisconnectIntegrationAccount('github'),
+      { wrapper },
+    )
+    result.current.mutate('some-account-id')
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
+    expect(assertDefined(mocks['mockDeleteAccount']).mock.calls).toEqual([
+      [{ param: { id: 'github', accountId: 'some-account-id' } }],
+    ])
+  })
+
   it('invalidates the list query on success', async () => {
     const mocks = await getMocks()
-    assertDefined(mocks['mockDelete']).mockResolvedValue({
+    assertDefined(mocks['mockDeleteAccount']).mockResolvedValue({
       status: 200,
       ok: true,
       json: () => Promise.resolve({ message: 'Disconnected' }),
     })
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
 
-    const { result } = renderHook(() => useDisconnectIntegration('github'), {
-      wrapper,
-    })
-    result.current.mutate()
+    const { result } = renderHook(
+      () => useDisconnectIntegrationAccount('github'),
+      { wrapper },
+    )
+    result.current.mutate('some-account-id')
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)

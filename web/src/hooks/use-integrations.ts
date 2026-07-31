@@ -41,12 +41,14 @@ export function useIntegrationAuthUrl(id: string, enabled: boolean) {
   })
 }
 
-export function useDisconnectIntegration(id: string) {
+export function useDisconnectIntegrationAccount(providerId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async () => {
-      const res = await api.api.integrations[':id'].$delete({ param: { id } })
+    mutationFn: async (accountId: string) => {
+      const res = await api.api.integrations[':id'].accounts[
+        ':accountId'
+      ].$delete({ param: { id: providerId, accountId } })
       assertStatus(res, 200)
       return res.json()
     },
