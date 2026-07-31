@@ -28,6 +28,17 @@ const calendarSubscriptionBodySchema = z.object({
   subscribed: z.boolean(),
 })
 
+// Shared by the two /accounts/:accountId/calendars* routes below: resolves
+// null both when the id doesn't exist and when it belongs to a different
+// provider, so callers 404 either way instead of leaking whether the id is
+// valid for some other provider.
+function resolveGoogleAccountToken(accountId: string) {
+  return getAccountToken(googleCalendarProvider, accountId).match(
+    (row) => row,
+    () => null,
+  )
+}
+
 // Maps a calendars-endpoint failure to an HTTP response: an auth rejection
 // is a normal, recoverable OAuth outcome (the client should prompt
 // re-connecting), so it gets its own 401 instead of falling into the
@@ -109,13 +120,7 @@ export const calendarApp = new Hono()
   .get('/accounts/:accountId/calendars', async (c) => {
     const accountId = c.req.param('accountId')
 
-    const token = await getAccountToken(
-      googleCalendarProvider,
-      accountId,
-    ).match(
-      (row) => row,
-      () => null,
-    )
+    const token = await resolveGoogleAccountToken(accountId)
     if (token == null) {
       return c.json({ error: 'Not found' }, 404)
     }
@@ -143,13 +148,7 @@ export const calendarApp = new Hono()
       const calendarId = c.req.param('calendarId')
       const { subscribed } = c.req.valid('json')
 
-      const token = await getAccountToken(
-        googleCalendarProvider,
-        accountId,
-      ).match(
-        (row) => row,
-        () => null,
-      )
+      const token = await resolveGoogleAccountToken(accountId)
       if (token == null) {
         return c.json({ error: 'Not found' }, 404)
       }

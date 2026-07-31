@@ -209,10 +209,13 @@ export const calendarSubscriptions = pgTable(
       .defaultNow(),
   },
   (table) => [
+    // No separate oauthTokenId-only index: this composite unique index's
+    // leftmost-prefix already covers every query in
+    // integrations/google-calendar/subscriptions.ts, all of which filter by
+    // oauthTokenId alone or by (oauthTokenId, calendarId).
     unique('uq_calendar_subscriptions_oauth_token_calendar').on(
       table.oauthTokenId,
       table.calendarId,
     ),
-    index('idx_calendar_subscriptions_oauth_token_id').on(table.oauthTokenId),
   ],
 )

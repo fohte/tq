@@ -973,6 +973,76 @@ describe('getEvents', () => {
     ])
   })
 
+  it("keeps a subscribed calendar's events when a sibling calendar for the same account fails", async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const token = await selectTokenByAccountId('google-sub-1')
+    await db.insert(calendarSubscriptions).values({
+      oauthTokenId: token.id,
+      calendarId: 'work@example.com',
+      displayName: 'Work',
+      color: '#ff0000',
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = requestUrl(input)
+      if (url.includes('/calendars/primary/events')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 'event-1',
+                  summary: 'Standup',
+                  start: { dateTime: '2026-03-22T09:00:00Z' },
+                  end: { dateTime: '2026-03-22T09:30:00Z' },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        )
+      }
+      if (url.includes('/calendars/work%40example.com/events')) {
+        return Promise.resolve(new Response('server error', { status: 500 }))
+      }
+      throw new Error(`unexpected fetch in test: url=${url}`)
+    })
+
+    const results = await getEvents(
+      '2026-03-22T00:00:00Z',
+      '2026-03-23T00:00:00Z',
+    )
+
+    expect(normalizeAccountResults(results)).toEqual([
+      {
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        ok: true,
+        value: [
+          {
+            id: 'event-1',
+            summary: 'Standup',
+            startTime: '2026-03-22T09:00:00Z',
+            endTime: '2026-03-22T09:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'primary',
+            calendarDisplayName: null,
+            calendarColor: null,
+          },
+        ],
+      },
+    ])
+  })
+
   it('resolves to zero events for an account with zero subscribed calendars, instead of falling back to its primary calendar', async () => {
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
@@ -1006,5 +1076,40 @@ describe('getEvents', () => {
       },
     ])
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('resolves the account as failed when every one of its subscribed calendars fails', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const token = await selectTokenByAccountId('google-sub-1')
+    await db.insert(calendarSubscriptions).values({
+      oauthTokenId: token.id,
+      calendarId: 'work@example.com',
+      displayName: 'Work',
+      color: '#ff0000',
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('server error', { status: 500 }),
+    )
+
+    const results = await getEvents(
+      '2026-03-22T00:00:00Z',
+      '2026-03-23T00:00:00Z',
+    )
+
+    expect(normalizeAccountResults(results)).toEqual([
+      {
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        ok: false,
+        value: new CalendarApiError('server error'),
+      },
+    ])
   })
 })

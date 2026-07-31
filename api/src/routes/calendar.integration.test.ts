@@ -421,7 +421,7 @@ describe('PUT /api/calendar/accounts/:accountId/calendars/:calendarId/subscripti
     })
   })
 
-  it('unsubscribing deletes the row and is idempotent when called again', async () => {
+  it('unsubscribing deletes the row', async () => {
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user@example.com',
@@ -431,16 +431,30 @@ describe('PUT /api/calendar/accounts/:accountId/calendars/:calendarId/subscripti
     })
     const token = await selectTokenByAccountId('google-sub-1')
 
-    const first = await putSubscription(token.id, 'primary', false)
-    const second = await putSubscription(token.id, 'primary', false)
+    const res = await putSubscription(token.id, 'primary', false)
 
-    expect(first.status).toBe(200)
-    expect(await first.json()).toEqual({
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
       calendarId: 'primary',
       subscribed: false,
     })
-    expect(second.status).toBe(200)
-    expect(await second.json()).toEqual({
+  })
+
+  it('unsubscribing is idempotent when called again', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const token = await selectTokenByAccountId('google-sub-1')
+    await putSubscription(token.id, 'primary', false)
+
+    const res = await putSubscription(token.id, 'primary', false)
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
       calendarId: 'primary',
       subscribed: false,
     })

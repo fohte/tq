@@ -1,5 +1,5 @@
 {
-  "id": "0e6820e3-f029-493b-a9b4-79d4e4b04fcc",
+  "id": "d299dd4c-5e51-43ba-8eb4-88352a714a43",
   "prevId": "2315956f-8c60-4e60-b508-edc8d65dee27",
   "version": "7",
   "dialect": "postgresql",
@@ -871,23 +871,7 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "idx_calendar_subscriptions_oauth_token_id": {
-          "name": "idx_calendar_subscriptions_oauth_token_id",
-          "columns": [
-            {
-              "expression": "oauth_token_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "calendar_subscriptions_oauth_token_id_oauth_tokens_id_fk": {
           "name": "calendar_subscriptions_oauth_token_id_oauth_tokens_id_fk",

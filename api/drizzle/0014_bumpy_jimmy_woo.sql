@@ -10,7 +10,6 @@ CREATE TABLE "calendar_subscriptions" (
 );
 --> statement-breakpoint
 ALTER TABLE "calendar_subscriptions" ADD CONSTRAINT "calendar_subscriptions_oauth_token_id_oauth_tokens_id_fk" FOREIGN KEY ("oauth_token_id") REFERENCES "public"."oauth_tokens"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "idx_calendar_subscriptions_oauth_token_id" ON "calendar_subscriptions" USING btree ("oauth_token_id");--> statement-breakpoint
 -- Preserves current behavior across the deploy: every connected account
 -- used to implicitly show its primary calendar's events (calendarId was
 -- hardcoded to 'primary'). Without this backfill, getEvents() only fetching

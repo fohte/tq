@@ -1,4 +1,5 @@
-import { type Result, ResultAsync } from 'neverthrow'
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
+import { errAsync, okAsync, type Result, ResultAsync } from 'neverthrow'
 
 import type { IntegrationConfigError } from '#integrations/errors'
 import { TokenRefreshError } from '#integrations/errors'
@@ -19,6 +20,14 @@ export interface AccountEventsResult {
   result: Result<ExternalEvent[], AccountEventsError>
 }
 
+// Fetches every subscribed calendar's events best-effort, mirroring
+// partitionAccountEvents one level down: one subscribed calendar failing
+// (e.g. access to a shared calendar was revoked) must not hide the other
+// subscribed calendars' events for the same account. ResultAsync.combine
+// can't be used here since it short-circuits on the first Err, discarding
+// any calendar that already resolved Ok. Only propagates an Err when every
+// subscribed calendar failed, so the account-level success/failure signal
+// partitionAccountEvents relies on is unchanged.
 function getSubscribedCalendarEvents(
   accessToken: string,
   oauthTokenId: string,
@@ -29,23 +38,55 @@ function getSubscribedCalendarEvents(
   AccountEventsError
 > {
   return listSubscribedCalendars(oauthTokenId).andThen((subscriptions) =>
-    ResultAsync.combine(
-      subscriptions.map((subscription) =>
-        googleCalendarProvider.capabilities.calendarEvents
-          .getEvents(accessToken, {
-            calendarId: subscription.calendarId,
-            timeMin,
-            timeMax,
-          })
-          .map((events) =>
-            events.map((event) => ({
-              ...event,
-              calendarDisplayName: subscription.displayName,
-              calendarColor: subscription.color,
-            })),
-          ),
+    ResultAsync.fromSafePromise(
+      Promise.all(
+        subscriptions.map((subscription) =>
+          googleCalendarProvider.capabilities.calendarEvents
+            .getEvents(accessToken, {
+              calendarId: subscription.calendarId,
+              timeMin,
+              timeMax,
+            })
+            .map((events) =>
+              events.map((event) => ({
+                ...event,
+                calendarDisplayName: subscription.displayName,
+                calendarColor: subscription.color,
+              })),
+            ),
+        ),
       ),
-    ).map((eventLists) => eventLists.flat()),
+    ).andThen((results) => {
+      const events: Omit<ExternalEvent, 'accountId' | 'accountLabel'>[] = []
+      let successCount = 0
+      let firstError: AccountEventsError | undefined
+
+      for (const result of results) {
+        result.match(
+          (calendarEvents) => {
+            successCount++
+            events.push(...calendarEvents)
+          },
+          (error) => {
+            firstError ??= error
+            captureWithFingerprint(
+              error,
+              'api.calendar.get-events-calendar-failed',
+              { extras: { oauthTokenId } },
+            )
+          },
+        )
+      }
+
+      if (
+        subscriptions.length > 0 &&
+        successCount === 0 &&
+        firstError != null
+      ) {
+        return errAsync(firstError)
+      }
+      return okAsync(events)
+    }),
   )
 }
 
