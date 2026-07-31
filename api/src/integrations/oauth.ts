@@ -16,6 +16,7 @@ import type {
   IntegrationProvider,
   OAuthTokenRow,
 } from '#integrations/types'
+import { firstOrErr, type RowNotFoundError } from '#lib/drizzle-utils'
 import type { TokenExchangeError } from '#lib/fetch-json'
 
 // Token refresh buffer: refresh 5 minutes before expiry
@@ -40,12 +41,19 @@ export function getAuthUrl(
 // this sentinel (see oauthTokens.accountId in db/schema.ts).
 const NO_ACCOUNT_IDENTITY_SENTINEL = ''
 
+export interface OAuthCallbackResult {
+  oauthTokenId: string
+}
+
 export function handleOAuthCallback(
   provider: IntegrationProvider,
   code: string,
 ): ResultAsync<
-  void,
-  IntegrationConfigError | TokenExchangeError | AccountIdentityError
+  OAuthCallbackResult,
+  | IntegrationConfigError
+  | TokenExchangeError
+  | AccountIdentityError
+  | RowNotFoundError
 > {
   return provider.oauth
     .getConfig()
@@ -92,8 +100,11 @@ export function handleOAuthCallback(
                   ? { expiresAt: payload.expiresAt }
                   : {}),
               },
-            }),
-        ).map(() => undefined),
+            })
+            .returning({ id: oauthTokens.id }),
+        ).andThen((rows) =>
+          firstOrErr(rows).map((row) => ({ oauthTokenId: row.id })),
+        ),
       )
     })
 }
@@ -286,4 +297,28 @@ export function disconnectAccount(
       )
       .returning({ id: oauthTokens.id }),
   ).map((rows) => rows.length > 0)
+}
+
+// Looks up a single account row scoped to `provider`, by the same
+// `accountRowId` (oauthTokens.id) that disconnectAccount takes. Resolves to
+// null both when the row doesn't exist and when it belongs to a different
+// provider, so callers can't accidentally act on another provider's account
+// through this id (see the IDOR-shaped 404 tests on
+// DELETE /api/integrations/:id/accounts/:accountId for the same concern).
+export function getAccountToken(
+  provider: IntegrationProvider,
+  accountRowId: string,
+): ResultAsync<OAuthTokenRow | null, never> {
+  return ResultAsync.fromSafePromise(
+    db
+      .select()
+      .from(oauthTokens)
+      .where(
+        and(
+          eq(oauthTokens.provider, provider.id),
+          eq(oauthTokens.id, accountRowId),
+        ),
+      )
+      .limit(1),
+  ).map((rows) => rows[0] ?? null)
 }

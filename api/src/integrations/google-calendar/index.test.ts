@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { db } from '#db/connection'
-import { oauthTokens } from '#db/schema'
+import { calendarSubscriptions, oauthTokens } from '#db/schema'
 import {
   AccountIdentityError,
   IntegrationConfigError,
@@ -69,17 +69,20 @@ function normalize(
 
 // Unwraps each account's neverthrow Result into a plain value so the whole
 // array (a mix of successful accounts and failed ones) can still be
-// asserted with a single `toEqual`, and sorts by accountId since
-// listAccountTokens/getEvents make no promise about row order.
+// asserted with a single `toEqual`, and sorts by accountId (and, within a
+// successful account, by event id) since listAccountTokens/getEvents and the
+// per-calendar fan-out in getSubscribedCalendarEvents make no promise about
+// row order.
 function normalizeAccountResults(results: AccountEventsResult[]) {
   return results
     .map((r) => ({
       accountId: r.accountId,
       accountLabel: r.accountLabel,
       ok: r.result.isOk(),
-      value: r.result.isOk()
-        ? r.result._unsafeUnwrap()
-        : r.result._unsafeUnwrapErr(),
+      value: r.result.match(
+        (events) => [...events].sort((a, b) => a.id.localeCompare(b.id)),
+        (error) => error,
+      ),
     }))
     .sort((a, b) => a.accountId.localeCompare(b.accountId))
 }
@@ -102,6 +105,16 @@ function normalizeSummary(
       (a.label ?? '').localeCompare(b.label ?? ''),
     ),
   }
+}
+
+// fetch's first parameter can be a Request, which has no meaningful
+// `toString()`, so this narrows to the cases fetchJson actually calls fetch
+// with (a plain URL string) or could (a URL/Request instance) instead of
+// stringifying `input` directly.
+function requestUrl(input: Parameters<typeof fetch>[0]): string {
+  if (typeof input === 'string') return input
+  if (input instanceof URL) return input.toString()
+  return input.url
 }
 
 // disconnectAccount takes oauthTokens.id (a surrogate key), which
@@ -704,6 +717,9 @@ describe('getEvents', () => {
             source: 'google_calendar',
             accountId: 'google-sub-1',
             accountLabel: 'user@example.com',
+            calendarId: 'primary',
+            calendarDisplayName: null,
+            calendarColor: null,
           },
           {
             id: 'event-2',
@@ -714,6 +730,9 @@ describe('getEvents', () => {
             source: 'google_calendar',
             accountId: 'google-sub-1',
             accountLabel: 'user@example.com',
+            calendarId: 'primary',
+            calendarDisplayName: null,
+            calendarColor: null,
           },
         ],
       },
@@ -764,6 +783,9 @@ describe('getEvents', () => {
             source: 'google_calendar',
             accountId: 'google-sub-1',
             accountLabel: 'user@example.com',
+            calendarId: 'primary',
+            calendarDisplayName: null,
+            calendarColor: null,
           },
         ],
       },
@@ -836,6 +858,9 @@ describe('getEvents', () => {
             source: 'google_calendar',
             accountId: 'google-sub-1',
             accountLabel: 'user1@example.com',
+            calendarId: 'primary',
+            calendarDisplayName: null,
+            calendarColor: null,
           },
         ],
       },
@@ -846,5 +871,140 @@ describe('getEvents', () => {
         value: new CalendarApiError('server error'),
       },
     ])
+  })
+
+  it('fetches events from every calendar the account is subscribed to, tagging each with its calendarId and subscription snapshot', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const token = await selectTokenByAccountId('google-sub-1')
+    await db.insert(calendarSubscriptions).values({
+      oauthTokenId: token.id,
+      calendarId: 'work@example.com',
+      displayName: 'Work',
+      color: '#ff0000',
+    })
+
+    // Keyed by the request URL's calendarId path segment rather than call
+    // order, since ResultAsync.combine makes no promise about which
+    // subscribed calendar's request goes out first.
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = requestUrl(input)
+      if (url.includes('/calendars/primary/events')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 'event-1',
+                  summary: 'Standup',
+                  start: { dateTime: '2026-03-22T09:00:00Z' },
+                  end: { dateTime: '2026-03-22T09:30:00Z' },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        )
+      }
+      if (url.includes('/calendars/work%40example.com/events')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 'event-2',
+                  summary: 'Planning',
+                  start: { dateTime: '2026-03-22T14:00:00Z' },
+                  end: { dateTime: '2026-03-22T14:30:00Z' },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        )
+      }
+      throw new Error(`unexpected fetch in test: url=${url}`)
+    })
+
+    const results = await getEvents(
+      '2026-03-22T00:00:00Z',
+      '2026-03-23T00:00:00Z',
+    )
+
+    expect(normalizeAccountResults(results)).toEqual([
+      {
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        ok: true,
+        value: [
+          {
+            id: 'event-1',
+            summary: 'Standup',
+            startTime: '2026-03-22T09:00:00Z',
+            endTime: '2026-03-22T09:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'primary',
+            calendarDisplayName: null,
+            calendarColor: null,
+          },
+          {
+            id: 'event-2',
+            summary: 'Planning',
+            startTime: '2026-03-22T14:00:00Z',
+            endTime: '2026-03-22T14:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'work@example.com',
+            calendarDisplayName: 'Work',
+            calendarColor: '#ff0000',
+          },
+        ],
+      },
+    ])
+  })
+
+  it('resolves to zero events for an account with zero subscribed calendars, instead of falling back to its primary calendar', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const token = await selectTokenByAccountId('google-sub-1')
+    // Removes the 'primary' subscription that upsertGoogleCalendarToken auto-
+    // seeds, leaving the account with an oauth_tokens row but zero
+    // calendar_subscriptions rows.
+    await db
+      .delete(calendarSubscriptions)
+      .where(eq(calendarSubscriptions.oauthTokenId, token.id))
+
+    // No calendar to fetch means getEvents must not call fetch at all.
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+
+    const results = await getEvents(
+      '2026-03-22T00:00:00Z',
+      '2026-03-23T00:00:00Z',
+    )
+
+    expect(normalizeAccountResults(results)).toEqual([
+      {
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        ok: true,
+        value: [],
+      },
+    ])
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 })

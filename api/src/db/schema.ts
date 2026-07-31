@@ -14,6 +14,8 @@ import {
   unique,
 } from 'drizzle-orm/pg-core'
 
+export * from '#db/schema/integrations'
+
 export const projects = pgTable(
   'projects',
   {
@@ -423,51 +425,6 @@ export const taskGithubLinks = pgTable(
     check(
       'task_github_links_state_kind_check',
       sql`${table.kind} = 'pull_request' OR ${table.state} <> 'merged'`,
-    ),
-  ],
-)
-
-export const oauthTokens = pgTable(
-  'oauth_tokens',
-  {
-    id: text('id')
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    provider: text('provider').notNull().default('google_calendar'),
-    // Identifies which account a row belongs to for providers that support
-    // multiple connected accounts (currently only google_calendar, keyed by
-    // the stable `sub` from Google's UserInfo endpoint; see
-    // IntegrationOAuth.identifyAccount in integrations/types.ts). GitHub has
-    // no such identity and is intentionally kept single-account: its rows
-    // use '' as a sentinel so the unique constraint below still caps it at
-    // one row per provider.
-    accountId: text('account_id').notNull(),
-    // Human-facing label for the account (Google's email); null for
-    // providers with no identifyAccount hook (e.g. GitHub).
-    accountLabel: text('account_label'),
-    accessToken: text('access_token').notNull(),
-    // Nullable: GitHub OAuth App tokens have neither a refresh token nor an
-    // expiry (see https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/token-expiration-and-revocation).
-    refreshToken: text('refresh_token'),
-    expiresAt: timestamp('expires_at', { withTimezone: true }),
-    createdAt: timestamp('created_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    unique('uq_oauth_tokens_provider_account_id').on(
-      table.provider,
-      table.accountId,
-    ),
-    // Exempts providers with no `oauth.refresh` in api/src/integrations/
-    // (tokens that never expire, so refresh metadata is meaningless). Add
-    // such a provider's id to this OR clause alongside 'github'.
-    check(
-      'oauth_tokens_refresh_metadata_required',
-      sql`${table.provider} = 'github' OR (${table.refreshToken} IS NOT NULL AND ${table.expiresAt} IS NOT NULL)`,
     ),
   ],
 )

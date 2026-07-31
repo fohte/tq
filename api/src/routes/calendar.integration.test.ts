@@ -1,9 +1,12 @@
+import { and, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
+import { db } from '#db/connection'
+import { oauthTokens } from '#db/schema'
 import { upsertGoogleCalendarToken } from '#integrations/google-calendar/testing'
 import type { ExternalEvent } from '#integrations/types'
-import { jsonBody, setupTestDb } from '#testing'
+import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
@@ -49,6 +52,52 @@ const invalidGrantResponse = () =>
     }),
     { status: 400 },
   )
+
+function putSubscription(
+  accountId: string,
+  calendarId: string,
+  subscribed: boolean,
+) {
+  return app.request(
+    `/api/calendar/accounts/${accountId}/calendars/${encodeURIComponent(calendarId)}/subscription`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscribed }),
+    },
+  )
+}
+
+// disconnectAccount/getAccountToken take oauthTokens.id (a surrogate key),
+// which upsertGoogleCalendarToken doesn't return, so tests that need it
+// re-select the row by the provider-specific accountId instead.
+async function selectTokenByAccountId(accountId: string) {
+  const [token] = await db
+    .select()
+    .from(oauthTokens)
+    .where(
+      and(
+        eq(oauthTokens.provider, 'google_calendar'),
+        eq(oauthTokens.accountId, accountId),
+      ),
+    )
+    .limit(1)
+  assertDefined(token)
+  return token
+}
+
+async function upsertGithubToken(accessToken: string) {
+  const [token] = await db
+    .insert(oauthTokens)
+    .values({ provider: 'github', accountId: '', accessToken })
+    .onConflictDoUpdate({
+      target: [oauthTokens.provider, oauthTokens.accountId],
+      set: { accessToken, updatedAt: new Date() },
+    })
+    .returning()
+  assertDefined(token)
+  return token
+}
 
 beforeEach(() => {
   setGoogleEnv()
@@ -143,6 +192,9 @@ describe('GET /api/calendar/events', () => {
         source: 'google_calendar',
         accountId: 'google-sub-1',
         accountLabel: 'user1@example.com',
+        calendarId: 'primary',
+        calendarDisplayName: null,
+        calendarColor: null,
       },
       {
         id: 'event-2',
@@ -153,6 +205,9 @@ describe('GET /api/calendar/events', () => {
         source: 'google_calendar',
         accountId: 'google-sub-2',
         accountLabel: 'user2@example.com',
+        calendarId: 'primary',
+        calendarDisplayName: null,
+        calendarColor: null,
       },
     ])
   })
@@ -217,6 +272,9 @@ describe('GET /api/calendar/events', () => {
         source: 'google_calendar',
         accountId: 'google-sub-1',
         accountLabel: 'user1@example.com',
+        calendarId: 'primary',
+        calendarDisplayName: null,
+        calendarColor: null,
       },
     ])
   })
@@ -249,5 +307,169 @@ describe('GET /api/calendar/events', () => {
     expect(await res.json()).toEqual({
       error: 'Google Calendar authentication is required',
     })
+  })
+})
+
+describe('GET /api/calendar/accounts/:accountId/calendars', () => {
+  it("merges the live calendar list with this account's subscription state", async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const token = await selectTokenByAccountId('google-sub-1')
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: 'primary',
+              summary: 'user@example.com',
+              primary: true,
+              backgroundColor: '#111111',
+            },
+            {
+              id: 'work@example.com',
+              summary: 'Work',
+              backgroundColor: '#ff0000',
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    )
+
+    const res = await app.request(
+      `/api/calendar/accounts/${token.id}/calendars`,
+    )
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual([
+      {
+        id: 'primary',
+        displayName: 'user@example.com',
+        color: '#111111',
+        primary: true,
+        subscribed: true,
+      },
+      {
+        id: 'work@example.com',
+        displayName: 'Work',
+        color: '#ff0000',
+        primary: false,
+        subscribed: false,
+      },
+    ])
+  })
+
+  it('returns 404 for a nonexistent account id', async () => {
+    const res = await app.request(
+      '/api/calendar/accounts/nonexistent-id/calendars',
+    )
+
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ error: 'Not found' })
+  })
+
+  it('returns 404 when the account id belongs to a different provider', async () => {
+    const token = await upsertGithubToken('valid-token')
+
+    const res = await app.request(
+      `/api/calendar/accounts/${token.id}/calendars`,
+    )
+
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ error: 'Not found' })
+  })
+})
+
+describe('PUT /api/calendar/accounts/:accountId/calendars/:calendarId/subscription', () => {
+  it("subscribing persists the live calendar's display name and color", async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const token = await selectTokenByAccountId('google-sub-1')
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: 'work@example.com',
+              summary: 'Work',
+              backgroundColor: '#ff0000',
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    )
+
+    const res = await putSubscription(token.id, 'work@example.com', true)
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      calendarId: 'work@example.com',
+      subscribed: true,
+    })
+  })
+
+  it('unsubscribing deletes the row and is idempotent when called again', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const token = await selectTokenByAccountId('google-sub-1')
+
+    const first = await putSubscription(token.id, 'primary', false)
+    const second = await putSubscription(token.id, 'primary', false)
+
+    expect(first.status).toBe(200)
+    expect(await first.json()).toEqual({
+      calendarId: 'primary',
+      subscribed: false,
+    })
+    expect(second.status).toBe(200)
+    expect(await second.json()).toEqual({
+      calendarId: 'primary',
+      subscribed: false,
+    })
+  })
+
+  it('returns 404 when subscribing to a calendarId absent from the live calendarList', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const token = await selectTokenByAccountId('google-sub-1')
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ items: [] }), { status: 200 }),
+    )
+
+    const res = await putSubscription(token.id, 'unknown@example.com', true)
+
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ error: 'Not found' })
+  })
+
+  it('returns 404 for a nonexistent account id', async () => {
+    const res = await putSubscription('nonexistent-id', 'primary', true)
+
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ error: 'Not found' })
   })
 })
