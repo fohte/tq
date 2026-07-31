@@ -260,7 +260,7 @@ function PageInlineEditor({
   defaultValue: string
 }) {
   const updatePage = useUpdateTaskPage(taskId)
-  const { onChange } = useDebouncedSave((markdown) => {
+  const { onChange, flush } = useDebouncedSave((markdown) => {
     updatePage.mutate({ pageId, input: { content: markdown } })
   })
 
@@ -270,6 +270,7 @@ function PageInlineEditor({
         defaultValue={defaultValue}
         placeholder="Write something..."
         onChange={onChange}
+        viewEditToggle={{ onExitEditMode: flush }}
       />
     </div>
   )

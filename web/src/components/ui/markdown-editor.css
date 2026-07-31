@@ -92,9 +92,9 @@
   border-radius: 4px !important;
 }
 
-/* Inline reference live preview (e.g. #123 task mentions): the raw source
-   text is hidden and replaced by a chip widget wherever the selection isn't
-   touching it. */
+/* Inline reference live preview (e.g. #123 task mentions): in view mode
+   (see view-mode.ts) the raw source text is hidden and replaced by a chip
+   widget. */
 .inline-reference-source {
   display: none;
 }
@@ -117,5 +117,12 @@
 }
 
 .task-mention-autocomplete[data-show='false'] {
+  display: none;
+}
+
+/* BlockEdit's drag handle feature has no readonly/editable awareness of its
+   own (@milkdown/crepe/src/feature/block-edit/), so it would otherwise still
+   appear on hover in view mode. Force-hide it there. */
+.milkdown-wrapper[data-view-mode='view'] .milkdown-block-handle {
   display: none;
 }

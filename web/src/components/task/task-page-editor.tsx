@@ -79,9 +79,10 @@ export function PageEditorInner({
     }
   }, [title, defaultTitle, pageId, updatePage])
 
-  const { onChange: handleContentChange } = useDebouncedSave((markdown) => {
-    updatePage.mutate({ pageId, input: { content: markdown } })
-  })
+  const { onChange: handleContentChange, flush: flushContent } =
+    useDebouncedSave((markdown) => {
+      updatePage.mutate({ pageId, input: { content: markdown } })
+    })
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-3.5 p-6">
@@ -117,6 +118,7 @@ export function PageEditorInner({
           defaultValue={defaultContent}
           placeholder="Write something..."
           onChange={handleContentChange}
+          viewEditToggle={{ onExitEditMode: flushContent }}
         />
       </div>
     </div>
