@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '#components/ui/dialog'
+import { Input } from '#components/ui/input'
 import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
 import {
   useCreateTaskFromGithubUrl,
@@ -105,7 +106,7 @@ export function GithubIssueLinkModal({
         </DialogHeader>
 
         <div className="flex flex-col gap-3">
-          <input
+          <Input
             type="text"
             value={url}
             onChange={(e) => {
@@ -121,7 +122,6 @@ export function GithubIssueLinkModal({
             }}
             placeholder="https://github.com/owner/repo/issues/123"
             autoFocus
-            className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-primary/50"
           />
 
           {resolveUrl.isPending && (
