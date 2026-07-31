@@ -58,6 +58,22 @@ function ContextBadge({ context }: { context: Task['context'] }) {
   return <Chip>{context}</Chip>
 }
 
+function rowWrapperClassName(isInProgress: boolean, isCompleted: boolean) {
+  return cn(
+    'flex items-center gap-2 border-b border-border border-l-2 border-l-transparent px-3 py-2',
+    isInProgress && 'border-l-primary bg-card',
+    isCompleted && 'opacity-[0.55]',
+  )
+}
+
+function rowTitleClassName(isInProgress: boolean, isCompleted: boolean) {
+  return cn(
+    'truncate text-sm',
+    isInProgress ? 'font-semibold' : 'font-normal',
+    isCompleted && 'text-muted-foreground line-through',
+  )
+}
+
 interface TaskRowBaseProps {
   id: string
   title: string
@@ -82,25 +98,13 @@ function TaskRowContent({
   const isCompleted = status === 'completed'
 
   return (
-    <div
-      className={cn(
-        'flex items-center gap-2 border-b border-border border-l-2 border-l-transparent px-3 py-2',
-        isInProgress && 'border-l-primary bg-card',
-        isCompleted && 'opacity-[0.55]',
-      )}
-    >
+    <div className={rowWrapperClassName(isInProgress, isCompleted)}>
       <TaskStatusPicker status={status} onStatusChange={handleStatusChange} />
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         {/* TopRow */}
         <div className="flex items-center gap-2 overflow-hidden">
-          <span
-            className={cn(
-              'truncate text-sm',
-              isInProgress ? 'font-semibold' : 'font-normal',
-              isCompleted && 'text-muted-foreground line-through',
-            )}
-          >
+          <span className={rowTitleClassName(isInProgress, isCompleted)}>
             {title}
           </span>
           {parentNumber != null && (
@@ -199,11 +203,7 @@ export function TreeTaskRow({
         className="block transition-colors hover:bg-secondary/30"
       >
         <div
-          className={cn(
-            'flex items-center gap-2 border-b border-border border-l-2 border-l-transparent px-3 py-2',
-            isInProgress && 'border-l-primary bg-card',
-            isCompleted && 'opacity-[0.55]',
-          )}
+          className={rowWrapperClassName(isInProgress, isCompleted)}
           style={{ paddingLeft: `${String(depth * 24 + 12)}px` }}
         >
           {/* Expand/collapse toggle */}
@@ -232,13 +232,7 @@ export function TreeTaskRow({
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             {/* TopRow */}
             <div className="flex items-center gap-2 overflow-hidden">
-              <span
-                className={cn(
-                  'truncate text-sm',
-                  isInProgress ? 'font-semibold' : 'font-normal',
-                  isCompleted && 'text-muted-foreground line-through',
-                )}
-              >
+              <span className={rowTitleClassName(isInProgress, isCompleted)}>
                 {node.title}
               </span>
             </div>

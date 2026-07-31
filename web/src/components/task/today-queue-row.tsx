@@ -5,6 +5,7 @@ import { useRef, useState } from 'react'
 
 import { TaskRow } from '#components/task/task-row'
 import { Button } from '#components/ui/button'
+import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
 import type { Task } from '#hooks/use-tasks'
 import { useUpdateTask } from '#hooks/use-tasks'
@@ -90,17 +91,18 @@ export function TodayQueueRow({
             className="h-6 w-16 shrink-0 py-0.5 font-mono text-xs"
           />
         ) : (
-          <button
-            type="button"
+          <Chip
+            as="button"
+            size="md"
             onClick={() => {
               setEstimateInput('')
               setIsEditingEstimate(true)
             }}
             title="No estimate set — excluded from auto-scheduling"
-            className="shrink-0 whitespace-nowrap border border-destructive px-1.5 py-0.5 font-mono text-[11px] text-destructive"
+            className="shrink-0 whitespace-nowrap border-destructive text-destructive"
           >
             No estimate
-          </button>
+          </Chip>
         ))}
 
       <Button
