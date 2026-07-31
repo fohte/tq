@@ -27,18 +27,32 @@ const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
 
 // `number` is a per-suite-run sequential value (the sequence isn't rolled
 // back with the surrounding test transaction), so it's normalized like the
-// uuid/timestamp fields rather than asserted on directly.
-function normalizeDynamicValues(value: unknown, key?: string): unknown {
+// uuid/timestamp fields rather than asserted on directly. `skipKeys` opts a
+// key out of uuid/timestamp normalization for callers that already know its
+// real value (e.g. a page/comment response's `taskId`, or an updated
+// resource's own `id`) and want to assert on that value directly instead of
+// blurring it into a placeholder.
+function normalizeDynamicValues(
+  value: unknown,
+  key: string | undefined,
+  skipKeys: ReadonlySet<string>,
+): unknown {
+  if (key != null && skipKeys.has(key)) return value
   if (key === 'number' && typeof value === 'number') return '<number>'
   if (typeof value === 'string') {
     if (UUID_PATTERN.test(value)) return '<uuid>'
     if (TIMESTAMP_PATTERN.test(value)) return '<timestamp>'
     return value
   }
-  if (Array.isArray(value)) return value.map((v) => normalizeDynamicValues(v))
+  if (Array.isArray(value)) {
+    return value.map((v) => normalizeDynamicValues(v, undefined, skipKeys))
+  }
   if (value != null && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value).map(([k, v]) => [k, normalizeDynamicValues(v, k)]),
+      Object.entries(value).map(([k, v]) => [
+        k,
+        normalizeDynamicValues(v, k, skipKeys),
+      ]),
     )
   }
   return value
@@ -53,8 +67,15 @@ function parseToolJson(result: CallToolResult): unknown {
   return JSON.parse(first.text)
 }
 
-function parseToolData(result: CallToolResult): unknown {
-  return normalizeDynamicValues(parseToolJson(result))
+function parseToolData(
+  result: CallToolResult,
+  skipKeys: readonly string[] = [],
+): unknown {
+  return normalizeDynamicValues(
+    parseToolJson(result),
+    undefined,
+    new Set(skipKeys),
+  )
 }
 
 let client: Client
@@ -399,9 +420,9 @@ describe('create_page tool', () => {
       content: 'Hello',
     })
 
-    expect(parseToolData(result)).toEqual({
+    expect(parseToolData(result, ['taskId'])).toEqual({
       id: '<uuid>',
-      taskId: '<uuid>',
+      taskId: task.id,
       title: 'My Page',
       content: 'Hello',
       sortOrder: 0,
@@ -420,9 +441,9 @@ describe('create_page tool', () => {
       agent: 'claude-opus-5',
     })
 
-    expect(parseToolData(result)).toEqual({
+    expect(parseToolData(result, ['taskId'])).toEqual({
       id: '<uuid>',
-      taskId: '<uuid>',
+      taskId: task.id,
       title: 'My Page',
       content: '',
       sortOrder: 0,
@@ -456,9 +477,9 @@ describe('update_page tool', () => {
       title: 'Updated title',
     })
 
-    expect(parseToolData(result)).toEqual({
-      id: '<uuid>',
-      taskId: '<uuid>',
+    expect(parseToolData(result, ['id', 'taskId'])).toEqual({
+      id: page.id,
+      taskId: task.id,
       title: 'Updated title',
       content: 'Original content',
       sortOrder: 0,
@@ -479,9 +500,9 @@ describe('update_page tool', () => {
       agent: 'claude-opus-5',
     })
 
-    expect(parseToolData(result)).toEqual({
-      id: '<uuid>',
-      taskId: '<uuid>',
+    expect(parseToolData(result, ['id', 'taskId'])).toEqual({
+      id: page.id,
+      taskId: task.id,
       title: 'Original title',
       content: 'Updated content',
       sortOrder: 0,
@@ -516,9 +537,9 @@ describe('create_comment tool', () => {
       content: 'A comment',
     })
 
-    expect(parseToolData(result)).toEqual({
+    expect(parseToolData(result, ['taskId'])).toEqual({
       id: '<uuid>',
-      taskId: '<uuid>',
+      taskId: task.id,
       content: 'A comment',
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
@@ -535,9 +556,9 @@ describe('create_comment tool', () => {
       agent: 'claude-opus-5',
     })
 
-    expect(parseToolData(result)).toEqual({
+    expect(parseToolData(result, ['taskId'])).toEqual({
       id: '<uuid>',
-      taskId: '<uuid>',
+      taskId: task.id,
       content: 'A comment',
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
@@ -569,9 +590,9 @@ describe('update_comment tool', () => {
       content: 'Updated content',
     })
 
-    expect(parseToolData(result)).toEqual({
-      id: '<uuid>',
-      taskId: '<uuid>',
+    expect(parseToolData(result, ['id', 'taskId'])).toEqual({
+      id: comment.id,
+      taskId: task.id,
       content: 'Updated content',
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
@@ -590,9 +611,9 @@ describe('update_comment tool', () => {
       agent: 'claude-opus-5',
     })
 
-    expect(parseToolData(result)).toEqual({
-      id: '<uuid>',
-      taskId: '<uuid>',
+    expect(parseToolData(result, ['id', 'taskId'])).toEqual({
+      id: comment.id,
+      taskId: task.id,
       content: 'Updated content',
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
