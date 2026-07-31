@@ -41,6 +41,23 @@ const mockResults = [
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
   },
+  {
+    id: '3',
+    title: 'Plan weekend trip',
+    description: null,
+    status: 'todo' as 'todo' | 'in_progress' | 'completed',
+    context: 'personal' as 'work' | 'personal' | 'dev',
+    startDate: null,
+    dueDate: null,
+    estimatedMinutes: 60,
+    parentId: null,
+    projectId: null,
+    sortOrder: 0,
+    recurrenceRuleId: null,
+    recurrenceRule: null,
+    createdAt: '2026-03-20T00:00:00.000Z',
+    updatedAt: '2026-03-20T00:00:00.000Z',
+  },
 ]
 
 let mockSearchReturn = {
@@ -234,6 +251,14 @@ describe('SearchView', () => {
       renderSearchView()
 
       expect(screen.getByText('work')).toBeInTheDocument()
+    })
+
+    it('displays context badge for personal tasks', () => {
+      mockSearchReturn.hasQuery = true
+      mockSearchReturn.results = [atIndex(mockResults, 2)]
+      renderSearchView()
+
+      expect(screen.getByText('personal')).toBeInTheDocument()
     })
 
     it('displays estimated time', () => {

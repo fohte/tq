@@ -11,8 +11,8 @@ const mockTasks = [
     id: '00000000-0000-0000-0000-000000000001',
     title: 'Implement task list UI',
     description: null,
-    status: 'todo' as const,
-    context: 'dev' as const,
+    status: 'todo' as 'todo' | 'in_progress' | 'completed',
+    context: 'dev' as 'work' | 'personal' | 'dev',
     startDate: null,
     dueDate: null,
     estimatedMinutes: 120,
@@ -28,8 +28,8 @@ const mockTasks = [
     id: '00000000-0000-0000-0000-000000000002',
     title: 'Review pull request',
     description: null,
-    status: 'in_progress' as const,
-    context: 'work' as const,
+    status: 'in_progress' as 'todo' | 'in_progress' | 'completed',
+    context: 'work' as 'work' | 'personal' | 'dev',
     startDate: null,
     dueDate: null,
     estimatedMinutes: 30,
@@ -42,6 +42,24 @@ const mockTasks = [
     updatedAt: '2026-03-20T00:00:00.000Z',
   },
 ]
+
+const personalTask = {
+  id: '00000000-0000-0000-0000-000000000003',
+  title: 'Plan weekend trip',
+  description: null,
+  status: 'todo' as 'todo' | 'in_progress' | 'completed',
+  context: 'personal' as 'work' | 'personal' | 'dev',
+  startDate: null,
+  dueDate: null,
+  estimatedMinutes: 60,
+  parentId: null,
+  projectId: null,
+  sortOrder: 2,
+  recurrenceRuleId: null,
+  recurrenceRule: null,
+  createdAt: '2026-03-20T00:00:00.000Z',
+  updatedAt: '2026-03-20T00:00:00.000Z',
+}
 
 const mockSuggestions = [
   { value: 'is:todo', display: 'Todo', category: 'is' },
@@ -135,6 +153,18 @@ describe('SearchModal', () => {
 
     expect(screen.getByText('Implement task list UI')).toBeInTheDocument()
     expect(screen.getByText('Review pull request')).toBeInTheDocument()
+  })
+
+  it('displays context badge for personal tasks', async () => {
+    mockSearchData = [personalTask]
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    const input = screen.getByLabelText('Search tasks')
+    await user.type(input, 'trip')
+
+    expect(screen.getByText('personal')).toBeInTheDocument()
   })
 
   it('shows suggestions when data is available', async () => {

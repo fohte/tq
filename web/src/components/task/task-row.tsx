@@ -53,8 +53,6 @@ function ActionArea({
 }
 
 function ContextBadge({ context }: { context: Task['context'] }) {
-  if (context === 'personal') return null
-
   return <Chip>{context}</Chip>
 }
 

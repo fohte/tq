@@ -247,6 +247,16 @@ describe('TreeTaskRow', () => {
     expect(screen.getByText('tq#42')).toBeInTheDocument()
   })
 
+  it('shows a context badge for personal tasks', () => {
+    renderTree(makeNode({ context: 'personal' }))
+    expect(screen.getByText('personal')).toBeInTheDocument()
+  })
+
+  it('shows a context badge for work tasks', () => {
+    renderTree(makeNode({ context: 'work' }))
+    expect(screen.getByText('work')).toBeInTheDocument()
+  })
+
   it('updates the status via useUpdateTaskStatus when a non-completed status is selected', async () => {
     const user = userEvent.setup()
     renderTree(makeNode({ status: 'todo' }))
