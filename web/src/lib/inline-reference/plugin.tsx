@@ -9,16 +9,14 @@ import type {
 import { useWidgetViewContext } from '@prosemirror-adapter/react'
 import { useEffect, useRef } from 'react'
 
-import { rangeTouchesSelection } from '#lib/inline-reference/selection-overlap'
 import { collectTextBlockRuns } from '#lib/inline-reference/text-scan'
 import type { InlineReferenceProvider } from '#lib/inline-reference/types'
+import { getInlineReferenceViewMode } from '#lib/inline-reference/view-mode'
 
 function buildDecorations<TData>(
   provider: InlineReferenceProvider<TData>,
   createWidget: ReturnType<CreateReactWidgetView>,
   doc: Node,
-  selectionFrom: number,
-  selectionTo: number,
 ): Decoration[] {
   const decorations: Decoration[] = []
 
@@ -26,8 +24,6 @@ function buildDecorations<TData>(
     for (const match of provider.findMatches(run.text)) {
       const from = run.posAt(match.start)
       const to = run.posAt(match.end)
-
-      if (rangeTouchesSelection(selectionFrom, selectionTo, from, to)) continue
 
       decorations.push(
         Decoration.inline(from, to, { class: 'inline-reference-source' }),
@@ -94,9 +90,10 @@ function createChipWidgetComponent<TData>(
   }
 }
 
-// Wires one InlineReferenceProvider up as a Milkdown/ProseMirror plugin: text
-// matching its pattern is hidden and replaced by the provider's chip widget,
-// except where the selection touches it (so it stays plain, editable text).
+// Wires one InlineReferenceProvider up as a Milkdown/ProseMirror plugin: in
+// 'view' mode (see view-mode.ts), text matching its pattern is hidden and
+// replaced by the provider's chip widget; in 'edit' mode, decorations are
+// suppressed entirely and the raw Markdown source is shown as-is.
 // `widgetViewFactory` comes from @prosemirror-adapter/react's
 // useWidgetViewFactory(), so this must be called from within a component
 // tree that has a ProsemirrorAdapterProvider ancestor.
@@ -114,16 +111,12 @@ export function createInlineReferencePlugin<TData>(
       key: new PluginKey(`inline-reference-${provider.id}`),
       props: {
         decorations(state) {
-          const { doc, selection } = state
+          if (getInlineReferenceViewMode(state) !== 'view')
+            return DecorationSet.empty
+          const { doc } = state
           return DecorationSet.create(
             doc,
-            buildDecorations(
-              provider,
-              createWidget,
-              doc,
-              selection.from,
-              selection.to,
-            ),
+            buildDecorations(provider, createWidget, doc),
           )
         },
       },

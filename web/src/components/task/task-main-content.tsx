@@ -202,7 +202,7 @@ function TaskDescription({
   author?: TaskDetail['descriptionAuthor']
 }) {
   const updateTask = useUpdateTask()
-  const { onChange } = useDebouncedSave((markdown) => {
+  const { onChange, flush } = useDebouncedSave((markdown) => {
     const desc = markdown.trim() || null
     updateTask.mutate({ id: taskId, input: { description: desc } })
   })
@@ -215,6 +215,7 @@ function TaskDescription({
           defaultValue={defaultValue ?? ''}
           placeholder="Add description..."
           onChange={onChange}
+          viewEditToggle={{ onExitEditMode: flush }}
         />
       </div>
     </div>

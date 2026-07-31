@@ -278,7 +278,7 @@ function ProjectDescription({
   defaultValue: string | null
 }) {
   const updateProject = useUpdateProject()
-  const { onChange } = useDebouncedSave((markdown) => {
+  const { onChange, flush } = useDebouncedSave((markdown) => {
     const desc = markdown.trim() || null
     updateProject.mutate({ id: projectId, input: { description: desc } })
   })
@@ -291,6 +291,7 @@ function ProjectDescription({
           defaultValue={defaultValue ?? ''}
           placeholder="Add description..."
           onChange={onChange}
+          viewEditToggle={{ onExitEditMode: flush }}
         />
       </div>
     </div>

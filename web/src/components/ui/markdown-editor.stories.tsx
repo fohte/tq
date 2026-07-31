@@ -133,7 +133,10 @@ function LiveReferencesProviders({ children }: { children: ReactNode }) {
 // Exercises the real Crepe editor end to end (not just the plugin mechanism
 // or an isolated Chip component): markdown parsing, both InlineReference
 // providers scanning the same textblock, and their chips coexisting without
-// interfering with each other.
+// interfering with each other. `viewEditToggle` is required for chips to
+// render at all — an always-editable editor (no `viewEditToggle`, e.g.
+// CommentInput) stays in 'edit' mode and only ever shows raw Markdown
+// source (see markdown-editor.tsx's CrepeEditorProps.mode comment).
 export const WithLiveReferences: Story = {
   render: (args) => {
     seedLiveReferenceFixtures()
@@ -145,6 +148,7 @@ export const WithLiveReferences: Story = {
   },
   args: {
     defaultValue: `See #${String(MENTION_FIXTURE_NUMBER)} and ${GITHUB_URL_FIXTURE} for details.`,
+    viewEditToggle: {},
   },
   play: async ({ canvas }) => {
     await expect(
@@ -153,5 +157,39 @@ export const WithLiveReferences: Story = {
     await expect(
       canvas.findByText(GITHUB_URL_FIXTURE_TITLE),
     ).resolves.toBeVisible()
+  },
+}
+
+// Clicking anywhere in the read-only view switches to edit mode: chips
+// disappear and the raw Markdown source they were hiding becomes visible
+// instead. Clicks land on the paragraph itself rather than on the chip, since
+// hovering the chip opens its own preview popup that would otherwise
+// intercept the click.
+export const ClickToEditRevealsSource: Story = {
+  render: (args) => {
+    seedLiveReferenceFixtures()
+    return (
+      <LiveReferencesProviders>
+        <MarkdownEditor {...args} />
+      </LiveReferencesProviders>
+    )
+  },
+  args: {
+    defaultValue: `See #${String(MENTION_FIXTURE_NUMBER)} for details.`,
+    viewEditToggle: {},
+  },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await canvas.findByText(MENTION_FIXTURE_TITLE)
+    const paragraph = canvasElement.querySelector('.milkdown .ProseMirror p')
+    if (paragraph == null) throw new Error('editor always renders a paragraph')
+
+    await userEvent.click(paragraph)
+
+    await expect(
+      canvas.findByText(new RegExp(`#${String(MENTION_FIXTURE_NUMBER)}`)),
+    ).resolves.toBeVisible()
+    await expect(
+      canvas.queryByText(MENTION_FIXTURE_TITLE),
+    ).not.toBeInTheDocument()
   },
 }

@@ -1,12 +1,13 @@
 import type { Ctx } from '@milkdown/kit/ctx'
 import { Schema } from '@milkdown/kit/prose/model'
-import { EditorState, TextSelection } from '@milkdown/kit/prose/state'
+import { EditorState } from '@milkdown/kit/prose/state'
 import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import type { CreateReactWidgetView } from '@prosemirror-adapter/react'
 import { describe, expect, it } from 'vitest'
 
 import { createInlineReferencePlugin } from '#lib/inline-reference/plugin'
 import type { InlineReferenceProvider } from '#lib/inline-reference/types'
+import { createInlineReferenceViewModePlugin } from '#lib/inline-reference/view-mode'
 
 const schema = new Schema({
   nodes: {
@@ -59,17 +60,18 @@ function docWithText(text: string) {
   ])
 }
 
+// `$prose`-wrapped plugins (both `createInlineReferencePlugin` and
+// `createInlineReferenceViewModePlugin`) need a real `Ctx` to resolve schema
+// timing and register the plugin, but the wrapped callbacks themselves never
+// read `ctx`, so a stub satisfying only the two methods `$prose` calls is
+// enough to unwrap the underlying `Plugin`.
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- stub only exercises .wait/.update, see comment above
+const fakeCtx = {
+  wait: async () => {},
+  update: () => {},
+} as unknown as Ctx
+
 async function buildPlugin() {
-  // `createInlineReferencePlugin` wraps a plain `prosemirror-state` `Plugin`
-  // in Milkdown's `$prose` lifecycle, which needs a real `Ctx` to resolve
-  // schema timing and register the plugin. The wrapped callback itself never
-  // reads `ctx`, so a stub satisfying only the two methods `$prose` calls is
-  // enough to unwrap the underlying `Plugin`.
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- stub only exercises .wait/.update, see comment above
-  const fakeCtx = {
-    wait: async () => {},
-    update: () => {},
-  } as unknown as Ctx
   const wrapped = createInlineReferencePlugin(
     fakeProvider,
     fakeWidgetViewFactory(),
@@ -78,24 +80,17 @@ async function buildPlugin() {
   return wrapped.plugin()
 }
 
-// Defaults the selection to the doc's end, away from any match, since a
-// decoration is suppressed wherever the selection touches it (see
-// selection-overlap.ts) — most cases here care about the decorations
-// themselves, not that suppression rule.
-async function decorationsFor(
-  text: string,
-  selection?: { from: number; to: number },
-) {
+async function buildModePlugin(mode: 'view' | 'edit') {
+  const wrapped = createInlineReferenceViewModePlugin(mode)
+  await wrapped(fakeCtx)()
+  return wrapped.plugin()
+}
+
+async function decorationsFor(text: string, mode: 'view' | 'edit') {
   const plugin = await buildPlugin()
+  const modePlugin = await buildModePlugin(mode)
   const doc = docWithText(text)
-  const sel = selection ?? {
-    from: TextSelection.atEnd(doc).from,
-    to: TextSelection.atEnd(doc).to,
-  }
-  const initialState = EditorState.create({ doc, schema })
-  const state = initialState.apply(
-    initialState.tr.setSelection(TextSelection.create(doc, sel.from, sel.to)),
-  )
+  const state = EditorState.create({ doc, schema, plugins: [modePlugin] })
 
   const decorationsProp = plugin.props.decorations
   if (decorationsProp == null)
@@ -117,7 +112,7 @@ function normalize(decorations: readonly Decoration[]) {
 
 describe('createInlineReferencePlugin', () => {
   it('hides the raw match and creates a widget carrying its data and raw text', async () => {
-    const decorations = await decorationsFor('see @1 here')
+    const decorations = await decorationsFor('see @1 here', 'view')
 
     expect(normalize(decorations)).toEqual([
       {
@@ -130,7 +125,7 @@ describe('createInlineReferencePlugin', () => {
   })
 
   it('creates a decoration pair for each of multiple matches', async () => {
-    const decorations = await decorationsFor('see @1 and @2 here')
+    const decorations = await decorationsFor('see @1 and @2 here', 'view')
 
     expect(normalize(decorations)).toEqual([
       {
@@ -148,13 +143,8 @@ describe('createInlineReferencePlugin', () => {
     ])
   })
 
-  it('suppresses the decoration pair for a match the selection touches', async () => {
-    // "see @1 here": the match spans doc positions [5, 7); a collapsed
-    // selection at 6 sits inside it.
-    const decorations = await decorationsFor('see @1 here', {
-      from: 6,
-      to: 6,
-    })
+  it('produces no decorations in edit mode', async () => {
+    const decorations = await decorationsFor('see @1 here', 'edit')
 
     expect(decorations).toEqual([])
   })

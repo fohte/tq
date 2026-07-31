@@ -70,7 +70,7 @@ function CommentCard({
 }) {
   const updateComment = useUpdateComment(taskId)
   const deleteComment = useDeleteComment(taskId)
-  const { onChange, cancel } = useDebouncedSave((markdown) => {
+  const { onChange, cancel, flush } = useDebouncedSave((markdown) => {
     const trimmed = markdown.trim()
     if (trimmed) {
       updateComment.mutate({ commentId: comment.id, content: trimmed })
@@ -111,7 +111,11 @@ function CommentCard({
 
         {/* Body - inline editable with debounced auto-save */}
         <div className="text-[13px] leading-relaxed text-foreground">
-          <MarkdownEditor defaultValue={comment.content} onChange={onChange} />
+          <MarkdownEditor
+            defaultValue={comment.content}
+            onChange={onChange}
+            viewEditToggle={{ onExitEditMode: flush }}
+          />
         </div>
       </div>
     </div>
