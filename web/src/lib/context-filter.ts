@@ -4,7 +4,7 @@ export type ContextFilterMode = 'all' | 'work' | 'personal'
  * Map filter mode to API context values.
  * - 'all' -> undefined (no filter)
  * - 'work' -> 'work'
- * - 'personal' -> undefined (filter client-side since personal includes 'personal' + 'dev')
+ * - 'personal' -> undefined (filtered client-side, see matchesContextFilter)
  */
 export function filterModeToApiContext(
   mode: ContextFilterMode,
@@ -20,7 +20,6 @@ export function filterModeToApiContext(
 
 /**
  * Client-side filter for tasks based on context mode.
- * Used for 'personal' mode which includes both 'personal' and 'dev' contexts.
  */
 export function matchesContextFilter(
   taskContext: string,
@@ -32,7 +31,7 @@ export function matchesContextFilter(
     case 'work':
       return taskContext === 'work'
     case 'personal':
-      return taskContext === 'personal' || taskContext === 'dev'
+      return taskContext === 'personal'
   }
 }
 

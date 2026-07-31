@@ -101,3 +101,11 @@ export const Empty: SubpageStory = {
     defaultContent: '',
   },
 }
+
+export const DefaultSP: SubpageStory = {
+  args: Default.args,
+  parameters: {
+    layout: 'fullscreen',
+    viewport: { defaultViewport: 'mobile1' },
+  },
+}

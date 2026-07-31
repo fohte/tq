@@ -4,6 +4,9 @@ import { GripVertical, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { TaskRow } from '#components/task/task-row'
+import { Button } from '#components/ui/button'
+import { Chip } from '#components/ui/chip'
+import { Input } from '#components/ui/input'
 import type { Task } from '#hooks/use-tasks'
 import { useUpdateTask } from '#hooks/use-tasks'
 import { formatMinutes, parseDurationToMinutes } from '#lib/parse-duration'
@@ -52,15 +55,17 @@ export function TodayQueueRow({
       style={style}
       className="flex items-center gap-1 border-b border-border"
     >
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-xs"
         {...attributes}
         {...listeners}
         aria-label="Reorder task"
-        className="flex shrink-0 touch-none cursor-grab items-center px-1 text-muted-foreground active:cursor-grabbing"
+        className="touch-none cursor-grab text-muted-foreground active:cursor-grabbing"
       >
         <GripVertical className="h-4 w-4" />
-      </button>
+      </Button>
 
       <div className="min-w-0 flex-1">
         <TaskRow task={task} draggable={task.status !== 'completed'} />
@@ -68,8 +73,7 @@ export function TodayQueueRow({
 
       {task.estimatedMinutes == null &&
         (isEditingEstimate ? (
-          <input
-            type="text"
+          <Input
             autoFocus
             value={estimateInput}
             onChange={(e) => {
@@ -84,30 +88,32 @@ export function TodayQueueRow({
               }
             }}
             placeholder={formatMinutes(30)}
-            className="w-16 shrink-0 rounded border border-border bg-transparent px-1 py-0.5 font-mono text-xs outline-none focus:border-primary/50"
+            className="h-6 w-16 shrink-0 py-0.5 font-mono text-xs"
           />
         ) : (
-          <button
-            type="button"
+          <Chip
+            as="button"
+            size="md"
             onClick={() => {
               setEstimateInput('')
               setIsEditingEstimate(true)
             }}
             title="No estimate set — excluded from auto-scheduling"
-            className="shrink-0 whitespace-nowrap rounded bg-destructive/10 px-1.5 py-0.5 text-xs text-destructive"
+            className="shrink-0 whitespace-nowrap border-destructive text-destructive"
           >
             No estimate
-          </button>
+          </Chip>
         ))}
 
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="icon-xs"
         onClick={onRemove}
         aria-label="Remove from today's queue"
-        className="shrink-0 px-2 text-muted-foreground hover:text-destructive"
+        className="shrink-0 text-muted-foreground hover:text-destructive"
       >
         <X className="h-4 w-4" />
-      </button>
+      </Button>
     </div>
   )
 }

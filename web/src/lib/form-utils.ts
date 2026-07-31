@@ -19,3 +19,19 @@ export function selectHandler<T extends string>(
     }
   }
 }
+
+/**
+ * Create an onValueChange handler for the Base UI `Select` primitive
+ * (`#components/ui/select`) that validates the value against a set of valid
+ * options before calling the setter.
+ */
+export function selectValueHandler<T extends string>(
+  setter: (value: T) => void,
+  validValues: readonly T[],
+): (value: string | null) => void {
+  return (value) => {
+    if (value != null && includes(validValues, value)) {
+      setter(value)
+    }
+  }
+}

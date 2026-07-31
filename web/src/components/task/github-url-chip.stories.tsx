@@ -149,7 +149,7 @@ export const LinkedToTask: Story = {
         title: 'Fix flaky test',
         description: null,
         status: 'in_progress',
-        context: 'dev',
+        context: 'personal',
         startDate: null,
         dueDate: null,
         estimatedMinutes: null,

@@ -2,6 +2,7 @@ import { Plus, X } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { Button } from '#components/ui/button'
+import { Input } from '#components/ui/input'
 import { useLabels } from '#hooks/use-labels'
 import { useCreateTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
@@ -189,7 +190,7 @@ export function CreateTaskInline({
         className="flex items-center gap-2 px-3 py-2"
       >
         <div className="relative min-w-0 flex-1">
-          <input
+          <Input
             ref={inputRef}
             type="text"
             value={input}
@@ -199,7 +200,7 @@ export function CreateTaskInline({
             onClick={handleSelect}
             placeholder="New task... (@30m @tomorrow #label %work)"
             autoFocus
-            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:border-0 focus-visible:ring-0"
           />
 
           {/* Suggestion dropdown */}
@@ -262,12 +263,13 @@ export function CreateTaskInline({
 
 export function FloatingActionButton({ onClick }: { onClick: () => void }) {
   return (
-    <button
+    <Button
       type="button"
+      size="icon-lg"
       onClick={onClick}
-      className="fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 md:hidden"
+      className="fixed bottom-20 right-4 z-50 md:hidden"
     >
-      <Plus className="h-6 w-6" />
-    </button>
+      <Plus />
+    </Button>
   )
 }

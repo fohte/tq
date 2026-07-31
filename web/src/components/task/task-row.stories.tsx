@@ -143,17 +143,6 @@ export const WorkContext: Story = {
   },
 }
 
-export const DevContext: Story = {
-  args: {
-    task: {
-      ...baseTask,
-      title: 'Fix armyknife build',
-      context: 'dev',
-      estimatedMinutes: 90,
-    },
-  },
-}
-
 export const WithParent: Story = {
   args: {
     task: {
@@ -209,13 +198,6 @@ export const AllVariants: Story = {
         title: 'Work context with estimate',
         context: 'work',
         estimatedMinutes: 120,
-      },
-      {
-        ...baseTask,
-        id: '5',
-        title: 'Dev context with estimate',
-        context: 'dev',
-        estimatedMinutes: 90,
       },
       {
         ...baseTask,

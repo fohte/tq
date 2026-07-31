@@ -2,7 +2,7 @@ export interface ParsedQuery {
   freeText: string
   status?: 'todo' | 'in_progress' | 'completed'
   label?: string
-  context?: 'work' | 'personal' | 'dev'
+  context?: 'work' | 'personal'
   hasPages?: boolean
   hasComments?: boolean
   parentId?: string
@@ -12,10 +12,9 @@ export interface ParsedQuery {
 
 const STATUS_VALUES: ReadonlySet<'todo' | 'in_progress' | 'completed'> =
   new Set(['todo', 'in_progress', 'completed'])
-const CONTEXT_VALUES: ReadonlySet<'work' | 'personal' | 'dev'> = new Set([
+const CONTEXT_VALUES: ReadonlySet<'work' | 'personal'> = new Set([
   'work',
   'personal',
-  'dev',
 ])
 const SORT_VALUES: ReadonlySet<'due' | 'created' | 'updated' | 'estimate'> =
   new Set(['due', 'created', 'updated', 'estimate'])
