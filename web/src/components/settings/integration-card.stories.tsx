@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { Calendar } from 'lucide-react'
 
 import { IntegrationCard } from '#components/settings/integration-card'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
@@ -19,68 +20,84 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-const icon = <GithubMarkIcon className="size-6 text-foreground" />
+const githubIcon = <GithubMarkIcon className="size-6 text-foreground" />
+const googleCalendarIcon = <Calendar className="size-6 text-foreground" />
 
-export const ConnectedWithLogin: Story = {
+export const NotConfigured: Story = {
   args: {
-    icon,
+    icon: githubIcon,
     displayName: 'GitHub',
-    connected: true,
-    login: 'fohte',
-    configured: true,
-    onDisconnect: () => {},
+    accounts: [],
+    canConnect: false,
+    configured: false,
+    onDisconnectAccount: () => {},
   },
 }
 
-export const ConnectedWithoutLogin: Story = {
+export const Disconnected: Story = {
   args: {
-    icon,
-    displayName: 'Google Calendar',
-    connected: true,
-    configured: true,
-    onDisconnect: () => {},
-  },
-}
-
-export const DisconnectedWithAuthUrl: Story = {
-  args: {
-    icon,
+    icon: githubIcon,
     displayName: 'GitHub',
-    connected: false,
+    accounts: [],
+    canConnect: true,
     configured: true,
     authUrl: 'https://github.com/login/oauth/authorize',
-    onDisconnect: () => {},
+    onDisconnectAccount: () => {},
   },
 }
 
 export const DisconnectedFetchingAuthUrl: Story = {
   args: {
-    icon,
+    icon: githubIcon,
     displayName: 'GitHub',
-    connected: false,
+    accounts: [],
+    canConnect: true,
     configured: true,
-    onDisconnect: () => {},
+    onDisconnectAccount: () => {},
   },
 }
 
-export const NotConfigured: Story = {
+export const SingleAccountConnected: Story = {
   args: {
-    icon,
+    icon: githubIcon,
     displayName: 'GitHub',
-    connected: false,
-    configured: false,
-    onDisconnect: () => {},
+    accounts: [{ id: 'token-1', label: 'fohte' }],
+    canConnect: false,
+    configured: true,
+    onDisconnectAccount: () => {},
+  },
+}
+
+export const MultiAccountOneConnected: Story = {
+  args: {
+    icon: googleCalendarIcon,
+    displayName: 'Google Calendar',
+    accounts: [{ id: 'token-1', label: 'fohte@example.com' }],
+    canConnect: true,
+    configured: true,
+    authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    onDisconnectAccount: () => {},
+  },
+}
+
+export const MultiAccountTwoConnected: Story = {
+  args: {
+    icon: googleCalendarIcon,
+    displayName: 'Google Calendar',
+    accounts: [
+      { id: 'token-1', label: 'fohte@example.com' },
+      { id: 'token-2', label: 'fohte.work@example.com' },
+    ],
+    canConnect: true,
+    configured: true,
+    authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    onDisconnectAccount: () => {},
   },
 }
 
 export const Disconnecting: Story = {
   args: {
-    icon,
-    displayName: 'GitHub',
-    connected: true,
-    login: 'fohte',
-    configured: true,
-    onDisconnect: () => {},
-    isDisconnecting: true,
+    ...MultiAccountTwoConnected.args,
+    disconnectingAccountId: 'token-1',
   },
 }

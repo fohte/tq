@@ -1,0 +1,1557 @@
+{
+  "name": "tq_test",
+  "tables": [
+    {
+      "name": "public.images",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "r2_key",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "content_type",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "size_bytes",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "images_pkey",
+          "def": "CREATE UNIQUE INDEX images_pkey ON public.images USING btree (id)",
+          "table": "public.images",
+          "columns": ["id"]
+        },
+        {
+          "name": "images_r2_key_unique",
+          "def": "CREATE UNIQUE INDEX images_r2_key_unique ON public.images USING btree (r2_key)",
+          "table": "public.images",
+          "columns": ["r2_key"]
+        },
+        {
+          "name": "idx_images_r2_key",
+          "def": "CREATE INDEX idx_images_r2_key ON public.images USING btree (r2_key)",
+          "table": "public.images",
+          "columns": ["r2_key"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "images_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.images",
+          "referenced_table": "",
+          "columns": ["id"]
+        },
+        {
+          "name": "images_r2_key_unique",
+          "type": "UNIQUE",
+          "def": "UNIQUE (r2_key)",
+          "table": "public.images",
+          "referenced_table": "",
+          "columns": ["r2_key"]
+        }
+      ]
+    },
+    {
+      "name": "public.labels",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "color",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "labels_pkey",
+          "def": "CREATE UNIQUE INDEX labels_pkey ON public.labels USING btree (id)",
+          "table": "public.labels",
+          "columns": ["id"]
+        },
+        {
+          "name": "labels_name_unique",
+          "def": "CREATE UNIQUE INDEX labels_name_unique ON public.labels USING btree (name)",
+          "table": "public.labels",
+          "columns": ["name"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "labels_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.labels",
+          "referenced_table": "",
+          "columns": ["id"]
+        },
+        {
+          "name": "labels_name_unique",
+          "type": "UNIQUE",
+          "def": "UNIQUE (name)",
+          "table": "public.labels",
+          "referenced_table": "",
+          "columns": ["name"]
+        }
+      ]
+    },
+    {
+      "name": "public.oauth_tokens",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "provider",
+          "type": "text",
+          "nullable": false,
+          "default": "'google_calendar'::text"
+        },
+        {
+          "name": "access_token",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "refresh_token",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "account_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "account_label",
+          "type": "text",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "oauth_tokens_pkey",
+          "def": "CREATE UNIQUE INDEX oauth_tokens_pkey ON public.oauth_tokens USING btree (id)",
+          "table": "public.oauth_tokens",
+          "columns": ["id"]
+        },
+        {
+          "name": "uq_oauth_tokens_provider_account_id",
+          "def": "CREATE UNIQUE INDEX uq_oauth_tokens_provider_account_id ON public.oauth_tokens USING btree (provider, account_id)",
+          "table": "public.oauth_tokens",
+          "columns": ["provider", "account_id"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "oauth_tokens_refresh_metadata_required",
+          "type": "CHECK",
+          "def": "CHECK (((provider = 'github'::text) OR ((refresh_token IS NOT NULL) AND (expires_at IS NOT NULL))))",
+          "table": "public.oauth_tokens",
+          "referenced_table": "",
+          "columns": ["provider", "refresh_token", "expires_at"]
+        },
+        {
+          "name": "oauth_tokens_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.oauth_tokens",
+          "referenced_table": "",
+          "columns": ["id"]
+        },
+        {
+          "name": "uq_oauth_tokens_provider_account_id",
+          "type": "UNIQUE",
+          "def": "UNIQUE (provider, account_id)",
+          "table": "public.oauth_tokens",
+          "referenced_table": "",
+          "columns": ["provider", "account_id"]
+        }
+      ]
+    },
+    {
+      "name": "public.projects",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "nullable": false,
+          "default": "'active'::text"
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "target_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "color",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "sort_order",
+          "type": "integer",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "projects_pkey",
+          "def": "CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)",
+          "table": "public.projects",
+          "columns": ["id"]
+        },
+        {
+          "name": "idx_projects_status",
+          "def": "CREATE INDEX idx_projects_status ON public.projects USING btree (status)",
+          "table": "public.projects",
+          "columns": ["status"]
+        },
+        {
+          "name": "idx_projects_sort_order",
+          "def": "CREATE INDEX idx_projects_sort_order ON public.projects USING btree (sort_order)",
+          "table": "public.projects",
+          "columns": ["sort_order"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "projects_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.projects",
+          "referenced_table": "",
+          "columns": ["id"]
+        }
+      ]
+    },
+    {
+      "name": "public.recurrence_rules",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "interval",
+          "type": "integer",
+          "nullable": false,
+          "default": "1"
+        },
+        {
+          "name": "days_of_week",
+          "type": "integer[]",
+          "nullable": true
+        },
+        {
+          "name": "day_of_month",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "recurrence_rules_pkey",
+          "def": "CREATE UNIQUE INDEX recurrence_rules_pkey ON public.recurrence_rules USING btree (id)",
+          "table": "public.recurrence_rules",
+          "columns": ["id"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "recurrence_rules_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.recurrence_rules",
+          "referenced_table": "",
+          "columns": ["id"]
+        }
+      ]
+    },
+    {
+      "name": "public.schedules",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "start_time",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "end_time",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "recurrence_rule_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "context",
+          "type": "text",
+          "nullable": false,
+          "default": "'personal'::text"
+        },
+        {
+          "name": "color",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "schedules_pkey",
+          "def": "CREATE UNIQUE INDEX schedules_pkey ON public.schedules USING btree (id)",
+          "table": "public.schedules",
+          "columns": ["id"]
+        },
+        {
+          "name": "idx_schedules_recurrence_rule_id",
+          "def": "CREATE INDEX idx_schedules_recurrence_rule_id ON public.schedules USING btree (recurrence_rule_id)",
+          "table": "public.schedules",
+          "columns": ["recurrence_rule_id"]
+        },
+        {
+          "name": "idx_schedules_context",
+          "def": "CREATE INDEX idx_schedules_context ON public.schedules USING btree (context)",
+          "table": "public.schedules",
+          "columns": ["context"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "schedules_recurrence_rule_id_recurrence_rules_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL",
+          "table": "public.schedules",
+          "referenced_table": "public.recurrence_rules",
+          "columns": ["recurrence_rule_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "schedules_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.schedules",
+          "referenced_table": "",
+          "columns": ["id"]
+        }
+      ]
+    },
+    {
+      "name": "public.task_comments",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "task_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "task_comments_pkey",
+          "def": "CREATE UNIQUE INDEX task_comments_pkey ON public.task_comments USING btree (id)",
+          "table": "public.task_comments",
+          "columns": ["id"]
+        },
+        {
+          "name": "idx_task_comments_task_id",
+          "def": "CREATE INDEX idx_task_comments_task_id ON public.task_comments USING btree (task_id)",
+          "table": "public.task_comments",
+          "columns": ["task_id"]
+        },
+        {
+          "name": "idx_task_comments_created_at",
+          "def": "CREATE INDEX idx_task_comments_created_at ON public.task_comments USING btree (task_id, created_at)",
+          "table": "public.task_comments",
+          "columns": ["task_id", "created_at"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "task_comments_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.task_comments",
+          "referenced_table": "",
+          "columns": ["id"]
+        },
+        {
+          "name": "task_comments_task_id_tasks_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE",
+          "table": "public.task_comments",
+          "referenced_table": "public.tasks",
+          "columns": ["task_id"],
+          "referenced_columns": ["id"]
+        }
+      ]
+    },
+    {
+      "name": "public.task_labels",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "task_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "label_id",
+          "type": "text",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "task_labels_task_id_label_id_pk",
+          "def": "CREATE UNIQUE INDEX task_labels_task_id_label_id_pk ON public.task_labels USING btree (task_id, label_id)",
+          "table": "public.task_labels",
+          "columns": ["task_id", "label_id"]
+        },
+        {
+          "name": "idx_task_labels_task_id",
+          "def": "CREATE INDEX idx_task_labels_task_id ON public.task_labels USING btree (task_id)",
+          "table": "public.task_labels",
+          "columns": ["task_id"]
+        },
+        {
+          "name": "idx_task_labels_label_id",
+          "def": "CREATE INDEX idx_task_labels_label_id ON public.task_labels USING btree (label_id)",
+          "table": "public.task_labels",
+          "columns": ["label_id"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "task_labels_label_id_labels_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE",
+          "table": "public.task_labels",
+          "referenced_table": "public.labels",
+          "columns": ["label_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "task_labels_task_id_label_id_pk",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (task_id, label_id)",
+          "table": "public.task_labels",
+          "referenced_table": "",
+          "columns": ["task_id", "label_id"]
+        },
+        {
+          "name": "task_labels_task_id_tasks_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE",
+          "table": "public.task_labels",
+          "referenced_table": "public.tasks",
+          "columns": ["task_id"],
+          "referenced_columns": ["id"]
+        }
+      ]
+    },
+    {
+      "name": "public.task_pages",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "task_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "content",
+          "type": "text",
+          "nullable": false,
+          "default": "''::text"
+        },
+        {
+          "name": "sort_order",
+          "type": "integer",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "task_pages_pkey",
+          "def": "CREATE UNIQUE INDEX task_pages_pkey ON public.task_pages USING btree (id)",
+          "table": "public.task_pages",
+          "columns": ["id"]
+        },
+        {
+          "name": "idx_task_pages_task_id",
+          "def": "CREATE INDEX idx_task_pages_task_id ON public.task_pages USING btree (task_id)",
+          "table": "public.task_pages",
+          "columns": ["task_id"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "task_pages_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.task_pages",
+          "referenced_table": "",
+          "columns": ["id"]
+        },
+        {
+          "name": "task_pages_task_id_tasks_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE",
+          "table": "public.task_pages",
+          "referenced_table": "public.tasks",
+          "columns": ["task_id"],
+          "referenced_columns": ["id"]
+        }
+      ]
+    },
+    {
+      "name": "public.tasks",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "nullable": false,
+          "default": "'todo'::text"
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "due_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "estimated_minutes",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "parent_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "project_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "recurrence_rule_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "context",
+          "type": "text",
+          "nullable": false,
+          "default": "'personal'::text"
+        },
+        {
+          "name": "sort_order",
+          "type": "integer",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "number",
+          "type": "integer",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "tasks_pkey",
+          "def": "CREATE UNIQUE INDEX tasks_pkey ON public.tasks USING btree (id)",
+          "table": "public.tasks",
+          "columns": ["id"]
+        },
+        {
+          "name": "idx_tasks_parent_id",
+          "def": "CREATE INDEX idx_tasks_parent_id ON public.tasks USING btree (parent_id)",
+          "table": "public.tasks",
+          "columns": ["parent_id"]
+        },
+        {
+          "name": "idx_tasks_status",
+          "def": "CREATE INDEX idx_tasks_status ON public.tasks USING btree (status)",
+          "table": "public.tasks",
+          "columns": ["status"]
+        },
+        {
+          "name": "idx_tasks_start_date",
+          "def": "CREATE INDEX idx_tasks_start_date ON public.tasks USING btree (start_date)",
+          "table": "public.tasks",
+          "columns": ["start_date"]
+        },
+        {
+          "name": "idx_tasks_due_date",
+          "def": "CREATE INDEX idx_tasks_due_date ON public.tasks USING btree (due_date)",
+          "table": "public.tasks",
+          "columns": ["due_date"]
+        },
+        {
+          "name": "idx_tasks_project_id",
+          "def": "CREATE INDEX idx_tasks_project_id ON public.tasks USING btree (project_id)",
+          "table": "public.tasks",
+          "columns": ["project_id"]
+        },
+        {
+          "name": "idx_tasks_project_status",
+          "def": "CREATE INDEX idx_tasks_project_status ON public.tasks USING btree (project_id, status)",
+          "table": "public.tasks",
+          "columns": ["project_id", "status"]
+        },
+        {
+          "name": "tasks_number_unique",
+          "def": "CREATE UNIQUE INDEX tasks_number_unique ON public.tasks USING btree (number)",
+          "table": "public.tasks",
+          "columns": ["number"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "tasks_project_id_projects_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL",
+          "table": "public.tasks",
+          "referenced_table": "public.projects",
+          "columns": ["project_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "tasks_recurrence_rule_id_recurrence_rules_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL",
+          "table": "public.tasks",
+          "referenced_table": "public.recurrence_rules",
+          "columns": ["recurrence_rule_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "tasks_parent_id_tasks_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL",
+          "table": "public.tasks",
+          "referenced_table": "public.tasks",
+          "columns": ["parent_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "tasks_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.tasks",
+          "referenced_table": "",
+          "columns": ["id"]
+        },
+        {
+          "name": "tasks_number_unique",
+          "type": "UNIQUE",
+          "def": "UNIQUE (number)",
+          "table": "public.tasks",
+          "referenced_table": "",
+          "columns": ["number"]
+        }
+      ]
+    },
+    {
+      "name": "public.time_blocks",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "task_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "start_time",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "end_time",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "is_auto_scheduled",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "time_blocks_pkey",
+          "def": "CREATE UNIQUE INDEX time_blocks_pkey ON public.time_blocks USING btree (id)",
+          "table": "public.time_blocks",
+          "columns": ["id"]
+        },
+        {
+          "name": "idx_time_blocks_task_id",
+          "def": "CREATE INDEX idx_time_blocks_task_id ON public.time_blocks USING btree (task_id)",
+          "table": "public.time_blocks",
+          "columns": ["task_id"]
+        },
+        {
+          "name": "idx_time_blocks_date_range",
+          "def": "CREATE INDEX idx_time_blocks_date_range ON public.time_blocks USING btree (start_time, end_time)",
+          "table": "public.time_blocks",
+          "columns": ["start_time", "end_time"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "time_blocks_task_id_tasks_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE",
+          "table": "public.time_blocks",
+          "referenced_table": "public.tasks",
+          "columns": ["task_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "time_blocks_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.time_blocks",
+          "referenced_table": "",
+          "columns": ["id"]
+        }
+      ]
+    },
+    {
+      "name": "public.today_tasks",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "task_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "sort_order",
+          "type": "integer",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "today_tasks_pkey",
+          "def": "CREATE UNIQUE INDEX today_tasks_pkey ON public.today_tasks USING btree (id)",
+          "table": "public.today_tasks",
+          "columns": ["id"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "today_tasks_task_id_tasks_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE",
+          "table": "public.today_tasks",
+          "referenced_table": "public.tasks",
+          "columns": ["task_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "today_tasks_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.today_tasks",
+          "referenced_table": "",
+          "columns": ["id"]
+        }
+      ]
+    },
+    {
+      "name": "public.edits",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false
+        },
+        {
+          "name": "task_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "page_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "comment_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "action",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "field",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "author_kind",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "author_agent",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "edits_pkey",
+          "def": "CREATE UNIQUE INDEX edits_pkey ON public.edits USING btree (id)",
+          "table": "public.edits",
+          "columns": ["id"]
+        },
+        {
+          "name": "idx_edits_task_id_created_at",
+          "def": "CREATE INDEX idx_edits_task_id_created_at ON public.edits USING btree (task_id, created_at)",
+          "table": "public.edits",
+          "columns": ["task_id", "created_at"]
+        },
+        {
+          "name": "idx_edits_page_id",
+          "def": "CREATE INDEX idx_edits_page_id ON public.edits USING btree (page_id) WHERE (page_id IS NOT NULL)",
+          "table": "public.edits",
+          "columns": ["page_id"]
+        },
+        {
+          "name": "idx_edits_comment_id",
+          "def": "CREATE INDEX idx_edits_comment_id ON public.edits USING btree (comment_id) WHERE (comment_id IS NOT NULL)",
+          "table": "public.edits",
+          "columns": ["comment_id"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "edits_action_check",
+          "type": "CHECK",
+          "def": "CHECK ((action = ANY (ARRAY['create'::text, 'update'::text])))",
+          "table": "public.edits",
+          "referenced_table": "",
+          "columns": ["action"]
+        },
+        {
+          "name": "edits_action_field_check",
+          "type": "CHECK",
+          "def": "CHECK ((((action = 'create'::text) AND (field IS NULL)) OR ((action = 'update'::text) AND (field IS NOT NULL))))",
+          "table": "public.edits",
+          "referenced_table": "",
+          "columns": ["action", "field"]
+        },
+        {
+          "name": "edits_author_agent_required_for_llm",
+          "type": "CHECK",
+          "def": "CHECK (((author_kind = 'llm'::text) = (author_agent IS NOT NULL)))",
+          "table": "public.edits",
+          "referenced_table": "",
+          "columns": ["author_kind", "author_agent"]
+        },
+        {
+          "name": "edits_author_kind_check",
+          "type": "CHECK",
+          "def": "CHECK ((author_kind = ANY (ARRAY['human'::text, 'llm'::text, 'system'::text])))",
+          "table": "public.edits",
+          "referenced_table": "",
+          "columns": ["author_kind"]
+        },
+        {
+          "name": "edits_field_target_check",
+          "type": "CHECK",
+          "def": "CHECK (((field IS NULL) OR ((page_id IS NULL) AND (comment_id IS NULL) AND (field = ANY (ARRAY['title'::text, 'description'::text]))) OR ((page_id IS NOT NULL) AND (field = ANY (ARRAY['title'::text, 'content'::text]))) OR ((comment_id IS NOT NULL) AND (field = 'content'::text))))",
+          "table": "public.edits",
+          "referenced_table": "",
+          "columns": ["field", "page_id", "comment_id"]
+        },
+        {
+          "name": "edits_target_exclusive_check",
+          "type": "CHECK",
+          "def": "CHECK ((NOT ((page_id IS NOT NULL) AND (comment_id IS NOT NULL))))",
+          "table": "public.edits",
+          "referenced_table": "",
+          "columns": ["page_id", "comment_id"]
+        },
+        {
+          "name": "edits_comment_id_task_comments_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (comment_id) REFERENCES task_comments(id) ON DELETE CASCADE",
+          "table": "public.edits",
+          "referenced_table": "public.task_comments",
+          "columns": ["comment_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "edits_page_id_task_pages_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (page_id) REFERENCES task_pages(id) ON DELETE CASCADE",
+          "table": "public.edits",
+          "referenced_table": "public.task_pages",
+          "columns": ["page_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "edits_task_id_tasks_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE",
+          "table": "public.edits",
+          "referenced_table": "public.tasks",
+          "columns": ["task_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "edits_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.edits",
+          "referenced_table": "",
+          "columns": ["id"]
+        }
+      ]
+    },
+    {
+      "name": "public.task_github_links",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "task_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "owner",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "repo",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "number",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "kind",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "url",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "state",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "last_synced_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "etag",
+          "type": "text",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "task_github_links_pkey",
+          "def": "CREATE UNIQUE INDEX task_github_links_pkey ON public.task_github_links USING btree (id)",
+          "table": "public.task_github_links",
+          "columns": ["id"]
+        },
+        {
+          "name": "task_github_links_task_id_unique",
+          "def": "CREATE UNIQUE INDEX task_github_links_task_id_unique ON public.task_github_links USING btree (task_id)",
+          "table": "public.task_github_links",
+          "columns": ["task_id"]
+        },
+        {
+          "name": "uq_task_github_links_repo_number",
+          "def": "CREATE UNIQUE INDEX uq_task_github_links_repo_number ON public.task_github_links USING btree (owner, repo, number)",
+          "table": "public.task_github_links",
+          "columns": ["owner", "repo", "number"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "task_github_links_state_kind_check",
+          "type": "CHECK",
+          "def": "CHECK (((kind = 'pull_request'::text) OR (state \u003c\u003e 'merged'::text)))",
+          "table": "public.task_github_links",
+          "referenced_table": "",
+          "columns": ["kind", "state"]
+        },
+        {
+          "name": "task_github_links_task_id_tasks_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE",
+          "table": "public.task_github_links",
+          "referenced_table": "public.tasks",
+          "columns": ["task_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "task_github_links_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.task_github_links",
+          "referenced_table": "",
+          "columns": ["id"]
+        },
+        {
+          "name": "task_github_links_task_id_unique",
+          "type": "UNIQUE",
+          "def": "UNIQUE (task_id)",
+          "table": "public.task_github_links",
+          "referenced_table": "",
+          "columns": ["task_id"]
+        },
+        {
+          "name": "uq_task_github_links_repo_number",
+          "type": "UNIQUE",
+          "def": "UNIQUE (owner, repo, number)",
+          "table": "public.task_github_links",
+          "referenced_table": "",
+          "columns": ["owner", "repo", "number"]
+        }
+      ]
+    },
+    {
+      "name": "public.task_links",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "source_task_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "target_task_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "task_links_source_task_id_target_task_id_pk",
+          "def": "CREATE UNIQUE INDEX task_links_source_task_id_target_task_id_pk ON public.task_links USING btree (source_task_id, target_task_id)",
+          "table": "public.task_links",
+          "columns": ["source_task_id", "target_task_id"]
+        },
+        {
+          "name": "idx_task_links_target_task_id",
+          "def": "CREATE INDEX idx_task_links_target_task_id ON public.task_links USING btree (target_task_id)",
+          "table": "public.task_links",
+          "columns": ["target_task_id"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "task_links_no_self_link",
+          "type": "CHECK",
+          "def": "CHECK ((source_task_id \u003c\u003e target_task_id))",
+          "table": "public.task_links",
+          "referenced_table": "",
+          "columns": ["source_task_id", "target_task_id"]
+        },
+        {
+          "name": "task_links_source_task_id_tasks_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (source_task_id) REFERENCES tasks(id) ON DELETE CASCADE",
+          "table": "public.task_links",
+          "referenced_table": "public.tasks",
+          "columns": ["source_task_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "task_links_target_task_id_tasks_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (target_task_id) REFERENCES tasks(id) ON DELETE CASCADE",
+          "table": "public.task_links",
+          "referenced_table": "public.tasks",
+          "columns": ["target_task_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "task_links_source_task_id_target_task_id_pk",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (source_task_id, target_task_id)",
+          "table": "public.task_links",
+          "referenced_table": "",
+          "columns": ["source_task_id", "target_task_id"]
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "table": "public.schedules",
+      "columns": ["recurrence_rule_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.recurrence_rules",
+      "parent_columns": ["id"],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "public.task_comments",
+      "columns": ["task_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.tasks",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.task_labels",
+      "columns": ["label_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.labels",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.task_labels",
+      "columns": ["task_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.tasks",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.task_pages",
+      "columns": ["task_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.tasks",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.tasks",
+      "columns": ["project_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.projects",
+      "parent_columns": ["id"],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "public.tasks",
+      "columns": ["recurrence_rule_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.recurrence_rules",
+      "parent_columns": ["id"],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "public.tasks",
+      "columns": ["parent_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.tasks",
+      "parent_columns": ["id"],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "public.time_blocks",
+      "columns": ["task_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.tasks",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.today_tasks",
+      "columns": ["task_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.tasks",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.edits",
+      "columns": ["comment_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.task_comments",
+      "parent_columns": ["id"],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (comment_id) REFERENCES task_comments(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.edits",
+      "columns": ["page_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.task_pages",
+      "parent_columns": ["id"],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (page_id) REFERENCES task_pages(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.edits",
+      "columns": ["task_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.tasks",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.task_github_links",
+      "columns": ["task_id"],
+      "cardinality": "zero_or_one",
+      "parent_table": "public.tasks",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.task_links",
+      "columns": ["source_task_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.tasks",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (source_task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.task_links",
+      "columns": ["target_task_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.tasks",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (target_task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    }
+  ],
+  "driver": {
+    "name": "postgres",
+    "database_version": "PostgreSQL 17.10 (Debian 17.10-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+    "meta": {
+      "current_schema": "public",
+      "search_paths": ["tq", "public"],
+      "dict": {
+        "Functions": "Stored procedures and functions"
+      }
+    }
+  }
+}

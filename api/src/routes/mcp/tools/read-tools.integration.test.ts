@@ -5,12 +5,18 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
-import { createLabel, createTask, TEST_UUID } from '#routes/tasks/testing'
+import {
+  createLabel,
+  createPage,
+  createTask,
+  TEST_UUID,
+} from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
 const READ_TOOL_NAMES = [
+  'get_page',
   'get_task',
   'get_today_tasks',
   'list_labels',
@@ -62,6 +68,28 @@ function parseJson(result: CallToolResult): unknown {
   return JSON.parse(first.text)
 }
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
+
+// Placeholders out ids/timestamps so a test can assert a full known literal
+// (title, content, author, ...) with `toEqual` instead of re-deriving the
+// expected value from the same route under test.
+function normalizeDynamicValues(value: unknown): unknown {
+  if (typeof value === 'string') {
+    if (UUID_PATTERN.test(value)) return '<uuid>'
+    if (TIMESTAMP_PATTERN.test(value)) return '<timestamp>'
+    return value
+  }
+  if (Array.isArray(value)) return value.map((v) => normalizeDynamicValues(v))
+  if (value != null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [k, normalizeDynamicValues(v)]),
+    )
+  }
+  return value
+}
+
 describe('read tools', () => {
   it('declares every read tool as read-only', async () => {
     const result = await withClient((client) => client.listTools())
@@ -75,6 +103,7 @@ describe('read tools', () => {
         }))
         .sort((a, b) => a.name.localeCompare(b.name)),
     ).toEqual([
+      { name: 'get_page', readOnlyHint: true },
       { name: 'get_task', readOnlyHint: true },
       { name: 'get_today_tasks', readOnlyHint: true },
       { name: 'list_labels', readOnlyHint: true },
@@ -137,6 +166,100 @@ describe('read tools', () => {
 
       expect(result).toEqual({
         content: [{ type: 'text', text: 'Task not found' }],
+        isError: true,
+      })
+    })
+
+    it('returns page metadata without content', async () => {
+      const task = await createTask('Task with notes')
+      const created = await createPage(
+        task.id,
+        'Investigation notes',
+        'note body',
+      )
+      const pageRes = await app.request(
+        `/api/tasks/${task.id}/pages/${created.id}`,
+      )
+      const page = await jsonBody<{
+        id: string
+        taskId: string
+        title: string
+        sortOrder: number
+        createdAt: string
+        updatedAt: string
+        author: unknown
+      }>(pageRes)
+
+      const toolResult = await callTool('get_task', { taskId: task.id })
+
+      expect(parseJson(toolResult)).toEqual({
+        ...task,
+        titleAuthor: { kind: 'human', agent: null },
+        descriptionAuthor: { kind: 'human', agent: null },
+        childCompletionCount: { total: 0, completed: 0 },
+        pages: [
+          {
+            id: page.id,
+            taskId: page.taskId,
+            title: page.title,
+            sortOrder: page.sortOrder,
+            createdAt: page.createdAt,
+            updatedAt: page.updatedAt,
+            author: page.author,
+          },
+        ],
+        timeBlocks: [],
+        links: { outgoing: [], incoming: [] },
+        subtasks: [],
+      })
+    })
+  })
+
+  describe('get_page', () => {
+    it('rejects invalid input', async () => {
+      const result = await callTool('get_page', {
+        taskId: 'not-a-uuid',
+        pageId: TEST_UUID,
+      })
+
+      expect(result.isError).toBe(true)
+    })
+
+    it('returns the full page including content', async () => {
+      const task = await createTask('Task with notes')
+      const created = await createPage(
+        task.id,
+        'Investigation notes',
+        '# Findings\n\nSome long content.',
+      )
+
+      const toolResult = await callTool('get_page', {
+        taskId: task.id,
+        pageId: created.id,
+      })
+
+      expect(normalizeDynamicValues(parseJson(toolResult))).toEqual({
+        id: '<uuid>',
+        taskId: '<uuid>',
+        title: 'Investigation notes',
+        content: '# Findings\n\nSome long content.',
+        sortOrder: 0,
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+        author: { kind: 'human', agent: null },
+      })
+    })
+
+    it('maps a non-existent page id to a 404 error result', async () => {
+      const task = await createTask('Task')
+
+      const result = await callTool('get_page', {
+        taskId: task.id,
+        pageId: TEST_UUID,
+      })
+
+      expect(result).toEqual({
+        content: [{ type: 'text', text: 'Page not found' }],
         isError: true,
       })
     })

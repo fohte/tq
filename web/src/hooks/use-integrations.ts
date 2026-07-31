@@ -9,6 +9,16 @@ export type IntegrationSummary = InferResponseType<
   200
 >[number]
 
+// A provider can accept a new/another account when it's configured and
+// either supports multiple accounts, or has none connected yet — the single
+// source of truth for whether to offer a "connect"/"add account" action.
+export function canConnectIntegration(summary: IntegrationSummary): boolean {
+  return (
+    summary.configured &&
+    (summary.supportsMultipleAccounts || summary.accounts.length === 0)
+  )
+}
+
 const integrationsKeys = {
   list: ['integrations'] as const,
   authUrl: (id: string) => ['integration-auth-url', id] as const,
@@ -41,12 +51,14 @@ export function useIntegrationAuthUrl(id: string, enabled: boolean) {
   })
 }
 
-export function useDisconnectIntegration(id: string) {
+export function useDisconnectIntegrationAccount(providerId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async () => {
-      const res = await api.api.integrations[':id'].$delete({ param: { id } })
+    mutationFn: async (accountId: string) => {
+      const res = await api.api.integrations[':id'].accounts[
+        ':accountId'
+      ].$delete({ param: { id: providerId, accountId } })
       assertStatus(res, 200)
       return res.json()
     },

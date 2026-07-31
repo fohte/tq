@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { IntegrationConfigError } from '#integrations/errors'
 import {
-  disconnect,
+  disconnectAccount,
   getAuthUrl,
   handleOAuthCallback,
 } from '#integrations/oauth'
@@ -76,13 +76,17 @@ export async function handleOAuthCallbackRoute(
   )
 }
 
-export async function handleDisconnect(
+export async function handleDisconnectAccount(
   c: Context,
   provider: IntegrationProvider,
+  accountId: string,
 ) {
-  const result = await disconnect(provider)
+  const result = await disconnectAccount(provider, accountId)
   return result.match(
-    () => c.json({ message: 'Disconnected' }, 200),
+    (deleted) =>
+      deleted
+        ? c.json({ message: 'Disconnected' }, 200)
+        : c.json({ error: 'Not found' }, 404),
     () => c.json({ error: 'Internal server error' }, 500),
   )
 }

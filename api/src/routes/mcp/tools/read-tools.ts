@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 import { callInternalRoute } from '#routes/mcp/route-bridge'
 import { projectStatus } from '#routes/projects'
+import { pageToResponse } from '#routes/task-pages'
 import { contextEnum, taskStatus } from '#routes/tasks/shared'
 
 async function resolveApp(): Promise<Hono> {
@@ -31,6 +32,26 @@ async function callAsResult(path: string): Promise<CallToolResult> {
   return result.ok
     ? { content: [{ type: 'text', text: JSON.stringify(result.data) }] }
     : result.result
+}
+
+type PageDetail = ReturnType<typeof pageToResponse>
+
+type TaskDetail = Record<string, unknown> & { pages: PageDetail[] }
+
+// `get_task` drops page `content` to keep the response small — pages are
+// meant for notes that can grow arbitrarily long, so returning it here would
+// let a single call inflate the agent's context with the full text of every
+// page on the task. Callers fetch a specific page's content with `get_page`.
+function toPageMetadata(page: PageDetail): Omit<PageDetail, 'content'> {
+  return {
+    id: page.id,
+    taskId: page.taskId,
+    title: page.title,
+    sortOrder: page.sortOrder,
+    createdAt: page.createdAt,
+    updatedAt: page.updatedAt,
+    author: page.author,
+  }
 }
 
 /** Read-only tools: task/project/label lookups, search, etc. */
@@ -70,7 +91,7 @@ export function registerReadTools(server: McpServer): void {
     'get_task',
     {
       description:
-        'Get the full detail of a single task by id: its attributes, recurrence rule, time blocks, pages, linked tasks (mentions via `#<number>`, as `links.outgoing`/`links.incoming`), and the nested subtree of its subtasks (as `subtasks`). Does not include labels — no existing TQ endpoint exposes labels for an individual task; use search_tasks with a label: filter to find tasks by label.',
+        "Get the full detail of a single task by id: its attributes, recurrence rule, time blocks, page metadata, linked tasks (mentions via `#<number>`, as `links.outgoing`/`links.incoming`), and the nested subtree of its subtasks (as `subtasks`). Each entry in `pages` is metadata only (id, taskId, title, sortOrder, timestamps, author) with no `content` — pass its `id` and this task's `id` to get_page to read a page's content. Does not include labels — no existing TQ endpoint exposes labels for an individual task; use search_tasks with a label: filter to find tasks by label.",
       inputSchema: {
         taskId: z.uuid().describe('The task id to look up.'),
       },
@@ -83,7 +104,7 @@ export function registerReadTools(server: McpServer): void {
       // recursive CTE, so this composes it with the detail endpoint instead
       // of walking `parentId` links here.
       const [taskResult, treeResult] = await Promise.all([
-        callInternalRoute<Record<string, unknown>>(app, `/api/tasks/${taskId}`),
+        callInternalRoute<TaskDetail>(app, `/api/tasks/${taskId}`),
         callInternalRoute<Array<{ children: unknown }>>(
           app,
           `/api/tasks/tree${buildQuery({ rootId: taskId })}`,
@@ -98,12 +119,28 @@ export function registerReadTools(server: McpServer): void {
             type: 'text',
             text: JSON.stringify({
               ...taskResult.data,
+              pages: taskResult.data.pages.map(toPageMetadata),
               subtasks: treeResult.data[0]?.children ?? [],
             }),
           },
         ],
       }
     },
+  )
+
+  server.registerTool(
+    'get_page',
+    {
+      description:
+        "Get the full content of a single page (a task note) by id. get_task lists a task's pages as metadata only — resolve taskId and pageId from an entry in its `pages` array before calling this.",
+      inputSchema: {
+        taskId: z.uuid().describe('The id of the task the page belongs to.'),
+        pageId: z.uuid().describe('The page id to look up.'),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ taskId, pageId }) =>
+      callAsResult(`/api/tasks/${taskId}/pages/${pageId}`),
   )
 
   server.registerTool(

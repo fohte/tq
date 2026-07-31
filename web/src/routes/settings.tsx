@@ -6,8 +6,9 @@ import { GithubSyncRuleList } from '#components/settings/github-sync-rule-list'
 import { IntegrationCard } from '#components/settings/integration-card'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
 import {
+  canConnectIntegration,
   type IntegrationSummary,
-  useDisconnectIntegration,
+  useDisconnectIntegrationAccount,
   useIntegrationAuthUrl,
   useIntegrationsList,
 } from '#hooks/use-integrations'
@@ -54,11 +55,9 @@ function Settings() {
 }
 
 function SettingsIntegrationRow({ summary }: { summary: IntegrationSummary }) {
-  const authUrl = useIntegrationAuthUrl(
-    summary.id,
-    !summary.connected && summary.configured,
-  )
-  const disconnect = useDisconnectIntegration(summary.id)
+  const canConnect = canConnectIntegration(summary)
+  const authUrl = useIntegrationAuthUrl(summary.id, canConnect)
+  const disconnectAccount = useDisconnectIntegrationAccount(summary.id)
 
   return (
     <IntegrationCard
@@ -68,16 +67,16 @@ function SettingsIntegrationRow({ summary }: { summary: IntegrationSummary }) {
         )
       }
       displayName={summary.displayName}
-      connected={summary.connected}
+      accounts={summary.accounts}
+      canConnect={canConnect}
       configured={summary.configured}
-      {...(summary.connected && summary.login != null
-        ? { login: summary.login }
-        : {})}
       {...(authUrl.data?.url != null ? { authUrl: authUrl.data.url } : {})}
-      onDisconnect={() => {
-        disconnect.mutate()
+      onDisconnectAccount={(accountId) => {
+        disconnectAccount.mutate(accountId)
       }}
-      isDisconnecting={disconnect.isPending}
+      disconnectingAccountId={
+        disconnectAccount.isPending ? disconnectAccount.variables : null
+      }
     />
   )
 }
