@@ -2,18 +2,18 @@
 
 ## Columns
 
-| Name        | Type                     | Default        | Nullable | Children                        | Parents | Comment |
-| ----------- | ------------------------ | -------------- | -------- | ------------------------------- | ------- | ------- |
-| id          | text                     |                | false    | [public.tasks](public.tasks.md) |         |         |
-| title       | text                     |                | false    |                                 |         |         |
-| description | text                     |                | true     |                                 |         |         |
-| status      | text                     | 'active'::text | false    |                                 |         |         |
-| start_date  | date                     |                | true     |                                 |         |         |
-| target_date | date                     |                | true     |                                 |         |         |
-| color       | text                     |                | true     |                                 |         |         |
-| sort_order  | integer                  | 0              | false    |                                 |         |         |
-| created_at  | timestamp with time zone | now()          | false    |                                 |         |         |
-| updated_at  | timestamp with time zone | now()          | false    |                                 |         |         |
+| Name        | Type                     | Default        | Nullable | Children                                                                                | Parents | Comment |
+| ----------- | ------------------------ | -------------- | -------- | --------------------------------------------------------------------------------------- | ------- | ------- |
+| id          | text                     |                | false    | [public.tasks](public.tasks.md) [public.github_sync_rules](public.github_sync_rules.md) |         |         |
+| title       | text                     |                | false    |                                                                                         |         |         |
+| description | text                     |                | true     |                                                                                         |         |         |
+| status      | text                     | 'active'::text | false    |                                                                                         |         |         |
+| start_date  | date                     |                | true     |                                                                                         |         |         |
+| target_date | date                     |                | true     |                                                                                         |         |         |
+| color       | text                     |                | true     |                                                                                         |         |         |
+| sort_order  | integer                  | 0              | false    |                                                                                         |         |         |
+| created_at  | timestamp with time zone | now()          | false    |                                                                                         |         |         |
+| updated_at  | timestamp with time zone | now()          | false    |                                                                                         |         |         |
 
 ## Constraints
 
@@ -35,6 +35,7 @@
 erDiagram
 
 "public.tasks" }o--o| "public.projects" : "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL"
+"public.github_sync_rules" }o--|| "public.projects" : "FOREIGN KEY (target_project_id) REFERENCES projects(id) ON DELETE CASCADE"
 
 "public.projects" {
   text id
@@ -64,6 +65,18 @@ erDiagram
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
   integer number
+}
+"public.github_sync_rules" {
+  text id
+  text scope
+  text org
+  text repo
+  text trigger
+  text target_project_id FK
+  boolean enabled
+  boolean seed_ignore_on_next_sync
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
 }
 ```
 
