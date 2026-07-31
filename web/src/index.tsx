@@ -7,7 +7,10 @@ import { createRoot } from 'react-dom/client'
 
 import { ContextFilterProvider } from '#hooks/use-context-filter'
 import { queryClient } from '#lib/query-client'
+import { applyStandaloneViewport } from '#lib/standalone-viewport'
 import { routeTree } from '#routeTree.gen'
+
+applyStandaloneViewport()
 
 const router = createRouter({ routeTree })
 
