@@ -15,6 +15,7 @@ interface PageResponse {
   sortOrder: number
   createdAt: string
   updatedAt: string
+  author: { kind: 'human' | 'llm' | 'system'; agent: string | null } | null
 }
 
 describe('task pages API', () => {
@@ -46,6 +47,24 @@ describe('task pages API', () => {
       const res = await app.request(`/api/tasks/${TEST_UUID}/pages`)
 
       expect(res.status).toBe(404)
+    })
+
+    it('reports each page author independently', async () => {
+      const task = await createTask('Task')
+      const humanPage = await createPage(task.id, { title: 'Page A' })
+      const llmPage = await createPage(
+        task.id,
+        { title: 'Page B' },
+        { 'X-Author': 'llm:claude-opus-5' },
+      )
+
+      const res = await app.request(`/api/tasks/${task.id}/pages`)
+
+      expect(res.status).toBe(200)
+      expect(await jsonBody<PageResponse[]>(res)).toEqual([
+        { ...humanPage, author: { kind: 'human', agent: null } },
+        { ...llmPage, author: { kind: 'llm', agent: 'claude-opus-5' } },
+      ])
     })
   })
 
@@ -271,10 +290,11 @@ async function createTask(title: string) {
 async function createPage(
   taskId: string,
   opts: { title: string; content?: string; sortOrder?: number },
+  headers: Record<string, string> = {},
 ) {
   const res = await app.request(`/api/tasks/${taskId}/pages`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(opts),
   })
   if (res.status !== 201) {

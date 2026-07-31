@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import type { TaskPage } from '#hooks/use-task-pages'
@@ -191,6 +192,7 @@ export function PageCardPresentation({
             )}
           />
           <span className="truncate text-sm font-medium">{page.title}</span>
+          <LlmAuthorLabel author={page.author} />
         </button>
 
         <div className="flex shrink-0 items-center gap-1">

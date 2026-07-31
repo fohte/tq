@@ -34,6 +34,8 @@ const baseTask: TaskDetail = {
   githubLink: null,
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
+  titleAuthor: null,
+  descriptionAuthor: null,
   childCompletionCount: { completed: 1, total: 3 },
   pages: [],
   timeBlocks: [],

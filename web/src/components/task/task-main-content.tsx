@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { Check, ChevronRight, Circle, Play } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { TaskActivity } from '#components/task/task-activity'
 import { TaskLinkedTasksSection } from '#components/task/task-linked-tasks-section'
 import {
@@ -39,11 +40,19 @@ export function TaskMainContent({
         <div className="mt-1.5">
           <TaskStatusIcon taskId={task.id} status={task.status} />
         </div>
-        <EditableTitle taskId={task.id} defaultValue={task.title} />
+        <EditableTitle
+          taskId={task.id}
+          defaultValue={task.title}
+          author={task.titleAuthor}
+        />
       </div>
 
       {/* Description */}
-      <TaskDescription taskId={task.id} defaultValue={task.description} />
+      <TaskDescription
+        taskId={task.id}
+        defaultValue={task.description}
+        author={task.descriptionAuthor}
+      />
 
       {/* Pages */}
       {pages ? (
@@ -71,9 +80,11 @@ export function TaskMainContent({
 function EditableTitle({
   taskId,
   defaultValue,
+  author,
 }: {
   taskId: string
   defaultValue: string
+  author?: TaskDetail['titleAuthor']
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [value, setValue] = useState(defaultValue)
@@ -98,39 +109,42 @@ function EditableTitle({
     setIsEditing(false)
   }, [value, defaultValue, taskId, updateTask])
 
-  if (isEditing) {
-    return (
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => {
-          setValue(e.target.value)
-        }}
-        onBlur={save}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') e.currentTarget.blur()
-          if (e.key === 'Escape') {
-            savingRef.current = true
-            setValue(defaultValue)
-            setIsEditing(false)
-          }
-        }}
-        autoFocus
-        className="flex-1 bg-transparent text-2xl font-bold text-foreground outline-none"
-      />
-    )
-  }
-
   return (
-    <button
-      type="button"
-      onClick={() => {
-        setIsEditing(true)
-      }}
-      className="flex-1 cursor-text text-left text-2xl font-bold text-foreground"
-    >
-      {value}
-    </button>
+    <>
+      {isEditing ? (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value)
+          }}
+          onBlur={save}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+            if (e.key === 'Escape') {
+              savingRef.current = true
+              setValue(defaultValue)
+              setIsEditing(false)
+            }
+          }}
+          autoFocus
+          className="flex-1 bg-transparent text-2xl font-bold text-foreground outline-none"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setIsEditing(true)
+          }}
+          className="flex-1 cursor-text text-left text-2xl font-bold text-foreground"
+        >
+          {value}
+        </button>
+      )}
+      <span className="mt-2">
+        <LlmAuthorLabel author={author} />
+      </span>
+    </>
   )
 }
 
@@ -180,9 +194,11 @@ function TaskStatusIcon({
 function TaskDescription({
   taskId,
   defaultValue,
+  author,
 }: {
   taskId: string
   defaultValue: string | null
+  author?: TaskDetail['descriptionAuthor']
 }) {
   const updateTask = useUpdateTask()
   const pendingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -210,12 +226,15 @@ function TaskDescription({
   }, [])
 
   return (
-    <div className="min-h-[120px] rounded-lg border border-border p-1 text-sm focus-within:border-primary/50">
-      <MarkdownEditor
-        defaultValue={defaultValue ?? ''}
-        placeholder="Add description..."
-        onChange={handleChange}
-      />
+    <div className="flex flex-col gap-1">
+      <LlmAuthorLabel author={author} />
+      <div className="min-h-[120px] rounded-lg border border-border p-1 text-sm focus-within:border-primary/50">
+        <MarkdownEditor
+          defaultValue={defaultValue ?? ''}
+          placeholder="Add description..."
+          onChange={handleChange}
+        />
+      </div>
     </div>
   )
 }

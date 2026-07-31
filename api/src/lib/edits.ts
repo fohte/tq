@@ -1,12 +1,17 @@
-import { and, desc, eq, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 
-import type { DbTransaction } from '#db/connection'
+import { db, type DbTransaction } from '#db/connection'
 import { edits } from '#db/schema'
 import type { Author } from '#lib/author'
 
 export type EditAuthor = Author | { kind: 'system'; agent: null }
 
 export const SYSTEM_AUTHOR: EditAuthor = { kind: 'system', agent: null }
+
+// What GET responses expose: who most recently wrote the current content.
+// Unlike `EditAuthor`, callers never construct this directly — it's always
+// read back from an `edits` row via the lookups below.
+export type EditAuthorInfo = { kind: EditAuthor['kind']; agent: string | null }
 
 export type EditTarget = {
   taskId: string
@@ -105,4 +110,96 @@ export async function recordEdit(
     authorKind: author.kind,
     authorAgent: author.agent,
   })
+}
+
+function toAuthorInfo(row: {
+  authorKind: EditAuthor['kind']
+  authorAgent: string | null
+}): EditAuthorInfo {
+  return { kind: row.authorKind, agent: row.authorAgent }
+}
+
+/**
+ * Shared by {@link getPageAuthors} and {@link getCommentAuthors}: the latest
+ * edits row per distinct value of `targetColumn` (`edits.pageId` or
+ * `edits.commentId`), via `DISTINCT ON` so Postgres returns one row per
+ * target instead of the full history.
+ */
+async function getTargetAuthors(
+  targetColumn: typeof edits.pageId | typeof edits.commentId,
+  targetIds: string[],
+): Promise<Map<string, EditAuthorInfo>> {
+  if (targetIds.length === 0) return new Map()
+
+  const rows = await db
+    .selectDistinctOn([targetColumn], {
+      targetId: targetColumn,
+      authorKind: edits.authorKind,
+      authorAgent: edits.authorAgent,
+    })
+    .from(edits)
+    .where(inArray(targetColumn, targetIds))
+    .orderBy(targetColumn, desc(edits.updatedAt))
+
+  const authors = new Map<string, EditAuthorInfo>()
+  for (const row of rows) {
+    if (row.targetId != null) authors.set(row.targetId, toAuthorInfo(row))
+  }
+  return authors
+}
+
+/**
+ * Author of each page's current content: the most recent edits row for that
+ * pageId across create/update and any field, so an unedited page falls back
+ * to its create row. Pages with no edits row (predating the edits table)
+ * are absent from the returned map.
+ */
+export function getPageAuthors(
+  pageIds: string[],
+): Promise<Map<string, EditAuthorInfo>> {
+  return getTargetAuthors(edits.pageId, pageIds)
+}
+
+/** Author of each comment's current content. Same rule as {@link getPageAuthors}. */
+export function getCommentAuthors(
+  commentIds: string[],
+): Promise<Map<string, EditAuthorInfo>> {
+  return getTargetAuthors(edits.commentId, commentIds)
+}
+
+/**
+ * Per-field author for a task's title/description: the most recent `update`
+ * row naming that field, falling back to the task's `create` row (recorded
+ * with `field = null`) when the field was never updated after creation.
+ * `DISTINCT ON (edits.field)` returns at most 3 rows (one each for `null`,
+ * `'title'`, `'description'` — `'content'` never applies to a task-level
+ * row), replacing a scan of the full history.
+ */
+export async function getTaskFieldAuthors(taskId: string): Promise<{
+  title: EditAuthorInfo | null
+  description: EditAuthorInfo | null
+}> {
+  const rows = await db
+    .selectDistinctOn([edits.field], {
+      field: edits.field,
+      authorKind: edits.authorKind,
+      authorAgent: edits.authorAgent,
+    })
+    .from(edits)
+    .where(
+      and(
+        eq(edits.taskId, taskId),
+        isNull(edits.pageId),
+        isNull(edits.commentId),
+      ),
+    )
+    .orderBy(edits.field, desc(edits.updatedAt))
+
+  const byField = new Map(rows.map((row) => [row.field, toAuthorInfo(row)]))
+  const createAuthor = byField.get(null) ?? null
+
+  return {
+    title: byField.get('title') ?? createAuthor,
+    description: byField.get('description') ?? createAuthor,
+  }
 }

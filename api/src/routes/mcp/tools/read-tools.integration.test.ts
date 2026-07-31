@@ -116,6 +116,8 @@ describe('read tools', () => {
 
       expect(parseJson(toolResult)).toEqual({
         ...parent,
+        titleAuthor: { kind: 'human', agent: null },
+        descriptionAuthor: { kind: 'human', agent: null },
         childCompletionCount: { total: 1, completed: 0 },
         pages: [],
         timeBlocks: [],

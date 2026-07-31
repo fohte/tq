@@ -22,6 +22,7 @@ const samplePages: TaskPage[] = [
     sortOrder: 0,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
+    author: null,
   },
   {
     id: 'page-002',
@@ -32,6 +33,7 @@ const samplePages: TaskPage[] = [
     sortOrder: 1,
     createdAt: '2026-03-21T00:00:00.000Z',
     updatedAt: '2026-03-21T00:00:00.000Z',
+    author: null,
   },
   {
     id: 'page-003',
@@ -41,6 +43,7 @@ const samplePages: TaskPage[] = [
     sortOrder: 2,
     createdAt: '2026-03-22T00:00:00.000Z',
     updatedAt: '2026-03-22T00:00:00.000Z',
+    author: null,
   },
 ]
 
