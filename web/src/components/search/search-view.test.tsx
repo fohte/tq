@@ -6,13 +6,31 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SearchView } from '#components/search/search-view'
 import { atIndex } from '#lib/test-utils'
 
-const mockResults = [
-  {
+interface MockResult {
+  id: string
+  title: string
+  description: null
+  status: 'todo' | 'in_progress' | 'completed'
+  context: 'work' | 'personal' | 'dev'
+  startDate: null
+  dueDate: null
+  estimatedMinutes: number
+  parentId: null
+  projectId: null
+  sortOrder: number
+  recurrenceRuleId: null
+  recurrenceRule: null
+  createdAt: string
+  updatedAt: string
+}
+
+function makeResult(overrides: Partial<MockResult> = {}): MockResult {
+  return {
     id: '1',
     title: 'Deploy to production',
     description: null,
-    status: 'todo' as 'todo' | 'in_progress' | 'completed',
-    context: 'work' as 'work' | 'personal' | 'dev',
+    status: 'todo',
+    context: 'work',
     startDate: null,
     dueDate: null,
     estimatedMinutes: 120,
@@ -23,41 +41,25 @@ const mockResults = [
     recurrenceRule: null,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
-  },
-  {
+    ...overrides,
+  }
+}
+
+const mockResults = [
+  makeResult(),
+  makeResult({
     id: '2',
     title: 'Fix armyknife build',
-    description: null,
-    status: 'in_progress' as 'todo' | 'in_progress' | 'completed',
-    context: 'dev' as 'work' | 'personal' | 'dev',
-    startDate: null,
-    dueDate: null,
+    status: 'in_progress',
+    context: 'dev',
     estimatedMinutes: 90,
-    parentId: null,
-    projectId: null,
-    sortOrder: 0,
-    recurrenceRuleId: null,
-    recurrenceRule: null,
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-  },
-  {
+  }),
+  makeResult({
     id: '3',
     title: 'Plan weekend trip',
-    description: null,
-    status: 'todo' as 'todo' | 'in_progress' | 'completed',
-    context: 'personal' as 'work' | 'personal' | 'dev',
-    startDate: null,
-    dueDate: null,
+    context: 'personal',
     estimatedMinutes: 60,
-    parentId: null,
-    projectId: null,
-    sortOrder: 0,
-    recurrenceRuleId: null,
-    recurrenceRule: null,
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-  },
+  }),
 ]
 
 let mockSearchReturn = {

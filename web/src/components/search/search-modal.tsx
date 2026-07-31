@@ -3,6 +3,7 @@ import { Loader2, Search } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+import { ContextBadge } from '#components/search/context-badge'
 import { StatusIcon } from '#components/task/status-icon'
 import type { SearchResult, Suggestion } from '#hooks/use-search'
 import { useSearchSuggestions, useSearchTasks } from '#hooks/use-search'
@@ -17,21 +18,6 @@ interface SearchModalProps {
 type ListItem =
   | { type: 'suggestion'; data: Suggestion }
   | { type: 'task'; data: SearchResult }
-
-function ContextBadge({ context }: { context: SearchResult['context'] }) {
-  return (
-    <span
-      className={cn(
-        'rounded-[10px] px-2 py-0.5 text-[11px] font-medium',
-        context === 'work' && 'bg-[#3D2020] text-[#FF5C33]',
-        context === 'personal' && 'bg-[#3D3320] text-[#FFC14D]',
-        context === 'dev' && 'bg-[#1A2040] text-[#B2B2FF]',
-      )}
-    >
-      {context}
-    </span>
-  )
-}
 
 function extractCurrentPrefix(query: string): string {
   const parts = query.split(/\s+/)

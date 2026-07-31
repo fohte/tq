@@ -2,26 +2,12 @@ import { Link } from '@tanstack/react-router'
 import { ChevronDown, Loader2, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { ContextBadge } from '#components/search/context-badge'
 import { StatusIcon } from '#components/task/status-icon'
 import type { SearchFilters, SearchResult } from '#hooks/use-search'
 import { useSearch } from '#hooks/use-search'
 import { formatMinutes } from '#lib/format'
 import { cn } from '#lib/utils'
-
-function ContextBadge({ context }: { context: string }) {
-  return (
-    <span
-      className={cn(
-        'rounded-[10px] px-2 py-0.5 text-[11px] font-medium',
-        context === 'work' && 'bg-[#3D2020] text-[#FF5C33]',
-        context === 'personal' && 'bg-[#3D3320] text-[#FFC14D]',
-        context === 'dev' && 'bg-[#1A2040] text-[#B2B2FF]',
-      )}
-    >
-      {context}
-    </span>
-  )
-}
 
 interface FilterChipProps {
   label: string
