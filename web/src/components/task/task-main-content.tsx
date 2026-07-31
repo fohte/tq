@@ -10,6 +10,7 @@ import {
   TaskPagesSection,
 } from '#components/task/task-pages-section'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
+import { useDebouncedSave } from '#hooks/use-debounced-save'
 import type { TaskPage } from '#hooks/use-task-pages'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { useUpdateTask, useUpdateTaskStatus } from '#hooks/use-tasks'
@@ -201,29 +202,10 @@ function TaskDescription({
   author?: TaskDetail['descriptionAuthor']
 }) {
   const updateTask = useUpdateTask()
-  const pendingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pendingSaveRef = useRef<(() => void) | null>(null)
-
-  const handleChange = useCallback(
-    (markdown: string) => {
-      if (pendingRef.current) clearTimeout(pendingRef.current)
-      const doSave = () => {
-        const desc = markdown.trim() || null
-        updateTask.mutate({ id: taskId, input: { description: desc } })
-        pendingSaveRef.current = null
-      }
-      pendingSaveRef.current = doSave
-      pendingRef.current = setTimeout(doSave, 1000)
-    },
-    [taskId, updateTask],
-  )
-
-  useEffect(() => {
-    return () => {
-      if (pendingRef.current) clearTimeout(pendingRef.current)
-      pendingSaveRef.current?.()
-    }
-  }, [])
+  const { onChange } = useDebouncedSave((markdown) => {
+    const desc = markdown.trim() || null
+    updateTask.mutate({ id: taskId, input: { description: desc } })
+  })
 
   return (
     <div className="flex flex-col gap-1">
@@ -232,7 +214,7 @@ function TaskDescription({
         <MarkdownEditor
           defaultValue={defaultValue ?? ''}
           placeholder="Add description..."
-          onChange={handleChange}
+          onChange={onChange}
         />
       </div>
     </div>

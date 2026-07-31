@@ -3,6 +3,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { MarkdownEditor } from '#components/ui/markdown-editor'
+import { useDebouncedSave } from '#hooks/use-debounced-save'
 import { useTaskPage, useUpdateTaskPage } from '#hooks/use-task-pages'
 
 export function TaskPageEditor({
@@ -54,8 +55,6 @@ export function PageEditorInner({
 }) {
   const updatePage = useUpdateTaskPage(taskId)
   const [title, setTitle] = useState(defaultTitle)
-  const pendingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pendingSaveRef = useRef<(() => void) | null>(null)
   const titleSavingRef = useRef(false)
 
   useEffect(() => {
@@ -75,25 +74,9 @@ export function PageEditorInner({
     }
   }, [title, defaultTitle, pageId, updatePage])
 
-  const handleContentChange = useCallback(
-    (markdown: string) => {
-      if (pendingRef.current) clearTimeout(pendingRef.current)
-      const doSave = () => {
-        updatePage.mutate({ pageId, input: { content: markdown } })
-        pendingSaveRef.current = null
-      }
-      pendingSaveRef.current = doSave
-      pendingRef.current = setTimeout(doSave, 1000)
-    },
-    [pageId, updatePage],
-  )
-
-  useEffect(() => {
-    return () => {
-      if (pendingRef.current) clearTimeout(pendingRef.current)
-      pendingSaveRef.current?.()
-    }
-  }, [])
+  const { onChange: handleContentChange } = useDebouncedSave((markdown) => {
+    updatePage.mutate({ pageId, input: { content: markdown } })
+  })
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4 p-6">
