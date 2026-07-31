@@ -6,13 +6,31 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SearchModal } from '#components/search/search-modal'
 
-const mockTasks = [
-  {
+interface MockTask {
+  id: string
+  title: string
+  description: null
+  status: 'todo' | 'in_progress' | 'completed'
+  context: 'work' | 'personal'
+  startDate: null
+  dueDate: null
+  estimatedMinutes: number
+  parentId: null
+  projectId: null
+  sortOrder: number
+  recurrenceRuleId: null
+  recurrenceRule: null
+  createdAt: string
+  updatedAt: string
+}
+
+function makeTask(overrides: Partial<MockTask> = {}): MockTask {
+  return {
     id: '00000000-0000-0000-0000-000000000001',
     title: 'Implement task list UI',
     description: null,
-    status: 'todo' as const,
-    context: 'personal' as const,
+    status: 'todo',
+    context: 'personal',
     startDate: null,
     dueDate: null,
     estimatedMinutes: 120,
@@ -23,25 +41,29 @@ const mockTasks = [
     recurrenceRule: null,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
-  },
-  {
+    ...overrides,
+  }
+}
+
+const mockTasks = [
+  makeTask(),
+  makeTask({
     id: '00000000-0000-0000-0000-000000000002',
     title: 'Review pull request',
-    description: null,
-    status: 'in_progress' as const,
-    context: 'work' as const,
-    startDate: null,
-    dueDate: null,
+    status: 'in_progress',
+    context: 'work',
     estimatedMinutes: 30,
-    parentId: null,
-    projectId: null,
     sortOrder: 1,
-    recurrenceRuleId: null,
-    recurrenceRule: null,
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-  },
+  }),
 ]
+
+const personalTask = makeTask({
+  id: '00000000-0000-0000-0000-000000000003',
+  title: 'Plan weekend trip',
+  context: 'personal',
+  estimatedMinutes: 60,
+  sortOrder: 2,
+})
 
 const mockSuggestions = [
   { value: 'is:todo', display: 'Todo', category: 'is' },
@@ -135,6 +157,18 @@ describe('SearchModal', () => {
 
     expect(screen.getByText('Implement task list UI')).toBeInTheDocument()
     expect(screen.getByText('Review pull request')).toBeInTheDocument()
+  })
+
+  it('displays context badge for personal tasks', async () => {
+    mockSearchData = [personalTask]
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    const input = screen.getByLabelText('Search tasks')
+    await user.type(input, 'trip')
+
+    expect(screen.getByText('personal')).toBeInTheDocument()
   })
 
   it('shows suggestions when data is available', async () => {
