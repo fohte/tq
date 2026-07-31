@@ -1,6 +1,6 @@
+import { ProgressBar } from '#components/ui/progress-bar'
 import type { Task } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
-import { cn } from '#lib/utils'
 
 export function TaskListHeader({ tasks }: { tasks: Task[] }) {
   const total = tasks.length
@@ -19,28 +19,21 @@ export function TaskListHeader({ tasks }: { tasks: Task[] }) {
 
   return (
     <div className="space-y-2 px-3">
-      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+      <div className="flex items-center gap-3 font-mono text-xs text-muted-foreground">
         <span>
           {completed}/{total} tasks
         </span>
         {totalEstimate > 0 && (
           <>
             <span className="text-border">|</span>
-            <span className="font-mono">
+            <span>
               {formatMinutes(completedEstimate)}/{formatMinutes(totalEstimate)}
             </span>
           </>
         )}
       </div>
 
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-        <div
-          className={cn(
-            'h-full rounded-full bg-primary transition-all duration-300',
-          )}
-          style={{ width: `${String(progress)}%` }}
-        />
-      </div>
+      <ProgressBar percent={progress} />
     </div>
   )
 }

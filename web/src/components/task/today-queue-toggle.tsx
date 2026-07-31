@@ -1,6 +1,6 @@
 import { Check, Plus } from 'lucide-react'
 
-import { cn } from '#lib/utils'
+import { Button } from '#components/ui/button'
 
 export function TodayQueueToggle({
   inQueue,
@@ -10,16 +10,13 @@ export function TodayQueueToggle({
   onToggle: () => void
 }) {
   return (
-    <button
+    <Button
       type="button"
+      variant={inQueue ? 'secondary' : 'outline'}
+      size="xs"
       onClick={onToggle}
       aria-pressed={inQueue}
-      className={cn(
-        'flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium transition-colors',
-        inQueue
-          ? 'bg-primary/10 text-primary hover:bg-primary/20'
-          : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-      )}
+      className="gap-1 font-mono"
     >
       {inQueue ? (
         <>
@@ -32,6 +29,6 @@ export function TodayQueueToggle({
           Add to Today
         </>
       )}
-    </button>
+    </Button>
   )
 }

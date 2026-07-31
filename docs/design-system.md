@@ -151,18 +151,16 @@ policy.
 
 ## Status convention
 
-Task status is expressed as literal bracket text in `font-mono`, not a
-colored icon or fill.
+Task status is expressed via `StatusIcon`
+(`web/src/components/task/status-icon.tsx`) as a small circular icon — an
+outline circle, a partial-pie circle, or a filled circle with a check mark —
+not literal bracket text.
 
-| Symbol | Meaning     | Color token                     | Extra styling                                                                   |
-| ------ | ----------- | ------------------------------- | ------------------------------------------------------------------------------- |
-| `[ ]`  | todo        | `text-muted-foreground`         | —                                                                               |
-| `[~]`  | in_progress | `text-primary` (the red accent) | One of the few places red fill/text is used — marks "the one thing in progress" |
-| `[x]`  | completed   | `text-muted-foreground-faint`   | Accompanying title text gets `line-through` + `text-muted-foreground`           |
-
-`web/src/components/task/status-icon.tsx` still renders the old
-lucide-icon-based status indicator; this table is the contract its
-implementation should be brought in line with.
+| Status        | Icon                                           | Color token                                               | Extra styling                                                                   |
+| ------------- | ---------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `todo`        | outline circle                                 | `text-muted-foreground`                                   | —                                                                               |
+| `in_progress` | partial-pie circle                             | `text-primary` (the red accent)                           | One of the few places red fill/text is used — marks "the one thing in progress" |
+| `completed`   | filled circle + check (lucide-react's `Check`) | `bg-muted-foreground-faint` fill, `text-background` check | Accompanying title text gets `line-through` + `text-muted-foreground`           |
 
 ## Primitives
 
