@@ -1,9 +1,14 @@
 import { Link } from '@tanstack/react-router'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
-import { useDebouncedSave } from '#hooks/use-debounced-save'
+import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
+import {
+  DEBOUNCED_SAVE_DELAY_MS,
+  useDebouncedSave,
+} from '#hooks/use-debounced-save'
 import { useTaskPage, useUpdateTaskPage } from '#hooks/use-task-pages'
 
 export function TaskPageEditor({
@@ -80,10 +85,9 @@ export function PageEditorInner({
     })
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4 p-6">
+    <div className="mx-auto flex max-w-3xl flex-col gap-3.5 p-6">
       {/* Editable title */}
-      <input
-        type="text"
+      <Input
         value={title}
         onChange={(e) => {
           setTitle(e.target.value)
@@ -97,12 +101,19 @@ export function PageEditorInner({
             e.currentTarget.blur()
           }
         }}
-        className="bg-transparent text-2xl font-bold text-foreground outline-none placeholder:text-muted-foreground"
+        className="h-auto border-0 bg-transparent p-0 text-2xl font-bold text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0 md:text-2xl"
         placeholder="Page title"
       />
 
+      {/* Meta line */}
+      <div className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground-faint">
+        <span>MARKDOWN</span>
+        <span className="text-border">|</span>
+        <span>autosave {DEBOUNCED_SAVE_DELAY_MS / 1000}s</span>
+      </div>
+
       {/* Content editor */}
-      <div className="min-h-[400px] text-sm">
+      <div className="min-h-[400px] border border-border bg-card p-2.5 text-sm">
         <MarkdownEditor
           defaultValue={defaultContent}
           placeholder="Write something..."
@@ -127,16 +138,18 @@ export function SubpageViewPresentation({
 }) {
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+      <ScreenHeaderBar>
         <Link
           to="/tasks/$taskId"
           params={{ taskId }}
-          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          className="font-mono text-xs text-muted-foreground-strong hover:text-foreground"
         >
-          <ArrowLeft className="size-5" />
+          ←
         </Link>
-        <span className="text-sm font-medium text-foreground">{pageTitle}</span>
-      </div>
+        <span className="min-w-0 flex-1 truncate font-mono text-xs font-medium text-foreground">
+          {pageTitle}
+        </span>
+      </ScreenHeaderBar>
       <div className="flex-1 overflow-y-auto">{children}</div>
     </div>
   )

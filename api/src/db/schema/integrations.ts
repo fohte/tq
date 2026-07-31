@@ -179,3 +179,43 @@ export const oauthTokens = pgTable(
     ),
   ],
 )
+
+// One row per calendar a user has chosen to see in tq (existence = subscribed;
+// there is no boolean column). No code path may treat zero rows for an
+// account as "show its primary calendar" — that would make it impossible to
+// express "hide every calendar for this account".
+export const calendarSubscriptions = pgTable(
+  'calendar_subscriptions',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    oauthTokenId: text('oauth_token_id')
+      .notNull()
+      .references(() => oauthTokens.id, { onDelete: 'cascade' }),
+    calendarId: text('calendar_id').notNull(),
+    // Cached snapshot of the calendar's Google-side summary/backgroundColor,
+    // refreshed whenever the subscription is written (see
+    // integrations/google-calendar/subscriptions.ts) rather than on every
+    // events fetch, so /api/calendar/events never has to call
+    // calendarList.list on its 60s poll path.
+    displayName: text('display_name'),
+    color: text('color'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // No separate oauthTokenId-only index: this composite unique index's
+    // leftmost-prefix already covers every query in
+    // integrations/google-calendar/subscriptions.ts, all of which filter by
+    // oauthTokenId alone or by (oauthTokenId, calendarId).
+    unique('uq_calendar_subscriptions_oauth_token_calendar').on(
+      table.oauthTokenId,
+      table.calendarId,
+    ),
+  ],
+)

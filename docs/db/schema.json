@@ -1581,6 +1581,90 @@
           "columns": ["id"]
         }
       ]
+    },
+    {
+      "name": "public.calendar_subscriptions",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "oauth_token_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "calendar_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "display_name",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "color",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "calendar_subscriptions_pkey",
+          "def": "CREATE UNIQUE INDEX calendar_subscriptions_pkey ON public.calendar_subscriptions USING btree (id)",
+          "table": "public.calendar_subscriptions",
+          "columns": ["id"]
+        },
+        {
+          "name": "uq_calendar_subscriptions_oauth_token_calendar",
+          "def": "CREATE UNIQUE INDEX uq_calendar_subscriptions_oauth_token_calendar ON public.calendar_subscriptions USING btree (oauth_token_id, calendar_id)",
+          "table": "public.calendar_subscriptions",
+          "columns": ["oauth_token_id", "calendar_id"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "calendar_subscriptions_oauth_token_id_oauth_tokens_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (oauth_token_id) REFERENCES oauth_tokens(id) ON DELETE CASCADE",
+          "table": "public.calendar_subscriptions",
+          "referenced_table": "public.oauth_tokens",
+          "columns": ["oauth_token_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "calendar_subscriptions_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.calendar_subscriptions",
+          "referenced_table": "",
+          "columns": ["id"]
+        },
+        {
+          "name": "uq_calendar_subscriptions_oauth_token_calendar",
+          "type": "UNIQUE",
+          "def": "UNIQUE (oauth_token_id, calendar_id)",
+          "table": "public.calendar_subscriptions",
+          "referenced_table": "",
+          "columns": ["oauth_token_id", "calendar_id"]
+        }
+      ]
     }
   ],
   "relations": [
@@ -1745,6 +1829,15 @@
       "parent_columns": ["id"],
       "parent_cardinality": "exactly_one",
       "def": "FOREIGN KEY (target_project_id) REFERENCES projects(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.calendar_subscriptions",
+      "columns": ["oauth_token_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.oauth_tokens",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (oauth_token_id) REFERENCES oauth_tokens(id) ON DELETE CASCADE"
     }
   ],
   "driver": {

@@ -68,13 +68,28 @@
 
 .milkdown-wrapper .milkdown .ProseMirror p {
   font-size: 0.875rem;
-  line-height: 1.5;
+  line-height: 1.75;
 }
 
 /* List bullet/number color */
 .milkdown-wrapper .milkdown .ProseMirror ul li::marker,
 .milkdown-wrapper .milkdown .ProseMirror ol li::marker {
   color: var(--muted-foreground);
+}
+
+/* Crepe's bundled floating UI (slash menu, block handle, link tooltip, table
+   controls, etc.) ships hardcoded border-radius from its own theme, unrelated
+   to our design tokens. Zero it everywhere to match the app's zero-radius
+   policy; inline code is the one sanctioned exception (see
+   docs/design-system.md's Radius policy). */
+.milkdown-wrapper .milkdown *,
+.milkdown-wrapper .milkdown *::before,
+.milkdown-wrapper .milkdown *::after {
+  border-radius: 0 !important;
+}
+
+.milkdown-wrapper .milkdown .ProseMirror code {
+  border-radius: 4px !important;
 }
 
 /* Inline reference live preview (e.g. #123 task mentions): in view mode

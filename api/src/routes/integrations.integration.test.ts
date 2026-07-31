@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { oauthTokens } from '#db/schema'
+import { calendarSubscriptions, oauthTokens } from '#db/schema'
 import { upsertGoogleCalendarToken } from '#integrations/google-calendar/testing'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
@@ -257,6 +257,29 @@ describe('DELETE /api/integrations/:id/accounts/:accountId', () => {
       .from(oauthTokens)
       .where(eq(oauthTokens.provider, 'google_calendar'))
     expect(remaining).toEqual([{ accountId: 'google-sub-2' }])
+  })
+
+  it("cascades to delete the disconnected account's calendar subscriptions", async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user1@example.com',
+      accessToken: 'access-token-1',
+      refreshToken: 'refresh-token-1',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const target = await selectGoogleTokenByAccountId('google-sub-1')
+
+    const res = await app.request(
+      `/api/integrations/google_calendar/accounts/${target.id}`,
+      { method: 'DELETE' },
+    )
+    expect(res.status).toBe(200)
+
+    const remainingSubscriptions = await db
+      .select()
+      .from(calendarSubscriptions)
+      .where(eq(calendarSubscriptions.oauthTokenId, target.id))
+    expect(remainingSubscriptions).toEqual([])
   })
 
   it('returns 404 for a nonexistent account id under a valid provider id', async () => {

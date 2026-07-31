@@ -25,7 +25,7 @@ export function TaskMentionAutocompleteMenu({
   if (!state.open) return null
 
   return (
-    <ul className="w-64 rounded-lg border border-border bg-background p-1 text-sm shadow-md">
+    <ul className="w-64 bg-popover p-1 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10">
       {isLoading ? (
         <li className="px-2 py-1.5 text-muted-foreground">Searching...</li>
       ) : state.items.length === 0 ? (
@@ -36,8 +36,9 @@ export function TaskMentionAutocompleteMenu({
             <button
               type="button"
               className={cn(
-                'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left',
-                index === state.highlightedIndex && 'bg-secondary',
+                'flex w-full items-center gap-2 px-2 py-1.5 text-left',
+                index === state.highlightedIndex &&
+                  'bg-accent text-accent-foreground',
               )}
               onMouseEnter={() => {
                 store.setHighlightedIndex(index)

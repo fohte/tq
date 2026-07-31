@@ -8,9 +8,21 @@ import {
   DialogPopup,
   DialogPortal,
 } from '#components/ui/dialog'
+import { Input } from '#components/ui/input'
+import {
+  ExpandableFieldChip,
+  InlineFieldGroup,
+} from '#components/ui/modal-field'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#components/ui/select'
 import type { CreateScheduleInput } from '#hooks/use-schedules'
 import { useCreateSchedule } from '#hooks/use-schedules'
-import { selectHandler } from '#lib/form-utils'
+import { selectValueHandler } from '#lib/form-utils'
 import { cn } from '#lib/utils'
 
 interface CreateScheduleModalProps {
@@ -18,13 +30,10 @@ interface CreateScheduleModalProps {
   onOpenChange: (open: boolean) => void
 }
 
-type ContextValue = 'work' | 'personal' | 'dev'
-const contextValues = [
-  '',
-  'work',
-  'personal',
-  'dev',
-] as const satisfies readonly (ContextValue | '')[]
+type ContextValue = 'work' | 'personal'
+const contextValues = ['', 'work', 'personal'] as const satisfies readonly (
+  ContextValue | ''
+)[]
 type RecurrenceType = 'daily' | 'weekly' | 'monthly' | 'custom'
 const recurrenceValues = [
   '',
@@ -37,7 +46,6 @@ const recurrenceValues = [
 const contextLabels: Record<ContextValue, string> = {
   work: 'Work',
   personal: 'Personal',
-  dev: 'Dev',
 }
 
 const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -150,22 +158,22 @@ export function CreateScheduleModal({
                 <span className="text-base font-semibold text-foreground">
                   New Schedule
                 </span>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => {
                     handleOpenChange(false)
                   }}
-                  className="text-muted-foreground transition-colors hover:text-foreground"
                 >
                   <X className="size-5" />
                   <span className="sr-only">Close</span>
-                </button>
+                </Button>
               </div>
 
               {/* Body */}
               <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
                 {/* Title */}
-                <input
+                <Input
                   type="text"
                   value={title}
                   onChange={(e) => {
@@ -173,34 +181,37 @@ export function CreateScheduleModal({
                   }}
                   placeholder="Schedule title"
                   autoFocus
-                  className="w-full bg-transparent text-xl font-medium text-foreground outline-none placeholder:text-muted-foreground"
+                  className="h-auto border-0 bg-transparent p-0 text-xl font-medium shadow-none focus-visible:ring-0 focus-visible:border-0"
                 />
 
                 {/* Time fields */}
                 <div className="flex items-end gap-4">
-                  <FieldGroup
+                  <InlineFieldGroup
                     label="Start"
                     icon={<Clock className="size-3.5" />}
                   >
-                    <input
+                    <Input
                       type="time"
                       value={startTime}
                       onChange={(e) => {
                         setStartTime(e.target.value)
                       }}
-                      className="w-24 bg-transparent text-xs text-foreground outline-none"
+                      className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
                     />
-                  </FieldGroup>
-                  <FieldGroup label="End" icon={<Clock className="size-3.5" />}>
-                    <input
+                  </InlineFieldGroup>
+                  <InlineFieldGroup
+                    label="End"
+                    icon={<Clock className="size-3.5" />}
+                  >
+                    <Input
                       type="time"
                       value={endTime}
                       onChange={(e) => {
                         setEndTime(e.target.value)
                       }}
-                      className="w-24 bg-transparent text-xs text-foreground outline-none"
+                      className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
                     />
-                  </FieldGroup>
+                  </InlineFieldGroup>
                 </div>
 
                 {startTime && endTime && startTime > endTime && (
@@ -211,24 +222,31 @@ export function CreateScheduleModal({
 
                 {/* Recurrence */}
                 <div className="flex flex-col gap-2">
-                  <FieldGroup
+                  <InlineFieldGroup
                     label="Repeat"
                     icon={<Repeat className="size-3.5" />}
                   >
-                    <select
+                    <Select
                       value={recurrenceType}
-                      onChange={selectHandler(
+                      onValueChange={selectValueHandler(
                         setRecurrenceType,
                         recurrenceValues,
                       )}
-                      className="bg-transparent text-xs text-foreground outline-none"
                     >
-                      <option value="">None</option>
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                    </select>
-                  </FieldGroup>
+                      <SelectTrigger
+                        size="sm"
+                        className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                      >
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </InlineFieldGroup>
 
                   {recurrenceType === 'weekly' && (
                     <div className="flex gap-1">
@@ -240,10 +258,10 @@ export function CreateScheduleModal({
                             toggleDay(idx)
                           }}
                           className={cn(
-                            'flex size-8 items-center justify-center rounded-full text-xs font-medium transition-colors',
+                            'flex size-8 items-center justify-center border text-xs font-medium transition-colors',
                             daysOfWeek.includes(idx)
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-secondary text-muted-foreground hover:bg-secondary/80',
+                              ? 'border-border-strong bg-surface-strong text-foreground'
+                              : 'border-border text-muted-foreground hover:border-border-strong',
                           )}
                         >
                           {label.charAt(0)}
@@ -253,8 +271,8 @@ export function CreateScheduleModal({
                   )}
 
                   {recurrenceType === 'monthly' && (
-                    <FieldGroup label="Day of month" icon={null}>
-                      <input
+                    <InlineFieldGroup label="Day of month" icon={null}>
+                      <Input
                         type="number"
                         min="1"
                         max="31"
@@ -263,32 +281,41 @@ export function CreateScheduleModal({
                           setDayOfMonth(e.target.value)
                         }}
                         placeholder="1-31"
-                        className="w-16 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+                        className="h-auto w-16 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
                       />
-                    </FieldGroup>
+                    </InlineFieldGroup>
                   )}
                 </div>
 
                 {/* Context & Color */}
                 <div className="flex flex-wrap items-end gap-4">
-                  <FieldGroup
+                  <InlineFieldGroup
                     label="Context"
                     icon={<Layers className="size-3.5" />}
                   >
-                    <select
+                    <Select
                       value={context}
-                      onChange={selectHandler(setContext, contextValues)}
-                      className="bg-transparent text-xs text-foreground outline-none"
+                      onValueChange={selectValueHandler(
+                        setContext,
+                        contextValues,
+                      )}
                     >
-                      <option value="">—</option>
-                      <option value="work">Work</option>
-                      <option value="personal">Personal</option>
-                      <option value="dev">Dev</option>
-                    </select>
-                  </FieldGroup>
+                      <SelectTrigger
+                        size="sm"
+                        className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                      >
+                        <SelectValue placeholder="—" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">—</SelectItem>
+                        <SelectItem value="work">Work</SelectItem>
+                        <SelectItem value="personal">Personal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </InlineFieldGroup>
 
                   <div className="flex flex-col gap-1">
-                    <span className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                    <span className="flex items-center gap-1 font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint">
                       <Palette className="size-3.5" />
                       Color
                     </span>
@@ -301,10 +328,10 @@ export function CreateScheduleModal({
                             setColor(color === c ? '' : c)
                           }}
                           className={cn(
-                            'size-6 rounded-full border-2 transition-all',
+                            'size-6 border-2 transition-all',
                             color === c
                               ? 'border-foreground scale-110'
-                              : 'border-transparent hover:scale-105',
+                              : 'border-transparent hover:scale-110',
                           )}
                           style={{ backgroundColor: c }}
                         />
@@ -316,15 +343,14 @@ export function CreateScheduleModal({
 
               {/* Footer */}
               <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-3">
-                <button
-                  type="button"
+                <Button
+                  variant="outline"
                   onClick={() => {
                     handleOpenChange(false)
                   }}
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Cancel
-                </button>
+                </Button>
                 <Button
                   onClick={handleSubmit}
                   disabled={!canSubmit || createSchedule.isPending}
@@ -344,22 +370,22 @@ export function CreateScheduleModal({
                 <span className="text-base font-semibold text-foreground">
                   New Schedule
                 </span>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => {
                     handleOpenChange(false)
                   }}
-                  className="text-muted-foreground transition-colors hover:text-foreground"
                 >
                   <X className="size-5" />
                   <span className="sr-only">Close</span>
-                </button>
+                </Button>
               </div>
 
               {/* Content */}
               <div className="flex flex-col gap-4 px-5 pt-4">
                 {/* Title */}
-                <input
+                <Input
                   type="text"
                   value={title}
                   onChange={(e) => {
@@ -367,83 +393,102 @@ export function CreateScheduleModal({
                   }}
                   placeholder="Schedule title"
                   autoFocus
-                  className="w-full bg-transparent text-lg font-medium text-foreground outline-none placeholder:text-muted-foreground"
+                  className="h-auto border-0 bg-transparent p-0 text-lg font-medium shadow-none focus-visible:ring-0 focus-visible:border-0"
                 />
 
                 <div className="h-px bg-border" />
 
                 {/* Chip row */}
                 <div className="flex flex-wrap gap-2">
-                  <SpChip
+                  <ExpandableFieldChip
                     icon={<Clock className="size-3.5" />}
                     label={startTime || 'Start'}
                     active={!!startTime}
-                    expanded={
-                      <input
+                    expanded={() => (
+                      <Input
                         type="time"
                         value={startTime}
                         onChange={(e) => {
                           setStartTime(e.target.value)
                         }}
                         autoFocus
-                        className="w-24 bg-transparent text-xs outline-none"
+                        className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
                       />
-                    }
+                    )}
                   />
-                  <SpChip
+                  <ExpandableFieldChip
                     icon={<Clock className="size-3.5" />}
                     label={endTime || 'End'}
                     active={!!endTime}
-                    expanded={
-                      <input
+                    expanded={() => (
+                      <Input
                         type="time"
                         value={endTime}
                         onChange={(e) => {
                           setEndTime(e.target.value)
                         }}
                         autoFocus
-                        className="w-24 bg-transparent text-xs outline-none"
+                        className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
                       />
-                    }
+                    )}
                   />
-                  <SpChip
+                  <ExpandableFieldChip
                     icon={<Repeat className="size-3.5" />}
                     label={recurrenceType || 'Repeat'}
                     active={!!recurrenceType}
-                    expanded={
-                      <select
+                    expanded={(close) => (
+                      <Select
                         value={recurrenceType}
-                        onChange={selectHandler(
-                          setRecurrenceType,
-                          recurrenceValues,
-                        )}
-                        autoFocus
-                        className="bg-transparent text-xs outline-none"
+                        onValueChange={(value) => {
+                          selectValueHandler(
+                            setRecurrenceType,
+                            recurrenceValues,
+                          )(value)
+                          close()
+                        }}
                       >
-                        <option value="">None</option>
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                      </select>
-                    }
+                        <SelectTrigger
+                          size="sm"
+                          autoFocus
+                          className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                        >
+                          <SelectValue placeholder="None" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   />
-                  <SpChip
+                  <ExpandableFieldChip
                     icon={<Layers className="size-3.5" />}
                     label={context ? contextLabels[context] : 'Context'}
                     active={!!context}
-                    expanded={
-                      <select
+                    expanded={(close) => (
+                      <Select
                         value={context}
-                        onChange={selectHandler(setContext, contextValues)}
-                        autoFocus
-                        className="bg-transparent text-xs outline-none"
+                        onValueChange={(value) => {
+                          selectValueHandler(setContext, contextValues)(value)
+                          close()
+                        }}
                       >
-                        <option value="">None</option>
-                        <option value="work">Work</option>
-                        <option value="personal">Personal</option>
-                        <option value="dev">Dev</option>
-                      </select>
-                    }
+                        <SelectTrigger
+                          size="sm"
+                          autoFocus
+                          className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                        >
+                          <SelectValue placeholder="None" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="work">Work</SelectItem>
+                          <SelectItem value="personal">Personal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   />
                 </div>
 
@@ -457,10 +502,10 @@ export function CreateScheduleModal({
                           toggleDay(idx)
                         }}
                         className={cn(
-                          'flex size-8 items-center justify-center rounded-full text-xs font-medium transition-colors',
+                          'flex size-8 items-center justify-center border text-xs font-medium transition-colors',
                           daysOfWeek.includes(idx)
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-secondary text-muted-foreground hover:bg-secondary/80',
+                            ? 'border-border-strong bg-surface-strong text-foreground'
+                            : 'border-border text-muted-foreground hover:border-border-strong',
                         )}
                       >
                         {label.charAt(0)}
@@ -487,10 +532,10 @@ export function CreateScheduleModal({
                           setColor(color === c ? '' : c)
                         }}
                         className={cn(
-                          'size-6 rounded-full border-2 transition-all',
+                          'size-6 border-2 transition-all',
                           color === c
                             ? 'border-foreground scale-110'
-                            : 'border-transparent',
+                            : 'border-transparent hover:scale-110',
                         )}
                         style={{ backgroundColor: c }}
                       />
@@ -512,73 +557,5 @@ export function CreateScheduleModal({
         </DialogPopup>
       </DialogPortal>
     </Dialog>
-  )
-}
-
-function FieldGroup({
-  label,
-  icon,
-  children,
-}: {
-  label: string
-  icon: React.ReactNode
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
-        {icon}
-        {label}
-      </span>
-      <div className="flex h-7 items-center rounded-md border border-border px-2 text-xs focus-within:border-primary/50">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function SpChip({
-  icon,
-  label,
-  active,
-  expanded,
-}: {
-  icon: React.ReactNode
-  label: string
-  active?: boolean
-  expanded?: React.ReactNode
-}) {
-  const [isEditing, setIsEditing] = useState(false)
-
-  return (
-    <div
-      className={cn(
-        'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors',
-        active === true
-          ? 'bg-primary/10 text-primary'
-          : 'bg-secondary text-muted-foreground',
-      )}
-    >
-      {icon}
-      {isEditing && expanded != null ? (
-        <div
-          onBlur={() => {
-            setIsEditing(false)
-          }}
-        >
-          {expanded}
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => {
-            setIsEditing(true)
-          }}
-          className="outline-none"
-        >
-          {label}
-        </button>
-      )}
-    </div>
   )
 }

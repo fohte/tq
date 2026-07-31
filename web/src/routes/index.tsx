@@ -131,7 +131,7 @@ function DayView() {
 
   const gcalEvents: TimeBlockEvent[] = useMemo(() => {
     if (!gcalEventsQuery.data) return []
-    // Google Calendar has no work/personal/dev context, so these are never
+    // Google Calendar has no work/personal context, so these are never
     // redacted by the context filter.
     return gcalEventsQuery.data.map((event) => ({
       id: `gcal-${event.id}`,

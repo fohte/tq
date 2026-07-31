@@ -7,6 +7,7 @@ import {
   disconnectAccount,
   getAuthUrl,
   handleOAuthCallback,
+  type OAuthCallbackResult,
 } from '#integrations/oauth'
 import type { IntegrationProvider } from '#integrations/types'
 import { TokenExchangeError } from '#lib/fetch-json'
@@ -45,8 +46,13 @@ export async function handleOAuthCallbackRoute(
   provider: IntegrationProvider,
   code: string,
   fingerprintPrefix: string,
+  onSuccess?: (result: OAuthCallbackResult) => Promise<void>,
 ) {
   const result = await handleOAuthCallback(provider, code)
+
+  if (result.isOk() && onSuccess != null) {
+    await onSuccess(result.value)
+  }
 
   return result.match(
     () => c.json({ message: 'Authentication successful' }, 200),

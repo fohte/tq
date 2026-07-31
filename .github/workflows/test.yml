@@ -92,6 +92,12 @@ jobs:
           DATABASE_URL: postgresql://tq:tq@localhost:5432/tq_test
         run: mise x tbls -- tbls doc --rm-dist
 
+      # lefthook's `--all-files` resolves `{staged_files}` via `git ls-files --cached`,
+      # which skips untracked files. Stage newly generated docs so a schema-adding PR's
+      # first CI run formats them here instead of leaving a follow-up commit on main.
+      - name: Stage generated DB documentation
+        run: git add docs/db
+
       - name: Run lefthook
         id: lefthook
         continue-on-error: true

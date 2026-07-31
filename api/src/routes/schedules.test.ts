@@ -9,7 +9,7 @@ function makeSchedule(
     startTime: string
     endTime: string
     recurrenceRuleId: string | null
-    context: 'work' | 'personal' | 'dev'
+    context: 'work' | 'personal'
     color: string | null
     createdAt: Date
     updatedAt: Date

@@ -72,12 +72,12 @@ describe('buildQueryFromFilters', () => {
   it('builds query with all filter types', () => {
     const result = buildQueryFromFilters('test', {
       status: 'in_progress',
-      context: 'dev',
+      context: 'personal',
       label: 'scope:life',
       sortBy: 'due',
     })
     expect(result).toBe(
-      'is:in_progress context:dev label:scope:life sort:due test',
+      'is:in_progress context:personal label:scope:life sort:due test',
     )
   })
 

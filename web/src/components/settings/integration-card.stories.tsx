@@ -3,6 +3,7 @@ import { Calendar } from 'lucide-react'
 
 import { IntegrationCard } from '#components/settings/integration-card'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
+import { Panel } from '#components/ui/panel'
 
 const meta = {
   title: 'Settings/IntegrationCard',
@@ -11,17 +12,17 @@ const meta = {
     layout: 'centered',
   },
   render: (args) => (
-    <div className="w-96">
+    <Panel className="w-96">
       <IntegrationCard {...args} />
-    </div>
+    </Panel>
   ),
 } satisfies Meta<typeof IntegrationCard>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
-const githubIcon = <GithubMarkIcon className="size-6 text-foreground" />
-const googleCalendarIcon = <Calendar className="size-6 text-foreground" />
+const githubIcon = <GithubMarkIcon className="size-5 text-foreground" />
+const googleCalendarIcon = <Calendar className="size-5 text-foreground" />
 
 export const NotConfigured: Story = {
   args: {

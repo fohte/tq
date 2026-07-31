@@ -8,13 +8,22 @@ import {
   DialogPopup,
   DialogPortal,
 } from '#components/ui/dialog'
+import { Input } from '#components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#components/ui/select'
+import { Textarea } from '#components/ui/textarea'
 import type { Project } from '#hooks/use-projects'
 import {
   PROJECT_COLOR_PRESETS,
   useCreateProject,
   useUpdateProject,
 } from '#hooks/use-projects'
-import { selectHandler } from '#lib/form-utils'
+import { selectValueHandler } from '#lib/form-utils'
 import { cn } from '#lib/utils'
 
 interface ProjectFormModalProps {
@@ -136,41 +145,47 @@ export function ProjectFormModal({
   const formContent = (
     <>
       {/* Title */}
-      <input
+      <Input
         type="text"
         value={title}
         onChange={(e) => {
           setTitle(e.target.value)
         }}
         placeholder="Project name"
-        className="w-full bg-transparent text-xl font-medium text-foreground outline-none placeholder:text-muted-foreground"
+        className="h-auto border-0 bg-transparent p-0 text-xl font-medium shadow-none focus-visible:border-0 focus-visible:ring-0"
       />
 
       {/* Description */}
-      <textarea
+      <Textarea
         value={description}
         onChange={(e) => {
           setDescription(e.target.value)
         }}
         placeholder="What is this project about?"
         rows={3}
-        className="w-full resize-none rounded-lg bg-secondary p-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-primary/50"
       />
 
       {/* Option fields */}
       <div className="flex flex-col gap-3">
         <FieldRow label="Status">
-          <select
+          <Select
             value={status}
-            onChange={selectHandler(setStatus, statusValues)}
-            className="bg-transparent text-sm text-foreground outline-none"
+            onValueChange={selectValueHandler(setStatus, statusValues)}
           >
-            {statusValues.map((s) => (
-              <option key={s} value={s}>
-                {statusLabels[s]}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              size="sm"
+              className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {statusValues.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {statusLabels[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </FieldRow>
 
         <FieldRow
@@ -208,10 +223,10 @@ export function ProjectFormModal({
                   setColor(preset.hex)
                 }}
                 className={cn(
-                  'size-6 rounded-full transition-all',
+                  'size-6 border-2 transition-all',
                   color === preset.hex
-                    ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background'
-                    : 'hover:scale-110',
+                    ? 'scale-110 border-foreground'
+                    : 'border-transparent hover:scale-110',
                 )}
                 style={{ backgroundColor: preset.hex }}
                 title={preset.name}
@@ -237,16 +252,16 @@ export function ProjectFormModal({
                 <span className="text-base font-semibold text-foreground">
                   {isEditing ? 'Edit Project' : 'New Project'}
                 </span>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => {
                     handleOpenChange(false)
                   }}
-                  className="text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  <X className="size-5" />
+                  <X />
                   <span className="sr-only">Close</span>
-                </button>
+                </Button>
               </div>
 
               {/* Body */}
@@ -256,15 +271,14 @@ export function ProjectFormModal({
 
               {/* Footer */}
               <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-3">
-                <button
-                  type="button"
+                <Button
+                  variant="outline"
                   onClick={() => {
                     handleOpenChange(false)
                   }}
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Cancel
-                </button>
+                </Button>
                 <Button
                   onClick={handleSubmit}
                   disabled={!title.trim() || isPending}
@@ -280,16 +294,16 @@ export function ProjectFormModal({
           <div className="fixed inset-0 z-50 flex flex-col bg-background md:hidden">
             {/* Header */}
             <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   handleOpenChange(false)
                 }}
-                className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
-                <ChevronLeft className="size-4" />
+                <ChevronLeft data-icon="inline-start" />
                 Back
-              </button>
+              </Button>
               <span className="text-base font-semibold text-foreground">
                 {isEditing ? 'Edit Project' : 'New Project'}
               </span>
@@ -324,7 +338,7 @@ function FieldRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="flex w-24 shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground">
+      <span className="flex w-24 shrink-0 items-center gap-1.5 font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint">
         {icon}
         {label}
       </span>
