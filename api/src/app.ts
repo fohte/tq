@@ -5,6 +5,7 @@ import { cors } from 'hono/cors'
 import { authorMiddleware } from '#lib/author'
 import { calendarApp } from '#routes/calendar'
 import { githubApp } from '#routes/github'
+import { githubSyncRulesApp } from '#routes/github-sync-rules'
 import { imagesApp } from '#routes/images'
 import { integrationsApp } from '#routes/integrations'
 import { labelsApp } from '#routes/labels'
@@ -35,6 +36,7 @@ const app = new Hono()
   .route('/api/schedule', schedulesApp)
   .route('/api/calendar', calendarApp)
   .route('/api/github', githubApp)
+  .route('/api/github/sync-rules', githubSyncRulesApp)
   .route('/api/images', imagesApp)
   .route('/api/integrations', integrationsApp)
   .route('/api/labels', labelsApp)
