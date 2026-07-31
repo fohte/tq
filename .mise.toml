@@ -25,4 +25,4 @@ file = "scripts/db-up"
 [tasks."db:doc"]
 description = "Generate DB documentation (ER diagram) with tbls"
 depends = ["db:up"]
-run = "tbls doc --rm-dist"
+run = "pnpm --filter api run db:migrate && tbls doc --rm-dist"
