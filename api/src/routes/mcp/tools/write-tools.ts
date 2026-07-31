@@ -5,7 +5,6 @@ import { z } from 'zod'
 import { app } from '#app'
 import { AUTHOR_HEADER } from '#lib/author'
 import { callInternalRoute } from '#routes/mcp/route-bridge'
-import { createPageSchema, updatePageSchema } from '#routes/task-pages'
 import { createTaskSchema, updateTaskSchema } from '#routes/tasks/crud'
 import { taskStatus } from '#routes/tasks/shared'
 
@@ -105,44 +104,5 @@ export function registerWriteTools(server: McpServer): void {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status }),
           }),
-  )
-
-  server.registerTool(
-    'create_page',
-    {
-      description:
-        'Create a new page on a task: a titled note for content that ' +
-        "doesn't fit in the task's description, such as investigation " +
-        'notes or design docs. Resolve taskId with get_task or another ' +
-        'task-lookup tool.',
-      inputSchema: { taskId: z.uuid(), ...createPageSchema.shape },
-    },
-    async ({ taskId, ...body }) =>
-      callRoute(`/api/tasks/${taskId}/pages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }),
-  )
-
-  server.registerTool(
-    'update_page',
-    {
-      description:
-        'Partially update an existing page by id. Only the fields ' +
-        'provided are changed; omit a field to leave it as-is. Resolve ' +
-        "taskId and pageId from the `pages` array in get_task's response.",
-      inputSchema: {
-        taskId: z.uuid(),
-        pageId: z.uuid(),
-        ...updatePageSchema.shape,
-      },
-    },
-    async ({ taskId, pageId, ...body }) =>
-      callRoute(`/api/tasks/${taskId}/pages/${pageId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }),
   )
 }

@@ -8,11 +8,7 @@ import {
   connectMcpClient,
   parseToolJson,
 } from '#routes/mcp/testing'
-import {
-  createPage,
-  createTask,
-  type TaskResponse,
-} from '#routes/tasks/testing'
+import { createTask, type TaskResponse } from '#routes/tasks/testing'
 import {
   assertDefined,
   jsonBody,
@@ -29,17 +25,6 @@ setupTestDb()
 
 type CompletedTaskResponse = TaskResponse & {
   nextTask: TaskResponse | null
-}
-
-interface PageResponse {
-  id: string
-  taskId: string
-  title: string
-  content: string
-  sortOrder: number
-  createdAt: string
-  updatedAt: string
-  author: { kind: 'human' | 'llm' | 'system'; agent: string | null } | null
 }
 
 let client: Client
@@ -214,38 +199,5 @@ describe('REST/MCP parity', () => {
       timeBlocks: [],
       links: { outgoing: [], incoming: [] },
     })
-  })
-
-  it('a page created via create_page is visible through GET /api/tasks/:taskId/pages/:pageId', async () => {
-    const task = await createTask('Task with notes')
-
-    const created = await callTool('create_page', {
-      taskId: task.id,
-      title: 'Investigation notes',
-      content: '# Findings',
-    })
-    const data = passthroughSchema<PageResponse>().parse(parseToolJson(created))
-
-    const res = await app.request(`/api/tasks/${task.id}/pages/${data.id}`)
-    expect(res.status).toBe(200)
-
-    expect(await jsonBody(res)).toEqual(data)
-  })
-
-  it('a title updated via update_page is visible through GET /api/tasks/:taskId/pages/:pageId', async () => {
-    const task = await createTask('Task with notes')
-    const page = await createPage(task.id, 'Original title', 'Original content')
-
-    const updated = await callTool('update_page', {
-      taskId: task.id,
-      pageId: page.id,
-      title: 'Updated via MCP',
-    })
-    const data = passthroughSchema<PageResponse>().parse(parseToolJson(updated))
-
-    const res = await app.request(`/api/tasks/${task.id}/pages/${page.id}`)
-    expect(res.status).toBe(200)
-
-    expect(await jsonBody(res)).toEqual(data)
   })
 })
