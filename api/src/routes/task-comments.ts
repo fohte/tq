@@ -10,11 +10,11 @@ import { firstOrThrow } from '#lib/drizzle-utils'
 import { type EditAuthorInfo, getCommentAuthors, recordEdit } from '#lib/edits'
 import { syncTaskLinks } from '#services/task-links'
 
-const createCommentSchema = z.object({
+export const createCommentSchema = z.object({
   content: z.string().min(1),
 })
 
-const updateCommentSchema = z.object({
+export const updateCommentSchema = z.object({
   content: z.string().min(1),
 })
 

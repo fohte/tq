@@ -31,6 +31,8 @@ describe('MCP endpoint', () => {
       // tool group's own tests; this only pins down that every registered
       // tool is reachable through the wire protocol.
       expect(result.tools.map((tool) => tool.name).sort()).toEqual([
+        'create_comment',
+        'create_page',
         'create_task',
         'get_task',
         'get_today_tasks',
@@ -38,6 +40,8 @@ describe('MCP endpoint', () => {
         'list_projects',
         'list_tasks',
         'search_tasks',
+        'update_comment',
+        'update_page',
         'update_task',
         'update_task_status',
       ])

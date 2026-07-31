@@ -11,7 +11,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { app } from '#app'
 import { db } from '#db/connection'
 import { labels, taskLabels } from '#db/schema'
-import { createTask, TEST_UUID } from '#routes/tasks/testing'
+import {
+  createComment,
+  createPage,
+  createTask,
+  TEST_UUID,
+} from '#routes/tasks/testing'
 import { passthroughSchema, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -380,6 +385,233 @@ describe('update_task_status tool', () => {
         createdAt: '<timestamp>',
         updatedAt: '<timestamp>',
       },
+    })
+  })
+})
+
+describe('create_page tool', () => {
+  it('creates a page with the given fields, attributed to the default mcp agent', async () => {
+    const task = await createTask('Has pages')
+
+    const result = await callTool('create_page', {
+      taskId: task.id,
+      title: 'My Page',
+      content: 'Hello',
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      taskId: '<uuid>',
+      title: 'My Page',
+      content: 'Hello',
+      sortOrder: 0,
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+      author: { kind: 'llm', agent: 'mcp' },
+    })
+  })
+
+  it('attributes the page to an explicitly passed agent', async () => {
+    const task = await createTask('Has pages')
+
+    const result = await callTool('create_page', {
+      taskId: task.id,
+      title: 'My Page',
+      agent: 'claude-opus-5',
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      taskId: '<uuid>',
+      title: 'My Page',
+      content: '',
+      sortOrder: 0,
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+      author: { kind: 'llm', agent: 'claude-opus-5' },
+    })
+  })
+
+  it('rejects a non-existent taskId', async () => {
+    const result = await callTool('create_page', {
+      taskId: TEST_UUID,
+      title: 'Orphan page',
+    })
+
+    expect(result).toEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Task not found' }],
+    })
+  })
+})
+
+describe('update_page tool', () => {
+  it('partially updates the given fields', async () => {
+    const task = await createTask('Has pages')
+    const page = await createPage(task.id, 'Original title', 'Original content')
+
+    const result = await callTool('update_page', {
+      taskId: task.id,
+      pageId: page.id,
+      title: 'Updated title',
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      taskId: '<uuid>',
+      title: 'Updated title',
+      content: 'Original content',
+      sortOrder: 0,
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+      author: { kind: 'llm', agent: 'mcp' },
+    })
+  })
+
+  it('attributes the update to an explicitly passed agent', async () => {
+    const task = await createTask('Has pages')
+    const page = await createPage(task.id, 'Original title', 'Original content')
+
+    const result = await callTool('update_page', {
+      taskId: task.id,
+      pageId: page.id,
+      content: 'Updated content',
+      agent: 'claude-opus-5',
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      taskId: '<uuid>',
+      title: 'Original title',
+      content: 'Updated content',
+      sortOrder: 0,
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+      author: { kind: 'llm', agent: 'claude-opus-5' },
+    })
+  })
+
+  it('rejects a non-existent pageId', async () => {
+    const task = await createTask('Has pages')
+
+    const result = await callTool('update_page', {
+      taskId: task.id,
+      pageId: TEST_UUID,
+      title: 'Updated title',
+    })
+
+    expect(result).toEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Page not found' }],
+    })
+  })
+})
+
+describe('create_comment tool', () => {
+  it('creates a comment, attributed to the default mcp agent', async () => {
+    const task = await createTask('Has comments')
+
+    const result = await callTool('create_comment', {
+      taskId: task.id,
+      content: 'A comment',
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      taskId: '<uuid>',
+      content: 'A comment',
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+      author: { kind: 'llm', agent: 'mcp' },
+    })
+  })
+
+  it('attributes the comment to an explicitly passed agent', async () => {
+    const task = await createTask('Has comments')
+
+    const result = await callTool('create_comment', {
+      taskId: task.id,
+      content: 'A comment',
+      agent: 'claude-opus-5',
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      taskId: '<uuid>',
+      content: 'A comment',
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+      author: { kind: 'llm', agent: 'claude-opus-5' },
+    })
+  })
+
+  it('rejects a non-existent taskId', async () => {
+    const result = await callTool('create_comment', {
+      taskId: TEST_UUID,
+      content: 'Orphan comment',
+    })
+
+    expect(result).toEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Task not found' }],
+    })
+  })
+})
+
+describe('update_comment tool', () => {
+  it('updates the comment content', async () => {
+    const task = await createTask('Has comments')
+    const comment = await createComment(task.id, 'Original content')
+
+    const result = await callTool('update_comment', {
+      taskId: task.id,
+      commentId: comment.id,
+      content: 'Updated content',
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      taskId: '<uuid>',
+      content: 'Updated content',
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+      author: { kind: 'llm', agent: 'mcp' },
+    })
+  })
+
+  it('attributes the update to an explicitly passed agent', async () => {
+    const task = await createTask('Has comments')
+    const comment = await createComment(task.id, 'Original content')
+
+    const result = await callTool('update_comment', {
+      taskId: task.id,
+      commentId: comment.id,
+      content: 'Updated content',
+      agent: 'claude-opus-5',
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      taskId: '<uuid>',
+      content: 'Updated content',
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+      author: { kind: 'llm', agent: 'claude-opus-5' },
+    })
+  })
+
+  it('rejects a non-existent commentId', async () => {
+    const task = await createTask('Has comments')
+
+    const result = await callTool('update_comment', {
+      taskId: task.id,
+      commentId: TEST_UUID,
+      content: 'Updated content',
+    })
+
+    expect(result).toEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Comment not found' }],
     })
   })
 })
