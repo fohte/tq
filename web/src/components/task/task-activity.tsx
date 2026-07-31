@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
+import { useDebouncedSave } from '#hooks/use-debounced-save'
 import type { Comment } from '#hooks/use-task-comments'
 import {
   useCreateComment,
@@ -69,38 +70,17 @@ function CommentCard({
 }) {
   const updateComment = useUpdateComment(taskId)
   const deleteComment = useDeleteComment(taskId)
-  const pendingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pendingSaveRef = useRef<(() => void) | null>(null)
-
-  const handleChange = useCallback(
-    (markdown: string) => {
-      if (pendingRef.current) clearTimeout(pendingRef.current)
-      const doSave = () => {
-        const trimmed = markdown.trim()
-        if (trimmed) {
-          updateComment.mutate({ commentId: comment.id, content: trimmed })
-        }
-        pendingSaveRef.current = null
-      }
-      pendingSaveRef.current = doSave
-      pendingRef.current = setTimeout(doSave, 1000)
-    },
-    [comment.id, updateComment],
-  )
-
-  useEffect(() => {
-    return () => {
-      if (pendingRef.current) clearTimeout(pendingRef.current)
-      pendingSaveRef.current?.()
+  const { onChange, cancel } = useDebouncedSave((markdown) => {
+    const trimmed = markdown.trim()
+    if (trimmed) {
+      updateComment.mutate({ commentId: comment.id, content: trimmed })
     }
-  }, [])
+  })
 
   const handleDelete = useCallback(() => {
-    // Cancel any pending save before deleting
-    if (pendingRef.current) clearTimeout(pendingRef.current)
-    pendingSaveRef.current = null
+    cancel()
     deleteComment.mutate(comment.id)
-  }, [comment.id, deleteComment])
+  }, [cancel, comment.id, deleteComment])
 
   const timestamp = formatRelativeTime(comment.createdAt)
   const isEdited = comment.createdAt !== comment.updatedAt
@@ -131,10 +111,7 @@ function CommentCard({
 
         {/* Body - inline editable with debounced auto-save */}
         <div className="text-[13px] leading-relaxed text-foreground">
-          <MarkdownEditor
-            defaultValue={comment.content}
-            onChange={handleChange}
-          />
+          <MarkdownEditor defaultValue={comment.content} onChange={onChange} />
         </div>
       </div>
     </div>

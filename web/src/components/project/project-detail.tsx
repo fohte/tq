@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ColorDot } from '#components/project/color-dot'
 import { statusConfig } from '#components/project/project-status-badge'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
+import { useDebouncedSave } from '#hooks/use-debounced-save'
 import type { ProjectDetail, ProjectTask } from '#hooks/use-projects'
 import { PROJECT_COLOR_PRESETS, useUpdateProject } from '#hooks/use-projects'
 import { selectHandler } from '#lib/form-utils'
@@ -277,29 +278,10 @@ function ProjectDescription({
   defaultValue: string | null
 }) {
   const updateProject = useUpdateProject()
-  const pendingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pendingSaveRef = useRef<(() => void) | null>(null)
-
-  const handleChange = useCallback(
-    (markdown: string) => {
-      if (pendingRef.current) clearTimeout(pendingRef.current)
-      const doSave = () => {
-        const desc = markdown.trim() || null
-        updateProject.mutate({ id: projectId, input: { description: desc } })
-        pendingSaveRef.current = null
-      }
-      pendingSaveRef.current = doSave
-      pendingRef.current = setTimeout(doSave, 1000)
-    },
-    [projectId, updateProject],
-  )
-
-  useEffect(() => {
-    return () => {
-      if (pendingRef.current) clearTimeout(pendingRef.current)
-      pendingSaveRef.current?.()
-    }
-  }, [])
+  const { onChange } = useDebouncedSave((markdown) => {
+    const desc = markdown.trim() || null
+    updateProject.mutate({ id: projectId, input: { description: desc } })
+  })
 
   return (
     <div className="flex flex-col gap-1">
@@ -308,7 +290,7 @@ function ProjectDescription({
         <MarkdownEditor
           defaultValue={defaultValue ?? ''}
           placeholder="Add description..."
-          onChange={handleChange}
+          onChange={onChange}
         />
       </div>
     </div>
