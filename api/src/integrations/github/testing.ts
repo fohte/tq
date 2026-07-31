@@ -36,3 +36,33 @@ export function mockGithubNotModifiedResponse() {
     new Response(null, { status: 304 }),
   )
 }
+
+export function mockAssignedIssuesResponse(
+  issues: Array<{
+    owner?: string
+    repo?: string
+    number?: number
+    title?: string
+    body?: string | null
+    isPullRequest?: boolean
+  }> = [],
+) {
+  vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+    new Response(
+      JSON.stringify(
+        issues.map((issue) => ({
+          number: issue.number ?? 1,
+          title: issue.title ?? 'Assigned issue',
+          body: issue.body ?? null,
+          html_url: `https://github.com/${issue.owner ?? 'fohte'}/${issue.repo ?? 'tq'}/issues/${String(issue.number ?? 1)}`,
+          repository: {
+            name: issue.repo ?? 'tq',
+            owner: { login: issue.owner ?? 'fohte' },
+          },
+          ...(issue.isPullRequest === true ? { pull_request: {} } : {}),
+        })),
+      ),
+      { status: 200 },
+    ),
+  )
+}

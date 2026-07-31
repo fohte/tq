@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Calendar, Puzzle } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { GithubSyncRuleList } from '#components/settings/github-sync-rule-list'
 import { IntegrationCard } from '#components/settings/integration-card'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
 import {
@@ -44,6 +45,10 @@ function Settings() {
             連携状態の取得に失敗しました
           </p>
         )}
+
+        <div className="mt-8">
+          <GithubSyncRuleList />
+        </div>
       </div>
     </div>
   )

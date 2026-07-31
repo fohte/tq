@@ -1,3 +1,5 @@
+import { Link } from '@tanstack/react-router'
+
 import { TaskMentionSummary } from '#components/task/task-mention-summary'
 import {
   PreviewCard,
@@ -9,13 +11,16 @@ import {
 import { useTaskMentionPreview } from '#hooks/use-task-mentions'
 import type { TaskMentionData } from '#lib/inline-reference/providers/task-mention'
 
-// Only ever mounted once the plugin has confirmed the task is already
-// resolved in the query cache, so this never needs to render a loading or
-// not-found state itself.
-export function TaskMentionChip({ data }: { data: TaskMentionData }) {
+export function TaskMentionChip({
+  data,
+  raw,
+}: {
+  data: TaskMentionData
+  raw: string
+}) {
   const { data: task } = useTaskMentionPreview(data.number)
 
-  if (task == null) return null
+  if (task == null) return <span>{raw}</span>
 
   return (
     <PreviewCard>
@@ -33,11 +38,11 @@ export function TaskMentionChip({ data }: { data: TaskMentionData }) {
       <PreviewCardPortal>
         <PreviewCardPositioner>
           <PreviewCardPopup>
-            {/* A plain anchor, not @tanstack/react-router's Link: this chip
-                is mounted into its own React root inside a ProseMirror
-                decoration, outside the app's RouterProvider tree, so Link's
-                useRouter() would throw. */}
-            <a href={`/tasks/${task.id}`} className="flex flex-col gap-1.5">
+            <Link
+              to="/tasks/$taskId"
+              params={{ taskId: task.id }}
+              className="flex flex-col gap-1.5"
+            >
               <div className="flex items-center gap-2 text-sm font-medium">
                 <TaskMentionSummary
                   status={task.status}
@@ -50,7 +55,7 @@ export function TaskMentionChip({ data }: { data: TaskMentionData }) {
                   {task.description}
                 </p>
               )}
-            </a>
+            </Link>
           </PreviewCardPopup>
         </PreviewCardPositioner>
       </PreviewCardPortal>

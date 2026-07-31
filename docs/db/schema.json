@@ -1395,6 +1395,192 @@
           "columns": ["source_task_id", "target_task_id"]
         }
       ]
+    },
+    {
+      "name": "public.github_sync_rule_ignored_issues",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "rule_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "owner",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "repo",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "number",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "github_sync_rule_ignored_issues_pkey",
+          "def": "CREATE UNIQUE INDEX github_sync_rule_ignored_issues_pkey ON public.github_sync_rule_ignored_issues USING btree (id)",
+          "table": "public.github_sync_rule_ignored_issues",
+          "columns": ["id"]
+        },
+        {
+          "name": "uq_github_sync_rule_ignored_issues",
+          "def": "CREATE UNIQUE INDEX uq_github_sync_rule_ignored_issues ON public.github_sync_rule_ignored_issues USING btree (rule_id, owner, repo, number)",
+          "table": "public.github_sync_rule_ignored_issues",
+          "columns": ["rule_id", "owner", "repo", "number"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "github_sync_rule_ignored_issues_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.github_sync_rule_ignored_issues",
+          "referenced_table": "",
+          "columns": ["id"]
+        },
+        {
+          "name": "uq_github_sync_rule_ignored_issues",
+          "type": "UNIQUE",
+          "def": "UNIQUE (rule_id, owner, repo, number)",
+          "table": "public.github_sync_rule_ignored_issues",
+          "referenced_table": "",
+          "columns": ["rule_id", "owner", "repo", "number"]
+        },
+        {
+          "name": "github_sync_rule_ignored_issues_rule_id_github_sync_rules_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (rule_id) REFERENCES github_sync_rules(id) ON DELETE CASCADE",
+          "table": "public.github_sync_rule_ignored_issues",
+          "referenced_table": "public.github_sync_rules",
+          "columns": ["rule_id"],
+          "referenced_columns": ["id"]
+        }
+      ]
+    },
+    {
+      "name": "public.github_sync_rules",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "scope",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "org",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "repo",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "trigger",
+          "type": "text",
+          "nullable": false,
+          "default": "'assigned'::text"
+        },
+        {
+          "name": "target_project_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "enabled",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true"
+        },
+        {
+          "name": "seed_ignore_on_next_sync",
+          "type": "boolean",
+          "nullable": false,
+          "default": "false"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "github_sync_rules_pkey",
+          "def": "CREATE UNIQUE INDEX github_sync_rules_pkey ON public.github_sync_rules USING btree (id)",
+          "table": "public.github_sync_rules",
+          "columns": ["id"]
+        },
+        {
+          "name": "idx_github_sync_rules_enabled",
+          "def": "CREATE INDEX idx_github_sync_rules_enabled ON public.github_sync_rules USING btree (enabled)",
+          "table": "public.github_sync_rules",
+          "columns": ["enabled"]
+        },
+        {
+          "name": "idx_github_sync_rules_target_project_id",
+          "def": "CREATE INDEX idx_github_sync_rules_target_project_id ON public.github_sync_rules USING btree (target_project_id)",
+          "table": "public.github_sync_rules",
+          "columns": ["target_project_id"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "github_sync_rules_scope_target_check",
+          "type": "CHECK",
+          "def": "CHECK ((((scope = 'all'::text) AND (org IS NULL) AND (repo IS NULL)) OR ((scope = 'org'::text) AND (org IS NOT NULL) AND (repo IS NULL)) OR ((scope = 'repo'::text) AND (org IS NOT NULL) AND (repo IS NOT NULL))))",
+          "table": "public.github_sync_rules",
+          "referenced_table": "",
+          "columns": ["scope", "org", "repo"]
+        },
+        {
+          "name": "github_sync_rules_target_project_id_projects_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (target_project_id) REFERENCES projects(id) ON DELETE CASCADE",
+          "table": "public.github_sync_rules",
+          "referenced_table": "public.projects",
+          "columns": ["target_project_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "github_sync_rules_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.github_sync_rules",
+          "referenced_table": "",
+          "columns": ["id"]
+        }
+      ]
     }
   ],
   "relations": [
@@ -1541,6 +1727,24 @@
       "parent_columns": ["id"],
       "parent_cardinality": "exactly_one",
       "def": "FOREIGN KEY (target_task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.github_sync_rule_ignored_issues",
+      "columns": ["rule_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.github_sync_rules",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (rule_id) REFERENCES github_sync_rules(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.github_sync_rules",
+      "columns": ["target_project_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.projects",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (target_project_id) REFERENCES projects(id) ON DELETE CASCADE"
     }
   ],
   "driver": {

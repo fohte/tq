@@ -2,16 +2,20 @@ import type { Node } from '@milkdown/kit/prose/model'
 import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
 import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
-import { QueryClientProvider } from '@tanstack/react-query'
-import { createRoot, type Root } from 'react-dom/client'
+import type {
+  CreateReactWidgetView,
+  ReactWidgetViewComponent,
+} from '@prosemirror-adapter/react'
+import { useWidgetViewContext } from '@prosemirror-adapter/react'
+import { useEffect, useRef } from 'react'
 
 import { rangeTouchesSelection } from '#lib/inline-reference/selection-overlap'
 import { collectTextBlockRuns } from '#lib/inline-reference/text-scan'
 import type { InlineReferenceProvider } from '#lib/inline-reference/types'
-import { queryClient } from '#lib/query-client'
 
 function buildDecorations<TData>(
   provider: InlineReferenceProvider<TData>,
+  createWidget: ReturnType<CreateReactWidgetView>,
   doc: Node,
   selectionFrom: number,
   selectionTo: number,
@@ -25,14 +29,14 @@ function buildDecorations<TData>(
 
       if (rangeTouchesSelection(selectionFrom, selectionTo, from, to)) continue
 
-      if (!provider.isReady(match.data)) {
-        provider.ensureLoaded(match.data)
-        continue
-      }
-
       decorations.push(
         Decoration.inline(from, to, { class: 'inline-reference-source' }),
-        createChipWidget(provider, match.data, match.raw, from),
+        createWidget(from, {
+          key: `${provider.id}:${match.raw}:${String(from)}`,
+          side: 1,
+          data: match.data,
+          raw: match.raw,
+        }),
       )
     }
   }
@@ -40,19 +44,21 @@ function buildDecorations<TData>(
   return decorations
 }
 
-function createChipWidget<TData>(
+// Bound once per provider (not per match): the widget's `data`/`raw` travel
+// through the decoration spec instead of component props, since
+// @prosemirror-adapter/react's widget component takes no props of its own
+// (see useWidgetViewContext below).
+function createChipWidgetComponent<TData>(
   provider: InlineReferenceProvider<TData>,
-  data: TData,
-  raw: string,
-  from: number,
-): Decoration {
-  let root: Root | undefined
+): ReactWidgetViewComponent {
+  return function InlineReferenceWidget() {
+    const { spec } = useWidgetViewContext()
+    const containerRef = useRef<HTMLSpanElement>(null)
 
-  return Decoration.widget(
-    from,
-    () => {
-      const container = document.createElement('span')
-      container.className = 'inline-reference-chip'
+    useEffect(() => {
+      const container = containerRef.current
+      if (container == null) return
+
       // The raw source text this chip covers is hidden but still in the doc
       // (see the .inline-reference-source CSS), so it can still carry marks
       // like `link`. Milkdown's own link-hover-preview plugin resolves mouse
@@ -61,34 +67,48 @@ function createChipWidget<TData>(
       // any mark it finds there — including this chip's hidden source.
       // Stopping propagation here keeps that plugin-internal (and any
       // similar mark-driven) mousemove handling from ever seeing the event.
-      container.addEventListener('mousemove', (e) => {
-        e.stopPropagation()
-      })
-      container.addEventListener('mouseleave', (e) => {
-        e.stopPropagation()
-      })
-      root = createRoot(container)
-      root.render(
-        <QueryClientProvider client={queryClient}>
-          <provider.Chip data={data} />
-        </QueryClientProvider>,
-      )
-      return container
-    },
-    {
-      key: `${provider.id}:${raw}:${String(from)}`,
-      side: 1,
-      destroy: () => root?.unmount(),
-    },
-  )
+      // This has to be a real DOM listener rather than a React one: React's
+      // synthetic events are delegated from the app's root DOM node, which
+      // sits above the ProseMirror view in the tree, so by the time a
+      // synthetic handler could call stopPropagation() the native event has
+      // already bubbled past the view's own listener.
+      const stopPropagation = (event: Event) => {
+        event.stopPropagation()
+      }
+      container.addEventListener('mousemove', stopPropagation)
+      container.addEventListener('mouseleave', stopPropagation)
+      return () => {
+        container.removeEventListener('mousemove', stopPropagation)
+        container.removeEventListener('mouseleave', stopPropagation)
+      }
+    }, [])
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- data/raw travel through the widget decoration spec's untyped `[key: string]: any` bag; this cast documents the shape createWidget() above always gives it
+    const { data, raw } = spec as { data: TData; raw: string }
+
+    return (
+      <span ref={containerRef} className="inline-reference-chip">
+        <provider.Chip data={data} raw={raw} />
+      </span>
+    )
+  }
 }
 
 // Wires one InlineReferenceProvider up as a Milkdown/ProseMirror plugin: text
 // matching its pattern is hidden and replaced by the provider's chip widget,
 // except where the selection touches it (so it stays plain, editable text).
+// `widgetViewFactory` comes from @prosemirror-adapter/react's
+// useWidgetViewFactory(), so this must be called from within a component
+// tree that has a ProsemirrorAdapterProvider ancestor.
 export function createInlineReferencePlugin<TData>(
   provider: InlineReferenceProvider<TData>,
+  widgetViewFactory: CreateReactWidgetView,
 ) {
+  const createWidget = widgetViewFactory({
+    as: 'span',
+    component: createChipWidgetComponent(provider),
+  })
+
   return $prose(() => {
     return new Plugin({
       key: new PluginKey(`inline-reference-${provider.id}`),
@@ -97,41 +117,15 @@ export function createInlineReferencePlugin<TData>(
           const { doc, selection } = state
           return DecorationSet.create(
             doc,
-            buildDecorations(provider, doc, selection.from, selection.to),
+            buildDecorations(
+              provider,
+              createWidget,
+              doc,
+              selection.from,
+              selection.to,
+            ),
           )
         },
-      },
-      view(editorView) {
-        // Metadata resolves asynchronously, outside of any ProseMirror
-        // transaction, so force a redraw to pick it up once it lands.
-        //
-        // The redraw is deferred to a microtask rather than dispatched
-        // inline: `notify` can fire synchronously and re-entrantly out of
-        // `ensureLoaded`'s `queryClient.fetchQuery()` call below (its cache
-        // `added`/fetch-start events are emitted before `fetchQuery` itself
-        // returns). Dispatching synchronously there would re-enter this same
-        // `decorations()` computation from inside itself, unboundedly,
-        // overflowing the call stack. A microtask always runs after the
-        // current synchronous call stack has fully unwound, so it can never
-        // nest inside the call that scheduled it.
-        let redrawScheduled = false
-        const unsubscribe = provider.subscribe(() => {
-          if (redrawScheduled) return
-          redrawScheduled = true
-          void Promise.resolve()
-            .then(() => {
-              redrawScheduled = false
-              if (editorView.isDestroyed) return
-              editorView.dispatch(editorView.state.tr)
-            })
-            .catch((error: unknown) => {
-              console.error(
-                `Failed to redraw inline-reference-${provider.id}`,
-                error,
-              )
-            })
-        })
-        return { destroy: unsubscribe }
       },
     })
   })

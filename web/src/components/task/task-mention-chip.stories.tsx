@@ -1,5 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { expect, within } from 'storybook/test'
 
@@ -35,27 +42,53 @@ const baseTask: TaskDetail = {
 }
 
 function Providers({
+  number,
   task,
   children,
 }: {
-  task: TaskDetail
+  number: number
+  task: TaskDetail | null
   children: ReactNode
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  queryClient.setQueryData(taskMentionKeys.preview(task.number), task)
+  queryClient.setQueryData(taskMentionKeys.preview(number), task)
+
+  const rootRoute = createRootRoute({
+    component: () => <>{children}</>,
+  })
+  const taskRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/tasks/$taskId',
+    component: () => null,
+  })
+  rootRoute.addChildren([taskRoute])
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  })
 
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   )
 }
 
-function TaskMentionChipWithProviders({ task }: { task: TaskDetail }) {
+function TaskMentionChipWithProviders({
+  number,
+  raw,
+  task,
+}: {
+  number: number
+  raw: string
+  task: TaskDetail | null
+}) {
   return (
-    <Providers task={task}>
+    <Providers number={number} task={task}>
       <p className="text-sm">
-        See <TaskMentionChip data={{ number: task.number }} /> for details.
+        See <TaskMentionChip data={{ number }} raw={raw} /> for details.
       </p>
     </Providers>
   )
@@ -73,13 +106,17 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Todo: Story = {
-  args: { task: baseTask },
+  args: {
+    number: baseTask.number,
+    raw: `#${String(baseTask.number)}`,
+    task: baseTask,
+  },
   play: async ({ canvas, canvasElement, userEvent }) => {
-    // The chip is mounted into its own React root (no RouterProvider) in
-    // production, so this exercises the exact same isolation the real
-    // ProseMirror widget does: hovering must open the preview card and
-    // render its navigation link without throwing. The popup renders via a
-    // portal, so it must be queried against the document body.
+    // The chip renders as a portal into the app's own React tree in
+    // production (see plugin.tsx), so this exercises the same tree shape:
+    // hovering must open the preview card and render its navigation link
+    // without throwing. The popup renders via a portal, so it must be
+    // queried against the document body.
     await userEvent.hover(canvas.getByText(baseTask.title))
     const body = within(canvasElement.ownerDocument.body)
     await expect(
@@ -90,22 +127,38 @@ export const Todo: Story = {
 
 export const InProgress: Story = {
   args: {
+    number: baseTask.number,
+    raw: `#${String(baseTask.number)}`,
     task: { ...baseTask, status: 'in_progress', title: 'Review pull request' },
   },
 }
 
 export const Completed: Story = {
   args: {
+    number: baseTask.number,
+    raw: `#${String(baseTask.number)}`,
     task: { ...baseTask, status: 'completed', title: 'Set up CI pipeline' },
   },
 }
 
 export const LongTitle: Story = {
   args: {
+    number: baseTask.number,
+    raw: `#${String(baseTask.number)}`,
     task: {
       ...baseTask,
       title:
         'This is a very long task title that should be truncated inside the chip',
     },
+  },
+}
+
+// The task preview hasn't resolved yet (or the mentioned number doesn't
+// exist): the chip falls back to rendering the raw matched text instead of
+// a card.
+export const Unresolved: Story = {
+  args: { number: 999, raw: '#999', task: null },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('#999')).toBeVisible()
   },
 }

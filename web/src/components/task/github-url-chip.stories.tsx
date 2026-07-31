@@ -1,5 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { expect, within } from 'storybook/test'
 
@@ -10,6 +17,7 @@ import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
 const OPEN_ISSUE_URL = 'https://github.com/fohte/tq/issues/158'
 const MERGED_PR_URL = 'https://github.com/fohte/tq/pull/159'
 const LINKED_ISSUE_URL = 'https://github.com/fohte/tq/issues/42'
+const UNRESOLVED_ISSUE_URL = 'https://github.com/fohte/tq/issues/999'
 
 function Providers({
   url,
@@ -17,7 +25,7 @@ function Providers({
   children,
 }: {
   url: string
-  result: ResolveGithubUrlResult
+  result: ResolveGithubUrlResult | null
   children: ReactNode
 }) {
   const queryClient = new QueryClient({
@@ -25,22 +33,40 @@ function Providers({
   })
   queryClient.setQueryData(githubUrlPreviewKeys.preview(url), result)
 
+  const rootRoute = createRootRoute({
+    component: () => <>{children}</>,
+  })
+  const taskRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/tasks/$taskId',
+    component: () => null,
+  })
+  rootRoute.addChildren([taskRoute])
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  })
+
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   )
 }
 
 function GithubUrlChipWithProviders({
   url,
+  raw,
   result,
 }: {
   url: string
-  result: ResolveGithubUrlResult
+  raw: string
+  result: ResolveGithubUrlResult | null
 }) {
   return (
     <Providers url={url} result={result}>
       <p className="text-sm">
-        See <GithubUrlChip data={{ url }} /> for details.
+        See <GithubUrlChip data={{ url }} raw={raw} /> for details.
       </p>
     </Providers>
   )
@@ -60,6 +86,7 @@ type Story = StoryObj<typeof meta>
 export const OpenIssue: Story = {
   args: {
     url: OPEN_ISSUE_URL,
+    raw: OPEN_ISSUE_URL,
     result: {
       linked: false,
       preview: {
@@ -75,11 +102,11 @@ export const OpenIssue: Story = {
     },
   },
   play: async ({ canvas, canvasElement, userEvent }) => {
-    // The chip is mounted into its own React root (no RouterProvider) in
-    // production, so this exercises the exact same isolation the real
-    // ProseMirror widget does: hovering must open the preview card and
-    // render its content without throwing. The popup renders via a portal,
-    // so it must be queried against the document body.
+    // The chip renders as a portal into the app's own React tree in
+    // production (see plugin.tsx), so this exercises the same tree shape:
+    // hovering must open the preview card and render its content without
+    // throwing. The popup renders via a portal, so it must be queried
+    // against the document body.
     await userEvent.hover(canvas.getByText('fohte/tq#158'))
     const body = within(canvasElement.ownerDocument.body)
     await expect(
@@ -93,6 +120,7 @@ export const OpenIssue: Story = {
 export const MergedPullRequest: Story = {
   args: {
     url: MERGED_PR_URL,
+    raw: MERGED_PR_URL,
     result: {
       linked: false,
       preview: {
@@ -112,6 +140,7 @@ export const MergedPullRequest: Story = {
 export const LinkedToTask: Story = {
   args: {
     url: LINKED_ISSUE_URL,
+    raw: LINKED_ISSUE_URL,
     result: {
       linked: true,
       task: {
@@ -149,5 +178,18 @@ export const LinkedToTask: Story = {
     await userEvent.hover(canvas.getByText('fohte/tq#42'))
     const body = within(canvasElement.ownerDocument.body)
     await expect(await body.findByText('Linked to a TQ task →')).toBeVisible()
+  },
+}
+
+// The preview hasn't resolved yet (or resolved to "not a real issue/PR"):
+// the chip falls back to rendering the raw matched text instead of a card.
+export const Unresolved: Story = {
+  args: {
+    url: UNRESOLVED_ISSUE_URL,
+    raw: UNRESOLVED_ISSUE_URL,
+    result: null,
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText(UNRESOLVED_ISSUE_URL)).toBeVisible()
   },
 }

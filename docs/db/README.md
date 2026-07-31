@@ -2,23 +2,25 @@
 
 ## Tables
 
-| Name                                                    | Columns | Comment | Type       |
-| ------------------------------------------------------- | ------- | ------- | ---------- |
-| [public.images](public.images.md)                       | 5       |         | BASE TABLE |
-| [public.labels](public.labels.md)                       | 4       |         | BASE TABLE |
-| [public.oauth_tokens](public.oauth_tokens.md)           | 9       |         | BASE TABLE |
-| [public.projects](public.projects.md)                   | 10      |         | BASE TABLE |
-| [public.recurrence_rules](public.recurrence_rules.md)   | 7       |         | BASE TABLE |
-| [public.schedules](public.schedules.md)                 | 9       |         | BASE TABLE |
-| [public.task_comments](public.task_comments.md)         | 5       |         | BASE TABLE |
-| [public.task_labels](public.task_labels.md)             | 2       |         | BASE TABLE |
-| [public.task_pages](public.task_pages.md)               | 7       |         | BASE TABLE |
-| [public.tasks](public.tasks.md)                         | 15      |         | BASE TABLE |
-| [public.time_blocks](public.time_blocks.md)             | 7       |         | BASE TABLE |
-| [public.today_tasks](public.today_tasks.md)             | 6       |         | BASE TABLE |
-| [public.edits](public.edits.md)                         | 10      |         | BASE TABLE |
-| [public.task_github_links](public.task_github_links.md) | 14      |         | BASE TABLE |
-| [public.task_links](public.task_links.md)               | 3       |         | BASE TABLE |
+| Name                                                                                | Columns | Comment | Type       |
+| ----------------------------------------------------------------------------------- | ------- | ------- | ---------- |
+| [public.images](public.images.md)                                                   | 5       |         | BASE TABLE |
+| [public.labels](public.labels.md)                                                   | 4       |         | BASE TABLE |
+| [public.oauth_tokens](public.oauth_tokens.md)                                       | 9       |         | BASE TABLE |
+| [public.projects](public.projects.md)                                               | 10      |         | BASE TABLE |
+| [public.recurrence_rules](public.recurrence_rules.md)                               | 7       |         | BASE TABLE |
+| [public.schedules](public.schedules.md)                                             | 9       |         | BASE TABLE |
+| [public.task_comments](public.task_comments.md)                                     | 5       |         | BASE TABLE |
+| [public.task_labels](public.task_labels.md)                                         | 2       |         | BASE TABLE |
+| [public.task_pages](public.task_pages.md)                                           | 7       |         | BASE TABLE |
+| [public.tasks](public.tasks.md)                                                     | 15      |         | BASE TABLE |
+| [public.time_blocks](public.time_blocks.md)                                         | 7       |         | BASE TABLE |
+| [public.today_tasks](public.today_tasks.md)                                         | 6       |         | BASE TABLE |
+| [public.edits](public.edits.md)                                                     | 10      |         | BASE TABLE |
+| [public.task_github_links](public.task_github_links.md)                             | 14      |         | BASE TABLE |
+| [public.task_links](public.task_links.md)                                           | 3       |         | BASE TABLE |
+| [public.github_sync_rule_ignored_issues](public.github_sync_rule_ignored_issues.md) | 6       |         | BASE TABLE |
+| [public.github_sync_rules](public.github_sync_rules.md)                             | 10      |         | BASE TABLE |
 
 ## Relations
 
@@ -41,6 +43,8 @@ erDiagram
 "public.task_github_links" |o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_links" }o--|| "public.tasks" : "FOREIGN KEY (source_task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_links" }o--|| "public.tasks" : "FOREIGN KEY (target_task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+"public.github_sync_rule_ignored_issues" }o--|| "public.github_sync_rules" : "FOREIGN KEY (rule_id) REFERENCES github_sync_rules(id) ON DELETE CASCADE"
+"public.github_sync_rules" }o--|| "public.projects" : "FOREIGN KEY (target_project_id) REFERENCES projects(id) ON DELETE CASCADE"
 
 "public.images" {
   text id
@@ -184,6 +188,26 @@ erDiagram
   text source_task_id FK
   text target_task_id FK
   timestamp_with_time_zone created_at
+}
+"public.github_sync_rule_ignored_issues" {
+  text id
+  text rule_id FK
+  text owner
+  text repo
+  integer number
+  timestamp_with_time_zone created_at
+}
+"public.github_sync_rules" {
+  text id
+  text scope
+  text org
+  text repo
+  text trigger
+  text target_project_id FK
+  boolean enabled
+  boolean seed_ignore_on_next_sync
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
 }
 ```
 
