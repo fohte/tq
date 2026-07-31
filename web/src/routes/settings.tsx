@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { IntegrationCard } from '#components/settings/integration-card'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
 import {
+  canConnectIntegration,
   type IntegrationSummary,
   useDisconnectIntegrationAccount,
   useIntegrationAuthUrl,
@@ -49,9 +50,7 @@ function Settings() {
 }
 
 function SettingsIntegrationRow({ summary }: { summary: IntegrationSummary }) {
-  const canConnect =
-    summary.configured &&
-    (summary.supportsMultipleAccounts || summary.accounts.length === 0)
+  const canConnect = canConnectIntegration(summary)
   const authUrl = useIntegrationAuthUrl(summary.id, canConnect)
   const disconnectAccount = useDisconnectIntegrationAccount(summary.id)
 
@@ -64,7 +63,7 @@ function SettingsIntegrationRow({ summary }: { summary: IntegrationSummary }) {
       }
       displayName={summary.displayName}
       accounts={summary.accounts}
-      supportsMultipleAccounts={summary.supportsMultipleAccounts}
+      canConnect={canConnect}
       configured={summary.configured}
       {...(authUrl.data?.url != null ? { authUrl: authUrl.data.url } : {})}
       onDisconnectAccount={(accountId) => {

@@ -11,7 +11,7 @@ export interface IntegrationCardProps {
   icon: ReactNode
   displayName: string
   accounts: IntegrationAccountView[]
-  supportsMultipleAccounts: boolean
+  canConnect: boolean
   configured: boolean
   authUrl?: string
   onDisconnectAccount: (accountId: string) => void
@@ -22,15 +22,12 @@ export function IntegrationCard({
   icon,
   displayName,
   accounts,
-  supportsMultipleAccounts,
+  canConnect,
   configured,
   authUrl,
   onDisconnectAccount,
   disconnectingAccountId,
 }: IntegrationCardProps) {
-  const canConnect =
-    configured && (supportsMultipleAccounts || accounts.length === 0)
-
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
       <div className="flex items-center justify-between gap-4">

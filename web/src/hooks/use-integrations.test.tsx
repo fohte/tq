@@ -4,11 +4,26 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  canConnectIntegration,
+  type IntegrationSummary,
   useDisconnectIntegrationAccount,
   useIntegrationAuthUrl,
   useIntegrationsList,
 } from '#hooks/use-integrations'
 import { assertDefined } from '#lib/test-utils'
+
+function buildSummary(
+  overrides: Partial<IntegrationSummary> = {},
+): IntegrationSummary {
+  return {
+    id: 'github',
+    displayName: 'GitHub',
+    configured: true,
+    supportsMultipleAccounts: false,
+    accounts: [],
+    ...overrides,
+  }
+}
 
 vi.mock('#lib/api', () => {
   const mockListGet = vi.fn()
@@ -58,6 +73,50 @@ beforeEach(async () => {
   for (const mock of Object.values(mocks)) {
     mock.mockReset()
   }
+})
+
+describe('canConnectIntegration', () => {
+  it('is false when not configured', () => {
+    expect(canConnectIntegration(buildSummary({ configured: false }))).toBe(
+      false,
+    )
+  })
+
+  it('is true when configured with no connected accounts, regardless of multi-account support', () => {
+    expect(
+      canConnectIntegration(
+        buildSummary({
+          configured: true,
+          supportsMultipleAccounts: false,
+          accounts: [],
+        }),
+      ),
+    ).toBe(true)
+  })
+
+  it('is true when configured, supports multiple accounts, and already has a connected account', () => {
+    expect(
+      canConnectIntegration(
+        buildSummary({
+          configured: true,
+          supportsMultipleAccounts: true,
+          accounts: [{ id: 'a', label: 'x' }],
+        }),
+      ),
+    ).toBe(true)
+  })
+
+  it('is false when configured, single-account only, and already has a connected account', () => {
+    expect(
+      canConnectIntegration(
+        buildSummary({
+          configured: true,
+          supportsMultipleAccounts: false,
+          accounts: [{ id: 'a', label: 'x' }],
+        }),
+      ),
+    ).toBe(false)
+  })
 })
 
 describe('useIntegrationsList', () => {

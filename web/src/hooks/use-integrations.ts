@@ -9,6 +9,16 @@ export type IntegrationSummary = InferResponseType<
   200
 >[number]
 
+// A provider can accept a new/another account when it's configured and
+// either supports multiple accounts, or has none connected yet — the single
+// source of truth for whether to offer a "connect"/"add account" action.
+export function canConnectIntegration(summary: IntegrationSummary): boolean {
+  return (
+    summary.configured &&
+    (summary.supportsMultipleAccounts || summary.accounts.length === 0)
+  )
+}
+
 const integrationsKeys = {
   list: ['integrations'] as const,
   authUrl: (id: string) => ['integration-auth-url', id] as const,
