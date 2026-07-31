@@ -29,17 +29,26 @@ export function IntegrationCard({
   disconnectingAccountId,
 }: IntegrationCardProps) {
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          {icon}
-          <span className="text-sm font-medium text-foreground">
+    <div>
+      <div className="flex items-center gap-3.5 p-4">
+        <div className="shrink-0">{icon}</div>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="font-mono text-[13px] font-medium text-foreground">
             {displayName}
           </span>
+          {accounts.length === 0 && (
+            <span className="text-xs text-muted-foreground">
+              {configured
+                ? `${displayName} が連携されていません`
+                : `${displayName} は未設定です (サーバー側の環境変数が不足しています)`}
+            </span>
+          )}
         </div>
 
         {canConnect && (
           <Button
+            className="ml-auto shrink-0"
+            size="sm"
             disabled={authUrl == null}
             render={
               authUrl != null ? (
@@ -54,19 +63,22 @@ export function IntegrationCard({
         )}
       </div>
 
-      {accounts.length > 0 ? (
-        <ul className="flex flex-col gap-2">
+      {accounts.length > 0 && (
+        <ul className="divide-y divide-border border-t border-border">
           {accounts.map((account) => (
             <li
               key={account.id}
-              className="flex items-center justify-between gap-4"
+              // Left padding lines the label up with the header's name text:
+              // header p-4 (1rem) + icon size-5 (1.25rem) + gap-3.5 (0.875rem).
+              className="flex items-center justify-between gap-4 py-2 pr-4 pl-[calc(1rem+1.25rem+0.875rem)]"
             >
-              <span className="text-sm text-muted-foreground">
+              <span className="min-w-0 truncate text-xs text-muted-foreground">
                 {account.label ?? '連携中'}
               </span>
               <Button
-                variant="outline"
-                size="sm"
+                variant="destructive"
+                size="xs"
+                className="shrink-0"
                 onClick={() => {
                   onDisconnectAccount(account.id)
                 }}
@@ -77,12 +89,6 @@ export function IntegrationCard({
             </li>
           ))}
         </ul>
-      ) : (
-        <span className="text-sm text-muted-foreground">
-          {configured
-            ? `${displayName} が連携されていません`
-            : `${displayName} は未設定です (サーバー側の環境変数が不足しています)`}
-        </span>
       )}
     </div>
   )
