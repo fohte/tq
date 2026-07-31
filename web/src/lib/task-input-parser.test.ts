@@ -223,7 +223,7 @@ describe('getSuggestions', () => {
 
   it('returns % suggestions', () => {
     const result = getSuggestions('%', '')
-    expect(result.map((s) => s.value)).toEqual(['work', 'personal', 'dev'])
+    expect(result.map((s) => s.value)).toEqual(['work', 'personal'])
   })
 
   it('filters % suggestions by partial', () => {

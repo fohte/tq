@@ -16,7 +16,6 @@ function ContextBadge({ context }: { context: string }) {
       className={cn(
         'rounded-[10px] px-2 py-0.5 text-[11px] font-medium',
         context === 'work' && 'bg-[#3D2020] text-[#FF5C33]',
-        context === 'dev' && 'bg-[#1A2040] text-[#B2B2FF]',
       )}
     >
       {context}
@@ -122,7 +121,6 @@ const STATUS_OPTIONS = [
 const CONTEXT_OPTIONS = [
   { value: 'work', label: 'Work' },
   { value: 'personal', label: 'Personal' },
-  { value: 'dev', label: 'Dev' },
 ]
 
 const SORT_OPTIONS = [

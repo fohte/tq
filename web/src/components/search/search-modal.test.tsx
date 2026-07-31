@@ -12,7 +12,7 @@ const mockTasks = [
     title: 'Implement task list UI',
     description: null,
     status: 'todo' as const,
-    context: 'dev' as const,
+    context: 'personal' as const,
     startDate: null,
     dueDate: null,
     estimatedMinutes: 120,

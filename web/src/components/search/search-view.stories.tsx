@@ -45,7 +45,7 @@ const mockResults: SearchResult[] = [
     ...baseTask,
     id: '2',
     title: 'Fix armyknife build',
-    context: 'dev',
+    context: 'personal',
     estimatedMinutes: 90,
     status: 'in_progress',
   },

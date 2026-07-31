@@ -66,7 +66,7 @@ function seedLiveReferenceFixtures() {
     title: MENTION_FIXTURE_TITLE,
     description: null,
     status: 'todo',
-    context: 'dev',
+    context: 'personal',
     startDate: null,
     dueDate: null,
     estimatedMinutes: null,

@@ -1,7 +1,7 @@
 import { formatLocalDate } from '#lib/date-range'
 import { parseDurationToMinutes } from '#lib/parse-duration'
 
-export type TaskContext = 'work' | 'personal' | 'dev'
+export type TaskContext = 'work' | 'personal'
 
 export interface ParsedTaskInput {
   title: string
@@ -12,7 +12,7 @@ export interface ParsedTaskInput {
   context?: TaskContext
 }
 
-const CONTEXT_VALUES: readonly TaskContext[] = ['work', 'personal', 'dev']
+const CONTEXT_VALUES: readonly TaskContext[] = ['work', 'personal']
 
 function isContextValue(value: string): value is TaskContext {
   return (CONTEXT_VALUES as readonly string[]).includes(value)
@@ -42,7 +42,7 @@ function resolveDateKeyword(keyword: string): string | null {
  * - `@today` / `@tomorrow` / `@YYYY-MM-DD` → dueDate
  * - `>today` / `>tomorrow` / `>YYYY-MM-DD` → startDate
  * - `#label` → labels
- * - `%work` / `%personal` / `%dev` → context
+ * - `%work` / `%personal` → context
  * - Everything else → title
  */
 export function parseTaskInput(input: string): ParsedTaskInput {
@@ -140,7 +140,6 @@ const START_DATE_SUGGESTIONS: SuggestionItem[] = [
 const CONTEXT_SUGGESTIONS: SuggestionItem[] = [
   { value: 'work', display: 'work' },
   { value: 'personal', display: 'personal' },
-  { value: 'dev', display: 'dev' },
 ]
 
 /**

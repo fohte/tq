@@ -23,18 +23,14 @@ interface CreateTaskModalProps {
   projectId?: string
 }
 
-type ContextValue = 'work' | 'personal' | 'dev'
-const contextValues = [
-  '',
-  'work',
-  'personal',
-  'dev',
-] as const satisfies readonly (ContextValue | '')[]
+type ContextValue = 'work' | 'personal'
+const contextValues = ['', 'work', 'personal'] as const satisfies readonly (
+  ContextValue | ''
+)[]
 
 const contextLabels: Record<ContextValue, string> = {
   work: 'Work',
   personal: 'Personal',
-  dev: 'Dev',
 }
 
 export function CreateTaskModal({
@@ -225,7 +221,6 @@ export function CreateTaskModal({
                       <option value="">—</option>
                       <option value="work">Work</option>
                       <option value="personal">Personal</option>
-                      <option value="dev">Dev</option>
                     </select>
                   </FieldGroup>
                 </div>
@@ -359,7 +354,6 @@ export function CreateTaskModal({
                         <option value="">None</option>
                         <option value="work">Work</option>
                         <option value="personal">Personal</option>
-                        <option value="dev">Dev</option>
                       </select>
                     }
                   />

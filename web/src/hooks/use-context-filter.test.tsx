@@ -54,18 +54,15 @@ describe('matchesContextFilter', () => {
   it('"all" mode matches everything', () => {
     expect(matchesContextFilter('work', 'all')).toBe(true)
     expect(matchesContextFilter('personal', 'all')).toBe(true)
-    expect(matchesContextFilter('dev', 'all')).toBe(true)
   })
 
   it('"work" mode matches only work', () => {
     expect(matchesContextFilter('work', 'work')).toBe(true)
     expect(matchesContextFilter('personal', 'work')).toBe(false)
-    expect(matchesContextFilter('dev', 'work')).toBe(false)
   })
 
-  it('"personal" mode matches personal and dev', () => {
+  it('"personal" mode matches only personal', () => {
     expect(matchesContextFilter('personal', 'personal')).toBe(true)
-    expect(matchesContextFilter('dev', 'personal')).toBe(true)
     expect(matchesContextFilter('work', 'personal')).toBe(false)
   })
 })

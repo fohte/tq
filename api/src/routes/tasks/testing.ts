@@ -50,7 +50,7 @@ export interface TaskResponse {
   title: string
   description: string | null
   status: 'todo' | 'in_progress' | 'completed'
-  context: 'work' | 'personal' | 'dev'
+  context: 'work' | 'personal'
   startDate: string | null
   dueDate: string | null
   estimatedMinutes: number | null
@@ -100,7 +100,7 @@ const taskResponseSchema = z.object({
   title: z.string(),
   description: z.string().nullable(),
   status: z.enum(['todo', 'in_progress', 'completed']),
-  context: z.enum(['work', 'personal', 'dev']),
+  context: z.enum(['work', 'personal']),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
   estimatedMinutes: z.number().nullable(),

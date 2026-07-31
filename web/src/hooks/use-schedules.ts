@@ -40,7 +40,7 @@ export interface CreateScheduleInput {
     daysOfWeek?: number[]
     dayOfMonth?: number
   }
-  context?: 'work' | 'personal' | 'dev'
+  context?: 'work' | 'personal'
   color?: string
 }
 
@@ -71,7 +71,7 @@ export interface UpdateScheduleInput {
     daysOfWeek?: number[]
     dayOfMonth?: number
   } | null
-  context?: 'work' | 'personal' | 'dev' | null
+  context?: 'work' | 'personal' | null
   color?: string | null
 }
 

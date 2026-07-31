@@ -19,7 +19,7 @@ type Suggestion = InferResponseType<
 export type { SearchResult, Suggestion }
 
 export type StatusFilter = 'todo' | 'in_progress' | 'completed'
-export type ContextFilter = 'work' | 'personal' | 'dev'
+export type ContextFilter = 'work' | 'personal'
 
 export interface SearchFilters {
   status?: StatusFilter | undefined
@@ -33,11 +33,7 @@ const STATUS_VALUES: ReadonlySet<StatusFilter> = new Set([
   'in_progress',
   'completed',
 ])
-const CONTEXT_VALUES: ReadonlySet<ContextFilter> = new Set([
-  'work',
-  'personal',
-  'dev',
-])
+const CONTEXT_VALUES: ReadonlySet<ContextFilter> = new Set(['work', 'personal'])
 type SortBy = NonNullable<SearchFilters['sortBy']>
 const SORT_VALUES: ReadonlySet<SortBy> = new Set([
   'due',

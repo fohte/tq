@@ -8,7 +8,7 @@ import { db } from '#db/connection'
 import { recurrenceRules, taskGithubLinks, tasks, timeBlocks } from '#db/schema'
 
 export const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
-export const contextEnum = z.enum(['work', 'personal', 'dev'])
+export const contextEnum = z.enum(['work', 'personal'])
 
 export function recurrenceRuleToResponse(
   rule: typeof recurrenceRules.$inferSelect,
