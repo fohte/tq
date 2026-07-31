@@ -57,8 +57,8 @@ const GITHUB_URL_FIXTURE_TITLE =
   'Support live-preview chips and autocomplete for task mentions'
 
 // Seeds the app-wide query cache the decoration plugin's chips render
-// through (see plugin.tsx's `createChipWidget`), so both providers resolve
-// their chip synchronously instead of via a real network round-trip.
+// through (see plugin.tsx's `createChipWidgetComponent`), so both providers
+// resolve their chip synchronously instead of via a real network round-trip.
 function seedLiveReferenceFixtures() {
   const task: TaskDetail = {
     id: '00000000-0000-0000-0000-000000000099',
@@ -105,9 +105,9 @@ function seedLiveReferenceFixtures() {
   })
 }
 
-// Chips now render as portals into the app's own React tree (see
-// plugin.tsx), so they need a QueryClientProvider and RouterProvider
-// ancestor here the same way the app's real root provides them.
+// Chips render as portals into the app's own React tree (see plugin.tsx),
+// so they need a QueryClientProvider and RouterProvider ancestor here the
+// same way the app's real root provides them.
 function LiveReferencesProviders({ children }: { children: ReactNode }) {
   const rootRoute = createRootRoute({
     component: () => <>{children}</>,

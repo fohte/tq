@@ -36,5 +36,16 @@ function githubUrlPreviewQueryOptions(url: string) {
 }
 
 export function useGithubUrlPreview(url: string) {
-  return useQuery(githubUrlPreviewQueryOptions(url))
+  return useQuery({
+    ...githubUrlPreviewQueryOptions(url),
+    // A non-2xx response above already resolves to `null` without throwing;
+    // reaching here means `queryFn` itself threw (network error, bad JSON,
+    // ...), which is unexpected and worth surfacing for debugging. The chip
+    // still falls back to the raw matched text either way, so this only
+    // logs — it must not throw to an error boundary.
+    throwOnError: (error) => {
+      console.error('Failed to load GitHub URL preview', error)
+      return false
+    },
+  })
 }

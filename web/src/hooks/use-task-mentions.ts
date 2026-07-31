@@ -36,7 +36,18 @@ function taskMentionPreviewQueryOptions(number: number) {
 }
 
 export function useTaskMentionPreview(number: number) {
-  return useQuery(taskMentionPreviewQueryOptions(number))
+  return useQuery({
+    ...taskMentionPreviewQueryOptions(number),
+    // A 404 above already resolves to `null` without throwing; reaching
+    // here means `queryFn` itself threw (network error, bad JSON, ...),
+    // which is unexpected and worth surfacing for debugging. The chip still
+    // falls back to the raw matched text either way, so this only logs — it
+    // must not throw to an error boundary.
+    throwOnError: (error) => {
+      console.error('Failed to load task mention preview', error)
+      return false
+    },
+  })
 }
 
 export function useTaskMentionSuggestions(query: string, enabled: boolean) {

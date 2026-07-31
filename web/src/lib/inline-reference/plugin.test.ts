@@ -106,33 +106,46 @@ async function decorationsFor(
   return source.find()
 }
 
+// Reduces a Decoration to the fields these tests assert on. Decoration
+// instances also hold a closure-based `type` (the widget's `toDOM`/inline
+// `toDOM`), which can't be compared by value, so it's deliberately excluded.
+function normalize(decorations: readonly Decoration[]) {
+  return decorations
+    .map((d) => ({ from: d.from, to: d.to, spec: d.spec as unknown }))
+    .sort((a, b) => a.from - b.from || a.to - b.to)
+}
+
 describe('createInlineReferencePlugin', () => {
   it('hides the raw match and creates a widget carrying its data and raw text', async () => {
     const decorations = await decorationsFor('see @1 here')
 
-    expect(decorations).toHaveLength(2)
-    const sourceDecoration = decorations.find((d) => d.from !== d.to)
-    const widgetDecoration = decorations.find((d) => d.from === d.to)
-    expect(sourceDecoration?.from).toBe(5)
-    expect(sourceDecoration?.to).toBe(7)
-    expect(widgetDecoration?.from).toBe(5)
-    expect(widgetDecoration?.spec).toEqual({
-      key: 'fake:@1:5',
-      side: 1,
-      data: { n: 1 },
-      raw: '@1',
-    })
+    expect(normalize(decorations)).toEqual([
+      {
+        from: 5,
+        to: 5,
+        spec: { key: 'fake:@1:5', side: 1, data: { n: 1 }, raw: '@1' },
+      },
+      { from: 5, to: 7, spec: {} },
+    ])
   })
 
   it('creates a decoration pair for each of multiple matches', async () => {
     const decorations = await decorationsFor('see @1 and @2 here')
 
-    expect(decorations).toHaveLength(4)
-    const widgetData = decorations
-      .filter((d) => d.from === d.to)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- every widget decoration in this file carries {data, raw} via its spec, see fakeWidgetViewFactory
-      .map((d) => (d.spec as { data: FakeData }).data)
-    expect(widgetData).toEqual([{ n: 1 }, { n: 2 }])
+    expect(normalize(decorations)).toEqual([
+      {
+        from: 5,
+        to: 5,
+        spec: { key: 'fake:@1:5', side: 1, data: { n: 1 }, raw: '@1' },
+      },
+      { from: 5, to: 7, spec: {} },
+      {
+        from: 12,
+        to: 12,
+        spec: { key: 'fake:@2:12', side: 1, data: { n: 2 }, raw: '@2' },
+      },
+      { from: 12, to: 14, spec: {} },
+    ])
   })
 
   it('suppresses the decoration pair for a match the selection touches', async () => {
