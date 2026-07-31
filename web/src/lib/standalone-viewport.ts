@@ -4,9 +4,7 @@ interface NavigatorWithIosStandalone extends Navigator {
   standalone?: boolean
 }
 
-const DEFAULT_VIEWPORT_CONTENT = 'width=device-width, initial-scale=1.0'
-const STANDALONE_VIEWPORT_CONTENT =
-  'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
+const ZOOM_DISABLING_SUFFIX = ', maximum-scale=1.0, user-scalable=no'
 
 export function isStandaloneDisplayMode(win: Window = window): boolean {
   const navigator = win.navigator as NavigatorWithIosStandalone
@@ -17,8 +15,15 @@ export function isStandaloneDisplayMode(win: Window = window): boolean {
   )
 }
 
-export function getViewportContent(isStandalone: boolean): string {
-  return isStandalone ? STANDALONE_VIEWPORT_CONTENT : DEFAULT_VIEWPORT_CONTENT
+// Appends to the existing viewport content instead of hardcoding the
+// non-standalone case, so it stays in sync with whatever web/index.html sets.
+export function getViewportContent(
+  currentContent: string,
+  isStandalone: boolean,
+): string {
+  return isStandalone
+    ? `${currentContent}${ZOOM_DISABLING_SUFFIX}`
+    : currentContent
 }
 
 export function applyStandaloneViewport(
@@ -30,8 +35,9 @@ export function applyStandaloneViewport(
     return
   }
 
+  const currentContent = viewportMeta.getAttribute('content') ?? ''
   viewportMeta.setAttribute(
     'content',
-    getViewportContent(isStandaloneDisplayMode(win)),
+    getViewportContent(currentContent, isStandaloneDisplayMode(win)),
   )
 }
