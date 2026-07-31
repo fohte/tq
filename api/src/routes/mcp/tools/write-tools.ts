@@ -34,6 +34,7 @@ const DEFAULT_AGENT = 'mcp'
 const agentArgSchema = z
   .string()
   .min(1)
+  .regex(/^[^\x00-\x1f\x7f]+$/, 'must not contain control characters')
   .optional()
   .describe(
     'Your own model name (e.g. "claude-opus-5"), so this write is ' +
