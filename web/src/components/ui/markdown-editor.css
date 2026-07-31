@@ -21,9 +21,9 @@
   --crepe-color-selected: var(--accent);
   --crepe-color-inline-area: var(--secondary);
 
-  --crepe-font-title: 'Geist Variable', sans-serif;
-  --crepe-font-default: 'Geist Variable', sans-serif;
-  --crepe-font-code: 'JetBrains Mono Variable', monospace;
+  --crepe-font-title: var(--font-sans);
+  --crepe-font-default: var(--font-editor);
+  --crepe-font-code: var(--font-editor);
 
   --crepe-shadow-1: none;
   --crepe-shadow-2: none;
@@ -42,7 +42,7 @@
 .milkdown-wrapper .milkdown .ProseMirror h1,
 .milkdown-wrapper .milkdown .ProseMirror h2,
 .milkdown-wrapper .milkdown .ProseMirror h3 {
-  font-family: 'Geist Variable', sans-serif;
+  font-family: var(--font-sans);
   margin: 0.5rem 0 0.25rem;
   line-height: 1.4;
 }
