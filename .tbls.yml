@@ -2,3 +2,5 @@ dsn: ${DATABASE_URL}?sslmode=disable
 docPath: docs/db
 er:
   format: mermaid
+exclude:
+  - drizzle.*
