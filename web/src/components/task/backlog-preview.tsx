@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 
+import { Chip } from '#components/ui/chip'
 import type { Task } from '#hooks/use-tasks'
 
 export function BacklogPreview({
@@ -22,17 +23,15 @@ export function BacklogPreview({
         onClick={() => {
           setIsOpen(!isOpen)
         }}
-        className="flex w-full items-center gap-2 py-1 text-sm text-muted-foreground hover:text-foreground"
+        className="flex w-full items-center gap-2 py-1 font-mono text-xs text-muted-foreground hover:text-foreground"
       >
         {isOpen ? (
           <ChevronDown className="h-4 w-4" />
         ) : (
           <ChevronRight className="h-4 w-4" />
         )}
-        <span>Backlog</span>
-        <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">
-          {tasks.length}
-        </span>
+        <span>backlog</span>
+        <Chip>{tasks.length}</Chip>
       </button>
 
       {isOpen && (
@@ -49,9 +48,9 @@ export function BacklogPreview({
             <button
               type="button"
               onClick={onViewAll}
-              className="text-sm text-primary hover:underline"
+              className="font-mono text-xs text-primary hover:underline"
             >
-              View all →
+              view all →
             </button>
           )}
         </div>

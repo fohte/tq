@@ -42,7 +42,7 @@ export interface CategorizedTasks {
   nonBacklog: Task[]
 }
 
-type TaskContext = 'work' | 'personal' | 'dev'
+type TaskContext = 'work' | 'personal'
 
 export function useTaskList(filter?: {
   status?: TaskStatus
@@ -89,7 +89,7 @@ export interface CreateTaskInput {
   startDate?: string
   dueDate?: string
   estimatedMinutes?: number
-  context?: 'work' | 'personal' | 'dev'
+  context?: 'work' | 'personal'
   labels?: string[]
   projectId?: string
 }
@@ -243,7 +243,7 @@ export interface UpdateTaskInput {
   dueDate?: string | null
   estimatedMinutes?: number | null
   projectId?: string | null
-  context?: 'work' | 'personal' | 'dev'
+  context?: 'work' | 'personal'
 }
 
 export function useUpdateTask() {

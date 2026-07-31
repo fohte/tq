@@ -5,7 +5,7 @@ import type { Task } from '#hooks/use-tasks'
 export function StatusIcon({ status }: { status: Task['status'] }) {
   if (status === 'completed') {
     return (
-      <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+      <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-muted-foreground-faint text-background">
         <Check className="h-3 w-3" />
       </span>
     )

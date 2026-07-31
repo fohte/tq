@@ -174,7 +174,6 @@ export const tasksSearchApp = new Hono()
       context: [
         { value: 'context:work', display: 'Work' },
         { value: 'context:personal', display: 'Personal' },
-        { value: 'context:dev', display: 'Dev' },
       ],
       sort: [
         { value: 'sort:due', display: 'Sort by due date' },

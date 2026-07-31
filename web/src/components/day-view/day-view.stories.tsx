@@ -23,7 +23,7 @@ const baseTask: Task = {
   title: '#506 fohte.net を astro で作る',
   description: null,
   status: 'todo',
-  context: 'dev',
+  context: 'personal',
   startDate: dateStr,
   dueDate: null,
   estimatedMinutes: 180,
@@ -45,7 +45,7 @@ const sampleTasks: Task[] = [
     id: '00000000-0000-0000-0000-000000000002',
     title: '#503 dotfiles 管理ツール整理',
     estimatedMinutes: 120,
-    context: 'dev',
+    context: 'personal',
   },
   {
     ...baseTask,
@@ -66,14 +66,14 @@ const sampleTasks: Task[] = [
     id: '00000000-0000-0000-0000-000000000005',
     title: 'sccache ログ確認',
     estimatedMinutes: 15,
-    context: 'dev',
+    context: 'personal',
   },
   {
     ...baseTask,
     id: '00000000-0000-0000-0000-000000000006',
     title: 'cache hit rate 改善',
     estimatedMinutes: 30,
-    context: 'dev',
+    context: 'personal',
   },
   {
     ...baseTask,
@@ -99,7 +99,7 @@ const backlogTasks: Task[] = [
     status: 'todo',
     startDate: null,
     estimatedMinutes: null,
-    context: 'dev',
+    context: 'personal',
   },
   {
     ...baseTask,
@@ -108,7 +108,7 @@ const backlogTasks: Task[] = [
     status: 'todo',
     startDate: null,
     estimatedMinutes: null,
-    context: 'dev',
+    context: 'personal',
   },
 ]
 
