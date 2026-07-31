@@ -22,6 +22,7 @@ const samplePage: TaskPage = {
   sortOrder: 0,
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
+  author: null,
 }
 
 const emptyPage: TaskPage = {
@@ -32,6 +33,7 @@ const emptyPage: TaskPage = {
   sortOrder: 2,
   createdAt: '2026-03-22T00:00:00.000Z',
   updatedAt: '2026-03-22T00:00:00.000Z',
+  author: null,
 }
 
 function Providers({ children }: { children: ReactNode }) {
@@ -122,4 +124,12 @@ export const DeleteConfirmation: CardStory = {
 
 export const EmptyContent: CardStory = {
   args: { page: emptyPage, isExpanded: false, deleteDialogOpen: false },
+}
+
+export const LlmAuthored: CardStory = {
+  args: {
+    page: { ...samplePage, author: { kind: 'llm', agent: 'claude-opus-5' } },
+    isExpanded: false,
+    deleteDialogOpen: false,
+  },
 }

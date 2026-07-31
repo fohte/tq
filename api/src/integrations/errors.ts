@@ -12,6 +12,13 @@ export class OAuthTokenMissingError extends Error {
   }
 }
 
+export class AccountIdentityError extends Error {
+  constructor(message: string, cause?: unknown) {
+    super(`Failed to identify account: ${message}`, { cause })
+    this.name = 'AccountIdentityError'
+  }
+}
+
 export class TokenRefreshError extends Error {
   /**
    * True when the provider itself rejected the refresh token (e.g.

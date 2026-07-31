@@ -13,6 +13,7 @@ interface CommentResponse {
   content: string
   createdAt: string
   updatedAt: string
+  author: { kind: 'human' | 'llm' | 'system'; agent: string | null } | null
 }
 
 describe('task comments API', () => {
@@ -101,6 +102,22 @@ describe('task comments API', () => {
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].content).toBe('Comment on task 1')
+    })
+
+    it('reports each comment author independently', async () => {
+      const task = await createTask('My task')
+      const humanComment = await createComment(task.id, 'From a human')
+      const llmComment = await createComment(task.id, 'From an llm', {
+        'X-Author': 'llm:claude-opus-5',
+      })
+
+      const res = await app.request(`/api/tasks/${task.id}/comments`)
+
+      expect(res.status).toBe(200)
+      expect(await jsonBody<CommentResponse[]>(res)).toEqual([
+        { ...humanComment, author: { kind: 'human', agent: null } },
+        { ...llmComment, author: { kind: 'llm', agent: 'claude-opus-5' } },
+      ])
     })
   })
 
@@ -199,10 +216,14 @@ async function createTask(title: string) {
   return jsonBody<{ id: string }>(res)
 }
 
-async function createComment(taskId: string, content: string) {
+async function createComment(
+  taskId: string,
+  content: string,
+  headers: Record<string, string> = {},
+) {
   const res = await app.request(`/api/tasks/${taskId}/comments`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify({ content }),
   })
   if (res.status !== 201) {

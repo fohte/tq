@@ -56,6 +56,7 @@ export function useCreateComment(taskId: string) {
         content,
         createdAt: now,
         updatedAt: now,
+        author: null,
       }
 
       queryClient.setQueryData<Comment[]>(commentKeys.all(taskId), (old) => [

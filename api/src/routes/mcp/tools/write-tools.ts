@@ -3,6 +3,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 
 import { app } from '#app'
+import { AUTHOR_HEADER } from '#lib/author'
 import { callInternalRoute } from '#routes/mcp/route-bridge'
 import { createTaskSchema, updateTaskSchema } from '#routes/tasks/crud'
 import { taskStatus } from '#routes/tasks/shared'
@@ -17,11 +18,29 @@ function toolResult(data: unknown): CallToolResult {
   return { content: [{ type: 'text', text: JSON.stringify(data) }] }
 }
 
+// A human never calls these write tools directly (humans use the web UI,
+// which sends its own `X-Author: human`); the MCP protocol here is only ever
+// driven by an LLM agent. There's no reliable way to learn the specific
+// calling model/agent name from the MCP protocol, so `mcp` is a generic
+// stand-in identifying the channel rather than the agent.
+const MCP_AUTHOR = 'llm:mcp'
+
+// Narrower than `RequestInit`: every call site here passes headers as a
+// plain object (or omits them), never the `Headers`/`string[][]` shapes
+// `RequestInit['headers']` also allows, so `headers` can be merged with a
+// plain object spread below.
+type RouteInit = Omit<RequestInit, 'headers'> & {
+  headers?: Record<string, string>
+}
+
 async function callRoute(
   path: string,
-  init?: RequestInit,
+  init: RouteInit = {},
 ): Promise<CallToolResult> {
-  const result = await callInternalRoute(app, path, init)
+  const result = await callInternalRoute(app, path, {
+    ...init,
+    headers: { ...init.headers, [AUTHOR_HEADER]: MCP_AUTHOR },
+  })
   return result.ok ? toolResult(result.data) : result.result
 }
 

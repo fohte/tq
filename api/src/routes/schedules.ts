@@ -3,7 +3,6 @@ import { zValidator } from '@hono/zod-validator'
 import { and, eq, gte, inArray, lte, notInArray } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { createFactory } from 'hono/factory'
-import { err, ok } from 'neverthrow'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
@@ -14,8 +13,10 @@ import {
   timeBlocks,
   todayTasks,
 } from '#db/schema'
-import { OAuthTokenMissingError } from '#integrations/errors'
-import { getEvents } from '#integrations/google-calendar/index'
+import {
+  getEvents,
+  partitionAccountEvents,
+} from '#integrations/google-calendar/index'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { localDateBoundsToUtc } from '#lib/timezone'
 import { expandScheduleForDate } from '#routes/schedule-expansion'
@@ -385,24 +386,35 @@ export const schedulesApp = new Hono()
         estimatedMinutes: r.task.estimatedMinutes,
       }))
 
-    const eventsResult = (
-      await getEvents('primary', dayStart.toISOString(), dayEnd.toISOString())
-    ).orElse((error) => {
-      if (!(error instanceof OAuthTokenMissingError)) return err(error)
-      console.warn(
-        '[auto-assign] Google Calendar unavailable, scheduling without external events:',
-        error.message,
-      )
-      return ok([])
-    })
-    if (eventsResult.isErr()) {
+    // No connected account, or every connected account merely needing
+    // re-authentication (an expired/revoked refresh token), is treated the
+    // same as "no calendar constraints" — auto-assign still proceeds without
+    // external events. Only a genuinely unexpected error with zero successful
+    // accounts is a failure worth surfacing.
+    const accounts = await getEvents(
+      dayStart.toISOString(),
+      dayEnd.toISOString(),
+    )
+
+    const {
+      events: externalEvents,
+      successCount,
+      authRejectedCount,
+    } = partitionAccountEvents(accounts, (accountId, error) => {
       captureWithFingerprint(
-        eventsResult.error,
+        error,
         'api.schedules.auto-assign-calendar-failed',
+        { extras: { accountId } },
       )
+    })
+
+    if (
+      accounts.length > 0 &&
+      successCount === 0 &&
+      authRejectedCount < accounts.length
+    ) {
       return c.json({ error: 'Internal server error' }, 500)
     }
-    const externalEvents = eventsResult.value
 
     const scheduleRules = await loadSchedulesWithRules()
     const expandedScheduleBlocks = scheduleRules.flatMap(({ schedule, rule }) =>

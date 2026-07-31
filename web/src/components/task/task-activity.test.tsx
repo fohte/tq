@@ -55,6 +55,7 @@ function makeComment(overrides: Partial<Comment> = {}): Comment {
     content: 'Test comment',
     createdAt: '2026-03-20T10:00:00.000Z',
     updatedAt: '2026-03-20T10:00:00.000Z',
+    author: null,
     ...overrides,
   }
 }

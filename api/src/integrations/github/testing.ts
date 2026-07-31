@@ -6,9 +6,9 @@ import { oauthTokens } from '#db/schema'
 export async function upsertGithubToken(accessToken: string) {
   await db
     .insert(oauthTokens)
-    .values({ provider: 'github', accessToken })
+    .values({ provider: 'github', accountId: '', accessToken })
     .onConflictDoUpdate({
-      target: oauthTokens.provider,
+      target: [oauthTokens.provider, oauthTokens.accountId],
       set: { accessToken, updatedAt: new Date() },
     })
 }

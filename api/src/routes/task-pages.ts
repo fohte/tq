@@ -6,7 +6,12 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import { taskPages, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import { diffFields, recordEdit } from '#lib/edits'
+import {
+  diffFields,
+  type EditAuthorInfo,
+  getPageAuthors,
+  recordEdit,
+} from '#lib/edits'
 import { syncTaskLinks } from '#services/task-links'
 
 const createPageSchema = z.object({
@@ -21,7 +26,10 @@ const updatePageSchema = z.object({
   sortOrder: z.number().int().optional(),
 })
 
-export function pageToResponse(page: typeof taskPages.$inferSelect) {
+export function pageToResponse(
+  page: typeof taskPages.$inferSelect,
+  author: EditAuthorInfo | null = null,
+) {
   return {
     id: page.id,
     taskId: page.taskId,
@@ -30,6 +38,7 @@ export function pageToResponse(page: typeof taskPages.$inferSelect) {
     sortOrder: page.sortOrder,
     createdAt: page.createdAt.toISOString(),
     updatedAt: page.updatedAt.toISOString(),
+    author,
   }
 }
 
@@ -64,7 +73,12 @@ export const taskPagesApp = new Hono<TaskPagesEnv>()
       .where(eq(taskPages.taskId, taskId))
       .orderBy(taskPages.sortOrder, taskPages.createdAt)
 
-    return c.json(pages.map(pageToResponse), 200)
+    const authors = await getPageAuthors(pages.map((page) => page.id))
+
+    return c.json(
+      pages.map((page) => pageToResponse(page, authors.get(page.id) ?? null)),
+      200,
+    )
   })
   .post('/', zValidator('json', createPageSchema), async (c) => {
     const taskId = c.get('taskId')
@@ -103,7 +117,7 @@ export const taskPagesApp = new Hono<TaskPagesEnv>()
 
     await syncTaskLinks(taskId)
 
-    return c.json(pageToResponse(page), 201)
+    return c.json(pageToResponse(page, author), 201)
   })
   .get('/:pageId', async (c) => {
     const taskId = c.get('taskId')
@@ -117,7 +131,9 @@ export const taskPagesApp = new Hono<TaskPagesEnv>()
       return c.json({ error: 'Page not found' }, 404)
     }
 
-    return c.json(pageToResponse(page), 200)
+    const authors = await getPageAuthors([pageId])
+
+    return c.json(pageToResponse(page, authors.get(pageId) ?? null), 200)
   })
   .patch('/:pageId', zValidator('json', updatePageSchema), async (c) => {
     const taskId = c.get('taskId')
@@ -164,7 +180,9 @@ export const taskPagesApp = new Hono<TaskPagesEnv>()
       await syncTaskLinks(taskId)
     }
 
-    return c.json(pageToResponse(updated), 200)
+    const authors = await getPageAuthors([pageId])
+
+    return c.json(pageToResponse(updated, authors.get(pageId) ?? null), 200)
   })
   .delete('/:pageId', async (c) => {
     const taskId = c.get('taskId')

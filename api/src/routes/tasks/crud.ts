@@ -14,7 +14,12 @@ import {
   timeBlocks,
 } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import { diffFields, recordEdit } from '#lib/edits'
+import {
+  diffFields,
+  getPageAuthors,
+  getTaskFieldAuthors,
+  recordEdit,
+} from '#lib/edits'
 import { pageToResponse } from '#routes/task-pages'
 import {
   contextEnum,
@@ -180,46 +185,60 @@ export const tasksCrudApp = new Hono()
     const task = c.get('task')
     const id = task.id
 
-    const [childStats, pages, taskTimeBlocks, rule, githubLink, links] =
-      await Promise.all([
-        db
-          .select({
-            total: count(),
-            completed: count(
-              sql`CASE WHEN ${tasks.status} = 'completed' THEN 1 END`,
-            ),
+    const [
+      childStats,
+      pages,
+      taskTimeBlocks,
+      rule,
+      githubLink,
+      links,
+      taskFieldAuthors,
+    ] = await Promise.all([
+      db
+        .select({
+          total: count(),
+          completed: count(
+            sql`CASE WHEN ${tasks.status} = 'completed' THEN 1 END`,
+          ),
+        })
+        .from(tasks)
+        .where(eq(tasks.parentId, id)),
+      db
+        .select()
+        .from(taskPages)
+        .where(eq(taskPages.taskId, id))
+        .orderBy(taskPages.sortOrder, taskPages.createdAt),
+      db
+        .select()
+        .from(timeBlocks)
+        .where(eq(timeBlocks.taskId, id))
+        .orderBy(timeBlocks.startTime),
+      task.recurrenceRuleId != null
+        ? db.query.recurrenceRules.findFirst({
+            where: eq(recurrenceRules.id, task.recurrenceRuleId),
           })
-          .from(tasks)
-          .where(eq(tasks.parentId, id)),
-        db
-          .select()
-          .from(taskPages)
-          .where(eq(taskPages.taskId, id))
-          .orderBy(taskPages.sortOrder, taskPages.createdAt),
-        db
-          .select()
-          .from(timeBlocks)
-          .where(eq(timeBlocks.taskId, id))
-          .orderBy(timeBlocks.startTime),
-        task.recurrenceRuleId != null
-          ? db.query.recurrenceRules.findFirst({
-              where: eq(recurrenceRules.id, task.recurrenceRuleId),
-            })
-          : Promise.resolve(null),
-        db.query.taskGithubLinks.findFirst({
-          where: eq(taskGithubLinks.taskId, id),
-        }),
-        getTaskLinks(id),
-      ])
+        : Promise.resolve(null),
+      db.query.taskGithubLinks.findFirst({
+        where: eq(taskGithubLinks.taskId, id),
+      }),
+      getTaskLinks(id),
+      getTaskFieldAuthors(id),
+    ])
+
+    const pageAuthors = await getPageAuthors(pages.map((page) => page.id))
 
     return c.json(
       {
         ...taskToResponse(task, rule, githubLink),
+        titleAuthor: taskFieldAuthors.title,
+        descriptionAuthor: taskFieldAuthors.description,
         childCompletionCount: {
           total: childStats[0]?.total ?? 0,
           completed: childStats[0]?.completed ?? 0,
         },
-        pages: pages.map(pageToResponse),
+        pages: pages.map((page) =>
+          pageToResponse(page, pageAuthors.get(page.id) ?? null),
+        ),
         timeBlocks: taskTimeBlocks.map(timeBlockToResponse),
         links,
       },

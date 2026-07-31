@@ -141,7 +141,18 @@ export const oauthTokens = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    provider: text('provider').notNull().default('google_calendar').unique(),
+    provider: text('provider').notNull().default('google_calendar'),
+    // Identifies which account a row belongs to for providers that support
+    // multiple connected accounts (currently only google_calendar, keyed by
+    // the stable `sub` from Google's UserInfo endpoint; see
+    // IntegrationOAuth.identifyAccount in integrations/types.ts). GitHub has
+    // no such identity and is intentionally kept single-account: its rows
+    // use '' as a sentinel so the unique constraint below still caps it at
+    // one row per provider.
+    accountId: text('account_id').notNull(),
+    // Human-facing label for the account (Google's email); null for
+    // providers with no identifyAccount hook (e.g. GitHub).
+    accountLabel: text('account_label'),
     accessToken: text('access_token').notNull(),
     // Nullable: GitHub OAuth App tokens have neither a refresh token nor an
     // expiry (see https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/token-expiration-and-revocation).
@@ -155,6 +166,10 @@ export const oauthTokens = pgTable(
       .defaultNow(),
   },
   (table) => [
+    unique('uq_oauth_tokens_provider_account_id').on(
+      table.provider,
+      table.accountId,
+    ),
     // Exempts providers with no `oauth.refresh` in api/src/integrations/
     // (tokens that never expire, so refresh metadata is meaningless). Add
     // such a provider's id to this OR clause alongside 'github'.

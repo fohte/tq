@@ -2,6 +2,7 @@ import type { Result, ResultAsync } from 'neverthrow'
 
 import type { oauthTokens } from '#db/schema'
 import type {
+  AccountIdentityError,
   IntegrationConfigError,
   TokenRefreshError,
 } from '#integrations/errors'
@@ -38,6 +39,11 @@ export type IntegrationListItem = ConnectionStatus & {
   configured: boolean
 }
 
+export interface OAuthAccountIdentity {
+  accountId: string
+  accountLabel: string
+}
+
 export interface IntegrationOAuth {
   authorizationEndpoint: string
   scope: string
@@ -53,13 +59,23 @@ export interface IntegrationOAuth {
     refreshToken: string,
     config: OAuthConfig,
   ) => ResultAsync<OAuthTokenPayload, TokenRefreshError>
+  /**
+   * Identifies the connected account right after code exchange, so the
+   * common OAuth layer can store multiple accounts side by side for this
+   * provider (see oauthTokens.accountId in db/schema.ts). Omitted for
+   * providers with no such identity (e.g. GitHub), whose token row keeps the
+   * `accountId` sentinel instead.
+   */
+  identifyAccount?: (
+    accessToken: string,
+  ) => ResultAsync<OAuthAccountIdentity, AccountIdentityError>
 }
 
 export interface CalendarEventsCapability {
   getEvents: (
     accessToken: string,
     params: { calendarId: string; timeMin: string; timeMax: string },
-  ) => ResultAsync<ExternalEvent[], Error>
+  ) => ResultAsync<Omit<ExternalEvent, 'accountId' | 'accountLabel'>[], Error>
 }
 
 export interface ExternalEvent {
@@ -69,6 +85,8 @@ export interface ExternalEvent {
   endTime: string
   isAllDay: boolean
   source: string
+  accountId: string
+  accountLabel: string | null
 }
 
 export interface IntegrationProvider {
