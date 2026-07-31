@@ -91,7 +91,7 @@ export const tasks = pgTable(
       { onDelete: 'set null' },
     ),
     context: text('context', {
-      enum: ['work', 'personal', 'dev'],
+      enum: ['work', 'personal'],
     })
       .notNull()
       .default('personal'),
@@ -180,7 +180,7 @@ export const schedules = pgTable(
       { onDelete: 'set null' },
     ),
     context: text('context', {
-      enum: ['work', 'personal', 'dev'],
+      enum: ['work', 'personal'],
     })
       .notNull()
       .default('personal'),

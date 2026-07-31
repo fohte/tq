@@ -295,16 +295,15 @@ function SidebarContextField({
       <select
         value={context}
         onChange={selectHandler(
-          (value: 'work' | 'personal' | 'dev') => {
+          (value: 'work' | 'personal') => {
             updateTask.mutate({ id: taskId, input: { context: value } })
           },
-          ['work', 'personal', 'dev'],
+          ['work', 'personal'],
         )}
         className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-primary/50"
       >
         <option value="personal">Personal</option>
         <option value="work">Work</option>
-        <option value="dev">Dev</option>
       </select>
     </SidebarField>
   )

@@ -18,13 +18,10 @@ interface CreateScheduleModalProps {
   onOpenChange: (open: boolean) => void
 }
 
-type ContextValue = 'work' | 'personal' | 'dev'
-const contextValues = [
-  '',
-  'work',
-  'personal',
-  'dev',
-] as const satisfies readonly (ContextValue | '')[]
+type ContextValue = 'work' | 'personal'
+const contextValues = ['', 'work', 'personal'] as const satisfies readonly (
+  ContextValue | ''
+)[]
 type RecurrenceType = 'daily' | 'weekly' | 'monthly' | 'custom'
 const recurrenceValues = [
   '',
@@ -37,7 +34,6 @@ const recurrenceValues = [
 const contextLabels: Record<ContextValue, string> = {
   work: 'Work',
   personal: 'Personal',
-  dev: 'Dev',
 }
 
 const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -283,7 +279,6 @@ export function CreateScheduleModal({
                       <option value="">—</option>
                       <option value="work">Work</option>
                       <option value="personal">Personal</option>
-                      <option value="dev">Dev</option>
                     </select>
                   </FieldGroup>
 
@@ -441,7 +436,6 @@ export function CreateScheduleModal({
                         <option value="">None</option>
                         <option value="work">Work</option>
                         <option value="personal">Personal</option>
-                        <option value="dev">Dev</option>
                       </select>
                     }
                   />

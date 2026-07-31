@@ -103,7 +103,7 @@ const sampleTasks: ProjectTask[] = [
     number: 5,
     title: 'Write unit tests',
     status: 'todo',
-    context: 'dev',
+    context: 'personal',
     estimatedMinutes: 90,
   },
   {

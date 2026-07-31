@@ -55,13 +55,7 @@ function ContextBadge({ context }: { context: Task['context'] }) {
   if (context === 'personal') return null
 
   return (
-    <span
-      className={cn(
-        'rounded-[10px] px-2 py-0.5 text-[11px] font-medium',
-        context === 'work' && 'bg-[#3D2020] text-[#FF5C33]',
-        context === 'dev' && 'bg-[#1A2040] text-[#B2B2FF]',
-      )}
-    >
+    <span className="rounded-[10px] bg-[#3D2020] px-2 py-0.5 text-[11px] font-medium text-[#FF5C33]">
       {context}
     </span>
   )
