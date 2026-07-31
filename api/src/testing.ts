@@ -4,7 +4,7 @@ import postgres from 'postgres'
 import { afterAll, aroundEach, expect } from 'vitest'
 import { z, type ZodType } from 'zod'
 
-import { dbContext } from '#db/connection'
+import { runWithDb } from '#db/connection'
 import * as schema from '#db/schema'
 import { DATABASE_URL } from '#env'
 
@@ -15,7 +15,7 @@ const testDb = drizzle(testClient, { schema })
 
 export function setupTestDb() {
   // Transaction strategy: wrap each test in a real transaction and roll it
-  // back afterward. `dbContext.run` binds the `tx` handed to the transaction
+  // back afterward. `runWithDb` binds the `tx` handed to the transaction
   // callback to `runTest`'s async execution context, so the `db` export (see
   // #db/connection) resolves to it for the whole test body without touching
   // any state shared with other test files running in parallel. A nested
@@ -27,11 +27,11 @@ export function setupTestDb() {
   // continuation of where it was entered, so a `tx` bound in beforeEach never
   // reaches the test body once an `await` separates them. `aroundEach` calls
   // `runTest` directly inside this callback, keeping the test body within
-  // the same continuation as `dbContext.run`.
+  // the same continuation as `runWithDb`.
   aroundEach(async (runTest) => {
     await testDb
       .transaction(async (tx) => {
-        await dbContext.run(tx, () => runTest())
+        await runWithDb(tx, () => runTest())
         tx.rollback()
       })
       .catch((error: unknown) => {
