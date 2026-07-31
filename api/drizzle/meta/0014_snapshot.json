@@ -1,6 +1,6 @@
 {
-  "id": "2315956f-8c60-4e60-b508-edc8d65dee27",
-  "prevId": "318e83eb-7115-477e-bf34-01a61f0831bf",
+  "id": "0e6820e3-f029-493b-a9b4-79d4e4b04fcc",
+  "prevId": "2315956f-8c60-4e60-b508-edc8d65dee27",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -818,6 +818,95 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.calendar_subscriptions": {
+      "name": "calendar_subscriptions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "oauth_token_id": {
+          "name": "oauth_token_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "calendar_id": {
+          "name": "calendar_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "color": {
+          "name": "color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_calendar_subscriptions_oauth_token_id": {
+          "name": "idx_calendar_subscriptions_oauth_token_id",
+          "columns": [
+            {
+              "expression": "oauth_token_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "calendar_subscriptions_oauth_token_id_oauth_tokens_id_fk": {
+          "name": "calendar_subscriptions_oauth_token_id_oauth_tokens_id_fk",
+          "tableFrom": "calendar_subscriptions",
+          "tableTo": "oauth_tokens",
+          "columnsFrom": ["oauth_token_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "uq_calendar_subscriptions_oauth_token_calendar": {
+          "name": "uq_calendar_subscriptions_oauth_token_calendar",
+          "nullsNotDistinct": false,
+          "columns": ["oauth_token_id", "calendar_id"]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

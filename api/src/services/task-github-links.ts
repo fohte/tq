@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm'
 import { err, errAsync, okAsync, type Result, ResultAsync } from 'neverthrow'
 
-import { db } from '#db/connection'
+import { db, type DbTransaction } from '#db/connection'
 import { taskGithubLinks, tasks } from '#db/schema'
 import type {
   IntegrationConfigError,
@@ -14,7 +14,7 @@ import type {
   GithubResourceRef,
 } from '#integrations/github/issues'
 import { fetchGithubIssue } from '#integrations/github/issues'
-import { firstOrErr, type RowNotFoundError } from '#lib/drizzle-utils'
+import { firstOrErr, RowNotFoundError } from '#lib/drizzle-utils'
 
 function toResultAsync<T, E>(
   promise: Promise<Result<T, E>>,
@@ -103,7 +103,7 @@ function findTaskForLink(
 
 const UNIQUE_VIOLATION = '23505'
 
-function isUniqueViolation(cause: unknown, constraintName: string): boolean {
+function isMatchingViolation(cause: unknown, constraintName: string): boolean {
   return (
     cause instanceof Error &&
     'code' in cause &&
@@ -113,29 +113,78 @@ function isUniqueViolation(cause: unknown, constraintName: string): boolean {
   )
 }
 
+// drizzle-orm wraps every query failure in a DrizzleQueryError, with the
+// driver's own error (postgres.js's PostgresError, carrying `code` and
+// `constraint_name`) as `.cause` — so the constraint check must look at both
+// the caught value and its `.cause`, not just the former.
+function isUniqueViolation(cause: unknown, constraintName: string): boolean {
+  return (
+    isMatchingViolation(cause, constraintName) ||
+    (cause instanceof Error && isMatchingViolation(cause.cause, constraintName))
+  )
+}
+
+// Accepted by insertLink so it can run standalone (against `db`) or as part
+// of a larger transaction (against the `tx` handed to `db.transaction`) —
+// createTaskFromIssueData needs the latter to make its task insert and link
+// insert atomic.
+type Executor = typeof db | DbTransaction
+
+type LinkConflictError =
+  TaskAlreadyLinkedError | GithubResourceAlreadyLinkedError | RowNotFoundError
+
 // The caller already checked findLinkByTaskId/findLinkByRef before calling
 // this, but that check-then-insert isn't atomic: a concurrent request can
 // insert the conflicting row in between, which the DB's unique constraints
 // (task_github_links_task_id_unique, uq_task_github_links_repo_number) still
 // catch. Converting that race into the same business error the pre-check
 // returns keeps the route's response a 409 instead of an unhandled 500.
+//
+// If `cause` is already one of this function's own error types, it's passed
+// through unchanged — createTaskFromIssueData relies on this to route a
+// RowNotFoundError it threw itself back into a Result without reclassifying
+// it as an unrecognized conflict.
+//
+// The uq_task_github_links_repo_number branch queries for the task that
+// already holds the conflicting link, which requires a connection that
+// isn't mid-rollback: a still-open, now-aborted transaction/savepoint (see
+// createTaskFromIssueData) rejects any further query until the rollback
+// completes. Safe to call directly after a non-transactional insert, or
+// once an owning transaction has fully settled.
+async function classifyLinkConflict(
+  cause: unknown,
+  taskId: string,
+  ref: GithubResourceRef,
+): Promise<Result<never, LinkConflictError>> {
+  if (
+    cause instanceof TaskAlreadyLinkedError ||
+    cause instanceof GithubResourceAlreadyLinkedError ||
+    cause instanceof RowNotFoundError
+  ) {
+    return err(cause)
+  }
+  if (isUniqueViolation(cause, 'task_github_links_task_id_unique')) {
+    return err(new TaskAlreadyLinkedError())
+  }
+  if (isUniqueViolation(cause, 'uq_task_github_links_repo_number')) {
+    const existing = await findLinkByRef(ref).unwrapOr(null)
+    return err(new GithubResourceAlreadyLinkedError(existing?.taskId ?? taskId))
+  }
+  // Not a recognized conflict; rethrow so the app-level error boundary
+  // reports it.
+  // eslint-disable-next-line no-restricted-syntax -- interop boundary: caught by this function's Promise-based callers (the try/catch below, or ResultAsync.fromSafePromise in createTaskFromIssueData)
+  throw cause
+}
+
 async function insertLink(
+  executor: Executor,
   taskId: string,
   ref: GithubResourceRef,
   issue: GithubIssueData,
-): Promise<
-  Result<
-    LinkRow,
-    TaskAlreadyLinkedError | GithubResourceAlreadyLinkedError | RowNotFoundError
-  >
-> {
-  // Must catch the unique constraint violation to convert a concurrent
-  // duplicate link into a business error (see comment above); anything else
-  // is rethrown for the app-level error boundary to capture, matching the
-  // throw below.
-  // eslint-disable-next-line no-restricted-syntax -- see comment above
+): Promise<Result<LinkRow, LinkConflictError>> {
+  // eslint-disable-next-line no-restricted-syntax -- interop boundary: converts the DB's thrown unique-violation into classifyLinkConflict's Result
   try {
-    const rows = await db
+    const rows = await executor
       .insert(taskGithubLinks)
       .values({
         taskId,
@@ -151,19 +200,7 @@ async function insertLink(
       .returning()
     return firstOrErr(rows)
   } catch (cause) {
-    if (isUniqueViolation(cause, 'task_github_links_task_id_unique')) {
-      return err(new TaskAlreadyLinkedError())
-    }
-    if (isUniqueViolation(cause, 'uq_task_github_links_repo_number')) {
-      const existing = await findLinkByRef(ref).unwrapOr(null)
-      return err(
-        new GithubResourceAlreadyLinkedError(existing?.taskId ?? taskId),
-      )
-    }
-    // Not a recognized conflict; rethrow so the app-level error boundary
-    // reports it.
-    // eslint-disable-next-line no-restricted-syntax -- see comment above
-    throw cause
+    return classifyLinkConflict(cause, taskId, ref)
   }
 }
 
@@ -189,6 +226,76 @@ export function resolveGithubUrl(
   })
 }
 
+// The task insert and the link insert must commit or roll back together:
+// without a transaction, a concurrent link created for the same issue
+// between the two inserts (see insertLink's comment) leaves this task
+// inserted with no link pointing at it.
+//
+// The link insert isn't run through insertLink here: classifying its
+// failure (via classifyLinkConflict) can require a follow-up query, and a
+// transaction/savepoint that just failed rejects any further query until it
+// rolls back — which only happens once this callback's returned promise
+// settles. So a raw failure is left uncaught here and thrown as-is (an
+// interop boundary: db.transaction() is a plain-Promise API with no way to
+// signal "roll back" other than a rejection), then classified in `.orElse`
+// below, once the transaction has fully settled and the rollback (if any)
+// has completed.
+export function createTaskFromIssueData(
+  issue: GithubIssueData,
+  options?: { projectId?: string | null },
+): ResultAsync<{ task: TaskRow; link: LinkRow }, LinkConflictError> {
+  let insertedTaskId: string | undefined
+
+  return ResultAsync.fromPromise<{ task: TaskRow; link: LinkRow }, unknown>(
+    db.transaction(async (tx) => {
+      const taskResult = firstOrErr(
+        await tx
+          .insert(tasks)
+          .values({
+            title: issue.title,
+            description: issue.body,
+            projectId: options?.projectId ?? null,
+          })
+          .returning(),
+      )
+      if (taskResult.isErr()) {
+        // eslint-disable-next-line no-restricted-syntax -- interop boundary: see comment above createTaskFromIssueData
+        throw taskResult.error
+      }
+      const task = taskResult.value
+      insertedTaskId = task.id
+
+      const linkResult = firstOrErr(
+        await tx
+          .insert(taskGithubLinks)
+          .values({
+            taskId: task.id,
+            owner: issue.owner,
+            repo: issue.repo,
+            number: issue.number,
+            kind: issue.kind,
+            url: issue.url,
+            state: issue.state,
+            title: issue.title,
+            body: issue.body,
+          })
+          .returning(),
+      )
+      if (linkResult.isErr()) {
+        // eslint-disable-next-line no-restricted-syntax -- interop boundary: see comment above createTaskFromIssueData
+        throw linkResult.error
+      }
+
+      return { task, link: linkResult.value }
+    }),
+    (cause) => cause,
+  ).orElse((cause) =>
+    ResultAsync.fromSafePromise(
+      classifyLinkConflict(cause, insertedTaskId ?? '', issue),
+    ).andThen((result) => result),
+  )
+}
+
 export function createTaskFromGithubUrl(
   ref: GithubResourceRef,
 ): ResultAsync<
@@ -212,20 +319,11 @@ export function createTaskFromGithubUrl(
     }
 
     return fetchGithubIssue(ref).andThen((issue) =>
-      ResultAsync.fromSafePromise(
-        db
-          .insert(tasks)
-          .values({ title: issue.title, description: issue.body })
-          .returning(),
-      )
-        .andThen(firstOrErr)
-        .andThen((task) =>
-          toResultAsync(insertLink(task.id, ref, issue)).map((link) => ({
-            task,
-            link,
-            created: true,
-          })),
-        ),
+      createTaskFromIssueData(issue).map(({ task, link }) => ({
+        task,
+        link,
+        created: true,
+      })),
     )
   })
 }
@@ -260,7 +358,7 @@ export function linkTaskToGithubUrl(
         }
 
         return fetchGithubIssue(ref).andThen((issue) =>
-          toResultAsync(insertLink(taskId, ref, issue)),
+          toResultAsync(insertLink(db, taskId, ref, issue)),
         )
       })
     })

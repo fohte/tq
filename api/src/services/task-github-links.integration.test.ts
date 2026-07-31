@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { taskGithubLinks } from '#db/schema'
+import { db } from '#db/connection'
+import { taskGithubLinks, tasks } from '#db/schema'
 import {
   mockGithubIssueResponse,
   upsertGithubToken,
@@ -8,6 +9,7 @@ import {
 import { createTask, TEST_UUID } from '#routes/tasks/testing'
 import {
   createTaskFromGithubUrl,
+  createTaskFromIssueData,
   GithubLinkNotFoundError,
   GithubResourceAlreadyLinkedError,
   linkTaskToGithubUrl,
@@ -107,6 +109,33 @@ describe('createTaskFromGithubUrl', () => {
     const second = (await createTaskFromGithubUrl(ref))._unsafeUnwrap()
 
     expect(second).toEqual({ ...first, created: false })
+  })
+})
+
+describe('createTaskFromIssueData', () => {
+  it('rolls back the task insert when the link insert conflicts with an existing link', async () => {
+    const linkedTask = await createTask('Already linked')
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
+    ;(await linkTaskToGithubUrl(linkedTask.id, ref))._unsafeUnwrap()
+
+    const tasksBefore = await db.select().from(tasks)
+
+    const error = (
+      await createTaskFromIssueData({
+        ...ref,
+        kind: 'issue',
+        url: 'https://github.com/fohte/tq/issues/42',
+        title: 'Duplicate issue',
+        body: null,
+        state: 'open',
+      })
+    )._unsafeUnwrapErr()
+
+    expect(error).toEqual(new GithubResourceAlreadyLinkedError(linkedTask.id))
+    // The task insert must not survive the link insert's failure: no
+    // orphaned task should have been left behind.
+    expect(await db.select().from(tasks)).toEqual(tasksBefore)
   })
 })
 

@@ -12,7 +12,9 @@ import {
 import { GithubApiError, githubProvider } from '#integrations/github/index'
 import { fetchGithubIssueIfChanged } from '#integrations/github/issues'
 import { getValidAccessToken } from '#integrations/oauth'
+import { isQuietProviderError } from '#integrations/quiet-errors'
 import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
+import { syncGithubAssignedIssues } from '#services/github-sync-rules'
 import { syncTaskLinks } from '#services/task-links'
 
 type LinkRow = typeof taskGithubLinks.$inferSelect
@@ -24,9 +26,9 @@ type SyncLinkError =
   | TokenRefreshError
 
 // `link.title`/`link.body`/`link.state` hold the GitHub values as of the
-// last sync (see schema.ts), so diffing a fresh fetch against them tells
-// "GitHub changed" apart from "the task was edited in TQ" — only the former
-// should overwrite the task.
+// last sync (see db/schema/integrations.ts), so diffing a fresh fetch
+// against them tells "GitHub changed" apart from "the task was edited in
+// TQ" — only the former should overwrite the task.
 export function syncLinkFromGithub(
   link: LinkRow,
 ): ResultAsync<void, SyncLinkError> {
@@ -140,27 +142,10 @@ export function syncLinkFromGithub(
   })
 }
 
-// A rejected GithubApiError/TokenRefreshError (4xx / a provider-rejected
-// refresh: e.g. the token lost access, or the issue/PR is gone) and a
-// missing token are both normal "not currently syncable" states, not
-// operational failures — skip them quietly so a disconnected or revoked
-// GitHub integration doesn't spam error reporting on every sync. Anything
-// else (network/parse/5xx, or a config error) is unexpected and must be
-// captured.
-function isQuietSyncError(error: SyncLinkError): boolean {
-  if (error instanceof GithubApiError) {
-    return error.rejected
-  }
-  if (error instanceof TokenRefreshError) {
-    return error.rejected
-  }
-  return error instanceof OAuthTokenMissingError
-}
-
 async function runSync(): Promise<void> {
   const tokenResult = await getValidAccessToken(githubProvider)
   if (tokenResult.isErr()) {
-    if (!isQuietSyncError(tokenResult.error)) {
+    if (!isQuietProviderError(tokenResult.error)) {
       captureWithFingerprint(
         tokenResult.error,
         'api.github-sync.get-token-failed',
@@ -173,12 +158,14 @@ async function runSync(): Promise<void> {
 
   for (const link of links) {
     const result = await syncLinkFromGithub(link)
-    if (result.isErr() && !isQuietSyncError(result.error)) {
+    if (result.isErr() && !isQuietProviderError(result.error)) {
       captureWithFingerprint(result.error, 'api.github-sync.sync-link-failed', {
         extras: { linkId: link.id },
       })
     }
   }
+
+  await syncGithubAssignedIssues()
 }
 
 let inFlightSync: Promise<void> | null = null

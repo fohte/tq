@@ -144,6 +144,53 @@ export type GithubIssueFetchResult =
   | { notModified: true }
   | { notModified: false; issue: GithubIssueData; etag: string | null }
 
+const assignedIssueResponseSchema = z.object({
+  number: z.number(),
+  title: z.string(),
+  body: z.string().nullable(),
+  html_url: z.string(),
+  pull_request: z.object({}).optional(),
+  repository: z.object({
+    name: z.string(),
+    owner: z.object({ login: z.string() }),
+  }),
+})
+
+// GitHub's `state` query param for this endpoint defaults to 'open', but is
+// passed explicitly to document the intent: only open issues/PRs can be
+// newly assigned in a way this sync cares about.
+// `per_page=100` is GitHub's max; there is no pagination beyond that (a
+// personal account is very unlikely to have more than 100 open assigned
+// issues/PRs at once).
+export function fetchAssignedIssues(): ResultAsync<
+  GithubIssueData[],
+  | GithubApiError
+  | OAuthTokenMissingError
+  | IntegrationConfigError
+  | TokenRefreshError
+> {
+  return getValidAccessToken(githubProvider).andThen((accessToken) =>
+    fetchJson(
+      `${GITHUB_API_BASE}/issues?filter=assigned&state=open&per_page=100`,
+      { headers: githubHeaders(accessToken) },
+      z.array(assignedIssueResponseSchema),
+      (message, cause, rejected) =>
+        new GithubApiError(message, cause, rejected),
+    ).map((issues) =>
+      issues.map((issue): GithubIssueData => ({
+        owner: issue.repository.owner.login.toLowerCase(),
+        repo: issue.repository.name.toLowerCase(),
+        number: issue.number,
+        kind: issue.pull_request == null ? 'issue' : 'pull_request',
+        url: issue.html_url,
+        title: issue.title,
+        body: issue.body,
+        state: 'open',
+      })),
+    ),
+  )
+}
+
 /**
  * Conditional variant of `fetchGithubIssue` for repeat syncs: pass the
  * `etag` recorded from a previous call to have GitHub answer with a bare 304
