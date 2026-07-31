@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 import { callInternalRoute } from '#routes/mcp/route-bridge'
 import { projectStatus } from '#routes/projects'
+import { pageToResponse } from '#routes/task-pages'
 import { contextEnum, taskStatus } from '#routes/tasks/shared'
 
 async function resolveApp(): Promise<Hono> {
@@ -33,16 +34,7 @@ async function callAsResult(path: string): Promise<CallToolResult> {
     : result.result
 }
 
-type PageDetail = {
-  id: string
-  taskId: string
-  title: string
-  content: string
-  sortOrder: number
-  createdAt: string
-  updatedAt: string
-  author: unknown
-}
+type PageDetail = ReturnType<typeof pageToResponse>
 
 type TaskDetail = Record<string, unknown> & { pages: PageDetail[] }
 
@@ -99,7 +91,7 @@ export function registerReadTools(server: McpServer): void {
     'get_task',
     {
       description:
-        "Get the full detail of a single task by id: its attributes, recurrence rule, time blocks, page metadata, linked tasks (mentions via `#<number>`, as `links.outgoing`/`links.incoming`), and the nested subtree of its subtasks (as `subtasks`). Each entry in `pages` is metadata only (id, title, sortOrder, timestamps, author) with no `content` — pass its `id` and this task's `id` to get_page to read a page's content. Does not include labels — no existing TQ endpoint exposes labels for an individual task; use search_tasks with a label: filter to find tasks by label.",
+        "Get the full detail of a single task by id: its attributes, recurrence rule, time blocks, page metadata, linked tasks (mentions via `#<number>`, as `links.outgoing`/`links.incoming`), and the nested subtree of its subtasks (as `subtasks`). Each entry in `pages` is metadata only (id, taskId, title, sortOrder, timestamps, author) with no `content` — pass its `id` and this task's `id` to get_page to read a page's content. Does not include labels — no existing TQ endpoint exposes labels for an individual task; use search_tasks with a label: filter to find tasks by label.",
       inputSchema: {
         taskId: z.uuid().describe('The task id to look up.'),
       },

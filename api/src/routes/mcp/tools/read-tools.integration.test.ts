@@ -68,6 +68,28 @@ function parseJson(result: CallToolResult): unknown {
   return JSON.parse(first.text)
 }
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
+
+// Placeholders out ids/timestamps so a test can assert a full known literal
+// (title, content, author, ...) with `toEqual` instead of re-deriving the
+// expected value from the same route under test.
+function normalizeDynamicValues(value: unknown): unknown {
+  if (typeof value === 'string') {
+    if (UUID_PATTERN.test(value)) return '<uuid>'
+    if (TIMESTAMP_PATTERN.test(value)) return '<timestamp>'
+    return value
+  }
+  if (Array.isArray(value)) return value.map((v) => normalizeDynamicValues(v))
+  if (value != null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [k, normalizeDynamicValues(v)]),
+    )
+  }
+  return value
+}
+
 describe('read tools', () => {
   it('declares every read tool as read-only', async () => {
     const result = await withClient((client) => client.listTools())
@@ -153,7 +175,7 @@ describe('read tools', () => {
       const created = await createPage(
         task.id,
         'Investigation notes',
-        'x'.repeat(2000),
+        'note body',
       )
       const pageRes = await app.request(
         `/api/tasks/${task.id}/pages/${created.id}`,
@@ -210,17 +232,22 @@ describe('read tools', () => {
         'Investigation notes',
         '# Findings\n\nSome long content.',
       )
-      const pageRes = await app.request(
-        `/api/tasks/${task.id}/pages/${created.id}`,
-      )
-      const page = await jsonBody(pageRes)
 
       const toolResult = await callTool('get_page', {
         taskId: task.id,
         pageId: created.id,
       })
 
-      expect(parseJson(toolResult)).toEqual(page)
+      expect(normalizeDynamicValues(parseJson(toolResult))).toEqual({
+        id: '<uuid>',
+        taskId: '<uuid>',
+        title: 'Investigation notes',
+        content: '# Findings\n\nSome long content.',
+        sortOrder: 0,
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+        author: { kind: 'human', agent: null },
+      })
     })
 
     it('maps a non-existent page id to a 404 error result', async () => {
