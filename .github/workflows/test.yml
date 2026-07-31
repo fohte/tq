@@ -11,6 +11,22 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    # tbls doc generation below needs a live DB to introspect.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: tq
+          POSTGRES_PASSWORD: tq
+          POSTGRES_DB: tq_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tq"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: octo-sts/action@f603d3be9d8dd9871a265776e625a27b00effe05 # v1.1.1
         id: octo-sts
@@ -64,6 +80,17 @@ jobs:
 
       - name: Check peer dependencies
         run: pnpm peers check
+
+      - name: Apply DB migrations
+        working-directory: api
+        env:
+          DATABASE_URL: postgresql://tq:tq@localhost:5432/tq_test
+        run: pnpm run db:migrate
+
+      - name: Generate DB documentation (ER diagram)
+        env:
+          DATABASE_URL: postgresql://tq:tq@localhost:5432/tq_test
+        run: mise x tbls -- tbls doc --rm-dist
 
       - name: Run lefthook
         id: lefthook
