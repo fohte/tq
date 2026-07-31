@@ -101,12 +101,18 @@ function CommentCard({
             <LlmAuthorLabel author={comment.author} />
           </div>
 
-          <DeleteConfirmButton
-            title="Delete comment"
-            description="Are you sure you want to delete this comment? This action cannot be undone."
-            onDelete={handleDelete}
-            iconClassName="size-3"
-          />
+          {/* onMouseDownCapture cancels the pending debounced save before
+              opening the dialog moves focus off the editor, which would
+              otherwise flush (and thus save) it out from under this delete
+              flow — even if the user then cancels the dialog. */}
+          <div onMouseDownCapture={cancel}>
+            <DeleteConfirmButton
+              title="Delete comment"
+              description="Are you sure you want to delete this comment? This action cannot be undone."
+              onDelete={handleDelete}
+              iconClassName="size-3"
+            />
+          </div>
         </div>
 
         {/* Body - inline editable with debounced auto-save */}

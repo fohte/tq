@@ -28,7 +28,10 @@ import {
 } from '#lib/inline-reference/view-mode'
 
 export interface ViewEditToggleOptions {
-  /** Mode the editor starts in. Defaults to 'view'. */
+  /**
+   * Mode the editor starts in. Defaults to 'view'; pass 'edit' for a route
+   * where editing is the primary action (e.g. a dedicated page editor).
+   */
   defaultMode?: 'view' | 'edit'
   /** Called right before the editor returns to view mode (blur or Escape); hook up a debounced save's `flush` here. */
   onExitEditMode?: () => void
@@ -56,10 +59,7 @@ interface CrepeEditorProps {
   placeholder?: string
   // Also controls Crepe's readOnly (view => readOnly, edit => editable): the
   // two always move together, since an editable+chip combination would let
-  // mid-edit typing form a chip out from under the cursor (this is what
-  // selection-overlap.ts used to prevent by suppressing decorations wherever
-  // the selection touched a match; removed now that decorations never render
-  // in 'edit' mode at all).
+  // mid-edit typing form a chip out from under the cursor.
   mode: 'view' | 'edit'
 }
 
@@ -144,10 +144,12 @@ function isEventTargetInsideEditorUi(
 ): boolean {
   if (!(target instanceof Node)) return false
   if (wrapper.contains(target)) return true
-  // Crepe's toolbar/slash-menu/block-handle/link-preview/link-edit popovers
-  // and tq's own task-mention-autocomplete render outside `.milkdown-wrapper`
-  // (portalled to document.body), so focus moving into them must not be
-  // treated as focus leaving the editor.
+  // Only tq's own task-mention-autocomplete renders outside
+  // `.milkdown-wrapper` (portalled to document.body via `position: fixed`;
+  // see markdown-editor.css). Crepe's own toolbar/slash-menu/block-handle/
+  // link-tooltip popovers append inside `view.dom.parentElement` by default,
+  // so they're already covered by the `wrapper.contains(target)` check
+  // above.
   return (
     target instanceof Element &&
     target.closest('.task-mention-autocomplete') != null
@@ -179,7 +181,10 @@ export function MarkdownEditor({
           data-view-mode={isToggleEnabled ? mode : undefined}
           onMouseUp={
             isToggleEnabled && mode === 'view'
-              ? () => {
+              ? (event) => {
+                  // Left click only: a right/middle click opening a context
+                  // menu or auto-scroll shouldn't also switch to edit mode.
+                  if (event.button !== 0) return
                   setMode('edit')
                 }
               : undefined

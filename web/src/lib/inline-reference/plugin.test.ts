@@ -1,26 +1,15 @@
-import type { Ctx } from '@milkdown/kit/ctx'
-import { Schema } from '@milkdown/kit/prose/model'
 import { EditorState } from '@milkdown/kit/prose/state'
 import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import type { CreateReactWidgetView } from '@prosemirror-adapter/react'
 import { describe, expect, it } from 'vitest'
 
 import { createInlineReferencePlugin } from '#lib/inline-reference/plugin'
+import {
+  buildModePlugin,
+  fakeCtx,
+  schema,
+} from '#lib/inline-reference/test-helpers'
 import type { InlineReferenceProvider } from '#lib/inline-reference/types'
-import { createInlineReferenceViewModePlugin } from '#lib/inline-reference/view-mode'
-
-const schema = new Schema({
-  nodes: {
-    doc: { content: 'block+' },
-    paragraph: {
-      content: 'inline*',
-      group: 'block',
-      toDOM: () => ['p', 0],
-    },
-    text: { group: 'inline' },
-  },
-  marks: {},
-})
 
 interface FakeData {
   n: number
@@ -60,28 +49,11 @@ function docWithText(text: string) {
   ])
 }
 
-// `$prose`-wrapped plugins (both `createInlineReferencePlugin` and
-// `createInlineReferenceViewModePlugin`) need a real `Ctx` to resolve schema
-// timing and register the plugin, but the wrapped callbacks themselves never
-// read `ctx`, so a stub satisfying only the two methods `$prose` calls is
-// enough to unwrap the underlying `Plugin`.
-// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- stub only exercises .wait/.update, see comment above
-const fakeCtx = {
-  wait: async () => {},
-  update: () => {},
-} as unknown as Ctx
-
 async function buildPlugin() {
   const wrapped = createInlineReferencePlugin(
     fakeProvider,
     fakeWidgetViewFactory(),
   )
-  await wrapped(fakeCtx)()
-  return wrapped.plugin()
-}
-
-async function buildModePlugin(mode: 'view' | 'edit') {
-  const wrapped = createInlineReferenceViewModePlugin(mode)
   await wrapped(fakeCtx)()
   return wrapped.plugin()
 }
