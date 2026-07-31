@@ -4,6 +4,9 @@ import type { ReactNode } from 'react'
 
 import { IntegrationCard } from '#components/settings/integration-card'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
+import { Panel } from '#components/ui/panel'
+import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
+import { SectionHeading } from '#components/ui/section-heading'
 import {
   canConnectIntegration,
   type IntegrationSummary,
@@ -17,8 +20,8 @@ export const Route = createFileRoute('/settings')({
 })
 
 const INTEGRATION_ICONS: Record<string, ReactNode> = {
-  github: <GithubMarkIcon className="size-6 text-foreground" />,
-  google_calendar: <Calendar className="size-6 text-foreground" />,
+  github: <GithubMarkIcon className="size-5 text-foreground" />,
+  google_calendar: <Calendar className="size-5 text-foreground" />,
 }
 
 function Settings() {
@@ -26,24 +29,30 @@ function Settings() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-border px-4 py-3">
-        <h1 className="text-lg font-bold text-foreground">Settings</h1>
-      </div>
+      <ScreenHeaderBar>
+        <SectionHeading level={2}>settings</SectionHeading>
+      </ScreenHeaderBar>
 
-      <div className="flex-1 overflow-y-auto p-4">
-        {integrationsList.isLoading ? (
-          <p className="text-sm text-muted-foreground">読み込み中...</p>
-        ) : integrationsList.isSuccess ? (
-          <div className="flex flex-col gap-3">
-            {integrationsList.data.map((summary) => (
-              <SettingsIntegrationRow key={summary.id} summary={summary} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-destructive">
-            連携状態の取得に失敗しました
-          </p>
-        )}
+      <div className="flex-1 overflow-y-auto p-4 md:px-7 md:py-6">
+        <div className="flex max-w-[680px] flex-col gap-2.5">
+          <SectionHeading level={3}>integrations</SectionHeading>
+
+          {integrationsList.isLoading ? (
+            <p className="text-sm text-muted-foreground">読み込み中...</p>
+          ) : integrationsList.isSuccess ? (
+            <Panel>
+              <div className="divide-y divide-border">
+                {integrationsList.data.map((summary) => (
+                  <SettingsIntegrationRow key={summary.id} summary={summary} />
+                ))}
+              </div>
+            </Panel>
+          ) : (
+            <p className="text-sm text-destructive">
+              連携状態の取得に失敗しました
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -58,7 +67,7 @@ function SettingsIntegrationRow({ summary }: { summary: IntegrationSummary }) {
     <IntegrationCard
       icon={
         INTEGRATION_ICONS[summary.id] ?? (
-          <Puzzle className="size-6 text-foreground" />
+          <Puzzle className="size-5 text-foreground" />
         )
       }
       displayName={summary.displayName}
