@@ -1,3 +1,5 @@
+import { Link } from '@tanstack/react-router'
+
 import type { GithubRef } from '#components/task/github-ref-summary'
 import { GithubRefSummary } from '#components/task/github-ref-summary'
 import {
@@ -55,15 +57,18 @@ function toGithubUrlSummary(
   }
 }
 
-// Only ever mounted once the plugin has confirmed the URL is already
-// resolved in the query cache, so this never needs to render a loading or
-// not-found state itself.
-export function GithubUrlChip({ data }: { data: GithubUrlData }) {
+export function GithubUrlChip({
+  data,
+  raw,
+}: {
+  data: GithubUrlData
+  raw: string
+}) {
   const { data: result } = useGithubUrlPreview(data.url)
-  if (result == null) return null
+  if (result == null) return <span>{raw}</span>
 
   const summary = toGithubUrlSummary(result)
-  if (summary == null) return null
+  if (summary == null) return <span>{raw}</span>
 
   return (
     <PreviewCard>
@@ -76,10 +81,6 @@ export function GithubUrlChip({ data }: { data: GithubUrlData }) {
       <PreviewCardPortal>
         <PreviewCardPositioner>
           <PreviewCardPopup>
-            {/* A plain anchor, not @tanstack/react-router's Link: this chip
-                is mounted into its own React root inside a ProseMirror
-                decoration, outside the app's RouterProvider tree, so Link's
-                useRouter() would throw. */}
             <a
               href={summary.htmlUrl}
               target="_blank"
@@ -96,12 +97,13 @@ export function GithubUrlChip({ data }: { data: GithubUrlData }) {
               )}
             </a>
             {summary.linkedTaskId != null && (
-              <a
-                href={`/tasks/${summary.linkedTaskId}`}
+              <Link
+                to="/tasks/$taskId"
+                params={{ taskId: summary.linkedTaskId }}
                 className="mt-1.5 block text-xs text-muted-foreground hover:underline"
               >
                 Linked to a TQ task →
-              </a>
+              </Link>
             )}
           </PreviewCardPopup>
         </PreviewCardPositioner>

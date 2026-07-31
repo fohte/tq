@@ -1,11 +1,5 @@
 import { GithubUrlChip } from '#components/task/github-url-chip'
-import {
-  ensureGithubUrlPreviewLoaded,
-  getCachedGithubUrlPreview,
-  isGithubUrlPreviewKey,
-} from '#hooks/use-github-url-preview'
 import type { InlineReferenceProvider } from '#lib/inline-reference/types'
-import { queryClient } from '#lib/query-client'
 
 export interface GithubUrlData {
   url: string
@@ -33,25 +27,6 @@ export const githubUrlProvider: InlineReferenceProvider<GithubUrlData> = {
       })
     }
     return matches
-  },
-
-  isReady(data) {
-    return getCachedGithubUrlPreview(queryClient, data.url) != null
-  },
-
-  ensureLoaded(data) {
-    ensureGithubUrlPreviewLoaded(queryClient, data.url)
-  },
-
-  subscribe(notify) {
-    return queryClient.getQueryCache().subscribe((event) => {
-      // Same widen-then-narrow reasoning as taskMentionProvider.subscribe:
-      // `event.query.queryKey` is typed `any` by @tanstack/query-core.
-      const queryKey: unknown = event.query.queryKey
-      if (Array.isArray(queryKey) && isGithubUrlPreviewKey(queryKey)) {
-        notify()
-      }
-    })
   },
 
   Chip: GithubUrlChip,

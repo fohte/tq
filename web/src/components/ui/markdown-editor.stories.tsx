@@ -1,4 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { QueryClientProvider } from '@tanstack/react-query'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
+import type { ReactNode } from 'react'
 import { expect, fn } from 'storybook/test'
 
 import { MarkdownEditor } from '#components/ui/markdown-editor'
@@ -96,6 +105,31 @@ function seedLiveReferenceFixtures() {
   })
 }
 
+// Chips now render as portals into the app's own React tree (see
+// plugin.tsx), so they need a QueryClientProvider and RouterProvider
+// ancestor here the same way the app's real root provides them.
+function LiveReferencesProviders({ children }: { children: ReactNode }) {
+  const rootRoute = createRootRoute({
+    component: () => <>{children}</>,
+  })
+  const taskRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/tasks/$taskId',
+    component: () => null,
+  })
+  rootRoute.addChildren([taskRoute])
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  })
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  )
+}
+
 // Exercises the real Crepe editor end to end (not just the plugin mechanism
 // or an isolated Chip component): markdown parsing, both InlineReference
 // providers scanning the same textblock, and their chips coexisting without
@@ -103,7 +137,11 @@ function seedLiveReferenceFixtures() {
 export const WithLiveReferences: Story = {
   render: (args) => {
     seedLiveReferenceFixtures()
-    return <MarkdownEditor {...args} />
+    return (
+      <LiveReferencesProviders>
+        <MarkdownEditor {...args} />
+      </LiveReferencesProviders>
+    )
   },
   args: {
     defaultValue: `See #${String(MENTION_FIXTURE_NUMBER)} and ${GITHUB_URL_FIXTURE} for details.`,
