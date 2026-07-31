@@ -21,7 +21,7 @@ export function TaskMentionChip({ data }: { data: TaskMentionData }) {
     <PreviewCard>
       <PreviewCardTrigger
         render={<span />}
-        className="inline-flex cursor-text items-center gap-1 rounded border border-border bg-secondary/50 px-1.5 py-0.5 align-baseline text-sm leading-none"
+        className="inline-flex cursor-text items-center gap-1 border border-border bg-secondary/50 px-1.5 py-0.5 align-baseline text-sm leading-none"
       >
         <TaskMentionSummary
           status={task.status}

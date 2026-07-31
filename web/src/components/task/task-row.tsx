@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 import { GithubLinkBadge } from '#components/task/github-link-badge'
 import { TaskStatusPicker } from '#components/task/task-status-picker'
+import { Chip } from '#components/ui/chip'
 import type { GithubLink } from '#hooks/use-github-link'
 import type { Task, TreeNode } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
@@ -42,7 +43,7 @@ function ActionArea({
           e.stopPropagation()
           onComplete()
         }}
-        className="flex h-6 w-6 items-center justify-center rounded-full bg-[#2E2E2E] text-white transition-opacity hover:opacity-80"
+        className="flex h-5 w-5 shrink-0 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
         aria-label="Complete task"
       >
         <Check className="h-3 w-3" />
@@ -54,17 +55,7 @@ function ActionArea({
 function ContextBadge({ context }: { context: Task['context'] }) {
   if (context === 'personal') return null
 
-  return (
-    <span
-      className={cn(
-        'rounded-[10px] px-2 py-0.5 text-[11px] font-medium',
-        context === 'work' && 'bg-[#3D2020] text-[#FF5C33]',
-        context === 'dev' && 'bg-[#1A2040] text-[#B2B2FF]',
-      )}
-    >
-      {context}
-    </span>
-  )
+  return <Chip>{context}</Chip>
 }
 
 interface TaskRowBaseProps {
@@ -93,11 +84,9 @@ function TaskRowContent({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 px-3 py-2',
-        isInProgress &&
-          'border-l-[3px] border-b border-b-primary border-l-primary bg-[#2D1F0F]',
-        !isInProgress && 'border-b border-b-border',
-        isCompleted && 'opacity-50',
+        'flex items-center gap-2 border-b border-border border-l-2 border-l-transparent px-3 py-2',
+        isInProgress && 'border-l-primary bg-card',
+        isCompleted && 'opacity-[0.55]',
       )}
     >
       <TaskStatusPicker status={status} onStatusChange={handleStatusChange} />
@@ -108,15 +97,14 @@ function TaskRowContent({
           <span
             className={cn(
               'truncate text-sm',
-              isInProgress && 'font-semibold',
-              isCompleted && 'font-normal text-muted-foreground',
-              !isInProgress && !isCompleted && 'font-medium',
+              isInProgress ? 'font-semibold' : 'font-normal',
+              isCompleted && 'text-muted-foreground line-through',
             )}
           >
             {title}
           </span>
           {parentNumber != null && (
-            <span className="shrink-0 text-xs text-muted-foreground">
+            <span className="shrink-0 font-mono text-xs text-muted-foreground">
               ← #{parentNumber}
             </span>
           )}
@@ -212,11 +200,9 @@ export function TreeTaskRow({
       >
         <div
           className={cn(
-            'flex items-center gap-2 px-3 py-2',
-            isInProgress &&
-              'border-l-[3px] border-b border-b-primary border-l-primary bg-[#2D1F0F]',
-            !isInProgress && 'border-b border-b-border',
-            isCompleted && 'opacity-50',
+            'flex items-center gap-2 border-b border-border border-l-2 border-l-transparent px-3 py-2',
+            isInProgress && 'border-l-primary bg-card',
+            isCompleted && 'opacity-[0.55]',
           )}
           style={{ paddingLeft: `${String(depth * 24 + 12)}px` }}
         >
@@ -249,9 +235,8 @@ export function TreeTaskRow({
               <span
                 className={cn(
                   'truncate text-sm',
-                  isInProgress && 'font-semibold',
-                  isCompleted && 'font-normal text-muted-foreground',
-                  !isInProgress && !isCompleted && 'font-medium',
+                  isInProgress ? 'font-semibold' : 'font-normal',
+                  isCompleted && 'text-muted-foreground line-through',
                 )}
               >
                 {node.title}
@@ -263,7 +248,7 @@ export function TreeTaskRow({
               {/* Child completion count */}
               {node.childCompletionCount.total > 0 && (
                 <span
-                  className="text-xs text-muted-foreground"
+                  className="font-mono text-xs text-muted-foreground"
                   data-testid="child-completion"
                 >
                   {node.childCompletionCount.completed}/

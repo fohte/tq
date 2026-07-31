@@ -16,7 +16,9 @@ export function TaskMentionSummary({
   return (
     <>
       <StatusIcon status={status} />
-      <span className="shrink-0 text-muted-foreground">#{number}</span>
+      <span className="shrink-0 font-mono text-muted-foreground">
+        #{number}
+      </span>
       <span className={cn('truncate', titleClassName)}>{title}</span>
     </>
   )
