@@ -1,10 +1,14 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 import { TaskPageEditor } from '#components/task/task-page-editor'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { useTaskPage } from '#hooks/use-task-pages'
 import { useTask } from '#hooks/use-tasks'
+import { formatRelativeTime } from '#lib/format'
+
+const SAVED_TIME_TICK_MS = 30_000
 
 export const Route = createFileRoute('/tasks/$taskId_/pages/$pageId')({
   component: TaskPageView,
@@ -43,6 +47,9 @@ function PageBreadcrumb({
 }) {
   const { data: task } = useTask(taskId)
   const { data: page, isLoading } = useTaskPage(taskId, pageId)
+  // "saved Xm ago" is only recomputed on render, so tick periodically to
+  // keep it from drifting while the tab stays open and focused.
+  useNowTick(SAVED_TIME_TICK_MS)
 
   if (isLoading) {
     return <Loader2 className="size-4 animate-spin text-muted-foreground" />
@@ -68,24 +75,20 @@ function PageBreadcrumb({
         {page.title}
       </span>
       <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground-ghost">
-        saved {formatSavedTime(page.updatedAt)}
+        saved {formatRelativeTime(page.updatedAt)}
       </span>
     </>
   )
 }
 
-function formatSavedTime(isoString: string): string {
-  const date = new Date(isoString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMinutes = Math.floor(diffMs / 60_000)
-  const diffHours = Math.floor(diffMs / 3_600_000)
-  const diffDays = Math.floor(diffMs / 86_400_000)
-
-  if (diffMinutes < 1) return 'just now'
-  if (diffMinutes < 60) return `${String(diffMinutes)}m ago`
-  if (diffHours < 24) return `${String(diffHours)}h ago`
-  if (diffDays < 7) return `${String(diffDays)}d ago`
-
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+function useNowTick(intervalMs: number) {
+  const [, forceRerender] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => {
+      forceRerender((n) => n + 1)
+    }, intervalMs)
+    return () => {
+      clearInterval(id)
+    }
+  }, [intervalMs])
 }
