@@ -11,6 +11,10 @@ import {
 import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import {
+  ExpandableFieldChip,
+  InlineFieldGroup,
+} from '#components/ui/modal-field'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -21,7 +25,6 @@ import type { CreateTaskInput } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
 import { selectValueHandler } from '#lib/form-utils'
 import { formatMinutes, parseDurationToMinutes } from '#lib/parse-duration'
-import { cn } from '#lib/utils'
 
 interface CreateTaskModalProps {
   open: boolean
@@ -183,7 +186,7 @@ export function CreateTaskModal({
 
                 {/* Option fields */}
                 <div className="flex flex-wrap items-end gap-4">
-                  <FieldGroup
+                  <InlineFieldGroup
                     label="Start"
                     icon={<CalendarPlus className="size-3.5" />}
                   >
@@ -195,8 +198,8 @@ export function CreateTaskModal({
                       }}
                       className="h-auto w-32 border-0 bg-transparent p-0 text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
                     />
-                  </FieldGroup>
-                  <FieldGroup
+                  </InlineFieldGroup>
+                  <InlineFieldGroup
                     label="Due"
                     icon={<Calendar className="size-3.5" />}
                   >
@@ -208,8 +211,8 @@ export function CreateTaskModal({
                       }}
                       className="h-auto w-32 border-0 bg-transparent p-0 text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
                     />
-                  </FieldGroup>
-                  <FieldGroup
+                  </InlineFieldGroup>
+                  <InlineFieldGroup
                     label="Estimate"
                     icon={<Clock className="size-3.5" />}
                   >
@@ -222,8 +225,8 @@ export function CreateTaskModal({
                       placeholder="1h30m"
                       className="h-auto w-16 border-0 bg-transparent p-0 text-xs text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
                     />
-                  </FieldGroup>
-                  <FieldGroup
+                  </InlineFieldGroup>
+                  <InlineFieldGroup
                     label="Context"
                     icon={<Layers className="size-3.5" />}
                   >
@@ -247,7 +250,7 @@ export function CreateTaskModal({
                         <SelectItem value="dev">Dev</SelectItem>
                       </SelectContent>
                     </Select>
-                  </FieldGroup>
+                  </InlineFieldGroup>
                 </div>
               </div>
 
@@ -319,11 +322,11 @@ export function CreateTaskModal({
 
                 {/* Chip row */}
                 <div className="flex gap-2 overflow-x-auto">
-                  <SpChip
+                  <ExpandableFieldChip
                     icon={<CalendarPlus className="size-3.5" />}
                     label={startDate || 'Start'}
                     active={!!startDate}
-                    expanded={
+                    expanded={() => (
                       <Input
                         type="date"
                         value={startDate}
@@ -333,13 +336,13 @@ export function CreateTaskModal({
                         autoFocus
                         className="h-auto w-28 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:border-0 focus-visible:ring-0"
                       />
-                    }
+                    )}
                   />
-                  <SpChip
+                  <ExpandableFieldChip
                     icon={<Clock className="size-3.5" />}
                     label={estimateLabel}
                     active={parsedMinutes != null}
-                    expanded={
+                    expanded={() => (
                       <Input
                         type="text"
                         value={estimateInput}
@@ -350,13 +353,13 @@ export function CreateTaskModal({
                         autoFocus
                         className="h-auto w-14 border-0 bg-transparent p-0 text-xs shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
                       />
-                    }
+                    )}
                   />
-                  <SpChip
+                  <ExpandableFieldChip
                     icon={<Calendar className="size-3.5" />}
                     label={dueDate || 'Due'}
                     active={!!dueDate}
-                    expanded={
+                    expanded={() => (
                       <Input
                         type="date"
                         value={dueDate}
@@ -366,19 +369,19 @@ export function CreateTaskModal({
                         autoFocus
                         className="h-auto w-28 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:border-0 focus-visible:ring-0"
                       />
-                    }
+                    )}
                   />
-                  <SpChip
+                  <ExpandableFieldChip
                     icon={<Layers className="size-3.5" />}
                     label={context ? contextLabels[context] : 'Context'}
                     active={!!context}
-                    expanded={
+                    expanded={(close) => (
                       <Select
                         value={context}
-                        onValueChange={selectValueHandler(
-                          setContext,
-                          contextValues,
-                        )}
+                        onValueChange={(value) => {
+                          selectValueHandler(setContext, contextValues)(value)
+                          close()
+                        }}
                       >
                         <SelectTrigger
                           autoFocus
@@ -394,7 +397,7 @@ export function CreateTaskModal({
                           <SelectItem value="dev">Dev</SelectItem>
                         </SelectContent>
                       </Select>
-                    }
+                    )}
                   />
                 </div>
 
@@ -412,83 +415,5 @@ export function CreateTaskModal({
         </DialogPopup>
       </DialogPortal>
     </Dialog>
-  )
-}
-
-function FieldGroup({
-  label,
-  icon,
-  children,
-}: {
-  label: string
-  icon: React.ReactNode
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="flex items-center gap-1 font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint">
-        {icon}
-        {label}
-      </span>
-      <div className="flex h-7 items-center border border-border px-2 text-xs focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/50">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function SpChip({
-  icon,
-  label,
-  active,
-  expanded,
-}: {
-  icon: React.ReactNode
-  label: string
-  active?: boolean
-  expanded?: React.ReactNode
-}) {
-  const [isEditing, setIsEditing] = useState(false)
-
-  return (
-    <div
-      className={cn(
-        'inline-flex shrink-0 items-center gap-1.5 border px-2.5 py-1.5 text-xs font-mono transition-colors',
-        active === true
-          ? 'border-border-strong text-foreground'
-          : 'border-border text-muted-foreground',
-      )}
-    >
-      {icon}
-      {isEditing && expanded != null ? (
-        <div
-          onBlur={(e) => {
-            // A Select's popup mounts in a portal, so it sits outside this
-            // div in the DOM — ignore blur events caused by focus moving
-            // into it, or picking an option would collapse the field back
-            // to its static label before the value change is committed.
-            if (
-              e.relatedTarget instanceof Element &&
-              e.relatedTarget.closest('[data-slot="select-content"]')
-            ) {
-              return
-            }
-            setIsEditing(false)
-          }}
-        >
-          {expanded}
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => {
-            setIsEditing(true)
-          }}
-          className="outline-none"
-        >
-          {label}
-        </button>
-      )}
-    </div>
   )
 }

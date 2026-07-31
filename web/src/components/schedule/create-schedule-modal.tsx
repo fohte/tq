@@ -10,6 +10,10 @@ import {
 } from '#components/ui/dialog'
 import { Input } from '#components/ui/input'
 import {
+  ExpandableFieldChip,
+  InlineFieldGroup,
+} from '#components/ui/modal-field'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -186,7 +190,7 @@ export function CreateScheduleModal({
 
                 {/* Time fields */}
                 <div className="flex items-end gap-4">
-                  <FieldGroup
+                  <InlineFieldGroup
                     label="Start"
                     icon={<Clock className="size-3.5" />}
                   >
@@ -198,8 +202,11 @@ export function CreateScheduleModal({
                       }}
                       className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
                     />
-                  </FieldGroup>
-                  <FieldGroup label="End" icon={<Clock className="size-3.5" />}>
+                  </InlineFieldGroup>
+                  <InlineFieldGroup
+                    label="End"
+                    icon={<Clock className="size-3.5" />}
+                  >
                     <Input
                       type="time"
                       value={endTime}
@@ -208,7 +215,7 @@ export function CreateScheduleModal({
                       }}
                       className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
                     />
-                  </FieldGroup>
+                  </InlineFieldGroup>
                 </div>
 
                 {startTime && endTime && startTime > endTime && (
@@ -219,7 +226,7 @@ export function CreateScheduleModal({
 
                 {/* Recurrence */}
                 <div className="flex flex-col gap-2">
-                  <FieldGroup
+                  <InlineFieldGroup
                     label="Repeat"
                     icon={<Repeat className="size-3.5" />}
                   >
@@ -243,7 +250,7 @@ export function CreateScheduleModal({
                         <SelectItem value="monthly">Monthly</SelectItem>
                       </SelectContent>
                     </Select>
-                  </FieldGroup>
+                  </InlineFieldGroup>
 
                   {recurrenceType === 'weekly' && (
                     <div className="flex gap-1">
@@ -268,7 +275,7 @@ export function CreateScheduleModal({
                   )}
 
                   {recurrenceType === 'monthly' && (
-                    <FieldGroup label="Day of month" icon={null}>
+                    <InlineFieldGroup label="Day of month" icon={null}>
                       <Input
                         type="number"
                         min="1"
@@ -280,13 +287,13 @@ export function CreateScheduleModal({
                         placeholder="1-31"
                         className="h-auto w-16 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
                       />
-                    </FieldGroup>
+                    </InlineFieldGroup>
                   )}
                 </div>
 
                 {/* Context & Color */}
                 <div className="flex flex-wrap items-end gap-4">
-                  <FieldGroup
+                  <InlineFieldGroup
                     label="Context"
                     icon={<Layers className="size-3.5" />}
                   >
@@ -310,7 +317,7 @@ export function CreateScheduleModal({
                         <SelectItem value="dev">Dev</SelectItem>
                       </SelectContent>
                     </Select>
-                  </FieldGroup>
+                  </InlineFieldGroup>
 
                   <div className="flex flex-col gap-1">
                     <span className="flex items-center gap-1 font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint">
@@ -398,11 +405,11 @@ export function CreateScheduleModal({
 
                 {/* Chip row */}
                 <div className="flex flex-wrap gap-2">
-                  <SpChip
+                  <ExpandableFieldChip
                     icon={<Clock className="size-3.5" />}
                     label={startTime || 'Start'}
                     active={!!startTime}
-                    expanded={
+                    expanded={() => (
                       <Input
                         type="time"
                         value={startTime}
@@ -412,13 +419,13 @@ export function CreateScheduleModal({
                         autoFocus
                         className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
                       />
-                    }
+                    )}
                   />
-                  <SpChip
+                  <ExpandableFieldChip
                     icon={<Clock className="size-3.5" />}
                     label={endTime || 'End'}
                     active={!!endTime}
-                    expanded={
+                    expanded={() => (
                       <Input
                         type="time"
                         value={endTime}
@@ -428,19 +435,22 @@ export function CreateScheduleModal({
                         autoFocus
                         className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
                       />
-                    }
+                    )}
                   />
-                  <SpChip
+                  <ExpandableFieldChip
                     icon={<Repeat className="size-3.5" />}
                     label={recurrenceType || 'Repeat'}
                     active={!!recurrenceType}
-                    expanded={
+                    expanded={(close) => (
                       <Select
                         value={recurrenceType}
-                        onValueChange={selectValueHandler(
-                          setRecurrenceType,
-                          recurrenceValues,
-                        )}
+                        onValueChange={(value) => {
+                          selectValueHandler(
+                            setRecurrenceType,
+                            recurrenceValues,
+                          )(value)
+                          close()
+                        }}
                       >
                         <SelectTrigger
                           size="sm"
@@ -456,19 +466,19 @@ export function CreateScheduleModal({
                           <SelectItem value="monthly">Monthly</SelectItem>
                         </SelectContent>
                       </Select>
-                    }
+                    )}
                   />
-                  <SpChip
+                  <ExpandableFieldChip
                     icon={<Layers className="size-3.5" />}
                     label={context ? contextLabels[context] : 'Context'}
                     active={!!context}
-                    expanded={
+                    expanded={(close) => (
                       <Select
                         value={context}
-                        onValueChange={selectValueHandler(
-                          setContext,
-                          contextValues,
-                        )}
+                        onValueChange={(value) => {
+                          selectValueHandler(setContext, contextValues)(value)
+                          close()
+                        }}
                       >
                         <SelectTrigger
                           size="sm"
@@ -484,7 +494,7 @@ export function CreateScheduleModal({
                           <SelectItem value="dev">Dev</SelectItem>
                         </SelectContent>
                       </Select>
-                    }
+                    )}
                   />
                 </div>
 
@@ -553,83 +563,5 @@ export function CreateScheduleModal({
         </DialogPopup>
       </DialogPortal>
     </Dialog>
-  )
-}
-
-function FieldGroup({
-  label,
-  icon,
-  children,
-}: {
-  label: string
-  icon: React.ReactNode
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="flex items-center gap-1 font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint">
-        {icon}
-        {label}
-      </span>
-      <div className="flex h-7 items-center border border-border px-2 text-xs focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/50">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function SpChip({
-  icon,
-  label,
-  active,
-  expanded,
-}: {
-  icon: React.ReactNode
-  label: string
-  active?: boolean
-  expanded?: React.ReactNode
-}) {
-  const [isEditing, setIsEditing] = useState(false)
-
-  return (
-    <div
-      className={cn(
-        'inline-flex shrink-0 items-center gap-1.5 border px-2.5 py-1.5 text-xs font-mono transition-colors',
-        active === true
-          ? 'border-border-strong text-foreground'
-          : 'border-border text-muted-foreground',
-      )}
-    >
-      {icon}
-      {isEditing && expanded != null ? (
-        <div
-          onBlur={(e) => {
-            // A Select's popup mounts in a portal, so it sits outside this
-            // div in the DOM — ignore blur events caused by focus moving
-            // into it, or picking an option would collapse the field back
-            // to its static label before the value change is committed.
-            if (
-              e.relatedTarget instanceof Element &&
-              e.relatedTarget.closest('[data-slot="select-content"]')
-            ) {
-              return
-            }
-            setIsEditing(false)
-          }}
-        >
-          {expanded}
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => {
-            setIsEditing(true)
-          }}
-          className="outline-none"
-        >
-          {label}
-        </button>
-      )}
-    </div>
   )
 }
