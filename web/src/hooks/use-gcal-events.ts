@@ -11,8 +11,6 @@ export type GcalEvent = InferResponseType<
   200
 >[number]
 
-const GCAL_CALENDAR_ID = 'primary'
-
 // Google Calendar has no webhook integration here, so changes are detected
 // by polling while the calendar is open.
 const GCAL_POLL_INTERVAL_MS = 60_000
@@ -35,7 +33,7 @@ export function useGcalEvents(date: string) {
     queryFn: async () => {
       const { timeMin, timeMax } = getDayIsoRange(date)
       const res = await api.api.calendar.events.$get({
-        query: { calendarId: GCAL_CALENDAR_ID, timeMin, timeMax },
+        query: { timeMin, timeMax },
       })
       if (res.status === 401) {
         throw new GcalAuthRequiredError()
