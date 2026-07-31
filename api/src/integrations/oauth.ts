@@ -11,7 +11,7 @@ import {
   TokenRefreshError,
 } from '#integrations/errors'
 import type {
-  ConnectionStatus,
+  IntegrationAccount,
   IntegrationListItem,
   IntegrationProvider,
   OAuthTokenRow,
@@ -185,31 +185,52 @@ export function listAccountTokens(
   )
 }
 
-export function getConnectionStatus(
+// Lists every currently connected account for `provider`. For a provider
+// with `checkConnection`, each stored row is live-checked individually and
+// dropped (via disconnectAccount, scoped to that one row) if it fails — a
+// revoked/expired account must not sweep up its sibling accounts' still-
+// valid rows.
+export function listConnectedAccounts(
   provider: IntegrationProvider,
-): ResultAsync<ConnectionStatus, Error> {
-  return ResultAsync.fromSafePromise(
-    db
-      .select()
-      .from(oauthTokens)
-      .where(eq(oauthTokens.provider, provider.id))
-      .limit(1),
-  ).andThen(([token]) => {
-    if (!token) {
-      return okAsync<ConnectionStatus, Error>({ connected: false })
-    }
-
+): ResultAsync<IntegrationAccount[], Error> {
+  return listAccountTokens(provider).andThen((tokens) => {
     const checkConnection = provider.checkConnection
     if (checkConnection == null) {
-      return okAsync<ConnectionStatus, Error>({ connected: true })
+      return okAsync<IntegrationAccount[], Error>(
+        tokens.map((token) => ({ id: token.id, label: token.accountLabel })),
+      )
     }
 
-    return checkConnection(token).andThen((status) =>
-      status.connected
-        ? okAsync<ConnectionStatus, Error>(status)
-        : disconnect(provider).map((): ConnectionStatus => ({
-            connected: false,
-          })),
+    return ResultAsync.combine(
+      tokens.map((token) =>
+        checkConnection(token)
+          .andThen((status) =>
+            status.connected
+              ? okAsync<IntegrationAccount | null, Error>({
+                  id: token.id,
+                  label: status.login ?? token.accountLabel,
+                })
+              : disconnectAccount(provider, token.id).map(() => null),
+          )
+          // A checkConnection failure for one account (e.g. a transient API
+          // error) must not discard every sibling account's result via
+          // ResultAsync.combine's short-circuit-on-first-Err. Treat it as
+          // "unknown for now" — excluded from this response, row left
+          // untouched — rather than a definitive `connected: false`, which
+          // is the only case that should actually delete the row.
+          .orElse((error) => {
+            captureWithFingerprint(
+              error,
+              'api.integrations.check-connection-failed',
+              { extras: { provider: provider.id } },
+            )
+            return okAsync<IntegrationAccount | null, Error>(null)
+          }),
+      ),
+    ).map((accounts) =>
+      accounts.filter(
+        (account): account is IntegrationAccount => account != null,
+      ),
     )
   })
 }
@@ -217,7 +238,7 @@ export function getConnectionStatus(
 // Resolves to a best-effort summary rather than a Result: one provider's
 // checkConnection failure (e.g. a GitHub API hiccup) must not take down the
 // whole `GET /api/integrations` list, so the error is captured and degraded
-// to `connected: false` here instead of propagating.
+// to an empty accounts list here instead of propagating.
 export async function getIntegrationSummary(
   provider: IntegrationProvider,
 ): Promise<IntegrationListItem> {
@@ -226,13 +247,13 @@ export async function getIntegrationSummary(
     () => false,
   )
 
-  const status = await getConnectionStatus(provider).match(
-    (status) => status,
-    (error): ConnectionStatus => {
+  const accounts = await listConnectedAccounts(provider).match(
+    (accounts) => accounts,
+    (error): IntegrationAccount[] => {
       captureWithFingerprint(error, 'api.integrations.get-summary-failed', {
         extras: { provider: provider.id },
       })
-      return { connected: false }
+      return []
     },
   )
 
@@ -240,18 +261,29 @@ export async function getIntegrationSummary(
     id: provider.id,
     displayName: provider.displayName,
     configured,
-    ...status,
+    supportsMultipleAccounts: provider.oauth.identifyAccount != null,
+    accounts,
   }
 }
 
-// Deletes every account connected to this provider, not just one — for a
-// provider with multiple connected accounts (e.g. google_calendar), this
-// is a deliberate "disconnect everything" for now. Per-account disconnect
-// is deferred to a follow-up PR alongside the accounts-list UI.
-export function disconnect(
+// Deletes a single account row scoped to `provider`. `accountRowId` is
+// oauthTokens.id (a surrogate key), not the provider-specific accountId —
+// see IntegrationAccount.id in integrations/types.ts. Resolves to whether a
+// row was actually deleted, so callers can tell "already gone"/"wrong
+// provider" apart from success.
+export function disconnectAccount(
   provider: IntegrationProvider,
-): ResultAsync<void, never> {
+  accountRowId: string,
+): ResultAsync<boolean, never> {
   return ResultAsync.fromSafePromise(
-    db.delete(oauthTokens).where(eq(oauthTokens.provider, provider.id)),
-  ).map(() => undefined)
+    db
+      .delete(oauthTokens)
+      .where(
+        and(
+          eq(oauthTokens.provider, provider.id),
+          eq(oauthTokens.id, accountRowId),
+        ),
+      )
+      .returning({ id: oauthTokens.id }),
+  ).map((rows) => rows.length > 0)
 }

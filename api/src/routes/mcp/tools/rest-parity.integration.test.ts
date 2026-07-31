@@ -101,6 +101,27 @@ describe('REST/MCP parity', () => {
     })
   })
 
+  it('a task created via create_task with an explicit agent is attributed to that agent through GET /api/tasks/:id', async () => {
+    const created = await callTool('create_task', {
+      title: 'Attributed via MCP',
+      agent: 'claude-opus-5',
+    })
+    const data = passthroughSchema<TaskResponse>().parse(parseToolJson(created))
+
+    const res = await app.request(`/api/tasks/${data.id}`)
+    expect(res.status).toBe(200)
+
+    expect(await jsonBody(res)).toEqual({
+      ...data,
+      titleAuthor: { kind: 'llm', agent: 'claude-opus-5' },
+      descriptionAuthor: { kind: 'llm', agent: 'claude-opus-5' },
+      childCompletionCount: { total: 0, completed: 0 },
+      pages: [],
+      timeBlocks: [],
+      links: { outgoing: [], incoming: [] },
+    })
+  })
+
   it('a task created via create_task is visible through GET /api/tasks (list)', async () => {
     const created = await callTool('create_task', {
       title: 'Listed via MCP',
@@ -199,5 +220,84 @@ describe('REST/MCP parity', () => {
       timeBlocks: [],
       links: { outgoing: [], incoming: [] },
     })
+  })
+
+  it('a page created via create_page is visible through GET /api/tasks/:taskId/pages', async () => {
+    const task = await createTask('Has pages')
+
+    const created = await callTool('create_page', {
+      taskId: task.id,
+      title: 'Notes',
+      content: 'Some content',
+    })
+    const data = parseToolJson(created)
+
+    const res = await app.request(`/api/tasks/${task.id}/pages`)
+    expect(res.status).toBe(200)
+
+    expect(await jsonBody(res)).toEqual([data])
+  })
+
+  it('a page updated via update_page with an explicit agent is attributed to that agent through GET /api/tasks/:taskId/pages', async () => {
+    const task = await createTask('Has pages')
+    const created = await callTool('create_page', {
+      taskId: task.id,
+      title: 'Notes',
+    })
+    const page = passthroughSchema<{ id: string }>().parse(
+      parseToolJson(created),
+    )
+
+    const updated = await callTool('update_page', {
+      taskId: task.id,
+      pageId: page.id,
+      content: 'Updated content',
+      agent: 'claude-opus-5',
+    })
+    const data = parseToolJson(updated)
+
+    const res = await app.request(`/api/tasks/${task.id}/pages`)
+    expect(res.status).toBe(200)
+
+    expect(await jsonBody(res)).toEqual([data])
+  })
+
+  it('a comment created via create_comment is visible through GET /api/tasks/:taskId/comments', async () => {
+    const task = await createTask('Has comments')
+
+    const created = await callTool('create_comment', {
+      taskId: task.id,
+      content: 'A comment',
+    })
+    const data = parseToolJson(created)
+
+    const res = await app.request(`/api/tasks/${task.id}/comments`)
+    expect(res.status).toBe(200)
+
+    expect(await jsonBody(res)).toEqual([data])
+  })
+
+  it('a comment updated via update_comment with an explicit agent is attributed to that agent through GET /api/tasks/:taskId/comments', async () => {
+    const task = await createTask('Has comments')
+    const created = await callTool('create_comment', {
+      taskId: task.id,
+      content: 'Original content',
+    })
+    const comment = passthroughSchema<{ id: string }>().parse(
+      parseToolJson(created),
+    )
+
+    const updated = await callTool('update_comment', {
+      taskId: task.id,
+      commentId: comment.id,
+      content: 'Updated content',
+      agent: 'claude-opus-5',
+    })
+    const data = parseToolJson(updated)
+
+    const res = await app.request(`/api/tasks/${task.id}/comments`)
+    expect(res.status).toBe(200)
+
+    expect(await jsonBody(res)).toEqual([data])
   })
 })

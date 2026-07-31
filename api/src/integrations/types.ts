@@ -26,17 +26,36 @@ export type ConnectionStatus =
   { connected: false } | { connected: true; login?: string }
 
 /**
- * One row of `GET /api/integrations`. `configured` reflects whether the
- * provider's OAuth env vars are currently set; `connected` reflects whether
- * a token is stored (and, for a provider with `checkConnection`, still
- * valid). The two are independent: a token stored while env vars were set
- * can outlive their removal, so `connected: true, configured: false` is
- * possible for a provider with no `checkConnection` (e.g. Google Calendar).
+ * One connected account, scoped to a single provider in
+ * `IntegrationListItem.accounts`. `id` is `oauthTokens.id` (a surrogate
+ * key), not the provider-specific `accountId` — GitHub's `accountId` is an
+ * empty-string sentinel and can't be carried in a URL path, but every row
+ * still has a real UUID `id` to disconnect by
+ * (`DELETE /api/integrations/:id/accounts/:accountId`). `label` is the
+ * account's display name: GitHub's live-checked `login`, or Google's stored
+ * `accountLabel` (email); null when neither is available.
  */
-export type IntegrationListItem = ConnectionStatus & {
+export interface IntegrationAccount {
+  id: string
+  label: string | null
+}
+
+/**
+ * One row of `GET /api/integrations`. `configured` reflects whether the
+ * provider's OAuth env vars are currently set; `accounts` lists every
+ * currently connected (and, for a provider with `checkConnection`, still
+ * valid) account. The two are independent: a token stored while env vars
+ * were set can outlive their removal, so a non-empty `accounts` alongside
+ * `configured: false` is possible for a provider with no `checkConnection`
+ * (e.g. Google Calendar). `supportsMultipleAccounts` mirrors whether the
+ * provider has an `IntegrationOAuth.identifyAccount` hook.
+ */
+export interface IntegrationListItem {
   id: string
   displayName: string
   configured: boolean
+  supportsMultipleAccounts: boolean
+  accounts: IntegrationAccount[]
 }
 
 export interface OAuthAccountIdentity {

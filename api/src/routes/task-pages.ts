@@ -14,13 +14,13 @@ import {
 } from '#lib/edits'
 import { syncTaskLinks } from '#services/task-links'
 
-const createPageSchema = z.object({
+export const createPageSchema = z.object({
   title: z.string().min(1),
   content: z.string().optional(),
   sortOrder: z.number().int().optional(),
 })
 
-const updatePageSchema = z.object({
+export const updatePageSchema = z.object({
   title: z.string().min(1).optional(),
   content: z.string().optional(),
   sortOrder: z.number().int().optional(),

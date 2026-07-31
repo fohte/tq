@@ -139,7 +139,10 @@ async function getTargetAuthors(
     })
     .from(edits)
     .where(inArray(targetColumn, targetIds))
-    .orderBy(targetColumn, desc(edits.updatedAt))
+    // `id` (an identity column) breaks ties when two edits land in the same
+    // `updatedAt` millisecond, e.g. an LLM agent creating and then
+    // immediately updating the same page/comment with a different author.
+    .orderBy(targetColumn, desc(edits.updatedAt), desc(edits.id))
 
   const authors = new Map<string, EditAuthorInfo>()
   for (const row of rows) {
@@ -193,7 +196,7 @@ export async function getTaskFieldAuthors(taskId: string): Promise<{
         isNull(edits.commentId),
       ),
     )
-    .orderBy(edits.field, desc(edits.updatedAt))
+    .orderBy(edits.field, desc(edits.updatedAt), desc(edits.id))
 
   const byField = new Map(rows.map((row) => [row.field, toAuthorInfo(row)]))
   const createAuthor = byField.get(null) ?? null

@@ -6,11 +6,12 @@ import {
   Loader2,
   Plus,
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 
 import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
+import { useDebouncedSave } from '#hooks/use-debounced-save'
 import type { TaskPage } from '#hooks/use-task-pages'
 import {
   useCreateTaskPage,
@@ -259,35 +260,16 @@ function PageInlineEditor({
   defaultValue: string
 }) {
   const updatePage = useUpdateTaskPage(taskId)
-  const pendingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pendingSaveRef = useRef<(() => void) | null>(null)
-
-  const handleChange = useCallback(
-    (markdown: string) => {
-      if (pendingRef.current) clearTimeout(pendingRef.current)
-      const doSave = () => {
-        updatePage.mutate({ pageId, input: { content: markdown } })
-        pendingSaveRef.current = null
-      }
-      pendingSaveRef.current = doSave
-      pendingRef.current = setTimeout(doSave, 1000)
-    },
-    [pageId, updatePage],
-  )
-
-  useEffect(() => {
-    return () => {
-      if (pendingRef.current) clearTimeout(pendingRef.current)
-      pendingSaveRef.current?.()
-    }
-  }, [])
+  const { onChange } = useDebouncedSave((markdown) => {
+    updatePage.mutate({ pageId, input: { content: markdown } })
+  })
 
   return (
     <div className="min-h-[80px] text-sm">
       <MarkdownEditor
         defaultValue={defaultValue}
         placeholder="Write something..."
-        onChange={handleChange}
+        onChange={onChange}
       />
     </div>
   )
