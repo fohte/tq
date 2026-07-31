@@ -2,28 +2,28 @@
 
 ## Columns
 
-| Name | Type | Default | Nullable | Children | Parents | Comment |
-| ---- | ---- | ------- | -------- | -------- | ------- | ------- |
-| id | text |  | false | [public.edits](public.edits.md) |  |  |
-| task_id | text |  | false |  | [public.tasks](public.tasks.md) |  |
-| title | text |  | false |  |  |  |
-| content | text | ''::text | false |  |  |  |
-| sort_order | integer | 0 | false |  |  |  |
-| created_at | timestamp with time zone | now() | false |  |  |  |
-| updated_at | timestamp with time zone | now() | false |  |  |  |
+| Name       | Type                     | Default  | Nullable | Children                        | Parents                         | Comment |
+| ---------- | ------------------------ | -------- | -------- | ------------------------------- | ------------------------------- | ------- |
+| id         | text                     |          | false    | [public.edits](public.edits.md) |                                 |         |
+| task_id    | text                     |          | false    |                                 | [public.tasks](public.tasks.md) |         |
+| title      | text                     |          | false    |                                 |                                 |         |
+| content    | text                     | ''::text | false    |                                 |                                 |         |
+| sort_order | integer                  | 0        | false    |                                 |                                 |         |
+| created_at | timestamp with time zone | now()    | false    |                                 |                                 |         |
+| updated_at | timestamp with time zone | now()    | false    |                                 |                                 |         |
 
 ## Constraints
 
-| Name | Type | Definition |
-| ---- | ---- | ---------- |
-| task_pages_pkey | PRIMARY KEY | PRIMARY KEY (id) |
+| Name                           | Type        | Definition                                                   |
+| ------------------------------ | ----------- | ------------------------------------------------------------ |
+| task_pages_pkey                | PRIMARY KEY | PRIMARY KEY (id)                                             |
 | task_pages_task_id_tasks_id_fk | FOREIGN KEY | FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE |
 
 ## Indexes
 
-| Name | Definition |
-| ---- | ---------- |
-| task_pages_pkey | CREATE UNIQUE INDEX task_pages_pkey ON public.task_pages USING btree (id) |
+| Name                   | Definition                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| task_pages_pkey        | CREATE UNIQUE INDEX task_pages_pkey ON public.task_pages USING btree (id)      |
 | idx_task_pages_task_id | CREATE INDEX idx_task_pages_task_id ON public.task_pages USING btree (task_id) |
 
 ## Relations
