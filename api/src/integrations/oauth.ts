@@ -203,14 +203,29 @@ export function listConnectedAccounts(
 
     return ResultAsync.combine(
       tokens.map((token) =>
-        checkConnection(token).andThen((status) =>
-          status.connected
-            ? okAsync<IntegrationAccount | null, Error>({
-                id: token.id,
-                label: status.login ?? token.accountLabel,
-              })
-            : disconnectAccount(provider, token.id).map(() => null),
-        ),
+        checkConnection(token)
+          .andThen((status) =>
+            status.connected
+              ? okAsync<IntegrationAccount | null, Error>({
+                  id: token.id,
+                  label: status.login ?? token.accountLabel,
+                })
+              : disconnectAccount(provider, token.id).map(() => null),
+          )
+          // A checkConnection failure for one account (e.g. a transient API
+          // error) must not discard every sibling account's result via
+          // ResultAsync.combine's short-circuit-on-first-Err. Treat it as
+          // "unknown for now" — excluded from this response, row left
+          // untouched — rather than a definitive `connected: false`, which
+          // is the only case that should actually delete the row.
+          .orElse((error) => {
+            captureWithFingerprint(
+              error,
+              'api.integrations.check-connection-failed',
+              { extras: { provider: provider.id } },
+            )
+            return okAsync<IntegrationAccount | null, Error>(null)
+          }),
       ),
     ).map((accounts) =>
       accounts.filter(

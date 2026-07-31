@@ -182,19 +182,25 @@ describe('GET /api/integrations', () => {
     expect(res.status).toBe(200)
 
     const body = await jsonBody<IntegrationEntry[]>(res)
-    const googleCalendar = body.find((item) => item.id === 'google_calendar')
-    assertDefined(googleCalendar)
-
-    expect(normalizeIntegrationEntry(googleCalendar)).toEqual({
-      id: 'google_calendar',
-      displayName: 'Google Calendar',
-      configured: false,
-      supportsMultipleAccounts: true,
-      accounts: [
-        { id: 'ID', label: 'user1@example.com' },
-        { id: 'ID', label: 'user2@example.com' },
-      ],
-    })
+    expect(body.map(normalizeIntegrationEntry)).toEqual([
+      {
+        id: 'github',
+        displayName: 'GitHub',
+        configured: false,
+        supportsMultipleAccounts: false,
+        accounts: [],
+      },
+      {
+        id: 'google_calendar',
+        displayName: 'Google Calendar',
+        configured: false,
+        supportsMultipleAccounts: true,
+        accounts: [
+          { id: 'ID', label: 'user1@example.com' },
+          { id: 'ID', label: 'user2@example.com' },
+        ],
+      },
+    ])
   })
 })
 

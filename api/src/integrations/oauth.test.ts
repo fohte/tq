@@ -95,6 +95,42 @@ describe('listConnectedAccounts', () => {
       .where(eq(oauthTokens.provider, FAKE_PROVIDER_ID))
     expect(remaining).toEqual([surviving])
   })
+
+  it('excludes an account whose checkConnection call errors, without deleting it or discarding its sibling', async () => {
+    const errored = await insertFakeToken({
+      accountId: 'account-erroring',
+      accessToken: 'access-token-erroring',
+    })
+    const surviving = await insertFakeToken({
+      accountId: 'account-ok',
+      accessToken: 'access-token-ok',
+    })
+
+    const checkConnection = vi.fn(
+      (token: OAuthTokenRow): ResultAsync<ConnectionStatus, Error> =>
+        token.accessToken === 'access-token-ok'
+          ? okAsync({ connected: true })
+          : errAsync(new Error('transient check-connection failure')),
+    )
+    const provider = createFakeProvider(checkConnection)
+
+    const accounts = (await listConnectedAccounts(provider))._unsafeUnwrap()
+    expect(accounts).toEqual([{ id: surviving.id, label: null }])
+
+    // Only a definitive `connected: false` should delete a row — an
+    // unexpected checkConnection failure must leave it untouched.
+    const remaining = await db
+      .select()
+      .from(oauthTokens)
+      .where(eq(oauthTokens.provider, FAKE_PROVIDER_ID))
+    expect(
+      remaining.sort((a, b) => a.accountId.localeCompare(b.accountId)),
+    ).toEqual(
+      [errored, surviving].sort((a, b) =>
+        a.accountId.localeCompare(b.accountId),
+      ),
+    )
+  })
 })
 
 describe('disconnectAccount', () => {

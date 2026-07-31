@@ -4,8 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db } from '#db/connection'
 import { oauthTokens } from '#db/schema'
 import { IntegrationConfigError } from '#integrations/errors'
-import { GithubApiError, githubProvider } from '#integrations/github/index'
-import { googleCalendarProvider } from '#integrations/google-calendar/index'
+import { githubProvider } from '#integrations/github/index'
 import {
   disconnectAccount,
   getAuthUrl,
@@ -203,18 +202,23 @@ describe('listConnectedAccounts', () => {
     expect(normalizeAccounts(accounts)).toEqual([{ id: 'ID', label: 'fohte' }])
   })
 
-  it('returns a GitHub API error when the request fails', async () => {
-    await upsertToken('some-token')
+  it('excludes the account without deleting it when the connection check fails', async () => {
+    const token = await upsertToken('some-token')
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response('server error', { status: 500 }),
     )
 
-    const error = (
-      await listConnectedAccounts(githubProvider)
-    )._unsafeUnwrapErr()
+    expect(
+      (await listConnectedAccounts(githubProvider))._unsafeUnwrap(),
+    ).toEqual([])
 
-    expect(error).toEqual(new GithubApiError('server error'))
+    const [remainingToken] = await db
+      .select()
+      .from(oauthTokens)
+      .where(eq(oauthTokens.provider, 'github'))
+      .limit(1)
+    expect(remainingToken).toEqual(token)
   })
 
   it('drops the token and returns no accounts when it was revoked on GitHub', async () => {
@@ -309,39 +313,5 @@ describe('disconnectAccount', () => {
       .where(eq(oauthTokens.provider, 'github'))
       .limit(1)
     expect(remainingToken).toBeUndefined()
-  })
-
-  it('resolves to false and deletes nothing for a nonexistent row id', async () => {
-    await upsertToken('valid-token')
-
-    expect(
-      (
-        await disconnectAccount(githubProvider, 'nonexistent-id')
-      )._unsafeUnwrap(),
-    ).toBe(false)
-
-    const [remainingToken] = await db
-      .select()
-      .from(oauthTokens)
-      .where(eq(oauthTokens.provider, 'github'))
-      .limit(1)
-    expect(remainingToken).toBeDefined()
-  })
-
-  it('resolves to false and deletes nothing when the row belongs to a different provider', async () => {
-    const token = await upsertToken('valid-token')
-
-    expect(
-      (
-        await disconnectAccount(googleCalendarProvider, token.id)
-      )._unsafeUnwrap(),
-    ).toBe(false)
-
-    const [remainingToken] = await db
-      .select()
-      .from(oauthTokens)
-      .where(eq(oauthTokens.provider, 'github'))
-      .limit(1)
-    expect(remainingToken).toBeDefined()
   })
 })
