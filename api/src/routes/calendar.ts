@@ -1,14 +1,19 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
+import type { Context } from 'hono'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
-import { OAuthTokenMissingError } from '#integrations/errors'
+import { OAuthTokenMissingError, TokenRefreshError } from '#integrations/errors'
 import {
+  ensureDefaultCalendarSubscription,
   getEvents,
   googleCalendarProvider,
+  listCalendarsWithSubscriptionState,
   partitionAccountEvents,
+  setCalendarSubscription,
 } from '#integrations/google-calendar/index'
+import { ensureValidAccessToken, getAccountToken } from '#integrations/oauth'
 import {
   callbackQuerySchema,
   handleOAuthCallbackRoute,
@@ -18,6 +23,38 @@ const eventsQuerySchema = z.object({
   timeMin: z.iso.datetime(),
   timeMax: z.iso.datetime(),
 })
+
+const calendarSubscriptionBodySchema = z.object({
+  subscribed: z.boolean(),
+})
+
+// Shared by the two /accounts/:accountId/calendars* routes below: resolves
+// null both when the id doesn't exist and when it belongs to a different
+// provider, so callers 404 either way instead of leaking whether the id is
+// valid for some other provider.
+function resolveGoogleAccountToken(accountId: string) {
+  return getAccountToken(googleCalendarProvider, accountId).match(
+    (row) => row,
+    () => null,
+  )
+}
+
+// Maps a calendars-endpoint failure to an HTTP response: an auth rejection
+// is a normal, recoverable OAuth outcome (the client should prompt
+// re-connecting), so it gets its own 401 instead of falling into the
+// generic 500 + Sentry capture path.
+function calendarsErrorResponse(
+  c: Context,
+  error: Error,
+  fingerprint: string,
+  extras: Record<string, string>,
+) {
+  if (error instanceof TokenRefreshError && error.rejected) {
+    return c.json({ error: 'Google Calendar authentication is required' }, 401)
+  }
+  captureWithFingerprint(error, fingerprint, { extras })
+  return c.json({ error: 'Internal server error' }, 500)
+}
 
 // Connection status/auth-url/disconnect are handled generically by
 // routes/integrations.ts. This file only keeps /events and the OAuth
@@ -73,6 +110,68 @@ export const calendarApp = new Hono()
         googleCalendarProvider,
         code,
         'calendar',
+        ({ oauthTokenId }) =>
+          Promise.resolve(ensureDefaultCalendarSubscription(oauthTokenId)).then(
+            () => undefined,
+          ),
+      )
+    },
+  )
+  .get('/accounts/:accountId/calendars', async (c) => {
+    const accountId = c.req.param('accountId')
+
+    const token = await resolveGoogleAccountToken(accountId)
+    if (token == null) {
+      return c.json({ error: 'Not found' }, 404)
+    }
+
+    const result = await ensureValidAccessToken(
+      googleCalendarProvider,
+      token,
+    ).andThen((accessToken) =>
+      listCalendarsWithSubscriptionState(accessToken, token.id),
+    )
+
+    return result.match(
+      (calendars) => c.json(calendars, 200),
+      (error) =>
+        calendarsErrorResponse(c, error, 'api.calendar.list-calendars-failed', {
+          accountId,
+        }),
+    )
+  })
+  .put(
+    '/accounts/:accountId/calendars/:calendarId/subscription',
+    zValidator('json', calendarSubscriptionBodySchema),
+    async (c) => {
+      const accountId = c.req.param('accountId')
+      const calendarId = c.req.param('calendarId')
+      const { subscribed } = c.req.valid('json')
+
+      const token = await resolveGoogleAccountToken(accountId)
+      if (token == null) {
+        return c.json({ error: 'Not found' }, 404)
+      }
+
+      const result = await ensureValidAccessToken(
+        googleCalendarProvider,
+        token,
+      ).andThen((accessToken) =>
+        setCalendarSubscription(accessToken, token.id, calendarId, subscribed),
+      )
+
+      return result.match(
+        (update) =>
+          update == null
+            ? c.json({ error: 'Not found' }, 404)
+            : c.json(update, 200),
+        (error) =>
+          calendarsErrorResponse(
+            c,
+            error,
+            'api.calendar.update-subscription-failed',
+            { accountId, calendarId },
+          ),
       )
     },
   )

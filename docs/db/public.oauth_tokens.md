@@ -2,17 +2,17 @@
 
 ## Columns
 
-| Name          | Type                     | Default                 | Nullable | Children | Parents | Comment |
-| ------------- | ------------------------ | ----------------------- | -------- | -------- | ------- | ------- |
-| id            | text                     |                         | false    |          |         |         |
-| provider      | text                     | 'google_calendar'::text | false    |          |         |         |
-| access_token  | text                     |                         | false    |          |         |         |
-| refresh_token | text                     |                         | true     |          |         |         |
-| expires_at    | timestamp with time zone |                         | true     |          |         |         |
-| created_at    | timestamp with time zone | now()                   | false    |          |         |         |
-| updated_at    | timestamp with time zone | now()                   | false    |          |         |         |
-| account_id    | text                     |                         | false    |          |         |         |
-| account_label | text                     |                         | true     |          |         |         |
+| Name          | Type                     | Default                 | Nullable | Children                                                          | Parents | Comment |
+| ------------- | ------------------------ | ----------------------- | -------- | ----------------------------------------------------------------- | ------- | ------- |
+| id            | text                     |                         | false    | [public.calendar_subscriptions](public.calendar_subscriptions.md) |         |         |
+| provider      | text                     | 'google_calendar'::text | false    |                                                                   |         |         |
+| access_token  | text                     |                         | false    |                                                                   |         |         |
+| refresh_token | text                     |                         | true     |                                                                   |         |         |
+| expires_at    | timestamp with time zone |                         | true     |                                                                   |         |         |
+| created_at    | timestamp with time zone | now()                   | false    |                                                                   |         |         |
+| updated_at    | timestamp with time zone | now()                   | false    |                                                                   |         |         |
+| account_id    | text                     |                         | false    |                                                                   |         |         |
+| account_label | text                     |                         | true     |                                                                   |         |         |
 
 ## Constraints
 
@@ -34,6 +34,7 @@
 ```mermaid
 erDiagram
 
+"public.calendar_subscriptions" }o--|| "public.oauth_tokens" : "FOREIGN KEY (oauth_token_id) REFERENCES oauth_tokens(id) ON DELETE CASCADE"
 
 "public.oauth_tokens" {
   text id
@@ -45,6 +46,15 @@ erDiagram
   timestamp_with_time_zone updated_at
   text account_id
   text account_label
+}
+"public.calendar_subscriptions" {
+  text id
+  text oauth_token_id FK
+  text calendar_id
+  text display_name
+  text color
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
 }
 ```
 

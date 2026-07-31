@@ -62,6 +62,9 @@ const sampleEvent = {
   source: 'google_calendar' as const,
   accountId: 'google-sub-1',
   accountLabel: 'user@example.com',
+  calendarId: 'primary',
+  calendarDisplayName: null,
+  calendarColor: null,
 }
 
 describe('useGcalEvents', () => {

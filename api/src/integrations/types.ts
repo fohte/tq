@@ -94,7 +94,13 @@ export interface CalendarEventsCapability {
   getEvents: (
     accessToken: string,
     params: { calendarId: string; timeMin: string; timeMax: string },
-  ) => ResultAsync<Omit<ExternalEvent, 'accountId' | 'accountLabel'>[], Error>
+  ) => ResultAsync<
+    Omit<
+      ExternalEvent,
+      'accountId' | 'accountLabel' | 'calendarDisplayName' | 'calendarColor'
+    >[],
+    Error
+  >
 }
 
 export interface ExternalEvent {
@@ -106,6 +112,21 @@ export interface ExternalEvent {
   source: string
   accountId: string
   accountLabel: string | null
+  calendarId: string
+  calendarDisplayName: string | null
+  calendarColor: string | null
+}
+
+/** One calendar from a provider's `calendarList`-equivalent API. */
+export interface CalendarListEntry {
+  id: string
+  displayName: string
+  color: string | null
+  primary: boolean
+}
+
+export interface CalendarListCapability {
+  list: (accessToken: string) => ResultAsync<CalendarListEntry[], Error>
 }
 
 export interface IntegrationProvider {
@@ -123,5 +144,6 @@ export interface IntegrationProvider {
   ) => ResultAsync<ConnectionStatus, Error>
   capabilities?: {
     calendarEvents?: CalendarEventsCapability
+    calendarList?: CalendarListCapability
   }
 }

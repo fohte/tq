@@ -21,6 +21,7 @@
 | [public.task_links](public.task_links.md)                                           | 3       |         | BASE TABLE |
 | [public.github_sync_rule_ignored_issues](public.github_sync_rule_ignored_issues.md) | 6       |         | BASE TABLE |
 | [public.github_sync_rules](public.github_sync_rules.md)                             | 10      |         | BASE TABLE |
+| [public.calendar_subscriptions](public.calendar_subscriptions.md)                   | 7       |         | BASE TABLE |
 
 ## Relations
 
@@ -45,6 +46,7 @@ erDiagram
 "public.task_links" }o--|| "public.tasks" : "FOREIGN KEY (target_task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.github_sync_rule_ignored_issues" }o--|| "public.github_sync_rules" : "FOREIGN KEY (rule_id) REFERENCES github_sync_rules(id) ON DELETE CASCADE"
 "public.github_sync_rules" }o--|| "public.projects" : "FOREIGN KEY (target_project_id) REFERENCES projects(id) ON DELETE CASCADE"
+"public.calendar_subscriptions" }o--|| "public.oauth_tokens" : "FOREIGN KEY (oauth_token_id) REFERENCES oauth_tokens(id) ON DELETE CASCADE"
 
 "public.images" {
   text id
@@ -206,6 +208,15 @@ erDiagram
   text target_project_id FK
   boolean enabled
   boolean seed_ignore_on_next_sync
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+}
+"public.calendar_subscriptions" {
+  text id
+  text oauth_token_id FK
+  text calendar_id
+  text display_name
+  text color
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
 }
