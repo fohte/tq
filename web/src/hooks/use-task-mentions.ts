@@ -1,4 +1,4 @@
-import { type QueryClient, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
 import { useDebounce } from '#hooks/use-debounce'
@@ -16,10 +16,6 @@ export const taskMentionKeys = {
   preview: (number: number) => [...mentionPreviewKeyPrefix, number] as const,
   suggestions: (query: string) =>
     [...taskKeys.all, 'mention-suggestions', query] as const,
-}
-
-export function isTaskMentionPreviewKey(queryKey: readonly unknown[]): boolean {
-  return mentionPreviewKeyPrefix.every((part, i) => queryKey[i] === part)
 }
 
 function taskMentionPreviewQueryOptions(number: number) {
@@ -40,37 +36,18 @@ function taskMentionPreviewQueryOptions(number: number) {
 }
 
 export function useTaskMentionPreview(number: number) {
-  return useQuery(taskMentionPreviewQueryOptions(number))
-}
-
-// Reads a mention preview straight from the cache without subscribing. The
-// live-preview decoration plugin calls this synchronously while computing
-// decorations, since it redraws by dispatching a transaction rather than
-// through a React re-render.
-export function getCachedTaskMentionPreview(
-  queryClient: QueryClient,
-  number: number,
-): TaskDetail | null | undefined {
-  return queryClient.getQueryData(taskMentionKeys.preview(number))
-}
-
-export function ensureTaskMentionPreviewLoaded(
-  queryClient: QueryClient,
-  number: number,
-): void {
-  const queryKey = taskMentionKeys.preview(number)
-  // The decoration plugin calls this on every keystroke throughout the
-  // whole document for every not-yet-ready mention, so a query that's
-  // already failed must not be retried on every single one of those calls.
-  if (queryClient.getQueryState(queryKey)?.status === 'error') return
-
-  void queryClient
-    .fetchQuery(taskMentionPreviewQueryOptions(number))
-    .catch((error: unknown) => {
-      // Surfaced to callers as a cached `undefined`/never-resolved entry; the
-      // mention just stays as plain text.
+  return useQuery({
+    ...taskMentionPreviewQueryOptions(number),
+    // A 404 above already resolves to `null` without throwing; reaching
+    // here means `queryFn` itself threw (network error, bad JSON, ...),
+    // which is unexpected and worth surfacing for debugging. The chip still
+    // falls back to the raw matched text either way, so this only logs — it
+    // must not throw to an error boundary.
+    throwOnError: (error) => {
       console.error('Failed to load task mention preview', error)
-    })
+      return false
+    },
+  })
 }
 
 export function useTaskMentionSuggestions(query: string, enabled: boolean) {
