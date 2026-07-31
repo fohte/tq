@@ -34,6 +34,7 @@ describe('MCP endpoint', () => {
         'create_comment',
         'create_page',
         'create_task',
+        'get_page',
         'get_task',
         'get_today_tasks',
         'list_labels',
