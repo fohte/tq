@@ -11,7 +11,7 @@ interface MockResult {
   title: string
   description: null
   status: 'todo' | 'in_progress' | 'completed'
-  context: 'work' | 'personal' | 'dev'
+  context: 'work' | 'personal'
   startDate: null
   dueDate: null
   estimatedMinutes: number
@@ -51,7 +51,7 @@ const mockResults = [
     id: '2',
     title: 'Fix armyknife build',
     status: 'in_progress',
-    context: 'dev',
+    context: 'personal',
     estimatedMinutes: 90,
   }),
   makeResult({

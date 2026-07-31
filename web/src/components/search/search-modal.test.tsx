@@ -11,7 +11,7 @@ interface MockTask {
   title: string
   description: null
   status: 'todo' | 'in_progress' | 'completed'
-  context: 'work' | 'personal' | 'dev'
+  context: 'work' | 'personal'
   startDate: null
   dueDate: null
   estimatedMinutes: number
@@ -30,7 +30,7 @@ function makeTask(overrides: Partial<MockTask> = {}): MockTask {
     title: 'Implement task list UI',
     description: null,
     status: 'todo',
-    context: 'dev',
+    context: 'personal',
     startDate: null,
     dueDate: null,
     estimatedMinutes: 120,

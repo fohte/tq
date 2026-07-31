@@ -145,7 +145,7 @@ export function buildNextTaskData(
     parentId: string | null
     projectId: string | null
     recurrenceRuleId: string
-    context: 'work' | 'personal' | 'dev'
+    context: 'work' | 'personal'
     sortOrder: number
   },
   EmptyDaysOfWeekError

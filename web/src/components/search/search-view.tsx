@@ -107,7 +107,6 @@ const STATUS_OPTIONS = [
 const CONTEXT_OPTIONS = [
   { value: 'work', label: 'Work' },
   { value: 'personal', label: 'Personal' },
-  { value: 'dev', label: 'Dev' },
 ]
 
 const SORT_OPTIONS = [

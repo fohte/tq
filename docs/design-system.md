@@ -137,10 +137,10 @@ default, including every Tailwind `rounded-*` utility that derives from the
 There are exactly **two** sanctioned exceptions, both **hardcoded** (not
 derived from the `--radius` token):
 
-| Exception                     | Where                                                                                  |
-| ----------------------------- | -------------------------------------------------------------------------------------- |
-| `KeybindHint` `boxed` variant | `rounded-[4px]` in `web/src/components/ui/keybind-hint.tsx`                            |
-| Inline `<code>` elements      | Not yet styled anywhere in the codebase; when it is, use hardcoded `rounded-[4px]` too |
+| Exception                     | Where                                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------------------ |
+| `KeybindHint` `boxed` variant | `rounded-[4px]` in `web/src/components/ui/keybind-hint.tsx`                                |
+| Inline `<code>` elements      | `border-radius: 4px` on `.ProseMirror code` in `web/src/components/ui/markdown-editor.css` |
 
 **Do not introduce new radius exceptions without updating this doc.**
 

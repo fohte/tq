@@ -23,12 +23,6 @@ export const Personal: Story = {
   },
 }
 
-export const Dev: Story = {
-  args: {
-    context: 'dev',
-  },
-}
-
 export const AllVariants: Story = {
   args: {
     context: 'work',
@@ -37,7 +31,6 @@ export const AllVariants: Story = {
     <div className="flex items-center gap-2">
       <ContextBadge context="work" />
       <ContextBadge context="personal" />
-      <ContextBadge context="dev" />
     </div>
   ),
 }

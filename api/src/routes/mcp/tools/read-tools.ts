@@ -147,7 +147,7 @@ export function registerReadTools(server: McpServer): void {
     'search_tasks',
     {
       description:
-        'Search tasks using the same query syntax as the TQ search bar. The `q` string does a free-text match across title, description, and page content, and also accepts prefixed filter tokens that can be combined with free text and with each other: `is:todo|in_progress|completed`, `label:<name>`, `context:work|personal|dev`, `has:pages`, `has:comments`, `parent:<uuid>`, `project:<uuid>`, `sort:due|created|updated|estimate`. Example: `q: "is:todo label:urgent context:work groceries"` finds todo tasks labeled urgent in the work context whose title, description, or pages mention "groceries". The same filters are also available as explicit parameters for when a query string is not needed.',
+        'Search tasks using the same query syntax as the TQ search bar. The `q` string does a free-text match across title, description, and page content, and also accepts prefixed filter tokens that can be combined with free text and with each other: `is:todo|in_progress|completed`, `label:<name>`, `context:work|personal`, `has:pages`, `has:comments`, `parent:<uuid>`, `project:<uuid>`, `sort:due|created|updated|estimate`. Example: `q: "is:todo label:urgent context:work groceries"` finds todo tasks labeled urgent in the work context whose title, description, or pages mention "groceries". The same filters are also available as explicit parameters for when a query string is not needed.',
       inputSchema: {
         q: z
           .string()
