@@ -6,7 +6,7 @@ import {
   integrationProviders,
 } from '#integrations/registry'
 import {
-  handleDisconnect,
+  handleDisconnectAccount,
   handleGetAuthUrl,
 } from '#routes/integration-handlers'
 
@@ -26,11 +26,11 @@ export const integrationsApp = new Hono()
 
     return handleGetAuthUrl(c, provider, `integrations.${provider.id}`)
   })
-  .delete('/:id', async (c) => {
+  .delete('/:id/accounts/:accountId', async (c) => {
     const provider = findIntegrationProvider(c.req.param('id'))
     if (provider == null) {
       return c.json({ error: 'Not found' }, 404)
     }
 
-    return handleDisconnect(c, provider)
+    return handleDisconnectAccount(c, provider, c.req.param('accountId'))
   })

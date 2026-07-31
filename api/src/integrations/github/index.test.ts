@@ -4,13 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db } from '#db/connection'
 import { oauthTokens } from '#db/schema'
 import { IntegrationConfigError } from '#integrations/errors'
-import { GithubApiError, githubProvider } from '#integrations/github/index'
+import { githubProvider } from '#integrations/github/index'
 import {
-  disconnect,
+  disconnectAccount,
   getAuthUrl,
-  getConnectionStatus,
   getIntegrationSummary,
   handleOAuthCallback,
+  listConnectedAccounts,
 } from '#integrations/oauth'
 import { TokenExchangeError } from '#lib/fetch-json'
 import { assertDefined, setupTestDb } from '#testing'
@@ -36,13 +36,16 @@ function clearEnv() {
 }
 
 async function upsertToken(accessToken: string) {
-  await db
+  const [token] = await db
     .insert(oauthTokens)
     .values({ provider: 'github', accountId: '', accessToken })
     .onConflictDoUpdate({
       target: [oauthTokens.provider, oauthTokens.accountId],
       set: { accessToken, updatedAt: new Date() },
     })
+    .returning()
+  assertDefined(token)
+  return token
 }
 
 beforeEach(() => {
@@ -61,6 +64,19 @@ function normalize(token: typeof oauthTokens.$inferSelect) {
     createdAt: 'DATE',
     updatedAt: 'DATE',
   }
+}
+
+// Replaces the surrogate row id with a fixed placeholder, same idea as
+// normalize() above, so an IntegrationAccount[] can still be asserted with a
+// single toEqual.
+function normalizeAccounts(accounts: { id: string; label: string | null }[]) {
+  return accounts.map((account) => ({ ...account, id: 'ID' }))
+}
+
+function normalizeSummary(
+  summary: Awaited<ReturnType<typeof getIntegrationSummary>>,
+) {
+  return { ...summary, accounts: normalizeAccounts(summary.accounts) }
 }
 
 describe('getAuthUrl', () => {
@@ -165,54 +181,56 @@ describe('handleOAuthCallback', () => {
   })
 })
 
-describe('getConnectionStatus', () => {
-  it('returns not connected when no token exists', async () => {
-    expect((await getConnectionStatus(githubProvider))._unsafeUnwrap()).toEqual(
-      {
-        connected: false,
-      },
-    )
+describe('listConnectedAccounts', () => {
+  it('returns no accounts when no token exists', async () => {
+    expect(
+      (await listConnectedAccounts(githubProvider))._unsafeUnwrap(),
+    ).toEqual([])
   })
 
-  it('returns connected with the account login when a token exists', async () => {
+  it('returns the account with its live-checked login when a token exists', async () => {
     await upsertToken('valid-token')
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(JSON.stringify({ login: 'fohte' }), { status: 200 }),
     )
 
-    expect((await getConnectionStatus(githubProvider))._unsafeUnwrap()).toEqual(
-      {
-        connected: true,
-        login: 'fohte',
-      },
-    )
+    const accounts = (
+      await listConnectedAccounts(githubProvider)
+    )._unsafeUnwrap()
+
+    expect(normalizeAccounts(accounts)).toEqual([{ id: 'ID', label: 'fohte' }])
   })
 
-  it('returns a GitHub API error when the request fails', async () => {
-    await upsertToken('some-token')
+  it('excludes the account without deleting it when the connection check fails', async () => {
+    const token = await upsertToken('some-token')
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response('server error', { status: 500 }),
     )
 
-    const error = (await getConnectionStatus(githubProvider))._unsafeUnwrapErr()
+    expect(
+      (await listConnectedAccounts(githubProvider))._unsafeUnwrap(),
+    ).toEqual([])
 
-    expect(error).toEqual(new GithubApiError('server error'))
+    const [remainingToken] = await db
+      .select()
+      .from(oauthTokens)
+      .where(eq(oauthTokens.provider, 'github'))
+      .limit(1)
+    expect(remainingToken).toEqual(token)
   })
 
-  it('drops the token and returns not connected when it was revoked on GitHub', async () => {
+  it('drops the token and returns no accounts when it was revoked on GitHub', async () => {
     await upsertToken('revoked-token')
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response('Bad credentials', { status: 401 }),
     )
 
-    expect((await getConnectionStatus(githubProvider))._unsafeUnwrap()).toEqual(
-      {
-        connected: false,
-      },
-    )
+    expect(
+      (await listConnectedAccounts(githubProvider))._unsafeUnwrap(),
+    ).toEqual([])
 
     const [remainingToken] = await db
       .select()
@@ -224,12 +242,13 @@ describe('getConnectionStatus', () => {
 })
 
 describe('getIntegrationSummary', () => {
-  it('reports configured true and connected false when no token exists', async () => {
+  it('reports configured true and no accounts when no token exists', async () => {
     expect(await getIntegrationSummary(githubProvider)).toEqual({
       id: 'github',
       displayName: 'GitHub',
       configured: true,
-      connected: false,
+      supportsMultipleAccounts: false,
+      accounts: [],
     })
   })
 
@@ -240,27 +259,30 @@ describe('getIntegrationSummary', () => {
       id: 'github',
       displayName: 'GitHub',
       configured: false,
-      connected: false,
+      supportsMultipleAccounts: false,
+      accounts: [],
     })
   })
 
-  it('reports connected true with the account login when a token exists', async () => {
+  it('reports the connected account with its login when a token exists', async () => {
     await upsertToken('valid-token')
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(JSON.stringify({ login: 'fohte' }), { status: 200 }),
     )
 
-    expect(await getIntegrationSummary(githubProvider)).toEqual({
+    const summary = await getIntegrationSummary(githubProvider)
+
+    expect(normalizeSummary(summary)).toEqual({
       id: 'github',
       displayName: 'GitHub',
       configured: true,
-      connected: true,
-      login: 'fohte',
+      supportsMultipleAccounts: false,
+      accounts: [{ id: 'ID', label: 'fohte' }],
     })
   })
 
-  it('degrades to connected false instead of rejecting when the GitHub API call fails', async () => {
+  it('degrades to an empty accounts list instead of rejecting when the GitHub API call fails', async () => {
     await upsertToken('some-token')
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
@@ -271,25 +293,19 @@ describe('getIntegrationSummary', () => {
       id: 'github',
       displayName: 'GitHub',
       configured: true,
-      connected: false,
+      supportsMultipleAccounts: false,
+      accounts: [],
     })
   })
 })
 
-describe('disconnect', () => {
+describe('disconnectAccount', () => {
   it('deletes the stored token', async () => {
-    await upsertToken('valid-token')
-    ;(await disconnect(githubProvider))._unsafeUnwrap()
+    const token = await upsertToken('valid-token')
 
-    expect((await getConnectionStatus(githubProvider))._unsafeUnwrap()).toEqual(
-      {
-        connected: false,
-      },
-    )
-  })
-
-  it('does nothing when no token exists', async () => {
-    ;(await disconnect(githubProvider))._unsafeUnwrap()
+    expect(
+      (await disconnectAccount(githubProvider, token.id))._unsafeUnwrap(),
+    ).toBe(true)
 
     const [remainingToken] = await db
       .select()
