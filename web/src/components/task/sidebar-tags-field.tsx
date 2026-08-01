@@ -1,5 +1,5 @@
 import { X } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { SidebarField } from '#components/task/sidebar-field'
 import { Button } from '#components/ui/button'
@@ -21,7 +21,6 @@ export function SidebarTagsField({
   const [isAdding, setIsAdding] = useState(false)
   const [input, setInput] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const inputRef = useRef<HTMLInputElement>(null)
 
   const suggestions = useMemo(() => {
     const existing = new Set(labels)
@@ -57,6 +56,8 @@ export function SidebarTagsField({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.nativeEvent.isComposing) return
+
     switch (e.key) {
       case 'ArrowDown':
         if (suggestions.length === 0) return
@@ -71,7 +72,11 @@ export function SidebarTagsField({
         )
         break
       case 'Enter':
+        e.preventDefault()
+        addTag(suggestions[selectedIndex] ?? input)
+        break
       case 'Tab':
+        if (suggestions.length === 0 && !input.trim()) return
         e.preventDefault()
         addTag(suggestions[selectedIndex] ?? input)
         break
@@ -105,7 +110,6 @@ export function SidebarTagsField({
         {isAdding ? (
           <div className="relative">
             <Input
-              ref={inputRef}
               type="text"
               value={input}
               onChange={(e) => {
