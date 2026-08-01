@@ -4,9 +4,7 @@ export interface CalendarEventProps {
   type?: 'manual' | 'auto' | 'gcal' | 'completed' | 'schedule'
   duration?: string
   parentRef?: string
-  label?: string
-  color?: { bg: string; accent: string }
-  icon?: string
+  color?: { accent: string }
   taskId?: string
   redacted?: boolean
 }

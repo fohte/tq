@@ -27,8 +27,7 @@ function generateWeekEvents(): TimeBlockEvent[] {
         start: `${ds}T23:00:00`,
         end: `${nextDs}T00:00:00`,
         type: 'schedule',
-        color: { bg: '#2D2B55', accent: '#6C63FF' },
-        icon: 'moon',
+        color: { accent: '#6C63FF' },
       },
       {
         id: `w-${String(dayOffset)}-sleep-am`,
@@ -36,8 +35,7 @@ function generateWeekEvents(): TimeBlockEvent[] {
         start: `${ds}T00:00:00`,
         end: `${ds}T07:00:00`,
         type: 'schedule',
-        color: { bg: '#2D2B55', accent: '#6C63FF' },
-        icon: 'moon',
+        color: { accent: '#6C63FF' },
       },
     )
 
@@ -56,7 +54,6 @@ function generateWeekEvents(): TimeBlockEvent[] {
         end: `${ds}T12:00:00`,
         type: 'manual',
         duration: '2h',
-        label: 'dev:tq',
       },
     )
     if (dayOffset % 2 === 0) {
@@ -77,8 +74,7 @@ function generateWeekEvents(): TimeBlockEvent[] {
         start: `${ds}T18:00:00`,
         end: `${ds}T19:00:00`,
         type: 'schedule',
-        color: { bg: '#1B4332', accent: '#52B788' },
-        icon: 'dumbbell',
+        color: { accent: '#52B788' },
       })
     }
   }
@@ -135,7 +131,6 @@ const sampleEvents: TimeBlockEvent[] = [
     end: `${dateStr}T10:00:00`,
     type: 'manual',
     duration: '1h',
-    label: 'dev:tq',
   },
   {
     id: '2',
@@ -167,8 +162,7 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T07:00:00`,
     end: `${dateStr}T08:00:00`,
     type: 'schedule',
-    color: { bg: '#1B4332', accent: '#52B788' },
-    icon: 'dumbbell',
+    color: { accent: '#52B788' },
   },
   {
     id: '6',
@@ -267,8 +261,7 @@ export const SchedulesOnly: Story = {
         end: `${dateStr}T07:00:00`,
         type: 'schedule',
         duration: '7h',
-        color: { bg: '#2D2B55', accent: '#6C63FF' },
-        icon: 'moon',
+        color: { accent: '#6C63FF' },
       },
       {
         id: 'sched-gym',
@@ -277,8 +270,7 @@ export const SchedulesOnly: Story = {
         end: `${dateStr}T08:00:00`,
         type: 'schedule',
         duration: '1h',
-        color: { bg: '#1B4332', accent: '#52B788' },
-        icon: 'dumbbell',
+        color: { accent: '#52B788' },
       },
       {
         id: 'sched-lunch',
@@ -287,7 +279,7 @@ export const SchedulesOnly: Story = {
         end: `${dateStr}T13:00:00`,
         type: 'schedule',
         duration: '1h',
-        color: { bg: '#4D1A00', accent: '#FF8400' },
+        color: { accent: '#FF8400' },
       },
       {
         id: 'sched-sleep-pm',
@@ -296,8 +288,7 @@ export const SchedulesOnly: Story = {
         end: `${tomorrowStr}T00:00:00`,
         type: 'schedule',
         duration: '1h',
-        color: { bg: '#2D2B55', accent: '#6C63FF' },
-        icon: 'moon',
+        color: { accent: '#6C63FF' },
       },
     ],
   },
@@ -328,8 +319,7 @@ export const OvernightEvents: Story = {
         start: `${dateStr}T23:30:00`,
         end: `${tomorrowStr}T07:00:00`,
         type: 'schedule',
-        color: { bg: '#2D2B55', accent: '#6C63FF' },
-        icon: 'moon',
+        color: { accent: '#6C63FF' },
       },
     ],
   },

@@ -100,13 +100,13 @@ export const InteractionTest: InteractionTestStory = {
   play: async ({ canvas, args, userEvent }) => {
     // Displays the formatted date with day of week
     // play can run before the component's initial React commit lands
-    await expect(await canvas.findByText(/March 7, 2025/)).toBeVisible()
+    await expect(await canvas.findByText('2025-03-07')).toBeVisible()
     await expect(canvas.getByText(/Fri/)).toBeVisible()
 
     // Renders all three view options
-    await expect(canvas.getByText('Day')).toBeVisible()
-    await expect(canvas.getByText('Week')).toBeVisible()
-    await expect(canvas.getByText('Month')).toBeVisible()
+    await expect(canvas.getByText('day')).toBeVisible()
+    await expect(canvas.getByText('week')).toBeVisible()
+    await expect(canvas.getByText('month')).toBeVisible()
 
     // Calls onPrev when previous button is clicked
     await userEvent.click(canvas.getByLabelText('Previous'))
@@ -116,16 +116,16 @@ export const InteractionTest: InteractionTestStory = {
     await userEvent.click(canvas.getByLabelText('Next'))
     await expect(args.onNext).toHaveBeenCalledOnce()
 
-    // Calls onToday when Today button is clicked
-    await userEvent.click(canvas.getByText('Today'))
+    // Calls onToday when today button is clicked
+    await userEvent.click(canvas.getByText('today'))
     await expect(args.onToday).toHaveBeenCalledOnce()
 
     // Calls onViewChange when a view button is clicked
-    await userEvent.click(canvas.getByText('Month'))
+    await userEvent.click(canvas.getByText('month'))
     await expect(args.onViewChange).toHaveBeenCalledWith('month')
 
-    // Highlights the active view (Day is active)
-    const dayButton = canvas.getByText('Day')
-    await expect(dayButton.className).toContain('bg-background')
+    // Highlights the active view (day is active)
+    const dayButton = canvas.getByText('day')
+    await expect(dayButton).toHaveAttribute('aria-pressed', 'true')
   },
 }

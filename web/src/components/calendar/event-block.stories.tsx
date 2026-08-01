@@ -11,7 +11,6 @@ function EventBlockPreview({
   timeText = '09:00 - 10:00',
   duration,
   parentRef,
-  label,
   color,
   allDay = false,
 }: {
@@ -20,15 +19,14 @@ function EventBlockPreview({
   timeText?: string
   duration?: string
   parentRef?: string
-  label?: string
-  color?: { bg: string; accent: string }
+  color?: { accent: string }
   allDay?: boolean
 }) {
   const arg = {
     event: {
       title,
       allDay,
-      extendedProps: { type, duration, parentRef, label, color },
+      extendedProps: { type, duration, parentRef, color },
     },
     timeText,
     isStart: true,
@@ -73,7 +71,6 @@ export const Manual: Story = {
     title: 'API ドキュメント作成',
     timeText: '09:00 - 10:00',
     duration: '1h',
-    label: 'dev:tq',
   },
 }
 
@@ -127,7 +124,7 @@ export const SchedulePurple: Story = {
     type: 'schedule',
     title: 'Sleep',
     timeText: '23:00 - 07:00',
-    color: { bg: '#2D2B55', accent: '#6C63FF' },
+    color: { accent: '#6C63FF' },
   },
 }
 
@@ -136,6 +133,6 @@ export const ScheduleGreen: Story = {
     type: 'schedule',
     title: 'Gym',
     timeText: '07:00 - 08:00',
-    color: { bg: '#1B4332', accent: '#52B788' },
+    color: { accent: '#52B788' },
   },
 }
