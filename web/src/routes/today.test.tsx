@@ -114,7 +114,7 @@ describe('TodayFocus', () => {
 
     renderToday()
 
-    expect(screen.getByText('Up next')).toBeInTheDocument()
+    expect(screen.getByText('UP NEXT')).toBeInTheDocument()
     expect(screen.getByText('Task B')).toBeInTheDocument()
   })
 
@@ -183,6 +183,6 @@ describe('TodayFocus', () => {
     rerender()
 
     expect(screen.getByText('Task B')).toBeInTheDocument()
-    expect(screen.queryByText('Up next')).not.toBeInTheDocument()
+    expect(screen.queryByText('UP NEXT')).not.toBeInTheDocument()
   })
 })
