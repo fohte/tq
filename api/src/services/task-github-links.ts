@@ -367,15 +367,14 @@ export function linkTaskToGithubUrl(
 
 export function unlinkTask(
   taskId: string,
-): ResultAsync<void, GithubLinkNotFoundError> {
+): ResultAsync<LinkRow, GithubLinkNotFoundError> {
   return ResultAsync.fromSafePromise(
     db
       .delete(taskGithubLinks)
       .where(eq(taskGithubLinks.taskId, taskId))
       .returning(),
-  ).andThen((deleted) =>
-    deleted.length > 0
-      ? okAsync(undefined)
-      : errAsync(new GithubLinkNotFoundError()),
-  )
+  ).andThen((deleted) => {
+    const [link] = deleted
+    return link ? okAsync(link) : errAsync(new GithubLinkNotFoundError())
+  })
 }

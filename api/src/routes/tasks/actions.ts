@@ -8,6 +8,7 @@ import { db } from '#db/connection'
 import { recurrenceRules, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
+import { recordStatusChanged } from '#lib/task-events'
 import { requireTask, taskStatus, taskToResponse } from '#routes/tasks/shared'
 import { buildNextTaskData } from '#services/recurrence'
 import { syncTaskLinks } from '#services/task-links'
@@ -29,14 +30,23 @@ export const tasksActionsApp = new Hono()
       const existing = c.get('task')
       const id = existing.id
       const { status } = c.req.valid('json')
+      const author = c.get('author')
 
-      const updated = firstOrThrow(
-        await db
-          .update(tasks)
-          .set({ status, updatedAt: new Date() })
-          .where(eq(tasks.id, id))
-          .returning(),
-      )
+      const updated = await db.transaction(async (tx) => {
+        const updated = firstOrThrow(
+          await tx
+            .update(tasks)
+            .set({ status, updatedAt: new Date() })
+            .where(eq(tasks.id, id))
+            .returning(),
+        )
+
+        if (existing.status !== status) {
+          await recordStatusChanged(tx, id, existing.status, status, author)
+        }
+
+        return updated
+      })
 
       return c.json(taskToResponse(updated), 200)
     },
@@ -95,18 +105,25 @@ export const tasksActionsApp = new Hono()
   .post('/:id/complete', requireTask, async (c) => {
     const existing = c.get('task')
     const id = existing.id
+    const author = c.get('author')
 
     if (existing.status === 'completed') {
       return c.json({ error: 'Task is already completed' }, 409)
     }
 
-    const updatedTask = firstOrThrow(
-      await db
-        .update(tasks)
-        .set({ status: 'completed', updatedAt: new Date() })
-        .where(eq(tasks.id, id))
-        .returning(),
-    )
+    const updatedTask = await db.transaction(async (tx) => {
+      const updatedTask = firstOrThrow(
+        await tx
+          .update(tasks)
+          .set({ status: 'completed', updatedAt: new Date() })
+          .where(eq(tasks.id, id))
+          .returning(),
+      )
+
+      await recordStatusChanged(tx, id, existing.status, 'completed', author)
+
+      return updatedTask
+    })
 
     let nextTask: ReturnType<typeof taskToResponse> | null = null
     let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null

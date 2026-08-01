@@ -1,6 +1,9 @@
+import { asc, eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { db } from '#db/connection'
+import { taskEvents } from '#db/schema'
 import {
   createRecurringTask,
   createTask,
@@ -11,12 +14,39 @@ import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
-async function setStatus(taskId: string, status: string) {
+async function setStatus(
+  taskId: string,
+  status: string,
+  headers: Record<string, string> = {},
+) {
   return app.request(`/api/tasks/${taskId}/status`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify({ status }),
   })
+}
+
+interface TaskEventFields {
+  type: 'status_changed' | 'github_linked' | 'github_unlinked'
+  fromStatus: 'todo' | 'in_progress' | 'completed' | null
+  toStatus: 'todo' | 'in_progress' | 'completed' | null
+  authorKind: 'human' | 'llm' | 'system'
+  authorAgent: string | null
+}
+
+async function fetchTaskEvents(taskId: string): Promise<TaskEventFields[]> {
+  const rows = await db
+    .select()
+    .from(taskEvents)
+    .where(eq(taskEvents.taskId, taskId))
+    .orderBy(asc(taskEvents.id))
+  return rows.map((row) => ({
+    type: row.type,
+    fromStatus: row.fromStatus,
+    toStatus: row.toStatus,
+    authorKind: row.authorKind,
+    authorAgent: row.authorAgent,
+  }))
 }
 
 describe('tasks actions API', () => {
@@ -72,6 +102,78 @@ describe('tasks actions API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body.status).toBe('in_progress')
+    })
+  })
+
+  describe('task_events recording', () => {
+    it('records a status_changed event when the status actually changes', async () => {
+      const task = await createTask('Task')
+
+      await setStatus(task.id, 'in_progress')
+
+      expect(await fetchTaskEvents(task.id)).toEqual([
+        {
+          type: 'status_changed',
+          fromStatus: 'todo',
+          toStatus: 'in_progress',
+          authorKind: 'human',
+          authorAgent: null,
+        },
+      ])
+    })
+
+    it('does not record when re-setting the same status (idempotent)', async () => {
+      const task = await createTask('Task')
+      await setStatus(task.id, 'in_progress')
+
+      await setStatus(task.id, 'in_progress')
+
+      expect(await fetchTaskEvents(task.id)).toEqual([
+        {
+          type: 'status_changed',
+          fromStatus: 'todo',
+          toStatus: 'in_progress',
+          authorKind: 'human',
+          authorAgent: null,
+        },
+      ])
+    })
+
+    it('records the author from the X-Author header', async () => {
+      const task = await createTask('Task')
+
+      await setStatus(task.id, 'in_progress', {
+        'X-Author': 'llm:claude-opus-5',
+      })
+
+      expect(await fetchTaskEvents(task.id)).toEqual([
+        {
+          type: 'status_changed',
+          fromStatus: 'todo',
+          toStatus: 'in_progress',
+          authorKind: 'llm',
+          authorAgent: 'claude-opus-5',
+        },
+      ])
+    })
+
+    it('records a status_changed event via POST /:id/complete', async () => {
+      const task = await createTask('Task')
+
+      const res = await app.request(`/api/tasks/${task.id}/complete`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(200)
+      expect(await fetchTaskEvents(task.id)).toEqual([
+        {
+          type: 'status_changed',
+          fromStatus: 'todo',
+          toStatus: 'completed',
+          authorKind: 'human',
+          authorAgent: null,
+        },
+      ])
     })
   })
 
