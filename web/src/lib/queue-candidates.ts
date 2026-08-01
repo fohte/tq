@@ -1,10 +1,8 @@
 import { formatLocalDate } from '#lib/date-range'
-import { isTaskOverdue } from '#lib/task-due-date'
+import { type DueDateCheckable, isTaskOverdue } from '#lib/task-due-date'
 
-interface CandidateCheckable {
+interface CandidateCheckable extends DueDateCheckable {
   id: string
-  status: string
-  dueDate: string | null
   startDate: string | null
 }
 

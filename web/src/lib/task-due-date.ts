@@ -1,6 +1,6 @@
 import { formatLocalDate } from '#lib/date-range'
 
-interface DueDateCheckable {
+export interface DueDateCheckable {
   status: string
   dueDate: string | null
 }

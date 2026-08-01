@@ -8,16 +8,26 @@ import {
 
 const now = new Date('2026-03-20T12:00:00')
 
+function makeCandidateTask(overrides: {
+  id?: string
+  status?: string
+  dueDate?: string | null
+  startDate?: string | null
+}) {
+  return {
+    id: '1',
+    status: 'todo',
+    dueDate: null,
+    startDate: null,
+    ...overrides,
+  }
+}
+
 describe('getCandidateReason', () => {
   it('returns null for a completed task', () => {
     expect(
       getCandidateReason(
-        {
-          id: '1',
-          status: 'completed',
-          dueDate: '2026-03-01',
-          startDate: null,
-        },
+        makeCandidateTask({ status: 'completed', dueDate: '2026-03-01' }),
         now,
       ),
     ).toBeNull()
@@ -25,49 +35,32 @@ describe('getCandidateReason', () => {
 
   it('returns overdue with the number of days past due', () => {
     expect(
-      getCandidateReason(
-        { id: '1', status: 'todo', dueDate: '2026-03-17', startDate: null },
-        now,
-      ),
+      getCandidateReason(makeCandidateTask({ dueDate: '2026-03-17' }), now),
     ).toEqual({ kind: 'overdue', days: 3 })
   })
 
   it('returns due-today when the due date is today', () => {
     expect(
-      getCandidateReason(
-        { id: '1', status: 'todo', dueDate: '2026-03-20', startDate: null },
-        now,
-      ),
+      getCandidateReason(makeCandidateTask({ dueDate: '2026-03-20' }), now),
     ).toEqual({ kind: 'due-today' })
   })
 
   it('returns starts with days=0 when the start date is today', () => {
     expect(
-      getCandidateReason(
-        { id: '1', status: 'todo', dueDate: null, startDate: '2026-03-20' },
-        now,
-      ),
+      getCandidateReason(makeCandidateTask({ startDate: '2026-03-20' }), now),
     ).toEqual({ kind: 'starts', days: 0 })
   })
 
   it('returns starts with days since start when the start date is in the past', () => {
     expect(
-      getCandidateReason(
-        { id: '1', status: 'todo', dueDate: null, startDate: '2026-03-17' },
-        now,
-      ),
+      getCandidateReason(makeCandidateTask({ startDate: '2026-03-17' }), now),
     ).toEqual({ kind: 'starts', days: 3 })
   })
 
   it('prefers overdue over a past start date', () => {
     expect(
       getCandidateReason(
-        {
-          id: '1',
-          status: 'todo',
-          dueDate: '2026-03-17',
-          startDate: '2026-03-10',
-        },
+        makeCandidateTask({ dueDate: '2026-03-17', startDate: '2026-03-10' }),
         now,
       ),
     ).toEqual({ kind: 'overdue', days: 3 })
@@ -76,12 +69,7 @@ describe('getCandidateReason', () => {
   it('prefers due-today over a past start date', () => {
     expect(
       getCandidateReason(
-        {
-          id: '1',
-          status: 'todo',
-          dueDate: '2026-03-20',
-          startDate: '2026-03-10',
-        },
+        makeCandidateTask({ dueDate: '2026-03-20', startDate: '2026-03-10' }),
         now,
       ),
     ).toEqual({ kind: 'due-today' })
@@ -90,84 +78,45 @@ describe('getCandidateReason', () => {
   it('returns null when the due date and start date are both in the future', () => {
     expect(
       getCandidateReason(
-        {
-          id: '1',
-          status: 'todo',
-          dueDate: '2026-03-25',
-          startDate: '2026-03-25',
-        },
+        makeCandidateTask({ dueDate: '2026-03-25', startDate: '2026-03-25' }),
         now,
       ),
     ).toBeNull()
   })
 
   it('returns null when there is no due date or start date', () => {
-    expect(
-      getCandidateReason(
-        { id: '1', status: 'todo', dueDate: null, startDate: null },
-        now,
-      ),
-    ).toBeNull()
+    expect(getCandidateReason(makeCandidateTask({}), now)).toBeNull()
   })
 })
 
 describe('getQueueCandidates', () => {
-  const overdueTask = {
-    id: '1',
-    status: 'todo',
-    dueDate: '2026-03-17',
-    startDate: null,
-  }
-  const moreOverdueTask = {
-    id: '2',
-    status: 'todo',
-    dueDate: '2026-03-10',
-    startDate: null,
-  }
-  const dueTodayTask = {
-    id: '3',
-    status: 'todo',
-    dueDate: '2026-03-20',
-    startDate: null,
-  }
-  const startsTodayTask = {
-    id: '4',
-    status: 'todo',
-    dueDate: null,
-    startDate: '2026-03-20',
-  }
-  const queuedOverdueTask = {
-    id: '5',
-    status: 'todo',
-    dueDate: '2026-03-01',
-    startDate: null,
-  }
-  const notCandidateTask = {
-    id: '6',
-    status: 'todo',
-    dueDate: '2026-03-25',
-    startDate: null,
-  }
-  const completedOverdueTask = {
-    id: '7',
-    status: 'completed',
-    dueDate: '2026-03-01',
-    startDate: null,
-  }
+  it('excludes tasks already in the queue', () => {
+    const candidateTask = makeCandidateTask({
+      id: '1',
+      dueDate: '2026-03-17',
+    })
+    const queuedTask = makeCandidateTask({ id: '2', dueDate: '2026-03-01' })
+    const queueTaskIds = new Set([queuedTask.id])
 
-  it('filters out non-candidates and queued tasks, sorted by reason priority and days', () => {
-    const tasks = [
-      dueTodayTask,
-      overdueTask,
-      notCandidateTask,
-      startsTodayTask,
-      moreOverdueTask,
-      queuedOverdueTask,
-      completedOverdueTask,
-    ]
-    const queueTaskIds = new Set([queuedOverdueTask.id])
+    expect(
+      getQueueCandidates([candidateTask, queuedTask], queueTaskIds, now),
+    ).toEqual([{ task: candidateTask, reason: { kind: 'overdue', days: 3 } }])
+  })
 
-    expect(getQueueCandidates(tasks, queueTaskIds, now)).toEqual([
+  it('sorts candidates by reason priority, then by days within a priority', () => {
+    const overdueTask = makeCandidateTask({ id: '1', dueDate: '2026-03-17' })
+    const moreOverdueTask = makeCandidateTask({
+      id: '2',
+      dueDate: '2026-03-10',
+    })
+    const dueTodayTask = makeCandidateTask({ id: '3', dueDate: '2026-03-20' })
+    const startsTodayTask = makeCandidateTask({
+      id: '4',
+      startDate: '2026-03-20',
+    })
+    const tasks = [dueTodayTask, overdueTask, startsTodayTask, moreOverdueTask]
+
+    expect(getQueueCandidates(tasks, new Set(), now)).toEqual([
       { task: moreOverdueTask, reason: { kind: 'overdue', days: 10 } },
       { task: overdueTask, reason: { kind: 'overdue', days: 3 } },
       { task: dueTodayTask, reason: { kind: 'due-today' } },
