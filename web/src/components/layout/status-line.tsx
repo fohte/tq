@@ -2,12 +2,17 @@ import { useRouterState } from '@tanstack/react-router'
 
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useFilteredTaskList } from '#hooks/use-filtered-tasks'
+import {
+  navKeybindings,
+  newTaskKeybinding,
+  searchKeybinding,
+} from '#lib/keybindings'
 
 const shortcuts = [
-  { key: '⌘K', label: 'search' },
-  { key: 'n', label: 'new' },
-  { key: 'g t', label: 'goto' },
-] as const
+  { key: searchKeybinding.keys, label: 'search' },
+  { key: newTaskKeybinding.keys, label: 'new' },
+  { key: navKeybindings.goToTasks.keys, label: 'goto' },
+]
 
 export function StatusLine() {
   const pathname = useRouterState({

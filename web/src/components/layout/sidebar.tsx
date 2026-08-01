@@ -5,27 +5,45 @@ import { KeybindHint } from '#components/ui/keybind-hint'
 import { useProjects } from '#hooks/use-projects'
 import { useTagCounts } from '#hooks/use-tag-counts'
 import { useTagFilter, useTagToggle } from '#hooks/use-tag-filter'
+import { navKeybindings, searchKeybinding } from '#lib/keybindings'
 import { cn } from '#lib/utils'
 
 interface NavItem {
   to: string
   label: string
-  keybind: string
+  keys: string
   exact?: boolean
 }
 
 const navItems: NavItem[] = [
-  { to: '/today', label: 'Today', keybind: 'g d' },
-  { to: '/', label: 'Calendar', keybind: 'g c', exact: true },
-  { to: '/tasks', label: 'Tasks', keybind: 'g t' },
-  { to: '/projects', label: 'Projects', keybind: 'g p' },
-  { to: '/search', label: 'Search', keybind: '⌘K' },
+  {
+    to: navKeybindings.goToToday.to,
+    label: 'Today',
+    keys: navKeybindings.goToToday.keys,
+  },
+  {
+    to: navKeybindings.goToCalendar.to,
+    label: 'Calendar',
+    keys: navKeybindings.goToCalendar.keys,
+    exact: true,
+  },
+  {
+    to: navKeybindings.goToTasks.to,
+    label: 'Tasks',
+    keys: navKeybindings.goToTasks.keys,
+  },
+  {
+    to: navKeybindings.goToProjects.to,
+    label: 'Projects',
+    keys: navKeybindings.goToProjects.keys,
+  },
+  { to: '/search', label: 'Search', keys: searchKeybinding.keys },
 ]
 
 const settingsNavItem: NavItem = {
-  to: '/settings',
+  to: navKeybindings.goToSettings.to,
   label: 'Settings',
-  keybind: 'g s',
+  keys: navKeybindings.goToSettings.keys,
 }
 
 function NavLink({ item }: { item: NavItem }) {
@@ -44,7 +62,7 @@ function NavLink({ item }: { item: NavItem }) {
       )}
     >
       <span className="flex-1 truncate text-left">{item.label}</span>
-      <KeybindHint>{item.keybind}</KeybindHint>
+      <KeybindHint>{item.keys}</KeybindHint>
     </Link>
   )
 }

@@ -1,11 +1,12 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
-import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { Button } from '#components/ui/button'
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { SectionHeading } from '#components/ui/section-heading'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
+import type { ActivityItem } from '#hooks/use-task-activity'
+import { useTaskActivity } from '#hooks/use-task-activity'
 import type { Comment } from '#hooks/use-task-comments'
 import {
   useCreateComment,
@@ -14,20 +15,51 @@ import {
   useUpdateComment,
 } from '#hooks/use-task-comments'
 import { formatRelativeTime } from '#lib/format'
+import { cn } from '#lib/utils'
+
+type ActivityAuthor = Comment['author']
+
+// tq is a single-user tool, so authors carry a role (human/llm/system) rather
+// than a name. Missing data (e.g. comments created before authors were
+// tracked) falls back to a neutral placeholder instead of a blank.
+function formatWho(author: ActivityAuthor | null): string {
+  if (!author) return 'someone'
+  if (author.kind === 'human') return 'you'
+  if (author.kind === 'system') return 'system'
+  return author.agent ?? 'someone'
+}
+
+function formatEventWhat(event: ActivityItem): string {
+  switch (event.type) {
+    case 'created':
+      return 'created this task'
+    case 'status_changed':
+      return `changed status ${event.fromStatus} → ${event.toStatus}`
+    case 'github_linked':
+      return `linked ${event.owner}/${event.repo}#${String(event.number)}`
+    case 'github_unlinked':
+      return `unlinked ${event.owner}/${event.repo}#${String(event.number)}`
+  }
+}
 
 // --- Public API ---
 
 export function TaskActivity({ taskId }: { taskId: string }) {
-  const { data: comments, isLoading } = useTaskComments(taskId)
+  const { data: comments, isLoading: commentsLoading } = useTaskComments(taskId)
+  const { data: events, isLoading: eventsLoading } = useTaskActivity(taskId)
 
   return (
     <div className="flex flex-col gap-3.5">
       <SectionHeading level={3}>activity</SectionHeading>
 
-      {isLoading ? (
+      {commentsLoading || eventsLoading ? (
         <p className="font-mono text-xs text-muted-foreground">Loading...</p>
       ) : (
-        <CommentList taskId={taskId} comments={comments ?? []} />
+        <ActivityTimeline
+          taskId={taskId}
+          comments={comments ?? []}
+          events={events ?? []}
+        />
       )}
 
       <CommentInput taskId={taskId} />
@@ -35,28 +67,103 @@ export function TaskActivity({ taskId }: { taskId: string }) {
   )
 }
 
-// --- Comment List ---
+// --- Activity Timeline ---
 
-function CommentList({
+type ActivityEntry =
+  | { key: string; createdAt: string; kind: 'comment'; comment: Comment }
+  | { key: string; createdAt: string; kind: 'event'; event: ActivityItem }
+
+function ActivityTimeline({
   taskId,
   comments,
+  events,
 }: {
   taskId: string
   comments: Comment[]
+  events: ActivityItem[]
 }) {
-  if (comments.length === 0) {
+  const entries = useMemo(() => {
+    const merged: ActivityEntry[] = [
+      ...comments.map((comment): ActivityEntry => ({
+        key: `comment-${comment.id}`,
+        createdAt: comment.createdAt,
+        kind: 'comment',
+        comment,
+      })),
+      ...events.map((event): ActivityEntry => ({
+        key: `event-${event.id}`,
+        createdAt: event.createdAt,
+        kind: 'event',
+        event,
+      })),
+    ]
+    merged.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    return merged
+  }, [comments, events])
+
+  if (entries.length === 0) {
     return (
       <p className="font-mono text-xs text-muted-foreground">
-        No comments yet.
+        No activity yet.
       </p>
     )
   }
 
   return (
     <div className="flex flex-col gap-3">
-      {comments.map((comment) => (
-        <CommentRow key={comment.id} taskId={taskId} comment={comment} />
-      ))}
+      {entries.map((entry) =>
+        entry.kind === 'comment' ? (
+          <CommentRow key={entry.key} taskId={taskId} comment={entry.comment} />
+        ) : (
+          <EventRow key={entry.key} event={entry.event} />
+        ),
+      )}
+    </div>
+  )
+}
+
+// --- Activity Row Header ---
+
+function ActivityHeader({
+  who,
+  what,
+  when,
+  className,
+}: {
+  who: string
+  what: string
+  when: string
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-baseline gap-2 font-mono text-[11px] text-muted-foreground',
+        className,
+      )}
+    >
+      <span className="text-muted-foreground-strong">{who}</span>
+      <span>{what}</span>
+      <span className="ml-auto text-muted-foreground-ghost">{when}</span>
+    </div>
+  )
+}
+
+// --- Event Row ---
+
+function EventRow({ event }: { event: ActivityItem }) {
+  return (
+    <div className="grid grid-cols-[14px_1fr] gap-3">
+      <span className="pt-px font-mono text-[11px] text-muted-foreground-ghost">
+        &middot;
+      </span>
+      <div className="min-w-0">
+        <ActivityHeader
+          who={formatWho(event.author)}
+          what={formatEventWhat(event)}
+          when={formatRelativeTime(event.createdAt)}
+        />
+      </div>
     </div>
   )
 }
@@ -78,25 +185,22 @@ function CommentRow({ taskId, comment }: { taskId: string; comment: Comment }) {
     deleteComment.mutate(comment.id)
   }, [cancel, comment.id, deleteComment])
 
-  const timestamp = formatRelativeTime(comment.createdAt)
   const isEdited = comment.createdAt !== comment.updatedAt
 
   return (
     <div className="grid grid-cols-[14px_1fr] gap-3">
-      {/* Only comment-type activity exists today, so a single glyph suffices. */}
-      <span className="pt-0.5 font-mono text-[11px] text-muted-foreground-ghost">
+      <span className="pt-px font-mono text-[11px] text-muted-foreground-ghost">
         &rsaquo;
       </span>
 
       <div className="flex min-w-0 flex-col gap-1.5">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
-            <span>
-              {timestamp}
-              {isEdited && ' (edited)'}
-            </span>
-            <LlmAuthorLabel author={comment.author} />
-          </div>
+        <div className="flex items-baseline justify-between gap-2">
+          <ActivityHeader
+            className="min-w-0 flex-1"
+            who={formatWho(comment.author)}
+            what={isEdited ? 'commented (edited)' : 'commented'}
+            when={formatRelativeTime(comment.createdAt)}
+          />
 
           {/* onMouseDownCapture cancels the pending debounced save before
               opening the dialog moves focus off the editor, which would

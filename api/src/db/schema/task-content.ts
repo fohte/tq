@@ -152,6 +152,78 @@ export const edits = pgTable(
   ],
 )
 
+// Status changes and GitHub link/unlink events for a task's activity
+// timeline. Deliberately separate from `edits`: that table's `DISTINCT ON`
+// "latest author per target" queries (see `lib/edits.ts`) assume one row
+// shape per target, which a mix of these event kinds would break.
+export const taskEvents = pgTable(
+  'task_events',
+  {
+    id: bigint('id', { mode: 'number' })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    taskId: text('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    type: text('type', {
+      enum: ['status_changed', 'github_linked', 'github_unlinked'],
+    }).notNull(),
+    fromStatus: text('from_status', {
+      enum: ['todo', 'in_progress', 'completed'],
+    }),
+    toStatus: text('to_status', {
+      enum: ['todo', 'in_progress', 'completed'],
+    }),
+    githubOwner: text('github_owner'),
+    githubRepo: text('github_repo'),
+    githubNumber: integer('github_number'),
+    githubKind: text('github_kind', { enum: ['issue', 'pull_request'] }),
+    authorKind: text('author_kind', {
+      enum: ['human', 'llm', 'system'],
+    }).notNull(),
+    authorAgent: text('author_agent'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      'task_events_type_check',
+      sql`${table.type} IN ('status_changed', 'github_linked', 'github_unlinked')`,
+    ),
+    // `status_changed` carries fromStatus/toStatus and no GitHub columns;
+    // `github_linked`/`github_unlinked` carry all four GitHub columns and no
+    // status columns.
+    check(
+      'task_events_payload_check',
+      sql`(${table.type} = 'status_changed'
+          AND ${table.fromStatus} IS NOT NULL AND ${table.toStatus} IS NOT NULL
+          AND ${table.githubOwner} IS NULL AND ${table.githubRepo} IS NULL
+          AND ${table.githubNumber} IS NULL AND ${table.githubKind} IS NULL)
+        OR (${table.type} IN ('github_linked', 'github_unlinked')
+          AND ${table.fromStatus} IS NULL AND ${table.toStatus} IS NULL
+          AND ${table.githubOwner} IS NOT NULL AND ${table.githubRepo} IS NOT NULL
+          AND ${table.githubNumber} IS NOT NULL AND ${table.githubKind} IS NOT NULL)`,
+    ),
+    check(
+      'task_events_author_kind_check',
+      sql`${table.authorKind} IN ('human', 'llm', 'system')`,
+    ),
+    check(
+      'task_events_author_agent_required_for_llm',
+      sql`(${table.authorKind} = 'llm') = (${table.authorAgent} IS NOT NULL)`,
+    ),
+    // Mirrors `idx_edits_task_id_created_at` for consistency and to serve
+    // future range queries by createdAt; the current activity.ts query only
+    // filters by taskId and sorts by id, so this is effectively a task_id-only
+    // index today.
+    index('idx_task_events_task_id_created_at').on(
+      table.taskId,
+      table.createdAt,
+    ),
+  ],
+)
+
 export const images = pgTable(
   'images',
   {

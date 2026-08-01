@@ -199,6 +199,49 @@ describe('tasks CRUD API', () => {
       expect(body.childCompletionCount).toEqual({ completed: 0, total: 0 })
     })
 
+    it('returns empty labels array when task has no labels', async () => {
+      const created = await createTask('No labels')
+
+      const res = await app.request(`/api/tasks/${created.id}`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body).toEqual({
+        ...created,
+        titleAuthor: { kind: 'human', agent: null },
+        descriptionAuthor: { kind: 'human', agent: null },
+        childCompletionCount: { total: 0, completed: 0 },
+        pages: [],
+        timeBlocks: [],
+        links: { outgoing: [], incoming: [] },
+        labels: [],
+      })
+    })
+
+    it('includes labels for a task with labels', async () => {
+      await createLabel('bug')
+      await createLabel('urgent')
+      const created = await createTask('Labeled', {
+        labels: ['bug', 'urgent'],
+      })
+
+      const res = await app.request(`/api/tasks/${created.id}`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      body.labels.sort()
+      expect(body).toEqual({
+        ...created,
+        titleAuthor: { kind: 'human', agent: null },
+        descriptionAuthor: { kind: 'human', agent: null },
+        childCompletionCount: { total: 0, completed: 0 },
+        pages: [],
+        timeBlocks: [],
+        links: { outgoing: [], incoming: [] },
+        labels: ['bug', 'urgent'],
+      })
+    })
+
     it('returns 404 for non-existent ID', async () => {
       const res = await app.request(`/api/tasks/${TEST_UUID}`)
 

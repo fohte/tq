@@ -16,11 +16,11 @@
 
 ## Constraints
 
-| Name                                   | Type        | Definition                                                                                          |
-| -------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------- |
-| oauth_tokens_refresh_metadata_required | CHECK       | CHECK (((provider = 'github'::text) OR ((refresh_token IS NOT NULL) AND (expires_at IS NOT NULL)))) |
-| oauth_tokens_pkey                      | PRIMARY KEY | PRIMARY KEY (id)                                                                                    |
-| uq_oauth_tokens_provider_account_id    | UNIQUE      | UNIQUE (provider, account_id)                                                                       |
+| Name                                   | Type        | Definition                                                                                                                        |
+| -------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| oauth_tokens_refresh_metadata_required | CHECK       | CHECK (((provider = 'github'::text) OR (provider = 'slack'::text) OR ((refresh_token IS NOT NULL) AND (expires_at IS NOT NULL)))) |
+| oauth_tokens_pkey                      | PRIMARY KEY | PRIMARY KEY (id)                                                                                                                  |
+| uq_oauth_tokens_provider_account_id    | UNIQUE      | UNIQUE (provider, account_id)                                                                                                     |
 
 ## Indexes
 

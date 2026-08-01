@@ -717,7 +717,7 @@ describe('getEvents', () => {
             source: 'google_calendar',
             accountId: 'google-sub-1',
             accountLabel: 'user@example.com',
-            calendarId: 'primary',
+            calendarId: 'user@example.com',
             calendarDisplayName: null,
             calendarColor: null,
           },
@@ -730,7 +730,7 @@ describe('getEvents', () => {
             source: 'google_calendar',
             accountId: 'google-sub-1',
             accountLabel: 'user@example.com',
-            calendarId: 'primary',
+            calendarId: 'user@example.com',
             calendarDisplayName: null,
             calendarColor: null,
           },
@@ -783,7 +783,7 @@ describe('getEvents', () => {
             source: 'google_calendar',
             accountId: 'google-sub-1',
             accountLabel: 'user@example.com',
-            calendarId: 'primary',
+            calendarId: 'user@example.com',
             calendarDisplayName: null,
             calendarColor: null,
           },
@@ -858,7 +858,7 @@ describe('getEvents', () => {
             source: 'google_calendar',
             accountId: 'google-sub-1',
             accountLabel: 'user1@example.com',
-            calendarId: 'primary',
+            calendarId: 'user1@example.com',
             calendarDisplayName: null,
             calendarColor: null,
           },
@@ -894,7 +894,7 @@ describe('getEvents', () => {
     // subscribed calendar's request goes out first.
     vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
       const url = requestUrl(input)
-      if (url.includes('/calendars/primary/events')) {
+      if (url.includes('/calendars/user%40example.com/events')) {
         return Promise.resolve(
           new Response(
             JSON.stringify({
@@ -951,7 +951,7 @@ describe('getEvents', () => {
             source: 'google_calendar',
             accountId: 'google-sub-1',
             accountLabel: 'user@example.com',
-            calendarId: 'primary',
+            calendarId: 'user@example.com',
             calendarDisplayName: null,
             calendarColor: null,
           },
@@ -991,7 +991,7 @@ describe('getEvents', () => {
 
     vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
       const url = requestUrl(input)
-      if (url.includes('/calendars/primary/events')) {
+      if (url.includes('/calendars/user%40example.com/events')) {
         return Promise.resolve(
           new Response(
             JSON.stringify({
@@ -1034,7 +1034,7 @@ describe('getEvents', () => {
             source: 'google_calendar',
             accountId: 'google-sub-1',
             accountLabel: 'user@example.com',
-            calendarId: 'primary',
+            calendarId: 'user@example.com',
             calendarDisplayName: null,
             calendarColor: null,
           },
@@ -1052,8 +1052,8 @@ describe('getEvents', () => {
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     })
     const token = await selectTokenByAccountId('google-sub-1')
-    // Removes the 'primary' subscription that upsertGoogleCalendarToken auto-
-    // seeds, leaving the account with an oauth_tokens row but zero
+    // Removes the default-calendar subscription that upsertGoogleCalendarToken
+    // auto-seeds, leaving the account with an oauth_tokens row but zero
     // calendar_subscriptions rows.
     await db
       .delete(calendarSubscriptions)

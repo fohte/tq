@@ -49,6 +49,7 @@ interface CalendarGridProps {
   dndCallbacks?: CalendarDndCallbacks | undefined
   externalDragContainerRef?: React.RefObject<HTMLElement | null> | undefined
   onDateClick?: (date: Date) => void
+  initialDate?: Date
 }
 
 export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
@@ -60,6 +61,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       dndCallbacks,
       externalDragContainerRef,
       onDateClick,
+      initialDate,
     },
     ref,
   ) {
@@ -171,6 +173,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           ref={ref}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
           initialView={FULLCALENDAR_VIEW_MAP[activeView]}
+          {...(initialDate ? { initialDate } : {})}
           headerToolbar={false}
           events={calendarEvents}
           eventContent={(arg) => {

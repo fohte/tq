@@ -120,6 +120,27 @@
       "when": 1785553331208,
       "tag": "0016_add_github_sync_rules_seq",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1785597493803,
+      "tag": "0017_eager_corsair",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1785598004557,
+      "tag": "0018_fix_primary_calendar_subscription",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1785602260515,
+      "tag": "0019_organic_joshua_kane",
+      "breakpoints": true
     }
   ]
 }

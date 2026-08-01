@@ -59,6 +59,8 @@ export interface DayViewPresentationProps {
   onRemoveFromQueue: (taskId: string) => void
   onAutoAssign: () => void
   isAutoAssigning: boolean
+  selectedDate: Date
+  onDateChange: (date: Date) => void
 }
 
 export function DayViewPresentation({
@@ -74,6 +76,8 @@ export function DayViewPresentation({
   onRemoveFromQueue,
   onAutoAssign,
   isAutoAssigning,
+  selectedDate,
+  onDateChange,
 }: DayViewPresentationProps) {
   const [activeTab, setActiveTab] = useState<TaskTab>('today')
   const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
@@ -273,6 +277,8 @@ export function DayViewPresentation({
               events={calendarEvents}
               dndCallbacks={dndCallbacks}
               externalDragContainerRef={taskListRef}
+              selectedDate={selectedDate}
+              onDateChange={onDateChange}
             />
           </div>
         </div>

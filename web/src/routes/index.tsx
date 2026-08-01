@@ -12,6 +12,7 @@ import {
 } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
 import { useScheduleList } from '#hooks/use-schedules'
+import { useSelectedDate } from '#hooks/use-selected-date'
 import type { Task } from '#hooks/use-tasks'
 import { useTaskList, useTaskMap } from '#hooks/use-tasks'
 import {
@@ -36,15 +37,19 @@ export const Route = createFileRoute('/')({
 function DayView() {
   const { isLoading, categorized } = useTaskList()
 
-  const todayStr = useMemo(() => formatLocalDate(new Date()), [])
-  const { data: timeBlocksData } = useTimeBlocks(todayStr)
-  const { data: schedulesData } = useScheduleList(todayStr)
-  const { data: todayTasksData } = useTodayTasks(todayStr)
+  const { selectedDate, setSelectedDate } = useSelectedDate()
+  const selectedDateStr = useMemo(
+    () => formatLocalDate(selectedDate),
+    [selectedDate],
+  )
+  const { data: timeBlocksData } = useTimeBlocks(selectedDateStr)
+  const { data: schedulesData } = useScheduleList(selectedDateStr)
+  const { data: todayTasksData } = useTodayTasks(selectedDateStr)
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
   const { mode: contextMode } = useContextFilter()
 
-  const gcalEventsQuery = useGcalEvents(todayStr)
+  const gcalEventsQuery = useGcalEvents(selectedDateStr)
   const gcalAuthRequired =
     gcalEventsQuery.error instanceof GcalAuthRequiredError
   const gcalAuthUrlQuery = useIntegrationAuthUrl(
@@ -194,7 +199,7 @@ function DayView() {
 
   const handleReorderQueue = (taskIds: string[]) => {
     if (setTodayTasks.isPending) return
-    setTodayTasks.mutate({ date: todayStr, taskIds })
+    setTodayTasks.mutate({ date: selectedDateStr, taskIds })
   }
 
   const handleToggleQueueTask = (taskId: string) => {
@@ -202,14 +207,14 @@ function DayView() {
     const taskIds = queueTaskIdSet.has(taskId)
       ? queueTaskIds.filter((id) => id !== taskId)
       : [...queueTaskIds, taskId]
-    setTodayTasks.mutate({ date: todayStr, taskIds })
+    setTodayTasks.mutate({ date: selectedDateStr, taskIds })
   }
 
   const handleAutoAssign = () => {
     if (autoAssign.isPending) return
     autoAssign.mutate(
       {
-        date: todayStr,
+        date: selectedDateStr,
         tzOffset: new Date().getTimezoneOffset(),
       },
       {
@@ -238,6 +243,8 @@ function DayView() {
       onRemoveFromQueue={handleToggleQueueTask}
       onAutoAssign={handleAutoAssign}
       isAutoAssigning={autoAssign.isPending}
+      selectedDate={selectedDate}
+      onDateChange={setSelectedDate}
     />
   )
 }

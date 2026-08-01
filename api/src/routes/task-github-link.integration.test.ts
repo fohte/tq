@@ -6,7 +6,7 @@ import {
   upsertGithubToken,
 } from '#integrations/github/testing'
 import type { GithubLinkResponse, TaskResponse } from '#routes/tasks/testing'
-import { createTask, TEST_UUID } from '#routes/tasks/testing'
+import { createTask, fetchTaskEvents, TEST_UUID } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -44,6 +44,32 @@ describe('POST /api/tasks/:taskId/github-link', () => {
       title: 'Bug: something broke',
       lastSyncedAt: 'DATE',
     })
+  })
+
+  it('records a github_linked task_event', async () => {
+    const task = await createTask('My task')
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
+
+    await app.request(`/api/tasks/${task.id}/github-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/42' }),
+    })
+
+    expect(await fetchTaskEvents(task.id)).toEqual([
+      {
+        type: 'github_linked',
+        fromStatus: null,
+        toStatus: null,
+        githubOwner: 'fohte',
+        githubRepo: 'tq',
+        githubNumber: 42,
+        githubKind: 'issue',
+        authorKind: 'human',
+        authorAgent: null,
+      },
+    ])
   })
 
   it('returns 400 for a non-GitHub URL', async () => {
@@ -146,6 +172,46 @@ describe('DELETE /api/tasks/:taskId/github-link', () => {
     })
 
     expect(res.status).toBe(404)
+  })
+
+  it('records a github_unlinked task_event with the removed link', async () => {
+    const task = await createTask('My task')
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
+    await app.request(`/api/tasks/${task.id}/github-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/42' }),
+    })
+
+    await app.request(`/api/tasks/${task.id}/github-link`, {
+      method: 'DELETE',
+    })
+
+    expect(await fetchTaskEvents(task.id)).toEqual([
+      {
+        type: 'github_linked',
+        fromStatus: null,
+        toStatus: null,
+        githubOwner: 'fohte',
+        githubRepo: 'tq',
+        githubNumber: 42,
+        githubKind: 'issue',
+        authorKind: 'human',
+        authorAgent: null,
+      },
+      {
+        type: 'github_unlinked',
+        fromStatus: null,
+        toStatus: null,
+        githubOwner: 'fohte',
+        githubRepo: 'tq',
+        githubNumber: 42,
+        githubKind: 'issue',
+        authorKind: 'human',
+        authorAgent: null,
+      },
+    ])
   })
 })
 

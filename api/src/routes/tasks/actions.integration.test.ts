@@ -5,6 +5,7 @@ import {
   createLabel,
   createRecurringTask,
   createTask,
+  fetchTaskEvents,
   TaskResponse,
   TEST_UUID,
 } from '#routes/tasks/testing'
@@ -12,10 +13,14 @@ import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
-async function setStatus(taskId: string, status: string) {
+async function setStatus(
+  taskId: string,
+  status: string,
+  headers: Record<string, string> = {},
+) {
   return app.request(`/api/tasks/${taskId}/status`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify({ status }),
   })
 }
@@ -84,6 +89,94 @@ describe('tasks actions API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body.labels).toEqual(['urgent'])
+    })
+  })
+
+  describe('task_events recording', () => {
+    it('records a status_changed event when the status actually changes', async () => {
+      const task = await createTask('Task')
+
+      await setStatus(task.id, 'in_progress')
+
+      expect(await fetchTaskEvents(task.id)).toEqual([
+        {
+          type: 'status_changed',
+          fromStatus: 'todo',
+          toStatus: 'in_progress',
+          githubOwner: null,
+          githubRepo: null,
+          githubNumber: null,
+          githubKind: null,
+          authorKind: 'human',
+          authorAgent: null,
+        },
+      ])
+    })
+
+    it('does not record when re-setting the same status (idempotent)', async () => {
+      const task = await createTask('Task')
+      await setStatus(task.id, 'in_progress')
+
+      await setStatus(task.id, 'in_progress')
+
+      expect(await fetchTaskEvents(task.id)).toEqual([
+        {
+          type: 'status_changed',
+          fromStatus: 'todo',
+          toStatus: 'in_progress',
+          githubOwner: null,
+          githubRepo: null,
+          githubNumber: null,
+          githubKind: null,
+          authorKind: 'human',
+          authorAgent: null,
+        },
+      ])
+    })
+
+    it('records the author from the X-Author header', async () => {
+      const task = await createTask('Task')
+
+      await setStatus(task.id, 'in_progress', {
+        'X-Author': 'llm:claude-opus-5',
+      })
+
+      expect(await fetchTaskEvents(task.id)).toEqual([
+        {
+          type: 'status_changed',
+          fromStatus: 'todo',
+          toStatus: 'in_progress',
+          githubOwner: null,
+          githubRepo: null,
+          githubNumber: null,
+          githubKind: null,
+          authorKind: 'llm',
+          authorAgent: 'claude-opus-5',
+        },
+      ])
+    })
+
+    it('records a status_changed event via POST /:id/complete', async () => {
+      const task = await createTask('Task')
+
+      const res = await app.request(`/api/tasks/${task.id}/complete`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(200)
+      expect(await fetchTaskEvents(task.id)).toEqual([
+        {
+          type: 'status_changed',
+          fromStatus: 'todo',
+          toStatus: 'completed',
+          githubOwner: null,
+          githubRepo: null,
+          githubNumber: null,
+          githubKind: null,
+          authorKind: 'human',
+          authorAgent: null,
+        },
+      ])
     })
   })
 

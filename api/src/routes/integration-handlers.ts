@@ -16,9 +16,9 @@ import { TokenExchangeError } from '#lib/fetch-json'
 // the connection endpoints every integration exposes. Status/auth-url/
 // disconnect are exposed generically through routes/integrations.ts; the
 // OAuth callback stays in each provider's own route file (routes/calendar.ts,
-// routes/github.ts) since its URL is an external contract (e.g. registered
-// as the OAuth App's callback URL) that must not shift as a side effect of
-// this sharing.
+// routes/github.ts, routes/slack.ts) since its URL is an external contract
+// (e.g. registered as the OAuth App's callback URL) that must not shift as a
+// side effect of this sharing.
 
 export const callbackQuerySchema = z.object({
   code: z.string(),

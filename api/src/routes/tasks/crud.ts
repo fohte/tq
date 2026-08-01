@@ -260,6 +260,7 @@ export const tasksCrudApp = new Hono()
         ),
         timeBlocks: taskTimeBlocks.map(timeBlockToResponse),
         links,
+        labels: labelsByTaskId.get(id) ?? [],
       },
       200,
     )
