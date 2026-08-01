@@ -81,7 +81,7 @@ function Providers({ children }: { children: ReactNode }) {
 function SidebarStory({ task }: { task: TaskDetail }) {
   return (
     <Providers>
-      <div className="w-60 border-l border-border p-4">
+      <div className="w-[236px] border-l border-border p-4">
         <TaskSidebar task={task} />
       </div>
     </Providers>
@@ -133,6 +133,34 @@ export const SidebarWithGithubLink: Story = {
         title: 'Implement task detail page',
         lastSyncedAt: '2026-03-20T00:00:00.000Z',
       },
+    },
+  },
+}
+
+export const SidebarWithTimeBlocks: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      timeBlocks: [
+        {
+          id: 'block-1',
+          taskId: baseTask.id,
+          startTime: '2026-07-30T10:00:00.000Z',
+          endTime: '2026-07-30T11:30:00.000Z',
+          isAutoScheduled: true,
+          createdAt: '2026-07-30T09:00:00.000Z',
+          updatedAt: '2026-07-30T09:00:00.000Z',
+        },
+        {
+          id: 'block-2',
+          taskId: baseTask.id,
+          startTime: '2026-07-29T16:00:00.000Z',
+          endTime: '2026-07-29T16:45:00.000Z',
+          isAutoScheduled: false,
+          createdAt: '2026-07-29T15:00:00.000Z',
+          updatedAt: '2026-07-29T15:00:00.000Z',
+        },
+      ],
     },
   },
 }

@@ -1,8 +1,10 @@
 import { useCallback, useRef, useState } from 'react'
 
 import { LlmAuthorLabel } from '#components/task/llm-author-label'
+import { Button } from '#components/ui/button'
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
+import { SectionHeading } from '#components/ui/section-heading'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
 import type { Comment } from '#hooks/use-task-comments'
 import {
@@ -11,7 +13,7 @@ import {
   useTaskComments,
   useUpdateComment,
 } from '#hooks/use-task-comments'
-import { cn } from '#lib/utils'
+import { formatRelativeTime } from '#lib/format'
 
 // --- Public API ---
 
@@ -19,16 +21,16 @@ export function TaskActivity({ taskId }: { taskId: string }) {
   const { data: comments, isLoading } = useTaskComments(taskId)
 
   return (
-    <div className="flex flex-col gap-2.5">
-      <h3 className="text-sm font-semibold text-foreground">Activity</h3>
-
-      <CommentInput taskId={taskId} />
+    <div className="flex flex-col gap-3.5">
+      <SectionHeading level={3}>activity</SectionHeading>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <p className="font-mono text-xs text-muted-foreground">Loading...</p>
       ) : (
         <CommentList taskId={taskId} comments={comments ?? []} />
       )}
+
+      <CommentInput taskId={taskId} />
     </div>
   )
 }
@@ -44,30 +46,24 @@ function CommentList({
 }) {
   if (comments.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        No comments yet. Add a comment above.
+      <p className="font-mono text-xs text-muted-foreground">
+        No comments yet.
       </p>
     )
   }
 
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-3">
       {comments.map((comment) => (
-        <CommentCard key={comment.id} taskId={taskId} comment={comment} />
+        <CommentRow key={comment.id} taskId={taskId} comment={comment} />
       ))}
     </div>
   )
 }
 
-// --- Comment Card ---
+// --- Comment Row ---
 
-function CommentCard({
-  taskId,
-  comment,
-}: {
-  taskId: string
-  comment: Comment
-}) {
+function CommentRow({ taskId, comment }: { taskId: string; comment: Comment }) {
   const updateComment = useUpdateComment(taskId)
   const deleteComment = useDeleteComment(taskId)
   const { onChange, cancel, flush } = useDebouncedSave((markdown) => {
@@ -86,15 +82,16 @@ function CommentCard({
   const isEdited = comment.createdAt !== comment.updatedAt
 
   return (
-    <div className="flex rounded-md border border-border bg-card">
-      {/* Orange accent bar */}
-      <div className="w-[3px] shrink-0 rounded-l-md bg-orange-500" />
+    <div className="grid grid-cols-[14px_1fr] gap-3">
+      {/* Only comment-type activity exists today, so a single glyph suffices. */}
+      <span className="pt-0.5 font-mono text-[11px] text-muted-foreground-ghost">
+        &rsaquo;
+      </span>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-1 px-2.5 py-2">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-muted-foreground">
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+            <span>
               {timestamp}
               {isEdited && ' (edited)'}
             </span>
@@ -116,7 +113,7 @@ function CommentCard({
         </div>
 
         {/* Body - inline editable with debounced auto-save */}
-        <div className="text-[13px] leading-relaxed text-foreground">
+        <div className="border-l-[3px] border-l-primary bg-card p-2.5 text-[13px] leading-[1.7] text-muted-foreground">
           <MarkdownEditor
             defaultValue={comment.content}
             onChange={onChange}
@@ -146,55 +143,31 @@ function CommentInput({ taskId }: { taskId: string }) {
   }, [createComment])
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border bg-card px-3 py-2.5">
-      <div className="text-[13px]">
-        <MarkdownEditor
-          key={editorKey}
-          defaultValue=""
-          placeholder="Add a comment..."
-          onChange={(md) => {
-            contentRef.current = md
-            setCanSubmit(!!md.trim())
-          }}
-        />
-      </div>
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={!canSubmit || createComment.isPending}
-          className={cn(
-            'rounded-md px-3 py-1 text-xs font-medium',
-            canSubmit && !createComment.isPending
-              ? 'bg-orange-500 text-white hover:bg-orange-600'
-              : 'cursor-not-allowed bg-orange-500/50 text-white/50',
-          )}
-        >
-          Comment
-        </button>
+    <div className="flex items-start gap-2.5">
+      <span className="pt-2.5 font-mono text-xs text-primary">&gt;</span>
+      <div className="flex flex-1 flex-col gap-2 border border-border bg-card px-3 py-2.5">
+        <div className="text-[13px]">
+          <MarkdownEditor
+            key={editorKey}
+            defaultValue=""
+            placeholder="Add a comment..."
+            onChange={(md) => {
+              contentRef.current = md
+              setCanSubmit(!!md.trim())
+            }}
+          />
+        </div>
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleSubmit}
+            disabled={!canSubmit || createComment.isPending}
+          >
+            Comment
+          </Button>
+        </div>
       </div>
     </div>
   )
-}
-
-// --- Helpers ---
-
-function formatRelativeTime(isoString: string): string {
-  const date = new Date(isoString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMinutes = Math.floor(diffMs / 60_000)
-  const diffHours = Math.floor(diffMs / 3_600_000)
-  const diffDays = Math.floor(diffMs / 86_400_000)
-
-  if (diffMinutes < 1) return 'just now'
-  if (diffMinutes < 60) return `${String(diffMinutes)}m ago`
-  if (diffHours < 24) return `${String(diffHours)}h ago`
-  if (diffDays < 7) return `${String(diffDays)}d ago`
-
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-  })
 }

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
 import { GithubLinkBadge } from '#components/task/github-link-badge'
 import { SidebarField } from '#components/task/sidebar-field'
-import { GithubMarkIcon } from '#components/ui/github-mark-icon'
+import { Button } from '#components/ui/button'
 import type { GithubLink } from '#hooks/use-github-link'
 import { useUnlinkTaskFromGithub } from '#hooks/use-github-link'
 
@@ -18,31 +18,35 @@ export function SidebarGithubLinkField({
   const unlink = useUnlinkTaskFromGithub(taskId)
 
   return (
-    <SidebarField label="GitHub" icon={<GithubMarkIcon className="size-3.5" />}>
+    <SidebarField label="GITHUB">
       {githubLink ? (
         <div className="flex items-center gap-1.5">
           <GithubLinkBadge link={githubLink} />
-          <button
+          <Button
             type="button"
+            variant="link"
+            size="xs"
+            className="h-auto p-0 text-muted-foreground-faint hover:text-destructive"
             onClick={() => {
               unlink.mutate()
             }}
             disabled={unlink.isPending}
-            className="text-xs text-muted-foreground hover:text-destructive"
           >
-            Unlink
-          </button>
+            unlink
+          </Button>
         </div>
       ) : (
-        <button
+        <Button
           type="button"
+          variant="link"
+          size="xs"
+          className="h-auto p-0 text-muted-foreground-faint hover:text-foreground"
           onClick={() => {
             setModalOpen(true)
           }}
-          className="text-xs text-muted-foreground hover:text-foreground"
         >
-          Link GitHub issue
-        </button>
+          link issue
+        </Button>
       )}
 
       <GithubIssueLinkModal

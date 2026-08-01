@@ -158,7 +158,7 @@ describe('TaskPage', () => {
       error: null,
     })
     renderTaskPage()
-    expect(screen.getAllByText('Tasks').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('tasks').length).toBeGreaterThan(0)
     expect(screen.getAllByText('#42').length).toBeGreaterThan(0)
   })
 
@@ -185,9 +185,9 @@ describe('TaskPage', () => {
       error: null,
     })
     renderTaskPage()
-    expect(screen.getAllByText('Status').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getAllByText('Estimate').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getAllByText('Context').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getAllByText('STATUS').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getAllByText('ESTIMATE').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getAllByText('CONTEXT').length).toBeGreaterThanOrEqual(2)
   })
 
   it('allows inline title editing', async () => {
