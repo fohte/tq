@@ -84,6 +84,10 @@ function normalize(token: typeof oauthTokens.$inferSelect) {
   }
 }
 
+// Replaces the surrogate row id with a fixed placeholder, same idea as
+// normalize() above, and sorts by label since listConnectedAccounts makes no
+// promise about account order, so an IntegrationAccount[] can still be
+// asserted with a single toEqual.
 function normalizeAccounts(accounts: { id: string; label: string | null }[]) {
   return accounts
     .map((account) => ({ ...account, id: 'ID' }))

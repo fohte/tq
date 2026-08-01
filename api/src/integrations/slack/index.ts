@@ -1,3 +1,4 @@
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { errAsync, okAsync } from 'neverthrow'
 import { z } from 'zod'
 
@@ -32,7 +33,18 @@ export class SlackApiError extends Error {
 }
 
 const tokenResponseSchema = z.discriminatedUnion('ok', [
-  z.object({ ok: z.literal(true), access_token: z.string() }),
+  z.object({
+    ok: z.literal(true),
+    access_token: z.string(),
+    // Present only when the Slack app has "Token Rotation" enabled — an
+    // irreversible, app-level toggle outside this repo (see
+    // docs.slack.dev/authentication/using-token-rotation). This provider has
+    // no `oauth.refresh`, so exchangeCode reports it below instead of
+    // silently dropping these fields, since Zod strips unknown keys by
+    // default.
+    expires_in: z.number().optional(),
+    refresh_token: z.string().optional(),
+  }),
   z.object({ ok: z.literal(false), error: z.string() }),
 ])
 
@@ -50,6 +62,23 @@ const INVALID_TOKEN_ERRORS = new Set([
   'account_inactive',
   'token_expired',
 ])
+
+// Shared by identifyAccount and checkConnection, the only two callers of
+// Slack's no-scope-required "who am I" endpoint.
+function fetchAuthTest<E extends Error>(
+  accessToken: string,
+  wrapError: (message: string, cause?: unknown) => E,
+) {
+  return fetchJson(
+    SLACK_AUTH_TEST_ENDPOINT,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+    authTestResponseSchema,
+    wrapError,
+  )
+}
 
 export const slackProvider = {
   id: PROVIDER_ID,
@@ -82,16 +111,20 @@ export const slackProvider = {
           return errAsync(new TokenExchangeError(data.error, undefined, true))
         }
 
+        if (data.expires_in != null || data.refresh_token != null) {
+          captureWithFingerprint(
+            new Error(
+              'Slack token exchange returned rotation fields but this provider has no oauth.refresh',
+            ),
+            'api.slack.token-rotation-detected',
+          )
+        }
+
         return okAsync({ accessToken: data.access_token })
       }),
     identifyAccount: (accessToken) =>
-      fetchJson(
-        SLACK_AUTH_TEST_ENDPOINT,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${accessToken}` },
-        },
-        authTestResponseSchema,
+      fetchAuthTest(
+        accessToken,
         (message, cause) => new AccountIdentityError(message, cause),
       ).andThen((data) =>
         data.ok
@@ -100,13 +133,8 @@ export const slackProvider = {
       ),
   },
   checkConnection: (token) =>
-    fetchJson(
-      SLACK_AUTH_TEST_ENDPOINT,
-      {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token.accessToken}` },
-      },
-      authTestResponseSchema,
+    fetchAuthTest(
+      token.accessToken,
       (message, cause) => new SlackApiError(message, cause),
     ).andThen((data) => {
       if (data.ok) {
