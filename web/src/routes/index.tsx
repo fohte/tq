@@ -12,6 +12,7 @@ import {
 } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
 import { useScheduleList } from '#hooks/use-schedules'
+import { useSchedulingSettings } from '#hooks/use-scheduling-settings'
 import { useSelectedDate } from '#hooks/use-selected-date'
 import type { Task } from '#hooks/use-tasks'
 import { useTaskList, useTaskMap } from '#hooks/use-tasks'
@@ -27,7 +28,6 @@ import {
 } from '#hooks/use-today-tasks'
 import { matchesContextFilter } from '#lib/context-filter'
 import { formatLocalDate } from '#lib/date-range'
-import { formatMinutes } from '#lib/format'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { scheduleColorToEventColor } from '#lib/schedule-color'
 
@@ -51,6 +51,7 @@ function DayView() {
   const { mode: contextMode } = useContextFilter()
 
   const gcalEventsQuery = useGcalEvents(selectedDateStr)
+  const schedulingSettings = useSchedulingSettings()
   const gcalAuthRequired =
     gcalEventsQuery.error instanceof GcalAuthRequiredError
   const gcalAuthUrlQuery = useIntegrationAuthUrl(
@@ -93,10 +94,8 @@ function DayView() {
     if (!timeBlocksData) return []
     return timeBlocksData.map((block) => {
       const task = taskMap.get(block.taskId)
-      const durationMs =
-        new Date(block.endTime).getTime() - new Date(block.startTime).getTime()
-      const durationMinutes = Math.round(durationMs / 60000)
-      const durationStr = formatMinutes(durationMinutes)
+      const parentTask =
+        task?.parentId != null ? taskMap.get(task.parentId) : undefined
 
       return {
         id: block.id,
@@ -109,7 +108,9 @@ function DayView() {
             : block.isAutoScheduled
               ? 'auto'
               : 'manual',
-        duration: durationStr,
+        ...(parentTask != null
+          ? { parentRef: `#${String(parentTask.number)} ${parentTask.title}` }
+          : {}),
         redacted: !matchesContextFilter(
           task?.context ?? 'personal',
           contextMode,
@@ -121,18 +122,12 @@ function DayView() {
   const scheduleEvents: TimeBlockEvent[] = useMemo(() => {
     if (!schedulesData) return []
     return schedulesData.map((schedule) => {
-      const durationMs =
-        new Date(schedule.end).getTime() - new Date(schedule.start).getTime()
-      const durationMinutes = Math.round(durationMs / 60000)
-      const durationStr = formatMinutes(durationMinutes)
-
       return {
         id: `schedule-${schedule.scheduleId}-${schedule.start}`,
         title: schedule.title,
         start: schedule.start,
         end: schedule.end,
         type: 'schedule' as const,
-        duration: durationStr,
         color: scheduleColorToEventColor(schedule.color),
         redacted: !matchesContextFilter(schedule.context, contextMode),
       }
@@ -230,19 +225,22 @@ function DayView() {
     )
   }
 
-  useAutoRescheduleOnGcalChange(gcalEventsQuery.data, handleAutoAssign)
+  useAutoRescheduleOnGcalChange(
+    gcalEventsQuery.data,
+    handleAutoAssign,
+    schedulingSettings.data?.autoRescheduleOnGcalChange ?? true,
+  )
 
   return (
     <DayViewPresentation
       isLoading={isLoading}
-      categorized={categorized}
+      backlogTasks={categorized.backlog}
       calendarEvents={calendarEvents}
       dndCallbacks={dndCallbacks}
       {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
         ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
         : {})}
       queueTasks={queueTasks}
-      queueTaskIds={queueTaskIdSet}
       queueCandidates={queueCandidates}
       onReorderQueue={handleReorderQueue}
       onToggleQueueTask={handleToggleQueueTask}

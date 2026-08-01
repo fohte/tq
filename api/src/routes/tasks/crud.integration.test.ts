@@ -9,7 +9,12 @@ import {
   TEST_UUID,
   TimeBlockResponse,
 } from '#routes/tasks/testing'
-import { assertDefined, jsonBody, setupTestDb } from '#testing'
+import {
+  assertDefined,
+  jsonBody,
+  patchSchedulingSettings,
+  setupTestDb,
+} from '#testing'
 
 setupTestDb()
 
@@ -18,6 +23,16 @@ function normalizeTimeBlock(block: TimeBlockResponse) {
     ...block,
     id: 'ID',
     taskId: 'TASK',
+    createdAt: 'TIMESTAMP',
+    updatedAt: 'TIMESTAMP',
+  }
+}
+
+function normalizeTask(task: TaskResponse) {
+  return {
+    ...task,
+    id: 'ID',
+    number: -1,
     createdAt: 'TIMESTAMP',
     updatedAt: 'TIMESTAMP',
   }
@@ -38,6 +53,39 @@ describe('tasks CRUD API', () => {
       expect(body.status).toBe('todo')
       expect(body.context).toBe('personal')
       expect(body.id).toBeDefined()
+    })
+
+    it('falls back to the configured default context when unspecified', async () => {
+      await patchSchedulingSettings({ defaultContext: 'work' })
+
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Buy groceries' }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(normalizeTask(body)).toEqual({
+        id: 'ID',
+        number: -1,
+        title: 'Buy groceries',
+        description: null,
+        status: 'todo',
+        context: 'work',
+        labels: [],
+        startDate: null,
+        dueDate: null,
+        estimatedMinutes: null,
+        parentId: null,
+        projectId: null,
+        recurrenceRuleId: null,
+        recurrenceRule: null,
+        githubLink: null,
+        sortOrder: 0,
+        createdAt: 'TIMESTAMP',
+        updatedAt: 'TIMESTAMP',
+      })
     })
 
     it('creates a task with all optional fields', async () => {
@@ -87,22 +135,21 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(404)
     })
 
-    it('includes only matched label names in the response', async () => {
+    it('creates any label names that do not exist yet and attaches all of them', async () => {
       await createLabel('foo')
-      await createLabel('bar')
 
       const res = await app.request('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: 'Labeled task',
-          labels: ['foo', 'bar', 'nonexistent'],
+          labels: ['foo', 'new-label'],
         }),
       })
       expect(res.status).toBe(201)
       const body = await jsonBody<TaskResponse>(res)
       const sortedLabels = body.labels.toSorted()
-      expect(sortedLabels).toEqual(['bar', 'foo'])
+      expect(sortedLabels).toEqual(['foo', 'new-label'])
     })
 
     it('returns an empty labels array when no labels are given', async () => {
@@ -445,6 +492,60 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body.labels).toEqual(['urgent'])
+    })
+
+    it('replaces the labels when given', async () => {
+      const created = await createTask('Task', { labels: ['urgent'] })
+
+      const res = await app.request(`/api/tasks/${created.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ labels: ['bug'] }),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body).toEqual({
+        ...created,
+        labels: ['bug'],
+        updatedAt: body.updatedAt,
+      })
+    })
+
+    it('creates any label names that do not exist yet when updating', async () => {
+      const created = await createTask('Task')
+
+      const res = await app.request(`/api/tasks/${created.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ labels: ['new-label'] }),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body).toEqual({
+        ...created,
+        labels: ['new-label'],
+        updatedAt: body.updatedAt,
+      })
+    })
+
+    it('clears all labels when given an empty array', async () => {
+      const created = await createTask('Task', { labels: ['urgent'] })
+
+      const res = await app.request(`/api/tasks/${created.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ labels: [] }),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body).toEqual({
+        ...created,
+        labels: [],
+        updatedAt: body.updatedAt,
+      })
     })
   })
 

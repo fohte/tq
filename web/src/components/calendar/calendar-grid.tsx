@@ -38,6 +38,10 @@ export interface CalendarDndCallbacks {
   }) => void
 }
 
+function formatHm(date: Date): string {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
 interface CalendarGridProps {
   events: TimeBlockEvent[]
   activeView: CalendarViewType
@@ -111,7 +115,6 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         event.redacted !== true,
       extendedProps: {
         type: event.type,
-        duration: event.duration,
         parentRef: event.parentRef,
         color: event.color,
         redacted: event.redacted,
@@ -199,14 +202,26 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
               endDate &&
               endDate.getDate() !== startDate.getDate()
             ) {
-              const fmt = (d: Date) =>
-                `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-              const overrideTimeText = `${fmt(startDate)} - ${fmt(endDate)}`
+              const overrideTimeText = `${formatHm(startDate)}–${formatHm(endDate)}`
               return <EventBlock {...arg} timeText={overrideTimeText} />
             }
             return <EventBlock {...arg} />
           }}
           nowIndicator={true}
+          nowIndicatorContent={(arg) => {
+            // arg.date is the column's day-start marker, not the current
+            // moment (FullCalendar forwards `cell.date`, not `nowDate`, to
+            // this hook) — read the wall clock directly instead. FullCalendar
+            // re-invokes this callback on its own per-minute timer, so no
+            // extra live-clock state is needed to keep the label current.
+            if (arg.isAxis) return undefined
+            return (
+              <span className="absolute -top-3.5 right-1 hidden font-mono text-[9px] text-primary md:inline">
+                {formatHm(new Date())}
+              </span>
+            )
+          }}
+          defaultRangeSeparator="–"
           allDaySlot={true}
           slotMinTime="00:00:00"
           slotMaxTime="24:00:00"

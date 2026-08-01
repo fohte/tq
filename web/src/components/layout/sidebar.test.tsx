@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { Sidebar } from '#components/layout/sidebar'
 import { ContextFilterProvider } from '#hooks/use-context-filter'
+import type { Project } from '#hooks/use-projects'
+import { projectKeys } from '#hooks/use-projects'
 import { TagFilterProvider } from '#hooks/use-tag-filter'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
@@ -46,11 +48,27 @@ const tasksWithTags: Task[] = [
   { ...baseTask, id: '2', title: 'Task B', labels: ['dev:tq'] },
 ]
 
-function renderSidebar(tasks: Task[] = []) {
+const baseProject: Project = {
+  id: '00000000-0000-0000-0000-000000000101',
+  title: 'tq',
+  description: null,
+  status: 'active',
+  startDate: null,
+  targetDate: null,
+  color: null,
+  sortOrder: 0,
+  createdAt: '2026-03-20T00:00:00.000Z',
+  updatedAt: '2026-03-20T00:00:00.000Z',
+  completionRate: 0,
+  taskCount: { total: 0, completed: 0 },
+}
+
+function renderSidebar(tasks: Task[] = [], projects: Project[] = []) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   queryClient.setQueryData(taskKeys.list(undefined), tasks)
+  queryClient.setQueryData(projectKeys.list(undefined), projects)
 
   return render(
     <QueryClientProvider client={queryClient}>
@@ -115,6 +133,57 @@ describe('Sidebar', () => {
       expect(
         screen.queryByRole('button', { name: 'clear ×' }),
       ).not.toBeInTheDocument()
+    })
+  })
+
+  describe('ProjectsSection', () => {
+    it("shows a project's completed/total ratio", () => {
+      renderSidebar(
+        [],
+        [
+          {
+            ...baseProject,
+            id: '1',
+            title: 'Project Alpha',
+            status: 'active',
+            taskCount: { completed: 3, total: 10 },
+          },
+        ],
+      )
+
+      expect(
+        screen.getByRole('link', { name: /Project Alpha/ }),
+      ).toHaveTextContent('Project Alpha3/10')
+    })
+
+    it('shows both active and paused projects together', () => {
+      renderSidebar(
+        [],
+        [
+          {
+            ...baseProject,
+            id: '1',
+            title: 'Project Alpha',
+            status: 'active',
+            taskCount: { completed: 1, total: 2 },
+          },
+          {
+            ...baseProject,
+            id: '2',
+            title: 'Project Beta',
+            status: 'paused',
+            taskCount: { completed: 5, total: 5 },
+          },
+        ],
+      )
+
+      const projectLinks = screen.getAllByRole('link', {
+        name: /^Project (Alpha|Beta)/,
+      })
+      expect(projectLinks.map((link) => link.textContent)).toEqual([
+        'Project Alpha1/2',
+        'Project Beta5/5',
+      ])
     })
   })
 })

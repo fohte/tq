@@ -11,7 +11,6 @@ import {
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
 import { TaskGridRow } from '#components/task/task-grid-row'
-import { TaskListHeader } from '#components/task/task-list-header'
 import { TASK_GRID_COLUMNS } from '#components/task/task-row-shared'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { Button } from '#components/ui/button'
@@ -31,7 +30,7 @@ export const Route = createFileRoute('/tasks/')({
   component: TaskList,
 })
 
-type Tab = 'today' | 'all' | 'backlog'
+type Tab = 'all' | 'backlog'
 
 function TaskListColumnHeader() {
   return (
@@ -50,7 +49,7 @@ function TaskListColumnHeader() {
 }
 
 function TaskList() {
-  const [activeTab, setActiveTab] = useState<Tab>('today')
+  const [activeTab, setActiveTab] = useState<Tab>('all')
   const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isGithubModalOpen, setIsGithubModalOpen] = useState(false)
@@ -67,8 +66,6 @@ function TaskList() {
 
   const displayTasks = (() => {
     switch (activeTab) {
-      case 'today':
-        return tasks.today
       case 'all':
         return tasks.all
       case 'backlog':
@@ -91,7 +88,6 @@ function TaskList() {
           value={activeTab}
           onChange={setActiveTab}
           options={[
-            { value: 'today', label: 'today' },
             { value: 'all', label: 'all' },
             {
               value: 'backlog',
@@ -147,13 +143,6 @@ function TaskList() {
         <TagFilterChips />
       </div>
 
-      {/* Summary header (Today tab) */}
-      {activeTab === 'today' && (
-        <div className="py-2">
-          <TaskListHeader tasks={tasks.nonBacklog} />
-        </div>
-      )}
-
       {/* Inline create */}
       {isCreating && (
         <div className="border-b border-border">
@@ -161,9 +150,6 @@ function TaskList() {
             onClose={() => {
               setIsCreating(false)
             }}
-            {...(activeTab === 'today'
-              ? { defaultStartDate: new Date().toISOString().slice(0, 10) }
-              : {})}
           />
         </div>
       )}
@@ -203,13 +189,7 @@ function TaskList() {
       />
 
       {/* Task create modal */}
-      <CreateTaskModal
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        {...(activeTab === 'today'
-          ? { defaultStartDate: new Date().toISOString().slice(0, 10) }
-          : {})}
-      />
+      <CreateTaskModal open={isModalOpen} onOpenChange={setIsModalOpen} />
 
       {/* Create task from GitHub issue/PR modal */}
       <GithubIssueLinkModal

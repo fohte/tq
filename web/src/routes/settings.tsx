@@ -6,6 +6,7 @@ import { GcalCalendarPicker } from '#components/settings/gcal-calendar-picker'
 import { GithubSyncRuleList } from '#components/settings/github-sync-rule-list'
 import { IntegrationCard } from '#components/settings/integration-card'
 import { KeybindingsList } from '#components/settings/keybindings-list'
+import { SchedulingSettingsPanel } from '#components/settings/scheduling-settings-panel'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
 import { Panel } from '#components/ui/panel'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
@@ -57,6 +58,10 @@ function Settings() {
               連携状態の取得に失敗しました
             </p>
           )}
+
+          <div className="mt-8">
+            <SchedulingSettingsPanel />
+          </div>
 
           <div className="mt-8">
             <GithubSyncRuleList />

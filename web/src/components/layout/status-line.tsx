@@ -1,7 +1,12 @@
 import { useRouterState } from '@tanstack/react-router'
+import { useMemo } from 'react'
 
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useFilteredTaskList } from '#hooks/use-filtered-tasks'
+import { useTaskMap } from '#hooks/use-tasks'
+import { useTodayTasks } from '#hooks/use-today-tasks'
+import { formatLocalDate } from '#lib/date-range'
+import { formatMinutes } from '#lib/format'
 import {
   navKeybindings,
   newTaskKeybinding,
@@ -18,7 +23,30 @@ export function StatusLine() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const { nonBacklog, today, isLoading } = useFilteredTaskList()
+  const {
+    nonBacklog,
+    all,
+    isLoading: isTaskListLoading,
+  } = useFilteredTaskList()
+
+  const taskMap = useTaskMap(all)
+  const todayStr = useMemo(() => formatLocalDate(new Date()), [])
+  const { data: todayTasksData, isLoading: isTodayTasksLoading } =
+    useTodayTasks(todayStr)
+  const isLoading = isTaskListLoading || isTodayTasksLoading
+
+  const queueTasks = useMemo(
+    () =>
+      (todayTasksData ?? [])
+        .map((t) => taskMap.get(t.taskId))
+        .filter((t) => t != null),
+    [todayTasksData, taskMap],
+  )
+  const remainingEstimate = queueTasks.reduce(
+    (total, t) =>
+      t.status === 'completed' ? total : total + (t.estimatedMinutes ?? 0),
+    0,
+  )
 
   return (
     <div className="hidden h-6 shrink-0 items-center gap-3 border-t border-border bg-card px-3 font-mono text-[10px] text-muted-foreground-faint md:flex">
@@ -30,7 +58,7 @@ export function StatusLine() {
       <span>
         {isLoading
           ? '…'
-          : `${String(nonBacklog.length)} tasks · ${String(today.length)} open`}
+          : `${String(nonBacklog.length)} tasks · ${String(queueTasks.length)} queued · ${formatMinutes(remainingEstimate)} left`}
       </span>
       <div className="ml-auto flex gap-3.5 whitespace-nowrap">
         {shortcuts.map((shortcut) => (

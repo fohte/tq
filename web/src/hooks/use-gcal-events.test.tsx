@@ -156,7 +156,7 @@ describe('useAutoRescheduleOnGcalChange', () => {
     const onChange = vi.fn()
     renderHook(
       ({ events }) => {
-        useAutoRescheduleOnGcalChange(events, onChange)
+        useAutoRescheduleOnGcalChange(events, onChange, true)
       },
       { initialProps: { events: [sampleEvent] } },
     )
@@ -168,7 +168,7 @@ describe('useAutoRescheduleOnGcalChange', () => {
     const onChange = vi.fn()
     const { rerender } = renderHook(
       ({ events }) => {
-        useAutoRescheduleOnGcalChange(events, onChange)
+        useAutoRescheduleOnGcalChange(events, onChange, true)
       },
       { initialProps: { events: [sampleEvent] } },
     )
@@ -185,7 +185,7 @@ describe('useAutoRescheduleOnGcalChange', () => {
     const events = [sampleEvent]
     const { rerender } = renderHook(
       ({ events }) => {
-        useAutoRescheduleOnGcalChange(events, onChange)
+        useAutoRescheduleOnGcalChange(events, onChange, true)
       },
       { initialProps: { events } },
     )
@@ -199,7 +199,7 @@ describe('useAutoRescheduleOnGcalChange', () => {
     const onChange = vi.fn()
     const { rerender } = renderHook(
       ({ events }: { events: (typeof sampleEvent)[] | undefined }) => {
-        useAutoRescheduleOnGcalChange(events, onChange)
+        useAutoRescheduleOnGcalChange(events, onChange, true)
       },
       { initialProps: { events: undefined } },
     )
@@ -213,7 +213,7 @@ describe('useAutoRescheduleOnGcalChange', () => {
     const onChange = vi.fn()
     const { rerender } = renderHook(
       ({ events }: { events: (typeof sampleEvent)[] | undefined }) => {
-        useAutoRescheduleOnGcalChange(events, onChange)
+        useAutoRescheduleOnGcalChange(events, onChange, true)
       },
       {
         initialProps: {
@@ -224,6 +224,22 @@ describe('useAutoRescheduleOnGcalChange', () => {
 
     // The query finishes loading and returns data for the first time
     rerender({ events: [sampleEvent] })
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('does not call onChange when disabled, even if events change', () => {
+    const onChange = vi.fn()
+    const { rerender } = renderHook(
+      ({ events }) => {
+        useAutoRescheduleOnGcalChange(events, onChange, false)
+      },
+      { initialProps: { events: [sampleEvent] } },
+    )
+
+    rerender({
+      events: [sampleEvent, { ...sampleEvent, id: 'gcal-event-2' }],
+    })
 
     expect(onChange).not.toHaveBeenCalled()
   })

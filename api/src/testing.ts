@@ -4,6 +4,7 @@ import postgres from 'postgres'
 import { afterAll, aroundEach, expect } from 'vitest'
 import { z, type ZodType } from 'zod'
 
+import { app } from '#app'
 import { runWithDb } from '#db/connection'
 import * as schema from '#db/schema'
 import { DATABASE_URL } from '#env'
@@ -93,4 +94,16 @@ export function assertDefined<T>(
  */
 export function makeFile(name: string, type: string, sizeBytes: number): File {
   return new File([Buffer.alloc(sizeBytes)], name, { type })
+}
+
+/**
+ * PATCH /api/scheduling-settings, returning the raw response so callers can
+ * assert on failures instead of having them pass silently.
+ */
+export function patchSchedulingSettings(body: Record<string, unknown>) {
+  return app.request('/api/scheduling-settings', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
 }

@@ -14,6 +14,8 @@ import {
   TaskSidebar,
   TaskSidebarMobile,
 } from '#components/task/task-detail'
+import type { ProjectDetail } from '#hooks/use-projects'
+import { projectKeys } from '#hooks/use-projects'
 import type { TaskPage } from '#hooks/use-task-pages'
 import type { TaskDetail } from '#hooks/use-tasks'
 
@@ -70,10 +72,19 @@ const baseTask: TaskDetail = {
   links: { outgoing: [], incoming: [] },
 }
 
-function Providers({ children }: { children: ReactNode }) {
+function Providers({
+  children,
+  project,
+}: {
+  children: ReactNode
+  project?: ProjectDetail | undefined
+}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
+  if (project) {
+    queryClient.setQueryData(projectKeys.detail(project.id), project)
+  }
   const rootRoute = createRootRoute({
     component: () => <>{children}</>,
   })
@@ -116,12 +127,14 @@ function Providers({ children }: { children: ReactNode }) {
 function MainContentStory({
   task,
   pages,
+  project,
 }: {
   task: TaskDetail
   pages: TaskPage[]
+  project?: ProjectDetail | undefined
 }) {
   return (
-    <Providers>
+    <Providers project={project}>
       <div className="max-w-2xl p-6">
         <TaskMainContent task={task} pages={pages} />
       </div>
@@ -210,6 +223,33 @@ export const LlmAuthored: Story = {
       descriptionAuthor: { kind: 'llm', agent: 'claude-opus-5' },
     },
     pages: [],
+  },
+}
+
+const sampleProject: ProjectDetail = {
+  id: 'aaaa0000-0000-0000-0000-000000000000',
+  title: 'tq',
+  description: null,
+  status: 'active',
+  startDate: null,
+  targetDate: null,
+  color: null,
+  sortOrder: 0,
+  createdAt: '2026-03-20T00:00:00.000Z',
+  updatedAt: '2026-03-20T00:00:00.000Z',
+  completionRate: 0.4,
+  taskCount: { total: 10, completed: 4 },
+}
+
+export const WithProject: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      projectId: sampleProject.id,
+      title: 'Task with project',
+    },
+    pages: [],
+    project: sampleProject,
   },
 }
 

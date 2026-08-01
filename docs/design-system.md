@@ -226,7 +226,7 @@ A row of adjoining bordered tab buttons (borders collapse between tabs via
 `border-l-0` on all but the first). The active tab gets `border-border-strong`
 plus `bg-surface-strong`; inactive tabs get `border-border` plus
 `text-muted-foreground`. Use for switching between a small, fixed set of
-views (e.g. Today/All/Backlog, Day/Week/Month) — this is a plain presentation
+views (e.g. All/Backlog, Day/Week/Month) — this is a plain presentation
 component, not an ARIA tablist.
 
 `web/src/components/ui/segmented-control.tsx` has a near-identical generic
@@ -241,8 +241,8 @@ component — extend one of these two.
 <TabStrip
   value={value}
   options={[
-    { value: 'today', label: 'Today' },
     { value: 'all', label: 'All' },
+    { value: 'backlog', label: 'Backlog' },
   ]}
   onChange={setValue}
 />

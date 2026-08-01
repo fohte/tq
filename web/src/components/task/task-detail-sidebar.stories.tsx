@@ -13,6 +13,8 @@ import {
   TaskSidebar,
   TaskSidebarMobile,
 } from '#components/task/task-detail-sidebar'
+import type { ProjectDetail } from '#hooks/use-projects'
+import { projectKeys } from '#hooks/use-projects'
 import type { TaskDetail } from '#hooks/use-tasks'
 
 const baseTask: TaskDetail = {
@@ -43,10 +45,19 @@ const baseTask: TaskDetail = {
   links: { outgoing: [], incoming: [] },
 }
 
-function Providers({ children }: { children: ReactNode }) {
+function Providers({
+  children,
+  project,
+}: {
+  children: ReactNode
+  project?: ProjectDetail | undefined
+}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
+  if (project) {
+    queryClient.setQueryData(projectKeys.detail(project.id), project)
+  }
   const rootRoute = createRootRoute({
     component: () => <>{children}</>,
   })
@@ -65,7 +76,12 @@ function Providers({ children }: { children: ReactNode }) {
     path: '/tasks/$taskId',
     component: () => null,
   })
-  rootRoute.addChildren([indexRoute, tasksRoute, taskRoute])
+  const projectRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/projects/$projectId',
+    component: () => null,
+  })
+  rootRoute.addChildren([indexRoute, tasksRoute, taskRoute, projectRoute])
 
   const router = createRouter({
     routeTree: rootRoute,
@@ -79,9 +95,15 @@ function Providers({ children }: { children: ReactNode }) {
   )
 }
 
-function SidebarStory({ task }: { task: TaskDetail }) {
+function SidebarStory({
+  task,
+  project,
+}: {
+  task: TaskDetail
+  project?: ProjectDetail | undefined
+}) {
   return (
-    <Providers>
+    <Providers project={project}>
       <div className="w-[236px] border-l border-border p-4">
         <TaskSidebar task={task} />
       </div>
@@ -138,6 +160,28 @@ export const SidebarWithGithubLink: Story = {
   },
 }
 
+const sampleProject: ProjectDetail = {
+  id: 'aaaa0000-0000-0000-0000-000000000000',
+  title: 'tq',
+  description: null,
+  status: 'active',
+  startDate: null,
+  targetDate: null,
+  color: null,
+  sortOrder: 0,
+  createdAt: '2026-03-20T00:00:00.000Z',
+  updatedAt: '2026-03-20T00:00:00.000Z',
+  completionRate: 0.4,
+  taskCount: { total: 10, completed: 4 },
+}
+
+export const SidebarWithProject: Story = {
+  args: {
+    task: { ...baseTask, projectId: sampleProject.id },
+    project: sampleProject,
+  },
+}
+
 export const SidebarWithTimeBlocks: Story = {
   args: {
     task: {
@@ -166,12 +210,15 @@ export const SidebarWithTimeBlocks: Story = {
   },
 }
 
-export const MobileSidebar: StoryObj<{ task: TaskDetail }> = {
+export const MobileSidebar: StoryObj<{
+  task: TaskDetail
+  project?: ProjectDetail | undefined
+}> = {
   args: {
     task: { ...baseTask },
   },
-  render: ({ task }) => (
-    <Providers>
+  render: ({ task, project }) => (
+    <Providers project={project}>
       <div className="max-w-sm border-t border-border p-4">
         <TaskSidebarMobile task={task} />
       </div>
