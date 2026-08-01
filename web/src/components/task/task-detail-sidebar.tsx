@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 
 import { SidebarField } from '#components/task/sidebar-field'
+import { SidebarTagsField } from '#components/task/sidebar-tags-field'
 import { SidebarGithubLinkField } from '#components/task/task-github-link-field'
 import { Input } from '#components/ui/input'
 import {
@@ -66,6 +67,7 @@ export function TaskSidebar({ task }: { task: TaskDetail }) {
       {task.projectId != null && (
         <SidebarProjectField projectId={task.projectId} />
       )}
+      <SidebarTagsField taskId={task.id} labels={task.labels} />
       <SidebarGithubLinkField taskId={task.id} githubLink={task.githubLink} />
       <SidebarTimeBlocks timeBlocks={task.timeBlocks} />
     </div>
@@ -131,6 +133,9 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
             <SidebarProjectField projectId={task.projectId} />
           </MobileFieldCell>
         )}
+        <MobileFieldCell className="col-span-2">
+          <SidebarTagsField taskId={task.id} labels={task.labels} />
+        </MobileFieldCell>
         <MobileFieldCell className="col-span-2">
           <SidebarGithubLinkField
             taskId={task.id}

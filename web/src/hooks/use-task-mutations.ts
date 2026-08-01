@@ -154,6 +154,7 @@ export interface UpdateTaskInput {
   estimatedMinutes?: number | null
   projectId?: string | null
   context?: 'work' | 'personal'
+  labels?: string[]
 }
 
 export function useUpdateTask() {
