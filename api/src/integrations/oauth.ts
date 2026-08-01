@@ -43,6 +43,7 @@ const NO_ACCOUNT_IDENTITY_SENTINEL = ''
 
 export interface OAuthCallbackResult {
   oauthTokenId: string
+  accountLabel: string | null
 }
 
 export function handleOAuthCallback(
@@ -103,7 +104,10 @@ export function handleOAuthCallback(
             })
             .returning({ id: oauthTokens.id }),
         ).andThen((rows) =>
-          firstOrErr(rows).map((row) => ({ oauthTokenId: row.id })),
+          firstOrErr(rows).map((row) => ({
+            oauthTokenId: row.id,
+            accountLabel,
+          })),
         ),
       )
     })
