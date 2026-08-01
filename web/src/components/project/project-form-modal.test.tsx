@@ -32,6 +32,8 @@ describe('ProjectFormModal', () => {
         status: 'active',
         startDate: null,
         targetDate: null,
+        completionRate: 0,
+        taskCount: { total: 0, completed: 0 },
         color: '#FF8400',
         sortOrder: 0,
         createdAt: '2024-01-01T00:00:00Z',
@@ -80,6 +82,8 @@ describe('ProjectFormModal', () => {
         sortOrder: 0,
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
+        completionRate: 0.25,
+        taskCount: { total: 4, completed: 1 },
       },
     })
 

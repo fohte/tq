@@ -1,27 +1,13 @@
+import { Chip } from '#components/ui/chip'
 import { cn } from '#lib/utils'
 
 export type ProjectStatus = 'active' | 'paused' | 'completed' | 'archived'
 
-export const statusConfig: Record<
-  ProjectStatus,
-  { label: string; className: string }
-> = {
-  active: {
-    label: 'Active',
-    className: 'bg-[#1A3D20] text-[#4CAF50]',
-  },
-  paused: {
-    label: 'Paused',
-    className: 'bg-secondary text-muted-foreground',
-  },
-  completed: {
-    label: 'Completed',
-    className: 'bg-[#1A3D20] text-[#4CAF50]',
-  },
-  archived: {
-    label: 'Archived',
-    className: 'bg-secondary text-muted-foreground',
-  },
+export const statusLabels: Record<ProjectStatus, string> = {
+  active: 'Active',
+  paused: 'Paused',
+  completed: 'Completed',
+  archived: 'Archived',
 }
 
 const validStatuses = new Set<string>([
@@ -35,17 +21,25 @@ function isProjectStatus(value: string): value is ProjectStatus {
   return validStatuses.has(value)
 }
 
-export function ProjectStatusBadge({ status }: { status: string }) {
+export function ProjectStatusBadge({
+  status,
+  className,
+}: {
+  status: string
+  className?: string
+}) {
   if (!isProjectStatus(status)) return null
-  const config = statusConfig[status]
   return (
-    <span
+    <Chip
+      size="md"
       className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium',
-        config.className,
+        status === 'active'
+          ? 'text-muted-foreground-strong'
+          : 'text-muted-foreground-faint',
+        className,
       )}
     >
-      {config.label}
-    </span>
+      {status}
+    </Chip>
   )
 }

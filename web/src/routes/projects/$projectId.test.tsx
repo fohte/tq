@@ -178,8 +178,10 @@ describe('ProjectDetailPage', () => {
       error: null,
     })
     renderProjectDetailPage()
-    // breadcrumb "Projects" link (PC + SP) + the SP back-nav "Projects" link
-    expect(screen.getAllByText('Projects')).toHaveLength(3)
+    // breadcrumb "projects" link, per layout (PC + SP)
+    expect(screen.getAllByText('projects')).toHaveLength(2)
+    // SP back-nav "Projects" link
+    expect(screen.getAllByText('Projects')).toHaveLength(1)
     // breadcrumb leaf + title button, per layout
     expect(screen.getAllByText('ISUCON14')).toHaveLength(4)
   })
@@ -248,14 +250,14 @@ describe('ProjectDetailPage', () => {
     expect(screen.getAllByText('Completed: 2')).toHaveLength(2)
   })
 
-  it('renders a View Board link to the project board route', () => {
+  it('renders a view board link to the project board route', () => {
     mockUseProject.mockReturnValue({
       data: mockProject,
       isLoading: false,
       error: null,
     })
     renderProjectDetailPage()
-    const links = screen.getAllByText('View Board →')
+    const links = screen.getAllByText('view board →')
     expect(links).toHaveLength(2)
     for (const link of links) {
       expect(link.closest('a')).toHaveAttribute(
@@ -265,6 +267,51 @@ describe('ProjectDetailPage', () => {
     }
   })
 
+  it('shows at most 5 non-completed tasks in the OPEN TASKS panel, per layout (PC + SP)', () => {
+    mockUseProject.mockReturnValue({
+      data: mockProject,
+      isLoading: false,
+      error: null,
+    })
+    const manyOpenTasks = Array.from({ length: 7 }, (_, i) => ({
+      ...baseTask,
+      id: String(i + 1),
+      title: `Open task ${String(i + 1)}`,
+      status: 'todo' as const,
+    }))
+    mockUseProjectTasks.mockReturnValue({
+      data: manyOpenTasks,
+      isLoading: false,
+      error: null,
+    })
+    renderProjectDetailPage()
+
+    expect(screen.getAllByText('OPEN TASKS')).toHaveLength(2)
+    expect(screen.getAllByText('Open task 1')).toHaveLength(2)
+    expect(screen.getAllByText('Open task 5')).toHaveLength(2)
+    expect(screen.queryAllByText('Open task 6')).toHaveLength(0)
+    expect(screen.queryAllByText('Open task 7')).toHaveLength(0)
+  })
+
+  it('does not render the OPEN TASKS panel when there are no non-completed tasks', () => {
+    mockUseProject.mockReturnValue({
+      data: mockProject,
+      isLoading: false,
+      error: null,
+    })
+    mockUseProjectTasks.mockReturnValue({
+      data: mockTasks.map((task) => ({
+        ...task,
+        status: 'completed' as const,
+      })),
+      isLoading: false,
+      error: null,
+    })
+    renderProjectDetailPage()
+
+    expect(screen.queryAllByText('OPEN TASKS')).toHaveLength(0)
+  })
+
   it('renders sidebar field labels once per layout (PC + SP)', () => {
     mockUseProject.mockReturnValue({
       data: mockProject,
@@ -272,10 +319,10 @@ describe('ProjectDetailPage', () => {
       error: null,
     })
     renderProjectDetailPage()
-    expect(screen.getAllByText('Status')).toHaveLength(2)
-    expect(screen.getAllByText('Start date')).toHaveLength(2)
-    expect(screen.getAllByText('Target date')).toHaveLength(2)
-    expect(screen.getAllByText('Color')).toHaveLength(2)
+    expect(screen.getAllByText('STATUS')).toHaveLength(2)
+    expect(screen.getAllByText('START DATE')).toHaveLength(2)
+    expect(screen.getAllByText('TARGET DATE')).toHaveLength(2)
+    expect(screen.getAllByText('COLOR')).toHaveLength(2)
   })
 
   it('renders remaining days based on the target date once per layout (PC + SP)', () => {

@@ -35,3 +35,15 @@ export const Completed: Story = {
 export const Archived: Story = {
   args: { status: 'archived' },
 }
+
+export const AllVariants: Story = {
+  args: { status: 'active' },
+  render: () => (
+    <div className="flex items-center gap-3">
+      <ProjectStatusBadge status="active" />
+      <ProjectStatusBadge status="paused" />
+      <ProjectStatusBadge status="completed" />
+      <ProjectStatusBadge status="archived" />
+    </div>
+  ),
+}

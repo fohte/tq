@@ -1,7 +1,8 @@
 import { Plus } from 'lucide-react'
 
+import { Button } from '#components/ui/button'
+import { TabStrip } from '#components/ui/tab-strip'
 import { selectHandler } from '#lib/form-utils'
-import { cn } from '#lib/utils'
 
 export type StatusFilter = 'all' | 'todo' | 'in_progress' | 'completed'
 
@@ -44,32 +45,18 @@ export function ProjectFilterBar({
   return (
     <div className="flex items-center gap-2 border-b border-border px-4 py-2">
       {/* Filter chips */}
-      <div className="flex items-center gap-1">
-        {statusFilters.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => {
-              onStatusFilterChange(value)
-            }}
-            className={cn(
-              'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-              statusFilter === value
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <TabStrip
+        value={statusFilter}
+        options={statusFilters}
+        onChange={onStatusFilterChange}
+      />
 
       <div className="ml-auto flex items-center gap-2">
         {/* Sort selector */}
         <select
           value={sortOption}
           onChange={selectHandler(onSortOptionChange, sortOptionValues)}
-          className="rounded-md bg-transparent px-2 py-1 text-xs text-muted-foreground outline-none hover:text-foreground"
+          className="bg-transparent px-2 py-1 font-mono text-xs text-muted-foreground outline-none hover:text-foreground"
         >
           {sortOptionValues.map((sort) => (
             <option key={sort} value={sort}>
@@ -80,14 +67,14 @@ export function ProjectFilterBar({
 
         {/* Add task button */}
         {onAddTask && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={onAddTask}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             aria-label="Add task"
           >
             <Plus className="h-4 w-4" />
-          </button>
+          </Button>
         )}
       </div>
     </div>
