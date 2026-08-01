@@ -1,6 +1,6 @@
 {
-  "id": "3191697b-0813-4d94-9b94-acf279e8f911",
-  "prevId": "95b31064-470c-403f-800d-86c2e09258c5",
+  "id": "782001fd-819d-4f5a-a6f2-c1c0f980c2fa",
+  "prevId": "e1577f1c-1a65-4b6c-b2d0-1f1d2c2a02a6",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1658,6 +1658,152 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.task_events": {
+      "name": "task_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "task_events_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from_status": {
+          "name": "from_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "to_status": {
+          "name": "to_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "github_owner": {
+          "name": "github_owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "github_repo": {
+          "name": "github_repo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "github_number": {
+          "name": "github_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "github_kind": {
+          "name": "github_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "author_kind": {
+          "name": "author_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "author_agent": {
+          "name": "author_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_task_events_task_id_created_at": {
+          "name": "idx_task_events_task_id_created_at",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "task_events_task_id_tasks_id_fk": {
+          "name": "task_events_task_id_tasks_id_fk",
+          "tableFrom": "task_events",
+          "tableTo": "tasks",
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "task_events_type_check": {
+          "name": "task_events_type_check",
+          "value": "\"task_events\".\"type\" IN ('status_changed', 'github_linked', 'github_unlinked')"
+        },
+        "task_events_payload_check": {
+          "name": "task_events_payload_check",
+          "value": "(\"task_events\".\"type\" = 'status_changed'\n          AND \"task_events\".\"from_status\" IS NOT NULL AND \"task_events\".\"to_status\" IS NOT NULL\n          AND \"task_events\".\"github_owner\" IS NULL AND \"task_events\".\"github_repo\" IS NULL\n          AND \"task_events\".\"github_number\" IS NULL AND \"task_events\".\"github_kind\" IS NULL)\n        OR (\"task_events\".\"type\" IN ('github_linked', 'github_unlinked')\n          AND \"task_events\".\"from_status\" IS NULL AND \"task_events\".\"to_status\" IS NULL\n          AND \"task_events\".\"github_owner\" IS NOT NULL AND \"task_events\".\"github_repo\" IS NOT NULL\n          AND \"task_events\".\"github_number\" IS NOT NULL AND \"task_events\".\"github_kind\" IS NOT NULL)"
+        },
+        "task_events_author_kind_check": {
+          "name": "task_events_author_kind_check",
+          "value": "\"task_events\".\"author_kind\" IN ('human', 'llm', 'system')"
+        },
+        "task_events_author_agent_required_for_llm": {
+          "name": "task_events_author_agent_required_for_llm",
+          "value": "(\"task_events\".\"author_kind\" = 'llm') = (\"task_events\".\"author_agent\" IS NOT NULL)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.task_links": {

@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { TaskActivity } from '#components/task/task-activity'
+import type { ActivityItem } from '#hooks/use-task-activity'
+import { useTaskActivity } from '#hooks/use-task-activity'
 import type { Comment } from '#hooks/use-task-comments'
 import {
   useCreateComment,
@@ -43,10 +45,20 @@ vi.mock('#hooks/use-task-comments', async (importOriginal) => {
   }
 })
 
+vi.mock('#hooks/use-task-activity', async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import('#hooks/use-task-activity')>()
+  return {
+    ...original,
+    useTaskActivity: vi.fn(),
+  }
+})
+
 const mockUseTaskComments = vi.mocked(useTaskComments)
 const mockUseCreateComment = vi.mocked(useCreateComment)
 const mockUseUpdateComment = vi.mocked(useUpdateComment)
 const mockUseDeleteComment = vi.mocked(useDeleteComment)
+const mockUseTaskActivity = vi.mocked(useTaskActivity)
 
 function makeComment(overrides: Partial<Comment> = {}): Comment {
   return {
@@ -60,17 +72,74 @@ function makeComment(overrides: Partial<Comment> = {}): Comment {
   }
 }
 
+function makeCreatedEvent(
+  overrides: Partial<Extract<ActivityItem, { type: 'created' }>> = {},
+): ActivityItem {
+  return {
+    id: 'event-created',
+    type: 'created',
+    createdAt: '2026-03-20T08:00:00.000Z',
+    author: { kind: 'human', agent: null },
+    ...overrides,
+  }
+}
+
+function makeStatusChangedEvent(
+  overrides: Partial<Extract<ActivityItem, { type: 'status_changed' }>> = {},
+): ActivityItem {
+  return {
+    id: 'event-status',
+    type: 'status_changed',
+    createdAt: '2026-03-20T09:00:00.000Z',
+    author: { kind: 'human', agent: null },
+    fromStatus: 'todo',
+    toStatus: 'in_progress',
+    ...overrides,
+  }
+}
+
+function makeGithubLinkedEvent(
+  overrides: Partial<
+    Extract<ActivityItem, { type: 'github_linked' | 'github_unlinked' }>
+  > = {},
+): ActivityItem {
+  return {
+    id: 'event-linked',
+    type: 'github_linked',
+    createdAt: '2026-03-20T09:30:00.000Z',
+    author: { kind: 'human', agent: null },
+    owner: 'fohte',
+    repo: 'tq',
+    number: 42,
+    kind: 'issue',
+    ...overrides,
+  }
+}
+
 function setupMocks({
   comments = [],
-  isLoading = false,
-}: { comments?: Comment[]; isLoading?: boolean } = {}) {
+  events = [],
+  commentsLoading = false,
+  eventsLoading = false,
+}: {
+  comments?: Comment[]
+  events?: ActivityItem[]
+  commentsLoading?: boolean
+  eventsLoading?: boolean
+} = {}) {
   const mutateFn = vi.fn()
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
   mockUseTaskComments.mockReturnValue({
     data: comments,
-    isLoading,
+    isLoading: commentsLoading,
   } as ReturnType<typeof useTaskComments>)
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
+  mockUseTaskActivity.mockReturnValue({
+    data: events,
+    isLoading: eventsLoading,
+  } as ReturnType<typeof useTaskActivity>)
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
   mockUseCreateComment.mockReturnValue({
@@ -104,10 +173,10 @@ function renderActivity(taskId = 'task-1') {
 }
 
 describe('TaskActivity', () => {
-  it('shows empty state when no comments exist', () => {
-    setupMocks({ comments: [] })
+  it('shows empty state when there is no activity', () => {
+    setupMocks({ comments: [], events: [] })
     renderActivity()
-    expect(screen.getByText(/no comments yet/i)).toBeInTheDocument()
+    expect(screen.getByText(/no activity yet/i)).toBeInTheDocument()
   })
 
   it('displays comments in order', () => {
@@ -153,7 +222,67 @@ describe('TaskActivity', () => {
     setupMocks({ comments: [comment] })
     renderActivity()
 
-    expect(screen.getByText(/\(edited\)/)).toBeInTheDocument()
+    expect(screen.getByText('commented (edited)')).toBeInTheDocument()
+  })
+
+  it('renders a created event', () => {
+    setupMocks({ events: [makeCreatedEvent()] })
+    renderActivity()
+
+    expect(screen.getByText('created this task')).toBeInTheDocument()
+  })
+
+  it('renders a status_changed event with statuses as-is', () => {
+    setupMocks({
+      events: [
+        makeStatusChangedEvent({ fromStatus: 'todo', toStatus: 'in_progress' }),
+      ],
+    })
+    renderActivity()
+
+    expect(
+      screen.getByText('changed status todo → in_progress'),
+    ).toBeInTheDocument()
+  })
+
+  it('renders a github_linked event', () => {
+    setupMocks({ events: [makeGithubLinkedEvent()] })
+    renderActivity()
+
+    expect(screen.getByText('linked fohte/tq#42')).toBeInTheDocument()
+  })
+
+  it('renders a github_unlinked event', () => {
+    setupMocks({
+      events: [makeGithubLinkedEvent({ type: 'github_unlinked' })],
+    })
+    renderActivity()
+
+    expect(screen.getByText('unlinked fohte/tq#42')).toBeInTheDocument()
+  })
+
+  it('merges comments and events into a single chronological timeline', () => {
+    const comments = [
+      makeComment({
+        id: 'c1',
+        content: 'Middle comment',
+        createdAt: '2026-03-20T09:15:00.000Z',
+      }),
+    ]
+    const events = [
+      makeCreatedEvent({ createdAt: '2026-03-20T08:00:00.000Z' }),
+      makeStatusChangedEvent({ createdAt: '2026-03-20T10:00:00.000Z' }),
+    ]
+    setupMocks({ comments, events })
+    renderActivity()
+
+    const allText = document.body.textContent
+    const createdIdx = allText.indexOf('created this task')
+    const commentIdx = allText.indexOf('Middle comment')
+    const statusIdx = allText.indexOf('changed status todo → in_progress')
+
+    expect(createdIdx).toBeLessThan(commentIdx)
+    expect(commentIdx).toBeLessThan(statusIdx)
   })
 
   it('submits a new comment', async () => {
@@ -178,8 +307,15 @@ describe('TaskActivity', () => {
     expect(submitButton).toBeDisabled()
   })
 
-  it('shows loading state', () => {
-    setupMocks({ isLoading: true })
+  it('shows loading state while comments are loading', () => {
+    setupMocks({ commentsLoading: true })
+    renderActivity()
+
+    expect(screen.getByText(/loading/i)).toBeInTheDocument()
+  })
+
+  it('shows loading state while activity events are loading', () => {
+    setupMocks({ eventsLoading: true })
     renderActivity()
 
     expect(screen.getByText(/loading/i)).toBeInTheDocument()

@@ -8,6 +8,7 @@ import { db } from '#db/connection'
 import { recurrenceRules, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
+import { recordStatusChanged } from '#lib/task-events'
 import { requireTask, taskStatus, taskToResponse } from '#routes/tasks/shared'
 import { buildNextTaskData } from '#services/recurrence'
 import { syncTaskLinks } from '#services/task-links'
@@ -29,14 +30,35 @@ export const tasksActionsApp = new Hono()
       const existing = c.get('task')
       const id = existing.id
       const { status } = c.req.valid('json')
+      const author = c.get('author')
 
-      const updated = firstOrThrow(
-        await db
-          .update(tasks)
-          .set({ status, updatedAt: new Date() })
-          .where(eq(tasks.id, id))
-          .returning(),
-      )
+      // `existing.status` was read by requireTask outside this transaction,
+      // so it can be stale under concurrent requests for the same task.
+      // Locking and re-reading here keeps fromStatus accurate for whichever
+      // request commits second.
+      const updated = await db.transaction(async (tx) => {
+        const current = firstOrThrow(
+          await tx
+            .select({ status: tasks.status })
+            .from(tasks)
+            .where(eq(tasks.id, id))
+            .for('update'),
+        )
+
+        const updated = firstOrThrow(
+          await tx
+            .update(tasks)
+            .set({ status, updatedAt: new Date() })
+            .where(eq(tasks.id, id))
+            .returning(),
+        )
+
+        if (current.status !== status) {
+          await recordStatusChanged(tx, id, current.status, status, author)
+        }
+
+        return updated
+      })
 
       return c.json(taskToResponse(updated), 200)
     },
@@ -95,18 +117,40 @@ export const tasksActionsApp = new Hono()
   .post('/:id/complete', requireTask, async (c) => {
     const existing = c.get('task')
     const id = existing.id
+    const author = c.get('author')
 
-    if (existing.status === 'completed') {
+    // `existing.status` was read by requireTask outside this transaction,
+    // so the already-completed check must be re-evaluated against a locked,
+    // freshly-read row: two concurrent completions of the same task would
+    // otherwise both see the stale pre-completion status and both record a
+    // status_changed event.
+    const updatedTask = await db.transaction(async (tx) => {
+      const current = firstOrThrow(
+        await tx
+          .select({ status: tasks.status })
+          .from(tasks)
+          .where(eq(tasks.id, id))
+          .for('update'),
+      )
+
+      if (current.status === 'completed') return null
+
+      const updatedTask = firstOrThrow(
+        await tx
+          .update(tasks)
+          .set({ status: 'completed', updatedAt: new Date() })
+          .where(eq(tasks.id, id))
+          .returning(),
+      )
+
+      await recordStatusChanged(tx, id, current.status, 'completed', author)
+
+      return updatedTask
+    })
+
+    if (updatedTask == null) {
       return c.json({ error: 'Task is already completed' }, 409)
     }
-
-    const updatedTask = firstOrThrow(
-      await db
-        .update(tasks)
-        .set({ status: 'completed', updatedAt: new Date() })
-        .where(eq(tasks.id, id))
-        .returning(),
-    )
 
     let nextTask: ReturnType<typeof taskToResponse> | null = null
     let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null

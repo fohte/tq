@@ -1,9 +1,10 @@
+import { asc, eq } from 'drizzle-orm'
 import { expect } from 'vitest'
 import { z } from 'zod'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { labels } from '#db/schema'
+import { labels, taskEvents } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { jsonBody } from '#testing'
 
@@ -206,4 +207,37 @@ export async function createComment(taskId: string, content: string) {
 
 export async function createLabel(name: string) {
   return firstOrThrow(await db.insert(labels).values({ name }).returning())
+}
+
+export interface TaskEventFields {
+  type: 'status_changed' | 'github_linked' | 'github_unlinked'
+  fromStatus: 'todo' | 'in_progress' | 'completed' | null
+  toStatus: 'todo' | 'in_progress' | 'completed' | null
+  githubOwner: string | null
+  githubRepo: string | null
+  githubNumber: number | null
+  githubKind: 'issue' | 'pull_request' | null
+  authorKind: 'human' | 'llm' | 'system'
+  authorAgent: string | null
+}
+
+export async function fetchTaskEvents(
+  taskId: string,
+): Promise<TaskEventFields[]> {
+  const rows = await db
+    .select()
+    .from(taskEvents)
+    .where(eq(taskEvents.taskId, taskId))
+    .orderBy(asc(taskEvents.id))
+  return rows.map((row) => ({
+    type: row.type,
+    fromStatus: row.fromStatus,
+    toStatus: row.toStatus,
+    githubOwner: row.githubOwner,
+    githubRepo: row.githubRepo,
+    githubNumber: row.githubNumber,
+    githubKind: row.githubKind,
+    authorKind: row.authorKind,
+    authorAgent: row.authorAgent,
+  }))
 }

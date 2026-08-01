@@ -3,7 +3,9 @@ import { Hono } from 'hono'
 import { okAsync } from 'neverthrow'
 import { z } from 'zod'
 
+import { db } from '#db/connection'
 import { parseGithubIssueUrl } from '#integrations/github/issues'
+import { recordGithubUnlinked } from '#lib/task-events'
 import { githubLinkErrorResponse } from '#routes/github-link-error'
 import { githubLinkToResponse } from '#routes/tasks/shared'
 import { syncLinkFromGithub } from '#services/github-sync'
@@ -32,10 +34,11 @@ export const taskGithubLinkApp = new Hono<TaskGithubLinkEnv>()
   })
   .post('/', zValidator('json', linkSchema), async (c) => {
     const taskId = c.get('taskId')
+    const author = c.get('author')
     const { url } = c.req.valid('json')
 
     const result = await parseGithubIssueUrl(url).asyncAndThen((ref) =>
-      linkTaskToGithubUrl(taskId, ref),
+      linkTaskToGithubUrl(taskId, ref, author),
     )
 
     return result.match(
@@ -45,8 +48,26 @@ export const taskGithubLinkApp = new Hono<TaskGithubLinkEnv>()
   })
   .delete('/', async (c) => {
     const taskId = c.get('taskId')
+    const author = c.get('author')
 
-    const result = await unlinkTask(taskId)
+    const result = await db.transaction(async (tx) => {
+      const unlinkResult = await unlinkTask(tx, taskId)
+      if (unlinkResult.isOk()) {
+        const link = unlinkResult.value
+        await recordGithubUnlinked(
+          tx,
+          taskId,
+          {
+            owner: link.owner,
+            repo: link.repo,
+            number: link.number,
+            kind: link.kind,
+          },
+          author,
+        )
+      }
+      return unlinkResult
+    })
 
     return result.match(
       () => c.body(null, 204),

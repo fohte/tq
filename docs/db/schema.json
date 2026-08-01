@@ -1670,6 +1670,146 @@
           "columns": ["oauth_token_id", "calendar_id"]
         }
       ]
+    },
+    {
+      "name": "public.task_events",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false
+        },
+        {
+          "name": "task_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "from_status",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "to_status",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "github_owner",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "github_repo",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "github_number",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "github_kind",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "author_kind",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "author_agent",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "task_events_pkey",
+          "def": "CREATE UNIQUE INDEX task_events_pkey ON public.task_events USING btree (id)",
+          "table": "public.task_events",
+          "columns": ["id"]
+        },
+        {
+          "name": "idx_task_events_task_id_created_at",
+          "def": "CREATE INDEX idx_task_events_task_id_created_at ON public.task_events USING btree (task_id, created_at)",
+          "table": "public.task_events",
+          "columns": ["task_id", "created_at"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "task_events_author_agent_required_for_llm",
+          "type": "CHECK",
+          "def": "CHECK (((author_kind = 'llm'::text) = (author_agent IS NOT NULL)))",
+          "table": "public.task_events",
+          "referenced_table": "",
+          "columns": ["author_kind", "author_agent"]
+        },
+        {
+          "name": "task_events_author_kind_check",
+          "type": "CHECK",
+          "def": "CHECK ((author_kind = ANY (ARRAY['human'::text, 'llm'::text, 'system'::text])))",
+          "table": "public.task_events",
+          "referenced_table": "",
+          "columns": ["author_kind"]
+        },
+        {
+          "name": "task_events_payload_check",
+          "type": "CHECK",
+          "def": "CHECK ((((type = 'status_changed'::text) AND (from_status IS NOT NULL) AND (to_status IS NOT NULL) AND (github_owner IS NULL) AND (github_repo IS NULL) AND (github_number IS NULL) AND (github_kind IS NULL)) OR ((type = ANY (ARRAY['github_linked'::text, 'github_unlinked'::text])) AND (from_status IS NULL) AND (to_status IS NULL) AND (github_owner IS NOT NULL) AND (github_repo IS NOT NULL) AND (github_number IS NOT NULL) AND (github_kind IS NOT NULL))))",
+          "table": "public.task_events",
+          "referenced_table": "",
+          "columns": [
+            "type",
+            "from_status",
+            "to_status",
+            "github_owner",
+            "github_repo",
+            "github_number",
+            "github_kind"
+          ]
+        },
+        {
+          "name": "task_events_type_check",
+          "type": "CHECK",
+          "def": "CHECK ((type = ANY (ARRAY['status_changed'::text, 'github_linked'::text, 'github_unlinked'::text])))",
+          "table": "public.task_events",
+          "referenced_table": "",
+          "columns": ["type"]
+        },
+        {
+          "name": "task_events_task_id_tasks_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE",
+          "table": "public.task_events",
+          "referenced_table": "public.tasks",
+          "columns": ["task_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "task_events_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.task_events",
+          "referenced_table": "",
+          "columns": ["id"]
+        }
+      ]
     }
   ],
   "relations": [
@@ -1843,6 +1983,15 @@
       "parent_columns": ["id"],
       "parent_cardinality": "exactly_one",
       "def": "FOREIGN KEY (oauth_token_id) REFERENCES oauth_tokens(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.task_events",
+      "columns": ["task_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.tasks",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
     }
   ],
   "driver": {
