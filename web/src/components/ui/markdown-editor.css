@@ -105,6 +105,22 @@
   user-select: none;
 }
 
+/* Unlike the chip, a card's title/excerpt text should stay selectable, so
+   this doesn't set user-select: none. */
+.inline-reference-card {
+  display: block;
+  margin: 0.25rem 0;
+}
+
+/* The card widget renders nested inside its hosting <p> (its raw source
+   text is hidden, not removed — see .inline-reference-source above), which
+   still carries crepe's reset padding (`padding: 4px 0` in
+   @milkdown/crepe/lib/theme/common/reset.css) and would otherwise double up
+   with the card's own margin above. */
+.milkdown-wrapper .milkdown .ProseMirror p:has(> .inline-reference-card) {
+  padding: 0;
+}
+
 /* `#` mention autocomplete popup, positioned by SlashProvider via floating-ui.
    Rendered at document.body with `position: fixed` (see the `root` /
    `floatingUIOptions.strategy` passed to SlashProvider) so it isn't clipped

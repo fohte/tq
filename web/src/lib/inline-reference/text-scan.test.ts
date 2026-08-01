@@ -20,6 +20,7 @@ function describeRun(run: ReturnType<typeof collectTextBlockRuns>[number]) {
     offsets: Array.from({ length: run.text.length + 1 }, (_, i) =>
       run.posAt(i),
     ),
+    nodeType: run.nodeType,
   }
 }
 
@@ -36,6 +37,7 @@ describe('collectTextBlockRuns', () => {
     const expected = {
       text: 'hello #123 world',
       offsets: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+      nodeType: 'paragraph',
     }
     expect(actual).toEqual(expected)
   })
@@ -66,6 +68,33 @@ describe('collectTextBlockRuns', () => {
     const expected = {
       text: 'a￼b',
       offsets: [1, 2, 3, 4],
+      nodeType: 'paragraph',
+    }
+    expect(actual).toEqual(expected)
+  })
+
+  it('reports the textblock node type for a non-paragraph textblock', () => {
+    const headingSchema = new Schema({
+      nodes: {
+        doc: { content: 'block+' },
+        paragraph: { content: 'inline*', group: 'block' },
+        heading: { content: 'inline*', group: 'block' },
+        text: { group: 'inline' },
+      },
+      marks: {},
+    })
+    const doc = headingSchema.node('doc', null, [
+      headingSchema.node('heading', null, [headingSchema.text('title')]),
+    ])
+
+    const runs = collectTextBlockRuns(doc)
+
+    expect(runs).toHaveLength(1)
+    const actual = describeRun(atIndex(runs, 0))
+    const expected = {
+      text: 'title',
+      offsets: [1, 2, 3, 4, 5, 6],
+      nodeType: 'heading',
     }
     expect(actual).toEqual(expected)
   })

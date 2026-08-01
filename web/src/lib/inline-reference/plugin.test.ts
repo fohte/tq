@@ -30,6 +30,7 @@ const fakeProvider: InlineReferenceProvider<FakeData> = {
     })
   },
   Chip: () => null,
+  Card: () => null,
 }
 
 // This file only exercises `createInlineReferencePlugin`'s own decoration
@@ -49,6 +50,12 @@ function docWithText(text: string) {
   ])
 }
 
+function docWithHeadingText(text: string) {
+  return schema.node('doc', null, [
+    schema.node('heading', null, [schema.text(text)]),
+  ])
+}
+
 async function buildPlugin() {
   const wrapped = createInlineReferencePlugin(
     fakeProvider,
@@ -58,10 +65,12 @@ async function buildPlugin() {
   return wrapped.plugin()
 }
 
-async function decorationsFor(text: string, mode: 'view' | 'edit') {
+async function decorationsForDoc(
+  doc: ReturnType<typeof docWithText>,
+  mode: 'view' | 'edit',
+) {
   const plugin = await buildPlugin()
   const modePlugin = await buildModePlugin(mode)
-  const doc = docWithText(text)
   const state = EditorState.create({ doc, schema, plugins: [modePlugin] })
 
   const decorationsProp = plugin.props.decorations
@@ -71,6 +80,10 @@ async function decorationsFor(text: string, mode: 'view' | 'edit') {
   if (!(source instanceof DecorationSet))
     throw new Error('plugin always builds decorations via DecorationSet.create')
   return source.find()
+}
+
+async function decorationsFor(text: string, mode: 'view' | 'edit') {
+  return decorationsForDoc(docWithText(text), mode)
 }
 
 // Reduces a Decoration to the fields these tests assert on. Decoration
@@ -119,5 +132,47 @@ describe('createInlineReferencePlugin', () => {
     const decorations = await decorationsFor('see @1 here', 'edit')
 
     expect(decorations).toEqual([])
+  })
+
+  it('renders a card when a paragraph is exactly one reference', async () => {
+    const decorations = await decorationsFor('@1', 'view')
+
+    expect(normalize(decorations)).toEqual([
+      {
+        from: 1,
+        to: 1,
+        spec: { key: 'fake:card:@1:1', side: 1, data: { n: 1 }, raw: '@1' },
+      },
+      { from: 1, to: 3, spec: {} },
+    ])
+  })
+
+  it('renders a card when a paragraph is one reference plus surrounding whitespace, hiding the whole run', async () => {
+    const decorations = await decorationsFor('  @1  ', 'view')
+
+    expect(normalize(decorations)).toEqual([
+      { from: 1, to: 7, spec: {} },
+      {
+        from: 3,
+        to: 3,
+        spec: { key: 'fake:card:@1:3', side: 1, data: { n: 1 }, raw: '@1' },
+      },
+    ])
+  })
+
+  it('does not render a card for a non-paragraph textblock, even when its whole text is one reference', async () => {
+    const decorations = await decorationsForDoc(
+      docWithHeadingText('@1'),
+      'view',
+    )
+
+    expect(normalize(decorations)).toEqual([
+      {
+        from: 1,
+        to: 1,
+        spec: { key: 'fake:@1:1', side: 1, data: { n: 1 }, raw: '@1' },
+      },
+      { from: 1, to: 3, spec: {} },
+    ])
   })
 })

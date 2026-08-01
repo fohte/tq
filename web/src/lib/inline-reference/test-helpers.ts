@@ -14,6 +14,7 @@ export const schema = new Schema({
       group: 'block',
       toDOM: () => ['p', 0],
     },
+    heading: { content: 'inline*', group: 'block' },
     text: { group: 'inline' },
   },
   marks: {},
