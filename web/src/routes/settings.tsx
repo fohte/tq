@@ -9,6 +9,7 @@ import { GithubMarkIcon } from '#components/ui/github-mark-icon'
 import { Panel } from '#components/ui/panel'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
+import { SlackMarkIcon } from '#components/ui/slack-mark-icon'
 import {
   canConnectIntegration,
   type IntegrationSummary,
@@ -24,6 +25,7 @@ export const Route = createFileRoute('/settings')({
 const INTEGRATION_ICONS: Record<string, ReactNode> = {
   github: <GithubMarkIcon className="size-5 text-foreground" />,
   google_calendar: <Calendar className="size-5 text-foreground" />,
+  slack: <SlackMarkIcon className="size-5 text-foreground" />,
 }
 
 function Settings() {
