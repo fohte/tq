@@ -18,18 +18,20 @@ export function TaskListHeader({ tasks }: { tasks: Task[] }) {
   const progress = total > 0 ? (completed / total) * 100 : 0
 
   return (
-    <div className="space-y-2 px-3">
-      <div className="flex items-center gap-3 font-mono text-xs text-muted-foreground">
-        <span>
-          {completed}/{total} tasks
+    <div className="flex flex-col gap-[7px] px-3">
+      <div className="flex items-baseline gap-2.5 font-mono text-[11px]">
+        <span className="text-foreground">
+          {completed}
+          <span className="text-muted-foreground-faint">/</span>
+          {total}
         </span>
+        <span className="text-muted-foreground-faint">done</span>
         {totalEstimate > 0 && (
-          <>
-            <span className="text-border">|</span>
-            <span>
-              {formatMinutes(completedEstimate)}/{formatMinutes(totalEstimate)}
-            </span>
-          </>
+          <span className="ml-auto whitespace-nowrap text-muted-foreground-strong">
+            {formatMinutes(completedEstimate)}
+            <span className="text-muted-foreground-faint"> / </span>
+            {formatMinutes(totalEstimate)}
+          </span>
         )}
       </div>
 
