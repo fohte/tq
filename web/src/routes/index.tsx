@@ -240,14 +240,13 @@ function DayView() {
   return (
     <DayViewPresentation
       isLoading={isLoading}
-      categorized={categorized}
+      backlogTasks={categorized.backlog}
       calendarEvents={calendarEvents}
       dndCallbacks={dndCallbacks}
       {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
         ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
         : {})}
       queueTasks={queueTasks}
-      queueTaskIds={queueTaskIdSet}
       queueCandidates={queueCandidates}
       onReorderQueue={handleReorderQueue}
       onToggleQueueTask={handleToggleQueueTask}
