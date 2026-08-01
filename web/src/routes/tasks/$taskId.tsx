@@ -38,21 +38,19 @@ function TaskPage() {
     <>
       {/* PC layout */}
       <div className="hidden h-full md:flex">
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto px-7 py-[22px]">
           <TaskMainContent task={task} />
         </div>
-        <div className="w-60 shrink-0 overflow-y-auto border-l border-border p-4">
+        <div className="w-[236px] shrink-0 overflow-y-auto border-l border-border p-4">
           <TaskSidebar task={task} />
         </div>
       </div>
 
       {/* SP layout */}
-      <div className="flex h-full flex-col overflow-y-auto md:hidden">
-        <div className="p-4">
+      <div className="flex h-full flex-col overflow-y-auto p-4 md:hidden">
+        <TaskSidebarMobile task={task} />
+        <div className="mt-4 border-t border-border pt-4">
           <TaskMainContent task={task} />
-        </div>
-        <div className="border-t border-border p-4">
-          <TaskSidebarMobile task={task} />
         </div>
       </div>
     </>

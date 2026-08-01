@@ -1,7 +1,8 @@
 import { Link } from '@tanstack/react-router'
-import { Link2 } from 'lucide-react'
 
 import { StatusIcon } from '#components/task/status-icon'
+import { Panel } from '#components/ui/panel'
+import { SectionHeading } from '#components/ui/section-heading'
 import type { LinkedTaskSummary } from '#hooks/use-tasks'
 
 function LinkedTaskRow({ task }: { task: LinkedTaskSummary }) {
@@ -9,10 +10,12 @@ function LinkedTaskRow({ task }: { task: LinkedTaskSummary }) {
     <Link
       to="/tasks/$taskId"
       params={{ taskId: task.id }}
-      className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-secondary/50"
+      className="flex items-center gap-2 border-b border-border px-3 py-2 text-sm transition-colors last:border-b-0 hover:bg-secondary/30"
     >
       <StatusIcon status={task.status} />
-      <span className="shrink-0 text-muted-foreground">#{task.number}</span>
+      <span className="shrink-0 font-mono text-xs text-muted-foreground">
+        #{task.number}
+      </span>
       <span className="truncate">{task.title}</span>
     </Link>
   )
@@ -29,14 +32,14 @@ function LinkedTaskGroup({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-[11px] font-medium text-muted-foreground">
+      <span className="font-mono text-[10px] text-muted-foreground-faint">
         {label}
       </span>
-      <div className="flex flex-col gap-1.5">
+      <Panel>
         {tasks.map((task) => (
           <LinkedTaskRow key={task.id} task={task} />
         ))}
-      </div>
+      </Panel>
     </div>
   )
 }
@@ -51,21 +54,18 @@ export function TaskLinkedTasksSection({
   const isEmpty = outgoing.length === 0 && incoming.length === 0
 
   return (
-    <div className="flex flex-col gap-3">
-      <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        <Link2 className="size-3.5" />
-        Linked Tasks
-      </h3>
+    <div className="flex flex-col gap-2.5">
+      <SectionHeading level={3}>linked tasks</SectionHeading>
 
       {isEmpty ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="font-mono text-xs text-muted-foreground">
           No linked tasks. Mention a task with #123 in the description, a page,
           or a comment to link it.
         </p>
       ) : (
         <div className="flex flex-col gap-3">
-          <LinkedTaskGroup label="Mentions" tasks={outgoing} />
-          <LinkedTaskGroup label="Mentioned by" tasks={incoming} />
+          <LinkedTaskGroup label="mentions" tasks={outgoing} />
+          <LinkedTaskGroup label="mentioned by" tasks={incoming} />
         </div>
       )}
     </div>

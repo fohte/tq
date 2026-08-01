@@ -1,16 +1,13 @@
 import { Link } from '@tanstack/react-router'
-import {
-  ChevronDown,
-  ExternalLink,
-  FileText,
-  Loader2,
-  Plus,
-} from 'lucide-react'
+import { ChevronDown, ExternalLink, Loader2, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import { LlmAuthorLabel } from '#components/task/llm-author-label'
+import { Button } from '#components/ui/button'
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
+import { Panel } from '#components/ui/panel'
+import { SectionHeading } from '#components/ui/section-heading'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
 import type { TaskPage } from '#hooks/use-task-pages'
 import {
@@ -19,6 +16,7 @@ import {
   useTaskPages,
   useUpdateTaskPage,
 } from '#hooks/use-task-pages'
+import { formatRelativeTime } from '#lib/format'
 import { cn } from '#lib/utils'
 
 // --- Pages Section (in task detail) ---
@@ -33,47 +31,20 @@ export function TaskPagesSection({ taskId }: { taskId: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
-        Loading pages...
+      <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+        <Loader2 className="size-3.5 animate-spin" />
+        loading pages...
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          <FileText className="size-3.5" />
-          Pages
-        </h3>
-        <button
-          type="button"
-          onClick={handleAddPage}
-          disabled={createPage.isPending}
-          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-        >
-          {createPage.isPending ? (
-            <Loader2 className="size-3 animate-spin" />
-          ) : (
-            <Plus className="size-3" />
-          )}
-          Add page
-        </button>
-      </div>
-
-      {pages && pages.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          {pages.map((page) => (
-            <PageCard key={page.id} taskId={taskId} page={page} />
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          No pages yet. Add a page to keep notes and documentation.
-        </p>
-      )}
-    </div>
+    <PagesSectionHeader
+      pages={pages ?? []}
+      taskId={taskId}
+      onAddPage={handleAddPage}
+      isAddingPage={createPage.isPending}
+    />
   )
 }
 
@@ -91,26 +62,49 @@ export function TaskPagesList({
   isAddingPage?: boolean
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          <FileText className="size-3.5" />
-          Pages
-        </h3>
+    <PagesSectionHeader
+      pages={pages}
+      taskId={taskId}
+      onAddPage={onAddPage}
+      isAddingPage={isAddingPage}
+    />
+  )
+}
+
+function PagesSectionHeader({
+  taskId,
+  pages,
+  onAddPage,
+  isAddingPage,
+}: {
+  taskId: string
+  pages: TaskPage[]
+  onAddPage?: (() => void) | undefined
+  isAddingPage?: boolean | undefined
+}) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-baseline gap-2">
+        <SectionHeading level={3}>pages</SectionHeading>
+        <span className="font-mono text-[11px] text-muted-foreground-faint">
+          {pages.length}
+        </span>
         {onAddPage && (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="xs"
+            className="ml-auto"
             onClick={onAddPage}
             disabled={isAddingPage}
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             {isAddingPage === true ? (
               <Loader2 className="size-3 animate-spin" />
             ) : (
               <Plus className="size-3" />
             )}
-            Add page
-          </button>
+            add page
+          </Button>
         )}
       </div>
 
@@ -121,7 +115,7 @@ export function TaskPagesList({
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">
+        <p className="font-mono text-xs text-muted-foreground">
           No pages yet. Add a page to keep notes and documentation.
         </p>
       )}
@@ -174,36 +168,55 @@ export function PageCardPresentation({
   const isExpanded = controlledExpanded ?? internalExpanded
 
   const previewLines = getPreviewLines(page.content, 3)
+  const hasMore =
+    page.content.split('\n').filter((line) => line.trim()).length > 3
 
   return (
-    <div className="rounded-lg border border-border">
+    <Panel>
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2">
+      <div className="flex items-center gap-2 px-2.5 py-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          onClick={() => {
+            setInternalExpanded(!isExpanded)
+          }}
+          aria-label={isExpanded ? 'Collapse' : 'Expand'}
+        >
+          <ChevronDown
+            className={cn(
+              'size-3.5 transition-transform',
+              !isExpanded && '-rotate-90',
+            )}
+          />
+        </Button>
         <button
           type="button"
           onClick={() => {
             setInternalExpanded(!isExpanded)
           }}
-          className="flex flex-1 items-center gap-2 text-left"
+          className="flex flex-1 items-center gap-2 overflow-hidden text-left"
         >
-          <ChevronDown
-            className={cn(
-              'size-3.5 shrink-0 text-muted-foreground transition-transform',
-              !isExpanded && '-rotate-90',
-            )}
-          />
-          <span className="truncate text-sm font-medium">{page.title}</span>
+          <span className="truncate font-mono text-xs font-medium text-foreground">
+            {page.title}
+          </span>
           <LlmAuthorLabel author={page.author} />
         </button>
+
+        <span className="shrink-0 font-mono text-[10px] text-muted-foreground-ghost">
+          {formatRelativeTime(page.updatedAt)}
+        </span>
 
         <div className="flex shrink-0 items-center gap-1">
           <Link
             to="/tasks/$taskId/pages/$pageId"
             params={{ taskId, pageId: page.id }}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="flex size-6 items-center justify-center text-muted-foreground-faint transition-colors hover:text-foreground"
             onClick={(e) => {
               e.stopPropagation()
             }}
+            aria-label="Open page"
           >
             <ExternalLink className="size-3.5" />
           </Link>
@@ -213,38 +226,40 @@ export function PageCardPresentation({
             onDelete={() => onDelete?.()}
             disabled={isDeleting}
             open={deleteDialogOpen}
+            iconClassName="size-3.5"
           />
         </div>
       </div>
 
       {/* Preview (collapsed) */}
       {!isExpanded && previewLines != null && (
-        <div className="border-t border-border px-3 py-2">
-          <p className="line-clamp-3 text-xs text-muted-foreground">
+        <div className="flex flex-col gap-1.5 border-t border-border px-2.5 py-2">
+          <p className="line-clamp-3 whitespace-pre-line font-editor text-[11px] leading-[1.65] text-muted-foreground">
             {previewLines}
           </p>
-          {page.content.split('\n').filter((line) => line.trim()).length >
-            3 && (
-            <button
+          {hasMore && (
+            <Button
               type="button"
+              variant="link"
+              size="xs"
+              className="h-auto w-fit p-0 text-[11px]"
               onClick={() => {
                 setInternalExpanded(true)
               }}
-              className="mt-1 text-xs text-primary hover:underline"
             >
-              Show more
-            </button>
+              show more
+            </Button>
           )}
         </div>
       )}
 
       {/* Expanded editor */}
       {isExpanded && renderEditor && (
-        <div className="border-t border-border p-1">
+        <div className="border-t border-border bg-card p-3">
           {renderEditor(page.content)}
         </div>
       )}
-    </div>
+    </Panel>
   )
 }
 
