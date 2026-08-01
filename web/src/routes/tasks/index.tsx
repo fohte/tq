@@ -10,8 +10,9 @@ import {
 } from '#components/task/create-task-inline'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
+import { TaskGridRow } from '#components/task/task-grid-row'
 import { TaskListHeader } from '#components/task/task-list-header'
-import { TaskRow, TreeTaskRow } from '#components/task/task-row'
+import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { Button } from '#components/ui/button'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
 import { KeybindHint } from '#components/ui/keybind-hint'
@@ -31,18 +32,16 @@ export const Route = createFileRoute('/tasks/')({
 
 type Tab = 'today' | 'all' | 'backlog'
 
-// TaskRow/TreeTaskRow lay out title/tags/link/est on wrapping flex lines, not
-// a matching grid, so these labels are a caption for the list rather than
-// literal column headers.
 function TaskListColumnHeader() {
   return (
-    <div className="hidden items-center gap-2 border-b border-border bg-card px-3 py-[5px] font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint md:flex">
-      <span className="w-[52px] shrink-0" />
-      <span className="flex-1">TITLE</span>
-      <span className="w-[132px] shrink-0">TAGS</span>
-      <span className="w-[104px] shrink-0">LINK</span>
-      <span className="w-[72px] shrink-0 text-right">EST</span>
-      <span className="w-[56px] shrink-0 text-right">DUE</span>
+    <div className="hidden grid-cols-[26px_26px_1fr_132px_104px_72px_56px] items-center gap-2 border-b border-border bg-card px-3 py-[5px] font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint md:grid">
+      <span />
+      <span />
+      <span>TITLE</span>
+      <span>TAGS</span>
+      <span>LINK</span>
+      <span className="text-right">EST</span>
+      <span className="text-right">DUE</span>
     </div>
   )
 }
@@ -181,13 +180,13 @@ function TaskList() {
         ) : showTree ? (
           <div className="py-1" data-testid="task-tree">
             {filteredTreeData.map((node) => (
-              <TreeTaskRow key={node.id} node={node} />
+              <TreeTaskGridRow key={node.id} node={node} />
             ))}
           </div>
         ) : (
           <div className="py-1">
             {displayTasks.map((task) => (
-              <TaskRow key={task.id} task={task} />
+              <TaskGridRow key={task.id} task={task} />
             ))}
           </div>
         )}
