@@ -17,7 +17,7 @@ import {
 import { formatRelativeTime } from '#lib/format'
 import { cn } from '#lib/utils'
 
-type ActivityAuthor = { kind: 'human' | 'llm' | 'system'; agent: string | null }
+type ActivityAuthor = Comment['author']
 
 // tq is a single-user tool, so authors carry a role (human/llm/system) rather
 // than a name. Missing data (e.g. comments created before authors were

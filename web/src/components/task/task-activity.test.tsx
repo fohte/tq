@@ -252,6 +252,15 @@ describe('TaskActivity', () => {
     expect(screen.getByText('linked fohte/tq#42')).toBeInTheDocument()
   })
 
+  it('renders a github_unlinked event', () => {
+    setupMocks({
+      events: [makeGithubLinkedEvent({ type: 'github_unlinked' })],
+    })
+    renderActivity()
+
+    expect(screen.getByText('unlinked fohte/tq#42')).toBeInTheDocument()
+  })
+
   it('merges comments and events into a single chronological timeline', () => {
     const comments = [
       makeComment({
@@ -267,8 +276,7 @@ describe('TaskActivity', () => {
     setupMocks({ comments, events })
     renderActivity()
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- textContent can be null at runtime
-    const allText = document.body.textContent ?? ''
+    const allText = document.body.textContent
     const createdIdx = allText.indexOf('created this task')
     const commentIdx = allText.indexOf('Middle comment')
     const statusIdx = allText.indexOf('changed status todo → in_progress')
