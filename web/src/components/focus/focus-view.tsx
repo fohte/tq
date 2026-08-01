@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 import { TaskStatusPicker } from '#components/task/task-status-picker'
 import { Button } from '#components/ui/button'
@@ -19,6 +20,14 @@ export interface FocusViewPresentationProps {
   focusTask: Task | null
   nextTask: Task | null
   subtasks: Task[]
+}
+
+function FocusLabel({ children }: { children: ReactNode }) {
+  return (
+    <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground-faint">
+      {children}
+    </span>
+  )
 }
 
 function FocusHeader() {
@@ -84,10 +93,10 @@ function FocusCard({ task }: { task: Task }) {
 
   return (
     <div className="border border-border bg-card p-[18px] md:p-6">
-      <div className="flex items-center gap-2 font-mono text-[10px] tracking-[0.08em] text-muted-foreground-faint">
-        <span className="text-primary">▍</span>
-        IN PROGRESS
-        <span className="ml-auto text-muted-foreground">
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-[10px] text-primary">▍</span>
+        <FocusLabel>IN PROGRESS</FocusLabel>
+        <span className="ml-auto font-mono text-[10px] tracking-[0.08em] text-muted-foreground">
           #{task.number} · {task.context}
         </span>
       </div>
@@ -119,9 +128,9 @@ function FocusSubtasks({ subtasks }: { subtasks: Task[] }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 font-mono text-[10px] tracking-[0.08em] text-muted-foreground-faint">
-        SUBTASKS
-        <span className="text-muted-foreground">
+      <div className="flex items-center gap-2">
+        <FocusLabel>SUBTASKS</FocusLabel>
+        <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground">
           {completed}/{subtasks.length}
         </span>
       </div>
@@ -165,9 +174,7 @@ function FocusNotes({ taskId }: { taskId: string }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground-faint">
-        NOTES
-      </span>
+      <FocusLabel>NOTES</FocusLabel>
       <Textarea
         value={notes}
         onChange={(e) => {
@@ -184,9 +191,7 @@ function FocusNotes({ taskId }: { taskId: string }) {
 function FocusUpNext({ task }: { task: Task }) {
   return (
     <Panel className="flex items-center gap-3 p-3.5">
-      <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground-faint">
-        UP NEXT
-      </span>
+      <FocusLabel>UP NEXT</FocusLabel>
       <span className="hidden font-mono text-[11px] text-muted-foreground-faint md:inline">
         #{task.number}
       </span>
