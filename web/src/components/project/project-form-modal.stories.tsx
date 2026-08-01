@@ -47,6 +47,8 @@ export const Edit: Story = {
       sortOrder: 0,
       createdAt: '2024-10-01T00:00:00Z',
       updatedAt: '2024-10-01T00:00:00Z',
+      completionRate: 0,
+      taskCount: { total: 0, completed: 0 },
     },
   },
 }

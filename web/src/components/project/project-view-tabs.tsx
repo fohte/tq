@@ -1,4 +1,4 @@
-import { SegmentedControl } from '#components/ui/segmented-control'
+import { TabStrip } from '#components/ui/tab-strip'
 
 export type ProjectView = 'list' | 'gantt'
 
@@ -15,13 +15,6 @@ export function ProjectViewTabs({
   onViewChange: (view: ProjectView) => void
 }) {
   return (
-    <SegmentedControl
-      value={view}
-      options={VIEW_OPTIONS}
-      onChange={onViewChange}
-      containerClassName="rounded-md bg-secondary p-0.5"
-      activeClassName="bg-background text-foreground shadow-sm"
-      inactiveClassName="text-muted-foreground hover:text-foreground"
-    />
+    <TabStrip value={view} options={VIEW_OPTIONS} onChange={onViewChange} />
   )
 }

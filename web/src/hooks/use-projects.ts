@@ -118,6 +118,8 @@ export function useCreateProject() {
         sortOrder: 0,
         createdAt: now,
         updatedAt: now,
+        completionRate: 0,
+        taskCount: { total: 0, completed: 0 },
       }
 
       queryClient.setQueriesData<Project[]>(

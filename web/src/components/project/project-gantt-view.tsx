@@ -3,7 +3,8 @@ import { Gantt } from '@svar-ui/react-gantt'
 import { useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { SegmentedControl } from '#components/ui/segmented-control'
+import { Button } from '#components/ui/button'
+import { TabStrip } from '#components/ui/tab-strip'
 import type { ProjectTask } from '#hooks/use-projects'
 import { useUpdateTask } from '#hooks/use-tasks'
 import {
@@ -94,20 +95,15 @@ export function ProjectGanttView({ tasks }: { tasks: ProjectTask[] }) {
   return (
     <div className="tq-gantt flex h-full flex-col">
       <div className="flex items-center justify-end gap-2 border-b border-border px-4 py-2">
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="xs"
+          className="font-mono text-[11px]"
           onClick={scrollToToday}
-          className="rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
         >
           Today
-        </button>
-        <SegmentedControl
-          value={scale}
-          options={SCALE_OPTIONS}
-          onChange={setScale}
-          activeClassName="bg-primary text-primary-foreground"
-          inactiveClassName="text-muted-foreground hover:bg-secondary hover:text-foreground"
-        />
+        </Button>
+        <TabStrip value={scale} options={SCALE_OPTIONS} onChange={setScale} />
       </div>
 
       <div className="min-h-0 flex-1">
