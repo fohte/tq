@@ -212,12 +212,17 @@ function Providers({ children }: { children: ReactNode }) {
     path: '/',
     component: () => null,
   })
+  const tasksRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/tasks',
+    component: () => null,
+  })
   const taskRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/tasks/$taskId',
     component: () => null,
   })
-  rootRoute.addChildren([indexRoute, taskRoute])
+  rootRoute.addChildren([indexRoute, tasksRoute, taskRoute])
 
   const router = createRouter({
     routeTree: rootRoute,
@@ -266,7 +271,7 @@ const queueCandidates = getQueueCandidates(
 export const Default: Story = {
   args: {
     isLoading: false,
-    categorized: sampleCategorized,
+    backlogTasks: sampleCategorized.backlog,
     calendarEvents: sampleEvents,
     dndCallbacks: {
       onEventDrop: fn(),
@@ -274,7 +279,6 @@ export const Default: Story = {
       onExternalDrop: fn(),
     },
     queueTasks: queuedTasks,
-    queueTaskIds: queuedTaskIds,
     queueCandidates,
     onReorderQueue: fn(),
     onToggleQueueTask: fn(),
@@ -287,10 +291,9 @@ export const Default: Story = {
 export const Loading: Story = {
   args: {
     isLoading: true,
-    categorized: { all: [], today: [], backlog: [], nonBacklog: [] },
+    backlogTasks: [],
     calendarEvents: [],
     queueTasks: [],
-    queueTaskIds: new Set(),
     queueCandidates: [],
     onReorderQueue: fn(),
     onToggleQueueTask: fn(),
@@ -303,10 +306,9 @@ export const Loading: Story = {
 export const Empty: Story = {
   args: {
     isLoading: false,
-    categorized: { all: [], today: [], backlog: [], nonBacklog: [] },
+    backlogTasks: [],
     calendarEvents: [],
     queueTasks: [],
-    queueTaskIds: new Set(),
     queueCandidates: [],
     onReorderQueue: fn(),
     onToggleQueueTask: fn(),

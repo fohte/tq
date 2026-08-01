@@ -1,16 +1,11 @@
+import { Link } from '@tanstack/react-router'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 
 import { Chip } from '#components/ui/chip'
 import type { Task } from '#hooks/use-tasks'
 
-export function BacklogPreview({
-  tasks,
-  onViewAll,
-}: {
-  tasks: Task[]
-  onViewAll: () => void
-}) {
+export function BacklogPreview({ tasks }: { tasks: Task[] }) {
   const [isOpen, setIsOpen] = useState(false)
   const previewTasks = tasks.slice(0, 3)
 
@@ -45,13 +40,12 @@ export function BacklogPreview({
             </div>
           ))}
           {tasks.length > 3 && (
-            <button
-              type="button"
-              onClick={onViewAll}
+            <Link
+              to="/tasks"
               className="font-mono text-xs text-primary hover:underline"
             >
               view all →
-            </button>
+            </Link>
           )}
         </div>
       )}

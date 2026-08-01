@@ -1,5 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { fn } from 'storybook/test'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
+import type { ReactNode } from 'react'
 
 import { BacklogPreview } from '#components/task/backlog-preview'
 import type { Task } from '#hooks/use-tasks'
@@ -27,6 +34,30 @@ const makeBacklogTasks = (count: number): Task[] =>
     updatedAt: '2026-03-20T00:00:00.000Z',
   }))
 
+function Providers({ children }: { children: ReactNode }) {
+  const rootRoute = createRootRoute({
+    component: () => <>{children}</>,
+  })
+  const indexRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/',
+    component: () => null,
+  })
+  const tasksRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/tasks',
+    component: () => null,
+  })
+  rootRoute.addChildren([indexRoute, tasksRoute])
+
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  })
+
+  return <RouterProvider router={router} />
+}
+
 const meta = {
   title: 'Task/BacklogPreview',
   component: BacklogPreview,
@@ -36,13 +67,12 @@ const meta = {
   decorators: [
     (Story) => (
       <div className="w-80">
-        <Story />
+        <Providers>
+          <Story />
+        </Providers>
       </div>
     ),
   ],
-  args: {
-    onViewAll: fn(),
-  },
 } satisfies Meta<typeof BacklogPreview>
 
 export default meta
