@@ -16,6 +16,8 @@ export interface IntegrationCardProps {
   authUrl?: string
   onDisconnectAccount: (accountId: string) => void
   disconnectingAccountId?: string | null
+  /** Provider-specific content rendered below an account row (e.g. Google Calendar's calendar picker). */
+  renderAccountExtra?: (account: IntegrationAccountView) => ReactNode
 }
 
 export function IntegrationCard({
@@ -27,6 +29,7 @@ export function IntegrationCard({
   authUrl,
   onDisconnectAccount,
   disconnectingAccountId,
+  renderAccountExtra,
 }: IntegrationCardProps) {
   return (
     <div>
@@ -70,22 +73,25 @@ export function IntegrationCard({
               key={account.id}
               // Left padding lines the label up with the header's name text:
               // header p-4 (1rem) + icon size-5 (1.25rem) + gap-3.5 (0.875rem).
-              className="flex items-center justify-between gap-4 py-2 pr-4 pl-[calc(1rem+1.25rem+0.875rem)]"
+              className="pl-[calc(1rem+1.25rem+0.875rem)]"
             >
-              <span className="min-w-0 truncate text-xs text-muted-foreground">
-                {account.label ?? '連携中'}
-              </span>
-              <Button
-                variant="destructive"
-                size="xs"
-                className="shrink-0"
-                onClick={() => {
-                  onDisconnectAccount(account.id)
-                }}
-                disabled={disconnectingAccountId === account.id}
-              >
-                連携を解除
-              </Button>
+              <div className="flex items-center justify-between gap-4 py-2 pr-4">
+                <span className="min-w-0 truncate text-xs text-muted-foreground">
+                  {account.label ?? '連携中'}
+                </span>
+                <Button
+                  variant="destructive"
+                  size="xs"
+                  className="shrink-0"
+                  onClick={() => {
+                    onDisconnectAccount(account.id)
+                  }}
+                  disabled={disconnectingAccountId === account.id}
+                >
+                  連携を解除
+                </Button>
+              </div>
+              {renderAccountExtra?.(account)}
             </li>
           ))}
         </ul>

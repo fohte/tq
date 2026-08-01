@@ -1,9 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Calendar } from 'lucide-react'
 
+import { GcalCalendarPicker } from '#components/settings/gcal-calendar-picker'
 import { IntegrationCard } from '#components/settings/integration-card'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
 import { Panel } from '#components/ui/panel'
+import type { GcalCalendar } from '#hooks/use-gcal-calendars'
 
 const meta = {
   title: 'Settings/IntegrationCard',
@@ -101,4 +104,38 @@ export const Disconnecting: Story = {
     ...MultiAccountTwoConnected.args,
     disconnectingAccountId: 'token-1',
   },
+}
+
+const gcalQueryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+})
+gcalQueryClient.setQueryData(['gcal-calendars', 'token-1'], [
+  {
+    id: 'fohte@example.com',
+    displayName: 'fohte@example.com',
+    color: '#D50000',
+    primary: true,
+    subscribed: true,
+  },
+  {
+    id: 'work-calendar-id',
+    displayName: 'Work',
+    color: '#039BE5',
+    primary: false,
+    subscribed: false,
+  },
+] satisfies GcalCalendar[])
+
+export const WithCalendarPicker: Story = {
+  args: {
+    ...MultiAccountOneConnected.args,
+    renderAccountExtra: (account) => <GcalCalendarPicker account={account} />,
+  },
+  decorators: [
+    (Story) => (
+      <QueryClientProvider client={gcalQueryClient}>
+        <Story />
+      </QueryClientProvider>
+    ),
+  ],
 }
