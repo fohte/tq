@@ -7,13 +7,19 @@ describe('formatMinutes', () => {
     expect(formatMinutes(30)).toBe('30m')
   })
 
-  it('formats exact hours', () => {
+  it('formats a single exact hour', () => {
     expect(formatMinutes(60)).toBe('1h')
+  })
+
+  it('formats multiple exact hours', () => {
     expect(formatMinutes(120)).toBe('2h')
   })
 
-  it('formats hours and minutes', () => {
+  it('formats a single hour with leftover minutes', () => {
     expect(formatMinutes(90)).toBe('1h30m')
+  })
+
+  it('formats multiple hours with leftover minutes', () => {
     expect(formatMinutes(135)).toBe('2h15m')
   })
 })
