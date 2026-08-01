@@ -27,6 +27,9 @@ describe('isTaskOverdue', () => {
     )
   })
 
+  // status is typed as string, not a status union, so this pins that
+  // "not completed" — not just status === 'todo' — is what makes a task
+  // overdue-eligible.
   it('returns true for an in-progress task past its due date', () => {
     expect(
       isTaskOverdue({ status: 'in_progress', dueDate: '2026-03-19' }, now),

@@ -14,6 +14,7 @@ export function isTaskOverdue(
   return task.dueDate < formatLocalDate(now)
 }
 
+/** Format a due date as "Mon D", or "Mon D, YYYY" when it falls outside the current year. */
 export function formatDueDate(dueDate: string, now: Date = new Date()): string {
   const date = new Date(`${dueDate}T00:00:00`)
   return date.toLocaleDateString('en-US', {
