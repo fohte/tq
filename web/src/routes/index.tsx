@@ -93,6 +93,8 @@ function DayView() {
     if (!timeBlocksData) return []
     return timeBlocksData.map((block) => {
       const task = taskMap.get(block.taskId)
+      const parentTask =
+        task?.parentId != null ? taskMap.get(task.parentId) : undefined
       const durationMs =
         new Date(block.endTime).getTime() - new Date(block.startTime).getTime()
       const durationMinutes = Math.round(durationMs / 60000)
@@ -110,6 +112,9 @@ function DayView() {
               ? 'auto'
               : 'manual',
         duration: durationStr,
+        ...(parentTask != null
+          ? { parentRef: `#${String(parentTask.number)} ${parentTask.title}` }
+          : {}),
         redacted: !matchesContextFilter(
           task?.context ?? 'personal',
           contextMode,
