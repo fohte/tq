@@ -1,6 +1,11 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
 
 import { ContextFilter } from '#components/context-filter'
+import {
+  isProjectStatus,
+  type ProjectStatus,
+  ProjectStatusMark,
+} from '#components/project/project-status-mark'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useProjects } from '#hooks/use-projects'
 import { useTagCounts } from '#hooks/use-tag-counts'
@@ -132,7 +137,7 @@ function TagsSection() {
 }
 
 function ProjectsSection() {
-  const { data: projects } = useProjects({ status: 'active' })
+  const { data: projects } = useProjects()
 
   return (
     <div className="flex shrink-0 flex-col">
@@ -145,17 +150,25 @@ function ProjectsSection() {
         </span>
       </div>
       <div className="flex max-h-[132px] flex-col overflow-y-auto">
-        {projects?.map((project) => (
-          <Link
-            key={project.id}
-            to="/projects/$projectId"
-            params={{ projectId: project.id }}
-            className="flex items-center gap-2 px-3.5 py-1 font-mono text-[11px] text-muted-foreground hover:bg-card hover:text-foreground"
-          >
-            <span aria-hidden className="size-[7px] shrink-0 bg-foreground" />
-            <span className="flex-1 truncate text-left">{project.title}</span>
-          </Link>
-        ))}
+        {projects?.map((project) => {
+          const status: ProjectStatus = isProjectStatus(project.status)
+            ? project.status
+            : 'active'
+          return (
+            <Link
+              key={project.id}
+              to="/projects/$projectId"
+              params={{ projectId: project.id }}
+              className="flex items-center gap-2 px-3.5 py-1 font-mono text-[11px] text-muted-foreground hover:bg-card hover:text-foreground"
+            >
+              <ProjectStatusMark status={status} />
+              <span className="flex-1 truncate text-left">{project.title}</span>
+              <span className="shrink-0 font-mono text-[10px] text-muted-foreground-faint">
+                {project.taskCount.completed}/{project.taskCount.total}
+              </span>
+            </Link>
+          )
+        })}
       </div>
     </div>
   )
