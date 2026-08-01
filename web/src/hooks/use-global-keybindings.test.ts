@@ -39,6 +39,16 @@ describe('useGlobalKeybindings', () => {
     document.documentElement.removeAttribute('data-base-ui-scroll-locked')
   })
 
+  // A prior test's `n` press may have dispatched the new-task shortcut without
+  // any listener mounted to consume it (see use-new-task-shortcut.ts's pending
+  // flag); drain it so later tests don't see a stale trigger on mount.
+  afterEach(() => {
+    const { unmount } = renderHook(() => {
+      useNewTaskShortcutListener(() => {})
+    })
+    unmount()
+  })
+
   it('toggles search open on Cmd+K', () => {
     const { onSearchOpenChange } = setup(false)
 
@@ -53,6 +63,14 @@ describe('useGlobalKeybindings', () => {
     fireKey('k', { metaKey: true })
 
     expect(onSearchOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('toggles search open on Ctrl+K', () => {
+    const { onSearchOpenChange } = setup(false)
+
+    fireKey('k', { ctrlKey: true })
+
+    expect(onSearchOpenChange).toHaveBeenCalledWith(true)
   })
 
   it('navigates to the matching route on a g-prefixed chord', () => {
@@ -93,7 +111,15 @@ describe('useGlobalKeybindings', () => {
     })
   })
 
-  it('navigates to /tasks and dispatches the new-task event on n', async () => {
+  it('navigates to /tasks on n', () => {
+    setup()
+
+    fireKey('n')
+
+    expect(navigateMock).toHaveBeenCalledWith({ to: '/tasks' })
+  })
+
+  it('dispatches the new-task shortcut once navigation resolves on n', async () => {
     const onTrigger = vi.fn()
     renderHook(() => {
       useNewTaskShortcutListener(onTrigger)
@@ -103,7 +129,6 @@ describe('useGlobalKeybindings', () => {
     fireKey('n')
     await Promise.resolve()
 
-    expect(navigateMock).toHaveBeenCalledWith({ to: '/tasks' })
     expect(onTrigger).toHaveBeenCalledTimes(1)
   })
 
@@ -125,6 +150,7 @@ describe('useGlobalKeybindings', () => {
     fireKey('n')
 
     expect(navigateMock).not.toHaveBeenCalled()
+    document.documentElement.removeAttribute('data-base-ui-scroll-locked')
   })
 
   it('ignores single-key shortcuts while the search modal is open', () => {

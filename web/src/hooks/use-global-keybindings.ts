@@ -4,7 +4,6 @@ import { useEffect } from 'react'
 import { dispatchNewTaskShortcut } from '#hooks/use-new-task-shortcut'
 import { type NavKeybinding, navKeybindings } from '#lib/keybindings'
 
-// How long a leading `g` waits for its second key before the chord is dropped.
 const CHORD_TIMEOUT_MS = 1000
 
 const navByChord: Map<string, NavKeybinding> = new Map(

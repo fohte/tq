@@ -55,13 +55,10 @@ export const navKeybindings = {
   },
 } as const satisfies Record<string, NavKeybinding>
 
-// Display order for the settings keybindings list; mirrors the sidebar's nav order.
+// Display order for the settings keybindings list; mirrors the sidebar's nav order
+// (navKeybindings' key insertion order matches it, so Object.values needs no sort).
 export const allKeybindings: Keybinding[] = [
   searchKeybinding,
   newTaskKeybinding,
-  navKeybindings.goToToday,
-  navKeybindings.goToCalendar,
-  navKeybindings.goToTasks,
-  navKeybindings.goToProjects,
-  navKeybindings.goToSettings,
+  ...Object.values(navKeybindings),
 ]
