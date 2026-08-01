@@ -58,6 +58,7 @@ export function EventBlock(arg: EventContentArg) {
         title={event.title}
         timeDetails={timeDetails}
         isShort={isShort}
+        calendarColor={props.calendarColor}
       />
     )
   }
@@ -285,13 +286,26 @@ function GcalBlock({
   title,
   timeDetails,
   isShort,
+  calendarColor,
 }: {
   title: string
   timeDetails: string
   isShort: boolean
+  calendarColor?: string | null | undefined
 }) {
   return (
-    <div className="h-full overflow-hidden rounded-md bg-[#2E2E2E] px-2.5 py-1">
+    <div
+      className={cn(
+        'relative h-full overflow-hidden rounded-md bg-[#2E2E2E] px-2.5 py-1',
+        calendarColor != null && 'pl-[13px]',
+      )}
+    >
+      {calendarColor != null && (
+        <div
+          className="absolute inset-y-0 left-0 w-[3px]"
+          style={{ backgroundColor: calendarColor }}
+        />
+      )}
       {isShort ? (
         <div className="flex items-center gap-1.5">
           <span className="truncate text-xs font-normal text-white">

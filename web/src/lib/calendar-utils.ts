@@ -9,6 +9,7 @@ export interface CalendarEventProps {
   icon?: string
   taskId?: string
   redacted?: boolean
+  calendarColor?: string | null
 }
 
 /**

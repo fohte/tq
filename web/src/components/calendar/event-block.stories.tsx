@@ -13,6 +13,7 @@ function EventBlockPreview({
   parentRef,
   label,
   color,
+  calendarColor,
   allDay = false,
 }: {
   type?: EventType
@@ -22,13 +23,14 @@ function EventBlockPreview({
   parentRef?: string
   label?: string
   color?: { bg: string; accent: string }
+  calendarColor?: string | null
   allDay?: boolean
 }) {
   const arg = {
     event: {
       title,
       allDay,
-      extendedProps: { type, duration, parentRef, label, color },
+      extendedProps: { type, duration, parentRef, label, color, calendarColor },
     },
     timeText,
     isStart: true,
@@ -110,6 +112,24 @@ export const GoogleCalendarAllDay: Story = {
     title: 'Company holiday',
     timeText: '',
     allDay: true,
+  },
+}
+
+export const GoogleCalendarWithColor: Story = {
+  args: {
+    type: 'gcal',
+    title: 'Product sync',
+    timeText: '18:00 - 18:45',
+    calendarColor: '#8E24AA',
+  },
+}
+
+export const GoogleCalendarSecondCalendar: Story = {
+  args: {
+    type: 'gcal',
+    title: 'Dentist appointment',
+    timeText: '16:30 - 17:00',
+    calendarColor: '#F6BF26',
   },
 }
 
