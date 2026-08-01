@@ -21,6 +21,7 @@ import {
 } from '#components/calendar/calendar-view'
 import { BacklogPreview } from '#components/task/backlog-preview'
 import { CreateTaskInline } from '#components/task/create-task-inline'
+import { QueueCandidatesSection } from '#components/task/queue-candidates-section'
 import { TaskListHeader } from '#components/task/task-list-header'
 import { TaskRow } from '#components/task/task-row'
 import { TodayQueueRow } from '#components/task/today-queue-row'
@@ -30,6 +31,7 @@ import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { TabStrip } from '#components/ui/tab-strip'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
+import type { QueueCandidate } from '#lib/queue-candidates'
 import { cn } from '#lib/utils'
 
 type TaskTab = 'today' | 'all'
@@ -54,6 +56,7 @@ export interface DayViewPresentationProps {
   gcalAuthUrl?: string
   queueTasks: Task[]
   queueTaskIds: Set<string>
+  queueCandidates: QueueCandidate<Task>[]
   onReorderQueue: (taskIds: string[]) => void
   onToggleQueueTask: (taskId: string) => void
   onRemoveFromQueue: (taskId: string) => void
@@ -71,6 +74,7 @@ export function DayViewPresentation({
   gcalAuthUrl,
   queueTasks,
   queueTaskIds,
+  queueCandidates,
   onReorderQueue,
   onToggleQueueTask,
   onRemoveFromQueue,
@@ -185,34 +189,41 @@ export function DayViewPresentation({
                 Loading...
               </div>
             ) : activeTab === 'today' ? (
-              queueTasks.length === 0 ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  No tasks in today's queue
-                </div>
-              ) : (
-                <DndContext
-                  sensors={dndSensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleQueueDragEnd}
-                >
-                  <SortableContext
-                    items={queueTasks.map((t) => t.id)}
-                    strategy={verticalListSortingStrategy}
+              <>
+                {queueTasks.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No tasks in today's queue
+                  </div>
+                ) : (
+                  <DndContext
+                    sensors={dndSensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleQueueDragEnd}
                   >
-                    <div className="py-1">
-                      {queueTasks.map((task) => (
-                        <TodayQueueRow
-                          key={task.id}
-                          task={task}
-                          onRemove={() => {
-                            onRemoveFromQueue(task.id)
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-              )
+                    <SortableContext
+                      items={queueTasks.map((t) => t.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="py-1">
+                        {queueTasks.map((task) => (
+                          <TodayQueueRow
+                            key={task.id}
+                            task={task}
+                            onRemove={() => {
+                              onRemoveFromQueue(task.id)
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                )}
+
+                <QueueCandidatesSection
+                  candidates={queueCandidates}
+                  onAdd={onToggleQueueTask}
+                />
+              </>
             ) : categorized.all.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
                 No tasks yet

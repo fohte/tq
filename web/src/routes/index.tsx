@@ -28,6 +28,7 @@ import {
 import { matchesContextFilter } from '#lib/context-filter'
 import { formatLocalDate } from '#lib/date-range'
 import { formatMinutes } from '#lib/format'
+import { getQueueCandidates } from '#lib/queue-candidates'
 import { scheduleColorToEventColor } from '#lib/schedule-color'
 
 export const Route = createFileRoute('/')({
@@ -83,6 +84,10 @@ function DayView() {
     [queueTaskIds, taskMap],
   )
   const queueTaskIdSet = useMemo(() => new Set(queueTaskIds), [queueTaskIds])
+  const queueCandidates = useMemo(
+    () => getQueueCandidates(categorized.all, queueTaskIdSet),
+    [categorized.all, queueTaskIdSet],
+  )
 
   const taskEvents: TimeBlockEvent[] = useMemo(() => {
     if (!timeBlocksData) return []
@@ -238,6 +243,7 @@ function DayView() {
         : {})}
       queueTasks={queueTasks}
       queueTaskIds={queueTaskIdSet}
+      queueCandidates={queueCandidates}
       onReorderQueue={handleReorderQueue}
       onToggleQueueTask={handleToggleQueueTask}
       onRemoveFromQueue={handleToggleQueueTask}

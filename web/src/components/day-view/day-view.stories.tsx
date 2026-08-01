@@ -13,9 +13,13 @@ import { fn } from 'storybook/test'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
+import { getQueueCandidates } from '#lib/queue-candidates'
 
 const today = new Date()
 const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+const overdueDate = new Date(today)
+overdueDate.setDate(overdueDate.getDate() - 3)
+const overdueDateStr = `${String(overdueDate.getFullYear())}-${String(overdueDate.getMonth() + 1).padStart(2, '0')}-${String(overdueDate.getDate()).padStart(2, '0')}`
 
 const baseTask: Task = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -68,6 +72,7 @@ const sampleTasks: Task[] = [
     title: 'sccache ログ確認',
     estimatedMinutes: 15,
     context: 'personal',
+    dueDate: overdueDateStr,
   },
   {
     ...baseTask,
@@ -252,6 +257,11 @@ type Story = StoryObj<typeof meta>
 
 const queuedTasks = sampleTasks.slice(0, 4)
 const queuedTaskIds = new Set(queuedTasks.map((t) => t.id))
+const queueCandidates = getQueueCandidates(
+  sampleCategorized.all,
+  queuedTaskIds,
+  today,
+)
 
 export const Default: Story = {
   args: {
@@ -265,6 +275,7 @@ export const Default: Story = {
     },
     queueTasks: queuedTasks,
     queueTaskIds: queuedTaskIds,
+    queueCandidates,
     onReorderQueue: fn(),
     onToggleQueueTask: fn(),
     onRemoveFromQueue: fn(),
@@ -280,6 +291,7 @@ export const Loading: Story = {
     calendarEvents: [],
     queueTasks: [],
     queueTaskIds: new Set(),
+    queueCandidates: [],
     onReorderQueue: fn(),
     onToggleQueueTask: fn(),
     onRemoveFromQueue: fn(),
@@ -295,6 +307,7 @@ export const Empty: Story = {
     calendarEvents: [],
     queueTasks: [],
     queueTaskIds: new Set(),
+    queueCandidates: [],
     onReorderQueue: fn(),
     onToggleQueueTask: fn(),
     onRemoveFromQueue: fn(),
