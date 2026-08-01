@@ -23,6 +23,7 @@
 | [public.github_sync_rules](public.github_sync_rules.md)                             | 11      |         | BASE TABLE |
 | [public.calendar_subscriptions](public.calendar_subscriptions.md)                   | 7       |         | BASE TABLE |
 | [public.task_events](public.task_events.md)                                         | 12      |         | BASE TABLE |
+| [public.scheduling_settings](public.scheduling_settings.md)                         | 8       |         | BASE TABLE |
 
 ## Relations
 
@@ -236,6 +237,16 @@ erDiagram
   text author_kind
   text author_agent
   timestamp_with_time_zone created_at
+}
+"public.scheduling_settings" {
+  text id
+  text working_hours_start
+  text working_hours_end
+  integer minimum_block_minutes
+  boolean auto_reschedule_on_gcal_change
+  text default_context
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
 }
 ```
 

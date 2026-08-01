@@ -1810,6 +1810,118 @@
           "columns": ["id"]
         }
       ]
+    },
+    {
+      "name": "public.scheduling_settings",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false,
+          "default": "'singleton'::text"
+        },
+        {
+          "name": "working_hours_start",
+          "type": "text",
+          "nullable": false,
+          "default": "'09:00'::text"
+        },
+        {
+          "name": "working_hours_end",
+          "type": "text",
+          "nullable": false,
+          "default": "'19:00'::text"
+        },
+        {
+          "name": "minimum_block_minutes",
+          "type": "integer",
+          "nullable": false,
+          "default": "30"
+        },
+        {
+          "name": "auto_reschedule_on_gcal_change",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true"
+        },
+        {
+          "name": "default_context",
+          "type": "text",
+          "nullable": false,
+          "default": "'personal'::text"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "scheduling_settings_pkey",
+          "def": "CREATE UNIQUE INDEX scheduling_settings_pkey ON public.scheduling_settings USING btree (id)",
+          "table": "public.scheduling_settings",
+          "columns": ["id"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "scheduling_settings_default_context_check",
+          "type": "CHECK",
+          "def": "CHECK ((default_context = ANY (ARRAY['work'::text, 'personal'::text])))",
+          "table": "public.scheduling_settings",
+          "referenced_table": "",
+          "columns": ["default_context"]
+        },
+        {
+          "name": "scheduling_settings_minimum_block_minutes_positive_check",
+          "type": "CHECK",
+          "def": "CHECK ((minimum_block_minutes \u003e 0))",
+          "table": "public.scheduling_settings",
+          "referenced_table": "",
+          "columns": ["minimum_block_minutes"]
+        },
+        {
+          "name": "scheduling_settings_singleton_check",
+          "type": "CHECK",
+          "def": "CHECK ((id = 'singleton'::text))",
+          "table": "public.scheduling_settings",
+          "referenced_table": "",
+          "columns": ["id"]
+        },
+        {
+          "name": "scheduling_settings_working_hours_format_check",
+          "type": "CHECK",
+          "def": "CHECK (((working_hours_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text) AND (working_hours_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text)))",
+          "table": "public.scheduling_settings",
+          "referenced_table": "",
+          "columns": ["working_hours_start", "working_hours_end"]
+        },
+        {
+          "name": "scheduling_settings_working_hours_order_check",
+          "type": "CHECK",
+          "def": "CHECK ((working_hours_start \u003c working_hours_end))",
+          "table": "public.scheduling_settings",
+          "referenced_table": "",
+          "columns": ["working_hours_start", "working_hours_end"]
+        },
+        {
+          "name": "scheduling_settings_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.scheduling_settings",
+          "referenced_table": "",
+          "columns": ["id"]
+        }
+      ]
     }
   ],
   "relations": [
