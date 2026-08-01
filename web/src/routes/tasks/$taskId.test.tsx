@@ -29,6 +29,7 @@ const mockTask = {
 }
 
 const mockUseTask = vi.fn()
+const mockUseTaskList = vi.fn()
 const mockUpdateMutate = vi.fn()
 const mockStatusMutate = vi.fn()
 
@@ -39,7 +40,8 @@ vi.mock('#hooks/use-tasks', () => ({
   useTask: (...args: unknown[]) => mockUseTask(...args),
   useUpdateTask: () => ({ mutate: mockUpdateMutate }),
   useUpdateTaskStatus: () => ({ mutate: mockStatusMutate }),
-  useTaskList: () => ({ categorized: { all: [] } }),
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+  useTaskList: (...args: unknown[]) => mockUseTaskList(...args),
   useUpdateTaskParent: () => ({ mutate: mockParentMutate }),
 }))
 
@@ -119,6 +121,7 @@ function renderTaskPage() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockUseTaskList.mockReturnValue({ categorized: { all: [] } })
 })
 
 describe('TaskPage', () => {
@@ -224,5 +227,69 @@ describe('TaskPage', () => {
     })
     renderTaskPage()
     expect(screen.getAllByText('1h30m').length).toBeGreaterThan(0)
+  })
+
+  it('renders subtasks and links to their detail pages', () => {
+    mockUseTask.mockReturnValue({
+      data: { ...mockTask, childCompletionCount: { completed: 1, total: 2 } },
+      isLoading: false,
+      error: null,
+    })
+    mockUseTaskList.mockReturnValue({
+      categorized: {
+        all: [
+          {
+            id: 'subtask-001',
+            number: 43,
+            title: 'Finished subtask',
+            description: null,
+            status: 'completed',
+            context: 'personal',
+            labels: [],
+            startDate: null,
+            dueDate: null,
+            estimatedMinutes: null,
+            parentId: mockTask.id,
+            parentNumber: mockTask.number,
+            projectId: null,
+            sortOrder: 0,
+            recurrenceRuleId: null,
+            recurrenceRule: null,
+            githubLink: null,
+            createdAt: '2026-03-20T00:00:00.000Z',
+            updatedAt: '2026-03-20T00:00:00.000Z',
+          },
+          {
+            id: 'subtask-002',
+            number: 44,
+            title: 'Pending subtask',
+            description: null,
+            status: 'todo',
+            context: 'personal',
+            labels: [],
+            startDate: null,
+            dueDate: null,
+            estimatedMinutes: null,
+            parentId: mockTask.id,
+            parentNumber: mockTask.number,
+            projectId: null,
+            sortOrder: 1,
+            recurrenceRuleId: null,
+            recurrenceRule: null,
+            githubLink: null,
+            createdAt: '2026-03-20T00:00:00.000Z',
+            updatedAt: '2026-03-20T00:00:00.000Z',
+          },
+        ],
+      },
+    })
+    renderTaskPage()
+
+    expect(
+      screen.getAllByRole('link', { name: 'Finished subtask' }).length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getAllByRole('link', { name: 'Pending subtask' }).length,
+    ).toBeGreaterThan(0)
   })
 })

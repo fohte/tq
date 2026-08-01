@@ -10,6 +10,10 @@ import {
   TaskPagesList,
   TaskPagesSection,
 } from '#components/task/task-pages-section'
+import {
+  TaskSubtasksList,
+  TaskSubtasksSection,
+} from '#components/task/task-subtasks-section'
 import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
@@ -17,7 +21,7 @@ import { useDebouncedSave } from '#hooks/use-debounced-save'
 import { useProject } from '#hooks/use-projects'
 import { useTagFilter } from '#hooks/use-tag-filter'
 import type { TaskPage } from '#hooks/use-task-pages'
-import type { TaskDetail } from '#hooks/use-tasks'
+import type { Task, TaskDetail } from '#hooks/use-tasks'
 import { useUpdateTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatRelativeTime } from '#lib/format'
 
@@ -26,9 +30,11 @@ import { formatRelativeTime } from '#lib/format'
 export function TaskMainContent({
   task,
   pages,
+  subtasks,
 }: {
   task: TaskDetail
   pages?: TaskPage[]
+  subtasks?: Task[]
 }) {
   return (
     <div className="flex max-w-[720px] flex-col gap-[18px]">
@@ -67,6 +73,15 @@ export function TaskMainContent({
         <TaskPagesList taskId={task.id} pages={pages} />
       ) : (
         <TaskPagesSection taskId={task.id} />
+      )}
+
+      {/* Subtasks */}
+      {subtasks ? (
+        <TaskSubtasksList subtasks={subtasks} />
+      ) : (
+        task.childCompletionCount.total > 0 && (
+          <TaskSubtasksSection taskId={task.id} />
+        )
       )}
 
       {/* Linked Tasks */}
