@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { TreeTaskRow } from '#components/task/task-row'
 import { makeNode } from '#components/task/task-row-test-fixtures'
+import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { TagFilterProvider, useTagFilter } from '#hooks/use-tag-filter'
 import type { TreeNode } from '#hooks/use-tasks'
 import { atIndex } from '#lib/test-utils'
@@ -37,8 +37,8 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 
 // Base UI's Menu relies on pointer events that jsdom does not implement
-// reliably, so the picker is stubbed here to exercise TreeTaskRow's status
-// change wiring directly. The real menu interaction is covered by
+// reliably, so the picker is stubbed here to exercise TreeTaskGridRow's
+// status change wiring directly. The real menu interaction is covered by
 // task-status-picker.stories.tsx (runs in a real browser via Storybook).
 // Not shared with the other row test files: vi.mock factories are hoisted
 // above imports, so a shared factory couldn't close over anything defined
@@ -88,7 +88,7 @@ function renderTree(node: TreeNode) {
   return render(
     <QueryClientProvider client={queryClient}>
       <TagFilterProvider>
-        <TreeTaskRow node={node} />
+        <TreeTaskGridRow node={node} />
         <TagProbe />
       </TagFilterProvider>
     </QueryClientProvider>,
@@ -99,15 +99,57 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('TreeTaskRow', () => {
+// The component renders a desktop grid and a mobile stack simultaneously
+// (CSS media queries choose which is visible; jsdom has no viewport so both
+// are queryable). Assertions below pin the count to 2 rather than just
+// "at least one" so a regression in either layout alone still fails.
+describe('TreeTaskGridRow', () => {
   it('renders task title', () => {
     renderTree(makeNode())
-    expect(screen.getByText('Parent Task')).toBeInTheDocument()
+    expect(screen.getAllByText('Parent Task')).toHaveLength(2)
   })
 
   it('renders the task number', () => {
     renderTree(makeNode({ number: 42 }))
-    expect(screen.getByText('#42')).toBeInTheDocument()
+    expect(screen.getAllByText('#42')).toHaveLength(2)
+  })
+
+  it('indents deeper rows more than their ancestors', () => {
+    const grandchild = makeNode({
+      id: 'grandchild-1',
+      title: 'Grandchild Task',
+    })
+    const child = makeNode({
+      id: 'child-1',
+      title: 'Child Task',
+      children: [grandchild],
+      childCompletionCount: { completed: 0, total: 1 },
+    })
+    const node = makeNode({
+      children: [child],
+      childCompletionCount: { completed: 0, total: 1 },
+    })
+    renderTree(node)
+
+    const paddingLeftPx = (text: string) => {
+      const el = atIndex(screen.getAllByText(text), 0).closest(
+        '[style*="padding-left"]',
+      )
+      if (!(el instanceof HTMLElement)) {
+        throw new Error(`Expected an element with padding-left near "${text}"`)
+      }
+      return Number.parseInt(el.style.paddingLeft, 10)
+    }
+
+    const depths = [
+      paddingLeftPx('Parent Task'),
+      paddingLeftPx('Child Task'),
+      paddingLeftPx('Grandchild Task'),
+    ]
+
+    expect(depths.every((px, i) => i === 0 || px > (depths[i - 1] ?? 0))).toBe(
+      true,
+    )
   })
 
   it('renders children under parent', () => {
@@ -118,8 +160,8 @@ describe('TreeTaskRow', () => {
       childCompletionCount: { completed: 0, total: 1 },
     })
     renderTree(node)
-    expect(screen.getByText('Parent Task')).toBeInTheDocument()
-    expect(screen.getByText('Child Task')).toBeInTheDocument()
+    expect(screen.getAllByText('Parent Task')).toHaveLength(2)
+    expect(screen.getAllByText('Child Task')).toHaveLength(2)
   })
 
   it('shows child completion count', () => {
@@ -145,9 +187,12 @@ describe('TreeTaskRow', () => {
       childCompletionCount: { completed: 1, total: 3 },
     })
     renderTree(node)
+    // Parent node should show 1/3, once per layout (desktop + mobile); none
+    // of the children have children of their own, so they show nothing.
     const completions = screen.getAllByTestId('child-completion')
-    // Parent node should show 1/3
+    expect(completions).toHaveLength(2)
     expect(atIndex(completions, 0)).toHaveTextContent('1/3')
+    expect(atIndex(completions, 1)).toHaveTextContent('1/3')
   })
 
   it('does not show child completion count when no children', () => {
@@ -166,7 +211,7 @@ describe('TreeTaskRow', () => {
     renderTree(node)
 
     // Children visible by default
-    expect(screen.getByText('Child Task')).toBeInTheDocument()
+    expect(screen.getAllByText('Child Task')).toHaveLength(2)
 
     // Click collapse button
     const collapseBtn = atIndex(screen.getAllByLabelText('Collapse'), 0)
@@ -191,8 +236,8 @@ describe('TreeTaskRow', () => {
     expect(screen.queryByText('Child Task')).not.toBeInTheDocument()
 
     // Expand
-    await user.click(screen.getByLabelText('Expand'))
-    expect(screen.getByText('Child Task')).toBeInTheDocument()
+    await user.click(atIndex(screen.getAllByLabelText('Expand'), 0))
+    expect(screen.getAllByText('Child Task')).toHaveLength(2)
   })
 
   it('renders nested children (grandchildren)', () => {
@@ -214,9 +259,9 @@ describe('TreeTaskRow', () => {
     })
     renderTree(node)
 
-    expect(screen.getByText('Parent Task')).toBeInTheDocument()
-    expect(screen.getByText('Child Task')).toBeInTheDocument()
-    expect(screen.getByText('Grandchild Task')).toBeInTheDocument()
+    expect(screen.getAllByText('Parent Task')).toHaveLength(2)
+    expect(screen.getAllByText('Child Task')).toHaveLength(2)
+    expect(screen.getAllByText('Grandchild Task')).toHaveLength(2)
   })
 
   it('does not show expand toggle for leaf nodes', () => {
@@ -247,17 +292,18 @@ describe('TreeTaskRow', () => {
       },
     })
     renderTree(node)
-    expect(screen.getByText('tq#42')).toBeInTheDocument()
+    // The LINK column only exists in the desktop grid.
+    expect(screen.getAllByText('tq#42')).toHaveLength(1)
   })
 
   it('shows a context badge for personal tasks', () => {
     renderTree(makeNode({ context: 'personal' }))
-    expect(screen.getByText('personal')).toBeInTheDocument()
+    expect(screen.getAllByText('personal')).toHaveLength(2)
   })
 
   it('shows a context badge for work tasks', () => {
     renderTree(makeNode({ context: 'work' }))
-    expect(screen.getByText('work')).toBeInTheDocument()
+    expect(screen.getAllByText('work')).toHaveLength(2)
   })
 
   it('does not render tag tokens when there are no labels', () => {
@@ -269,9 +315,20 @@ describe('TreeTaskRow', () => {
 
   it('renders a token per label', () => {
     renderTree(makeNode({ labels: ['dev:tq', 'chore'] }))
+    // Desktop and mobile layouts both render, so each label's token appears
+    // twice, in layout order.
     expect(
       screen.getAllByRole('button', { name: /^#/ }).map((el) => el.textContent),
-    ).toEqual(['#dev:tq', '#chore'])
+    ).toEqual(['#dev:tq', '#chore', '#dev:tq', '#chore'])
+  })
+
+  it('highlights an overdue due date', () => {
+    renderTree(makeNode({ dueDate: '2020-01-01' }))
+    const badges = screen.getAllByText('Jan 1, 2020')
+    expect(badges.map((b) => b.classList.contains('text-primary'))).toEqual([
+      true,
+      true,
+    ])
   })
 
   it('sets the tag filter and stops the click from reaching the row Link when a tag token is clicked', async () => {
@@ -280,7 +337,7 @@ describe('TreeTaskRow', () => {
 
     expect(screen.getByTestId('tag-probe')).toHaveTextContent('none')
 
-    await user.click(screen.getByText('#dev:tq'))
+    await user.click(atIndex(screen.getAllByText('#dev:tq'), 0))
 
     expect(screen.getByTestId('tag-probe')).toHaveTextContent('dev:tq')
     expect(mockLinkOnClick).not.toHaveBeenCalled()
@@ -292,7 +349,7 @@ describe('TreeTaskRow', () => {
     const user = userEvent.setup()
     renderTree(makeNode({ labels: ['dev:tq'] }))
 
-    await user.click(screen.getByText('Parent Task'))
+    await user.click(atIndex(screen.getAllByText('Parent Task'), 0))
 
     expect(mockLinkOnClick).toHaveBeenCalled()
   })
@@ -301,7 +358,7 @@ describe('TreeTaskRow', () => {
     const user = userEvent.setup()
     renderTree(makeNode({ status: 'todo' }))
 
-    await user.click(screen.getByText('Set In Progress'))
+    await user.click(atIndex(screen.getAllByText('Set In Progress'), 0))
 
     expect(mockUpdateStatusMutate).toHaveBeenCalledWith({
       id: 'parent-1',
@@ -314,7 +371,7 @@ describe('TreeTaskRow', () => {
     const user = userEvent.setup()
     renderTree(makeNode({ status: 'todo' }))
 
-    await user.click(screen.getByText('Set Completed'))
+    await user.click(atIndex(screen.getAllByText('Set Completed'), 0))
 
     expect(mockMutate).toHaveBeenCalledWith('parent-1')
     expect(mockUpdateStatusMutate).not.toHaveBeenCalled()
@@ -324,7 +381,7 @@ describe('TreeTaskRow', () => {
     const user = userEvent.setup()
     renderTree(makeNode({ status: 'todo' }))
 
-    await user.click(screen.getByText('Set Todo'))
+    await user.click(atIndex(screen.getAllByText('Set Todo'), 0))
 
     expect(mockMutate).not.toHaveBeenCalled()
     expect(mockUpdateStatusMutate).not.toHaveBeenCalled()

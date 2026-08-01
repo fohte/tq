@@ -3,88 +3,18 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 
 import { GithubLinkBadge } from '#components/task/github-link-badge'
+import {
+  ContextBadge,
+  DueDateBadge,
+  TagTokens,
+  TaskNumberLabel,
+  useHandleStatusChange,
+} from '#components/task/task-row-shared'
 import { TaskStatusPicker } from '#components/task/task-status-picker'
-import { Chip } from '#components/ui/chip'
 import type { GithubLink } from '#hooks/use-github-link'
-import { useTagFilter } from '#hooks/use-tag-filter'
 import type { Task, TreeNode } from '#hooks/use-tasks'
-import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
-import { formatDueDate, isTaskOverdue } from '#lib/task-due-date'
 import { cn } from '#lib/utils'
-
-function useHandleStatusChange(id: string, status: Task['status']) {
-  const completeTask = useCompleteTask()
-  const updateStatus = useUpdateTaskStatus()
-
-  return (newStatus: Task['status']) => {
-    if (newStatus === status) return
-    if (newStatus === 'completed') {
-      completeTask.mutate(id)
-    } else {
-      updateStatus.mutate({ id, status: newStatus })
-    }
-  }
-}
-
-function ContextBadge({ context }: { context: Task['context'] }) {
-  return <Chip>{context}</Chip>
-}
-
-function TagTokens({
-  labels,
-  isCompleted,
-}: {
-  labels: string[]
-  isCompleted: boolean
-}) {
-  const { setTag } = useTagFilter()
-
-  return (
-    <div className="flex items-center gap-1.5">
-      {labels.map((label) => (
-        <button
-          key={label}
-          type="button"
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            setTag(label)
-          }}
-          className={cn(
-            'font-mono text-xs hover:text-foreground',
-            isCompleted
-              ? 'text-muted-foreground-faint'
-              : 'text-muted-foreground',
-          )}
-        >
-          #{label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-function DueDateBadge({
-  dueDate,
-  status,
-}: {
-  dueDate: string
-  status: Task['status']
-}) {
-  const overdue = isTaskOverdue({ status, dueDate })
-
-  return (
-    <span
-      className={cn(
-        'shrink-0 font-mono text-xs',
-        overdue ? 'text-primary' : 'text-muted-foreground',
-      )}
-    >
-      {formatDueDate(dueDate)}
-    </span>
-  )
-}
 
 function rowWrapperClassName(isInProgress: boolean, isCompleted: boolean) {
   return cn(
@@ -104,6 +34,7 @@ function rowTitleClassName(isInProgress: boolean, isCompleted: boolean) {
 
 interface TaskRowBaseProps {
   id: string
+  number: number
   title: string
   status: Task['status']
   context: Task['context']
@@ -116,6 +47,7 @@ interface TaskRowBaseProps {
 
 function TaskRowContent({
   id,
+  number,
   title,
   status,
   context,
@@ -136,6 +68,7 @@ function TaskRowContent({
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         {/* TopRow */}
         <div className="flex items-center gap-2 overflow-hidden">
+          <TaskNumberLabel number={number} />
           <span className={rowTitleClassName(isInProgress, isCompleted)}>
             {title}
           </span>
@@ -194,6 +127,7 @@ export function TaskRow({
     >
       <TaskRowContent
         id={task.id}
+        number={task.number}
         title={task.title}
         status={task.status}
         context={task.context}
@@ -265,6 +199,7 @@ export function TreeTaskRow({
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             {/* TopRow */}
             <div className="flex items-center gap-2 overflow-hidden">
+              <TaskNumberLabel number={node.number} />
               <span className={rowTitleClassName(isInProgress, isCompleted)}>
                 {node.title}
               </span>
