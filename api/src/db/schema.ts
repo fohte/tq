@@ -3,4 +3,5 @@
 // imports elsewhere don't need to change.
 export * from '#db/schema/core'
 export * from '#db/schema/integrations'
+export * from '#db/schema/settings'
 export * from '#db/schema/task-content'

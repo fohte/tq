@@ -18,7 +18,7 @@ import {
   partitionAccountEvents,
 } from '#integrations/google-calendar/index'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import { localDateBoundsToUtc } from '#lib/timezone'
+import { localDateBoundsToUtc, localNaiveDateTimeToUtc } from '#lib/timezone'
 import { expandScheduleForDate } from '#routes/schedule-expansion'
 import { timeBlockToResponse } from '#routes/tasks/shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
@@ -27,8 +27,10 @@ import {
   calculateFreeSlots,
   expandedScheduleBlocksToBusyRanges,
   externalEventsToBusyRanges,
+  filterSlotsByMinimumDuration,
   manualBlocksToBusyRanges,
 } from '#services/auto-scheduler'
+import { getSchedulingSettings } from '#services/scheduling-settings'
 
 const timePattern = /^\d{2}:\d{2}$/
 
@@ -368,6 +370,23 @@ export const schedulesApp = new Hono()
     const { date, tzOffset } = c.req.valid('json')
     const offset = tzOffset ?? 0
     const { dayStart, dayEnd } = localDateBoundsToUtc(date, offset)
+    const schedulingSettingsResult = await getSchedulingSettings()
+    if (schedulingSettingsResult.isErr()) {
+      captureWithFingerprint(
+        schedulingSettingsResult.error,
+        'api.schedules.auto-assign-scheduling-settings-failed',
+      )
+      return c.json({ error: 'Internal server error' }, 500)
+    }
+    const settings = schedulingSettingsResult.value
+    const workStart = localNaiveDateTimeToUtc(
+      `${date}T${settings.workingHoursStart}:00`,
+      offset,
+    )
+    const workEnd = localNaiveDateTimeToUtc(
+      `${date}T${settings.workingHoursEnd}:00`,
+      offset,
+    )
 
     const queueRows = await db
       .select({ task: tasks })
@@ -449,7 +468,10 @@ export const schedulesApp = new Hono()
       ...expandedScheduleBlocksToBusyRanges(expandedScheduleBlocks, offset),
     ]
 
-    const freeSlots = calculateFreeSlots(dayStart, dayEnd, busyRanges)
+    const freeSlots = filterSlotsByMinimumDuration(
+      calculateFreeSlots(workStart, workEnd, busyRanges),
+      settings.minimumBlockMinutes,
+    )
     const assigned = autoAssign(schedulableTasks, freeSlots)
 
     // Insert the newly-assigned blocks before deleting the stale ones: if the

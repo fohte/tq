@@ -1,0 +1,2 @@
+ALTER TABLE "scheduling_settings" ADD CONSTRAINT "scheduling_settings_working_hours_format_check" CHECK ("scheduling_settings"."working_hours_start" ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' AND "scheduling_settings"."working_hours_end" ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$');--> statement-breakpoint
+ALTER TABLE "scheduling_settings" ADD CONSTRAINT "scheduling_settings_default_context_check" CHECK ("scheduling_settings"."default_context" IN ('work', 'personal'));
