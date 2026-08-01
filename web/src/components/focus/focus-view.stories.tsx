@@ -15,6 +15,7 @@ const baseTask: Task = {
   startDate: null,
   dueDate: null,
   estimatedMinutes: 60,
+  labels: [],
   parentId: null,
   parentNumber: null,
   projectId: null,

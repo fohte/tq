@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import {
+  createLabel,
   createRecurringTask,
   createTask,
   TaskResponse,
@@ -138,6 +139,41 @@ describe('tasks CRUD API', () => {
       assertDefined(body[0])
       expect(body[0].title).toBe('Task B')
     })
+
+    it('includes labels for a labeled task in the list response', async () => {
+      await createLabel('bug')
+      await createLabel('urgent')
+      const labeled = await createTask('Labeled', { labels: ['bug', 'urgent'] })
+
+      const res = await app.request('/api/tasks')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse[]>(res)
+      const labeledBody = body.find((t) => t.id === labeled.id)
+      assertDefined(labeledBody)
+      labeledBody.labels?.sort()
+      expect(labeledBody).toEqual({
+        ...labeled,
+        parentNumber: null,
+        labels: ['bug', 'urgent'],
+      })
+    })
+
+    it('returns empty labels array for an unlabeled task in the list response', async () => {
+      const unlabeled = await createTask('Unlabeled')
+
+      const res = await app.request('/api/tasks')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse[]>(res)
+      const unlabeledBody = body.find((t) => t.id === unlabeled.id)
+      assertDefined(unlabeledBody)
+      expect(unlabeledBody).toEqual({
+        ...unlabeled,
+        parentNumber: null,
+        labels: [],
+      })
+    })
   })
 
   describe('GET /api/tasks/:id', () => {
@@ -150,6 +186,49 @@ describe('tasks CRUD API', () => {
       const body = await jsonBody<TaskResponse>(res)
       expect(body.title).toBe('My task')
       expect(body.childCompletionCount).toEqual({ completed: 0, total: 0 })
+    })
+
+    it('returns empty labels array when task has no labels', async () => {
+      const created = await createTask('No labels')
+
+      const res = await app.request(`/api/tasks/${created.id}`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body).toEqual({
+        ...created,
+        titleAuthor: { kind: 'human', agent: null },
+        descriptionAuthor: { kind: 'human', agent: null },
+        childCompletionCount: { total: 0, completed: 0 },
+        pages: [],
+        timeBlocks: [],
+        links: { outgoing: [], incoming: [] },
+        labels: [],
+      })
+    })
+
+    it('includes labels for a task with labels', async () => {
+      await createLabel('bug')
+      await createLabel('urgent')
+      const created = await createTask('Labeled', {
+        labels: ['bug', 'urgent'],
+      })
+
+      const res = await app.request(`/api/tasks/${created.id}`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      body.labels?.sort()
+      expect(body).toEqual({
+        ...created,
+        titleAuthor: { kind: 'human', agent: null },
+        descriptionAuthor: { kind: 'human', agent: null },
+        childCompletionCount: { total: 0, completed: 0 },
+        pages: [],
+        timeBlocks: [],
+        links: { outgoing: [], incoming: [] },
+        labels: ['bug', 'urgent'],
+      })
     })
 
     it('returns 404 for non-existent ID', async () => {

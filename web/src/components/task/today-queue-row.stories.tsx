@@ -70,6 +70,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     startDate: null,
     dueDate: null,
     estimatedMinutes: 30,
+    labels: [],
     parentId: null,
     parentNumber: null,
     projectId: null,

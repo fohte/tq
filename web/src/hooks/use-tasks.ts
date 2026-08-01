@@ -123,6 +123,7 @@ export function useCreateTask() {
         startDate: input.startDate ?? null,
         dueDate: input.dueDate ?? null,
         estimatedMinutes: input.estimatedMinutes ?? null,
+        labels: input.labels ?? [],
         parentId: null,
         parentNumber: null,
         projectId: input.projectId ?? null,

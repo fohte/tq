@@ -126,7 +126,9 @@ describe('read tools', () => {
 
       const toolResult = await callTool('list_tasks', { context: 'work' })
 
-      expect(parseJson(toolResult)).toEqual([{ ...task, parentNumber: null }])
+      expect(parseJson(toolResult)).toEqual([
+        { ...task, parentNumber: null, labels: [] },
+      ])
     })
   })
 
@@ -151,6 +153,7 @@ describe('read tools', () => {
         pages: [],
         timeBlocks: [],
         links: { outgoing: [], incoming: [] },
+        labels: [],
         subtasks: [
           {
             ...child,
@@ -210,6 +213,7 @@ describe('read tools', () => {
         ],
         timeBlocks: [],
         links: { outgoing: [], incoming: [] },
+        labels: [],
         subtasks: [],
       })
     })

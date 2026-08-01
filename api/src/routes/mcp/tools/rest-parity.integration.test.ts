@@ -98,6 +98,7 @@ describe('REST/MCP parity', () => {
       pages: [],
       timeBlocks: [],
       links: { outgoing: [], incoming: [] },
+      labels: [],
     })
   })
 
@@ -119,6 +120,7 @@ describe('REST/MCP parity', () => {
       pages: [],
       timeBlocks: [],
       links: { outgoing: [], incoming: [] },
+      labels: [],
     })
   })
 
@@ -133,7 +135,7 @@ describe('REST/MCP parity', () => {
     expect(res.status).toBe(200)
 
     expect(await jsonBody<unknown[]>(res)).toEqual([
-      { ...data, parentNumber: null },
+      { ...data, parentNumber: null, labels: [] },
     ])
   })
 
@@ -157,6 +159,7 @@ describe('REST/MCP parity', () => {
       pages: [],
       timeBlocks: [],
       links: { outgoing: [], incoming: [] },
+      labels: [],
     })
   })
 
@@ -180,6 +183,7 @@ describe('REST/MCP parity', () => {
       pages: [],
       timeBlocks: [],
       links: { outgoing: [], incoming: [] },
+      labels: [],
     })
   })
 
@@ -192,8 +196,13 @@ describe('REST/MCP parity', () => {
     const byId = (a: { id: string }, b: { id: string }) =>
       a.id.localeCompare(b.id)
     const expected = [
-      { ...completedTask, recurrenceRule: null, parentNumber: null },
-      { ...nextTask, recurrenceRule: null, parentNumber: null },
+      {
+        ...completedTask,
+        recurrenceRule: null,
+        parentNumber: null,
+        labels: [],
+      },
+      { ...nextTask, recurrenceRule: null, parentNumber: null, labels: [] },
     ]
 
     // GET /api/tasks (list) never hydrates recurrenceRule, unlike the detail
@@ -219,6 +228,7 @@ describe('REST/MCP parity', () => {
       pages: [],
       timeBlocks: [],
       links: { outgoing: [], incoming: [] },
+      labels: [],
     })
   })
 

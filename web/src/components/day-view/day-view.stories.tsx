@@ -27,6 +27,7 @@ const baseTask: Task = {
   startDate: dateStr,
   dueDate: null,
   estimatedMinutes: 180,
+  labels: [],
   parentId: null,
   parentNumber: null,
   projectId: null,
@@ -240,6 +241,10 @@ const meta = {
       </Providers>
     ),
   ],
+  args: {
+    selectedDate: today,
+    onDateChange: fn(),
+  },
 } satisfies Meta<typeof DayViewPresentation>
 
 export default meta

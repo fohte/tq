@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { fn } from 'storybook/test'
 
 import {
   CalendarView,
@@ -209,6 +210,10 @@ const meta = {
       </div>
     ),
   ],
+  args: {
+    selectedDate: today,
+    onDateChange: fn(),
+  },
 } satisfies Meta<typeof CalendarView>
 
 export default meta

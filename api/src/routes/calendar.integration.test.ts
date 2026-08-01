@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { oauthTokens } from '#db/schema'
+import { calendarSubscriptions, oauthTokens } from '#db/schema'
 import { upsertGoogleCalendarToken } from '#integrations/google-calendar/testing'
 import type { ExternalEvent } from '#integrations/types'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
@@ -192,7 +192,7 @@ describe('GET /api/calendar/events', () => {
         source: 'google_calendar',
         accountId: 'google-sub-1',
         accountLabel: 'user1@example.com',
-        calendarId: 'primary',
+        calendarId: 'user1@example.com',
         calendarDisplayName: null,
         calendarColor: null,
       },
@@ -205,7 +205,7 @@ describe('GET /api/calendar/events', () => {
         source: 'google_calendar',
         accountId: 'google-sub-2',
         accountLabel: 'user2@example.com',
-        calendarId: 'primary',
+        calendarId: 'user2@example.com',
         calendarDisplayName: null,
         calendarColor: null,
       },
@@ -272,7 +272,7 @@ describe('GET /api/calendar/events', () => {
         source: 'google_calendar',
         accountId: 'google-sub-1',
         accountLabel: 'user1@example.com',
-        calendarId: 'primary',
+        calendarId: 'user1@example.com',
         calendarDisplayName: null,
         calendarColor: null,
       },
@@ -310,6 +310,42 @@ describe('GET /api/calendar/events', () => {
   })
 })
 
+describe('GET /api/calendar/oauth-callback', () => {
+  it('seeds a subscription to the calendar matching the connected account email', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            access_token: 'new-access-token',
+            refresh_token: 'new-refresh-token',
+            expires_in: 3600,
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ sub: 'google-sub-1', email: 'user@example.com' }),
+          { status: 200 },
+        ),
+      )
+
+    const res = await app.request(
+      '/api/calendar/oauth-callback?code=auth-code-123',
+    )
+
+    expect(res.status).toBe(200)
+
+    const token = await selectTokenByAccountId('google-sub-1')
+    expect(
+      await db
+        .select({ calendarId: calendarSubscriptions.calendarId })
+        .from(calendarSubscriptions)
+        .where(eq(calendarSubscriptions.oauthTokenId, token.id)),
+    ).toEqual([{ calendarId: 'user@example.com' }])
+  })
+})
+
 describe('GET /api/calendar/accounts/:accountId/calendars', () => {
   it("merges the live calendar list with this account's subscription state", async () => {
     await upsertGoogleCalendarToken({
@@ -326,7 +362,7 @@ describe('GET /api/calendar/accounts/:accountId/calendars', () => {
         JSON.stringify({
           items: [
             {
-              id: 'primary',
+              id: 'user@example.com',
               summary: 'user@example.com',
               primary: true,
               backgroundColor: '#111111',
@@ -349,7 +385,7 @@ describe('GET /api/calendar/accounts/:accountId/calendars', () => {
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual([
       {
-        id: 'primary',
+        id: 'user@example.com',
         displayName: 'user@example.com',
         color: '#111111',
         primary: true,
@@ -431,11 +467,11 @@ describe('PUT /api/calendar/accounts/:accountId/calendars/:calendarId/subscripti
     })
     const token = await selectTokenByAccountId('google-sub-1')
 
-    const res = await putSubscription(token.id, 'primary', false)
+    const res = await putSubscription(token.id, 'user@example.com', false)
 
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({
-      calendarId: 'primary',
+      calendarId: 'user@example.com',
       subscribed: false,
     })
   })
@@ -449,13 +485,13 @@ describe('PUT /api/calendar/accounts/:accountId/calendars/:calendarId/subscripti
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     })
     const token = await selectTokenByAccountId('google-sub-1')
-    await putSubscription(token.id, 'primary', false)
+    await putSubscription(token.id, 'user@example.com', false)
 
-    const res = await putSubscription(token.id, 'primary', false)
+    const res = await putSubscription(token.id, 'user@example.com', false)
 
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({
-      calendarId: 'primary',
+      calendarId: 'user@example.com',
       subscribed: false,
     })
   })

@@ -53,6 +53,7 @@ const baseTask: TaskDetail = {
   startDate: '2026-03-20',
   dueDate: '2026-03-25',
   estimatedMinutes: 90,
+  labels: [],
   parentId: null,
   projectId: null,
   sortOrder: 0,
