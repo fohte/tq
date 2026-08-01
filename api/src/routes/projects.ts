@@ -1,5 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, count, eq, sql } from 'drizzle-orm'
+import { and, count, eq, inArray, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -93,7 +93,39 @@ export const projectsApp = new Hono()
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(projects.sortOrder, projects.createdAt)
 
-    return c.json(result.map(projectToResponse), 200)
+    const projectIds = result.map((project) => project.id)
+    const taskStats =
+      projectIds.length > 0
+        ? await db
+            .select({
+              projectId: tasks.projectId,
+              total: count(),
+              completed: count(
+                sql`CASE WHEN ${tasks.status} = 'completed' THEN 1 END`,
+              ),
+            })
+            .from(tasks)
+            .where(inArray(tasks.projectId, projectIds))
+            .groupBy(tasks.projectId)
+        : []
+
+    const statsByProjectId = new Map(
+      taskStats.map((stats) => [stats.projectId, stats]),
+    )
+
+    return c.json(
+      result.map((project) => {
+        const stats = statsByProjectId.get(project.id)
+        const total = stats?.total ?? 0
+        const completed = stats?.completed ?? 0
+        return {
+          ...projectToResponse(project),
+          completionRate: total > 0 ? completed / total : 0,
+          taskCount: { total, completed },
+        }
+      }),
+      200,
+    )
   })
   .get('/:id', async (c) => {
     const id = c.req.param('id')

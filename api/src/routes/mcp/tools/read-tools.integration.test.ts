@@ -361,7 +361,13 @@ describe('read tools', () => {
 
       const toolResult = await callTool('list_projects')
 
-      expect(parseJson(toolResult)).toEqual([project])
+      expect(parseJson(toolResult)).toEqual([
+        {
+          ...project,
+          completionRate: 0,
+          taskCount: { total: 0, completed: 0 },
+        },
+      ])
     })
   })
 

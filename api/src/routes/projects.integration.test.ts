@@ -115,6 +115,27 @@ describe('projects API', () => {
       assertDefined(body[0])
       expect(body[0].title).toBe('Active')
     })
+
+    it('includes task counts for each project', async () => {
+      const project = await createProject('My project')
+      await createTask('Task 1', { projectId: project.id })
+      const task2 = await createTask('Task 2', { projectId: project.id })
+      await createTask('Task without project')
+
+      await app.request(`/api/tasks/${task2.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      })
+
+      const res = await app.request('/api/projects')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<ProjectDetailResponse[]>(res)
+      assertDefined(body[0])
+      expect(body[0].completionRate).toBeCloseTo(0.5)
+      expect(body[0].taskCount).toEqual({ total: 2, completed: 1 })
+    })
   })
 
   describe('GET /api/projects/:id', () => {
