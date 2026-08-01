@@ -1,7 +1,9 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { Button } from '#components/ui/button'
-import { cn } from '#lib/utils'
+import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
+import { TabStrip } from '#components/ui/tab-strip'
+import { formatLocalDate } from '#lib/date-range'
 
 export type CalendarViewType = 'day' | 'week' | 'month'
 
@@ -10,6 +12,12 @@ export const FULLCALENDAR_VIEW_MAP: Record<CalendarViewType, string> = {
   week: 'timeGridWeek',
   month: 'dayGridMonth',
 }
+
+const VIEW_OPTIONS: { value: CalendarViewType; label: string }[] = [
+  { value: 'day', label: 'day' },
+  { value: 'week', label: 'week' },
+  { value: 'month', label: 'month' },
+]
 
 interface CalendarHeaderProps {
   currentDate: Date
@@ -20,13 +28,8 @@ interface CalendarHeaderProps {
   onViewChange: (view: CalendarViewType) => void
 }
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    weekday: 'short',
-  })
+function formatWeekday(date: Date): string {
+  return date.toLocaleDateString('en-US', { weekday: 'short' })
 }
 
 export function CalendarHeader({
@@ -37,60 +40,48 @@ export function CalendarHeader({
   onToday,
   onViewChange,
 }: CalendarHeaderProps) {
-  const viewOptions: { value: CalendarViewType; label: string }[] = [
-    { value: 'day', label: 'Day' },
-    { value: 'week', label: 'Week' },
-    { value: 'month', label: 'Month' },
-  ]
-
   return (
-    <div className="flex items-center justify-between border-b border-border px-3 py-2">
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-0.5">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onPrev}
-            aria-label="Previous"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onNext}
-            aria-label="Next"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+    <ScreenHeaderBar>
+      <span className="font-mono text-[13px] font-bold">
+        {formatLocalDate(currentDate)}
+      </span>
+      <span className="font-mono text-[11px] text-muted-foreground">
+        {formatWeekday(currentDate)}
+      </span>
 
-        <span className="text-sm font-medium">{formatDate(currentDate)}</span>
-
-        <Button variant="outline" size="sm" onClick={onToday}>
-          Today
+      <div className="ml-2 flex">
+        <Button
+          variant="outline"
+          size="icon-xs"
+          onClick={onPrev}
+          aria-label="Previous"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={onToday}
+          className="border-x-0 font-mono"
+        >
+          today
+        </Button>
+        <Button
+          variant="outline"
+          size="icon-xs"
+          onClick={onNext}
+          aria-label="Next"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
         </Button>
       </div>
 
-      <div className="flex gap-0.5 rounded-lg bg-secondary p-0.5">
-        {viewOptions.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => {
-              onViewChange(option.value)
-            }}
-            className={cn(
-              'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-              activeView === option.value
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
+      <TabStrip
+        className="ml-auto"
+        value={activeView}
+        options={VIEW_OPTIONS}
+        onChange={onViewChange}
+      />
+    </ScreenHeaderBar>
   )
 }
