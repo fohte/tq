@@ -140,22 +140,39 @@ describe('tasks CRUD API', () => {
       expect(body[0].title).toBe('Task B')
     })
 
-    it('includes each task labels', async () => {
+    it('includes labels for a labeled task in the list response', async () => {
       await createLabel('bug')
       await createLabel('urgent')
       const labeled = await createTask('Labeled', { labels: ['bug', 'urgent'] })
-      const unlabeled = await createTask('Unlabeled')
 
       const res = await app.request('/api/tasks')
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse[]>(res)
       const labeledBody = body.find((t) => t.id === labeled.id)
-      const unlabeledBody = body.find((t) => t.id === unlabeled.id)
       assertDefined(labeledBody)
+      labeledBody.labels?.sort()
+      expect(labeledBody).toEqual({
+        ...labeled,
+        parentNumber: null,
+        labels: ['bug', 'urgent'],
+      })
+    })
+
+    it('returns empty labels array for an unlabeled task in the list response', async () => {
+      const unlabeled = await createTask('Unlabeled')
+
+      const res = await app.request('/api/tasks')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse[]>(res)
+      const unlabeledBody = body.find((t) => t.id === unlabeled.id)
       assertDefined(unlabeledBody)
-      expect([...(labeledBody.labels ?? [])].sort()).toEqual(['bug', 'urgent'])
-      expect(unlabeledBody.labels).toEqual([])
+      expect(unlabeledBody).toEqual({
+        ...unlabeled,
+        parentNumber: null,
+        labels: [],
+      })
     })
   })
 
@@ -178,7 +195,16 @@ describe('tasks CRUD API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
-      expect(body.labels).toEqual([])
+      expect(body).toEqual({
+        ...created,
+        titleAuthor: { kind: 'human', agent: null },
+        descriptionAuthor: { kind: 'human', agent: null },
+        childCompletionCount: { total: 0, completed: 0 },
+        pages: [],
+        timeBlocks: [],
+        links: { outgoing: [], incoming: [] },
+        labels: [],
+      })
     })
 
     it('includes labels for a task with labels', async () => {
@@ -192,7 +218,17 @@ describe('tasks CRUD API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
-      expect([...(body.labels ?? [])].sort()).toEqual(['bug', 'urgent'])
+      body.labels?.sort()
+      expect(body).toEqual({
+        ...created,
+        titleAuthor: { kind: 'human', agent: null },
+        descriptionAuthor: { kind: 'human', agent: null },
+        childCompletionCount: { total: 0, completed: 0 },
+        pages: [],
+        timeBlocks: [],
+        links: { outgoing: [], incoming: [] },
+        labels: ['bug', 'urgent'],
+      })
     })
 
     it('returns 404 for non-existent ID', async () => {
