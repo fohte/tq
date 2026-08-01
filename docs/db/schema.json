@@ -201,7 +201,7 @@
         {
           "name": "oauth_tokens_refresh_metadata_required",
           "type": "CHECK",
-          "def": "CHECK (((provider = 'github'::text) OR ((refresh_token IS NOT NULL) AND (expires_at IS NOT NULL))))",
+          "def": "CHECK (((provider = 'github'::text) OR (provider = 'slack'::text) OR ((refresh_token IS NOT NULL) AND (expires_at IS NOT NULL))))",
           "table": "public.oauth_tokens",
           "referenced_table": "",
           "columns": ["provider", "refresh_token", "expires_at"]

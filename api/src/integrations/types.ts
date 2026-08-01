@@ -32,8 +32,8 @@ export type ConnectionStatus =
  * empty-string sentinel and can't be carried in a URL path, but every row
  * still has a real UUID `id` to disconnect by
  * (`DELETE /api/integrations/:id/accounts/:accountId`). `label` is the
- * account's display name: GitHub's live-checked `login`, or Google's stored
- * `accountLabel` (email); null when neither is available.
+ * account's display name: GitHub's or Slack's live-checked `login`, or
+ * Google's stored `accountLabel` (email); null when neither is available.
  */
 export interface IntegrationAccount {
   id: string
