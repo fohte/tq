@@ -84,6 +84,9 @@ The API server and web frontend are configured via environment variables.
 | `GITHUB_CLIENT_ID`     | No       | —                       | GitHub OAuth App client ID, required to connect a GitHub account                                                                   |
 | `GITHUB_CLIENT_SECRET` | No       | —                       | GitHub OAuth App client secret, required to connect a GitHub account                                                               |
 | `GITHUB_REDIRECT_URI`  | No       | —                       | OAuth callback URL registered on the GitHub OAuth App (`<API base URL>/api/github/oauth-callback`)                                 |
+| `SLACK_CLIENT_ID`      | No       | —                       | Slack app client ID, required to connect a Slack workspace                                                                         |
+| `SLACK_CLIENT_SECRET`  | No       | —                       | Slack app client secret, required to connect a Slack workspace                                                                     |
+| `SLACK_REDIRECT_URI`   | No       | —                       | OAuth callback URL registered on the Slack app (`<API base URL>/api/slack/oauth-callback`)                                         |
 
 ### Web (nginx runtime)
 
