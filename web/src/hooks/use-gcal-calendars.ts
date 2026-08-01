@@ -9,7 +9,7 @@ export type GcalCalendar = InferResponseType<
   200
 >[number]
 
-const gcalCalendarsKeys = {
+export const gcalCalendarsKeys = {
   list: (accountId: string) => ['gcal-calendars', accountId] as const,
 }
 

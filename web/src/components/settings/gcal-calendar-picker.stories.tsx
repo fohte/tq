@@ -6,7 +6,7 @@ import { expect, within } from 'storybook/test'
 import { GcalCalendarPicker } from '#components/settings/gcal-calendar-picker'
 import type { IntegrationAccountView } from '#components/settings/integration-card'
 import { Panel } from '#components/ui/panel'
-import type { GcalCalendar } from '#hooks/use-gcal-calendars'
+import { type GcalCalendar, gcalCalendarsKeys } from '#hooks/use-gcal-calendars'
 
 const account: IntegrationAccountView = {
   id: 'token-1',
@@ -40,7 +40,7 @@ function Providers({
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  queryClient.setQueryData(['gcal-calendars', account.id], calendars)
+  queryClient.setQueryData(gcalCalendarsKeys.list(account.id), calendars)
 
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
