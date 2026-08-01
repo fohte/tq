@@ -6,6 +6,7 @@ import {
   mockGithubIssueResponse,
   upsertGithubToken,
 } from '#integrations/github/testing'
+import type { EditAuthor } from '#lib/edits'
 import { createTask, TEST_UUID } from '#routes/tasks/testing'
 import {
   createTaskFromGithubUrl,
@@ -37,6 +38,7 @@ function normalizeLink(link: typeof taskGithubLinks.$inferSelect) {
 }
 
 const ref = { owner: 'fohte', repo: 'tq', number: 42 }
+const author: EditAuthor = { kind: 'human', agent: null }
 
 describe('resolveGithubUrl', () => {
   it('returns a preview when the issue is not linked to any task', async () => {
@@ -117,7 +119,7 @@ describe('createTaskFromIssueData', () => {
     const linkedTask = await createTask('Already linked')
     await upsertGithubToken('valid-token')
     mockGithubIssueResponse()
-    ;(await linkTaskToGithubUrl(linkedTask.id, ref))._unsafeUnwrap()
+    ;(await linkTaskToGithubUrl(linkedTask.id, ref, author))._unsafeUnwrap()
 
     const tasksBefore = await db.select().from(tasks)
 
@@ -145,7 +147,9 @@ describe('linkTaskToGithubUrl', () => {
     await upsertGithubToken('valid-token')
     mockGithubIssueResponse()
 
-    const link = (await linkTaskToGithubUrl(task.id, ref))._unsafeUnwrap()
+    const link = (
+      await linkTaskToGithubUrl(task.id, ref, author)
+    )._unsafeUnwrap()
 
     expect(normalizeLink(link)).toEqual({
       id: 'ID',
@@ -166,7 +170,9 @@ describe('linkTaskToGithubUrl', () => {
   })
 
   it('returns a TaskNotFoundError for a non-existent task', async () => {
-    const error = (await linkTaskToGithubUrl(TEST_UUID, ref))._unsafeUnwrapErr()
+    const error = (
+      await linkTaskToGithubUrl(TEST_UUID, ref, author)
+    )._unsafeUnwrapErr()
 
     expect(error).toEqual(new TaskNotFoundError())
   })
@@ -175,13 +181,13 @@ describe('linkTaskToGithubUrl', () => {
     const task = await createTask('My task')
     await upsertGithubToken('valid-token')
     mockGithubIssueResponse()
-    ;(await linkTaskToGithubUrl(task.id, ref))._unsafeUnwrap()
+    ;(await linkTaskToGithubUrl(task.id, ref, author))._unsafeUnwrap()
 
     mockGithubIssueResponse({
       html_url: 'https://github.com/fohte/tq/issues/43',
     })
     const error = (
-      await linkTaskToGithubUrl(task.id, { ...ref, number: 43 })
+      await linkTaskToGithubUrl(task.id, { ...ref, number: 43 }, author)
     )._unsafeUnwrapErr()
 
     expect(error).toEqual(new TaskAlreadyLinkedError())
@@ -191,11 +197,11 @@ describe('linkTaskToGithubUrl', () => {
     const linkedTask = await createTask('Already linked')
     await upsertGithubToken('valid-token')
     mockGithubIssueResponse()
-    ;(await linkTaskToGithubUrl(linkedTask.id, ref))._unsafeUnwrap()
+    ;(await linkTaskToGithubUrl(linkedTask.id, ref, author))._unsafeUnwrap()
 
     const otherTask = await createTask('Another task')
     const error = (
-      await linkTaskToGithubUrl(otherTask.id, ref)
+      await linkTaskToGithubUrl(otherTask.id, ref, author)
     )._unsafeUnwrapErr()
 
     expect(error).toEqual(new GithubResourceAlreadyLinkedError(linkedTask.id))
@@ -207,9 +213,9 @@ describe('unlinkTask', () => {
     const task = await createTask('My task')
     await upsertGithubToken('valid-token')
     mockGithubIssueResponse()
-    ;(await linkTaskToGithubUrl(task.id, ref))._unsafeUnwrap()
+    ;(await linkTaskToGithubUrl(task.id, ref, author))._unsafeUnwrap()
 
-    ;(await unlinkTask(task.id))._unsafeUnwrap()
+    ;(await unlinkTask(db, task.id))._unsafeUnwrap()
 
     mockGithubIssueResponse()
     const resolved = (await resolveGithubUrl(ref))._unsafeUnwrap()
@@ -219,7 +225,7 @@ describe('unlinkTask', () => {
   it('returns a GithubLinkNotFoundError when the task has no link', async () => {
     const task = await createTask('My task')
 
-    const error = (await unlinkTask(task.id))._unsafeUnwrapErr()
+    const error = (await unlinkTask(db, task.id))._unsafeUnwrapErr()
 
     expect(error).toEqual(new GithubLinkNotFoundError())
   })

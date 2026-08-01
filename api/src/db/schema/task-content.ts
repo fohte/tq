@@ -213,6 +213,10 @@ export const taskEvents = pgTable(
       'task_events_author_agent_required_for_llm',
       sql`(${table.authorKind} = 'llm') = (${table.authorAgent} IS NOT NULL)`,
     ),
+    // Mirrors `idx_edits_task_id_created_at` for consistency and to serve
+    // future range queries by createdAt; the current activity.ts query only
+    // filters by taskId and sorts by id, so this is effectively a task_id-only
+    // index today.
     index('idx_task_events_task_id_created_at').on(
       table.taskId,
       table.createdAt,

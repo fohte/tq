@@ -3,9 +3,10 @@ import { Hono } from 'hono'
 
 import { db } from '#db/connection'
 import { edits, taskEvents } from '#db/schema'
+import type { EditAuthorInfo } from '#lib/edits'
 import { requireTask } from '#routes/tasks/shared'
 
-type ActivityAuthor = { kind: 'human' | 'llm' | 'system'; agent: string | null }
+type ActivityAuthor = EditAuthorInfo
 
 type ActivityItem =
   | { id: string; type: 'created'; createdAt: string; author: ActivityAuthor }

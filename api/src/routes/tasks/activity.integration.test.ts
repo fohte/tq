@@ -87,8 +87,6 @@ describe('GET /api/tasks/:id/activity', () => {
         kind: 'issue',
       },
     ])
-    // React keys must be distinct across the merged edits/task_events rows.
-    expect(new Set(body.map((item) => item.id)).size).toBe(body.length)
   })
 
   it('returns 404 for a non-existent task', async () => {

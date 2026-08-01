@@ -36,15 +36,16 @@ export async function recordStatusChanged(
   })
 }
 
-export async function recordGithubLinked(
+async function recordGithubLinkEvent(
   executor: Executor,
   taskId: string,
+  type: 'github_linked' | 'github_unlinked',
   link: GithubLinkRef,
   author: EditAuthor,
 ): Promise<void> {
   await executor.insert(taskEvents).values({
     taskId,
-    type: 'github_linked',
+    type,
     githubOwner: link.owner,
     githubRepo: link.repo,
     githubNumber: link.number,
@@ -54,20 +55,26 @@ export async function recordGithubLinked(
   })
 }
 
-export async function recordGithubUnlinked(
+export function recordGithubLinked(
   executor: Executor,
   taskId: string,
   link: GithubLinkRef,
   author: EditAuthor,
 ): Promise<void> {
-  await executor.insert(taskEvents).values({
+  return recordGithubLinkEvent(executor, taskId, 'github_linked', link, author)
+}
+
+export function recordGithubUnlinked(
+  executor: Executor,
+  taskId: string,
+  link: GithubLinkRef,
+  author: EditAuthor,
+): Promise<void> {
+  return recordGithubLinkEvent(
+    executor,
     taskId,
-    type: 'github_unlinked',
-    githubOwner: link.owner,
-    githubRepo: link.repo,
-    githubNumber: link.number,
-    githubKind: link.kind,
-    authorKind: author.kind,
-    authorAgent: author.agent,
-  })
+    'github_unlinked',
+    link,
+    author,
+  )
 }

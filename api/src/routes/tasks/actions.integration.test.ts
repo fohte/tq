@@ -1,12 +1,10 @@
-import { asc, eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
-import { db } from '#db/connection'
-import { taskEvents } from '#db/schema'
 import {
   createRecurringTask,
   createTask,
+  fetchTaskEvents,
   TaskResponse,
   TEST_UUID,
 } from '#routes/tasks/testing'
@@ -24,29 +22,6 @@ async function setStatus(
     headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify({ status }),
   })
-}
-
-interface TaskEventFields {
-  type: 'status_changed' | 'github_linked' | 'github_unlinked'
-  fromStatus: 'todo' | 'in_progress' | 'completed' | null
-  toStatus: 'todo' | 'in_progress' | 'completed' | null
-  authorKind: 'human' | 'llm' | 'system'
-  authorAgent: string | null
-}
-
-async function fetchTaskEvents(taskId: string): Promise<TaskEventFields[]> {
-  const rows = await db
-    .select()
-    .from(taskEvents)
-    .where(eq(taskEvents.taskId, taskId))
-    .orderBy(asc(taskEvents.id))
-  return rows.map((row) => ({
-    type: row.type,
-    fromStatus: row.fromStatus,
-    toStatus: row.toStatus,
-    authorKind: row.authorKind,
-    authorAgent: row.authorAgent,
-  }))
 }
 
 describe('tasks actions API', () => {
@@ -116,6 +91,10 @@ describe('tasks actions API', () => {
           type: 'status_changed',
           fromStatus: 'todo',
           toStatus: 'in_progress',
+          githubOwner: null,
+          githubRepo: null,
+          githubNumber: null,
+          githubKind: null,
           authorKind: 'human',
           authorAgent: null,
         },
@@ -133,6 +112,10 @@ describe('tasks actions API', () => {
           type: 'status_changed',
           fromStatus: 'todo',
           toStatus: 'in_progress',
+          githubOwner: null,
+          githubRepo: null,
+          githubNumber: null,
+          githubKind: null,
           authorKind: 'human',
           authorAgent: null,
         },
@@ -151,6 +134,10 @@ describe('tasks actions API', () => {
           type: 'status_changed',
           fromStatus: 'todo',
           toStatus: 'in_progress',
+          githubOwner: null,
+          githubRepo: null,
+          githubNumber: null,
+          githubKind: null,
           authorKind: 'llm',
           authorAgent: 'claude-opus-5',
         },
@@ -170,6 +157,10 @@ describe('tasks actions API', () => {
           type: 'status_changed',
           fromStatus: 'todo',
           toStatus: 'completed',
+          githubOwner: null,
+          githubRepo: null,
+          githubNumber: null,
+          githubKind: null,
           authorKind: 'human',
           authorAgent: null,
         },

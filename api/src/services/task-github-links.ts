@@ -15,12 +15,8 @@ import type {
 } from '#integrations/github/issues'
 import { fetchGithubIssue } from '#integrations/github/issues'
 import { firstOrErr, RowNotFoundError } from '#lib/drizzle-utils'
-
-function toResultAsync<T, E>(
-  promise: Promise<Result<T, E>>,
-): ResultAsync<T, E> {
-  return ResultAsync.fromSafePromise(promise).andThen((result) => result)
-}
+import type { EditAuthor } from '#lib/edits'
+import { recordGithubLinked } from '#lib/task-events'
 
 export class TaskNotFoundError extends Error {
   constructor() {
@@ -124,10 +120,11 @@ function isUniqueViolation(cause: unknown, constraintName: string): boolean {
   )
 }
 
-// Accepted by insertLink so it can run standalone (against `db`) or as part
-// of a larger transaction (against the `tx` handed to `db.transaction`) —
-// createTaskFromIssueData needs the latter to make its task insert and link
-// insert atomic.
+// Accepted by insertLink/unlinkTask so they can run standalone (against
+// `db`) or as part of a larger transaction (against the `tx` handed to
+// `db.transaction`). createTaskFromIssueData needs the latter to make its
+// task insert and link insert atomic; linkTaskToGithubUrl/unlinkTask need it
+// to make their link write and its task_events row atomic.
 type Executor = typeof db | DbTransaction
 
 type LinkConflictError =
@@ -328,9 +325,25 @@ export function createTaskFromGithubUrl(
   })
 }
 
+// The link insert and its task_events row must commit or roll back
+// together: a bare insertLink followed by a separate recordGithubLinked
+// write would leave the timeline missing an entry if the process crashes (or
+// the write fails) between the two. The GitHub API fetch happens before the
+// transaction opens since it can't participate in it.
+//
+// insertLink's own try/catch can't be relied on to keep the transaction
+// alive on conflict: postgres.js marks the whole transaction failed as soon
+// as any query on it rejects, even one the immediate caller catches (see
+// https://github.com/porsager/postgres#transactions — `scope()` tracks each
+// query's rejection independently of the callback's own try/catch and
+// rethrows it once the callback settles). So a conflict is rethrown here to
+// trigger that rollback, then reclassified in `.orElse`, once the
+// transaction has fully settled — the same boundary createTaskFromIssueData
+// uses.
 export function linkTaskToGithubUrl(
   taskId: string,
   ref: GithubResourceRef,
+  author: EditAuthor,
 ): ResultAsync<
   LinkRow,
   | TaskNotFoundError
@@ -358,7 +371,33 @@ export function linkTaskToGithubUrl(
         }
 
         return fetchGithubIssue(ref).andThen((issue) =>
-          toResultAsync(insertLink(db, taskId, ref, issue)),
+          ResultAsync.fromPromise<LinkRow, unknown>(
+            db.transaction(async (tx) => {
+              const linkResult = await insertLink(tx, taskId, ref, issue)
+              if (linkResult.isErr()) {
+                // eslint-disable-next-line no-restricted-syntax -- interop boundary: see comment above linkTaskToGithubUrl
+                throw linkResult.error
+              }
+              const link = linkResult.value
+              await recordGithubLinked(
+                tx,
+                taskId,
+                {
+                  owner: link.owner,
+                  repo: link.repo,
+                  number: link.number,
+                  kind: link.kind,
+                },
+                author,
+              )
+              return link
+            }),
+            (cause) => cause,
+          ).orElse((cause) =>
+            ResultAsync.fromSafePromise(
+              classifyLinkConflict(cause, taskId, ref),
+            ).andThen((result) => result),
+          ),
         )
       })
     })
@@ -366,10 +405,11 @@ export function linkTaskToGithubUrl(
 }
 
 export function unlinkTask(
+  executor: Executor,
   taskId: string,
 ): ResultAsync<LinkRow, GithubLinkNotFoundError> {
   return ResultAsync.fromSafePromise(
-    db
+    executor
       .delete(taskGithubLinks)
       .where(eq(taskGithubLinks.taskId, taskId))
       .returning(),

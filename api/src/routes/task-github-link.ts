@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { parseGithubIssueUrl } from '#integrations/github/issues'
-import { recordGithubLinked, recordGithubUnlinked } from '#lib/task-events'
+import { recordGithubUnlinked } from '#lib/task-events'
 import { githubLinkErrorResponse } from '#routes/github-link-error'
 import { githubLinkToResponse } from '#routes/tasks/shared'
 import { syncLinkFromGithub } from '#services/github-sync'
@@ -38,23 +38,8 @@ export const taskGithubLinkApp = new Hono<TaskGithubLinkEnv>()
     const { url } = c.req.valid('json')
 
     const result = await parseGithubIssueUrl(url).asyncAndThen((ref) =>
-      linkTaskToGithubUrl(taskId, ref),
+      linkTaskToGithubUrl(taskId, ref, author),
     )
-
-    if (result.isOk()) {
-      const link = result.value
-      await recordGithubLinked(
-        db,
-        taskId,
-        {
-          owner: link.owner,
-          repo: link.repo,
-          number: link.number,
-          kind: link.kind,
-        },
-        author,
-      )
-    }
 
     return result.match(
       (link) => c.json(githubLinkToResponse(link), 201),
@@ -65,22 +50,24 @@ export const taskGithubLinkApp = new Hono<TaskGithubLinkEnv>()
     const taskId = c.get('taskId')
     const author = c.get('author')
 
-    const result = await unlinkTask(taskId)
-
-    if (result.isOk()) {
-      const link = result.value
-      await recordGithubUnlinked(
-        db,
-        taskId,
-        {
-          owner: link.owner,
-          repo: link.repo,
-          number: link.number,
-          kind: link.kind,
-        },
-        author,
-      )
-    }
+    const result = await db.transaction(async (tx) => {
+      const unlinkResult = await unlinkTask(tx, taskId)
+      if (unlinkResult.isOk()) {
+        const link = unlinkResult.value
+        await recordGithubUnlinked(
+          tx,
+          taskId,
+          {
+            owner: link.owner,
+            repo: link.repo,
+            number: link.number,
+            kind: link.kind,
+          },
+          author,
+        )
+      }
+      return unlinkResult
+    })
 
     return result.match(
       () => c.body(null, 204),

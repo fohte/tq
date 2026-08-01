@@ -32,7 +32,19 @@ export const tasksActionsApp = new Hono()
       const { status } = c.req.valid('json')
       const author = c.get('author')
 
+      // `existing.status` was read by requireTask outside this transaction,
+      // so it can be stale under concurrent requests for the same task.
+      // Locking and re-reading here keeps fromStatus accurate for whichever
+      // request commits second.
       const updated = await db.transaction(async (tx) => {
+        const current = firstOrThrow(
+          await tx
+            .select({ status: tasks.status })
+            .from(tasks)
+            .where(eq(tasks.id, id))
+            .for('update'),
+        )
+
         const updated = firstOrThrow(
           await tx
             .update(tasks)
@@ -41,8 +53,8 @@ export const tasksActionsApp = new Hono()
             .returning(),
         )
 
-        if (existing.status !== status) {
-          await recordStatusChanged(tx, id, existing.status, status, author)
+        if (current.status !== status) {
+          await recordStatusChanged(tx, id, current.status, status, author)
         }
 
         return updated
@@ -107,11 +119,22 @@ export const tasksActionsApp = new Hono()
     const id = existing.id
     const author = c.get('author')
 
-    if (existing.status === 'completed') {
-      return c.json({ error: 'Task is already completed' }, 409)
-    }
-
+    // `existing.status` was read by requireTask outside this transaction,
+    // so the already-completed check must be re-evaluated against a locked,
+    // freshly-read row: two concurrent completions of the same task would
+    // otherwise both see the stale pre-completion status and both record a
+    // status_changed event.
     const updatedTask = await db.transaction(async (tx) => {
+      const current = firstOrThrow(
+        await tx
+          .select({ status: tasks.status })
+          .from(tasks)
+          .where(eq(tasks.id, id))
+          .for('update'),
+      )
+
+      if (current.status === 'completed') return null
+
       const updatedTask = firstOrThrow(
         await tx
           .update(tasks)
@@ -120,10 +143,14 @@ export const tasksActionsApp = new Hono()
           .returning(),
       )
 
-      await recordStatusChanged(tx, id, existing.status, 'completed', author)
+      await recordStatusChanged(tx, id, current.status, 'completed', author)
 
       return updatedTask
     })
+
+    if (updatedTask == null) {
+      return c.json({ error: 'Task is already completed' }, 409)
+    }
 
     let nextTask: ReturnType<typeof taskToResponse> | null = null
     let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
