@@ -293,7 +293,7 @@ describe('ProjectDetailPage', () => {
     expect(screen.queryAllByText('Open task 7')).toHaveLength(0)
   })
 
-  it('does not render the OPEN TASKS panel when there are no non-completed tasks', () => {
+  it('still shows the OPEN TASKS panel and its view board link when there are no non-completed tasks', () => {
     mockUseProject.mockReturnValue({
       data: mockProject,
       isLoading: false,
@@ -309,7 +309,9 @@ describe('ProjectDetailPage', () => {
     })
     renderProjectDetailPage()
 
-    expect(screen.queryAllByText('OPEN TASKS')).toHaveLength(0)
+    expect(screen.getAllByText('OPEN TASKS')).toHaveLength(2)
+    expect(screen.getAllByText('view board →')).toHaveLength(2)
+    expect(screen.getAllByText('No open tasks')).toHaveLength(2)
   })
 
   it('renders sidebar field labels once per layout (PC + SP)', () => {

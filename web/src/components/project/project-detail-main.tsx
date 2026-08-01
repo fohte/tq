@@ -3,8 +3,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { summarizeTaskStatus } from '#components/project/project-detail-utils'
 import { ProjectStatusBadge } from '#components/project/project-status-badge'
-import type { ProjectStatus } from '#components/project/project-status-mark'
-import { ProjectStatusMark } from '#components/project/project-status-mark'
+import {
+  isProjectStatus,
+  ProjectStatusMark,
+} from '#components/project/project-status-mark'
 import { TaskRow } from '#components/task/task-row'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { Panel, PanelHeader } from '#components/ui/panel'
@@ -12,15 +14,6 @@ import { ProgressBar } from '#components/ui/progress-bar'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
 import type { ProjectDetail, ProjectTask } from '#hooks/use-projects'
 import { useUpdateProject } from '#hooks/use-projects'
-
-function isProjectStatus(value: string): value is ProjectStatus {
-  return (
-    value === 'active' ||
-    value === 'paused' ||
-    value === 'completed' ||
-    value === 'archived'
-  )
-}
 
 // --- Main Content ---
 
@@ -213,7 +206,6 @@ function ProjectOpenTasksPanel({
   tasks: ProjectTask[]
 }) {
   const openTasks = tasks.filter((t) => t.status !== 'completed').slice(0, 5)
-  if (openTasks.length === 0) return null
 
   return (
     <Panel>
@@ -227,11 +219,17 @@ function ProjectOpenTasksPanel({
           view board →
         </Link>
       </PanelHeader>
-      <div>
-        {openTasks.map((task) => (
-          <TaskRow key={task.id} task={task} />
-        ))}
-      </div>
+      {openTasks.length > 0 ? (
+        <div>
+          {openTasks.map((task) => (
+            <TaskRow key={task.id} task={task} />
+          ))}
+        </div>
+      ) : (
+        <div className="px-3 py-2 text-sm text-muted-foreground">
+          No open tasks
+        </div>
+      )}
     </Panel>
   )
 }
