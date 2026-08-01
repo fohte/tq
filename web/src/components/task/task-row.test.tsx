@@ -127,6 +127,11 @@ describe('TreeTaskRow', () => {
     expect(screen.getByText('Parent Task')).toBeInTheDocument()
   })
 
+  it('renders the task number', () => {
+    renderTree(makeNode({ number: 42 }))
+    expect(screen.getByText('#42')).toBeInTheDocument()
+  })
+
   it('renders children under parent', () => {
     const node = makeNode({
       children: [
@@ -279,15 +284,16 @@ describe('TreeTaskRow', () => {
 
   it('does not render tag tokens when there are no labels', () => {
     renderTree(makeNode({ labels: [] }))
-    expect(screen.queryByText(/^#/)).not.toBeInTheDocument()
+    // Tag tokens render as buttons; the task number label (a <span>) also
+    // starts with "#", so scope the query to buttons to avoid a false match.
+    expect(screen.queryByRole('button', { name: /^#/ })).not.toBeInTheDocument()
   })
 
   it('renders a token per label', () => {
     renderTree(makeNode({ labels: ['dev:tq', 'chore'] }))
-    expect(screen.getAllByText(/^#/).map((el) => el.textContent)).toEqual([
-      '#dev:tq',
-      '#chore',
-    ])
+    expect(
+      screen.getAllByRole('button', { name: /^#/ }).map((el) => el.textContent),
+    ).toEqual(['#dev:tq', '#chore'])
   })
 
   it('sets the tag filter and stops the click from reaching the row Link when a tag token is clicked', async () => {
