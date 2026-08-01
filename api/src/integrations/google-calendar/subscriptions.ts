@@ -35,14 +35,11 @@ export function listSubscribedCalendars(
 // 'primary' alias as calendarId, since calendarList.list() never returns an
 // entry whose id is literally 'primary' — it returns the real calendar (with
 // a `primary: true` flag), which for a personal Google Calendar is keyed by
-// the account's own email. Seeding the alias instead of the real id let this
-// row (a) duplicate the real calendar's events once its id was separately
-// subscribed via setCalendarSubscription, and (b) become unremovable from
-// the settings screen, since it can never match a live calendarList entry.
-// onConflictDoNothing makes this a no-op for an account that already has
-// subscription rows (from an earlier connect, or from this migration's
-// backfill), so reconnecting an existing account never re-adds the primary
-// calendar after the user has deliberately unsubscribed from it.
+// the account's own email. onConflictDoNothing makes this a no-op for an
+// account that already has subscription rows (from an earlier connect, or
+// from this migration's backfill), so reconnecting an existing account never
+// re-adds the primary calendar after the user has deliberately unsubscribed
+// from it.
 export function ensureDefaultCalendarSubscription(
   oauthTokenId: string,
   accountLabel: string | null,
