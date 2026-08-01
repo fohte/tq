@@ -114,7 +114,7 @@ export function ProjectTaskList({
     <div className="py-1" data-testid="project-task-list">
       {flat.map(({ task, depth }) => (
         <div key={task.id} style={{ paddingLeft: `${String(depth * 24)}px` }}>
-          <TaskRow task={task} />
+          <TaskRow task={{ ...task, labels: [] }} />
         </div>
       ))}
     </div>

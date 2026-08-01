@@ -70,6 +70,7 @@ function seedLiveReferenceFixtures() {
     startDate: null,
     dueDate: null,
     estimatedMinutes: null,
+    labels: [],
     parentId: null,
     projectId: null,
     recurrenceRuleId: null,

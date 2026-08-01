@@ -65,6 +65,7 @@ export interface TaskResponse {
   childCompletionCount?: { completed: number; total: number }
   children?: TaskResponse[]
   links?: { outgoing: LinkedTaskResponse[]; incoming: LinkedTaskResponse[] }
+  labels?: string[]
 }
 
 const recurrenceRuleResponseSchema = z.object({
@@ -122,6 +123,7 @@ const taskResponseSchema = z.object({
       incoming: z.array(linkedTaskResponseSchema),
     })
     .optional(),
+  labels: z.array(z.string()).optional(),
 })
 
 const idResponseSchema = z.object({ id: z.string() })

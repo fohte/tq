@@ -23,6 +23,7 @@ import {
 import { pageToResponse } from '#routes/task-pages'
 import {
   contextEnum,
+  getLabelNamesByTaskId,
   parentTasks,
   requireTask,
   taskStatus,
@@ -173,10 +174,19 @@ export const tasksCrudApp = new Hono()
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(tasks.sortOrder, tasks.createdAt)
 
+      const labelsByTaskId = await getLabelNamesByTaskId(
+        result.map((r) => r.task.id),
+      )
+
       return c.json(
-        result.map((r) =>
-          taskWithParentNumberToResponse(r.task, r.parentNumber, r.githubLink),
-        ),
+        result.map((r) => ({
+          ...taskWithParentNumberToResponse(
+            r.task,
+            r.parentNumber,
+            r.githubLink,
+          ),
+          labels: labelsByTaskId.get(r.task.id) ?? [],
+        })),
         200,
       )
     },
@@ -193,6 +203,7 @@ export const tasksCrudApp = new Hono()
       githubLink,
       links,
       taskFieldAuthors,
+      labelsByTaskId,
     ] = await Promise.all([
       db
         .select({
@@ -223,6 +234,7 @@ export const tasksCrudApp = new Hono()
       }),
       getTaskLinks(id),
       getTaskFieldAuthors(id),
+      getLabelNamesByTaskId([id]),
     ])
 
     const pageAuthors = await getPageAuthors(pages.map((page) => page.id))
@@ -241,6 +253,7 @@ export const tasksCrudApp = new Hono()
         ),
         timeBlocks: taskTimeBlocks.map(timeBlockToResponse),
         links,
+        labels: labelsByTaskId.get(id) ?? [],
       },
       200,
     )

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import {
+  createLabel,
   createRecurringTask,
   createTask,
   TaskResponse,
@@ -138,6 +139,24 @@ describe('tasks CRUD API', () => {
       assertDefined(body[0])
       expect(body[0].title).toBe('Task B')
     })
+
+    it('includes each task labels', async () => {
+      await createLabel('bug')
+      await createLabel('urgent')
+      const labeled = await createTask('Labeled', { labels: ['bug', 'urgent'] })
+      const unlabeled = await createTask('Unlabeled')
+
+      const res = await app.request('/api/tasks')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse[]>(res)
+      const labeledBody = body.find((t) => t.id === labeled.id)
+      const unlabeledBody = body.find((t) => t.id === unlabeled.id)
+      assertDefined(labeledBody)
+      assertDefined(unlabeledBody)
+      expect([...(labeledBody.labels ?? [])].sort()).toEqual(['bug', 'urgent'])
+      expect(unlabeledBody.labels).toEqual([])
+    })
   })
 
   describe('GET /api/tasks/:id', () => {
@@ -150,6 +169,30 @@ describe('tasks CRUD API', () => {
       const body = await jsonBody<TaskResponse>(res)
       expect(body.title).toBe('My task')
       expect(body.childCompletionCount).toEqual({ completed: 0, total: 0 })
+    })
+
+    it('returns empty labels array when task has no labels', async () => {
+      const created = await createTask('No labels')
+
+      const res = await app.request(`/api/tasks/${created.id}`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.labels).toEqual([])
+    })
+
+    it('includes labels for a task with labels', async () => {
+      await createLabel('bug')
+      await createLabel('urgent')
+      const created = await createTask('Labeled', {
+        labels: ['bug', 'urgent'],
+      })
+
+      const res = await app.request(`/api/tasks/${created.id}`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect([...(body.labels ?? [])].sort()).toEqual(['bug', 'urgent'])
     })
 
     it('returns 404 for non-existent ID', async () => {
