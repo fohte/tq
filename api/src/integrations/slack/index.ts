@@ -10,10 +10,10 @@ import { fetchJson, TokenExchangeError } from '#lib/fetch-json'
 const SLACK_AUTHORIZE_ENDPOINT = 'https://slack.com/oauth/v2_user/authorize'
 const SLACK_TOKEN_ENDPOINT = 'https://slack.com/api/oauth.v2.user.access'
 const SLACK_AUTH_TEST_ENDPOINT = 'https://slack.com/api/auth.test'
-// Scopes needed to resolve a permalink (a later PR): message bodies
-// (`*:history`), channel names (`channels:read`/`groups:read`), and author
-// names (`users:read`). All are requested up front since adding a scope
-// later would force every already-connected workspace to re-authorize.
+// Scopes needed to resolve a permalink: message bodies (`*:history`),
+// channel names (`channels:read`/`groups:read`), and author names
+// (`users:read`). All are requested up front since adding a scope later
+// would force every already-connected workspace to re-authorize.
 const SCOPES = [
   'channels:history',
   'groups:history',
@@ -26,9 +26,19 @@ const SCOPES = [
 const PROVIDER_ID = 'slack'
 
 export class SlackApiError extends Error {
-  constructor(message: string, cause?: unknown) {
+  /**
+   * True when Slack itself reported the request as rejected — either an
+   * `ok: false` business-logic error (Slack's API answers with HTTP 200
+   * regardless) or a 4xx transport response — which is safe to relay to the
+   * client. False for a network/parse/schema failure or a 5xx, which must be
+   * reported to Sentry instead.
+   */
+  readonly rejected: boolean
+
+  constructor(message: string, cause?: unknown, rejected = false) {
     super(`Slack API error: ${message}`, { cause })
     this.name = 'SlackApiError'
+    this.rejected = rejected
   }
 }
 

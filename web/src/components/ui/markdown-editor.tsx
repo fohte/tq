@@ -20,6 +20,7 @@ import {
 } from '#lib/image-upload'
 import { createInlineReferencePlugin } from '#lib/inline-reference/plugin'
 import { githubUrlProvider } from '#lib/inline-reference/providers/github-url'
+import { slackPermalinkProvider } from '#lib/inline-reference/providers/slack-permalink'
 import { taskMentionProvider } from '#lib/inline-reference/providers/task-mention'
 import { taskMentionAutocompletePlugin } from '#lib/inline-reference/providers/task-mention-autocomplete-plugin'
 import {
@@ -109,6 +110,9 @@ function CrepeEditor({
       .use(createInlineReferencePlugin(taskMentionProvider, widgetViewFactory))
       .use(taskMentionAutocompletePlugin)
       .use(createInlineReferencePlugin(githubUrlProvider, widgetViewFactory))
+      .use(
+        createInlineReferencePlugin(slackPermalinkProvider, widgetViewFactory),
+      )
 
     if (onChange) {
       crepe.on((listener) => {
