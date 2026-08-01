@@ -10,6 +10,7 @@ import { useTagFilter } from '#hooks/use-tag-filter'
 import type { Task, TreeNode } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
+import { formatDueDate, isTaskOverdue } from '#lib/task-due-date'
 import { cn } from '#lib/utils'
 
 function useHandleStatusChange(id: string, status: Task['status']) {
@@ -64,6 +65,27 @@ function TagTokens({
   )
 }
 
+function DueDateBadge({
+  dueDate,
+  status,
+}: {
+  dueDate: string
+  status: Task['status']
+}) {
+  const overdue = isTaskOverdue({ status, dueDate })
+
+  return (
+    <span
+      className={cn(
+        'shrink-0 font-mono text-xs',
+        overdue ? 'text-primary' : 'text-muted-foreground',
+      )}
+    >
+      {formatDueDate(dueDate)}
+    </span>
+  )
+}
+
 function rowWrapperClassName(isInProgress: boolean, isCompleted: boolean) {
   return cn(
     'flex items-center gap-2 border-b border-border border-l-2 border-l-transparent px-3 py-2',
@@ -89,6 +111,7 @@ interface TaskRowBaseProps {
   parentNumber: number | null
   githubLink: GithubLink | null
   labels: string[]
+  dueDate: string | null
 }
 
 function TaskRowContent({
@@ -100,6 +123,7 @@ function TaskRowContent({
   parentNumber,
   githubLink,
   labels,
+  dueDate,
 }: TaskRowBaseProps) {
   const handleStatusChange = useHandleStatusChange(id, status)
   const isInProgress = status === 'in_progress'
@@ -133,6 +157,9 @@ function TaskRowContent({
             <span className="font-mono text-xs text-muted-foreground">
               {formatMinutes(estimatedMinutes)}
             </span>
+          )}
+          {dueDate != null && (
+            <DueDateBadge dueDate={dueDate} status={status} />
           )}
         </div>
       </div>
@@ -174,6 +201,7 @@ export function TaskRow({
         parentNumber={task.parentNumber}
         githubLink={task.githubLink}
         labels={task.labels}
+        dueDate={task.dueDate}
       />
     </Link>
   )
@@ -265,6 +293,9 @@ export function TreeTaskRow({
                 <span className="font-mono text-xs text-muted-foreground">
                   {formatMinutes(node.estimatedMinutes)}
                 </span>
+              )}
+              {node.dueDate != null && (
+                <DueDateBadge dueDate={node.dueDate} status={node.status} />
               )}
             </div>
           </div>

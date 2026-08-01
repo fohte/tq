@@ -131,3 +131,10 @@ export const InProgress: Story = {
     task: makeTask({ status: 'in_progress' }),
   },
 }
+
+export const Overdue: Story = {
+  args: {
+    // Fixed past date so this story always renders as overdue.
+    task: makeTask({ title: 'Renew SSL certificate', dueDate: '2020-01-01' }),
+  },
+}

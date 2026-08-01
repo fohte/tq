@@ -147,6 +147,39 @@ export const Nested: Story = {
   },
 }
 
+export const WithDueDate: Story = {
+  args: {
+    node: {
+      ...baseTreeNode,
+      title: 'Submit expense report',
+      // Far future so this story never flips to overdue.
+      dueDate: '2099-06-15',
+    },
+  },
+}
+
+export const Overdue: Story = {
+  args: {
+    node: {
+      ...baseTreeNode,
+      title: 'Renew SSL certificate',
+      // Fixed past date so this story always renders as overdue.
+      dueDate: '2020-01-01',
+    },
+  },
+}
+
+export const OverdueCompleted: Story = {
+  args: {
+    node: {
+      ...baseTreeNode,
+      status: 'completed',
+      title: 'Renew SSL certificate',
+      dueDate: '2020-01-01',
+    },
+  },
+}
+
 export const WithGithubLink: Story = {
   args: {
     node: {
