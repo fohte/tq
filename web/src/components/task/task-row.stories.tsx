@@ -8,7 +8,9 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
+import { expect } from 'storybook/test'
 
+import { TagFilterBar } from '#components/tag-filter-bar'
 import { TaskRow } from '#components/task/task-row'
 import type { Task } from '#hooks/use-tasks'
 
@@ -19,6 +21,7 @@ const baseTask: Task = {
   description: null,
   status: 'todo',
   context: 'personal',
+  labels: [],
   startDate: null,
   dueDate: null,
   estimatedMinutes: null,
@@ -170,6 +173,34 @@ export const WithGithubLink: Story = {
         lastSyncedAt: '2026-03-20T00:00:00.000Z',
       },
     },
+  },
+}
+
+export const WithTags: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Ship the release notes',
+      labels: ['dev:tq', 'chore'],
+    },
+  },
+}
+
+export const TagClick: Story = {
+  args: {
+    task: { ...baseTask, title: 'Click a tag token', labels: ['dev:tq'] },
+  },
+  render: (args) => (
+    <Providers>
+      <div className="w-96">
+        <TaskRow task={args.task} />
+        <TagFilterBar />
+      </div>
+    </Providers>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByText('#dev:tq'))
+    await expect(canvas.getByText('filtered by')).toBeVisible()
   },
 }
 

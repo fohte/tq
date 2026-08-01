@@ -13,6 +13,7 @@ const baseTask: ProjectTask = {
   description: null,
   status: 'todo',
   context: 'personal',
+  labels: [],
   startDate: null,
   dueDate: null,
   estimatedMinutes: null,

@@ -23,6 +23,7 @@ const baseTask: TaskDetail = {
     '## Why\n\nThe task detail page is needed.\n\n## What\n\n- Add inline editing\n- Add sidebar fields',
   status: 'todo',
   context: 'personal',
+  labels: [],
   startDate: '2026-03-20',
   dueDate: '2026-03-25',
   estimatedMinutes: 90,

@@ -4,6 +4,7 @@ import type { Preview } from '@storybook/react-vite'
 import { initialize, mswLoader } from 'msw-storybook-addon'
 
 import { ContextFilterProvider } from '#hooks/use-context-filter'
+import { TagFilterProvider } from '#hooks/use-tag-filter'
 
 initialize({
   onUnhandledRequest: ({ url: requestUrl }, print) => {
@@ -51,7 +52,9 @@ const preview: Preview = {
       document.documentElement.classList.toggle('dark', themeValue === 'dark')
       return (
         <ContextFilterProvider>
-          <Story />
+          <TagFilterProvider>
+            <Story />
+          </TagFilterProvider>
         </ContextFilterProvider>
       )
     },

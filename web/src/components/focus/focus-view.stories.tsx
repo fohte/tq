@@ -12,6 +12,7 @@ const baseTask: Task = {
   description: null,
   status: 'todo',
   context: 'work',
+  labels: [],
   startDate: null,
   dueDate: null,
   estimatedMinutes: 60,

@@ -67,6 +67,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     description: null,
     status: 'todo',
     context: 'work',
+    labels: [],
     startDate: null,
     dueDate: null,
     estimatedMinutes: 30,

@@ -20,6 +20,7 @@ const baseTask: SearchResult = {
   description: null,
   status: 'todo',
   context: 'personal',
+  labels: [],
   startDate: null,
   dueDate: null,
   estimatedMinutes: null,

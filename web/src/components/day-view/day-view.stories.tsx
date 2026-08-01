@@ -24,6 +24,7 @@ const baseTask: Task = {
   description: null,
   status: 'todo',
   context: 'personal',
+  labels: [],
   startDate: dateStr,
   dueDate: null,
   estimatedMinutes: 180,

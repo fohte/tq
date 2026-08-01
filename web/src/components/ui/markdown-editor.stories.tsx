@@ -67,6 +67,7 @@ function seedLiveReferenceFixtures() {
     description: null,
     status: 'todo',
     context: 'personal',
+    labels: [],
     startDate: null,
     dueDate: null,
     estimatedMinutes: null,

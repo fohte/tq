@@ -2,6 +2,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { ContextFilterInline } from '#components/context-filter'
+import { TagFilterBar } from '#components/tag-filter-bar'
+import { TagFilterChips } from '#components/tag-filter-chips'
 import {
   CreateTaskInline,
   FloatingActionButton,
@@ -121,9 +123,16 @@ function TaskList() {
         </div>
       </ScreenHeaderBar>
 
+      <TagFilterBar />
+
       {/* Context filter (mobile only — desktop already has it in the sidebar) */}
       <div className="border-b border-border px-3 py-2 md:hidden">
         <ContextFilterInline />
+      </div>
+
+      {/* Tag filter chips (mobile only — desktop already has TAGS in the sidebar) */}
+      <div className="md:hidden">
+        <TagFilterChips />
       </div>
 
       {/* Summary header (Today tab) */}

@@ -12,6 +12,7 @@ const makeBacklogTasks = (count: number): Task[] =>
     description: null,
     status: 'todo' as const,
     context: 'personal' as const,
+    labels: [],
     startDate: null,
     dueDate: null,
     estimatedMinutes: null,

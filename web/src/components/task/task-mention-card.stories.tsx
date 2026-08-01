@@ -22,6 +22,7 @@ const baseTask: TaskDetail = {
     'Adds live preview cards for #123-style task mentions when they are the entire content of a paragraph.',
   status: 'todo',
   context: 'personal',
+  labels: [],
   startDate: null,
   dueDate: null,
   estimatedMinutes: null,
