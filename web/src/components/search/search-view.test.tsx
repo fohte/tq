@@ -283,7 +283,7 @@ describe('SearchView', () => {
       renderSearchView()
 
       const row = screen.getByTestId('search-result-row')
-      expect(row.className).toContain('opacity-[0.55]')
+      expect(row).toHaveClass('opacity-[0.55]')
     })
   })
 })
