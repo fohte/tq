@@ -1,12 +1,15 @@
 import { Link } from '@tanstack/react-router'
-import { ChevronDown, Loader2, Search, X } from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-import { ContextBadge } from '#components/search/context-badge'
-import { StatusIcon } from '#components/task/status-icon'
+import {
+  SearchResultRow,
+  searchResultRowWrapperClassName,
+} from '#components/search/search-result-row'
+import { Chip } from '#components/ui/chip'
+import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import type { SearchFilters, SearchResult } from '#hooks/use-search'
 import { useSearch } from '#hooks/use-search'
-import { formatMinutes } from '#lib/format'
 import { cn } from '#lib/utils'
 
 interface FilterChipProps {
@@ -37,41 +40,29 @@ function FilterChip({ label, value, options, onChange }: FilterChipProps) {
     }
   }, [open])
 
+  const activeLabel =
+    value != null
+      ? (options.find((o) => o.value === value)?.label ?? value)
+      : label
+
   return (
     <div className="relative" ref={ref}>
-      <button
-        type="button"
+      <Chip
+        as="button"
+        size="md"
+        active={value != null}
         onClick={() => {
           setOpen(!open)
         }}
-        className={cn(
-          'flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
-          value != null
-            ? 'bg-primary/10 text-primary'
-            : 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        )}
         data-testid={`filter-chip-${label.toLowerCase()}`}
       >
-        {value != null
-          ? (options.find((o) => o.value === value)?.label ?? value)
-          : label}
-        {value != null ? (
-          <X
-            className="h-3 w-3"
-            onClick={(e) => {
-              e.stopPropagation()
-              onChange(undefined)
-              setOpen(false)
-            }}
-          />
-        ) : (
-          <ChevronDown className="h-3 w-3" />
-        )}
-      </button>
+        {activeLabel}
+        <span className="text-muted-foreground-faint">▾</span>
+      </Chip>
 
       {open && (
         <div
-          className="absolute top-full left-0 z-50 mt-1 min-w-[140px] rounded-lg border border-border bg-card p-1 shadow-lg"
+          className="absolute top-full left-0 z-50 mt-1 min-w-[140px] border border-border bg-popover p-1 text-popover-foreground"
           data-testid={`filter-dropdown-${label.toLowerCase()}`}
         >
           {options.map((option) => (
@@ -83,10 +74,10 @@ function FilterChip({ label, value, options, onChange }: FilterChipProps) {
                 setOpen(false)
               }}
               className={cn(
-                'flex w-full items-center rounded-md px-3 py-1.5 text-left text-xs transition-colors',
+                'flex w-full items-center px-3 py-1.5 text-left font-mono text-xs',
                 value === option.value
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-foreground hover:bg-secondary',
+                  ? 'bg-secondary text-foreground'
+                  : 'text-muted-foreground hover:bg-secondary/50',
               )}
             >
               {option.label}
@@ -115,43 +106,6 @@ const SORT_OPTIONS = [
   { value: 'updated', label: 'Updated' },
   { value: 'estimate', label: 'Estimate' },
 ]
-
-function SearchResultRow({ task }: { task: SearchResult }) {
-  const isCompleted = task.status === 'completed'
-
-  return (
-    <Link
-      to="/tasks/$taskId"
-      params={{ taskId: task.id }}
-      className={cn(
-        'flex items-center gap-2 border-b border-border px-3 py-2 transition-colors hover:bg-secondary/30',
-        isCompleted && 'opacity-50',
-      )}
-      data-testid="search-result-row"
-    >
-      <StatusIcon status={task.status} />
-
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span
-          className={cn(
-            'truncate text-sm font-medium',
-            isCompleted && 'text-muted-foreground',
-          )}
-        >
-          {task.title}
-        </span>
-        <div className="flex items-center gap-1.5">
-          <ContextBadge context={task.context} />
-          {task.estimatedMinutes != null && (
-            <span className="font-mono text-xs text-muted-foreground">
-              {formatMinutes(task.estimatedMinutes)}
-            </span>
-          )}
-        </div>
-      </div>
-    </Link>
-  )
-}
 
 export interface SearchViewInnerProps {
   query: string
@@ -187,51 +141,54 @@ export function SearchViewInner({
     <div
       className="flex h-full flex-col bg-background"
       data-testid="search-view"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          onBack?.()
+        }
+      }}
     >
-      {/* Search header */}
-      <div className="flex items-center gap-2 px-3 py-2">
-        <div className="flex flex-1 items-center gap-2 rounded-lg bg-card px-3 py-2">
-          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value)
+      <ScreenHeaderBar>
+        <span className="font-mono text-[13px] font-bold text-primary">
+          &gt;
+        </span>
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value)
+          }}
+          placeholder="search tasks…"
+          className="flex-1 border-0 bg-transparent font-mono text-[13px] outline-none placeholder:text-muted-foreground"
+          data-testid="search-input"
+          autoFocus
+        />
+        {query !== '' && (
+          <button
+            type="button"
+            onClick={() => {
+              setQuery('')
             }}
-            placeholder="Search tasks..."
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-            data-testid="search-input"
-            autoFocus
-          />
-          {query !== '' && (
-            <button
-              type="button"
-              onClick={() => {
-                setQuery('')
-              }}
-              className="text-muted-foreground hover:text-foreground"
-              aria-label="Clear search"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-
+            className="text-muted-foreground hover:text-foreground"
+            aria-label="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
         {onBack != null && (
           <button
             type="button"
             onClick={onBack}
-            className="text-sm text-primary hover:text-primary/80"
+            className="font-mono text-[10px] text-muted-foreground-ghost hover:text-muted-foreground"
           >
-            Cancel
+            esc to close
           </button>
         )}
-      </div>
+      </ScreenHeaderBar>
 
       {/* Filter row */}
       <div
-        className="flex items-center gap-2 px-3 py-2"
+        className="flex items-center gap-2 border-b border-border px-3 py-2"
         data-testid="filter-row"
       >
         <FilterChip
@@ -258,10 +215,10 @@ export function SearchViewInner({
             handleFilterChange('sortBy', v)
           }}
         />
+        <span className="ml-auto font-mono text-[10px] text-muted-foreground-faint">
+          {results.length} results
+        </span>
       </div>
-
-      {/* Divider */}
-      <div className="h-px bg-border" />
 
       {/* Results */}
       <div className="flex-1 overflow-y-auto" data-testid="search-results">
@@ -270,15 +227,25 @@ export function SearchViewInner({
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : hasQuery && results.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            No results found
+          <div className="py-8 text-center font-mono text-xs text-muted-foreground-faint">
+            {`no results for "${query}"`}
           </div>
         ) : !hasQuery ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
+          <div className="py-8 text-center font-mono text-xs text-muted-foreground-faint">
             Type to search tasks
           </div>
         ) : (
-          results.map((task) => <SearchResultRow key={task.id} task={task} />)
+          results.map((task) => (
+            <Link
+              key={task.id}
+              to="/tasks/$taskId"
+              params={{ taskId: task.id }}
+              className={searchResultRowWrapperClassName(task.status)}
+              data-testid="search-result-row"
+            >
+              <SearchResultRow task={task} />
+            </Link>
+          ))
         )}
       </div>
     </div>

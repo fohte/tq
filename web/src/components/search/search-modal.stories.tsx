@@ -53,7 +53,7 @@ function SearchModalStory() {
           onClick={() => {
             setOpen(true)
           }}
-          className="rounded-lg bg-secondary px-4 py-2 text-sm text-foreground"
+          className="border border-border bg-secondary px-4 py-2 font-mono text-sm text-foreground"
         >
           Open Search (Cmd+K)
         </button>

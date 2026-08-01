@@ -2,11 +2,10 @@ import { type ReactNode, useCallback, useEffect, useState } from 'react'
 
 import { BottomTabBar } from '#components/layout/bottom-tab-bar'
 import { Sidebar } from '#components/layout/sidebar'
-import { ProjectFormModal } from '#components/project/project-form-modal'
+import { StatusLine } from '#components/layout/status-line'
 import { SearchModal } from '#components/search/search-modal'
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const [showCreateProject, setShowCreateProject] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -25,17 +24,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-screen">
-      <Sidebar
-        onNewProject={() => {
-          setShowCreateProject(true)
-        }}
-      />
-      <main className="flex-1 overflow-auto pb-14 md:pb-0">{children}</main>
+      <Sidebar />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <main className="flex-1 overflow-auto pb-[52px] md:pb-0">
+          {children}
+        </main>
+        <StatusLine />
+      </div>
       <BottomTabBar />
-      <ProjectFormModal
-        open={showCreateProject}
-        onOpenChange={setShowCreateProject}
-      />
       <SearchModal open={searchOpen} onOpenChange={setSearchOpen} />
     </div>
   )
