@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
-import { createTask, TaskResponse, TEST_UUID } from '#routes/tasks/testing'
+import {
+  createLabel,
+  createTask,
+  TaskResponse,
+  TEST_UUID,
+} from '#routes/tasks/testing'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -84,6 +89,29 @@ describe('tasks tree API', () => {
 
       expect(res.status).toBe(200)
       expect(await res.json()).toEqual([])
+    })
+
+    it('includes labels in each tree node', async () => {
+      await createLabel('urgent')
+      await createLabel('bug')
+      const parent = await createTask('Parent', { labels: ['urgent'] })
+      const child = await createTask('Child', {
+        parentId: parent.id,
+        labels: ['bug'],
+      })
+
+      const res = await app.request('/api/tasks/tree')
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse[]>(res)
+      assertDefined(body[0])
+      assertDefined(body[0].children)
+      assertDefined(body[0].children[0])
+      const nodes = [body[0], body[0].children[0]].map((n) => [n.id, n.labels])
+
+      expect(nodes).toEqual([
+        [parent.id, ['urgent']],
+        [child.id, ['bug']],
+      ])
     })
 
     it('includes childCompletionCount in tree nodes', async () => {

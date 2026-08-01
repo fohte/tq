@@ -8,7 +8,12 @@ import { db } from '#db/connection'
 import { recurrenceRules, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
-import { requireTask, taskStatus, taskToResponse } from '#routes/tasks/shared'
+import {
+  getLabelNamesByTaskId,
+  requireTask,
+  taskStatus,
+  taskToResponse,
+} from '#routes/tasks/shared'
 import { buildNextTaskData } from '#services/recurrence'
 import { syncTaskLinks } from '#services/task-links'
 
@@ -38,7 +43,17 @@ export const tasksActionsApp = new Hono()
           .returning(),
       )
 
-      return c.json(taskToResponse(updated), 200)
+      const labelsByTaskId = await getLabelNamesByTaskId([id])
+
+      return c.json(
+        taskToResponse(
+          updated,
+          undefined,
+          undefined,
+          labelsByTaskId.get(id) ?? [],
+        ),
+        200,
+      )
     },
   )
   .patch(
@@ -89,7 +104,17 @@ export const tasksActionsApp = new Hono()
           .returning(),
       )
 
-      return c.json(taskToResponse(updated), 200)
+      const labelsByTaskId = await getLabelNamesByTaskId([id])
+
+      return c.json(
+        taskToResponse(
+          updated,
+          undefined,
+          undefined,
+          labelsByTaskId.get(id) ?? [],
+        ),
+        200,
+      )
     },
   )
   .post('/:id/complete', requireTask, async (c) => {
@@ -108,7 +133,7 @@ export const tasksActionsApp = new Hono()
         .returning(),
     )
 
-    let nextTask: ReturnType<typeof taskToResponse> | null = null
+    let createdTask: typeof tasks.$inferSelect | null = null
     let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
     if (updatedTask.recurrenceRuleId != null) {
       completedTaskRule =
@@ -138,13 +163,31 @@ export const tasksActionsApp = new Hono()
           return created
         })
         await syncTaskLinks(created.id)
-        nextTask = taskToResponse(created, completedTaskRule)
+        createdTask = created
       }
     }
 
+    const labelsByTaskId = await getLabelNamesByTaskId(
+      createdTask != null ? [id, createdTask.id] : [id],
+    )
+    const nextTask =
+      createdTask != null
+        ? taskToResponse(
+            createdTask,
+            completedTaskRule,
+            undefined,
+            labelsByTaskId.get(createdTask.id) ?? [],
+          )
+        : null
+
     return c.json(
       {
-        ...taskToResponse(updatedTask, completedTaskRule),
+        ...taskToResponse(
+          updatedTask,
+          completedTaskRule,
+          undefined,
+          labelsByTaskId.get(id) ?? [],
+        ),
         nextTask,
       },
       200,

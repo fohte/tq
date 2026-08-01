@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import {
+  createLabel,
   createRecurringTask,
   createTask,
   TaskResponse,
@@ -85,6 +86,36 @@ describe('tasks CRUD API', () => {
 
       expect(res.status).toBe(404)
     })
+
+    it('includes only matched label names in the response', async () => {
+      await createLabel('foo')
+      await createLabel('bar')
+
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Labeled task',
+          labels: ['foo', 'bar', 'nonexistent'],
+        }),
+      })
+      expect(res.status).toBe(201)
+      const body = await jsonBody<TaskResponse>(res)
+      const sortedLabels = body.labels.toSorted()
+      expect(sortedLabels).toEqual(['bar', 'foo'])
+    })
+
+    it('returns an empty labels array when no labels are given', async () => {
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Unlabeled task' }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.labels).toEqual([])
+    })
   })
 
   describe('GET /api/tasks', () => {
@@ -138,6 +169,22 @@ describe('tasks CRUD API', () => {
       assertDefined(body[0])
       expect(body[0].title).toBe('Task B')
     })
+
+    it('includes each task labels in the response', async () => {
+      await createLabel('urgent')
+      await createLabel('bug')
+      const taskA = await createTask('Task A', { labels: ['urgent', 'bug'] })
+      const taskB = await createTask('Task B', { labels: ['urgent'] })
+      const taskC = await createTask('Task C')
+
+      const res = await app.request('/api/tasks')
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse[]>(res)
+      const byId = new Map(body.map((t) => [t.id, t.labels.toSorted()]))
+      const labelsByTask = [taskA, taskB, taskC].map((t) => byId.get(t.id))
+
+      expect(labelsByTask).toEqual([['bug', 'urgent'], ['urgent'], []])
+    })
   })
 
   describe('GET /api/tasks/:id', () => {
@@ -156,6 +203,20 @@ describe('tasks CRUD API', () => {
       const res = await app.request(`/api/tasks/${TEST_UUID}`)
 
       expect(res.status).toBe(404)
+    })
+
+    it('includes labels in the response', async () => {
+      await createLabel('urgent')
+      await createLabel('bug')
+      const created = await createTask('Labeled task', {
+        labels: ['urgent', 'bug'],
+      })
+
+      const res = await app.request(`/api/tasks/${created.id}`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.labels.toSorted()).toEqual(['bug', 'urgent'])
     })
 
     it('accepts the task number in place of the UUID', async () => {
@@ -326,6 +387,21 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body.description).toBeNull()
+    })
+
+    it('keeps the existing labels unchanged', async () => {
+      await createLabel('urgent')
+      const created = await createTask('Task', { labels: ['urgent'] })
+
+      const res = await app.request(`/api/tasks/${created.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Updated' }),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.labels).toEqual(['urgent'])
     })
   })
 

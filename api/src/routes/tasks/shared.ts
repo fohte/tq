@@ -1,11 +1,18 @@
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { createFactory } from 'hono/factory'
 import { err, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
-import { recurrenceRules, taskGithubLinks, tasks, timeBlocks } from '#db/schema'
+import {
+  labels,
+  recurrenceRules,
+  taskGithubLinks,
+  taskLabels,
+  tasks,
+  timeBlocks,
+} from '#db/schema'
 
 export const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
 export const contextEnum = z.enum(['work', 'personal'])
@@ -42,6 +49,7 @@ export function taskToResponse(
   task: typeof tasks.$inferSelect,
   rule?: typeof recurrenceRules.$inferSelect | null,
   githubLink?: typeof taskGithubLinks.$inferSelect | null,
+  labelNames: string[] = [],
 ) {
   return {
     id: task.id,
@@ -50,6 +58,7 @@ export function taskToResponse(
     description: task.description,
     status: task.status,
     context: task.context,
+    labels: labelNames,
     startDate: task.startDate,
     dueDate: task.dueDate,
     estimatedMinutes: task.estimatedMinutes,
@@ -64,6 +73,28 @@ export function taskToResponse(
   }
 }
 
+// Batch-fetches label names for a set of task ids, keyed by task id, for
+// list/tree endpoints that would otherwise issue one query per task.
+export async function getLabelNamesByTaskId(
+  taskIds: string[],
+): Promise<Map<string, string[]>> {
+  if (taskIds.length === 0) return new Map()
+
+  const rows = await db
+    .select({ taskId: taskLabels.taskId, name: labels.name })
+    .from(taskLabels)
+    .innerJoin(labels, eq(taskLabels.labelId, labels.id))
+    .where(inArray(taskLabels.taskId, taskIds))
+
+  const map = new Map<string, string[]>()
+  for (const row of rows) {
+    const list = map.get(row.taskId) ?? []
+    list.push(row.name)
+    map.set(row.taskId, list)
+  }
+  return map
+}
+
 // Self-join alias resolving a task row's parent's `number`, for list
 // endpoints that render a "← #<parent number>" reference without fetching
 // the whole parent task. Callers add `.leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))`
@@ -75,8 +106,12 @@ export function taskWithParentNumberToResponse(
   task: typeof tasks.$inferSelect,
   parentNumber: number | null,
   githubLink?: typeof taskGithubLinks.$inferSelect | null,
+  labelNames: string[] = [],
 ) {
-  return { ...taskToResponse(task, undefined, githubLink), parentNumber }
+  return {
+    ...taskToResponse(task, undefined, githubLink, labelNames),
+    parentNumber,
+  }
 }
 
 export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
@@ -109,12 +144,18 @@ export function buildTree(
   allTasks: Array<typeof tasks.$inferSelect>,
   rootId?: string,
   linksByTaskId?: Map<string, typeof taskGithubLinks.$inferSelect>,
+  labelsByTaskId?: Map<string, string[]>,
 ): Result<TreeNode[], TaskTreeConsistencyError> {
   const nodeMap = new Map<string, TreeNode>()
 
   for (const task of allTasks) {
     nodeMap.set(task.id, {
-      ...taskToResponse(task, undefined, linksByTaskId?.get(task.id)),
+      ...taskToResponse(
+        task,
+        undefined,
+        linksByTaskId?.get(task.id),
+        labelsByTaskId?.get(task.id) ?? [],
+      ),
       children: [],
       childCompletionCount: { completed: 0, total: 0 },
     })

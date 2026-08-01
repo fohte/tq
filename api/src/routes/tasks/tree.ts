@@ -6,7 +6,7 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { taskGithubLinks, tasks } from '#db/schema'
-import { buildTree } from '#routes/tasks/shared'
+import { buildTree, getLabelNamesByTaskId } from '#routes/tasks/shared'
 
 const subtreeIdSchema = z.array(z.object({ id: z.string() }))
 
@@ -65,8 +65,11 @@ export const tasksTreeApp = new Hono().get(
             )
         : []
     const linksByTaskId = new Map(links.map((link) => [link.taskId, link]))
+    const labelsByTaskId = await getLabelNamesByTaskId(
+      treeTasks.map((t) => t.id),
+    )
 
-    return buildTree(treeTasks, rootId, linksByTaskId).match(
+    return buildTree(treeTasks, rootId, linksByTaskId, labelsByTaskId).match(
       (tree) => c.json(tree, 200),
       (error) => {
         captureWithFingerprint(error, 'api.tasks.build-tree-failed')

@@ -13,6 +13,7 @@ import { db } from '#db/connection'
 import { labels, taskLabels } from '#db/schema'
 import {
   createComment,
+  createLabel,
   createPage,
   createTask,
   TEST_UUID,
@@ -123,6 +124,7 @@ describe('create_task tool', () => {
       description: null,
       status: 'todo',
       context: 'work',
+      labels: [],
       startDate: null,
       dueDate: null,
       estimatedMinutes: null,
@@ -188,6 +190,7 @@ describe('update_task tool', () => {
       description: 'Original description',
       status: 'todo',
       context: 'personal',
+      labels: [],
       startDate: null,
       dueDate: null,
       estimatedMinutes: null,
@@ -219,6 +222,7 @@ describe('update_task tool', () => {
       description: null,
       status: 'todo',
       context: 'personal',
+      labels: [],
       startDate: null,
       dueDate: null,
       estimatedMinutes: null,
@@ -262,6 +266,38 @@ describe('update_task_status tool', () => {
       description: null,
       status: 'in_progress',
       context: 'personal',
+      labels: [],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      githubLink: null,
+      sortOrder: 0,
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+    })
+  })
+
+  it('keeps the labels of a labeled task', async () => {
+    await createLabel('urgent')
+    const task = await createTask('Start me', { labels: ['urgent'] })
+
+    const result = await callTool('update_task_status', {
+      taskId: task.id,
+      status: 'in_progress',
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      number: '<number>',
+      title: 'Start me',
+      description: null,
+      status: 'in_progress',
+      context: 'personal',
+      labels: ['urgent'],
       startDate: null,
       dueDate: null,
       estimatedMinutes: null,
@@ -295,6 +331,7 @@ describe('update_task_status tool', () => {
       description: null,
       status: 'todo',
       context: 'personal',
+      labels: [],
       startDate: null,
       dueDate: null,
       estimatedMinutes: null,
@@ -328,6 +365,7 @@ describe('update_task_status tool', () => {
       description: null,
       status: 'todo',
       context: 'personal',
+      labels: [],
       startDate: null,
       dueDate: null,
       estimatedMinutes: null,
@@ -364,6 +402,7 @@ describe('update_task_status tool', () => {
       description: null,
       status: 'completed',
       context: 'personal',
+      labels: [],
       startDate: null,
       dueDate: '2026-03-22',
       estimatedMinutes: null,
@@ -388,6 +427,7 @@ describe('update_task_status tool', () => {
         description: null,
         status: 'todo',
         context: 'personal',
+        labels: [],
         startDate: null,
         dueDate: '2026-03-23',
         estimatedMinutes: null,

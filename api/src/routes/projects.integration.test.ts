@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { createLabel } from '#routes/tasks/testing'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -29,6 +30,7 @@ interface TaskResponse {
   id: string
   title: string
   projectId: string | null
+  labels: string[]
 }
 
 describe('projects API', () => {
@@ -199,6 +201,22 @@ describe('projects API', () => {
       expect(body[0].title).toBe('Task in project')
     })
 
+    it('includes each task labels in the response', async () => {
+      await createLabel('urgent')
+      const project = await createProject('My project')
+      await createTask('Labeled task', {
+        projectId: project.id,
+        labels: ['urgent'],
+      })
+
+      const res = await app.request(`/api/projects/${project.id}/tasks`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse[]>(res)
+      assertDefined(body[0])
+      expect(body[0].labels).toEqual(['urgent'])
+    })
+
     it('returns 404 for non-existent project', async () => {
       const res = await app.request(`/api/projects/${TEST_UUID}/tasks`)
 
@@ -342,7 +360,10 @@ async function createProject(
   return jsonBody<ProjectResponse>(res)
 }
 
-async function createTask(title: string, opts: { projectId?: string } = {}) {
+async function createTask(
+  title: string,
+  opts: { projectId?: string; labels?: string[] } = {},
+) {
   const res = await app.request('/api/tasks', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
