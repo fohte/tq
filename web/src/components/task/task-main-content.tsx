@@ -14,6 +14,7 @@ import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
+import { useProject } from '#hooks/use-projects'
 import { useTagFilter } from '#hooks/use-tag-filter'
 import type { TaskPage } from '#hooks/use-task-pages'
 import type { TaskDetail } from '#hooks/use-tasks'
@@ -49,6 +50,9 @@ export function TaskMainContent({
         {task.labels.length > 0 && <TaskTagChips labels={task.labels} />}
         <Chip>{task.context}</Chip>
         {task.githubLink != null && <GithubLinkBadge link={task.githubLink} />}
+        {task.projectId != null && (
+          <TaskProjectChip projectId={task.projectId} />
+        )}
       </div>
 
       {/* Description */}
@@ -103,6 +107,12 @@ function TaskTagChips({ labels }: { labels: string[] }) {
       ))}
     </>
   )
+}
+
+function TaskProjectChip({ projectId }: { projectId: string }) {
+  const { data: project } = useProject(projectId)
+
+  return <Chip>project: {project?.title ?? '…'}</Chip>
 }
 
 // --- Breadcrumb ---

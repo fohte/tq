@@ -92,6 +92,8 @@ function DayView() {
     if (!timeBlocksData) return []
     return timeBlocksData.map((block) => {
       const task = taskMap.get(block.taskId)
+      const parentTask =
+        task?.parentId != null ? taskMap.get(task.parentId) : undefined
 
       return {
         id: block.id,
@@ -104,6 +106,9 @@ function DayView() {
             : block.isAutoScheduled
               ? 'auto'
               : 'manual',
+        ...(parentTask != null
+          ? { parentRef: `#${String(parentTask.number)} ${parentTask.title}` }
+          : {}),
         redacted: !matchesContextFilter(
           task?.context ?? 'personal',
           contextMode,
@@ -223,14 +228,13 @@ function DayView() {
   return (
     <DayViewPresentation
       isLoading={isLoading}
-      categorized={categorized}
+      backlogTasks={categorized.backlog}
       calendarEvents={calendarEvents}
       dndCallbacks={dndCallbacks}
       {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
         ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
         : {})}
       queueTasks={queueTasks}
-      queueTaskIds={queueTaskIdSet}
       queueCandidates={queueCandidates}
       onReorderQueue={handleReorderQueue}
       onToggleQueueTask={handleToggleQueueTask}

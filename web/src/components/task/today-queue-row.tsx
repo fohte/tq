@@ -9,7 +9,8 @@ import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
 import type { Task } from '#hooks/use-tasks'
 import { useUpdateTask } from '#hooks/use-tasks'
-import { formatMinutes, parseDurationToMinutes } from '#lib/parse-duration'
+import { formatMinutes } from '#lib/format'
+import { parseDurationToMinutes } from '#lib/parse-duration'
 
 export function TodayQueueRow({
   task,

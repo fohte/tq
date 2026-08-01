@@ -23,24 +23,16 @@ import { BacklogPreview } from '#components/task/backlog-preview'
 import { CreateTaskInline } from '#components/task/create-task-inline'
 import { QueueCandidatesSection } from '#components/task/queue-candidates-section'
 import { TaskListHeader } from '#components/task/task-list-header'
-import { TaskRow } from '#components/task/task-row'
 import { TodayQueueRow } from '#components/task/today-queue-row'
-import { TodayQueueToggle } from '#components/task/today-queue-toggle'
 import { Button } from '#components/ui/button'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { TabStrip } from '#components/ui/tab-strip'
-import type { CategorizedTasks, Task } from '#hooks/use-tasks'
+import type { Task } from '#hooks/use-tasks'
 import type { QueueCandidate } from '#lib/queue-candidates'
 import { cn } from '#lib/utils'
 
-type TaskTab = 'today' | 'all'
 type MobileTab = 'calendar' | 'tasks'
-
-const TASK_TAB_OPTIONS = [
-  { value: 'today', label: 'today' },
-  { value: 'all', label: 'all' },
-] as const
 
 const MOBILE_TAB_OPTIONS = [
   { value: 'calendar', label: 'calendar' },
@@ -49,13 +41,12 @@ const MOBILE_TAB_OPTIONS = [
 
 export interface DayViewPresentationProps {
   isLoading: boolean
-  categorized: CategorizedTasks
+  backlogTasks: Task[]
   calendarEvents: TimeBlockEvent[]
   dndCallbacks?: CalendarDndCallbacks
   /** Google OAuth consent URL, present when Google Calendar is not connected */
   gcalAuthUrl?: string
   queueTasks: Task[]
-  queueTaskIds: Set<string>
   queueCandidates: QueueCandidate<Task>[]
   onReorderQueue: (taskIds: string[]) => void
   onToggleQueueTask: (taskId: string) => void
@@ -68,12 +59,11 @@ export interface DayViewPresentationProps {
 
 export function DayViewPresentation({
   isLoading,
-  categorized,
+  backlogTasks,
   calendarEvents,
   dndCallbacks,
   gcalAuthUrl,
   queueTasks,
-  queueTaskIds,
   queueCandidates,
   onReorderQueue,
   onToggleQueueTask,
@@ -83,7 +73,6 @@ export function DayViewPresentation({
   selectedDate,
   onDateChange,
 }: DayViewPresentationProps) {
-  const [activeTab, setActiveTab] = useState<TaskTab>('today')
   const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
   const [isCreating, setIsCreating] = useState(false)
   const taskListRef = useRef<HTMLDivElement>(null)
@@ -125,29 +114,20 @@ export function DayViewPresentation({
           <ScreenHeaderBar>
             <SectionHeading level={2}>queue</SectionHeading>
 
-            <TabStrip
-              className="ml-auto"
-              value={activeTab}
-              options={TASK_TAB_OPTIONS}
-              onChange={setActiveTab}
-            />
-
-            {activeTab === 'today' && (
-              <Button
-                variant="outline"
-                size="xs"
-                onClick={onAutoAssign}
-                disabled={isAutoAssigning || !canAutoAssign}
-                title={
-                  canAutoAssign
-                    ? undefined
-                    : 'Set an estimate on at least one queued task to auto-schedule'
-                }
-                className="font-mono"
-              >
-                {isAutoAssigning ? 'scheduling…' : 'auto'}
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={onAutoAssign}
+              disabled={isAutoAssigning || !canAutoAssign}
+              title={
+                canAutoAssign
+                  ? undefined
+                  : 'Set an estimate on at least one queued task to auto-schedule'
+              }
+              className="ml-auto font-mono"
+            >
+              {isAutoAssigning ? 'scheduling…' : 'auto'}
+            </Button>
 
             <Button
               variant="ghost"
@@ -162,11 +142,9 @@ export function DayViewPresentation({
           </ScreenHeaderBar>
 
           {/* Summary header */}
-          {activeTab === 'today' && (
-            <div className="border-b border-border py-2.5">
-              <TaskListHeader tasks={queueTasks} />
-            </div>
-          )}
+          <div className="border-b border-border py-2.5">
+            <TaskListHeader tasks={queueTasks} />
+          </div>
 
           {/* Inline create */}
           {isCreating && (
@@ -175,9 +153,7 @@ export function DayViewPresentation({
                 onClose={() => {
                   setIsCreating(false)
                 }}
-                {...(activeTab === 'today'
-                  ? { defaultStartDate: new Date().toISOString().slice(0, 10) }
-                  : {})}
+                defaultStartDate={new Date().toISOString().slice(0, 10)}
               />
             </div>
           )}
@@ -188,7 +164,7 @@ export function DayViewPresentation({
               <div className="p-4 text-center text-sm text-muted-foreground">
                 Loading...
               </div>
-            ) : activeTab === 'today' ? (
+            ) : (
               <>
                 {queueTasks.length === 0 ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
@@ -224,41 +200,10 @@ export function DayViewPresentation({
                   onAdd={onToggleQueueTask}
                 />
               </>
-            ) : categorized.all.length === 0 ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                No tasks yet
-              </div>
-            ) : (
-              <div className="py-1">
-                {categorized.all.map((task) => (
-                  <div key={task.id} className="flex items-center gap-1">
-                    <div className="min-w-0 flex-1">
-                      <TaskRow
-                        task={task}
-                        draggable={task.status !== 'completed'}
-                      />
-                    </div>
-                    <TodayQueueToggle
-                      inQueue={queueTaskIds.has(task.id)}
-                      onToggle={() => {
-                        onToggleQueueTask(task.id)
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
             )}
           </div>
 
-          {/* Backlog preview (Today tab only) */}
-          {activeTab === 'today' && (
-            <BacklogPreview
-              tasks={categorized.backlog}
-              onViewAll={() => {
-                setActiveTab('all')
-              }}
-            />
-          )}
+          <BacklogPreview tasks={backlogTasks} />
         </div>
 
         {/* Right panel: Calendar */}

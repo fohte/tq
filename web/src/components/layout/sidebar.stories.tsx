@@ -9,6 +9,8 @@ import {
 } from '@tanstack/react-router'
 
 import { Sidebar } from '#components/layout/sidebar'
+import type { Project } from '#hooks/use-projects'
+import { projectKeys } from '#hooks/use-projects'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 
@@ -40,11 +42,57 @@ const tasksWithTags: Task[] = [
   { ...baseTask, id: '3', title: 'Task C', labels: ['review'] },
 ]
 
-function SidebarStory({ tasks }: { tasks?: Task[] | undefined }) {
+const baseProject: Project = {
+  id: '00000000-0000-0000-0000-000000000101',
+  title: 'tq',
+  description: null,
+  status: 'active',
+  startDate: null,
+  targetDate: null,
+  color: null,
+  sortOrder: 0,
+  createdAt: '2026-03-20T00:00:00.000Z',
+  updatedAt: '2026-03-20T00:00:00.000Z',
+  completionRate: 0,
+  taskCount: { total: 0, completed: 0 },
+}
+
+const projectsAcrossStatuses: Project[] = [
+  {
+    ...baseProject,
+    id: '1',
+    title: 'tq',
+    status: 'active',
+    taskCount: { completed: 12, total: 31 },
+  },
+  {
+    ...baseProject,
+    id: '2',
+    title: 'Home renovation',
+    status: 'paused',
+    taskCount: { completed: 4, total: 9 },
+  },
+  {
+    ...baseProject,
+    id: '3',
+    title: 'Q1 report',
+    status: 'completed',
+    taskCount: { completed: 8, total: 8 },
+  },
+]
+
+function SidebarStory({
+  tasks,
+  projects,
+}: {
+  tasks?: Task[] | undefined
+  projects?: Project[] | undefined
+}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   queryClient.setQueryData(taskKeys.list(undefined), tasks ?? [])
+  queryClient.setQueryData(projectKeys.list(undefined), projects ?? [])
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -58,12 +106,14 @@ function SidebarStory({ tasks }: { tasks?: Task[] | undefined }) {
 function SidebarWithRouter({
   currentPath,
   tasks,
+  projects,
 }: {
   currentPath: string
   tasks?: Task[] | undefined
+  projects?: Project[] | undefined
 }) {
   const rootRoute = createRootRoute({
-    component: () => <SidebarStory tasks={tasks} />,
+    component: () => <SidebarStory tasks={tasks} projects={projects} />,
   })
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -131,5 +181,12 @@ export const WithTags: Story = {
   args: {
     currentPath: '/',
     tasks: tasksWithTags,
+  },
+}
+
+export const WithProjects: Story = {
+  args: {
+    currentPath: '/',
+    projects: projectsAcrossStatuses,
   },
 }
