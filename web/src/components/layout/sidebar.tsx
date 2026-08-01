@@ -3,6 +3,8 @@ import { Link, useMatchRoute } from '@tanstack/react-router'
 import { ContextFilter } from '#components/context-filter'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useProjects } from '#hooks/use-projects'
+import { useTagCounts } from '#hooks/use-tag-counts'
+import { useTagFilter, useTagToggle } from '#hooks/use-tag-filter'
 import { navKeybindings, searchKeybinding } from '#lib/keybindings'
 import { cn } from '#lib/utils'
 
@@ -65,6 +67,70 @@ function NavLink({ item }: { item: NavItem }) {
   )
 }
 
+function TagButton({ name, count }: { name: string; count: number }) {
+  const { isActive, toggle } = useTagToggle(name)
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-pressed={isActive}
+      className={cn(
+        'flex w-full items-center gap-2 px-3.5 py-1 text-left font-mono text-[11px]',
+        isActive
+          ? 'bg-card text-foreground'
+          : 'text-muted-foreground-strong hover:bg-card hover:text-foreground',
+      )}
+    >
+      <span
+        className={cn(
+          'font-bold',
+          isActive ? 'text-primary' : 'text-muted-foreground-faint',
+        )}
+      >
+        #
+      </span>
+      <span className="flex-1 truncate text-left">{name}</span>
+      <span className="shrink-0 text-muted-foreground-faint">{count}</span>
+    </button>
+  )
+}
+
+function TagsSection() {
+  const { tagCounts } = useTagCounts()
+  const { tag, setTag } = useTagFilter()
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex items-center justify-between px-3.5 pb-1.5">
+        <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground-faint">
+          TAGS
+        </span>
+        {tag != null && (
+          <button
+            type="button"
+            onClick={() => {
+              setTag(null)
+            }}
+            className="font-mono text-[10px] text-muted-foreground-faint hover:text-foreground"
+          >
+            clear ×
+          </button>
+        )}
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {tagCounts.map((tagCount) => (
+          <TagButton
+            key={tagCount.name}
+            name={tagCount.name}
+            count={tagCount.count}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function ProjectsSection() {
   const { data: projects } = useProjects({ status: 'active' })
 
@@ -118,6 +184,7 @@ export function Sidebar() {
 
       <div className="mx-3.5 mt-1.5 mb-2 border-t border-border" />
 
+      <TagsSection />
       <ProjectsSection />
 
       <div className="mt-auto border-t border-border">

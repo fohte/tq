@@ -36,6 +36,7 @@ const baseTask: Omit<ProjectTask, 'id' | 'title' | 'status'> = {
   number: 1,
   description: null,
   context: 'personal',
+  labels: [],
   startDate: null,
   dueDate: null,
   estimatedMinutes: null,

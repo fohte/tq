@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import {
+  createLabel,
   createRecurringTask,
   createTask,
   fetchTaskEvents,
@@ -77,6 +78,17 @@ describe('tasks actions API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body.status).toBe('in_progress')
+    })
+
+    it('keeps the labels in the response', async () => {
+      await createLabel('urgent')
+      const created = await createTask('Task', { labels: ['urgent'] })
+
+      const res = await setStatus(created.id, 'in_progress')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.labels).toEqual(['urgent'])
     })
   })
 
@@ -199,6 +211,22 @@ describe('tasks actions API', () => {
       expect(body.parentId).toBeNull()
     })
 
+    it('keeps the labels in the response', async () => {
+      await createLabel('urgent')
+      const parent = await createTask('Parent')
+      const child = await createTask('Child', { labels: ['urgent'] })
+
+      const res = await app.request(`/api/tasks/${child.id}/parent`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: parent.id }),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.labels).toEqual(['urgent'])
+    })
+
     it('returns 409 for self-referencing parent', async () => {
       const task = await createTask('Task')
 
@@ -251,6 +279,19 @@ describe('tasks actions API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body.status).toBe('completed')
+    })
+
+    it('keeps the labels in the response', async () => {
+      await createLabel('urgent')
+      const task = await createTask('Complete me', { labels: ['urgent'] })
+
+      const res = await app.request(`/api/tasks/${task.id}/complete`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.labels).toEqual(['urgent'])
     })
 
     it('returns 409 when task is already completed', async () => {

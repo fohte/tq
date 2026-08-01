@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { GithubLinkBadge } from '#components/task/github-link-badge'
@@ -14,6 +14,7 @@ import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
+import { useTagFilter } from '#hooks/use-tag-filter'
 import type { TaskPage } from '#hooks/use-task-pages'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { useUpdateTask, useUpdateTaskStatus } from '#hooks/use-tasks'
@@ -43,8 +44,9 @@ export function TaskMainContent({
         />
       </div>
 
-      {/* Context / GitHub chips */}
+      {/* Tag / Context / GitHub chips */}
       <div className="flex flex-wrap gap-2">
+        {task.labels.length > 0 && <TaskTagChips labels={task.labels} />}
         <Chip>{task.context}</Chip>
         {task.githubLink != null && <GithubLinkBadge link={task.githubLink} />}
       </div>
@@ -74,6 +76,32 @@ export function TaskMainContent({
         <TaskActivity taskId={task.id} />
       </div>
     </div>
+  )
+}
+
+// --- Tag Chips ---
+
+function TaskTagChips({ labels }: { labels: string[] }) {
+  const { setTag } = useTagFilter()
+  const navigate = useNavigate()
+
+  return (
+    <>
+      {labels.map((label) => (
+        <Chip
+          key={label}
+          as="button"
+          size="sm"
+          onClick={() => {
+            setTag(label)
+            void navigate({ to: '/tasks' })
+          }}
+        >
+          <span className="text-primary font-bold">#</span>
+          {label}
+        </Chip>
+      ))}
+    </>
   )
 }
 

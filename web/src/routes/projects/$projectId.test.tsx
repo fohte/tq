@@ -23,6 +23,7 @@ const mockProject = {
 const baseTask = {
   description: null,
   context: 'personal' as const,
+  labels: [],
   startDate: null,
   dueDate: null,
   estimatedMinutes: null,

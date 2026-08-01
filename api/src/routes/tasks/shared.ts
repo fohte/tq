@@ -49,6 +49,7 @@ export function taskToResponse(
   task: typeof tasks.$inferSelect,
   rule?: typeof recurrenceRules.$inferSelect | null,
   githubLink?: typeof taskGithubLinks.$inferSelect | null,
+  labelNames: string[] = [],
 ) {
   return {
     id: task.id,
@@ -57,6 +58,7 @@ export function taskToResponse(
     description: task.description,
     status: task.status,
     context: task.context,
+    labels: labelNames,
     startDate: task.startDate,
     dueDate: task.dueDate,
     estimatedMinutes: task.estimatedMinutes,
@@ -71,6 +73,28 @@ export function taskToResponse(
   }
 }
 
+// Batch-fetches label names for a set of task ids, keyed by task id, for
+// list/tree endpoints that would otherwise issue one query per task.
+export async function getLabelNamesByTaskId(
+  taskIds: string[],
+): Promise<Map<string, string[]>> {
+  if (taskIds.length === 0) return new Map()
+
+  const rows = await db
+    .select({ taskId: taskLabels.taskId, name: labels.name })
+    .from(taskLabels)
+    .innerJoin(labels, eq(taskLabels.labelId, labels.id))
+    .where(inArray(taskLabels.taskId, taskIds))
+
+  const map = new Map<string, string[]>()
+  for (const row of rows) {
+    const list = map.get(row.taskId) ?? []
+    list.push(row.name)
+    map.set(row.taskId, list)
+  }
+  return map
+}
+
 // Self-join alias resolving a task row's parent's `number`, for list
 // endpoints that render a "← #<parent number>" reference without fetching
 // the whole parent task. Callers add `.leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))`
@@ -82,8 +106,12 @@ export function taskWithParentNumberToResponse(
   task: typeof tasks.$inferSelect,
   parentNumber: number | null,
   githubLink?: typeof taskGithubLinks.$inferSelect | null,
+  labelNames: string[] = [],
 ) {
-  return { ...taskToResponse(task, undefined, githubLink), parentNumber }
+  return {
+    ...taskToResponse(task, undefined, githubLink, labelNames),
+    parentNumber,
+  }
 }
 
 export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
@@ -96,32 +124,6 @@ export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
     createdAt: block.createdAt.toISOString(),
     updatedAt: block.updatedAt.toISOString(),
   }
-}
-
-// One query for any number of task ids, so list endpoints can attach labels
-// without an N+1 per task.
-export async function getLabelNamesByTaskId(
-  taskIds: string[],
-): Promise<Map<string, string[]>> {
-  const namesByTaskId = new Map<string, string[]>()
-  if (taskIds.length === 0) return namesByTaskId
-
-  const rows = await db
-    .select({ taskId: taskLabels.taskId, name: labels.name })
-    .from(taskLabels)
-    .innerJoin(labels, eq(taskLabels.labelId, labels.id))
-    .where(inArray(taskLabels.taskId, taskIds))
-
-  for (const row of rows) {
-    const names = namesByTaskId.get(row.taskId)
-    if (names) {
-      names.push(row.name)
-    } else {
-      namesByTaskId.set(row.taskId, [row.name])
-    }
-  }
-
-  return namesByTaskId
 }
 
 export type TaskResponseData = ReturnType<typeof taskToResponse>
@@ -142,12 +144,18 @@ export function buildTree(
   allTasks: Array<typeof tasks.$inferSelect>,
   rootId?: string,
   linksByTaskId?: Map<string, typeof taskGithubLinks.$inferSelect>,
+  labelsByTaskId?: Map<string, string[]>,
 ): Result<TreeNode[], TaskTreeConsistencyError> {
   const nodeMap = new Map<string, TreeNode>()
 
   for (const task of allTasks) {
     nodeMap.set(task.id, {
-      ...taskToResponse(task, undefined, linksByTaskId?.get(task.id)),
+      ...taskToResponse(
+        task,
+        undefined,
+        linksByTaskId?.get(task.id),
+        labelsByTaskId?.get(task.id) ?? [],
+      ),
       children: [],
       childCompletionCount: { completed: 0, total: 0 },
     })

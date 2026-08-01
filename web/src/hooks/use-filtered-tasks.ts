@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 
 import { useContextFilter } from '#hooks/use-context-filter'
+import { useTagFilter } from '#hooks/use-tag-filter'
 import type { TreeNode } from '#hooks/use-tasks'
 import { useTaskList, useTaskTree } from '#hooks/use-tasks'
 import {
@@ -8,29 +9,31 @@ import {
   filterModeToApiContext,
   filterTreeByContext,
 } from '#lib/context-filter'
+import { filterByTag, filterTreeByTag } from '#lib/tag-filter'
 
 export function useFilteredTaskList() {
   const { mode } = useContextFilter()
+  const { tag } = useTagFilter()
   const apiContext = filterModeToApiContext(mode)
   const { isLoading, categorized } = useTaskList(
     apiContext ? { context: apiContext } : undefined,
   )
 
   const today = useMemo(
-    () => filterByContext(categorized.today, mode),
-    [categorized.today, mode],
+    () => filterByTag(filterByContext(categorized.today, mode), tag),
+    [categorized.today, mode, tag],
   )
   const all = useMemo(
-    () => filterByContext(categorized.all, mode),
-    [categorized.all, mode],
+    () => filterByTag(filterByContext(categorized.all, mode), tag),
+    [categorized.all, mode, tag],
   )
   const backlog = useMemo(
-    () => filterByContext(categorized.backlog, mode),
-    [categorized.backlog, mode],
+    () => filterByTag(filterByContext(categorized.backlog, mode), tag),
+    [categorized.backlog, mode, tag],
   )
   const nonBacklog = useMemo(
-    () => filterByContext(categorized.nonBacklog, mode),
-    [categorized.nonBacklog, mode],
+    () => filterByTag(filterByContext(categorized.nonBacklog, mode), tag),
+    [categorized.nonBacklog, mode, tag],
   )
 
   return { isLoading, today, all, backlog, nonBacklog }
@@ -52,12 +55,15 @@ function recalcChildCompletionCount(nodes: TreeNode[]): TreeNode[] {
 
 export function useFilteredTaskTree(options: { enabled: boolean }) {
   const { mode } = useContextFilter()
+  const { tag } = useTagFilter()
   const { data, isLoading } = useTaskTree(options)
 
   const tree = useMemo(() => {
-    const filtered = filterTreeByContext(data ?? [], mode)
-    return mode === 'all' ? filtered : recalcChildCompletionCount(filtered)
-  }, [data, mode])
+    const filtered = filterTreeByTag(filterTreeByContext(data ?? [], mode), tag)
+    return mode === 'all' && tag == null
+      ? filtered
+      : recalcChildCompletionCount(filtered)
+  }, [data, mode, tag])
 
   return { isLoading, tree }
 }

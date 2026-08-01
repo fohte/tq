@@ -4,11 +4,17 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { TreeTaskRow } from '#components/task/task-row'
+import { TagFilterProvider, useTagFilter } from '#hooks/use-tag-filter'
 import type { TreeNode } from '#hooks/use-tasks'
 import { atIndex } from '#lib/test-utils'
 
 const mockMutate = vi.fn()
 const mockUpdateStatusMutate = vi.fn()
+// Fires when a click bubbles up to the row's Link. A tag token's onClick
+// calls stopPropagation, so this spy lets tests confirm that click never
+// reaches the Link (i.e. no navigation), without relying on jsdom's <a> not
+// actually navigating.
+const mockLinkOnClick = vi.fn()
 
 vi.mock('#hooks/use-tasks', () => ({
   useCompleteTask: () => ({ mutate: mockMutate }),
@@ -20,7 +26,12 @@ vi.mock('@tanstack/react-router', () => ({
     children,
     ...props
   }: { children: React.ReactNode } & Record<string, unknown>) => (
-    <a href={typeof props['to'] === 'string' ? props['to'] : '#'}>{children}</a>
+    <a
+      href={typeof props['to'] === 'string' ? props['to'] : '#'}
+      onClick={mockLinkOnClick}
+    >
+      {children}
+    </a>
   ),
 }))
 
@@ -69,6 +80,7 @@ function makeNode(overrides: Partial<TreeNode> = {}): TreeNode {
     description: null,
     status: 'todo',
     context: 'personal',
+    labels: [],
     startDate: null,
     dueDate: null,
     estimatedMinutes: null,
@@ -86,13 +98,21 @@ function makeNode(overrides: Partial<TreeNode> = {}): TreeNode {
   }
 }
 
+function TagProbe() {
+  const { tag } = useTagFilter()
+  return <div data-testid="tag-probe">{tag ?? 'none'}</div>
+}
+
 function renderTree(node: TreeNode) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   return render(
     <QueryClientProvider client={queryClient}>
-      <TreeTaskRow node={node} />
+      <TagFilterProvider>
+        <TreeTaskRow node={node} />
+        <TagProbe />
+      </TagFilterProvider>
     </QueryClientProvider>,
   )
 }
@@ -255,6 +275,42 @@ describe('TreeTaskRow', () => {
   it('shows a context badge for work tasks', () => {
     renderTree(makeNode({ context: 'work' }))
     expect(screen.getByText('work')).toBeInTheDocument()
+  })
+
+  it('does not render tag tokens when there are no labels', () => {
+    renderTree(makeNode({ labels: [] }))
+    expect(screen.queryByText(/^#/)).not.toBeInTheDocument()
+  })
+
+  it('renders a token per label', () => {
+    renderTree(makeNode({ labels: ['dev:tq', 'chore'] }))
+    expect(screen.getAllByText(/^#/).map((el) => el.textContent)).toEqual([
+      '#dev:tq',
+      '#chore',
+    ])
+  })
+
+  it('sets the tag filter and stops the click from reaching the row Link when a tag token is clicked', async () => {
+    const user = userEvent.setup()
+    renderTree(makeNode({ labels: ['dev:tq'] }))
+
+    expect(screen.getByTestId('tag-probe')).toHaveTextContent('none')
+
+    await user.click(screen.getByText('#dev:tq'))
+
+    expect(screen.getByTestId('tag-probe')).toHaveTextContent('dev:tq')
+    expect(mockLinkOnClick).not.toHaveBeenCalled()
+  })
+
+  it('lets a click bubble to the row Link when clicking elsewhere in the row', async () => {
+    // Control for the tag-token test above: proves mockLinkOnClick actually
+    // observes bubbled clicks, so its absence there means something.
+    const user = userEvent.setup()
+    renderTree(makeNode({ labels: ['dev:tq'] }))
+
+    await user.click(screen.getByText('Parent Task'))
+
+    expect(mockLinkOnClick).toHaveBeenCalled()
   })
 
   it('updates the status via useUpdateTaskStatus when a non-completed status is selected', async () => {

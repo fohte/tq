@@ -6,6 +6,7 @@ import { GithubLinkBadge } from '#components/task/github-link-badge'
 import { TaskStatusPicker } from '#components/task/task-status-picker'
 import { Chip } from '#components/ui/chip'
 import type { GithubLink } from '#hooks/use-github-link'
+import { useTagFilter } from '#hooks/use-tag-filter'
 import type { Task, TreeNode } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
@@ -28,6 +29,40 @@ function useHandleStatusChange(id: string, status: Task['status']) {
 
 function ContextBadge({ context }: { context: Task['context'] }) {
   return <Chip>{context}</Chip>
+}
+
+function TagTokens({
+  labels,
+  isCompleted,
+}: {
+  labels: string[]
+  isCompleted: boolean
+}) {
+  const { setTag } = useTagFilter()
+
+  return (
+    <div className="flex items-center gap-1.5">
+      {labels.map((label) => (
+        <button
+          key={label}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            setTag(label)
+          }}
+          className={cn(
+            'font-mono text-xs hover:text-foreground',
+            isCompleted
+              ? 'text-muted-foreground-faint'
+              : 'text-muted-foreground',
+          )}
+        >
+          #{label}
+        </button>
+      ))}
+    </div>
+  )
 }
 
 function DueDateBadge({
@@ -75,6 +110,7 @@ interface TaskRowBaseProps {
   estimatedMinutes: number | null
   parentNumber: number | null
   githubLink: GithubLink | null
+  labels: string[]
   dueDate: string | null
 }
 
@@ -86,6 +122,7 @@ function TaskRowContent({
   estimatedMinutes,
   parentNumber,
   githubLink,
+  labels,
   dueDate,
 }: TaskRowBaseProps) {
   const handleStatusChange = useHandleStatusChange(id, status)
@@ -113,6 +150,9 @@ function TaskRowContent({
         <div className="flex items-center gap-1.5">
           <ContextBadge context={context} />
           {githubLink != null && <GithubLinkBadge link={githubLink} />}
+          {labels.length > 0 && (
+            <TagTokens labels={labels} isCompleted={status === 'completed'} />
+          )}
           {estimatedMinutes != null && (
             <span className="font-mono text-xs text-muted-foreground">
               {formatMinutes(estimatedMinutes)}
@@ -160,6 +200,7 @@ export function TaskRow({
         estimatedMinutes={task.estimatedMinutes}
         parentNumber={task.parentNumber}
         githubLink={task.githubLink}
+        labels={task.labels}
         dueDate={task.dueDate}
       />
     </Link>
@@ -244,6 +285,9 @@ export function TreeTaskRow({
               <ContextBadge context={node.context} />
               {node.githubLink != null && (
                 <GithubLinkBadge link={node.githubLink} />
+              )}
+              {node.labels.length > 0 && (
+                <TagTokens labels={node.labels} isCompleted={isCompleted} />
               )}
               {node.estimatedMinutes != null && (
                 <span className="font-mono text-xs text-muted-foreground">

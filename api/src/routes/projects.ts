@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import { projects, taskGithubLinks, tasks } from '#db/schema'
 import {
+  getLabelNamesByTaskId,
   parentTasks,
   taskWithParentNumberToResponse,
 } from '#routes/tasks/shared'
@@ -181,9 +182,18 @@ export const projectsApp = new Hono()
       .where(eq(tasks.projectId, id))
       .orderBy(tasks.sortOrder, tasks.createdAt)
 
+    const labelsByTaskId = await getLabelNamesByTaskId(
+      result.map((r) => r.task.id),
+    )
+
     return c.json(
       result.map((r) =>
-        taskWithParentNumberToResponse(r.task, r.parentNumber, r.githubLink),
+        taskWithParentNumberToResponse(
+          r.task,
+          r.parentNumber,
+          r.githubLink,
+          labelsByTaskId.get(r.task.id) ?? [],
+        ),
       ),
       200,
     )

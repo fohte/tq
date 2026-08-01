@@ -6,6 +6,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { ContextFilterProvider } from '#hooks/use-context-filter'
+import { TagFilterProvider } from '#hooks/use-tag-filter'
 import { queryClient } from '#lib/query-client'
 import { applyStandaloneViewport } from '#lib/standalone-viewport'
 import { routeTree } from '#routeTree.gen'
@@ -29,7 +30,9 @@ createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <ContextFilterProvider>
-        <RouterProvider router={router} />
+        <TagFilterProvider>
+          <RouterProvider router={router} />
+        </TagFilterProvider>
       </ContextFilterProvider>
     </QueryClientProvider>
   </StrictMode>,

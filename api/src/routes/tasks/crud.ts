@@ -72,67 +72,74 @@ export const tasksCrudApp = new Hono()
       }
     }
 
-    const { task, createdRule } = await db.transaction(async (tx) => {
-      // Create recurrence rule if provided
-      let recurrenceRuleId: string | null = null
-      let createdRule: typeof recurrenceRules.$inferSelect | null = null
-      if (input.recurrenceRule != null) {
-        const rule = firstOrThrow(
+    const { task, createdRule, matchedLabelNames } = await db.transaction(
+      async (tx) => {
+        // Create recurrence rule if provided
+        let recurrenceRuleId: string | null = null
+        let createdRule: typeof recurrenceRules.$inferSelect | null = null
+        if (input.recurrenceRule != null) {
+          const rule = firstOrThrow(
+            await tx
+              .insert(recurrenceRules)
+              .values({
+                type: input.recurrenceRule.type,
+                interval: input.recurrenceRule.interval,
+                daysOfWeek: input.recurrenceRule.daysOfWeek ?? null,
+                dayOfMonth: input.recurrenceRule.dayOfMonth ?? null,
+              })
+              .returning(),
+          )
+          recurrenceRuleId = rule.id
+          createdRule = rule
+        }
+
+        const task = firstOrThrow(
           await tx
-            .insert(recurrenceRules)
+            .insert(tasks)
             .values({
-              type: input.recurrenceRule.type,
-              interval: input.recurrenceRule.interval,
-              daysOfWeek: input.recurrenceRule.daysOfWeek ?? null,
-              dayOfMonth: input.recurrenceRule.dayOfMonth ?? null,
+              title: input.title,
+              description: input.description ?? null,
+              startDate: input.startDate ?? null,
+              dueDate: input.dueDate ?? null,
+              estimatedMinutes: input.estimatedMinutes ?? null,
+              parentId: input.parentId ?? null,
+              projectId: input.projectId ?? null,
+              context: input.context ?? 'personal',
+              recurrenceRuleId,
             })
             .returning(),
         )
-        recurrenceRuleId = rule.id
-        createdRule = rule
-      }
 
-      const task = firstOrThrow(
-        await tx
-          .insert(tasks)
-          .values({
-            title: input.title,
-            description: input.description ?? null,
-            startDate: input.startDate ?? null,
-            dueDate: input.dueDate ?? null,
-            estimatedMinutes: input.estimatedMinutes ?? null,
-            parentId: input.parentId ?? null,
-            projectId: input.projectId ?? null,
-            context: input.context ?? 'personal',
-            recurrenceRuleId,
-          })
-          .returning(),
-      )
+        let matchedLabelNames: string[] = []
+        if (input.labels != null && input.labels.length > 0) {
+          const matchedLabels = await tx
+            .select()
+            .from(labels)
+            .where(inArray(labels.name, input.labels))
 
-      if (input.labels != null && input.labels.length > 0) {
-        const matchedLabels = await tx
-          .select()
-          .from(labels)
-          .where(inArray(labels.name, input.labels))
-
-        if (matchedLabels.length > 0) {
-          await tx.insert(taskLabels).values(
-            matchedLabels.map((label) => ({
-              taskId: task.id,
-              labelId: label.id,
-            })),
-          )
+          if (matchedLabels.length > 0) {
+            await tx.insert(taskLabels).values(
+              matchedLabels.map((label) => ({
+                taskId: task.id,
+                labelId: label.id,
+              })),
+            )
+          }
+          matchedLabelNames = matchedLabels.map((label) => label.name)
         }
-      }
 
-      await recordEdit(tx, { taskId: task.id }, { action: 'create' }, author)
+        await recordEdit(tx, { taskId: task.id }, { action: 'create' }, author)
 
-      return { task, createdRule }
-    })
+        return { task, createdRule, matchedLabelNames }
+      },
+    )
 
     await syncTaskLinks(task.id)
 
-    return c.json(taskToResponse(task, createdRule), 201)
+    return c.json(
+      taskToResponse(task, createdRule, undefined, matchedLabelNames),
+      201,
+    )
   })
   .get(
     '/',
@@ -179,14 +186,14 @@ export const tasksCrudApp = new Hono()
       )
 
       return c.json(
-        result.map((r) => ({
-          ...taskWithParentNumberToResponse(
+        result.map((r) =>
+          taskWithParentNumberToResponse(
             r.task,
             r.parentNumber,
             r.githubLink,
+            labelsByTaskId.get(r.task.id) ?? [],
           ),
-          labels: labelsByTaskId.get(r.task.id) ?? [],
-        })),
+        ),
         200,
       )
     },
@@ -241,7 +248,7 @@ export const tasksCrudApp = new Hono()
 
     return c.json(
       {
-        ...taskToResponse(task, rule, githubLink),
+        ...taskToResponse(task, rule, githubLink, labelsByTaskId.get(id) ?? []),
         titleAuthor: taskFieldAuthors.title,
         descriptionAuthor: taskFieldAuthors.description,
         childCompletionCount: {
@@ -395,11 +402,22 @@ export const tasksCrudApp = new Hono()
         await syncTaskLinks(id)
       }
 
-      const githubLink = await db.query.taskGithubLinks.findFirst({
-        where: eq(taskGithubLinks.taskId, id),
-      })
+      const [githubLink, labelsByTaskId] = await Promise.all([
+        db.query.taskGithubLinks.findFirst({
+          where: eq(taskGithubLinks.taskId, id),
+        }),
+        getLabelNamesByTaskId([id]),
+      ])
 
-      return c.json(taskToResponse(updatedTask, updatedRule, githubLink), 200)
+      return c.json(
+        taskToResponse(
+          updatedTask,
+          updatedRule,
+          githubLink,
+          labelsByTaskId.get(id) ?? [],
+        ),
+        200,
+      )
     },
   )
   .delete('/:id', requireTask, async (c) => {
