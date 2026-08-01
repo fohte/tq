@@ -21,15 +21,10 @@ export interface TimeBlockEvent {
   duration?: string
   /** Parent task reference (e.g. "#488 tq 作成") */
   parentRef?: string
-  /** Label (e.g. "dev:armyknife") */
-  label?: string
-  /** Custom color for schedule events */
+  /** Custom accent color for schedule events */
   color?: {
-    bg: string
     accent: string
   }
-  /** Icon name for schedule events (lucide icon) */
-  icon?: string
   /** Google Calendar's color for the event's calendar, used as an accent on gcal events */
   calendarColor?: string | null
   /** When true, content is hidden and rendered as a generic "busy" block */

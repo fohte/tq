@@ -83,31 +83,31 @@ describe('CalendarView', () => {
     )
   })
 
-  it('switches to week view when Week button is clicked', async () => {
+  it('switches to week view when week button is clicked', async () => {
     const user = userEvent.setup()
     render(<CalendarView />)
 
-    const weekButtons = screen.getAllByText('Week')
+    const weekButtons = screen.getAllByText('week')
     await user.click(atIndex(weekButtons, weekButtons.length - 1))
 
     expect(mockChangeView).toHaveBeenCalledWith('timeGridWeek')
   })
 
-  it('switches to month view when Month button is clicked', async () => {
+  it('switches to month view when month button is clicked', async () => {
     const user = userEvent.setup()
     render(<CalendarView />)
 
-    const monthButtons = screen.getAllByText('Month')
+    const monthButtons = screen.getAllByText('month')
     await user.click(atIndex(monthButtons, monthButtons.length - 1))
 
     expect(mockChangeView).toHaveBeenCalledWith('dayGridMonth')
   })
 
-  it('switches back to day view when Day button is clicked from week view', async () => {
+  it('switches back to day view when day button is clicked from week view', async () => {
     const user = userEvent.setup()
     render(<CalendarView initialView="week" />)
 
-    const dayButtons = screen.getAllByText('Day')
+    const dayButtons = screen.getAllByText('day')
     await user.click(atIndex(dayButtons, dayButtons.length - 1))
 
     expect(mockChangeView).toHaveBeenCalledWith('timeGridDay')
@@ -127,8 +127,8 @@ describe('CalendarView', () => {
   it('highlights active view button', () => {
     render(<CalendarView initialView="week" />)
 
-    const weekButtons = screen.getAllByText('Week')
+    const weekButtons = screen.getAllByText('week')
     const activeWeekButton = atIndex(weekButtons, weekButtons.length - 1)
-    expect(activeWeekButton.className).toContain('bg-background')
+    expect(activeWeekButton).toHaveAttribute('aria-pressed', 'true')
   })
 })

@@ -185,10 +185,10 @@ describe('TaskActivity', () => {
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
 
-  it('shows Activity heading', () => {
+  it('shows activity heading', () => {
     setupMocks({ comments: [] })
     renderActivity()
 
-    expect(screen.getByText('Activity')).toBeInTheDocument()
+    expect(screen.getByText('activity')).toBeInTheDocument()
   })
 })

@@ -1,13 +1,12 @@
 import { useNavigate } from '@tanstack/react-router'
-import { Loader2, Search } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-import { ContextBadge } from '#components/search/context-badge'
-import { StatusIcon } from '#components/task/status-icon'
+import { SearchResultRow } from '#components/search/search-result-row'
+import { KeybindHint } from '#components/ui/keybind-hint'
 import type { SearchResult, Suggestion } from '#hooks/use-search'
 import { useSearchSuggestions, useSearchTasks } from '#hooks/use-search'
-import { formatMinutes } from '#lib/format'
 import { cn } from '#lib/utils'
 
 interface SearchModalProps {
@@ -153,13 +152,15 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
         }}
       >
         <div
-          className="flex max-h-[480px] w-full max-w-[640px] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
+          className="flex max-h-[480px] w-full max-w-[640px] flex-col overflow-hidden border border-border bg-popover text-popover-foreground"
           role="dialog"
           aria-label="Search"
         >
           {/* Search input */}
           <div className="flex h-12 items-center gap-3 border-b border-border px-4">
-            <Search className="h-[18px] w-[18px] shrink-0 text-muted-foreground" />
+            <span className="font-mono text-[13px] font-bold text-primary">
+              &gt;
+            </span>
             <input
               ref={inputRef}
               type="text"
@@ -169,7 +170,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
               }}
               placeholder="Search tasks..."
               autoFocus
-              className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              className="flex-1 border-0 bg-transparent font-mono text-[13px] outline-none placeholder:text-muted-foreground"
               aria-label="Search tasks"
             />
             {isFetching && (
@@ -178,9 +179,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                 data-testid="search-loading"
               />
             )}
-            <kbd className="flex shrink-0 items-center rounded bg-secondary px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
-              Esc
-            </kbd>
+            <KeybindHint variant="boxed">Esc</KeybindHint>
           </div>
 
           {/* Results list */}
@@ -193,7 +192,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
             {/* Suggestions section */}
             {hasSuggestions && (
               <>
-                <div className="px-4 py-1 text-[11px] font-medium text-muted-foreground">
+                <div className="px-4 py-1 font-mono text-[10px] tracking-[0.08em] text-muted-foreground-faint">
                   Suggestions
                 </div>
                 {suggestions.map((suggestion, i) => {
@@ -247,7 +246,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
             {/* Tasks section */}
             {hasTasks && (
               <>
-                <div className="px-4 py-1 text-[11px] font-medium text-muted-foreground">
+                <div className="px-4 py-1 font-mono text-[10px] tracking-[0.08em] text-muted-foreground-faint">
                   Tasks
                 </div>
                 {tasks.map((task, i) => {
@@ -280,23 +279,10 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                         selectedIndex === globalIndex
                           ? 'bg-secondary'
                           : 'hover:bg-secondary/50',
-                        task.status === 'completed' && 'opacity-50',
+                        task.status === 'completed' && 'opacity-[0.55]',
                       )}
                     >
-                      <StatusIcon status={task.status} />
-                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate text-sm font-medium text-foreground">
-                          {task.title}
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          <ContextBadge context={task.context} />
-                          {task.estimatedMinutes != null && (
-                            <span className="font-mono text-xs text-muted-foreground">
-                              {formatMinutes(task.estimatedMinutes)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      <SearchResultRow task={task} />
                     </button>
                   )
                 })}
@@ -308,25 +294,29 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
               !isFetching &&
               !hasTasks &&
               !hasSuggestions && (
-                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                  No results found
+                <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
+                  {`no results for "${query}"`}
                 </div>
               )}
 
             {/* Initial state */}
             {query.length === 0 && (
-              <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                Type to search tasks...
+              <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
+                Type to search tasks
               </div>
             )}
           </div>
 
           {/* Footer with keyboard hints */}
-          <div className="flex h-9 items-center border-t border-border px-4">
-            <span className="font-mono text-[11px] text-muted-foreground">
-              <kbd>↑↓</kbd> navigate <kbd>Tab</kbd> autocomplete{' '}
-              <kbd>Enter</kbd> open <kbd>Esc</kbd> close
-            </span>
+          <div className="flex h-9 items-center gap-1.5 border-t border-border px-4 font-mono text-[11px] text-muted-foreground-ghost">
+            <KeybindHint variant="boxed">↑↓</KeybindHint>
+            <span>navigate</span>
+            <KeybindHint variant="boxed">Tab</KeybindHint>
+            <span>autocomplete</span>
+            <KeybindHint variant="boxed">Enter</KeybindHint>
+            <span>open</span>
+            <KeybindHint variant="boxed">Esc</KeybindHint>
+            <span>close</span>
           </div>
         </div>
       </div>

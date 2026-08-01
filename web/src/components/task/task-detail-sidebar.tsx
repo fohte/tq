@@ -1,15 +1,15 @@
-import {
-  Calendar,
-  CalendarPlus,
-  Circle,
-  Clock,
-  Layers,
-  Network,
-} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { SidebarField } from '#components/task/sidebar-field'
 import { SidebarGithubLinkField } from '#components/task/task-github-link-field'
+import { Input } from '#components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#components/ui/select'
 import type { TaskDetail } from '#hooks/use-tasks'
 import {
   useTaskList,
@@ -17,17 +17,30 @@ import {
   useUpdateTaskParent,
   useUpdateTaskStatus,
 } from '#hooks/use-tasks'
-import { selectHandler } from '#lib/form-utils'
+import { selectValueHandler } from '#lib/form-utils'
 import { formatMinutes, parseDurationToMinutes } from '#lib/parse-duration'
+import { cn } from '#lib/utils'
+
+// Shared chrome for a field's editable value: no border/height/padding of
+// its own, so it reads as plain text until focused (matches the design's
+// icon-less, borderless field rows).
+const fieldValueClassName =
+  'h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0'
+
+function SidebarSectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="font-mono text-[9px] tracking-[0.1em] text-muted-foreground-faint">
+      {children}
+    </span>
+  )
+}
 
 // --- Sidebar (PC) ---
 
 export function TaskSidebar({ task }: { task: TaskDetail }) {
   return (
     <div className="flex flex-col gap-4">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Details
-      </h3>
+      <SidebarSectionLabel>DETAILS</SidebarSectionLabel>
       <SidebarStatusField taskId={task.id} status={task.status} />
       <SidebarEstimateField
         taskId={task.id}
@@ -36,61 +49,85 @@ export function TaskSidebar({ task }: { task: TaskDetail }) {
       <SidebarDateField
         taskId={task.id}
         field="startDate"
-        label="Start date"
-        icon={<CalendarPlus className="size-3.5" />}
+        label="START"
         value={task.startDate}
       />
       <SidebarDateField
         taskId={task.id}
         field="dueDate"
-        label="Due"
-        icon={<Calendar className="size-3.5" />}
+        label="DUE"
         value={task.dueDate}
       />
       <SidebarParentField taskId={task.id} parentId={task.parentId} />
       <SidebarContextField taskId={task.id} context={task.context} />
       <SidebarGithubLinkField taskId={task.id} githubLink={task.githubLink} />
+      <SidebarTimeBlocks timeBlocks={task.timeBlocks} />
     </div>
   )
 }
 
 // --- Sidebar (SP) ---
 
+function MobileFieldCell({
+  children,
+  className,
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={cn('border-b border-border p-2.5 last:border-b-0', className)}
+    >
+      {children}
+    </div>
+  )
+}
+
 export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Details
-      </h3>
-      <div className="grid grid-cols-2 gap-3">
-        <SidebarStatusField taskId={task.id} status={task.status} />
-        <SidebarEstimateField
-          taskId={task.id}
-          estimatedMinutes={task.estimatedMinutes}
-        />
-        <SidebarDateField
-          taskId={task.id}
-          field="startDate"
-          label="Start date"
-          icon={<CalendarPlus className="size-3.5" />}
-          value={task.startDate}
-        />
-        <SidebarDateField
-          taskId={task.id}
-          field="dueDate"
-          label="Due"
-          icon={<Calendar className="size-3.5" />}
-          value={task.dueDate}
-        />
-        <SidebarParentField taskId={task.id} parentId={task.parentId} />
-        <SidebarContextField taskId={task.id} context={task.context} />
-        <div className="col-span-2">
+      <SidebarSectionLabel>DETAILS</SidebarSectionLabel>
+      <div className="grid grid-cols-2 border border-border">
+        <MobileFieldCell>
+          <SidebarStatusField taskId={task.id} status={task.status} />
+        </MobileFieldCell>
+        <MobileFieldCell>
+          <SidebarEstimateField
+            taskId={task.id}
+            estimatedMinutes={task.estimatedMinutes}
+          />
+        </MobileFieldCell>
+        <MobileFieldCell>
+          <SidebarDateField
+            taskId={task.id}
+            field="startDate"
+            label="START"
+            value={task.startDate}
+          />
+        </MobileFieldCell>
+        <MobileFieldCell>
+          <SidebarDateField
+            taskId={task.id}
+            field="dueDate"
+            label="DUE"
+            value={task.dueDate}
+          />
+        </MobileFieldCell>
+        <MobileFieldCell>
+          <SidebarParentField taskId={task.id} parentId={task.parentId} />
+        </MobileFieldCell>
+        <MobileFieldCell>
+          <SidebarContextField taskId={task.id} context={task.context} />
+        </MobileFieldCell>
+        <MobileFieldCell className="col-span-2">
           <SidebarGithubLinkField
             taskId={task.id}
             githubLink={task.githubLink}
           />
-        </div>
+        </MobileFieldCell>
       </div>
+      <SidebarTimeBlocks timeBlocks={task.timeBlocks} />
     </div>
   )
 }
@@ -102,34 +139,30 @@ function SidebarStatusField({
   status,
 }: {
   taskId: string
-  status: string
+  status: TaskDetail['status']
 }) {
   const updateStatus = useUpdateTaskStatus()
 
-  const statusOptions = [
-    { value: 'todo', label: 'Todo' },
-    { value: 'in_progress', label: 'In Progress' },
-    { value: 'completed', label: 'Completed' },
-  ] as const
-
   return (
-    <SidebarField label="Status" icon={<Circle className="size-3.5" />}>
-      <select
+    <SidebarField label="STATUS">
+      <Select
         value={status}
-        onChange={selectHandler(
-          (value: 'todo' | 'in_progress' | 'completed') => {
+        onValueChange={selectValueHandler(
+          (value: TaskDetail['status']) => {
             updateStatus.mutate({ id: taskId, status: value })
           },
           ['todo', 'in_progress', 'completed'],
         )}
-        className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-primary/50"
       >
-        {statusOptions.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger size="sm" className={fieldValueClassName}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="todo">todo</SelectItem>
+          <SelectItem value="in_progress">in progress</SelectItem>
+          <SelectItem value="completed">completed</SelectItem>
+        </SelectContent>
+      </Select>
     </SidebarField>
   )
 }
@@ -169,9 +202,9 @@ function SidebarEstimateField({
   }
 
   return (
-    <SidebarField label="Estimate" icon={<Clock className="size-3.5" />}>
+    <SidebarField label="ESTIMATE">
       {isEditing ? (
-        <input
+        <Input
           type="text"
           value={input}
           onChange={(e) => {
@@ -190,7 +223,7 @@ function SidebarEstimateField({
           }}
           placeholder="1h30m"
           autoFocus
-          className="w-full rounded-md border border-border bg-transparent px-2 py-1 font-mono text-xs outline-none focus:border-primary/50"
+          className={fieldValueClassName}
         />
       ) : (
         <button
@@ -198,7 +231,7 @@ function SidebarEstimateField({
           onClick={() => {
             setIsEditing(true)
           }}
-          className="w-full cursor-text rounded-md px-2 py-1 text-left font-mono text-xs text-muted-foreground hover:bg-secondary/50"
+          className="w-full cursor-text text-left transition-colors hover:text-muted-foreground-strong"
         >
           {estimatedMinutes != null ? formatMinutes(estimatedMinutes) : '—'}
         </button>
@@ -211,13 +244,11 @@ function SidebarDateField({
   taskId,
   field,
   label,
-  icon,
   value,
 }: {
   taskId: string
   field: 'startDate' | 'dueDate'
   label: string
-  icon: React.ReactNode
   value: string | null
 }) {
   const updateTask = useUpdateTask()
@@ -231,12 +262,12 @@ function SidebarDateField({
   }
 
   return (
-    <SidebarField label={label} icon={icon}>
-      <input
+    <SidebarField label={label}>
+      <Input
         type="date"
         value={value ?? ''}
         onChange={handleChange}
-        className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-primary/50"
+        className={fieldValueClassName}
       />
     </SidebarField>
   )
@@ -261,22 +292,28 @@ function SidebarParentField({
   const candidates = allTasks.filter((t) => !invalidParentIds.has(t.id))
 
   return (
-    <SidebarField label="Parent" icon={<Network className="size-3.5" />}>
-      <select
+    <SidebarField label="PARENT">
+      <Select
         value={parentId ?? ''}
-        onChange={(e) => {
-          const newParentId = e.target.value || null
-          updateParent.mutate({ id: taskId, parentId: newParentId })
+        onValueChange={(value) => {
+          updateParent.mutate({
+            id: taskId,
+            parentId: value != null && value !== '' ? value : null,
+          })
         }}
-        className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-primary/50"
       >
-        <option value="">None</option>
-        {candidates.map((t) => (
-          <option key={t.id} value={t.id}>
-            #{t.number} {t.title}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger size="sm" className={fieldValueClassName}>
+          <SelectValue placeholder="—" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="">—</SelectItem>
+          {candidates.map((t) => (
+            <SelectItem key={t.id} value={t.id}>
+              #{t.number} {t.title}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </SidebarField>
   )
 }
@@ -286,25 +323,75 @@ function SidebarContextField({
   context,
 }: {
   taskId: string
-  context: string
+  context: TaskDetail['context']
 }) {
   const updateTask = useUpdateTask()
 
   return (
-    <SidebarField label="Context" icon={<Layers className="size-3.5" />}>
-      <select
+    <SidebarField label="CONTEXT">
+      <Select
         value={context}
-        onChange={selectHandler(
-          (value: 'work' | 'personal') => {
+        onValueChange={selectValueHandler(
+          (value: TaskDetail['context']) => {
             updateTask.mutate({ id: taskId, input: { context: value } })
           },
           ['work', 'personal'],
         )}
-        className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-primary/50"
       >
-        <option value="personal">Personal</option>
-        <option value="work">Work</option>
-      </select>
+        <SelectTrigger size="sm" className={fieldValueClassName}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="work">work</SelectItem>
+          <SelectItem value="personal">personal</SelectItem>
+        </SelectContent>
+      </Select>
     </SidebarField>
+  )
+}
+
+// --- Time Blocks ---
+
+function pad2(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+function formatBlockDate(iso: string): string {
+  const d = new Date(iso)
+  return `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+}
+
+function formatBlockRange(startIso: string, endIso: string): string {
+  const start = new Date(startIso)
+  const end = new Date(endIso)
+  return `${pad2(start.getHours())}:${pad2(start.getMinutes())}–${pad2(end.getHours())}:${pad2(end.getMinutes())}`
+}
+
+// No empty state: unlike Pages/Linked Tasks (user-authored content worth
+// prompting for), time blocks are schedule-derived, so an empty list just
+// means nothing has been scheduled yet.
+function SidebarTimeBlocks({
+  timeBlocks,
+}: {
+  timeBlocks: TaskDetail['timeBlocks']
+}) {
+  if (timeBlocks.length === 0) return null
+
+  return (
+    <div className="flex flex-col gap-[7px] border-t border-border pt-3.5">
+      <span className="font-mono text-[10px] text-muted-foreground-faint">
+        TIME BLOCKS
+      </span>
+      <div className="flex flex-col gap-[5px] font-mono text-[11px] text-muted-foreground-strong">
+        {timeBlocks.map((block) => (
+          <span key={block.id}>
+            <span className="text-muted-foreground-faint">
+              {formatBlockDate(block.startTime)}
+            </span>{' '}
+            {formatBlockRange(block.startTime, block.endTime)}
+          </span>
+        ))}
+      </div>
+    </div>
   )
 }

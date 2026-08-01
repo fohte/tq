@@ -129,7 +129,7 @@ describe('SearchModal', () => {
 
   it('shows initial empty state', () => {
     renderSearchModal()
-    expect(screen.getByText('Type to search tasks...')).toBeInTheDocument()
+    expect(screen.getByText('Type to search tasks')).toBeInTheDocument()
   })
 
   it('does not render when closed', () => {
@@ -224,7 +224,7 @@ describe('SearchModal', () => {
     const input = screen.getByLabelText('Search tasks')
     await user.type(input, 'nonexistent')
 
-    expect(screen.getByText('No results found')).toBeInTheDocument()
+    expect(screen.getByText('no results for "nonexistent"')).toBeInTheDocument()
   })
 
   it('shows keyboard hints in footer', () => {

@@ -126,8 +126,7 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T00:00:00`,
     end: `${dateStr}T07:00:00`,
     type: 'schedule',
-    color: { bg: '#2D2B55', accent: '#6C63FF' },
-    icon: 'moon',
+    color: { accent: '#6C63FF' },
   },
   {
     id: 'tb-2',
@@ -182,8 +181,7 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T18:00:00`,
     end: `${dateStr}T19:00:00`,
     type: 'schedule',
-    color: { bg: '#1B4332', accent: '#52B788' },
-    icon: 'dumbbell',
+    color: { accent: '#52B788' },
   },
   {
     id: 'tb-9',

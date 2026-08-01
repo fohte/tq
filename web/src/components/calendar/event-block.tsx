@@ -1,8 +1,25 @@
 import type { EventContentArg } from '@fullcalendar/core'
-import { Check, icons, Repeat, Sparkles } from 'lucide-react'
 
 import { getEventProps } from '#lib/calendar-utils'
 import { cn } from '#lib/utils'
+
+type EventKind = 'manual' | 'auto' | 'gcal' | 'completed' | 'schedule'
+
+const RULE_CLASS: Record<EventKind, string> = {
+  schedule: 'border-l-primary',
+  manual: 'border-l-foreground',
+  completed: 'border-l-foreground',
+  auto: 'border-l-muted-foreground',
+  gcal: 'border-l-border',
+}
+
+const BG_CLASS: Record<EventKind, string> = {
+  schedule: 'bg-card',
+  gcal: 'bg-card',
+  auto: 'bg-transparent',
+  manual: 'bg-surface-strong',
+  completed: 'bg-surface-strong',
+}
 
 export function EventBlock(arg: EventContentArg) {
   const { event, timeText } = arg
@@ -10,12 +27,12 @@ export function EventBlock(arg: EventContentArg) {
   const type = props.type ?? 'manual'
   const duration = props.duration
   const parentRef = props.parentRef
-  const label = props.label
-  const color = props.color
-  const iconName = props.icon
+  const scheduleAccent = props.color?.accent
+  const calendarColor = props.calendarColor
   const redacted = props.redacted ?? false
 
   const isShort = arg.isStart && (event.allDay || isShortEvent(event))
+  const isCompleted = type === 'completed'
 
   // Build time detail line: "10:30 - 11:30  ·  1h  ← #488"
   const timeDetails = [
@@ -27,85 +44,101 @@ export function EventBlock(arg: EventContentArg) {
     .join('  ·  ')
 
   if (redacted) {
-    return <HasPlansBlock timeText={timeText} isShort={isShort} />
-  }
-
-  if (type === 'schedule') {
     return (
-      <ScheduleBlock
-        event={event}
-        timeDetails={timeDetails}
+      <EventBlockShell
         isShort={isShort}
-        {...(color != null ? { color } : {})}
-        {...(iconName != null ? { iconName } : {})}
+        className="border-dashed border-l-muted-foreground-faint bg-transparent"
+        title={
+          <span className="truncate font-mono text-[13px] text-muted-foreground">
+            予定あり
+          </span>
+        }
+        meta={timeText}
       />
     )
   }
 
-  if (type === 'auto') {
-    return (
-      <AutoBlock
-        title={event.title}
-        timeDetails={timeDetails}
-        isShort={isShort}
-      />
-    )
-  }
+  const badge = type === 'auto' ? 'auto' : type === 'gcal' ? 'gcal' : undefined
 
-  if (type === 'gcal') {
-    return (
-      <GcalBlock
-        title={event.title}
-        timeDetails={timeDetails}
-        isShort={isShort}
-        calendarColor={props.calendarColor}
-      />
-    )
-  }
+  const accentColor =
+    type === 'schedule'
+      ? scheduleAccent
+      : type === 'gcal'
+        ? calendarColor
+        : undefined
 
-  // manual or completed
-  const isCompleted = type === 'completed'
+  return (
+    <EventBlockShell
+      isShort={isShort}
+      className={cn(
+        RULE_CLASS[type],
+        BG_CLASS[type],
+        type === 'auto' && 'border-dashed',
+        isCompleted && 'opacity-50',
+      )}
+      {...(accentColor != null
+        ? { style: { borderLeftColor: accentColor } }
+        : {})}
+      title={
+        <span
+          className={cn(
+            'truncate text-[13px]',
+            type === 'gcal'
+              ? 'text-muted-foreground-strong'
+              : 'font-mono text-foreground',
+            type === 'manual' && 'font-medium',
+            isCompleted && 'line-through',
+          )}
+        >
+          {event.title}
+        </span>
+      }
+      badge={badge}
+      meta={isShort ? timeText : timeDetails}
+    />
+  )
+}
 
+function EventBlockShell({
+  isShort,
+  className,
+  style,
+  title,
+  badge,
+  meta,
+}: {
+  isShort: boolean
+  className?: string
+  style?: React.CSSProperties
+  title: React.ReactNode
+  badge?: string | undefined
+  meta: string
+}) {
   return (
     <div
       className={cn(
-        'h-full overflow-hidden rounded-md px-2.5 py-1',
-        'bg-primary text-primary-foreground',
-        isCompleted && 'opacity-50',
+        'flex h-full min-w-0 gap-1.5 overflow-hidden border border-l-2 px-2',
+        isShort ? 'flex-row items-center py-px' : 'flex-col py-1',
+        className,
       )}
+      style={style}
     >
-      {isShort ? (
-        <div className="flex items-center gap-1.5">
-          {isCompleted ? (
-            <Check className="size-3 shrink-0 text-[#1A1A1A]" />
-          ) : (
-            <div className="size-1.5 shrink-0 rounded-full bg-[#1A1A1A]" />
-          )}
-          <span className="truncate text-xs font-medium">{event.title}</span>
-          <span className="shrink-0 font-mono text-[10px] text-white/70">
-            {timeText}
+      <div className="flex min-w-0 items-center gap-1.5">
+        {title}
+        {badge != null && (
+          <span className="shrink-0 border border-border px-[3px] font-mono text-[8px] leading-[12px] text-muted-foreground">
+            {badge}
           </span>
-        </div>
-      ) : (
-        <>
-          <div className="flex items-center gap-1.5">
-            {isCompleted ? (
-              <Check className="size-3.5 shrink-0 text-[#1A1A1A]" />
-            ) : (
-              <div className="size-2 shrink-0 rounded-full bg-[#1A1A1A]" />
-            )}
-            <span className="truncate text-[13px] font-medium">
-              {event.title}
-            </span>
-          </div>
-          <div className="font-mono text-[10px] text-white/70">
-            {timeDetails}
-          </div>
-          {label != null && (
-            <div className="text-[7px] font-medium text-white/70">{label}</div>
-          )}
-        </>
-      )}
+        )}
+      </div>
+      <span
+        className={cn(
+          'shrink-0 truncate font-mono text-[9px] whitespace-nowrap text-muted-foreground-faint',
+          isShort && 'ml-auto',
+        )}
+      >
+        {meta}
+      </span>
     </div>
   )
 }
@@ -114,225 +147,4 @@ function isShortEvent(event: EventContentArg['event']): boolean {
   if (!event.start || !event.end) return false
   const durationMs = event.end.getTime() - event.start.getTime()
   return durationMs <= 30 * 60 * 1000 // 30 minutes or less
-}
-
-function isIconName(value: string): value is keyof typeof icons {
-  return value in icons
-}
-
-function resolveIcon(name: string | undefined) {
-  if (name == null || name === '') return null
-  // Convert kebab-case to PascalCase: "dumbbell" -> "Dumbbell", "arrow-left" -> "ArrowLeft"
-  const pascalCase = name
-    .split('-')
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join('')
-  if (!isIconName(pascalCase)) return null
-  return icons[pascalCase]
-}
-
-function ScheduleBlock({
-  event,
-  timeDetails,
-  isShort,
-  color,
-  iconName,
-}: {
-  event: EventContentArg['event']
-  timeDetails: string
-  isShort: boolean
-  color?: { bg: string; accent: string }
-  iconName?: string
-}) {
-  const accentColor = color?.accent ?? '#6C63FF'
-  const bgColor = color?.bg ?? '#2D2B55'
-  const IconComponent = resolveIcon(iconName)
-
-  return (
-    <div
-      className="relative h-full overflow-hidden rounded-md py-1 pr-2 pl-2.5"
-      style={{ backgroundColor: bgColor }}
-    >
-      {/* Left accent border */}
-      <div
-        className="absolute inset-y-0 left-0 w-[3px]"
-        style={{ backgroundColor: accentColor }}
-      />
-      {isShort ? (
-        <div className="flex items-center gap-1.5 pl-1">
-          {IconComponent && (
-            <IconComponent
-              className="size-3 shrink-0"
-              style={{ color: accentColor }}
-            />
-          )}
-          <span className="truncate text-xs font-medium text-white">
-            {event.title}
-          </span>
-          <span
-            className="shrink-0 font-mono text-[10px]"
-            style={{ color: `${accentColor}99` }}
-          >
-            {timeDetails}
-          </span>
-        </div>
-      ) : (
-        <div className="pl-1">
-          <div className="flex items-center gap-1.5">
-            {IconComponent && (
-              <IconComponent
-                className="size-3.5 shrink-0"
-                style={{ color: accentColor }}
-              />
-            )}
-            <span className="truncate text-[13px] font-medium text-white">
-              {event.title}
-            </span>
-          </div>
-          <div
-            className="font-mono text-[10px]"
-            style={{ color: `${accentColor}99` }}
-          >
-            {timeDetails}
-          </div>
-        </div>
-      )}
-      {/* Repeat icon top-right */}
-      <Repeat
-        className="absolute top-1 right-1.5 size-2.5"
-        style={{ color: `${accentColor}99` }}
-      />
-    </div>
-  )
-}
-
-function AutoBlock({
-  title,
-  timeDetails,
-  isShort,
-}: {
-  title: string
-  timeDetails: string
-  isShort: boolean
-}) {
-  return (
-    <div className="h-full overflow-hidden rounded-md border border-dashed border-primary bg-primary/15 px-2.5 py-1">
-      {isShort ? (
-        <div className="flex items-center gap-1.5">
-          <span className="truncate text-xs font-medium text-white">
-            {title}
-          </span>
-          <span className="inline-flex shrink-0 items-center gap-0.5 rounded bg-primary/20 px-1 text-[8px] font-semibold text-primary">
-            <Sparkles className="size-2" />
-            Auto
-          </span>
-          <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-            {timeDetails}
-          </span>
-        </div>
-      ) : (
-        <>
-          <div className="flex items-center gap-1.5">
-            <span className="truncate text-[13px] font-medium text-white">
-              {title}
-            </span>
-            <span className="inline-flex shrink-0 items-center gap-0.5 rounded bg-primary/20 px-1 py-px text-[9px] font-semibold text-primary">
-              <Sparkles className="size-2.5" />
-              Auto
-            </span>
-          </div>
-          <div className="font-mono text-[10px] text-muted-foreground">
-            {timeDetails}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-function HasPlansBlock({
-  timeText,
-  isShort,
-}: {
-  timeText: string
-  isShort: boolean
-}) {
-  return (
-    <div className="h-full overflow-hidden rounded-md bg-muted px-2.5 py-1">
-      {isShort ? (
-        <div className="flex items-center gap-1.5">
-          <span className="truncate text-xs font-medium text-muted-foreground">
-            予定あり
-          </span>
-          <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-            {timeText}
-          </span>
-        </div>
-      ) : (
-        <>
-          <span className="truncate text-[13px] font-medium text-muted-foreground">
-            予定あり
-          </span>
-          <div className="font-mono text-[10px] text-muted-foreground">
-            {timeText}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-function GcalBlock({
-  title,
-  timeDetails,
-  isShort,
-  calendarColor,
-}: {
-  title: string
-  timeDetails: string
-  isShort: boolean
-  calendarColor?: string | null | undefined
-}) {
-  return (
-    <div
-      className={cn(
-        'relative h-full overflow-hidden rounded-md bg-[#2E2E2E] px-2.5 py-1',
-        calendarColor != null && 'pl-[13px]',
-      )}
-    >
-      {calendarColor != null && (
-        <div
-          className="absolute inset-y-0 left-0 w-[3px]"
-          style={{ backgroundColor: calendarColor }}
-        />
-      )}
-      {isShort ? (
-        <div className="flex items-center gap-1.5">
-          <span className="truncate text-xs font-normal text-white">
-            {title}
-          </span>
-          <span className="shrink-0 rounded px-1 text-[8px] font-semibold text-muted-foreground">
-            GCal
-          </span>
-          <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-            {timeDetails}
-          </span>
-        </div>
-      ) : (
-        <>
-          <div className="flex items-center gap-1.5">
-            <span className="truncate text-[13px] font-normal text-white">
-              {title}
-            </span>
-            <span className="shrink-0 rounded bg-[#2E2E2E] px-1 py-px text-[9px] font-semibold text-muted-foreground">
-              GCal
-            </span>
-          </div>
-          <div className="font-mono text-[10px] text-muted-foreground">
-            {timeDetails}
-          </div>
-        </>
-      )}
-    </div>
-  )
 }

@@ -1,46 +1,44 @@
-import type { LucideIcon } from 'lucide-react'
-import { Briefcase, Globe, User } from 'lucide-react'
-
+import { TabStrip } from '#components/ui/tab-strip'
 import {
   type ContextFilterMode,
   useContextFilter,
 } from '#hooks/use-context-filter'
 import { cn } from '#lib/utils'
 
-interface FilterOption {
+const filterOptions: ReadonlyArray<{
   mode: ContextFilterMode
   label: string
-  icon: LucideIcon
-}
-
-const filterOptions: FilterOption[] = [
-  { mode: 'all', label: 'All', icon: Globe },
-  { mode: 'work', label: 'Work', icon: Briefcase },
-  { mode: 'personal', label: 'Personal', icon: User },
+}> = [
+  { mode: 'all', label: 'all' },
+  { mode: 'work', label: 'work' },
+  { mode: 'personal', label: 'personal' },
 ]
 
+/**
+ * 3-column grid variant for the sidebar footer.
+ */
 export function ContextFilter() {
   const { mode, setMode } = useContextFilter()
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      {filterOptions.map((option) => (
+    <div className="grid grid-cols-3">
+      {filterOptions.map((option, index) => (
         <button
           key={option.mode}
           type="button"
           onClick={() => {
             setMode(option.mode)
           }}
-          title={option.label}
+          aria-pressed={mode === option.mode}
           className={cn(
-            'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
-            'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+            'border py-1 font-mono text-[10px]',
             mode === option.mode
-              ? 'bg-sidebar-accent text-primary'
-              : 'text-sidebar-foreground/40',
+              ? 'border-border-strong bg-surface-strong text-foreground'
+              : 'border-border text-muted-foreground-faint',
+            index > 0 && 'border-l-0',
           )}
         >
-          <option.icon className="h-4 w-4" />
+          {option.label}
         </button>
       ))}
     </div>
@@ -54,25 +52,13 @@ export function ContextFilterInline() {
   const { mode, setMode } = useContextFilter()
 
   return (
-    <div className="flex items-center gap-0.5 rounded-lg bg-muted p-0.5">
-      {filterOptions.map((option) => (
-        <button
-          key={option.mode}
-          type="button"
-          onClick={() => {
-            setMode(option.mode)
-          }}
-          className={cn(
-            'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-            mode === option.mode
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground',
-          )}
-        >
-          <option.icon className="h-3.5 w-3.5" />
-          {option.label}
-        </button>
-      ))}
-    </div>
+    <TabStrip
+      value={mode}
+      options={filterOptions.map((option) => ({
+        value: option.mode,
+        label: option.label,
+      }))}
+      onChange={setMode}
+    />
   )
 }

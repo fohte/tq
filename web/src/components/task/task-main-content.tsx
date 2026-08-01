@@ -1,20 +1,23 @@
 import { Link } from '@tanstack/react-router'
-import { Check, ChevronRight, Circle, Play } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { GithubLinkBadge } from '#components/task/github-link-badge'
 import { LlmAuthorLabel } from '#components/task/llm-author-label'
+import { StatusIcon } from '#components/task/status-icon'
 import { TaskActivity } from '#components/task/task-activity'
 import { TaskLinkedTasksSection } from '#components/task/task-linked-tasks-section'
 import {
   TaskPagesList,
   TaskPagesSection,
 } from '#components/task/task-pages-section'
+import { Chip } from '#components/ui/chip'
+import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
 import type { TaskPage } from '#hooks/use-task-pages'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { useUpdateTask, useUpdateTaskStatus } from '#hooks/use-tasks'
-import { cn } from '#lib/utils'
+import { formatRelativeTime } from '#lib/format'
 
 // --- Main Content ---
 
@@ -26,26 +29,24 @@ export function TaskMainContent({
   pages?: TaskPage[]
 }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex max-w-[720px] flex-col gap-[18px]">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-        <Link to="/tasks" className="hover:text-foreground">
-          Tasks
-        </Link>
-        <ChevronRight className="size-3.5" />
-        <span className="text-foreground">#{task.number}</span>
-      </nav>
+      <TaskBreadcrumb task={task} />
 
       {/* Status + Title */}
       <div className="flex items-start gap-3">
-        <div className="mt-1.5">
-          <TaskStatusIcon taskId={task.id} status={task.status} />
-        </div>
+        <TaskStatusToggle taskId={task.id} status={task.status} />
         <EditableTitle
           taskId={task.id}
           defaultValue={task.title}
           author={task.titleAuthor}
         />
+      </div>
+
+      {/* Context / GitHub chips */}
+      <div className="flex flex-wrap gap-2">
+        <Chip>{task.context}</Chip>
+        {task.githubLink != null && <GithubLinkBadge link={task.githubLink} />}
       </div>
 
       {/* Description */}
@@ -73,6 +74,50 @@ export function TaskMainContent({
         <TaskActivity taskId={task.id} />
       </div>
     </div>
+  )
+}
+
+// --- Breadcrumb ---
+
+function TaskBreadcrumb({ task }: { task: TaskDetail }) {
+  return (
+    <nav className="flex items-center gap-[7px] font-mono text-[11px] text-muted-foreground">
+      <Link to="/tasks" className="hover:text-foreground">
+        tasks
+      </Link>
+      <span className="text-muted-foreground-ghost">/</span>
+      <span className="text-foreground">#{task.number}</span>
+      <span className="ml-auto text-muted-foreground-faint">
+        opened {task.createdAt.slice(0, 10)} · updated{' '}
+        {formatRelativeTime(task.updatedAt)}
+      </span>
+    </nav>
+  )
+}
+
+// --- Status Toggle ---
+
+function TaskStatusToggle({
+  taskId,
+  status,
+}: {
+  taskId: string
+  status: TaskDetail['status']
+}) {
+  const updateStatus = useUpdateTaskStatus()
+
+  const handleToggle = () => {
+    const nextStatus = status === 'completed' ? 'todo' : 'completed'
+    updateStatus.mutate({
+      id: taskId,
+      status: nextStatus,
+    })
+  }
+
+  return (
+    <button type="button" onClick={handleToggle} className="mt-1 shrink-0">
+      <StatusIcon status={status} />
+    </button>
   )
 }
 
@@ -113,7 +158,7 @@ function EditableTitle({
   return (
     <>
       {isEditing ? (
-        <input
+        <Input
           type="text"
           value={value}
           onChange={(e) => {
@@ -129,7 +174,7 @@ function EditableTitle({
             }
           }}
           autoFocus
-          className="flex-1 bg-transparent text-2xl font-bold text-foreground outline-none"
+          className="h-auto flex-1 border-0 bg-transparent p-0 text-[23px] font-bold leading-[1.4] text-foreground shadow-none focus-visible:ring-0"
         />
       ) : (
         <button
@@ -137,56 +182,15 @@ function EditableTitle({
           onClick={() => {
             setIsEditing(true)
           }}
-          className="flex-1 cursor-text text-left text-2xl font-bold text-foreground"
+          className="flex-1 cursor-text text-left text-[23px] font-bold leading-[1.4] text-foreground"
         >
           {value}
         </button>
       )}
-      <span className="mt-2">
+      <span className="mt-2 shrink-0">
         <LlmAuthorLabel author={author} />
       </span>
     </>
-  )
-}
-
-// --- Status Icon ---
-
-function TaskStatusIcon({
-  taskId,
-  status,
-}: {
-  taskId: string
-  status: string
-}) {
-  const updateStatus = useUpdateTaskStatus()
-
-  const handleToggle = () => {
-    const nextStatus = status === 'completed' ? 'todo' : 'completed'
-    updateStatus.mutate({
-      id: taskId,
-      status: nextStatus,
-    })
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={handleToggle}
-      className={cn(
-        'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors',
-        status === 'completed' &&
-          'border-primary bg-primary text-primary-foreground',
-        status === 'in_progress' && 'border-primary text-primary',
-        status === 'todo' &&
-          'border-muted-foreground/40 text-muted-foreground/40 hover:border-muted-foreground hover:text-muted-foreground',
-      )}
-    >
-      {status === 'completed' && <Check className="h-3.5 w-3.5" />}
-      {status === 'in_progress' && (
-        <Play className="h-3.5 w-3.5 fill-current" />
-      )}
-      {status === 'todo' && <Circle className="h-3.5 w-3.5" />}
-    </button>
   )
 }
 
@@ -208,9 +212,9 @@ function TaskDescription({
   })
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       <LlmAuthorLabel author={author} />
-      <div className="min-h-[120px] rounded-lg border border-border p-1 text-sm focus-within:border-primary/50">
+      <div className="min-h-[120px] border border-border p-4 text-sm leading-[1.75] focus-within:border-ring">
         <MarkdownEditor
           defaultValue={defaultValue ?? ''}
           placeholder="Add description..."

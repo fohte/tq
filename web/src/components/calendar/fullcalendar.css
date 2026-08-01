@@ -3,9 +3,9 @@
 .tq-calendar {
   --fc-border-color: var(--border);
   --fc-page-bg-color: var(--background);
-  --fc-neutral-bg-color: var(--secondary);
+  --fc-neutral-bg-color: var(--card);
   --fc-today-bg-color: transparent;
-  --fc-now-indicator-color: #e53e3e;
+  --fc-now-indicator-color: var(--primary);
   --fc-event-border-color: transparent;
   --fc-event-bg-color: transparent;
   --fc-small-font-size: 0.8rem;
@@ -13,38 +13,55 @@
 
 /* Time slot labels */
 .tq-calendar .fc-timegrid-slot-label-cushion {
-  font-family: 'JetBrains Mono Variable', monospace;
-  font-size: 11px;
-  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted-foreground-faint);
 }
 
-/* Slot lanes */
+/* All-day row label ("all-day" -> rendered as "ALL-DAY") */
+.tq-calendar .fc-timegrid-axis-cushion {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground-faint);
+}
+
+.tq-calendar .fc-timegrid-body .fc-daygrid-day-frame {
+  background-color: var(--card);
+}
+
+/* Slot lanes — hourly line only (52px per hour); half-hour lines hidden */
 .tq-calendar .fc-timegrid-slot {
-  height: 2.5rem;
+  height: 26px;
 }
 
 .tq-calendar .fc-timegrid-slot-lane {
-  border-color: var(--border);
+  border-color: transparent;
 }
 
-/* Now indicator — red dot + red line */
+.tq-calendar .fc-timegrid-slot-lane:not(.fc-timegrid-slot-minor) {
+  border-top-style: solid;
+  border-color: var(--surface-strong);
+}
+
+/* Now indicator — thin red line + square marker */
 .tq-calendar .fc-timegrid-now-indicator-line {
-  border-color: #e53e3e;
-  border-width: 2px;
+  border-color: var(--primary);
+  border-width: 1px;
 }
 
 .tq-calendar .fc-timegrid-now-indicator-arrow {
-  /* Replace default arrow with a circle dot */
+  /* Replace default arrow with a square marker */
   border: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: #e53e3e;
-  margin-top: -4px;
-  left: -1px;
+  width: 6px;
+  height: 6px;
+  background-color: var(--primary);
+  margin-top: -3px;
+  left: 0;
 }
 
-/* Hide now indicator arrow in week view — line only, no dot overlapping time labels */
+/* Hide now indicator arrow in week view — line only, no marker overlapping time labels */
 .tq-calendar .fc-timeGridWeek-view .fc-timegrid-now-indicator-arrow {
   display: none;
 }
@@ -57,38 +74,39 @@
 /* Week view day headers */
 .tq-calendar .fc-timeGridWeek-view .fc-col-header-cell {
   padding: 6px 0;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 500;
   color: var(--muted-foreground);
 }
 
-/* Highlight today's column header in week view */
 .tq-calendar .fc-timeGridWeek-view .fc-col-header-cell-cushion {
   padding: 4px 8px;
 }
 
+/* Highlight today's column header in week view */
 .tq-calendar .fc-timeGridWeek-view .fc-day-today .fc-col-header-cell-cushion {
   color: var(--primary);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* Highlight today's column in week view */
 .tq-calendar .fc-timeGridWeek-view .fc-day-today {
-  background-color: #1f1a14;
+  background-color: var(--card);
 }
 
 /* Month view styles */
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-day {
   cursor: pointer;
-  border-color: #2e2e2e44;
+  border-color: var(--border);
 }
 
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-day:hover {
-  background-color: var(--secondary);
+  background-color: var(--card);
 }
 
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-day-number {
-  font-family: 'JetBrains Mono Variable', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 500;
   padding: 4px 6px;
@@ -101,16 +119,15 @@
   font-weight: normal;
 }
 
-/* Today's date: primary circle background with white text */
+/* Today's date: primary square with primary-foreground text */
 .tq-calendar .fc-dayGridMonth-view .fc-day-today {
-  background-color: #1f1a14;
+  background-color: var(--card);
 }
 
 .tq-calendar .fc-dayGridMonth-view .fc-day-today .fc-daygrid-day-number {
   background-color: var(--primary);
-  color: white;
+  color: var(--primary-foreground);
   font-weight: 700;
-  border-radius: 50%;
   width: 22px;
   height: 22px;
   display: flex;
@@ -133,7 +150,6 @@
 }
 
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-event-harness .fc-event {
-  border-radius: 3px;
   padding: 0;
   min-height: 0;
   background-color: transparent;
@@ -149,40 +165,38 @@
   display: none;
 }
 
-/* Custom month event pill */
+/* Custom month event pill — same kind -> color mapping as the day view's EventBlock */
 .tq-month-event {
   display: flex;
   align-items: center;
   padding: 1px 4px;
-  border-radius: 3px;
-  background-color: #ff840026;
-  border-left: 2px solid #ff8400;
+  background-color: var(--surface-strong);
+  border-left: 2px solid var(--foreground);
   overflow: hidden;
 }
 
 .tq-month-event[data-event-type='gcal'] {
-  background-color: #3b82f626;
-  border-left-color: #3b82f6;
+  background-color: var(--card);
+  border-left-color: var(--border);
+}
+
+.tq-month-event[data-event-type='schedule'] {
+  background-color: var(--card);
+  border-left-color: var(--primary);
 }
 
 .tq-month-event[data-event-type='auto'] {
-  background-color: #ff840012;
-  border-left-color: #ff8400;
+  background-color: transparent;
+  border-left-color: var(--muted-foreground);
   border-left-style: dashed;
 }
 
 .tq-month-event[data-event-type='completed'] {
-  background-color: #22c55e1a;
-  border-left-color: #22c55e;
-  opacity: 0.7;
-}
-
-.tq-month-event[data-event-type='schedule'] {
-  background-color: #8b5cf626;
-  border-left-color: #8b5cf6;
+  opacity: 0.5;
 }
 
 .tq-month-event-title {
+  font-family: var(--font-mono);
   font-size: 10px;
   line-height: 1.4;
   color: var(--foreground);
@@ -203,7 +217,8 @@
 /* Month view header */
 .tq-calendar .fc-dayGridMonth-view .fc-col-header-cell {
   padding: 8px 0;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 500;
   color: var(--muted-foreground);
 }
@@ -211,6 +226,7 @@
 /* "+N more" link in month view */
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-day-bottom {
   padding: 0 4px 2px;
+  font-family: var(--font-mono);
   font-size: 10px;
 }
 

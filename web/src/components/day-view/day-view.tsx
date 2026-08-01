@@ -25,15 +25,24 @@ import { TaskListHeader } from '#components/task/task-list-header'
 import { TaskRow } from '#components/task/task-row'
 import { TodayQueueRow } from '#components/task/today-queue-row'
 import { TodayQueueToggle } from '#components/task/today-queue-toggle'
+import { Button } from '#components/ui/button'
+import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
+import { SectionHeading } from '#components/ui/section-heading'
+import { TabStrip } from '#components/ui/tab-strip'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
 import { cn } from '#lib/utils'
 
 type TaskTab = 'today' | 'all'
 type MobileTab = 'calendar' | 'tasks'
 
-const MOBILE_TABS = [
-  { value: 'calendar', label: 'Calendar' },
-  { value: 'tasks', label: 'Tasks' },
+const TASK_TAB_OPTIONS = [
+  { value: 'today', label: 'today' },
+  { value: 'all', label: 'all' },
+] as const
+
+const MOBILE_TAB_OPTIONS = [
+  { value: 'calendar', label: 'calendar' },
+  { value: 'tasks', label: 'queue' },
 ] as const
 
 export interface DayViewPresentationProps {
@@ -86,41 +95,39 @@ export function DayViewPresentation({
   }
 
   return (
-    <div className="flex h-full">
-      {/* Left panel: Today's Queue */}
-      <div
-        ref={taskListRef}
-        className={cn(
-          'flex w-full flex-col border-r border-border md:w-80 lg:w-96',
-          mobileTab === 'calendar' ? 'hidden md:flex' : 'flex md:flex',
-        )}
-      >
-        {/* Tab bar */}
-        <div className="flex items-center justify-between border-b border-border px-3 py-2">
-          <div className="flex gap-1">
-            {(['today', 'all'] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => {
-                  setActiveTab(tab)
-                }}
-                className={cn(
-                  'rounded-md px-3 py-1 text-sm font-medium transition-colors',
-                  activeTab === tab
-                    ? 'bg-secondary text-foreground'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {tab === 'today' ? 'Today' : 'All'}
-              </button>
-            ))}
-          </div>
+    <div className="flex h-full flex-col">
+      {/* Mobile pane switcher */}
+      <div className="border-b border-border px-3 py-2 md:hidden">
+        <TabStrip
+          value={mobileTab}
+          options={MOBILE_TAB_OPTIONS}
+          onChange={setMobileTab}
+        />
+      </div>
 
-          <div className="flex items-center gap-2">
+      <div className="flex min-h-0 flex-1">
+        {/* Left panel: Today's Queue */}
+        <div
+          ref={taskListRef}
+          className={cn(
+            'flex w-full flex-col border-r border-border md:w-80 lg:w-96',
+            mobileTab === 'calendar' ? 'hidden md:flex' : 'flex md:flex',
+          )}
+        >
+          <ScreenHeaderBar>
+            <SectionHeading level={2}>queue</SectionHeading>
+
+            <TabStrip
+              className="ml-auto"
+              value={activeTab}
+              options={TASK_TAB_OPTIONS}
+              onChange={setActiveTab}
+            />
+
             {activeTab === 'today' && (
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="xs"
                 onClick={onAutoAssign}
                 disabled={isAutoAssigning || !canAutoAssign}
                 title={
@@ -128,166 +135,147 @@ export function DayViewPresentation({
                     ? undefined
                     : 'Set an estimate on at least one queued task to auto-schedule'
                 }
-                className="rounded-md bg-primary px-3 py-1 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+                className="font-mono"
               >
-                {isAutoAssigning ? 'Scheduling…' : 'Auto Schedule'}
-              </button>
+                {isAutoAssigning ? 'scheduling…' : 'auto'}
+              </Button>
             )}
-            <button
-              type="button"
+
+            <Button
+              variant="ghost"
+              size="icon-xs"
               onClick={() => {
                 setIsCreating(true)
               }}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              aria-label="New task"
             >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          </ScreenHeaderBar>
 
-        {/* Summary header */}
-        {activeTab === 'today' && (
-          <div className="py-2">
-            <TaskListHeader tasks={queueTasks} />
-          </div>
-        )}
-
-        {/* Inline create */}
-        {isCreating && (
-          <div className="border-b border-border">
-            <CreateTaskInline
-              onClose={() => {
-                setIsCreating(false)
-              }}
-              {...(activeTab === 'today'
-                ? { defaultStartDate: new Date().toISOString().slice(0, 10) }
-                : {})}
-            />
-          </div>
-        )}
-
-        {/* Task list */}
-        <div className="flex-1 overflow-auto">
-          {isLoading ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              Loading...
+          {/* Summary header */}
+          {activeTab === 'today' && (
+            <div className="border-b border-border py-2.5">
+              <TaskListHeader tasks={queueTasks} />
             </div>
-          ) : activeTab === 'today' ? (
-            queueTasks.length === 0 ? (
+          )}
+
+          {/* Inline create */}
+          {isCreating && (
+            <div className="border-b border-border">
+              <CreateTaskInline
+                onClose={() => {
+                  setIsCreating(false)
+                }}
+                {...(activeTab === 'today'
+                  ? { defaultStartDate: new Date().toISOString().slice(0, 10) }
+                  : {})}
+              />
+            </div>
+          )}
+
+          {/* Task list */}
+          <div className="flex-1 overflow-auto">
+            {isLoading ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
-                No tasks in today's queue
+                Loading...
+              </div>
+            ) : activeTab === 'today' ? (
+              queueTasks.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  No tasks in today's queue
+                </div>
+              ) : (
+                <DndContext
+                  sensors={dndSensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleQueueDragEnd}
+                >
+                  <SortableContext
+                    items={queueTasks.map((t) => t.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="py-1">
+                      {queueTasks.map((task) => (
+                        <TodayQueueRow
+                          key={task.id}
+                          task={task}
+                          onRemove={() => {
+                            onRemoveFromQueue(task.id)
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )
+            ) : categorized.all.length === 0 ? (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                No tasks yet
               </div>
             ) : (
-              <DndContext
-                sensors={dndSensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleQueueDragEnd}
-              >
-                <SortableContext
-                  items={queueTasks.map((t) => t.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="py-1">
-                    {queueTasks.map((task) => (
-                      <TodayQueueRow
-                        key={task.id}
+              <div className="py-1">
+                {categorized.all.map((task) => (
+                  <div key={task.id} className="flex items-center gap-1">
+                    <div className="min-w-0 flex-1">
+                      <TaskRow
                         task={task}
-                        onRemove={() => {
-                          onRemoveFromQueue(task.id)
-                        }}
+                        draggable={task.status !== 'completed'}
                       />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            )
-          ) : categorized.all.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              No tasks yet
-            </div>
-          ) : (
-            <div className="py-1">
-              {categorized.all.map((task) => (
-                <div key={task.id} className="flex items-center gap-1">
-                  <div className="min-w-0 flex-1">
-                    <TaskRow
-                      task={task}
-                      draggable={task.status !== 'completed'}
+                    </div>
+                    <TodayQueueToggle
+                      inQueue={queueTaskIds.has(task.id)}
+                      onToggle={() => {
+                        onToggleQueueTask(task.id)
+                      }}
                     />
                   </div>
-                  <TodayQueueToggle
-                    inQueue={queueTaskIds.has(task.id)}
-                    onToggle={() => {
-                      onToggleQueueTask(task.id)
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Backlog preview (Today tab only) */}
-        {activeTab === 'today' && (
-          <BacklogPreview
-            tasks={categorized.backlog}
-            onViewAll={() => {
-              setActiveTab('all')
-            }}
-          />
-        )}
-      </div>
-
-      {/* Right panel: Calendar */}
-      <div
-        className={cn(
-          'flex-1',
-          mobileTab === 'tasks' ? 'hidden md:flex' : 'flex md:flex',
-        )}
-      >
-        <div className="flex h-full w-full flex-col">
-          {gcalAuthUrl != null && (
-            <div className="flex items-center justify-between gap-2 border-b border-border bg-secondary px-3 py-2 text-sm">
-              <span className="text-muted-foreground">
-                Google Calendar が連携されていません
-              </span>
-              <a
-                href={gcalAuthUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-primary hover:underline"
-              >
-                連携する
-              </a>
-            </div>
-          )}
-          <CalendarView
-            events={calendarEvents}
-            dndCallbacks={dndCallbacks}
-            externalDragContainerRef={taskListRef}
-          />
-        </div>
-      </div>
-
-      {/* Mobile tab switcher */}
-      <div className="fixed bottom-16 left-1/2 z-10 flex -translate-x-1/2 gap-0.5 rounded-lg bg-secondary p-0.5 shadow-lg md:hidden">
-        {MOBILE_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            onClick={() => {
-              setMobileTab(tab.value)
-            }}
-            className={cn(
-              'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-              mobileTab === tab.value
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
+                ))}
+              </div>
             )}
-          >
-            {tab.label}
-          </button>
-        ))}
+          </div>
+
+          {/* Backlog preview (Today tab only) */}
+          {activeTab === 'today' && (
+            <BacklogPreview
+              tasks={categorized.backlog}
+              onViewAll={() => {
+                setActiveTab('all')
+              }}
+            />
+          )}
+        </div>
+
+        {/* Right panel: Calendar */}
+        <div
+          className={cn(
+            'flex-1',
+            mobileTab === 'tasks' ? 'hidden md:flex' : 'flex md:flex',
+          )}
+        >
+          <div className="flex h-full w-full flex-col">
+            {gcalAuthUrl != null && (
+              <div className="flex items-center justify-between gap-2 border-b border-border bg-secondary px-3 py-2 text-sm">
+                <span className="text-muted-foreground">
+                  Google Calendar が連携されていません
+                </span>
+                <a
+                  href={gcalAuthUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary hover:underline"
+                >
+                  連携する
+                </a>
+              </div>
+            )}
+            <CalendarView
+              events={calendarEvents}
+              dndCallbacks={dndCallbacks}
+              externalDragContainerRef={taskListRef}
+            />
+          </div>
+        </div>
       </div>
     </div>
   )

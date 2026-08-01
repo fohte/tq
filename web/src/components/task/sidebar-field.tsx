@@ -1,19 +1,16 @@
 export function SidebarField({
   label,
-  icon,
   children,
 }: {
   label: string
-  icon: React.ReactNode
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-        {icon}
+    <div className="flex flex-col gap-[5px]">
+      <span className="font-mono text-[10px] text-muted-foreground-faint">
         {label}
       </span>
-      <div className="text-sm text-foreground">{children}</div>
+      <div className="font-mono text-xs text-foreground">{children}</div>
     </div>
   )
 }

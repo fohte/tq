@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { Clock } from 'lucide-react'
 
 import { SidebarField } from '#components/task/sidebar-field'
 
@@ -23,8 +22,7 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   args: {
-    label: 'Estimate',
-    icon: <Clock className="size-3.5" />,
+    label: 'ESTIMATE',
     children: '1h30m',
   },
 }
