@@ -18,8 +18,6 @@ export interface TimeBlockEvent {
   start: string
   end: string
   type: 'manual' | 'auto' | 'gcal' | 'completed' | 'schedule'
-  /** Duration text (e.g. "1h", "30m") */
-  duration?: string
   /** Parent task reference (e.g. "#488 tq 作成") */
   parentRef?: string
   /** Custom accent color for schedule events */

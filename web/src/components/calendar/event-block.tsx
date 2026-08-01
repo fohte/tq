@@ -25,7 +25,6 @@ export function EventBlock(arg: EventContentArg) {
   const { event, timeText } = arg
   const props = getEventProps(event)
   const type = props.type ?? 'manual'
-  const duration = props.duration
   const parentRef = props.parentRef
   const scheduleAccent = props.color?.accent
   const calendarColor = props.calendarColor
@@ -34,10 +33,9 @@ export function EventBlock(arg: EventContentArg) {
   const isShort = arg.isStart && (event.allDay || isShortEvent(event))
   const isCompleted = type === 'completed'
 
-  // Build time detail line: "10:30 - 11:30  ·  1h  ← #488"
+  // Build time detail line: "10:30–11:30  ·  ← #488"
   const timeDetails = [
     timeText,
-    duration,
     parentRef != null ? `← ${parentRef}` : undefined,
   ]
     .filter(Boolean)
@@ -49,7 +47,7 @@ export function EventBlock(arg: EventContentArg) {
         isShort={isShort}
         className="border-dashed border-l-muted-foreground-faint bg-transparent"
         title={
-          <span className="truncate font-mono text-[13px] text-muted-foreground">
+          <span className="truncate font-mono text-[11px] text-muted-foreground">
             予定あり
           </span>
         }
@@ -76,13 +74,19 @@ export function EventBlock(arg: EventContentArg) {
         type === 'auto' && 'border-dashed',
         isCompleted && 'opacity-50',
       )}
-      {...(accentColor != null
-        ? { style: { borderLeftColor: accentColor } }
-        : {})}
+      style={
+        // The left rule stays solid regardless of type; only the rest of the
+        // border reads dashed for `auto` events.
+        type === 'auto'
+          ? { borderLeftStyle: 'solid' }
+          : accentColor != null
+            ? { borderLeftColor: accentColor }
+            : undefined
+      }
       title={
         <span
           className={cn(
-            'truncate text-[13px]',
+            'truncate text-[11px]',
             type === 'gcal'
               ? 'text-muted-foreground-strong'
               : 'font-mono text-foreground',
@@ -109,7 +113,7 @@ function EventBlockShell({
 }: {
   isShort: boolean
   className?: string
-  style?: React.CSSProperties
+  style?: React.CSSProperties | undefined
   title: React.ReactNode
   badge?: string | undefined
   meta: string
