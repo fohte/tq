@@ -113,6 +113,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         parentRef: event.parentRef,
         color: event.color,
         redacted: event.redacted,
+        calendarColor: event.calendarColor,
       },
     }))
 

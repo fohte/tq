@@ -28,6 +28,7 @@ export function EventBlock(arg: EventContentArg) {
   const duration = props.duration
   const parentRef = props.parentRef
   const scheduleAccent = props.color?.accent
+  const calendarColor = props.calendarColor
   const redacted = props.redacted ?? false
 
   const isShort = arg.isStart && (event.allDay || isShortEvent(event))
@@ -59,6 +60,13 @@ export function EventBlock(arg: EventContentArg) {
 
   const badge = type === 'auto' ? 'auto' : type === 'gcal' ? 'gcal' : undefined
 
+  const accentColor =
+    type === 'schedule'
+      ? scheduleAccent
+      : type === 'gcal'
+        ? calendarColor
+        : undefined
+
   return (
     <EventBlockShell
       isShort={isShort}
@@ -68,8 +76,8 @@ export function EventBlock(arg: EventContentArg) {
         type === 'auto' && 'border-dashed',
         isCompleted && 'opacity-50',
       )}
-      {...(type === 'schedule' && scheduleAccent != null
-        ? { style: { borderLeftColor: scheduleAccent } }
+      {...(accentColor != null
+        ? { style: { borderLeftColor: accentColor } }
         : {})}
       title={
         <span

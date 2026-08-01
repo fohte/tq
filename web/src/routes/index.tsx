@@ -140,6 +140,7 @@ function DayView() {
       end: event.endTime,
       type: 'gcal' as const,
       allDay: event.isAllDay,
+      calendarColor: event.calendarColor,
     }))
   }, [gcalEventsQuery.data])
 

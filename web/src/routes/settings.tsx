@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Calendar, Puzzle } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { GcalCalendarPicker } from '#components/settings/gcal-calendar-picker'
 import { GithubSyncRuleList } from '#components/settings/github-sync-rule-list'
 import { IntegrationCard } from '#components/settings/integration-card'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
@@ -86,6 +87,13 @@ function SettingsIntegrationRow({ summary }: { summary: IntegrationSummary }) {
       disconnectingAccountId={
         disconnectAccount.isPending ? disconnectAccount.variables : null
       }
+      {...(summary.id === 'google_calendar'
+        ? {
+            renderAccountExtra: (account) => (
+              <GcalCalendarPicker account={account} />
+            ),
+          }
+        : {})}
     />
   )
 }

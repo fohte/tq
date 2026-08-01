@@ -25,6 +25,8 @@ export interface TimeBlockEvent {
   color?: {
     accent: string
   }
+  /** Google Calendar's color for the event's calendar, used as an accent on gcal events */
+  calendarColor?: string | null
   /** When true, content is hidden and rendered as a generic "busy" block */
   redacted?: boolean
   /** When true, rendered in FullCalendar's all-day row instead of a time slot */
