@@ -120,20 +120,26 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
+// The component renders a desktop grid and a mobile stack simultaneously
+// (CSS media queries choose which is visible; jsdom has no viewport so both
+// are queryable). Assertions below pin the count to 2 rather than just
+// "at least one" so a regression in either layout alone still fails.
 describe('TaskGridRow', () => {
   it('renders the task title', () => {
     renderRow(makeTask())
-    expect(screen.getAllByText('Task title').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Task title')).toHaveLength(2)
   })
 
   it('renders the task number', () => {
     renderRow(makeTask({ number: 42 }))
-    expect(screen.getAllByText('#42').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('#42')).toHaveLength(2)
   })
 
   it('renders a parent reference when parentNumber is set', () => {
     renderRow(makeTask({ parentNumber: 7 }))
-    expect(screen.getAllByText('← #7').length).toBeGreaterThan(0)
+    // The parent reference only appears in the desktop title cell — the
+    // mobile meta row has no room for it.
+    expect(screen.getAllByText('← #7')).toHaveLength(1)
   })
 
   it('does not render a parent reference when parentNumber is null', () => {
@@ -150,8 +156,8 @@ describe('TaskGridRow', () => {
 
   it('renders a token per label', () => {
     renderRow(makeTask({ labels: ['dev:tq', 'chore'] }))
-    expect(screen.getAllByText('#dev:tq').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('#chore').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('#dev:tq')).toHaveLength(2)
+    expect(screen.getAllByText('#chore')).toHaveLength(2)
   })
 
   it('sets the tag filter and stops the click from reaching the row Link when a tag token is clicked', async () => {
@@ -198,19 +204,24 @@ describe('TaskGridRow', () => {
         },
       }),
     )
-    expect(screen.getAllByText('tq#42').length).toBeGreaterThan(0)
+    // The LINK column only exists in the desktop grid.
+    expect(screen.getAllByText('tq#42')).toHaveLength(1)
   })
 
   it('highlights an overdue due date', () => {
     renderRow(makeTask({ dueDate: '2020-01-01' }))
-    const badge = atIndex(screen.getAllByText('Jan 1, 2020'), 0)
-    expect(badge).toHaveClass('text-primary')
+    const badges = screen.getAllByText('Jan 1, 2020')
+    expect(badges).toHaveLength(2)
+    expect(atIndex(badges, 0)).toHaveClass('text-primary')
+    expect(atIndex(badges, 1)).toHaveClass('text-primary')
   })
 
   it('does not highlight a completed task even when the due date has passed', () => {
     renderRow(makeTask({ status: 'completed', dueDate: '2020-01-01' }))
-    const badge = atIndex(screen.getAllByText('Jan 1, 2020'), 0)
-    expect(badge).not.toHaveClass('text-primary')
+    const badges = screen.getAllByText('Jan 1, 2020')
+    expect(badges).toHaveLength(2)
+    expect(atIndex(badges, 0)).not.toHaveClass('text-primary')
+    expect(atIndex(badges, 1)).not.toHaveClass('text-primary')
   })
 
   it('updates the status via useUpdateTaskStatus when a non-completed status is selected', async () => {

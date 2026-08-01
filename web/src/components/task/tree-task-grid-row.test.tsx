@@ -121,15 +121,19 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
+// The component renders a desktop grid and a mobile stack simultaneously
+// (CSS media queries choose which is visible; jsdom has no viewport so both
+// are queryable). Assertions below pin the count to 2 rather than just
+// "at least one" so a regression in either layout alone still fails.
 describe('TreeTaskGridRow', () => {
   it('renders task title', () => {
     renderTree(makeNode())
-    expect(screen.getAllByText('Parent Task').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Parent Task')).toHaveLength(2)
   })
 
   it('renders the task number', () => {
     renderTree(makeNode({ number: 42 }))
-    expect(screen.getAllByText('#42').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('#42')).toHaveLength(2)
   })
 
   it('indents by 12 + depth * 14 px', () => {
@@ -160,8 +164,8 @@ describe('TreeTaskGridRow', () => {
       childCompletionCount: { completed: 0, total: 1 },
     })
     renderTree(node)
-    expect(screen.getAllByText('Parent Task').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Child Task').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Parent Task')).toHaveLength(2)
+    expect(screen.getAllByText('Child Task')).toHaveLength(2)
   })
 
   it('shows child completion count', () => {
@@ -187,9 +191,12 @@ describe('TreeTaskGridRow', () => {
       childCompletionCount: { completed: 1, total: 3 },
     })
     renderTree(node)
+    // Parent node should show 1/3, once per layout (desktop + mobile); none
+    // of the children have children of their own, so they show nothing.
     const completions = screen.getAllByTestId('child-completion')
-    // Parent node should show 1/3
+    expect(completions).toHaveLength(2)
     expect(atIndex(completions, 0)).toHaveTextContent('1/3')
+    expect(atIndex(completions, 1)).toHaveTextContent('1/3')
   })
 
   it('does not show child completion count when no children', () => {
@@ -208,7 +215,7 @@ describe('TreeTaskGridRow', () => {
     renderTree(node)
 
     // Children visible by default
-    expect(screen.getAllByText('Child Task').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Child Task')).toHaveLength(2)
 
     // Click collapse button
     const collapseBtn = atIndex(screen.getAllByLabelText('Collapse'), 0)
@@ -234,7 +241,7 @@ describe('TreeTaskGridRow', () => {
 
     // Expand
     await user.click(atIndex(screen.getAllByLabelText('Expand'), 0))
-    expect(screen.getAllByText('Child Task').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Child Task')).toHaveLength(2)
   })
 
   it('renders nested children (grandchildren)', () => {
@@ -256,9 +263,9 @@ describe('TreeTaskGridRow', () => {
     })
     renderTree(node)
 
-    expect(screen.getAllByText('Parent Task').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Child Task').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Grandchild Task').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Parent Task')).toHaveLength(2)
+    expect(screen.getAllByText('Child Task')).toHaveLength(2)
+    expect(screen.getAllByText('Grandchild Task')).toHaveLength(2)
   })
 
   it('does not show expand toggle for leaf nodes', () => {
@@ -289,17 +296,18 @@ describe('TreeTaskGridRow', () => {
       },
     })
     renderTree(node)
-    expect(screen.getAllByText('tq#42').length).toBeGreaterThan(0)
+    // The LINK column only exists in the desktop grid.
+    expect(screen.getAllByText('tq#42')).toHaveLength(1)
   })
 
   it('shows a context badge for personal tasks', () => {
     renderTree(makeNode({ context: 'personal' }))
-    expect(screen.getAllByText('personal').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('personal')).toHaveLength(2)
   })
 
   it('shows a context badge for work tasks', () => {
     renderTree(makeNode({ context: 'work' }))
-    expect(screen.getAllByText('work').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('work')).toHaveLength(2)
   })
 
   it('does not render tag tokens when there are no labels', () => {
@@ -311,14 +319,16 @@ describe('TreeTaskGridRow', () => {
 
   it('renders a token per label', () => {
     renderTree(makeNode({ labels: ['dev:tq', 'chore'] }))
-    expect(screen.getAllByText('#dev:tq').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('#chore').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('#dev:tq')).toHaveLength(2)
+    expect(screen.getAllByText('#chore')).toHaveLength(2)
   })
 
   it('highlights an overdue due date', () => {
     renderTree(makeNode({ dueDate: '2020-01-01' }))
-    const badge = atIndex(screen.getAllByText('Jan 1, 2020'), 0)
-    expect(badge).toHaveClass('text-primary')
+    const badges = screen.getAllByText('Jan 1, 2020')
+    expect(badges).toHaveLength(2)
+    expect(atIndex(badges, 0)).toHaveClass('text-primary')
+    expect(atIndex(badges, 1)).toHaveClass('text-primary')
   })
 
   it('sets the tag filter and stops the click from reaching the row Link when a tag token is clicked', async () => {
