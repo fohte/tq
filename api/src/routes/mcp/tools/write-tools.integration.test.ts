@@ -5,12 +5,11 @@ import {
   type CallToolResult,
   CallToolResultSchema,
 } from '@modelcontextprotocol/sdk/types.js'
-import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { labels, taskLabels } from '#db/schema'
+import { labels } from '#db/schema'
 import {
   createComment,
   createLabel,
@@ -139,24 +138,19 @@ describe('create_task tool', () => {
     })
   })
 
-  it('attaches only the labels that exist, ignoring unknown names', async () => {
+  it('creates any label names that do not exist yet and attaches all of them', async () => {
     await db.insert(labels).values({ name: 'urgent' })
 
     const result = await callTool('create_task', {
       title: 'Labeled task',
-      labels: ['urgent', 'unknown'],
+      labels: ['urgent', 'new-label'],
     })
 
-    const data = passthroughSchema<{ id: string }>().parse(
+    const data = passthroughSchema<{ labels: string[] }>().parse(
       parseToolJson(result),
     )
-    const attached = await db
-      .select({ name: labels.name })
-      .from(taskLabels)
-      .innerJoin(labels, eq(taskLabels.labelId, labels.id))
-      .where(eq(taskLabels.taskId, data.id))
 
-    expect(attached).toEqual([{ name: 'urgent' }])
+    expect(data.labels.toSorted()).toEqual(['new-label', 'urgent'])
   })
 
   it('rejects a non-existent parentId', async () => {
@@ -246,6 +240,37 @@ describe('update_task tool', () => {
     expect(result).toEqual({
       isError: true,
       content: [{ type: 'text', text: 'Task not found' }],
+    })
+  })
+
+  it('replaces the labels of a task, creating any that do not exist yet', async () => {
+    await createLabel('urgent')
+    const task = await createTask('Has a label', { labels: ['urgent'] })
+
+    const result = await callTool('update_task', {
+      taskId: task.id,
+      labels: ['bug'],
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      number: '<number>',
+      title: 'Has a label',
+      description: null,
+      status: 'todo',
+      context: 'personal',
+      labels: ['bug'],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      githubLink: null,
+      sortOrder: 0,
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
     })
   })
 })

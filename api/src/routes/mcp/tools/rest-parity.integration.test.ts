@@ -8,7 +8,11 @@ import {
   connectMcpClient,
   parseToolJson,
 } from '#routes/mcp/testing'
-import { createTask, type TaskResponse } from '#routes/tasks/testing'
+import {
+  createLabel,
+  createTask,
+  type TaskResponse,
+} from '#routes/tasks/testing'
 import {
   assertDefined,
   jsonBody,
@@ -160,6 +164,34 @@ describe('REST/MCP parity', () => {
       timeBlocks: [],
       links: { outgoing: [], incoming: [] },
       labels: [],
+    })
+  })
+
+  it('labels replaced via update_task, including newly created ones, are visible through GET /api/tasks/:id', async () => {
+    await createLabel('urgent')
+    const task = await createTask('Needs a label', { labels: ['urgent'] })
+
+    const updated = await callTool('update_task', {
+      taskId: task.id,
+      labels: ['urgent', 'new-label'],
+    })
+    const data = passthroughSchema<TaskResponse>().parse(parseToolJson(updated))
+
+    const res = await app.request(`/api/tasks/${task.id}`)
+    expect(res.status).toBe(200)
+
+    const body = await jsonBody<TaskResponse>(res)
+    body.labels = body.labels.toSorted()
+
+    expect(body).toEqual({
+      ...data,
+      titleAuthor: { kind: 'human', agent: null },
+      descriptionAuthor: { kind: 'human', agent: null },
+      childCompletionCount: { total: 0, completed: 0 },
+      pages: [],
+      timeBlocks: [],
+      links: { outgoing: [], incoming: [] },
+      labels: data.labels.toSorted(),
     })
   })
 

@@ -1,14 +1,12 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, count, eq, inArray, sql } from 'drizzle-orm'
+import { and, count, eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
 import {
-  labels,
   recurrenceRules,
   taskGithubLinks,
-  taskLabels,
   taskPages,
   tasks,
   timeBlocks,
@@ -32,6 +30,7 @@ import {
   timeBlockToResponse,
 } from '#routes/tasks/shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
+import { syncTaskLabels } from '#services/task-labels'
 import { getTaskLinks, syncTaskLinks } from '#services/task-links'
 
 export const createTaskSchema = z.object({
@@ -43,7 +42,7 @@ export const createTaskSchema = z.object({
   parentId: z.uuid().optional(),
   projectId: z.uuid().optional(),
   context: contextEnum.optional(),
-  labels: z.array(z.string()).optional(),
+  labels: z.array(z.string().trim().min(1)).optional(),
   recurrenceRule: recurrenceRuleSchema.optional(),
 })
 
@@ -55,6 +54,7 @@ export const updateTaskSchema = z.object({
   estimatedMinutes: z.number().int().positive().nullable().optional(),
   projectId: z.uuid().nullable().optional(),
   context: contextEnum.optional(),
+  labels: z.array(z.string().trim().min(1)).optional(),
   recurrenceRule: recurrenceRuleSchema.nullable().optional(),
 })
 
@@ -72,7 +72,7 @@ export const tasksCrudApp = new Hono()
       }
     }
 
-    const { task, createdRule, matchedLabelNames } = await db.transaction(
+    const { task, createdRule, labelNames } = await db.transaction(
       async (tx) => {
         // Create recurrence rule if provided
         let recurrenceRuleId: string | null = null
@@ -110,36 +110,20 @@ export const tasksCrudApp = new Hono()
             .returning(),
         )
 
-        let matchedLabelNames: string[] = []
-        if (input.labels != null && input.labels.length > 0) {
-          const matchedLabels = await tx
-            .select()
-            .from(labels)
-            .where(inArray(labels.name, input.labels))
-
-          if (matchedLabels.length > 0) {
-            await tx.insert(taskLabels).values(
-              matchedLabels.map((label) => ({
-                taskId: task.id,
-                labelId: label.id,
-              })),
-            )
-          }
-          matchedLabelNames = matchedLabels.map((label) => label.name)
-        }
+        const labelNames =
+          input.labels != null
+            ? await syncTaskLabels(tx, task.id, input.labels)
+            : []
 
         await recordEdit(tx, { taskId: task.id }, { action: 'create' }, author)
 
-        return { task, createdRule, matchedLabelNames }
+        return { task, createdRule, labelNames }
       },
     )
 
     await syncTaskLinks(task.id)
 
-    return c.json(
-      taskToResponse(task, createdRule, undefined, matchedLabelNames),
-      201,
-    )
+    return c.json(taskToResponse(task, createdRule, undefined, labelNames), 201)
   })
   .get(
     '/',
@@ -273,8 +257,11 @@ export const tasksCrudApp = new Hono()
       const existing = c.get('task')
       const author = c.get('author')
       const id = existing.id
-      const { recurrenceRule: recurrenceRuleInput, ...taskFields } =
-        c.req.valid('json')
+      const {
+        recurrenceRule: recurrenceRuleInput,
+        labels: labelsInput,
+        ...taskFields
+      } = c.req.valid('json')
 
       const changedFields = diffFields(existing, taskFields, [
         'title',
@@ -384,6 +371,10 @@ export const tasksCrudApp = new Hono()
             (await tx.query.recurrenceRules.findFirst({
               where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
             })) ?? null
+        }
+
+        if (labelsInput !== undefined) {
+          await syncTaskLabels(tx, id, labelsInput)
         }
 
         for (const field of changedFields) {
