@@ -33,8 +33,8 @@ function isBacklog(t: Task): boolean {
 export interface CategorizedTasks {
   /** All tasks from the API */
   all: Task[]
-  /** Non-completed, non-backlog tasks (the "today" queue) */
-  today: Task[]
+  /** Non-completed, non-backlog tasks */
+  open: Task[]
   /** Tasks with no date and status=todo */
   backlog: Task[]
   /** Non-backlog tasks (for header stats: includes completed) */
@@ -62,11 +62,11 @@ export function useTaskList(filter?: {
     const all = query.data ?? []
     const backlog = all.filter(isBacklog)
     const backlogIds = new Set(backlog.map((t) => t.id))
-    const today = all.filter(
+    const open = all.filter(
       (t) => t.status !== 'completed' && !backlogIds.has(t.id),
     )
     const nonBacklog = all.filter((t) => !backlogIds.has(t.id))
-    return { all, today, backlog, nonBacklog }
+    return { all, open, backlog, nonBacklog }
   }, [query.data])
 
   return { ...query, categorized }
