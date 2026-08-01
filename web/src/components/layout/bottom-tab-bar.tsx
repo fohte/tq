@@ -1,46 +1,50 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
-import type { LucideIcon } from 'lucide-react'
-import { Calendar, CheckSquare, FolderKanban, Sun } from 'lucide-react'
 
 import { cn } from '#lib/utils'
 
 interface TabItem {
   to: string
-  icon: LucideIcon
+  glyph: string
   label: string
   exact?: boolean
 }
 
 const tabs: TabItem[] = [
-  { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
-  { to: '/', icon: Calendar, label: 'Calendar', exact: true },
-  { to: '/projects', icon: FolderKanban, label: 'Projects' },
-  { to: '/today', icon: Sun, label: 'Today' },
+  { to: '/today', glyph: '◆', label: 'today' },
+  { to: '/', glyph: '▤', label: 'calendar', exact: true },
+  { to: '/tasks', glyph: '≡', label: 'tasks' },
+  { to: '/projects', glyph: '▚', label: 'projects' },
+  { to: '/settings', glyph: '⚙', label: 'settings' },
 ]
 
 function Tab({ tab }: { tab: TabItem }) {
   const matchRoute = useMatchRoute()
-  const isActive = matchRoute({ to: tab.to, fuzzy: tab.exact !== true })
+  const isActive =
+    matchRoute({ to: tab.to, fuzzy: tab.exact !== true }) !== false
 
   return (
     <Link
       to={tab.to}
       className={cn(
-        'flex flex-col items-center justify-center gap-0.5 px-3 py-1',
-        isActive !== false ? 'text-primary' : 'text-muted-foreground',
+        'flex min-h-11 flex-1 flex-col items-center justify-center gap-[3px] border-t-2',
+        isActive
+          ? 'border-t-primary text-foreground'
+          : 'border-t-transparent text-muted-foreground-faint',
       )}
     >
-      <tab.icon className="h-5 w-5" />
-      <span className="text-xs">{tab.label}</span>
+      <span className="font-mono text-[13px] leading-none">{tab.glyph}</span>
+      <span className="font-mono text-[9px] tracking-[0.04em]">
+        {tab.label}
+      </span>
     </Link>
   )
 }
 
 export function BottomTabBar() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-14 items-center justify-around border-t border-border bg-background md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-50 flex h-[52px] items-stretch border-t border-border bg-background md:hidden">
       {tabs.map((tab) => (
-        <Tab key={tab.label} tab={tab} />
+        <Tab key={tab.to} tab={tab} />
       ))}
     </nav>
   )

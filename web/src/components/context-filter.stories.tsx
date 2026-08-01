@@ -9,7 +9,7 @@ function ContextFilterDemo() {
         <p className="mb-2 text-sm font-medium text-muted-foreground">
           Sidebar variant
         </p>
-        <div className="flex w-14 flex-col items-center rounded-lg bg-sidebar p-4">
+        <div className="w-[200px] border border-border bg-sidebar p-2.5">
           <ContextFilter />
         </div>
       </div>
@@ -38,7 +38,7 @@ export const Default: Story = {}
 
 export const Sidebar: Story = {
   render: () => (
-    <div className="flex w-14 flex-col items-center rounded-lg bg-sidebar p-4">
+    <div className="w-[200px] border border-border bg-sidebar p-2.5">
       <ContextFilter />
     </div>
   ),

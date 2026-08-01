@@ -7,7 +7,6 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { fn } from 'storybook/test'
 
 import { Sidebar } from '#components/layout/sidebar'
 
@@ -19,7 +18,7 @@ function SidebarStory() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="h-screen md:flex">
-        <Sidebar onNewProject={fn()} />
+        <Sidebar />
       </div>
     </QueryClientProvider>
   )
@@ -51,7 +50,7 @@ const meta = {
   argTypes: {
     currentPath: {
       control: 'select',
-      options: ['/', '/tasks', '/search', '/today', '/projects'],
+      options: ['/', '/tasks', '/search', '/today', '/projects', '/settings'],
     },
   },
 } satisfies Meta<typeof SidebarWithRouter>
@@ -80,5 +79,11 @@ export const SearchActive: Story = {
 export const ProjectsActive: Story = {
   args: {
     currentPath: '/projects',
+  },
+}
+
+export const SettingsActive: Story = {
+  args: {
+    currentPath: '/settings',
   },
 }

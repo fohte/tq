@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   createMemoryHistory,
   createRootRoute,
@@ -7,18 +8,22 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 
-import { BottomTabBar } from '#components/layout/bottom-tab-bar'
+import { StatusLine } from '#components/layout/status-line'
 
-function BottomTabBarStory() {
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+})
+
+function StatusLineStory() {
   return (
-    <div className="relative h-20">
-      <BottomTabBar />
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <StatusLine />
+    </QueryClientProvider>
   )
 }
 
-function BottomTabBarWithRouter({ currentPath }: { currentPath: string }) {
-  const rootRoute = createRootRoute({ component: BottomTabBarStory })
+function StatusLineWithRouter({ currentPath }: { currentPath: string }) {
+  const rootRoute = createRootRoute({ component: StatusLineStory })
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/',
@@ -35,19 +40,18 @@ function BottomTabBarWithRouter({ currentPath }: { currentPath: string }) {
 }
 
 const meta = {
-  title: 'Layout/BottomTabBar',
-  component: BottomTabBarWithRouter,
+  title: 'Layout/StatusLine',
+  component: StatusLineWithRouter,
   parameters: {
     layout: 'fullscreen',
-    viewport: { defaultViewport: 'mobile1' },
   },
   argTypes: {
     currentPath: {
       control: 'select',
-      options: ['/', '/tasks', '/projects', '/today', '/settings'],
+      options: ['/', '/tasks', '/today', '/projects'],
     },
   },
-} satisfies Meta<typeof BottomTabBarWithRouter>
+} satisfies Meta<typeof StatusLineWithRouter>
 
 export default meta
 type Story = StoryObj<typeof meta>
@@ -58,14 +62,8 @@ export const Default: Story = {
   },
 }
 
-export const TasksActive: Story = {
+export const TasksPath: Story = {
   args: {
     currentPath: '/tasks',
-  },
-}
-
-export const SettingsActive: Story = {
-  args: {
-    currentPath: '/settings',
   },
 }
