@@ -20,4 +20,6 @@ export interface InlineReferenceProvider<TData> {
   findMatches: (text: string) => Array<InlineReferenceMatch<TData>>
   /** Renders the chip that replaces the raw text; falls back to rendering `raw` while its data is unresolved. */
   Chip: ComponentType<{ data: TData; raw: string }>
+  /** Renders the block-level card that replaces the whole paragraph when it consists of exactly one reference and nothing else; falls back to rendering `raw` while its data is unresolved (see the paragraph-is-a-single-reference rule in plugin.tsx). */
+  Card: ComponentType<{ data: TData; raw: string }>
 }

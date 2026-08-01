@@ -4,6 +4,8 @@ export interface TextBlockRun {
   text: string
   /** Maps an index into `text` (0..text.length inclusive) to a doc position. */
   posAt: (index: number) => number
+  /** Node type name of the textblock itself (e.g. 'paragraph', 'heading', 'code_block'). */
+  nodeType: string
 }
 
 // Non-text inline leaves (hard breaks, images, ...) are represented by this
@@ -41,6 +43,7 @@ export function collectTextBlockRuns(doc: Node): TextBlockRun[] {
     runs.push({
       text,
       posAt: (index) => offsets[index] ?? contentEnd,
+      nodeType: node.type.name,
     })
 
     // Already extracted this block's text manually; don't descend into its

@@ -193,3 +193,99 @@ export const ClickToEditRevealsSource: Story = {
     ).not.toBeInTheDocument()
   },
 }
+
+const LINKED_GITHUB_URL_FIXTURE = 'https://github.com/fohte/tq/issues/9104'
+const LINKED_TASK_LINK_TEXT = 'Linked to a TQ task →'
+const OUTSIDE_CARD_TEXT = 'A plain paragraph outside any card.'
+
+// Seeds a GitHub URL preview already linked to a TQ task, so GithubUrlCard
+// renders its nested "Linked to a TQ task" router `Link` in addition to its
+// plain `<a>` — combined with seedLiveReferenceFixtures' task-mention card
+// (whose whole clickable area IS a router `Link`), this covers every `Link`
+// a card can render.
+function seedLinkedGithubUrlFixture() {
+  queryClient.setQueryData(
+    githubUrlPreviewKeys.preview(LINKED_GITHUB_URL_FIXTURE),
+    {
+      linked: true,
+      task: {
+        id: '00000000-0000-0000-0000-000000000098',
+        number: 7,
+        title: 'Fix flaky test',
+        description: null,
+        status: 'in_progress',
+        context: 'personal',
+        startDate: null,
+        dueDate: null,
+        estimatedMinutes: null,
+        parentId: null,
+        projectId: null,
+        recurrenceRuleId: null,
+        recurrenceRule: null,
+        githubLink: {
+          id: 'link-1',
+          owner: 'fohte',
+          repo: 'tq',
+          number: 9104,
+          kind: 'issue',
+          url: LINKED_GITHUB_URL_FIXTURE,
+          state: 'open',
+          title: 'Fix flaky test',
+          lastSyncedAt: '2026-03-20T00:00:00.000Z',
+        },
+        sortOrder: 0,
+        createdAt: '2026-03-20T00:00:00.000Z',
+        updatedAt: '2026-03-20T00:00:00.000Z',
+      },
+    },
+  )
+}
+
+// Cards must stay clickable without ever flipping the editor into edit mode
+// (see plugin.tsx's createCardWidgetComponent and the per-element
+// `onMouseUp` stopPropagation in github-url-card.tsx/task-mention-card.tsx).
+// This is the one place that exercises the full chain for real: a real
+// mouseup dispatched by userEvent.click, bubbling from an actual rendered
+// card through an actual rendered MarkdownEditor — unlike plugin.test.ts
+// (decoration-building logic in isolation) or the cards' own stories
+// (render/fallback only, not click-safety).
+export const ClickingCardStaysInViewMode: Story = {
+  render: (args) => {
+    seedLiveReferenceFixtures()
+    seedLinkedGithubUrlFixture()
+    return (
+      <LiveReferencesProviders>
+        <MarkdownEditor {...args} />
+      </LiveReferencesProviders>
+    )
+  },
+  args: {
+    defaultValue: `#${String(MENTION_FIXTURE_NUMBER)}\n\n${LINKED_GITHUB_URL_FIXTURE}\n\n${OUTSIDE_CARD_TEXT}`,
+    viewEditToggle: {},
+  },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const wrapper = canvasElement.querySelector('.milkdown-wrapper')
+    if (wrapper == null)
+      throw new Error('MarkdownEditor always renders its wrapper')
+
+    await canvas.findByText(MENTION_FIXTURE_TITLE)
+    await canvas.findByText(LINKED_TASK_LINK_TEXT)
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'view')
+
+    // The task-mention card's whole clickable area is a router `Link`.
+    await userEvent.click(canvas.getByText(MENTION_FIXTURE_TITLE))
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'view')
+
+    // GithubUrlCard's "Linked to a TQ task" line is a router `Link` nested
+    // inside the card, separate from the card's own plain `<a>`.
+    await userEvent.click(canvas.getByText(LINKED_TASK_LINK_TEXT))
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'view')
+
+    // Control: clicking plain text outside any card must still flip the
+    // editor into edit mode, proving the two assertions above are actually
+    // capable of detecting a mode switch (not a false negative from a
+    // selector that can never observe it).
+    await userEvent.click(canvas.getByText(OUTSIDE_CARD_TEXT))
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
+  },
+}

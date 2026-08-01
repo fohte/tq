@@ -1,5 +1,6 @@
 import { MENTION_PATTERN } from 'api/constants/mention-pattern'
 
+import { TaskMentionCard } from '#components/task/task-mention-card'
 import { TaskMentionChip } from '#components/task/task-mention-chip'
 import type { InlineReferenceProvider } from '#lib/inline-reference/types'
 
@@ -26,4 +27,5 @@ export const taskMentionProvider: InlineReferenceProvider<TaskMentionData> = {
   },
 
   Chip: TaskMentionChip,
+  Card: TaskMentionCard,
 }

@@ -1,3 +1,4 @@
+import { GithubUrlCard } from '#components/task/github-url-card'
 import { GithubUrlChip } from '#components/task/github-url-chip'
 import type { InlineReferenceProvider } from '#lib/inline-reference/types'
 
@@ -30,4 +31,5 @@ export const githubUrlProvider: InlineReferenceProvider<GithubUrlData> = {
   },
 
   Chip: GithubUrlChip,
+  Card: GithubUrlCard,
 }
