@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Check, ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 
 import { GithubLinkBadge } from '#components/task/github-link-badge'
@@ -23,33 +23,6 @@ function useHandleStatusChange(id: string, status: Task['status']) {
       updateStatus.mutate({ id, status: newStatus })
     }
   }
-}
-
-function ActionArea({
-  status,
-  onComplete,
-}: {
-  status: Task['status']
-  onComplete: () => void
-}) {
-  if (status === 'completed') return null
-
-  return (
-    <div className="flex shrink-0 items-center gap-1.5">
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          onComplete()
-        }}
-        className="flex h-5 w-5 shrink-0 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
-        aria-label="Complete task"
-      >
-        <Check className="h-3 w-3" />
-      </button>
-    </div>
-  )
 }
 
 function ContextBadge({ context }: { context: Task['context'] }) {
@@ -123,13 +96,6 @@ function TaskRowContent({
           )}
         </div>
       </div>
-
-      <ActionArea
-        status={status}
-        onComplete={() => {
-          handleStatusChange('completed')
-        }}
-      />
     </div>
   )
 }
@@ -258,13 +224,6 @@ export function TreeTaskRow({
               )}
             </div>
           </div>
-
-          <ActionArea
-            status={node.status}
-            onComplete={() => {
-              handleStatusChange('completed')
-            }}
-          />
         </div>
       </Link>
 
