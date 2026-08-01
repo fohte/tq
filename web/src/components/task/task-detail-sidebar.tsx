@@ -18,7 +18,8 @@ import {
   useUpdateTaskStatus,
 } from '#hooks/use-tasks'
 import { selectValueHandler } from '#lib/form-utils'
-import { formatMinutes, parseDurationToMinutes } from '#lib/parse-duration'
+import { formatMinutes } from '#lib/format'
+import { parseDurationToMinutes } from '#lib/parse-duration'
 import { cn } from '#lib/utils'
 
 // Shared chrome for a field's editable value: no border/height/padding of

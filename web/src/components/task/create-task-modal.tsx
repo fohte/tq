@@ -24,7 +24,8 @@ import {
 import type { CreateTaskInput } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
 import { selectValueHandler } from '#lib/form-utils'
-import { formatMinutes, parseDurationToMinutes } from '#lib/parse-duration'
+import { formatMinutes } from '#lib/format'
+import { parseDurationToMinutes } from '#lib/parse-duration'
 
 interface CreateTaskModalProps {
   open: boolean

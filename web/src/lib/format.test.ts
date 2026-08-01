@@ -1,6 +1,22 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatRelativeTime } from '#lib/format'
+import { formatMinutes, formatRelativeTime } from '#lib/format'
+
+describe('formatMinutes', () => {
+  it('formats minutes under an hour', () => {
+    expect(formatMinutes(30)).toBe('30m')
+  })
+
+  it('formats exact hours', () => {
+    expect(formatMinutes(60)).toBe('1h')
+    expect(formatMinutes(120)).toBe('2h')
+  })
+
+  it('formats hours and minutes', () => {
+    expect(formatMinutes(90)).toBe('1h30m')
+    expect(formatMinutes(135)).toBe('2h15m')
+  })
+})
 
 describe('formatRelativeTime', () => {
   const now = new Date('2026-03-20T12:00:00.000Z')
