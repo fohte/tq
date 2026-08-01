@@ -1,7 +1,7 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import type { Context } from 'hono'
 
-import { IntegrationConfigError } from '#integrations/errors'
+import { IntegrationConfigError, TokenRefreshError } from '#integrations/errors'
 import { SlackApiError } from '#integrations/slack/index'
 import {
   SlackChannelNotFoundError,
@@ -36,6 +36,10 @@ export function slackLinkErrorResponse(
   // inaccessible with every connected account's token).
   if (error instanceof SlackApiError && error.rejected) {
     return c.json({ error: error.message }, 404)
+  }
+  // The stored token was revoked; the user must reconnect.
+  if (error instanceof TokenRefreshError && error.rejected) {
+    return c.json({ error: error.message }, 400)
   }
   if (error instanceof IntegrationConfigError) {
     captureWithFingerprint(error, `api.${fingerprintPrefix}.config-error`)

@@ -86,4 +86,17 @@ describe('POST /api/slack/resolve', () => {
 
     expect(res.status).toBe(404)
   })
+
+  it('returns 500 when Slack itself fails with a non-rejected error', async () => {
+    await upsertSlackToken('valid-token')
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response('boom', { status: 500 }),
+    )
+
+    const res = await resolve(
+      'https://acme.slack.com/archives/C0123456789/p1753880000123456',
+    )
+
+    expect(res.status).toBe(500)
+  })
 })

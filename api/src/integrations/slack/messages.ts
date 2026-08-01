@@ -99,19 +99,30 @@ function slackHeaders(accessToken: string) {
   return { Authorization: `Bearer ${accessToken}` }
 }
 
+// Slack answers a rejected request with HTTP 200 and `ok: false` rather than
+// a non-2xx status, so this can't be caught by fetchJson.
+function unwrapOk<T, D extends { ok: true } | { ok: false; error: string }>(
+  request: ResultAsync<D, SlackApiError>,
+  select: (data: Extract<D, { ok: true }>) => T,
+): ResultAsync<T, SlackApiError> {
+  return request.andThen((data) =>
+    data.ok
+      ? // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- TS can't narrow a generic type parameter by its discriminant, even though `data.ok` was just checked above
+        okAsync(select(data as Extract<D, { ok: true }>))
+      : errAsync(new SlackApiError(data.error, undefined, true)),
+  )
+}
+
 function fetchConversationsInfo(accessToken: string, channelId: string) {
   const params = new URLSearchParams({ channel: channelId })
-  return fetchJson(
-    `${SLACK_API_BASE}/conversations.info?${params.toString()}`,
-    { headers: slackHeaders(accessToken) },
-    conversationsInfoResponseSchema,
-    (message, cause, rejected) => new SlackApiError(message, cause, rejected),
-  ).andThen((data) =>
-    // Slack answers a rejected request with HTTP 200 and `ok: false` rather
-    // than a non-2xx status, so this can't be caught by fetchJson.
-    data.ok
-      ? okAsync(data.channel)
-      : errAsync(new SlackApiError(data.error, undefined, true)),
+  return unwrapOk(
+    fetchJson(
+      `${SLACK_API_BASE}/conversations.info?${params.toString()}`,
+      { headers: slackHeaders(accessToken) },
+      conversationsInfoResponseSchema,
+      (message, cause, rejected) => new SlackApiError(message, cause, rejected),
+    ),
+    (data) => data.channel,
   )
 }
 
@@ -126,15 +137,14 @@ function fetchConversationsHistory(
     inclusive: 'true',
     limit: '1',
   })
-  return fetchJson(
-    `${SLACK_API_BASE}/conversations.history?${params.toString()}`,
-    { headers: slackHeaders(accessToken) },
-    conversationsMessagesResponseSchema,
-    (message, cause, rejected) => new SlackApiError(message, cause, rejected),
-  ).andThen((data) =>
-    data.ok
-      ? okAsync(data.messages)
-      : errAsync(new SlackApiError(data.error, undefined, true)),
+  return unwrapOk(
+    fetchJson(
+      `${SLACK_API_BASE}/conversations.history?${params.toString()}`,
+      { headers: slackHeaders(accessToken) },
+      conversationsMessagesResponseSchema,
+      (message, cause, rejected) => new SlackApiError(message, cause, rejected),
+    ),
+    (data) => data.messages,
   )
 }
 
@@ -156,29 +166,27 @@ function fetchConversationsReplies(
     inclusive: 'true',
     limit: '1',
   })
-  return fetchJson(
-    `${SLACK_API_BASE}/conversations.replies?${params.toString()}`,
-    { headers: slackHeaders(accessToken) },
-    conversationsMessagesResponseSchema,
-    (message, cause, rejected) => new SlackApiError(message, cause, rejected),
-  ).andThen((data) =>
-    data.ok
-      ? okAsync(data.messages)
-      : errAsync(new SlackApiError(data.error, undefined, true)),
+  return unwrapOk(
+    fetchJson(
+      `${SLACK_API_BASE}/conversations.replies?${params.toString()}`,
+      { headers: slackHeaders(accessToken) },
+      conversationsMessagesResponseSchema,
+      (message, cause, rejected) => new SlackApiError(message, cause, rejected),
+    ),
+    (data) => data.messages,
   )
 }
 
 function fetchUserInfo(accessToken: string, userId: string) {
   const params = new URLSearchParams({ user: userId })
-  return fetchJson(
-    `${SLACK_API_BASE}/users.info?${params.toString()}`,
-    { headers: slackHeaders(accessToken) },
-    usersInfoResponseSchema,
-    (message, cause, rejected) => new SlackApiError(message, cause, rejected),
-  ).andThen((data) =>
-    data.ok
-      ? okAsync(data.user)
-      : errAsync(new SlackApiError(data.error, undefined, true)),
+  return unwrapOk(
+    fetchJson(
+      `${SLACK_API_BASE}/users.info?${params.toString()}`,
+      { headers: slackHeaders(accessToken) },
+      usersInfoResponseSchema,
+      (message, cause, rejected) => new SlackApiError(message, cause, rejected),
+    ),
+    (data) => data.user,
   )
 }
 
@@ -192,7 +200,10 @@ function findAccountForChannel(
   channelId: string,
 ): ResultAsync<
   { accessToken: string; channel: SlackChannel },
-  SlackChannelNotFoundError | IntegrationConfigError | TokenRefreshError
+  | SlackChannelNotFoundError
+  | SlackApiError
+  | IntegrationConfigError
+  | TokenRefreshError
 > {
   const [token, ...rest] = tokens
   if (token == null) {
@@ -202,11 +213,18 @@ function findAccountForChannel(
   return ensureValidAccessToken(slackProvider, token).andThen((accessToken) =>
     fetchConversationsInfo(accessToken, channelId)
       .map((channel) => ({ accessToken, channel }))
-      .orElse(() =>
-        rest.length > 0
-          ? findAccountForChannel(rest, channelId)
-          : errAsync(new SlackChannelNotFoundError(channelId)),
-      ),
+      .orElse((error) => {
+        if (rest.length > 0) {
+          return findAccountForChannel(rest, channelId)
+        }
+        // Only a Slack-rejected request (e.g. channel_not_found) means the
+        // channel genuinely isn't accessible; a network/5xx/schema failure
+        // must propagate as SlackApiError so it reaches the catch-all
+        // 500+Sentry path instead of being misreported as "not found".
+        return error instanceof SlackApiError && error.rejected
+          ? errAsync(new SlackChannelNotFoundError(channelId))
+          : errAsync(error)
+      }),
   )
 }
 
@@ -285,9 +303,7 @@ export function stripSlackMrkdwn(text: string): string {
       // generic <url|label> replacement below, which would otherwise match
       // the same `<#id|name>` shape.
       .replace(/<#[A-Z0-9]+\|([^>]*)>/g, '#$1')
-      // <https://example.com|label> -> label
       .replace(/<([^|>]+)\|([^>]*)>/g, '$2')
-      // <https://example.com> -> https://example.com
       .replace(/<([^|>]+)>/g, '$1')
   )
 }
