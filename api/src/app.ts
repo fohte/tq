@@ -12,6 +12,7 @@ import { labelsApp } from '#routes/labels'
 import { mcpApp } from '#routes/mcp/index'
 import { projectsApp } from '#routes/projects'
 import { schedulesApp } from '#routes/schedules'
+import { schedulingSettingsApp } from '#routes/scheduling-settings'
 import { slackApp } from '#routes/slack'
 import { taskCommentsApp } from '#routes/task-comments'
 import { taskGithubLinkApp } from '#routes/task-github-link'
@@ -41,6 +42,7 @@ const app = new Hono()
   .route('/api/images', imagesApp)
   .route('/api/integrations', integrationsApp)
   .route('/api/labels', labelsApp)
+  .route('/api/scheduling-settings', schedulingSettingsApp)
   .route('/api/slack', slackApp)
   .route('/api/mcp', mcpApp)
   // Final safety net: any error that escapes a route handler without being

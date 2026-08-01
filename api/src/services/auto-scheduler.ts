@@ -96,6 +96,17 @@ function makeFreeSlot(start: Date, end: Date): FreeSlot {
   }
 }
 
+/**
+ * Drop free slots shorter than the configured minimum, so a task is never
+ * packed into a gap too small to be a useful block.
+ */
+export function filterSlotsByMinimumDuration(
+  freeSlots: FreeSlot[],
+  minimumMinutes: number,
+): FreeSlot[] {
+  return freeSlots.filter((slot) => slot.durationMinutes >= minimumMinutes)
+}
+
 export interface SchedulableTask {
   taskId: string
   estimatedMinutes: number

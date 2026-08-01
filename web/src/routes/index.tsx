@@ -12,6 +12,7 @@ import {
 } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
 import { useScheduleList } from '#hooks/use-schedules'
+import { useSchedulingSettings } from '#hooks/use-scheduling-settings'
 import { useSelectedDate } from '#hooks/use-selected-date'
 import type { Task } from '#hooks/use-tasks'
 import { useTaskList, useTaskMap } from '#hooks/use-tasks'
@@ -50,6 +51,7 @@ function DayView() {
   const { mode: contextMode } = useContextFilter()
 
   const gcalEventsQuery = useGcalEvents(selectedDateStr)
+  const schedulingSettings = useSchedulingSettings()
   const gcalAuthRequired =
     gcalEventsQuery.error instanceof GcalAuthRequiredError
   const gcalAuthUrlQuery = useIntegrationAuthUrl(
@@ -223,7 +225,11 @@ function DayView() {
     )
   }
 
-  useAutoRescheduleOnGcalChange(gcalEventsQuery.data, handleAutoAssign)
+  useAutoRescheduleOnGcalChange(
+    gcalEventsQuery.data,
+    handleAutoAssign,
+    schedulingSettings.data?.autoRescheduleOnGcalChange ?? true,
+  )
 
   return (
     <DayViewPresentation

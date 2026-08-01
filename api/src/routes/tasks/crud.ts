@@ -1,3 +1,4 @@
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
 import { and, count, eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -30,6 +31,7 @@ import {
   timeBlockToResponse,
 } from '#routes/tasks/shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
+import { getSchedulingSettings } from '#services/scheduling-settings'
 import { syncTaskLabels } from '#services/task-labels'
 import { getTaskLinks, syncTaskLinks } from '#services/task-links'
 
@@ -72,6 +74,16 @@ export const tasksCrudApp = new Hono()
       }
     }
 
+    const schedulingSettingsResult = await getSchedulingSettings()
+    if (schedulingSettingsResult.isErr()) {
+      captureWithFingerprint(
+        schedulingSettingsResult.error,
+        'api.tasks.create-scheduling-settings-failed',
+      )
+      return c.json({ error: 'Internal server error' }, 500)
+    }
+    const schedulingSettings = schedulingSettingsResult.value
+
     const { task, createdRule, labelNames } = await db.transaction(
       async (tx) => {
         // Create recurrence rule if provided
@@ -104,7 +116,7 @@ export const tasksCrudApp = new Hono()
               estimatedMinutes: input.estimatedMinutes ?? null,
               parentId: input.parentId ?? null,
               projectId: input.projectId ?? null,
-              context: input.context ?? 'personal',
+              context: input.context ?? schedulingSettings.defaultContext,
               recurrenceRuleId,
             })
             .returning(),

@@ -5,6 +5,7 @@ import {
   calculateFreeSlots,
   expandedScheduleBlocksToBusyRanges,
   externalEventsToBusyRanges,
+  filterSlotsByMinimumDuration,
   manualBlocksToBusyRanges,
 } from '#services/auto-scheduler'
 
@@ -92,6 +93,37 @@ describe('calculateFreeSlots', () => {
     ])
 
     expect(slots).toEqual([])
+  })
+})
+
+describe('filterSlotsByMinimumDuration', () => {
+  it('drops slots shorter than the minimum', () => {
+    const slots = [
+      { startTime: d('09:00'), endTime: d('09:20'), durationMinutes: 20 },
+      { startTime: d('10:00'), endTime: d('11:00'), durationMinutes: 60 },
+    ]
+
+    expect(filterSlotsByMinimumDuration(slots, 30)).toEqual([
+      { startTime: d('10:00'), endTime: d('11:00'), durationMinutes: 60 },
+    ])
+  })
+
+  it('keeps a slot exactly at the minimum', () => {
+    const slots = [
+      { startTime: d('09:00'), endTime: d('09:30'), durationMinutes: 30 },
+    ]
+
+    expect(filterSlotsByMinimumDuration(slots, 30)).toEqual([
+      { startTime: d('09:00'), endTime: d('09:30'), durationMinutes: 30 },
+    ])
+  })
+
+  it('returns an empty array when every slot is too short', () => {
+    const slots = [
+      { startTime: d('09:00'), endTime: d('09:10'), durationMinutes: 10 },
+    ]
+
+    expect(filterSlotsByMinimumDuration(slots, 30)).toEqual([])
   })
 })
 

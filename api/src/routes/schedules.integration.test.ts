@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
-import { assertDefined, jsonBody, setupTestDb } from '#testing'
+import {
+  assertDefined,
+  jsonBody,
+  patchSchedulingSettings,
+  setupTestDb,
+} from '#testing'
 
 setupTestDb()
 
@@ -725,7 +730,7 @@ describe('schedule/today-tasks API', () => {
 // proceeds as if no Google Calendar events exist.
 describe('schedule/auto-assign API', () => {
   describe('POST /api/schedule/auto-assign', () => {
-    it('assigns queued tasks back-to-back starting at the day boundary', async () => {
+    it('assigns queued tasks back-to-back starting at the start of working hours', async () => {
       const taskA = await createTask('Task A', { estimatedMinutes: 30 })
       const taskB = await createTask('Task B', { estimatedMinutes: 60 })
       await putTodayTasks([taskA.id, taskB.id], '2026-03-22')
@@ -737,8 +742,8 @@ describe('schedule/auto-assign API', () => {
         {
           id: 'ID',
           taskId: taskA.id,
-          startTime: '2026-03-22T00:00:00.000Z',
-          endTime: '2026-03-22T00:30:00.000Z',
+          startTime: '2026-03-22T09:00:00.000Z',
+          endTime: '2026-03-22T09:30:00.000Z',
           isAutoScheduled: true,
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
@@ -746,8 +751,8 @@ describe('schedule/auto-assign API', () => {
         {
           id: 'ID',
           taskId: taskB.id,
-          startTime: '2026-03-22T00:30:00.000Z',
-          endTime: '2026-03-22T01:30:00.000Z',
+          startTime: '2026-03-22T09:30:00.000Z',
+          endTime: '2026-03-22T10:30:00.000Z',
           isAutoScheduled: true,
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
@@ -759,8 +764,8 @@ describe('schedule/auto-assign API', () => {
       const busyTask = await createTask('Busy task')
       await createTimeBlock(
         busyTask.id,
-        '2026-03-22T00:00:00.000Z',
-        '2026-03-22T01:00:00.000Z',
+        '2026-03-22T09:00:00.000Z',
+        '2026-03-22T10:00:00.000Z',
       )
 
       const queuedTask = await createTask('Queued task', {
@@ -775,8 +780,8 @@ describe('schedule/auto-assign API', () => {
         {
           id: 'ID',
           taskId: queuedTask.id,
-          startTime: '2026-03-22T01:00:00.000Z',
-          endTime: '2026-03-22T01:30:00.000Z',
+          startTime: '2026-03-22T10:00:00.000Z',
+          endTime: '2026-03-22T10:30:00.000Z',
           isAutoScheduled: true,
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
@@ -801,8 +806,8 @@ describe('schedule/auto-assign API', () => {
         {
           id: 'ID',
           taskId: withEstimateTask.id,
-          startTime: '2026-03-22T00:00:00.000Z',
-          endTime: '2026-03-22T00:30:00.000Z',
+          startTime: '2026-03-22T09:00:00.000Z',
+          endTime: '2026-03-22T09:30:00.000Z',
           isAutoScheduled: true,
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
@@ -825,8 +830,8 @@ describe('schedule/auto-assign API', () => {
         {
           id: 'ID',
           taskId: pendingTask.id,
-          startTime: '2026-03-22T00:00:00.000Z',
-          endTime: '2026-03-22T00:30:00.000Z',
+          startTime: '2026-03-22T09:00:00.000Z',
+          endTime: '2026-03-22T09:30:00.000Z',
           isAutoScheduled: true,
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
@@ -853,8 +858,8 @@ describe('schedule/auto-assign API', () => {
         {
           id: 'ID',
           taskId: taskB.id,
-          startTime: '2026-03-22T00:00:00.000Z',
-          endTime: '2026-03-22T00:30:00.000Z',
+          startTime: '2026-03-22T09:00:00.000Z',
+          endTime: '2026-03-22T09:30:00.000Z',
           isAutoScheduled: true,
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
@@ -862,8 +867,8 @@ describe('schedule/auto-assign API', () => {
         {
           id: 'ID',
           taskId: taskA.id,
-          startTime: '2026-03-22T00:30:00.000Z',
-          endTime: '2026-03-22T01:00:00.000Z',
+          startTime: '2026-03-22T09:30:00.000Z',
+          endTime: '2026-03-22T10:00:00.000Z',
           isAutoScheduled: true,
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
@@ -908,19 +913,19 @@ describe('schedule/auto-assign API', () => {
       expect(blocks.map(normalizeTimeBlock)).toEqual([
         {
           id: 'ID',
-          taskId: taskB.id,
-          startTime: '2026-03-22T00:00:00.000Z',
-          endTime: '2026-03-22T00:30:00.000Z',
-          isAutoScheduled: true,
+          taskId: taskA.id,
+          startTime: '2026-03-22T02:00:00.000Z',
+          endTime: '2026-03-22T02:30:00.000Z',
+          isAutoScheduled: false,
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
         },
         {
           id: 'ID',
-          taskId: taskA.id,
-          startTime: '2026-03-22T02:00:00.000Z',
-          endTime: '2026-03-22T02:30:00.000Z',
-          isAutoScheduled: false,
+          taskId: taskB.id,
+          startTime: '2026-03-22T09:00:00.000Z',
+          endTime: '2026-03-22T09:30:00.000Z',
+          isAutoScheduled: true,
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
         },
@@ -930,6 +935,59 @@ describe('schedule/auto-assign API', () => {
     it('returns 400 for a malformed date', async () => {
       const { res } = await requestAutoAssign('2026/03/22')
       expect(res.status).toBe(400)
+    })
+
+    it('does not place blocks outside custom working hours', async () => {
+      await patchSchedulingSettings({
+        workingHoursStart: '10:00',
+        workingHoursEnd: '12:00',
+      })
+      const task = await createTask('Task', { estimatedMinutes: 30 })
+      await putTodayTasks([task.id], '2026-03-22')
+
+      const { res, body } = await requestAutoAssign('2026-03-22')
+
+      expect(res.status).toBe(200)
+      expect(body.map(normalizeTimeBlock)).toEqual([
+        {
+          id: 'ID',
+          taskId: task.id,
+          startTime: '2026-03-22T10:00:00.000Z',
+          endTime: '2026-03-22T10:30:00.000Z',
+          isAutoScheduled: true,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ])
+    })
+
+    it('skips a free slot shorter than the configured minimum block duration', async () => {
+      // A manual block from 09:20-09:30 splits the working day into a
+      // 20-minute free slot (09:00-09:20, too short) and the remaining
+      // 09:30-19:00 (plenty), given the default minimumBlockMinutes of 30.
+      const busyTask = await createTask('Busy task')
+      await createTimeBlock(
+        busyTask.id,
+        '2026-03-22T09:20:00.000Z',
+        '2026-03-22T09:30:00.000Z',
+      )
+      const task = await createTask('Short task', { estimatedMinutes: 5 })
+      await putTodayTasks([task.id], '2026-03-22')
+
+      const { res, body } = await requestAutoAssign('2026-03-22')
+
+      expect(res.status).toBe(200)
+      expect(body.map(normalizeTimeBlock)).toEqual([
+        {
+          id: 'ID',
+          taskId: task.id,
+          startTime: '2026-03-22T09:30:00.000Z',
+          endTime: '2026-03-22T09:35:00.000Z',
+          isAutoScheduled: true,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ])
     })
   })
 })

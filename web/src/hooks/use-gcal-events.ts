@@ -53,6 +53,7 @@ export function useGcalEvents(date: string) {
 export function useAutoRescheduleOnGcalChange(
   gcalEvents: GcalEvent[] | undefined,
   onChange: () => void,
+  enabled: boolean,
 ) {
   const previousEventsRef = useRef<GcalEvent[] | undefined>(undefined)
   const hasSeenDataRef = useRef(false)
@@ -60,6 +61,7 @@ export function useAutoRescheduleOnGcalChange(
   onChangeRef.current = onChange
 
   useEffect(() => {
+    if (!enabled) return
     if (gcalEvents == null) return
 
     if (!hasSeenDataRef.current) {
@@ -72,5 +74,5 @@ export function useAutoRescheduleOnGcalChange(
       previousEventsRef.current = gcalEvents
       onChangeRef.current()
     }
-  }, [gcalEvents])
+  }, [gcalEvents, enabled])
 }
