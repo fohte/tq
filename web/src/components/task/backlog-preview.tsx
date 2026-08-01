@@ -1,13 +1,9 @@
+import { Link } from '@tanstack/react-router'
+
 import { Chip } from '#components/ui/chip'
 import type { Task } from '#hooks/use-tasks'
 
-export function BacklogPreview({
-  tasks,
-  onViewAll,
-}: {
-  tasks: Task[]
-  onViewAll: () => void
-}) {
+export function BacklogPreview({ tasks }: { tasks: Task[] }) {
   if (tasks.length === 0) return null
 
   return (
@@ -19,13 +15,12 @@ export function BacklogPreview({
         backlog
       </span>
       <Chip className="text-muted-foreground-faint">{tasks.length}</Chip>
-      <button
-        type="button"
-        onClick={onViewAll}
+      <Link
+        to="/tasks"
         className="ml-auto font-mono text-[11px] whitespace-nowrap text-primary hover:underline"
       >
         view all →
-      </button>
+      </Link>
     </div>
   )
 }
