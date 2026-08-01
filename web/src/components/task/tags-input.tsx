@@ -75,6 +75,7 @@ export function TagsInput({
         break
       case 'Escape':
         e.preventDefault()
+        e.stopPropagation()
         closeAdding()
         break
     }

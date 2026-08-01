@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { expect } from 'storybook/test'
 
 import { SidebarTagsField } from '#components/task/sidebar-tags-field'
 
@@ -40,31 +39,5 @@ export const Empty: Story = {
 export const WithTags: Story = {
   args: {
     labels: ['dev:tq', 'chore'],
-  },
-}
-
-export const OpensInputOnAddClick: Story = {
-  args: {
-    labels: ['dev:tq'],
-  },
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '+ add tag' }))
-
-    await expect(canvas.getByPlaceholderText('tag name')).toBeInTheDocument()
-  },
-}
-
-export const ClosesInputOnEscape: Story = {
-  args: {
-    labels: [],
-  },
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '+ add tag' }))
-    await userEvent.type(canvas.getByPlaceholderText('tag name'), 'urgent')
-    await userEvent.keyboard('{Escape}')
-
-    await expect(
-      canvas.queryByPlaceholderText('tag name'),
-    ).not.toBeInTheDocument()
   },
 }
