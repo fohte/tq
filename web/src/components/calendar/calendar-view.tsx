@@ -53,6 +53,9 @@ export function CalendarView({
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendarType>(null)
   const [activeView, setActiveView] = useState<CalendarViewType>(initialView)
+  // Set while the sync effect below drives FullCalendar via gotoDate, so
+  // handleDatesSet can ignore the datesSet it synchronously triggers.
+  const isProgrammaticGotoRef = useRef(false)
 
   const handlePrev = useCallback(() => {
     const api = calendarRef.current?.getApi()
@@ -120,6 +123,7 @@ export function CalendarView({
 
   const handleDatesSet = useCallback(
     (info: { start: Date; end: Date; view: { currentStart: Date } }) => {
+      if (isProgrammaticGotoRef.current) return
       onDateChange(info.view.currentStart)
     },
     [onDateChange],
@@ -134,7 +138,9 @@ export function CalendarView({
       api &&
       formatLocalDate(api.getDate()) !== formatLocalDate(selectedDate)
     ) {
+      isProgrammaticGotoRef.current = true
       api.gotoDate(selectedDate)
+      isProgrammaticGotoRef.current = false
     }
   }, [selectedDate])
 

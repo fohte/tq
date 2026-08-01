@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { LIVE_TODAY_CHECK_INTERVAL_MS } from '#hooks/use-live-today'
 import { useSelectedDate } from '#hooks/use-selected-date'
 import { formatLocalDate } from '#lib/date-range'
 
@@ -39,7 +40,7 @@ describe('useSelectedDate', () => {
       result.current.setSelectedDate(new Date(2026, 6, 30))
     })
     act(() => {
-      vi.advanceTimersByTime(60_000)
+      vi.advanceTimersByTime(LIVE_TODAY_CHECK_INTERVAL_MS)
     })
 
     expect(formatLocalDate(result.current.selectedDate)).toBe('2026-07-30')
@@ -56,7 +57,7 @@ describe('useSelectedDate', () => {
       result.current.setSelectedDate(new Date(2026, 6, 31))
     })
     act(() => {
-      vi.advanceTimersByTime(60_000)
+      vi.advanceTimersByTime(LIVE_TODAY_CHECK_INTERVAL_MS)
     })
 
     expect(formatLocalDate(result.current.selectedDate)).toBe('2026-08-01')
