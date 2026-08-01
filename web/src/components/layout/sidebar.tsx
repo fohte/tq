@@ -60,12 +60,18 @@ function NavLink({ item }: { item: NavItem }) {
     <Link
       to={item.to}
       className={cn(
-        'flex items-center gap-2 border-l-2 py-1.5 pr-3.5 pl-3 font-mono text-xs',
+        'flex items-center gap-2 py-1.5 pr-3.5 pl-3 font-mono text-xs',
         isActive
-          ? 'border-l-primary bg-card text-foreground'
-          : 'border-l-transparent text-muted-foreground hover:bg-card hover:text-foreground',
+          ? 'bg-card text-foreground'
+          : 'text-muted-foreground hover:bg-card hover:text-foreground',
       )}
     >
+      <span
+        className={cn(
+          'h-[13px] w-0.5 shrink-0',
+          isActive ? 'bg-primary' : 'bg-transparent',
+        )}
+      />
       <span className="flex-1 truncate text-left">{item.label}</span>
       <KeybindHint>{item.keys}</KeybindHint>
     </Link>
