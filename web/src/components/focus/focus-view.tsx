@@ -1,5 +1,13 @@
-import { Check, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import type { ReactNode } from 'react'
 
+import { TaskStatusPicker } from '#components/task/task-status-picker'
+import { Button } from '#components/ui/button'
+import { Panel } from '#components/ui/panel'
+import { ProgressBar } from '#components/ui/progress-bar'
+import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
+import { SectionHeading } from '#components/ui/section-heading'
+import { Textarea } from '#components/ui/textarea'
 import { useFocusNotes } from '#hooks/use-focus-notes'
 import type { Task } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
@@ -12,6 +20,25 @@ export interface FocusViewPresentationProps {
   focusTask: Task | null
   nextTask: Task | null
   subtasks: Task[]
+}
+
+function FocusLabel({ children }: { children: ReactNode }) {
+  return (
+    <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground-faint">
+      {children}
+    </span>
+  )
+}
+
+function FocusHeader() {
+  return (
+    <ScreenHeaderBar>
+      <SectionHeading level={2}>today</SectionHeading>
+      <span className="ml-auto font-mono text-[11px] whitespace-nowrap text-muted-foreground">
+        focus mode
+      </span>
+    </ScreenHeaderBar>
+  )
 }
 
 function FocusProgress({ tasks }: { tasks: Task[] }) {
@@ -31,84 +58,96 @@ function FocusProgress({ tasks }: { tasks: Task[] }) {
   const progress = total > 0 ? (completed / total) * 100 : 0
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>
-          {completed}/{total} completed
+    <div className="flex flex-col gap-[7px]">
+      <div className="flex items-baseline gap-3 font-mono text-[11px] whitespace-nowrap">
+        <span className="text-muted-foreground-strong">
+          {completed}
+          <span className="text-muted-foreground-faint">/</span>
+          {total} completed
         </span>
         {totalEstimate > 0 && (
-          <span className="font-mono" data-testid="focus-remaining-time">
-            Remaining: {formatMinutes(remainingEstimate)} /{' '}
-            {formatMinutes(totalEstimate)}
+          <span
+            className="ml-auto text-muted-foreground-strong"
+            data-testid="focus-remaining-time"
+          >
+            <span className="md:hidden">
+              {formatMinutes(remainingEstimate)} left
+            </span>
+            <span className="hidden md:inline">
+              remaining {formatMinutes(remainingEstimate)}
+              <span className="text-muted-foreground-faint">
+                {' '}
+                / {formatMinutes(totalEstimate)}
+              </span>
+            </span>
           </span>
         )}
       </div>
+      <ProgressBar percent={progress} />
+    </div>
+  )
+}
 
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-        <div
-          className="h-full rounded-full bg-primary transition-all duration-300"
-          style={{ width: `${String(progress)}%` }}
-        />
+function FocusCard({ task }: { task: Task }) {
+  const completeTask = useCompleteTask()
+
+  return (
+    <div className="border border-border bg-card p-[18px] md:p-6">
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-[10px] text-primary">▍</span>
+        <FocusLabel>IN PROGRESS</FocusLabel>
+        <span className="ml-auto font-mono text-[10px] tracking-[0.08em] text-muted-foreground">
+          #{task.number} · {task.context}
+        </span>
+      </div>
+      <h1 className="mt-3 text-[19px] leading-[1.4] font-bold text-pretty md:mt-3.5 md:text-2xl md:leading-[1.35]">
+        {task.title}
+      </h1>
+      <div className="mt-4 flex items-center gap-3 md:mt-[18px]">
+        <Button
+          className="flex-1 font-mono md:flex-none"
+          onClick={() => {
+            completeTask.mutate(task.id)
+          }}
+        >
+          complete
+        </Button>
+        {task.estimatedMinutes != null && (
+          <span className="font-mono text-[13px] text-muted-foreground-strong md:ml-auto">
+            {formatMinutes(task.estimatedMinutes)}
+          </span>
+        )}
       </div>
     </div>
   )
 }
 
-function FocusActions({ task }: { task: Task }) {
-  const completeTask = useCompleteTask()
-
-  return (
-    <div className="flex items-center gap-3">
-      <button
-        type="button"
-        onClick={() => {
-          completeTask.mutate(task.id)
-        }}
-        className="flex h-12 w-12 items-center justify-center rounded-full bg-[#2E2E2E] text-white transition-opacity hover:opacity-80"
-        aria-label="Complete task"
-      >
-        <Check className="h-5 w-5" />
-      </button>
-    </div>
-  )
-}
-
-function FocusSubtaskChecklist({ subtasks }: { subtasks: Task[] }) {
+function FocusSubtasks({ subtasks }: { subtasks: Task[] }) {
   const updateStatus = useUpdateTaskStatus()
   const completed = subtasks.filter((t) => t.status === 'completed').length
 
   return (
-    <div className="w-full space-y-2">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Subtasks ({completed}/{subtasks.length})
-      </h3>
-      <ul className="space-y-1.5">
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <FocusLabel>SUBTASKS</FocusLabel>
+        <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground">
+          {completed}/{subtasks.length}
+        </span>
+      </div>
+      <Panel>
         {subtasks.map((subtask) => {
           const isCompleted = subtask.status === 'completed'
           return (
-            <li key={subtask.id} className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  updateStatus.mutate({
-                    id: subtask.id,
-                    status: isCompleted ? 'todo' : 'completed',
-                  })
+            <div
+              key={subtask.id}
+              className="flex items-center gap-2.5 border-b border-border px-3 py-2.5 last:border-b-0"
+            >
+              <TaskStatusPicker
+                status={subtask.status}
+                onStatusChange={(status) => {
+                  updateStatus.mutate({ id: subtask.id, status })
                 }}
-                aria-label={
-                  isCompleted
-                    ? `Mark "${subtask.title}" as todo`
-                    : `Mark "${subtask.title}" as completed`
-                }
-                className={cn(
-                  'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors',
-                  isCompleted
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-muted-foreground/40 text-muted-foreground/40 hover:border-muted-foreground',
-                )}
-              >
-                {isCompleted && <Check className="h-3 w-3" />}
-              </button>
+              />
               <span
                 className={cn(
                   'text-sm',
@@ -117,10 +156,15 @@ function FocusSubtaskChecklist({ subtasks }: { subtasks: Task[] }) {
               >
                 {subtask.title}
               </span>
-            </li>
+              {subtask.estimatedMinutes != null && (
+                <span className="ml-auto shrink-0 font-mono text-[11px] text-muted-foreground-faint">
+                  {formatMinutes(subtask.estimatedMinutes)}
+                </span>
+              )}
+            </div>
           )
         })}
-      </ul>
+      </Panel>
     </div>
   )
 }
@@ -129,36 +173,37 @@ function FocusNotes({ taskId }: { taskId: string }) {
   const [notes, setNotes] = useFocusNotes(taskId)
 
   return (
-    <div className="w-full">
-      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Notes
-      </h3>
-      <textarea
+    <div className="flex flex-col gap-2">
+      <FocusLabel>NOTES</FocusLabel>
+      <Textarea
         value={notes}
         onChange={(e) => {
           setNotes(e.target.value)
         }}
         placeholder="Jot down notes while you work..."
-        rows={4}
-        className="w-full resize-none rounded-lg border border-border bg-transparent p-3 text-sm outline-none focus:border-primary/50"
+        rows={5}
+        className="resize-y bg-card p-3 font-editor text-xs leading-[1.7]"
       />
     </div>
   )
 }
 
-function FocusNextTaskPreview({ task }: { task: Task }) {
+function FocusUpNext({ task }: { task: Task }) {
   return (
-    <div className="flex w-full items-center justify-between rounded-lg border border-border bg-secondary/30 px-4 py-3">
-      <div className="flex min-w-0 flex-col">
-        <span className="text-xs text-muted-foreground">Up next</span>
-        <span className="truncate text-sm font-medium">{task.title}</span>
-      </div>
+    <Panel className="flex items-center gap-3 p-3.5">
+      <FocusLabel>UP NEXT</FocusLabel>
+      <span className="hidden font-mono text-[11px] text-muted-foreground-faint md:inline">
+        #{task.number}
+      </span>
+      <span className="truncate text-[13px] text-muted-foreground-strong">
+        {task.title}
+      </span>
       {task.estimatedMinutes != null && (
-        <span className="shrink-0 font-mono text-xs text-muted-foreground">
+        <span className="ml-auto shrink-0 font-mono text-[11px] text-muted-foreground">
           {formatMinutes(task.estimatedMinutes)}
         </span>
       )}
-    </div>
+    </Panel>
   )
 }
 
@@ -171,55 +216,47 @@ export function FocusViewPresentation({
 }: FocusViewPresentationProps) {
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      <div className="flex h-full flex-col">
+        <FocusHeader />
+        <div className="flex flex-1 items-center justify-center">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
       </div>
     )
   }
 
   if (!focusTask) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
-        <p className="text-lg font-medium">
-          {queueTasks.length === 0
-            ? "No tasks in today's queue"
-            : 'All tasks completed for today'}
-        </p>
-        <p className="text-sm text-muted-foreground">
-          {queueTasks.length === 0
-            ? 'Add tasks to your queue from the Day View.'
-            : 'Great work today.'}
-        </p>
+      <div className="flex h-full flex-col">
+        <FocusHeader />
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
+          <p className="text-lg font-medium">
+            {queueTasks.length === 0
+              ? "No tasks in today's queue"
+              : 'All tasks completed for today'}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {queueTasks.length === 0
+              ? 'Add tasks to your queue from the Day View.'
+              : 'Great work today.'}
+          </p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex h-full flex-col items-center gap-8 overflow-auto p-6 md:justify-center">
-      <div className="w-full max-w-lg">
-        <FocusProgress tasks={queueTasks} />
-      </div>
-
-      <div className="flex w-full max-w-lg flex-col items-center gap-4 text-center">
-        <h1 className="text-xl font-semibold">{focusTask.title}</h1>
-        <FocusActions task={focusTask} />
-      </div>
-
-      {subtasks.length > 0 && (
-        <div className="w-full max-w-lg">
-          <FocusSubtaskChecklist subtasks={subtasks} />
+    <div className="flex h-full flex-col">
+      <FocusHeader />
+      <div className="flex flex-1 justify-center overflow-y-auto px-3.5 py-4 md:px-6 md:py-10">
+        <div className="flex w-full max-w-[620px] flex-col gap-5 md:gap-7">
+          <FocusProgress tasks={queueTasks} />
+          <FocusCard task={focusTask} />
+          {subtasks.length > 0 && <FocusSubtasks subtasks={subtasks} />}
+          <FocusNotes taskId={focusTask.id} />
+          {nextTask && <FocusUpNext task={nextTask} />}
         </div>
-      )}
-
-      <div className="w-full max-w-lg">
-        <FocusNotes taskId={focusTask.id} />
       </div>
-
-      {nextTask && (
-        <div className="w-full max-w-lg">
-          <FocusNextTaskPreview task={nextTask} />
-        </div>
-      )}
     </div>
   )
 }
