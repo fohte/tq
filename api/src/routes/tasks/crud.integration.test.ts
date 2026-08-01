@@ -447,8 +447,6 @@ describe('tasks CRUD API', () => {
     })
 
     it('replaces the labels when given', async () => {
-      await createLabel('urgent')
-      await createLabel('bug')
       const created = await createTask('Task', { labels: ['urgent'] })
 
       const res = await app.request(`/api/tasks/${created.id}`, {
@@ -485,7 +483,6 @@ describe('tasks CRUD API', () => {
     })
 
     it('clears all labels when given an empty array', async () => {
-      await createLabel('urgent')
       const created = await createTask('Task', { labels: ['urgent'] })
 
       const res = await app.request(`/api/tasks/${created.id}`, {

@@ -244,7 +244,6 @@ describe('update_task tool', () => {
   })
 
   it('replaces the labels of a task, creating any that do not exist yet', async () => {
-    await createLabel('urgent')
     const task = await createTask('Has a label', { labels: ['urgent'] })
 
     const result = await callTool('update_task', {

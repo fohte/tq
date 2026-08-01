@@ -3,8 +3,8 @@ import { eq, inArray } from 'drizzle-orm'
 import type { DbTransaction } from '#db/connection'
 import { labels, taskLabels } from '#db/schema'
 
-// Replaces a task's full set of labels with `names`, creating any label that
-// doesn't exist yet. Passing an empty array clears all labels from the task.
+// Full replacement, not add/remove: callers must pass the complete desired
+// set of names each time, so an empty array clears every label from the task.
 export async function syncTaskLabels(
   tx: DbTransaction,
   taskId: string,
@@ -28,6 +28,7 @@ export async function syncTaskLabels(
   await tx
     .insert(taskLabels)
     .values(rows.map((label) => ({ taskId, labelId: label.id })))
+    .onConflictDoNothing({ target: [taskLabels.taskId, taskLabels.labelId] })
 
   return rows.map((label) => label.name)
 }

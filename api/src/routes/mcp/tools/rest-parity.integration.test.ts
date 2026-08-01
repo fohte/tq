@@ -8,11 +8,7 @@ import {
   connectMcpClient,
   parseToolJson,
 } from '#routes/mcp/testing'
-import {
-  createLabel,
-  createTask,
-  type TaskResponse,
-} from '#routes/tasks/testing'
+import { createTask, type TaskResponse } from '#routes/tasks/testing'
 import {
   assertDefined,
   jsonBody,
@@ -168,7 +164,6 @@ describe('REST/MCP parity', () => {
   })
 
   it('labels replaced via update_task, including newly created ones, are visible through GET /api/tasks/:id', async () => {
-    await createLabel('urgent')
     const task = await createTask('Needs a label', { labels: ['urgent'] })
 
     const updated = await callTool('update_task', {
