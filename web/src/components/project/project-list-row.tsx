@@ -1,34 +1,15 @@
 import { Link } from '@tanstack/react-router'
 
+import { formatDate } from '#components/project/project-detail-utils'
 import { ProjectStatusBadge } from '#components/project/project-status-badge'
 import {
+  isProjectStatus,
   type ProjectStatus,
   ProjectStatusMark,
 } from '#components/project/project-status-mark'
 import { ProgressBar } from '#components/ui/progress-bar'
 import type { Project } from '#hooks/use-projects'
 import { cn } from '#lib/utils'
-
-const validStatuses = new Set<string>([
-  'active',
-  'paused',
-  'completed',
-  'archived',
-])
-
-function isProjectStatus(value: string): value is ProjectStatus {
-  return validStatuses.has(value)
-}
-
-function formatDate(dateStr: string | null): string | null {
-  if (dateStr == null) return null
-  const date = new Date(`${dateStr}T00:00:00`)
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
 
 export function ProjectListRow({ project }: { project: Project }) {
   const status: ProjectStatus = isProjectStatus(project.status)

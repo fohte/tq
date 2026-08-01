@@ -2,6 +2,15 @@ import { cn } from '#lib/utils'
 
 export type ProjectStatus = 'active' | 'paused' | 'completed' | 'archived'
 
+export function isProjectStatus(value: string): value is ProjectStatus {
+  return (
+    value === 'active' ||
+    value === 'paused' ||
+    value === 'completed' ||
+    value === 'archived'
+  )
+}
+
 export function ProjectStatusMark({
   status,
   size = 7,

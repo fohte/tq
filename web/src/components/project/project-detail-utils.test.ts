@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   getDaysRemaining,
   summarizeTaskStatus,
-} from '#components/project/project-detail'
+} from '#components/project/project-detail-utils'
 import type { ProjectTask } from '#hooks/use-projects'
 
 const baseTask: ProjectTask = {

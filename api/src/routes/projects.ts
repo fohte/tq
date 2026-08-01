@@ -56,6 +56,13 @@ function projectToResponse(project: typeof projects.$inferSelect) {
   }
 }
 
+function taskStatsToSummary(total: number, completed: number) {
+  return {
+    completionRate: total > 0 ? completed / total : 0,
+    taskCount: { total, completed },
+  }
+}
+
 export const projectsApp = new Hono()
   .post('/', zValidator('json', createProjectSchema), async (c) => {
     const input = c.req.valid('json')
@@ -116,12 +123,9 @@ export const projectsApp = new Hono()
     return c.json(
       result.map((project) => {
         const stats = statsByProjectId.get(project.id)
-        const total = stats?.total ?? 0
-        const completed = stats?.completed ?? 0
         return {
           ...projectToResponse(project),
-          completionRate: total > 0 ? completed / total : 0,
-          taskCount: { total, completed },
+          ...taskStatsToSummary(stats?.total ?? 0, stats?.completed ?? 0),
         }
       }),
       200,
@@ -147,14 +151,10 @@ export const projectsApp = new Hono()
       .from(tasks)
       .where(eq(tasks.projectId, id))
 
-    const total = taskStats?.total ?? 0
-    const completed = taskStats?.completed ?? 0
-
     return c.json(
       {
         ...projectToResponse(project),
-        completionRate: total > 0 ? completed / total : 0,
-        taskCount: { total, completed },
+        ...taskStatsToSummary(taskStats?.total ?? 0, taskStats?.completed ?? 0),
       },
       200,
     )

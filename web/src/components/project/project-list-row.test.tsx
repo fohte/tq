@@ -44,46 +44,46 @@ const baseProject: Project = {
 }
 
 describe('ProjectListRow', () => {
-  it('renders project title', async () => {
+  it('renders project title once per layout (desktop + mobile)', async () => {
     renderRow(baseProject)
     await waitFor(() => {
-      expect(screen.getAllByText('Test Project').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Test Project')).toHaveLength(2)
     })
   })
 
-  it('renders project description when present', async () => {
+  it('renders project description in the desktop layout only', async () => {
     renderRow(baseProject)
     await waitFor(() => {
-      expect(screen.getAllByText('A description').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('A description')).toHaveLength(1)
     })
   })
 
   it('does not render description when null', async () => {
     renderRow({ ...baseProject, description: null })
     await waitFor(() => {
-      expect(screen.getAllByText('Test Project').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Test Project')).toHaveLength(2)
     })
     expect(screen.queryByText('A description')).not.toBeInTheDocument()
   })
 
-  it('renders status badge', async () => {
+  it('renders status badge once per layout (desktop + mobile)', async () => {
     renderRow(baseProject)
     await waitFor(() => {
-      expect(screen.getAllByText('active').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('active')).toHaveLength(2)
     })
   })
 
-  it('renders paused status badge', async () => {
+  it('renders paused status badge once per layout (desktop + mobile)', async () => {
     renderRow({ ...baseProject, status: 'paused' })
     await waitFor(() => {
-      expect(screen.getAllByText('paused').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('paused')).toHaveLength(2)
     })
   })
 
-  it('renders completed/total task count', async () => {
+  it('renders completed/total task count once per layout (desktop + mobile)', async () => {
     renderRow(baseProject)
     await waitFor(() => {
-      expect(screen.getAllByText('1/4').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('1/4')).toHaveLength(2)
     })
   })
 })

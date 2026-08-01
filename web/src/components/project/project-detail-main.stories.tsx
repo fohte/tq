@@ -9,11 +9,11 @@ import {
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
+import { ProjectMainContent } from '#components/project/project-detail-main'
 import {
-  ProjectMainContent,
   ProjectSidebar,
   ProjectSidebarMobile,
-} from '#components/project/project-detail'
+} from '#components/project/project-detail-sidebar'
 import type { ProjectDetail, ProjectTask } from '#hooks/use-projects'
 
 const baseProject: ProjectDetail = {
@@ -198,49 +198,6 @@ export const Completed: Story = {
     },
     tasks: sampleTasks.map((task) => ({ ...task, status: 'completed' })),
   },
-}
-
-// --- ProjectSidebar Stories ---
-
-export const Sidebar: StoryObj<{ project: ProjectDetail }> = {
-  args: {
-    project: { ...baseProject },
-  },
-  render: ({ project }) => (
-    <Providers>
-      <div className="w-60 border-l border-border p-4">
-        <ProjectSidebar project={project} />
-      </div>
-    </Providers>
-  ),
-}
-
-export const SidebarNoTargetDate: StoryObj<{ project: ProjectDetail }> = {
-  args: {
-    project: { ...baseProject, targetDate: null },
-  },
-  render: ({ project }) => (
-    <Providers>
-      <div className="w-60 border-l border-border p-4">
-        <ProjectSidebar project={project} />
-      </div>
-    </Providers>
-  ),
-}
-
-// --- ProjectSidebarMobile Stories ---
-
-export const MobileSidebar: StoryObj<{ project: ProjectDetail }> = {
-  args: {
-    project: { ...baseProject },
-  },
-  render: ({ project }) => (
-    <Providers>
-      <div className="max-w-sm border-t border-border p-4">
-        <ProjectSidebarMobile project={project} />
-      </div>
-    </Providers>
-  ),
 }
 
 // --- Full Page Layout ---

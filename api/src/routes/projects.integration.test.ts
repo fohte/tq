@@ -132,9 +132,13 @@ describe('projects API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<ProjectDetailResponse[]>(res)
-      assertDefined(body[0])
-      expect(body[0].completionRate).toBeCloseTo(0.5)
-      expect(body[0].taskCount).toEqual({ total: 2, completed: 1 })
+      expect(body).toEqual([
+        {
+          ...project,
+          completionRate: 0.5,
+          taskCount: { total: 2, completed: 1 },
+        },
+      ])
     })
   })
 
