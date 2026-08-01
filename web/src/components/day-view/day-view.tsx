@@ -119,8 +119,13 @@ export function DayViewPresentation({
     const activeData = active.data.current
     if (isCandidateDragData(activeData)) {
       const overIndex = queueTasks.findIndex((t) => t.id === over.id)
-      const insertIndex = overIndex === -1 ? queueTasks.length : overIndex
-      onInsertCandidate(activeData.taskId, insertIndex)
+      if (overIndex === -1) {
+        onInsertCandidate(activeData.taskId, queueTasks.length)
+        return
+      }
+      const activeTop = active.rect.current.translated?.top ?? over.rect.top
+      const isAfter = activeTop > over.rect.top + over.rect.height / 2
+      onInsertCandidate(activeData.taskId, overIndex + (isAfter ? 1 : 0))
       return
     }
 
