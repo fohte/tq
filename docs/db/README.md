@@ -22,6 +22,7 @@
 | [public.github_sync_rule_ignored_issues](public.github_sync_rule_ignored_issues.md) | 6       |         | BASE TABLE |
 | [public.github_sync_rules](public.github_sync_rules.md)                             | 11      |         | BASE TABLE |
 | [public.calendar_subscriptions](public.calendar_subscriptions.md)                   | 7       |         | BASE TABLE |
+| [public.task_events](public.task_events.md)                                         | 12      |         | BASE TABLE |
 
 ## Relations
 
@@ -47,6 +48,7 @@ erDiagram
 "public.github_sync_rule_ignored_issues" }o--|| "public.github_sync_rules" : "FOREIGN KEY (rule_id) REFERENCES github_sync_rules(id) ON DELETE CASCADE"
 "public.github_sync_rules" }o--|| "public.projects" : "FOREIGN KEY (target_project_id) REFERENCES projects(id) ON DELETE CASCADE"
 "public.calendar_subscriptions" }o--|| "public.oauth_tokens" : "FOREIGN KEY (oauth_token_id) REFERENCES oauth_tokens(id) ON DELETE CASCADE"
+"public.task_events" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 
 "public.images" {
   text id
@@ -220,6 +222,20 @@ erDiagram
   text color
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+}
+"public.task_events" {
+  bigint id
+  text task_id FK
+  text type
+  text from_status
+  text to_status
+  text github_owner
+  text github_repo
+  integer github_number
+  text github_kind
+  text author_kind
+  text author_agent
+  timestamp_with_time_zone created_at
 }
 ```
 
