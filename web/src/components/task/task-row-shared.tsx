@@ -2,8 +2,14 @@ import { Chip } from '#components/ui/chip'
 import { useTagFilter } from '#hooks/use-tag-filter'
 import type { Task } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
+import { formatMinutes } from '#lib/format'
 import { formatDueDate, isTaskOverdue } from '#lib/task-due-date'
 import { cn } from '#lib/utils'
+
+// Shared between TaskGridRow, TreeTaskGridRow, and the Tasks list column
+// header so the header stays aligned with the row grids.
+export const TASK_GRID_COLUMNS =
+  'grid-cols-[26px_26px_1fr_132px_104px_72px_56px]'
 
 export function useHandleStatusChange(id: string, status: Task['status']) {
   const completeTask = useCompleteTask()
@@ -82,6 +88,47 @@ export function TaskNumberLabel({ number }: { number: number }) {
   return (
     <span className="shrink-0 font-mono text-xs text-muted-foreground-faint">
       #{number}
+    </span>
+  )
+}
+
+export function gridRowWrapperClassName(
+  isInProgress: boolean,
+  isCompleted: boolean,
+) {
+  return cn(
+    'border-b border-border border-l-2 border-l-transparent px-3 py-2 transition-colors hover:bg-secondary/30',
+    isInProgress && 'border-l-primary bg-card',
+    isCompleted && 'opacity-[0.55]',
+  )
+}
+
+export function gridRowTitleClassName(
+  isInProgress: boolean,
+  isCompleted: boolean,
+) {
+  return cn(
+    'truncate text-sm',
+    isInProgress ? 'font-semibold' : 'font-normal',
+    isCompleted && 'text-muted-foreground line-through',
+  )
+}
+
+export function GridEstimate({
+  estimatedMinutes,
+  isCompleted,
+}: {
+  estimatedMinutes: number
+  isCompleted: boolean
+}) {
+  return (
+    <span
+      className={cn(
+        'shrink-0 text-right font-mono text-xs',
+        isCompleted ? 'text-muted-foreground-faint' : 'text-muted-foreground',
+      )}
+    >
+      {formatMinutes(estimatedMinutes)}
     </span>
   )
 }

@@ -4,14 +4,13 @@ import { useState } from 'react'
 
 import { GithubLinkBadge } from '#components/task/github-link-badge'
 import {
+  ContextBadge,
+  DueDateBadge,
   GridEstimate,
   gridRowTitleClassName,
   gridRowWrapperClassName,
-} from '#components/task/task-grid-row'
-import {
-  ContextBadge,
-  DueDateBadge,
   TagTokens,
+  TASK_GRID_COLUMNS,
   TaskNumberLabel,
   useHandleStatusChange,
 } from '#components/task/task-row-shared'
@@ -64,7 +63,9 @@ export function TreeTaskGridRow({
           style={{ paddingLeft: `${String(12 + depth * 14)}px` }}
         >
           {/* Desktop: single-row grid matching the column header */}
-          <div className="hidden grid-cols-[26px_26px_1fr_132px_104px_72px_56px] items-center gap-2 md:grid">
+          <div
+            className={`hidden items-center gap-2 md:grid ${TASK_GRID_COLUMNS}`}
+          >
             {expandToggle}
             <TaskStatusPicker
               status={node.status}

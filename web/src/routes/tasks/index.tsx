@@ -12,6 +12,7 @@ import { CreateTaskModal } from '#components/task/create-task-modal'
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
 import { TaskGridRow } from '#components/task/task-grid-row'
 import { TaskListHeader } from '#components/task/task-list-header'
+import { TASK_GRID_COLUMNS } from '#components/task/task-row-shared'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { Button } from '#components/ui/button'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
@@ -34,7 +35,9 @@ type Tab = 'today' | 'all' | 'backlog'
 
 function TaskListColumnHeader() {
   return (
-    <div className="hidden grid-cols-[26px_26px_1fr_132px_104px_72px_56px] items-center gap-2 border-b border-border bg-card px-3 py-[5px] font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint md:grid">
+    <div
+      className={`hidden items-center gap-2 border-b border-border bg-card px-3 py-[5px] font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint md:grid ${TASK_GRID_COLUMNS}`}
+    >
       <span />
       <span />
       <span>TITLE</span>

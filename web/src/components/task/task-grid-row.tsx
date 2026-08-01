@@ -4,55 +4,16 @@ import { GithubLinkBadge } from '#components/task/github-link-badge'
 import {
   ContextBadge,
   DueDateBadge,
+  GridEstimate,
+  gridRowTitleClassName,
+  gridRowWrapperClassName,
   TagTokens,
+  TASK_GRID_COLUMNS,
   TaskNumberLabel,
   useHandleStatusChange,
 } from '#components/task/task-row-shared'
 import { TaskStatusPicker } from '#components/task/task-status-picker'
 import type { Task } from '#hooks/use-tasks'
-import { formatMinutes } from '#lib/format'
-import { cn } from '#lib/utils'
-
-export function gridRowWrapperClassName(
-  isInProgress: boolean,
-  isCompleted: boolean,
-) {
-  return cn(
-    'border-b border-border border-l-2 border-l-transparent px-3 py-2 transition-colors hover:bg-secondary/30',
-    isInProgress && 'border-l-primary bg-card',
-    isCompleted && 'opacity-[0.55]',
-  )
-}
-
-export function gridRowTitleClassName(
-  isInProgress: boolean,
-  isCompleted: boolean,
-) {
-  return cn(
-    'truncate text-sm',
-    isInProgress ? 'font-semibold' : 'font-normal',
-    isCompleted && 'text-muted-foreground line-through',
-  )
-}
-
-export function GridEstimate({
-  estimatedMinutes,
-  isCompleted,
-}: {
-  estimatedMinutes: number
-  isCompleted: boolean
-}) {
-  return (
-    <span
-      className={cn(
-        'shrink-0 text-right font-mono text-xs',
-        isCompleted ? 'text-muted-foreground-faint' : 'text-muted-foreground',
-      )}
-    >
-      {formatMinutes(estimatedMinutes)}
-    </span>
-  )
-}
 
 export function TaskGridRow({ task }: { task: Task }) {
   const handleStatusChange = useHandleStatusChange(task.id, task.status)
@@ -63,7 +24,9 @@ export function TaskGridRow({ task }: { task: Task }) {
     <Link to="/tasks/$taskId" params={{ taskId: task.id }} className="block">
       <div className={gridRowWrapperClassName(isInProgress, isCompleted)}>
         {/* Desktop: single-row grid matching the column header */}
-        <div className="hidden grid-cols-[26px_26px_1fr_132px_104px_72px_56px] items-center gap-2 md:grid">
+        <div
+          className={`hidden items-center gap-2 md:grid ${TASK_GRID_COLUMNS}`}
+        >
           <span />
           <TaskStatusPicker
             status={task.status}
