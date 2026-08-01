@@ -1,4 +1,5 @@
 import { preventClickWhileSelecting } from '#components/task/prevent-click-while-selecting'
+import { SlackAuthorSummary } from '#components/task/slack-author-summary'
 import { Badge } from '#components/ui/badge'
 import { useSlackPermalinkPreview } from '#hooks/use-slack-permalink-preview'
 import type { SlackPermalinkData } from '#lib/inline-reference/providers/slack-permalink'
@@ -26,21 +27,11 @@ export function SlackPermalinkCard({
         className="flex flex-col gap-1.5"
       >
         <div className="flex items-center gap-2">
-          {preview.authorAvatarUrl != null ? (
-            <img
-              src={preview.authorAvatarUrl}
-              alt=""
-              className="size-5 shrink-0 border border-border"
-            />
-          ) : (
-            <div className="size-5 shrink-0 border border-border bg-secondary" />
-          )}
-          <span className="font-sans text-sm font-medium">
-            {preview.authorName}
-          </span>
-          <span className="text-sm text-muted-foreground">
-            #{preview.channelName}
-          </span>
+          <SlackAuthorSummary
+            authorName={preview.authorName}
+            authorAvatarUrl={preview.authorAvatarUrl}
+            channelName={preview.channelName}
+          />
           {preview.isThreadReply && (
             <Badge variant="outline">thread reply</Badge>
           )}

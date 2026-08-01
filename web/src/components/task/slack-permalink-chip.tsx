@@ -1,3 +1,4 @@
+import { SlackAuthorSummary } from '#components/task/slack-author-summary'
 import {
   PreviewCard,
   PreviewCardPopup,
@@ -39,20 +40,12 @@ export function SlackPermalinkChip({
               rel="noopener noreferrer"
               className="flex flex-col gap-1.5"
             >
-              <div className="flex items-center gap-2 text-sm font-medium">
-                {preview.authorAvatarUrl != null ? (
-                  <img
-                    src={preview.authorAvatarUrl}
-                    alt=""
-                    className="size-5 shrink-0 border border-border"
-                  />
-                ) : (
-                  <div className="size-5 shrink-0 border border-border bg-secondary" />
-                )}
-                <span>{preview.authorName}</span>
-                <span className="text-muted-foreground">
-                  #{preview.channelName}
-                </span>
+              <div className="flex items-center gap-2">
+                <SlackAuthorSummary
+                  authorName={preview.authorName}
+                  authorAvatarUrl={preview.authorAvatarUrl}
+                  channelName={preview.channelName}
+                />
               </div>
               {preview.text !== '' && (
                 <p className="line-clamp-3 text-xs text-muted-foreground">

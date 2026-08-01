@@ -7,7 +7,7 @@ describe('slackPermalinkProvider.findMatches', () => {
     return slackPermalinkProvider.findMatches(text).map((m) => m.data.url)
   }
 
-  it('finds a permalink', () => {
+  it('finds a channel permalink', () => {
     expect(
       urls(
         'see https://fohte-team.slack.com/archives/C0123ABCDEF/p1699999999000100 for context',
@@ -59,6 +59,22 @@ describe('slackPermalinkProvider.findMatches', () => {
       ),
     ).toEqual([
       'https://fohte-team.slack.com/archives/C0123ABCDEF/p1699999999000100',
+    ])
+  })
+
+  it('excludes a trailing closing paren from a query string wrapped in punctuation', () => {
+    const matches = slackPermalinkProvider.findMatches(
+      '(https://fohte-team.slack.com/archives/C0123ABCDEF/p1699999999000200?thread_ts=1699999999.000100&cid=C0123ABCDEF)',
+    )
+    expect(matches).toEqual([
+      {
+        start: 1,
+        end: 112,
+        raw: 'https://fohte-team.slack.com/archives/C0123ABCDEF/p1699999999000200?thread_ts=1699999999.000100&cid=C0123ABCDEF',
+        data: {
+          url: 'https://fohte-team.slack.com/archives/C0123ABCDEF/p1699999999000200?thread_ts=1699999999.000100&cid=C0123ABCDEF',
+        },
+      },
     ])
   })
 
