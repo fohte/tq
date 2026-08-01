@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import {
+  bigint,
   boolean,
   check,
   index,
@@ -90,6 +91,16 @@ export const githubSyncRules = pgTable(
     seedIgnoreOnNextSync: boolean('seed_ignore_on_next_sync')
       .notNull()
       .default(false),
+    // Tiebreaker for ordering by creation time: `now()` is fixed for the
+    // whole transaction, so rules inserted in the same transaction (e.g. two
+    // requests handled inside one test transaction) can share an identical
+    // `createdAt`, leaving `ORDER BY created_at` alone to Postgres's
+    // undefined tie order. This identity column advances on every insert
+    // regardless of transaction boundaries, so it always reflects true
+    // insertion order.
+    seq: bigint('seq', { mode: 'number' })
+      .notNull()
+      .generatedAlwaysAsIdentity(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

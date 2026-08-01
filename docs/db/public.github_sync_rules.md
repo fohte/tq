@@ -14,6 +14,7 @@
 | seed_ignore_on_next_sync | boolean                  | false            | false    |                                                                                     |                                       |         |
 | created_at               | timestamp with time zone | now()            | false    |                                                                                     |                                       |         |
 | updated_at               | timestamp with time zone | now()            | false    |                                                                                     |                                       |         |
+| seq                      | bigint                   |                  | false    |                                                                                     |                                       |         |
 
 ## Constraints
 
@@ -50,6 +51,7 @@ erDiagram
   boolean seed_ignore_on_next_sync
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+  bigint seq
 }
 "public.github_sync_rule_ignored_issues" {
   text id

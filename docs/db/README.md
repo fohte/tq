@@ -20,7 +20,7 @@
 | [public.task_github_links](public.task_github_links.md)                             | 14      |         | BASE TABLE |
 | [public.task_links](public.task_links.md)                                           | 3       |         | BASE TABLE |
 | [public.github_sync_rule_ignored_issues](public.github_sync_rule_ignored_issues.md) | 6       |         | BASE TABLE |
-| [public.github_sync_rules](public.github_sync_rules.md)                             | 10      |         | BASE TABLE |
+| [public.github_sync_rules](public.github_sync_rules.md)                             | 11      |         | BASE TABLE |
 | [public.calendar_subscriptions](public.calendar_subscriptions.md)                   | 7       |         | BASE TABLE |
 
 ## Relations
@@ -210,6 +210,7 @@ erDiagram
   boolean seed_ignore_on_next_sync
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+  bigint seq
 }
 "public.calendar_subscriptions" {
   text id

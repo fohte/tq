@@ -108,7 +108,7 @@ export const githubSyncRulesApp = new Hono()
     const result = await db
       .select()
       .from(githubSyncRules)
-      .orderBy(githubSyncRules.createdAt)
+      .orderBy(githubSyncRules.createdAt, githubSyncRules.seq)
 
     return c.json(result.map(syncRuleToResponse), 200)
   })

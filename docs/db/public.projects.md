@@ -77,6 +77,7 @@ erDiagram
   boolean seed_ignore_on_next_sync
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+  bigint seq
 }
 ```
 
