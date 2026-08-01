@@ -19,9 +19,9 @@ export function useFilteredTaskList() {
     apiContext ? { context: apiContext } : undefined,
   )
 
-  const today = useMemo(
-    () => filterByTag(filterByContext(categorized.today, mode), tag),
-    [categorized.today, mode, tag],
+  const open = useMemo(
+    () => filterByTag(filterByContext(categorized.open, mode), tag),
+    [categorized.open, mode, tag],
   )
   const all = useMemo(
     () => filterByTag(filterByContext(categorized.all, mode), tag),
@@ -36,7 +36,7 @@ export function useFilteredTaskList() {
     [categorized.nonBacklog, mode, tag],
   )
 
-  return { isLoading, today, all, backlog, nonBacklog }
+  return { isLoading, open, all, backlog, nonBacklog }
 }
 
 function recalcChildCompletionCount(nodes: TreeNode[]): TreeNode[] {

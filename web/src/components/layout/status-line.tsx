@@ -18,7 +18,7 @@ export function StatusLine() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const { nonBacklog, today, isLoading } = useFilteredTaskList()
+  const { nonBacklog, open, isLoading } = useFilteredTaskList()
 
   return (
     <div className="hidden h-6 shrink-0 items-center gap-3 border-t border-border bg-card px-3 font-mono text-[10px] text-muted-foreground-faint md:flex">
@@ -30,7 +30,7 @@ export function StatusLine() {
       <span>
         {isLoading
           ? '…'
-          : `${String(nonBacklog.length)} tasks · ${String(today.length)} open`}
+          : `${String(nonBacklog.length)} tasks · ${String(open.length)} open`}
       </span>
       <div className="ml-auto flex gap-3.5 whitespace-nowrap">
         {shortcuts.map((shortcut) => (

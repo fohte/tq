@@ -120,7 +120,7 @@ const backlogTasks: Task[] = [
 
 const sampleCategorized: CategorizedTasks = {
   all: [...sampleTasks, ...backlogTasks],
-  today: sampleTasks,
+  open: sampleTasks,
   backlog: backlogTasks,
   nonBacklog: sampleTasks,
 }
