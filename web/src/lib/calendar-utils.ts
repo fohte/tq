@@ -2,7 +2,6 @@ import type { EventApi } from '@fullcalendar/core'
 
 export interface CalendarEventProps {
   type?: 'manual' | 'auto' | 'gcal' | 'completed' | 'schedule'
-  duration?: string
   parentRef?: string
   color?: { accent: string }
   taskId?: string

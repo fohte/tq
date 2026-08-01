@@ -140,7 +140,6 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T08:30:00`,
     end: `${dateStr}T10:00:00`,
     type: 'completed',
-    duration: '2h',
   },
   {
     id: 'tb-3',
@@ -155,7 +154,6 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T10:30:00`,
     end: `${dateStr}T11:30:00`,
     type: 'manual',
-    duration: '1h',
     parentRef: '#488 tq 作成',
   },
   {
@@ -171,7 +169,6 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T13:00:00`,
     end: `${dateStr}T13:45:00`,
     type: 'auto',
-    duration: '45m',
   },
   {
     id: 'tb-7',
@@ -179,7 +176,6 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T13:45:00`,
     end: `${dateStr}T14:15:00`,
     type: 'auto',
-    duration: '30m',
   },
   {
     id: 'tb-8',
@@ -195,7 +191,6 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T15:00:00`,
     end: `${dateStr}T16:00:00`,
     type: 'manual',
-    duration: '1h',
     redacted: true,
   },
 ]

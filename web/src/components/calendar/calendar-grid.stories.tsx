@@ -22,7 +22,6 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T09:00:00`,
     end: `${dateStr}T10:00:00`,
     type: 'manual',
-    duration: '1h',
   },
   {
     id: '2',
@@ -30,7 +29,6 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T10:30:00`,
     end: `${dateStr}T11:30:00`,
     type: 'auto',
-    duration: '1h',
     parentRef: '#488 tq 作成',
   },
   {

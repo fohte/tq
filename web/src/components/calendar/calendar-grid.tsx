@@ -115,7 +115,6 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         event.redacted !== true,
       extendedProps: {
         type: event.type,
-        duration: event.duration,
         parentRef: event.parentRef,
         color: event.color,
         redacted: event.redacted,
@@ -212,7 +211,9 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           nowIndicatorContent={(arg) => {
             // arg.date is the column's day-start marker, not the current
             // moment (FullCalendar forwards `cell.date`, not `nowDate`, to
-            // this hook) — read the wall clock directly instead.
+            // this hook) — read the wall clock directly instead. FullCalendar
+            // re-invokes this callback on its own per-minute timer, so no
+            // extra live-clock state is needed to keep the label current.
             if (arg.isAxis) return undefined
             return (
               <span className="absolute -top-3.5 right-1 hidden font-mono text-[9px] text-primary md:inline">
