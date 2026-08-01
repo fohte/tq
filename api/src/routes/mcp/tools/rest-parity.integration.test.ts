@@ -163,6 +163,33 @@ describe('REST/MCP parity', () => {
     })
   })
 
+  it('labels replaced via update_task, including newly created ones, are visible through GET /api/tasks/:id', async () => {
+    const task = await createTask('Needs a label', { labels: ['urgent'] })
+
+    const updated = await callTool('update_task', {
+      taskId: task.id,
+      labels: ['urgent', 'new-label'],
+    })
+    const data = passthroughSchema<TaskResponse>().parse(parseToolJson(updated))
+
+    const res = await app.request(`/api/tasks/${task.id}`)
+    expect(res.status).toBe(200)
+
+    const body = await jsonBody<TaskResponse>(res)
+    body.labels = body.labels.toSorted()
+
+    expect(body).toEqual({
+      ...data,
+      titleAuthor: { kind: 'human', agent: null },
+      descriptionAuthor: { kind: 'human', agent: null },
+      childCompletionCount: { total: 0, completed: 0 },
+      pages: [],
+      timeBlocks: [],
+      links: { outgoing: [], incoming: [] },
+      labels: data.labels.toSorted(),
+    })
+  })
+
   it('setting a task to in_progress via update_task_status is visible through GET /api/tasks/:id', async () => {
     const task = await createTask('Start via MCP')
 
