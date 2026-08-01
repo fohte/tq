@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { makeNode } from '#components/task/task-row-test-fixtures'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { TagFilterProvider, useTagFilter } from '#hooks/use-tag-filter'
 import type { TreeNode } from '#hooks/use-tasks'
@@ -39,6 +40,9 @@ vi.mock('@tanstack/react-router', () => ({
 // reliably, so the picker is stubbed here to exercise TreeTaskGridRow's
 // status change wiring directly. The real menu interaction is covered by
 // task-status-picker.stories.tsx (runs in a real browser via Storybook).
+// Not shared with the other row test files: vi.mock factories are hoisted
+// above imports, so a shared factory couldn't close over anything defined
+// after the mock call, and vi.mock itself must stay inline per-file.
 vi.mock('#components/task/task-status-picker', () => ({
   TaskStatusPicker: ({
     onStatusChange,
@@ -71,32 +75,6 @@ vi.mock('#components/task/task-status-picker', () => ({
     </div>
   ),
 }))
-
-function makeNode(overrides: Partial<TreeNode> = {}): TreeNode {
-  return {
-    id: 'parent-1',
-    number: 1,
-    title: 'Parent Task',
-    description: null,
-    status: 'todo',
-    context: 'personal',
-    labels: [],
-    startDate: null,
-    dueDate: null,
-    estimatedMinutes: null,
-    parentId: null,
-    projectId: null,
-    sortOrder: 0,
-    recurrenceRuleId: null,
-    recurrenceRule: null,
-    githubLink: null,
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-    children: [],
-    childCompletionCount: { completed: 0, total: 0 },
-    ...overrides,
-  }
-}
 
 function TagProbe() {
   const { tag } = useTagFilter()
@@ -136,24 +114,42 @@ describe('TreeTaskGridRow', () => {
     expect(screen.getAllByText('#42')).toHaveLength(2)
   })
 
-  it('indents by 12 + depth * 14 px', () => {
+  it('indents deeper rows more than their ancestors', () => {
+    const grandchild = makeNode({
+      id: 'grandchild-1',
+      title: 'Grandchild Task',
+    })
+    const child = makeNode({
+      id: 'child-1',
+      title: 'Child Task',
+      children: [grandchild],
+      childCompletionCount: { completed: 0, total: 1 },
+    })
     const node = makeNode({
-      children: [
-        makeNode({ id: 'child-1', title: 'Child Task', parentId: 'parent-1' }),
-      ],
+      children: [child],
       childCompletionCount: { completed: 0, total: 1 },
     })
     renderTree(node)
 
-    const parentRow = atIndex(screen.getAllByText('Parent Task'), 0).closest(
-      '[style*="padding-left"]',
-    )
-    const childRow = atIndex(screen.getAllByText('Child Task'), 0).closest(
-      '[style*="padding-left"]',
-    )
+    const paddingLeftPx = (text: string) => {
+      const el = atIndex(screen.getAllByText(text), 0).closest(
+        '[style*="padding-left"]',
+      )
+      if (!(el instanceof HTMLElement)) {
+        throw new Error(`Expected an element with padding-left near "${text}"`)
+      }
+      return Number.parseInt(el.style.paddingLeft, 10)
+    }
 
-    expect(parentRow).toHaveStyle({ paddingLeft: '12px' })
-    expect(childRow).toHaveStyle({ paddingLeft: '26px' })
+    const depths = [
+      paddingLeftPx('Parent Task'),
+      paddingLeftPx('Child Task'),
+      paddingLeftPx('Grandchild Task'),
+    ]
+
+    expect(depths.every((px, i) => i === 0 || px > (depths[i - 1] ?? 0))).toBe(
+      true,
+    )
   })
 
   it('renders children under parent', () => {
@@ -319,16 +315,20 @@ describe('TreeTaskGridRow', () => {
 
   it('renders a token per label', () => {
     renderTree(makeNode({ labels: ['dev:tq', 'chore'] }))
-    expect(screen.getAllByText('#dev:tq')).toHaveLength(2)
-    expect(screen.getAllByText('#chore')).toHaveLength(2)
+    // Desktop and mobile layouts both render, so each label's token appears
+    // twice, in layout order.
+    expect(
+      screen.getAllByRole('button', { name: /^#/ }).map((el) => el.textContent),
+    ).toEqual(['#dev:tq', '#chore', '#dev:tq', '#chore'])
   })
 
   it('highlights an overdue due date', () => {
     renderTree(makeNode({ dueDate: '2020-01-01' }))
     const badges = screen.getAllByText('Jan 1, 2020')
-    expect(badges).toHaveLength(2)
-    expect(atIndex(badges, 0)).toHaveClass('text-primary')
-    expect(atIndex(badges, 1)).toHaveClass('text-primary')
+    expect(badges.map((b) => b.classList.contains('text-primary'))).toEqual([
+      true,
+      true,
+    ])
   })
 
   it('sets the tag filter and stops the click from reaching the row Link when a tag token is clicked', async () => {

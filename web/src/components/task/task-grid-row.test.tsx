@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { TaskGridRow } from '#components/task/task-grid-row'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import { TagFilterProvider, useTagFilter } from '#hooks/use-tag-filter'
 import type { Task } from '#hooks/use-tasks'
 import { atIndex } from '#lib/test-utils'
@@ -39,6 +40,9 @@ vi.mock('@tanstack/react-router', () => ({
 // reliably, so the picker is stubbed here to exercise TaskGridRow's status
 // change wiring directly. The real menu interaction is covered by
 // task-status-picker.stories.tsx (runs in a real browser via Storybook).
+// Not shared with the other row test files: vi.mock factories are hoisted
+// above imports, so a shared factory couldn't close over anything defined
+// after the mock call, and vi.mock itself must stay inline per-file.
 vi.mock('#components/task/task-status-picker', () => ({
   TaskStatusPicker: ({
     onStatusChange,
@@ -71,31 +75,6 @@ vi.mock('#components/task/task-status-picker', () => ({
     </div>
   ),
 }))
-
-function makeTask(overrides: Partial<Task> = {}): Task {
-  return {
-    id: 'task-1',
-    number: 1,
-    title: 'Task title',
-    description: null,
-    status: 'todo',
-    context: 'personal',
-    labels: [],
-    startDate: null,
-    dueDate: null,
-    estimatedMinutes: null,
-    parentId: null,
-    parentNumber: null,
-    projectId: null,
-    sortOrder: 0,
-    recurrenceRuleId: null,
-    recurrenceRule: null,
-    githubLink: null,
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-    ...overrides,
-  }
-}
 
 function TagProbe() {
   const { tag } = useTagFilter()
@@ -156,8 +135,11 @@ describe('TaskGridRow', () => {
 
   it('renders a token per label', () => {
     renderRow(makeTask({ labels: ['dev:tq', 'chore'] }))
-    expect(screen.getAllByText('#dev:tq')).toHaveLength(2)
-    expect(screen.getAllByText('#chore')).toHaveLength(2)
+    // Desktop and mobile layouts both render, so each label's token appears
+    // twice, in layout order.
+    expect(
+      screen.getAllByRole('button', { name: /^#/ }).map((el) => el.textContent),
+    ).toEqual(['#dev:tq', '#chore', '#dev:tq', '#chore'])
   })
 
   it('sets the tag filter and stops the click from reaching the row Link when a tag token is clicked', async () => {
@@ -211,17 +193,19 @@ describe('TaskGridRow', () => {
   it('highlights an overdue due date', () => {
     renderRow(makeTask({ dueDate: '2020-01-01' }))
     const badges = screen.getAllByText('Jan 1, 2020')
-    expect(badges).toHaveLength(2)
-    expect(atIndex(badges, 0)).toHaveClass('text-primary')
-    expect(atIndex(badges, 1)).toHaveClass('text-primary')
+    expect(badges.map((b) => b.classList.contains('text-primary'))).toEqual([
+      true,
+      true,
+    ])
   })
 
   it('does not highlight a completed task even when the due date has passed', () => {
     renderRow(makeTask({ status: 'completed', dueDate: '2020-01-01' }))
     const badges = screen.getAllByText('Jan 1, 2020')
-    expect(badges).toHaveLength(2)
-    expect(atIndex(badges, 0)).not.toHaveClass('text-primary')
-    expect(atIndex(badges, 1)).not.toHaveClass('text-primary')
+    expect(badges.map((b) => b.classList.contains('text-primary'))).toEqual([
+      false,
+      false,
+    ])
   })
 
   it('updates the status via useUpdateTaskStatus when a non-completed status is selected', async () => {

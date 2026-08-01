@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { TreeTaskRow } from '#components/task/task-row'
+import { makeNode } from '#components/task/task-row-test-fixtures'
 import { TagFilterProvider, useTagFilter } from '#hooks/use-tag-filter'
 import type { TreeNode } from '#hooks/use-tasks'
 import { atIndex } from '#lib/test-utils'
@@ -39,6 +40,9 @@ vi.mock('@tanstack/react-router', () => ({
 // reliably, so the picker is stubbed here to exercise TreeTaskRow's status
 // change wiring directly. The real menu interaction is covered by
 // task-status-picker.stories.tsx (runs in a real browser via Storybook).
+// Not shared with the other row test files: vi.mock factories are hoisted
+// above imports, so a shared factory couldn't close over anything defined
+// after the mock call, and vi.mock itself must stay inline per-file.
 vi.mock('#components/task/task-status-picker', () => ({
   TaskStatusPicker: ({
     onStatusChange,
@@ -71,32 +75,6 @@ vi.mock('#components/task/task-status-picker', () => ({
     </div>
   ),
 }))
-
-function makeNode(overrides: Partial<TreeNode> = {}): TreeNode {
-  return {
-    id: 'parent-1',
-    number: 1,
-    title: 'Parent Task',
-    description: null,
-    status: 'todo',
-    context: 'personal',
-    labels: [],
-    startDate: null,
-    dueDate: null,
-    estimatedMinutes: null,
-    parentId: null,
-    projectId: null,
-    sortOrder: 0,
-    recurrenceRuleId: null,
-    recurrenceRule: null,
-    githubLink: null,
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-    children: [],
-    childCompletionCount: { completed: 0, total: 0 },
-    ...overrides,
-  }
-}
 
 function TagProbe() {
   const { tag } = useTagFilter()
