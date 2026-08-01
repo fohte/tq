@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 
 import { ContextFilterInline } from '#components/context-filter'
 import {
@@ -20,6 +20,8 @@ import {
   useFilteredTaskList,
   useFilteredTaskTree,
 } from '#hooks/use-filtered-tasks'
+import { useNewTaskShortcutListener } from '#hooks/use-new-task-shortcut'
+import { newTaskKeybinding } from '#lib/keybindings'
 
 export const Route = createFileRoute('/tasks/')({
   component: TaskList,
@@ -52,6 +54,12 @@ function TaskList() {
   const tasks = useFilteredTaskList()
   const { isLoading: isTreeLoading, tree: filteredTreeData } =
     useFilteredTaskTree({ enabled: activeTab === 'all' })
+
+  useNewTaskShortcutListener(
+    useCallback(() => {
+      setIsCreating(true)
+    }, []),
+  )
 
   const displayTasks = (() => {
     switch (activeTab) {
@@ -116,7 +124,9 @@ function TaskList() {
             }}
           >
             + new
-            <KeybindHint className="text-muted-foreground">n</KeybindHint>
+            <KeybindHint className="text-muted-foreground">
+              {newTaskKeybinding.keys}
+            </KeybindHint>
           </Button>
         </div>
       </ScreenHeaderBar>

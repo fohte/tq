@@ -1,26 +1,15 @@
-import { type ReactNode, useCallback, useEffect, useState } from 'react'
+import { type ReactNode, useState } from 'react'
 
 import { BottomTabBar } from '#components/layout/bottom-tab-bar'
 import { Sidebar } from '#components/layout/sidebar'
 import { StatusLine } from '#components/layout/status-line'
 import { SearchModal } from '#components/search/search-modal'
+import { useGlobalKeybindings } from '#hooks/use-global-keybindings'
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false)
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-      e.preventDefault()
-      setSearchOpen((prev) => !prev)
-    }
-  }, [])
-
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [handleKeyDown])
+  useGlobalKeybindings({ searchOpen, onSearchOpenChange: setSearchOpen })
 
   return (
     <div className="flex h-screen">
