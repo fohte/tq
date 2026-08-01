@@ -26,7 +26,7 @@ export function TodayQueueRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id })
+  } = useSortable({ id: task.id, data: { type: 'queue-task' } })
   const updateTask = useUpdateTask()
   const [isEditingEstimate, setIsEditingEstimate] = useState(false)
   const [estimateInput, setEstimateInput] = useState('')

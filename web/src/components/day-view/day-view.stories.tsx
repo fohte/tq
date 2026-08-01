@@ -276,6 +276,7 @@ export const Default: Story = {
     queueTasks: queuedTasks,
     queueCandidates,
     onReorderQueue: fn(),
+    onInsertCandidate: fn(),
     onToggleQueueTask: fn(),
     onRemoveFromQueue: fn(),
     onAutoAssign: fn(),
@@ -291,6 +292,7 @@ export const Loading: Story = {
     queueTasks: [],
     queueCandidates: [],
     onReorderQueue: fn(),
+    onInsertCandidate: fn(),
     onToggleQueueTask: fn(),
     onRemoveFromQueue: fn(),
     onAutoAssign: fn(),
@@ -306,6 +308,27 @@ export const Empty: Story = {
     queueTasks: [],
     queueCandidates: [],
     onReorderQueue: fn(),
+    onInsertCandidate: fn(),
+    onToggleQueueTask: fn(),
+    onRemoveFromQueue: fn(),
+    onAutoAssign: fn(),
+    isAutoAssigning: false,
+  },
+}
+
+export const EmptyQueueWithCandidates: Story = {
+  args: {
+    isLoading: false,
+    backlogTasks: sampleCategorized.backlog,
+    calendarEvents: [],
+    queueTasks: [],
+    queueCandidates: getQueueCandidates(
+      sampleCategorized.all,
+      new Set(),
+      today,
+    ),
+    onReorderQueue: fn(),
+    onInsertCandidate: fn(),
     onToggleQueueTask: fn(),
     onRemoveFromQueue: fn(),
     onAutoAssign: fn(),

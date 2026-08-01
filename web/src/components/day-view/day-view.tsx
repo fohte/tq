@@ -3,6 +3,7 @@ import {
   DndContext,
   type DragEndEvent,
   PointerSensor,
+  useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -39,6 +40,33 @@ const MOBILE_TAB_OPTIONS = [
   { value: 'tasks', label: 'queue' },
 ] as const
 
+interface CandidateDragData extends Record<string, unknown> {
+  type: 'candidate'
+  taskId: string
+}
+
+function isCandidateDragData(
+  data: Record<string, unknown> | undefined,
+): data is CandidateDragData {
+  return data?.['type'] === 'candidate'
+}
+
+function EmptyQueueDropZone() {
+  const { setNodeRef, isOver } = useDroppable({ id: 'empty-queue' })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'p-4 text-center text-sm text-muted-foreground',
+        isOver && 'bg-muted',
+      )}
+    >
+      No tasks in today's queue
+    </div>
+  )
+}
+
 export interface DayViewPresentationProps {
   isLoading: boolean
   backlogTasks: Task[]
@@ -49,6 +77,7 @@ export interface DayViewPresentationProps {
   queueTasks: Task[]
   queueCandidates: QueueCandidate<Task>[]
   onReorderQueue: (taskIds: string[]) => void
+  onInsertCandidate: (taskId: string, index: number) => void
   onToggleQueueTask: (taskId: string) => void
   onRemoveFromQueue: (taskId: string) => void
   onAutoAssign: () => void
@@ -66,6 +95,7 @@ export function DayViewPresentation({
   queueTasks,
   queueCandidates,
   onReorderQueue,
+  onInsertCandidate,
   onToggleQueueTask,
   onRemoveFromQueue,
   onAutoAssign,
@@ -82,9 +112,19 @@ export function DayViewPresentation({
 
   const canAutoAssign = queueTasks.some((t) => t.estimatedMinutes != null)
 
-  const handleQueueDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
-    if (over == null || active.id === over.id) return
+    if (over == null) return
+
+    const activeData = active.data.current
+    if (isCandidateDragData(activeData)) {
+      const overIndex = queueTasks.findIndex((t) => t.id === over.id)
+      const insertIndex = overIndex === -1 ? queueTasks.length : overIndex
+      onInsertCandidate(activeData.taskId, insertIndex)
+      return
+    }
+
+    if (active.id === over.id) return
     const oldIndex = queueTasks.findIndex((t) => t.id === active.id)
     const newIndex = queueTasks.findIndex((t) => t.id === over.id)
     if (oldIndex === -1 || newIndex === -1) return
@@ -165,41 +205,37 @@ export function DayViewPresentation({
                 Loading...
               </div>
             ) : (
-              <>
-                {queueTasks.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    No tasks in today's queue
+              <DndContext
+                sensors={dndSensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={queueTasks.map((t) => t.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="py-1">
+                    {queueTasks.length === 0 ? (
+                      <EmptyQueueDropZone />
+                    ) : (
+                      queueTasks.map((task) => (
+                        <TodayQueueRow
+                          key={task.id}
+                          task={task}
+                          onRemove={() => {
+                            onRemoveFromQueue(task.id)
+                          }}
+                        />
+                      ))
+                    )}
                   </div>
-                ) : (
-                  <DndContext
-                    sensors={dndSensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleQueueDragEnd}
-                  >
-                    <SortableContext
-                      items={queueTasks.map((t) => t.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div className="py-1">
-                        {queueTasks.map((task) => (
-                          <TodayQueueRow
-                            key={task.id}
-                            task={task}
-                            onRemove={() => {
-                              onRemoveFromQueue(task.id)
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
-                )}
+                </SortableContext>
 
                 <QueueCandidatesSection
                   candidates={queueCandidates}
                   onAdd={onToggleQueueTask}
                 />
-              </>
+              </DndContext>
             )}
           </div>
 

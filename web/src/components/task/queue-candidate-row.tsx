@@ -1,5 +1,7 @@
+import { useDraggable } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 import { Link } from '@tanstack/react-router'
-import { Plus } from 'lucide-react'
+import { GripVertical, Plus } from 'lucide-react'
 
 import { Button } from '#components/ui/button'
 import type { Task } from '#hooks/use-tasks'
@@ -18,12 +20,39 @@ export function QueueCandidateRow({
   reason: CandidateReason
   onAdd: () => void
 }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: `candidate-${task.id}`,
+      data: { type: 'candidate', taskId: task.id },
+    })
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.5 : 1,
+  }
+
   return (
-    <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-1 border-b border-border"
+    >
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-xs"
+        {...attributes}
+        {...listeners}
+        aria-label="Drag to today's queue"
+        className="touch-none cursor-grab text-muted-foreground active:cursor-grabbing"
+      >
+        <GripVertical className="h-4 w-4" />
+      </Button>
+
       <Link
         to="/tasks/$taskId"
         params={{ taskId: task.id }}
-        className="min-w-0 flex-1 truncate text-sm hover:underline"
+        className="min-w-0 flex-1 truncate py-2 text-sm hover:underline"
       >
         {task.title}
       </Link>
@@ -42,7 +71,7 @@ export function QueueCandidateRow({
         size="icon-xs"
         onClick={onAdd}
         aria-label="Add to today's queue"
-        className="shrink-0 text-muted-foreground hover:text-foreground"
+        className="mr-1 shrink-0 text-muted-foreground hover:text-foreground"
       >
         <Plus className="h-3.5 w-3.5" />
       </Button>
