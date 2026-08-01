@@ -72,13 +72,14 @@ export function registerWriteTools(server: McpServer): void {
     'create_task',
     {
       description:
-        'Create a new task. `labels` is an array of existing label names ' +
-        '(not label IDs); names that do not match any existing label are ' +
-        'ignored. `recurrenceRule`, when set, makes the task recur: `type` ' +
-        'is one of daily/weekly/monthly/custom, `interval` is the repeat ' +
-        'count (e.g. 2 with type weekly means every 2 weeks), `daysOfWeek` ' +
-        '(0=Sunday..6=Saturday) restricts a weekly rule to specific days, ' +
-        'and `dayOfMonth` (1-31) fixes the day for a monthly rule.',
+        'Create a new task. `labels` is an array of label names to attach; ' +
+        'names that do not match an existing label are created ' +
+        'automatically. `recurrenceRule`, when set, makes the task recur: ' +
+        '`type` is one of daily/weekly/monthly/custom, `interval` is the ' +
+        'repeat count (e.g. 2 with type weekly means every 2 weeks), ' +
+        '`daysOfWeek` (0=Sunday..6=Saturday) restricts a weekly rule to ' +
+        'specific days, and `dayOfMonth` (1-31) fixes the day for a ' +
+        'monthly rule.',
       inputSchema: { ...createTaskSchema.shape, agent: agentArgSchema },
     },
     async ({ agent, ...input }) =>
@@ -96,9 +97,12 @@ export function registerWriteTools(server: McpServer): void {
         'Partially update an existing task by id. Only the fields provided ' +
         'are changed; omit a field to leave it as-is. Nullable fields ' +
         '(description, startDate, dueDate, estimatedMinutes, projectId, ' +
-        'recurrenceRule) are cleared by passing null. `recurrenceRule` ' +
-        'takes the same shape as in create_task, or null to remove ' +
-        'recurrence from the task.',
+        'recurrenceRule) are cleared by passing null. `labels`, when ' +
+        'provided, replaces the full set of labels on the task — pass an ' +
+        'empty array to remove all labels; names that do not match an ' +
+        'existing label are created automatically. `recurrenceRule` takes ' +
+        'the same shape as in create_task, or null to remove recurrence ' +
+        'from the task.',
       inputSchema: {
         taskId: z.uuid(),
         ...updateTaskSchema.shape,

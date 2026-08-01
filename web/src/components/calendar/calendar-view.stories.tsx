@@ -54,7 +54,6 @@ function generateWeekEvents(): TimeBlockEvent[] {
         start: `${ds}T10:00:00`,
         end: `${ds}T12:00:00`,
         type: 'manual',
-        duration: '2h',
       },
     )
     if (dayOffset % 2 === 0) {
@@ -64,7 +63,6 @@ function generateWeekEvents(): TimeBlockEvent[] {
         start: `${ds}T14:00:00`,
         end: `${ds}T15:00:00`,
         type: 'auto',
-        duration: '1h',
       })
     }
     // Gym schedule on weekdays only (Mon-Fri)
@@ -131,7 +129,6 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T09:00:00`,
     end: `${dateStr}T10:00:00`,
     type: 'manual',
-    duration: '1h',
   },
   {
     id: '2',
@@ -139,7 +136,6 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T10:30:00`,
     end: `${dateStr}T11:30:00`,
     type: 'auto',
-    duration: '1h',
     parentRef: '#488 tq 作成',
   },
   {
@@ -155,7 +151,6 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T14:00:00`,
     end: `${dateStr}T15:00:00`,
     type: 'completed',
-    duration: '1h',
   },
   {
     id: '5',
@@ -185,7 +180,6 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T16:00:00`,
     end: `${dateStr}T16:30:00`,
     type: 'manual',
-    duration: '30m',
   },
   {
     id: '11',
@@ -265,7 +259,6 @@ export const SchedulesOnly: Story = {
         start: `${dateStr}T00:00:00`,
         end: `${dateStr}T07:00:00`,
         type: 'schedule',
-        duration: '7h',
         color: { accent: '#6C63FF' },
       },
       {
@@ -274,7 +267,6 @@ export const SchedulesOnly: Story = {
         start: `${dateStr}T07:00:00`,
         end: `${dateStr}T08:00:00`,
         type: 'schedule',
-        duration: '1h',
         color: { accent: '#52B788' },
       },
       {
@@ -283,7 +275,6 @@ export const SchedulesOnly: Story = {
         start: `${dateStr}T12:00:00`,
         end: `${dateStr}T13:00:00`,
         type: 'schedule',
-        duration: '1h',
         color: { accent: '#FF8400' },
       },
       {
@@ -292,7 +283,6 @@ export const SchedulesOnly: Story = {
         start: `${dateStr}T23:00:00`,
         end: `${tomorrowStr}T00:00:00`,
         type: 'schedule',
-        duration: '1h',
         color: { accent: '#6C63FF' },
       },
     ],
@@ -316,7 +306,6 @@ export const OvernightEvents: Story = {
         start: `${dateStr}T23:00:00`,
         end: `${tomorrowStr}T01:00:00`,
         type: 'manual',
-        duration: '2h',
       },
       {
         id: '8',

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatMinutes, parseDurationToMinutes } from '#lib/parse-duration'
+import { parseDurationToMinutes } from '#lib/parse-duration'
 
 describe('parseDurationToMinutes', () => {
   it('parses plain minutes', () => {
@@ -37,21 +37,5 @@ describe('parseDurationToMinutes', () => {
     expect(parseDurationToMinutes('')).toBeNull()
     expect(parseDurationToMinutes('abc')).toBeNull()
     expect(parseDurationToMinutes('h')).toBeNull()
-  })
-})
-
-describe('formatMinutes', () => {
-  it('formats minutes under an hour', () => {
-    expect(formatMinutes(30)).toBe('30m')
-  })
-
-  it('formats exact hours', () => {
-    expect(formatMinutes(60)).toBe('1h')
-    expect(formatMinutes(120)).toBe('2h')
-  })
-
-  it('formats hours and minutes', () => {
-    expect(formatMinutes(90)).toBe('1h30m')
-    expect(formatMinutes(135)).toBe('2h15m')
   })
 })

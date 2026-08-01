@@ -18,7 +18,8 @@ import {
   useUpdateSchedulingSettings,
 } from '#hooks/use-scheduling-settings'
 import { selectValueHandler } from '#lib/form-utils'
-import { formatMinutes, parseDurationToMinutes } from '#lib/parse-duration'
+import { formatMinutes } from '#lib/format'
+import { parseDurationToMinutes } from '#lib/parse-duration'
 
 type ContextValue = SchedulingSettings['defaultContext']
 const CONTEXT_VALUES = [
