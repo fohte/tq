@@ -8,8 +8,7 @@ type EventType = TimeBlockEvent['type']
 function EventBlockPreview({
   type = 'manual',
   title = 'API ドキュメント作成',
-  timeText = '09:00 - 10:00',
-  duration,
+  timeText = '09:00–10:00',
   parentRef,
   color,
   calendarColor,
@@ -18,7 +17,6 @@ function EventBlockPreview({
   type?: EventType
   title?: string
   timeText?: string
-  duration?: string
   parentRef?: string
   color?: { accent: string }
   calendarColor?: string | null
@@ -28,7 +26,7 @@ function EventBlockPreview({
     event: {
       title,
       allDay,
-      extendedProps: { type, duration, parentRef, color, calendarColor },
+      extendedProps: { type, parentRef, color, calendarColor },
     },
     timeText,
     isStart: true,
@@ -71,8 +69,7 @@ export const Manual: Story = {
   args: {
     type: 'manual',
     title: 'API ドキュメント作成',
-    timeText: '09:00 - 10:00',
-    duration: '1h',
+    timeText: '09:00–10:00',
   },
 }
 
@@ -80,8 +77,7 @@ export const ManualWithParent: Story = {
   args: {
     type: 'manual',
     title: 'テスト追加',
-    timeText: '10:30 - 11:30',
-    duration: '1h',
+    timeText: '10:30–11:30',
     parentRef: '#488 tq 作成',
   },
 }
@@ -90,8 +86,7 @@ export const AutoScheduled: Story = {
   args: {
     type: 'auto',
     title: 'コードレビュー',
-    timeText: '13:00 - 13:45',
-    duration: '45m',
+    timeText: '13:00–13:45',
   },
 }
 
@@ -99,7 +94,7 @@ export const GoogleCalendar: Story = {
   args: {
     type: 'gcal',
     title: 'Team standup',
-    timeText: '11:00 - 11:30',
+    timeText: '11:00–11:30',
   },
 }
 
@@ -116,7 +111,7 @@ export const GoogleCalendarWithColor: Story = {
   args: {
     type: 'gcal',
     title: 'Product sync',
-    timeText: '18:00 - 18:45',
+    timeText: '18:00–18:45',
     calendarColor: '#8E24AA',
   },
 }
@@ -125,7 +120,7 @@ export const GoogleCalendarSecondCalendar: Story = {
   args: {
     type: 'gcal',
     title: 'Dentist appointment',
-    timeText: '16:30 - 17:00',
+    timeText: '16:30–17:00',
     calendarColor: '#F6BF26',
   },
 }
@@ -134,8 +129,7 @@ export const Completed: Story = {
   args: {
     type: 'completed',
     title: 'CI パイプライン構築',
-    timeText: '14:00 - 15:00',
-    duration: '1h',
+    timeText: '14:00–15:00',
   },
 }
 
@@ -143,7 +137,7 @@ export const SchedulePurple: Story = {
   args: {
     type: 'schedule',
     title: 'Sleep',
-    timeText: '23:00 - 07:00',
+    timeText: '23:00–07:00',
     color: { accent: '#6C63FF' },
   },
 }
@@ -152,7 +146,7 @@ export const ScheduleGreen: Story = {
   args: {
     type: 'schedule',
     title: 'Gym',
-    timeText: '07:00 - 08:00',
+    timeText: '07:00–08:00',
     color: { accent: '#52B788' },
   },
 }
