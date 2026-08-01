@@ -9,6 +9,7 @@ import {
 import type { ReactNode } from 'react'
 
 import { TaskActivity } from '#components/task/task-activity'
+import type { ActivityItem } from '#hooks/use-task-activity'
 import type { Comment } from '#hooks/use-task-comments'
 
 const baseComments: Comment[] = [
@@ -42,16 +43,19 @@ const baseComments: Comment[] = [
 function Providers({
   children,
   comments = [],
+  events = [],
 }: {
   children: ReactNode
   comments?: Comment[]
+  events?: ActivityItem[]
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
 
-  // Pre-populate query cache with comments
+  // Pre-populate query caches with comments and activity events
   queryClient.setQueryData(['tasks', 'task-1', 'comments'], comments)
+  queryClient.setQueryData(['tasks', 'task-1', 'activity'], events)
 
   const rootRoute = createRootRoute({
     component: () => <>{children}</>,
@@ -69,9 +73,15 @@ function Providers({
   )
 }
 
-function ActivityStory({ comments = [] }: { comments?: typeof baseComments }) {
+function ActivityStory({
+  comments = [],
+  events = [],
+}: {
+  comments?: Comment[]
+  events?: ActivityItem[]
+}) {
   return (
-    <Providers comments={comments}>
+    <Providers comments={comments} events={events}>
       <div className="max-w-2xl p-6">
         <TaskActivity taskId="task-1" />
       </div>
@@ -93,12 +103,14 @@ type Story = StoryObj<typeof meta>
 export const Empty: Story = {
   args: {
     comments: [],
+    events: [],
   },
 }
 
 export const WithComments: Story = {
   args: {
     comments: baseComments,
+    events: [],
   },
 }
 
@@ -107,6 +119,7 @@ const [firstComment] = baseComments
 export const SingleComment: Story = {
   args: {
     comments: firstComment ? [firstComment] : [],
+    events: [],
   },
 }
 
@@ -120,6 +133,7 @@ export const ManyComments: Story = {
       updatedAt: new Date(Date.now() - 3_600_000 * (10 - i)).toISOString(),
       author: null,
     })),
+    events: [],
   },
 }
 
@@ -134,6 +148,57 @@ export const LlmAuthored: Story = {
         createdAt: new Date(Date.now() - 300_000).toISOString(),
         updatedAt: new Date(Date.now() - 300_000).toISOString(),
         author: { kind: 'llm', agent: 'claude-opus-5' },
+      },
+    ],
+    events: [],
+  },
+}
+
+export const MixedTimeline: Story = {
+  args: {
+    comments: [
+      {
+        id: 'comment-1',
+        taskId: 'task-1',
+        content:
+          'greedy な詰め方をやめたら auto-schedule の作り直しが 1/3 になった。minBlock のガードは別 PR に切る。',
+        createdAt: new Date(Date.now() - 3_600_000 * 3).toISOString(),
+        updatedAt: new Date(Date.now() - 3_600_000 * 3).toISOString(),
+        author: null,
+      },
+      {
+        id: 'comment-2',
+        taskId: 'task-1',
+        content: 'Applied the suggested fix and re-ran the test suite.',
+        createdAt: new Date(Date.now() - 300_000).toISOString(),
+        updatedAt: new Date(Date.now() - 300_000).toISOString(),
+        author: { kind: 'llm', agent: 'claude-opus-5' },
+      },
+    ],
+    events: [
+      {
+        id: 'event-1',
+        type: 'created',
+        createdAt: new Date(Date.now() - 3_600_000 * 6).toISOString(),
+        author: { kind: 'human', agent: null },
+      },
+      {
+        id: 'event-2',
+        type: 'github_linked',
+        createdAt: new Date(Date.now() - 3_600_000 * 5).toISOString(),
+        author: { kind: 'human', agent: null },
+        owner: 'fohte',
+        repo: 'tq',
+        number: 212,
+        kind: 'issue',
+      },
+      {
+        id: 'event-3',
+        type: 'status_changed',
+        createdAt: new Date(Date.now() - 3_600_000 * 2).toISOString(),
+        author: { kind: 'human', agent: null },
+        fromStatus: 'todo',
+        toStatus: 'in_progress',
       },
     ],
   },
