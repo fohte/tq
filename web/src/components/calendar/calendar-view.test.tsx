@@ -54,13 +54,20 @@ vi.mock('@fullcalendar/timegrid', () => ({ default: {} }))
 vi.mock('@fullcalendar/daygrid', () => ({ default: {} }))
 vi.mock('@fullcalendar/interaction', () => ({ default: {} }))
 
+const initialSelectedDate = new Date(2025, 2, 7)
+
 describe('CalendarView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('renders with day view by default', () => {
-    render(<CalendarView />)
+    render(
+      <CalendarView
+        selectedDate={initialSelectedDate}
+        onDateChange={vi.fn()}
+      />,
+    )
     expect(screen.getByTestId('fullcalendar')).toHaveAttribute(
       'data-view',
       'timeGridDay',
@@ -68,7 +75,13 @@ describe('CalendarView', () => {
   })
 
   it('renders with week view when initialView is week', () => {
-    render(<CalendarView initialView="week" />)
+    render(
+      <CalendarView
+        initialView="week"
+        selectedDate={initialSelectedDate}
+        onDateChange={vi.fn()}
+      />,
+    )
     expect(screen.getByTestId('fullcalendar')).toHaveAttribute(
       'data-view',
       'timeGridWeek',
@@ -76,7 +89,13 @@ describe('CalendarView', () => {
   })
 
   it('renders with month view when initialView is month', () => {
-    render(<CalendarView initialView="month" />)
+    render(
+      <CalendarView
+        initialView="month"
+        selectedDate={initialSelectedDate}
+        onDateChange={vi.fn()}
+      />,
+    )
     expect(screen.getByTestId('fullcalendar')).toHaveAttribute(
       'data-view',
       'dayGridMonth',
@@ -85,7 +104,12 @@ describe('CalendarView', () => {
 
   it('switches to week view when week button is clicked', async () => {
     const user = userEvent.setup()
-    render(<CalendarView />)
+    render(
+      <CalendarView
+        selectedDate={initialSelectedDate}
+        onDateChange={vi.fn()}
+      />,
+    )
 
     const weekButtons = screen.getAllByText('week')
     await user.click(atIndex(weekButtons, weekButtons.length - 1))
@@ -95,7 +119,12 @@ describe('CalendarView', () => {
 
   it('switches to month view when month button is clicked', async () => {
     const user = userEvent.setup()
-    render(<CalendarView />)
+    render(
+      <CalendarView
+        selectedDate={initialSelectedDate}
+        onDateChange={vi.fn()}
+      />,
+    )
 
     const monthButtons = screen.getAllByText('month')
     await user.click(atIndex(monthButtons, monthButtons.length - 1))
@@ -105,7 +134,13 @@ describe('CalendarView', () => {
 
   it('switches back to day view when day button is clicked from week view', async () => {
     const user = userEvent.setup()
-    render(<CalendarView initialView="week" />)
+    render(
+      <CalendarView
+        initialView="week"
+        selectedDate={initialSelectedDate}
+        onDateChange={vi.fn()}
+      />,
+    )
 
     const dayButtons = screen.getAllByText('day')
     await user.click(atIndex(dayButtons, dayButtons.length - 1))
@@ -115,7 +150,13 @@ describe('CalendarView', () => {
 
   it('navigates to day view on date click in month view', async () => {
     const user = userEvent.setup()
-    render(<CalendarView initialView="month" />)
+    render(
+      <CalendarView
+        initialView="month"
+        selectedDate={initialSelectedDate}
+        onDateChange={vi.fn()}
+      />,
+    )
 
     // Click the mock calendar to trigger dateClick
     await user.click(screen.getByTestId('fullcalendar'))
@@ -125,10 +166,98 @@ describe('CalendarView', () => {
   })
 
   it('highlights active view button', () => {
-    render(<CalendarView initialView="week" />)
+    render(
+      <CalendarView
+        initialView="week"
+        selectedDate={initialSelectedDate}
+        onDateChange={vi.fn()}
+      />,
+    )
 
     const weekButtons = screen.getAllByText('week')
     const activeWeekButton = atIndex(weekButtons, weekButtons.length - 1)
     expect(activeWeekButton).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('calls onDateChange with the new date when the Previous button is clicked', async () => {
+    const user = userEvent.setup()
+    const onDateChange = vi.fn()
+    render(
+      <CalendarView
+        selectedDate={initialSelectedDate}
+        onDateChange={onDateChange}
+      />,
+    )
+
+    await user.click(screen.getByLabelText('Previous'))
+
+    expect(mockPrev).toHaveBeenCalled()
+    expect(onDateChange).toHaveBeenCalledWith(mockGetDate())
+  })
+
+  it('calls onDateChange with the new date when the Next button is clicked', async () => {
+    const user = userEvent.setup()
+    const onDateChange = vi.fn()
+    render(
+      <CalendarView
+        selectedDate={initialSelectedDate}
+        onDateChange={onDateChange}
+      />,
+    )
+
+    await user.click(screen.getByLabelText('Next'))
+
+    expect(mockNext).toHaveBeenCalled()
+    expect(onDateChange).toHaveBeenCalledWith(mockGetDate())
+  })
+
+  it('calls onDateChange with the new date when the Today button is clicked', async () => {
+    const user = userEvent.setup()
+    const onDateChange = vi.fn()
+    render(
+      <CalendarView
+        selectedDate={initialSelectedDate}
+        onDateChange={onDateChange}
+      />,
+    )
+
+    await user.click(screen.getByText('today'))
+
+    expect(mockToday).toHaveBeenCalled()
+    expect(onDateChange).toHaveBeenCalledWith(mockGetDate())
+  })
+
+  it('syncs FullCalendar to a new selectedDate from an external source', () => {
+    const onDateChange = vi.fn()
+    const { rerender } = render(
+      <CalendarView
+        selectedDate={initialSelectedDate}
+        onDateChange={onDateChange}
+      />,
+    )
+
+    const externalDate = new Date(2025, 2, 20)
+    rerender(
+      <CalendarView selectedDate={externalDate} onDateChange={onDateChange} />,
+    )
+
+    expect(mockGotoDate).toHaveBeenCalledWith(externalDate)
+  })
+
+  it('does not call gotoDate when selectedDate changes to the same day FullCalendar already shows', () => {
+    const onDateChange = vi.fn()
+    const { rerender } = render(
+      <CalendarView
+        selectedDate={initialSelectedDate}
+        onDateChange={onDateChange}
+      />,
+    )
+
+    const sameDay = new Date(2025, 2, 7, 15, 30)
+    rerender(
+      <CalendarView selectedDate={sameDay} onDateChange={onDateChange} />,
+    )
+
+    expect(mockGotoDate).not.toHaveBeenCalled()
   })
 })

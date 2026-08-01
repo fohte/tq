@@ -240,6 +240,10 @@ const meta = {
       </Providers>
     ),
   ],
+  args: {
+    selectedDate: today,
+    onDateChange: fn(),
+  },
 } satisfies Meta<typeof DayViewPresentation>
 
 export default meta

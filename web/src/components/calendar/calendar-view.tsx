@@ -10,6 +10,7 @@ import {
   type CalendarViewType,
   FULLCALENDAR_VIEW_MAP,
 } from '#components/calendar/calendar-header'
+import { formatLocalDate } from '#lib/date-range'
 
 export interface TimeBlockEvent {
   id: string
@@ -38,6 +39,8 @@ interface CalendarViewProps {
   dndCallbacks?: CalendarDndCallbacks | undefined
   externalDragContainerRef?: React.RefObject<HTMLElement | null> | undefined
   initialView?: CalendarViewType
+  selectedDate: Date
+  onDateChange: (date: Date) => void
 }
 
 export function CalendarView({
@@ -45,43 +48,47 @@ export function CalendarView({
   dndCallbacks,
   externalDragContainerRef,
   initialView = 'day',
+  selectedDate,
+  onDateChange,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendarType>(null)
-  const [currentDate, setCurrentDate] = useState(new Date())
   const [activeView, setActiveView] = useState<CalendarViewType>(initialView)
 
   const handlePrev = useCallback(() => {
     const api = calendarRef.current?.getApi()
     if (api) {
       api.prev()
-      setCurrentDate(api.getDate())
+      onDateChange(api.getDate())
     }
-  }, [])
+  }, [onDateChange])
 
   const handleNext = useCallback(() => {
     const api = calendarRef.current?.getApi()
     if (api) {
       api.next()
-      setCurrentDate(api.getDate())
+      onDateChange(api.getDate())
     }
-  }, [])
+  }, [onDateChange])
 
   const handleToday = useCallback(() => {
     const api = calendarRef.current?.getApi()
     if (api) {
       api.today()
-      setCurrentDate(api.getDate())
+      onDateChange(api.getDate())
     }
-  }, [])
+  }, [onDateChange])
 
-  const handleViewChange = useCallback((view: CalendarViewType) => {
-    const api = calendarRef.current?.getApi()
-    if (api) {
-      api.changeView(FULLCALENDAR_VIEW_MAP[view])
-      setActiveView(view)
-      setCurrentDate(api.getDate())
-    }
-  }, [])
+  const handleViewChange = useCallback(
+    (view: CalendarViewType) => {
+      const api = calendarRef.current?.getApi()
+      if (api) {
+        api.changeView(FULLCALENDAR_VIEW_MAP[view])
+        setActiveView(view)
+        onDateChange(api.getDate())
+      }
+    },
+    [onDateChange],
+  )
 
   const handleDateClick = useCallback(
     (date: Date) => {
@@ -92,11 +99,11 @@ export function CalendarView({
           api.gotoDate(date)
           api.changeView('timeGridDay')
           setActiveView('day')
-          setCurrentDate(date)
+          onDateChange(date)
         }
       }
     },
-    [activeView],
+    [activeView, onDateChange],
   )
 
   // Sync FullCalendar view when activeView changes from external source (e.g. initialView)
@@ -113,15 +120,28 @@ export function CalendarView({
 
   const handleDatesSet = useCallback(
     (info: { start: Date; end: Date; view: { currentStart: Date } }) => {
-      setCurrentDate(info.view.currentStart)
+      onDateChange(info.view.currentStart)
     },
-    [],
+    [onDateChange],
   )
+
+  // Sync FullCalendar's internal date when selectedDate changes from an
+  // external source (e.g. the live-today rollover), so a subsequent
+  // prev/next computes from the reported selectedDate, not a stale anchor.
+  useEffect(() => {
+    const api = calendarRef.current?.getApi()
+    if (
+      api &&
+      formatLocalDate(api.getDate()) !== formatLocalDate(selectedDate)
+    ) {
+      api.gotoDate(selectedDate)
+    }
+  }, [selectedDate])
 
   return (
     <div className="flex h-full flex-col">
       <CalendarHeader
-        currentDate={currentDate}
+        currentDate={selectedDate}
         activeView={activeView}
         onPrev={handlePrev}
         onNext={handleNext}
@@ -137,6 +157,7 @@ export function CalendarView({
           dndCallbacks={dndCallbacks}
           externalDragContainerRef={externalDragContainerRef}
           onDateClick={handleDateClick}
+          initialDate={selectedDate}
         />
       </div>
     </div>
