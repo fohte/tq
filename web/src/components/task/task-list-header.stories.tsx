@@ -14,6 +14,7 @@ const makeTasks = (overrides: Array<Partial<Task>>): Task[] =>
     startDate: null,
     dueDate: null,
     estimatedMinutes: null,
+    labels: [],
     parentId: null,
     parentNumber: null,
     projectId: null,

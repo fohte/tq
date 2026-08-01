@@ -1,11 +1,18 @@
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { createFactory } from 'hono/factory'
 import { err, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
-import { recurrenceRules, taskGithubLinks, tasks, timeBlocks } from '#db/schema'
+import {
+  labels,
+  recurrenceRules,
+  taskGithubLinks,
+  taskLabels,
+  tasks,
+  timeBlocks,
+} from '#db/schema'
 
 export const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
 export const contextEnum = z.enum(['work', 'personal'])
@@ -89,6 +96,32 @@ export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
     createdAt: block.createdAt.toISOString(),
     updatedAt: block.updatedAt.toISOString(),
   }
+}
+
+// One query for any number of task ids, so list endpoints can attach labels
+// without an N+1 per task.
+export async function getLabelNamesByTaskId(
+  taskIds: string[],
+): Promise<Map<string, string[]>> {
+  const namesByTaskId = new Map<string, string[]>()
+  if (taskIds.length === 0) return namesByTaskId
+
+  const rows = await db
+    .select({ taskId: taskLabels.taskId, name: labels.name })
+    .from(taskLabels)
+    .innerJoin(labels, eq(taskLabels.labelId, labels.id))
+    .where(inArray(taskLabels.taskId, taskIds))
+
+  for (const row of rows) {
+    const names = namesByTaskId.get(row.taskId)
+    if (names) {
+      names.push(row.name)
+    } else {
+      namesByTaskId.set(row.taskId, [row.name])
+    }
+  }
+
+  return namesByTaskId
 }
 
 export type TaskResponseData = ReturnType<typeof taskToResponse>
