@@ -150,10 +150,11 @@ describe('SearchView', () => {
 
   it('shows no results message', () => {
     mockSearchReturn.hasQuery = true
+    mockSearchReturn.query = 'nonexistent'
     mockSearchReturn.results = []
     renderSearchView()
 
-    expect(screen.getByText('No results found')).toBeInTheDocument()
+    expect(screen.getByText('no results for "nonexistent"')).toBeInTheDocument()
   })
 
   it('calls setQuery on input change', async () => {
@@ -166,23 +167,23 @@ describe('SearchView', () => {
     expect(mockSearchReturn.setQuery).toHaveBeenCalled()
   })
 
-  it('renders cancel button when onBack is provided', () => {
+  it('renders esc-to-close hint when onBack is provided', () => {
     const onBack = vi.fn()
     renderSearchView(onBack)
-    expect(screen.getByText('Cancel')).toBeInTheDocument()
+    expect(screen.getByText('esc to close')).toBeInTheDocument()
   })
 
-  it('does not render cancel button when onBack is not provided', () => {
+  it('does not render esc-to-close hint when onBack is not provided', () => {
     renderSearchView()
-    expect(screen.queryByText('Cancel')).not.toBeInTheDocument()
+    expect(screen.queryByText('esc to close')).not.toBeInTheDocument()
   })
 
-  it('calls onBack when cancel button clicked', async () => {
+  it('calls onBack when esc-to-close hint clicked', async () => {
     const user = userEvent.setup()
     const onBack = vi.fn()
     renderSearchView(onBack)
 
-    await user.click(screen.getByText('Cancel'))
+    await user.click(screen.getByText('esc to close'))
     expect(onBack).toHaveBeenCalledOnce()
   })
 
@@ -282,7 +283,7 @@ describe('SearchView', () => {
       renderSearchView()
 
       const row = screen.getByTestId('search-result-row')
-      expect(row.className).toContain('opacity-50')
+      expect(row.className).toContain('opacity-[0.55]')
     })
   })
 })
