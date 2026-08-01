@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { GcalCalendarPicker } from '#components/settings/gcal-calendar-picker'
 import { GithubSyncRuleList } from '#components/settings/github-sync-rule-list'
 import { IntegrationCard } from '#components/settings/integration-card'
+import { KeybindingsList } from '#components/settings/keybindings-list'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
 import { Panel } from '#components/ui/panel'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
@@ -57,6 +58,10 @@ function Settings() {
 
           <div className="mt-8">
             <GithubSyncRuleList />
+          </div>
+
+          <div className="mt-8">
+            <KeybindingsList />
           </div>
         </div>
       </div>
