@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useFilteredTaskList } from '#hooks/use-filtered-tasks'
-import { useTaskList, useTaskMap } from '#hooks/use-tasks'
+import { useTaskMap } from '#hooks/use-tasks'
 import { useTodayTasks } from '#hooks/use-today-tasks'
 import { formatLocalDate } from '#lib/date-range'
 import { formatMinutes } from '#lib/format'
@@ -23,10 +23,13 @@ export function StatusLine() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const { nonBacklog, isLoading: isTaskListLoading } = useFilteredTaskList()
+  const {
+    nonBacklog,
+    all,
+    isLoading: isTaskListLoading,
+  } = useFilteredTaskList()
 
-  const { categorized } = useTaskList()
-  const taskMap = useTaskMap(categorized.all)
+  const taskMap = useTaskMap(all)
   const todayStr = useMemo(() => formatLocalDate(new Date()), [])
   const { data: todayTasksData, isLoading: isTodayTasksLoading } =
     useTodayTasks(todayStr)

@@ -153,7 +153,7 @@ describe('Sidebar', () => {
 
       expect(
         screen.getByRole('link', { name: /Project Alpha/ }),
-      ).toHaveTextContent('3/10')
+      ).toHaveTextContent('Project Alpha3/10')
     })
 
     it('shows both active and paused projects together', () => {
@@ -177,12 +177,13 @@ describe('Sidebar', () => {
         ],
       )
 
-      expect(
-        screen.getByRole('link', { name: /Project Alpha/ }),
-      ).toBeInTheDocument()
-      expect(
-        screen.getByRole('link', { name: /Project Beta/ }),
-      ).toBeInTheDocument()
+      const projectLinks = screen.getAllByRole('link', {
+        name: /^Project (Alpha|Beta)/,
+      })
+      expect(projectLinks.map((link) => link.textContent)).toEqual([
+        'Project Alpha1/2',
+        'Project Beta5/5',
+      ])
     })
   })
 })
