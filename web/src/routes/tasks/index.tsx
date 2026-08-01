@@ -10,18 +10,38 @@ import { CreateTaskModal } from '#components/task/create-task-modal'
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
 import { TaskListHeader } from '#components/task/task-list-header'
 import { TaskRow, TreeTaskRow } from '#components/task/task-row'
+import { Button } from '#components/ui/button'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
+import { KeybindHint } from '#components/ui/keybind-hint'
+import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
+import { SectionHeading } from '#components/ui/section-heading'
+import { TabStrip } from '#components/ui/tab-strip'
 import {
   useFilteredTaskList,
   useFilteredTaskTree,
 } from '#hooks/use-filtered-tasks'
-import { cn } from '#lib/utils'
 
 export const Route = createFileRoute('/tasks/')({
   component: TaskList,
 })
 
 type Tab = 'today' | 'all' | 'backlog'
+
+// TaskRow/TreeTaskRow lay out title/tags/link/est on wrapping flex lines, not
+// a matching grid, so these labels are a caption for the list rather than
+// literal column headers.
+function TaskListColumnHeader() {
+  return (
+    <div className="hidden items-center gap-2 border-b border-border bg-card px-3 py-[5px] font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint md:flex">
+      <span className="w-[52px] shrink-0" />
+      <span className="flex-1">TITLE</span>
+      <span className="w-[132px] shrink-0">TAGS</span>
+      <span className="w-[104px] shrink-0">LINK</span>
+      <span className="w-[72px] shrink-0 text-right">EST</span>
+      <span className="w-[56px] shrink-0 text-right">DUE</span>
+    </div>
+  )
+}
 
 function TaskList() {
   const [activeTab, setActiveTab] = useState<Tab>('today')
@@ -52,43 +72,58 @@ function TaskList() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 border-b border-border px-3 py-2">
-        {(['today', 'all', 'backlog'] as const).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => {
-              setActiveTab(tab)
-            }}
-            className={cn(
-              'rounded-md px-3 py-1 text-sm font-medium transition-colors',
-              activeTab === tab
-                ? 'bg-secondary text-foreground'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            {tab === 'today' ? 'Today' : tab === 'all' ? 'All' : 'Backlog'}
-            {tab === 'backlog' && tasks.backlog.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-muted-foreground/20 px-1.5 py-0.5 text-xs">
-                {tasks.backlog.length}
-              </span>
-            )}
-          </button>
-        ))}
+      <ScreenHeaderBar>
+        <SectionHeading level={2}>tasks</SectionHeading>
+        <TabStrip
+          className="ml-2.5"
+          value={activeTab}
+          onChange={setActiveTab}
+          options={[
+            { value: 'today', label: 'today' },
+            { value: 'all', label: 'all' },
+            {
+              value: 'backlog',
+              label: (
+                <>
+                  backlog{' '}
+                  <span className="text-muted-foreground-faint">
+                    {tasks.backlog.length}
+                  </span>
+                </>
+              ),
+            },
+          ]}
+        />
         <div className="ml-auto flex items-center gap-2">
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="xs"
             onClick={() => {
               setIsGithubModalOpen(true)
             }}
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             aria-label="Create task from GitHub"
           >
-            <GithubMarkIcon className="size-4" />
-          </button>
-          <ContextFilterInline />
+            <GithubMarkIcon className="size-[11px]" />
+            <span className="hidden md:inline">from issue</span>
+          </Button>
+          <Button
+            type="button"
+            size="xs"
+            className="hidden md:inline-flex"
+            onClick={() => {
+              setIsCreating(true)
+            }}
+          >
+            + new
+            <KeybindHint className="text-muted-foreground">n</KeybindHint>
+          </Button>
         </div>
+      </ScreenHeaderBar>
+
+      {/* Context filter (mobile only — desktop already has it in the sidebar) */}
+      <div className="border-b border-border px-3 py-2 md:hidden">
+        <ContextFilterInline />
       </div>
 
       {/* Summary header (Today tab) */}
@@ -111,6 +146,8 @@ function TaskList() {
           />
         </div>
       )}
+
+      <TaskListColumnHeader />
 
       {/* Task list */}
       <div className="flex-1 overflow-auto">
