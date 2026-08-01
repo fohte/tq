@@ -1,194 +1,112 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
-import type { LucideIcon } from 'lucide-react'
-import {
-  Calendar,
-  CheckSquare,
-  FolderKanban,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Plus,
-  Search,
-  Settings,
-  Sun,
-} from 'lucide-react'
-import { useState } from 'react'
 
 import { ContextFilter } from '#components/context-filter'
-import { ColorDot } from '#components/project/color-dot'
+import { KeybindHint } from '#components/ui/keybind-hint'
 import { useProjects } from '#hooks/use-projects'
 import { cn } from '#lib/utils'
 
 interface NavItem {
   to: string
-  icon: LucideIcon
   label: string
+  keybind: string
   exact?: boolean
 }
 
 const navItems: NavItem[] = [
-  { to: '/search', icon: Search, label: 'Search' },
-  { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
-  { to: '/', icon: Calendar, label: 'Calendar', exact: true },
-  { to: '/today', icon: Sun, label: 'Today' },
+  { to: '/today', label: 'Today', keybind: 'g d' },
+  { to: '/', label: 'Calendar', keybind: 'g c', exact: true },
+  { to: '/tasks', label: 'Tasks', keybind: 'g t' },
+  { to: '/projects', label: 'Projects', keybind: 'g p' },
+  { to: '/search', label: 'Search', keybind: '⌘K' },
 ]
 
-function CollapsedNavLink({ item }: { item: NavItem }) {
+const settingsNavItem: NavItem = {
+  to: '/settings',
+  label: 'Settings',
+  keybind: 'g s',
+}
+
+function NavLink({ item }: { item: NavItem }) {
   const matchRoute = useMatchRoute()
-  const isActive = matchRoute({ to: item.to, fuzzy: item.exact !== true })
+  const isActive =
+    matchRoute({ to: item.to, fuzzy: item.exact !== true }) !== false
 
   return (
     <Link
       to={item.to}
       className={cn(
-        'flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
-        'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-        isActive !== false
-          ? 'bg-sidebar-accent text-primary'
-          : 'text-sidebar-foreground/60',
+        'flex items-center gap-2 border-l-2 py-1.5 pr-3.5 pl-3 font-mono text-xs',
+        isActive
+          ? 'border-l-primary bg-card text-foreground'
+          : 'border-l-transparent text-muted-foreground hover:bg-card hover:text-foreground',
       )}
-      title={item.label}
     >
-      <item.icon className="h-5 w-5" />
+      <span className="flex-1 truncate text-left">{item.label}</span>
+      <KeybindHint>{item.keybind}</KeybindHint>
     </Link>
   )
 }
 
-function ExpandedNavLink({ item }: { item: NavItem }) {
-  const matchRoute = useMatchRoute()
-  const isActive = matchRoute({ to: item.to, fuzzy: item.exact !== true })
-
-  return (
-    <Link
-      to={item.to}
-      className={cn(
-        'flex h-10 items-center gap-3 rounded-lg px-4 text-sm transition-colors',
-        'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-        isActive !== false
-          ? 'bg-sidebar-accent text-primary'
-          : 'text-sidebar-foreground/60',
-      )}
-    >
-      <item.icon className="h-5 w-5 shrink-0" />
-      <span className="truncate">{item.label}</span>
-    </Link>
-  )
-}
-
-function ProjectsSection({ onNewProject }: { onNewProject: () => void }) {
+function ProjectsSection() {
   const { data: projects } = useProjects({ status: 'active' })
 
   return (
-    <div className="flex flex-col gap-1">
-      <span className="px-4 text-[10px] font-semibold uppercase text-muted-foreground">
-        Projects
-      </span>
-      {projects?.map((project) => (
-        <Link
-          key={project.id}
-          to="/projects/$projectId"
-          params={{ projectId: project.id }}
-          className="flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent"
-        >
-          <ColorDot color={project.color} size={8} />
-          <span className="truncate">{project.title}</span>
-        </Link>
-      ))}
-      <button
-        type="button"
-        onClick={onNewProject}
-        className="flex items-center gap-2 px-4 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <Plus className="size-3.5" />
-        <span>New</span>
-      </button>
+    <div className="flex shrink-0 flex-col">
+      <div className="flex items-center justify-between px-3.5 pb-1.5">
+        <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground-faint">
+          PROJECTS
+        </span>
+        <span className="font-mono text-[10px] text-muted-foreground-faint">
+          {projects?.length ?? 0}
+        </span>
+      </div>
+      <div className="flex max-h-[132px] flex-col overflow-y-auto">
+        {projects?.map((project) => (
+          <Link
+            key={project.id}
+            to="/projects/$projectId"
+            params={{ projectId: project.id }}
+            className="flex items-center gap-2 px-3.5 py-1 font-mono text-[11px] text-muted-foreground hover:bg-card hover:text-foreground"
+          >
+            <span aria-hidden className="size-[7px] shrink-0 bg-foreground" />
+            <span className="flex-1 truncate text-left">{project.title}</span>
+          </Link>
+        ))}
+      </div>
     </div>
   )
 }
 
-const projectNavItem: NavItem = {
-  to: '/projects',
-  icon: FolderKanban,
-  label: 'Projects',
-}
-
-const settingsNavItem: NavItem = {
-  to: '/settings',
-  icon: Settings,
-  label: 'Settings',
-}
-
-export function Sidebar({ onNewProject }: { onNewProject?: () => void }) {
-  const [expanded, setExpanded] = useState(false)
-
-  if (expanded) {
-    return (
-      <aside className="hidden md:flex h-screen w-[200px] flex-col border-r border-border bg-sidebar py-4">
-        <div className="flex items-center justify-between px-4 mb-4">
-          <Link to="/" className="text-lg font-bold text-primary">
-            tq
-          </Link>
-          <button
-            type="button"
-            onClick={() => {
-              setExpanded(false)
-            }}
-            className="text-sidebar-foreground/60 transition-colors hover:text-foreground"
-            title="Collapse sidebar"
-          >
-            <PanelLeftClose className="size-4" />
-          </button>
-        </div>
-
-        <nav className="flex flex-1 flex-col gap-1 px-2">
-          {navItems.map((item) => (
-            <ExpandedNavLink key={item.label} item={item} />
-          ))}
-
-          <div className="mx-2 my-2 h-px bg-border" />
-
-          <ProjectsSection onNewProject={onNewProject ?? (() => {})} />
-        </nav>
-
-        <div className="flex flex-col gap-2 px-2">
-          <ExpandedNavLink item={settingsNavItem} />
-          <div className="px-2">
-            <ContextFilter />
-          </div>
-        </div>
-      </aside>
-    )
-  }
-
+export function Sidebar() {
   return (
-    <aside className="hidden md:flex h-screen w-14 flex-col items-center border-r border-border bg-sidebar py-4">
-      <Link to="/" className="mb-6 text-lg font-bold text-primary">
-        tq
-      </Link>
+    <aside className="hidden h-screen w-[200px] shrink-0 flex-col border-r border-border bg-sidebar md:flex">
+      <div className="flex h-[41px] shrink-0 items-center gap-[7px] border-b border-border px-3.5">
+        <Link to="/" className="flex items-center gap-[7px]">
+          <span className="font-mono text-sm font-bold text-primary">&gt;</span>
+          <span className="font-mono text-sm font-bold tracking-tight text-foreground">
+            tq
+          </span>
+        </Link>
+        <span className="ml-auto font-mono text-[10px] text-muted-foreground-faint">
+          task queue
+        </span>
+      </div>
 
-      <nav className="flex flex-1 flex-col items-center gap-2">
+      <nav className="flex flex-col gap-px py-2">
         {navItems.map((item) => (
-          <CollapsedNavLink key={item.label} item={item} />
+          <NavLink key={item.to} item={item} />
         ))}
-
-        <div className="mx-2 my-2 h-px w-8 bg-border" />
-
-        <CollapsedNavLink item={projectNavItem} />
-
-        <button
-          type="button"
-          onClick={() => {
-            setExpanded(true)
-          }}
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          title="Expand sidebar"
-        >
-          <PanelLeftOpen className="h-5 w-5" />
-        </button>
       </nav>
 
-      <div className="mb-4 flex flex-col items-center gap-2">
-        <CollapsedNavLink item={settingsNavItem} />
-        <ContextFilter />
+      <div className="mx-3.5 mt-1.5 mb-2 border-t border-border" />
+
+      <ProjectsSection />
+
+      <div className="mt-auto border-t border-border">
+        <div className="px-2.5 py-2">
+          <ContextFilter />
+        </div>
+        <NavLink item={settingsNavItem} />
       </div>
     </aside>
   )

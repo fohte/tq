@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -14,15 +15,25 @@ vi.mock('@tanstack/react-router', () => ({
   useMatchRoute: () => () => false,
 }))
 
-describe('Sidebar', () => {
-  it('is hidden below the md breakpoint in its default collapsed state', () => {
-    render(
+function renderSidebar() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+
+  return render(
+    <QueryClientProvider client={queryClient}>
       <ContextFilterProvider>
         <Sidebar />
-      </ContextFilterProvider>,
-    )
+      </ContextFilterProvider>
+    </QueryClientProvider>,
+  )
+}
+
+describe('Sidebar', () => {
+  it('is hidden below the md breakpoint', () => {
+    renderSidebar()
     expect(screen.getByRole('complementary').className).toBe(
-      'hidden md:flex h-screen w-14 flex-col items-center border-r border-border bg-sidebar py-4',
+      'hidden h-screen w-[200px] shrink-0 flex-col border-r border-border bg-sidebar md:flex',
     )
   })
 })
