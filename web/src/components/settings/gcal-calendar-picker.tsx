@@ -55,6 +55,12 @@ export function GcalCalendarPicker({ account }: GcalCalendarPickerProps) {
             カレンダー一覧の取得に失敗しました
           </p>
         ))}
+
+      {updateSubscription.isError && (
+        <p className="py-1.5 text-xs text-destructive">
+          {updateSubscription.error.message}
+        </p>
+      )}
     </div>
   )
 }
