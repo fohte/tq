@@ -1,11 +1,12 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { TaskRow } from '#components/task/task-row'
 import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
+import { DragHandle } from '#components/ui/drag-handle'
 import { Input } from '#components/ui/input'
 import type { Task } from '#hooks/use-tasks'
 import { useUpdateTask } from '#hooks/use-tasks'
@@ -56,17 +57,11 @@ export function TodayQueueRow({
       style={style}
       className="flex items-center gap-1 border-b border-border"
     >
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        {...attributes}
-        {...listeners}
+      <DragHandle
+        attributes={attributes}
+        listeners={listeners}
         aria-label="Reorder task"
-        className="touch-none cursor-grab text-muted-foreground active:cursor-grabbing"
-      >
-        <GripVertical className="h-4 w-4" />
-      </Button>
+      />
 
       <div className="min-w-0 flex-1">
         <TaskRow task={task} draggable={task.status !== 'completed'} />

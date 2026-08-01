@@ -1,9 +1,10 @@
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { Link } from '@tanstack/react-router'
-import { GripVertical, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 
 import { Button } from '#components/ui/button'
+import { DragHandle } from '#components/ui/drag-handle'
 import type { Task } from '#hooks/use-tasks'
 import {
   type CandidateReason,
@@ -37,17 +38,11 @@ export function QueueCandidateRow({
       style={style}
       className="flex items-center gap-1 border-b border-border"
     >
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        {...attributes}
-        {...listeners}
+      <DragHandle
+        attributes={attributes}
+        listeners={listeners}
         aria-label="Drag to today's queue"
-        className="touch-none cursor-grab text-muted-foreground active:cursor-grabbing"
-      >
-        <GripVertical className="h-4 w-4" />
-      </Button>
+      />
 
       <Link
         to="/tasks/$taskId"
