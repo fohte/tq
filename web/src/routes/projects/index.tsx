@@ -39,7 +39,7 @@ function ProjectList() {
         />
         <Button
           size="xs"
-          className="ml-auto font-mono text-[11px]"
+          className="ml-auto text-[11px]"
           onClick={() => {
             setShowCreate(true)
           }}

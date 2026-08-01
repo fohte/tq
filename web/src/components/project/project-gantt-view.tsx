@@ -98,7 +98,7 @@ export function ProjectGanttView({ tasks }: { tasks: ProjectTask[] }) {
         <Button
           variant="outline"
           size="xs"
-          className="font-mono text-[11px]"
+          className="text-[11px]"
           onClick={scrollToToday}
         >
           Today

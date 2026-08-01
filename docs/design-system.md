@@ -116,16 +116,16 @@ content"** — `--font-mono` and `--font-editor` are deliberately different
 stacks (JetBrains-Mono-first vs. IBM-Plex-Mono-first) even though both
 eventually fall back to similar faces.
 
-| Role             | CSS variable    | Font stack                                                                          | Tailwind utility                                                                | Use for                                                                                          |
-| ---------------- | --------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Sans (default)   | `--font-sans`   | Helvetica Neue, Arial, Hiragino Kaku Gothic ProN, Hiragino Sans, Meiryo, sans-serif | `font-sans` (applied at `html` level, so this is the default — no class needed) | Reading content: task titles, descriptions, prose                                                |
-| Mono (UI chrome) | `--font-mono`   | JetBrains Mono Variable, IBM Plex Mono, monospace                                   | `font-mono`                                                                     | ALL UI chrome: nav labels, tabs, section headings, badges/chips, keybind hints, numeric counters |
-| Editor           | `--font-editor` | IBM Plex Mono, monospace                                                            | `font-editor`                                                                   | Markdown/page editor body text and textareas ONLY — not general UI chrome                        |
+| Role             | CSS variable    | Font stack                                                                          | Tailwind utility                                                                | Use for                                                                                                   |
+| ---------------- | --------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Sans (default)   | `--font-sans`   | Helvetica Neue, Arial, Hiragino Kaku Gothic ProN, Hiragino Sans, Meiryo, sans-serif | `font-sans` (applied at `html` level, so this is the default — no class needed) | Reading content: task titles, descriptions, prose                                                         |
+| Mono (UI chrome) | `--font-mono`   | JetBrains Mono Variable, IBM Plex Mono, monospace                                   | `font-mono`                                                                     | ALL UI chrome: nav labels, tabs, section headings, badges/chips, buttons, keybind hints, numeric counters |
+| Editor           | `--font-editor` | IBM Plex Mono, monospace                                                            | `font-editor`                                                                   | Markdown/page editor body text and textareas ONLY — not general UI chrome                                 |
 
 Examples:
 
 - Task title → `font-sans` (default, no class needed)
-- Nav label / tab / badge / keybind hint → `font-mono`
+- Nav label / tab / badge / button / keybind hint → `font-mono` (`Button` applies this by default, no class needed)
 - Markdown editor textarea → `font-editor`
 
 ## Radius policy

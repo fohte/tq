@@ -124,7 +124,7 @@ export function DayViewPresentation({
                   ? undefined
                   : 'Set an estimate on at least one queued task to auto-schedule'
               }
-              className="ml-auto font-mono"
+              className="ml-auto"
             >
               {isAutoAssigning ? 'scheduling…' : 'auto'}
             </Button>
