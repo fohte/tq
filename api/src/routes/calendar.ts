@@ -110,10 +110,10 @@ export const calendarApp = new Hono()
         googleCalendarProvider,
         code,
         'calendar',
-        ({ oauthTokenId }) =>
-          Promise.resolve(ensureDefaultCalendarSubscription(oauthTokenId)).then(
-            () => undefined,
-          ),
+        ({ oauthTokenId, accountLabel }) =>
+          Promise.resolve(
+            ensureDefaultCalendarSubscription(oauthTokenId, accountLabel),
+          ).then(() => undefined),
       )
     },
   )

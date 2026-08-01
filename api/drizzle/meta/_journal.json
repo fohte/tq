@@ -120,6 +120,13 @@
       "when": 1785553331208,
       "tag": "0016_add_github_sync_rules_seq",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1785598004557,
+      "tag": "0017_fix_primary_calendar_subscription",
+      "breakpoints": true
     }
   ]
 }

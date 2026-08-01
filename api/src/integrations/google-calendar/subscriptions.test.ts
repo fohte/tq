@@ -57,10 +57,30 @@ afterEach(() => {
 })
 
 describe('ensureDefaultCalendarSubscription', () => {
-  it("seeds a 'primary' subscription when the account has none", async () => {
+  it('seeds a subscription keyed by the account email when the account has none', async () => {
     const oauthTokenId = await insertBareToken('google-sub-1')
 
-    await ensureDefaultCalendarSubscription(oauthTokenId)
+    await ensureDefaultCalendarSubscription(oauthTokenId, 'user@example.com')
+
+    expect(
+      normalizeSubscriptions(await selectSubscriptions(oauthTokenId)),
+    ).toEqual([
+      {
+        id: 'ID',
+        oauthTokenId: 'TOKEN_ID',
+        calendarId: 'user@example.com',
+        displayName: null,
+        color: null,
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+      },
+    ])
+  })
+
+  it("falls back to the 'primary' alias when the account has no email", async () => {
+    const oauthTokenId = await insertBareToken('google-sub-1')
+
+    await ensureDefaultCalendarSubscription(oauthTokenId, null)
 
     expect(
       normalizeSubscriptions(await selectSubscriptions(oauthTokenId)),
@@ -77,16 +97,16 @@ describe('ensureDefaultCalendarSubscription', () => {
     ])
   })
 
-  it("is a no-op that leaves an existing 'primary' subscription's stored display name and color untouched", async () => {
+  it("is a no-op that leaves an existing subscription's stored display name and color untouched", async () => {
     const oauthTokenId = await insertBareToken('google-sub-1')
     await db.insert(calendarSubscriptions).values({
       oauthTokenId,
-      calendarId: 'primary',
+      calendarId: 'user@example.com',
       displayName: 'user@example.com',
       color: '#123456',
     })
 
-    await ensureDefaultCalendarSubscription(oauthTokenId)
+    await ensureDefaultCalendarSubscription(oauthTokenId, 'user@example.com')
 
     expect(
       normalizeSubscriptions(await selectSubscriptions(oauthTokenId)),
@@ -94,7 +114,7 @@ describe('ensureDefaultCalendarSubscription', () => {
       {
         id: 'ID',
         oauthTokenId: 'TOKEN_ID',
-        calendarId: 'primary',
+        calendarId: 'user@example.com',
         displayName: 'user@example.com',
         color: '#123456',
         createdAt: 'DATE',

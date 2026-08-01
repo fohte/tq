@@ -8,6 +8,10 @@ import type { CalendarListEntry } from '#integrations/types'
 
 export type CalendarSubscriptionRow = typeof calendarSubscriptions.$inferSelect
 
+// Fallback for the type-level possibility of a null accountLabel (never
+// actually happens for google_calendar: identifyAccount's userinfo schema
+// requires email). Kept as a last resort rather than the normal case — see
+// the calendarId comment on ensureDefaultCalendarSubscription below.
 const DEFAULT_CALENDAR_ID = 'primary'
 
 // Never fails (a bare select), matching listAccountTokens in oauth.ts: an
@@ -25,19 +29,29 @@ export function listSubscribedCalendars(
   )
 }
 
-// Seeds a 'primary' subscription so a freshly connected account behaves the
-// same as before this feature existed. onConflictDoNothing makes this a
-// no-op for an account that already has subscription rows (from an earlier
-// connect, or from this migration's backfill), so reconnecting an existing
-// account never re-adds 'primary' after the user has deliberately
-// unsubscribed from it.
+// Seeds a subscription to the account's primary calendar so a freshly
+// connected account behaves the same as before this feature existed. Uses
+// `accountLabel` (the account's email) rather than the Google Calendar API's
+// 'primary' alias as calendarId, since calendarList.list() never returns an
+// entry whose id is literally 'primary' — it returns the real calendar (with
+// a `primary: true` flag), which for a personal Google Calendar is keyed by
+// the account's own email. Seeding the alias instead of the real id let this
+// row (a) duplicate the real calendar's events once its id was separately
+// subscribed via setCalendarSubscription, and (b) become unremovable from
+// the settings screen, since it can never match a live calendarList entry.
+// onConflictDoNothing makes this a no-op for an account that already has
+// subscription rows (from an earlier connect, or from this migration's
+// backfill), so reconnecting an existing account never re-adds the primary
+// calendar after the user has deliberately unsubscribed from it.
 export function ensureDefaultCalendarSubscription(
   oauthTokenId: string,
+  accountLabel: string | null,
 ): ResultAsync<void, never> {
+  const calendarId = accountLabel ?? DEFAULT_CALENDAR_ID
   return ResultAsync.fromSafePromise(
     db
       .insert(calendarSubscriptions)
-      .values({ oauthTokenId, calendarId: DEFAULT_CALENDAR_ID })
+      .values({ oauthTokenId, calendarId })
       .onConflictDoNothing({
         target: [
           calendarSubscriptions.oauthTokenId,
