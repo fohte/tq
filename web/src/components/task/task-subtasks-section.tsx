@@ -1,9 +1,9 @@
 import { Link } from '@tanstack/react-router'
-import { Loader2 } from 'lucide-react'
 
 import { TaskStatusPicker } from '#components/task/task-status-picker'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
+import { SectionLoadingIndicator } from '#components/ui/section-loading-indicator'
 import type { Task } from '#hooks/use-tasks'
 import { useTaskList, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
@@ -12,14 +12,17 @@ import { cn } from '#lib/utils'
 // --- Subtasks Section (in task detail, self-fetching) ---
 
 export function TaskSubtasksSection({ taskId }: { taskId: string }) {
-  const { categorized, isLoading } = useTaskList({ parentId: taskId })
+  const { categorized, isLoading, isError } = useTaskList({ parentId: taskId })
 
   if (isLoading) {
+    return <SectionLoadingIndicator label="subtasks" />
+  }
+
+  if (isError) {
     return (
-      <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
-        <Loader2 className="size-3.5 animate-spin" />
-        loading subtasks...
-      </div>
+      <p className="font-mono text-xs text-destructive">
+        Failed to load subtasks.
+      </p>
     )
   }
 
