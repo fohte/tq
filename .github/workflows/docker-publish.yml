@@ -1,32 +1,19 @@
-<<<<<<< before updating
-name: Docker
-||||||| last update
-=======
 name: Docker publish
->>>>>>> after updating
 
 on:
   push:
     branches:
       - main
-<<<<<<< before updating
-||||||| last update
-=======
   workflow_dispatch:
->>>>>>> after updating
 
 permissions:
   contents: read
   packages: write
 
-<<<<<<< before updating
-||||||| last update
-=======
 concurrency:
   group: docker-publish-${{ github.ref }}
   cancel-in-progress: false
 
->>>>>>> after updating
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -35,15 +22,11 @@ jobs:
       matrix:
         include:
           - component: api
-<<<<<<< before updating
+            context: .
             dockerfile: ./api/Dockerfile
           - component: web
-            dockerfile: ./web/Dockerfile
-||||||| last update
-=======
             context: .
-            dockerfile: api/Dockerfile
->>>>>>> after updating
+            dockerfile: ./web/Dockerfile
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -70,12 +53,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
-<<<<<<< before updating
-          context: .
-||||||| last update
-=======
           context: ${{ matrix.context }}
->>>>>>> after updating
           file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}

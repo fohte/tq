@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup'
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: ['src/index.ts', 'src/db/migrate.ts'],
   format: ['esm'],
   // Keep in sync with the node version in .mise.toml.
   target: 'node24',

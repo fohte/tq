@@ -60,14 +60,10 @@ jobs:
         with:
           version: 2026.7.13
 
-<<<<<<< before updating
       # lefthook hooks (eslint, prettier, etc.) shell out to `pnpm`, so corepack
-      # must activate and dependencies must be installed before lefthook runs.
-||||||| last update
-=======
-      # corepack creates the pnpm executable inside mise's node install bin
-      # directory; reshim so the mise shims dir (which is on PATH) picks it up.
->>>>>>> after updating
+      # must activate before lefthook runs. corepack creates the pnpm executable
+      # inside mise's node install bin directory; reshim so the mise shims dir
+      # (which is on PATH) picks it up.
       - run: |
           corepack enable
           mise reshim

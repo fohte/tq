@@ -11,90 +11,34 @@
     "#*": "./src/*.ts"
   },
   "scripts": {
-    "dev": "tsx watch --import ./otel-register.mjs src/index.ts",
-    "build": "tsup src/index.ts src/db/migrate.ts --format esm --out-dir dist --clean",
-    "start": "node --import ./otel-register.mjs dist/index.js",
+    "dev": "tsx watch --import @fohte/service-kit/otel-register src/index.ts",
+    "build": "tsup",
+    "start": "node --import @fohte/service-kit/otel-register dist/index.js",
     "test": "conc pnpm:test:type pnpm:test:unit",
     "test:type": "tsc --noEmit",
     "test:unit": "vitest run",
-<<<<<<< before updating
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:migrate:prod": "node dist/db/migrate.js"
-||||||| last update
-    "test:unit": "vitest run"
-=======
-    "build": "tsup",
-    "start": "node --import @fohte/service-kit/otel-register dist/index.js",
-    "dev": "tsx watch --import @fohte/service-kit/otel-register src/index.ts"
->>>>>>> after updating
   },
   "dependencies": {
-<<<<<<< before updating
     "@aws-sdk/client-s3": "3.1075.0",
     "@aws-sdk/s3-request-presigner": "3.1075.0",
-||||||| last update
-    "@fohte/service-kit": "0.1.4",
-=======
->>>>>>> after updating
     "@fohte/service-kit": "0.1.6",
-<<<<<<< before updating
     "@hono/mcp": "0.3.1",
     "@hono/node-server": "1.19.14",
     "@hono/zod-validator": "0.7.6",
     "@modelcontextprotocol/sdk": "1.29.0",
-||||||| last update
-    "@fohte/service-kit": "0.1.4",
-=======
->>>>>>> after updating
     "@opentelemetry/api": "1.9.1",
-<<<<<<< before updating
-    "@opentelemetry/auto-instrumentations-node": "0.77.0",
-    "@opentelemetry/exporter-trace-otlp-proto": "0.219.0",
-    "@opentelemetry/instrumentation": "0.219.0",
-    "@opentelemetry/resources": "2.8.0",
-    "@opentelemetry/sdk-node": "0.219.0",
-    "@opentelemetry/sdk-trace-base": "2.8.0",
-    "@opentelemetry/semantic-conventions": "1.41.1",
-    "@sentry/node": "10.63.0",
-    "@sentry/opentelemetry": "10.63.0",
     "drizzle-orm": "0.45.2",
     "hono": "4.12.27",
     "neverthrow": "8.2.0",
     "postgres": "3.4.9",
     "zod": "4.3.6"
-||||||| last update
-    "@opentelemetry/auto-instrumentations-node": "0.77.0",
-    "@opentelemetry/exporter-trace-otlp-proto": "0.219.0",
-    "@opentelemetry/instrumentation": "0.219.0",
-    "@opentelemetry/resources": "2.8.0",
-    "@opentelemetry/sdk-node": "0.219.0",
-    "@opentelemetry/sdk-trace-base": "2.8.0",
-    "@opentelemetry/semantic-conventions": "1.41.1",
-    "@sentry/node": "10.63.0",
-    "@sentry/opentelemetry": "10.63.0",
-    "neverthrow": "8.2.0"
-=======
-    "neverthrow": "8.2.0"
->>>>>>> after updating
   },
   "devDependencies": {
-<<<<<<< before updating
     "aws-sdk-client-mock": "4.1.0",
     "drizzle-kit": "0.31.10",
-||||||| last update
-    "@opentelemetry/auto-instrumentations-node": "0.77.0",
-    "@opentelemetry/exporter-trace-otlp-proto": "0.219.0",
-    "@opentelemetry/instrumentation": "0.219.0",
-    "@opentelemetry/resources": "2.8.0",
-    "@opentelemetry/sdk-node": "0.219.0",
-    "@opentelemetry/sdk-trace-base": "2.8.0",
-    "@opentelemetry/semantic-conventions": "1.41.1",
-    "@sentry/node": "10.63.0",
-    "@sentry/opentelemetry": "10.63.0",
-    "neverthrow": "8.2.0"
-=======
->>>>>>> after updating
     "tsup": "8.5.1",
     "tsx": "4.23.1"
   }
