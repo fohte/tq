@@ -1,11 +1,11 @@
 import { Plus, X } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
+import { ProjectChip } from '#components/task/project-chip'
 import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
 import { useLabels } from '#hooks/use-labels'
-import { useProject } from '#hooks/use-projects'
 import { useCreateTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import {
@@ -214,12 +214,7 @@ export function CreateTaskInline({
   for (const label of parsed.labels) {
     ownChips.push({
       key: `label-${label}`,
-      label: (
-        <>
-          <span className="font-bold text-primary">#</span>
-          {label}
-        </>
-      ),
+      label: <LabelChipText label={label} />,
     })
   }
   if (parsed.context != null) {
@@ -312,12 +307,11 @@ export function CreateTaskInline({
           )}
           {inheritedLabelChips.map((label) => (
             <Chip key={`inherited-label-${label}`} size="sm">
-              <span className="font-bold text-primary">#</span>
-              {label}
+              <LabelChipText label={label} />
             </Chip>
           ))}
           {inherited?.projectId != null && (
-            <InheritedProjectChip projectId={inherited.projectId} />
+            <ProjectChip projectId={inherited.projectId} />
           )}
         </div>
       )}
@@ -325,10 +319,13 @@ export function CreateTaskInline({
   )
 }
 
-function InheritedProjectChip({ projectId }: { projectId: string }) {
-  const { data: project } = useProject(projectId)
-
-  return <Chip size="sm">project: {project?.title ?? '…'}</Chip>
+function LabelChipText({ label }: { label: string }) {
+  return (
+    <>
+      <span className="font-bold text-primary">#</span>
+      {label}
+    </>
+  )
 }
 
 export function FloatingActionButton({ onClick }: { onClick: () => void }) {

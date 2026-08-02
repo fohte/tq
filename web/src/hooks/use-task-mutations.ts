@@ -17,6 +17,16 @@ export interface CreateTaskInput {
   parentId?: string
 }
 
+// taskKeys.list() keys are ['tasks', 'list', filter], where filter carries
+// an optional parentId — read it back without an unsafe cast.
+function listKeyParentId(key: readonly unknown[]): string | undefined {
+  const filter = key[2]
+  if (typeof filter !== 'object' || filter === null) return undefined
+  if (!('parentId' in filter)) return undefined
+  const { parentId } = filter
+  return typeof parentId === 'string' ? parentId : undefined
+}
+
 export function useCreateTask() {
   const queryClient = useQueryClient()
 
@@ -58,13 +68,17 @@ export function useCreateTask() {
         updatedAt: now,
       }
 
-      queryClient.setQueriesData<Task[]>(
-        { queryKey: taskKeys.lists },
-        (old) => {
-          if (!old) return [optimisticTask]
-          return [optimisticTask, ...old]
-        },
-      )
+      // Only insert into lists filtered by the same parentId — otherwise a
+      // subtask briefly leaks into an unrelated task's cached subtask list
+      // (or vice versa) until the next refetch. setQueriesData's updater
+      // doesn't receive the query key, so match/update each entry by hand.
+      for (const [key, data] of previousLists) {
+        if (listKeyParentId(key) !== input.parentId) continue
+        queryClient.setQueryData<Task[]>(
+          key,
+          data ? [optimisticTask, ...data] : [optimisticTask],
+        )
+      }
 
       return { previousLists }
     },
