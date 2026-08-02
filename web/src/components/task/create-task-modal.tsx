@@ -1,6 +1,7 @@
-import { Calendar, CalendarPlus, Clock, Layers, X } from 'lucide-react'
+import { Calendar, CalendarPlus, Clock, Layers, Tag, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { TagsInput } from '#components/task/tags-input'
 import { Button } from '#components/ui/button'
 import {
   Dialog,
@@ -59,6 +60,7 @@ export function CreateTaskModal({
   const [dueDate, setDueDate] = useState('')
   const [estimateInput, setEstimateInput] = useState('')
   const [context, setContext] = useState<ContextValue | ''>('')
+  const [labels, setLabels] = useState<string[]>([])
   const createTask = useCreateTask()
 
   // Sync startDate when defaultStartDate prop changes (e.g. tab switch)
@@ -78,6 +80,7 @@ export function CreateTaskModal({
     setDueDate('')
     setEstimateInput('')
     setContext('')
+    setLabels([])
   }, [defaultStartDate])
 
   const handleOpenChange = useCallback(
@@ -101,6 +104,7 @@ export function CreateTaskModal({
       ...(dueDate ? { dueDate } : {}),
       ...(parsedMinutes != null ? { estimatedMinutes: parsedMinutes } : {}),
       ...(context ? { context } : {}),
+      ...(labels.length > 0 ? { labels } : {}),
       ...(projectId != null ? { projectId } : {}),
     }
 
@@ -247,6 +251,15 @@ export function CreateTaskModal({
                       </SelectContent>
                     </Select>
                   </InlineFieldGroup>
+                </div>
+
+                {/* Tags */}
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1 font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint">
+                    <Tag className="size-3.5" />
+                    TAGS
+                  </span>
+                  <TagsInput labels={labels} onLabelsChange={setLabels} />
                 </div>
               </div>
 
@@ -395,6 +408,9 @@ export function CreateTaskModal({
                     )}
                   />
                 </div>
+
+                {/* Tags */}
+                <TagsInput labels={labels} onLabelsChange={setLabels} />
 
                 {/* Create button */}
                 <Button

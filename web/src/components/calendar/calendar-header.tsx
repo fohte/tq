@@ -62,7 +62,7 @@ export function CalendarHeader({
           variant="outline"
           size="xs"
           onClick={onToday}
-          className="border-x-0 font-mono"
+          className="border-x-0"
         >
           today
         </Button>

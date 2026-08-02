@@ -1,3 +1,4 @@
+import { DndContext } from '@dnd-kit/core'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
@@ -93,7 +94,9 @@ const meta = {
     (Story) => (
       <Providers>
         <div className="w-96 border border-border">
-          <Story />
+          <DndContext>
+            <Story />
+          </DndContext>
         </div>
       </Providers>
     ),

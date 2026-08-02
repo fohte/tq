@@ -64,6 +64,53 @@ export const Default: Story = {
   },
 }
 
+export const AddsTag: Story = {
+  play: async ({ canvasElement, userEvent }) => {
+    const body = within(canvasElement.ownerDocument.body)
+
+    const addTagButtons = await body.findAllByRole('button', {
+      name: '+ add tag',
+    })
+    const addTagButton = addTagButtons[0]
+    if (addTagButton == null) throw new Error('Add tag button not found')
+    await userEvent.click(addTagButton)
+
+    const tagInputs = body.getAllByPlaceholderText('tag name')
+    const tagInput = tagInputs[0]
+    if (tagInput == null) throw new Error('Tag name input not found')
+    await userEvent.type(tagInput, 'urgent')
+    await userEvent.keyboard('{Enter}')
+
+    await expect(body.getAllByText('urgent').length).toBeGreaterThan(0)
+  },
+}
+
+export const EscapeInTagInputDoesNotCloseModal: Story = {
+  play: async ({ canvasElement, userEvent, args }) => {
+    const body = within(canvasElement.ownerDocument.body)
+
+    const addTagButtons = await body.findAllByRole('button', {
+      name: '+ add tag',
+    })
+    const addTagButton = addTagButtons[0]
+    if (addTagButton == null) throw new Error('Add tag button not found')
+    await userEvent.click(addTagButton)
+
+    const tagInputs = body.getAllByPlaceholderText('tag name')
+    const tagInput = tagInputs[0]
+    if (tagInput == null) throw new Error('Tag name input not found')
+    await userEvent.type(tagInput, 'urgent')
+    await userEvent.keyboard('{Escape}')
+
+    // The tag input closes on Escape, but the event must not bubble up to
+    // the Dialog and close the whole modal (and discard the in-progress task).
+    await expect(
+      body.queryByPlaceholderText('tag name'),
+    ).not.toBeInTheDocument()
+    await expect(args.onOpenChange).not.toHaveBeenCalled()
+  },
+}
+
 export const WithDefaultStartDate: Story = {
   args: {
     defaultStartDate: new Date().toISOString().slice(0, 10),

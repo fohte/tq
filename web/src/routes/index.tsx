@@ -202,6 +202,13 @@ function DayView() {
     setTodayTasks.mutate({ date: selectedDateStr, taskIds })
   }
 
+  const handleInsertCandidate = (taskId: string, index: number) => {
+    if (setTodayTasks.isPending) return
+    const nextTaskIds = [...queueTaskIds]
+    nextTaskIds.splice(index, 0, taskId)
+    setTodayTasks.mutate({ date: selectedDateStr, taskIds: nextTaskIds })
+  }
+
   const handleToggleQueueTask = (taskId: string) => {
     if (setTodayTasks.isPending) return
     const taskIds = queueTaskIdSet.has(taskId)
@@ -243,6 +250,7 @@ function DayView() {
       queueTasks={queueTasks}
       queueCandidates={queueCandidates}
       onReorderQueue={handleReorderQueue}
+      onInsertCandidate={handleInsertCandidate}
       onToggleQueueTask={handleToggleQueueTask}
       onRemoveFromQueue={handleToggleQueueTask}
       onAutoAssign={handleAutoAssign}
