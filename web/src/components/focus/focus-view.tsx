@@ -121,7 +121,7 @@ function FocusCard({
         </Button>
         <Button
           variant="secondary"
-          className="hidden font-mono md:inline-flex"
+          className="hidden md:inline-flex"
           onClick={() => {
             onDefer(task.id)
           }}
