@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { FocusViewPresentation } from '#components/focus/focus-view'
 import type { Task } from '#hooks/use-tasks'
 import { useTaskList, useTaskMap } from '#hooks/use-tasks'
-import { useTodayTasks } from '#hooks/use-today-tasks'
+import { useSetTodayTasks, useTodayTasks } from '#hooks/use-today-tasks'
 import { formatLocalDate } from '#lib/date-range'
 
 export const Route = createFileRoute('/today')({
@@ -19,6 +19,8 @@ export function TodayFocus() {
   const { data: todayTasksData, isLoading: isTodayTasksLoading } =
     useTodayTasks(todayStr)
   const isLoading = isTaskListLoading || isTodayTasksLoading
+
+  const setTodayTasks = useSetTodayTasks()
 
   const taskMap = useTaskMap(categorized.all)
 
@@ -49,6 +51,16 @@ export function TodayFocus() {
     return categorized.all.filter((t) => t.parentId === focusTask.id)
   }, [categorized.all, focusTask])
 
+  const handleDefer = (taskId: string) => {
+    if (setTodayTasks.isPending) return
+    setTodayTasks.mutate({
+      date: todayStr,
+      taskIds: (todayTasksData ?? [])
+        .map((t) => t.taskId)
+        .filter((id) => id !== taskId),
+    })
+  }
+
   return (
     <FocusViewPresentation
       isLoading={isLoading}
@@ -56,6 +68,7 @@ export function TodayFocus() {
       focusTask={focusTask}
       nextTask={nextTask}
       subtasks={subtasks}
+      onDefer={handleDefer}
     />
   )
 }

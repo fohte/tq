@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { fn } from 'storybook/test'
 
 import { FocusViewPresentation } from '#components/focus/focus-view'
 import type { Task } from '#hooks/use-tasks'
@@ -86,6 +87,9 @@ const meta = {
   component: FocusViewWithProviders,
   parameters: {
     layout: 'fullscreen',
+  },
+  args: {
+    onDefer: fn(),
   },
 } satisfies Meta<typeof FocusViewWithProviders>
 

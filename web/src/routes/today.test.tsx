@@ -1,12 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Task } from '#hooks/use-tasks'
 import { TodayFocus } from '#routes/today'
 
 const mockUseTaskList = vi.fn()
 const mockUseTodayTasks = vi.fn()
+const mockUseSetTodayTasks = vi.fn()
 
 vi.mock('#hooks/use-tasks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-tasks')>()
@@ -20,6 +22,8 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
 vi.mock('#hooks/use-today-tasks', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useTodayTasks: (...args: unknown[]) => mockUseTodayTasks(...args),
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+  useSetTodayTasks: (...args: unknown[]) => mockUseSetTodayTasks(...args),
 }))
 
 function makeTask(overrides: Partial<Task> = {}): Task {
@@ -63,6 +67,9 @@ function setup({
     data: queue.map((t) => ({ taskId: t.id })),
     isLoading: isTodayTasksLoading,
   })
+  const mutate = vi.fn()
+  mockUseSetTodayTasks.mockReturnValue({ mutate, isPending: false })
+  return { mutate }
 }
 
 function renderToday() {
@@ -85,6 +92,12 @@ function renderToday() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-03-20T09:00:00'))
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('TodayFocus', () => {
@@ -185,5 +198,36 @@ describe('TodayFocus', () => {
 
     expect(screen.getByText('Task B')).toBeInTheDocument()
     expect(screen.queryByText('UP NEXT')).not.toBeInTheDocument()
+  })
+
+  it('removes the focus task from today when defer is clicked', async () => {
+    const taskA = makeTask({ id: 'a', title: 'Task A' })
+    const taskB = makeTask({ id: 'b', title: 'Task B' })
+    const { mutate } = setup({ all: [taskA, taskB], queue: [taskA, taskB] })
+
+    renderToday()
+    vi.useRealTimers()
+    const user = userEvent.setup()
+    await user.click(screen.getByText('defer'))
+
+    expect(mutate).toHaveBeenCalledWith({
+      date: '2026-03-20',
+      taskIds: ['b'],
+    })
+  })
+
+  it('moves focus to the next task once the current task leaves the queue', () => {
+    const taskA = makeTask({ id: 'a', title: 'Task A' })
+    const taskB = makeTask({ id: 'b', title: 'Task B' })
+    setup({ all: [taskA, taskB], queue: [taskA, taskB] })
+
+    const { rerender } = renderToday()
+    expect(screen.getByText('Task A')).toBeInTheDocument()
+
+    setup({ all: [taskA, taskB], queue: [taskB] })
+    rerender()
+
+    expect(screen.getByText('Task B')).toBeInTheDocument()
+    expect(screen.queryByText('Task A')).not.toBeInTheDocument()
   })
 })
