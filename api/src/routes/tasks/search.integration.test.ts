@@ -213,6 +213,37 @@ describe('tasks search API', () => {
       const body = await jsonBody<TaskResponse[]>(res)
       expect(body).toHaveLength(1)
     })
+
+    it('includes the parent task number for a task with a parent', async () => {
+      const parent = await createTask('Parent task')
+      const child = await createTask('Child task', { parentId: parent.id })
+
+      const res = await app.request(
+        '/api/tasks/search?q=' + encodeURIComponent('Child task'),
+      )
+
+      expect(res.status).toBe(200)
+      const body =
+        await jsonBody<Array<TaskResponse & { parentNumber: number | null }>>(
+          res,
+        )
+      expect(body).toEqual([{ ...child, parentNumber: parent.number }])
+    })
+
+    it('returns a null parentNumber for a root task', async () => {
+      const task = await createTask('Root task')
+
+      const res = await app.request(
+        '/api/tasks/search?q=' + encodeURIComponent('Root task'),
+      )
+
+      expect(res.status).toBe(200)
+      const body =
+        await jsonBody<Array<TaskResponse & { parentNumber: number | null }>>(
+          res,
+        )
+      expect(body).toEqual([{ ...task, parentNumber: null }])
+    })
   })
 
   describe('GET /api/tasks/search/suggest', () => {

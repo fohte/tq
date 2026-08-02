@@ -43,11 +43,14 @@ export interface CategorizedTasks {
 
 type TaskContext = 'work' | 'personal'
 
-export function useTaskList(filter?: {
-  status?: TaskStatus
-  context?: TaskContext
-  parentId?: string
-}) {
+export function useTaskList(
+  filter?: {
+    status?: TaskStatus
+    context?: TaskContext
+    parentId?: string
+  },
+  options?: { enabled?: boolean },
+) {
   const query = useQuery({
     queryKey: taskKeys.list(filter),
     queryFn: async () => {
@@ -57,6 +60,7 @@ export function useTaskList(filter?: {
       assertOk(res)
       return res.json()
     },
+    enabled: options?.enabled ?? true,
   })
 
   const categorized = useMemo((): CategorizedTasks => {

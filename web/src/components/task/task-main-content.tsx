@@ -84,12 +84,14 @@ export function TaskMainContent({
       {subtasks ? (
         <TaskSubtasksList
           taskId={task.id}
+          parentTaskNumber={task.number}
           subtasks={subtasks}
           inherited={inheritedSubtaskAttributes}
         />
       ) : (
         <TaskSubtasksSection
           taskId={task.id}
+          parentTaskNumber={task.number}
           inherited={inheritedSubtaskAttributes}
         />
       )}

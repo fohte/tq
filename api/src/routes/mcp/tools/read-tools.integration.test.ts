@@ -282,7 +282,7 @@ describe('read tools', () => {
 
       const toolResult = await callTool('search_tasks', { q: 'deploy' })
 
-      expect(parseJson(toolResult)).toEqual([match])
+      expect(parseJson(toolResult)).toEqual([{ ...match, parentNumber: null }])
     })
 
     it('translates hasEstimate into the REST string param', async () => {
@@ -291,7 +291,9 @@ describe('read tools', () => {
 
       const toolResult = await callTool('search_tasks', { hasEstimate: false })
 
-      expect(parseJson(toolResult)).toEqual([withoutEstimate])
+      expect(parseJson(toolResult)).toEqual([
+        { ...withoutEstimate, parentNumber: null },
+      ])
     })
 
     it('translates hasDue into the REST string param', async () => {
@@ -302,7 +304,9 @@ describe('read tools', () => {
 
       const toolResult = await callTool('search_tasks', { hasDue: true })
 
-      expect(parseJson(toolResult)).toEqual([withDue])
+      expect(parseJson(toolResult)).toEqual([
+        { ...withDue, parentNumber: null },
+      ])
     })
   })
 

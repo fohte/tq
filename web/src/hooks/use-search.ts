@@ -135,7 +135,7 @@ export function buildQueryFromFilters(
   return parts.join(' ')
 }
 
-const searchKeys = {
+export const searchKeys = {
   all: ['search'] as const,
   query: (q: string) => [...searchKeys.all, q] as const,
   results: (q: string) => [...searchKeys.all, 'results', q] as const,

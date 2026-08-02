@@ -17,9 +17,11 @@ import { cn } from '#lib/utils'
 
 export function TaskSubtasksSection({
   taskId,
+  parentTaskNumber,
   inherited,
 }: {
   taskId: string
+  parentTaskNumber: number
   inherited: InheritedTaskAttributes
 }) {
   const { categorized, isLoading, isError } = useTaskList({ parentId: taskId })
@@ -39,6 +41,7 @@ export function TaskSubtasksSection({
   return (
     <TaskSubtasksList
       taskId={taskId}
+      parentTaskNumber={parentTaskNumber}
       subtasks={categorized.all}
       inherited={inherited}
     />
@@ -49,10 +52,12 @@ export function TaskSubtasksSection({
 
 export function TaskSubtasksList({
   taskId,
+  parentTaskNumber,
   subtasks,
   inherited,
 }: {
   taskId: string
+  parentTaskNumber: number
   subtasks: Task[]
   inherited: InheritedTaskAttributes
 }) {
@@ -72,7 +77,11 @@ export function TaskSubtasksList({
         {subtasks.map((subtask) => (
           <SubtaskRow key={subtask.id} subtask={subtask} />
         ))}
-        <AddSubtaskRow taskId={taskId} inherited={inherited} />
+        <AddSubtaskRow
+          taskId={taskId}
+          parentTaskNumber={parentTaskNumber}
+          inherited={inherited}
+        />
       </Panel>
     </div>
   )
@@ -82,9 +91,11 @@ export function TaskSubtasksList({
 
 function AddSubtaskRow({
   taskId,
+  parentTaskNumber,
   inherited,
 }: {
   taskId: string
+  parentTaskNumber: number
   inherited: InheritedTaskAttributes
 }) {
   const [isAdding, setIsAdding] = useState(false)
@@ -94,6 +105,7 @@ function AddSubtaskRow({
       <div className="border-t border-border">
         <CreateTaskInline
           parentId={taskId}
+          parentTaskNumber={parentTaskNumber}
           inherited={inherited}
           closeOnSubmit={false}
           onClose={() => {

@@ -23,6 +23,7 @@ import {
 import { selectValueHandler } from '#lib/form-utils'
 import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
+import { getDescendantIds } from '#lib/task-tree'
 import { cn } from '#lib/utils'
 
 // Shared chrome for a field's editable value: no border/height/padding of
@@ -300,11 +301,10 @@ function SidebarParentField({
   const updateParent = useUpdateTaskParent()
 
   const allTasks = categorized.all
-  const getDescendantIds = (id: string): string[] =>
-    allTasks
-      .filter((t) => t.parentId === id)
-      .flatMap((child) => [child.id, ...getDescendantIds(child.id)])
-  const invalidParentIds = new Set([taskId, ...getDescendantIds(taskId)])
+  const invalidParentIds = new Set([
+    taskId,
+    ...getDescendantIds(allTasks, taskId),
+  ])
   const candidates = allTasks.filter((t) => !invalidParentIds.has(t.id))
 
   return (
