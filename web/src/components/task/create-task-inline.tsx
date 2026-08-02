@@ -1,12 +1,20 @@
 import { Plus, X } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
+import { CreateTaskInlineExistingMenu } from '#components/task/create-task-inline-existing-menu'
+import { LinkExistingTaskDialog } from '#components/task/link-existing-task-dialog'
 import { ProjectChip } from '#components/task/project-chip'
 import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
 import { useLabels } from '#hooks/use-labels'
-import { useCreateTask } from '#hooks/use-tasks'
+import type { SearchResult } from '#hooks/use-search'
+import { useSearchTasks } from '#hooks/use-search'
+import {
+  useCreateTask,
+  useTaskList,
+  useUpdateTaskParent,
+} from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import {
   detectTrigger,
@@ -16,6 +24,7 @@ import {
   type TaskContext,
   type TriggerChar,
 } from '#lib/task-input-parser'
+import { getDescendantIds } from '#lib/task-tree'
 import { cn } from '#lib/utils'
 
 export interface InheritedTaskAttributes {
@@ -24,10 +33,15 @@ export interface InheritedTaskAttributes {
   labels: string[]
 }
 
+function cycleIndex(current: number, delta: 1 | -1, length: number): number {
+  return (current + delta + length) % length
+}
+
 export function CreateTaskInline({
   onClose,
   defaultStartDate,
   parentId,
+  parentTaskNumber,
   inherited,
   closeOnSubmit = true,
 }: {
@@ -35,6 +49,9 @@ export function CreateTaskInline({
   defaultStartDate?: string
   /** When set, the created task becomes a child of this task. */
   parentId?: string
+  /** The current task's own number — used only for the "link existing task"
+   * confirmation dialog copy. Required whenever `parentId` is set. */
+  parentTaskNumber?: number
   /** Parent attributes to inherit (typed notation still wins over these). */
   inherited?: InheritedTaskAttributes
   /** Whether a successful submit should call `onClose` (default: true). */
@@ -48,10 +65,15 @@ export function CreateTaskInline({
     partial: string
     tokenStart: number
   } | null>(null)
+  const [existingMenuIndex, setExistingMenuIndex] = useState(0)
+  const [existingMenuDismissed, setExistingMenuDismissed] = useState(false)
+  const [linkDialogCandidate, setLinkDialogCandidate] =
+    useState<SearchResult | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
   const createTask = useCreateTask()
+  const updateTaskParent = useUpdateTaskParent()
   const { data: labelsData } = useLabels()
 
   const availableLabels = useMemo(
@@ -115,38 +137,120 @@ export function CreateTaskInline({
     [input, cursorTrigger],
   )
 
+  // --- Existing-task linking (only active when this row creates a subtask) ---
+
+  // Only searched while no @/>/#/% trigger dropdown is active, since the two
+  // dropdowns are mutually exclusive.
+  const existingSearchQuery =
+    parentId != null && cursorTrigger == null ? parsed.title.trim() : ''
+  const { data: searchResults } = useSearchTasks(existingSearchQuery)
+
+  const { categorized: allTasksForLinking } = useTaskList(undefined, {
+    enabled: parentId != null,
+  })
+
+  const excludedTaskIds = useMemo(() => {
+    if (parentId == null) return new Set<string>()
+    return new Set([
+      parentId,
+      ...getDescendantIds(allTasksForLinking.all, parentId),
+    ])
+  }, [parentId, allTasksForLinking.all])
+
+  const existingCandidates = useMemo(
+    () => (searchResults ?? []).filter((t) => !excludedTaskIds.has(t.id)),
+    [searchResults, excludedTaskIds],
+  )
+
+  const showExistingMenu =
+    parentId != null &&
+    parentTaskNumber != null &&
+    cursorTrigger == null &&
+    parsed.title.trim() !== '' &&
+    existingCandidates.length > 0 &&
+    !existingMenuDismissed
+
+  const finishLink = useCallback(() => {
+    setInput('')
+    setExistingMenuIndex(0)
+    if (closeOnSubmit) onClose()
+  }, [closeOnSubmit, onClose])
+
+  const selectCandidate = useCallback(
+    (candidate: SearchResult) => {
+      if (parentId == null) return
+      if (candidate.parentId == null) {
+        updateTaskParent.mutate(
+          { id: candidate.id, parentId },
+          { onSuccess: finishLink },
+        )
+      } else {
+        setLinkDialogCandidate(candidate)
+      }
+    },
+    [parentId, updateTaskParent, finishLink],
+  )
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Escape' && (!showSuggestions || suggestions.length === 0)) {
+    const suggestionsActive = showSuggestions && suggestions.length > 0
+
+    if (e.key === 'Escape') {
       e.preventDefault()
+      if (suggestionsActive) {
+        setShowSuggestions(false)
+        return
+      }
+      if (showExistingMenu) {
+        setExistingMenuIndex(0)
+        setExistingMenuDismissed(true)
+        return
+      }
       onClose()
       return
     }
 
-    if (!showSuggestions || suggestions.length === 0) return
+    if (suggestionsActive) {
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault()
+          setSelectedIndex((prev) => cycleIndex(prev, 1, suggestions.length))
+          break
+        case 'ArrowUp':
+          e.preventDefault()
+          setSelectedIndex((prev) => cycleIndex(prev, -1, suggestions.length))
+          break
+        case 'Enter':
+        case 'Tab':
+          e.preventDefault()
+          {
+            const suggestion = suggestions[selectedIndex]
+            if (suggestion != null) applySuggestion(suggestion)
+          }
+          break
+      }
+      return
+    }
 
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault()
-        setSelectedIndex((prev) => (prev + 1) % suggestions.length)
-        break
-      case 'ArrowUp':
-        e.preventDefault()
-        setSelectedIndex(
-          (prev) => (prev - 1 + suggestions.length) % suggestions.length,
-        )
-        break
-      case 'Enter':
-      case 'Tab':
-        e.preventDefault()
-        {
-          const suggestion = suggestions[selectedIndex]
-          if (suggestion != null) applySuggestion(suggestion)
-        }
-        break
-      case 'Escape':
-        e.preventDefault()
-        setShowSuggestions(false)
-        break
+    if (showExistingMenu) {
+      const total = existingCandidates.length + 1
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault()
+          setExistingMenuIndex((prev) => cycleIndex(prev, 1, total))
+          break
+        case 'ArrowUp':
+          e.preventDefault()
+          setExistingMenuIndex((prev) => cycleIndex(prev, -1, total))
+          break
+        case 'Enter':
+        case 'Tab':
+          if (existingMenuIndex > 0) {
+            e.preventDefault()
+            const candidate = existingCandidates[existingMenuIndex - 1]
+            if (candidate != null) selectCandidate(candidate)
+          }
+          break
+      }
     }
   }
 
@@ -190,6 +294,8 @@ export function CreateTaskInline({
     const value = e.target.value
     setInput(value)
     updateTrigger(value, e.target.selectionStart ?? value.length)
+    setExistingMenuIndex(0)
+    setExistingMenuDismissed(false)
   }
 
   const handleSelect = (e: React.SyntheticEvent<HTMLInputElement>) => {
@@ -277,6 +383,16 @@ export function CreateTaskInline({
               ))}
             </div>
           )}
+
+          {/* Combined create/existing-task dropdown */}
+          {showExistingMenu && (
+            <CreateTaskInlineExistingMenu
+              title={parsed.title.trim()}
+              candidates={existingCandidates}
+              highlightedIndex={existingMenuIndex}
+              onSelectCandidate={selectCandidate}
+            />
+          )}
         </div>
 
         <Button
@@ -314,6 +430,29 @@ export function CreateTaskInline({
             <ProjectChip projectId={inherited.projectId} />
           )}
         </div>
+      )}
+
+      {parentTaskNumber != null && (
+        <LinkExistingTaskDialog
+          candidate={linkDialogCandidate}
+          parentTaskNumber={parentTaskNumber}
+          open={linkDialogCandidate != null}
+          onOpenChange={(open) => {
+            if (!open) setLinkDialogCandidate(null)
+          }}
+          onConfirm={() => {
+            if (linkDialogCandidate == null || parentId == null) return
+            updateTaskParent.mutate(
+              { id: linkDialogCandidate.id, parentId },
+              {
+                onSuccess: () => {
+                  setLinkDialogCandidate(null)
+                  finishLink()
+                },
+              },
+            )
+          }}
+        />
       )}
     </div>
   )

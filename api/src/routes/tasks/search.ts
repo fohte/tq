@@ -5,7 +5,12 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { labels, taskComments, taskLabels, taskPages, tasks } from '#db/schema'
-import { contextEnum, taskStatus, taskToResponse } from '#routes/tasks/shared'
+import {
+  contextEnum,
+  parentTasks,
+  taskStatus,
+  taskWithParentNumberToResponse,
+} from '#routes/tasks/shared'
 import { parseSearchQuery } from '#search-query-parser'
 
 const searchQuerySchema = z.object({
@@ -147,15 +152,16 @@ export const tasksSearchApp = new Hono()
     const offset = query.offset ?? 0
 
     const result = await db
-      .select()
+      .select({ task: tasks, parentNumber: parentTasks.number })
       .from(tasks)
+      .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(orderBy)
       .limit(limit)
       .offset(offset)
 
     return c.json(
-      result.map((t) => taskToResponse(t)),
+      result.map((r) => taskWithParentNumberToResponse(r.task, r.parentNumber)),
       200,
     )
   })

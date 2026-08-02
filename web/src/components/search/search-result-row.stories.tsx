@@ -18,6 +18,7 @@ const baseTask: SearchResult = {
   dueDate: null,
   estimatedMinutes: null,
   parentId: null,
+  parentNumber: null,
   projectId: null,
   sortOrder: 0,
   recurrenceRuleId: null,

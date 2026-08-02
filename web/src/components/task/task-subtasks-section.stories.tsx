@@ -141,6 +141,7 @@ function SectionStory({
       <div className="max-w-2xl p-6">
         <TaskSubtasksList
           taskId={parentTaskId}
+          parentTaskNumber={1}
           subtasks={subtasks}
           inherited={inherited}
         />
