@@ -2,8 +2,10 @@ import { Plus, X } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { Button } from '#components/ui/button'
+import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
 import { useLabels } from '#hooks/use-labels'
+import { useProject } from '#hooks/use-projects'
 import { useCreateTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import {
@@ -11,16 +13,32 @@ import {
   getSuggestions,
   parseTaskInput,
   type SuggestionItem,
+  type TaskContext,
   type TriggerChar,
 } from '#lib/task-input-parser'
 import { cn } from '#lib/utils'
 
+export interface InheritedTaskAttributes {
+  context: TaskContext
+  projectId: string | null
+  labels: string[]
+}
+
 export function CreateTaskInline({
   onClose,
   defaultStartDate,
+  parentId,
+  inherited,
+  closeOnSubmit = true,
 }: {
   onClose: () => void
   defaultStartDate?: string
+  /** When set, the created task becomes a child of this task. */
+  parentId?: string
+  /** Parent attributes to inherit (typed notation still wins over these). */
+  inherited?: InheritedTaskAttributes
+  /** Whether a successful submit should call `onClose` (default: true). */
+  closeOnSubmit?: boolean
 }) {
   const [input, setInput] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -98,6 +116,12 @@ export function CreateTaskInline({
   )
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape' && (!showSuggestions || suggestions.length === 0)) {
+      e.preventDefault()
+      onClose()
+      return
+    }
+
     if (!showSuggestions || suggestions.length === 0) return
 
     switch (e.key) {
@@ -133,6 +157,10 @@ export function CreateTaskInline({
     if (!parsed.title.trim() || createTask.isPending) return
 
     const startDate = parsed.startDate ?? defaultStartDate
+    const context = parsed.context ?? inherited?.context
+    const labels = Array.from(
+      new Set([...(inherited?.labels ?? []), ...parsed.labels]),
+    )
 
     createTask.mutate(
       {
@@ -142,13 +170,17 @@ export function CreateTaskInline({
           : {}),
         ...(parsed.dueDate != null ? { dueDate: parsed.dueDate } : {}),
         ...(startDate != null ? { startDate } : {}),
-        ...(parsed.context != null ? { context: parsed.context } : {}),
-        ...(parsed.labels.length > 0 ? { labels: parsed.labels } : {}),
+        ...(context != null ? { context } : {}),
+        ...(labels.length > 0 ? { labels } : {}),
+        ...(inherited?.projectId != null
+          ? { projectId: inherited.projectId }
+          : {}),
+        ...(parentId != null ? { parentId } : {}),
       },
       {
         onSuccess: () => {
           setInput('')
-          onClose()
+          if (closeOnSubmit) onClose()
         },
       },
     )
@@ -165,23 +197,43 @@ export function CreateTaskInline({
     updateTrigger(el.value, el.selectionStart ?? el.value.length)
   }
 
-  // Preview chips for parsed fields
-  const previewChips: string[] = []
+  // Preview chips for own (typed) fields
+  const ownChips: { key: string; label: React.ReactNode }[] = []
   if (parsed.estimatedMinutes != null) {
-    previewChips.push(formatMinutes(parsed.estimatedMinutes))
+    ownChips.push({
+      key: 'estimate',
+      label: formatMinutes(parsed.estimatedMinutes),
+    })
   }
   if (parsed.dueDate != null) {
-    previewChips.push(`due: ${parsed.dueDate}`)
+    ownChips.push({ key: 'due', label: `due: ${parsed.dueDate}` })
   }
   if (parsed.startDate != null) {
-    previewChips.push(`start: ${parsed.startDate}`)
+    ownChips.push({ key: 'start', label: `start: ${parsed.startDate}` })
   }
   for (const label of parsed.labels) {
-    previewChips.push(`#${label}`)
+    ownChips.push({
+      key: `label-${label}`,
+      label: (
+        <>
+          <span className="font-bold text-primary">#</span>
+          {label}
+        </>
+      ),
+    })
   }
   if (parsed.context != null) {
-    previewChips.push(parsed.context)
+    ownChips.push({ key: 'context', label: parsed.context })
   }
+
+  // Preview chips for values inherited from the parent task — dimmer, and
+  // suppressed wherever the typed notation already covers the same field.
+  const inheritedContextChip =
+    parsed.context == null ? inherited?.context : undefined
+  const inheritedLabelChips = (inherited?.labels ?? []).filter(
+    (label) => !parsed.labels.includes(label),
+  )
+  const hasInheritedProjectChip = inherited?.projectId != null
 
   return (
     <div className="relative">
@@ -245,20 +297,38 @@ export function CreateTaskInline({
       </form>
 
       {/* Preview chips */}
-      {previewChips.length > 0 && (
+      {(ownChips.length > 0 ||
+        inheritedContextChip != null ||
+        inheritedLabelChips.length > 0 ||
+        hasInheritedProjectChip) && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2">
-          {previewChips.map((chip, index) => (
-            <span
-              key={`${chip}-${String(index)}`}
-              className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
-            >
-              {chip}
-            </span>
+          {ownChips.map((chip) => (
+            <Chip key={chip.key} size="sm" active>
+              {chip.label}
+            </Chip>
           ))}
+          {inheritedContextChip != null && (
+            <Chip size="sm">{inheritedContextChip}</Chip>
+          )}
+          {inheritedLabelChips.map((label) => (
+            <Chip key={`inherited-label-${label}`} size="sm">
+              <span className="font-bold text-primary">#</span>
+              {label}
+            </Chip>
+          ))}
+          {inherited?.projectId != null && (
+            <InheritedProjectChip projectId={inherited.projectId} />
+          )}
         </div>
       )}
     </div>
   )
+}
+
+function InheritedProjectChip({ projectId }: { projectId: string }) {
+  const { data: project } = useProject(projectId)
+
+  return <Chip size="sm">project: {project?.title ?? '…'}</Chip>
 }
 
 export function FloatingActionButton({ onClick }: { onClick: () => void }) {

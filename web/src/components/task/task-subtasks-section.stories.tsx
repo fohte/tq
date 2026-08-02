@@ -8,7 +8,9 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
+import { expect, within } from 'storybook/test'
 
+import type { InheritedTaskAttributes } from '#components/task/create-task-inline'
 import { TaskSubtasksList } from '#components/task/task-subtasks-section'
 import type { Task } from '#hooks/use-tasks'
 
@@ -99,11 +101,21 @@ function Providers({ children }: { children: ReactNode }) {
   )
 }
 
-function SectionStory({ subtasks }: { subtasks: Task[] }) {
+function SectionStory({
+  subtasks,
+  inherited,
+}: {
+  subtasks: Task[]
+  inherited: InheritedTaskAttributes
+}) {
   return (
     <Providers>
       <div className="max-w-2xl p-6">
-        <TaskSubtasksList subtasks={subtasks} />
+        <TaskSubtasksList
+          taskId={parentTaskId}
+          subtasks={subtasks}
+          inherited={inherited}
+        />
       </div>
     </Providers>
   )
@@ -114,6 +126,9 @@ const meta = {
   component: SectionStory,
   parameters: {
     layout: 'padded',
+  },
+  args: {
+    inherited: { context: 'work', projectId: null, labels: [] },
   },
 } satisfies Meta<typeof SectionStory>
 
@@ -130,4 +145,39 @@ export const AllCompleted: SectionStoryType = {
 
 export const Empty: SectionStoryType = {
   args: { subtasks: [] },
+}
+
+export const AddingSubtask: SectionStoryType = {
+  args: {
+    subtasks: mixedSubtasks,
+    inherited: { context: 'work', projectId: null, labels: ['dev:tq'] },
+  },
+  play: async ({ canvasElement, userEvent }) => {
+    const canvas = within(canvasElement)
+
+    const addButton = await canvas.findByRole('button', {
+      name: /add subtask/i,
+    })
+    await userEvent.click(addButton)
+
+    const input = await canvas.findByPlaceholderText(/New task/i)
+
+    // Inherited context/labels show as dim preview chips before typing.
+    await expect(canvas.getByText('work')).toBeInTheDocument()
+    await expect(canvas.getByText(/dev:tq/)).toBeInTheDocument()
+
+    // Typed notation overrides the inherited context.
+    await userEvent.type(input, '%personal ')
+    await expect(canvas.getByText('personal')).toBeInTheDocument()
+    await expect(canvas.queryByText('work')).not.toBeInTheDocument()
+
+    // Escape closes the row back to the trigger button.
+    await userEvent.keyboard('{Escape}')
+    await expect(
+      canvas.queryByPlaceholderText(/New task/i),
+    ).not.toBeInTheDocument()
+    await expect(
+      canvas.getByRole('button', { name: /add subtask/i }),
+    ).toBeInTheDocument()
+  },
 }

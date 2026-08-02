@@ -14,6 +14,7 @@ export interface CreateTaskInput {
   context?: 'work' | 'personal'
   labels?: string[]
   projectId?: string
+  parentId?: string
 }
 
 export function useCreateTask() {
@@ -46,7 +47,7 @@ export function useCreateTask() {
         startDate: input.startDate ?? null,
         dueDate: input.dueDate ?? null,
         estimatedMinutes: input.estimatedMinutes ?? null,
-        parentId: null,
+        parentId: input.parentId ?? null,
         parentNumber: null,
         projectId: input.projectId ?? null,
         sortOrder: 0,

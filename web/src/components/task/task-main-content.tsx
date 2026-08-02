@@ -77,11 +77,24 @@ export function TaskMainContent({
 
       {/* Subtasks */}
       {subtasks ? (
-        <TaskSubtasksList subtasks={subtasks} />
+        <TaskSubtasksList
+          taskId={task.id}
+          subtasks={subtasks}
+          inherited={{
+            context: task.context,
+            projectId: task.projectId,
+            labels: task.labels,
+          }}
+        />
       ) : (
-        task.childCompletionCount.total > 0 && (
-          <TaskSubtasksSection taskId={task.id} />
-        )
+        <TaskSubtasksSection
+          taskId={task.id}
+          inherited={{
+            context: task.context,
+            projectId: task.projectId,
+            labels: task.labels,
+          }}
+        />
       )}
 
       {/* Linked Tasks */}
