@@ -1,12 +1,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Task } from '#hooks/use-tasks'
+import { formatLocalDate } from '#lib/date-range'
 import { TodayFocus } from '#routes/today'
 
 const mockUseTaskList = vi.fn()
 const mockUseTodayTasks = vi.fn()
+const mockUseSetTodayTasks = vi.fn()
 
 vi.mock('#hooks/use-tasks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-tasks')>()
@@ -20,6 +23,8 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
 vi.mock('#hooks/use-today-tasks', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useTodayTasks: (...args: unknown[]) => mockUseTodayTasks(...args),
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+  useSetTodayTasks: (...args: unknown[]) => mockUseSetTodayTasks(...args),
 }))
 
 function makeTask(overrides: Partial<Task> = {}): Task {
@@ -63,6 +68,9 @@ function setup({
     data: queue.map((t) => ({ taskId: t.id })),
     isLoading: isTodayTasksLoading,
   })
+  const mutate = vi.fn()
+  mockUseSetTodayTasks.mockReturnValue({ mutate, isPending: false })
+  return { mutate }
 }
 
 function renderToday() {
@@ -185,5 +193,35 @@ describe('TodayFocus', () => {
 
     expect(screen.getByText('Task B')).toBeInTheDocument()
     expect(screen.queryByText('UP NEXT')).not.toBeInTheDocument()
+  })
+
+  it('removes the focus task from today when defer is clicked', async () => {
+    const taskA = makeTask({ id: 'a', title: 'Task A' })
+    const taskB = makeTask({ id: 'b', title: 'Task B' })
+    const { mutate } = setup({ all: [taskA, taskB], queue: [taskA, taskB] })
+    const user = userEvent.setup()
+
+    renderToday()
+    await user.click(screen.getByText('defer'))
+
+    expect(mutate).toHaveBeenCalledWith({
+      date: formatLocalDate(new Date()),
+      taskIds: ['b'],
+    })
+  })
+
+  it('moves focus to the next task once the current task is deferred', () => {
+    const taskA = makeTask({ id: 'a', title: 'Task A' })
+    const taskB = makeTask({ id: 'b', title: 'Task B' })
+    setup({ all: [taskA, taskB], queue: [taskA, taskB] })
+
+    const { rerender } = renderToday()
+    expect(screen.getByText('Task A')).toBeInTheDocument()
+
+    setup({ all: [taskA, taskB], queue: [taskB] })
+    rerender()
+
+    expect(screen.getByText('Task B')).toBeInTheDocument()
+    expect(screen.queryByText('Task A')).not.toBeInTheDocument()
   })
 })

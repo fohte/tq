@@ -20,6 +20,7 @@ export interface FocusViewPresentationProps {
   focusTask: Task | null
   nextTask: Task | null
   subtasks: Task[]
+  onDefer: (taskId: string) => void
 }
 
 function FocusLabel({ children }: { children: ReactNode }) {
@@ -88,7 +89,13 @@ function FocusProgress({ tasks }: { tasks: Task[] }) {
   )
 }
 
-function FocusCard({ task }: { task: Task }) {
+function FocusCard({
+  task,
+  onDefer,
+}: {
+  task: Task
+  onDefer: (taskId: string) => void
+}) {
   const completeTask = useCompleteTask()
 
   return (
@@ -111,6 +118,15 @@ function FocusCard({ task }: { task: Task }) {
           }}
         >
           complete
+        </Button>
+        <Button
+          variant="secondary"
+          className="hidden font-mono md:inline-flex"
+          onClick={() => {
+            onDefer(task.id)
+          }}
+        >
+          defer
         </Button>
         {task.estimatedMinutes != null && (
           <span className="font-mono text-[13px] text-muted-foreground-strong md:ml-auto">
@@ -213,6 +229,7 @@ export function FocusViewPresentation({
   focusTask,
   nextTask,
   subtasks,
+  onDefer,
 }: FocusViewPresentationProps) {
   if (isLoading) {
     return (
@@ -251,7 +268,7 @@ export function FocusViewPresentation({
       <div className="flex flex-1 justify-center overflow-y-auto px-3.5 py-4 md:px-6 md:py-10">
         <div className="flex w-full max-w-[620px] flex-col gap-5 md:gap-7">
           <FocusProgress tasks={queueTasks} />
-          <FocusCard task={focusTask} />
+          <FocusCard task={focusTask} onDefer={onDefer} />
           {subtasks.length > 0 && <FocusSubtasks subtasks={subtasks} />}
           <FocusNotes taskId={focusTask.id} />
           {nextTask && <FocusUpNext task={nextTask} />}
