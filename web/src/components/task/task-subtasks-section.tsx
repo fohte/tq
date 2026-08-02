@@ -1,5 +1,9 @@
 import { Link } from '@tanstack/react-router'
+import { Plus } from 'lucide-react'
+import { useState } from 'react'
 
+import type { InheritedTaskAttributes } from '#components/task/create-task-inline'
+import { CreateTaskInline } from '#components/task/create-task-inline'
 import { TaskStatusPicker } from '#components/task/task-status-picker'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
@@ -11,7 +15,13 @@ import { cn } from '#lib/utils'
 
 // --- Subtasks Section (in task detail, self-fetching) ---
 
-export function TaskSubtasksSection({ taskId }: { taskId: string }) {
+export function TaskSubtasksSection({
+  taskId,
+  inherited,
+}: {
+  taskId: string
+  inherited: InheritedTaskAttributes
+}) {
   const { categorized, isLoading, isError } = useTaskList({ parentId: taskId })
 
   if (isLoading) {
@@ -26,30 +36,85 @@ export function TaskSubtasksSection({ taskId }: { taskId: string }) {
     )
   }
 
-  return <TaskSubtasksList subtasks={categorized.all} />
+  return (
+    <TaskSubtasksList
+      taskId={taskId}
+      subtasks={categorized.all}
+      inherited={inherited}
+    />
+  )
 }
 
 // --- Subtasks List (pure presentation, for Storybook) ---
 
-export function TaskSubtasksList({ subtasks }: { subtasks: Task[] }) {
-  if (subtasks.length === 0) return null
-
+export function TaskSubtasksList({
+  taskId,
+  subtasks,
+  inherited,
+}: {
+  taskId: string
+  subtasks: Task[]
+  inherited: InheritedTaskAttributes
+}) {
   const completed = subtasks.filter((t) => t.status === 'completed').length
 
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-baseline gap-2">
         <SectionHeading level={3}>subtasks</SectionHeading>
-        <span className="font-mono text-[11px] text-muted-foreground-faint">
-          {completed}/{subtasks.length}
-        </span>
+        {subtasks.length > 0 && (
+          <span className="font-mono text-[11px] text-muted-foreground-faint">
+            {completed}/{subtasks.length}
+          </span>
+        )}
       </div>
       <Panel>
         {subtasks.map((subtask) => (
           <SubtaskRow key={subtask.id} subtask={subtask} />
         ))}
+        <AddSubtaskRow taskId={taskId} inherited={inherited} />
       </Panel>
     </div>
+  )
+}
+
+// --- Add Subtask Row ---
+
+function AddSubtaskRow({
+  taskId,
+  inherited,
+}: {
+  taskId: string
+  inherited: InheritedTaskAttributes
+}) {
+  const [isAdding, setIsAdding] = useState(false)
+
+  if (isAdding) {
+    return (
+      <div className="border-t border-border">
+        <CreateTaskInline
+          parentId={taskId}
+          inherited={inherited}
+          closeOnSubmit={false}
+          onClose={() => {
+            setIsAdding(false)
+          }}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setIsAdding(true)
+      }}
+      className="flex min-h-[44px] w-full items-center gap-1.5 border-t border-dashed border-border px-3 font-mono text-xs text-muted-foreground-faint transition-colors hover:text-muted-foreground"
+    >
+      <Plus className="size-3" />
+      add subtask
+    </button>
   )
 }
 

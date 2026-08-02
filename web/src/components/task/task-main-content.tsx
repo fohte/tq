@@ -1,8 +1,10 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import type { InheritedTaskAttributes } from '#components/task/create-task-inline'
 import { GithubLinkBadge } from '#components/task/github-link-badge'
 import { LlmAuthorLabel } from '#components/task/llm-author-label'
+import { ProjectChip } from '#components/task/project-chip'
 import { StatusIcon } from '#components/task/status-icon'
 import { TaskActivity } from '#components/task/task-activity'
 import { TaskLinkedTasksSection } from '#components/task/task-linked-tasks-section'
@@ -18,7 +20,6 @@ import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
-import { useProject } from '#hooks/use-projects'
 import { useTagFilter } from '#hooks/use-tag-filter'
 import type { TaskPage } from '#hooks/use-task-pages'
 import type { Task, TaskDetail } from '#hooks/use-tasks'
@@ -36,6 +37,12 @@ export function TaskMainContent({
   pages?: TaskPage[]
   subtasks?: Task[]
 }) {
+  const inheritedSubtaskAttributes: InheritedTaskAttributes = {
+    context: task.context,
+    projectId: task.projectId,
+    labels: task.labels,
+  }
+
   return (
     <div className="flex max-w-[720px] flex-col gap-[18px]">
       {/* Breadcrumb */}
@@ -56,9 +63,7 @@ export function TaskMainContent({
         {task.labels.length > 0 && <TaskTagChips labels={task.labels} />}
         <Chip>{task.context}</Chip>
         {task.githubLink != null && <GithubLinkBadge link={task.githubLink} />}
-        {task.projectId != null && (
-          <TaskProjectChip projectId={task.projectId} />
-        )}
+        {task.projectId != null && <ProjectChip projectId={task.projectId} />}
       </div>
 
       {/* Description */}
@@ -77,11 +82,16 @@ export function TaskMainContent({
 
       {/* Subtasks */}
       {subtasks ? (
-        <TaskSubtasksList subtasks={subtasks} />
+        <TaskSubtasksList
+          taskId={task.id}
+          subtasks={subtasks}
+          inherited={inheritedSubtaskAttributes}
+        />
       ) : (
-        task.childCompletionCount.total > 0 && (
-          <TaskSubtasksSection taskId={task.id} />
-        )
+        <TaskSubtasksSection
+          taskId={task.id}
+          inherited={inheritedSubtaskAttributes}
+        />
       )}
 
       {/* Linked Tasks */}
@@ -122,12 +132,6 @@ function TaskTagChips({ labels }: { labels: string[] }) {
       ))}
     </>
   )
-}
-
-function TaskProjectChip({ projectId }: { projectId: string }) {
-  const { data: project } = useProject(projectId)
-
-  return <Chip>project: {project?.title ?? '…'}</Chip>
 }
 
 // --- Breadcrumb ---
