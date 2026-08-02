@@ -8,6 +8,7 @@ import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
+import { SectionLoadingIndicator } from '#components/ui/section-loading-indicator'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
 import type { TaskPage } from '#hooks/use-task-pages'
 import {
@@ -30,12 +31,7 @@ export function TaskPagesSection({ taskId }: { taskId: string }) {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
-        <Loader2 className="size-3.5 animate-spin" />
-        loading pages...
-      </div>
-    )
+    return <SectionLoadingIndicator label="pages" />
   }
 
   return (

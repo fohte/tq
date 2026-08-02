@@ -16,7 +16,7 @@ type TreeNode = InferResponseType<typeof api.api.tasks.tree.$get, 200>[number]
 export const taskKeys = {
   all: ['tasks'] as const,
   lists: ['tasks', 'list'] as const,
-  list: (filter?: { status?: string; context?: string }) =>
+  list: (filter?: { status?: string; context?: string; parentId?: string }) =>
     [...taskKeys.lists, filter] as const,
   tree: ['tasks', 'tree'] as const,
   detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
@@ -46,6 +46,7 @@ type TaskContext = 'work' | 'personal'
 export function useTaskList(filter?: {
   status?: TaskStatus
   context?: TaskContext
+  parentId?: string
 }) {
   const query = useQuery({
     queryKey: taskKeys.list(filter),

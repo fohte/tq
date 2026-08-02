@@ -17,7 +17,7 @@ import {
 import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { TaskPage } from '#hooks/use-task-pages'
-import type { TaskDetail } from '#hooks/use-tasks'
+import type { Task, TaskDetail } from '#hooks/use-tasks'
 
 const samplePages: TaskPage[] = [
   {
@@ -66,11 +66,56 @@ const baseTask: TaskDetail = {
   updatedAt: '2026-03-20T00:00:00.000Z',
   titleAuthor: null,
   descriptionAuthor: null,
-  childCompletionCount: { completed: 1, total: 3 },
+  childCompletionCount: { completed: 0, total: 0 },
   pages: [],
   timeBlocks: [],
   links: { outgoing: [], incoming: [] },
 }
+
+const sampleSubtasks: Task[] = [
+  {
+    id: 'aaaa1111-0000-0000-0000-000000000001',
+    number: 2,
+    title: 'Add inline editing',
+    description: null,
+    status: 'completed',
+    context: 'work',
+    labels: [],
+    startDate: null,
+    dueDate: null,
+    estimatedMinutes: 30,
+    parentId: baseTask.id,
+    parentNumber: baseTask.number,
+    projectId: null,
+    sortOrder: 0,
+    recurrenceRuleId: null,
+    recurrenceRule: null,
+    githubLink: null,
+    createdAt: '2026-03-20T00:00:00.000Z',
+    updatedAt: '2026-03-20T00:00:00.000Z',
+  },
+  {
+    id: 'aaaa1111-0000-0000-0000-000000000002',
+    number: 3,
+    title: 'Add sidebar fields',
+    description: null,
+    status: 'todo',
+    context: 'work',
+    labels: [],
+    startDate: null,
+    dueDate: null,
+    estimatedMinutes: null,
+    parentId: baseTask.id,
+    parentNumber: baseTask.number,
+    projectId: null,
+    sortOrder: 1,
+    recurrenceRuleId: null,
+    recurrenceRule: null,
+    githubLink: null,
+    createdAt: '2026-03-20T00:00:00.000Z',
+    updatedAt: '2026-03-20T00:00:00.000Z',
+  },
+]
 
 function Providers({
   children,
@@ -127,16 +172,18 @@ function Providers({
 function MainContentStory({
   task,
   pages,
+  subtasks,
   project,
 }: {
   task: TaskDetail
   pages: TaskPage[]
+  subtasks: Task[]
   project?: ProjectDetail | undefined
 }) {
   return (
     <Providers project={project}>
       <div className="max-w-2xl p-6">
-        <TaskMainContent task={task} pages={pages} />
+        <TaskMainContent task={task} pages={pages} subtasks={subtasks} />
       </div>
     </Providers>
   )
@@ -157,6 +204,7 @@ export const Default: Story = {
   args: {
     task: { ...baseTask },
     pages: [],
+    subtasks: [],
   },
 }
 
@@ -164,6 +212,7 @@ export const InProgress: Story = {
   args: {
     task: { ...baseTask, status: 'in_progress', title: 'Review pull request' },
     pages: [],
+    subtasks: [],
   },
 }
 
@@ -175,6 +224,7 @@ export const Completed: Story = {
       title: 'Set up CI pipeline',
     },
     pages: [],
+    subtasks: [],
   },
 }
 
@@ -182,6 +232,7 @@ export const NoDescription: Story = {
   args: {
     task: { ...baseTask, description: null, title: 'Task without description' },
     pages: [],
+    subtasks: [],
   },
 }
 
@@ -193,6 +244,7 @@ export const WithTags: Story = {
       labels: ['dev:tq', 'chore'],
     },
     pages: [],
+    subtasks: [],
   },
 }
 
@@ -204,6 +256,7 @@ export const WithParent: Story = {
       title: 'Subtask with parent',
     },
     pages: [],
+    subtasks: [],
   },
 }
 
@@ -211,6 +264,19 @@ export const WithPages: Story = {
   args: {
     task: { ...baseTask, title: 'Task with pages' },
     pages: samplePages,
+    subtasks: [],
+  },
+}
+
+export const WithSubtasks: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Task with subtasks',
+      childCompletionCount: { completed: 1, total: 2 },
+    },
+    pages: [],
+    subtasks: sampleSubtasks,
   },
 }
 
@@ -223,6 +289,7 @@ export const LlmAuthored: Story = {
       descriptionAuthor: { kind: 'llm', agent: 'claude-opus-5' },
     },
     pages: [],
+    subtasks: [],
   },
 }
 
@@ -249,6 +316,7 @@ export const WithProject: Story = {
       title: 'Task with project',
     },
     pages: [],
+    subtasks: [],
     project: sampleProject,
   },
 }
@@ -258,19 +326,24 @@ export const WithProject: Story = {
 // with TaskSidebar/TaskSidebarMobile; these compose them with
 // TaskMainContent to exercise the full page layout.)
 
-export const FullPagePC: StoryObj<{ task: TaskDetail; pages: TaskPage[] }> = {
+export const FullPagePC: StoryObj<{
+  task: TaskDetail
+  pages: TaskPage[]
+  subtasks: Task[]
+}> = {
   args: {
     task: { ...baseTask },
     pages: samplePages,
+    subtasks: [],
   },
   parameters: {
     layout: 'fullscreen',
   },
-  render: ({ task, pages }) => (
+  render: ({ task, pages, subtasks }) => (
     <Providers>
       <div className="flex h-screen">
         <div className="flex-1 overflow-y-auto px-7 py-[22px]">
-          <TaskMainContent task={task} pages={pages} />
+          <TaskMainContent task={task} pages={pages} subtasks={subtasks} />
         </div>
         <div className="w-[236px] shrink-0 overflow-y-auto border-l border-border p-4">
           <TaskSidebar task={task} />
@@ -280,21 +353,26 @@ export const FullPagePC: StoryObj<{ task: TaskDetail; pages: TaskPage[] }> = {
   ),
 }
 
-export const FullPageSP: StoryObj<{ task: TaskDetail; pages: TaskPage[] }> = {
+export const FullPageSP: StoryObj<{
+  task: TaskDetail
+  pages: TaskPage[]
+  subtasks: Task[]
+}> = {
   args: {
     task: { ...baseTask },
     pages: samplePages,
+    subtasks: [],
   },
   parameters: {
     layout: 'fullscreen',
     viewport: { defaultViewport: 'mobile1' },
   },
-  render: ({ task, pages }) => (
+  render: ({ task, pages, subtasks }) => (
     <Providers>
       <div className="flex h-screen flex-col overflow-y-auto p-4">
         <TaskSidebarMobile task={task} />
         <div className="mt-4 border-t border-border pt-4">
-          <TaskMainContent task={task} pages={pages} />
+          <TaskMainContent task={task} pages={pages} subtasks={subtasks} />
         </div>
       </div>
     </Providers>
