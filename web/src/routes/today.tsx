@@ -55,7 +55,9 @@ export function TodayFocus() {
     if (setTodayTasks.isPending) return
     setTodayTasks.mutate({
       date: todayStr,
-      taskIds: queueTasks.filter((t) => t.id !== taskId).map((t) => t.id),
+      taskIds: (todayTasksData ?? [])
+        .map((t) => t.taskId)
+        .filter((id) => id !== taskId),
     })
   }
 

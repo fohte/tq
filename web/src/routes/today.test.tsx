@@ -1,10 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Task } from '#hooks/use-tasks'
-import { formatLocalDate } from '#lib/date-range'
 import { TodayFocus } from '#routes/today'
 
 const mockUseTaskList = vi.fn()
@@ -93,6 +92,12 @@ function renderToday() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-03-20T09:00:00'))
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('TodayFocus', () => {
@@ -199,18 +204,19 @@ describe('TodayFocus', () => {
     const taskA = makeTask({ id: 'a', title: 'Task A' })
     const taskB = makeTask({ id: 'b', title: 'Task B' })
     const { mutate } = setup({ all: [taskA, taskB], queue: [taskA, taskB] })
-    const user = userEvent.setup()
 
     renderToday()
+    vi.useRealTimers()
+    const user = userEvent.setup()
     await user.click(screen.getByText('defer'))
 
     expect(mutate).toHaveBeenCalledWith({
-      date: formatLocalDate(new Date()),
+      date: '2026-03-20',
       taskIds: ['b'],
     })
   })
 
-  it('moves focus to the next task once the current task is deferred', () => {
+  it('moves focus to the next task once the current task leaves the queue', () => {
     const taskA = makeTask({ id: 'a', title: 'Task A' })
     const taskB = makeTask({ id: 'b', title: 'Task B' })
     setup({ all: [taskA, taskB], queue: [taskA, taskB] })
