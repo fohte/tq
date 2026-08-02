@@ -105,7 +105,7 @@ function FocusCard({ task }: { task: Task }) {
       </h1>
       <div className="mt-4 flex items-center gap-3 md:mt-[18px]">
         <Button
-          className="flex-1 font-mono md:flex-none"
+          className="flex-1 md:flex-none"
           onClick={() => {
             completeTask.mutate(task.id)
           }}
