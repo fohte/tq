@@ -93,12 +93,25 @@ vi.mock('@tanstack/react-router', () => {
     },
     Link: ({
       children,
-      ...props
-    }: { children: React.ReactNode } & Record<string, unknown>) => (
-      <a href={typeof props['to'] === 'string' ? props['to'] : '#'}>
-        {children}
-      </a>
-    ),
+      to,
+      params,
+      className,
+    }: {
+      children: React.ReactNode
+      to?: string
+      params?: Record<string, string>
+      className?: string
+    }) => {
+      const href = Object.entries(params ?? {}).reduce(
+        (acc, [key, value]) => acc.replace(`$${key}`, value),
+        typeof to === 'string' ? to : '#',
+      )
+      return (
+        <a href={href} className={className}>
+          {children}
+        </a>
+      )
+    },
     useNavigate: () => vi.fn(),
   }
 })
@@ -230,66 +243,77 @@ describe('TaskPage', () => {
   })
 
   it('renders subtasks and links to their detail pages', () => {
+    const baseSubtask = {
+      id: 'subtask-001',
+      number: 43,
+      title: 'Subtask',
+      description: null,
+      status: 'todo' as const,
+      context: 'personal' as const,
+      labels: [],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      parentId: mockTask.id,
+      parentNumber: mockTask.number,
+      projectId: null,
+      sortOrder: 0,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      githubLink: null,
+      createdAt: '2026-03-20T00:00:00.000Z',
+      updatedAt: '2026-03-20T00:00:00.000Z',
+    }
+    const subtasks = [
+      {
+        ...baseSubtask,
+        id: 'subtask-001',
+        title: 'Finished subtask',
+        status: 'completed' as const,
+      },
+      {
+        ...baseSubtask,
+        id: 'subtask-002',
+        number: 44,
+        title: 'Pending subtask',
+        sortOrder: 1,
+      },
+    ]
+
     mockUseTask.mockReturnValue({
       data: { ...mockTask, childCompletionCount: { completed: 1, total: 2 } },
       isLoading: false,
       error: null,
     })
-    mockUseTaskList.mockReturnValue({
-      categorized: {
-        all: [
-          {
-            id: 'subtask-001',
-            number: 43,
-            title: 'Finished subtask',
-            description: null,
-            status: 'completed',
-            context: 'personal',
-            labels: [],
-            startDate: null,
-            dueDate: null,
-            estimatedMinutes: null,
-            parentId: mockTask.id,
-            parentNumber: mockTask.number,
-            projectId: null,
-            sortOrder: 0,
-            recurrenceRuleId: null,
-            recurrenceRule: null,
-            githubLink: null,
-            createdAt: '2026-03-20T00:00:00.000Z',
-            updatedAt: '2026-03-20T00:00:00.000Z',
-          },
-          {
-            id: 'subtask-002',
-            number: 44,
-            title: 'Pending subtask',
-            description: null,
-            status: 'todo',
-            context: 'personal',
-            labels: [],
-            startDate: null,
-            dueDate: null,
-            estimatedMinutes: null,
-            parentId: mockTask.id,
-            parentNumber: mockTask.number,
-            projectId: null,
-            sortOrder: 1,
-            recurrenceRuleId: null,
-            recurrenceRule: null,
-            githubLink: null,
-            createdAt: '2026-03-20T00:00:00.000Z',
-            updatedAt: '2026-03-20T00:00:00.000Z',
-          },
-        ],
-      },
-    })
+    mockUseTaskList.mockImplementation((filter?: { parentId?: string }) =>
+      filter?.parentId === mockTask.id
+        ? { categorized: { all: subtasks } }
+        : { categorized: { all: [] } },
+    )
+
     renderTaskPage()
 
-    expect(
-      screen.getAllByRole('link', { name: 'Finished subtask' }).length,
-    ).toBeGreaterThan(0)
-    expect(
-      screen.getAllByRole('link', { name: 'Pending subtask' }).length,
-    ).toBeGreaterThan(0)
+    expect(mockUseTaskList).toHaveBeenCalledWith({ parentId: mockTask.id })
+
+    // PC and SP layouts both render TaskMainContent, so each subtask appears twice.
+    const finishedLinks = screen.getAllByRole('link', {
+      name: 'Finished subtask',
+    })
+    expect(finishedLinks.map((el) => el.getAttribute('href'))).toEqual([
+      '/tasks/subtask-001',
+      '/tasks/subtask-001',
+    ])
+    expect(atIndex(finishedLinks, 0)).toHaveClass('line-through')
+
+    const pendingLinks = screen.getAllByRole('link', {
+      name: 'Pending subtask',
+    })
+    expect(pendingLinks.map((el) => el.getAttribute('href'))).toEqual([
+      '/tasks/subtask-002',
+      '/tasks/subtask-002',
+    ])
+    expect(atIndex(pendingLinks, 0)).not.toHaveClass('line-through')
+
+    expect(screen.getAllByText('1/2').length).toBeGreaterThan(0)
   })
 })
