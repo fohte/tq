@@ -20,14 +20,14 @@ export const contextEnum = z.enum(['work', 'personal'])
 export const taskListSortBy = z.enum(['created', 'updated'])
 export type TaskListSortBy = z.infer<typeof taskListSortBy>
 
-// `updated` shows the most recently touched tasks first; `created` (the
-// default) keeps the existing manual/creation order so callers that omit
-// `sortBy` see unchanged behavior.
+// Omitting `sortBy` preserves sortOrder-based manual ordering, which differs
+// from the explicit `created` option below (pure createdAt order).
 export function resolveTaskListOrderBy(sortBy?: TaskListSortBy) {
   switch (sortBy) {
     case 'updated':
       return [desc(tasks.updatedAt)]
     case 'created':
+      return [tasks.createdAt]
     default:
       return [tasks.sortOrder, tasks.createdAt]
   }

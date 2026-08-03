@@ -145,18 +145,36 @@ describe('tasks tree API', () => {
       const parent = await createTask('Parent')
       const childA = await createTask('Child A', { parentId: parent.id })
       const childB = await createTask('Child B', { parentId: parent.id })
+      const childC = await createTask('Child C', { parentId: parent.id })
 
-      // Force Child B's PATCH-driven `updatedAt` (millisecond precision) far
-      // past both children's creation time so it can't tie with Child A's
-      // `defaultNow()` insert timestamp regardless of request timing.
-      vi.useFakeTimers({ toFake: ['Date'] })
-      vi.setSystemTime(new Date('2030-01-01T00:00:00.000Z'))
-      await app.request(`/api/tasks/${childB.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'Child B (updated)' }),
-      })
-      vi.useRealTimers()
+      // See crud.integration.test.ts's analogous test for why every sibling
+      // needs a distinct, explicitly-patched `updatedAt`: all three share the
+      // same DB-default timestamp from this test's transaction start, so an
+      // unpatched sibling would tie with another and make `ORDER BY
+      // updated_at DESC` arbitrary between them.
+      const patchWithFakeTime = async (
+        taskId: string,
+        title: string,
+        time: string,
+      ) => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date(time))
+        const res = await app.request(`/api/tasks/${taskId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title }),
+        })
+        vi.useRealTimers()
+        expect(res.status).toBe(200)
+      }
+
+      await patchWithFakeTime(childA.id, 'Child A', '2030-01-01T00:00:00.000Z')
+      await patchWithFakeTime(childC.id, 'Child C', '2030-01-02T00:00:00.000Z')
+      await patchWithFakeTime(
+        childB.id,
+        'Child B (updated)',
+        '2030-01-03T00:00:00.000Z',
+      )
 
       const res = await app.request('/api/tasks/tree?sortBy=updated')
 
@@ -164,7 +182,11 @@ describe('tasks tree API', () => {
       const body = await jsonBody<TaskResponse[]>(res)
       assertDefined(body[0])
       assertDefined(body[0].children)
-      expect(body[0].children.map((c) => c.id)).toEqual([childB.id, childA.id])
+      expect(body[0].children.map((c) => c.title)).toEqual([
+        'Child B (updated)',
+        'Child C',
+        'Child A',
+      ])
     })
   })
 })

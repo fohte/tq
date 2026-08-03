@@ -108,6 +108,10 @@ describe('TaskList sort selector', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('Sort tasks')).toHaveValue('updated')
     })
+    // Two independent mocks, so each gets its own full-equality check rather
+    // than being fused into one array (which `fohte/no-inline-object-in-expect`
+    // forbids: it's for the same reason it disallows partial per-field checks
+    // on a single output — bundling unrelated values back-defeats the point).
     expect(mockUseFilteredTaskList.mock.calls[0]).toEqual(['updated'])
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
       { enabled: true, sortBy: 'updated' },
