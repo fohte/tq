@@ -38,7 +38,12 @@ export default defineConfig({
           name: 'storybook',
           browser: {
             enabled: true,
-            provider: playwright(),
+            // Pin the browser's timezone so time-dependent stories (calendar
+            // "now" indicators, relative timestamps) render identically
+            // regardless of the host machine's local timezone.
+            provider: playwright({
+              contextOptions: { timezoneId: 'Asia/Tokyo' },
+            }),
             headless: true,
             instances: [{ browser: 'chromium' }],
           },
