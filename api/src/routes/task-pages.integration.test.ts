@@ -74,45 +74,7 @@ describe('task pages API', () => {
   })
 
   describe('POST /api/tasks/:taskId/pages', () => {
-    it('creates a page with title only', async () => {
-      const task = await createTask('Task')
-
-      const res = await app.request(`/api/tasks/${task.id}/pages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'My Page' }),
-      })
-
-      expect(res.status).toBe(201)
-      const body = await jsonBody<PageResponse>(res)
-      expect(body.title).toBe('My Page')
-      expect(body.content).toBe('')
-      expect(body.sortOrder).toBe(0)
-      expect(body.taskId).toBe(task.id)
-      expect(body.id).toBeDefined()
-    })
-
-    it('creates a page with all fields', async () => {
-      const task = await createTask('Task')
-
-      const res = await app.request(`/api/tasks/${task.id}/pages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: 'Detailed Page',
-          content: '# Hello\nWorld',
-          sortOrder: 5,
-        }),
-      })
-
-      expect(res.status).toBe(201)
-      const body = await jsonBody<PageResponse>(res)
-      expect(body.title).toBe('Detailed Page')
-      expect(body.content).toBe('# Hello\nWorld')
-      expect(body.sortOrder).toBe(5)
-    })
-
-    it('defaults format to markdown when not specified', async () => {
+    it('creates a page with title only, defaulting format to markdown', async () => {
       const task = await createTask('Task')
 
       const res = await app.request(`/api/tasks/${task.id}/pages`, {
@@ -134,6 +96,26 @@ describe('task pages API', () => {
         updatedAt: 'DATE',
         author: { kind: 'human', agent: null },
       })
+    })
+
+    it('creates a page with all fields', async () => {
+      const task = await createTask('Task')
+
+      const res = await app.request(`/api/tasks/${task.id}/pages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Detailed Page',
+          content: '# Hello\nWorld',
+          sortOrder: 5,
+        }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await jsonBody<PageResponse>(res)
+      expect(body.title).toBe('Detailed Page')
+      expect(body.content).toBe('# Hello\nWorld')
+      expect(body.sortOrder).toBe(5)
     })
 
     it('creates a page with format html', async () => {

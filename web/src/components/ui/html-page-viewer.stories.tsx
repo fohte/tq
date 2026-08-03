@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
-import { HtmlPageViewer } from '#components/task/html-page-viewer'
+import { HtmlPageViewer } from '#components/ui/html-page-viewer'
 
 const meta = {
-  title: 'Task/TaskPages/HtmlPageViewer',
+  title: 'UI/HtmlPageViewer',
   component: HtmlPageViewer,
   parameters: {
     layout: 'padded',

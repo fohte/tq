@@ -146,12 +146,13 @@ export function registerWriteTools(server: McpServer): void {
       description:
         'Create a new page under a task. Pages hold longer-form content ' +
         "associated with a task, separate from the task's own " +
-        '`description` field. Set `format: "html"` to save a ' +
-        'self-contained HTML document instead of Markdown — it renders in ' +
-        "a sandboxed iframe with no access to this app's cookies, " +
-        'localStorage, or API, so inline any CSS/JS rather than ' +
-        'referencing external files. `sortOrder` controls display order ' +
-        "among the task's pages and defaults to 0.",
+        '`description` field. Set `format: "html"` to save an HTML ' +
+        'document instead of Markdown — it renders in a sandboxed iframe ' +
+        "with no access to this app's cookies, localStorage, or API. " +
+        'Prefer inlining any CSS/JS rather than referencing external ' +
+        "files, since there's no guarantee an external resource stays " +
+        'reachable when the page is viewed later. `sortOrder` controls ' +
+        "display order among the task's pages and defaults to 0.",
       inputSchema: {
         taskId: z.uuid(),
         ...createPageSchema.shape,

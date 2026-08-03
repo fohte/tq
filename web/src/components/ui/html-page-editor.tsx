@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { HtmlPageViewer } from '#components/task/html-page-viewer'
+import { HtmlPageViewer } from '#components/ui/html-page-viewer'
 import { SegmentedControl } from '#components/ui/segmented-control'
 import { Textarea } from '#components/ui/textarea'
 import { cn } from '#lib/utils'
@@ -47,7 +47,7 @@ export function HtmlPageEditor({
       />
       {mode === 'source' ? (
         <Textarea
-          defaultValue={defaultValue}
+          value={value}
           placeholder={placeholder}
           onChange={(e) => {
             setValue(e.target.value)
