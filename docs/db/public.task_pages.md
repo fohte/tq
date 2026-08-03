@@ -2,15 +2,16 @@
 
 ## Columns
 
-| Name       | Type                     | Default  | Nullable | Children                        | Parents                         | Comment |
-| ---------- | ------------------------ | -------- | -------- | ------------------------------- | ------------------------------- | ------- |
-| id         | text                     |          | false    | [public.edits](public.edits.md) |                                 |         |
-| task_id    | text                     |          | false    |                                 | [public.tasks](public.tasks.md) |         |
-| title      | text                     |          | false    |                                 |                                 |         |
-| content    | text                     | ''::text | false    |                                 |                                 |         |
-| sort_order | integer                  | 0        | false    |                                 |                                 |         |
-| created_at | timestamp with time zone | now()    | false    |                                 |                                 |         |
-| updated_at | timestamp with time zone | now()    | false    |                                 |                                 |         |
+| Name       | Type                     | Default          | Nullable | Children                        | Parents                         | Comment |
+| ---------- | ------------------------ | ---------------- | -------- | ------------------------------- | ------------------------------- | ------- |
+| id         | text                     |                  | false    | [public.edits](public.edits.md) |                                 |         |
+| task_id    | text                     |                  | false    |                                 | [public.tasks](public.tasks.md) |         |
+| title      | text                     |                  | false    |                                 |                                 |         |
+| content    | text                     | ''::text         | false    |                                 |                                 |         |
+| sort_order | integer                  | 0                | false    |                                 |                                 |         |
+| created_at | timestamp with time zone | now()            | false    |                                 |                                 |         |
+| updated_at | timestamp with time zone | now()            | false    |                                 |                                 |         |
+| format     | text                     | 'markdown'::text | false    |                                 |                                 |         |
 
 ## Constraints
 
@@ -42,6 +43,7 @@ erDiagram
   integer sort_order
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+  text format
 }
 "public.edits" {
   bigint id
