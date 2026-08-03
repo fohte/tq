@@ -151,8 +151,8 @@ importers:
         specifier: 7.19.0
         version: 7.19.0(@codemirror/language@6.12.4)(@codemirror/state@6.7.0)(@codemirror/view@6.43.5)(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-view@1.42.2)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(supports-color@10.2.2)(typescript@6.0.3)
       '@prosemirror-adapter/react':
-        specifier: 0.5.3
-        version: 0.5.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        specifier: 0.5.5
+        version: 0.5.5(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@svar-ui/react-gantt':
         specifier: 2.7.1
         version: 2.7.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -3007,11 +3007,11 @@ packages:
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
-  '@prosemirror-adapter/core@0.5.3':
-    resolution: {integrity: sha512-jGcI/eq3USFqf1fCaejgCmifmXYDyFco6/5KjyyNBnuEhLqyLjD+020CtcduEOsnN4xPZr5ikclgHIR6kEFkQg==}
+  '@prosemirror-adapter/core@0.5.5':
+    resolution: {integrity: sha512-R1BV/up0qApb0mtZt81I4TCBmalclqb43ecCQXiVHD5LpoarYHMMBzEoZFanSFg+8YxB1CmvbJwN+DLqbXJwsg==}
 
-  '@prosemirror-adapter/react@0.5.3':
-    resolution: {integrity: sha512-k/dpqT6FrC8vH/OeX9yZswQ3Acap1In4PeKj9SAh6BfMXPWOWFclU7K1mWwpD9aC1Va1npz+FZTMmXSsiQTsnw==}
+  '@prosemirror-adapter/react@0.5.5':
+    resolution: {integrity: sha512-bU6YakJ7wk6K1N+HfiJ8vKkMRl53nzAouazXdtEtzftFJNQ50c9gZPmoMOJM+EsOV1J9T7jnFh3v0TuwL4QnTA==}
     peerDependencies:
       react: '*'
       react-dom: '*'
@@ -11071,16 +11071,16 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
-  '@prosemirror-adapter/core@0.5.3':
+  '@prosemirror-adapter/core@0.5.5':
     dependencies:
       '@ocavue/utils': 1.7.0
       prosemirror-model: 1.25.11
       prosemirror-state: 1.4.4
       prosemirror-view: 1.42.2
 
-  '@prosemirror-adapter/react@0.5.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@prosemirror-adapter/react@0.5.5(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
-      '@prosemirror-adapter/core': 0.5.3
+      '@prosemirror-adapter/core': 0.5.5
       prosemirror-model: 1.25.11
       prosemirror-state: 1.4.4
       prosemirror-view: 1.42.2
