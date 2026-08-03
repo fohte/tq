@@ -1,3 +1,10 @@
+import { vi } from 'vitest'
+
+// Pin the clock so stories that read the current time (calendar "now"
+// indicators, relative timestamps, "today" fixtures built at module scope)
+// render identically regardless of when the VRT suite runs.
+vi.setSystemTime(new Date('2026-03-10T10:15:00+09:00'))
+
 // Milkdown throws contextNotFound during async cleanup when unmounting.
 // This is a library limitation, not an application bug.
 
