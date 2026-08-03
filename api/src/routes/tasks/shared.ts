@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm'
+import { desc, eq, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { createFactory } from 'hono/factory'
 import { err, ok, type Result } from 'neverthrow'
@@ -16,6 +16,22 @@ import {
 
 export const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
 export const contextEnum = z.enum(['work', 'personal'])
+
+export const taskListSortBy = z.enum(['created', 'updated'])
+export type TaskListSortBy = z.infer<typeof taskListSortBy>
+
+// `updated` shows the most recently touched tasks first; `created` (the
+// default) keeps the existing manual/creation order so callers that omit
+// `sortBy` see unchanged behavior.
+export function resolveTaskListOrderBy(sortBy?: TaskListSortBy) {
+  switch (sortBy) {
+    case 'updated':
+      return [desc(tasks.updatedAt)]
+    case 'created':
+    default:
+      return [tasks.sortOrder, tasks.createdAt]
+  }
+}
 
 export function recurrenceRuleToResponse(
   rule: typeof recurrenceRules.$inferSelect,

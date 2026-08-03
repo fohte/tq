@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import {
@@ -10,6 +10,10 @@ import {
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
+
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 describe('tasks tree API', () => {
   describe('GET /api/tasks/tree', () => {
@@ -135,6 +139,32 @@ describe('tasks tree API', () => {
         completed: 1,
         total: 3,
       })
+    })
+
+    it('sorts sibling nodes by updatedAt descending when sortBy=updated', async () => {
+      const parent = await createTask('Parent')
+      const childA = await createTask('Child A', { parentId: parent.id })
+      const childB = await createTask('Child B', { parentId: parent.id })
+
+      // Force Child B's PATCH-driven `updatedAt` (millisecond precision) far
+      // past both children's creation time so it can't tie with Child A's
+      // `defaultNow()` insert timestamp regardless of request timing.
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2030-01-01T00:00:00.000Z'))
+      await app.request(`/api/tasks/${childB.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Child B (updated)' }),
+      })
+      vi.useRealTimers()
+
+      const res = await app.request('/api/tasks/tree?sortBy=updated')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse[]>(res)
+      assertDefined(body[0])
+      assertDefined(body[0].children)
+      expect(body[0].children.map((c) => c.id)).toEqual([childB.id, childA.id])
     })
   })
 })

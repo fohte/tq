@@ -24,6 +24,8 @@ import {
   useFilteredTaskTree,
 } from '#hooks/use-filtered-tasks'
 import { useNewTaskShortcutListener } from '#hooks/use-new-task-shortcut'
+import type { TaskSortBy } from '#hooks/use-tasks'
+import { selectHandler } from '#lib/form-utils'
 import { newTaskKeybinding } from '#lib/keybindings'
 
 export const Route = createFileRoute('/tasks/')({
@@ -31,6 +33,16 @@ export const Route = createFileRoute('/tasks/')({
 })
 
 type Tab = 'all' | 'backlog'
+
+const sortOptionValues = [
+  'updated',
+  'created',
+] as const satisfies readonly TaskSortBy[]
+
+const sortLabels: Record<TaskSortBy, string> = {
+  updated: 'Updated',
+  created: 'Created',
+}
 
 function TaskListColumnHeader() {
   return (
@@ -48,15 +60,16 @@ function TaskListColumnHeader() {
   )
 }
 
-function TaskList() {
+export function TaskList() {
   const [activeTab, setActiveTab] = useState<Tab>('all')
   const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isGithubModalOpen, setIsGithubModalOpen] = useState(false)
+  const [sortBy, setSortBy] = useState<TaskSortBy>('updated')
 
-  const tasks = useFilteredTaskList()
+  const tasks = useFilteredTaskList(sortBy)
   const { isLoading: isTreeLoading, tree: filteredTreeData } =
-    useFilteredTaskTree({ enabled: activeTab === 'all' })
+    useFilteredTaskTree({ enabled: activeTab === 'all', sortBy })
 
   useNewTaskShortcutListener(
     useCallback(() => {
@@ -103,6 +116,18 @@ function TaskList() {
           ]}
         />
         <div className="ml-auto flex items-center gap-2">
+          <select
+            value={sortBy}
+            onChange={selectHandler(setSortBy, sortOptionValues)}
+            className="bg-transparent px-2 py-1 font-mono text-xs text-muted-foreground outline-none hover:text-foreground"
+            aria-label="Sort tasks"
+          >
+            {sortOptionValues.map((sort) => (
+              <option key={sort} value={sort}>
+                Sort: {sortLabels[sort]}
+              </option>
+            ))}
+          </select>
           <Button
             type="button"
             variant="secondary"

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import {
@@ -17,6 +17,10 @@ import {
 } from '#testing'
 
 setupTestDb()
+
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 function normalizeTimeBlock(block: TimeBlockResponse) {
   return {
@@ -231,6 +235,41 @@ describe('tasks CRUD API', () => {
       const labelsByTask = [taskA, taskB, taskC].map((t) => byId.get(t.id))
 
       expect(labelsByTask).toEqual([['bug', 'urgent'], ['urgent'], []])
+    })
+
+    it('sorts by createdAt ascending by default', async () => {
+      const taskA = await createTask('Task A')
+      const taskB = await createTask('Task B')
+
+      const res = await app.request('/api/tasks')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse[]>(res)
+      expect(body.map((t) => t.id)).toEqual([taskA.id, taskB.id])
+    })
+
+    it('sorts by updatedAt descending when sortBy=updated', async () => {
+      const taskA = await createTask('Task A')
+      const taskB = await createTask('Task B')
+
+      // Force Task B's PATCH-driven `updatedAt` (set via `new Date()`, only
+      // millisecond precision) to a timestamp far past both tasks' creation
+      // time, so the assertion can't tie with Task A's `defaultNow()` insert
+      // timestamp regardless of how fast the two requests above ran.
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2030-01-01T00:00:00.000Z'))
+      await app.request(`/api/tasks/${taskB.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Task B (updated)' }),
+      })
+      vi.useRealTimers()
+
+      const res = await app.request('/api/tasks?sortBy=updated')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse[]>(res)
+      expect(body.map((t) => t.id)).toEqual([taskB.id, taskA.id])
     })
   })
 
