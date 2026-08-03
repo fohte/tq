@@ -15,14 +15,14 @@ function fireKey(
   opts: KeyboardEventInit = {},
   target: EventTarget = document.body,
 ) {
-  target.dispatchEvent(
-    new KeyboardEvent('keydown', {
-      key,
-      bubbles: true,
-      cancelable: true,
-      ...opts,
-    }),
-  )
+  const event = new KeyboardEvent('keydown', {
+    key,
+    bubbles: true,
+    cancelable: true,
+    ...opts,
+  })
+  target.dispatchEvent(event)
+  return event
 }
 
 function setup(searchOpen = false) {
@@ -65,12 +65,25 @@ describe('useGlobalKeybindings', () => {
     expect(onSearchOpenChange).toHaveBeenCalledWith(false)
   })
 
-  it('toggles search open on Ctrl+K', () => {
+  it('leaves Ctrl+K to the OS/browser instead of opening search', () => {
     const { onSearchOpenChange } = setup(false)
 
-    fireKey('k', { ctrlKey: true })
+    const event = fireKey('k', { ctrlKey: true })
 
-    expect(onSearchOpenChange).toHaveBeenCalledWith(true)
+    expect(onSearchOpenChange).not.toHaveBeenCalled()
+    expect(event.defaultPrevented).toBe(false)
+  })
+
+  it('leaves Ctrl+K to the OS/browser while typing in an input', () => {
+    const input = document.createElement('input')
+    document.body.appendChild(input)
+    const { onSearchOpenChange } = setup(false)
+
+    const event = fireKey('k', { ctrlKey: true }, input)
+
+    expect(onSearchOpenChange).not.toHaveBeenCalled()
+    expect(event.defaultPrevented).toBe(false)
+    input.remove()
   })
 
   it('navigates to the matching route on a g-prefixed chord', () => {
