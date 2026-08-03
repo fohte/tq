@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { HtmlPageEditor } from '#components/ui/html-page-editor'
 import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
@@ -9,6 +10,7 @@ import {
   DEBOUNCED_SAVE_DELAY_MS,
   useDebouncedSave,
 } from '#hooks/use-debounced-save'
+import type { TaskPage } from '#hooks/use-task-pages'
 import { useTaskPage, useUpdateTaskPage } from '#hooks/use-task-pages'
 
 export function TaskPageEditor({
@@ -43,6 +45,7 @@ export function TaskPageEditor({
       pageId={pageId}
       defaultTitle={page.title}
       defaultContent={page.content}
+      format={page.format}
     />
   )
 }
@@ -52,11 +55,13 @@ export function PageEditorInner({
   pageId,
   defaultTitle,
   defaultContent,
+  format,
 }: {
   taskId: string
   pageId: string
   defaultTitle: string
   defaultContent: string
+  format: TaskPage['format']
 }) {
   const updatePage = useUpdateTaskPage(taskId)
   const [title, setTitle] = useState(defaultTitle)
@@ -80,30 +85,58 @@ export function PageEditorInner({
   }, [title, defaultTitle, pageId, updatePage])
 
   const { onChange: handleContentChange, flush: flushContent } =
-    useDebouncedSave((markdown) => {
-      updatePage.mutate({ pageId, input: { content: markdown } })
+    useDebouncedSave((content) => {
+      updatePage.mutate({ pageId, input: { content } })
     })
+
+  const titleInput = (
+    <Input
+      value={title}
+      onChange={(e) => {
+        setTitle(e.target.value)
+      }}
+      onBlur={handleTitleBlur}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur()
+        if (e.key === 'Escape') {
+          titleSavingRef.current = true
+          setTitle(defaultTitle)
+          e.currentTarget.blur()
+        }
+      }}
+      className="h-auto border-0 bg-transparent p-0 text-2xl font-bold text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0 md:text-2xl"
+      placeholder="Page title"
+    />
+  )
+
+  if (format === 'html') {
+    return (
+      <div className="flex h-full flex-col gap-3.5 p-6">
+        {titleInput}
+
+        <div className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground-faint">
+          <span>HTML</span>
+          <span className="text-border">|</span>
+          <span>autosave {DEBOUNCED_SAVE_DELAY_MS / 1000}s</span>
+        </div>
+
+        <div className="min-h-0 flex-1 border border-border bg-card p-2.5 text-sm">
+          <HtmlPageEditor
+            defaultValue={defaultContent}
+            placeholder="Write HTML..."
+            onChange={handleContentChange}
+            onExitSourceMode={flushContent}
+            className="h-full"
+          />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-3.5 p-6">
       {/* Editable title */}
-      <Input
-        value={title}
-        onChange={(e) => {
-          setTitle(e.target.value)
-        }}
-        onBlur={handleTitleBlur}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') e.currentTarget.blur()
-          if (e.key === 'Escape') {
-            titleSavingRef.current = true
-            setTitle(defaultTitle)
-            e.currentTarget.blur()
-          }
-        }}
-        className="h-auto border-0 bg-transparent p-0 text-2xl font-bold text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0 md:text-2xl"
-        placeholder="Page title"
-      />
+      {titleInput}
 
       {/* Meta line */}
       <div className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground-faint">

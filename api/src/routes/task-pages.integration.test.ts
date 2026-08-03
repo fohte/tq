@@ -12,10 +12,15 @@ interface PageResponse {
   taskId: string
   title: string
   content: string
+  format: 'markdown' | 'html'
   sortOrder: number
   createdAt: string
   updatedAt: string
   author: { kind: 'human' | 'llm' | 'system'; agent: string | null } | null
+}
+
+function normalizePage(page: PageResponse) {
+  return { ...page, id: 'ID', createdAt: 'DATE', updatedAt: 'DATE' }
 }
 
 describe('task pages API', () => {
@@ -107,6 +112,54 @@ describe('task pages API', () => {
       expect(body.sortOrder).toBe(5)
     })
 
+    it('defaults format to markdown when not specified', async () => {
+      const task = await createTask('Task')
+
+      const res = await app.request(`/api/tasks/${task.id}/pages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'My Page' }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await jsonBody<PageResponse>(res)
+      expect(normalizePage(body)).toEqual({
+        id: 'ID',
+        taskId: task.id,
+        title: 'My Page',
+        content: '',
+        format: 'markdown',
+        sortOrder: 0,
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+        author: { kind: 'human', agent: null },
+      })
+    })
+
+    it('creates a page with format html', async () => {
+      const task = await createTask('Task')
+
+      const res = await app.request(`/api/tasks/${task.id}/pages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'HTML Page', format: 'html' }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await jsonBody<PageResponse>(res)
+      expect(normalizePage(body)).toEqual({
+        id: 'ID',
+        taskId: task.id,
+        title: 'HTML Page',
+        content: '',
+        format: 'html',
+        sortOrder: 0,
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+        author: { kind: 'human', agent: null },
+      })
+    })
+
     it('returns 400 for empty title', async () => {
       const task = await createTask('Task')
 
@@ -174,6 +227,31 @@ describe('task pages API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<PageResponse>(res)
       expect(body.sortOrder).toBe(10)
+    })
+
+    it('updates page format from markdown to html', async () => {
+      const task = await createTask('Task')
+      const page = await createPage(task.id, { title: 'Page' })
+
+      const res = await app.request(`/api/tasks/${task.id}/pages/${page.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ format: 'html' }),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<PageResponse>(res)
+      expect(normalizePage(body)).toEqual({
+        id: 'ID',
+        taskId: task.id,
+        title: 'Page',
+        content: '',
+        format: 'html',
+        sortOrder: 0,
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+        author: { kind: 'human', agent: null },
+      })
     })
 
     it('returns 404 for non-existent page', async () => {

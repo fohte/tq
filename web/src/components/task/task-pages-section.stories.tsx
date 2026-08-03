@@ -19,6 +19,7 @@ const samplePages: TaskPage[] = [
     title: 'Meeting Notes',
     content:
       '## Discussion Points\n\n- Architecture review\n- Sprint planning\n- Performance improvements\n\nWe decided to go with option B.',
+    format: 'markdown',
     sortOrder: 0,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
@@ -30,6 +31,7 @@ const samplePages: TaskPage[] = [
     title: 'Technical Spec',
     content:
       '# API Design\n\nREST endpoints for the task management system.\n\n## Endpoints\n\n- GET /tasks\n- POST /tasks\n- PATCH /tasks/:id',
+    format: 'markdown',
     sortOrder: 1,
     createdAt: '2026-03-21T00:00:00.000Z',
     updatedAt: '2026-03-21T00:00:00.000Z',
@@ -40,12 +42,26 @@ const samplePages: TaskPage[] = [
     taskId: 'task-001',
     title: 'Empty Page',
     content: '',
+    format: 'markdown',
     sortOrder: 2,
     createdAt: '2026-03-22T00:00:00.000Z',
     updatedAt: '2026-03-22T00:00:00.000Z',
     author: null,
   },
 ]
+
+const sampleHtmlPage: TaskPage = {
+  id: 'page-004',
+  taskId: 'task-001',
+  title: 'Dashboard Mockup',
+  content:
+    '<!doctype html><html><body style="font-family: sans-serif; margin: 0; padding: 16px;"><h1>Dashboard</h1></body></html>',
+  format: 'html',
+  sortOrder: 3,
+  createdAt: '2026-03-23T00:00:00.000Z',
+  updatedAt: '2026-03-23T00:00:00.000Z',
+  author: null,
+}
 
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
@@ -119,4 +135,8 @@ const [firstPage] = samplePages
 
 export const SinglePage: SectionStoryType = {
   args: { taskId: 'task-single', pages: firstPage ? [firstPage] : [] },
+}
+
+export const WithHtmlPage: SectionStoryType = {
+  args: { taskId: 'task-001', pages: [...samplePages, sampleHtmlPage] },
 }
