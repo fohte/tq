@@ -23,6 +23,9 @@ export const taskPages = pgTable(
       .references(() => tasks.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
     content: text('content').notNull().default(''),
+    format: text('format', { enum: ['markdown', 'html'] })
+      .notNull()
+      .default('markdown'),
     sortOrder: integer('sort_order').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

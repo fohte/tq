@@ -1,10 +1,11 @@
 import { Link } from '@tanstack/react-router'
-import { ChevronDown, ExternalLink, Loader2, Plus } from 'lucide-react'
+import { ChevronDown, Code2, ExternalLink, Loader2, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { Button } from '#components/ui/button'
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
+import { HtmlPageEditor } from '#components/ui/html-page-editor'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
@@ -136,6 +137,7 @@ function PageCard({ taskId, page }: { taskId: string; page: TaskPage }) {
         <PageInlineEditor
           taskId={taskId}
           pageId={page.id}
+          format={page.format}
           defaultValue={defaultValue}
         />
       )}
@@ -163,8 +165,10 @@ export function PageCardPresentation({
   const [internalExpanded, setInternalExpanded] = useState(false)
   const isExpanded = controlledExpanded ?? internalExpanded
 
-  const previewLines = getPreviewLines(page.content, 3)
+  const previewLines =
+    page.format === 'html' ? null : getPreviewLines(page.content, 3)
   const hasMore =
+    page.format !== 'html' &&
     page.content.split('\n').filter((line) => line.trim()).length > 3
 
   return (
@@ -228,6 +232,12 @@ export function PageCardPresentation({
       </div>
 
       {/* Preview (collapsed) */}
+      {!isExpanded && page.format === 'html' && (
+        <div className="flex items-center gap-1.5 border-t border-border px-2.5 py-2 font-mono text-[11px] text-muted-foreground-faint">
+          <Code2 className="size-3" />
+          <span>HTML page</span>
+        </div>
+      )}
       {!isExpanded && previewLines != null && (
         <div className="flex flex-col gap-1.5 border-t border-border px-2.5 py-2">
           <p className="line-clamp-3 whitespace-pre-line font-editor text-[11px] leading-[1.65] text-muted-foreground">
@@ -264,16 +274,32 @@ export function PageCardPresentation({
 function PageInlineEditor({
   taskId,
   pageId,
+  format,
   defaultValue,
 }: {
   taskId: string
   pageId: string
+  format: TaskPage['format']
   defaultValue: string
 }) {
   const updatePage = useUpdateTaskPage(taskId)
-  const { onChange, flush } = useDebouncedSave((markdown) => {
-    updatePage.mutate({ pageId, input: { content: markdown } })
+  const { onChange, flush } = useDebouncedSave((content) => {
+    updatePage.mutate({ pageId, input: { content } })
   })
+
+  if (format === 'html') {
+    return (
+      <div className="h-[400px] text-sm">
+        <HtmlPageEditor
+          defaultValue={defaultValue}
+          placeholder="Write HTML..."
+          onChange={onChange}
+          onExitSourceMode={flush}
+          className="h-full"
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-[80px] text-sm">

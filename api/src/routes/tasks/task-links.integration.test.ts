@@ -113,6 +113,34 @@ describe('task mention links', () => {
     })
   })
 
+  it('does not link from a mention in an html-format page', async () => {
+    const source = await createTask('Source')
+    const target = await createTask('Target')
+
+    await createPage(
+      source.id,
+      'Notes',
+      `Related to #${String(target.number)}`,
+      { format: 'html' },
+    )
+
+    expect(await getLinks(source.id)).toEqual({ outgoing: [], incoming: [] })
+  })
+
+  it('does not link from a numeric character reference in an html-format page', async () => {
+    const source = await createTask('Source')
+    const target = await createTask('Target')
+
+    await createPage(
+      source.id,
+      'Notes',
+      `<p>See &#${String(target.number)};</p>`,
+      { format: 'html' },
+    )
+
+    expect(await getLinks(source.id)).toEqual({ outgoing: [], incoming: [] })
+  })
+
   it('links from a mention in a comment', async () => {
     const source = await createTask('Source')
     const target = await createTask('Target')

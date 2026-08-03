@@ -185,11 +185,12 @@ export async function createPage(
   taskId: string,
   title: string,
   content: string,
+  opts: { format?: 'markdown' | 'html' } = {},
 ) {
   const res = await app.request(`/api/tasks/${taskId}/pages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, content }),
+    body: JSON.stringify({ title, content, ...opts }),
   })
   await assertCreated(res, 'Failed to create page')
   return jsonBody(res, idResponseSchema)
