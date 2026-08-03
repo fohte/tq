@@ -49,7 +49,10 @@ export function useGlobalKeybindings({
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      // Ctrl+K is intentionally excluded: on macOS it's the standard
+      // kill-line binding in text fields, and stealing it here breaks that
+      // for every input/textarea in the app.
+      if (e.metaKey && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         onSearchOpenChange(!searchOpen)
         return
