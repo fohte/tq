@@ -132,3 +132,6 @@ dist
 
 # Storybook build output
 storybook-static/
+
+# storycap screenshot capture output (expected images live in R2, not git)
+__screenshots__/

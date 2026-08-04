@@ -10,6 +10,14 @@
         "./src/*"
       ],
       "default": "./src/*"
+    },
+    "#storybook-config/*": {
+      "types": [
+        "./.storybook/*.tsx",
+        "./.storybook/*.ts",
+        "./.storybook/*"
+      ],
+      "default": "./.storybook/*"
     }
   },
   "scripts": {
@@ -21,7 +29,7 @@
     "test:unit": "vitest run --project=unit",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "test:storybook": "vitest run --project=storybook"
+    "test:storybook": "vitest run --project=storybook --project=storybook-mobile"
   },
   "dependencies": {
     "@base-ui/react": "1.3.0",
@@ -62,6 +70,7 @@
     "@storybook/addon-docs": "10.4.6",
     "@storybook/addon-vitest": "10.4.6",
     "@storybook/react-vite": "10.4.6",
+    "@storycap-testrun/browser": "2.1.1",
     "@tanstack/router-plugin": "1.166.14",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
