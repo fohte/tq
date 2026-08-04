@@ -67,8 +67,6 @@ function CrepeEditor({
   mode,
 }: CrepeEditorProps) {
   const crepeRef = useRef<Crepe | null>(null)
-  // Parallel lifetime to crepeRef: both are set together in the useEditor
-  // factory below, once per Crepe instance.
   const viewModeStoreRef = useRef<ReturnType<
     typeof createInlineReferenceViewModeStore
   > | null>(null)
