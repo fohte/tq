@@ -17,7 +17,6 @@ const alias = {
   '@storybook-config': fileURLToPath(new URL('./.storybook', import.meta.url)),
 }
 
-// desktop/mobile share this root so reg-suit's `actualDir` can point at one tree.
 const screenshotsDir = path.join(dirname, '__screenshots__')
 
 // @storycap-testrun/browser ships a bundled .d.ts with its own copy of vite's
@@ -43,6 +42,44 @@ function asProvider(provider: unknown): any {
   return provider
 }
 
+function createStorybookProject({
+  name,
+  viewport,
+  screenshotsSubdir,
+  viewportSetupFile,
+}: {
+  name: string
+  viewport: { width: number; height: number }
+  screenshotsSubdir: string
+  viewportSetupFile: string
+}) {
+  return {
+    plugins: [
+      storybookTest({
+        configDir: path.join(dirname, '.storybook'),
+      }),
+      asPlugin(
+        storycap({
+          viewport,
+          output: { dir: path.join(screenshotsDir, screenshotsSubdir) },
+        }),
+      ),
+    ],
+    resolve: { alias },
+    test: {
+      name,
+      browser: {
+        enabled: true,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- asProvider casts through `any`, see comment above its definition
+        provider: asProvider(playwright()),
+        headless: true,
+        instances: [{ browser: 'chromium' as const }],
+      },
+      setupFiles: [viewportSetupFile, './.storybook/vitest.setup.ts'],
+    },
+  }
+}
+
 export default defineConfig({
   resolve: { alias },
   test: {
@@ -59,64 +96,18 @@ export default defineConfig({
           env: { TZ: 'Asia/Tokyo' },
         },
       },
-      {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- asPlugin casts through `any`, see comment above its definition
-        plugins: [
-          storybookTest({
-            configDir: path.join(dirname, '.storybook'),
-          }),
-          asPlugin(
-            storycap({
-              viewport: DESKTOP_VIEWPORT,
-              output: { dir: path.join(screenshotsDir, 'desktop') },
-            }),
-          ),
-        ],
-        resolve: { alias },
-        test: {
-          name: 'storybook',
-          browser: {
-            enabled: true,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- asProvider casts through `any`, see comment above its definition
-            provider: asProvider(playwright()),
-            headless: true,
-            instances: [{ browser: 'chromium' }],
-          },
-          setupFiles: [
-            './.storybook/vitest.setup.desktop.ts',
-            './.storybook/vitest.setup.ts',
-          ],
-        },
-      },
-      {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- asPlugin casts through `any`, see comment above its definition
-        plugins: [
-          storybookTest({
-            configDir: path.join(dirname, '.storybook'),
-          }),
-          asPlugin(
-            storycap({
-              viewport: MOBILE_VIEWPORT,
-              output: { dir: path.join(screenshotsDir, 'mobile') },
-            }),
-          ),
-        ],
-        resolve: { alias },
-        test: {
-          name: 'storybook-mobile',
-          browser: {
-            enabled: true,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- asProvider casts through `any`, see comment above its definition
-            provider: asProvider(playwright()),
-            headless: true,
-            instances: [{ browser: 'chromium' }],
-          },
-          setupFiles: [
-            './.storybook/vitest.setup.mobile.ts',
-            './.storybook/vitest.setup.ts',
-          ],
-        },
-      },
+      createStorybookProject({
+        name: 'storybook',
+        viewport: DESKTOP_VIEWPORT,
+        screenshotsSubdir: 'desktop',
+        viewportSetupFile: './.storybook/vitest.setup.desktop.ts',
+      }),
+      createStorybookProject({
+        name: 'storybook-mobile',
+        viewport: MOBILE_VIEWPORT,
+        screenshotsSubdir: 'mobile',
+        viewportSetupFile: './.storybook/vitest.setup.mobile.ts',
+      }),
     ],
   },
 })
