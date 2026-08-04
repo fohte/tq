@@ -16,15 +16,21 @@ type TreeNode = InferResponseType<typeof api.api.tasks.tree.$get, 200>[number]
 export const taskKeys = {
   all: ['tasks'] as const,
   lists: ['tasks', 'list'] as const,
-  list: (filter?: { status?: string; context?: string; parentId?: string }) =>
-    [...taskKeys.lists, filter] as const,
-  tree: ['tasks', 'tree'] as const,
+  list: (filter?: {
+    status?: string
+    context?: string
+    parentId?: string
+    sortBy?: string
+  }) => [...taskKeys.lists, filter] as const,
+  tree: (sortBy?: string) => [...taskKeys.all, 'tree', sortBy] as const,
   detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
 }
 
 export type { LinkedTaskSummary, Task, TaskDetail, TreeNode }
 
 type TaskStatus = 'todo' | 'in_progress' | 'completed'
+
+export type TaskSortBy = 'created' | 'updated'
 
 function isBacklog(t: Task): boolean {
   return t.status === 'todo' && t.dueDate == null && t.startDate == null
@@ -48,6 +54,7 @@ export function useTaskList(
     status?: TaskStatus
     context?: TaskContext
     parentId?: string
+    sortBy?: TaskSortBy
   },
   options?: { enabled?: boolean },
 ) {
@@ -100,11 +107,16 @@ export function useTask(id: string) {
   })
 }
 
-export function useTaskTree(options: { enabled: boolean }) {
+export function useTaskTree(options: {
+  enabled: boolean
+  sortBy?: TaskSortBy
+}) {
   return useQuery({
-    queryKey: taskKeys.tree,
+    queryKey: taskKeys.tree(options.sortBy),
     queryFn: async () => {
-      const res = await api.api.tasks.tree.$get({ query: {} })
+      const res = await api.api.tasks.tree.$get({
+        query: options.sortBy ? { sortBy: options.sortBy } : {},
+      })
       assertOk(res)
       return res.json()
     },

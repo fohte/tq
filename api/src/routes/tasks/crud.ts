@@ -25,6 +25,8 @@ import {
   getLabelNamesByTaskId,
   parentTasks,
   requireTask,
+  resolveTaskListOrderBy,
+  taskListSortBy,
   taskStatus,
   taskToResponse,
   taskWithParentNumberToResponse,
@@ -146,6 +148,7 @@ export const tasksCrudApp = new Hono()
         projectId: z.uuid().optional(),
         parentId: z.uuid().optional(),
         context: contextEnum.optional(),
+        sortBy: taskListSortBy.optional(),
       }),
     ),
     async (c) => {
@@ -175,7 +178,7 @@ export const tasksCrudApp = new Hono()
         .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
         .leftJoin(taskGithubLinks, eq(tasks.id, taskGithubLinks.taskId))
         .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .orderBy(tasks.sortOrder, tasks.createdAt)
+        .orderBy(...resolveTaskListOrderBy(query.sortBy))
 
       const labelsByTaskId = await getLabelNamesByTaskId(
         result.map((r) => r.task.id),
