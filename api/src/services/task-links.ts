@@ -20,7 +20,7 @@ export async function syncTaskLinks(sourceTaskId: string): Promise<void> {
   const [task, pages, comments] = await Promise.all([
     db.query.tasks.findFirst({ where: eq(tasks.id, sourceTaskId) }),
     db
-      .select({ content: taskPages.content })
+      .select({ content: taskPages.content, format: taskPages.format })
       .from(taskPages)
       .where(eq(taskPages.taskId, sourceTaskId)),
     db
@@ -33,9 +33,12 @@ export async function syncTaskLinks(sourceTaskId: string): Promise<void> {
   // removed by the FK cascade, so there's nothing left to sync.
   if (!task) return
 
+  // HTML pages are excluded: their markup can contain numeric character
+  // references (e.g. `&#47;`) that MENTION_PATTERN would misread as a task
+  // mention.
   const texts = [
     task.description ?? '',
-    ...pages.map((p) => p.content),
+    ...pages.filter((p) => p.format !== 'html').map((p) => p.content),
     ...comments.map((c) => c.content),
   ]
   const mentionedNumbers = new Set(texts.flatMap(extractMentionedNumbers))

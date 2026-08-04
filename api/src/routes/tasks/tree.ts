@@ -6,19 +6,25 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { taskGithubLinks, tasks } from '#db/schema'
-import { buildTree, getLabelNamesByTaskId } from '#routes/tasks/shared'
+import {
+  buildTree,
+  getLabelNamesByTaskId,
+  resolveTaskListOrderBy,
+  taskListSortBy,
+} from '#routes/tasks/shared'
 
 const subtreeIdSchema = z.array(z.object({ id: z.string() }))
 
 const treeQuerySchema = z.object({
   rootId: z.uuid().optional(),
+  sortBy: taskListSortBy.optional(),
 })
 
 export const tasksTreeApp = new Hono().get(
   '/tree',
   zValidator('query', treeQuerySchema),
   async (c) => {
-    const { rootId } = c.req.valid('query')
+    const { rootId, sortBy } = c.req.valid('query')
 
     let treeTasks: Array<typeof tasks.$inferSelect>
 
@@ -44,12 +50,12 @@ export const tasksTreeApp = new Hono().get(
         .select()
         .from(tasks)
         .where(inArray(tasks.id, ids))
-        .orderBy(tasks.sortOrder, tasks.createdAt)
+        .orderBy(...resolveTaskListOrderBy(sortBy))
     } else {
       treeTasks = await db
         .select()
         .from(tasks)
-        .orderBy(tasks.sortOrder, tasks.createdAt)
+        .orderBy(...resolveTaskListOrderBy(sortBy))
     }
 
     const links =

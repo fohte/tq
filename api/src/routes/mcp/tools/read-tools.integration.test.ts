@@ -187,6 +187,7 @@ describe('read tools', () => {
         id: string
         taskId: string
         title: string
+        format: string
         sortOrder: number
         createdAt: string
         updatedAt: string
@@ -205,6 +206,7 @@ describe('read tools', () => {
             id: page.id,
             taskId: page.taskId,
             title: page.title,
+            format: page.format,
             sortOrder: page.sortOrder,
             createdAt: page.createdAt,
             updatedAt: page.updatedAt,
@@ -247,6 +249,7 @@ describe('read tools', () => {
         taskId: '<uuid>',
         title: 'Investigation notes',
         content: '# Findings\n\nSome long content.',
+        format: 'markdown',
         sortOrder: 0,
         createdAt: '<timestamp>',
         updatedAt: '<timestamp>',

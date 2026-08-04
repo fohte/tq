@@ -13,6 +13,7 @@ import {
   PageEditorInner,
   SubpageViewPresentation,
 } from '#components/task/task-page-editor'
+import type { TaskPage } from '#hooks/use-task-pages'
 
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
@@ -50,11 +51,13 @@ function Story({
   pageId,
   defaultTitle,
   defaultContent,
+  format,
 }: {
   taskId: string
   pageId: string
   defaultTitle: string
   defaultContent: string
+  format: TaskPage['format']
 }) {
   return (
     <Providers>
@@ -65,6 +68,7 @@ function Story({
             pageId={pageId}
             defaultTitle={defaultTitle}
             defaultContent={defaultContent}
+            format={format}
           />
         </SubpageViewPresentation>
       </div>
@@ -90,6 +94,7 @@ export const Default: SubpageStory = {
     defaultTitle: 'Meeting Notes',
     defaultContent:
       '## Discussion Points\n\n- Architecture review\n- Sprint planning\n- Performance improvements\n\nWe decided to go with option B for the following reasons:\n\n1. Better performance\n2. Simpler architecture\n3. Easier to maintain',
+    format: 'markdown',
   },
 }
 
@@ -99,6 +104,7 @@ export const Empty: SubpageStory = {
     pageId: 'page-002',
     defaultTitle: 'Untitled',
     defaultContent: '',
+    format: 'markdown',
   },
 }
 

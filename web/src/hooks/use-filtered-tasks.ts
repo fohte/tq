@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 
 import { useContextFilter } from '#hooks/use-context-filter'
 import { useTagFilter } from '#hooks/use-tag-filter'
-import type { TreeNode } from '#hooks/use-tasks'
+import type { TaskSortBy, TreeNode } from '#hooks/use-tasks'
 import { useTaskList, useTaskTree } from '#hooks/use-tasks'
 import {
   filterByContext,
@@ -11,13 +11,14 @@ import {
 } from '#lib/context-filter'
 import { filterByTag, filterTreeByTag } from '#lib/tag-filter'
 
-export function useFilteredTaskList() {
+export function useFilteredTaskList(sortBy?: TaskSortBy) {
   const { mode } = useContextFilter()
   const { tag } = useTagFilter()
   const apiContext = filterModeToApiContext(mode)
-  const { isLoading, categorized } = useTaskList(
-    apiContext ? { context: apiContext } : undefined,
-  )
+  const { isLoading, categorized } = useTaskList({
+    ...(apiContext ? { context: apiContext } : {}),
+    ...(sortBy ? { sortBy } : {}),
+  })
 
   const open = useMemo(
     () => filterByTag(filterByContext(categorized.open, mode), tag),
@@ -53,7 +54,10 @@ function recalcChildCompletionCount(nodes: TreeNode[]): TreeNode[] {
   })
 }
 
-export function useFilteredTaskTree(options: { enabled: boolean }) {
+export function useFilteredTaskTree(options: {
+  enabled: boolean
+  sortBy?: TaskSortBy
+}) {
   const { mode } = useContextFilter()
   const { tag } = useTagFilter()
   const { data, isLoading } = useTaskTree(options)

@@ -14,15 +14,29 @@ import {
 } from '#lib/edits'
 import { syncTaskLinks } from '#services/task-links'
 
+const pageFormatSchema = z
+  .enum(['markdown', 'html'])
+  .describe(
+    'Content format of this page. "markdown" (default) renders as ' +
+      'formatted Markdown. "html" renders the content as a full HTML ' +
+      "document inside a sandboxed iframe: it cannot access this app's " +
+      'cookies, localStorage, or API (no same-origin access). Prefer ' +
+      'inlining any CSS/JS rather than referencing external files, since ' +
+      "there's no guarantee an external resource stays reachable when " +
+      'the page is viewed later.',
+  )
+
 export const createPageSchema = z.object({
   title: z.string().min(1),
   content: z.string().optional(),
+  format: pageFormatSchema.optional(),
   sortOrder: z.number().int().optional(),
 })
 
 export const updatePageSchema = z.object({
   title: z.string().min(1).optional(),
   content: z.string().optional(),
+  format: pageFormatSchema.optional(),
   sortOrder: z.number().int().optional(),
 })
 
@@ -35,6 +49,7 @@ export function pageToResponse(
     taskId: page.taskId,
     title: page.title,
     content: page.content,
+    format: page.format,
     sortOrder: page.sortOrder,
     createdAt: page.createdAt.toISOString(),
     updatedAt: page.updatedAt.toISOString(),
@@ -100,6 +115,7 @@ export const taskPagesApp = new Hono<TaskPagesEnv>()
             taskId,
             title: input.title,
             content: input.content ?? '',
+            format: input.format ?? 'markdown',
             sortOrder: input.sortOrder ?? 0,
           })
           .returning(),

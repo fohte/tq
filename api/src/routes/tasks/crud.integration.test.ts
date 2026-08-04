@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { eq } from 'drizzle-orm'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
+import { db } from '#db/connection'
+import { tasks } from '#db/schema'
 import {
   createLabel,
   createRecurringTask,
@@ -18,6 +21,10 @@ import {
 
 setupTestDb()
 
+afterEach(() => {
+  vi.useRealTimers()
+})
+
 function normalizeTimeBlock(block: TimeBlockResponse) {
   return {
     ...block,
@@ -28,7 +35,19 @@ function normalizeTimeBlock(block: TimeBlockResponse) {
   }
 }
 
-function normalizeTask(task: TaskResponse) {
+// Generic (rather than `TaskResponse`-typed) so it also accepts the
+// zod-inferred return type of `createTask`/`createTask`-derived PATCH
+// responses, whose optional fields are typed as `T | undefined` and would
+// otherwise conflict with `TaskResponse`'s plain optional fields under
+// `exactOptionalPropertyTypes`.
+function normalizeTask<
+  T extends {
+    id: string
+    number: number
+    createdAt: string
+    updatedAt: string
+  },
+>(task: T) {
   return {
     ...task,
     id: 'ID',
@@ -231,6 +250,98 @@ describe('tasks CRUD API', () => {
       const labelsByTask = [taskA, taskB, taskC].map((t) => byId.get(t.id))
 
       expect(labelsByTask).toEqual([['bug', 'urgent'], ['urgent'], []])
+    })
+
+    it('sorts by createdAt ascending by default', async () => {
+      const taskA = await createTask('Task A')
+      const taskB = await createTask('Task B')
+
+      // `createdAt` defaults to Postgres's `now()`, which is frozen at this
+      // test's transaction start (see setupTestDb), so both creates above
+      // share the exact same timestamp, and `sortOrder` (the primary default
+      // sort key) defaults to 0 for every task with no API to change it. With
+      // both keys tied, `ORDER BY sort_order, created_at` has no real
+      // tiebreaker and its result would be an unspecified tie-break rather
+      // than a genuine test of createdAt ordering. Force distinct
+      // `createdAt` values directly so the assertion exercises the real sort
+      // key deterministically.
+      await db
+        .update(tasks)
+        .set({ createdAt: new Date('2020-01-01T00:00:00.000Z') })
+        .where(eq(tasks.id, taskA.id))
+      await db
+        .update(tasks)
+        .set({ createdAt: new Date('2020-01-02T00:00:00.000Z') })
+        .where(eq(tasks.id, taskB.id))
+
+      const res = await app.request('/api/tasks')
+
+      expect(res.status).toBe(200)
+      const body =
+        await jsonBody<Array<TaskResponse & { parentNumber: number | null }>>(
+          res,
+        )
+      expect(body.map(normalizeTask)).toEqual([
+        { ...normalizeTask(taskA), parentNumber: null },
+        { ...normalizeTask(taskB), parentNumber: null },
+      ])
+    })
+
+    it('sorts by updatedAt descending when sortBy=updated', async () => {
+      const taskA = await createTask('Task A')
+      const taskB = await createTask('Task B')
+      const taskC = await createTask('Task C')
+
+      // `createdAt`/`updatedAt` both default to Postgres's `now()`, which is
+      // frozen at this test's transaction start (see setupTestDb), so all
+      // three creates above share the exact same timestamp. Give each task a
+      // distinct `updatedAt` via a PATCH under a fake clock (PATCH sets
+      // `updatedAt: new Date()` in application code, unlike the DB-side
+      // default) so `ORDER BY updated_at DESC` has no ties to break
+      // arbitrarily — three distinct values also mean the resulting order
+      // ([B, C, A]) can't coincide with plain creation order ([A, B, C]) or
+      // its reverse.
+      const patchWithFakeTime = async (
+        task: { id: string; title: string },
+        time: string,
+      ) => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date(time))
+        const res = await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: `${task.title} (updated)` }),
+        })
+        vi.useRealTimers()
+        expect(res.status).toBe(200)
+        return jsonBody<TaskResponse>(res)
+      }
+
+      const patchedTaskA = await patchWithFakeTime(
+        taskA,
+        '2030-01-01T00:00:00.000Z',
+      )
+      const patchedTaskC = await patchWithFakeTime(
+        taskC,
+        '2030-01-02T00:00:00.000Z',
+      )
+      const patchedTaskB = await patchWithFakeTime(
+        taskB,
+        '2030-01-03T00:00:00.000Z',
+      )
+
+      const res = await app.request('/api/tasks?sortBy=updated')
+
+      expect(res.status).toBe(200)
+      const body =
+        await jsonBody<Array<TaskResponse & { parentNumber: number | null }>>(
+          res,
+        )
+      expect(body.map(normalizeTask)).toEqual([
+        { ...normalizeTask(patchedTaskB), parentNumber: null },
+        { ...normalizeTask(patchedTaskC), parentNumber: null },
+        { ...normalizeTask(patchedTaskA), parentNumber: null },
+      ])
     })
   })
 

@@ -98,6 +98,7 @@ erDiagram
   integer sort_order
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+  text format
 }
 "public.time_blocks" {
   text id

@@ -47,6 +47,7 @@ function toPageMetadata(page: PageDetail): Omit<PageDetail, 'content'> {
     id: page.id,
     taskId: page.taskId,
     title: page.title,
+    format: page.format,
     sortOrder: page.sortOrder,
     createdAt: page.createdAt,
     updatedAt: page.updatedAt,

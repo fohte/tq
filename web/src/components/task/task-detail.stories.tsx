@@ -26,6 +26,7 @@ const samplePages: TaskPage[] = [
     title: 'Meeting Notes',
     content:
       '## Discussion Points\n\n- Architecture review\n- Sprint planning\n- Performance improvements\n\nWe decided to go with option B.',
+    format: 'markdown',
     sortOrder: 0,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
@@ -37,6 +38,7 @@ const samplePages: TaskPage[] = [
     title: 'Technical Spec',
     content:
       '# API Design\n\nREST endpoints for the task management system.\n\n## Endpoints\n\n- GET /tasks\n- POST /tasks\n- PATCH /tasks/:id',
+    format: 'markdown',
     sortOrder: 1,
     createdAt: '2026-03-21T00:00:00.000Z',
     updatedAt: '2026-03-21T00:00:00.000Z',

@@ -489,6 +489,7 @@ describe('create_page tool', () => {
       taskId: task.id,
       title: 'My Page',
       content: 'Hello',
+      format: 'markdown',
       sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
@@ -510,10 +511,34 @@ describe('create_page tool', () => {
       taskId: task.id,
       title: 'My Page',
       content: '',
+      format: 'markdown',
       sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'claude-opus-5' },
+    })
+  })
+
+  it('creates a page with format html', async () => {
+    const task = await createTask('Has pages')
+
+    const result = await callTool('create_page', {
+      taskId: task.id,
+      title: 'HTML Page',
+      content: '<p>Hello</p>',
+      format: 'html',
+    })
+
+    expect(parseToolData(result, ['taskId'])).toEqual({
+      id: '<uuid>',
+      taskId: task.id,
+      title: 'HTML Page',
+      content: '<p>Hello</p>',
+      format: 'html',
+      sortOrder: 0,
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+      author: { kind: 'llm', agent: 'mcp' },
     })
   })
 
@@ -546,6 +571,7 @@ describe('update_page tool', () => {
       taskId: task.id,
       title: 'Updated title',
       content: 'Original content',
+      format: 'markdown',
       sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
@@ -569,10 +595,39 @@ describe('update_page tool', () => {
       taskId: task.id,
       title: 'Original title',
       content: 'Updated content',
+      format: 'markdown',
       sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'claude-opus-5' },
+    })
+  })
+
+  it('updates format from markdown to html', async () => {
+    const task = await createTask('Has pages')
+    const page = await createPage(task.id, 'Original title', 'Original content')
+
+    const result = await callTool('update_page', {
+      taskId: task.id,
+      pageId: page.id,
+      format: 'html',
+    })
+
+    // `author` reflects the page's last recorded edit, not this call: a
+    // format-only change isn't tracked by `diffFields` (title/content only),
+    // so no new edit is recorded and the author stays whoever created the
+    // page — the `createPage` helper's default `human` author, not the mcp
+    // tool's own `llm:mcp`.
+    expect(parseToolData(result, ['id', 'taskId'])).toEqual({
+      id: page.id,
+      taskId: task.id,
+      title: 'Original title',
+      content: 'Original content',
+      format: 'html',
+      sortOrder: 0,
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+      author: { kind: 'human', agent: null },
     })
   })
 

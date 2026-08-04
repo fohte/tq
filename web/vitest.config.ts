@@ -70,8 +70,13 @@ function createStorybookProject({
       name,
       browser: {
         enabled: true,
+        // Pin the browser's timezone so time-dependent stories (calendar
+        // "now" indicators, relative timestamps) render identically
+        // regardless of the host machine's local timezone.
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- asProvider casts through `any`, see comment above its definition
-        provider: asProvider(playwright()),
+        provider: asProvider(
+          playwright({ contextOptions: { timezoneId: 'Asia/Tokyo' } }),
+        ),
         headless: true,
         instances: [{ browser: 'chromium' as const }],
       },

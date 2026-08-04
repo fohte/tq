@@ -61,13 +61,13 @@ importers:
         version: 0.1.7(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.9.0(@opentelemetry/api@1.9.1))(@opentelemetry/exporter-trace-otlp-http@0.219.0(@opentelemetry/api@1.9.1))(supports-color@10.2.2)
       '@hono/mcp':
         specifier: 0.3.1
-        version: 0.3.1(@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@4.3.6))(hono-rate-limiter@0.5.3(hono@4.12.27))(hono@4.12.27)(zod@4.3.6)
+        version: 0.3.1(@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@4.3.6))(hono-rate-limiter@0.5.3(hono@4.12.32))(hono@4.12.32)(zod@4.3.6)
       '@hono/node-server':
         specifier: 1.19.14
-        version: 1.19.14(hono@4.12.27)
+        version: 1.19.14(hono@4.12.32)
       '@hono/zod-validator':
         specifier: 0.7.6
-        version: 0.7.6(hono@4.12.27)(zod@4.3.6)
+        version: 0.7.6(hono@4.12.32)(zod@4.3.6)
       '@modelcontextprotocol/sdk':
         specifier: 1.29.0
         version: 1.29.0(supports-color@10.2.2)(zod@4.3.6)
@@ -78,8 +78,8 @@ importers:
         specifier: 0.45.2
         version: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(postgres@3.4.9)
       hono:
-        specifier: 4.12.27
-        version: 4.12.27
+        specifier: 4.12.32
+        version: 4.12.32
       neverthrow:
         specifier: 8.2.0
         version: 8.2.0
@@ -151,8 +151,8 @@ importers:
         specifier: 7.19.0
         version: 7.19.0(@codemirror/language@6.12.4)(@codemirror/state@6.7.0)(@codemirror/view@6.43.5)(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-view@1.42.2)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(supports-color@10.2.2)(typescript@6.0.3)
       '@prosemirror-adapter/react':
-        specifier: 0.5.3
-        version: 0.5.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        specifier: 0.5.5
+        version: 0.5.5(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@svar-ui/react-gantt':
         specifier: 2.7.1
         version: 2.7.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -175,8 +175,8 @@ importers:
         specifier: 2.1.1
         version: 2.1.1
       hono:
-        specifier: 4.12.27
-        version: 4.12.27
+        specifier: 4.12.32
+        version: 4.12.32
       lucide-react:
         specifier: 0.577.0
         version: 0.577.0(react@19.2.6)
@@ -3010,11 +3010,11 @@ packages:
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
 
-  '@prosemirror-adapter/core@0.5.3':
-    resolution: {integrity: sha512-jGcI/eq3USFqf1fCaejgCmifmXYDyFco6/5KjyyNBnuEhLqyLjD+020CtcduEOsnN4xPZr5ikclgHIR6kEFkQg==}
+  '@prosemirror-adapter/core@0.5.5':
+    resolution: {integrity: sha512-R1BV/up0qApb0mtZt81I4TCBmalclqb43ecCQXiVHD5LpoarYHMMBzEoZFanSFg+8YxB1CmvbJwN+DLqbXJwsg==}
 
-  '@prosemirror-adapter/react@0.5.3':
-    resolution: {integrity: sha512-k/dpqT6FrC8vH/OeX9yZswQ3Acap1In4PeKj9SAh6BfMXPWOWFclU7K1mWwpD9aC1Va1npz+FZTMmXSsiQTsnw==}
+  '@prosemirror-adapter/react@0.5.5':
+    resolution: {integrity: sha512-bU6YakJ7wk6K1N+HfiJ8vKkMRl53nzAouazXdtEtzftFJNQ50c9gZPmoMOJM+EsOV1J9T7jnFh3v0TuwL4QnTA==}
     peerDependencies:
       react: '*'
       react-dom: '*'
@@ -5417,8 +5417,8 @@ packages:
       unstorage:
         optional: true
 
-  hono@4.12.27:
-    resolution: {integrity: sha512-1yrb/+w6HWQJrUCLkJ2IF5jNIPvvFkblV5RNOYl6bV+OA6p9GLcMpHFFGTosSvHvcAUibuUukRqhlYI4z32C7Q==}
+  hono@4.12.32:
+    resolution: {integrity: sha512-XcuyW9qE2kJn07PkecMOBd5Vq/hMy7mmGw+idz1yblbg9N17ijJODrvPkn7/dwL3Kulj8LcRJ69DLOWf91dRUg==}
     engines: {node: '>=16.9.0'}
 
   html-encoding-sniffer@6.0.0:
@@ -9654,21 +9654,21 @@ snapshots:
       protobufjs: 7.6.5
       yargs: 17.7.3
 
-  '@hono/mcp@0.3.1(@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@4.3.6))(hono-rate-limiter@0.5.3(hono@4.12.27))(hono@4.12.27)(zod@4.3.6)':
+  '@hono/mcp@0.3.1(@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@4.3.6))(hono-rate-limiter@0.5.3(hono@4.12.32))(hono@4.12.32)(zod@4.3.6)':
     dependencies:
       '@modelcontextprotocol/sdk': 1.29.0(supports-color@10.2.2)(zod@4.3.6)
-      hono: 4.12.27
-      hono-rate-limiter: 0.5.3(hono@4.12.27)
+      hono: 4.12.32
+      hono-rate-limiter: 0.5.3(hono@4.12.32)
       pkce-challenge: 5.0.1
       zod: 4.3.6
 
-  '@hono/node-server@1.19.14(hono@4.12.27)':
+  '@hono/node-server@1.19.14(hono@4.12.32)':
     dependencies:
-      hono: 4.12.27
+      hono: 4.12.32
 
-  '@hono/zod-validator@0.7.6(hono@4.12.27)(zod@4.3.6)':
+  '@hono/zod-validator@0.7.6(hono@4.12.32)(zod@4.3.6)':
     dependencies:
-      hono: 4.12.27
+      hono: 4.12.32
       zod: 4.3.6
 
   '@humanfs/core@0.19.2':
@@ -10137,7 +10137,7 @@ snapshots:
 
   '@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@3.25.76)':
     dependencies:
-      '@hono/node-server': 1.19.14(hono@4.12.27)
+      '@hono/node-server': 1.19.14(hono@4.12.32)
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)
       content-type: 1.0.5
@@ -10147,7 +10147,7 @@ snapshots:
       eventsource-parser: 3.1.0
       express: 5.2.1(supports-color@10.2.2)
       express-rate-limit: 8.5.2(express@5.2.1(supports-color@10.2.2))
-      hono: 4.12.27
+      hono: 4.12.32
       jose: 6.2.3
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
@@ -10159,7 +10159,7 @@ snapshots:
 
   '@modelcontextprotocol/sdk@1.29.0(supports-color@10.2.2)(zod@4.3.6)':
     dependencies:
-      '@hono/node-server': 1.19.14(hono@4.12.27)
+      '@hono/node-server': 1.19.14(hono@4.12.32)
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)
       content-type: 1.0.5
@@ -10169,7 +10169,7 @@ snapshots:
       eventsource-parser: 3.1.0
       express: 5.2.1(supports-color@10.2.2)
       express-rate-limit: 8.5.2(express@5.2.1(supports-color@10.2.2))
-      hono: 4.12.27
+      hono: 4.12.32
       jose: 6.2.3
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
@@ -11082,16 +11082,16 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
-  '@prosemirror-adapter/core@0.5.3':
+  '@prosemirror-adapter/core@0.5.5':
     dependencies:
       '@ocavue/utils': 1.7.0
       prosemirror-model: 1.25.11
       prosemirror-state: 1.4.4
       prosemirror-view: 1.42.2
 
-  '@prosemirror-adapter/react@0.5.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@prosemirror-adapter/react@0.5.5(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
-      '@prosemirror-adapter/core': 0.5.3
+      '@prosemirror-adapter/core': 0.5.5
       prosemirror-model: 1.25.11
       prosemirror-state: 1.4.4
       prosemirror-view: 1.42.2
@@ -13614,11 +13614,11 @@ snapshots:
 
   headers-polyfill@4.0.3: {}
 
-  hono-rate-limiter@0.5.3(hono@4.12.27):
+  hono-rate-limiter@0.5.3(hono@4.12.32):
     dependencies:
-      hono: 4.12.27
+      hono: 4.12.32
 
-  hono@4.12.27: {}
+  hono@4.12.32: {}
 
   html-encoding-sniffer@6.0.0:
     dependencies:
