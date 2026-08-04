@@ -3,7 +3,6 @@ import '@milkdown/crepe/theme/frame-dark.css'
 import '#components/ui/markdown-editor.css'
 
 import { Crepe } from '@milkdown/crepe'
-import { EditorStatus, editorViewCtx } from '@milkdown/kit/core'
 import { upload, uploadConfig } from '@milkdown/plugin-upload'
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
 import {
@@ -23,10 +22,7 @@ import { githubUrlProvider } from '#lib/inline-reference/providers/github-url'
 import { slackPermalinkProvider } from '#lib/inline-reference/providers/slack-permalink'
 import { taskMentionProvider } from '#lib/inline-reference/providers/task-mention'
 import { taskMentionAutocompletePlugin } from '#lib/inline-reference/providers/task-mention-autocomplete-plugin'
-import {
-  createInlineReferenceViewModePlugin,
-  dispatchInlineReferenceViewMode,
-} from '#lib/inline-reference/view-mode'
+import { createInlineReferenceViewModeStore } from '#lib/inline-reference/view-mode'
 
 export interface ViewEditToggleOptions {
   /**
@@ -71,6 +67,11 @@ function CrepeEditor({
   mode,
 }: CrepeEditorProps) {
   const crepeRef = useRef<Crepe | null>(null)
+  // Parallel lifetime to crepeRef: both are set together in the useEditor
+  // factory below, once per Crepe instance.
+  const viewModeStoreRef = useRef<ReturnType<
+    typeof createInlineReferenceViewModeStore
+  > | null>(null)
   const widgetViewFactory = useWidgetViewFactory()
 
   useEditor((root) => {
@@ -91,6 +92,7 @@ function CrepeEditor({
     // rerender (useEditor memoizes this callback once), so later changes are
     // instead applied via the effect below.
     crepe.setReadonly(mode === 'view')
+    const viewModeStore = createInlineReferenceViewModeStore(mode)
 
     // Crepe's image-block feature only covers file-picker uploads; wire up
     // plugin-upload so pasting/dropping an image anywhere in the editor
@@ -106,12 +108,27 @@ function CrepeEditor({
             ),
         }))
       })
-      .use(createInlineReferenceViewModePlugin(mode))
-      .use(createInlineReferencePlugin(taskMentionProvider, widgetViewFactory))
-      .use(taskMentionAutocompletePlugin)
-      .use(createInlineReferencePlugin(githubUrlProvider, widgetViewFactory))
       .use(
-        createInlineReferencePlugin(slackPermalinkProvider, widgetViewFactory),
+        createInlineReferencePlugin(
+          taskMentionProvider,
+          widgetViewFactory,
+          viewModeStore,
+        ),
+      )
+      .use(taskMentionAutocompletePlugin)
+      .use(
+        createInlineReferencePlugin(
+          githubUrlProvider,
+          widgetViewFactory,
+          viewModeStore,
+        ),
+      )
+      .use(
+        createInlineReferencePlugin(
+          slackPermalinkProvider,
+          widgetViewFactory,
+          viewModeStore,
+        ),
       )
 
     if (onChange) {
@@ -123,20 +140,28 @@ function CrepeEditor({
     }
 
     crepeRef.current = crepe
+    viewModeStoreRef.current = viewModeStore
     return crepe
   })
 
   // Follows `mode` after the initial render: the Crepe instance itself is
   // only ever created once (see the initial-mode comment above), so later
   // changes have to be pushed onto it imperatively.
+  //
+  // This deliberately never dispatches a ProseMirror transaction. Any
+  // dispatched transaction — even one that changes no document content —
+  // gives every plugin's `appendTransaction` hook a chance to run, and
+  // Milkdown's built-in `trailing` plugin (@milkdown/plugin-trailing) uses
+  // that hook to insert an empty paragraph whenever the document doesn't
+  // already end in one, independent of what triggered the transaction. That
+  // turned "click into edit mode" / "click out again" into a real,
+  // content-changing edit with zero typing. `crepe.setReadonly()` already
+  // calls `view.setProps()` below, which alone is enough to make
+  // ProseMirror recompute decorations against the store's new value (see
+  // view-mode.ts).
   useEffect(() => {
-    const crepe = crepeRef.current
-    if (crepe == null) return
-    crepe.setReadonly(mode === 'view')
-    if (crepe.editor.status !== EditorStatus.Created) return
-    crepe.editor.action((ctx) => {
-      dispatchInlineReferenceViewMode(ctx.get(editorViewCtx), mode)
-    })
+    viewModeStoreRef.current?.setMode(mode)
+    crepeRef.current?.setReadonly(mode === 'view')
   }, [mode])
 
   return <Milkdown />

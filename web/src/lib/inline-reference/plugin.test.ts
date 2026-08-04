@@ -4,12 +4,9 @@ import type { CreateReactWidgetView } from '@prosemirror-adapter/react'
 import { describe, expect, it } from 'vitest'
 
 import { createInlineReferencePlugin } from '#lib/inline-reference/plugin'
-import {
-  buildModePlugin,
-  fakeCtx,
-  schema,
-} from '#lib/inline-reference/test-helpers'
+import { fakeCtx, schema } from '#lib/inline-reference/test-helpers'
 import type { InlineReferenceProvider } from '#lib/inline-reference/types'
+import { createInlineReferenceViewModeStore } from '#lib/inline-reference/view-mode'
 
 interface FakeData {
   n: number
@@ -56,10 +53,12 @@ function docWithHeadingText(text: string) {
   ])
 }
 
-async function buildPlugin() {
+async function buildPlugin(mode: 'view' | 'edit') {
+  const viewModeStore = createInlineReferenceViewModeStore(mode)
   const wrapped = createInlineReferencePlugin(
     fakeProvider,
     fakeWidgetViewFactory(),
+    viewModeStore,
   )
   await wrapped(fakeCtx)()
   return wrapped.plugin()
@@ -69,9 +68,8 @@ async function decorationsForDoc(
   doc: ReturnType<typeof docWithText>,
   mode: 'view' | 'edit',
 ) {
-  const plugin = await buildPlugin()
-  const modePlugin = await buildModePlugin(mode)
-  const state = EditorState.create({ doc, schema, plugins: [modePlugin] })
+  const plugin = await buildPlugin(mode)
+  const state = EditorState.create({ doc, schema })
 
   const decorationsProp = plugin.props.decorations
   if (decorationsProp == null)

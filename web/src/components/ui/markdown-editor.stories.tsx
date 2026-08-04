@@ -8,7 +8,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { expect, fn } from 'storybook/test'
+import { expect, fireEvent, fn } from 'storybook/test'
 
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
@@ -192,6 +192,104 @@ export const ClickToEditRevealsSource: Story = {
     await expect(
       canvas.queryByText(MENTION_FIXTURE_TITLE),
     ).not.toBeInTheDocument()
+  },
+}
+
+const TRAILING_BLOCKQUOTE_CONTENT =
+  'Some intro text.\n\n> A blockquote at the very end.'
+
+// Regression test: switching view<->edit mode with zero typing must never
+// mutate the document. Content ending in a blockquote (rather than a
+// paragraph/heading) is what exposes this: Milkdown's built-in `trailing`
+// plugin (@milkdown/plugin-trailing) appends an empty paragraph via
+// `appendTransaction` whenever ANY transaction is dispatched while the doc
+// doesn't already end in a paragraph/heading — regardless of whether that
+// transaction itself changed anything. A content ending in a *list* doesn't
+// reproduce this: Crepe's list-item node view dispatches its own
+// content-neutral selection-sync transaction the moment the editor mounts,
+// which already closes this same gap before a user ever clicks.
+//
+// The block count is the assertion that actually distinguishes buggy from
+// fixed behavior here. `onChange` is also asserted for completeness, but
+// this project's Storybook/VRT setup pins the system clock
+// (.storybook/vitest.setup.ts), which starves Milkdown's `markdownUpdated`
+// listener of real elapsed time (it debounces via lodash, which reads
+// `Date.now()`) — so `onChange` never fires in this environment regardless
+// of whether the underlying bug is present.
+export const SwitchingModeWithoutEditingDoesNotAutosave: Story = {
+  args: {
+    defaultValue: TRAILING_BLOCKQUOTE_CONTENT,
+    viewEditToggle: {},
+  },
+  play: async ({ canvasElement, userEvent, args }) => {
+    const wrapper = canvasElement.querySelector('.milkdown-wrapper')
+    const proseMirrorRoot = canvasElement.querySelector(
+      '.milkdown .ProseMirror',
+    )
+    if (wrapper == null || proseMirrorRoot == null)
+      throw new Error('MarkdownEditor always renders its wrapper and root')
+    const blockquote = canvasElement.querySelector(
+      '.milkdown .ProseMirror blockquote',
+    )
+    if (blockquote == null)
+      throw new Error('editor always renders the blockquote')
+
+    const blockCountBefore = proseMirrorRoot.children.length
+
+    // view -> edit, zero typing
+    await userEvent.click(blockquote)
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
+
+    // edit -> view, zero typing. `fireEvent` (not `userEvent.keyboard`)
+    // targets the wrapper directly: the click above flips the editor into
+    // edit mode, but Crepe only applies `contenteditable=true` in a React
+    // effect that runs after that click event has already finished, so the
+    // browser never focuses the (still read-only at click time) DOM node —
+    // there'd be nothing for a keyboard-targeted Escape to bubble up from.
+    await fireEvent.keyDown(wrapper, { key: 'Escape' })
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'view')
+
+    await expect(proseMirrorRoot.children.length).toBe(blockCountBefore)
+    await expect(args.onChange).not.toHaveBeenCalled()
+  },
+}
+
+// Companion to the regression test above: a real edit must still reach the
+// document (the fix must not also swallow legitimate changes). Typing a
+// second click into the blockquote first: the first click flips the editor
+// into edit mode, but Crepe only applies `contenteditable=true` in a React
+// effect that runs after that click event has already finished, so the
+// browser never focuses the (still read-only at click time) DOM node — a
+// second click, now that it's actually editable, gives it real focus so the
+// following keystroke lands in the document.
+export const TypingAfterEnteringEditModeChangesDocument: Story = {
+  args: {
+    defaultValue: TRAILING_BLOCKQUOTE_CONTENT,
+    viewEditToggle: {},
+  },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const wrapper = canvasElement.querySelector('.milkdown-wrapper')
+    if (wrapper == null)
+      throw new Error('MarkdownEditor always renders its wrapper')
+    const blockquote = canvasElement.querySelector(
+      '.milkdown .ProseMirror blockquote',
+    )
+    if (blockquote == null)
+      throw new Error('editor always renders the blockquote')
+
+    await userEvent.click(blockquote)
+    await userEvent.click(blockquote)
+    await userEvent.keyboard('!')
+
+    await expect(
+      canvas.findByText('A blockquote at the very end.!'),
+    ).resolves.toBeVisible()
+
+    await userEvent.keyboard('{Escape}')
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'view')
+    await expect(
+      canvas.findByText('A blockquote at the very end.!'),
+    ).resolves.toBeVisible()
   },
 }
 
