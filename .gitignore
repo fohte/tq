@@ -132,3 +132,6 @@ dist
 
 # Storybook build output
 storybook-static/
+
+# Generated storycap screenshot output
+__screenshots__/
