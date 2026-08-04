@@ -8,7 +8,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { expect, fn } from 'storybook/test'
+import { expect, fireEvent, fn } from 'storybook/test'
 
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
@@ -192,6 +192,98 @@ export const ClickToEditRevealsSource: Story = {
     await expect(
       canvas.queryByText(MENTION_FIXTURE_TITLE),
     ).not.toBeInTheDocument()
+  },
+}
+
+const TRAILING_BLOCKQUOTE_CONTENT =
+  'Some intro text.\n\n> A blockquote at the very end.'
+
+// Content ending in a blockquote (rather than a paragraph/heading) is
+// required here: Milkdown's built-in `trailing` plugin
+// (@milkdown/plugin-trailing) appends an empty paragraph via
+// `appendTransaction` whenever any transaction is dispatched while the doc
+// doesn't already end in a paragraph/heading, regardless of whether that
+// transaction itself changed anything. Content ending in a *list* doesn't
+// exercise this: Crepe's list-item node view dispatches its own
+// content-neutral selection-sync transaction the moment the editor mounts,
+// which already closes this same gap before a click ever happens.
+//
+// The block count is the assertion that distinguishes the two outcomes.
+// `onChange` is also asserted, but this project's Storybook/VRT setup pins
+// the system clock (.storybook/vitest.setup.ts), which starves Milkdown's
+// `markdownUpdated` listener of real elapsed time (it debounces via lodash,
+// which reads `Date.now()`) — so `onChange` never fires in this environment
+// either way.
+export const SwitchingModeWithoutEditingDoesNotAutosave: Story = {
+  args: {
+    defaultValue: TRAILING_BLOCKQUOTE_CONTENT,
+    viewEditToggle: {},
+  },
+  play: async ({ canvasElement, userEvent, args }) => {
+    const wrapper = canvasElement.querySelector('.milkdown-wrapper')
+    const proseMirrorRoot = canvasElement.querySelector(
+      '.milkdown .ProseMirror',
+    )
+    if (wrapper == null || proseMirrorRoot == null)
+      throw new Error('MarkdownEditor always renders its wrapper and root')
+    const blockquote = canvasElement.querySelector(
+      '.milkdown .ProseMirror blockquote',
+    )
+    if (blockquote == null)
+      throw new Error('editor always renders the blockquote')
+
+    const blockCountBefore = proseMirrorRoot.children.length
+
+    await userEvent.click(blockquote)
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
+
+    // `fireEvent` (not `userEvent.keyboard`) targets the wrapper directly:
+    // the click above flips the editor into edit mode, but Crepe only
+    // applies `contenteditable=true` in a React effect that runs after that
+    // click event has already finished, so the browser never focuses the
+    // (still read-only at click time) DOM node — there'd be nothing for a
+    // keyboard-targeted Escape to bubble up from.
+    await fireEvent.keyDown(wrapper, { key: 'Escape' })
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'view')
+
+    await expect(proseMirrorRoot.children.length).toBe(blockCountBefore)
+    await expect(args.onChange).not.toHaveBeenCalled()
+  },
+}
+
+// A first click flips the editor into edit mode, but Crepe only applies
+// `contenteditable=true` in a React effect that runs after that click event
+// has already finished, so the browser never focuses the (still read-only at
+// click time) DOM node. A second click, now that it's actually editable,
+// gives it real focus so the following keystroke lands in the document.
+export const TypingAfterEnteringEditModeChangesDocument: Story = {
+  args: {
+    defaultValue: TRAILING_BLOCKQUOTE_CONTENT,
+    viewEditToggle: {},
+  },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const wrapper = canvasElement.querySelector('.milkdown-wrapper')
+    if (wrapper == null)
+      throw new Error('MarkdownEditor always renders its wrapper')
+    const blockquote = canvasElement.querySelector(
+      '.milkdown .ProseMirror blockquote',
+    )
+    if (blockquote == null)
+      throw new Error('editor always renders the blockquote')
+
+    await userEvent.click(blockquote)
+    await userEvent.click(blockquote)
+    await userEvent.keyboard('!')
+
+    await expect(
+      canvas.findByText('A blockquote at the very end.!'),
+    ).resolves.toBeVisible()
+
+    await userEvent.keyboard('{Escape}')
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'view')
+    await expect(
+      canvas.findByText('A blockquote at the very end.!'),
+    ).resolves.toBeVisible()
   },
 }
 

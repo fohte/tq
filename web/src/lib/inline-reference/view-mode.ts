@@ -1,43 +1,32 @@
-import type { EditorState, Transaction } from '@milkdown/kit/prose/state'
-import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
-import type { EditorView } from '@milkdown/kit/prose/view'
-import { $prose } from '@milkdown/kit/utils'
-
 export type InlineReferenceViewMode = 'view' | 'edit'
 
-// Shared across every createInlineReferencePlugin instance (one per
-// provider): a single dispatchInlineReferenceViewMode call updates them all
-// together, since decorations only render in 'view' mode.
-export const inlineReferenceViewModeKey =
-  new PluginKey<InlineReferenceViewMode>('inline-reference-view-mode')
+export interface InlineReferenceViewModeStore {
+  getMode: () => InlineReferenceViewMode
+  setMode: (mode: InlineReferenceViewMode) => void
+}
 
-export function createInlineReferenceViewModePlugin(
+// One store per editor instance (created alongside its Crepe instance in
+// markdown-editor.tsx): multiple MarkdownEditor instances can be mounted at
+// once (e.g. one per comment), and their view/edit mode must not leak into
+// each other.
+//
+// This intentionally lives outside ProseMirror state/plugins. Mode is
+// UI-only, not document content — reading it straight from a mutable ref
+// (instead of routing it through a dispatched transaction) means switching
+// modes never dispatches a transaction at all, so it can't accidentally give
+// other plugins' `appendTransaction` hooks (e.g. `@milkdown/plugin-trailing`)
+// a chance to mutate the document as a side effect. `crepe.setReadonly()`
+// already calls `view.setProps()` on every mode change, which is enough on
+// its own to make ProseMirror recompute decorations (`decorations(state)`
+// runs on every `setProps`/`dispatch`, not just on a new transaction).
+export function createInlineReferenceViewModeStore(
   initialMode: InlineReferenceViewMode,
-) {
-  return $prose(
-    () =>
-      new Plugin({
-        key: inlineReferenceViewModeKey,
-        state: {
-          init: () => initialMode,
-          apply: (tr: Transaction, value: InlineReferenceViewMode) =>
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- only dispatchInlineReferenceViewMode below ever sets this meta key, always with an InlineReferenceViewMode
-            (tr.getMeta(inlineReferenceViewModeKey) as
-              InlineReferenceViewMode | undefined) ?? value,
-        },
-      }),
-  )
-}
-
-export function getInlineReferenceViewMode(
-  state: EditorState,
-): InlineReferenceViewMode {
-  return inlineReferenceViewModeKey.getState(state) ?? 'edit'
-}
-
-export function dispatchInlineReferenceViewMode(
-  view: EditorView,
-  mode: InlineReferenceViewMode,
-) {
-  view.dispatch(view.state.tr.setMeta(inlineReferenceViewModeKey, mode))
+): InlineReferenceViewModeStore {
+  let mode = initialMode
+  return {
+    getMode: () => mode,
+    setMode: (next) => {
+      mode = next
+    },
+  }
 }

@@ -12,7 +12,7 @@ import { useEffect, useRef } from 'react'
 
 import { collectTextBlockRuns } from '#lib/inline-reference/text-scan'
 import type { InlineReferenceProvider } from '#lib/inline-reference/types'
-import { getInlineReferenceViewMode } from '#lib/inline-reference/view-mode'
+import type { InlineReferenceViewModeStore } from '#lib/inline-reference/view-mode'
 
 function buildDecorations<TData>(
   provider: InlineReferenceProvider<TData>,
@@ -157,10 +157,12 @@ function createCardWidgetComponent<TData>(
 // source is shown as-is. `widgetViewFactory` comes from
 // @prosemirror-adapter/react's useWidgetViewFactory(), so this must be
 // called from within a component tree that has a ProsemirrorAdapterProvider
-// ancestor.
+// ancestor. `viewModeStore` is read directly (not from ProseMirror state) so
+// that switching modes never needs a transaction dispatch — see view-mode.ts.
 export function createInlineReferencePlugin<TData>(
   provider: InlineReferenceProvider<TData>,
   widgetViewFactory: CreateReactWidgetView,
+  viewModeStore: InlineReferenceViewModeStore,
 ) {
   const createChipWidget = widgetViewFactory({
     as: 'span',
@@ -176,8 +178,7 @@ export function createInlineReferencePlugin<TData>(
       key: new PluginKey(`inline-reference-${provider.id}`),
       props: {
         decorations(state) {
-          if (getInlineReferenceViewMode(state) !== 'view')
-            return DecorationSet.empty
+          if (viewModeStore.getMode() !== 'view') return DecorationSet.empty
           const { doc } = state
           return DecorationSet.create(
             doc,

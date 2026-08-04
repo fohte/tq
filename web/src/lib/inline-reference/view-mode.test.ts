@@ -1,45 +1,29 @@
-import { EditorState } from '@milkdown/kit/prose/state'
-import { EditorView } from '@milkdown/kit/prose/view'
 import { describe, expect, it } from 'vitest'
 
-import { buildModePlugin, schema } from '#lib/inline-reference/test-helpers'
-import {
-  dispatchInlineReferenceViewMode,
-  getInlineReferenceViewMode,
-} from '#lib/inline-reference/view-mode'
+import { createInlineReferenceViewModeStore } from '#lib/inline-reference/view-mode'
 
-function emptyDoc() {
-  return schema.node('doc', null, [schema.node('paragraph', null, [])])
-}
+describe('createInlineReferenceViewModeStore', () => {
+  it('starts at the given initial mode', () => {
+    const store = createInlineReferenceViewModeStore('view')
 
-describe('getInlineReferenceViewMode', () => {
-  it('returns the plugin initial mode', async () => {
-    const modePlugin = await buildModePlugin('view')
-    const doc = emptyDoc()
-    const state = EditorState.create({ doc, schema, plugins: [modePlugin] })
-
-    expect(getInlineReferenceViewMode(state)).toEqual('view')
+    expect(store.getMode()).toEqual('view')
   })
 
-  it('falls back to edit mode when the plugin is not registered', () => {
-    const doc = emptyDoc()
-    const state = EditorState.create({ doc, schema })
+  it('reflects the mode passed to setMode', () => {
+    const store = createInlineReferenceViewModeStore('view')
 
-    expect(getInlineReferenceViewMode(state)).toEqual('edit')
+    store.setMode('edit')
+
+    expect(store.getMode()).toEqual('edit')
   })
-})
 
-describe('dispatchInlineReferenceViewMode', () => {
-  it('switches the mode read back from the view after dispatch', async () => {
-    const modePlugin = await buildModePlugin('view')
-    const doc = emptyDoc()
-    const state = EditorState.create({ doc, schema, plugins: [modePlugin] })
-    const view = new EditorView(document.createElement('div'), { state })
+  it('keeps separate instances independent', () => {
+    const a = createInlineReferenceViewModeStore('view')
+    const b = createInlineReferenceViewModeStore('view')
 
-    dispatchInlineReferenceViewMode(view, 'edit')
+    a.setMode('edit')
 
-    expect(getInlineReferenceViewMode(view.state)).toEqual('edit')
-
-    view.destroy()
+    expect(a.getMode()).toEqual('edit')
+    expect(b.getMode()).toEqual('view')
   })
 })
