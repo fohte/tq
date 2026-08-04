@@ -131,8 +131,9 @@ export function syncLinkFromGithub(
         })
         // Mirrors the task PATCH route: re-scan for `#number` mentions after
         // a description change commits, so a GitHub-sourced body is treated
-        // the same as a human edit for task-link purposes. Run outside the
-        // transaction — syncTaskLinks isn't tx-aware (see its own comment).
+        // the same as a human edit for task-link purposes. Run after the
+        // transaction settles — syncTaskLinks opens its own transaction and
+        // must see the description update as already committed.
         .then(async () => {
           if (bodyChanged) {
             await syncTaskLinks(link.taskId)
