@@ -3,6 +3,7 @@ import type { InferRequestType } from 'hono/client'
 
 import type { Client } from '#client'
 import { createClient, toApiError } from '#client'
+import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
 import { printJson, writeContentFile } from '#output'
 
@@ -49,8 +50,8 @@ function buildClient(command: Command, fetchImpl: typeof fetch): Client {
 
 function parseSortOrder(value: string): number {
   const parsed = Number(value)
-  if (!Number.isFinite(parsed)) {
-    throw new InvalidArgumentError(`Expected a number, got: ${value}`)
+  if (!Number.isInteger(parsed)) {
+    throw new InvalidArgumentError(`Expected an integer, got: ${value}`)
   }
   return parsed
 }
@@ -67,7 +68,7 @@ function addFormatOption(command: Command): Command {
 export function registerPageCommands(
   program: Command,
   fetchImpl: typeof fetch,
-  stdin: NodeJS.ReadStream,
+  stdin: ReadableStdin,
 ): void {
   const page = program.command('page').description('Manage task pages')
 

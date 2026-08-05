@@ -6,6 +6,7 @@ import { Readable } from 'node:stream'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { runCli } from '#cli'
+import type { ReadableStdin } from '#input'
 
 interface CapturedRequest {
   method: string
@@ -23,8 +24,6 @@ function captureFetch(respond: () => Response): {
     const headers = new Headers(init?.headers)
     calls.push({
       method: init?.method ?? 'GET',
-      // hono/client always calls fetch with a plain string URL (see its
-      // ClientRequestImpl.fetch), never a URL or Request instance.
       url:
         input instanceof URL
           ? input.toString()
@@ -42,10 +41,9 @@ function captureFetch(respond: () => Response): {
   return { fetchStub, calls }
 }
 
-function fakeStdin(isTTY: boolean): NodeJS.ReadStream {
+function fakeStdin(isTTY: boolean): ReadableStdin {
   const readable = Readable.from([])
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- NodeJS.ReadStream extends net.Socket, which a plain Readable can't structurally satisfy; only isTTY is read at runtime
-  return Object.assign(readable, { isTTY }) as unknown as NodeJS.ReadStream
+  return Object.assign(readable, { isTTY })
 }
 
 function spyStdout() {
@@ -53,6 +51,10 @@ function spyStdout() {
 }
 
 const apiUrl = 'http://api.test'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe('page list', () => {
   it('prints the pages returned by the server as JSON', async () => {
@@ -69,9 +71,7 @@ describe('page list', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(write).toHaveBeenCalledWith(`${JSON.stringify(pages, null, 2)}\n`)
-
-    write.mockRestore()
+    expect(write.mock.calls).toEqual([[`${JSON.stringify(pages, null, 2)}\n`]])
   })
 })
 
@@ -90,9 +90,7 @@ describe('page get', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(write).toHaveBeenCalledWith(`${JSON.stringify(page, null, 2)}\n`)
-
-    write.mockRestore()
+    expect(write.mock.calls).toEqual([[`${JSON.stringify(page, null, 2)}\n`]])
   })
 
   describe('with --output', () => {
@@ -135,18 +133,12 @@ describe('page get', () => {
       )
 
       expect(exitCode).toBe(0)
-
-      const stdoutOutput = write.mock.calls.map((call) => call[0]).join('')
-      expect(stdoutOutput).not.toContain('Secret content')
-      expect(stdoutOutput).toBe(
-        `${JSON.stringify({ id: 'p1', title: 'Notes' }, null, 2)}\n`,
-      )
-
+      expect(write.mock.calls).toEqual([
+        [`${JSON.stringify({ id: 'p1', title: 'Notes' }, null, 2)}\n`],
+      ])
       await expect(readFile(outputPath, 'utf8')).resolves.toBe(
         '# Secret content',
       )
-
-      write.mockRestore()
     })
   })
 })
@@ -189,9 +181,9 @@ describe('page create', () => {
 
     expect(exitCode).toBe(0)
     expect(calls[0]?.body).toEqual({ title: 'Notes', content: '# From file' })
-    expect(write).toHaveBeenCalledWith(`${JSON.stringify(created, null, 2)}\n`)
-
-    write.mockRestore()
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify(created, null, 2)}\n`],
+    ])
   })
 
   it('omits content from the request body when neither --file nor stdin provide any', async () => {
@@ -269,10 +261,10 @@ describe('page delete', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(write).toHaveBeenCalledWith(
-      `${JSON.stringify({ deleted: true, taskId: '42', pageId: 'p1' }, null, 2)}\n`,
-    )
-
-    write.mockRestore()
+    expect(write.mock.calls).toEqual([
+      [
+        `${JSON.stringify({ deleted: true, taskId: '42', pageId: 'p1' }, null, 2)}\n`,
+      ],
+    ])
   })
 })

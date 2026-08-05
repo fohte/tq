@@ -3,10 +3,11 @@ import { Command, CommanderError, Option } from 'commander'
 import { registerPageCommands } from '#commands/page'
 import { ApiError } from '#errors'
 import { collectHeader } from '#headers'
+import type { ReadableStdin } from '#input'
 
 export function buildProgram(
   fetchImpl: typeof fetch = fetch,
-  stdin: NodeJS.ReadStream = process.stdin,
+  stdin: ReadableStdin = process.stdin,
 ): Command {
   const program = new Command()
     .name('tq')
@@ -34,7 +35,7 @@ export function buildProgram(
 export async function runCli(
   argv: readonly string[],
   fetchImpl: typeof fetch = fetch,
-  stdin: NodeJS.ReadStream = process.stdin,
+  stdin: ReadableStdin = process.stdin,
 ): Promise<number> {
   const program = buildProgram(fetchImpl, stdin)
   try {

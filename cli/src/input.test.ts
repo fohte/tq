@@ -6,14 +6,14 @@ import { Readable } from 'node:stream'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { FileIoError } from '#errors'
+import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
 
-function fakeStdin(chunks: string[], isTTY: boolean): NodeJS.ReadStream {
+function fakeStdin(chunks: string[], isTTY: boolean): ReadableStdin {
   // Real stdin streams emit Buffer chunks (not strings), which is what
   // readStreamText expects to Buffer.concat.
   const readable = Readable.from(chunks.map((chunk) => Buffer.from(chunk)))
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- NodeJS.ReadStream extends net.Socket, which a plain Readable can't structurally satisfy; only isTTY is read at runtime
-  return Object.assign(readable, { isTTY }) as unknown as NodeJS.ReadStream
+  return Object.assign(readable, { isTTY })
 }
 
 describe('readContentInput', () => {

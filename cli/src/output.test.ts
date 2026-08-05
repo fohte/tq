@@ -7,6 +7,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { FileIoError } from '#errors'
 import { printJson, writeContentFile } from '#output'
 
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
 describe('printJson', () => {
   it('writes the value as pretty-printed JSON followed by a newline', () => {
     const write = vi
@@ -15,12 +19,9 @@ describe('printJson', () => {
 
     printJson({ id: '1', title: 'Hello' })
 
-    expect(write).toHaveBeenCalledTimes(1)
-    expect(write).toHaveBeenCalledWith(
-      `${JSON.stringify({ id: '1', title: 'Hello' }, null, 2)}\n`,
-    )
-
-    write.mockRestore()
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify({ id: '1', title: 'Hello' }, null, 2)}\n`],
+    ])
   })
 })
 

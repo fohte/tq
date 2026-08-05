@@ -1,20 +1,22 @@
 import { Readable } from 'node:stream'
 
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { runCli } from '#cli'
+import type { ReadableStdin } from '#input'
 
-function fakeStdin(): NodeJS.ReadStream {
+function fakeStdin(): ReadableStdin {
   const readable = Readable.from([])
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- NodeJS.ReadStream extends net.Socket, which a plain Readable can't structurally satisfy; only isTTY is read at runtime
-  return Object.assign(readable, {
-    isTTY: true,
-  }) as unknown as NodeJS.ReadStream
+  return Object.assign(readable, { isTTY: true })
 }
 
 function spyStderr() {
   return vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
 }
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe('runCli', () => {
   it('returns exit code 0 for --help without calling fetch', async () => {
@@ -23,7 +25,7 @@ describe('runCli', () => {
     const exitCode = await runCli(['--help'], fetchStub, fakeStdin())
 
     expect(exitCode).toBe(0)
-    expect(fetchStub).not.toHaveBeenCalled()
+    expect(fetchStub.mock.calls).toEqual([])
   })
 
   it('returns a non-zero exit code for an unknown subcommand', async () => {
@@ -51,9 +53,7 @@ describe('runCli', () => {
     )
 
     expect(exitCode).toBe(1)
-    expect(stderr).toHaveBeenCalledWith('Error: Page not found (HTTP 404)\n')
-
-    stderr.mockRestore()
+    expect(stderr.mock.calls).toEqual([['Error: Page not found (HTTP 404)\n']])
   })
 
   it('returns exit code 1 and reports the failure when fetch rejects', async () => {
@@ -69,10 +69,8 @@ describe('runCli', () => {
     )
 
     expect(exitCode).toBe(1)
-    expect(stderr).toHaveBeenCalledWith(
-      'Error: Failed to reach http://api.test\n',
-    )
-
-    stderr.mockRestore()
+    expect(stderr.mock.calls).toEqual([
+      ['Error: Failed to reach http://api.test\n'],
+    ])
   })
 })

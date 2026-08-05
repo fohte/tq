@@ -2,14 +2,19 @@ import { readFile } from 'node:fs/promises'
 
 import { FileIoError } from '#errors'
 
+export interface ReadableStdin {
+  readonly isTTY?: boolean
+  [Symbol.asyncIterator](): AsyncIterator<Buffer | string>
+}
+
 export async function readContentInput(
   filePath: string | undefined,
-  stdin: NodeJS.ReadStream = process.stdin,
+  stdin: ReadableStdin = process.stdin,
 ): Promise<string | undefined> {
   if (filePath != null) {
     return readFileContent(filePath)
   }
-  if (stdin.isTTY) {
+  if (stdin.isTTY === true) {
     return undefined
   }
   return readStreamText(stdin)
@@ -24,7 +29,7 @@ async function readFileContent(filePath: string): Promise<string> {
 }
 
 async function readStreamText(
-  stream: NodeJS.ReadableStream,
+  stream: ReadableStdin,
 ): Promise<string | undefined> {
   const chunks: Buffer[] = []
   for await (const chunk of stream) {
