@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "install-cli": "pnpm run build && pnpm link --global",
+    "install-cli": "pnpm run build && pnpm add -g .",
     "test": "conc pnpm:test:type pnpm:test:unit",
     "test:type": "tsc --noEmit",
     "test:unit": "vitest run"
