@@ -7,9 +7,11 @@ import { formatDueDate, isTaskOverdue } from '#lib/task-due-date'
 import { cn } from '#lib/utils'
 
 // Shared between TaskGridRow, TreeTaskGridRow, and the Tasks list column
-// header so the header stays aligned with the row grids.
+// header so the header stays aligned with the row grids. The trailing 28px
+// column seats TreeTaskGridRow's row-actions trigger; other consumers still
+// render an empty cell there to keep columns aligned.
 export const TASK_GRID_COLUMNS =
-  'grid-cols-[26px_26px_1fr_132px_104px_72px_56px]'
+  'grid-cols-[26px_26px_1fr_132px_104px_72px_56px_28px]'
 
 export function useHandleStatusChange(id: string, status: Task['status']) {
   const completeTask = useCompleteTask()

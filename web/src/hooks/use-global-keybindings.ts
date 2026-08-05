@@ -13,7 +13,7 @@ const navByChord: Map<string, NavKeybinding> = new Map(
   ]),
 )
 
-function isEditableTarget(target: EventTarget | null): boolean {
+export function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
   if (target.isContentEditable) return true
   return (
