@@ -8,7 +8,7 @@ import { callInternalRoute } from '#routes/mcp/route-bridge'
 import { createCommentSchema, updateCommentSchema } from '#routes/task-comments'
 import { createPageSchema, updatePageSchema } from '#routes/task-pages'
 import { createTaskSchema, updateTaskSchema } from '#routes/tasks/crud'
-import { taskStatus } from '#routes/tasks/shared'
+import { taskIdOrNumber, taskStatus } from '#routes/tasks/shared'
 
 // Completing a task carries a side effect (generating the next occurrence of
 // a recurring task) that a direct status write doesn't, so that transition
@@ -104,13 +104,13 @@ export function registerWriteTools(server: McpServer): void {
         'the same shape as in create_task, or null to remove recurrence ' +
         'from the task.',
       inputSchema: {
-        taskId: z.uuid(),
+        taskId: taskIdOrNumber,
         ...updateTaskSchema.shape,
         agent: agentArgSchema,
       },
     },
     async ({ taskId, agent, ...body }) =>
-      callRoute(`/api/tasks/${taskId}`, agent, {
+      callRoute(`/api/tasks/${String(taskId)}`, agent, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -125,15 +125,17 @@ export function registerWriteTools(server: McpServer): void {
         'task that has a recurrenceRule creates the next occurrence of ' +
         'that task. Completing an already-completed task is rejected.',
       inputSchema: {
-        taskId: z.uuid(),
+        taskId: taskIdOrNumber,
         status: taskStatus,
         agent: agentArgSchema,
       },
     },
     async ({ taskId, status, agent }) =>
       status === 'completed'
-        ? callRoute(`/api/tasks/${taskId}/complete`, agent, { method: 'POST' })
-        : callRoute(`/api/tasks/${taskId}/status`, agent, {
+        ? callRoute(`/api/tasks/${String(taskId)}/complete`, agent, {
+            method: 'POST',
+          })
+        : callRoute(`/api/tasks/${String(taskId)}/status`, agent, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status }),
@@ -154,13 +156,13 @@ export function registerWriteTools(server: McpServer): void {
         'reachable when the page is viewed later. `sortOrder` controls ' +
         "display order among the task's pages and defaults to 0.",
       inputSchema: {
-        taskId: z.uuid(),
+        taskId: taskIdOrNumber,
         ...createPageSchema.shape,
         agent: agentArgSchema,
       },
     },
     async ({ taskId, agent, ...body }) =>
-      callRoute(`/api/tasks/${taskId}/pages`, agent, {
+      callRoute(`/api/tasks/${String(taskId)}/pages`, agent, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -174,14 +176,14 @@ export function registerWriteTools(server: McpServer): void {
         'Partially update an existing page by task id and page id. Only ' +
         'the fields provided are changed; omit a field to leave it as-is.',
       inputSchema: {
-        taskId: z.uuid(),
+        taskId: taskIdOrNumber,
         pageId: z.uuid(),
         ...updatePageSchema.shape,
         agent: agentArgSchema,
       },
     },
     async ({ taskId, pageId, agent, ...body }) =>
-      callRoute(`/api/tasks/${taskId}/pages/${pageId}`, agent, {
+      callRoute(`/api/tasks/${String(taskId)}/pages/${pageId}`, agent, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -193,13 +195,13 @@ export function registerWriteTools(server: McpServer): void {
     {
       description: 'Add a comment to a task.',
       inputSchema: {
-        taskId: z.uuid(),
+        taskId: taskIdOrNumber,
         ...createCommentSchema.shape,
         agent: agentArgSchema,
       },
     },
     async ({ taskId, agent, ...body }) =>
-      callRoute(`/api/tasks/${taskId}/comments`, agent, {
+      callRoute(`/api/tasks/${String(taskId)}/comments`, agent, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -212,14 +214,14 @@ export function registerWriteTools(server: McpServer): void {
       description:
         'Update the content of an existing comment by task id and comment id.',
       inputSchema: {
-        taskId: z.uuid(),
+        taskId: taskIdOrNumber,
         commentId: z.uuid(),
         ...updateCommentSchema.shape,
         agent: agentArgSchema,
       },
     },
     async ({ taskId, commentId, agent, ...body }) =>
-      callRoute(`/api/tasks/${taskId}/comments/${commentId}`, agent, {
+      callRoute(`/api/tasks/${String(taskId)}/comments/${commentId}`, agent, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

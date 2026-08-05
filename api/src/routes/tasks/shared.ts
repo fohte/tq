@@ -207,13 +207,11 @@ export function buildTree(
   return ok(roots)
 }
 
-type TaskEnv = {
+export type TaskEnv = {
   Variables: {
     task: typeof tasks.$inferSelect
   }
 }
-
-const factory = createFactory<TaskEnv, '/:id'>()
 
 const numericIdPattern = /^\d+$/
 // `tasks.number` is a Postgres `integer`; a digit string past this range
@@ -221,17 +219,28 @@ const numericIdPattern = /^\d+$/
 // 404, so it's treated as a non-numeric (UUID-lookup, always-empty) id.
 const PG_INTEGER_MAX = 2147483647
 
-export const requireTask = factory.createMiddleware(async (c, next) => {
-  const param = c.req.param('id')
+export const taskIdOrNumber = z.union([
+  z.uuid(),
+  z.string().regex(numericIdPattern),
+  z.number().int().positive(),
+])
+
+// Task detail URLs (and their subresources) accept either the UUID primary
+// key or the human-facing sequential number (e.g. `/tasks/123`), so
+// bookmarked UUID links keep working alongside the short numeric form.
+export function findTaskByIdOrNumber(param: string) {
   const isNumericId =
     numericIdPattern.test(param) && Number(param) <= PG_INTEGER_MAX
 
-  // Task detail URLs accept either the UUID primary key or the human-facing
-  // sequential number (e.g. `/tasks/123`), so bookmarked UUID links keep
-  // working alongside the new short form.
-  const task = await db.query.tasks.findFirst({
+  return db.query.tasks.findFirst({
     where: isNumericId ? eq(tasks.number, Number(param)) : eq(tasks.id, param),
   })
+}
+
+const factory = createFactory<TaskEnv, '/:id'>()
+
+export const requireTask = factory.createMiddleware(async (c, next) => {
+  const task = await findTaskByIdOrNumber(c.req.param('id'))
   if (!task) {
     return c.json({ error: 'Task not found' }, 404)
   }
