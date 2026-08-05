@@ -26,13 +26,9 @@ function parseValue(inner: z.ZodType, raw: string): unknown {
 }
 
 /**
- * Adds one `--<field> <value>` Option per optional field of `schema` to
- * `command`. Required fields are skipped: they're the caller's job to wire
- * up as positional arguments instead of flags.
- *
- * Choices (for enum fields), value validation, and the option description
- * all come from the schema, so adding a field there is enough to grow the
- * CLI surface — no per-field CLI code needed.
+ * Only wraps `z.optional()` fields into flags; required fields are left
+ * for the caller to add as positional arguments instead, keeping the
+ * flag/positional split without a per-command exclude list.
  */
 export function addSchemaOptions<Shape extends z.core.$ZodShape>(
   command: Command,
@@ -68,22 +64,26 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
 }
 
 /**
- * Picks the fields of `schema` that are present (non-`undefined`) in
- * `options`, skipping `exclude`. Commander camelCases flag names back to
- * the schema's own keys, so this is a direct lookup with no per-field
- * mapping to maintain.
+ * Commander camelCases flag names back to the schema's own keys, so
+ * picking is a direct lookup with no per-field mapping to maintain.
+ * Re-validates against `schema`, so this is safe to call even with
+ * `options` that didn't go through `addSchemaOptions`'s argParser.
  */
 export function pickSchemaFields<Shape extends z.core.$ZodShape>(
   schema: z.ZodObject<Shape>,
   options: Record<string, unknown>,
   exclude: readonly string[] = [],
-): Partial<z.infer<z.ZodObject<Shape>>> {
-  const result: Record<string, unknown> = {}
+) {
+  const picked: Record<string, unknown> = {}
   for (const key of Object.keys(schema.shape)) {
     if (exclude.includes(key)) continue
     const value = options[key]
-    if (value !== undefined) result[key] = value
+    if (value !== undefined) picked[key] = value
   }
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- values were already validated by the argParser each flag was registered with in addSchemaOptions; this loop only re-groups them by key
-  return result as Partial<z.infer<z.ZodObject<Shape>>>
+
+  const result = schema.partial().safeParse(picked)
+  if (!result.success) {
+    throw new Error(result.error.issues[0]?.message ?? 'Invalid value')
+  }
+  return result.data
 }

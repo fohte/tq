@@ -115,8 +115,8 @@ export function registerPageCommands(
       const content = await readContentInput(options.file, stdin)
 
       const json: CreatePageJson = {
-        title,
         ...pickSchemaFields(createPageSchema, options, ['content']),
+        title,
         ...(content !== undefined ? { content } : {}),
       }
 

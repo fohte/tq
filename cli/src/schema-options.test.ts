@@ -12,45 +12,47 @@ const testSchema = z.object({
 })
 
 function buildCommand(exclude: string[] = []): Command {
-  return addSchemaOptions(new Command().exitOverride(), testSchema, exclude)
+  return addSchemaOptions(
+    new Command('test').exitOverride(),
+    testSchema,
+    exclude,
+  )
+}
+
+function captureError(run: () => void): Error {
+  try {
+    run()
+  } catch (error) {
+    if (error instanceof Error) return error
+    throw error
+  }
+  throw new Error('expected run() to throw')
 }
 
 describe('addSchemaOptions', () => {
-  it('adds a flag per optional field, using the schema description or a humanized fallback', () => {
-    const flags = buildCommand().options.map((option) => [
-      option.long,
-      option.description,
-    ])
+  it('shows one flag per optional field in --help — schema description, enum choices, a humanized fallback label, and never the required field', () => {
+    expect(buildCommand().helpInformation()).toBe(
+      `Usage: test [options]
 
-    expect(flags).toEqual([
-      ['--status', 'Current status'],
-      ['--priority', 'Priority'],
-      ['--note', 'Note'],
-    ])
-  })
-
-  it("skips required fields, since those are the caller's positional arguments", () => {
-    const command = buildCommand()
-
-    expect(command.options.some((option) => option.long === '--name')).toBe(
-      false,
+Options:
+  --status <value>    Current status (choices: "open", "closed")
+  --priority <value>  Priority
+  --note <value>      Note
+  -h, --help          display help for command
+`,
     )
   })
 
-  it('skips excluded fields even when optional', () => {
-    const command = buildCommand(['note'])
+  it('drops an excluded field from --help even when optional', () => {
+    expect(buildCommand(['note']).helpInformation()).toBe(
+      `Usage: test [options]
 
-    expect(command.options.some((option) => option.long === '--note')).toBe(
-      false,
+Options:
+  --status <value>    Current status (choices: "open", "closed")
+  --priority <value>  Priority
+  -h, --help          display help for command
+`,
     )
-  })
-
-  it('exposes enum choices for --help', () => {
-    const status = buildCommand().options.find(
-      (option) => option.long === '--status',
-    )
-
-    expect(status?.argChoices).toEqual(['open', 'closed'])
   })
 
   it('converts and validates a valid value through the schema', () => {
@@ -62,25 +64,33 @@ describe('addSchemaOptions', () => {
   })
 
   it('rejects a value the schema does not accept', () => {
-    const command = buildCommand()
+    const error = captureError(() =>
+      buildCommand().parse(['--priority', 'abc'], { from: 'user' }),
+    )
 
-    expect(() =>
-      command.parse(['--priority', 'abc'], { from: 'user' }),
-    ).toThrow(/expected number/i)
+    expect(error.message).toBe(
+      "error: option '--priority <value>' argument 'abc' is invalid. Invalid input: expected number, received NaN",
+    )
   })
 
   it("rejects an enum value outside the schema's choices", () => {
-    const command = buildCommand()
+    const error = captureError(() =>
+      buildCommand().parse(['--status', 'archived'], { from: 'user' }),
+    )
 
-    expect(() =>
-      command.parse(['--status', 'archived'], { from: 'user' }),
-    ).toThrow(/expected one of/i)
+    expect(error.message).toBe(
+      'error: option \'--status <value>\' argument \'archived\' is invalid. Invalid option: expected one of "open"|"closed"',
+    )
   })
 
   it('throws at registration time for a schema field type it does not support', () => {
     const unsupportedSchema = z.object({ flag: z.boolean().optional() })
 
-    expect(() => addSchemaOptions(new Command(), unsupportedSchema)).toThrow(
+    const error = captureError(() =>
+      addSchemaOptions(new Command(), unsupportedSchema),
+    )
+
+    expect(error.message).toBe(
       'addSchemaOptions: unsupported schema type for field "flag"',
     )
   })
@@ -105,5 +115,15 @@ describe('pickSchemaFields', () => {
     const result = pickSchemaFields(testSchema, { name: 'value' })
 
     expect(result).toEqual({ name: 'value' })
+  })
+
+  it('validates values even when called directly, bypassing addSchemaOptions', () => {
+    const error = captureError(() =>
+      pickSchemaFields(testSchema, { priority: 'not-a-number' }),
+    )
+
+    expect(error.message).toBe(
+      'Invalid input: expected number, received string',
+    )
   })
 })
