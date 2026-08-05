@@ -5,7 +5,8 @@
   "exports": {
     "./types": "./src/app.ts",
     "./constants/images": "./src/constants/images.ts",
-    "./constants/mention-pattern": "./src/constants/mention-pattern.ts"
+    "./constants/mention-pattern": "./src/constants/mention-pattern.ts",
+    "./schemas/task-page": "./src/schemas/task-page.ts"
   },
   "imports": {
     "#*": "./src/*.ts"

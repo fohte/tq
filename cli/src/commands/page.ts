@@ -1,4 +1,5 @@
-import { Command, InvalidArgumentError, Option } from 'commander'
+import { createPageSchema, updatePageSchema } from 'api/schemas/task-page'
+import type { Command } from 'commander'
 import type { InferRequestType } from 'hono/client'
 
 import type { Client } from '#client'
@@ -6,6 +7,7 @@ import { createClient, toApiError } from '#client'
 import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
 import { printJson, writeContentFile } from '#output'
+import { addSchemaOptions, pickSchemaFields } from '#schema-options'
 
 type CreatePageJson = InferRequestType<
   Client['api']['tasks'][':taskId']['pages']['$post']
@@ -20,17 +22,12 @@ interface GlobalOptions {
   header: Record<string, string>
 }
 
-interface CreateOptions {
+interface CreateOptions extends Record<string, unknown> {
   file?: string
-  format?: 'markdown' | 'html'
-  sortOrder?: number
 }
 
-interface UpdateOptions {
-  title?: string
+interface UpdateOptions extends Record<string, unknown> {
   file?: string
-  format?: 'markdown' | 'html'
-  sortOrder?: number
 }
 
 function resolveApiUrl(options: GlobalOptions): string {
@@ -46,23 +43,6 @@ function buildClient(command: Command, fetchImpl: typeof fetch): Client {
   const options = command.optsWithGlobals<GlobalOptions>()
   const apiUrl = resolveApiUrl(options)
   return createClient({ apiUrl, headers: options.header }, fetchImpl)
-}
-
-function parseSortOrder(value: string): number {
-  const parsed = Number(value)
-  if (!Number.isInteger(parsed)) {
-    throw new InvalidArgumentError(`Expected an integer, got: ${value}`)
-  }
-  return parsed
-}
-
-function addFormatOption(command: Command): Command {
-  return command.addOption(
-    new Option('--format <format>', 'Content format').choices([
-      'markdown',
-      'html',
-    ]),
-  )
 }
 
 export function registerPageCommands(
@@ -117,74 +97,69 @@ export function registerPageCommands(
       },
     )
 
-  addFormatOption(
+  addSchemaOptions(
     page
       .command('create <taskId> <title>')
       .description('Create a page')
       .option('--file <path>', 'Read content from a file instead of stdin'),
+    createPageSchema,
+    ['content'],
+  ).action(
+    async (
+      taskId: string,
+      title: string,
+      options: CreateOptions,
+      command: Command,
+    ) => {
+      const client = buildClient(command, fetchImpl)
+      const content = await readContentInput(options.file, stdin)
+
+      const json: CreatePageJson = {
+        title,
+        ...pickSchemaFields(createPageSchema, options, ['content']),
+        ...(content !== undefined ? { content } : {}),
+      }
+
+      const res = await client.api.tasks[':taskId'].pages.$post({
+        param: { taskId },
+        json,
+      })
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 201 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
+      if (!res.ok) throw await toApiError(res)
+      printJson(await res.json())
+    },
   )
-    .option('--sort-order <n>', 'Sort order', parseSortOrder)
-    .action(
-      async (
-        taskId: string,
-        title: string,
-        options: CreateOptions,
-        command: Command,
-      ) => {
-        const client = buildClient(command, fetchImpl)
-        const content = await readContentInput(options.file, stdin)
 
-        const json: CreatePageJson = { title }
-        if (content !== undefined) json.content = content
-        if (options.format !== undefined) json.format = options.format
-        if (options.sortOrder !== undefined) {
-          json.sortOrder = options.sortOrder
-        }
-
-        const res = await client.api.tasks[':taskId'].pages.$post({
-          param: { taskId },
-          json,
-        })
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 201 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
-        if (!res.ok) throw await toApiError(res)
-        printJson(await res.json())
-      },
-    )
-
-  addFormatOption(
+  addSchemaOptions(
     page
       .command('update <taskId> <pageId>')
       .description('Update a page')
-      .option('--title <title>', 'New title')
       .option('--file <path>', 'Read content from a file instead of stdin'),
+    updatePageSchema,
+    ['content'],
+  ).action(
+    async (
+      taskId: string,
+      pageId: string,
+      options: UpdateOptions,
+      command: Command,
+    ) => {
+      const client = buildClient(command, fetchImpl)
+      const content = await readContentInput(options.file, stdin)
+
+      const json: UpdatePageJson = {
+        ...pickSchemaFields(updatePageSchema, options, ['content']),
+        ...(content !== undefined ? { content } : {}),
+      }
+
+      const res = await client.api.tasks[':taskId'].pages[':pageId'].$patch({
+        param: { taskId, pageId },
+        json,
+      })
+      if (!res.ok) throw await toApiError(res)
+      printJson(await res.json())
+    },
   )
-    .option('--sort-order <n>', 'Sort order', parseSortOrder)
-    .action(
-      async (
-        taskId: string,
-        pageId: string,
-        options: UpdateOptions,
-        command: Command,
-      ) => {
-        const client = buildClient(command, fetchImpl)
-        const content = await readContentInput(options.file, stdin)
-
-        const json: UpdatePageJson = {}
-        if (options.title !== undefined) json.title = options.title
-        if (content !== undefined) json.content = content
-        if (options.format !== undefined) json.format = options.format
-        if (options.sortOrder !== undefined) {
-          json.sortOrder = options.sortOrder
-        }
-
-        const res = await client.api.tasks[':taskId'].pages[':pageId'].$patch({
-          param: { taskId, pageId },
-          json,
-        })
-        if (!res.ok) throw await toApiError(res)
-        printJson(await res.json())
-      },
-    )
 
   page
     .command('delete <taskId> <pageId>')

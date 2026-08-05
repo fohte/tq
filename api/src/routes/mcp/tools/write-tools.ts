@@ -6,9 +6,9 @@ import { app } from '#app'
 import { AUTHOR_HEADER } from '#lib/author'
 import { callInternalRoute } from '#routes/mcp/route-bridge'
 import { createCommentSchema, updateCommentSchema } from '#routes/task-comments'
-import { createPageSchema, updatePageSchema } from '#routes/task-pages'
 import { createTaskSchema, updateTaskSchema } from '#routes/tasks/crud'
 import { taskIdOrNumber, taskStatus } from '#routes/tasks/shared'
+import { createPageSchema, updatePageSchema } from '#schemas/task-page'
 
 // Completing a task carries a side effect (generating the next occurrence of
 // a recurring task) that a direct status write doesn't, so that transition
