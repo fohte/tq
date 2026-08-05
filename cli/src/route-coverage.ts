@@ -16,7 +16,6 @@ export type AllRoutes = {
   }[keyof Schema[Path]]
 }[keyof Schema]
 
-/** Routes with a working CLI command today. */
 export const COVERED_ROUTES = [
   'GET /api/tasks/:taskId/pages',
   'POST /api/tasks/:taskId/pages',
@@ -27,7 +26,6 @@ export const COVERED_ROUTES = [
 
 type CoveredRoutes = (typeof COVERED_ROUTES)[number]
 
-/** Routes deliberately out of scope for the CLI, with the reason. */
 export const EXCLUDED_ROUTES = {
   // OAuth callbacks are a browser/server contract, not something a CLI invokes.
   'GET /api/calendar/oauth-callback': 'oauth callback: browser/server contract',
@@ -139,10 +137,10 @@ export const PENDING_ROUTES = [
   'GET /api/schedule/today-tasks',
   'PUT /api/schedule/today-tasks',
 
-  // calendar (no CLI resource planned yet)
+  // calendar
   'GET /api/calendar/events',
 
-  // slack (no CLI resource planned yet)
+  // slack
   'POST /api/slack/resolve',
 ] as const satisfies readonly AllRoutes[]
 
@@ -160,3 +158,18 @@ export type UnclassifiedRoutes = Exclude<
   CoveredRoutes | ExcludedRoutes | PendingRoutes
 >
 export type _AssertAllRoutesClassified = AssertNever<UnclassifiedRoutes>
+
+/**
+ * Coverage alone doesn't catch a route left in two tables at once (e.g. added
+ * to `COVERED_ROUTES` on implementation without being removed from
+ * `PENDING_ROUTES`) — these assert the three tables are pairwise disjoint.
+ */
+export type _AssertCoveredExcludedDisjoint = AssertNever<
+  Extract<CoveredRoutes, ExcludedRoutes>
+>
+export type _AssertCoveredPendingDisjoint = AssertNever<
+  Extract<CoveredRoutes, PendingRoutes>
+>
+export type _AssertExcludedPendingDisjoint = AssertNever<
+  Extract<ExcludedRoutes, PendingRoutes>
+>
