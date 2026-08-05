@@ -255,6 +255,61 @@ jobs:
           DATABASE_URL: postgresql://tq:tq@localhost:5432/tq_test
         run: pnpm run test
 
+      - name: Get GitHub token for VRT PR comment
+        if: matrix.package == 'web'
+        uses: octo-sts/action@f603d3be9d8dd9871a265776e625a27b00effe05 # v1.1.1
+        id: octo-sts-vrt
+        with:
+          scope: fohte
+          identity: ${{ github.event.repository.name }}
+          domain: octo-sts.fohte.net
+
+      # main pushes publish under the pr/ prefix too (as pr/main-<sha>) so the
+      # new snapshot never overwrites main/latest directly — if reg-suit or
+      # the promote step below fails, main/latest (the baseline every PR
+      # compares against) is untouched instead of ending up deleted or half
+      # written. The pr/ prefix's 3-day lifecycle rule cleans these up same
+      # as regular PR snapshots.
+      - name: Set VRT snapshot keys
+        if: matrix.package == 'web'
+        id: vrt-keys
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "actual_key=pr/main-${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "actual_key=pr/${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "expected_key=main/latest" >> "$GITHUB_OUTPUT"
+
+      - name: Run VRT (reg-suit)
+        if: matrix.package == 'web'
+        working-directory: web
+        env:
+          VRT_ACTUAL_KEY: ${{ steps.vrt-keys.outputs.actual_key }}
+          VRT_EXPECTED_KEY: ${{ steps.vrt-keys.outputs.expected_key }}
+          VRT_GITHUB_TOKEN: ${{ steps.octo-sts-vrt.outputs.token }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: pnpm exec reg-suit run
+
+      # Only reached once reg-suit has successfully published the new actual
+      # images under pr/main-<sha>, so a failure above never touches
+      # main/latest. `sync --delete` also drops images for removed stories,
+      # which a plain overwrite would otherwise leave behind forever.
+      # Concurrent main pushes aren't serialized here — main is merged
+      # serially by a single maintainer in practice, and an overlapping race
+      # self-corrects on the next push.
+      - name: Promote VRT snapshot to main/latest
+        if: matrix.package == 'web' && github.ref == 'refs/heads/main'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          aws s3 sync "s3://tq-vrt/${{ steps.vrt-keys.outputs.actual_key }}/actual" s3://tq-vrt/main/latest/actual \
+            --delete \
+            --endpoint-url https://8d88a085ccc7b11f252419e2f3a25fd6.r2.cloudflarestorage.com
+
   # Aggregation gate for the unit-test matrix. Matrix leg names are dynamic and
   # cannot be pinned as a required status check, so this single fixed-name job is
   # the branch protection gate instead. It fails only when a needed job failed;
