@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { BoundaryError } from '#errors'
+import { ApiError, BoundaryError } from '#errors'
 
 class TaskStorePersistenceError extends BoundaryError {}
 
@@ -13,5 +13,13 @@ describe('BoundaryError', () => {
     expect(wrapped).toEqual(
       new TaskStorePersistenceError('failed to save', original),
     )
+  })
+})
+
+describe('ApiError', () => {
+  it('holds the HTTP status and message', () => {
+    const error = new ApiError(404, 'Task not found')
+
+    expect(error).toEqual(new ApiError(404, 'Task not found'))
   })
 })

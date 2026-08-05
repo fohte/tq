@@ -2,15 +2,26 @@
   "name": "cli",
   "private": true,
   "type": "module",
+  "bin": {
+    "tq": "./dist/index.js"
+  },
   "imports": {
     "#*": "./src/*.ts"
   },
   "scripts": {
+    "build": "tsup",
+    "install-cli": "pnpm run build && pnpm link --global",
     "test": "conc pnpm:test:type pnpm:test:unit",
     "test:type": "tsc --noEmit",
     "test:unit": "vitest run"
   },
   "dependencies": {
+    "api": "workspace:*",
+    "commander": "15.0.0",
+    "hono": "4.12.34",
     "neverthrow": "8.2.0"
+  },
+  "devDependencies": {
+    "tsup": "8.5.1"
   }
 }
