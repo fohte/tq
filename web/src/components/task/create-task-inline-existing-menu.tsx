@@ -1,3 +1,4 @@
+import { TaskCandidateList } from '#components/task/task-candidate-list'
 import type { SearchResult } from '#hooks/use-search'
 import { cn } from '#lib/utils'
 
@@ -33,32 +34,12 @@ export function CreateTaskInlineExistingMenu({
         <div className="px-3 py-1 text-[10px] tracking-[0.08em] text-muted-foreground-faint">
           EXISTING
         </div>
-        {candidates.map((candidate, index) => (
-          <button
-            key={candidate.id}
-            type="button"
-            className={cn(
-              'flex min-h-[44px] w-full items-center gap-2 px-3 text-left text-sm',
-              highlightedIndex === index + 1
-                ? 'bg-accent text-accent-foreground'
-                : 'text-popover-foreground hover:bg-accent/50',
-            )}
-            onMouseDown={(e) => {
-              e.preventDefault()
-              onSelectCandidate(candidate)
-            }}
-          >
-            <span className="shrink-0 text-muted-foreground-faint">
-              #{candidate.number}
-            </span>
-            <span className="truncate">{candidate.title}</span>
-            {candidate.parentId != null && candidate.parentNumber != null && (
-              <span className="ml-auto shrink-0 text-xs text-muted-foreground-faint">
-                ← #{candidate.parentNumber}
-              </span>
-            )}
-          </button>
-        ))}
+        <TaskCandidateList
+          candidates={candidates}
+          highlightedIndex={highlightedIndex}
+          indexOffset={1}
+          onSelectCandidate={onSelectCandidate}
+        />
       </div>
     </div>
   )

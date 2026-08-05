@@ -123,6 +123,23 @@ describe('parseTaskInput', () => {
     expect(result.dueDate).toBe(formatLocalDate(tomorrow))
   })
 
+  it('parses parentNumber with ^N', () => {
+    const result = parseTaskInput('Task ^12')
+    expect(result).toEqual({
+      title: 'Task',
+      labels: [],
+      parentNumber: 12,
+    })
+  })
+
+  it('treats non-numeric ^ as title', () => {
+    const result = parseTaskInput('Task ^foo')
+    expect(result).toEqual({
+      title: 'Task ^foo',
+      labels: [],
+    })
+  })
+
   it('handles empty input', () => {
     const result = parseTaskInput('')
     expect(result.title).toBe('')
@@ -174,6 +191,11 @@ describe('detectTrigger', () => {
   it('detects % trigger', () => {
     const result = detectTrigger('Task %w', 7)
     expect(result).toEqual({ trigger: '%', partial: 'w', tokenStart: 5 })
+  })
+
+  it('detects ^ trigger', () => {
+    const result = detectTrigger('Task ^12', 8)
+    expect(result).toEqual({ trigger: '^', partial: '12', tokenStart: 5 })
   })
 
   it('returns null when not on a trigger token', () => {
@@ -229,5 +251,10 @@ describe('getSuggestions', () => {
   it('filters % suggestions by partial', () => {
     const result = getSuggestions('%', 'w')
     expect(result.map((s) => s.value)).toEqual(['work'])
+  })
+
+  it('returns no ^ suggestions (sourced from search, not this function)', () => {
+    const result = getSuggestions('^', '')
+    expect(result).toEqual([])
   })
 })

@@ -1,7 +1,11 @@
 import { Link } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 
-import { SidebarField } from '#components/task/sidebar-field'
+import {
+  fieldValueClassName,
+  SidebarField,
+} from '#components/task/sidebar-field'
+import { SidebarParentField } from '#components/task/sidebar-parent-field'
 import { SidebarTagsField } from '#components/task/sidebar-tags-field'
 import { SidebarGithubLinkField } from '#components/task/task-github-link-field'
 import { Input } from '#components/ui/input'
@@ -14,23 +18,11 @@ import {
 } from '#components/ui/select'
 import { useProject } from '#hooks/use-projects'
 import type { TaskDetail } from '#hooks/use-tasks'
-import {
-  useTaskList,
-  useUpdateTask,
-  useUpdateTaskParent,
-  useUpdateTaskStatus,
-} from '#hooks/use-tasks'
+import { useUpdateTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { selectValueHandler } from '#lib/form-utils'
 import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
-import { getDescendantIds } from '#lib/task-tree'
 import { cn } from '#lib/utils'
-
-// Shared chrome for a field's editable value: no border/height/padding of
-// its own, so it reads as plain text until focused (matches the design's
-// icon-less, borderless field rows).
-const fieldValueClassName =
-  'h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0'
 
 function SidebarSectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -286,50 +278,6 @@ function SidebarDateField({
         onChange={handleChange}
         className={fieldValueClassName}
       />
-    </SidebarField>
-  )
-}
-
-function SidebarParentField({
-  taskId,
-  parentId,
-}: {
-  taskId: string
-  parentId: string | null
-}) {
-  const { categorized } = useTaskList()
-  const updateParent = useUpdateTaskParent()
-
-  const allTasks = categorized.all
-  const invalidParentIds = new Set([
-    taskId,
-    ...getDescendantIds(allTasks, taskId),
-  ])
-  const candidates = allTasks.filter((t) => !invalidParentIds.has(t.id))
-
-  return (
-    <SidebarField label="PARENT">
-      <Select
-        value={parentId ?? ''}
-        onValueChange={(value) => {
-          updateParent.mutate({
-            id: taskId,
-            parentId: value != null && value !== '' ? value : null,
-          })
-        }}
-      >
-        <SelectTrigger size="sm" className={fieldValueClassName}>
-          <SelectValue placeholder="—" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">—</SelectItem>
-          {candidates.map((t) => (
-            <SelectItem key={t.id} value={t.id}>
-              #{t.number} {t.title}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
     </SidebarField>
   )
 }

@@ -10,6 +10,7 @@ export interface ParsedTaskInput {
   startDate?: string
   labels: string[]
   context?: TaskContext
+  parentNumber?: number
 }
 
 const CONTEXT_VALUES: readonly TaskContext[] = ['work', 'personal']
@@ -43,6 +44,7 @@ function resolveDateKeyword(keyword: string): string | null {
  * - `>today` / `>tomorrow` / `>YYYY-MM-DD` → startDate
  * - `#label` → labels
  * - `%work` / `%personal` → context
+ * - `^N` → parentNumber
  * - Everything else → title
  */
 export function parseTaskInput(input: string): ParsedTaskInput {
@@ -107,6 +109,13 @@ export function parseTaskInput(input: string): ParsedTaskInput {
       } else {
         titleParts.push(token)
       }
+    } else if (token.startsWith('^')) {
+      const value = token.slice(1)
+      if (/^\d+$/.test(value)) {
+        result.parentNumber = Number(value)
+      } else {
+        titleParts.push(token)
+      }
     } else {
       titleParts.push(token)
     }
@@ -121,7 +130,7 @@ export interface SuggestionItem {
   display: string
 }
 
-export type TriggerChar = '@' | '>' | '#' | '%'
+export type TriggerChar = '@' | '>' | '#' | '%' | '^'
 
 const AT_SUGGESTIONS: SuggestionItem[] = [
   { value: 'today', display: 'today' },
@@ -164,7 +173,8 @@ export function detectTrigger(
     firstChar === '@' ||
     firstChar === '>' ||
     firstChar === '#' ||
-    firstChar === '%'
+    firstChar === '%' ||
+    firstChar === '^'
   ) {
     return {
       trigger: firstChar,
@@ -198,6 +208,11 @@ export function getSuggestions(
       break
     case '%':
       items = CONTEXT_SUGGESTIONS
+      break
+    case '^':
+      // Real `^` suggestions come from an async server search
+      // (`useSearchTasks` in `CreateTaskInline`), not this function.
+      items = []
       break
   }
 
