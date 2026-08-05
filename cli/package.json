@@ -19,7 +19,8 @@
     "api": "workspace:*",
     "commander": "15.0.0",
     "hono": "4.12.34",
-    "neverthrow": "8.2.0"
+    "neverthrow": "8.2.0",
+    "zod": "4.3.6"
   },
   "devDependencies": {
     "tsup": "8.5.1"
