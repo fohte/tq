@@ -3,10 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { expect, fn, waitFor, within } from 'storybook/test'
 
-import {
-  CreateTaskInline,
-  FloatingActionButton,
-} from '#components/task/create-task-inline'
+import { CreateTaskInline } from '#components/task/create-task-inline'
 import { searchKeys, type SearchResult } from '#hooks/use-search'
 import { taskKeys } from '#hooks/use-tasks'
 
@@ -38,14 +35,6 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
-
-export const FAB: StoryObj<typeof FloatingActionButton> = {
-  render: () => (
-    <div className="relative h-40 w-40">
-      <FloatingActionButton onClick={fn()} />
-    </div>
-  ),
-}
 
 // --- Existing-candidates menu (subtask row only, `parentId` set) ---
 

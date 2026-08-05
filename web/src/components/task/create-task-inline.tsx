@@ -2,19 +2,18 @@ import { Plus, X } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { CreateTaskInlineExistingMenu } from '#components/task/create-task-inline-existing-menu'
+import { CreateTaskInlineParentMenu } from '#components/task/create-task-inline-parent-menu'
+import { CreateTaskInputAccessoryBar } from '#components/task/create-task-input-accessory-bar'
 import { LinkExistingTaskDialog } from '#components/task/link-existing-task-dialog'
 import { ProjectChip } from '#components/task/project-chip'
 import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
+import { useExistingTaskLink } from '#hooks/use-existing-task-link'
 import { useLabels } from '#hooks/use-labels'
-import type { SearchResult } from '#hooks/use-search'
-import { useSearchTasks } from '#hooks/use-search'
-import {
-  useCreateTask,
-  useTaskList,
-  useUpdateTaskParent,
-} from '#hooks/use-tasks'
+import { useParentPicker } from '#hooks/use-parent-picker'
+import { useCreateTask } from '#hooks/use-tasks'
+import { cycleIndex } from '#lib/cycle-index'
 import { formatMinutes } from '#lib/format'
 import {
   detectTrigger,
@@ -24,17 +23,12 @@ import {
   type TaskContext,
   type TriggerChar,
 } from '#lib/task-input-parser'
-import { getDescendantIds } from '#lib/task-tree'
 import { cn } from '#lib/utils'
 
 export interface InheritedTaskAttributes {
   context: TaskContext
   projectId: string | null
   labels: string[]
-}
-
-function cycleIndex(current: number, delta: 1 | -1, length: number): number {
-  return (current + delta + length) % length
 }
 
 export function CreateTaskInline({
@@ -65,15 +59,11 @@ export function CreateTaskInline({
     partial: string
     tokenStart: number
   } | null>(null)
-  const [existingMenuIndex, setExistingMenuIndex] = useState(0)
-  const [existingMenuDismissed, setExistingMenuDismissed] = useState(false)
-  const [linkDialogCandidate, setLinkDialogCandidate] =
-    useState<SearchResult | null>(null)
+  const [isInputFocused, setIsInputFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
   const createTask = useCreateTask()
-  const updateTaskParent = useUpdateTaskParent()
   const { data: labelsData } = useLabels()
 
   const availableLabels = useMemo(
@@ -137,59 +127,79 @@ export function CreateTaskInline({
     [input, cursorTrigger],
   )
 
-  // --- Existing-task linking (only active when this row creates a subtask) ---
+  // Inserts `trigger` at the input's current cursor position, as if the
+  // user had typed it — used by the mobile accessory bar.
+  const insertTrigger = useCallback(
+    (trigger: TriggerChar) => {
+      const cursorPos = inputRef.current?.selectionStart ?? input.length
+      const before = input.slice(0, cursorPos)
+      const after = input.slice(cursorPos)
+      const needsLeadingSpace = before.length > 0 && !before.endsWith(' ')
+      const needsTrailingSpace = after.length > 0 && !after.startsWith(' ')
+      const leadingSpace = needsLeadingSpace ? ' ' : ''
+      const trailingSpace = needsTrailingSpace ? ' ' : ''
+      const newInput = `${before}${leadingSpace}${trigger}${trailingSpace}${after}`
+      setInput(newInput)
 
-  // Only searched while no @/>/#/% trigger dropdown is active, since the two
-  // dropdowns are mutually exclusive.
-  const existingSearchQuery =
-    parentId != null && cursorTrigger == null ? parsed.title.trim() : ''
-  const { data: searchResults } = useSearchTasks(existingSearchQuery)
+      requestAnimationFrame(() => {
+        const el = inputRef.current
+        if (el) {
+          el.focus()
+          // Caret lands right after the trigger char (before the trailing
+          // space, if any) so `updateTrigger` sees an empty partial — same
+          // as if the user had just typed the trigger key by hand.
+          const pos = before.length + leadingSpace.length + trigger.length
+          el.setSelectionRange(pos, pos)
+          updateTrigger(newInput, pos)
+        }
+      })
+    },
+    [input, updateTrigger],
+  )
 
-  const { categorized: allTasksForLinking } = useTaskList(undefined, {
-    enabled: parentId != null,
+  const {
+    selectedParent,
+    setSelectedParent,
+    showParentMenu,
+    parentCandidates,
+    isParentSearchFetching,
+    parentMenuIndex,
+    resetParentMenu,
+    applyParentSelection,
+    handleParentMenuKeyDown,
+    resolvedParentId,
+  } = useParentPicker({
+    parentId,
+    input,
+    setInput,
+    cursorTrigger,
+    setCursorTrigger,
+    parsedParentNumber: parsed.parentNumber,
+    inputRef,
   })
 
-  const excludedTaskIds = useMemo(() => {
-    if (parentId == null) return new Set<string>()
-    return new Set([
-      parentId,
-      ...getDescendantIds(allTasksForLinking.all, parentId),
-    ])
-  }, [parentId, allTasksForLinking.all])
-
-  const existingCandidates = useMemo(
-    () => (searchResults ?? []).filter((t) => !excludedTaskIds.has(t.id)),
-    [searchResults, excludedTaskIds],
-  )
-
-  const showExistingMenu =
-    parentId != null &&
-    parentTaskNumber != null &&
-    cursorTrigger == null &&
-    parsed.title.trim() !== '' &&
-    existingCandidates.length > 0 &&
-    !existingMenuDismissed
-
-  const finishLink = useCallback(() => {
-    setInput('')
-    setExistingMenuIndex(0)
-    if (closeOnSubmit) onClose()
-  }, [closeOnSubmit, onClose])
-
-  const selectCandidate = useCallback(
-    (candidate: SearchResult) => {
-      if (parentId == null) return
-      if (candidate.parentId == null) {
-        updateTaskParent.mutate(
-          { id: candidate.id, parentId },
-          { onSuccess: finishLink },
-        )
-      } else {
-        setLinkDialogCandidate(candidate)
-      }
+  const {
+    existingCandidates,
+    showExistingMenu,
+    existingMenuIndex,
+    resetExistingMenu,
+    dismissExistingMenu,
+    selectCandidate,
+    handleExistingMenuKeyDown,
+    linkDialogCandidate,
+    setLinkDialogCandidate,
+    confirmLinkDialog,
+  } = useExistingTaskLink({
+    parentId,
+    parentTaskNumber,
+    triggerDropdownActive: cursorTrigger != null,
+    title: parsed.title.trim(),
+    closeOnSubmit,
+    onClose,
+    onInputReset: () => {
+      setInput('')
     },
-    [parentId, updateTaskParent, finishLink],
-  )
+  })
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const suggestionsActive = showSuggestions && suggestions.length > 0
@@ -200,9 +210,12 @@ export function CreateTaskInline({
         setShowSuggestions(false)
         return
       }
+      if (showParentMenu) {
+        setCursorTrigger(null)
+        return
+      }
       if (showExistingMenu) {
-        setExistingMenuIndex(0)
-        setExistingMenuDismissed(true)
+        dismissExistingMenu()
         return
       }
       onClose()
@@ -231,32 +244,36 @@ export function CreateTaskInline({
       return
     }
 
+    if (showParentMenu) {
+      handleParentMenuKeyDown(e)
+      return
+    }
+
     if (showExistingMenu) {
-      const total = existingCandidates.length + 1
-      switch (e.key) {
-        case 'ArrowDown':
-          e.preventDefault()
-          setExistingMenuIndex((prev) => cycleIndex(prev, 1, total))
-          break
-        case 'ArrowUp':
-          e.preventDefault()
-          setExistingMenuIndex((prev) => cycleIndex(prev, -1, total))
-          break
-        case 'Enter':
-        case 'Tab':
-          if (existingMenuIndex > 0) {
-            e.preventDefault()
-            const candidate = existingCandidates[existingMenuIndex - 1]
-            if (candidate != null) selectCandidate(candidate)
-          }
-          break
-      }
+      handleExistingMenuKeyDown(e)
     }
   }
 
   const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault()
     if (showSuggestions) return
+
+    if (
+      parsed.parentNumber != null &&
+      parsed.parentNumber !== selectedParent?.number
+    ) {
+      // A `^<number>` token is present but was never confirmed via the
+      // parent picker (dropdown dismissed, or the token hand-edited) —
+      // reopen it instead of silently creating the task with no parent.
+      const matches = [...input.matchAll(/\^\d+/g)]
+      const lastMatch = matches.at(-1)
+      if (lastMatch?.index != null) {
+        const pos = lastMatch.index + lastMatch[0].length
+        updateTrigger(input, pos)
+        inputRef.current?.setSelectionRange(pos, pos)
+      }
+      return
+    }
 
     if (!parsed.title.trim() || createTask.isPending) return
 
@@ -279,11 +296,12 @@ export function CreateTaskInline({
         ...(inherited?.projectId != null
           ? { projectId: inherited.projectId }
           : {}),
-        ...(parentId != null ? { parentId } : {}),
+        ...(resolvedParentId != null ? { parentId: resolvedParentId } : {}),
       },
       {
         onSuccess: () => {
           setInput('')
+          setSelectedParent(null)
           if (closeOnSubmit) onClose()
         },
       },
@@ -294,8 +312,8 @@ export function CreateTaskInline({
     const value = e.target.value
     setInput(value)
     updateTrigger(value, e.target.selectionStart ?? value.length)
-    setExistingMenuIndex(0)
-    setExistingMenuDismissed(false)
+    resetExistingMenu()
+    resetParentMenu()
   }
 
   const handleSelect = (e: React.SyntheticEvent<HTMLInputElement>) => {
@@ -326,6 +344,12 @@ export function CreateTaskInline({
   if (parsed.context != null) {
     ownChips.push({ key: 'context', label: parsed.context })
   }
+  if (selectedParent != null) {
+    ownChips.push({
+      key: 'parent',
+      label: `parent: #${String(selectedParent.number)} ${selectedParent.title}`,
+    })
+  }
 
   // Preview chips for values inherited from the parent task — dimmer, and
   // suppressed wherever the typed notation already covers the same field.
@@ -335,6 +359,9 @@ export function CreateTaskInline({
     (label) => !parsed.labels.includes(label),
   )
   const hasInheritedProjectChip = inherited?.projectId != null
+
+  const accessoryTriggers: TriggerChar[] =
+    parentId == null ? ['@', '>', '#', '%', '^'] : ['@', '>', '#', '%']
 
   return (
     <div className="relative">
@@ -351,7 +378,17 @@ export function CreateTaskInline({
             onKeyDown={handleKeyDown}
             onSelect={handleSelect}
             onClick={handleSelect}
-            placeholder="New task... (@30m @tomorrow #label %work)"
+            onFocus={() => {
+              setIsInputFocused(true)
+            }}
+            onBlur={() => {
+              setIsInputFocused(false)
+            }}
+            placeholder={
+              parentId == null
+                ? 'New task... (@30m @tomorrow #label %work ^parent)'
+                : 'New task... (@30m @tomorrow #label %work)'
+            }
             autoFocus
             className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:border-0 focus-visible:ring-0"
           />
@@ -384,6 +421,16 @@ export function CreateTaskInline({
             </div>
           )}
 
+          {/* Parent-picker dropdown */}
+          {showParentMenu && (
+            <CreateTaskInlineParentMenu
+              candidates={parentCandidates}
+              highlightedIndex={parentMenuIndex}
+              isLoading={isParentSearchFetching}
+              onSelectCandidate={applyParentSelection}
+            />
+          )}
+
           {/* Combined create/existing-task dropdown */}
           {showExistingMenu && (
             <CreateTaskInlineExistingMenu
@@ -406,6 +453,13 @@ export function CreateTaskInline({
           <X className="h-3 w-3" />
         </Button>
       </form>
+
+      {isInputFocused && (
+        <CreateTaskInputAccessoryBar
+          triggers={accessoryTriggers}
+          onTriggerTap={insertTrigger}
+        />
+      )}
 
       {/* Preview chips */}
       {(ownChips.length > 0 ||
@@ -440,18 +494,7 @@ export function CreateTaskInline({
           onOpenChange={(open) => {
             if (!open) setLinkDialogCandidate(null)
           }}
-          onConfirm={() => {
-            if (linkDialogCandidate == null || parentId == null) return
-            updateTaskParent.mutate(
-              { id: linkDialogCandidate.id, parentId },
-              {
-                onSuccess: () => {
-                  setLinkDialogCandidate(null)
-                  finishLink()
-                },
-              },
-            )
-          }}
+          onConfirm={confirmLinkDialog}
         />
       )}
     </div>
@@ -467,15 +510,4 @@ function LabelChipText({ label }: { label: string }) {
   )
 }
 
-export function FloatingActionButton({ onClick }: { onClick: () => void }) {
-  return (
-    <Button
-      type="button"
-      size="icon-lg"
-      onClick={onClick}
-      className="fixed bottom-20 right-4 z-50 md:hidden"
-    >
-      <Plus />
-    </Button>
-  )
-}
+export { FloatingActionButton } from '#components/task/floating-action-button'
