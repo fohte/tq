@@ -12,6 +12,8 @@ subpackages:
   - name: api
     type: node
     web_app: true
+  - name: cli
+    type: node
 type: base
 use_release_please: false
 use_storybook: true
