@@ -56,13 +56,13 @@ describe('task pages API', () => {
 
     it('accepts the task number in place of the UUID', async () => {
       const task = await createTask('Task')
-      await createPage(task.id, { title: 'Page' })
+      const page = await createPage(task.id, { title: 'Page' })
 
       const res = await app.request(`/api/tasks/${String(task.number)}/pages`)
 
       expect(res.status).toBe(200)
       const body = await jsonBody<PageResponse[]>(res)
-      expect(body).toHaveLength(1)
+      expect(body.map(normalizePage)).toEqual([normalizePage(page)])
     })
 
     it('reports each page author independently', async () => {

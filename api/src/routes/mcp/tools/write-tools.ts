@@ -110,7 +110,7 @@ export function registerWriteTools(server: McpServer): void {
       },
     },
     async ({ taskId, agent, ...body }) =>
-      callRoute(`/api/tasks/${taskId}`, agent, {
+      callRoute(`/api/tasks/${String(taskId)}`, agent, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -132,8 +132,10 @@ export function registerWriteTools(server: McpServer): void {
     },
     async ({ taskId, status, agent }) =>
       status === 'completed'
-        ? callRoute(`/api/tasks/${taskId}/complete`, agent, { method: 'POST' })
-        : callRoute(`/api/tasks/${taskId}/status`, agent, {
+        ? callRoute(`/api/tasks/${String(taskId)}/complete`, agent, {
+            method: 'POST',
+          })
+        : callRoute(`/api/tasks/${String(taskId)}/status`, agent, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status }),
@@ -160,7 +162,7 @@ export function registerWriteTools(server: McpServer): void {
       },
     },
     async ({ taskId, agent, ...body }) =>
-      callRoute(`/api/tasks/${taskId}/pages`, agent, {
+      callRoute(`/api/tasks/${String(taskId)}/pages`, agent, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -181,7 +183,7 @@ export function registerWriteTools(server: McpServer): void {
       },
     },
     async ({ taskId, pageId, agent, ...body }) =>
-      callRoute(`/api/tasks/${taskId}/pages/${pageId}`, agent, {
+      callRoute(`/api/tasks/${String(taskId)}/pages/${pageId}`, agent, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -199,7 +201,7 @@ export function registerWriteTools(server: McpServer): void {
       },
     },
     async ({ taskId, agent, ...body }) =>
-      callRoute(`/api/tasks/${taskId}/comments`, agent, {
+      callRoute(`/api/tasks/${String(taskId)}/comments`, agent, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -219,7 +221,7 @@ export function registerWriteTools(server: McpServer): void {
       },
     },
     async ({ taskId, commentId, agent, ...body }) =>
-      callRoute(`/api/tasks/${taskId}/comments/${commentId}`, agent, {
+      callRoute(`/api/tasks/${String(taskId)}/comments/${commentId}`, agent, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

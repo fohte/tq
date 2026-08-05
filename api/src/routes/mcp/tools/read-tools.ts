@@ -107,10 +107,10 @@ export function registerReadTools(server: McpServer): void {
       // recursive CTE, so this composes it with the detail endpoint instead
       // of walking `parentId` links here.
       const [taskResult, treeResult] = await Promise.all([
-        callInternalRoute<TaskDetail>(app, `/api/tasks/${taskId}`),
+        callInternalRoute<TaskDetail>(app, `/api/tasks/${String(taskId)}`),
         callInternalRoute<Array<{ children: unknown }>>(
           app,
-          `/api/tasks/tree${buildQuery({ rootId: taskId })}`,
+          `/api/tasks/tree${buildQuery({ rootId: String(taskId) })}`,
         ),
       ])
       if (!taskResult.ok) return taskResult.result
@@ -145,7 +145,7 @@ export function registerReadTools(server: McpServer): void {
       annotations: { readOnlyHint: true },
     },
     async ({ taskId, pageId }) =>
-      callAsResult(`/api/tasks/${taskId}/pages/${pageId}`),
+      callAsResult(`/api/tasks/${String(taskId)}/pages/${pageId}`),
   )
 
   server.registerTool(

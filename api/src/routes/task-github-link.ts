@@ -81,7 +81,8 @@ export const taskGithubLinkApp = new Hono<TaskEnv>()
   // Triggered by the web client when it opens this task's detail view, for
   // an immediate single-task refresh instead of waiting for the next
   // whole-account sync (POST /api/github/sync). A no-op (204) when the task
-  // isn't linked.
+  // exists but isn't linked; a nonexistent task 404s via the middleware
+  // above.
   .post('/sync', async (c) => {
     const taskId = c.get('task').id
 

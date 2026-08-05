@@ -111,6 +111,18 @@ describe('POST /api/tasks/:taskId/github-link', () => {
     )
 
     expect(res.status).toBe(201)
+    const body = await jsonBody<GithubLinkResponse>(res)
+    expect(normalizeLink(body)).toEqual({
+      id: 'ID',
+      owner: 'fohte',
+      repo: 'tq',
+      number: 42,
+      kind: 'issue',
+      url: 'https://github.com/fohte/tq/issues/42',
+      state: 'open',
+      title: 'Bug: something broke',
+      lastSyncedAt: 'DATE',
+    })
   })
 
   it('returns 409 when the task is already linked', async () => {
@@ -269,6 +281,14 @@ describe('POST /api/tasks/:taskId/github-link/sync', () => {
     })
 
     expect(res.status).toBe(204)
+  })
+
+  it('returns 404 for a non-existent task', async () => {
+    const res = await app.request(`/api/tasks/${TEST_UUID}/github-link/sync`, {
+      method: 'POST',
+    })
+
+    expect(res.status).toBe(404)
   })
 })
 

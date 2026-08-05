@@ -219,11 +219,10 @@ const numericIdPattern = /^\d+$/
 // 404, so it's treated as a non-numeric (UUID-lookup, always-empty) id.
 const PG_INTEGER_MAX = 2147483647
 
-// Accepts either the UUID primary key or the human-facing sequential number
-// (e.g. `47`), matching what `findTaskByIdOrNumber` resolves.
 export const taskIdOrNumber = z.union([
   z.uuid(),
   z.string().regex(numericIdPattern),
+  z.number().int().positive(),
 ])
 
 // Task detail URLs (and their subresources) accept either the UUID primary

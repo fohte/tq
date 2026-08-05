@@ -90,7 +90,7 @@ describe('task comments API', () => {
 
     it('accepts the task number in place of the UUID', async () => {
       const task = await createTask('My task')
-      await createComment(task.id, 'A comment')
+      const comment = await createComment(task.id, 'A comment')
 
       const res = await app.request(
         `/api/tasks/${String(task.number)}/comments`,
@@ -98,7 +98,7 @@ describe('task comments API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<CommentResponse[]>(res)
-      expect(body).toHaveLength(1)
+      expect(body).toEqual([comment])
     })
 
     it('does not return comments from other tasks', async () => {
