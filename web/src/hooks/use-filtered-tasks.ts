@@ -4,6 +4,7 @@ import { useContextFilter } from '#hooks/use-context-filter'
 import { useTagFilter } from '#hooks/use-tag-filter'
 import type { TaskSortBy, TreeNode } from '#hooks/use-tasks'
 import { useTaskList, useTaskTree } from '#hooks/use-tasks'
+import { filterByCompleted, filterTreeByCompleted } from '#lib/completed-filter'
 import {
   filterByContext,
   filterModeToApiContext,
@@ -11,7 +12,7 @@ import {
 } from '#lib/context-filter'
 import { filterByTag, filterTreeByTag } from '#lib/tag-filter'
 
-export function useFilteredTaskList(sortBy?: TaskSortBy) {
+export function useFilteredTaskList(sortBy?: TaskSortBy, showCompleted = true) {
   const { mode } = useContextFilter()
   const { tag } = useTagFilter()
   const apiContext = filterModeToApiContext(mode)
@@ -25,8 +26,12 @@ export function useFilteredTaskList(sortBy?: TaskSortBy) {
     [categorized.open, mode, tag],
   )
   const all = useMemo(
-    () => filterByTag(filterByContext(categorized.all, mode), tag),
-    [categorized.all, mode, tag],
+    () =>
+      filterByCompleted(
+        filterByTag(filterByContext(categorized.all, mode), tag),
+        showCompleted,
+      ),
+    [categorized.all, mode, tag, showCompleted],
   )
   const backlog = useMemo(
     () => filterByTag(filterByContext(categorized.backlog, mode), tag),
@@ -57,17 +62,21 @@ function recalcChildCompletionCount(nodes: TreeNode[]): TreeNode[] {
 export function useFilteredTaskTree(options: {
   enabled: boolean
   sortBy?: TaskSortBy
+  showCompleted?: boolean
 }) {
   const { mode } = useContextFilter()
   const { tag } = useTagFilter()
   const { data, isLoading } = useTaskTree(options)
+  const showCompleted = options.showCompleted ?? true
 
   const tree = useMemo(() => {
     const filtered = filterTreeByTag(filterTreeByContext(data ?? [], mode), tag)
-    return mode === 'all' && tag == null
-      ? filtered
-      : recalcChildCompletionCount(filtered)
-  }, [data, mode, tag])
+    const withCounts =
+      mode === 'all' && tag == null
+        ? filtered
+        : recalcChildCompletionCount(filtered)
+    return filterTreeByCompleted(withCounts, showCompleted)
+  }, [data, mode, tag, showCompleted])
 
   return { isLoading, tree }
 }
