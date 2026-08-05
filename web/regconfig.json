@@ -1,0 +1,30 @@
+{
+  "core": {
+    "workingDir": ".reg",
+    "actualDir": "__screenshots__"
+  },
+  "plugins": {
+    "reg-simple-keygen-plugin": {
+      "expectedKey": "${VRT_EXPECTED_KEY}",
+      "actualKey": "${VRT_ACTUAL_KEY}"
+    },
+    "reg-publish-s3-plugin": {
+      "bucketName": "tq-vrt",
+      "customDomain": "tq-vrt.fohte.net",
+      "sdkOptions": {
+        "region": "auto",
+        "endpoint": "https://8d88a085ccc7b11f252419e2f3a25fd6.r2.cloudflarestorage.com",
+        "credentials": {
+          "accessKeyId": "${AWS_ACCESS_KEY_ID}",
+          "secretAccessKey": "${AWS_SECRET_ACCESS_KEY}"
+        }
+      }
+    },
+    "reg-notify-github-with-api-plugin": {
+      "owner": "fohte",
+      "repository": "tq",
+      "privateToken": "${VRT_GITHUB_TOKEN}",
+      "ref": "${GITHUB_REF}"
+    }
+  }
+}

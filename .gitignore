@@ -135,3 +135,6 @@ storybook-static/
 
 # Generated storycap screenshot output
 __screenshots__/
+
+# reg-suit working directory
+.reg/
