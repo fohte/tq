@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { expect, within } from 'storybook/test'
+import { expect, waitFor, within } from 'storybook/test'
 
 import { SlackPermalinkChip } from '#components/task/slack-permalink-chip'
 import type { SlackPermalinkPreview } from '#hooks/use-slack-permalink-preview'
@@ -89,9 +89,14 @@ export const NormalMessage: Story = {
     // against the document body.
     await userEvent.hover(canvas.getByText('Hayato Kawai:'))
     const body = within(canvasElement.ownerDocument.body)
-    await expect(
-      await body.findByText('Deploy finished, everything looks green.'),
-    ).toBeVisible()
+    // The popup's fade-in animation can still be mid-transition right as the
+    // text mounts, so wait for it to finish rather than checking visibility
+    // the instant the text appears.
+    await waitFor(() =>
+      expect(
+        body.getByText('Deploy finished, everything looks green.'),
+      ).toBeVisible(),
+    )
   },
 }
 
@@ -150,9 +155,12 @@ export const BotMessageWithoutAvatar: Story = {
   play: async ({ canvas, canvasElement, userEvent }) => {
     await userEvent.hover(canvas.getByText('CI Bot:'))
     const body = within(canvasElement.ownerDocument.body)
-    await expect(
-      await body.findByText('Build #482 failed on main.'),
-    ).toBeVisible()
+    // The popup's fade-in animation can still be mid-transition right as the
+    // text mounts, so wait for it to finish rather than checking visibility
+    // the instant the text appears.
+    await waitFor(() =>
+      expect(body.getByText('Build #482 failed on main.')).toBeVisible(),
+    )
   },
 }
 

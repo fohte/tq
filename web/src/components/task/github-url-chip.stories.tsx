@@ -8,7 +8,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { expect, within } from 'storybook/test'
+import { expect, waitFor, within } from 'storybook/test'
 
 import { GithubUrlChip } from '#components/task/github-url-chip'
 import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
@@ -109,11 +109,16 @@ export const OpenIssue: Story = {
     // against the document body.
     await userEvent.hover(canvas.getByText('fohte/tq#158'))
     const body = within(canvasElement.ownerDocument.body)
-    await expect(
-      await body.findByText(
-        'Adds an InlineReferenceProvider abstraction so task mentions render as chips.',
-      ),
-    ).toBeVisible()
+    // The popup's fade-in animation can still be mid-transition right as the
+    // text mounts, so wait for it to finish rather than checking visibility
+    // the instant the text appears.
+    await waitFor(() =>
+      expect(
+        body.getByText(
+          'Adds an InlineReferenceProvider abstraction so task mentions render as chips.',
+        ),
+      ).toBeVisible(),
+    )
   },
 }
 
@@ -178,7 +183,12 @@ export const LinkedToTask: Story = {
   play: async ({ canvas, canvasElement, userEvent }) => {
     await userEvent.hover(canvas.getByText('fohte/tq#42'))
     const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('Linked to a TQ task →')).toBeVisible()
+    // The popup's fade-in animation can still be mid-transition right as the
+    // link mounts, so wait for it to finish rather than checking visibility
+    // the instant the text appears.
+    await waitFor(() =>
+      expect(body.getByText('Linked to a TQ task →')).toBeVisible(),
+    )
   },
 }
 
