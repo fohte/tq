@@ -420,12 +420,12 @@ export const Hovered: Story = {
   args: {
     node: { ...baseTreeNode, title: 'Hover to reveal the ⋯ actions menu' },
   },
-  play: async ({ canvasElement, userEvent }) => {
-    const wrapper = canvasElement.querySelector<HTMLElement>('.group')
-    if (wrapper == null) throw new Error('row wrapper not found')
-
+  play: async ({ canvasElement }) => {
+    // `[data-slot="dropdown-menu-trigger"]` alone also matches the row's
+    // status picker, which sits earlier in the DOM — scope to the
+    // row-actions menu by its accessible name.
     const desktopTrigger = canvasElement.querySelector<HTMLElement>(
-      '[data-slot="dropdown-menu-trigger"]',
+      '[data-slot="dropdown-menu-trigger"][aria-label="Task actions"]',
     )
     const mobileTrigger = canvasElement.querySelector<HTMLElement>(
       '[data-slot="action-sheet-trigger"]',
@@ -441,8 +441,11 @@ export const Hovered: Story = {
       return
     }
 
+    // `userEvent.hover()` dispatches synthetic pointer events, which real
+    // browsers don't honor for `:hover`/`group-hover` matching — the trigger
+    // reveals on focus too, so drive it with a real focus change instead.
     await expect(desktopTrigger).not.toBeVisible()
-    await userEvent.hover(wrapper)
+    desktopTrigger.focus()
     await expect(desktopTrigger).toBeVisible()
   },
 }

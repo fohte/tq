@@ -3,6 +3,7 @@ import { fileURLToPath, URL } from 'node:url'
 
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
 import storycap from '@storycap-testrun/browser/vitest-plugin'
+import tailwindcss from '@tailwindcss/vite'
 import { playwright } from '@vitest/browser-playwright'
 import { defineConfig } from 'vitest/config'
 
@@ -55,6 +56,7 @@ function createStorybookProject({
 }) {
   return {
     plugins: [
+      tailwindcss(),
       storybookTest({
         configDir: path.join(dirname, '.storybook'),
       }),

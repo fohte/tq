@@ -8,7 +8,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { expect, within } from 'storybook/test'
+import { expect, waitFor, within } from 'storybook/test'
 
 import { TaskMentionChip } from '#components/task/task-mention-chip'
 import { taskMentionKeys } from '#hooks/use-task-mentions'
@@ -120,9 +120,12 @@ export const Todo: Story = {
     // queried against the document body.
     await userEvent.hover(canvas.getByText(baseTask.title))
     const body = within(canvasElement.ownerDocument.body)
-    await expect(
-      await body.findByText(baseTask.description ?? ''),
-    ).toBeVisible()
+    // The popup's fade-in animation can still be mid-transition right as the
+    // text mounts, so wait for it to finish rather than checking visibility
+    // the instant the text appears.
+    await waitFor(() =>
+      expect(body.getByText(baseTask.description ?? '')).toBeVisible(),
+    )
   },
 }
 
