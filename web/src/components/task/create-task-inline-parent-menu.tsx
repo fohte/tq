@@ -1,8 +1,6 @@
 import { TaskCandidateList } from '#components/task/task-candidate-list'
 import type { SearchResult } from '#hooks/use-search'
 
-// The dropdown shown while the `^` trigger is active in `CreateTaskInline`,
-// letting the user pick a parent for the task being created.
 export function CreateTaskInlineParentMenu({
   candidates,
   highlightedIndex,

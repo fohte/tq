@@ -258,6 +258,23 @@ export function CreateTaskInline({
     e.preventDefault()
     if (showSuggestions) return
 
+    if (
+      parsed.parentNumber != null &&
+      parsed.parentNumber !== selectedParent?.number
+    ) {
+      // A `^<number>` token is present but was never confirmed via the
+      // parent picker (dropdown dismissed, or the token hand-edited) —
+      // reopen it instead of silently creating the task with no parent.
+      const matches = [...input.matchAll(/\^\d+/g)]
+      const lastMatch = matches.at(-1)
+      if (lastMatch?.index != null) {
+        const pos = lastMatch.index + lastMatch[0].length
+        updateTrigger(input, pos)
+        inputRef.current?.setSelectionRange(pos, pos)
+      }
+      return
+    }
+
     if (!parsed.title.trim() || createTask.isPending) return
 
     const startDate = parsed.startDate ?? defaultStartDate

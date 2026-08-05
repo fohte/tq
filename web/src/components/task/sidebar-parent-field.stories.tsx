@@ -153,11 +153,15 @@ export const SearchAndSelect: Story = {
     await userEvent.type(input, searchText)
 
     const candidateRow = await canvas.findByText('Deploy to production')
+
     // The current task and its own child are excluded from candidates.
-    await expect(canvas.queryByText('Current task')).not.toBeInTheDocument()
-    await expect(
-      canvas.queryByText('Child of current task'),
-    ).not.toBeInTheDocument()
+    await expect({
+      currentTaskShown: canvas.queryByText('Current task') != null,
+      childTaskShown: canvas.queryByText('Child of current task') != null,
+    }).toEqual({
+      currentTaskShown: false,
+      childTaskShown: false,
+    })
 
     await userEvent.click(candidateRow)
 

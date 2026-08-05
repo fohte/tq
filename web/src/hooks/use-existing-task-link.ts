@@ -7,11 +7,6 @@ import { useTaskList, useUpdateTaskParent } from '#hooks/use-tasks'
 import { cycleIndex } from '#lib/cycle-index'
 import { getDescendantIds } from '#lib/task-tree'
 
-/**
- * State and behavior for `CreateTaskInline`'s "link an existing task as a
- * subtask" dropdown — only active when this row creates a subtask
- * (`parentId` set).
- */
 export function useExistingTaskLink({
   parentId,
   parentTaskNumber,

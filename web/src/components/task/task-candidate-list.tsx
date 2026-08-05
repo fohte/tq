@@ -1,11 +1,6 @@
 import type { SearchResult } from '#hooks/use-search'
 import { cn } from '#lib/utils'
 
-// Shared row rendering for a list of task search results, used by any
-// dropdown that lets the user pick an existing task (link-existing-task,
-// parent picker, sidebar parent field). `indexOffset` lets a caller reserve
-// leading `highlightedIndex` values for its own rows above this list (e.g.
-// a "Create ..." row at index 0).
 export function TaskCandidateList({
   candidates,
   highlightedIndex,
