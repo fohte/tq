@@ -6,6 +6,7 @@ import { Button } from '#components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
@@ -34,6 +35,25 @@ function DropdownMenuDemo({
   )
 }
 
+function DropdownMenuItemsDemo({
+  open,
+  onOpenChange,
+}: {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}) {
+  return (
+    <DropdownMenu open={open} onOpenChange={onOpenChange}>
+      <DropdownMenuTrigger render={<Button />}>Actions</DropdownMenuTrigger>
+      <DropdownMenuContent>
+        <DropdownMenuItem>Edit</DropdownMenuItem>
+        <DropdownMenuItem>Duplicate</DropdownMenuItem>
+        <DropdownMenuItem>Delete</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 const meta = {
   title: 'UI/DropdownMenu',
   component: DropdownMenuDemo,
@@ -57,5 +77,21 @@ export const ClosedTrigger: Story = {
 export const Open: Story = {
   args: {
     open: true,
+  },
+}
+
+export const ItemsClosedTrigger: StoryObj<typeof DropdownMenuItemsDemo> = {
+  render: (args) => <DropdownMenuItemsDemo {...args} />,
+  args: {
+    open: false,
+    onOpenChange: fn(),
+  },
+}
+
+export const ItemsOpen: StoryObj<typeof DropdownMenuItemsDemo> = {
+  render: (args) => <DropdownMenuItemsDemo {...args} />,
+  args: {
+    open: true,
+    onOpenChange: fn(),
   },
 }

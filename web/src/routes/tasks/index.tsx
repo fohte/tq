@@ -25,6 +25,7 @@ import {
 } from '#hooks/use-filtered-tasks'
 import { useNewTaskShortcutListener } from '#hooks/use-new-task-shortcut'
 import type { TaskSortBy } from '#hooks/use-tasks'
+import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { selectHandler } from '#lib/form-utils'
 import { newTaskKeybinding } from '#lib/keybindings'
 
@@ -56,6 +57,7 @@ function TaskListColumnHeader() {
       <span>LINK</span>
       <span className="text-right">EST</span>
       <span className="text-right">DUE</span>
+      <span />
     </div>
   )
 }
@@ -70,6 +72,9 @@ export function TaskList() {
   const tasks = useFilteredTaskList(sortBy)
   const { isLoading: isTreeLoading, tree: filteredTreeData } =
     useFilteredTaskTree({ enabled: activeTab === 'all', sortBy })
+  const treeOutliner = useTreeOutliner(filteredTreeData, {
+    enabled: activeTab === 'all',
+  })
 
   useNewTaskShortcutListener(
     useCallback(() => {
@@ -194,7 +199,20 @@ export function TaskList() {
         ) : showTree ? (
           <div className="py-1" data-testid="task-tree">
             {filteredTreeData.map((node) => (
-              <TreeTaskGridRow key={node.id} node={node} />
+              <TreeTaskGridRow
+                key={node.id}
+                node={node}
+                isExpanded={treeOutliner.isExpanded}
+                onToggleExpand={treeOutliner.toggleExpand}
+                selectedRowId={treeOutliner.selectedRowId}
+                onSelectRow={treeOutliner.selectRow}
+                outlinerInput={treeOutliner.outlinerInput}
+                outlinerTarget={treeOutliner.outlinerTarget}
+                onOpenChildInput={treeOutliner.openChildInput}
+                onCloseOutlinerInput={treeOutliner.closeOutlinerInput}
+                onIndentOutlinerInput={treeOutliner.indentOutlinerInput}
+                onOutdentOutlinerInput={treeOutliner.outdentOutlinerInput}
+              />
             ))}
           </div>
         ) : (

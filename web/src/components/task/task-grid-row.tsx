@@ -72,6 +72,10 @@ export function TaskGridRow({ task }: { task: Task }) {
               <DueDateBadge dueDate={task.dueDate} status={task.status} />
             )}
           </div>
+
+          {/* Empty trailing cell — keeps this grid aligned with TreeTaskGridRow's
+              row-actions column, which this flat (backlog) row doesn't render. */}
+          <div />
         </div>
 
         {/* Mobile: two-line stack */}

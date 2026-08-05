@@ -7,6 +7,7 @@ import { makeNode } from '#components/task/task-row-test-fixtures'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { TagFilterProvider, useTagFilter } from '#hooks/use-tag-filter'
 import type { TreeNode } from '#hooks/use-tasks'
+import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { atIndex } from '#lib/test-utils'
 
 const mockMutate = vi.fn()
@@ -17,9 +18,15 @@ const mockUpdateStatusMutate = vi.fn()
 // actually navigating.
 const mockLinkOnClick = vi.fn()
 
+// LinkExistingTaskMenu/MoveUnderTaskMenu (rendered unconditionally by every
+// row, controlled via their own `open` prop) also pull from this module.
+// Both dialogs start closed, so their queries stay disabled — these stubs
+// only need to exist, not do anything.
 vi.mock('#hooks/use-tasks', () => ({
   useCompleteTask: () => ({ mutate: mockMutate }),
   useUpdateTaskStatus: () => ({ mutate: mockUpdateStatusMutate }),
+  useTaskList: () => ({ categorized: { all: [] } }),
+  useUpdateTaskParent: () => ({ mutate: vi.fn() }),
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -81,6 +88,29 @@ function TagProbe() {
   return <div data-testid="tag-probe">{tag ?? 'none'}</div>
 }
 
+// Expand/collapse, selection, and the outliner input are all owned by
+// useTreeOutliner rather than local state, so the row under test is driven
+// through the real hook instead of a hand-rolled prop harness.
+function TreeHarness({ node }: { node: TreeNode }) {
+  const outliner = useTreeOutliner([node], { enabled: true })
+
+  return (
+    <TreeTaskGridRow
+      node={node}
+      isExpanded={outliner.isExpanded}
+      onToggleExpand={outliner.toggleExpand}
+      selectedRowId={outliner.selectedRowId}
+      onSelectRow={outliner.selectRow}
+      outlinerInput={outliner.outlinerInput}
+      outlinerTarget={outliner.outlinerTarget}
+      onOpenChildInput={outliner.openChildInput}
+      onCloseOutlinerInput={outliner.closeOutlinerInput}
+      onIndentOutlinerInput={outliner.indentOutlinerInput}
+      onOutdentOutlinerInput={outliner.outdentOutlinerInput}
+    />
+  )
+}
+
 function renderTree(node: TreeNode) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -88,7 +118,7 @@ function renderTree(node: TreeNode) {
   return render(
     <QueryClientProvider client={queryClient}>
       <TagFilterProvider>
-        <TreeTaskGridRow node={node} />
+        <TreeHarness node={node} />
         <TagProbe />
       </TagFilterProvider>
     </QueryClientProvider>,
@@ -107,6 +137,14 @@ describe('TreeTaskGridRow', () => {
   it('renders task title', () => {
     renderTree(makeNode())
     expect(screen.getAllByText('Parent Task')).toHaveLength(2)
+  })
+
+  it('renders a row-actions trigger for the ⋯ menu', () => {
+    renderTree(makeNode())
+    // TreeRowActionsMenu itself renders one trigger per layout (desktop
+    // dropdown + mobile action sheet), and the row mounts it once for the
+    // desktop grid section and once for the mobile stack section: 2 x 2.
+    expect(screen.getAllByLabelText('Task actions')).toHaveLength(4)
   })
 
   it('renders the task number', () => {
@@ -343,13 +381,36 @@ describe('TreeTaskGridRow', () => {
     expect(mockLinkOnClick).not.toHaveBeenCalled()
   })
 
-  it('lets a click bubble to the row Link when clicking elsewhere in the row', async () => {
-    // Control for the tag-token test above: proves mockLinkOnClick actually
-    // observes bubbled clicks, so its absence there means something.
+  it('selects the row instead of navigating when clicking its desktop non-interactive area', async () => {
+    const user = userEvent.setup()
+    renderTree(makeNode())
+
+    // The desktop grid is the first ("Parent Task" x2) instance in render
+    // order; its own onClick intercepts the click before it ever reaches
+    // the row's Link.
+    const desktopTitle = atIndex(screen.getAllByText('Parent Task'), 0)
+    await user.click(desktopTitle)
+
+    const wrapper = desktopTitle.closest('.group')
+    if (!(wrapper instanceof HTMLElement)) {
+      throw new Error('Expected a row wrapper carrying the "group" class')
+    }
+
+    const observed: unknown[] = []
+    observed.push(wrapper.classList.contains('ring-border-strong'))
+    observed.push(mockLinkOnClick.mock.calls.length)
+
+    expect(observed).toEqual([true, 0])
+  })
+
+  it('still lets a click bubble to the row Link from the mobile layout', async () => {
+    // Control for the desktop-selection test above: proves mockLinkOnClick
+    // actually observes bubbled clicks, so a row tap still navigates on the
+    // touch layout, which has no onClick of its own to intercept it.
     const user = userEvent.setup()
     renderTree(makeNode({ labels: ['dev:tq'] }))
 
-    await user.click(atIndex(screen.getAllByText('Parent Task'), 0))
+    await user.click(atIndex(screen.getAllByText('Parent Task'), 1))
 
     expect(mockLinkOnClick).toHaveBeenCalled()
   })

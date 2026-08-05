@@ -11,8 +11,10 @@ import type { ReactNode } from 'react'
 import { expect } from 'storybook/test'
 
 import { TagFilterBar } from '#components/tag-filter-bar'
+import type { TreeTaskGridRowProps } from '#components/task/tree-task-grid-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import type { TreeNode } from '#hooks/use-tasks'
+import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { atIndex } from '#lib/test-utils'
 
 const baseTreeNode: TreeNode = {
@@ -69,11 +71,60 @@ function Providers({ children }: { children: ReactNode }) {
   )
 }
 
+// Expand/collapse, selection, and the outliner input are all owned by
+// useTreeOutliner rather than local state, so interactive stories drive the
+// row through the real hook instead of a hand-rolled prop harness.
+function InteractiveTreeTaskGridRow({ node }: { node: TreeNode }) {
+  const outliner = useTreeOutliner([node], { enabled: true })
+
+  return (
+    <TreeTaskGridRow
+      node={node}
+      isExpanded={outliner.isExpanded}
+      onToggleExpand={outliner.toggleExpand}
+      selectedRowId={outliner.selectedRowId}
+      onSelectRow={outliner.selectRow}
+      outlinerInput={outliner.outlinerInput}
+      outlinerTarget={outliner.outlinerTarget}
+      onOpenChildInput={outliner.openChildInput}
+      onCloseOutlinerInput={outliner.closeOutlinerInput}
+      onIndentOutlinerInput={outliner.indentOutlinerInput}
+      onOutdentOutlinerInput={outliner.outdentOutlinerInput}
+    />
+  )
+}
+
 function TreeTaskGridRowWithProviders({ node }: { node: TreeNode }) {
   return (
     <Providers>
       <div className="w-[600px]">
-        <TreeTaskGridRow node={node} />
+        <InteractiveTreeTaskGridRow node={node} />
+      </div>
+    </Providers>
+  )
+}
+
+// For stories that showcase a specific, non-default outliner/selection
+// state without needing to drive it there via interaction.
+function StaticTreeTaskGridRow(
+  props: Partial<TreeTaskGridRowProps> & { node: TreeNode },
+) {
+  return (
+    <Providers>
+      <div className="w-[600px]">
+        <TreeTaskGridRow
+          isExpanded={() => true}
+          onToggleExpand={() => {}}
+          selectedRowId={null}
+          onSelectRow={() => {}}
+          outlinerInput={null}
+          outlinerTarget={null}
+          onOpenChildInput={() => {}}
+          onCloseOutlinerInput={() => {}}
+          onIndentOutlinerInput={() => {}}
+          onOutdentOutlinerInput={() => {}}
+          {...props}
+        />
       </div>
     </Providers>
   )
@@ -211,7 +262,7 @@ export const TagClick: Story = {
   render: (args) => (
     <Providers>
       <div className="w-[600px]">
-        <TreeTaskGridRow node={args.node} />
+        <InteractiveTreeTaskGridRow node={args.node} />
         <TagFilterBar />
       </div>
     </Providers>
@@ -357,10 +408,81 @@ export const AllVariants: Story = {
       <Providers>
         <div className="w-[600px] divide-y divide-border">
           {nodes.map((node) => (
-            <TreeTaskGridRow key={node.id} node={node} />
+            <InteractiveTreeTaskGridRow key={node.id} node={node} />
           ))}
         </div>
       </Providers>
     )
+  },
+}
+
+export const Hovered: Story = {
+  args: {
+    node: { ...baseTreeNode, title: 'Hover to reveal the ⋯ actions menu' },
+  },
+  play: async ({ canvasElement, userEvent }) => {
+    const wrapper = canvasElement.querySelector<HTMLElement>('.group')
+    if (wrapper == null) throw new Error('row wrapper not found')
+
+    const desktopTrigger = canvasElement.querySelector<HTMLElement>(
+      '[data-slot="dropdown-menu-trigger"]',
+    )
+    const mobileTrigger = canvasElement.querySelector<HTMLElement>(
+      '[data-slot="action-sheet-trigger"]',
+    )
+    if (desktopTrigger == null || mobileTrigger == null) {
+      throw new Error('row-actions triggers not found')
+    }
+
+    // The mobile ⋯ is always visible; the desktop one only reveals on
+    // hover/focus, so the reveal-on-hover behavior only applies there.
+    if (getComputedStyle(mobileTrigger).display !== 'none') {
+      await expect(mobileTrigger).toBeVisible()
+      return
+    }
+
+    await expect(desktopTrigger).not.toBeVisible()
+    await userEvent.hover(wrapper)
+    await expect(desktopTrigger).toBeVisible()
+  },
+}
+
+export const Selected: Story = {
+  args: { node: baseTreeNode },
+  render: () => (
+    <StaticTreeTaskGridRow
+      node={{ ...baseTreeNode, title: 'Selected row' }}
+      selectedRowId={baseTreeNode.id}
+    />
+  ),
+}
+
+export const AddSubtaskInputOpen: Story = {
+  args: { node: baseTreeNode },
+  render: () => {
+    const node: TreeNode = {
+      ...baseTreeNode,
+      title: 'Parent with an open add-subtask row',
+    }
+
+    return (
+      <StaticTreeTaskGridRow
+        node={node}
+        outlinerInput={{ anchorRowId: node.id, mode: 'child' }}
+        outlinerTarget={{
+          anchorRowId: node.id,
+          mode: 'child',
+          parentId: node.id,
+          parentNumber: node.number,
+          depth: 1,
+          inherited: undefined,
+        }}
+      />
+    )
+  },
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByPlaceholderText(/New task/i),
+    ).toBeInTheDocument()
   },
 }
