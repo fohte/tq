@@ -14,6 +14,7 @@ import { TaskGridRow } from '#components/task/task-grid-row'
 import { TASK_GRID_COLUMNS } from '#components/task/task-row-shared'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { Button } from '#components/ui/button'
+import { Checkbox } from '#components/ui/checkbox'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
@@ -68,10 +69,11 @@ export function TaskList() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isGithubModalOpen, setIsGithubModalOpen] = useState(false)
   const [sortBy, setSortBy] = useState<TaskSortBy>('updated')
+  const [showCompleted, setShowCompleted] = useState(false)
 
-  const tasks = useFilteredTaskList(sortBy)
+  const tasks = useFilteredTaskList(sortBy, showCompleted)
   const { isLoading: isTreeLoading, tree: filteredTreeData } =
-    useFilteredTaskTree({ enabled: activeTab === 'all', sortBy })
+    useFilteredTaskTree({ enabled: activeTab === 'all', sortBy, showCompleted })
   const treeOutliner = useTreeOutliner(filteredTreeData, {
     enabled: activeTab === 'all',
   })
@@ -121,6 +123,13 @@ export function TaskList() {
           ]}
         />
         <div className="ml-auto flex items-center gap-2">
+          <label className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground hover:text-foreground">
+            <Checkbox
+              checked={showCompleted}
+              onCheckedChange={setShowCompleted}
+            />
+            show completed
+          </label>
           <select
             value={sortBy}
             onChange={selectHandler(setSortBy, sortOptionValues)}

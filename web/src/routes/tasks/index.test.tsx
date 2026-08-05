@@ -112,9 +112,9 @@ describe('TaskList sort selector', () => {
     // than being fused into one array (which `fohte/no-inline-object-in-expect`
     // forbids: it's for the same reason it disallows partial per-field checks
     // on a single output — bundling unrelated values back-defeats the point).
-    expect(mockUseFilteredTaskList.mock.calls[0]).toEqual(['updated'])
+    expect(mockUseFilteredTaskList.mock.calls[0]).toEqual(['updated', false])
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { enabled: true, sortBy: 'updated' },
+      { enabled: true, sortBy: 'updated', showCompleted: false },
     ])
   })
 
@@ -128,9 +128,44 @@ describe('TaskList sort selector', () => {
     await user.selectOptions(screen.getByLabelText('Sort tasks'), 'created')
 
     expect(screen.getByLabelText('Sort tasks')).toHaveValue('created')
-    expect(mockUseFilteredTaskList.mock.calls.at(-1)).toEqual(['created'])
+    expect(mockUseFilteredTaskList.mock.calls.at(-1)).toEqual([
+      'created',
+      false,
+    ])
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
-      { enabled: true, sortBy: 'created' },
+      { enabled: true, sortBy: 'created', showCompleted: false },
+    ])
+  })
+})
+
+describe('TaskList "show completed" toggle', () => {
+  it('defaults to unchecked, hiding completed tasks', async () => {
+    renderTaskList()
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('checkbox', { name: 'show completed' }),
+      ).not.toBeChecked()
+    })
+  })
+
+  it('requests completed tasks once checked', async () => {
+    const user = userEvent.setup()
+    renderTaskList()
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('checkbox', { name: 'show completed' }),
+      ).toBeInTheDocument()
+    })
+    await user.click(screen.getByRole('checkbox', { name: 'show completed' }))
+
+    expect(
+      screen.getByRole('checkbox', { name: 'show completed' }),
+    ).toBeChecked()
+    expect(mockUseFilteredTaskList.mock.calls.at(-1)).toEqual(['updated', true])
+    expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
+      { enabled: true, sortBy: 'updated', showCompleted: true },
     ])
   })
 })
