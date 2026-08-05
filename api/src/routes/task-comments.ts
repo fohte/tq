@@ -5,9 +5,10 @@ import { createFactory } from 'hono/factory'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
-import { taskComments, tasks } from '#db/schema'
+import { taskComments } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { type EditAuthorInfo, getCommentAuthors, recordEdit } from '#lib/edits'
+import { findTaskByIdOrNumber, type TaskEnv } from '#routes/tasks/shared'
 import { syncTaskLinks } from '#services/task-links'
 
 export const createCommentSchema = z.object({
@@ -32,25 +33,22 @@ function commentToResponse(
   }
 }
 
-const factory = createFactory<object, '/:taskId/comments'>()
+const factory = createFactory<TaskEnv, '/:taskId/comments'>()
 
 const requireTask = factory.createMiddleware(async (c, next) => {
-  const taskId = c.req.param('taskId')
-
-  const task = await db.query.tasks.findFirst({
-    where: eq(tasks.id, taskId),
-  })
+  const task = await findTaskByIdOrNumber(c.req.param('taskId'))
   if (!task) {
     return c.json({ error: 'Task not found' }, 404)
   }
 
+  c.set('task', task)
   return next()
 })
 
-export const taskCommentsApp = new Hono()
+export const taskCommentsApp = new Hono<TaskEnv>()
   .use('/:taskId/comments/*', requireTask)
   .get('/:taskId/comments', async (c) => {
-    const taskId = c.req.param('taskId')
+    const taskId = c.get('task').id
 
     const comments = await db
       .select()
@@ -69,7 +67,7 @@ export const taskCommentsApp = new Hono()
     '/:taskId/comments',
     zValidator('json', createCommentSchema),
     async (c) => {
-      const taskId = c.req.param('taskId')
+      const taskId = c.get('task').id
       const input = c.req.valid('json')
       const author = c.get('author')
 
@@ -103,7 +101,7 @@ export const taskCommentsApp = new Hono()
     '/:taskId/comments/:commentId',
     zValidator('json', updateCommentSchema),
     async (c) => {
-      const taskId = c.req.param('taskId')
+      const taskId = c.get('task').id
       const commentId = c.req.param('commentId')
       const author = c.get('author')
 
@@ -152,7 +150,7 @@ export const taskCommentsApp = new Hono()
     },
   )
   .delete('/:taskId/comments/:commentId', async (c) => {
-    const taskId = c.req.param('taskId')
+    const taskId = c.get('task').id
     const commentId = c.req.param('commentId')
 
     const existing = await db.query.taskComments.findFirst({

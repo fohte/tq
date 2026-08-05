@@ -94,6 +94,25 @@ describe('POST /api/tasks/:taskId/github-link', () => {
     expect(res.status).toBe(404)
   })
 
+  it('accepts the task number in place of the UUID', async () => {
+    const task = await createTask('My task')
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
+
+    const res = await app.request(
+      `/api/tasks/${String(task.number)}/github-link`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: 'https://github.com/fohte/tq/issues/42',
+        }),
+      },
+    )
+
+    expect(res.status).toBe(201)
+  })
+
   it('returns 409 when the task is already linked', async () => {
     const task = await createTask('My task')
     await upsertGithubToken('valid-token')

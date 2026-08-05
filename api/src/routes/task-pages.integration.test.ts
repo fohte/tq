@@ -54,6 +54,17 @@ describe('task pages API', () => {
       expect(res.status).toBe(404)
     })
 
+    it('accepts the task number in place of the UUID', async () => {
+      const task = await createTask('Task')
+      await createPage(task.id, { title: 'Page' })
+
+      const res = await app.request(`/api/tasks/${String(task.number)}/pages`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<PageResponse[]>(res)
+      expect(body).toHaveLength(1)
+    })
+
     it('reports each page author independently', async () => {
       const task = await createTask('Task')
       const humanPage = await createPage(task.id, { title: 'Page A' })
@@ -344,7 +355,7 @@ async function createTask(title: string) {
       `Failed to create task: ${String(res.status)} ${await res.text()}`,
     )
   }
-  return jsonBody<{ id: string; title: string }>(res)
+  return jsonBody<{ id: string; title: string; number: number }>(res)
 }
 
 async function createPage(

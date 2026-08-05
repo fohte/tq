@@ -7,7 +7,11 @@ import { db } from '#db/connection'
 import { parseGithubIssueUrl } from '#integrations/github/issues'
 import { recordGithubUnlinked } from '#lib/task-events'
 import { githubLinkErrorResponse } from '#routes/github-link-error'
-import { githubLinkToResponse } from '#routes/tasks/shared'
+import {
+  findTaskByIdOrNumber,
+  githubLinkToResponse,
+  type TaskEnv,
+} from '#routes/tasks/shared'
 import { syncLinkFromGithub } from '#services/github-sync'
 import {
   findLinkByTaskId,
@@ -17,23 +21,23 @@ import {
 
 const linkSchema = z.object({ url: z.string().min(1) })
 
-type TaskGithubLinkEnv = {
-  Variables: {
-    taskId: string
-  }
-}
-
-export const taskGithubLinkApp = new Hono<TaskGithubLinkEnv>()
+export const taskGithubLinkApp = new Hono<TaskEnv>()
   .use('*', async (c, next) => {
-    const taskId = c.req.param('taskId')
-    if (taskId == null) {
+    const param = c.req.param('taskId')
+    if (param == null) {
       return c.json({ error: 'taskId is required' }, 400)
     }
-    c.set('taskId', taskId)
+
+    const task = await findTaskByIdOrNumber(param)
+    if (!task) {
+      return c.json({ error: 'Task not found' }, 404)
+    }
+
+    c.set('task', task)
     return next()
   })
   .post('/', zValidator('json', linkSchema), async (c) => {
-    const taskId = c.get('taskId')
+    const taskId = c.get('task').id
     const author = c.get('author')
     const { url } = c.req.valid('json')
 
@@ -47,7 +51,7 @@ export const taskGithubLinkApp = new Hono<TaskGithubLinkEnv>()
     )
   })
   .delete('/', async (c) => {
-    const taskId = c.get('taskId')
+    const taskId = c.get('task').id
     const author = c.get('author')
 
     const result = await db.transaction(async (tx) => {
@@ -79,7 +83,7 @@ export const taskGithubLinkApp = new Hono<TaskGithubLinkEnv>()
   // whole-account sync (POST /api/github/sync). A no-op (204) when the task
   // isn't linked.
   .post('/sync', async (c) => {
-    const taskId = c.get('taskId')
+    const taskId = c.get('task').id
 
     const result = await findLinkByTaskId(taskId).andThen((link) =>
       link ? syncLinkFromGithub(link) : okAsync(undefined),

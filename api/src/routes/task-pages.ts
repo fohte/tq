@@ -4,7 +4,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
-import { taskPages, tasks } from '#db/schema'
+import { taskPages } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import {
   diffFields,
@@ -12,6 +12,7 @@ import {
   getPageAuthors,
   recordEdit,
 } from '#lib/edits'
+import { findTaskByIdOrNumber, type TaskEnv } from '#routes/tasks/shared'
 import { syncTaskLinks } from '#services/task-links'
 
 const pageFormatSchema = z
@@ -57,30 +58,23 @@ export function pageToResponse(
   }
 }
 
-type TaskPagesEnv = {
-  Variables: {
-    taskId: string
-  }
-}
-
-export const taskPagesApp = new Hono<TaskPagesEnv>()
+export const taskPagesApp = new Hono<TaskEnv>()
   .use('*', async (c, next) => {
-    const taskId = c.req.param('taskId')
-    if (taskId == null) {
+    const param = c.req.param('taskId')
+    if (param == null) {
       return c.json({ error: 'taskId is required' }, 400)
     }
-    c.set('taskId', taskId)
-    return next()
-  })
-  .get('/', async (c) => {
-    const taskId = c.get('taskId')
 
-    const task = await db.query.tasks.findFirst({
-      where: eq(tasks.id, taskId),
-    })
+    const task = await findTaskByIdOrNumber(param)
     if (!task) {
       return c.json({ error: 'Task not found' }, 404)
     }
+
+    c.set('task', task)
+    return next()
+  })
+  .get('/', async (c) => {
+    const taskId = c.get('task').id
 
     const pages = await db
       .select()
@@ -96,16 +90,9 @@ export const taskPagesApp = new Hono<TaskPagesEnv>()
     )
   })
   .post('/', zValidator('json', createPageSchema), async (c) => {
-    const taskId = c.get('taskId')
+    const taskId = c.get('task').id
     const input = c.req.valid('json')
     const author = c.get('author')
-
-    const task = await db.query.tasks.findFirst({
-      where: eq(tasks.id, taskId),
-    })
-    if (!task) {
-      return c.json({ error: 'Task not found' }, 404)
-    }
 
     const page = await db.transaction(async (tx) => {
       const page = firstOrThrow(
@@ -136,7 +123,7 @@ export const taskPagesApp = new Hono<TaskPagesEnv>()
     return c.json(pageToResponse(page, author), 201)
   })
   .get('/:pageId', async (c) => {
-    const taskId = c.get('taskId')
+    const taskId = c.get('task').id
     const pageId = c.req.param('pageId')
 
     const page = await db.query.taskPages.findFirst({
@@ -152,7 +139,7 @@ export const taskPagesApp = new Hono<TaskPagesEnv>()
     return c.json(pageToResponse(page, authors.get(pageId) ?? null), 200)
   })
   .patch('/:pageId', zValidator('json', updatePageSchema), async (c) => {
-    const taskId = c.get('taskId')
+    const taskId = c.get('task').id
     const pageId = c.req.param('pageId')
     const input = c.req.valid('json')
     const author = c.get('author')
@@ -201,7 +188,7 @@ export const taskPagesApp = new Hono<TaskPagesEnv>()
     return c.json(pageToResponse(updated, authors.get(pageId) ?? null), 200)
   })
   .delete('/:pageId', async (c) => {
-    const taskId = c.get('taskId')
+    const taskId = c.get('task').id
     const pageId = c.req.param('pageId')
 
     const deleted = await db

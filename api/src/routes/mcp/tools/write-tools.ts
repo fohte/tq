@@ -8,7 +8,7 @@ import { callInternalRoute } from '#routes/mcp/route-bridge'
 import { createCommentSchema, updateCommentSchema } from '#routes/task-comments'
 import { createPageSchema, updatePageSchema } from '#routes/task-pages'
 import { createTaskSchema, updateTaskSchema } from '#routes/tasks/crud'
-import { taskStatus } from '#routes/tasks/shared'
+import { taskIdOrNumber, taskStatus } from '#routes/tasks/shared'
 
 // Completing a task carries a side effect (generating the next occurrence of
 // a recurring task) that a direct status write doesn't, so that transition
@@ -104,7 +104,7 @@ export function registerWriteTools(server: McpServer): void {
         'the same shape as in create_task, or null to remove recurrence ' +
         'from the task.',
       inputSchema: {
-        taskId: z.uuid(),
+        taskId: taskIdOrNumber,
         ...updateTaskSchema.shape,
         agent: agentArgSchema,
       },
@@ -125,7 +125,7 @@ export function registerWriteTools(server: McpServer): void {
         'task that has a recurrenceRule creates the next occurrence of ' +
         'that task. Completing an already-completed task is rejected.',
       inputSchema: {
-        taskId: z.uuid(),
+        taskId: taskIdOrNumber,
         status: taskStatus,
         agent: agentArgSchema,
       },
@@ -154,7 +154,7 @@ export function registerWriteTools(server: McpServer): void {
         'reachable when the page is viewed later. `sortOrder` controls ' +
         "display order among the task's pages and defaults to 0.",
       inputSchema: {
-        taskId: z.uuid(),
+        taskId: taskIdOrNumber,
         ...createPageSchema.shape,
         agent: agentArgSchema,
       },
@@ -174,7 +174,7 @@ export function registerWriteTools(server: McpServer): void {
         'Partially update an existing page by task id and page id. Only ' +
         'the fields provided are changed; omit a field to leave it as-is.',
       inputSchema: {
-        taskId: z.uuid(),
+        taskId: taskIdOrNumber,
         pageId: z.uuid(),
         ...updatePageSchema.shape,
         agent: agentArgSchema,
@@ -193,7 +193,7 @@ export function registerWriteTools(server: McpServer): void {
     {
       description: 'Add a comment to a task.',
       inputSchema: {
-        taskId: z.uuid(),
+        taskId: taskIdOrNumber,
         ...createCommentSchema.shape,
         agent: agentArgSchema,
       },
@@ -212,7 +212,7 @@ export function registerWriteTools(server: McpServer): void {
       description:
         'Update the content of an existing comment by task id and comment id.',
       inputSchema: {
-        taskId: z.uuid(),
+        taskId: taskIdOrNumber,
         commentId: z.uuid(),
         ...updateCommentSchema.shape,
         agent: agentArgSchema,
