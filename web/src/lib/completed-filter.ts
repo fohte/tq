@@ -1,6 +1,3 @@
-/**
- * Filter a flat list of items by completion status.
- */
 export function filterByCompleted<T extends { status: string }>(
   items: T[],
   showCompleted: boolean,
@@ -10,7 +7,6 @@ export function filterByCompleted<T extends { status: string }>(
 }
 
 /**
- * Filter a tree of nodes by completion status.
  * Keeps a node if it isn't completed or any of its descendants aren't.
  */
 export function filterTreeByCompleted<

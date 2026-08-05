@@ -70,12 +70,13 @@ export function useFilteredTaskTree(options: {
   const showCompleted = options.showCompleted ?? true
 
   const tree = useMemo(() => {
-    const filtered = filterTreeByTag(filterTreeByContext(data ?? [], mode), tag)
-    const withCounts =
-      mode === 'all' && tag == null
-        ? filtered
-        : recalcChildCompletionCount(filtered)
-    return filterTreeByCompleted(withCounts, showCompleted)
+    const filtered = filterTreeByCompleted(
+      filterTreeByTag(filterTreeByContext(data ?? [], mode), tag),
+      showCompleted,
+    )
+    return mode === 'all' && tag == null && showCompleted
+      ? filtered
+      : recalcChildCompletionCount(filtered)
   }, [data, mode, tag, showCompleted])
 
   return { isLoading, tree }
