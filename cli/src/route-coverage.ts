@@ -36,6 +36,23 @@ export const COVERED_ROUTES = [
   'GET /api/tasks/tree',
   'GET /api/tasks/search',
   'POST /api/tasks/from-github',
+
+  // comment
+  'GET /api/tasks/:taskId/comments',
+  'POST /api/tasks/:taskId/comments',
+  'PATCH /api/tasks/:taskId/comments/:commentId',
+  'DELETE /api/tasks/:taskId/comments/:commentId',
+
+  // project
+  'POST /api/projects',
+  'GET /api/projects',
+  'GET /api/projects/:id',
+  'GET /api/projects/:id/tasks',
+  'PATCH /api/projects/:id',
+  'DELETE /api/projects/:id',
+
+  // label
+  'GET /api/labels',
 ] as const satisfies readonly AllRoutes[]
 
 type CoveredRoutes = (typeof COVERED_ROUTES)[number]
@@ -109,23 +126,6 @@ type ExcludedRoutes = keyof typeof EXCLUDED_ROUTES
  */
 export const PENDING_ROUTES = [
   'GET /health',
-
-  // comment
-  'GET /api/tasks/:taskId/comments',
-  'POST /api/tasks/:taskId/comments',
-  'PATCH /api/tasks/:taskId/comments/:commentId',
-  'DELETE /api/tasks/:taskId/comments/:commentId',
-
-  // project
-  'POST /api/projects',
-  'GET /api/projects',
-  'GET /api/projects/:id',
-  'GET /api/projects/:id/tasks',
-  'PATCH /api/projects/:id',
-  'DELETE /api/projects/:id',
-
-  // label
-  'GET /api/labels',
 
   // image
   'POST /api/images',

@@ -4,7 +4,7 @@ import type { InferRequestType } from 'hono/client'
 
 import type { Client } from '#client'
 import { toApiError } from '#client'
-import { buildClient } from '#commands/shared'
+import { buildClient } from '#command-context'
 import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
 import { printJson, writeContentFile } from '#output'

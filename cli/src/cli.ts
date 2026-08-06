@@ -1,6 +1,9 @@
 import { Command, CommanderError, Option } from 'commander'
 
+import { registerCommentCommands } from '#commands/comment'
+import { registerLabelCommands } from '#commands/label'
 import { registerPageCommands } from '#commands/page'
+import { registerProjectCommands } from '#commands/project'
 import { registerTaskCommands } from '#commands/task'
 import { ApiError } from '#errors'
 import { collectHeader } from '#headers'
@@ -30,6 +33,9 @@ export function buildProgram(
 
   registerPageCommands(program, fetchImpl, stdin)
   registerTaskCommands(program, fetchImpl)
+  registerCommentCommands(program, fetchImpl, stdin)
+  registerProjectCommands(program, fetchImpl)
+  registerLabelCommands(program, fetchImpl)
 
   return program
 }

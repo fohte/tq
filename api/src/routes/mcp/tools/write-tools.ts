@@ -5,9 +5,9 @@ import { z } from 'zod'
 import { app } from '#app'
 import { AUTHOR_HEADER } from '#lib/author'
 import { callInternalRoute } from '#routes/mcp/route-bridge'
-import { createCommentSchema, updateCommentSchema } from '#routes/task-comments'
 import { taskIdOrNumber } from '#routes/tasks/shared'
 import { createTaskSchema, taskStatus, updateTaskSchema } from '#schemas/task'
+import { createCommentSchema, updateCommentSchema } from '#schemas/task-comment'
 import { createPageSchema, updatePageSchema } from '#schemas/task-page'
 
 // Completing a task carries a side effect (generating the next occurrence of

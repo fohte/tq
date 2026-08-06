@@ -8,7 +8,7 @@ export interface GlobalOptions {
   header: Record<string, string>
 }
 
-export function resolveApiUrl(options: GlobalOptions): string {
+function resolveApiUrl(options: GlobalOptions): string {
   if (options.apiUrl != null && options.apiUrl.length > 0) {
     return options.apiUrl
   }

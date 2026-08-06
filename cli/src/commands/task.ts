@@ -11,7 +11,7 @@ import type { InferRequestType } from 'hono/client'
 
 import type { Client } from '#client'
 import { toApiError } from '#client'
-import { buildClient } from '#commands/shared'
+import { buildClient } from '#command-context'
 import { printJson } from '#output'
 import { addSchemaOptions, pickSchemaFields } from '#schema-options'
 

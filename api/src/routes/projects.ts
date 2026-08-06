@@ -1,7 +1,6 @@
 import { zValidator } from '@hono/zod-validator'
 import { and, count, eq, inArray, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { projects, taskGithubLinks, tasks } from '#db/schema'
@@ -10,37 +9,11 @@ import {
   parentTasks,
   taskWithParentNumberToResponse,
 } from '#routes/tasks/shared'
-
-export const projectStatus = z.enum([
-  'active',
-  'paused',
-  'completed',
-  'archived',
-])
-
-const createProjectSchema = z.object({
-  title: z.string().min(1),
-  description: z.string().optional(),
-  status: projectStatus.optional(),
-  startDate: z.string().optional(),
-  targetDate: z.string().optional(),
-  color: z.string().optional(),
-  sortOrder: z.number().int().optional(),
-})
-
-const updateProjectSchema = z.object({
-  title: z.string().min(1).optional(),
-  description: z.string().nullable().optional(),
-  status: projectStatus.optional(),
-  startDate: z.string().nullable().optional(),
-  targetDate: z.string().nullable().optional(),
-  color: z.string().nullable().optional(),
-  sortOrder: z.number().int().optional(),
-})
-
-const listQuerySchema = z.object({
-  status: projectStatus.optional(),
-})
+import {
+  createProjectSchema,
+  listProjectsQuerySchema,
+  updateProjectSchema,
+} from '#schemas/project'
 
 function projectToResponse(project: typeof projects.$inferSelect) {
   return {
@@ -87,7 +60,7 @@ export const projectsApp = new Hono()
 
     return c.json(projectToResponse(project), 201)
   })
-  .get('/', zValidator('query', listQuerySchema), async (c) => {
+  .get('/', zValidator('query', listProjectsQuerySchema), async (c) => {
     const query = c.req.valid('query')
     const conditions = []
 

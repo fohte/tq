@@ -4,9 +4,9 @@ import type { Hono } from 'hono'
 import { z } from 'zod'
 
 import { callInternalRoute } from '#routes/mcp/route-bridge'
-import { projectStatus } from '#routes/projects'
 import { pageToResponse } from '#routes/task-pages'
 import { taskIdOrNumber } from '#routes/tasks/shared'
+import { projectStatus } from '#schemas/project'
 import { contextEnum, taskStatus } from '#schemas/task'
 
 async function resolveApp(): Promise<Hono> {
