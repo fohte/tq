@@ -1,0 +1,32 @@
+name: Start PostgreSQL
+description: >-
+  Start a PostgreSQL container for integration tests and wait until it
+  accepts connections. Unlike a job-level `services:` block (whose health
+  check only polls every `--health-interval`), this polls every second so
+  the wait is bounded by actual startup time instead of the check interval.
+
+runs:
+  using: composite
+  steps:
+    - name: Start PostgreSQL container
+      shell: bash
+      run: |
+        docker run -d \
+          --name postgres \
+          -e POSTGRES_USER=tq \
+          -e POSTGRES_PASSWORD=tq \
+          -e POSTGRES_DB=tq_test \
+          -p 5432:5432 \
+          postgres:17
+
+    - name: Wait for PostgreSQL to accept connections
+      shell: bash
+      run: |
+        for _ in $(seq 1 30); do
+          if docker exec postgres pg_isready -U tq >/dev/null 2>&1; then
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "PostgreSQL did not become ready in time" >&2
+        exit 1
