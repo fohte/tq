@@ -30,9 +30,14 @@ describe('slack resolve', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.body).toEqual({
-      url: 'https://example.slack.com/archives/C1/p123',
-    })
+    expect(calls).toEqual([
+      {
+        method: 'POST',
+        url: `${apiUrl}/api/slack/resolve`,
+        headers: { 'content-type': 'application/json' },
+        body: { url: 'https://example.slack.com/archives/C1/p123' },
+      },
+    ])
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(resolved, null, 2)}\n`],
     ])

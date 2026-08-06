@@ -31,9 +31,14 @@ describe('calendar events', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.url).toBe(
-      `${apiUrl}/api/calendar/events?timeMin=2026-08-06T00%3A00%3A00.000Z&timeMax=2026-08-07T00%3A00%3A00.000Z`,
-    )
+    expect(calls).toEqual([
+      {
+        method: 'GET',
+        url: `${apiUrl}/api/calendar/events?timeMin=2026-08-06T00%3A00%3A00.000Z&timeMax=2026-08-07T00%3A00%3A00.000Z`,
+        headers: {},
+        body: undefined,
+      },
+    ])
     expect(write.mock.calls).toEqual([[`${JSON.stringify(events, null, 2)}\n`]])
   })
 })

@@ -33,9 +33,14 @@ describe('today get', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.url).toBe(
-      `${apiUrl}/api/schedule/today-tasks?date=2026-08-06`,
-    )
+    expect(calls).toEqual([
+      {
+        method: 'GET',
+        url: `${apiUrl}/api/schedule/today-tasks?date=2026-08-06`,
+        headers: {},
+        body: undefined,
+      },
+    ])
     expect(write.mock.calls).toEqual([[`${JSON.stringify(rows, null, 2)}\n`]])
   })
 })
@@ -57,10 +62,14 @@ describe('today set', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.body).toEqual({
-      date: '2026-08-06',
-      taskIds: ['task1', 'task2'],
-    })
+    expect(calls).toEqual([
+      {
+        method: 'PUT',
+        url: `${apiUrl}/api/schedule/today-tasks`,
+        headers: { 'content-type': 'application/json' },
+        body: { date: '2026-08-06', taskIds: ['task1', 'task2'] },
+      },
+    ])
   })
 
   it('sends an empty taskIds array when task ids are omitted', async () => {
@@ -75,6 +84,13 @@ describe('today set', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.body).toEqual({ date: '2026-08-06', taskIds: [] })
+    expect(calls).toEqual([
+      {
+        method: 'PUT',
+        url: `${apiUrl}/api/schedule/today-tasks`,
+        headers: { 'content-type': 'application/json' },
+        body: { date: '2026-08-06', taskIds: [] },
+      },
+    ])
   })
 })

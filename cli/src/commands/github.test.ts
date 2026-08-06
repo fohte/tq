@@ -41,16 +41,21 @@ describe('github link', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.body).toEqual({
-      url: 'https://github.com/fohte/tq/issues/42',
-    })
+    expect(calls).toEqual([
+      {
+        method: 'POST',
+        url: `${apiUrl}/api/tasks/task1/github-link`,
+        headers: { 'content-type': 'application/json' },
+        body: { url: 'https://github.com/fohte/tq/issues/42' },
+      },
+    ])
     expect(write.mock.calls).toEqual([[`${JSON.stringify(linked, null, 2)}\n`]])
   })
 })
 
 describe('github unlink', () => {
   it('prints an unlink confirmation', async () => {
-    const { fetchStub } = captureFetch(
+    const { fetchStub, calls } = captureFetch(
       () => new Response(null, { status: 204 }),
     )
     const write = spyStdout()
@@ -62,6 +67,14 @@ describe('github unlink', () => {
     )
 
     expect(exitCode).toBe(0)
+    expect(calls).toEqual([
+      {
+        method: 'DELETE',
+        url: `${apiUrl}/api/tasks/task1/github-link`,
+        headers: {},
+        body: undefined,
+      },
+    ])
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify({ unlinked: true, taskId: 'task1' }, null, 2)}\n`],
     ])
@@ -82,7 +95,14 @@ describe('github sync', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.url).toBe(`${apiUrl}/api/tasks/task1/github-link/sync`)
+    expect(calls).toEqual([
+      {
+        method: 'POST',
+        url: `${apiUrl}/api/tasks/task1/github-link/sync`,
+        headers: {},
+        body: undefined,
+      },
+    ])
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify({ synced: true, taskId: 'task1' }, null, 2)}\n`],
     ])
@@ -101,7 +121,14 @@ describe('github sync', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.url).toBe(`${apiUrl}/api/github/sync`)
+    expect(calls).toEqual([
+      {
+        method: 'POST',
+        url: `${apiUrl}/api/github/sync`,
+        headers: {},
+        body: undefined,
+      },
+    ])
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify({ synced: true }, null, 2)}\n`],
     ])
@@ -129,9 +156,14 @@ describe('github resolve', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.body).toEqual({
-      url: 'https://github.com/fohte/tq/issues/42',
-    })
+    expect(calls).toEqual([
+      {
+        method: 'POST',
+        url: `${apiUrl}/api/github/resolve`,
+        headers: { 'content-type': 'application/json' },
+        body: { url: 'https://github.com/fohte/tq/issues/42' },
+      },
+    ])
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(resolved, null, 2)}\n`],
     ])

@@ -24,7 +24,7 @@ interface CapturedFormRequest {
   url: string
   fileName: string
   fileType: string
-  fileText: string
+  fileBytes: Uint8Array
 }
 
 function captureMultipartFetch(respond: () => Response): {
@@ -42,12 +42,12 @@ function captureMultipartFetch(respond: () => Response): {
       throw new Error('expected a "file" field of type File')
     }
     calls.push(
-      file.text().then((fileText) => ({
+      file.arrayBuffer().then((buffer) => ({
         method: init?.method ?? 'GET',
         url: requestUrl(input),
         fileName: file.name,
         fileType: file.type,
-        fileText,
+        fileBytes: new Uint8Array(buffer),
       })),
     )
     return Promise.resolve(respond())
@@ -80,7 +80,10 @@ describe('image upload', () => {
 
     tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-image-upload-'))
     const filePath = join(tmpDir, 'photo.png')
-    await writeFile(filePath, 'fake-png-bytes')
+    const pngBytes = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x00, 0xff, 0x10, 0x7f,
+    ])
+    await writeFile(filePath, pngBytes)
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'image', 'upload', filePath],
@@ -94,7 +97,7 @@ describe('image upload', () => {
       url: `${apiUrl}/api/images`,
       fileName: 'photo.png',
       fileType: 'image/png',
-      fileText: 'fake-png-bytes',
+      fileBytes: pngBytes,
     })
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(uploaded, null, 2)}\n`],
@@ -109,7 +112,8 @@ describe('image upload', () => {
 
     tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-image-upload-'))
     const filePath = join(tmpDir, 'photo.jpg')
-    await writeFile(filePath, 'fake-jpg-bytes')
+    const jpgBytes = new Uint8Array([0xff, 0xd8, 0xff, 0x00, 0x10, 0x7f])
+    await writeFile(filePath, jpgBytes)
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'image', 'upload', filePath],
@@ -123,7 +127,7 @@ describe('image upload', () => {
       url: `${apiUrl}/api/images`,
       fileName: 'photo.jpg',
       fileType: 'image/jpeg',
-      fileText: 'fake-jpg-bytes',
+      fileBytes: jpgBytes,
     })
   })
 })
