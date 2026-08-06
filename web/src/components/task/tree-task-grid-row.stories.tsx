@@ -97,7 +97,7 @@ function InteractiveTreeTaskGridRow({ node }: { node: TreeNode }) {
 function TreeTaskGridRowWithProviders({ node }: { node: TreeNode }) {
   return (
     <Providers>
-      <div className="w-[680px]">
+      <div className="w-[600px]">
         <InteractiveTreeTaskGridRow node={node} />
       </div>
     </Providers>
@@ -111,7 +111,7 @@ function StaticTreeTaskGridRow(
 ) {
   return (
     <Providers>
-      <div className="w-[680px]">
+      <div className="w-[600px]">
         <TreeTaskGridRow
           isExpanded={() => true}
           onToggleExpand={() => {}}
@@ -261,7 +261,7 @@ export const TagClick: Story = {
   },
   render: (args) => (
     <Providers>
-      <div className="w-[680px]">
+      <div className="w-[600px]">
         <InteractiveTreeTaskGridRow node={args.node} />
         <TagFilterBar />
       </div>
@@ -406,7 +406,7 @@ export const AllVariants: Story = {
 
     return (
       <Providers>
-        <div className="w-[680px] divide-y divide-border">
+        <div className="w-[600px] divide-y divide-border">
           {nodes.map((node) => (
             <InteractiveTreeTaskGridRow key={node.id} node={node} />
           ))}
@@ -415,10 +415,10 @@ export const AllVariants: Story = {
     )
   },
   play: async ({ canvas }) => {
-    // Regression check: the title cell needs enough room for the number
-    // label and context badge (both effectively fixed-width — see
-    // task-row-shared.tsx) before any width is left for the title itself.
-    // Below that floor the title collapses to 0 instead of truncating.
+    // Regression check: this container is narrower than the row's fixed
+    // columns need, so without TASK_GRID_COLUMNS' title-column floor (see
+    // task-row-shared.tsx) the title collapses to 0 width instead of
+    // truncating.
     const title = atIndex(canvas.getAllByText('Todo task (personal)'), 0)
     await expect(title.getBoundingClientRect().width).toBeGreaterThan(0)
   },

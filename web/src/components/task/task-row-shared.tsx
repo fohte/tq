@@ -10,8 +10,15 @@ import { cn } from '#lib/utils'
 // header so the header stays aligned with the row grids. The trailing 28px
 // column seats TreeTaskGridRow's row-actions trigger; other consumers still
 // render an empty cell there to keep columns aligned.
+//
+// The title column has a `minmax` floor, not a bare `1fr`: a bare `1fr`
+// track has no content-based minimum, so once the row's available width
+// drops below what the other columns need, the title track gets squeezed
+// to 0 and the title disappears entirely instead of truncating. The floor
+// forces the row to overflow (scrollable, since the page body scrolls both
+// axes) rather than hide the title.
 export const TASK_GRID_COLUMNS =
-  'grid-cols-[26px_26px_1fr_132px_104px_72px_56px_28px]'
+  'grid-cols-[26px_26px_minmax(120px,1fr)_132px_104px_72px_56px_28px]'
 
 export function useHandleStatusChange(id: string, status: Task['status']) {
   const completeTask = useCompleteTask()
