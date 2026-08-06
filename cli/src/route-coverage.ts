@@ -22,6 +22,20 @@ export const COVERED_ROUTES = [
   'GET /api/tasks/:taskId/pages/:pageId',
   'PATCH /api/tasks/:taskId/pages/:pageId',
   'DELETE /api/tasks/:taskId/pages/:pageId',
+
+  'GET /api/tasks/:taskId/comments',
+  'POST /api/tasks/:taskId/comments',
+  'PATCH /api/tasks/:taskId/comments/:commentId',
+  'DELETE /api/tasks/:taskId/comments/:commentId',
+
+  'POST /api/projects',
+  'GET /api/projects',
+  'GET /api/projects/:id',
+  'GET /api/projects/:id/tasks',
+  'PATCH /api/projects/:id',
+  'DELETE /api/projects/:id',
+
+  'GET /api/labels',
 ] as const satisfies readonly AllRoutes[]
 
 type CoveredRoutes = (typeof COVERED_ROUTES)[number]
@@ -103,23 +117,6 @@ export const PENDING_ROUTES = [
   'GET /api/tasks/search/suggest',
   'GET /api/tasks/mentions',
   'POST /api/tasks/from-github',
-
-  // comment
-  'GET /api/tasks/:taskId/comments',
-  'POST /api/tasks/:taskId/comments',
-  'PATCH /api/tasks/:taskId/comments/:commentId',
-  'DELETE /api/tasks/:taskId/comments/:commentId',
-
-  // project
-  'POST /api/projects',
-  'GET /api/projects',
-  'GET /api/projects/:id',
-  'GET /api/projects/:id/tasks',
-  'PATCH /api/projects/:id',
-  'DELETE /api/projects/:id',
-
-  // label
-  'GET /api/labels',
 
   // image
   'POST /api/images',

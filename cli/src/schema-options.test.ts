@@ -127,3 +127,33 @@ describe('pickSchemaFields', () => {
     )
   })
 })
+
+describe('a nullable optional field (z.string().nullable().optional())', () => {
+  const nullableSchema = z.object({
+    description: z.string().nullable().optional(),
+  })
+
+  it('gets a working --flag <value> in --help instead of "unsupported schema type"', () => {
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      nullableSchema,
+    )
+
+    expect(command.helpInformation()).toBe(
+      `Usage: test [options]
+
+Options:
+  --description <value>  Description
+  -h, --help             display help for command
+`,
+    )
+  })
+
+  it('round-trips a string value through pickSchemaFields', () => {
+    const result = pickSchemaFields(nullableSchema, {
+      description: 'hello',
+    })
+
+    expect(result).toEqual({ description: 'hello' })
+  })
+})
