@@ -38,10 +38,15 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
   for (const [key, field] of Object.entries(schema.shape)) {
     if (exclude.includes(key) || !(field instanceof z.ZodOptional)) continue
 
-    const inner = field.unwrap()
+    let inner = field.unwrap()
+    // ponytail: unwraps nullable so the field becomes a flag, but there's no way to explicitly set it back to null via this flag yet; add that if a command needs to clear a nullable field
+    if (inner instanceof z.ZodNullable) {
+      inner = inner.unwrap()
+    }
     if (
       !(inner instanceof z.ZodEnum) &&
       !(inner instanceof z.ZodString) &&
+      !(inner instanceof z.ZodStringFormat) &&
       !(inner instanceof z.ZodNumber)
     ) {
       throw new Error(
