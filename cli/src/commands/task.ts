@@ -1,0 +1,251 @@
+import {
+  createTaskSchema,
+  listTasksQuerySchema,
+  searchQuerySchema,
+  taskStatus,
+  treeQuerySchema,
+  updateTaskSchema,
+} from 'api/schemas/task'
+import type { Command } from 'commander'
+import type { InferRequestType } from 'hono/client'
+
+import type { Client } from '#client'
+import { toApiError } from '#client'
+import { buildClient } from '#commands/shared'
+import { printJson } from '#output'
+import { addSchemaOptions, pickSchemaFields } from '#schema-options'
+
+type ListTasksQuery = InferRequestType<Client['api']['tasks']['$get']>['query']
+type CreateTaskJson = InferRequestType<Client['api']['tasks']['$post']>['json']
+type UpdateTaskJson = InferRequestType<
+  Client['api']['tasks'][':id']['$patch']
+>['json']
+type UpdateStatusJson = InferRequestType<
+  Client['api']['tasks'][':id']['status']['$patch']
+>['json']
+type UpdateParentJson = InferRequestType<
+  Client['api']['tasks'][':id']['parent']['$patch']
+>['json']
+type TreeQuery = InferRequestType<
+  Client['api']['tasks']['tree']['$get']
+>['query']
+type SearchQuery = InferRequestType<
+  Client['api']['tasks']['search']['$get']
+>['query']
+type FromGithubJson = InferRequestType<
+  Client['api']['tasks']['from-github']['$post']
+>['json']
+
+// hono's client types every query field as `string | string[] | undefined`
+// regardless of the underlying zod schema, so numbers/enums picked from the
+// schema (real types) must be stringified before being sent as a query.
+function toQuery(fields: Record<string, unknown>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(fields).map(([key, value]) => [key, String(value)]),
+  )
+}
+
+export function registerTaskCommands(
+  program: Command,
+  fetchImpl: typeof fetch,
+): void {
+  const task = program.command('task').description('Manage tasks')
+
+  addSchemaOptions(
+    task.command('list').description('List tasks'),
+    listTasksQuerySchema,
+  ).action(async (options: Record<string, unknown>, command: Command) => {
+    const client = buildClient(command, fetchImpl)
+    const query: ListTasksQuery = toQuery(
+      pickSchemaFields(listTasksQuerySchema, options),
+    )
+    const res = await client.api.tasks.$get({ query })
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
+    if (!res.ok) throw await toApiError(res)
+    printJson(await res.json())
+  })
+
+  task
+    .command('get <id>')
+    .description('Get a task')
+    .action(async (id: string, _options: unknown, command: Command) => {
+      const client = buildClient(command, fetchImpl)
+      const res = await client.api.tasks[':id'].$get({ param: { id } })
+      if (!res.ok) throw await toApiError(res)
+      printJson(await res.json())
+    })
+
+  addSchemaOptions(
+    task.command('create <title>').description('Create a task'),
+    createTaskSchema,
+    // ponytail: labels/recurrenceRule aren't exposed as flags — addSchemaOptions only supports scalar fields; add array/object flag support if a command needs to set them
+    ['title', 'labels', 'recurrenceRule'],
+  ).action(
+    async (
+      title: string,
+      options: Record<string, unknown>,
+      command: Command,
+    ) => {
+      const client = buildClient(command, fetchImpl)
+      const json: CreateTaskJson = {
+        ...pickSchemaFields(createTaskSchema, options, [
+          'title',
+          'labels',
+          'recurrenceRule',
+        ]),
+        title,
+      }
+      const res = await client.api.tasks.$post({ json })
+      if (!res.ok) throw await toApiError(res)
+      printJson(await res.json())
+    },
+  )
+
+  addSchemaOptions(
+    task.command('update <id>').description('Update a task'),
+    updateTaskSchema,
+    ['labels', 'recurrenceRule'],
+  ).action(
+    async (id: string, options: Record<string, unknown>, command: Command) => {
+      const client = buildClient(command, fetchImpl)
+      const json: UpdateTaskJson = pickSchemaFields(updateTaskSchema, options, [
+        'labels',
+        'recurrenceRule',
+      ])
+      const res = await client.api.tasks[':id'].$patch({ param: { id }, json })
+      if (!res.ok) throw await toApiError(res)
+      printJson(await res.json())
+    },
+  )
+
+  task
+    .command('delete <id>')
+    .description('Delete a task')
+    .action(async (id: string, _options: unknown, command: Command) => {
+      const client = buildClient(command, fetchImpl)
+      const res = await client.api.tasks[':id'].$delete({ param: { id } })
+      if (!res.ok) throw await toApiError(res)
+      printJson({ deleted: true, id })
+    })
+
+  task
+    .command('status <id> <status>')
+    .description(`Update task status (${taskStatus.options.join(', ')})`)
+    .action(
+      async (
+        id: string,
+        status: string,
+        _options: unknown,
+        command: Command,
+      ) => {
+        const parsed = taskStatus.safeParse(status)
+        if (!parsed.success) {
+          throw new Error(parsed.error.issues[0]?.message ?? 'Invalid value')
+        }
+
+        const client = buildClient(command, fetchImpl)
+        const json: UpdateStatusJson = { status: parsed.data }
+        const res = await client.api.tasks[':id'].status.$patch({
+          param: { id },
+          json,
+        })
+        if (!res.ok) throw await toApiError(res)
+        printJson(await res.json())
+      },
+    )
+
+  task
+    .command('parent <id> [parentId]')
+    .description("Set or clear a task's parent (omit parentId to clear it)")
+    .action(
+      async (
+        id: string,
+        parentId: string | undefined,
+        _options: unknown,
+        command: Command,
+      ) => {
+        const client = buildClient(command, fetchImpl)
+        const json: UpdateParentJson = { parentId: parentId ?? null }
+        const res = await client.api.tasks[':id'].parent.$patch({
+          param: { id },
+          json,
+        })
+        if (!res.ok) throw await toApiError(res)
+        printJson(await res.json())
+      },
+    )
+
+  task
+    .command('complete <id>')
+    .description('Complete a task')
+    .action(async (id: string, _options: unknown, command: Command) => {
+      const client = buildClient(command, fetchImpl)
+      const res = await client.api.tasks[':id'].complete.$post({
+        param: { id },
+      })
+      if (!res.ok) throw await toApiError(res)
+      printJson(await res.json())
+    })
+
+  task
+    .command('activity <id>')
+    .description('Get task activity')
+    .action(async (id: string, _options: unknown, command: Command) => {
+      const client = buildClient(command, fetchImpl)
+      const res = await client.api.tasks[':id'].activity.$get({
+        param: { id },
+      })
+      if (!res.ok) throw await toApiError(res)
+      printJson(await res.json())
+    })
+
+  addSchemaOptions(
+    task.command('tree').description('Get the task tree'),
+    treeQuerySchema,
+  ).action(async (options: Record<string, unknown>, command: Command) => {
+    const client = buildClient(command, fetchImpl)
+    const query: TreeQuery = toQuery(pickSchemaFields(treeQuerySchema, options))
+    const res = await client.api.tasks.tree.$get({ query })
+    if (!res.ok) throw await toApiError(res)
+    printJson(await res.json())
+  })
+
+  addSchemaOptions(
+    task.command('search [query]').description('Search tasks'),
+    searchQuerySchema,
+    // ponytail: hasEstimate/hasDue aren't exposed as flags — they're transform-based fields addSchemaOptions doesn't support; add manual boolean options if needed
+    ['q', 'hasEstimate', 'hasDue'],
+  ).action(
+    async (
+      query: string | undefined,
+      options: Record<string, unknown>,
+      command: Command,
+    ) => {
+      const client = buildClient(command, fetchImpl)
+      const fields = {
+        ...pickSchemaFields(searchQuerySchema, options, [
+          'q',
+          'hasEstimate',
+          'hasDue',
+        ]),
+        ...(query !== undefined ? { q: query } : {}),
+      }
+      const searchQuery: SearchQuery = toQuery(fields)
+      const res = await client.api.tasks.search.$get({ query: searchQuery })
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
+      if (!res.ok) throw await toApiError(res)
+      printJson(await res.json())
+    },
+  )
+
+  task
+    .command('from-github <url>')
+    .description('Create a task from a GitHub issue or pull request URL')
+    .action(async (url: string, _options: unknown, command: Command) => {
+      const client = buildClient(command, fetchImpl)
+      const json: FromGithubJson = { url }
+      const res = await client.api.tasks['from-github'].$post({ json })
+      if (!res.ok) throw await toApiError(res)
+      printJson(await res.json())
+    })
+}

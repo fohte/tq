@@ -1,6 +1,7 @@
 import { Command, CommanderError, Option } from 'commander'
 
 import { registerPageCommands } from '#commands/page'
+import { registerTaskCommands } from '#commands/task'
 import { ApiError } from '#errors'
 import { collectHeader } from '#headers'
 import type { ReadableStdin } from '#input'
@@ -28,6 +29,7 @@ export function buildProgram(
     )
 
   registerPageCommands(program, fetchImpl, stdin)
+  registerTaskCommands(program, fetchImpl)
 
   return program
 }
