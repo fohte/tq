@@ -6,6 +6,7 @@ import {
   createRoute,
   createRouter,
   RouterProvider,
+  useRouterState,
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { expect } from 'storybook/test'
@@ -92,6 +93,13 @@ function InteractiveTreeTaskGridRow({ node }: { node: TreeNode }) {
       onOutdentOutlinerInput={outliner.outdentOutlinerInput}
     />
   )
+}
+
+function RoutePathProbe() {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  return <div data-testid="route-probe">{pathname}</div>
 }
 
 function TreeTaskGridRowWithProviders({ node }: { node: TreeNode }) {
@@ -272,6 +280,29 @@ export const TagClick: Story = {
     // which is visible), so the tag token exists twice — click either one.
     await userEvent.click(atIndex(canvas.getAllByText('#dev:tq'), 0))
     await expect(canvas.getByText('filtered by')).toBeVisible()
+  },
+}
+
+export const ClickNavigates: Story = {
+  args: {
+    node: { ...baseTreeNode, title: 'Click this row to navigate' },
+  },
+  render: (args) => (
+    <Providers>
+      <div className="w-[600px]">
+        <InteractiveTreeTaskGridRow node={args.node} />
+      </div>
+      <RoutePathProbe />
+    </Providers>
+  ),
+  play: async ({ args, canvas, userEvent }) => {
+    // Both the desktop and mobile layouts render at once — click the
+    // desktop one, which used to intercept this click before it reached
+    // the row's Link.
+    await userEvent.click(atIndex(canvas.getAllByText(args.node.title), 0))
+    await expect(canvas.getByTestId('route-probe')).toHaveTextContent(
+      `/tasks/${args.node.id}`,
+    )
   },
 }
 
