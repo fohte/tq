@@ -26,6 +26,18 @@ function parseValue(inner: z.ZodType, raw: string): unknown {
 }
 
 /**
+ * Unwraps `z.optional()`, and `z.optional(z.nullable())` for fields that
+ * accept an explicit null (e.g. clearing a date). The CLI only adds and
+ * validates values through the flag, never sends an explicit null, so the
+ * nullable layer itself carries no flag behavior of its own.
+ */
+function unwrapOptional(field: z.core.$ZodType): z.core.$ZodType | undefined {
+  if (!(field instanceof z.ZodOptional)) return undefined
+  const inner = field.unwrap()
+  return inner instanceof z.ZodNullable ? inner.unwrap() : inner
+}
+
+/**
  * Only wraps `z.optional()` fields into flags; required fields are left
  * for the caller to add as positional arguments instead, keeping the
  * flag/positional split without a per-command exclude list.
@@ -36,9 +48,10 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
   exclude: readonly string[] = [],
 ): Command {
   for (const [key, field] of Object.entries(schema.shape)) {
-    if (exclude.includes(key) || !(field instanceof z.ZodOptional)) continue
+    if (exclude.includes(key)) continue
+    const inner = unwrapOptional(field)
+    if (inner === undefined) continue
 
-    const inner = field.unwrap()
     if (
       !(inner instanceof z.ZodEnum) &&
       !(inner instanceof z.ZodString) &&
