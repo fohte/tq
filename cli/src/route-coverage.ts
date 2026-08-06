@@ -22,6 +22,30 @@ export const COVERED_ROUTES = [
   'GET /api/tasks/:taskId/pages/:pageId',
   'PATCH /api/tasks/:taskId/pages/:pageId',
   'DELETE /api/tasks/:taskId/pages/:pageId',
+
+  'GET /health',
+
+  // image
+  'POST /api/images',
+  'GET /api/images/:id',
+  'DELETE /api/images/:id',
+
+  // github
+  'POST /api/tasks/:taskId/github-link',
+  'DELETE /api/tasks/:taskId/github-link',
+  'POST /api/tasks/:taskId/github-link/sync',
+  'POST /api/github/resolve',
+  'POST /api/github/sync',
+
+  // today
+  'GET /api/schedule/today-tasks',
+  'PUT /api/schedule/today-tasks',
+
+  // calendar
+  'GET /api/calendar/events',
+
+  // slack
+  'POST /api/slack/resolve',
 ] as const satisfies readonly AllRoutes[]
 
 type CoveredRoutes = (typeof COVERED_ROUTES)[number]
@@ -86,8 +110,6 @@ type ExcludedRoutes = keyof typeof EXCLUDED_ROUTES
  * `EXCLUDED_ROUTES` with a reason instead of deleting it silently.
  */
 export const PENDING_ROUTES = [
-  'GET /health',
-
   // task
   'GET /api/tasks',
   'POST /api/tasks',
@@ -120,28 +142,6 @@ export const PENDING_ROUTES = [
 
   // label
   'GET /api/labels',
-
-  // image
-  'POST /api/images',
-  'GET /api/images/:id',
-  'DELETE /api/images/:id',
-
-  // github
-  'POST /api/tasks/:taskId/github-link',
-  'DELETE /api/tasks/:taskId/github-link',
-  'POST /api/tasks/:taskId/github-link/sync',
-  'POST /api/github/resolve',
-  'POST /api/github/sync',
-
-  // today
-  'GET /api/schedule/today-tasks',
-  'PUT /api/schedule/today-tasks',
-
-  // calendar
-  'GET /api/calendar/events',
-
-  // slack
-  'POST /api/slack/resolve',
 ] as const satisfies readonly AllRoutes[]
 
 type PendingRoutes = (typeof PENDING_ROUTES)[number]

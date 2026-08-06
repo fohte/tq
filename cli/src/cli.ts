@@ -1,6 +1,12 @@
 import { Command, CommanderError, Option } from 'commander'
 
+import { registerCalendarCommands } from '#commands/calendar'
+import { registerGithubCommands } from '#commands/github'
+import { registerHealthCommand } from '#commands/health'
+import { registerImageCommands } from '#commands/image'
 import { registerPageCommands } from '#commands/page'
+import { registerSlackCommands } from '#commands/slack'
+import { registerTodayCommands } from '#commands/today'
 import { ApiError } from '#errors'
 import { collectHeader } from '#headers'
 import type { ReadableStdin } from '#input'
@@ -28,6 +34,12 @@ export function buildProgram(
     )
 
   registerPageCommands(program, fetchImpl, stdin)
+  registerImageCommands(program, fetchImpl)
+  registerGithubCommands(program, fetchImpl)
+  registerTodayCommands(program, fetchImpl)
+  registerCalendarCommands(program, fetchImpl)
+  registerSlackCommands(program, fetchImpl)
+  registerHealthCommand(program, fetchImpl)
 
   return program
 }
