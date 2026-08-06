@@ -51,8 +51,17 @@ function spyStderr() {
   return vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
 }
 
-function query(url: string): Record<string, string> {
-  return Object.fromEntries(new URL(url).searchParams)
+// Normalizes a captured request into one comparable value, so a test can
+// assert the whole request shape (method/path/query/body) with a single
+// `toEqual` instead of checking each part separately.
+function request(call: CapturedRequest | undefined) {
+  const url = new URL(call?.url ?? '')
+  return {
+    method: call?.method,
+    pathname: url.pathname,
+    query: Object.fromEntries(url.searchParams),
+    body: call?.body,
+  }
 }
 
 const apiUrl = 'http://api.test'
@@ -76,9 +85,12 @@ describe('task list', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.method).toBe('GET')
-    expect(new URL(calls[0]?.url ?? '').pathname).toBe('/api/tasks')
-    expect(query(calls[0]?.url ?? '')).toEqual({ status: 'todo' })
+    expect(request(calls[0])).toEqual({
+      method: 'GET',
+      pathname: '/api/tasks',
+      query: { status: 'todo' },
+      body: undefined,
+    })
     expect(write.mock.calls).toEqual([[`${JSON.stringify(tasks, null, 2)}\n`]])
   })
 })
@@ -98,8 +110,12 @@ describe('task get', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.method).toBe('GET')
-    expect(new URL(calls[0]?.url ?? '').pathname).toBe('/api/tasks/42')
+    expect(request(calls[0])).toEqual({
+      method: 'GET',
+      pathname: '/api/tasks/42',
+      query: {},
+      body: undefined,
+    })
     expect(write.mock.calls).toEqual([[`${JSON.stringify(found, null, 2)}\n`]])
   })
 })
@@ -119,8 +135,12 @@ describe('task create', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.method).toBe('POST')
-    expect(calls[0]?.body).toEqual({ title: 'New task' })
+    expect(request(calls[0])).toEqual({
+      method: 'POST',
+      pathname: '/api/tasks',
+      query: {},
+      body: { title: 'New task' },
+    })
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(created, null, 2)}\n`],
     ])
@@ -164,9 +184,27 @@ describe('task update', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.method).toBe('PATCH')
-    expect(new URL(calls[0]?.url ?? '').pathname).toBe('/api/tasks/42')
-    expect(calls[0]?.body).toEqual({ title: 'Updated title' })
+    expect(request(calls[0])).toEqual({
+      method: 'PATCH',
+      pathname: '/api/tasks/42',
+      query: {},
+      body: { title: 'Updated title' },
+    })
+  })
+
+  it('rejects the call before making any fetch call when no flags are given', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify({}), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'update', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(1)
+    expect(calls.length).toBe(0)
   })
 })
 
@@ -184,8 +222,12 @@ describe('task delete', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.method).toBe('DELETE')
-    expect(new URL(calls[0]?.url ?? '').pathname).toBe('/api/tasks/42')
+    expect(request(calls[0])).toEqual({
+      method: 'DELETE',
+      pathname: '/api/tasks/42',
+      query: {},
+      body: undefined,
+    })
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify({ deleted: true, id: '42' }, null, 2)}\n`],
     ])
@@ -207,9 +249,12 @@ describe('task status', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.method).toBe('PATCH')
-    expect(new URL(calls[0]?.url ?? '').pathname).toBe('/api/tasks/42/status')
-    expect(calls[0]?.body).toEqual({ status: 'in_progress' })
+    expect(request(calls[0])).toEqual({
+      method: 'PATCH',
+      pathname: '/api/tasks/42/status',
+      query: {},
+      body: { status: 'in_progress' },
+    })
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(updated, null, 2)}\n`],
     ])
@@ -252,9 +297,12 @@ describe('task parent', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.method).toBe('PATCH')
-    expect(new URL(calls[0]?.url ?? '').pathname).toBe('/api/tasks/42/parent')
-    expect(calls[0]?.body).toEqual({ parentId: 'p-uuid' })
+    expect(request(calls[0])).toEqual({
+      method: 'PATCH',
+      pathname: '/api/tasks/42/parent',
+      query: {},
+      body: { parentId: 'p-uuid' },
+    })
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(updated, null, 2)}\n`],
     ])
@@ -273,7 +321,12 @@ describe('task parent', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.body).toEqual({ parentId: null })
+    expect(request(calls[0])).toEqual({
+      method: 'PATCH',
+      pathname: '/api/tasks/42/parent',
+      query: {},
+      body: { parentId: null },
+    })
   })
 })
 
@@ -297,9 +350,12 @@ describe('task complete', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.method).toBe('POST')
-    expect(new URL(calls[0]?.url ?? '').pathname).toBe('/api/tasks/42/complete')
-    expect(calls[0]?.body).toBeUndefined()
+    expect(request(calls[0])).toEqual({
+      method: 'POST',
+      pathname: '/api/tasks/42/complete',
+      query: {},
+      body: undefined,
+    })
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(completed, null, 2)}\n`],
     ])
@@ -321,8 +377,12 @@ describe('task activity', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.method).toBe('GET')
-    expect(new URL(calls[0]?.url ?? '').pathname).toBe('/api/tasks/42/activity')
+    expect(request(calls[0])).toEqual({
+      method: 'GET',
+      pathname: '/api/tasks/42/activity',
+      query: {},
+      body: undefined,
+    })
     expect(write.mock.calls).toEqual([[`${JSON.stringify(items, null, 2)}\n`]])
   })
 })
@@ -342,9 +402,12 @@ describe('task tree', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.method).toBe('GET')
-    expect(new URL(calls[0]?.url ?? '').pathname).toBe('/api/tasks/tree')
-    expect(query(calls[0]?.url ?? '')).toEqual({ sortBy: 'updated' })
+    expect(request(calls[0])).toEqual({
+      method: 'GET',
+      pathname: '/api/tasks/tree',
+      query: { sortBy: 'updated' },
+      body: undefined,
+    })
     expect(write.mock.calls).toEqual([[`${JSON.stringify(tree, null, 2)}\n`]])
   })
 })
@@ -364,9 +427,12 @@ describe('task search', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.method).toBe('GET')
-    expect(new URL(calls[0]?.url ?? '').pathname).toBe('/api/tasks/search')
-    expect(query(calls[0]?.url ?? '')).toEqual({ q: 'hello', limit: '5' })
+    expect(request(calls[0])).toEqual({
+      method: 'GET',
+      pathname: '/api/tasks/search',
+      query: { q: 'hello', limit: '5' },
+      body: undefined,
+    })
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(results, null, 2)}\n`],
     ])
@@ -397,10 +463,11 @@ describe('task from-github', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls[0]?.method).toBe('POST')
-    expect(new URL(calls[0]?.url ?? '').pathname).toBe('/api/tasks/from-github')
-    expect(calls[0]?.body).toEqual({
-      url: 'https://github.com/owner/repo/issues/1',
+    expect(request(calls[0])).toEqual({
+      method: 'POST',
+      pathname: '/api/tasks/from-github',
+      query: {},
+      body: { url: 'https://github.com/owner/repo/issues/1' },
     })
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(created, null, 2)}\n`],

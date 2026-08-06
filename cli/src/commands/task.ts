@@ -78,7 +78,7 @@ export function registerTaskCommands(
   addSchemaOptions(
     task.command('create <title>').description('Create a task'),
     createTaskSchema,
-    // ponytail: labels/recurrenceRule aren't exposed as flags — addSchemaOptions only supports scalar fields; add array/object flag support if a command needs to set them
+    // labels (array) and recurrenceRule (object) aren't scalar fields, so addSchemaOptions can't turn them into flags.
     ['title', 'labels', 'recurrenceRule'],
   ).action(
     async (
@@ -107,11 +107,15 @@ export function registerTaskCommands(
     ['labels', 'recurrenceRule'],
   ).action(
     async (id: string, options: Record<string, unknown>, command: Command) => {
-      const client = buildClient(command, fetchImpl)
       const json: UpdateTaskJson = pickSchemaFields(updateTaskSchema, options, [
         'labels',
         'recurrenceRule',
       ])
+      if (Object.keys(json).length === 0) {
+        throw new Error('Pass at least one flag to update')
+      }
+
+      const client = buildClient(command, fetchImpl)
       const res = await client.api.tasks[':id'].$patch({ param: { id }, json })
       if (!res.ok) throw await toApiError(res)
       printJson(await res.json())
@@ -213,7 +217,7 @@ export function registerTaskCommands(
   addSchemaOptions(
     task.command('search [query]').description('Search tasks'),
     searchQuerySchema,
-    // ponytail: hasEstimate/hasDue aren't exposed as flags — they're transform-based fields addSchemaOptions doesn't support; add manual boolean options if needed
+    // hasEstimate/hasDue are transform-based fields (a ZodPipe once unwrapped), which addSchemaOptions doesn't support, so they aren't exposed as flags.
     ['q', 'hasEstimate', 'hasDue'],
   ).action(
     async (
