@@ -292,7 +292,7 @@ jobs:
           pointer_err=$(mktemp)
           if live_slot=$(aws s3 cp "s3://tq-vrt/baseline/pointer" - --endpoint-url https://8d88a085ccc7b11f252419e2f3a25fd6.r2.cloudflarestorage.com 2>"$pointer_err"); then
             :
-          elif grep -q NoSuchKey "$pointer_err"; then
+          elif grep -qE 'NoSuchKey|\(404\)' "$pointer_err"; then
             live_slot=""
           else
             cat "$pointer_err" >&2
