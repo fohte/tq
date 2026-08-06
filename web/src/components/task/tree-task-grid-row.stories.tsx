@@ -414,6 +414,14 @@ export const AllVariants: Story = {
       </Providers>
     )
   },
+  play: async ({ canvas }) => {
+    // Regression check: this container is narrower than the row's fixed
+    // columns need, so without TASK_GRID_COLUMNS' title-column floor (see
+    // task-row-shared.tsx) the title collapses to 0 width instead of
+    // truncating.
+    const title = atIndex(canvas.getAllByText('Todo task (personal)'), 0)
+    await expect(title.getBoundingClientRect().width).toBeGreaterThan(0)
+  },
 }
 
 export const Hovered: Story = {
