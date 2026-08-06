@@ -281,7 +281,35 @@ jobs:
           fi
           echo "expected_key=main/latest" >> "$GITHUB_OUTPUT"
 
-      - name: Run VRT (reg-suit)
+      - name: Compare VRT screenshots
+        if: matrix.package == 'web'
+        working-directory: web
+        id: vrt-compare
+        env:
+          VRT_ACTUAL_KEY: ${{ steps.vrt-keys.outputs.actual_key }}
+          VRT_EXPECTED_KEY: ${{ steps.vrt-keys.outputs.expected_key }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          pnpm exec reg-suit sync-expected
+          pnpm exec reg-suit compare
+
+          # expected/ is byte-for-byte identical to the baseline key's actual/
+          # (that's literally where sync-expected fetched it from), so point the
+          # report's "before" pane at the baseline directly instead of uploading
+          # a duplicate copy under this run's key.
+          expected_rel=$(node -e "console.log(require('path').posix.relative(process.env.VRT_ACTUAL_KEY, process.env.VRT_EXPECTED_KEY))")
+          sed -i "s#\"expectedDir\":\"expected\"#\"expectedDir\":\"${expected_rel}/actual\"#" .reg/index.html
+
+          diff_count=$(jq '(.failedItems | length) + (.newItems | length) + (.deletedItems | length)' .reg/out.json)
+          echo "Diff count: $diff_count"
+          if [ "$diff_count" -eq 0 ]; then
+            echo "has_diff=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_diff=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish VRT report
         if: matrix.package == 'web'
         working-directory: web
         env:
@@ -290,7 +318,11 @@ jobs:
           VRT_GITHUB_TOKEN: ${{ steps.octo-sts-vrt.outputs.token }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: pnpm exec reg-suit run
+          # A no-match pattern skips the report upload when has_diff is false.
+          # `-n` still runs the notifier, which posts the "no visual
+          # difference" PR comment either way.
+          VRT_PUBLISH_PATTERN: ${{ steps.vrt-compare.outputs.has_diff == 'true' && '{*.{html,js,wasm,json},{actual,diff}/**/*.{png,jpeg,jpg,tiff,bmp,gif}}' || 'no-such-dir/**' }}
+        run: pnpm exec reg-suit publish -n
 
       # Only reached once reg-suit has successfully published the new actual
       # images under pr/main-<sha>, so a failure above never touches
@@ -299,8 +331,13 @@ jobs:
       # Concurrent main pushes aren't serialized here — main is merged
       # serially by a single maintainer in practice, and an overlapping race
       # self-corrects on the next push.
+      # Requires has_diff == 'true': a zero-diff run skips the actual/ upload
+      # (see the Publish step above), so pr/main-<sha>/actual wouldn't exist
+      # remotely — syncing from it with --delete would wipe main/latest
+      # instead of leaving it untouched. Skipping here is safe because
+      # zero-diff means this run's actual/ already matches main/latest.
       - name: Promote VRT snapshot to main/latest
-        if: matrix.package == 'web' && github.ref == 'refs/heads/main'
+        if: matrix.package == 'web' && github.ref == 'refs/heads/main' && steps.vrt-compare.outputs.has_diff == 'true'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
