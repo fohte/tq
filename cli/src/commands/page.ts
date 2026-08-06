@@ -3,7 +3,8 @@ import type { Command } from 'commander'
 import type { InferRequestType } from 'hono/client'
 
 import type { Client } from '#client'
-import { createClient, toApiError } from '#client'
+import { toApiError } from '#client'
+import { buildClient } from '#commands/shared'
 import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
 import { printJson, writeContentFile } from '#output'
@@ -17,32 +18,12 @@ type UpdatePageJson = InferRequestType<
   Client['api']['tasks'][':taskId']['pages'][':pageId']['$patch']
 >['json']
 
-interface GlobalOptions {
-  apiUrl?: string
-  header: Record<string, string>
-}
-
 interface CreateOptions extends Record<string, unknown> {
   file?: string
 }
 
 interface UpdateOptions extends Record<string, unknown> {
   file?: string
-}
-
-function resolveApiUrl(options: GlobalOptions): string {
-  if (options.apiUrl != null && options.apiUrl.length > 0) {
-    return options.apiUrl
-  }
-  throw new Error(
-    'API URL is not set. Pass --api-url or set the TQ_API_URL environment variable.',
-  )
-}
-
-function buildClient(command: Command, fetchImpl: typeof fetch): Client {
-  const options = command.optsWithGlobals<GlobalOptions>()
-  const apiUrl = resolveApiUrl(options)
-  return createClient({ apiUrl, headers: options.header }, fetchImpl)
 }
 
 export function registerPageCommands(
