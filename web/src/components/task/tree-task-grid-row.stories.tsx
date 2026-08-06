@@ -97,7 +97,7 @@ function InteractiveTreeTaskGridRow({ node }: { node: TreeNode }) {
 function TreeTaskGridRowWithProviders({ node }: { node: TreeNode }) {
   return (
     <Providers>
-      <div className="w-[600px]">
+      <div className="w-[680px]">
         <InteractiveTreeTaskGridRow node={node} />
       </div>
     </Providers>
@@ -111,7 +111,7 @@ function StaticTreeTaskGridRow(
 ) {
   return (
     <Providers>
-      <div className="w-[600px]">
+      <div className="w-[680px]">
         <TreeTaskGridRow
           isExpanded={() => true}
           onToggleExpand={() => {}}
@@ -261,7 +261,7 @@ export const TagClick: Story = {
   },
   render: (args) => (
     <Providers>
-      <div className="w-[600px]">
+      <div className="w-[680px]">
         <InteractiveTreeTaskGridRow node={args.node} />
         <TagFilterBar />
       </div>
@@ -406,13 +406,20 @@ export const AllVariants: Story = {
 
     return (
       <Providers>
-        <div className="w-[600px] divide-y divide-border">
+        <div className="w-[680px] divide-y divide-border">
           {nodes.map((node) => (
             <InteractiveTreeTaskGridRow key={node.id} node={node} />
           ))}
         </div>
       </Providers>
     )
+  },
+  play: async ({ canvas }) => {
+    // Regression check: a narrow row must truncate the title, not collapse
+    // it to zero width (the title span sits in a flex row next to badges
+    // that need to stay `shrink-0` — see task-row-shared.tsx ContextBadge).
+    const title = atIndex(canvas.getAllByText('Todo task (personal)'), 0)
+    await expect(title.getBoundingClientRect().width).toBeGreaterThan(0)
   },
 }
 

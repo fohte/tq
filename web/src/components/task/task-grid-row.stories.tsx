@@ -71,7 +71,7 @@ function Providers({ children }: { children: ReactNode }) {
 function TaskGridRowWithProviders({ task }: { task: Task }) {
   return (
     <Providers>
-      <div className="w-[600px]">
+      <div className="w-[680px]">
         <TaskGridRow task={task} />
       </div>
     </Providers>
@@ -205,7 +205,7 @@ export const TagClick: Story = {
   },
   render: (args) => (
     <Providers>
-      <div className="w-[600px]">
+      <div className="w-[680px]">
         <TaskGridRow task={args.task} />
         <TagFilterBar />
       </div>
@@ -267,7 +267,7 @@ export const AllVariants: Story = {
 
     return (
       <Providers>
-        <div className="w-[600px] divide-y divide-border">
+        <div className="w-[680px] divide-y divide-border">
           {tasks.map((task) => (
             <TaskGridRow key={task.id} task={task} />
           ))}
