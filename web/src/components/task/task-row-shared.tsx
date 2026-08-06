@@ -28,7 +28,7 @@ export function useHandleStatusChange(id: string, status: Task['status']) {
 }
 
 export function ContextBadge({ context }: { context: Task['context'] }) {
-  return <Chip className="shrink-0">{context}</Chip>
+  return <Chip>{context}</Chip>
 }
 
 export function TagTokens({

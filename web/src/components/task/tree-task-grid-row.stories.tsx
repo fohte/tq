@@ -415,9 +415,10 @@ export const AllVariants: Story = {
     )
   },
   play: async ({ canvas }) => {
-    // Regression check: a narrow row must truncate the title, not collapse
-    // it to zero width (the title span sits in a flex row next to badges
-    // that need to stay `shrink-0` — see task-row-shared.tsx ContextBadge).
+    // Regression check: the title cell needs enough room for the number
+    // label and context badge (both effectively fixed-width — see
+    // task-row-shared.tsx) before any width is left for the title itself.
+    // Below that floor the title collapses to 0 instead of truncating.
     const title = atIndex(canvas.getAllByText('Todo task (personal)'), 0)
     await expect(title.getBoundingClientRect().width).toBeGreaterThan(0)
   },
