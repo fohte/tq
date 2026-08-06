@@ -194,6 +194,14 @@ jobs:
         package: ${{ fromJSON(needs.setup.outputs.packages) }}
     name: 'unit-test (${{ matrix.package }})'
     runs-on: ubuntu-latest
+    # Overlapping runs for the same package + ref would otherwise let two
+    # `web` legs publish VRT snapshots to the same S3 key at once — most
+    # importantly two main pushes racing to fill the same (non-live) baseline
+    # slot, which could flip the pointer to a slot holding a mix of two runs'
+    # screenshots.
+    concurrency:
+      group: unit-test-${{ matrix.package }}-${{ github.ref }}
+      cancel-in-progress: false
     # The `api` package's integration tests need PostgreSQL. The matrix legs share
     # one job definition, so this service starts for every package — harmless idle
     # cost for the `web` leg, but avoids forking the job.
@@ -269,8 +277,10 @@ jobs:
       # flips the pointer only after a successful run, so a failed reg-suit
       # or flip never corrupts the baseline every PR relies on, and promoting
       # is a single small object write instead of copying every screenshot.
-      # A missing pointer (the first run after this design shipped) falls
-      # back to the legacy main/latest key.
+      # A missing pointer falls back to the legacy main/latest key — but any
+      # other read failure (auth, network, permissions) must not be treated
+      # the same way, or a transient error could make main overwrite the
+      # live slot instead of the intended target.
       - name: Set VRT snapshot keys
         if: matrix.package == 'web'
         id: vrt-keys
@@ -279,7 +289,15 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: auto
         run: |
-          live_slot=$(aws s3 cp "s3://tq-vrt/baseline/pointer" - --endpoint-url https://8d88a085ccc7b11f252419e2f3a25fd6.r2.cloudflarestorage.com 2>/dev/null || true)
+          pointer_err=$(mktemp)
+          if live_slot=$(aws s3 cp "s3://tq-vrt/baseline/pointer" - --endpoint-url https://8d88a085ccc7b11f252419e2f3a25fd6.r2.cloudflarestorage.com 2>"$pointer_err"); then
+            :
+          elif grep -q NoSuchKey "$pointer_err"; then
+            live_slot=""
+          else
+            cat "$pointer_err" >&2
+            exit 1
+          fi
 
           if [ -n "$live_slot" ]; then
             echo "expected_key=baseline/$live_slot" >> "$GITHUB_OUTPUT"
@@ -301,6 +319,22 @@ jobs:
             echo "actual_key=branch/${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
           fi
 
+      # reg-suit's S3 publisher only uploads — it never deletes. Since a
+      # baseline slot is reused across main pushes, a screenshot removed
+      # since this slot was last written (e.g. a deleted story) would
+      # otherwise linger and get reported as a false "deleted" diff every
+      # time this slot becomes live again.
+      - name: Clear VRT baseline target slot
+        if: matrix.package == 'web' && github.ref == 'refs/heads/main'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          aws s3 rm "s3://tq-vrt/${{ steps.vrt-keys.outputs.actual_key }}/actual" \
+            --recursive \
+            --endpoint-url https://8d88a085ccc7b11f252419e2f3a25fd6.r2.cloudflarestorage.com
+
       - name: Run VRT (reg-suit)
         if: matrix.package == 'web'
         working-directory: web
@@ -314,9 +348,7 @@ jobs:
 
       # Reached only once reg-suit has successfully published the new baseline
       # candidate to the non-live slot, so a failure above never touches the
-      # pointer PRs actually read. Concurrent main pushes aren't serialized
-      # here — main is merged serially by a single maintainer in practice,
-      # and an overlapping race self-corrects on the next push.
+      # pointer PRs actually read.
       - name: Flip VRT baseline pointer
         if: matrix.package == 'web' && github.ref == 'refs/heads/main'
         env:
