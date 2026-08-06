@@ -1,20 +1,12 @@
-import { Readable } from 'node:stream'
-
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { runCli } from '#cli'
-import type { ReadableStdin } from '#input'
-
-function fakeStdin(isTTY: boolean): ReadableStdin {
-  const readable = Readable.from([])
-  return Object.assign(readable, { isTTY })
-}
-
-function spyStdout() {
-  return vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
-}
-
-const apiUrl = 'http://api.test'
+import {
+  apiUrl,
+  captureFetch,
+  fakeStdin,
+  spyStdout,
+} from '#commands/test-support'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -23,10 +15,9 @@ afterEach(() => {
 describe('label list', () => {
   it('prints the labels returned by the server as JSON', async () => {
     const labels = [{ id: 'l1', name: 'bug', color: '#ff0000' }]
-    const fetchStub = (() =>
-      Promise.resolve(
-        new Response(JSON.stringify(labels), { status: 200 }),
-      )) as typeof fetch
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(labels), { status: 200 }),
+    )
     const write = spyStdout()
 
     const exitCode = await runCli(

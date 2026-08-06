@@ -56,8 +56,13 @@ export function registerCommentCommands(
     async (taskId: string, options: ContentOptions, command: Command) => {
       const client = buildClient(command, fetchImpl)
       const content = await readContentInput(options.file, stdin)
+      if (content === undefined) {
+        throw new Error(
+          'Comment content is required. Provide --file <path> or pipe content via stdin.',
+        )
+      }
 
-      const json: CreateCommentJson = { content: content ?? '' }
+      const json: CreateCommentJson = { content }
 
       const res = await client.api.tasks[':taskId'].comments.$post({
         param: { taskId },
@@ -85,8 +90,13 @@ export function registerCommentCommands(
     ) => {
       const client = buildClient(command, fetchImpl)
       const content = await readContentInput(options.file, stdin)
+      if (content === undefined) {
+        throw new Error(
+          'Comment content is required. Provide --file <path> or pipe content via stdin.',
+        )
+      }
 
-      const json: UpdateCommentJson = { content: content ?? '' }
+      const json: UpdateCommentJson = { content }
 
       const res = await client.api.tasks[':taskId'].comments[
         ':commentId'

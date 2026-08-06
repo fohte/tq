@@ -26,10 +26,10 @@ function parseValue(inner: z.ZodType, raw: string): unknown {
 }
 
 /**
- * Unwraps `z.optional()`, and `z.optional(z.nullable())` for fields that
- * accept an explicit null (e.g. clearing a date). The CLI only adds and
- * validates values through the flag, never sends an explicit null, so the
- * nullable layer itself carries no flag behavior of its own.
+ * Unwraps `z.optional()` and `z.optional(z.nullable())` into a single flag
+ * type. There is no way to send an explicit `null` through a flag, so a
+ * nullable field (e.g. a project's `description`/`startDate`/`targetDate`/
+ * `color`) cannot be cleared via the CLI yet — a known, accepted gap.
  */
 function unwrapOptional(field: z.core.$ZodType): z.core.$ZodType | undefined {
   if (!(field instanceof z.ZodOptional)) return undefined

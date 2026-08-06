@@ -6,51 +6,12 @@ import { Readable } from 'node:stream'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { runCli } from '#cli'
-import type { ReadableStdin } from '#input'
-
-interface CapturedRequest {
-  method: string
-  url: string
-  headers: Record<string, string>
-  body: unknown
-}
-
-function captureFetch(respond: () => Response): {
-  fetchStub: typeof fetch
-  calls: CapturedRequest[]
-} {
-  const calls: CapturedRequest[] = []
-  const fetchStub = ((input: string | URL | Request, init?: RequestInit) => {
-    const headers = new Headers(init?.headers)
-    calls.push({
-      method: init?.method ?? 'GET',
-      url:
-        input instanceof URL
-          ? input.toString()
-          : input instanceof Request
-            ? input.url
-            : input,
-      headers: Object.fromEntries(headers.entries()),
-      body:
-        typeof init?.body === 'string' && init.body.length > 0
-          ? (JSON.parse(init.body) as unknown)
-          : undefined,
-    })
-    return Promise.resolve(respond())
-  }) as typeof fetch
-  return { fetchStub, calls }
-}
-
-function fakeStdin(isTTY: boolean): ReadableStdin {
-  const readable = Readable.from([])
-  return Object.assign(readable, { isTTY })
-}
-
-function spyStdout() {
-  return vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
-}
-
-const apiUrl = 'http://api.test'
+import {
+  apiUrl,
+  captureFetch,
+  fakeStdin,
+  spyStdout,
+} from '#commands/test-support'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -111,10 +72,29 @@ describe('comment create', () => {
     ])
   })
 
-  it('sends an empty content string when neither --file nor stdin provide any', async () => {
-    const created = { id: 'c1', content: '' }
+  it('sends piped stdin content as the request body content when --file is not given', async () => {
+    const created = { id: 'c1', content: 'some piped content' }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'comment', 'create', '42'],
+      fetchStub,
+      Object.assign(Readable.from(['some piped content']), { isTTY: false }),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(calls[0]?.body).toEqual({ content: 'some piped content' })
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify(created, null, 2)}\n`],
+    ])
+  })
+
+  it('exits non-zero and never calls fetch when neither --file nor stdin provide any content', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(null, { status: 500 }),
     )
 
     const exitCode = await runCli(
@@ -123,8 +103,8 @@ describe('comment create', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls[0]?.body).toEqual({ content: '' })
+    expect(exitCode).toBe(1)
+    expect(calls).toEqual([])
   })
 })
 
@@ -169,6 +149,41 @@ describe('comment update', () => {
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(updated, null, 2)}\n`],
     ])
+  })
+
+  it('sends piped stdin content as the request body content when --file is not given', async () => {
+    const updated = { id: 'c1', content: 'some piped content' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'comment', 'update', '42', 'c1'],
+      fetchStub,
+      Object.assign(Readable.from(['some piped content']), { isTTY: false }),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(calls[0]?.body).toEqual({ content: 'some piped content' })
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify(updated, null, 2)}\n`],
+    ])
+  })
+
+  it('exits non-zero and never calls fetch when neither --file nor stdin provide any content', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(null, { status: 500 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'comment', 'update', '42', 'c1'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(1)
+    expect(calls).toEqual([])
   })
 })
 
