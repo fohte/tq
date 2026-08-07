@@ -1,11 +1,15 @@
 import { Command, CommanderError, Option } from 'commander'
 
 import { registerCalendarCommands } from '#commands/calendar'
+import { registerCommentCommands } from '#commands/comment'
 import { registerGithubCommands } from '#commands/github'
 import { registerHealthCommand } from '#commands/health'
 import { registerImageCommands } from '#commands/image'
+import { registerLabelCommands } from '#commands/label'
 import { registerPageCommands } from '#commands/page'
+import { registerProjectCommands } from '#commands/project'
 import { registerSlackCommands } from '#commands/slack'
+import { registerTaskCommands } from '#commands/task'
 import { registerTodayCommands } from '#commands/today'
 import { ApiError } from '#errors'
 import { collectHeader } from '#headers'
@@ -34,6 +38,10 @@ export function buildProgram(
     )
 
   registerPageCommands(program, fetchImpl, stdin)
+  registerTaskCommands(program, fetchImpl)
+  registerCommentCommands(program, fetchImpl, stdin)
+  registerProjectCommands(program, fetchImpl)
+  registerLabelCommands(program, fetchImpl)
   registerImageCommands(program, fetchImpl)
   registerGithubCommands(program, fetchImpl)
   registerTodayCommands(program, fetchImpl)

@@ -45,3 +45,5 @@ export function fakeStdin(isTTY: boolean): ReadableStdin {
 export function spyStdout() {
   return vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
 }
+
+export const apiUrl = 'http://api.test'

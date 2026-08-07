@@ -46,6 +46,37 @@ export const COVERED_ROUTES = [
 
   // slack
   'POST /api/slack/resolve',
+
+  // task
+  'GET /api/tasks',
+  'POST /api/tasks',
+  'GET /api/tasks/:id',
+  'PATCH /api/tasks/:id',
+  'DELETE /api/tasks/:id',
+  'PATCH /api/tasks/:id/status',
+  'PATCH /api/tasks/:id/parent',
+  'POST /api/tasks/:id/complete',
+  'GET /api/tasks/:id/activity',
+  'GET /api/tasks/tree',
+  'GET /api/tasks/search',
+  'POST /api/tasks/from-github',
+
+  // comment
+  'GET /api/tasks/:taskId/comments',
+  'POST /api/tasks/:taskId/comments',
+  'PATCH /api/tasks/:taskId/comments/:commentId',
+  'DELETE /api/tasks/:taskId/comments/:commentId',
+
+  // project
+  'POST /api/projects',
+  'GET /api/projects',
+  'GET /api/projects/:id',
+  'GET /api/projects/:id/tasks',
+  'PATCH /api/projects/:id',
+  'DELETE /api/projects/:id',
+
+  // label
+  'GET /api/labels',
 ] as const satisfies readonly AllRoutes[]
 
 type CoveredRoutes = (typeof COVERED_ROUTES)[number]
@@ -100,6 +131,14 @@ export const EXCLUDED_ROUTES = {
 
   // Not a REST resource: a JSON-RPC/MCP transport endpoint, not a CLI concern.
   'ALL /api/mcp': 'MCP transport endpoint, not a REST resource',
+
+  // Autocomplete backends for the web editor's search bar and `#` mention
+  // picker; they return canned/UI-shaped data, not task data a CLI use case
+  // would want on its own.
+  'GET /api/tasks/search/suggest':
+    'backs the web search bar autocomplete, not a CLI concern',
+  'GET /api/tasks/mentions':
+    "backs the editor's # mention autocomplete, not a CLI concern",
 } as const satisfies Partial<Record<AllRoutes, string>>
 
 type ExcludedRoutes = keyof typeof EXCLUDED_ROUTES
@@ -109,40 +148,7 @@ type ExcludedRoutes = keyof typeof EXCLUDED_ROUTES
  * ships; if the route is later found to be out of scope, move it to
  * `EXCLUDED_ROUTES` with a reason instead of deleting it silently.
  */
-export const PENDING_ROUTES = [
-  // task
-  'GET /api/tasks',
-  'POST /api/tasks',
-  'GET /api/tasks/:id',
-  'PATCH /api/tasks/:id',
-  'DELETE /api/tasks/:id',
-  'PATCH /api/tasks/:id/status',
-  'PATCH /api/tasks/:id/parent',
-  'POST /api/tasks/:id/complete',
-  'GET /api/tasks/:id/activity',
-  'GET /api/tasks/tree',
-  'GET /api/tasks/search',
-  'GET /api/tasks/search/suggest',
-  'GET /api/tasks/mentions',
-  'POST /api/tasks/from-github',
-
-  // comment
-  'GET /api/tasks/:taskId/comments',
-  'POST /api/tasks/:taskId/comments',
-  'PATCH /api/tasks/:taskId/comments/:commentId',
-  'DELETE /api/tasks/:taskId/comments/:commentId',
-
-  // project
-  'POST /api/projects',
-  'GET /api/projects',
-  'GET /api/projects/:id',
-  'GET /api/projects/:id/tasks',
-  'PATCH /api/projects/:id',
-  'DELETE /api/projects/:id',
-
-  // label
-  'GET /api/labels',
-] as const satisfies readonly AllRoutes[]
+export const PENDING_ROUTES = [] as const satisfies readonly AllRoutes[]
 
 type PendingRoutes = (typeof PENDING_ROUTES)[number]
 
@@ -155,6 +161,7 @@ type AssertNever<T extends never> = T
  */
 export type UnclassifiedRoutes = Exclude<
   AllRoutes,
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents -- PendingRoutes resolves to `never` whenever PENDING_ROUTES is empty (all routes classified); keep it in the union so a future route added to PENDING_ROUTES stays excluded here too
   CoveredRoutes | ExcludedRoutes | PendingRoutes
 >
 export type _AssertAllRoutesClassified = AssertNever<UnclassifiedRoutes>

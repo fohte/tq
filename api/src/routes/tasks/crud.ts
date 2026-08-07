@@ -2,7 +2,6 @@ import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
 import { and, count, eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { z } from 'zod'
 
 import { db } from '#db/connection'
 import {
@@ -21,46 +20,22 @@ import {
 } from '#lib/edits'
 import { pageToResponse } from '#routes/task-pages'
 import {
-  contextEnum,
   getLabelNamesByTaskId,
   parentTasks,
   requireTask,
   resolveTaskListOrderBy,
-  taskListSortBy,
-  taskStatus,
   taskToResponse,
   taskWithParentNumberToResponse,
   timeBlockToResponse,
 } from '#routes/tasks/shared'
-import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
+import {
+  createTaskSchema,
+  listTasksQuerySchema,
+  updateTaskSchema,
+} from '#schemas/task'
 import { getSchedulingSettings } from '#services/scheduling-settings'
 import { syncTaskLabels } from '#services/task-labels'
 import { getTaskLinks, syncTaskLinks } from '#services/task-links'
-
-export const createTaskSchema = z.object({
-  title: z.string().min(1),
-  description: z.string().optional(),
-  startDate: z.string().optional(),
-  dueDate: z.string().optional(),
-  estimatedMinutes: z.number().int().positive().optional(),
-  parentId: z.uuid().optional(),
-  projectId: z.uuid().optional(),
-  context: contextEnum.optional(),
-  labels: z.array(z.string().trim().min(1)).optional(),
-  recurrenceRule: recurrenceRuleSchema.optional(),
-})
-
-export const updateTaskSchema = z.object({
-  title: z.string().min(1).optional(),
-  description: z.string().nullable().optional(),
-  startDate: z.string().nullable().optional(),
-  dueDate: z.string().nullable().optional(),
-  estimatedMinutes: z.number().int().positive().nullable().optional(),
-  projectId: z.uuid().nullable().optional(),
-  context: contextEnum.optional(),
-  labels: z.array(z.string().trim().min(1)).optional(),
-  recurrenceRule: recurrenceRuleSchema.nullable().optional(),
-})
 
 export const tasksCrudApp = new Hono()
   .post('/', zValidator('json', createTaskSchema), async (c) => {
@@ -139,64 +114,51 @@ export const tasksCrudApp = new Hono()
 
     return c.json(taskToResponse(task, createdRule, undefined, labelNames), 201)
   })
-  .get(
-    '/',
-    zValidator(
-      'query',
-      z.object({
-        status: taskStatus.optional(),
-        projectId: z.uuid().optional(),
-        parentId: z.uuid().optional(),
-        context: contextEnum.optional(),
-        sortBy: taskListSortBy.optional(),
-      }),
-    ),
-    async (c) => {
-      const query = c.req.valid('query')
-      const conditions = []
+  .get('/', zValidator('query', listTasksQuerySchema), async (c) => {
+    const query = c.req.valid('query')
+    const conditions = []
 
-      if (query.status != null) {
-        conditions.push(eq(tasks.status, query.status))
-      }
-      if (query.projectId != null) {
-        conditions.push(eq(tasks.projectId, query.projectId))
-      }
-      if (query.parentId != null) {
-        conditions.push(eq(tasks.parentId, query.parentId))
-      }
-      if (query.context != null) {
-        conditions.push(eq(tasks.context, query.context))
-      }
+    if (query.status != null) {
+      conditions.push(eq(tasks.status, query.status))
+    }
+    if (query.projectId != null) {
+      conditions.push(eq(tasks.projectId, query.projectId))
+    }
+    if (query.parentId != null) {
+      conditions.push(eq(tasks.parentId, query.parentId))
+    }
+    if (query.context != null) {
+      conditions.push(eq(tasks.context, query.context))
+    }
 
-      const result = await db
-        .select({
-          task: tasks,
-          parentNumber: parentTasks.number,
-          githubLink: taskGithubLinks,
-        })
-        .from(tasks)
-        .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
-        .leftJoin(taskGithubLinks, eq(tasks.id, taskGithubLinks.taskId))
-        .where(conditions.length > 0 ? and(...conditions) : undefined)
-        .orderBy(...resolveTaskListOrderBy(query.sortBy))
+    const result = await db
+      .select({
+        task: tasks,
+        parentNumber: parentTasks.number,
+        githubLink: taskGithubLinks,
+      })
+      .from(tasks)
+      .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
+      .leftJoin(taskGithubLinks, eq(tasks.id, taskGithubLinks.taskId))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(...resolveTaskListOrderBy(query.sortBy))
 
-      const labelsByTaskId = await getLabelNamesByTaskId(
-        result.map((r) => r.task.id),
-      )
+    const labelsByTaskId = await getLabelNamesByTaskId(
+      result.map((r) => r.task.id),
+    )
 
-      return c.json(
-        result.map((r) =>
-          taskWithParentNumberToResponse(
-            r.task,
-            r.parentNumber,
-            r.githubLink,
-            labelsByTaskId.get(r.task.id) ?? [],
-          ),
+    return c.json(
+      result.map((r) =>
+        taskWithParentNumberToResponse(
+          r.task,
+          r.parentNumber,
+          r.githubLink,
+          labelsByTaskId.get(r.task.id) ?? [],
         ),
-        200,
-      )
-    },
-  )
+      ),
+      200,
+    )
+  })
   .get('/:id', requireTask, async (c) => {
     const task = c.get('task')
     const id = task.id
