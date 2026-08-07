@@ -55,6 +55,7 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
     if (
       !(inner instanceof z.ZodEnum) &&
       !(inner instanceof z.ZodString) &&
+      !(inner instanceof z.ZodStringFormat) &&
       !(inner instanceof z.ZodNumber)
     ) {
       throw new Error(

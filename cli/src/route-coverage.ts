@@ -23,11 +23,27 @@ export const COVERED_ROUTES = [
   'PATCH /api/tasks/:taskId/pages/:pageId',
   'DELETE /api/tasks/:taskId/pages/:pageId',
 
+  // task
+  'GET /api/tasks',
+  'POST /api/tasks',
+  'GET /api/tasks/:id',
+  'PATCH /api/tasks/:id',
+  'DELETE /api/tasks/:id',
+  'PATCH /api/tasks/:id/status',
+  'PATCH /api/tasks/:id/parent',
+  'POST /api/tasks/:id/complete',
+  'GET /api/tasks/:id/activity',
+  'GET /api/tasks/tree',
+  'GET /api/tasks/search',
+  'POST /api/tasks/from-github',
+
+  // comment
   'GET /api/tasks/:taskId/comments',
   'POST /api/tasks/:taskId/comments',
   'PATCH /api/tasks/:taskId/comments/:commentId',
   'DELETE /api/tasks/:taskId/comments/:commentId',
 
+  // project
   'POST /api/projects',
   'GET /api/projects',
   'GET /api/projects/:id',
@@ -35,6 +51,7 @@ export const COVERED_ROUTES = [
   'PATCH /api/projects/:id',
   'DELETE /api/projects/:id',
 
+  // label
   'GET /api/labels',
 ] as const satisfies readonly AllRoutes[]
 
@@ -90,6 +107,14 @@ export const EXCLUDED_ROUTES = {
 
   // Not a REST resource: a JSON-RPC/MCP transport endpoint, not a CLI concern.
   'ALL /api/mcp': 'MCP transport endpoint, not a REST resource',
+
+  // Autocomplete backends for the web editor's search bar and `#` mention
+  // picker; they return canned/UI-shaped data, not task data a CLI use case
+  // would want on its own.
+  'GET /api/tasks/search/suggest':
+    'backs the web search bar autocomplete, not a CLI concern',
+  'GET /api/tasks/mentions':
+    "backs the editor's # mention autocomplete, not a CLI concern",
 } as const satisfies Partial<Record<AllRoutes, string>>
 
 type ExcludedRoutes = keyof typeof EXCLUDED_ROUTES
@@ -101,22 +126,6 @@ type ExcludedRoutes = keyof typeof EXCLUDED_ROUTES
  */
 export const PENDING_ROUTES = [
   'GET /health',
-
-  // task
-  'GET /api/tasks',
-  'POST /api/tasks',
-  'GET /api/tasks/:id',
-  'PATCH /api/tasks/:id',
-  'DELETE /api/tasks/:id',
-  'PATCH /api/tasks/:id/status',
-  'PATCH /api/tasks/:id/parent',
-  'POST /api/tasks/:id/complete',
-  'GET /api/tasks/:id/activity',
-  'GET /api/tasks/tree',
-  'GET /api/tasks/search',
-  'GET /api/tasks/search/suggest',
-  'GET /api/tasks/mentions',
-  'POST /api/tasks/from-github',
 
   // image
   'POST /api/images',

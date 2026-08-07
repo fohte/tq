@@ -13,12 +13,7 @@ import {
   tasks,
   timeBlocks,
 } from '#db/schema'
-
-export const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
-export const contextEnum = z.enum(['work', 'personal'])
-
-export const taskListSortBy = z.enum(['created', 'updated'])
-export type TaskListSortBy = z.infer<typeof taskListSortBy>
+import type { TaskListSortBy } from '#schemas/task'
 
 // Omitting `sortBy` preserves sortOrder-based manual ordering, which differs
 // from the explicit `created` option below (pure createdAt order).
