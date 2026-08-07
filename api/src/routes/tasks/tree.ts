@@ -10,15 +10,10 @@ import {
   buildTree,
   getLabelNamesByTaskId,
   resolveTaskListOrderBy,
-  taskListSortBy,
 } from '#routes/tasks/shared'
+import { treeQuerySchema } from '#schemas/task'
 
 const subtreeIdSchema = z.array(z.object({ id: z.string() }))
-
-const treeQuerySchema = z.object({
-  rootId: z.uuid().optional(),
-  sortBy: taskListSortBy.optional(),
-})
 
 export const tasksTreeApp = new Hono().get(
   '/tree',

@@ -202,23 +202,6 @@ jobs:
     concurrency:
       group: unit-test-${{ matrix.package }}-${{ github.ref }}
       cancel-in-progress: false
-    # The `api` package's integration tests need PostgreSQL. The matrix legs share
-    # one job definition, so this service starts for every package — harmless idle
-    # cost for the `web` leg, but avoids forking the job.
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: tq
-          POSTGRES_PASSWORD: tq
-          POSTGRES_DB: tq_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U tq"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -251,10 +234,31 @@ jobs:
 
       # `web`'s `test:storybook` runs Storybook stories through a headless
       # Playwright chromium browser, which isn't preinstalled on the runner.
-      - name: Install Playwright chromium
+      # The browser binary is cached, but OS-level packages installed by
+      # `--with-deps` aren't (they don't live under this cache path), so a
+      # cache hit still needs `install-deps` to cover them.
+      - name: Cache Playwright browsers
         if: matrix.package == 'web'
+        id: playwright-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright chromium
+        if: matrix.package == 'web' && steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: web
         run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: matrix.package == 'web' && steps.playwright-cache.outputs.cache-hit == 'true'
+        working-directory: web
+        run: pnpm exec playwright install-deps chromium
+
+      # Only the `api` package's integration tests need PostgreSQL.
+      - name: Start PostgreSQL
+        if: matrix.package == 'api'
+        uses: ./.github/actions/start-postgres
 
       - name: Run tests
         working-directory: ${{ matrix.package }}
