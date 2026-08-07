@@ -1,7 +1,7 @@
 import type { Command } from 'commander'
 
 import { toApiError } from '#client'
-import { buildClient } from '#command-client'
+import { buildClient } from '#command-context'
 import { printJson } from '#output'
 
 export function registerHealthCommand(

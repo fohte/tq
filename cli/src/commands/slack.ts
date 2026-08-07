@@ -3,7 +3,7 @@ import type { InferRequestType } from 'hono/client'
 
 import type { Client } from '#client'
 import { toApiError } from '#client'
-import { buildClient } from '#command-client'
+import { buildClient } from '#command-context'
 import { printJson } from '#output'
 
 type ResolveJson = InferRequestType<

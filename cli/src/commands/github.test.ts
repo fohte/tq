@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { runCli } from '#cli'
-import { captureFetch, fakeStdin, spyStdout } from '#test-utils'
-
-const apiUrl = 'http://api.test'
+import {
+  apiUrl,
+  captureFetch,
+  fakeStdin,
+  spyStdout,
+} from '#commands/test-support'
 
 afterEach(() => {
   vi.restoreAllMocks()

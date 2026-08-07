@@ -4,7 +4,7 @@ import { ALLOWED_CONTENT_TYPES } from 'api/constants/images'
 import type { Command } from 'commander'
 
 import { toApiError } from '#client'
-import { buildClient } from '#command-client'
+import { buildClient } from '#command-context'
 import { readBinaryFile } from '#input'
 import { printJson, writeBinaryFile } from '#output'
 
