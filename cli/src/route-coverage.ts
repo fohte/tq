@@ -143,40 +143,22 @@ export const EXCLUDED_ROUTES = {
 
 type ExcludedRoutes = keyof typeof EXCLUDED_ROUTES
 
-/**
- * Routes with no CLI command yet. Remove an entry here once its command
- * ships; if the route is later found to be out of scope, move it to
- * `EXCLUDED_ROUTES` with a reason instead of deleting it silently.
- */
-export const PENDING_ROUTES = [] as const satisfies readonly AllRoutes[]
-
-type PendingRoutes = (typeof PENDING_ROUTES)[number]
-
 type AssertNever<T extends never> = T
 
 /**
- * Compile error if any API route is neither implemented, excluded, nor
- * pending — the mechanism that keeps the CLI from silently falling behind
- * the API.
+ * Compile error if any API route is neither implemented nor excluded — the
+ * mechanism that keeps the CLI from silently falling behind the API.
  */
 export type UnclassifiedRoutes = Exclude<
   AllRoutes,
-  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents -- PendingRoutes resolves to `never` whenever PENDING_ROUTES is empty (all routes classified); keep it in the union so a future route added to PENDING_ROUTES stays excluded here too
-  CoveredRoutes | ExcludedRoutes | PendingRoutes
+  CoveredRoutes | ExcludedRoutes
 >
 export type _AssertAllRoutesClassified = AssertNever<UnclassifiedRoutes>
 
 /**
- * Coverage alone doesn't catch a route left in two tables at once (e.g. added
- * to `COVERED_ROUTES` on implementation without being removed from
- * `PENDING_ROUTES`) — these assert the three tables are pairwise disjoint.
+ * Coverage alone doesn't catch a route classified in both tables at once —
+ * this asserts `COVERED_ROUTES` and `EXCLUDED_ROUTES` are disjoint.
  */
 export type _AssertCoveredExcludedDisjoint = AssertNever<
   Extract<CoveredRoutes, ExcludedRoutes>
->
-export type _AssertCoveredPendingDisjoint = AssertNever<
-  Extract<CoveredRoutes, PendingRoutes>
->
-export type _AssertExcludedPendingDisjoint = AssertNever<
-  Extract<ExcludedRoutes, PendingRoutes>
 >
