@@ -282,32 +282,29 @@ export const TagClick: Story = {
   },
 }
 
-let clickNavigatesHistory: RouterHistory
+export const ClickNavigates: Story = (() => {
+  const history = createMemoryHistory({ initialEntries: ['/'] })
 
-export const ClickNavigates: Story = {
-  args: {
-    node: { ...baseTreeNode, title: 'Click this row to navigate' },
-  },
-  render: (args) => {
-    clickNavigatesHistory = createMemoryHistory({ initialEntries: ['/'] })
-    return (
-      <Providers history={clickNavigatesHistory}>
+  return {
+    args: {
+      node: { ...baseTreeNode, title: 'Click this row to navigate' },
+    },
+    render: (args) => (
+      <Providers history={history}>
         <div className="w-[600px]">
           <InteractiveTreeTaskGridRow node={args.node} />
         </div>
       </Providers>
-    )
-  },
-  play: async ({ args, canvas, userEvent }) => {
-    // Both the desktop and mobile layouts render at once — click the
-    // desktop one, which used to intercept this click before it reached
-    // the row's Link.
-    await userEvent.click(atIndex(canvas.getAllByText(args.node.title), 0))
-    await expect(clickNavigatesHistory.location.pathname).toBe(
-      `/tasks/${args.node.id}`,
-    )
-  },
-}
+    ),
+    play: async ({ args, canvas, userEvent }) => {
+      // Both the desktop and mobile layouts render at once — click the
+      // desktop one, which used to intercept this click before it reached
+      // the row's Link.
+      await userEvent.click(atIndex(canvas.getAllByText(args.node.title), 0))
+      await expect(history.location.pathname).toBe(`/tasks/${args.node.id}`)
+    },
+  }
+})()
 
 export const WithChildren: Story = {
   args: {
