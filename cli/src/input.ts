@@ -28,6 +28,14 @@ async function readFileContent(filePath: string): Promise<string> {
   }
 }
 
+export async function readBinaryFile(filePath: string): Promise<Buffer> {
+  try {
+    return await readFile(filePath)
+  } catch (cause) {
+    throw new FileIoError(`Failed to read ${filePath}`, cause)
+  }
+}
+
 async function readStreamText(
   stream: ReadableStdin,
 ): Promise<string | undefined> {

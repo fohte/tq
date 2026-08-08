@@ -169,7 +169,10 @@ describe('getAuthUrl', () => {
 
     expect(error).toEqual(
       new IntegrationConfigError(
-        'GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI environment variables are required',
+        'invalid environment:\n' +
+          '- missing required environment variable: GOOGLE_CLIENT_ID\n' +
+          '- missing required environment variable: GOOGLE_CLIENT_SECRET\n' +
+          '- missing required environment variable: GOOGLE_REDIRECT_URI',
       ),
     )
   })
