@@ -224,6 +224,76 @@ describe('global options', () => {
     expect(exitCode).toBe(0)
     expect(calls[0]?.headers).toEqual({ 'x-test': 'abc' })
   })
+
+  it('sends X-Author derived from --author', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify([]), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, '--author', 'claude-opus-5', 'page', 'list', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(calls[0]?.headers).toEqual({ 'x-author': 'llm:claude-opus-5' })
+  })
+
+  it('omits X-Author when --author is not given', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify([]), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'page', 'list', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(calls[0]?.headers).toEqual({})
+  })
+
+  it('omits X-Author when --author is an empty string', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify([]), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, '--author', '', 'page', 'list', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(calls[0]?.headers).toEqual({})
+  })
+
+  it('lets an explicit -H override the X-Author derived from --author', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify([]), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        '--author',
+        'claude-opus-5',
+        '--header',
+        'X-Author: llm:manual-override',
+        'page',
+        'list',
+        '42',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(calls[0]?.headers).toEqual({ 'x-author': 'llm:manual-override' })
+  })
 })
 
 describe('page delete', () => {
