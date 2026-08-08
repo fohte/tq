@@ -71,16 +71,8 @@ afterEach(() => {
 })
 
 describe('task list', () => {
-  it('sends the schema-derived flags as a query string and omits description by default', async () => {
-    const tasks = [
-      {
-        id: 't1',
-        number: 1,
-        title: 'Task one',
-        status: 'todo',
-        description: 'long body',
-      },
-    ]
+  it('sends the schema-derived flags as a query string and prints the response', async () => {
+    const tasks = [{ id: 't1', number: 1, title: 'Task one', status: 'todo' }]
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(tasks), { status: 200 }),
     )
@@ -99,6 +91,31 @@ describe('task list', () => {
       query: { status: 'todo' },
       body: undefined,
     })
+    expect(write.mock.calls).toEqual([[`${JSON.stringify(tasks, null, 2)}\n`]])
+  })
+
+  it('omits description from the printed output by default', async () => {
+    const tasks = [
+      {
+        id: 't1',
+        number: 1,
+        title: 'Task one',
+        status: 'todo',
+        description: 'long body',
+      },
+    ]
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(tasks), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'list'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
     expect(write.mock.calls).toEqual([
       [
         `${JSON.stringify(
@@ -110,7 +127,7 @@ describe('task list', () => {
     ])
   })
 
-  it('includes description when --full is given', async () => {
+  it('includes description in the list output when --full is given', async () => {
     const tasks = [
       { id: 't1', number: 1, title: 'Task one', description: 'long body' },
     ]
@@ -423,24 +440,8 @@ describe('task activity', () => {
 })
 
 describe('task tree', () => {
-  it('sends the schema-derived flags as a query string and omits description, including in nested children', async () => {
-    const tree = [
-      {
-        id: 't1',
-        number: 1,
-        title: 'Root',
-        description: 'root body',
-        children: [
-          {
-            id: 't2',
-            number: 2,
-            title: 'Child',
-            description: 'child body',
-            children: [],
-          },
-        ],
-      },
-    ]
+  it('sends the schema-derived flags as a query string and prints the response', async () => {
+    const tree = [{ id: 't1', number: 1, title: 'Root', children: [] }]
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(tree), { status: 200 }),
     )
@@ -459,6 +460,39 @@ describe('task tree', () => {
       query: { sortBy: 'updated' },
       body: undefined,
     })
+    expect(write.mock.calls).toEqual([[`${JSON.stringify(tree, null, 2)}\n`]])
+  })
+
+  it('omits description from the printed output by default, including in nested children', async () => {
+    const tree = [
+      {
+        id: 't1',
+        number: 1,
+        title: 'Root',
+        description: 'root body',
+        children: [
+          {
+            id: 't2',
+            number: 2,
+            title: 'Child',
+            description: 'child body',
+            children: [],
+          },
+        ],
+      },
+    ]
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(tree), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'tree'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
     expect(write.mock.calls).toEqual([
       [
         `${JSON.stringify(
@@ -477,7 +511,7 @@ describe('task tree', () => {
     ])
   })
 
-  it('includes description when --full is given', async () => {
+  it('includes description in the tree output when --full is given', async () => {
     const tree = [
       {
         id: 't1',
@@ -504,10 +538,8 @@ describe('task tree', () => {
 })
 
 describe('task search', () => {
-  it('combines the positional query with schema-derived flags into the query string and omits description by default', async () => {
-    const results = [
-      { id: 't1', number: 1, title: 'Match', description: 'long body' },
-    ]
+  it('combines the positional query with schema-derived flags into the query string', async () => {
+    const results = [{ id: 't1', number: 1, title: 'Match' }]
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(results), { status: 200 }),
     )
@@ -527,13 +559,34 @@ describe('task search', () => {
       body: undefined,
     })
     expect(write.mock.calls).toEqual([
+      [`${JSON.stringify(results, null, 2)}\n`],
+    ])
+  })
+
+  it('omits description from the printed output by default', async () => {
+    const results = [
+      { id: 't1', number: 1, title: 'Match', description: 'long body' },
+    ]
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(results), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'search', 'hello'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(write.mock.calls).toEqual([
       [
         `${JSON.stringify([{ id: 't1', number: 1, title: 'Match' }], null, 2)}\n`,
       ],
     ])
   })
 
-  it('includes description when --full is given', async () => {
+  it('includes description in search results when --full is given', async () => {
     const results = [
       { id: 't1', number: 1, title: 'Match', description: 'long body' },
     ]

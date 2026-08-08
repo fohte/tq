@@ -13,8 +13,8 @@ afterEach(() => {
 })
 
 describe('project list', () => {
-  it('sends an empty query and omits description from the printed output by default', async () => {
-    const projects = [{ id: 'p1', title: 'Website', description: 'long body' }]
+  it('sends an empty query and prints the projects returned by the server as JSON', async () => {
+    const projects = [{ id: 'p1', title: 'Website' }]
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(projects), { status: 200 }),
     )
@@ -28,6 +28,25 @@ describe('project list', () => {
 
     expect(exitCode).toBe(0)
     expect(new URL(calls[0]?.url ?? '').search).toBe('')
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify(projects, null, 2)}\n`],
+    ])
+  })
+
+  it('omits description from the printed output by default', async () => {
+    const projects = [{ id: 'p1', title: 'Website', description: 'long body' }]
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(projects), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'project', 'list'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify([{ id: 'p1', title: 'Website' }], null, 2)}\n`],
     ])

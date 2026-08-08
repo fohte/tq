@@ -6,8 +6,6 @@ export function printJson(data: unknown): void {
   process.stdout.write(`${JSON.stringify(data, null, 2)}\n`)
 }
 
-// Walks arrays and plain objects to drop every property named `key`,
-// including inside `task tree`'s nested `children` arrays.
 function omitDeep(value: unknown, key: string): unknown {
   if (Array.isArray(value)) {
     return value.map((item) => omitDeep(item, key))
