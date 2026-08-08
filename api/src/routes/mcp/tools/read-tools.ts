@@ -4,9 +4,10 @@ import type { Hono } from 'hono'
 import { z } from 'zod'
 
 import { callInternalRoute } from '#routes/mcp/route-bridge'
-import { projectStatus } from '#routes/projects'
 import { pageToResponse } from '#routes/task-pages'
-import { contextEnum, taskIdOrNumber, taskStatus } from '#routes/tasks/shared'
+import { taskIdOrNumber } from '#routes/tasks/shared'
+import { projectStatus } from '#schemas/project'
+import { contextEnum, taskStatus } from '#schemas/task'
 
 async function resolveApp(): Promise<Hono> {
   // `#app` imports `mcpApp` (routes/mcp/index.ts -> server.ts -> this

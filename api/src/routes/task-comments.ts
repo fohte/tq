@@ -2,22 +2,14 @@ import { zValidator } from '@hono/zod-validator'
 import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { createFactory } from 'hono/factory'
-import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { taskComments } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { type EditAuthorInfo, getCommentAuthors, recordEdit } from '#lib/edits'
 import { findTaskByIdOrNumber, type TaskEnv } from '#routes/tasks/shared'
+import { createCommentSchema, updateCommentSchema } from '#schemas/task-comment'
 import { syncTaskLinks } from '#services/task-links'
-
-export const createCommentSchema = z.object({
-  content: z.string().min(1),
-})
-
-export const updateCommentSchema = z.object({
-  content: z.string().min(1),
-})
 
 function commentToResponse(
   comment: typeof taskComments.$inferSelect,
