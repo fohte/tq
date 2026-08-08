@@ -1,4 +1,5 @@
-import { err, ok, type Result } from 'neverthrow'
+import { parseEnv, requireString } from '@fohte/service-kit/env'
+import type { Result } from 'neverthrow'
 
 import { IntegrationConfigError } from '#integrations/errors'
 import type { OAuthConfig } from '#integrations/types'
@@ -11,24 +12,9 @@ import type { OAuthConfig } from '#integrations/types'
 export function getOAuthEnvConfig(
   prefix: string,
 ): Result<OAuthConfig, IntegrationConfigError> {
-  const clientId = process.env[`${prefix}_CLIENT_ID`]
-  const clientSecret = process.env[`${prefix}_CLIENT_SECRET`]
-  const redirectUri = process.env[`${prefix}_REDIRECT_URI`]
-
-  if (
-    clientId == null ||
-    clientId === '' ||
-    clientSecret == null ||
-    clientSecret === '' ||
-    redirectUri == null ||
-    redirectUri === ''
-  ) {
-    return err(
-      new IntegrationConfigError(
-        `${prefix}_CLIENT_ID, ${prefix}_CLIENT_SECRET, and ${prefix}_REDIRECT_URI environment variables are required`,
-      ),
-    )
-  }
-
-  return ok({ clientId, clientSecret, redirectUri })
+  return parseEnv({
+    clientId: requireString(process.env, `${prefix}_CLIENT_ID`),
+    clientSecret: requireString(process.env, `${prefix}_CLIENT_SECRET`),
+    redirectUri: requireString(process.env, `${prefix}_REDIRECT_URI`),
+  }).mapErr((error) => new IntegrationConfigError(error.message))
 }
