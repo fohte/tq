@@ -188,6 +188,12 @@ jobs:
   unit-test-run:
     needs: setup
     if: ${{ needs.setup.outputs.packages != '[]' }}
+    # Job-level permissions replace (not extend) the workflow-level block,
+    # so this scopes pull-requests:write to just this job instead of also
+    # exposing it to the `test` job's third-party lint/format tools.
+    permissions:
+      contents: read
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
@@ -259,15 +265,6 @@ jobs:
           DATABASE_URL: postgresql://tq:tq@localhost:5432/tq_test
         run: pnpm run test
 
-      - name: Get GitHub token for VRT PR comment
-        if: matrix.package == 'web'
-        uses: octo-sts/action@f603d3be9d8dd9871a265776e625a27b00effe05 # v1.1.1
-        id: octo-sts-vrt
-        with:
-          scope: fohte
-          identity: ${{ github.event.repository.name }}
-          domain: octo-sts.fohte.net
-
       # main pushes publish under the pr/ prefix too (as pr/main-<sha>) so the
       # new snapshot never overwrites main/latest directly — if reg-suit or
       # the promote step below fails, main/latest (the baseline every PR
@@ -291,10 +288,23 @@ jobs:
         env:
           VRT_ACTUAL_KEY: ${{ steps.vrt-keys.outputs.actual_key }}
           VRT_EXPECTED_KEY: ${{ steps.vrt-keys.outputs.expected_key }}
-          VRT_GITHUB_TOKEN: ${{ steps.octo-sts-vrt.outputs.token }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: pnpm exec reg-suit run
+
+      # Runs regardless of whether an open PR exists yet: pushing straight to
+      # main (no PR) or to a branch without an open PR both no-op inside the
+      # action instead of failing here.
+      - name: Post VRT PR comment
+        if: matrix.package == 'web'
+        uses: ./.github/actions/vrt-comment
+        with:
+          repo: ${{ github.repository }}
+          branch: ${{ github.ref_name }}
+          sha: ${{ github.sha }}
+          out-json-path: web/.reg/out.json
+          report-url: https://tq-vrt.fohte.net/${{ steps.vrt-keys.outputs.actual_key }}/index.html
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # Only reached once reg-suit has successfully published the new actual
       # images under pr/main-<sha>, so a failure above never touches
