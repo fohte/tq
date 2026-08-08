@@ -66,7 +66,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+// The screenshot is taken after `play` resolves, and the hover card needs
+// longer than the capture's own settle window to be back on screen.
+const HOVER_CARD_SCREENSHOT = { screenshot: { delay: 500 } }
+
 export const NormalMessage: Story = {
+  parameters: HOVER_CARD_SCREENSHOT,
   args: {
     url: NORMAL_MESSAGE_URL,
     raw: NORMAL_MESSAGE_URL,
@@ -138,6 +143,7 @@ export const LongText: Story = {
 }
 
 export const BotMessageWithoutAvatar: Story = {
+  parameters: HOVER_CARD_SCREENSHOT,
   args: {
     url: BOT_MESSAGE_URL,
     raw: BOT_MESSAGE_URL,
