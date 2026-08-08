@@ -1,0 +1,38 @@
+name: Set up workspace
+description: >-
+  Install the pnpm workspace (mise toolchain, corepack, pnpm store cache,
+  `pnpm install --frozen-lockfile`). The caller must check out the repo first
+  — a composite action can't check out the repo it's itself loaded from.
+
+runs:
+  using: composite
+  steps:
+    - uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14 # v4.2.3
+      with:
+        version: 2026.7.16
+
+    # corepack creates the pnpm executable inside mise's node install bin
+    # directory; reshim so the mise shims dir (which is on PATH) picks it up.
+    - shell: bash
+      run: |
+        corepack enable
+        mise reshim
+
+    - name: Get pnpm store directory
+      id: pnpm-store
+      shell: bash
+      run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache pnpm store
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ${{ steps.pnpm-store.outputs.path }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: ${{ runner.os }}-pnpm-store-
+
+    # Install the full workspace: web imports from api's source at both
+    # type-check and runtime (e.g. `api/constants/images`), so a `--filter
+    # ./web...` install would leave those unresolvable.
+    - shell: bash
+      run: pnpm install --frozen-lockfile

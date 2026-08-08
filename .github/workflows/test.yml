@@ -56,31 +56,10 @@ jobs:
             echo "skip_commit=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14 # v4.2.3
-        with:
-          version: 2026.7.16
-
-      # lefthook hooks (eslint, prettier, etc.) shell out to `pnpm`, so corepack
-      # must activate before lefthook runs. corepack creates the pnpm executable
-      # inside mise's node install bin directory; reshim so the mise shims dir
-      # (which is on PATH) picks it up.
-      - run: |
-          corepack enable
-          mise reshim
-
-      - name: Get pnpm store directory
-        id: pnpm-store
-        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ${{ steps.pnpm-store.outputs.path }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-store-
-
-      - run: pnpm install --frozen-lockfile
+      # lefthook hooks (eslint, prettier, etc.) shell out to `pnpm`, so the
+      # workspace (which activates corepack) must be installed before
+      # lefthook runs below.
+      - uses: ./.github/actions/setup-workspace
 
       - name: Check peer dependencies
         run: pnpm peers check
@@ -160,7 +139,7 @@ jobs:
         id: set-packages
         env:
           # Changes to these files affect every package, so they trigger the full matrix.
-          GLOBAL_PATHS_REGEX: '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.github/workflows/test\.yml)$'
+          GLOBAL_PATHS_REGEX: '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.github/workflows/test\.yml|\.github/workflows/vrt\.yml|\.github/actions/setup-workspace/action\.yml)$'
           CHANGED_FILES: ${{ steps.changed.outputs.all_changed_files }}
         run: |
           # Workspace packages are the directories holding a non-root package.json.
@@ -188,78 +167,16 @@ jobs:
   unit-test-run:
     needs: setup
     if: ${{ needs.setup.outputs.packages != '[]' }}
-    # Job-level permissions replace (not extend) the workflow-level block,
-    # so this scopes pull-requests:write to just this job instead of also
-    # exposing it to the `test` job's third-party lint/format tools.
-    permissions:
-      contents: read
-      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
         package: ${{ fromJSON(needs.setup.outputs.packages) }}
     name: 'unit-test (${{ matrix.package }})'
     runs-on: ubuntu-latest
-    # Overlapping runs for the same package + ref would otherwise let two
-    # `web` legs publish VRT snapshots to the same S3 key at once — most
-    # importantly two main pushes racing to fill the same (non-live) baseline
-    # slot, which could flip the pointer to a slot holding a mix of two runs'
-    # screenshots.
-    concurrency:
-      group: unit-test-${{ matrix.package }}-${{ github.ref }}
-      cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14 # v4.2.3
-        with:
-          version: 2026.7.16
-
-      # corepack creates the pnpm executable inside mise's node install bin
-      # directory; reshim so the mise shims dir (which is on PATH) picks it up.
-      - run: |
-          corepack enable
-          mise reshim
-
-      - name: Get pnpm store directory
-        id: pnpm-store
-        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ${{ steps.pnpm-store.outputs.path }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-store-
-
-      # Install the full workspace: `web`'s `tsc --noEmit` reads `api`'s source for
-      # cross-package types, so a `--filter ./web...` install leaves it unable to
-      # resolve `api`'s `node_modules` and the type-check step fails.
-      - run: pnpm install --frozen-lockfile
-
-      # `web`'s `test:storybook` runs Storybook stories through a headless
-      # Playwright chromium browser, which isn't preinstalled on the runner.
-      # The browser binary is cached, but OS-level packages installed by
-      # `--with-deps` aren't (they don't live under this cache path), so a
-      # cache hit still needs `install-deps` to cover them.
-      - name: Cache Playwright browsers
-        if: matrix.package == 'web'
-        id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - name: Install Playwright chromium
-        if: matrix.package == 'web' && steps.playwright-cache.outputs.cache-hit != 'true'
-        working-directory: web
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Install Playwright system dependencies
-        if: matrix.package == 'web' && steps.playwright-cache.outputs.cache-hit == 'true'
-        working-directory: web
-        run: pnpm exec playwright install-deps chromium
+      - uses: ./.github/actions/setup-workspace
 
       # Only the `api` package's integration tests need PostgreSQL.
       - name: Start PostgreSQL
@@ -273,152 +190,39 @@ jobs:
           DATABASE_URL: postgresql://tq:tq@localhost:5432/tq_test
         run: pnpm run test
 
-      # baseline/pointer names which of two slots (blue/green) is the live
-      # baseline PRs compare against. main publishes into the other slot and
-      # flips the pointer only after a successful run, so a failed reg-suit
-      # or flip never corrupts the baseline every PR relies on, and promoting
-      # is a single small object write instead of copying every screenshot.
-      # A missing pointer falls back to the legacy main/latest key — but any
-      # other read failure (auth, network, permissions) must not be treated
-      # the same way, or a transient error could make main overwrite the
-      # live slot instead of the intended target.
-      - name: Set VRT snapshot keys
-        if: matrix.package == 'web'
-        id: vrt-keys
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-        run: |
-          pointer_err=$(mktemp)
-          if live_slot=$(aws s3 cp "s3://tq-vrt/baseline/pointer" - --endpoint-url https://8d88a085ccc7b11f252419e2f3a25fd6.r2.cloudflarestorage.com 2>"$pointer_err"); then
-            :
-          elif grep -qE 'NoSuchKey|HeadObject operation: Not Found' "$pointer_err"; then
-            live_slot=""
-          else
-            cat "$pointer_err" >&2
-            exit 1
-          fi
+  # Storybook's screenshot capture and reg-suit's comparison/publish live in
+  # their own reusable workflow so they can shard across runners instead of
+  # sharing the `web` leg above with the (browser-free) type-check and unit
+  # test run.
+  vrt:
+    # Also needs unit-test-run so a red web `tsc --noEmit`/unit-test leg
+    # blocks the flip below instead of racing ahead of it — without this,
+    # `vrt` only depended on `setup` and could flip the shared baseline while
+    # unit-test-run was still failing.
+    needs:
+      - setup
+      - unit-test-run
+    if: ${{ contains(fromJSON(needs.setup.outputs.packages), 'web') }}
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: ./.github/workflows/vrt.yml
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-          if [ -n "$live_slot" ]; then
-            echo "expected_key=baseline/$live_slot" >> "$GITHUB_OUTPUT"
-          else
-            echo "expected_key=main/latest" >> "$GITHUB_OUTPUT"
-          fi
-
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            if [ "$live_slot" = "blue" ]; then
-              target_slot=green
-            else
-              target_slot=blue
-            fi
-            echo "actual_key=baseline/$target_slot" >> "$GITHUB_OUTPUT"
-            echo "target_slot=$target_slot" >> "$GITHUB_OUTPUT"
-          else
-            # One key per branch: re-pushing to the same branch overwrites its
-            # previous snapshot instead of accumulating a new one per commit.
-            echo "actual_key=branch/${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          fi
-
-      # reg-suit's S3 publisher only uploads — it never deletes. Since a
-      # baseline slot is reused across main pushes, a screenshot removed
-      # since this slot was last written (e.g. a deleted story) would
-      # otherwise linger and get reported as a false "deleted" diff every
-      # time this slot becomes live again.
-      - name: Clear VRT baseline target slot
-        if: matrix.package == 'web' && github.ref == 'refs/heads/main'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-        run: |
-          aws s3 rm "s3://tq-vrt/${{ steps.vrt-keys.outputs.actual_key }}/actual" \
-            --recursive \
-            --endpoint-url https://8d88a085ccc7b11f252419e2f3a25fd6.r2.cloudflarestorage.com
-
-      - name: Compare VRT screenshots
-        if: matrix.package == 'web'
-        working-directory: web
-        id: vrt-compare
-        env:
-          VRT_ACTUAL_KEY: ${{ steps.vrt-keys.outputs.actual_key }}
-          VRT_EXPECTED_KEY: ${{ steps.vrt-keys.outputs.expected_key }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: |
-          pnpm exec reg-suit sync-expected
-          pnpm exec reg-suit compare
-
-          # expected/ is byte-for-byte identical to the baseline key's actual/
-          # (that's literally where sync-expected fetched it from), so point the
-          # report's "before" pane at the baseline directly instead of uploading
-          # a duplicate copy under this run's key.
-          expected_rel=$(node -e "console.log(require('path').posix.relative(process.env.VRT_ACTUAL_KEY, process.env.VRT_EXPECTED_KEY))")
-          sed -i "s#\"expectedDir\":\"expected\"#\"expectedDir\":\"${expected_rel}/actual\"#" .reg/index.html
-
-          diff_count=$(jq '(.failedItems | length) + (.newItems | length) + (.deletedItems | length)' .reg/out.json)
-          echo "Diff count: $diff_count"
-          if [ "$diff_count" -eq 0 ]; then
-            echo "has_diff=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_diff=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Publish VRT report
-        if: matrix.package == 'web'
-        working-directory: web
-        env:
-          VRT_ACTUAL_KEY: ${{ steps.vrt-keys.outputs.actual_key }}
-          VRT_EXPECTED_KEY: ${{ steps.vrt-keys.outputs.expected_key }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          # A no-match pattern skips the report upload when has_diff is false.
-          # `-n` still runs the notifier, which posts the "no visual
-          # difference" PR comment either way.
-          VRT_PUBLISH_PATTERN: ${{ steps.vrt-compare.outputs.has_diff == 'true' && '{*.{html,js,wasm,json},{actual,diff}/**/*.{png,jpeg,jpg,tiff,bmp,gif}}' || 'no-such-dir/**' }}
-        run: pnpm exec reg-suit publish -n
-
-      # Runs regardless of whether an open PR exists yet: pushing straight to
-      # main (no PR) or to a branch without an open PR both no-op inside the
-      # action instead of failing here.
-      - name: Post VRT PR comment
-        if: matrix.package == 'web'
-        uses: ./.github/actions/vrt-comment
-        with:
-          repo: ${{ github.repository }}
-          branch: ${{ github.ref_name }}
-          sha: ${{ github.sha }}
-          out-json-path: web/.reg/out.json
-          report-url: https://tq-vrt.fohte.net/${{ steps.vrt-keys.outputs.actual_key }}/index.html
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      # Reached only once reg-suit has successfully published the new baseline
-      # candidate to the non-live slot, so a failure above never touches the
-      # pointer PRs actually read. Requires has_diff == 'true': a zero-diff run
-      # skips the actual/ upload (see the Publish step above), so the target
-      # slot's actual/ would still be empty from the Clear step — flipping to
-      # it would break every PR's comparison instead of leaving the
-      # still-accurate live slot in place.
-      - name: Flip VRT baseline pointer
-        if: matrix.package == 'web' && github.ref == 'refs/heads/main' && steps.vrt-compare.outputs.has_diff == 'true'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-        run: |
-          echo -n "${{ steps.vrt-keys.outputs.target_slot }}" | aws s3 cp - s3://tq-vrt/baseline/pointer \
-            --endpoint-url https://8d88a085ccc7b11f252419e2f3a25fd6.r2.cloudflarestorage.com
-
-  # Aggregation gate for the unit-test matrix. Matrix leg names are dynamic and
-  # cannot be pinned as a required status check, so this single fixed-name job is
-  # the branch protection gate instead. It fails only when a needed job failed;
-  # when every leg succeeds (or the matrix is skipped because nothing changed) it
-  # is skipped, and a skipped required check counts as success.
+  # Aggregation gate for unit-test-run's matrix and the vrt reusable workflow
+  # call. Matrix leg names are dynamic and cannot be pinned as a required
+  # status check, so this single fixed-name job is the branch protection gate
+  # instead. It fails only when a needed job failed; when every leg succeeds
+  # (or a job is skipped because nothing changed) it is skipped, and a
+  # skipped required check counts as success.
   unit-test:
     runs-on: ubuntu-slim
     needs:
       - setup
       - unit-test-run
+      - vrt
     if: failure()
     steps:
       - run: exit 1
