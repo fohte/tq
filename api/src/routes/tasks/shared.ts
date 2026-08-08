@@ -15,16 +15,13 @@ import {
 } from '#db/schema'
 import type { TaskListSortBy } from '#schemas/task'
 
-// Omitting `sortBy` preserves sortOrder-based manual ordering, which differs
-// from the explicit `created` option below (pure createdAt order).
 export function resolveTaskListOrderBy(sortBy?: TaskListSortBy) {
   switch (sortBy) {
     case 'updated':
       return [desc(tasks.updatedAt)]
     case 'created':
-      return [tasks.createdAt]
     default:
-      return [tasks.sortOrder, tasks.createdAt]
+      return [tasks.createdAt]
   }
 }
 
