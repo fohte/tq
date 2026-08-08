@@ -28,6 +28,11 @@ export function buildProgram(
       'tq API base URL (or set TQ_API_URL)',
       process.env['TQ_API_URL'],
     )
+    .option(
+      '--author <name>',
+      'Attribute writes to this LLM agent, e.g. "claude-opus-5" (or set TQ_AUTHOR); sent as X-Author: llm:<name>',
+      process.env['TQ_AUTHOR'],
+    )
     .addOption(
       new Option(
         '-H, --header <name:value>',

@@ -5,6 +5,7 @@ import { createClient } from '#client'
 
 export interface GlobalOptions {
   apiUrl?: string
+  author?: string
   header: Record<string, string>
 }
 
@@ -17,8 +18,15 @@ function resolveApiUrl(options: GlobalOptions): string {
   )
 }
 
+function resolveHeaders(options: GlobalOptions): Record<string, string> {
+  if (options.author == null || options.author.length === 0) {
+    return options.header
+  }
+  return { 'X-Author': `llm:${options.author}`, ...options.header }
+}
+
 export function buildClient(command: Command, fetchImpl: typeof fetch): Client {
   const options = command.optsWithGlobals<GlobalOptions>()
   const apiUrl = resolveApiUrl(options)
-  return createClient({ apiUrl, headers: options.header }, fetchImpl)
+  return createClient({ apiUrl, headers: resolveHeaders(options) }, fetchImpl)
 }
