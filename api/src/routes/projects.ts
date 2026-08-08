@@ -153,7 +153,7 @@ export const projectsApp = new Hono()
       .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
       .leftJoin(taskGithubLinks, eq(tasks.id, taskGithubLinks.taskId))
       .where(eq(tasks.projectId, id))
-      .orderBy(tasks.sortOrder, tasks.createdAt)
+      .orderBy(tasks.createdAt)
 
     const labelsByTaskId = await getLabelNamesByTaskId(
       result.map((r) => r.task.id),

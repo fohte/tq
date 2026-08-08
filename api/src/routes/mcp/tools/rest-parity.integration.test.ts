@@ -235,7 +235,7 @@ describe('REST/MCP parity', () => {
     // GET /api/tasks (list) never hydrates recurrenceRule, unlike the detail
     // endpoint and this write tool's own response. Sorting both sides by id
     // avoids depending on the unspecified tie-break order Postgres uses when
-    // sortOrder and createdAt are identical for both tasks.
+    // createdAt is identical for both tasks.
     expect((await jsonBody<{ id: string }[]>(res)).sort(byId)).toEqual(
       expected.sort(byId),
     )
