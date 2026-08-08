@@ -81,9 +81,7 @@ export function TreeTaskGridRow({
     onToggleExpand(node.id)
   }
 
-  const handleSelectRow = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const handleSelectRow = () => {
     onSelectRow(node.id)
   }
 

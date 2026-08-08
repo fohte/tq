@@ -18,7 +18,7 @@ afterEach(() => {
 })
 
 describe('comment list', () => {
-  it('prints the comments returned by the server as JSON', async () => {
+  it('omits comment content from the printed output by default', async () => {
     const comments = [{ id: 'c1', content: 'Hello' }]
     const { fetchStub } = captureFetch(
       () => new Response(JSON.stringify(comments), { status: 200 }),
@@ -27,6 +27,25 @@ describe('comment list', () => {
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'comment', 'list', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify([{ id: 'c1' }], null, 2)}\n`],
+    ])
+  })
+
+  it('includes comment content when --full is given', async () => {
+    const comments = [{ id: 'c1', content: 'Hello' }]
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(comments), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'comment', 'list', '42', '--full'],
       fetchStub,
       fakeStdin(true),
     )

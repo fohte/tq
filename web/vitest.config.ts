@@ -43,6 +43,40 @@ function asProvider(provider: unknown): any {
   return provider
 }
 
+// @storycap-testrun/browser waits for 500ms of network silence before every
+// capture and exposes no option to shorten it, so every story pays that flat
+// half second per viewport. Only the floor moves: the window still restarts on
+// each resource load, and `document.fonts.ready` plus the metrics-stability
+// poll that follow it are untouched.
+const NETWORK_IDLE_MS = 100
+
+// The module arrives here either as the shipped `dist/index.mjs` or as an
+// esbuild pre-bundle, which reformats the minified source but keeps the literal.
+const NETWORK_IDLE_DEFAULT = /=\s*500\s*\)\s*=>\s*new Promise\(/
+
+const storycapNetworkIdle = {
+  name: 'storycap-network-idle',
+  transform(code: string, id: string) {
+    if (
+      !id.includes('@storycap-testrun') ||
+      !code.includes('PerformanceObserver')
+    ) {
+      return null
+    }
+
+    const patched = code.replace(NETWORK_IDLE_DEFAULT, (match) =>
+      match.replace('500', String(NETWORK_IDLE_MS)),
+    )
+    if (patched === code) {
+      throw new Error(
+        `storycap-network-idle: no 500ms network-idle default found in ${id}. Drop this plugin if @storycap-testrun made the wait configurable, otherwise re-derive the pattern.`,
+      )
+    }
+
+    return patched
+  },
+}
+
 function createStorybookProject({
   name,
   viewport,
@@ -56,6 +90,7 @@ function createStorybookProject({
 }) {
   return {
     plugins: [
+      storycapNetworkIdle,
       tailwindcss(),
       storybookTest({
         configDir: path.join(dirname, '.storybook'),
