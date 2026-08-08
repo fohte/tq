@@ -4,6 +4,8 @@ import { err, type Result } from 'neverthrow'
 const APP_ENVS = ['development', 'test', 'production'] as const
 type AppEnv = (typeof APP_ENVS)[number]
 
+// An empty APP_ENV is treated the same as unset (falls back to
+// 'development'), not rejected as invalid.
 const appEnvResult = optionalEnum(
   process.env,
   'APP_ENV',
