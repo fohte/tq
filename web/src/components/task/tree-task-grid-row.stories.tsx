@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { RouterHistory } from '@tanstack/react-router'
 import {
   createMemoryHistory,
   createRootRoute,
@@ -40,7 +41,13 @@ const baseTreeNode: TreeNode = {
   childCompletionCount: { completed: 0, total: 0 },
 }
 
-function Providers({ children }: { children: ReactNode }) {
+function Providers({
+  children,
+  history = createMemoryHistory({ initialEntries: ['/'] }),
+}: {
+  children: ReactNode
+  history?: RouterHistory
+}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -61,7 +68,7 @@ function Providers({ children }: { children: ReactNode }) {
 
   const router = createRouter({
     routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
+    history,
   })
 
   return (
@@ -274,6 +281,30 @@ export const TagClick: Story = {
     await expect(canvas.getByText('filtered by')).toBeVisible()
   },
 }
+
+export const ClickNavigates: Story = (() => {
+  const history = createMemoryHistory({ initialEntries: ['/'] })
+
+  return {
+    args: {
+      node: { ...baseTreeNode, title: 'Click this row to navigate' },
+    },
+    render: (args) => (
+      <Providers history={history}>
+        <div className="w-[600px]">
+          <InteractiveTreeTaskGridRow node={args.node} />
+        </div>
+      </Providers>
+    ),
+    play: async ({ args, canvas, userEvent }) => {
+      // Both the desktop and mobile layouts render at once — click the
+      // desktop one, which used to intercept this click before it reached
+      // the row's Link.
+      await userEvent.click(atIndex(canvas.getAllByText(args.node.title), 0))
+      await expect(history.location.pathname).toBe(`/tasks/${args.node.id}`)
+    },
+  }
+})()
 
 export const WithChildren: Story = {
   args: {
