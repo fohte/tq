@@ -260,13 +260,11 @@ describe('tasks CRUD API', () => {
 
       // `createdAt` defaults to Postgres's `now()`, which is frozen at this
       // test's transaction start (see setupTestDb), so both creates above
-      // share the exact same timestamp, and `sortOrder` (the primary default
-      // sort key) defaults to 0 for every task with no API to change it. With
-      // both keys tied, `ORDER BY sort_order, created_at` has no real
-      // tiebreaker and its result would be an unspecified tie-break rather
-      // than a genuine test of createdAt ordering. Force distinct
-      // `createdAt` values directly so the assertion exercises the real sort
-      // key deterministically.
+      // share the exact same timestamp and `ORDER BY created_at` has no real
+      // tiebreaker, making its result an unspecified tie-break rather than a
+      // genuine test of createdAt ordering. Force distinct `createdAt`
+      // values directly so the assertion exercises the real sort key
+      // deterministically.
       await db
         .update(tasks)
         .set({ createdAt: new Date('2020-01-01T00:00:00.000Z') })
