@@ -6,7 +6,6 @@ on:
 permissions:
   contents: read
   id-token: write
-  pull-requests: write
 
 jobs:
   test:
@@ -189,6 +188,12 @@ jobs:
   unit-test-run:
     needs: setup
     if: ${{ needs.setup.outputs.packages != '[]' }}
+    # Job-level permissions replace (not extend) the workflow-level block,
+    # so this scopes pull-requests:write to just this job instead of also
+    # exposing it to the `test` job's third-party lint/format tools.
+    permissions:
+      contents: read
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
@@ -296,6 +301,7 @@ jobs:
         with:
           repo: ${{ github.repository }}
           branch: ${{ github.ref_name }}
+          sha: ${{ github.sha }}
           out-json-path: web/.reg/out.json
           report-url: https://tq-vrt.fohte.net/${{ steps.vrt-keys.outputs.actual_key }}/index.html
           github-token: ${{ secrets.GITHUB_TOKEN }}

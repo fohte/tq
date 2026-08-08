@@ -10,6 +10,9 @@ inputs:
   branch:
     description: Branch name to resolve the open PR from
     required: true
+  sha:
+    description: Head commit SHA the out.json result was computed for
+    required: true
   out-json-path:
     description: Path to reg-suit's out.json
     required: true
@@ -29,12 +32,22 @@ runs:
         GH_TOKEN: ${{ inputs.github-token }}
         REPO: ${{ inputs.repo }}
         BRANCH: ${{ inputs.branch }}
+        SHA: ${{ inputs.sha }}
         OUT_JSON_PATH: ${{ inputs.out-json-path }}
         REPORT_URL: ${{ inputs.report-url }}
       run: |
         pr_number=$(gh pr list --repo "$REPO" --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
         if [ -z "$pr_number" ]; then
           echo "No open PR for branch '$BRANCH'; skipping VRT comment."
+          exit 0
+        fi
+
+        # Guards against two overlapping runs (e.g. a push and the
+        # auto-format commit it triggers) racing to upsert the comment: the
+        # one for an older head would otherwise overwrite the newer result.
+        head_sha=$(gh pr view "$pr_number" --repo "$REPO" --json headRefOid --jq .headRefOid)
+        if [ "$head_sha" != "$SHA" ]; then
+          echo "PR #$pr_number's head has moved past $SHA (now $head_sha); skipping stale VRT comment."
           exit 0
         fi
 

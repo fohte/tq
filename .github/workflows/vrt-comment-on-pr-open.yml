@@ -19,15 +19,16 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # If this 404s, the push-side CI for this head commit hasn't published a
-      # result yet (or is still running) and will comment itself on
-      # completion, so this must not wait for it and just exits here.
+      # Anything other than 200 (missing, still publishing, or a transient
+      # R2/network error) is treated the same way: the push-side CI for this
+      # head commit will comment itself once it completes, so this must not
+      # wait for it and just exits here instead of retrying.
       - name: Fetch VRT result for this PR's head commit
         id: fetch
         env:
           SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          status=$(curl -sS -o out.json -w '%{http_code}' "https://tq-vrt.fohte.net/pr/${SHA}/out.json")
+          status=$(curl -sS -o out.json -w '%{http_code}' "https://tq-vrt.fohte.net/pr/${SHA}/out.json") || status=000
           if [ "$status" != "200" ]; then
             echo "No VRT result yet for $SHA (HTTP $status)."
             echo "found=false" >> "$GITHUB_OUTPUT"
@@ -41,6 +42,7 @@ jobs:
         with:
           repo: ${{ github.repository }}
           branch: ${{ github.event.pull_request.head.ref }}
+          sha: ${{ github.event.pull_request.head.sha }}
           out-json-path: out.json
           report-url: https://tq-vrt.fohte.net/pr/${{ github.event.pull_request.head.sha }}/index.html
           github-token: ${{ secrets.GITHUB_TOKEN }}
