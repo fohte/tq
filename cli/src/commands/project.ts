@@ -9,7 +9,7 @@ import type { InferRequestType } from 'hono/client'
 import type { Client } from '#client'
 import { toApiError } from '#client'
 import { buildClient } from '#command-context'
-import { printJson } from '#output'
+import { printJson, printJsonList } from '#output'
 import { addSchemaOptions, pickSchemaFields } from '#schema-options'
 
 type ListProjectsQuery = InferRequestType<
@@ -31,19 +31,27 @@ export function registerProjectCommands(
   const project = program.command('project').description('Manage projects')
 
   addSchemaOptions(
-    project.command('list').description('List projects'),
+    project
+      .command('list')
+      .description('List projects')
+      .option('--full', 'Include full project description in the output'),
     listProjectsQuerySchema,
-  ).action(async (options: Record<string, unknown>, command: Command) => {
-    const client = buildClient(command, fetchImpl)
-    const query: ListProjectsQuery = pickSchemaFields(
-      listProjectsQuerySchema,
-      options,
-    )
-    const res = await client.api.projects.$get({ query })
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
-    if (!res.ok) throw await toApiError(res)
-    printJson(await res.json())
-  })
+  ).action(
+    async (
+      options: Record<string, unknown> & { full?: boolean },
+      command: Command,
+    ) => {
+      const client = buildClient(command, fetchImpl)
+      const query: ListProjectsQuery = pickSchemaFields(
+        listProjectsQuerySchema,
+        options,
+      )
+      const res = await client.api.projects.$get({ query })
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
+      if (!res.ok) throw await toApiError(res)
+      printJsonList(await res.json(), 'description', { full: options.full })
+    },
+  )
 
   project
     .command('get <id>')
@@ -108,12 +116,15 @@ export function registerProjectCommands(
   project
     .command('tasks <id>')
     .description('List tasks in a project')
-    .action(async (id: string, _options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl)
-      const res = await client.api.projects[':id'].tasks.$get({
-        param: { id },
-      })
-      if (!res.ok) throw await toApiError(res)
-      printJson(await res.json())
-    })
+    .option('--full', 'Include full task description in the output')
+    .action(
+      async (id: string, options: { full?: boolean }, command: Command) => {
+        const client = buildClient(command, fetchImpl)
+        const res = await client.api.projects[':id'].tasks.$get({
+          param: { id },
+        })
+        if (!res.ok) throw await toApiError(res)
+        printJsonList(await res.json(), 'description', { full: options.full })
+      },
+    )
 }

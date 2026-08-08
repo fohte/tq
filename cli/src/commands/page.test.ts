@@ -17,8 +17,8 @@ afterEach(() => {
 })
 
 describe('page list', () => {
-  it('prints the pages returned by the server as JSON', async () => {
-    const pages = [{ id: 'p1', title: 'Notes' }]
+  it('omits page content from the printed output by default', async () => {
+    const pages = [{ id: 'p1', title: 'Notes', content: '# Hello' }]
     const { fetchStub } = captureFetch(
       () => new Response(JSON.stringify(pages), { status: 200 }),
     )
@@ -26,6 +26,25 @@ describe('page list', () => {
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'page', 'list', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify([{ id: 'p1', title: 'Notes' }], null, 2)}\n`],
+    ])
+  })
+
+  it('includes page content when --full is given', async () => {
+    const pages = [{ id: 'p1', title: 'Notes', content: '# Hello' }]
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(pages), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'page', 'list', '42', '--full'],
       fetchStub,
       fakeStdin(true),
     )

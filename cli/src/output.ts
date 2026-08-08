@@ -6,6 +6,35 @@ export function printJson(data: unknown): void {
   process.stdout.write(`${JSON.stringify(data, null, 2)}\n`)
 }
 
+// Walks arrays and plain objects to drop every property named `key`,
+// including inside `task tree`'s nested `children` arrays.
+function omitDeep(value: unknown, key: string): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => omitDeep(item, key))
+  }
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([k]) => k !== key)
+        .map(([k, v]) => [k, omitDeep(v, key)]),
+    )
+  }
+  return value
+}
+
+/**
+ * Prints a list response as JSON, omitting `omitKey` (a long-text field
+ * like `content`/`description`) from every item unless `full` is set —
+ * keeps list output from flooding stdout with full page/comment bodies.
+ */
+export function printJsonList(
+  data: unknown,
+  omitKey: string,
+  { full = false }: { full?: boolean | undefined } = {},
+): void {
+  printJson(full ? data : omitDeep(data, omitKey))
+}
+
 export async function writeContentFile(
   filePath: string,
   content: string,

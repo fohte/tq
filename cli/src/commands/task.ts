@@ -12,7 +12,7 @@ import type { InferRequestType } from 'hono/client'
 import type { Client } from '#client'
 import { toApiError } from '#client'
 import { buildClient } from '#command-context'
-import { printJson } from '#output'
+import { printJson, printJsonList } from '#output'
 import { addSchemaOptions, pickSchemaFields } from '#schema-options'
 
 type ListTasksQuery = InferRequestType<Client['api']['tasks']['$get']>['query']
@@ -52,18 +52,26 @@ export function registerTaskCommands(
   const task = program.command('task').description('Manage tasks')
 
   addSchemaOptions(
-    task.command('list').description('List tasks'),
+    task
+      .command('list')
+      .description('List tasks')
+      .option('--full', 'Include full task description in the output'),
     listTasksQuerySchema,
-  ).action(async (options: Record<string, unknown>, command: Command) => {
-    const client = buildClient(command, fetchImpl)
-    const query: ListTasksQuery = toQuery(
-      pickSchemaFields(listTasksQuerySchema, options),
-    )
-    const res = await client.api.tasks.$get({ query })
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
-    if (!res.ok) throw await toApiError(res)
-    printJson(await res.json())
-  })
+  ).action(
+    async (
+      options: Record<string, unknown> & { full?: boolean },
+      command: Command,
+    ) => {
+      const client = buildClient(command, fetchImpl)
+      const query: ListTasksQuery = toQuery(
+        pickSchemaFields(listTasksQuerySchema, options),
+      )
+      const res = await client.api.tasks.$get({ query })
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
+      if (!res.ok) throw await toApiError(res)
+      printJsonList(await res.json(), 'description', { full: options.full })
+    },
+  )
 
   task
     .command('get <id>')
@@ -204,25 +212,38 @@ export function registerTaskCommands(
     })
 
   addSchemaOptions(
-    task.command('tree').description('Get the task tree'),
+    task
+      .command('tree')
+      .description('Get the task tree')
+      .option('--full', 'Include full task description in the output'),
     treeQuerySchema,
-  ).action(async (options: Record<string, unknown>, command: Command) => {
-    const client = buildClient(command, fetchImpl)
-    const query: TreeQuery = toQuery(pickSchemaFields(treeQuerySchema, options))
-    const res = await client.api.tasks.tree.$get({ query })
-    if (!res.ok) throw await toApiError(res)
-    printJson(await res.json())
-  })
+  ).action(
+    async (
+      options: Record<string, unknown> & { full?: boolean },
+      command: Command,
+    ) => {
+      const client = buildClient(command, fetchImpl)
+      const query: TreeQuery = toQuery(
+        pickSchemaFields(treeQuerySchema, options),
+      )
+      const res = await client.api.tasks.tree.$get({ query })
+      if (!res.ok) throw await toApiError(res)
+      printJsonList(await res.json(), 'description', { full: options.full })
+    },
+  )
 
   addSchemaOptions(
-    task.command('search [query]').description('Search tasks'),
+    task
+      .command('search [query]')
+      .description('Search tasks')
+      .option('--full', 'Include full task description in the output'),
     searchQuerySchema,
     // hasEstimate/hasDue are transform-based fields (a ZodPipe once unwrapped), which addSchemaOptions doesn't support, so they aren't exposed as flags.
     ['q', 'hasEstimate', 'hasDue'],
   ).action(
     async (
       query: string | undefined,
-      options: Record<string, unknown>,
+      options: Record<string, unknown> & { full?: boolean },
       command: Command,
     ) => {
       const client = buildClient(command, fetchImpl)
@@ -238,7 +259,7 @@ export function registerTaskCommands(
       const res = await client.api.tasks.search.$get({ query: searchQuery })
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
       if (!res.ok) throw await toApiError(res)
-      printJson(await res.json())
+      printJsonList(await res.json(), 'description', { full: options.full })
     },
   )
 
