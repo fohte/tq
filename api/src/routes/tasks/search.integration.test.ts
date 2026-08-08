@@ -99,7 +99,7 @@ describe('tasks search API', () => {
 
     it('filters by label: prefix in q parameter', async () => {
       await createLabel('dev')
-      await createTask('Dev task', { labels: ['dev'] })
+      const task = await createTask('Dev task', { labels: ['dev'] })
       await createTask('Other task')
 
       const res = await app.request(
@@ -108,10 +108,9 @@ describe('tasks search API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body).toHaveLength(1)
-      assertDefined(body[0])
-      expect(body[0].title).toBe('Dev task')
-      expect(body[0].labels).toEqual(['dev'])
+      expect(body).toEqual([
+        { ...withoutRecurrenceRule(task), parentNumber: null },
+      ])
     })
 
     it('filters by context: prefix in q parameter', async () => {

@@ -64,6 +64,35 @@ describe('tasks tree API', () => {
       expect(body[0].children[0].children[0].title).toBe('Grandchild')
     })
 
+    it('returns a null parentNumber for a subtree root whose actual parent is outside the fetched subtree', async () => {
+      const grandparent = await createTask('Grandparent')
+      const root = await createTask('Root', { parentId: grandparent.id })
+      await createTask('Child', { parentId: root.id })
+
+      const res = await app.request(`/api/tasks/tree?rootId=${root.id}`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Root')
+      expect(body[0].parentNumber).toBeNull()
+    })
+
+    it('includes parentNumber for a node within the fetched tree', async () => {
+      const parent = await createTask('Parent')
+      await createTask('Child', { parentId: parent.id })
+
+      const res = await app.request('/api/tasks/tree')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      assertDefined(body[0])
+      expect(body[0].parentNumber).toBeNull()
+      assertDefined(body[0].children)
+      assertDefined(body[0].children[0])
+      expect(body[0].children[0].parentNumber).toBe(parent.number)
+    })
+
     it('returns deeply nested tree (3+ levels)', async () => {
       const level1 = await createTask('Level 1')
       const level2 = await createTask('Level 2', { parentId: level1.id })

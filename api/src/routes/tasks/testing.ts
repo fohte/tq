@@ -102,8 +102,8 @@ export interface TaskListItemResponse {
 export function withoutRecurrenceRule<T extends { recurrenceRule: unknown }>(
   task: T,
 ): Omit<T, 'recurrenceRule'> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured only to exclude it from `rest`
   const { recurrenceRule, ...rest } = task
+  void recurrenceRule
   return rest
 }
 
