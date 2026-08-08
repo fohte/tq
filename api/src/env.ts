@@ -1,37 +1,42 @@
+import { optionalEnum, parseEnv, requireString } from '@fohte/service-kit/env'
+import { err, type Result } from 'neverthrow'
+
 const APP_ENVS = ['development', 'test', 'production'] as const
 type AppEnv = (typeof APP_ENVS)[number]
 
-function isAppEnv(value: string): value is AppEnv {
-  return (APP_ENVS as readonly string[]).includes(value)
-}
+const appEnvResult = optionalEnum(
+  process.env,
+  'APP_ENV',
+  APP_ENVS,
+  'development',
+)
 
-function resolveAppEnv(): AppEnv {
-  const env = process.env['APP_ENV']
-  if (env === undefined) return 'development'
-  if (isAppEnv(env)) return env
-  // eslint-disable-next-line no-restricted-syntax -- throws at module-eval time, before the Hono app (and its app.onError Sentry hook) exists, so there's no Result to return to
-  throw new Error(
-    `Invalid APP_ENV: "${env}". Must be one of: ${APP_ENVS.join(', ')}`,
-  )
-}
+// APP_ENV itself may be invalid, but the hint below is cosmetic (which
+// `mise run db:up` database name to suggest) — falling back to
+// 'development' here doesn't hide the real APP_ENV issue, which parseEnv
+// reports separately below.
+function resolveDatabaseUrl(appEnv: AppEnv): Result<string, string> {
+  const explicit = requireString(process.env, 'DATABASE_URL')
+  if (explicit.isOk()) return explicit
 
-export const APP_ENV: AppEnv = resolveAppEnv()
-
-function resolveDatabaseUrl(): string {
-  const explicit = process.env['DATABASE_URL']
-  if (explicit != null && explicit !== '') return explicit
-
-  if (APP_ENV === 'production') {
-    // eslint-disable-next-line no-restricted-syntax -- see comment above
-    throw new Error(
-      'DATABASE_URL environment variable is required in production',
-    )
+  if (appEnv === 'production') {
+    return err('DATABASE_URL environment variable is required in production')
   }
-  const dbName = APP_ENV === 'test' ? 'tq_test' : 'tq_dev'
-  // eslint-disable-next-line no-restricted-syntax -- see comment above
-  throw new Error(
+  const dbName = appEnv === 'test' ? 'tq_test' : 'tq_dev'
+  return err(
     `DATABASE_URL environment variable is required (run \`mise run db:up\` to start Postgres and generate .env.runtime, or set DATABASE_URL=postgresql://tq:tq@localhost:<port>/${dbName} manually)`,
   )
 }
 
-export const DATABASE_URL: string = resolveDatabaseUrl()
+const parsed = parseEnv({
+  APP_ENV: appEnvResult,
+  DATABASE_URL: resolveDatabaseUrl(appEnvResult.unwrapOr('development')),
+})
+
+if (parsed.isErr()) {
+  // eslint-disable-next-line no-restricted-syntax -- throws at module-eval time, before the Hono app (and its app.onError Sentry hook) exists, so there's no Result to return to
+  throw parsed.error
+}
+
+export const APP_ENV: AppEnv = parsed.value.APP_ENV
+export const DATABASE_URL: string = parsed.value.DATABASE_URL
