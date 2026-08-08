@@ -94,6 +94,65 @@ Options:
       'addSchemaOptions: unsupported schema type for field "flag"',
     )
   })
+
+  it('shows a z.uuid() field in --help without an enum choices suffix', () => {
+    const uuidSchema = z.object({ id: z.uuid().optional() })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      uuidSchema,
+    )
+
+    expect(command.helpInformation()).toBe(
+      `Usage: test [options]
+
+Options:
+  --id <value>  Id
+  -h, --help    display help for command
+`,
+    )
+  })
+
+  it('converts and validates a valid z.uuid() value', () => {
+    const uuidSchema = z.object({ id: z.uuid().optional() })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      uuidSchema,
+    )
+
+    command.parse(['--id', '123e4567-e89b-12d3-a456-426614174000'], {
+      from: 'user',
+    })
+
+    expect(command.opts()).toEqual({
+      id: '123e4567-e89b-12d3-a456-426614174000',
+    })
+  })
+
+  it('rejects a value that does not match the z.uuid() format', () => {
+    const uuidSchema = z.object({ id: z.uuid().optional() })
+    const error = captureError(() =>
+      addSchemaOptions(new Command('test').exitOverride(), uuidSchema).parse(
+        ['--id', 'not-a-uuid'],
+        { from: 'user' },
+      ),
+    )
+
+    expect(error.message).toBe(
+      "error: option '--id <value>' argument 'not-a-uuid' is invalid. Invalid UUID",
+    )
+  })
+
+  it('unwraps a .nullable().optional() field into a working flag', () => {
+    const nullableSchema = z.object({ note: z.string().nullable().optional() })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      nullableSchema,
+    )
+
+    command.parse(['--note', 'hello'], { from: 'user' })
+
+    expect(command.opts()).toEqual({ note: 'hello' })
+  })
 })
 
 describe('pickSchemaFields', () => {
@@ -125,5 +184,35 @@ describe('pickSchemaFields', () => {
     expect(error.message).toBe(
       'Invalid input: expected number, received string',
     )
+  })
+})
+
+describe('a nullable optional field (z.string().nullable().optional())', () => {
+  const nullableSchema = z.object({
+    description: z.string().nullable().optional(),
+  })
+
+  it('gets a working --flag <value> in --help instead of "unsupported schema type"', () => {
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      nullableSchema,
+    )
+
+    expect(command.helpInformation()).toBe(
+      `Usage: test [options]
+
+Options:
+  --description <value>  Description
+  -h, --help             display help for command
+`,
+    )
+  })
+
+  it('round-trips a string value through pickSchemaFields', () => {
+    const result = pickSchemaFields(nullableSchema, {
+      description: 'hello',
+    })
+
+    expect(result).toEqual({ description: 'hello' })
   })
 })

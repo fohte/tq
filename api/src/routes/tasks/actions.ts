@@ -12,9 +12,9 @@ import { recordStatusChanged } from '#lib/task-events'
 import {
   getLabelNamesByTaskId,
   requireTask,
-  taskStatus,
   taskToResponse,
 } from '#routes/tasks/shared'
+import { taskStatus } from '#schemas/task'
 import { buildNextTaskData } from '#services/recurrence'
 import { syncTaskLinks } from '#services/task-links'
 

@@ -123,7 +123,10 @@ describe('getAuthUrl', () => {
 
     expect(error).toEqual(
       new IntegrationConfigError(
-        'SLACK_CLIENT_ID, SLACK_CLIENT_SECRET, and SLACK_REDIRECT_URI environment variables are required',
+        'invalid environment:\n' +
+          '- missing required environment variable: SLACK_CLIENT_ID\n' +
+          '- missing required environment variable: SLACK_CLIENT_SECRET\n' +
+          '- missing required environment variable: SLACK_REDIRECT_URI',
       ),
     )
   })

@@ -188,29 +188,18 @@ jobs:
   unit-test-run:
     needs: setup
     if: ${{ needs.setup.outputs.packages != '[]' }}
+    # Job-level permissions replace (not extend) the workflow-level block,
+    # so this scopes pull-requests:write to just this job instead of also
+    # exposing it to the `test` job's third-party lint/format tools.
+    permissions:
+      contents: read
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
         package: ${{ fromJSON(needs.setup.outputs.packages) }}
     name: 'unit-test (${{ matrix.package }})'
     runs-on: ubuntu-latest
-    # The `api` package's integration tests need PostgreSQL. The matrix legs share
-    # one job definition, so this service starts for every package — harmless idle
-    # cost for the `web` leg, but avoids forking the job.
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: tq
-          POSTGRES_PASSWORD: tq
-          POSTGRES_DB: tq_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U tq"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -243,10 +232,31 @@ jobs:
 
       # `web`'s `test:storybook` runs Storybook stories through a headless
       # Playwright chromium browser, which isn't preinstalled on the runner.
-      - name: Install Playwright chromium
+      # The browser binary is cached, but OS-level packages installed by
+      # `--with-deps` aren't (they don't live under this cache path), so a
+      # cache hit still needs `install-deps` to cover them.
+      - name: Cache Playwright browsers
         if: matrix.package == 'web'
+        id: playwright-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright chromium
+        if: matrix.package == 'web' && steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: web
         run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: matrix.package == 'web' && steps.playwright-cache.outputs.cache-hit == 'true'
+        working-directory: web
+        run: pnpm exec playwright install-deps chromium
+
+      # Only the `api` package's integration tests need PostgreSQL.
+      - name: Start PostgreSQL
+        if: matrix.package == 'api'
+        uses: ./.github/actions/start-postgres
 
       - name: Run tests
         working-directory: ${{ matrix.package }}
@@ -254,15 +264,6 @@ jobs:
           # The api leg's integration tests need this; harmless no-op for other legs.
           DATABASE_URL: postgresql://tq:tq@localhost:5432/tq_test
         run: pnpm run test
-
-      - name: Get GitHub token for VRT PR comment
-        if: matrix.package == 'web'
-        uses: octo-sts/action@f603d3be9d8dd9871a265776e625a27b00effe05 # v1.1.1
-        id: octo-sts-vrt
-        with:
-          scope: fohte
-          identity: ${{ github.event.repository.name }}
-          domain: octo-sts.fohte.net
 
       # main pushes publish under the pr/ prefix too (as pr/main-<sha>) so the
       # new snapshot never overwrites main/latest directly — if reg-suit or
@@ -315,7 +316,6 @@ jobs:
         env:
           VRT_ACTUAL_KEY: ${{ steps.vrt-keys.outputs.actual_key }}
           VRT_EXPECTED_KEY: ${{ steps.vrt-keys.outputs.expected_key }}
-          VRT_GITHUB_TOKEN: ${{ steps.octo-sts-vrt.outputs.token }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           # A no-match pattern skips the report upload when has_diff is false.
@@ -323,6 +323,20 @@ jobs:
           # difference" PR comment either way.
           VRT_PUBLISH_PATTERN: ${{ steps.vrt-compare.outputs.has_diff == 'true' && '{*.{html,js,wasm,json},{actual,diff}/**/*.{png,jpeg,jpg,tiff,bmp,gif}}' || 'no-such-dir/**' }}
         run: pnpm exec reg-suit publish -n
+
+      # Runs regardless of whether an open PR exists yet: pushing straight to
+      # main (no PR) or to a branch without an open PR both no-op inside the
+      # action instead of failing here.
+      - name: Post VRT PR comment
+        if: matrix.package == 'web'
+        uses: ./.github/actions/vrt-comment
+        with:
+          repo: ${{ github.repository }}
+          branch: ${{ github.ref_name }}
+          sha: ${{ github.sha }}
+          out-json-path: web/.reg/out.json
+          report-url: https://tq-vrt.fohte.net/${{ steps.vrt-keys.outputs.actual_key }}/index.html
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # Only reached once reg-suit has successfully published the new actual
       # images under pr/main-<sha>, so a failure above never touches

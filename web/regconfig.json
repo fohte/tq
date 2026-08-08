@@ -20,12 +20,6 @@
           "secretAccessKey": "${AWS_SECRET_ACCESS_KEY}"
         }
       }
-    },
-    "reg-notify-github-with-api-plugin": {
-      "owner": "fohte",
-      "repository": "tq",
-      "privateToken": "${VRT_GITHUB_TOKEN}",
-      "ref": "${GITHUB_REF}"
     }
   }
 }
