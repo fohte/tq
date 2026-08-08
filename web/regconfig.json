@@ -11,6 +11,7 @@
     "reg-publish-s3-plugin": {
       "bucketName": "tq-vrt",
       "customDomain": "tq-vrt.fohte.net",
+      "pattern": "${VRT_PUBLISH_PATTERN}",
       "sdkOptions": {
         "region": "auto",
         "endpoint": "https://8d88a085ccc7b11f252419e2f3a25fd6.r2.cloudflarestorage.com",
