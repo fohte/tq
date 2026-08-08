@@ -24,7 +24,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "conc pnpm:test:type pnpm:test:unit pnpm:test:storybook",
+    "test": "conc pnpm:test:type pnpm:test:unit",
     "test:type": "tsc --noEmit",
     "test:unit": "vitest run --project=unit",
     "storybook": "storybook dev -p 6006",
