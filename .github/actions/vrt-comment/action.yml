@@ -73,7 +73,10 @@ runs:
           echo "[View report]($REPORT_URL)"
         } >"$body_file"
 
-        existing_id=$(gh api "repos/$REPO/issues/$pr_number/comments" --paginate --jq --arg marker "$marker" '.[] | select(.body | startswith($marker)) | .id' | head -1)
+        # gh api's --jq is a plain jq filter string, not the jq binary
+        # itself, so it doesn't support --arg; $marker is a fixed literal
+        # (not external input) and is safe to inline directly.
+        existing_id=$(gh api "repos/$REPO/issues/$pr_number/comments" --paginate --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -1)
         if [ -n "$existing_id" ]; then
           gh api "repos/$REPO/issues/comments/$existing_id" -X PATCH -F body=@"$body_file"
         else
