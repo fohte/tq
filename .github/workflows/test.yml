@@ -240,9 +240,12 @@ jobs:
 
       # `web`'s `test:storybook` runs Storybook stories through a headless
       # Playwright chromium browser, which isn't preinstalled on the runner.
-      # Only the browser binary needs installing: ubuntu-latest already ships
-      # the shared libraries chromium needs, so a cache hit needs nothing
-      # further.
+      # ubuntu-latest already ships the shared libraries chromium needs, so a
+      # cache hit (browser binary only) needs nothing further. The cache-miss
+      # install below keeps `--with-deps` as a fallback; if a future runner
+      # image drops one of those libraries, cache hits will start failing to
+      # launch chromium and this step needs an `install-deps` step
+      # reinstated for the cache-hit path too.
       - name: Cache Playwright browsers
         if: matrix.package == 'web'
         id: playwright-cache
