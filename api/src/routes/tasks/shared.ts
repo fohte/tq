@@ -53,9 +53,8 @@ export function githubLinkToResponse(
   }
 }
 
-export function taskToResponse(
+function taskCoreToResponse(
   task: typeof tasks.$inferSelect,
-  rule?: typeof recurrenceRules.$inferSelect | null,
   githubLink?: typeof taskGithubLinks.$inferSelect | null,
   labelNames: string[] = [],
 ) {
@@ -73,11 +72,22 @@ export function taskToResponse(
     parentId: task.parentId,
     projectId: task.projectId,
     recurrenceRuleId: task.recurrenceRuleId,
-    recurrenceRule: rule ? recurrenceRuleToResponse(rule) : null,
     githubLink: githubLink ? githubLinkToResponse(githubLink) : null,
     sortOrder: task.sortOrder,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
+  }
+}
+
+export function taskToResponse(
+  task: typeof tasks.$inferSelect,
+  rule?: typeof recurrenceRules.$inferSelect | null,
+  githubLink?: typeof taskGithubLinks.$inferSelect | null,
+  labelNames: string[] = [],
+) {
+  return {
+    ...taskCoreToResponse(task, githubLink, labelNames),
+    recurrenceRule: rule ? recurrenceRuleToResponse(rule) : null,
   }
 }
 
@@ -107,17 +117,21 @@ export async function getLabelNamesByTaskId(
 // endpoints that render a "← #<parent number>" reference without fetching
 // the whole parent task. Callers add `.leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))`
 // and select `parentTasks.number`, then format the row with
-// `taskWithParentNumberToResponse`.
+// `taskListItemToResponse`.
 export const parentTasks = alias(tasks, 'parent_task')
 
-export function taskWithParentNumberToResponse(
+// Shared response shape for every list-returning endpoint (`/api/tasks`,
+// `/api/tasks/tree`, `/api/tasks/search`, `/api/projects/:id/tasks`). Omits
+// `recurrenceRule`: no list consumer reads it, and hydrating it would cost an
+// extra query per endpoint for a field nothing uses.
+export function taskListItemToResponse(
   task: typeof tasks.$inferSelect,
   parentNumber: number | null,
   githubLink?: typeof taskGithubLinks.$inferSelect | null,
   labelNames: string[] = [],
 ) {
   return {
-    ...taskToResponse(task, undefined, githubLink, labelNames),
+    ...taskCoreToResponse(task, githubLink, labelNames),
     parentNumber,
   }
 }
@@ -134,9 +148,9 @@ export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
   }
 }
 
-export type TaskResponseData = ReturnType<typeof taskToResponse>
+export type TaskListItemResponse = ReturnType<typeof taskListItemToResponse>
 
-export type TreeNode = TaskResponseData & {
+export type TreeNode = TaskListItemResponse & {
   children: TreeNode[]
   childCompletionCount: { completed: number; total: number }
 }
@@ -155,12 +169,19 @@ export function buildTree(
   labelsByTaskId?: Map<string, string[]>,
 ): Result<TreeNode[], TaskTreeConsistencyError> {
   const nodeMap = new Map<string, TreeNode>()
+  // `allTasks` may be a subtree fetch (only descendants of a rootId), so a
+  // root node's own parent can be absent — its parentNumber then falls back
+  // to null, same as a task with no parent at all.
+  const numberById = new Map(allTasks.map((task) => [task.id, task.number]))
 
   for (const task of allTasks) {
+    const parentNumber =
+      task.parentId != null ? (numberById.get(task.parentId) ?? null) : null
+
     nodeMap.set(task.id, {
-      ...taskToResponse(
+      ...taskListItemToResponse(
         task,
-        undefined,
+        parentNumber,
         linksByTaskId?.get(task.id),
         labelsByTaskId?.get(task.id) ?? [],
       ),

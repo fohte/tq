@@ -10,6 +10,7 @@ import {
   createPage,
   createTask,
   TEST_UUID,
+  withoutRecurrenceRule,
 } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
@@ -127,7 +128,7 @@ describe('read tools', () => {
       const toolResult = await callTool('list_tasks', { context: 'work' })
 
       expect(parseJson(toolResult)).toEqual([
-        { ...task, parentNumber: null, labels: [] },
+        { ...withoutRecurrenceRule(task), parentNumber: null, labels: [] },
       ])
     })
   })
@@ -156,7 +157,8 @@ describe('read tools', () => {
         labels: [],
         subtasks: [
           {
-            ...child,
+            ...withoutRecurrenceRule(child),
+            parentNumber: parent.number,
             children: [],
             childCompletionCount: { total: 0, completed: 0 },
           },
@@ -285,7 +287,9 @@ describe('read tools', () => {
 
       const toolResult = await callTool('search_tasks', { q: 'deploy' })
 
-      expect(parseJson(toolResult)).toEqual([{ ...match, parentNumber: null }])
+      expect(parseJson(toolResult)).toEqual([
+        { ...withoutRecurrenceRule(match), parentNumber: null },
+      ])
     })
 
     it('translates hasEstimate into the REST string param', async () => {
@@ -295,7 +299,7 @@ describe('read tools', () => {
       const toolResult = await callTool('search_tasks', { hasEstimate: false })
 
       expect(parseJson(toolResult)).toEqual([
-        { ...withoutEstimate, parentNumber: null },
+        { ...withoutRecurrenceRule(withoutEstimate), parentNumber: null },
       ])
     })
 
@@ -308,7 +312,7 @@ describe('read tools', () => {
       const toolResult = await callTool('search_tasks', { hasDue: true })
 
       expect(parseJson(toolResult)).toEqual([
-        { ...withDue, parentNumber: null },
+        { ...withoutRecurrenceRule(withDue), parentNumber: null },
       ])
     })
   })

@@ -7,7 +7,7 @@ import { projects, taskGithubLinks, tasks } from '#db/schema'
 import {
   getLabelNamesByTaskId,
   parentTasks,
-  taskWithParentNumberToResponse,
+  taskListItemToResponse,
 } from '#routes/tasks/shared'
 import {
   createProjectSchema,
@@ -161,7 +161,7 @@ export const projectsApp = new Hono()
 
     return c.json(
       result.map((r) =>
-        taskWithParentNumberToResponse(
+        taskListItemToResponse(
           r.task,
           r.parentNumber,
           r.githubLink,

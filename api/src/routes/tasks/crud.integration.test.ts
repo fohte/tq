@@ -8,9 +8,11 @@ import {
   createLabel,
   createRecurringTask,
   createTask,
+  TaskListItemResponse,
   TaskResponse,
   TEST_UUID,
   TimeBlockResponse,
+  withoutRecurrenceRule,
 } from '#routes/tasks/testing'
 import {
   assertDefined,
@@ -199,7 +201,7 @@ describe('tasks CRUD API', () => {
       const res = await app.request('/api/tasks')
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(2)
     })
 
@@ -212,7 +214,7 @@ describe('tasks CRUD API', () => {
       const res = await app.request(`/api/tasks?parentId=${parent.id}`)
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(2)
       expect(body.every((t) => t.parentId === parent.id)).toBe(true)
     })
@@ -230,7 +232,7 @@ describe('tasks CRUD API', () => {
       const res = await app.request('/api/tasks?status=todo')
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Task B')
@@ -245,7 +247,7 @@ describe('tasks CRUD API', () => {
 
       const res = await app.request('/api/tasks')
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       const byId = new Map(body.map((t) => [t.id, t.labels.toSorted()]))
       const labelsByTask = [taskA, taskB, taskC].map((t) => byId.get(t.id))
 
@@ -275,13 +277,10 @@ describe('tasks CRUD API', () => {
       const res = await app.request('/api/tasks')
 
       expect(res.status).toBe(200)
-      const body =
-        await jsonBody<Array<TaskResponse & { parentNumber: number | null }>>(
-          res,
-        )
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body.map(normalizeTask)).toEqual([
-        { ...normalizeTask(taskA), parentNumber: null },
-        { ...normalizeTask(taskB), parentNumber: null },
+        { ...normalizeTask(withoutRecurrenceRule(taskA)), parentNumber: null },
+        { ...normalizeTask(withoutRecurrenceRule(taskB)), parentNumber: null },
       ])
     })
 
@@ -331,14 +330,20 @@ describe('tasks CRUD API', () => {
       const res = await app.request('/api/tasks?sortBy=updated')
 
       expect(res.status).toBe(200)
-      const body =
-        await jsonBody<Array<TaskResponse & { parentNumber: number | null }>>(
-          res,
-        )
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body.map(normalizeTask)).toEqual([
-        { ...normalizeTask(patchedTaskB), parentNumber: null },
-        { ...normalizeTask(patchedTaskC), parentNumber: null },
-        { ...normalizeTask(patchedTaskA), parentNumber: null },
+        {
+          ...normalizeTask(withoutRecurrenceRule(patchedTaskB)),
+          parentNumber: null,
+        },
+        {
+          ...normalizeTask(withoutRecurrenceRule(patchedTaskC)),
+          parentNumber: null,
+        },
+        {
+          ...normalizeTask(withoutRecurrenceRule(patchedTaskA)),
+          parentNumber: null,
+        },
       ])
     })
   })
@@ -765,10 +770,7 @@ describe('tasks CRUD API', () => {
       const parent = await createTask('Parent')
 
       const res = await app.request('/api/tasks')
-      const body =
-        await jsonBody<Array<TaskResponse & { parentNumber: number | null }>>(
-          res,
-        )
+      const body = await jsonBody<TaskListItemResponse[]>(res)
 
       const parentBody = body.find((t) => t.id === parent.id)
       assertDefined(parentBody)
@@ -780,10 +782,7 @@ describe('tasks CRUD API', () => {
       const child = await createTask('Child', { parentId: parent.id })
 
       const res = await app.request('/api/tasks')
-      const body =
-        await jsonBody<Array<TaskResponse & { parentNumber: number | null }>>(
-          res,
-        )
+      const body = await jsonBody<TaskListItemResponse[]>(res)
 
       const childBody = body.find((t) => t.id === child.id)
       assertDefined(childBody)

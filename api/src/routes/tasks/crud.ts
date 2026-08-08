@@ -24,8 +24,8 @@ import {
   parentTasks,
   requireTask,
   resolveTaskListOrderBy,
+  taskListItemToResponse,
   taskToResponse,
-  taskWithParentNumberToResponse,
   timeBlockToResponse,
 } from '#routes/tasks/shared'
 import {
@@ -149,7 +149,7 @@ export const tasksCrudApp = new Hono()
 
     return c.json(
       result.map((r) =>
-        taskWithParentNumberToResponse(
+        taskListItemToResponse(
           r.task,
           r.parentNumber,
           r.githubLink,
