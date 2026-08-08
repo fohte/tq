@@ -56,7 +56,7 @@ const NETWORK_IDLE_MS = 100
 // fall back to the root config like the default thread pool does), so this is
 // set on each storybook project below rather than at the top level.
 // rerun 3
-const STORYBOOK_MAX_WORKERS = 8
+// const STORYBOOK_MAX_WORKERS = 8
 
 // The module arrives here either as the shipped `dist/index.mjs` or as an
 // esbuild pre-bundle, which reformats the minified source but keeps the literal.
@@ -113,7 +113,7 @@ function createStorybookProject({
     resolve: { alias },
     test: {
       name,
-      maxWorkers: STORYBOOK_MAX_WORKERS,
+      // maxWorkers: STORYBOOK_MAX_WORKERS, // control: temporarily disabled to measure baseline flake rate
       browser: {
         enabled: true,
         // Pin the browser's timezone so time-dependent stories (calendar
