@@ -93,6 +93,58 @@ describe('task list', () => {
     })
     expect(write.mock.calls).toEqual([[`${JSON.stringify(tasks, null, 2)}\n`]])
   })
+
+  it('omits description from the printed output by default', async () => {
+    const tasks = [
+      {
+        id: 't1',
+        number: 1,
+        title: 'Task one',
+        status: 'todo',
+        description: 'long body',
+      },
+    ]
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(tasks), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'list'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(write.mock.calls).toEqual([
+      [
+        `${JSON.stringify(
+          [{ id: 't1', number: 1, title: 'Task one', status: 'todo' }],
+          null,
+          2,
+        )}\n`,
+      ],
+    ])
+  })
+
+  it('includes description in the list output when --full is given', async () => {
+    const tasks = [
+      { id: 't1', number: 1, title: 'Task one', description: 'long body' },
+    ]
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(tasks), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'list', '--full'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(write.mock.calls).toEqual([[`${JSON.stringify(tasks, null, 2)}\n`]])
+  })
 })
 
 describe('task get', () => {
@@ -410,6 +462,79 @@ describe('task tree', () => {
     })
     expect(write.mock.calls).toEqual([[`${JSON.stringify(tree, null, 2)}\n`]])
   })
+
+  it('omits description from the printed output by default, including in nested children', async () => {
+    const tree = [
+      {
+        id: 't1',
+        number: 1,
+        title: 'Root',
+        description: 'root body',
+        children: [
+          {
+            id: 't2',
+            number: 2,
+            title: 'Child',
+            description: 'child body',
+            children: [],
+          },
+        ],
+      },
+    ]
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(tree), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'tree'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(write.mock.calls).toEqual([
+      [
+        `${JSON.stringify(
+          [
+            {
+              id: 't1',
+              number: 1,
+              title: 'Root',
+              children: [{ id: 't2', number: 2, title: 'Child', children: [] }],
+            },
+          ],
+          null,
+          2,
+        )}\n`,
+      ],
+    ])
+  })
+
+  it('includes description in the tree output when --full is given', async () => {
+    const tree = [
+      {
+        id: 't1',
+        number: 1,
+        title: 'Root',
+        description: 'root body',
+        children: [],
+      },
+    ]
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(tree), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'tree', '--full'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(write.mock.calls).toEqual([[`${JSON.stringify(tree, null, 2)}\n`]])
+  })
 })
 
 describe('task search', () => {
@@ -433,6 +558,50 @@ describe('task search', () => {
       query: { q: 'hello', limit: '5' },
       body: undefined,
     })
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify(results, null, 2)}\n`],
+    ])
+  })
+
+  it('omits description from the printed output by default', async () => {
+    const results = [
+      { id: 't1', number: 1, title: 'Match', description: 'long body' },
+    ]
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(results), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'search', 'hello'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(write.mock.calls).toEqual([
+      [
+        `${JSON.stringify([{ id: 't1', number: 1, title: 'Match' }], null, 2)}\n`,
+      ],
+    ])
+  })
+
+  it('includes description in search results when --full is given', async () => {
+    const results = [
+      { id: 't1', number: 1, title: 'Match', description: 'long body' },
+    ]
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(results), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'search', 'hello', '--full'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(results, null, 2)}\n`],
     ])

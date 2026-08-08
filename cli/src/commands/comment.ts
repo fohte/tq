@@ -10,7 +10,7 @@ import { toApiError } from '#client'
 import { buildClient } from '#command-context'
 import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
-import { printJson } from '#output'
+import { printJson, printJsonList } from '#output'
 import { addSchemaOptions } from '#schema-options'
 
 type CreateCommentJson = InferRequestType<
@@ -35,15 +35,18 @@ export function registerCommentCommands(
   comment
     .command('list <taskId>')
     .description('List comments for a task')
-    .action(async (taskId: string, _options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl)
-      const res = await client.api.tasks[':taskId'].comments.$get({
-        param: { taskId },
-      })
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
-      if (!res.ok) throw await toApiError(res)
-      printJson(await res.json())
-    })
+    .option('--full', 'Include full comment content in the output')
+    .action(
+      async (taskId: string, options: { full?: boolean }, command: Command) => {
+        const client = buildClient(command, fetchImpl)
+        const res = await client.api.tasks[':taskId'].comments.$get({
+          param: { taskId },
+        })
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
+        if (!res.ok) throw await toApiError(res)
+        printJsonList(await res.json(), 'content', { full: options.full })
+      },
+    )
 
   addSchemaOptions(
     comment

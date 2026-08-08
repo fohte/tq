@@ -33,6 +33,44 @@ describe('project list', () => {
     ])
   })
 
+  it('omits description from the printed output by default', async () => {
+    const projects = [{ id: 'p1', title: 'Website', description: 'long body' }]
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(projects), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'project', 'list'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify([{ id: 'p1', title: 'Website' }], null, 2)}\n`],
+    ])
+  })
+
+  it('includes description when --full is given', async () => {
+    const projects = [{ id: 'p1', title: 'Website', description: 'long body' }]
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(projects), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'project', 'list', '--full'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify(projects, null, 2)}\n`],
+    ])
+  })
+
   it('sends --status as the query string', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify([]), { status: 200 }),
@@ -163,8 +201,10 @@ describe('project delete', () => {
 })
 
 describe('project tasks', () => {
-  it('prints the tasks returned by the server as JSON', async () => {
-    const tasks = [{ id: 't1', title: 'Do the thing' }]
+  it('omits task description from the printed output by default', async () => {
+    const tasks = [
+      { id: 't1', title: 'Do the thing', description: 'long body' },
+    ]
     const { fetchStub } = captureFetch(
       () => new Response(JSON.stringify(tasks), { status: 200 }),
     )
@@ -172,6 +212,27 @@ describe('project tasks', () => {
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'project', 'tasks', 'p1'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify([{ id: 't1', title: 'Do the thing' }], null, 2)}\n`],
+    ])
+  })
+
+  it('includes task description when --full is given', async () => {
+    const tasks = [
+      { id: 't1', title: 'Do the thing', description: 'long body' },
+    ]
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(tasks), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'project', 'tasks', 'p1', '--full'],
       fetchStub,
       fakeStdin(true),
     )
