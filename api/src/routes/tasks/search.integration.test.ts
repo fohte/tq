@@ -6,7 +6,8 @@ import {
   createLabel,
   createPage,
   createTask,
-  TaskResponse,
+  TaskListItemResponse,
+  withoutRecurrenceRule,
 } from '#routes/tasks/testing'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
@@ -28,7 +29,7 @@ describe('tasks search API', () => {
       const res = await app.request('/api/tasks/search?hasEstimate=false')
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Without estimate')
@@ -43,7 +44,7 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Deploy to production')
@@ -58,7 +59,7 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Task A')
@@ -74,7 +75,7 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Task with page')
@@ -90,7 +91,7 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Completed task')
@@ -106,10 +107,11 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Dev task')
+      expect(body[0].labels).toEqual(['dev'])
     })
 
     it('filters by context: prefix in q parameter', async () => {
@@ -121,7 +123,7 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Work task')
@@ -137,7 +139,7 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Has pages')
@@ -153,7 +155,7 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Has comments')
@@ -169,7 +171,7 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Child')
@@ -185,7 +187,7 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Deploy app')
@@ -198,7 +200,7 @@ describe('tasks search API', () => {
       const res = await app.request('/api/tasks/search')
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(2)
     })
 
@@ -210,7 +212,7 @@ describe('tasks search API', () => {
       const res = await app.request('/api/tasks/search?limit=1&offset=1')
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
     })
 
@@ -223,11 +225,10 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body =
-        await jsonBody<Array<TaskResponse & { parentNumber: number | null }>>(
-          res,
-        )
-      expect(body).toEqual([{ ...child, parentNumber: parent.number }])
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toEqual([
+        { ...withoutRecurrenceRule(child), parentNumber: parent.number },
+      ])
     })
 
     it('returns a null parentNumber for a root task', async () => {
@@ -238,11 +239,10 @@ describe('tasks search API', () => {
       )
 
       expect(res.status).toBe(200)
-      const body =
-        await jsonBody<Array<TaskResponse & { parentNumber: number | null }>>(
-          res,
-        )
-      expect(body).toEqual([{ ...task, parentNumber: null }])
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toEqual([
+        { ...withoutRecurrenceRule(task), parentNumber: null },
+      ])
     })
   })
 

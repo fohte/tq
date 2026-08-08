@@ -5,7 +5,11 @@ import {
   mockGithubIssueResponse,
   upsertGithubToken,
 } from '#integrations/github/testing'
-import type { GithubLinkResponse, TaskResponse } from '#routes/tasks/testing'
+import type {
+  GithubLinkResponse,
+  TaskListItemResponse,
+  TaskResponse,
+} from '#routes/tasks/testing'
 import { createTask, fetchTaskEvents, TEST_UUID } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
@@ -301,11 +305,17 @@ describe('githubLink embedded in task responses', () => {
     expect(detailBody.githubLink).toBeNull()
 
     const listRes = await app.request('/api/tasks')
-    const listBody = await jsonBody<TaskResponse[]>(listRes)
+    const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
     expect(listBody.find((t) => t.id === task.id)?.githubLink).toBeNull()
+
+    const searchRes = await app.request(
+      '/api/tasks/search?q=' + encodeURIComponent('My task'),
+    )
+    const searchBody = await jsonBody<TaskListItemResponse[]>(searchRes)
+    expect(searchBody.find((t) => t.id === task.id)?.githubLink).toBeNull()
   })
 
-  it('appears in both the detail and list responses once linked', async () => {
+  it('appears in the detail, list, and search responses once linked', async () => {
     const task = await createTask('My task')
     await upsertGithubToken('valid-token')
     mockGithubIssueResponse()
@@ -321,7 +331,13 @@ describe('githubLink embedded in task responses', () => {
     expect(detailBody.githubLink).toEqual(link)
 
     const listRes = await app.request('/api/tasks')
-    const listBody = await jsonBody<TaskResponse[]>(listRes)
+    const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
     expect(listBody.find((t) => t.id === task.id)?.githubLink).toEqual(link)
+
+    const searchRes = await app.request(
+      '/api/tasks/search?q=' + encodeURIComponent('My task'),
+    )
+    const searchBody = await jsonBody<TaskListItemResponse[]>(searchRes)
+    expect(searchBody.find((t) => t.id === task.id)?.githubLink).toEqual(link)
   })
 })

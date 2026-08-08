@@ -4,7 +4,7 @@ import { app } from '#app'
 import {
   createLabel,
   createTask,
-  TaskResponse,
+  TaskListItemResponse,
   TEST_UUID,
 } from '#routes/tasks/testing'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
@@ -32,7 +32,7 @@ describe('tasks tree API', () => {
       const res = await app.request('/api/tasks/tree')
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Parent')
@@ -50,7 +50,7 @@ describe('tasks tree API', () => {
       const res = await app.request(`/api/tasks/tree?rootId=${root.id}`)
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Root')
@@ -73,7 +73,7 @@ describe('tasks tree API', () => {
       const res = await app.request('/api/tasks/tree')
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       assertDefined(body[0].children)
@@ -106,7 +106,7 @@ describe('tasks tree API', () => {
 
       const res = await app.request('/api/tasks/tree')
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       assertDefined(body[0])
       assertDefined(body[0].children)
       assertDefined(body[0].children[0])
@@ -133,7 +133,7 @@ describe('tasks tree API', () => {
       const res = await app.request('/api/tasks/tree')
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       assertDefined(body[0])
       expect(body[0].childCompletionCount).toEqual({
         completed: 1,
@@ -179,7 +179,7 @@ describe('tasks tree API', () => {
       const res = await app.request('/api/tasks/tree?sortBy=updated')
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<TaskResponse[]>(res)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
       assertDefined(body[0])
       assertDefined(body[0].children)
       expect(body[0].children.map((c) => c.title)).toEqual([

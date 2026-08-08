@@ -69,6 +69,44 @@ export interface TaskResponse {
   links?: { outgoing: LinkedTaskResponse[]; incoming: LinkedTaskResponse[] }
 }
 
+// Shape returned by the 4 list-returning endpoints (`/api/tasks`,
+// `/api/tasks/tree`, `/api/tasks/search`, `/api/projects/:id/tasks`): no
+// `recurrenceRule` key (unlike `TaskResponse`), plus `parentNumber`.
+export interface TaskListItemResponse {
+  id: string
+  number: number
+  title: string
+  description: string | null
+  status: 'todo' | 'in_progress' | 'completed'
+  context: 'work' | 'personal'
+  labels: string[]
+  startDate: string | null
+  dueDate: string | null
+  estimatedMinutes: number | null
+  parentId: string | null
+  projectId: string | null
+  recurrenceRuleId: string | null
+  githubLink: GithubLinkResponse | null
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+  parentNumber: number | null
+  childCompletionCount?: { completed: number; total: number }
+  children?: TaskListItemResponse[]
+}
+
+// List-endpoint responses have no `recurrenceRule` key at all, unlike
+// `TaskResponse`, so building a list-item expectation out of a
+// create/update response needs the key dropped rather than left behind as
+// a stray `recurrenceRule: null`.
+export function withoutRecurrenceRule<T extends { recurrenceRule: unknown }>(
+  task: T,
+): Omit<T, 'recurrenceRule'> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured only to exclude it from `rest`
+  const { recurrenceRule, ...rest } = task
+  return rest
+}
+
 const recurrenceRuleResponseSchema = z.object({
   id: z.string(),
   type: z.enum(['daily', 'weekly', 'monthly', 'custom']),

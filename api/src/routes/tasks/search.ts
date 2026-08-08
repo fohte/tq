@@ -4,10 +4,18 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
-import { labels, taskComments, taskLabels, taskPages, tasks } from '#db/schema'
 import {
+  labels,
+  taskComments,
+  taskGithubLinks,
+  taskLabels,
+  taskPages,
+  tasks,
+} from '#db/schema'
+import {
+  getLabelNamesByTaskId,
   parentTasks,
-  taskWithParentNumberToResponse,
+  taskListItemToResponse,
 } from '#routes/tasks/shared'
 import { searchQuerySchema } from '#schemas/task'
 import { parseSearchQuery } from '#search-query-parser'
@@ -133,16 +141,32 @@ export const tasksSearchApp = new Hono()
     const offset = query.offset ?? 0
 
     const result = await db
-      .select({ task: tasks, parentNumber: parentTasks.number })
+      .select({
+        task: tasks,
+        parentNumber: parentTasks.number,
+        githubLink: taskGithubLinks,
+      })
       .from(tasks)
       .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
+      .leftJoin(taskGithubLinks, eq(tasks.id, taskGithubLinks.taskId))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(orderBy)
       .limit(limit)
       .offset(offset)
 
+    const labelsByTaskId = await getLabelNamesByTaskId(
+      result.map((r) => r.task.id),
+    )
+
     return c.json(
-      result.map((r) => taskWithParentNumberToResponse(r.task, r.parentNumber)),
+      result.map((r) =>
+        taskListItemToResponse(
+          r.task,
+          r.parentNumber,
+          r.githubLink,
+          labelsByTaskId.get(r.task.id) ?? [],
+        ),
+      ),
       200,
     )
   })

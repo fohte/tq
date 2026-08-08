@@ -8,7 +8,11 @@ import {
   connectMcpClient,
   parseToolJson,
 } from '#routes/mcp/testing'
-import { createTask, type TaskResponse } from '#routes/tasks/testing'
+import {
+  createTask,
+  type TaskResponse,
+  withoutRecurrenceRule,
+} from '#routes/tasks/testing'
 import {
   assertDefined,
   jsonBody,
@@ -135,7 +139,7 @@ describe('REST/MCP parity', () => {
     expect(res.status).toBe(200)
 
     expect(await jsonBody<unknown[]>(res)).toEqual([
-      { ...data, parentNumber: null, labels: [] },
+      { ...withoutRecurrenceRule(data), parentNumber: null, labels: [] },
     ])
   })
 
@@ -224,18 +228,21 @@ describe('REST/MCP parity', () => {
       a.id.localeCompare(b.id)
     const expected = [
       {
-        ...completedTask,
-        recurrenceRule: null,
+        ...withoutRecurrenceRule(completedTask),
         parentNumber: null,
         labels: [],
       },
-      { ...nextTask, recurrenceRule: null, parentNumber: null, labels: [] },
+      {
+        ...withoutRecurrenceRule(nextTask),
+        parentNumber: null,
+        labels: [],
+      },
     ]
 
-    // GET /api/tasks (list) never hydrates recurrenceRule, unlike the detail
-    // endpoint and this write tool's own response. Sorting both sides by id
-    // avoids depending on the unspecified tie-break order Postgres uses when
-    // sortOrder and createdAt are identical for both tasks.
+    // GET /api/tasks (list) has no recurrenceRule key at all, unlike the
+    // detail endpoint and this write tool's own response. Sorting both sides
+    // by id avoids depending on the unspecified tie-break order Postgres
+    // uses when sortOrder and createdAt are identical for both tasks.
     expect((await jsonBody<{ id: string }[]>(res)).sort(byId)).toEqual(
       expected.sort(byId),
     )
