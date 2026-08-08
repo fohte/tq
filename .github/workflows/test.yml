@@ -56,31 +56,10 @@ jobs:
             echo "skip_commit=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14 # v4.2.3
-        with:
-          version: 2026.7.16
-
-      # lefthook hooks (eslint, prettier, etc.) shell out to `pnpm`, so corepack
-      # must activate before lefthook runs. corepack creates the pnpm executable
-      # inside mise's node install bin directory; reshim so the mise shims dir
-      # (which is on PATH) picks it up.
-      - run: |
-          corepack enable
-          mise reshim
-
-      - name: Get pnpm store directory
-        id: pnpm-store
-        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ${{ steps.pnpm-store.outputs.path }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-store-
-
-      - run: pnpm install --frozen-lockfile
+      # lefthook hooks (eslint, prettier, etc.) shell out to `pnpm`, so the
+      # workspace (which activates corepack) must be installed before
+      # lefthook runs below.
+      - uses: ./.github/actions/setup-workspace
 
       - name: Check peer dependencies
         run: pnpm peers check
@@ -160,7 +139,7 @@ jobs:
         id: set-packages
         env:
           # Changes to these files affect every package, so they trigger the full matrix.
-          GLOBAL_PATHS_REGEX: '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.github/workflows/test\.yml|\.github/workflows/vrt\.yml)$'
+          GLOBAL_PATHS_REGEX: '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.github/workflows/test\.yml|\.github/workflows/vrt\.yml|\.github/actions/setup-workspace/action\.yml)$'
           CHANGED_FILES: ${{ steps.changed.outputs.all_changed_files }}
         run: |
           # Workspace packages are the directories holding a non-root package.json.
@@ -216,13 +195,21 @@ jobs:
   # sharing the `web` leg above with the (browser-free) type-check and unit
   # test run.
   vrt:
-    needs: setup
+    # Also needs unit-test-run so a red web `tsc --noEmit`/unit-test leg
+    # blocks the flip below instead of racing ahead of it — without this,
+    # `vrt` only depended on `setup` and could flip the shared baseline while
+    # unit-test-run was still failing.
+    needs:
+      - setup
+      - unit-test-run
     if: ${{ contains(fromJSON(needs.setup.outputs.packages), 'web') }}
     permissions:
       contents: read
       pull-requests: write
     uses: ./.github/workflows/vrt.yml
-    secrets: inherit
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
   # Aggregation gate for unit-test-run's matrix and the vrt reusable workflow
   # call. Matrix leg names are dynamic and cannot be pinned as a required
