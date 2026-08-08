@@ -381,13 +381,12 @@ describe('TreeTaskGridRow', () => {
     expect(mockLinkOnClick).not.toHaveBeenCalled()
   })
 
-  it('selects the row instead of navigating when clicking its desktop non-interactive area', async () => {
+  it('selects the row and navigates when clicking its desktop non-interactive area', async () => {
     const user = userEvent.setup()
     renderTree(makeNode())
 
     // The desktop grid is the first ("Parent Task" x2) instance in render
-    // order; its own onClick intercepts the click before it ever reaches
-    // the row's Link.
+    // order.
     const desktopTitle = atIndex(screen.getAllByText('Parent Task'), 0)
     await user.click(desktopTitle)
 
@@ -400,7 +399,7 @@ describe('TreeTaskGridRow', () => {
     observed.push(wrapper.classList.contains('ring-border-strong'))
     observed.push(mockLinkOnClick.mock.calls.length)
 
-    expect(observed).toEqual([true, 0])
+    expect(observed).toEqual([true, 1])
   })
 
   it('still lets a click bubble to the row Link from the mobile layout', async () => {

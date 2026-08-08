@@ -114,7 +114,7 @@ const meta = {
   decorators: [
     (Story) => (
       <Providers>
-        <div className="h-[844px] w-[390px] bg-background">
+        <div className="h-screen bg-background">
           <Story />
         </div>
       </Providers>

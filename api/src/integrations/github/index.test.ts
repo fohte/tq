@@ -101,7 +101,10 @@ describe('getAuthUrl', () => {
 
     expect(error).toEqual(
       new IntegrationConfigError(
-        'GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, and GITHUB_REDIRECT_URI environment variables are required',
+        'invalid environment:\n' +
+          '- missing required environment variable: GITHUB_CLIENT_ID\n' +
+          '- missing required environment variable: GITHUB_CLIENT_SECRET\n' +
+          '- missing required environment variable: GITHUB_REDIRECT_URI',
       ),
     )
   })

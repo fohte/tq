@@ -188,12 +188,26 @@ jobs:
   unit-test-run:
     needs: setup
     if: ${{ needs.setup.outputs.packages != '[]' }}
+    # Job-level permissions replace (not extend) the workflow-level block,
+    # so this scopes pull-requests:write to just this job instead of also
+    # exposing it to the `test` job's third-party lint/format tools.
+    permissions:
+      contents: read
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
         package: ${{ fromJSON(needs.setup.outputs.packages) }}
     name: 'unit-test (${{ matrix.package }})'
     runs-on: ubuntu-latest
+    # Overlapping runs for the same package + ref would otherwise let two
+    # `web` legs publish VRT snapshots to the same S3 key at once — most
+    # importantly two main pushes racing to fill the same (non-live) baseline
+    # slot, which could flip the pointer to a slot holding a mix of two runs'
+    # screenshots.
+    concurrency:
+      group: unit-test-${{ matrix.package }}-${{ github.ref }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -259,31 +273,68 @@ jobs:
           DATABASE_URL: postgresql://tq:tq@localhost:5432/tq_test
         run: pnpm run test
 
-      - name: Get GitHub token for VRT PR comment
-        if: matrix.package == 'web'
-        uses: octo-sts/action@f603d3be9d8dd9871a265776e625a27b00effe05 # v1.1.1
-        id: octo-sts-vrt
-        with:
-          scope: fohte
-          identity: ${{ github.event.repository.name }}
-          domain: octo-sts.fohte.net
-
-      # main pushes publish under the pr/ prefix too (as pr/main-<sha>) so the
-      # new snapshot never overwrites main/latest directly — if reg-suit or
-      # the promote step below fails, main/latest (the baseline every PR
-      # compares against) is untouched instead of ending up deleted or half
-      # written. The pr/ prefix's 3-day lifecycle rule cleans these up same
-      # as regular PR snapshots.
+      # baseline/pointer names which of two slots (blue/green) is the live
+      # baseline PRs compare against. main publishes into the other slot and
+      # flips the pointer only after a successful run, so a failed reg-suit
+      # or flip never corrupts the baseline every PR relies on, and promoting
+      # is a single small object write instead of copying every screenshot.
+      # A missing pointer falls back to the legacy main/latest key — but any
+      # other read failure (auth, network, permissions) must not be treated
+      # the same way, or a transient error could make main overwrite the
+      # live slot instead of the intended target.
       - name: Set VRT snapshot keys
         if: matrix.package == 'web'
         id: vrt-keys
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "actual_key=pr/main-${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          pointer_err=$(mktemp)
+          if live_slot=$(aws s3 cp "s3://tq-vrt/baseline/pointer" - --endpoint-url https://8d88a085ccc7b11f252419e2f3a25fd6.r2.cloudflarestorage.com 2>"$pointer_err"); then
+            :
+          elif grep -qE 'NoSuchKey|HeadObject operation: Not Found' "$pointer_err"; then
+            live_slot=""
           else
-            echo "actual_key=pr/${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            cat "$pointer_err" >&2
+            exit 1
           fi
-          echo "expected_key=main/latest" >> "$GITHUB_OUTPUT"
+
+          if [ -n "$live_slot" ]; then
+            echo "expected_key=baseline/$live_slot" >> "$GITHUB_OUTPUT"
+          else
+            echo "expected_key=main/latest" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            if [ "$live_slot" = "blue" ]; then
+              target_slot=green
+            else
+              target_slot=blue
+            fi
+            echo "actual_key=baseline/$target_slot" >> "$GITHUB_OUTPUT"
+            echo "target_slot=$target_slot" >> "$GITHUB_OUTPUT"
+          else
+            # One key per branch: re-pushing to the same branch overwrites its
+            # previous snapshot instead of accumulating a new one per commit.
+            echo "actual_key=branch/${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # reg-suit's S3 publisher only uploads — it never deletes. Since a
+      # baseline slot is reused across main pushes, a screenshot removed
+      # since this slot was last written (e.g. a deleted story) would
+      # otherwise linger and get reported as a false "deleted" diff every
+      # time this slot becomes live again.
+      - name: Clear VRT baseline target slot
+        if: matrix.package == 'web' && github.ref == 'refs/heads/main'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          aws s3 rm "s3://tq-vrt/${{ steps.vrt-keys.outputs.actual_key }}/actual" \
+            --recursive \
+            --endpoint-url https://8d88a085ccc7b11f252419e2f3a25fd6.r2.cloudflarestorage.com
 
       - name: Run VRT (reg-suit)
         if: matrix.package == 'web'
@@ -291,27 +342,35 @@ jobs:
         env:
           VRT_ACTUAL_KEY: ${{ steps.vrt-keys.outputs.actual_key }}
           VRT_EXPECTED_KEY: ${{ steps.vrt-keys.outputs.expected_key }}
-          VRT_GITHUB_TOKEN: ${{ steps.octo-sts-vrt.outputs.token }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: pnpm exec reg-suit run
 
-      # Only reached once reg-suit has successfully published the new actual
-      # images under pr/main-<sha>, so a failure above never touches
-      # main/latest. `sync --delete` also drops images for removed stories,
-      # which a plain overwrite would otherwise leave behind forever.
-      # Concurrent main pushes aren't serialized here — main is merged
-      # serially by a single maintainer in practice, and an overlapping race
-      # self-corrects on the next push.
-      - name: Promote VRT snapshot to main/latest
+      # Runs regardless of whether an open PR exists yet: pushing straight to
+      # main (no PR) or to a branch without an open PR both no-op inside the
+      # action instead of failing here.
+      - name: Post VRT PR comment
+        if: matrix.package == 'web'
+        uses: ./.github/actions/vrt-comment
+        with:
+          repo: ${{ github.repository }}
+          branch: ${{ github.ref_name }}
+          sha: ${{ github.sha }}
+          out-json-path: web/.reg/out.json
+          report-url: https://tq-vrt.fohte.net/${{ steps.vrt-keys.outputs.actual_key }}/index.html
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Reached only once reg-suit has successfully published the new baseline
+      # candidate to the non-live slot, so a failure above never touches the
+      # pointer PRs actually read.
+      - name: Flip VRT baseline pointer
         if: matrix.package == 'web' && github.ref == 'refs/heads/main'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: auto
         run: |
-          aws s3 sync "s3://tq-vrt/${{ steps.vrt-keys.outputs.actual_key }}/actual" s3://tq-vrt/main/latest/actual \
-            --delete \
+          echo -n "${{ steps.vrt-keys.outputs.target_slot }}" | aws s3 cp - s3://tq-vrt/baseline/pointer \
             --endpoint-url https://8d88a085ccc7b11f252419e2f3a25fd6.r2.cloudflarestorage.com
 
   # Aggregation gate for the unit-test matrix. Matrix leg names are dynamic and
