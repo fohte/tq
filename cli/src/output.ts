@@ -16,3 +16,14 @@ export async function writeContentFile(
     throw new FileIoError(`Failed to write ${filePath}`, cause)
   }
 }
+
+export async function writeBinaryFile(
+  filePath: string,
+  data: Uint8Array,
+): Promise<void> {
+  try {
+    await writeFile(filePath, data)
+  } catch (cause) {
+    throw new FileIoError(`Failed to write ${filePath}`, cause)
+  }
+}

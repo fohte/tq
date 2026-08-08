@@ -6,30 +6,11 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import { labels, taskComments, taskLabels, taskPages, tasks } from '#db/schema'
 import {
-  contextEnum,
   parentTasks,
-  taskStatus,
   taskWithParentNumberToResponse,
 } from '#routes/tasks/shared'
+import { searchQuerySchema } from '#schemas/task'
 import { parseSearchQuery } from '#search-query-parser'
-
-const searchQuerySchema = z.object({
-  q: z.string().optional(),
-  status: taskStatus.optional(),
-  label: z.string().optional(),
-  context: contextEnum.optional(),
-  hasEstimate: z
-    .string()
-    .transform((v) => v === 'true')
-    .optional(),
-  hasDue: z
-    .string()
-    .transform((v) => v === 'true')
-    .optional(),
-  sortBy: z.enum(['due', 'created', 'updated', 'estimate']).optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
-  offset: z.coerce.number().int().min(0).optional(),
-})
 
 const suggestQuerySchema = z.object({
   prefix: z.string(),
