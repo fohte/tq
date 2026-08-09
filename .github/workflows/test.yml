@@ -40,21 +40,11 @@ jobs:
           persist-credentials: false
           fetch-depth: 2
 
-      - name: Check if current commit is auto-format by bot
-        id: check-auto-format
-        run: |
-          commit_message=$(git log -1 --format=%s)
-          commit_author=$(git log -1 --format=%an)
-          echo "Current commit message: $commit_message"
-          echo "Current commit author: $commit_author"
-
-          # Skip if the current commit is an auto-format commit by a bot
-          # to prevent infinite loop: auto-format push -> CI -> auto-format push -> ...
-          if [ "$commit_message" = "style: auto-format" ] && [[ "$commit_author" == *"[bot]"* ]]; then
-            echo "skip_commit=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip_commit=false" >> "$GITHUB_OUTPUT"
-          fi
+      # Skip committing below if the current commit is already an auto-format
+      # commit, to prevent an infinite loop: auto-format push -> CI ->
+      # auto-format push -> ...
+      - uses: ./.github/actions/detect-auto-format-commit
+        id: detect-auto-format
 
       # lefthook hooks (eslint, prettier, etc.) shell out to `pnpm`, so the
       # workspace (which activates corepack) must be installed before
@@ -99,7 +89,7 @@ jobs:
         run: git restore --staged .
 
       - name: Commit formatted files
-        if: ${{ !cancelled() && steps.check-auto-format.outputs.skip_commit != 'true' }}
+        if: ${{ !cancelled() && steps.detect-auto-format.outputs.is_auto_format != 'true' }}
         uses: suzuki-shunsuke/commit-action@06e3b49d4706498d325d29bd85adc82ecf2f5d8f # v1.0.0
         with:
           commit_message: 'style: auto-format'
@@ -119,12 +109,30 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 2
+          # An auto-format commit needs its grandparent (HEAD~2) available
+          # below to diff against.
+          fetch-depth: 3
+
+      - uses: ./.github/actions/detect-auto-format-commit
+        id: detect-auto-format
+
+      # An auto-format commit's own diff is just the formatter's output (e.g.
+      # regenerated docs/db), not the human change that triggered it. Diffing
+      # against its grandparent instead unions both, so package detection
+      # below (and thus vrt/unit-test-run) doesn't miss a change that already
+      # ran once in the triggering push.
+      - name: Find changed-files base SHA
+        id: base-sha
+        if: steps.detect-auto-format.outputs.is_auto_format == 'true'
+        run: |
+          base_sha=$(git rev-parse HEAD~2)
+          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
 
       - name: Detect changed files
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         id: changed
         with:
+          base_sha: ${{ steps.base-sha.outputs.base_sha }}
           json: true
           # Emit valid JSON; the default escapes quotes and breaks jq parsing.
           escape_json: false
