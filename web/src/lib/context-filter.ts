@@ -4,22 +4,25 @@ export type ContextFilterMode = 'all' | 'work' | 'personal'
  * Map filter mode to API context values.
  * - 'all' -> undefined (no filter)
  * - 'work' -> 'work'
- * - 'personal' -> undefined (filtered client-side, see matchesContextFilter)
+ * - 'personal' -> 'personal'
  */
 export function filterModeToApiContext(
   mode: ContextFilterMode,
-): 'work' | undefined {
+): 'work' | 'personal' | undefined {
   switch (mode) {
     case 'work':
       return 'work'
-    case 'all':
     case 'personal':
+      return 'personal'
+    case 'all':
       return undefined
   }
 }
 
 /**
- * Client-side filter for tasks based on context mode.
+ * Client-side filter for tasks based on context mode. Used where a task list
+ * isn't already server-filtered (e.g. calendar events, which are redacted
+ * rather than dropped).
  */
 export function matchesContextFilter(
   taskContext: string,
@@ -33,36 +36,4 @@ export function matchesContextFilter(
     case 'personal':
       return taskContext === 'personal'
   }
-}
-
-/**
- * Filter a flat list of items by context mode.
- * Items must have a `context` property.
- */
-export function filterByContext<T extends { context: string }>(
-  items: T[],
-  mode: ContextFilterMode,
-): T[] {
-  if (mode === 'all' || mode === 'work') return items
-  return items.filter((t) => matchesContextFilter(t.context, mode))
-}
-
-/**
- * Filter a tree of nodes by context mode.
- * Keeps a node if it matches the filter or any of its descendants match.
- */
-export function filterTreeByContext<
-  T extends { context: string; children: T[] },
->(nodes: T[], mode: ContextFilterMode): T[] {
-  if (mode === 'all') return nodes
-  return nodes.reduce<T[]>((acc, node) => {
-    const filteredChildren = filterTreeByContext(node.children, mode)
-    if (
-      matchesContextFilter(node.context, mode) ||
-      filteredChildren.length > 0
-    ) {
-      acc.push({ ...node, children: filteredChildren })
-    }
-    return acc
-  }, [])
 }

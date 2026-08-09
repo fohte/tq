@@ -2,61 +2,31 @@ import { useMemo } from 'react'
 
 import { useContextFilter } from '#hooks/use-context-filter'
 import { useTagFilter } from '#hooks/use-tag-filter'
-import type { TaskSortBy, TreeNode } from '#hooks/use-tasks'
-import { useTaskList, useTaskTree } from '#hooks/use-tasks'
-import { filterByCompleted, filterTreeByCompleted } from '#lib/completed-filter'
-import {
-  filterByContext,
-  filterModeToApiContext,
-  filterTreeByContext,
-} from '#lib/context-filter'
-import { filterByTag, filterTreeByTag } from '#lib/tag-filter'
+import type { TaskListFilter, TaskSortBy } from '#hooks/use-tasks'
+import { useTaskList } from '#hooks/use-tasks'
+import { filterModeToApiContext } from '#lib/context-filter'
+import { buildTree } from '#lib/tree-builder'
 
-export function useFilteredTaskList(sortBy?: TaskSortBy, showCompleted = true) {
+function useBaseFilter(showCompleted: boolean): TaskListFilter {
   const { mode } = useContextFilter()
   const { tag } = useTagFilter()
   const apiContext = filterModeToApiContext(mode)
-  const { isLoading, categorized } = useTaskList({
+
+  return {
     ...(apiContext ? { context: apiContext } : {}),
+    ...(tag != null ? { label: tag } : {}),
+    ...(showCompleted ? {} : { status: ['todo', 'in_progress'] }),
+  }
+}
+
+export function useFilteredTaskList(sortBy?: TaskSortBy, showCompleted = true) {
+  const baseFilter = useBaseFilter(showCompleted)
+  const { isLoading, categorized } = useTaskList({
+    ...baseFilter,
     ...(sortBy ? { sortBy } : {}),
   })
 
-  const open = useMemo(
-    () => filterByTag(filterByContext(categorized.open, mode), tag),
-    [categorized.open, mode, tag],
-  )
-  const all = useMemo(
-    () =>
-      filterByCompleted(
-        filterByTag(filterByContext(categorized.all, mode), tag),
-        showCompleted,
-      ),
-    [categorized.all, mode, tag, showCompleted],
-  )
-  const backlog = useMemo(
-    () => filterByTag(filterByContext(categorized.backlog, mode), tag),
-    [categorized.backlog, mode, tag],
-  )
-  const nonBacklog = useMemo(
-    () => filterByTag(filterByContext(categorized.nonBacklog, mode), tag),
-    [categorized.nonBacklog, mode, tag],
-  )
-
-  return { isLoading, open, all, backlog, nonBacklog }
-}
-
-function recalcChildCompletionCount(nodes: TreeNode[]): TreeNode[] {
-  return nodes.map((node) => {
-    const children = recalcChildCompletionCount(node.children)
-    return {
-      ...node,
-      children,
-      childCompletionCount: {
-        total: children.length,
-        completed: children.filter((c) => c.status === 'completed').length,
-      },
-    }
-  })
+  return { isLoading, ...categorized }
 }
 
 export function useFilteredTaskTree(options: {
@@ -64,20 +34,17 @@ export function useFilteredTaskTree(options: {
   sortBy?: TaskSortBy
   showCompleted?: boolean
 }) {
-  const { mode } = useContextFilter()
-  const { tag } = useTagFilter()
-  const { data, isLoading } = useTaskTree(options)
-  const showCompleted = options.showCompleted ?? true
+  const baseFilter = useBaseFilter(options.showCompleted ?? true)
+  const { isLoading, categorized } = useTaskList(
+    {
+      ...baseFilter,
+      ...(options.sortBy ? { sortBy: options.sortBy } : {}),
+      includeAncestors: true,
+    },
+    { enabled: options.enabled },
+  )
 
-  const tree = useMemo(() => {
-    const filtered = filterTreeByCompleted(
-      filterTreeByTag(filterTreeByContext(data ?? [], mode), tag),
-      showCompleted,
-    )
-    return mode === 'all' && tag == null && showCompleted
-      ? filtered
-      : recalcChildCompletionCount(filtered)
-  }, [data, mode, tag, showCompleted])
+  const tree = useMemo(() => buildTree(categorized.all), [categorized.all])
 
   return { isLoading, tree }
 }

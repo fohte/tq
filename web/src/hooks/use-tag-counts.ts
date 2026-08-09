@@ -1,13 +1,12 @@
 import { useMemo } from 'react'
 
 import { useTaskList } from '#hooks/use-tasks'
-import type { TagCount } from '#lib/tag-filter'
-import { computeTagCounts } from '#lib/tag-filter'
+import type { TagCount } from '#lib/tag-counts'
+import { computeTagCounts } from '#lib/tag-counts'
 
 /**
  * Tag counts for the whole task set, independent of the context filter and
- * the tag filter itself. Calling `useTaskList()` with no filter reuses the
- * same query cache entry as `useFilteredTaskList` in 'all'/'personal' mode.
+ * the tag filter itself.
  */
 export function useTagCounts(): { tagCounts: TagCount[]; isLoading: boolean } {
   const { categorized, isLoading } = useTaskList()
