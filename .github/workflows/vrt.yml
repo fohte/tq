@@ -228,7 +228,7 @@ jobs:
       # result never needs this check: overwriting an existing approval with
       # `success` is a no-op either way.
       - name: Check for an existing VRT approval
-        if: steps.vrt-compare.outputs.has_diff == 'true'
+        if: github.ref != 'refs/heads/main' && steps.vrt-compare.outputs.has_diff == 'true'
         id: vrt-approval
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
