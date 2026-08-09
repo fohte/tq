@@ -9,7 +9,7 @@ import { tasksSearchApp } from '#routes/tasks/search'
 export { taskToResponse } from '#routes/tasks/shared'
 
 // Search and github routes must be registered before CRUD to prevent
-// /:id from matching /tree, /search, and /from-github as path parameters.
+// /:id from matching /search and /from-github as path parameters.
 export const tasksApp = new Hono()
   .route('/', tasksSearchApp)
   .route('/', tasksGithubApp)

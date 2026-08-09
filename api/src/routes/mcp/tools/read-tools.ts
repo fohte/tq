@@ -101,7 +101,7 @@ export function registerReadTools(server: McpServer): void {
     'get_task',
     {
       description:
-        "Get the full detail of a single task by id: its attributes, recurrence rule, time blocks, page metadata, linked tasks (mentions via `#<number>`, as `links.outgoing`/`links.incoming`), labels, and the nested subtree of its subtasks (as `subtasks`). Each entry in `pages` is metadata only (id, taskId, title, sortOrder, timestamps, author) with no `content` — pass its `id` and this task's `id` to get_page to read a page's content. Entries in `subtasks` do not include labels; use search_tasks with a label: filter to find tasks by label.",
+        "Get the full detail of a single task by id: its attributes, recurrence rule, time blocks, page metadata, linked tasks (mentions via `#<number>`, as `links.outgoing`/`links.incoming`), labels, and the nested subtree of its subtasks (as `subtasks`, each entry including its own labels). Each entry in `pages` is metadata only (id, taskId, title, sortOrder, timestamps, author) with no `content` — pass its `id` and this task's `id` to get_page to read a page's content.",
       inputSchema: {
         taskId: taskIdOrNumber.describe(
           'The task id (UUID) or task number to look up.',
