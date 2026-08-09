@@ -222,7 +222,14 @@ function ProjectOpenTasksPanel({
       {openTasks.length > 0 ? (
         <div>
           {openTasks.map((task) => (
-            <TaskRow key={task.id} task={{ ...task, labels: [] }} />
+            <TaskRow
+              key={task.id}
+              task={{
+                ...task,
+                labels: [],
+                childCompletionCount: { completed: 0, total: 0 },
+              }}
+            />
           ))}
         </div>
       ) : (
