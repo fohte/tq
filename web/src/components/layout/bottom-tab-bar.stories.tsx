@@ -11,7 +11,7 @@ import { BottomTabBar } from '#components/layout/bottom-tab-bar'
 
 function BottomTabBarStory() {
   return (
-    <div className="relative h-20">
+    <div className="flex h-dvh flex-col justify-end">
       <BottomTabBar />
     </div>
   )
