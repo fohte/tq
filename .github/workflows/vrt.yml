@@ -221,25 +221,44 @@ jobs:
           report-url: https://tq-vrt.fohte.net/${{ steps.vrt-keys.outputs.actual_key }}/index.html
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # A run that would report `failure` here must not clobber an approval
+      # applied to this same commit while this job was still in flight —
+      # that would silently negate a human's explicit "this diff is
+      # intentional" call with the very run that prompted it. A `success`
+      # result never needs this check: overwriting an existing approval with
+      # `success` is a no-op either way.
+      - name: Check for an existing VRT approval
+        if: steps.vrt-compare.outputs.has_diff == 'true'
+        id: vrt-approval
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          approved=$(gh pr list --repo "$REPO" --head "$BRANCH" --state open --json labels \
+            --jq 'if length == 0 then false else (.[0].labels | any(.name == "vrt-approved")) end')
+          echo "approved=$approved" >> "$GITHUB_OUTPUT"
+
       # A separate, non-required status (as opposed to the required `unit-test`
       # gate) so a diff never blocks a merge by itself. vrt-approval.yml
       # overrides this to success when the `vrt-approved` label is applied,
       # and clears that label (never this status directly) on the next push
       # — the new commit's own status here starts fresh anyway.
+      #
+      # continue-on-error so a transient failure here (rate limit, network
+      # blip) can't skip the baseline-pointer flip further down, the same
+      # reasoning the "Publish VRT commit marker" step below already applies.
       - name: Set VRT commit status
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          SHA: ${{ github.sha }}
-          STATE: ${{ steps.vrt-compare.outputs.has_diff == 'true' && 'failure' || 'success' }}
-          DESCRIPTION: ${{ steps.vrt-compare.outputs.has_diff == 'true' && 'Visual differences detected' || 'No visual differences' }}
-          TARGET_URL: https://tq-vrt.fohte.net/${{ steps.vrt-keys.outputs.actual_key }}/index.html
-        run: |
-          gh api "repos/$REPO/statuses/$SHA" \
-            -f state="$STATE" \
-            -f context=vrt \
-            -f description="$DESCRIPTION" \
-            -f target_url="$TARGET_URL"
+        if: steps.vrt-approval.outputs.approved != 'true'
+        continue-on-error: true
+        uses: ./.github/actions/vrt-status
+        with:
+          repo: ${{ github.repository }}
+          sha: ${{ github.sha }}
+          state: ${{ steps.vrt-compare.outputs.has_diff == 'true' && 'failure' || 'success' }}
+          description: ${{ steps.vrt-compare.outputs.has_diff == 'true' && 'Visual differences detected' || 'No visual differences' }}
+          target-url: https://tq-vrt.fohte.net/${{ steps.vrt-keys.outputs.actual_key }}/index.html
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # branch/<ref_name> is overwritten by every push to that branch (see
       # Set VRT snapshot keys above), so a consumer reading it later has no
