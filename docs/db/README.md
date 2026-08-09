@@ -13,7 +13,7 @@
 | [public.task_comments](public.task_comments.md)                                     | 5       |         | BASE TABLE |
 | [public.task_labels](public.task_labels.md)                                         | 2       |         | BASE TABLE |
 | [public.task_pages](public.task_pages.md)                                           | 8       |         | BASE TABLE |
-| [public.tasks](public.tasks.md)                                                     | 15      |         | BASE TABLE |
+| [public.tasks](public.tasks.md)                                                     | 14      |         | BASE TABLE |
 | [public.time_blocks](public.time_blocks.md)                                         | 7       |         | BASE TABLE |
 | [public.today_tasks](public.today_tasks.md)                                         | 6       |         | BASE TABLE |
 | [public.edits](public.edits.md)                                                     | 10      |         | BASE TABLE |
@@ -140,7 +140,6 @@ erDiagram
   text project_id FK
   text recurrence_rule_id FK
   text context
-  integer sort_order
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
   integer number
