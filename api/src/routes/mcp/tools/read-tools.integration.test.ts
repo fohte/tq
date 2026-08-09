@@ -128,7 +128,12 @@ describe('read tools', () => {
       const toolResult = await callTool('list_tasks', { context: 'work' })
 
       expect(parseJson(toolResult)).toEqual([
-        { ...withoutRecurrenceRule(task), parentNumber: null, labels: [] },
+        {
+          ...withoutRecurrenceRule(task),
+          parentNumber: null,
+          labels: [],
+          childCompletionCount: { total: 0, completed: 0 },
+        },
       ])
     })
   })

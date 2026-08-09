@@ -1,4 +1,4 @@
-import { desc, eq, inArray } from 'drizzle-orm'
+import { count, desc, eq, inArray, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { createFactory } from 'hono/factory'
 import { err, ok, type Result } from 'neverthrow'
@@ -13,12 +13,16 @@ import {
   tasks,
   timeBlocks,
 } from '#db/schema'
-import type { TaskListSortBy } from '#schemas/task'
+import type { TaskSortBy } from '#schemas/task'
 
-export function resolveTaskListOrderBy(sortBy?: TaskListSortBy) {
+export function resolveTaskListOrderBy(sortBy?: TaskSortBy) {
   switch (sortBy) {
     case 'updated':
       return [desc(tasks.updatedAt)]
+    case 'due':
+      return [tasks.dueDate]
+    case 'estimate':
+      return [tasks.estimatedMinutes]
     case 'created':
     default:
       return [tasks.createdAt]
@@ -109,6 +113,34 @@ export async function getLabelNamesByTaskId(
     const list = map.get(row.taskId) ?? []
     list.push(row.name)
     map.set(row.taskId, list)
+  }
+  return map
+}
+
+// Batch-fetches each task's full child completion count keyed by parent id,
+// for list endpoints that would otherwise issue one query per task. Always
+// counts every child of a task regardless of the caller's own predicate
+// filters, since it's a fresh unfiltered query keyed only by parentId.
+export async function getChildCompletionCountsByTaskId(
+  taskIds: string[],
+): Promise<Map<string, { completed: number; total: number }>> {
+  if (taskIds.length === 0) return new Map()
+
+  const rows = await db
+    .select({
+      parentId: tasks.parentId,
+      total: count(),
+      completed: count(sql`CASE WHEN ${tasks.status} = 'completed' THEN 1 END`),
+    })
+    .from(tasks)
+    .where(inArray(tasks.parentId, taskIds))
+    .groupBy(tasks.parentId)
+
+  const map = new Map<string, { completed: number; total: number }>()
+  for (const row of rows) {
+    if (row.parentId != null) {
+      map.set(row.parentId, { completed: row.completed, total: row.total })
+    }
   }
   return map
 }

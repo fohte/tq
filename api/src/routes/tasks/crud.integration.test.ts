@@ -27,6 +27,14 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
+function setStatus(taskId: string, status: string) {
+  return app.request(`/api/tasks/${taskId}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+}
+
 function normalizeTimeBlock(block: TimeBlockResponse) {
   return {
     ...block,
@@ -279,8 +287,16 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body.map(normalizeTask)).toEqual([
-        { ...normalizeTask(withoutRecurrenceRule(taskA)), parentNumber: null },
-        { ...normalizeTask(withoutRecurrenceRule(taskB)), parentNumber: null },
+        {
+          ...normalizeTask(withoutRecurrenceRule(taskA)),
+          parentNumber: null,
+          childCompletionCount: { completed: 0, total: 0 },
+        },
+        {
+          ...normalizeTask(withoutRecurrenceRule(taskB)),
+          parentNumber: null,
+          childCompletionCount: { completed: 0, total: 0 },
+        },
       ])
     })
 
@@ -335,16 +351,227 @@ describe('tasks CRUD API', () => {
         {
           ...normalizeTask(withoutRecurrenceRule(patchedTaskB)),
           parentNumber: null,
+          childCompletionCount: { completed: 0, total: 0 },
         },
         {
           ...normalizeTask(withoutRecurrenceRule(patchedTaskC)),
           parentNumber: null,
+          childCompletionCount: { completed: 0, total: 0 },
         },
         {
           ...normalizeTask(withoutRecurrenceRule(patchedTaskA)),
           parentNumber: null,
+          childCompletionCount: { completed: 0, total: 0 },
         },
       ])
+    })
+  })
+
+  describe('GET /api/tasks with extended predicates', () => {
+    it('filters by multiple status values', async () => {
+      const todoTask = await createTask('Todo task')
+      const inProgressTask = await createTask('In progress task')
+      const completedTask = await createTask('Completed task')
+      await setStatus(inProgressTask.id, 'in_progress')
+      await setStatus(completedTask.id, 'completed')
+
+      const res = await app.request('/api/tasks?status=todo&status=in_progress')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id).toSorted()).toEqual(
+        [todoTask.id, inProgressTask.id].toSorted(),
+      )
+    })
+
+    it('filters by free text via q', async () => {
+      await createTask('Deploy to production')
+      await createTask('Buy groceries')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('deploy'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Deploy to production')
+    })
+
+    it('lets a parsed q prefix win over the explicit status param', async () => {
+      await createTask('Todo task')
+      const completedTask = await createTask('Completed task')
+      await setStatus(completedTask.id, 'completed')
+
+      const res = await app.request(
+        '/api/tasks?status=todo&q=' + encodeURIComponent('is:completed'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].id).toBe(completedTask.id)
+    })
+
+    it('filters by label', async () => {
+      await createLabel('urgent')
+      const labeledTask = await createTask('Labeled', { labels: ['urgent'] })
+      await createTask('Unlabeled')
+
+      const res = await app.request('/api/tasks?label=urgent')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].id).toBe(labeledTask.id)
+    })
+
+    it('filters by hasEstimate', async () => {
+      const withEstimate = await createTask('With estimate', {
+        estimatedMinutes: 30,
+      })
+      await createTask('Without estimate')
+
+      const res = await app.request('/api/tasks?hasEstimate=true')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].id).toBe(withEstimate.id)
+    })
+
+    it('filters by hasDue', async () => {
+      await createTask('With due date', { dueDate: '2026-03-25' })
+      const withoutDue = await createTask('Without due date')
+
+      const res = await app.request('/api/tasks?hasDue=false')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].id).toBe(withoutDue.id)
+    })
+
+    it('filters descendants of a task via descendantOf, excluding the root itself', async () => {
+      const root = await createTask('Root')
+      const child = await createTask('Child', { parentId: root.id })
+      const grandchild = await createTask('Grandchild', { parentId: child.id })
+      await createTask('Unrelated')
+
+      const res = await app.request(`/api/tasks?descendantOf=${root.id}`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id).toSorted()).toEqual(
+        [child.id, grandchild.id].toSorted(),
+      )
+    })
+
+    it('limits the returned tasks', async () => {
+      await createTask('Task 1')
+      await createTask('Task 2')
+      await createTask('Task 3')
+
+      const res = await app.request('/api/tasks?limit=1')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+    })
+
+    it('combines descendantOf, includeAncestors, a status filter, and limit', async () => {
+      const root = await createTask('Root')
+      const child = await createTask('Child', { parentId: root.id })
+      const grandchild1 = await createTask('Grandchild 1', {
+        parentId: child.id,
+      })
+      const grandchild2 = await createTask('Grandchild 2', {
+        parentId: child.id,
+      })
+      await setStatus(child.id, 'completed')
+
+      // `createdAt` is frozen to the transaction start (see setupTestDb), so
+      // both grandchildren would otherwise tie on the default sort key and
+      // make which one `limit=1` keeps nondeterministic.
+      await db
+        .update(tasks)
+        .set({ createdAt: new Date('2020-01-01T00:00:00.000Z') })
+        .where(eq(tasks.id, grandchild1.id))
+      await db
+        .update(tasks)
+        .set({ createdAt: new Date('2020-01-02T00:00:00.000Z') })
+        .where(eq(tasks.id, grandchild2.id))
+
+      const res = await app.request(
+        `/api/tasks?descendantOf=${root.id}&status=todo&includeAncestors=true&limit=1`,
+      )
+
+      expect(res.status).toBe(200)
+      const body =
+        await jsonBody<
+          Array<TaskListItemResponse & { ancestorOnly?: boolean }>
+        >(res)
+
+      // limit constrains only the predicate-matching set (grandchild1, the
+      // earlier-created of the two todo grandchildren); its full ancestor
+      // chain (child, root) is added on top, flagged ancestorOnly, and not
+      // counted against the limit. grandchild2 never appears.
+      expect(
+        body.map((t) => [t.id, t.ancestorOnly ?? false]).toSorted(),
+      ).toEqual(
+        [
+          [grandchild1.id, false],
+          [child.id, true],
+          [root.id, true],
+        ].toSorted(),
+      )
+    })
+
+    it('always computes childCompletionCount over all children regardless of the active filter', async () => {
+      const parent = await createTask('Parent')
+      await createTask('Child 1', { parentId: parent.id })
+      const child2 = await createTask('Child 2', { parentId: parent.id })
+      await setStatus(child2.id, 'completed')
+
+      const res = await app.request('/api/tasks?status=todo')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      const parentBody = body.find((t) => t.id === parent.id)
+      assertDefined(parentBody)
+      expect(parentBody.childCompletionCount).toEqual({
+        completed: 1,
+        total: 2,
+      })
+    })
+
+    it('sorts by due date ascending when sortBy=due', async () => {
+      const taskA = await createTask('Task A', { dueDate: '2026-03-25' })
+      const taskB = await createTask('Task B', { dueDate: '2026-03-20' })
+      const taskC = await createTask('Task C', { dueDate: '2026-03-22' })
+
+      const res = await app.request('/api/tasks?sortBy=due')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id)).toEqual([taskB.id, taskC.id, taskA.id])
+    })
+
+    it('sorts by estimate ascending when sortBy=estimate', async () => {
+      const taskA = await createTask('Task A', { estimatedMinutes: 90 })
+      const taskB = await createTask('Task B', { estimatedMinutes: 15 })
+      const taskC = await createTask('Task C', { estimatedMinutes: 45 })
+
+      const res = await app.request('/api/tasks?sortBy=estimate')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id)).toEqual([taskB.id, taskC.id, taskA.id])
     })
   })
 

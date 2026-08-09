@@ -32,6 +32,7 @@ const makeBacklogTasks = (count: number): Task[] =>
     githubLink: null,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
+    childCompletionCount: { completed: 0, total: 0 },
   }))
 
 function Providers({ children }: { children: ReactNode }) {

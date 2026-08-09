@@ -25,16 +25,38 @@ function parseValue(inner: z.ZodType, raw: string): unknown {
   return result.data
 }
 
+function isSupportedLeaf(
+  field: z.core.$ZodType,
+): field is z.ZodEnum | z.ZodString | z.ZodStringFormat | z.ZodNumber {
+  return (
+    field instanceof z.ZodEnum ||
+    field instanceof z.ZodString ||
+    field instanceof z.ZodStringFormat ||
+    field instanceof z.ZodNumber
+  )
+}
+
 /**
- * Unwraps `z.optional()` and `z.optional(z.nullable())` into a single flag
- * type. There is no way to send an explicit `null` through a flag, so a
- * nullable field (e.g. a project's `description`/`startDate`/`targetDate`/
- * `color`) cannot be cleared via the CLI yet — a known, accepted gap.
+ * Unwraps `z.optional()`, `z.optional(z.nullable())`, and a trailing
+ * `.transform()` (e.g. `status`'s single-or-array-to-array normalization)
+ * into the leaf type used for flag validation and choices. For a
+ * transform's pre-transform union (e.g. `z.union([taskStatus,
+ * z.array(taskStatus)])`), the first supported member is used, since
+ * `parseValue` only needs to validate a single raw flag value — the full
+ * schema (with transform) re-validates it again in `pickSchemaFields`.
+ * There is no way to send an explicit `null` through a flag, so a nullable
+ * field (e.g. a project's `description`/`startDate`/`targetDate`/`color`)
+ * cannot be cleared via the CLI yet — a known, accepted gap.
  */
 function unwrapOptional(field: z.core.$ZodType): z.core.$ZodType | undefined {
   if (!(field instanceof z.ZodOptional)) return undefined
-  const inner = field.unwrap()
-  return inner instanceof z.ZodNullable ? inner.unwrap() : inner
+  let inner = field.unwrap()
+  if (inner instanceof z.ZodNullable) inner = inner.unwrap()
+  if (inner instanceof z.ZodPipe) inner = inner.in
+  if (inner instanceof z.ZodUnion) {
+    inner = inner.options.find(isSupportedLeaf) ?? inner
+  }
+  return inner
 }
 
 /**
@@ -52,12 +74,7 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
     const inner = unwrapOptional(field)
     if (inner === undefined) continue
 
-    if (
-      !(inner instanceof z.ZodEnum) &&
-      !(inner instanceof z.ZodString) &&
-      !(inner instanceof z.ZodStringFormat) &&
-      !(inner instanceof z.ZodNumber)
-    ) {
+    if (!isSupportedLeaf(inner)) {
       throw new Error(
         `addSchemaOptions: unsupported schema type for field "${key}"`,
       )

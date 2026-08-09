@@ -57,6 +57,12 @@ export function registerTaskCommands(
       .description('List tasks')
       .option('--full', 'Include full task description in the output'),
     listTasksQuerySchema,
+    // hasEstimate/hasDue/includeAncestors unwrap to a raw ZodString (their
+    // pre-transform type), so addSchemaOptions would expose them but without
+    // true/false validation (any string round-trips through the
+    // 'v === "true"' transform silently, e.g. a typo'd value becomes false).
+    // Excluded until that gets its own stricter boolean flag type.
+    ['hasEstimate', 'hasDue', 'includeAncestors'],
   ).action(
     async (
       options: Record<string, unknown> & { full?: boolean },
@@ -64,7 +70,11 @@ export function registerTaskCommands(
     ) => {
       const client = buildClient(command, fetchImpl)
       const query: ListTasksQuery = toQuery(
-        pickSchemaFields(listTasksQuerySchema, options),
+        pickSchemaFields(listTasksQuerySchema, options, [
+          'hasEstimate',
+          'hasDue',
+          'includeAncestors',
+        ]),
       )
       const res = await client.api.tasks.$get({ query })
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
@@ -238,7 +248,11 @@ export function registerTaskCommands(
       .description('Search tasks')
       .option('--full', 'Include full task description in the output'),
     searchQuerySchema,
-    // hasEstimate/hasDue are transform-based fields (a ZodPipe once unwrapped), which addSchemaOptions doesn't support, so they aren't exposed as flags.
+    // hasEstimate/hasDue unwrap to a raw ZodString (their pre-transform
+    // type), so addSchemaOptions would expose them but without true/false
+    // validation (any string round-trips through the 'v === "true"'
+    // transform silently). Excluded until that gets its own stricter
+    // boolean flag type.
     ['q', 'hasEstimate', 'hasDue'],
   ).action(
     async (

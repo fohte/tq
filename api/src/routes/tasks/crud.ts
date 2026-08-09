@@ -19,11 +19,11 @@ import {
   recordEdit,
 } from '#lib/edits'
 import { pageToResponse } from '#routes/task-pages'
+import { queryTaskList } from '#routes/tasks/list-query'
 import {
+  getChildCompletionCountsByTaskId,
   getLabelNamesByTaskId,
-  parentTasks,
   requireTask,
-  resolveTaskListOrderBy,
   taskListItemToResponse,
   taskToResponse,
   timeBlockToResponse,
@@ -116,46 +116,28 @@ export const tasksCrudApp = new Hono()
   })
   .get('/', zValidator('query', listTasksQuerySchema), async (c) => {
     const query = c.req.valid('query')
-    const conditions = []
+    const { rows, ancestorOnlyIds } = await queryTaskList(query)
 
-    if (query.status != null) {
-      conditions.push(eq(tasks.status, query.status))
-    }
-    if (query.projectId != null) {
-      conditions.push(eq(tasks.projectId, query.projectId))
-    }
-    if (query.parentId != null) {
-      conditions.push(eq(tasks.parentId, query.parentId))
-    }
-    if (query.context != null) {
-      conditions.push(eq(tasks.context, query.context))
-    }
-
-    const result = await db
-      .select({
-        task: tasks,
-        parentNumber: parentTasks.number,
-        githubLink: taskGithubLinks,
-      })
-      .from(tasks)
-      .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
-      .leftJoin(taskGithubLinks, eq(tasks.id, taskGithubLinks.taskId))
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(...resolveTaskListOrderBy(query.sortBy))
-
-    const labelsByTaskId = await getLabelNamesByTaskId(
-      result.map((r) => r.task.id),
-    )
+    const ids = rows.map((r) => r.task.id)
+    const [labelsByTaskId, childCompletionCountsByTaskId] = await Promise.all([
+      getLabelNamesByTaskId(ids),
+      getChildCompletionCountsByTaskId(ids),
+    ])
 
     return c.json(
-      result.map((r) =>
-        taskListItemToResponse(
+      rows.map((r) => ({
+        ...taskListItemToResponse(
           r.task,
           r.parentNumber,
           r.githubLink,
           labelsByTaskId.get(r.task.id) ?? [],
         ),
-      ),
+        childCompletionCount: childCompletionCountsByTaskId.get(r.task.id) ?? {
+          completed: 0,
+          total: 0,
+        },
+        ...(ancestorOnlyIds.has(r.task.id) ? { ancestorOnly: true } : {}),
+      })),
       200,
     )
   })

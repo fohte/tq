@@ -94,6 +94,7 @@ const sampleSubtasks: Task[] = [
     githubLink: null,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
+    childCompletionCount: { completed: 0, total: 0 },
   },
   {
     id: 'aaaa1111-0000-0000-0000-000000000002',
@@ -114,6 +115,7 @@ const sampleSubtasks: Task[] = [
     githubLink: null,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
+    childCompletionCount: { completed: 0, total: 0 },
   },
 ]
 
