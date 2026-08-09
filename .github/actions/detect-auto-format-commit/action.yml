@@ -1,0 +1,27 @@
+name: Detect auto-format commit
+description: >-
+  Detect whether HEAD is fohte-bot's `style: auto-format` commit. The caller
+  must check out the repo first — a composite action can't check out the
+  repo it's itself loaded from.
+
+outputs:
+  is_auto_format:
+    description: "'true' if HEAD is a bot-authored 'style: auto-format' commit"
+    value: ${{ steps.detect.outputs.is_auto_format }}
+
+runs:
+  using: composite
+  steps:
+    - id: detect
+      shell: bash
+      run: |
+        commit_message=$(git log -1 --format=%s)
+        commit_author=$(git log -1 --format=%an)
+        echo "Current commit message: $commit_message"
+        echo "Current commit author: $commit_author"
+
+        if [ "$commit_message" = "style: auto-format" ] && [[ "$commit_author" == *"[bot]"* ]]; then
+          echo "is_auto_format=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "is_auto_format=false" >> "$GITHUB_OUTPUT"
+        fi
