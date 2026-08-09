@@ -196,6 +196,20 @@ jobs:
           VRT_PUBLISH_PATTERN: ${{ steps.vrt-compare.outputs.has_diff == 'true' && '{*.{html,js,wasm,json},{actual,diff}/**/*.{png,jpeg,jpg,tiff,bmp,gif}}' || 'no-such-dir/**' }}
         run: pnpm exec reg-suit publish -n
 
+      # branch/<ref_name> is overwritten by every push to that branch (see
+      # Set VRT snapshot keys above), so a consumer reading it later has no
+      # way to tell which commit it reflects. This marker lets
+      # vrt-comment-on-pr-open.yml confirm the branch key still matches the
+      # PR's head commit before trusting it.
+      - name: Publish VRT commit marker
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          echo -n "${{ github.sha }}" | aws s3 cp - "s3://tq-vrt/${{ steps.vrt-keys.outputs.actual_key }}/sha" \
+            --endpoint-url https://8d88a085ccc7b11f252419e2f3a25fd6.r2.cloudflarestorage.com
+
       # Runs regardless of whether an open PR exists yet: pushing straight to
       # main (no PR) or to a branch without an open PR both no-op inside the
       # action instead of failing here.

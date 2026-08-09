@@ -19,18 +19,31 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Anything other than 200 (missing, still publishing, or a transient
-      # R2/network error) is treated the same way: the push-side CI for this
-      # head commit will comment itself once it completes, so this must not
-      # wait for it and just exits here instead of retrying.
+      # vrt.yml publishes to branch/<ref_name> (overwritten by every push to
+      # that branch), not a per-commit key, so the "sha" marker it writes
+      # alongside must be checked first to confirm the branch key still
+      # reflects this PR's head commit and not an older, since-superseded
+      # push. Anything short of an exact match (missing, still publishing, a
+      # transient R2/network error, or a stale sha) is treated the same way:
+      # the push-side CI for this head commit will comment itself once it
+      # completes, so this must not wait for it and just exits here instead
+      # of retrying.
       - name: Fetch VRT result for this PR's head commit
         id: fetch
         env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
           SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          status=$(curl -sS -o out.json -w '%{http_code}' "https://tq-vrt.fohte.net/pr/${SHA}/out.json") || status=000
+          sha_status=$(curl -sS -o sha.txt -w '%{http_code}' "https://tq-vrt.fohte.net/branch/${BRANCH}/sha") || sha_status=000
+          if [ "$sha_status" != "200" ] || [ "$(cat sha.txt)" != "$SHA" ]; then
+            echo "No VRT result published for $SHA yet."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          status=$(curl -sS -o out.json -w '%{http_code}' "https://tq-vrt.fohte.net/branch/${BRANCH}/out.json") || status=000
           if [ "$status" != "200" ]; then
-            echo "No VRT result yet for $SHA (HTTP $status)."
+            echo "No VRT report published for $SHA (likely no visual diff)."
             echo "found=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -44,5 +57,5 @@ jobs:
           branch: ${{ github.event.pull_request.head.ref }}
           sha: ${{ github.event.pull_request.head.sha }}
           out-json-path: out.json
-          report-url: https://tq-vrt.fohte.net/pr/${{ github.event.pull_request.head.sha }}/index.html
+          report-url: https://tq-vrt.fohte.net/branch/${{ github.event.pull_request.head.ref }}/index.html
           github-token: ${{ secrets.GITHUB_TOKEN }}
