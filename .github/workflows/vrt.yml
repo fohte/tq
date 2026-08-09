@@ -83,6 +83,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      statuses: write
     # Overlapping runs for the same ref would otherwise let two VRT runs
     # publish snapshots to the same S3 key at once — most importantly two
     # main pushes racing to fill the same (non-live) baseline slot, which
@@ -219,6 +220,26 @@ jobs:
           out-json-path: web/.reg/out.json
           report-url: https://tq-vrt.fohte.net/${{ steps.vrt-keys.outputs.actual_key }}/index.html
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # A separate, non-required status (as opposed to the required `unit-test`
+      # gate) so a diff never blocks a merge by itself. vrt-approval.yml
+      # overrides this to success when the `vrt-approved` label is applied,
+      # and clears that label (never this status directly) on the next push
+      # — the new commit's own status here starts fresh anyway.
+      - name: Set VRT commit status
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          STATE: ${{ steps.vrt-compare.outputs.has_diff == 'true' && 'failure' || 'success' }}
+          DESCRIPTION: ${{ steps.vrt-compare.outputs.has_diff == 'true' && 'Visual differences detected' || 'No visual differences' }}
+          TARGET_URL: https://tq-vrt.fohte.net/${{ steps.vrt-keys.outputs.actual_key }}/index.html
+        run: |
+          gh api "repos/$REPO/statuses/$SHA" \
+            -f state="$STATE" \
+            -f context=vrt \
+            -f description="$DESCRIPTION" \
+            -f target_url="$TARGET_URL"
 
       # branch/<ref_name> is overwritten by every push to that branch (see
       # Set VRT snapshot keys above), so a consumer reading it later has no

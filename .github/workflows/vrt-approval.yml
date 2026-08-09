@@ -1,0 +1,49 @@
+name: VRT approval
+
+# vrt.yml sets the `vrt` commit status per push based on reg-suit's diff
+# result. This workflow lets a human override that to success for an
+# intentional diff via the `vrt-approved` label, and keeps the label from
+# silently surviving a diff nobody has actually reviewed.
+
+on:
+  pull_request:
+    types: [synchronize, labeled]
+
+permissions:
+  pull-requests: write
+  statuses: write
+
+jobs:
+  handle-vrt-approval:
+    runs-on: ubuntu-slim
+    steps:
+      # A new push gets its own head SHA, whose `vrt` status starts fresh
+      # (see vrt.yml) regardless of this label — but the label itself must
+      # still be removed, or it keeps reading as "the current diff is
+      # approved" when nobody has looked at it yet.
+      - name: Remove stale vrt-approved label
+        if: >-
+          github.event.action == 'synchronize' &&
+          contains(github.event.pull_request.labels.*.name, 'vrt-approved')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --remove-label vrt-approved
+
+      - name: Set VRT status to success
+        if: >-
+          github.event.action == 'labeled' &&
+          github.event.label.name == 'vrt-approved'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          TARGET_URL: https://tq-vrt.fohte.net/branch/${{ github.event.pull_request.head.ref }}/index.html
+        run: |
+          gh api "repos/$REPO/statuses/$SHA" \
+            -f state=success \
+            -f context=vrt \
+            -f description="Approved via vrt-approved label" \
+            -f target_url="$TARGET_URL"

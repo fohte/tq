@@ -213,6 +213,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      statuses: write
     uses: ./.github/workflows/vrt.yml
     secrets:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
