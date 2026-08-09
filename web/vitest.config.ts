@@ -52,11 +52,13 @@ const NETWORK_IDLE_MS = 100
 
 // Screenshot capture is I/O-bound (network-idle wait, font loading, CDP metric
 // polling), not CPU-bound, so workers can oversubscribe past the runner's vCPU
-// count (4 on the `ubuntu-latest` CI runner). Vitest's browser pool reads
-// `test.maxWorkers` per-project (it doesn't fall back to the root config like
-// the default thread pool does), so this is set on each storybook project
-// below rather than at the top level.
-const STORYBOOK_MAX_WORKERS = 8
+// count (4 on the `ubuntu-latest` CI runner) — 8 is a measured sweet spot
+// there, not a portable ratio, so it's scoped to CI and local runs keep
+// Vitest's own CPU-based default. Vitest's browser pool reads `test.maxWorkers`
+// per-project (it doesn't fall back to the root config like the default thread
+// pool does), so this is set on each storybook project below rather than at
+// the top level.
+const STORYBOOK_MAX_WORKERS = process.env['CI'] != null ? 8 : undefined
 
 // The module arrives here either as the shipped `dist/index.mjs` or as an
 // esbuild pre-bundle, which reformats the minified source but keeps the literal.
@@ -113,7 +115,9 @@ function createStorybookProject({
     resolve: { alias },
     test: {
       name,
-      maxWorkers: STORYBOOK_MAX_WORKERS,
+      ...(STORYBOOK_MAX_WORKERS !== undefined && {
+        maxWorkers: STORYBOOK_MAX_WORKERS,
+      }),
       browser: {
         enabled: true,
         // Pin the browser's timezone so time-dependent stories (calendar
