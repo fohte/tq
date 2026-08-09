@@ -39,6 +39,23 @@ caretStyle.textContent =
   'input, textarea, [contenteditable] { caret-color: transparent !important; }'
 document.head.appendChild(caretStyle)
 
+// CSS animations/transitions (popup open/close fades, zooms, spinners, ...)
+// capture at whatever frame happens to be on screen when the screenshot
+// fires, so the same story rasterizes differently between runs even though
+// nothing about it actually changed. Forcing zero duration collapses every
+// animation/transition to its end state instantly, keeping captures
+// deterministic without touching application code.
+const animationStyle = document.createElement('style')
+animationStyle.textContent = `
+  *, *::before, *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+`
+document.head.appendChild(animationStyle)
+
 // @storycap-testrun/browser ships a bundled .d.ts with its own copy of
 // vitest's `TestContext`, so it's structurally close but nominally unrelated
 // to ours — cast through `unknown` to sidestep the resulting type error.
