@@ -93,6 +93,19 @@ function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
+function DialogHeaderBar({ className, ...props }: React.ComponentProps<'div'>) {
+  return (
+    <div
+      data-slot="dialog-header-bar"
+      className={cn(
+        'flex h-14 shrink-0 items-center justify-between border-b border-border px-6',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
 function DialogFooter({
   className,
   showCloseButton = false,
@@ -153,6 +166,7 @@ export {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogHeaderBar,
   DialogOverlay,
   DialogPopup,
   DialogPortal,
