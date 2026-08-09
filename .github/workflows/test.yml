@@ -119,12 +119,32 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 2
+          # 3 instead of 2: an auto-format commit needs its grandparent
+          # (HEAD~2) available below to diff against.
+          fetch-depth: 3
+
+      - name: Detect auto-format commit
+        id: detect-auto-format
+        run: |
+          commit_message=$(git log -1 --format=%s)
+          commit_author=$(git log -1 --format=%an)
+
+          # An auto-format commit's own diff is just the formatter's output
+          # (e.g. regenerated docs/db), not the human change that triggered
+          # it. Diffing against its grandparent instead unions both, so
+          # package detection below (and thus vrt/unit-test-run) doesn't miss
+          # a change that already ran once in the triggering push.
+          if [ "$commit_message" = "style: auto-format" ] && [[ "$commit_author" == *"[bot]"* ]]; then
+            echo "base_sha=$(git rev-parse HEAD~2)" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Detect changed files
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         id: changed
         with:
+          base_sha: ${{ steps.detect-auto-format.outputs.base_sha }}
           json: true
           # Emit valid JSON; the default escapes quotes and breaks jq parsing.
           escape_json: false
