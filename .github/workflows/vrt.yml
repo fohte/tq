@@ -199,13 +199,13 @@ jobs:
           VRT_EXPECTED_KEY: ${{ steps.vrt-keys.outputs.expected_key }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          # A no-diff run still publishes out.json (`*.json` always matches
-          # it) so vrt-comment-on-pr-open.yml has a fresh result to read;
-          # the larger html/js/wasm report and image assets are skipped
-          # since there's nothing to show.
-          # `-n` still runs the notifier, which posts the "no visual
-          # difference" PR comment either way.
-          VRT_PUBLISH_PATTERN: ${{ steps.vrt-compare.outputs.has_diff == 'true' && '{*.{html,js,wasm,json},{actual,diff}/**/*.{png,jpeg,jpg,tiff,bmp,gif}}' || '*.json' }}
+          # A no-diff run still publishes the report shell (html/js/wasm) and
+          # out.json — both vrt-comment-on-pr-open.yml and the report links
+          # in the PR comment/commit status need the report URL to actually
+          # resolve. Only the actual/diff screenshot sets are skipped: they
+          # scale with story count and are identical to the baseline when
+          # there's no diff, so there's nothing worth re-uploading.
+          VRT_PUBLISH_PATTERN: ${{ steps.vrt-compare.outputs.has_diff == 'true' && '{*.{html,js,wasm,json},{actual,diff}/**/*.{png,jpeg,jpg,tiff,bmp,gif}}' || '*.{html,js,wasm,json}' }}
         run: pnpm exec reg-suit publish -n
 
       # Runs regardless of whether an open PR exists yet: pushing straight to
