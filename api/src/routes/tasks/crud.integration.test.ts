@@ -5,7 +5,9 @@ import { app } from '#app'
 import { db } from '#db/connection'
 import { tasks } from '#db/schema'
 import {
+  createComment,
   createLabel,
+  createPage,
   createRecurringTask,
   createTask,
   TaskListItemResponse,
@@ -33,6 +35,24 @@ function setStatus(taskId: string, status: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status }),
   })
+}
+
+function setProjectId(taskId: string, projectId: string) {
+  return app.request(`/api/tasks/${taskId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ projectId }),
+  })
+}
+
+async function createProject(title: string) {
+  const res = await app.request('/api/projects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  })
+  expect(res.status).toBe(201)
+  return jsonBody<{ id: string }>(res)
 }
 
 function normalizeTimeBlock(block: TimeBlockResponse) {
@@ -454,6 +474,99 @@ describe('tasks CRUD API', () => {
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].id).toBe(withoutDue.id)
+    })
+
+    it('filters by context: prefix in q parameter', async () => {
+      await createTask('Work task', { context: 'work' })
+      await createTask('Personal task')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('context:work'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Work task')
+    })
+
+    it('filters by has:pages prefix in q parameter', async () => {
+      const task = await createTask('Has pages')
+      await createTask('No pages')
+      await createPage(task.id, 'Page', 'content')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('has:pages'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Has pages')
+    })
+
+    it('filters by has:comments prefix in q parameter', async () => {
+      const task = await createTask('Has comments')
+      await createTask('No comments')
+      await createComment(task.id, 'A comment')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('has:comments'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Has comments')
+    })
+
+    it('filters by parent: prefix in q parameter', async () => {
+      const parent = await createTask('Parent')
+      await createTask('Child', { parentId: parent.id })
+      await createTask('Orphan')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent(`parent:${parent.id}`),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Child')
+    })
+
+    it('returns tasks belonging to the project', async () => {
+      const project = await createProject('My project')
+      const task = await createTask('Task in project')
+      await setProjectId(task.id, project.id)
+      await createTask('Task without project')
+
+      const res = await app.request(`/api/tasks?projectId=${project.id}`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].id).toBe(task.id)
+    })
+
+    it('includes each task labels in the response', async () => {
+      await createLabel('urgent')
+      const project = await createProject('My project')
+      const task = await createTask('Labeled task', { labels: ['urgent'] })
+      await setProjectId(task.id, project.id)
+
+      const res = await app.request(`/api/tasks?projectId=${project.id}`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].labels).toEqual(['urgent'])
     })
 
     it('filters descendants of a task via descendantOf, excluding the root itself', async () => {

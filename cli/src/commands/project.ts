@@ -120,9 +120,16 @@ export function registerProjectCommands(
     .action(
       async (id: string, options: { full?: boolean }, command: Command) => {
         const client = buildClient(command, fetchImpl)
-        const res = await client.api.projects[':id'].tasks.$get({
+        // GET /api/tasks?projectId= filters by equality without checking the
+        // project exists, so a bogus id would otherwise silently print `[]`
+        // instead of surfacing the same 404 the old dedicated endpoint gave.
+        const projectRes = await client.api.projects[':id'].$get({
           param: { id },
         })
+        if (!projectRes.ok) throw await toApiError(projectRes)
+
+        const res = await client.api.tasks.$get({ query: { projectId: id } })
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
         if (!res.ok) throw await toApiError(res)
         printJsonList(await res.json(), 'description', { full: options.full })
       },

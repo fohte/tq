@@ -1,7 +1,6 @@
 import { count, desc, eq, inArray, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { createFactory } from 'hono/factory'
-import { err, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
@@ -151,8 +150,7 @@ export async function getChildCompletionCountsByTaskId(
 // `taskListItemToResponse`.
 export const parentTasks = alias(tasks, 'parent_task')
 
-// Shared response shape for every list-returning endpoint (`/api/tasks`,
-// `/api/tasks/tree`, `/api/tasks/search`, `/api/projects/:id/tasks`). Omits
+// Shared response shape for the list-returning endpoint (`/api/tasks`). Omits
 // `recurrenceRule`: no list consumer reads it, and hydrating it would cost an
 // extra query per endpoint for a field nothing uses.
 export function taskListItemToResponse(
@@ -181,74 +179,35 @@ export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
 
 export type TaskListItemResponse = ReturnType<typeof taskListItemToResponse>
 
-export type TreeNode = TaskListItemResponse & {
-  children: TreeNode[]
-  childCompletionCount: { completed: number; total: number }
-}
+export type TaskListItemWithChildren<
+  T extends { id: string; parentId: string | null },
+> = T & { children: TaskListItemWithChildren<T>[] }
 
-export class TaskTreeConsistencyError extends Error {
-  constructor(taskId: string) {
-    super(`Node not found for task ${taskId}`)
-    this.name = 'TaskTreeConsistencyError'
-  }
-}
-
-export function buildTree(
-  allTasks: Array<typeof tasks.$inferSelect>,
-  rootId?: string,
-  linksByTaskId?: Map<string, typeof taskGithubLinks.$inferSelect>,
-  labelsByTaskId?: Map<string, string[]>,
-): Result<TreeNode[], TaskTreeConsistencyError> {
-  const nodeMap = new Map<string, TreeNode>()
-  // `allTasks` may be a subtree fetch (only descendants of a rootId), so a
-  // root node's own parent can be absent — its parentNumber then falls back
-  // to null, same as a task with no parent at all.
-  const numberById = new Map(allTasks.map((task) => [task.id, task.number]))
-
-  for (const task of allTasks) {
-    const parentNumber =
-      task.parentId != null ? (numberById.get(task.parentId) ?? null) : null
-
-    nodeMap.set(task.id, {
-      ...taskListItemToResponse(
-        task,
-        parentNumber,
-        linksByTaskId?.get(task.id),
-        labelsByTaskId?.get(task.id) ?? [],
-      ),
-      children: [],
-      childCompletionCount: { completed: 0, total: 0 },
-    })
+// Nests a flat list-item response array into a tree by parentId. A row
+// whose parent isn't present in the input (e.g. filtered out, or excluded by
+// a `descendantOf` query) surfaces as a root instead of being dropped.
+export function nestTaskListRows<
+  T extends { id: string; parentId: string | null },
+>(rows: T[]): Array<TaskListItemWithChildren<T>> {
+  const nodeMap = new Map<string, TaskListItemWithChildren<T>>()
+  for (const row of rows) {
+    nodeMap.set(row.id, { ...row, children: [] })
   }
 
-  const roots: TreeNode[] = []
+  const roots: Array<TaskListItemWithChildren<T>> = []
+  for (const row of rows) {
+    const node = nodeMap.get(row.id)
+    if (node == null) continue
 
-  for (const task of allTasks) {
-    const node = nodeMap.get(task.id)
-    if (!node) {
-      // Every task.id was set as a key in the loop above, so this can only
-      // happen if allTasks mutated between the two loops.
-      return err(new TaskTreeConsistencyError(task.id))
-    }
-    const parentNode = task.parentId != null ? nodeMap.get(task.parentId) : null
-
-    if (parentNode) {
-      parentNode.children.push(node)
-      parentNode.childCompletionCount.total++
-      if (task.status === 'completed') {
-        parentNode.childCompletionCount.completed++
-      }
-    } else if (rootId == null || task.id === rootId) {
+    const parent = row.parentId != null ? nodeMap.get(row.parentId) : undefined
+    if (parent != null) {
+      parent.children.push(node)
+    } else {
       roots.push(node)
     }
   }
 
-  if (rootId != null) {
-    const rootNode = nodeMap.get(rootId)
-    return ok(rootNode != null ? [rootNode] : [])
-  }
-
-  return ok(roots)
+  return roots
 }
 
 export type TaskEnv = {

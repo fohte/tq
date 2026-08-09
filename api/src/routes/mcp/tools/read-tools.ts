@@ -5,7 +5,11 @@ import { z } from 'zod'
 
 import { callInternalRoute } from '#routes/mcp/route-bridge'
 import { pageToResponse } from '#routes/task-pages'
-import { taskIdOrNumber } from '#routes/tasks/shared'
+import {
+  nestTaskListRows,
+  taskIdOrNumber,
+  type TaskListItemResponse,
+} from '#routes/tasks/shared'
 import { projectStatus } from '#schemas/project'
 import { contextEnum, taskStatus } from '#schemas/task'
 
@@ -38,6 +42,10 @@ async function callAsResult(path: string): Promise<CallToolResult> {
 type PageDetail = ReturnType<typeof pageToResponse>
 
 type TaskDetail = Record<string, unknown> & { pages: PageDetail[] }
+
+type TaskListRow = TaskListItemResponse & {
+  childCompletionCount: { completed: number; total: number }
+}
 
 // `get_task` drops page `content` to keep the response small — pages are
 // meant for notes that can grow arbitrarily long, so returning it here would
@@ -93,7 +101,7 @@ export function registerReadTools(server: McpServer): void {
     'get_task',
     {
       description:
-        "Get the full detail of a single task by id: its attributes, recurrence rule, time blocks, page metadata, linked tasks (mentions via `#<number>`, as `links.outgoing`/`links.incoming`), labels, and the nested subtree of its subtasks (as `subtasks`). Each entry in `pages` is metadata only (id, taskId, title, sortOrder, timestamps, author) with no `content` — pass its `id` and this task's `id` to get_page to read a page's content. Entries in `subtasks` do not include labels; use search_tasks with a label: filter to find tasks by label.",
+        "Get the full detail of a single task by id: its attributes, recurrence rule, time blocks, page metadata, linked tasks (mentions via `#<number>`, as `links.outgoing`/`links.incoming`), labels, and the nested subtree of its subtasks (as `subtasks`, each entry including its own labels). Each entry in `pages` is metadata only (id, taskId, title, sortOrder, timestamps, author) with no `content` — pass its `id` and this task's `id` to get_page to read a page's content.",
       inputSchema: {
         taskId: taskIdOrNumber.describe(
           'The task id (UUID) or task number to look up.',
@@ -104,18 +112,20 @@ export function registerReadTools(server: McpServer): void {
     async ({ taskId }) => {
       const app = await resolveApp()
 
-      // `/api/tasks/tree` already implements subtree traversal via a
-      // recursive CTE, so this composes it with the detail endpoint instead
-      // of walking `parentId` links here.
-      const [taskResult, treeResult] = await Promise.all([
+      // `descendantOf` already implements subtree traversal via a recursive
+      // CTE, returning a flat array of all descendants; nestTaskListRows
+      // turns that into the subtree, with the target task's direct children
+      // naturally ending up as roots since the task itself is never in the
+      // result set.
+      const [taskResult, descendantsResult] = await Promise.all([
         callInternalRoute<TaskDetail>(app, `/api/tasks/${String(taskId)}`),
-        callInternalRoute<Array<{ children: unknown }>>(
+        callInternalRoute<TaskListRow[]>(
           app,
-          `/api/tasks/tree${buildQuery({ rootId: String(taskId) })}`,
+          `/api/tasks${buildQuery({ descendantOf: String(taskId) })}`,
         ),
       ])
       if (!taskResult.ok) return taskResult.result
-      if (!treeResult.ok) return treeResult.result
+      if (!descendantsResult.ok) return descendantsResult.result
 
       return {
         content: [
@@ -124,7 +134,7 @@ export function registerReadTools(server: McpServer): void {
             text: JSON.stringify({
               ...taskResult.data,
               pages: taskResult.data.pages.map(toPageMetadata),
-              subtasks: treeResult.data[0]?.children ?? [],
+              subtasks: nestTaskListRows(descendantsResult.data),
             }),
           },
         ],
@@ -223,7 +233,7 @@ export function registerReadTools(server: McpServer): void {
       offset,
     }) =>
       callAsResult(
-        `/api/tasks/search${buildQuery({
+        `/api/tasks${buildQuery({
           q,
           status,
           label,
@@ -231,7 +241,7 @@ export function registerReadTools(server: McpServer): void {
           hasEstimate: hasEstimate?.toString(),
           hasDue: hasDue?.toString(),
           sortBy,
-          limit: limit?.toString(),
+          limit: (limit ?? 20).toString(),
           offset: offset?.toString(),
         })}`,
       ),

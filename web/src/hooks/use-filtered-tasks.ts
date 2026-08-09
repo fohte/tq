@@ -7,7 +7,7 @@ import { useTaskList } from '#hooks/use-tasks'
 import { filterModeToApiContext } from '#lib/context-filter'
 import { buildTree } from '#lib/tree-builder'
 
-function useBaseFilter(showCompleted: boolean): TaskListFilter {
+export function useBaseFilter(showCompleted: boolean): TaskListFilter {
   const { mode } = useContextFilter()
   const { tag } = useTagFilter()
   const apiContext = filterModeToApiContext(mode)

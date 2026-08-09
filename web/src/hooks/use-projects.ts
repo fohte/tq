@@ -11,10 +11,7 @@ type ProjectDetail = InferResponseType<
   200
 >
 
-type ProjectTask = InferResponseType<
-  (typeof api.api.projects)[':id']['tasks']['$get'],
-  200
->[number]
+type ProjectTask = InferResponseType<typeof api.api.tasks.$get, 200>[number]
 
 export type { Project, ProjectDetail, ProjectTask }
 
@@ -70,10 +67,8 @@ export function useProjectTasks(id: string) {
   return useQuery({
     queryKey: projectKeys.tasks(id),
     queryFn: async () => {
-      const res = await api.api.projects[':id'].tasks.$get({
-        param: { id },
-      })
-      if (!res.ok) throw new Error('Failed to fetch project tasks')
+      const res = await api.api.tasks.$get({ query: { projectId: id } })
+      assertOk(res)
       return res.json()
     },
   })

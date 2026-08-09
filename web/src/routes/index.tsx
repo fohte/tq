@@ -5,6 +5,7 @@ import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
 import { useContextFilter } from '#hooks/use-context-filter'
+import { useBaseFilter } from '#hooks/use-filtered-tasks'
 import {
   GcalAuthRequiredError,
   useAutoRescheduleOnGcalChange,
@@ -36,7 +37,8 @@ export const Route = createFileRoute('/')({
 })
 
 function DayView() {
-  const { isLoading, categorized } = useTaskList()
+  const baseFilter = useBaseFilter(true)
+  const { isLoading, categorized } = useTaskList(baseFilter)
 
   const { selectedDate, setSelectedDate } = useSelectedDate()
   const selectedDateStr = useMemo(

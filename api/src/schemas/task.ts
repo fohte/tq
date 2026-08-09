@@ -5,9 +5,6 @@ import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 export const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
 export const contextEnum = z.enum(['work', 'personal'])
 
-export const taskListSortBy = z.enum(['created', 'updated'])
-export type TaskListSortBy = z.infer<typeof taskListSortBy>
-
 export const taskSortBy = z.enum(['created', 'updated', 'due', 'estimate'])
 export type TaskSortBy = z.infer<typeof taskSortBy>
 
@@ -60,20 +57,3 @@ export const listTasksQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 })
 export type ListTasksQuery = z.infer<typeof listTasksQuerySchema>
-
-export const treeQuerySchema = z.object({
-  rootId: z.uuid().optional(),
-  sortBy: taskListSortBy.optional(),
-})
-
-export const searchQuerySchema = z.object({
-  q: z.string().optional(),
-  status: taskStatus.optional(),
-  label: z.string().optional(),
-  context: contextEnum.optional(),
-  hasEstimate: hasFlagSchema,
-  hasDue: hasFlagSchema,
-  sortBy: taskSortBy.optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
-  offset: z.coerce.number().int().min(0).optional(),
-})

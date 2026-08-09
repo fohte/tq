@@ -37,6 +37,19 @@ export function captureFetch(respond: () => Response): {
   return { fetchStub, calls }
 }
 
+// Normalizes a captured request into one comparable value, so a test can
+// assert the whole request shape (method/path/query/body) with a single
+// `toEqual` instead of checking each part separately.
+export function request(call: CapturedRequest | undefined) {
+  const url = new URL(call?.url ?? '')
+  return {
+    method: call?.method,
+    pathname: url.pathname,
+    query: Object.fromEntries(url.searchParams),
+    body: call?.body,
+  }
+}
+
 export function fakeStdin(isTTY: boolean): ReadableStdin {
   const readable = Readable.from([])
   return Object.assign(readable, { isTTY })

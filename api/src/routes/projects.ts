@@ -3,12 +3,7 @@ import { and, count, eq, inArray, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
-import { projects, taskGithubLinks, tasks } from '#db/schema'
-import {
-  getLabelNamesByTaskId,
-  parentTasks,
-  taskListItemToResponse,
-} from '#routes/tasks/shared'
+import { projects, tasks } from '#db/schema'
 import {
   createProjectSchema,
   listProjectsQuerySchema,
@@ -130,44 +125,6 @@ export const projectsApp = new Hono()
         ...projectToResponse(project),
         ...taskStatsToSummary(taskStats?.total ?? 0, taskStats?.completed ?? 0),
       },
-      200,
-    )
-  })
-  .get('/:id/tasks', async (c) => {
-    const id = c.req.param('id')
-
-    const project = await db.query.projects.findFirst({
-      where: eq(projects.id, id),
-    })
-    if (!project) {
-      return c.json({ error: 'Project not found' }, 404)
-    }
-
-    const result = await db
-      .select({
-        task: tasks,
-        parentNumber: parentTasks.number,
-        githubLink: taskGithubLinks,
-      })
-      .from(tasks)
-      .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
-      .leftJoin(taskGithubLinks, eq(tasks.id, taskGithubLinks.taskId))
-      .where(eq(tasks.projectId, id))
-      .orderBy(tasks.createdAt)
-
-    const labelsByTaskId = await getLabelNamesByTaskId(
-      result.map((r) => r.task.id),
-    )
-
-    return c.json(
-      result.map((r) =>
-        taskListItemToResponse(
-          r.task,
-          r.parentNumber,
-          r.githubLink,
-          labelsByTaskId.get(r.task.id) ?? [],
-        ),
-      ),
       200,
     )
   })

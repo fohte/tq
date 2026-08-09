@@ -5,6 +5,7 @@ import {
   apiUrl,
   captureFetch,
   fakeStdin,
+  request,
   spyStdout,
 } from '#commands/test-support'
 
@@ -201,6 +202,57 @@ describe('project delete', () => {
 })
 
 describe('project tasks', () => {
+  it('checks the project exists, then requests /api/tasks filtered by projectId', async () => {
+    const tasks = [{ id: 't1', title: 'Do the thing' }]
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(tasks), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'project', 'tasks', 'p1'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'GET',
+      pathname: '/api/projects/p1',
+      query: {},
+    })
+    expect(request(calls[1])).toEqual({
+      method: 'GET',
+      pathname: '/api/tasks',
+      query: { projectId: 'p1' },
+    })
+    expect(write.mock.calls).toEqual([[`${JSON.stringify(tasks, null, 2)}\n`]])
+  })
+
+  it('reports the API error and skips the tasks request when the project does not exist', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () =>
+        new Response(JSON.stringify({ error: 'Project not found' }), {
+          status: 404,
+        }),
+    )
+    const stderr = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'project', 'tasks', 'missing'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(1)
+    expect(calls).toHaveLength(1)
+    expect(stderr.mock.calls).toEqual([
+      ['Error: Project not found (HTTP 404)\n'],
+    ])
+  })
+
   it('omits task description from the printed output by default', async () => {
     const tasks = [
       { id: 't1', title: 'Do the thing', description: 'long body' },
