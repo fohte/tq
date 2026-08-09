@@ -122,7 +122,10 @@ function TaskTagChips({ labels }: { labels: string[] }) {
           as="button"
           size="sm"
           onClick={() => {
-            void navigate({ to: '/tasks', search: { tag: label } })
+            void navigate({
+              to: '/tasks',
+              search: (prev) => ({ ...prev, tag: label }),
+            })
           }}
         >
           <span className="text-primary font-bold">#</span>

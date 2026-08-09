@@ -7,19 +7,17 @@ interface TagFilterState {
 
 export function useTagFilter(): TagFilterState {
   const { tag } = useSearch({ strict: false })
-  // `from: '/'` only pins the *type* used for the search updater below (this
-  // hook is called from many routes) — navigate() with no `to` always stays
-  // on the current URL and only touches search at runtime.
-  const navigate = useNavigate({ from: '/' })
+  const navigate = useNavigate()
 
   return {
     tag: tag ?? null,
     setTag: (nextTag) => {
       void navigate({
+        to: '.',
         search: (prev) => {
           if (nextTag == null) {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured only to drop it from `rest`
             const { tag: _tag, ...rest } = prev
+            void _tag
             return rest
           }
           return { ...prev, tag: nextTag }

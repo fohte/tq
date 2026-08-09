@@ -81,9 +81,9 @@ function setup({
 // loaders, so router.load() is awaited before render() to avoid an initial
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
 // A fresh router (re-loaded) is built for both the initial render and every
-// rerender: reusing one router across rerender() calls left TanStack
-// Router's matched-route rendering memoized on unchanged router state, so
-// updated mock data never reached TodayFocus.
+// rerender — TanStack Router memoizes matched-route rendering on unchanged
+// router state, so reusing one router across rerenders would keep stale
+// mock data on screen.
 async function buildTree(queryClient: QueryClient) {
   const rootRoute = createRootRoute({
     validateSearch: (search: Record<string, unknown>) => search,
