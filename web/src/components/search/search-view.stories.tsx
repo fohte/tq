@@ -27,7 +27,6 @@ const baseTask: SearchResult = {
   parentId: null,
   parentNumber: null,
   projectId: null,
-  sortOrder: 0,
   recurrenceRuleId: null,
   githubLink: null,
   createdAt: '2026-03-20T00:00:00.000Z',

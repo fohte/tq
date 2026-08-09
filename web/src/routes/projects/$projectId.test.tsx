@@ -29,7 +29,6 @@ const baseTask = {
   estimatedMinutes: null,
   parentId: null,
   projectId: 'p1',
-  sortOrder: 0,
   recurrenceRuleId: null,
   recurrenceRule: null,
   createdAt: '2026-01-01T00:00:00.000Z',

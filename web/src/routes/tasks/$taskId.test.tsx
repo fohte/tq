@@ -20,7 +20,6 @@ const mockTask = {
   estimatedMinutes: 90,
   parentId: null,
   projectId: null,
-  sortOrder: 0,
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
   childCompletionCount: { completed: 0, total: 0 },
@@ -257,7 +256,6 @@ describe('TaskPage', () => {
       parentId: mockTask.id,
       parentNumber: mockTask.number,
       projectId: null,
-      sortOrder: 0,
       recurrenceRuleId: null,
       recurrenceRule: null,
       githubLink: null,
@@ -276,7 +274,6 @@ describe('TaskPage', () => {
         id: 'subtask-002',
         number: 44,
         title: 'Pending subtask',
-        sortOrder: 1,
       },
     ]
 

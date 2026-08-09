@@ -17,7 +17,6 @@ interface MockTask {
   estimatedMinutes: number
   parentId: null
   projectId: null
-  sortOrder: number
   recurrenceRuleId: null
   recurrenceRule: null
   createdAt: string
@@ -36,7 +35,6 @@ function makeTask(overrides: Partial<MockTask> = {}): MockTask {
     estimatedMinutes: 120,
     parentId: null,
     projectId: null,
-    sortOrder: 0,
     recurrenceRuleId: null,
     recurrenceRule: null,
     createdAt: '2026-03-20T00:00:00.000Z',
@@ -53,7 +51,6 @@ const mockTasks = [
     status: 'in_progress',
     context: 'work',
     estimatedMinutes: 30,
-    sortOrder: 1,
   }),
 ]
 
@@ -62,7 +59,6 @@ const personalTask = makeTask({
   title: 'Plan weekend trip',
   context: 'personal',
   estimatedMinutes: 60,
-  sortOrder: 2,
 })
 
 const mockSuggestions = [

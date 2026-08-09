@@ -18,7 +18,6 @@ const candidate: SearchResult = {
   parentId: '00000000-0000-0000-0000-000000000099',
   parentNumber: 3,
   projectId: null,
-  sortOrder: 0,
   recurrenceRuleId: null,
   githubLink: null,
   createdAt: '2026-03-20T00:00:00.000Z',

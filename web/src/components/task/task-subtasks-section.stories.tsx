@@ -47,7 +47,6 @@ const baseSubtask: Task = {
   parentId: parentTaskId,
   parentNumber: 1,
   projectId: null,
-  sortOrder: 0,
   recurrenceRuleId: null,
   githubLink: null,
   createdAt: '2026-03-20T00:00:00.000Z',

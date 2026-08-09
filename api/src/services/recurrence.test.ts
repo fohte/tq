@@ -169,7 +169,6 @@ describe('buildNextTaskData', () => {
     parentId: null,
     projectId: 'proj-1',
     recurrenceRuleId: 'rule-1',
-    sortOrder: 0,
     createdAt: new Date('2026-03-22T00:00:00Z'),
     updatedAt: new Date('2026-03-22T00:00:00Z'),
   }
@@ -197,7 +196,6 @@ describe('buildNextTaskData', () => {
         projectId: 'proj-1',
         recurrenceRuleId: 'rule-1',
         context: 'work',
-        sortOrder: 0,
       }),
     )
   })
@@ -221,7 +219,6 @@ describe('buildNextTaskData', () => {
         projectId: 'proj-1',
         recurrenceRuleId: 'rule-1',
         context: 'work',
-        sortOrder: 0,
       }),
     )
   })
@@ -244,7 +241,6 @@ describe('buildNextTaskData', () => {
         projectId: 'proj-1',
         recurrenceRuleId: 'rule-1',
         context: 'work',
-        sortOrder: 0,
       }),
     )
   })

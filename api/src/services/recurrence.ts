@@ -146,7 +146,6 @@ export function buildNextTaskData(
     projectId: string | null
     recurrenceRuleId: string
     context: 'work' | 'personal'
-    sortOrder: number
   },
   EmptyDaysOfWeekError
 > {
@@ -181,7 +180,6 @@ export function buildNextTaskData(
       projectId: completedTask.projectId,
       recurrenceRuleId: rule.id,
       context: completedTask.context,
-      sortOrder: completedTask.sortOrder,
     }
   })
 }
