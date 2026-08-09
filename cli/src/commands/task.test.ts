@@ -3,6 +3,7 @@ import { Readable } from 'node:stream'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { runCli } from '#cli'
+import { request } from '#commands/test-support'
 import type { ReadableStdin } from '#input'
 
 interface CapturedRequest {
@@ -49,19 +50,6 @@ function spyStdout() {
 
 function spyStderr() {
   return vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-}
-
-// Normalizes a captured request into one comparable value, so a test can
-// assert the whole request shape (method/path/query/body) with a single
-// `toEqual` instead of checking each part separately.
-function request(call: CapturedRequest | undefined) {
-  const url = new URL(call?.url ?? '')
-  return {
-    method: call?.method,
-    pathname: url.pathname,
-    query: Object.fromEntries(url.searchParams),
-    body: call?.body,
-  }
 }
 
 const apiUrl = 'http://api.test'
