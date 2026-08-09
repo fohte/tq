@@ -64,7 +64,7 @@ Every presentational component under `web/src/components/` should have a co-loca
 Stories aren't just documentation — they run as the `storybook` project in `web/vitest.config.ts` (`@storybook/addon-vitest` + `@vitest/browser-playwright`), rendering each story in a real headless Chromium:
 
 ```sh
-pnpm --filter web run test:storybook # vitest run --project=storybook
+pnpm --filter web run test:storybook # vitest run --project=storybook && vitest run --project=storybook-mobile
 ```
 
 This is separate from `pnpm --filter web run test`, so writing the story is not enforced by the default test run — write it anyway when adding or changing a presentational component.
