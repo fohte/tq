@@ -19,8 +19,8 @@ const UNRESOLVED_URL =
   'https://fohte-team.slack.com/archives/C0999ZZZZZZ/p1699999999999900'
 
 // An inline data URI keeps the screenshot deterministic — an external URL
-// (e.g. placehold.co) made VRT captures flaky depending on whether the
-// request settled before the screenshot was taken.
+// may not finish loading before the screenshot is taken, making VRT captures
+// flaky.
 const AVATAR_URL =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' fill='%2394a3b8'/%3E%3C/svg%3E"
 
