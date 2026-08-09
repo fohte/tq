@@ -472,6 +472,18 @@ describe('tasks CRUD API', () => {
       )
     })
 
+    it('limits the returned tasks', async () => {
+      await createTask('Task 1')
+      await createTask('Task 2')
+      await createTask('Task 3')
+
+      const res = await app.request('/api/tasks?limit=1')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+    })
+
     it('combines descendantOf, includeAncestors, a status filter, and limit', async () => {
       const root = await createTask('Root')
       const child = await createTask('Child', { parentId: root.id })
