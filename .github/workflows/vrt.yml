@@ -83,6 +83,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      statuses: write
     # Overlapping runs for the same ref would otherwise let two VRT runs
     # publish snapshots to the same S3 key at once — most importantly two
     # main pushes racing to fill the same (non-live) baseline slot, which
@@ -198,13 +199,13 @@ jobs:
           VRT_EXPECTED_KEY: ${{ steps.vrt-keys.outputs.expected_key }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          # A no-diff run still publishes out.json (`*.json` always matches
-          # it) so vrt-comment-on-pr-open.yml has a fresh result to read;
-          # the larger html/js/wasm report and image assets are skipped
-          # since there's nothing to show.
-          # `-n` still runs the notifier, which posts the "no visual
-          # difference" PR comment either way.
-          VRT_PUBLISH_PATTERN: ${{ steps.vrt-compare.outputs.has_diff == 'true' && '{*.{html,js,wasm,json},{actual,diff}/**/*.{png,jpeg,jpg,tiff,bmp,gif}}' || '*.json' }}
+          # A no-diff run still publishes the report shell (html/js/wasm) and
+          # out.json — both vrt-comment-on-pr-open.yml and the report links
+          # in the PR comment/commit status need the report URL to actually
+          # resolve. Only the actual/diff screenshot sets are skipped: they
+          # scale with story count and are identical to the baseline when
+          # there's no diff, so there's nothing worth re-uploading.
+          VRT_PUBLISH_PATTERN: ${{ steps.vrt-compare.outputs.has_diff == 'true' && '{*.{html,js,wasm,json},{actual,diff}/**/*.{png,jpeg,jpg,tiff,bmp,gif}}' || '*.{html,js,wasm,json}' }}
         run: pnpm exec reg-suit publish -n
 
       # Runs regardless of whether an open PR exists yet: pushing straight to
@@ -218,6 +219,45 @@ jobs:
           sha: ${{ github.sha }}
           out-json-path: web/.reg/out.json
           report-url: https://tq-vrt.fohte.net/${{ steps.vrt-keys.outputs.actual_key }}/index.html
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # A run that would report `failure` here must not clobber an approval
+      # applied to this same commit while this job was still in flight —
+      # that would silently negate a human's explicit "this diff is
+      # intentional" call with the very run that prompted it. A `success`
+      # result never needs this check: overwriting an existing approval with
+      # `success` is a no-op either way.
+      - name: Check for an existing VRT approval
+        if: steps.vrt-compare.outputs.has_diff == 'true'
+        id: vrt-approval
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          approved=$(gh pr list --repo "$REPO" --head "$BRANCH" --state open --json labels \
+            --jq 'if length == 0 then false else (.[0].labels | any(.name == "vrt-approved")) end')
+          echo "approved=$approved" >> "$GITHUB_OUTPUT"
+
+      # A separate, non-required status (as opposed to the required `unit-test`
+      # gate) so a diff never blocks a merge by itself. vrt-approval.yml
+      # overrides this to success when the `vrt-approved` label is applied,
+      # and clears that label (never this status directly) on the next push
+      # — the new commit's own status here starts fresh anyway.
+      #
+      # continue-on-error so a transient failure here (rate limit, network
+      # blip) can't skip the baseline-pointer flip further down, the same
+      # reasoning the "Publish VRT commit marker" step below already applies.
+      - name: Set VRT commit status
+        if: steps.vrt-approval.outputs.approved != 'true'
+        continue-on-error: true
+        uses: ./.github/actions/vrt-status
+        with:
+          repo: ${{ github.repository }}
+          sha: ${{ github.sha }}
+          state: ${{ steps.vrt-compare.outputs.has_diff == 'true' && 'failure' || 'success' }}
+          description: ${{ steps.vrt-compare.outputs.has_diff == 'true' && 'Visual differences detected' || 'No visual differences' }}
+          target-url: https://tq-vrt.fohte.net/${{ steps.vrt-keys.outputs.actual_key }}/index.html
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # branch/<ref_name> is overwritten by every push to that branch (see

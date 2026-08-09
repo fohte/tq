@@ -1,0 +1,55 @@
+name: VRT approval
+
+# vrt.yml sets the `vrt` commit status per push based on reg-suit's diff
+# result. This workflow lets a human override that to success for an
+# intentional diff via the `vrt-approved` label, and keeps the label from
+# silently surviving a diff nobody has actually reviewed.
+
+on:
+  pull_request:
+    types: [synchronize, labeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+
+jobs:
+  handle-vrt-approval:
+    runs-on: ubuntu-slim
+    steps:
+      # Local composite actions (`./.github/actions/...` below) resolve
+      # against the checked-out workspace, not the runner's action cache.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # A new push gets its own head SHA, whose `vrt` status starts fresh
+      # (see vrt.yml) regardless of this label — but the label itself must
+      # still be removed, or it keeps reading as "the current diff is
+      # approved" when nobody has looked at it yet.
+      - name: Remove stale vrt-approved label
+        if: >-
+          github.event.action == 'synchronize' &&
+          contains(github.event.pull_request.labels.*.name, 'vrt-approved')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --remove-label vrt-approved
+
+      # Removing the label again (`unlabeled`) intentionally does not revert
+      # this — that would need re-deriving whatever the last actual diff
+      # result was, which is out of scope here. The only invalidation this
+      # workflow implements is the unconditional one above: a new push.
+      - name: Set VRT status to success
+        if: >-
+          github.event.action == 'labeled' &&
+          github.event.label.name == 'vrt-approved'
+        uses: ./.github/actions/vrt-status
+        with:
+          repo: ${{ github.repository }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          state: success
+          description: Approved via vrt-approved label
+          target-url: https://tq-vrt.fohte.net/branch/${{ github.event.pull_request.head.ref }}/index.html
+          github-token: ${{ secrets.GITHUB_TOKEN }}
