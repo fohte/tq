@@ -241,7 +241,7 @@ export function registerReadTools(server: McpServer): void {
           hasEstimate: hasEstimate?.toString(),
           hasDue: hasDue?.toString(),
           sortBy,
-          limit: limit?.toString(),
+          limit: (limit ?? 20).toString(),
           offset: offset?.toString(),
         })}`,
       ),

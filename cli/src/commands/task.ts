@@ -235,6 +235,7 @@ export function registerTaskCommands(
     ) => {
       const client = buildClient(command, fetchImpl)
       const fields = {
+        limit: 20,
         ...pickSchemaFields(listTasksQuerySchema, options, [
           'q',
           'hasEstimate',
