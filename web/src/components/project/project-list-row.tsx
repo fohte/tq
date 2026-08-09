@@ -33,10 +33,7 @@ export function ProjectListRow({ project }: { project: Project }) {
     >
       {/* Desktop row */}
       <div
-        className={cn(
-          'hidden items-center gap-3 border-b border-border px-3.5 py-[11px] hover:bg-card md:grid',
-          PROJECT_LIST_GRID_COLUMNS,
-        )}
+        className={`hidden items-center gap-3 border-b border-border px-3.5 py-[11px] hover:bg-card md:grid ${PROJECT_LIST_GRID_COLUMNS}`}
       >
         <ProjectStatusMark status={status} />
         <div className="flex min-w-0 flex-col gap-[3px]">
