@@ -45,8 +45,8 @@ describe('filterModeToApiContext', () => {
     expect(filterModeToApiContext('work')).toBe('work')
   })
 
-  it('returns undefined for "personal" (client-side filtering)', () => {
-    expect(filterModeToApiContext('personal')).toBeUndefined()
+  it('returns "personal" for "personal"', () => {
+    expect(filterModeToApiContext('personal')).toBe('personal')
   })
 })
 

@@ -11,26 +11,29 @@ type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
 
 type LinkedTaskSummary = TaskDetail['links']['outgoing'][number]
 
-type TreeNode = InferResponseType<typeof api.api.tasks.tree.$get, 200>[number]
+type TaskStatus = 'todo' | 'in_progress' | 'completed'
+
+type TaskContext = 'work' | 'personal'
+
+export type TaskSortBy = 'created' | 'updated'
+
+export interface TaskListFilter {
+  status?: TaskStatus | TaskStatus[]
+  context?: TaskContext
+  parentId?: string
+  label?: string
+  sortBy?: TaskSortBy
+  includeAncestors?: boolean
+}
 
 export const taskKeys = {
   all: ['tasks'] as const,
   lists: ['tasks', 'list'] as const,
-  list: (filter?: {
-    status?: string
-    context?: string
-    parentId?: string
-    sortBy?: string
-  }) => [...taskKeys.lists, filter] as const,
-  tree: (sortBy?: string) => [...taskKeys.all, 'tree', sortBy] as const,
+  list: (filter?: TaskListFilter) => [...taskKeys.lists, filter] as const,
   detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
 }
 
-export type { LinkedTaskSummary, Task, TaskDetail, TreeNode }
-
-type TaskStatus = 'todo' | 'in_progress' | 'completed'
-
-export type TaskSortBy = 'created' | 'updated'
+export type { LinkedTaskSummary, Task, TaskDetail }
 
 function isBacklog(t: Task): boolean {
   return t.status === 'todo' && t.dueDate == null && t.startDate == null
@@ -47,22 +50,19 @@ export interface CategorizedTasks {
   nonBacklog: Task[]
 }
 
-type TaskContext = 'work' | 'personal'
-
 export function useTaskList(
-  filter?: {
-    status?: TaskStatus
-    context?: TaskContext
-    parentId?: string
-    sortBy?: TaskSortBy
-  },
+  filter?: TaskListFilter,
   options?: { enabled?: boolean },
 ) {
   const query = useQuery({
     queryKey: taskKeys.list(filter),
     queryFn: async () => {
       const res = await api.api.tasks.$get({
-        query: filter ?? {},
+        query: {
+          ...filter,
+          includeAncestors:
+            filter?.includeAncestors === true ? 'true' : undefined,
+        },
       })
       assertOk(res)
       return res.json()
@@ -104,22 +104,5 @@ export function useTask(id: string) {
       if (!res.ok) throw new Error('Failed to fetch task')
       return res.json()
     },
-  })
-}
-
-export function useTaskTree(options: {
-  enabled: boolean
-  sortBy?: TaskSortBy
-}) {
-  return useQuery({
-    queryKey: taskKeys.tree(options.sortBy),
-    queryFn: async () => {
-      const res = await api.api.tasks.tree.$get({
-        query: options.sortBy ? { sortBy: options.sortBy } : {},
-      })
-      assertOk(res)
-      return res.json()
-    },
-    enabled: options.enabled,
   })
 }
