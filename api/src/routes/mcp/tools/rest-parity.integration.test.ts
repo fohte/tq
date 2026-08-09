@@ -139,7 +139,12 @@ describe('REST/MCP parity', () => {
     expect(res.status).toBe(200)
 
     expect(await jsonBody<unknown[]>(res)).toEqual([
-      { ...withoutRecurrenceRule(data), parentNumber: null, labels: [] },
+      {
+        ...withoutRecurrenceRule(data),
+        parentNumber: null,
+        labels: [],
+        childCompletionCount: { total: 0, completed: 0 },
+      },
     ])
   })
 
@@ -231,11 +236,13 @@ describe('REST/MCP parity', () => {
         ...withoutRecurrenceRule(completedTask),
         parentNumber: null,
         labels: [],
+        childCompletionCount: { total: 0, completed: 0 },
       },
       {
         ...withoutRecurrenceRule(nextTask),
         parentNumber: null,
         labels: [],
+        childCompletionCount: { total: 0, completed: 0 },
       },
     ]
 

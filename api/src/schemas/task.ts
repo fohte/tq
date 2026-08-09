@@ -8,6 +8,14 @@ export const contextEnum = z.enum(['work', 'personal'])
 export const taskListSortBy = z.enum(['created', 'updated'])
 export type TaskListSortBy = z.infer<typeof taskListSortBy>
 
+export const taskSortBy = z.enum(['created', 'updated', 'due', 'estimate'])
+export type TaskSortBy = z.infer<typeof taskSortBy>
+
+const hasFlagSchema = z
+  .string()
+  .transform((v) => v === 'true')
+  .optional()
+
 export const createTaskSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
@@ -34,12 +42,24 @@ export const updateTaskSchema = z.object({
 })
 
 export const listTasksQuerySchema = z.object({
-  status: taskStatus.optional(),
+  status: z
+    .union([taskStatus, z.array(taskStatus)])
+    .transform((v) => (Array.isArray(v) ? v : [v]))
+    .optional(),
+  q: z.string().optional(),
+  label: z.string().optional(),
+  hasEstimate: hasFlagSchema,
+  hasDue: hasFlagSchema,
+  context: contextEnum.optional(),
   projectId: z.uuid().optional(),
   parentId: z.uuid().optional(),
-  context: contextEnum.optional(),
-  sortBy: taskListSortBy.optional(),
+  descendantOf: z.uuid().optional(),
+  includeAncestors: hasFlagSchema,
+  sortBy: taskSortBy.optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 })
+export type ListTasksQuery = z.infer<typeof listTasksQuerySchema>
 
 export const treeQuerySchema = z.object({
   rootId: z.uuid().optional(),
@@ -51,15 +71,9 @@ export const searchQuerySchema = z.object({
   status: taskStatus.optional(),
   label: z.string().optional(),
   context: contextEnum.optional(),
-  hasEstimate: z
-    .string()
-    .transform((v) => v === 'true')
-    .optional(),
-  hasDue: z
-    .string()
-    .transform((v) => v === 'true')
-    .optional(),
-  sortBy: z.enum(['due', 'created', 'updated', 'estimate']).optional(),
+  hasEstimate: hasFlagSchema,
+  hasDue: hasFlagSchema,
+  sortBy: taskSortBy.optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
   offset: z.coerce.number().int().min(0).optional(),
 })
