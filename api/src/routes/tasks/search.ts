@@ -1,24 +1,10 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, eq, exists, ilike, isNotNull, isNull, sql } from 'drizzle-orm'
+import { ilike, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
-import {
-  labels,
-  taskComments,
-  taskGithubLinks,
-  taskLabels,
-  taskPages,
-  tasks,
-} from '#db/schema'
-import {
-  getLabelNamesByTaskId,
-  parentTasks,
-  taskListItemToResponse,
-} from '#routes/tasks/shared'
-import { searchQuerySchema } from '#schemas/task'
-import { parseSearchQuery } from '#search-query-parser'
+import { tasks } from '#db/schema'
 
 const suggestQuerySchema = z.object({
   prefix: z.string(),
@@ -31,145 +17,6 @@ const mentionsQuerySchema = z.object({
 })
 
 export const tasksSearchApp = new Hono()
-  .get('/search', zValidator('query', searchQuerySchema), async (c) => {
-    const query = c.req.valid('query')
-    const conditions = []
-
-    // Parse q parameter for prefix-based filters and free text
-    const parsed = query.q != null ? parseSearchQuery(query.q) : null
-
-    // Free text search across title, description, and task_pages.content
-    if (parsed?.freeText != null && parsed.freeText !== '') {
-      const pattern = `%${parsed.freeText}%`
-      conditions.push(
-        sql`(${tasks.title} ILIKE ${pattern} OR ${tasks.description} ILIKE ${pattern} OR EXISTS (SELECT 1 FROM ${taskPages} WHERE ${taskPages.taskId} = ${tasks.id} AND ${taskPages.content} ILIKE ${pattern}))`,
-      )
-    }
-
-    // Status filter: from parsed query or explicit param
-    const status = parsed?.status ?? query.status
-    if (status != null) {
-      conditions.push(eq(tasks.status, status))
-    }
-
-    // Context filter: from parsed query or explicit param
-    const context = parsed?.context ?? query.context
-    if (context != null) {
-      conditions.push(eq(tasks.context, context))
-    }
-
-    // Label filter: from parsed query or explicit param
-    const labelName = parsed?.label ?? query.label
-    if (labelName != null) {
-      conditions.push(
-        exists(
-          db
-            .select({ _: sql`1` })
-            .from(taskLabels)
-            .innerJoin(labels, eq(taskLabels.labelId, labels.id))
-            .where(
-              and(eq(taskLabels.taskId, tasks.id), eq(labels.name, labelName)),
-            ),
-        ),
-      )
-    }
-
-    // has:pages filter
-    if (parsed?.hasPages === true) {
-      conditions.push(
-        exists(
-          db
-            .select({ _: sql`1` })
-            .from(taskPages)
-            .where(eq(taskPages.taskId, tasks.id)),
-        ),
-      )
-    }
-
-    // has:comments filter
-    if (parsed?.hasComments === true) {
-      conditions.push(
-        exists(
-          db
-            .select({ _: sql`1` })
-            .from(taskComments)
-            .where(eq(taskComments.taskId, tasks.id)),
-        ),
-      )
-    }
-
-    // parent: filter
-    if (parsed?.parentId != null) {
-      conditions.push(eq(tasks.parentId, parsed.parentId))
-    }
-
-    // project: filter
-    if (parsed?.projectId != null) {
-      conditions.push(eq(tasks.projectId, parsed.projectId))
-    }
-
-    // Explicit query params (backward compatibility)
-    if (query.hasEstimate === true) {
-      conditions.push(isNotNull(tasks.estimatedMinutes))
-    } else if (query.hasEstimate === false) {
-      conditions.push(isNull(tasks.estimatedMinutes))
-    }
-    if (query.hasDue === true) {
-      conditions.push(isNotNull(tasks.dueDate))
-    } else if (query.hasDue === false) {
-      conditions.push(isNull(tasks.dueDate))
-    }
-
-    // Sort order: from parsed query or explicit param
-    const sortBy = parsed?.sortBy ?? query.sortBy
-    const orderBy = (() => {
-      switch (sortBy) {
-        case 'due':
-          return tasks.dueDate
-        case 'created':
-          return tasks.createdAt
-        case 'updated':
-          return tasks.updatedAt
-        case 'estimate':
-          return tasks.estimatedMinutes
-        default:
-          return tasks.createdAt
-      }
-    })()
-
-    const limit = query.limit ?? 20
-    const offset = query.offset ?? 0
-
-    const result = await db
-      .select({
-        task: tasks,
-        parentNumber: parentTasks.number,
-        githubLink: taskGithubLinks,
-      })
-      .from(tasks)
-      .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
-      .leftJoin(taskGithubLinks, eq(tasks.id, taskGithubLinks.taskId))
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(orderBy)
-      .limit(limit)
-      .offset(offset)
-
-    const labelsByTaskId = await getLabelNamesByTaskId(
-      result.map((r) => r.task.id),
-    )
-
-    return c.json(
-      result.map((r) =>
-        taskListItemToResponse(
-          r.task,
-          r.parentNumber,
-          r.githubLink,
-          labelsByTaskId.get(r.task.id) ?? [],
-        ),
-      ),
-      200,
-    )
-  })
   .get('/search/suggest', zValidator('query', suggestQuerySchema), (c) => {
     const { prefix, category } = c.req.valid('query')
 

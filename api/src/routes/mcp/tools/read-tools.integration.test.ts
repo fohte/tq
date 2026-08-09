@@ -293,7 +293,11 @@ describe('read tools', () => {
       const toolResult = await callTool('search_tasks', { q: 'deploy' })
 
       expect(parseJson(toolResult)).toEqual([
-        { ...withoutRecurrenceRule(match), parentNumber: null },
+        {
+          ...withoutRecurrenceRule(match),
+          parentNumber: null,
+          childCompletionCount: { total: 0, completed: 0 },
+        },
       ])
     })
 
@@ -304,7 +308,11 @@ describe('read tools', () => {
       const toolResult = await callTool('search_tasks', { hasEstimate: false })
 
       expect(parseJson(toolResult)).toEqual([
-        { ...withoutRecurrenceRule(withoutEstimate), parentNumber: null },
+        {
+          ...withoutRecurrenceRule(withoutEstimate),
+          parentNumber: null,
+          childCompletionCount: { total: 0, completed: 0 },
+        },
       ])
     })
 
@@ -317,7 +325,11 @@ describe('read tools', () => {
       const toolResult = await callTool('search_tasks', { hasDue: true })
 
       expect(parseJson(toolResult)).toEqual([
-        { ...withoutRecurrenceRule(withDue), parentNumber: null },
+        {
+          ...withoutRecurrenceRule(withDue),
+          parentNumber: null,
+          childCompletionCount: { total: 0, completed: 0 },
+        },
       ])
     })
   })

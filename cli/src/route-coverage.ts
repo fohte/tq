@@ -57,8 +57,6 @@ export const COVERED_ROUTES = [
   'PATCH /api/tasks/:id/parent',
   'POST /api/tasks/:id/complete',
   'GET /api/tasks/:id/activity',
-  'GET /api/tasks/tree',
-  'GET /api/tasks/search',
   'POST /api/tasks/from-github',
 
   // comment
@@ -71,7 +69,6 @@ export const COVERED_ROUTES = [
   'POST /api/projects',
   'GET /api/projects',
   'GET /api/projects/:id',
-  'GET /api/projects/:id/tasks',
   'PATCH /api/projects/:id',
   'DELETE /api/projects/:id',
 

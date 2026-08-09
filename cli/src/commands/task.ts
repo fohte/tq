@@ -1,9 +1,7 @@
 import {
   createTaskSchema,
   listTasksQuerySchema,
-  searchQuerySchema,
   taskStatus,
-  treeQuerySchema,
   updateTaskSchema,
 } from 'api/schemas/task'
 import type { Command } from 'commander'
@@ -26,12 +24,7 @@ type UpdateStatusJson = InferRequestType<
 type UpdateParentJson = InferRequestType<
   Client['api']['tasks'][':id']['parent']['$patch']
 >['json']
-type TreeQuery = InferRequestType<
-  Client['api']['tasks']['tree']['$get']
->['query']
-type SearchQuery = InferRequestType<
-  Client['api']['tasks']['search']['$get']
->['query']
+type SearchQuery = InferRequestType<Client['api']['tasks']['$get']>['query']
 type FromGithubJson = InferRequestType<
   Client['api']['tasks']['from-github']['$post']
 >['json']
@@ -223,37 +216,17 @@ export function registerTaskCommands(
 
   addSchemaOptions(
     task
-      .command('tree')
-      .description('Get the task tree')
-      .option('--full', 'Include full task description in the output'),
-    treeQuerySchema,
-  ).action(
-    async (
-      options: Record<string, unknown> & { full?: boolean },
-      command: Command,
-    ) => {
-      const client = buildClient(command, fetchImpl)
-      const query: TreeQuery = toQuery(
-        pickSchemaFields(treeQuerySchema, options),
-      )
-      const res = await client.api.tasks.tree.$get({ query })
-      if (!res.ok) throw await toApiError(res)
-      printJsonList(await res.json(), 'description', { full: options.full })
-    },
-  )
-
-  addSchemaOptions(
-    task
       .command('search [query]')
       .description('Search tasks')
       .option('--full', 'Include full task description in the output'),
-    searchQuerySchema,
-    // hasEstimate/hasDue unwrap to a raw ZodString (their pre-transform
-    // type), so addSchemaOptions would expose them but without true/false
-    // validation (any string round-trips through the 'v === "true"'
-    // transform silently). Excluded until that gets its own stricter
-    // boolean flag type.
-    ['q', 'hasEstimate', 'hasDue'],
+    listTasksQuerySchema,
+    // hasEstimate/hasDue/includeAncestors unwrap to a raw ZodString (their
+    // pre-transform type), so addSchemaOptions would expose them but without
+    // true/false validation (any string round-trips through the
+    // 'v === "true"' transform silently). Excluded until that gets its own
+    // stricter boolean flag type. `q` is excluded since it's handled via the
+    // positional query argument below.
+    ['q', 'hasEstimate', 'hasDue', 'includeAncestors'],
   ).action(
     async (
       query: string | undefined,
@@ -262,15 +235,16 @@ export function registerTaskCommands(
     ) => {
       const client = buildClient(command, fetchImpl)
       const fields = {
-        ...pickSchemaFields(searchQuerySchema, options, [
+        ...pickSchemaFields(listTasksQuerySchema, options, [
           'q',
           'hasEstimate',
           'hasDue',
+          'includeAncestors',
         ]),
         ...(query !== undefined ? { q: query } : {}),
       }
       const searchQuery: SearchQuery = toQuery(fields)
-      const res = await client.api.tasks.search.$get({ query: searchQuery })
+      const res = await client.api.tasks.$get({ query: searchQuery })
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
       if (!res.ok) throw await toApiError(res)
       printJsonList(await res.json(), 'description', { full: options.full })

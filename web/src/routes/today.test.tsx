@@ -3,6 +3,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { ContextFilterProvider } from '#hooks/use-context-filter'
+import { TagFilterProvider } from '#hooks/use-tag-filter'
 import type { Task } from '#hooks/use-tasks'
 import { TodayFocus } from '#routes/today'
 
@@ -77,7 +79,11 @@ function renderToday() {
   })
   const buildTree = () => (
     <QueryClientProvider client={queryClient}>
-      <TodayFocus />
+      <ContextFilterProvider>
+        <TagFilterProvider>
+          <TodayFocus />
+        </TagFilterProvider>
+      </ContextFilterProvider>
     </QueryClientProvider>
   )
   const utils = render(buildTree())

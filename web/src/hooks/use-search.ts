@@ -6,10 +6,7 @@ import { useDebounce } from '#hooks/use-debounce'
 import { api } from '#lib/api'
 import { assertOk } from '#lib/assert-response'
 
-type SearchResult = InferResponseType<
-  typeof api.api.tasks.search.$get,
-  200
->[number]
+type SearchResult = InferResponseType<typeof api.api.tasks.$get, 200>[number]
 
 type Suggestion = InferResponseType<
   (typeof api.api.tasks.search)['suggest']['$get'],
@@ -170,7 +167,7 @@ export function useSearch() {
   const searchQuery = useQuery({
     queryKey: searchKeys.query(debouncedQuery),
     queryFn: async () => {
-      const res = await api.api.tasks.search.$get({
+      const res = await api.api.tasks.$get({
         query: { q: debouncedQuery, limit: '20' },
       })
       assertOk(res)
@@ -224,7 +221,7 @@ export function useSearchTasks(query: string) {
   return useQuery({
     queryKey: searchKeys.results(debouncedQuery),
     queryFn: async () => {
-      const res = await api.api.tasks.search.$get({
+      const res = await api.api.tasks.$get({
         query: { q: debouncedQuery, limit: '20' },
       })
       assertOk(res)

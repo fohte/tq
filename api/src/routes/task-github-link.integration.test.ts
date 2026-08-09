@@ -309,7 +309,7 @@ describe('githubLink embedded in task responses', () => {
     expect(listBody.find((t) => t.id === task.id)?.githubLink).toBeNull()
 
     const searchRes = await app.request(
-      '/api/tasks/search?q=' + encodeURIComponent('My task'),
+      '/api/tasks?q=' + encodeURIComponent('My task'),
     )
     const searchBody = await jsonBody<TaskListItemResponse[]>(searchRes)
     expect(searchBody.find((t) => t.id === task.id)?.githubLink).toBeNull()
@@ -335,7 +335,7 @@ describe('githubLink embedded in task responses', () => {
     expect(listBody.find((t) => t.id === task.id)?.githubLink).toEqual(link)
 
     const searchRes = await app.request(
-      '/api/tasks/search?q=' + encodeURIComponent('My task'),
+      '/api/tasks?q=' + encodeURIComponent('My task'),
     )
     const searchBody = await jsonBody<TaskListItemResponse[]>(searchRes)
     expect(searchBody.find((t) => t.id === task.id)?.githubLink).toEqual(link)

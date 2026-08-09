@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { runCli } from '#cli'
+import type { CapturedRequest } from '#commands/test-support'
 import {
   apiUrl,
   captureFetch,
@@ -200,7 +201,38 @@ describe('project delete', () => {
   })
 })
 
+function request(call: CapturedRequest | undefined) {
+  const url = new URL(call?.url ?? '')
+  return {
+    method: call?.method,
+    pathname: url.pathname,
+    query: Object.fromEntries(url.searchParams),
+  }
+}
+
 describe('project tasks', () => {
+  it('requests /api/tasks filtered by projectId', async () => {
+    const tasks = [{ id: 't1', title: 'Do the thing' }]
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(tasks), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'project', 'tasks', 'p1'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'GET',
+      pathname: '/api/tasks',
+      query: { projectId: 'p1' },
+    })
+    expect(write.mock.calls).toEqual([[`${JSON.stringify(tasks, null, 2)}\n`]])
+  })
+
   it('omits task description from the printed output by default', async () => {
     const tasks = [
       { id: 't1', title: 'Do the thing', description: 'long body' },

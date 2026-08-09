@@ -68,8 +68,7 @@ export interface TaskResponse {
   links?: { outgoing: LinkedTaskResponse[]; incoming: LinkedTaskResponse[] }
 }
 
-// Shape returned by the 4 list-returning endpoints (`/api/tasks`,
-// `/api/tasks/tree`, `/api/tasks/search`, `/api/projects/:id/tasks`): no
+// Shape returned by the list-returning endpoint (`/api/tasks`): no
 // `recurrenceRule` key (unlike `TaskResponse`), plus `parentNumber`.
 export interface TaskListItemResponse {
   id: string

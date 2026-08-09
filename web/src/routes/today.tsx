@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useMemo } from 'react'
 
 import { FocusViewPresentation } from '#components/focus/focus-view'
+import { useBaseFilter } from '#hooks/use-filtered-tasks'
 import type { Task } from '#hooks/use-tasks'
 import { useTaskList, useTaskMap } from '#hooks/use-tasks'
 import { useSetTodayTasks, useTodayTasks } from '#hooks/use-today-tasks'
@@ -12,7 +13,8 @@ export const Route = createFileRoute('/today')({
 })
 
 export function TodayFocus() {
-  const { isLoading: isTaskListLoading, categorized } = useTaskList()
+  const baseFilter = useBaseFilter(true)
+  const { isLoading: isTaskListLoading, categorized } = useTaskList(baseFilter)
 
   const todayStr = useMemo(() => formatLocalDate(new Date()), [])
 
