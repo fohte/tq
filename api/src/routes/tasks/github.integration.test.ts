@@ -82,7 +82,6 @@ describe('POST /api/tasks/from-github', () => {
           title: 'Bug: something broke',
           lastSyncedAt: 'DATE',
         },
-        sortOrder: 0,
         createdAt: 'DATE',
         updatedAt: 'DATE',
       },

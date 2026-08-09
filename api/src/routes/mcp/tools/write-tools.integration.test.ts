@@ -132,7 +132,6 @@ describe('create_task tool', () => {
       recurrenceRuleId: null,
       recurrenceRule: null,
       githubLink: null,
-      sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
@@ -193,7 +192,6 @@ describe('update_task tool', () => {
       recurrenceRuleId: null,
       recurrenceRule: null,
       githubLink: null,
-      sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
@@ -225,7 +223,6 @@ describe('update_task tool', () => {
       recurrenceRuleId: null,
       recurrenceRule: null,
       githubLink: null,
-      sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
@@ -267,7 +264,6 @@ describe('update_task tool', () => {
       recurrenceRuleId: null,
       recurrenceRule: null,
       githubLink: null,
-      sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
@@ -299,7 +295,6 @@ describe('update_task_status tool', () => {
       recurrenceRuleId: null,
       recurrenceRule: null,
       githubLink: null,
-      sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
@@ -330,7 +325,6 @@ describe('update_task_status tool', () => {
       recurrenceRuleId: null,
       recurrenceRule: null,
       githubLink: null,
-      sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
@@ -364,7 +358,6 @@ describe('update_task_status tool', () => {
       recurrenceRuleId: null,
       recurrenceRule: null,
       githubLink: null,
-      sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
@@ -398,7 +391,6 @@ describe('update_task_status tool', () => {
       recurrenceRuleId: null,
       recurrenceRule: null,
       githubLink: null,
-      sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
@@ -441,7 +433,6 @@ describe('update_task_status tool', () => {
         dayOfMonth: null,
       },
       githubLink: null,
-      sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       nextTask: {
@@ -466,7 +457,6 @@ describe('update_task_status tool', () => {
           dayOfMonth: null,
         },
         githubLink: null,
-        sortOrder: 0,
         createdAt: '<timestamp>',
         updatedAt: '<timestamp>',
       },

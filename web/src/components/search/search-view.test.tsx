@@ -17,7 +17,6 @@ interface MockResult {
   estimatedMinutes: number
   parentId: null
   projectId: null
-  sortOrder: number
   recurrenceRuleId: null
   recurrenceRule: null
   createdAt: string
@@ -36,7 +35,6 @@ function makeResult(overrides: Partial<MockResult> = {}): MockResult {
     estimatedMinutes: 120,
     parentId: null,
     projectId: null,
-    sortOrder: 0,
     recurrenceRuleId: null,
     recurrenceRule: null,
     createdAt: '2026-03-20T00:00:00.000Z',

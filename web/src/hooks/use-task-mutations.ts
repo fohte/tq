@@ -60,7 +60,6 @@ export function useCreateTask() {
         parentId: input.parentId ?? null,
         parentNumber: null,
         projectId: input.projectId ?? null,
-        sortOrder: 0,
         recurrenceRuleId: null,
         githubLink: null,
         createdAt: now,

@@ -751,12 +751,6 @@
           "default": "'personal'::text"
         },
         {
-          "name": "sort_order",
-          "type": "integer",
-          "nullable": false,
-          "default": "0"
-        },
-        {
           "name": "created_at",
           "type": "timestamp with time zone",
           "nullable": false,

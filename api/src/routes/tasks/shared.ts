@@ -77,7 +77,6 @@ function taskCoreToResponse(
     projectId: task.projectId,
     recurrenceRuleId: task.recurrenceRuleId,
     githubLink: githubLink ? githubLinkToResponse(githubLink) : null,
-    sortOrder: task.sortOrder,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   }

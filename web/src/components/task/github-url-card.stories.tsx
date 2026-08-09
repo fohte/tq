@@ -185,7 +185,6 @@ export const LinkedToTask: Story = {
           title: 'Fix flaky test',
           lastSyncedAt: '2026-03-20T00:00:00.000Z',
         },
-        sortOrder: 0,
         createdAt: '2026-03-20T00:00:00.000Z',
         updatedAt: '2026-03-20T00:00:00.000Z',
       },

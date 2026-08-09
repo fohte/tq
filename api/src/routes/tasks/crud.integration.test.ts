@@ -111,7 +111,6 @@ describe('tasks CRUD API', () => {
         recurrenceRuleId: null,
         recurrenceRule: null,
         githubLink: null,
-        sortOrder: 0,
         createdAt: 'TIMESTAMP',
         updatedAt: 'TIMESTAMP',
       })

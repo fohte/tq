@@ -61,7 +61,6 @@ export interface TaskResponse {
   recurrenceRuleId: string | null
   recurrenceRule: RecurrenceRuleResponse | null
   githubLink: GithubLinkResponse | null
-  sortOrder: number
   createdAt: string
   updatedAt: string
   childCompletionCount?: { completed: number; total: number }
@@ -87,7 +86,6 @@ export interface TaskListItemResponse {
   projectId: string | null
   recurrenceRuleId: string | null
   githubLink: GithubLinkResponse | null
-  sortOrder: number
   createdAt: string
   updatedAt: string
   parentNumber: number | null
@@ -150,7 +148,6 @@ const taskResponseSchema = z.object({
   recurrenceRuleId: z.string().nullable(),
   recurrenceRule: recurrenceRuleResponseSchema.nullable(),
   githubLink: githubLinkResponseSchema.nullable(),
-  sortOrder: z.number(),
   createdAt: z.string(),
   updatedAt: z.string(),
   childCompletionCount: z

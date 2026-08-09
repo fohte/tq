@@ -43,7 +43,6 @@ const baseTask: Omit<ProjectTask, 'id' | 'title' | 'status'> = {
   parentId: null,
   parentNumber: null,
   projectId: 'proj-001',
-  sortOrder: 0,
   recurrenceRuleId: null,
   githubLink: null,
   createdAt: '2026-06-01T00:00:00.000Z',

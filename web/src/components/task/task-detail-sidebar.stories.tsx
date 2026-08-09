@@ -31,7 +31,6 @@ const baseTask: TaskDetail = {
   estimatedMinutes: 90,
   parentId: null,
   projectId: null,
-  sortOrder: 0,
   recurrenceRuleId: null,
   recurrenceRule: null,
   githubLink: null,

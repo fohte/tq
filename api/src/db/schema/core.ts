@@ -95,7 +95,6 @@ export const tasks = pgTable(
     })
       .notNull()
       .default('personal'),
-    sortOrder: integer('sort_order').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

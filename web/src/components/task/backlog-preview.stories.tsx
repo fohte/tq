@@ -26,7 +26,6 @@ const makeBacklogTasks = (count: number): Task[] =>
     parentId: null,
     parentNumber: null,
     projectId: null,
-    sortOrder: i,
     recurrenceRuleId: null,
     recurrenceRule: null,
     githubLink: null,
