@@ -28,10 +28,13 @@ jobs:
       - uses: ./.github/actions/setup-workspace
 
       # Storybook stories run through a headless Playwright chromium browser,
-      # which isn't preinstalled on the runner. The browser binary is cached,
-      # but OS-level packages installed by `--with-deps` aren't (they don't
-      # live under this cache path), so a cache hit still needs `install-deps`
-      # to cover them.
+      # which isn't preinstalled on the runner. ubuntu-latest already ships
+      # the shared libraries chromium needs, so a cache hit (browser binary
+      # only) needs nothing further. The cache-miss install below keeps
+      # `--with-deps` as a fallback; if a future runner image drops one of
+      # those libraries, cache hits will start failing to launch chromium and
+      # this step needs an `install-deps` step reinstated for the cache-hit
+      # path too.
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -43,11 +46,6 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: web
         run: pnpm exec playwright install --with-deps chromium
-
-      - name: Install Playwright system dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        working-directory: web
-        run: pnpm exec playwright install-deps chromium
 
       - name: Run Storybook screenshots
         working-directory: web

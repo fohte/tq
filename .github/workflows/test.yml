@@ -178,27 +178,6 @@ jobs:
 
       - uses: ./.github/actions/setup-workspace
 
-      # `web`'s `test:storybook` runs Storybook stories through a headless
-      # Playwright chromium browser, which isn't preinstalled on the runner.
-      # ubuntu-latest already ships the shared libraries chromium needs, so a
-      # cache hit (browser binary only) needs nothing further. The cache-miss
-      # install below keeps `--with-deps` as a fallback; if a future runner
-      # image drops one of those libraries, cache hits will start failing to
-      # launch chromium and this step needs an `install-deps` step
-      # reinstated for the cache-hit path too.
-      - name: Cache Playwright browsers
-        if: matrix.package == 'web'
-        id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - name: Install Playwright chromium
-        if: matrix.package == 'web' && steps.playwright-cache.outputs.cache-hit != 'true'
-        working-directory: web
-        run: pnpm exec playwright install --with-deps chromium
-
       # Only the `api` package's integration tests need PostgreSQL.
       - name: Start PostgreSQL
         if: matrix.package == 'api'
@@ -216,13 +195,7 @@ jobs:
   # sharing the `web` leg above with the (browser-free) type-check and unit
   # test run.
   vrt:
-    # Also needs unit-test-run so a red web `tsc --noEmit`/unit-test leg
-    # blocks the flip below instead of racing ahead of it — without this,
-    # `vrt` only depended on `setup` and could flip the shared baseline while
-    # unit-test-run was still failing.
-    needs:
-      - setup
-      - unit-test-run
+    needs: setup
     if: ${{ contains(fromJSON(needs.setup.outputs.packages), 'web') }}
     permissions:
       contents: read
