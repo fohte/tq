@@ -6,8 +6,7 @@ import { computeTagCounts } from '#lib/tag-counts'
 
 /**
  * Tag counts for the whole task set, independent of the context filter and
- * the tag filter itself. Calling `useTaskList()` with no filter reuses the
- * same query cache entry as `useFilteredTaskList` in 'all' mode.
+ * the tag filter itself.
  */
 export function useTagCounts(): { tagCounts: TagCount[]; isLoading: boolean } {
   const { categorized, isLoading } = useTaskList()

@@ -46,7 +46,10 @@ export interface CategorizedTasks {
   open: Task[]
   /** Tasks with no date and status=todo */
   backlog: Task[]
-  /** Non-backlog tasks (for header stats: includes completed) */
+  /**
+   * Non-backlog tasks (for header stats: includes completed, unless the
+   * caller's own filter already excludes completed tasks server-side)
+   */
   nonBacklog: Task[]
 }
 
