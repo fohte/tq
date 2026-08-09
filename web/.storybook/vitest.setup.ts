@@ -30,14 +30,19 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 })
 
+function injectStyle(css: string): void {
+  const style = document.createElement('style')
+  style.textContent = css
+  document.head.appendChild(style)
+}
+
 // The native text-input caret blinks on an OS timer, so a captured frame of a
 // focused input/contenteditable is on or off at random — same content, different
 // pixels between runs. Hiding it keeps captures deterministic without touching
 // application code.
-const caretStyle = document.createElement('style')
-caretStyle.textContent =
-  'input, textarea, [contenteditable] { caret-color: transparent !important; }'
-document.head.appendChild(caretStyle)
+injectStyle(
+  'input, textarea, [contenteditable] { caret-color: transparent !important; }',
+)
 
 // CSS animations/transitions (popup open/close fades, zooms, spinners, ...)
 // capture at whatever frame happens to be on screen when the screenshot
@@ -45,16 +50,14 @@ document.head.appendChild(caretStyle)
 // nothing about it actually changed. Forcing zero duration collapses every
 // animation/transition to its end state instantly, keeping captures
 // deterministic without touching application code.
-const animationStyle = document.createElement('style')
-animationStyle.textContent = `
+injectStyle(`
   *, *::before, *::after {
     animation-duration: 0s !important;
     animation-delay: 0s !important;
     transition-duration: 0s !important;
     transition-delay: 0s !important;
   }
-`
-document.head.appendChild(animationStyle)
+`)
 
 // @storycap-testrun/browser ships a bundled .d.ts with its own copy of
 // vitest's `TestContext`, so it's structurally close but nominally unrelated
