@@ -43,7 +43,7 @@ jobs:
 
           status=$(curl -sS -o out.json -w '%{http_code}' "https://tq-vrt.fohte.net/branch/${BRANCH}/out.json") || status=000
           if [ "$status" != "200" ]; then
-            echo "No VRT report published for $SHA (likely no visual diff)."
+            echo "VRT report not available for $SHA despite a matching marker (HTTP $status)."
             echo "found=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
