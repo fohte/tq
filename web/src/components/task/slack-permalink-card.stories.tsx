@@ -18,6 +18,12 @@ const BOT_MESSAGE_URL =
 const UNRESOLVED_URL =
   'https://fohte-team.slack.com/archives/C0999ZZZZZZ/p1699999999999900'
 
+// An inline data URI keeps the screenshot deterministic — an external URL
+// may not finish loading before the screenshot is taken, making VRT captures
+// flaky.
+const AVATAR_URL =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' fill='%2394a3b8'/%3E%3C/svg%3E"
+
 function Providers({
   url,
   preview,
@@ -75,7 +81,7 @@ export const NormalMessage: Story = {
       channelName: 'general',
       isPrivate: false,
       authorName: 'Hayato Kawai',
-      authorAvatarUrl: 'https://placehold.co/64x64',
+      authorAvatarUrl: AVATAR_URL,
       text: 'Deploy finished, everything looks green.',
       ts: '1699999999.000100',
       isThreadReply: false,
@@ -99,7 +105,7 @@ export const ThreadReply: Story = {
       channelName: 'incidents',
       isPrivate: true,
       authorName: 'Hayato Kawai',
-      authorAvatarUrl: 'https://placehold.co/64x64',
+      authorAvatarUrl: AVATAR_URL,
       text: 'Root cause was a stale cache entry.',
       ts: '1699999999.000200',
       isThreadReply: true,
@@ -119,7 +125,7 @@ export const LongText: Story = {
       channelName: 'general',
       isPrivate: false,
       authorName: 'Hayato Kawai',
-      authorAvatarUrl: 'https://placehold.co/64x64',
+      authorAvatarUrl: AVATAR_URL,
       text: 'This is a fairly long message body that should be clamped to three lines instead of overflowing the card indefinitely, so the card keeps a predictable height regardless of how verbose the underlying Slack message is, even across many additional sentences of filler text.',
       ts: '1699999999.000300',
       isThreadReply: false,
