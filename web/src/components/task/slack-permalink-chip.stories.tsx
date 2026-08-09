@@ -18,6 +18,12 @@ const BOT_MESSAGE_URL =
 const UNRESOLVED_URL =
   'https://fohte-team.slack.com/archives/C0999ZZZZZZ/p1699999999999900'
 
+// An inline data URI keeps the screenshot deterministic — an external URL
+// (e.g. placehold.co) made VRT captures flaky depending on whether the
+// request settled before the screenshot was taken.
+const AVATAR_URL =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' fill='%2394a3b8'/%3E%3C/svg%3E"
+
 function Providers({
   url,
   preview,
@@ -80,7 +86,7 @@ export const NormalMessage: Story = {
       channelName: 'general',
       isPrivate: false,
       authorName: 'Hayato Kawai',
-      authorAvatarUrl: 'https://placehold.co/64x64',
+      authorAvatarUrl: AVATAR_URL,
       text: 'Deploy finished, everything looks green.',
       ts: '1699999999.000100',
       isThreadReply: false,
@@ -114,7 +120,7 @@ export const ThreadReply: Story = {
       channelName: 'incidents',
       isPrivate: true,
       authorName: 'Hayato Kawai',
-      authorAvatarUrl: 'https://placehold.co/64x64',
+      authorAvatarUrl: AVATAR_URL,
       text: 'Root cause was a stale cache entry.',
       ts: '1699999999.000200',
       isThreadReply: true,
@@ -134,7 +140,7 @@ export const LongText: Story = {
       channelName: 'general',
       isPrivate: false,
       authorName: 'Hayato Kawai',
-      authorAvatarUrl: 'https://placehold.co/64x64',
+      authorAvatarUrl: AVATAR_URL,
       text: 'This is a fairly long message body that should be truncated to a single line inside the inline chip trigger instead of overflowing the surrounding paragraph indefinitely.',
       ts: '1699999999.000300',
       isThreadReply: false,
