@@ -35,10 +35,11 @@ jobs:
       - uses: ./.github/actions/setup-workspace
 
       # Storybook stories run through a headless Playwright chromium browser,
-      # which isn't preinstalled on the runner. The browser binary is cached,
-      # but OS-level packages installed by `--with-deps` aren't (they don't
-      # live under this cache path), so a cache hit still needs `install-deps`
-      # to cover them.
+      # which isn't preinstalled on the runner. ubuntu-latest ships the
+      # shared libraries chromium needs to launch, but not the CJK font
+      # packages `--with-deps` pulls in — without them, Japanese text renders
+      # as tofu boxes and every story with Japanese text shows up as a VRT
+      # diff. A cache hit (browser binary only) still needs this.
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
