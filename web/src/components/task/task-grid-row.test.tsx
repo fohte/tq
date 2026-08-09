@@ -1,11 +1,17 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { TaskGridRow } from '#components/task/task-grid-row'
 import { makeTask } from '#components/task/task-row-test-fixtures'
-import { TagFilterProvider, useTagFilter } from '#hooks/use-tag-filter'
+import { useTagFilter } from '#hooks/use-tag-filter'
 import type { Task } from '#hooks/use-tasks'
 import { atIndex } from '#lib/test-utils'
 
@@ -22,19 +28,26 @@ vi.mock('#hooks/use-tasks', () => ({
   useUpdateTaskStatus: () => ({ mutate: mockUpdateStatusMutate }),
 }))
 
-vi.mock('@tanstack/react-router', () => ({
-  Link: ({
-    children,
-    ...props
-  }: { children: React.ReactNode } & Record<string, unknown>) => (
-    <a
-      href={typeof props['to'] === 'string' ? props['to'] : '#'}
-      onClick={mockLinkOnClick}
-    >
-      {children}
-    </a>
-  ),
-}))
+// Only Link is stubbed (to spy on mockLinkOnClick instead of really
+// navigating) — useSearch/useNavigate/router-building exports stay real so
+// useTagFilter (via useSearch({strict: false})) keeps working.
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>()
+  return {
+    ...actual,
+    Link: ({
+      children,
+      ...props
+    }: { children: React.ReactNode } & Record<string, unknown>) => (
+      <a
+        href={typeof props['to'] === 'string' ? props['to'] : '#'}
+        onClick={mockLinkOnClick}
+      >
+        {children}
+      </a>
+    ),
+  }
+})
 
 // Base UI's Menu relies on pointer events that jsdom does not implement
 // reliably, so the picker is stubbed here to exercise TaskGridRow's status
@@ -81,16 +94,31 @@ function TagProbe() {
   return <div data-testid="tag-probe">{tag ?? 'none'}</div>
 }
 
-function renderRow(task: Task) {
+// The router's first route match resolves asynchronously even with no
+// loaders, so router.load() is awaited before render() to avoid an initial
+// blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
+async function renderRow(task: Task) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <TagFilterProvider>
+  const rootRoute = createRootRoute({
+    validateSearch: (search: Record<string, unknown>) => search,
+    component: () => (
+      <>
         <TaskGridRow task={task} />
         <TagProbe />
-      </TagFilterProvider>
+      </>
+    ),
+  })
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  })
+  await router.load()
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
     </QueryClientProvider>,
   )
 }
@@ -104,37 +132,37 @@ beforeEach(() => {
 // are queryable). Assertions below pin the count to 2 rather than just
 // "at least one" so a regression in either layout alone still fails.
 describe('TaskGridRow', () => {
-  it('renders the task title', () => {
-    renderRow(makeTask())
+  it('renders the task title', async () => {
+    await renderRow(makeTask())
     expect(screen.getAllByText('Task title')).toHaveLength(2)
   })
 
-  it('renders the task number', () => {
-    renderRow(makeTask({ number: 42 }))
+  it('renders the task number', async () => {
+    await renderRow(makeTask({ number: 42 }))
     expect(screen.getAllByText('#42')).toHaveLength(2)
   })
 
-  it('renders a parent reference when parentNumber is set', () => {
-    renderRow(makeTask({ parentNumber: 7 }))
+  it('renders a parent reference when parentNumber is set', async () => {
+    await renderRow(makeTask({ parentNumber: 7 }))
     // The parent reference only appears in the desktop title cell — the
     // mobile meta row has no room for it.
     expect(screen.getAllByText('← #7')).toHaveLength(1)
   })
 
-  it('does not render a parent reference when parentNumber is null', () => {
-    renderRow(makeTask({ parentNumber: null }))
+  it('does not render a parent reference when parentNumber is null', async () => {
+    await renderRow(makeTask({ parentNumber: null }))
     expect(screen.queryByText(/← #/)).not.toBeInTheDocument()
   })
 
-  it('does not render tag tokens when there are no labels', () => {
-    renderRow(makeTask({ labels: [] }))
+  it('does not render tag tokens when there are no labels', async () => {
+    await renderRow(makeTask({ labels: [] }))
     // Tag tokens render as buttons; the task number label (a <span>) also
     // starts with "#", so scope the query to buttons to avoid a false match.
     expect(screen.queryByRole('button', { name: /^#/ })).not.toBeInTheDocument()
   })
 
-  it('renders a token per label', () => {
-    renderRow(makeTask({ labels: ['dev:tq', 'chore'] }))
+  it('renders a token per label', async () => {
+    await renderRow(makeTask({ labels: ['dev:tq', 'chore'] }))
     // Desktop and mobile layouts both render, so each label's token appears
     // twice, in layout order.
     expect(
@@ -144,7 +172,7 @@ describe('TaskGridRow', () => {
 
   it('sets the tag filter and stops the click from reaching the row Link when a tag token is clicked', async () => {
     const user = userEvent.setup()
-    renderRow(makeTask({ labels: ['dev:tq'] }))
+    await renderRow(makeTask({ labels: ['dev:tq'] }))
 
     expect(screen.getByTestId('tag-probe')).toHaveTextContent('none')
 
@@ -158,20 +186,20 @@ describe('TaskGridRow', () => {
     // Control for the tag-token test above: proves mockLinkOnClick actually
     // observes bubbled clicks, so its absence there means something.
     const user = userEvent.setup()
-    renderRow(makeTask({ labels: ['dev:tq'] }))
+    await renderRow(makeTask({ labels: ['dev:tq'] }))
 
     await user.click(atIndex(screen.getAllByText('Task title'), 0))
 
     expect(mockLinkOnClick).toHaveBeenCalled()
   })
 
-  it('does not show a GitHub badge when there is no link', () => {
-    renderRow(makeTask())
+  it('does not show a GitHub badge when there is no link', async () => {
+    await renderRow(makeTask())
     expect(screen.queryByText('tq#42')).not.toBeInTheDocument()
   })
 
-  it('shows a GitHub badge when linked', () => {
-    renderRow(
+  it('shows a GitHub badge when linked', async () => {
+    await renderRow(
       makeTask({
         githubLink: {
           id: 'link-1',
@@ -190,8 +218,8 @@ describe('TaskGridRow', () => {
     expect(screen.getAllByText('tq#42')).toHaveLength(1)
   })
 
-  it('highlights an overdue due date', () => {
-    renderRow(makeTask({ dueDate: '2020-01-01' }))
+  it('highlights an overdue due date', async () => {
+    await renderRow(makeTask({ dueDate: '2020-01-01' }))
     const badges = screen.getAllByText('Jan 1, 2020')
     expect(badges.map((b) => b.classList.contains('text-primary'))).toEqual([
       true,
@@ -199,8 +227,8 @@ describe('TaskGridRow', () => {
     ])
   })
 
-  it('does not highlight a completed task even when the due date has passed', () => {
-    renderRow(makeTask({ status: 'completed', dueDate: '2020-01-01' }))
+  it('does not highlight a completed task even when the due date has passed', async () => {
+    await renderRow(makeTask({ status: 'completed', dueDate: '2020-01-01' }))
     const badges = screen.getAllByText('Jan 1, 2020')
     expect(badges.map((b) => b.classList.contains('text-primary'))).toEqual([
       false,
@@ -210,7 +238,7 @@ describe('TaskGridRow', () => {
 
   it('updates the status via useUpdateTaskStatus when a non-completed status is selected', async () => {
     const user = userEvent.setup()
-    renderRow(makeTask({ status: 'todo' }))
+    await renderRow(makeTask({ status: 'todo' }))
 
     await user.click(atIndex(screen.getAllByText('Set In Progress'), 0))
 
@@ -223,7 +251,7 @@ describe('TaskGridRow', () => {
 
   it('completes the task via useCompleteTask when completed is selected', async () => {
     const user = userEvent.setup()
-    renderRow(makeTask({ status: 'todo' }))
+    await renderRow(makeTask({ status: 'todo' }))
 
     await user.click(atIndex(screen.getAllByText('Set Completed'), 0))
 
@@ -233,7 +261,7 @@ describe('TaskGridRow', () => {
 
   it('does nothing when the currently selected status is chosen again', async () => {
     const user = userEvent.setup()
-    renderRow(makeTask({ status: 'todo' }))
+    await renderRow(makeTask({ status: 'todo' }))
 
     await user.click(atIndex(screen.getAllByText('Set Todo'), 0))
 

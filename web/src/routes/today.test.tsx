@@ -1,10 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ContextFilterProvider } from '#hooks/use-context-filter'
-import { TagFilterProvider } from '#hooks/use-tag-filter'
 import type { Task } from '#hooks/use-tasks'
 import { TodayFocus } from '#routes/today'
 
@@ -73,24 +77,39 @@ function setup({
   return { mutate }
 }
 
-function renderToday() {
+// The router's first route match resolves asynchronously even with no
+// loaders, so router.load() is awaited before render() to avoid an initial
+// blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
+// A fresh router (re-loaded) is built for both the initial render and every
+// rerender: reusing one router across rerender() calls left TanStack
+// Router's matched-route rendering memoized on unchanged router state, so
+// updated mock data never reached TodayFocus.
+async function buildTree(queryClient: QueryClient) {
+  const rootRoute = createRootRoute({
+    validateSearch: (search: Record<string, unknown>) => search,
+    component: () => (
+      <QueryClientProvider client={queryClient}>
+        <TodayFocus />
+      </QueryClientProvider>
+    ),
+  })
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  })
+  await router.load()
+  return <RouterProvider router={router} />
+}
+
+async function renderToday() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  const buildTree = () => (
-    <QueryClientProvider client={queryClient}>
-      <ContextFilterProvider>
-        <TagFilterProvider>
-          <TodayFocus />
-        </TagFilterProvider>
-      </ContextFilterProvider>
-    </QueryClientProvider>
-  )
-  const utils = render(buildTree())
+  const utils = render(await buildTree(queryClient))
   return {
     ...utils,
-    rerender: () => {
-      utils.rerender(buildTree())
+    rerender: async () => {
+      utils.rerender(await buildTree(queryClient))
     },
   }
 }
@@ -106,38 +125,38 @@ afterEach(() => {
 })
 
 describe('TodayFocus', () => {
-  it('focuses the first non-completed task in queue order', () => {
+  it('focuses the first non-completed task in queue order', async () => {
     const taskA = makeTask({ id: 'a', title: 'Task A' })
     const taskB = makeTask({ id: 'b', title: 'Task B' })
     setup({ all: [taskA, taskB], queue: [taskA, taskB] })
 
-    renderToday()
+    await renderToday()
 
     expect(screen.getByText('Task A')).toBeInTheDocument()
   })
 
-  it('skips completed tasks when selecting the focus task', () => {
+  it('skips completed tasks when selecting the focus task', async () => {
     const taskA = makeTask({ id: 'a', title: 'Task A', status: 'completed' })
     const taskB = makeTask({ id: 'b', title: 'Task B' })
     setup({ all: [taskA, taskB], queue: [taskA, taskB] })
 
-    renderToday()
+    await renderToday()
 
     expect(screen.getByText('Task B')).toBeInTheDocument()
   })
 
-  it('shows the next non-completed task as the next task preview', () => {
+  it('shows the next non-completed task as the next task preview', async () => {
     const taskA = makeTask({ id: 'a', title: 'Task A' })
     const taskB = makeTask({ id: 'b', title: 'Task B' })
     setup({ all: [taskA, taskB], queue: [taskA, taskB] })
 
-    renderToday()
+    await renderToday()
 
     expect(screen.getByText('UP NEXT')).toBeInTheDocument()
     expect(screen.getByText('Task B')).toBeInTheDocument()
   })
 
-  it('shows subtasks of the focus task as a checklist', () => {
+  it('shows subtasks of the focus task as a checklist', async () => {
     const parent = makeTask({ id: 'parent', title: 'Parent task' })
     const child = makeTask({
       id: 'child',
@@ -146,52 +165,52 @@ describe('TodayFocus', () => {
     })
     setup({ all: [parent, child], queue: [parent] })
 
-    renderToday()
+    await renderToday()
 
     expect(screen.getByText('Child task')).toBeInTheDocument()
   })
 
-  it("shows the empty queue state when today's queue is empty", () => {
+  it("shows the empty queue state when today's queue is empty", async () => {
     setup({ all: [], queue: [] })
 
-    renderToday()
+    await renderToday()
 
     expect(screen.getByText("No tasks in today's queue")).toBeInTheDocument()
   })
 
-  it('shows the all-done state when every queued task is completed', () => {
+  it('shows the all-done state when every queued task is completed', async () => {
     const taskA = makeTask({ id: 'a', title: 'Task A', status: 'completed' })
     setup({ all: [taskA], queue: [taskA] })
 
-    renderToday()
+    await renderToday()
 
     expect(
       screen.getByText('All tasks completed for today'),
     ).toBeInTheDocument()
   })
 
-  it('shows a loading spinner while tasks are loading', () => {
+  it('shows a loading spinner while tasks are loading', async () => {
     setup({ all: [], queue: [], isLoading: true })
 
-    renderToday()
+    await renderToday()
 
     expect(document.querySelector('.animate-spin')).toBeTruthy()
   })
 
-  it("shows a loading spinner while today's queue is still loading even after the task list finishes", () => {
+  it("shows a loading spinner while today's queue is still loading even after the task list finishes", async () => {
     setup({ all: [], queue: [], isLoading: false, isTodayTasksLoading: true })
 
-    renderToday()
+    await renderToday()
 
     expect(document.querySelector('.animate-spin')).toBeTruthy()
   })
 
-  it('moves focus to the next task once the current task is completed', () => {
+  it('moves focus to the next task once the current task is completed', async () => {
     const taskA = makeTask({ id: 'a', title: 'Task A' })
     const taskB = makeTask({ id: 'b', title: 'Task B' })
     setup({ all: [taskA, taskB], queue: [taskA, taskB] })
 
-    const { rerender } = renderToday()
+    const { rerender } = await renderToday()
     expect(screen.getByText('Task A')).toBeInTheDocument()
 
     const completedTaskA: Task = { ...taskA, status: 'completed' }
@@ -199,7 +218,7 @@ describe('TodayFocus', () => {
       all: [completedTaskA, taskB],
       queue: [completedTaskA, taskB],
     })
-    rerender()
+    await rerender()
 
     expect(screen.getByText('Task B')).toBeInTheDocument()
     expect(screen.queryByText('UP NEXT')).not.toBeInTheDocument()
@@ -210,7 +229,7 @@ describe('TodayFocus', () => {
     const taskB = makeTask({ id: 'b', title: 'Task B' })
     const { mutate } = setup({ all: [taskA, taskB], queue: [taskA, taskB] })
 
-    renderToday()
+    await renderToday()
     vi.useRealTimers()
     const user = userEvent.setup()
     await user.click(screen.getByText('defer'))
@@ -221,16 +240,16 @@ describe('TodayFocus', () => {
     })
   })
 
-  it('moves focus to the next task once the current task leaves the queue', () => {
+  it('moves focus to the next task once the current task leaves the queue', async () => {
     const taskA = makeTask({ id: 'a', title: 'Task A' })
     const taskB = makeTask({ id: 'b', title: 'Task B' })
     setup({ all: [taskA, taskB], queue: [taskA, taskB] })
 
-    const { rerender } = renderToday()
+    const { rerender } = await renderToday()
     expect(screen.getByText('Task A')).toBeInTheDocument()
 
     setup({ all: [taskA, taskB], queue: [taskB] })
-    rerender()
+    await rerender()
 
     expect(screen.getByText('Task B')).toBeInTheDocument()
     expect(screen.queryByText('Task A')).not.toBeInTheDocument()

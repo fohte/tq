@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
 import { useCallback, useState } from 'react'
 
 import { ContextFilterInline } from '#components/context-filter'
@@ -30,10 +30,6 @@ import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { selectHandler } from '#lib/form-utils'
 import { newTaskKeybinding } from '#lib/keybindings'
 
-export const Route = createFileRoute('/tasks/')({
-  component: TaskList,
-})
-
 type Tab = 'all' | 'backlog'
 
 const sortOptionValues = [
@@ -45,6 +41,34 @@ const sortLabels: Record<TaskSortBy, string> = {
   updated: 'Updated',
   created: 'Created',
 }
+
+const tasksSearchDefaults = {
+  activeTab: 'all' as Tab,
+  sortBy: 'updated' as TaskSortBy,
+  showCompleted: false,
+}
+
+interface TasksSearch {
+  activeTab?: Tab
+  sortBy?: TaskSortBy
+  showCompleted?: boolean
+}
+
+function validateSearch(search: Record<string, unknown>): TasksSearch {
+  const activeTab: Tab = search['activeTab'] === 'backlog' ? 'backlog' : 'all'
+  const sortBy: TaskSortBy =
+    sortOptionValues.find((value) => value === search['sortBy']) ?? 'updated'
+  const showCompleted = search['showCompleted'] === true
+  return { activeTab, sortBy, showCompleted }
+}
+
+export const Route = createFileRoute('/tasks/')({
+  validateSearch,
+  search: {
+    middlewares: [stripSearchParams(tasksSearchDefaults)],
+  },
+  component: TaskList,
+})
 
 function TaskListColumnHeader() {
   return (
@@ -64,12 +88,34 @@ function TaskListColumnHeader() {
 }
 
 export function TaskList() {
-  const [activeTab, setActiveTab] = useState<Tab>('all')
+  const {
+    activeTab = 'all',
+    sortBy = 'updated',
+    showCompleted = false,
+  } = Route.useSearch()
+  const navigate = Route.useNavigate()
   const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isGithubModalOpen, setIsGithubModalOpen] = useState(false)
-  const [sortBy, setSortBy] = useState<TaskSortBy>('updated')
-  const [showCompleted, setShowCompleted] = useState(false)
+
+  const setActiveTab = (tab: Tab) => {
+    void navigate({
+      search: (prev) => ({ ...prev, activeTab: tab }),
+      replace: true,
+    })
+  }
+  const setSortBy = (sort: TaskSortBy) => {
+    void navigate({
+      search: (prev) => ({ ...prev, sortBy: sort }),
+      replace: true,
+    })
+  }
+  const setShowCompleted = (checked: boolean) => {
+    void navigate({
+      search: (prev) => ({ ...prev, showCompleted: checked }),
+      replace: true,
+    })
+  }
 
   const tasks = useFilteredTaskList(sortBy, showCompleted)
   const { isLoading: isTreeLoading, tree: filteredTreeData } =

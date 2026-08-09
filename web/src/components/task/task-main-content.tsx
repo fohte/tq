@@ -20,7 +20,6 @@ import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
-import { useTagFilter } from '#hooks/use-tag-filter'
 import type { TaskPage } from '#hooks/use-task-pages'
 import type { Task, TaskDetail } from '#hooks/use-tasks'
 import { useUpdateTask, useUpdateTaskStatus } from '#hooks/use-tasks'
@@ -113,7 +112,6 @@ export function TaskMainContent({
 // --- Tag Chips ---
 
 function TaskTagChips({ labels }: { labels: string[] }) {
-  const { setTag } = useTagFilter()
   const navigate = useNavigate()
 
   return (
@@ -124,8 +122,7 @@ function TaskTagChips({ labels }: { labels: string[] }) {
           as="button"
           size="sm"
           onClick={() => {
-            setTag(label)
-            void navigate({ to: '/tasks' })
+            void navigate({ to: '/tasks', search: { tag: label } })
           }}
         >
           <span className="text-primary font-bold">#</span>

@@ -112,6 +112,7 @@ function SidebarWithRouter({
   projects?: Project[] | undefined
 }) {
   const rootRoute = createRootRoute({
+    validateSearch: (search: Record<string, unknown>) => search,
     component: () => <SidebarStory tasks={tasks} projects={projects} />,
   })
   const indexRoute = createRoute({

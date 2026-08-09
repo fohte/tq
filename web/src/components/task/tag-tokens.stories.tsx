@@ -4,10 +4,10 @@ import { expect } from 'storybook/test'
 import { TagFilterBar } from '#components/tag-filter-bar'
 import { TagTokens } from '#components/task/task-row-shared'
 
-// TagTokens only reads/writes tag state via useTagFilter (no routing or
-// data-fetching involved), and the Storybook preview already wraps every
-// story in a TagFilterProvider, so no extra provider setup is needed here
-// (see .storybook/preview.tsx and tag-filter-bar.stories.tsx for the same
+// TagTokens only reads/writes tag state via useTagFilter (URL search state
+// via useSearch/useNavigate), and the Storybook preview already wraps every
+// story in a router, so no extra provider setup is needed here (see
+// .storybook/preview.tsx and tag-filter-bar.stories.tsx for the same
 // pattern).
 function TagTokensDemo({
   labels,
