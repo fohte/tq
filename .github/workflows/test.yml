@@ -195,6 +195,11 @@ jobs:
   # sharing the `web` leg above with the (browser-free) type-check and unit
   # test run.
   vrt:
+    # Doesn't need unit-test-run: a red web `tsc --noEmit`/unit-test leg
+    # doesn't affect whether stories render correctly, and an incomplete
+    # screenshot set (the actual risk to the baseline) already fails
+    # vrt.yml's shard job, which blocks its report job (needs: shard) from
+    # promoting anything.
     needs: setup
     if: ${{ contains(fromJSON(needs.setup.outputs.packages), 'web') }}
     permissions:
