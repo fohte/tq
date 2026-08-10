@@ -1,5 +1,5 @@
 import { screenshot } from '@storycap-testrun/browser'
-import { afterEach, vi } from 'vitest'
+import { afterEach, beforeEach, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 // Pin the clock so stories that read the current time (calendar "now"
@@ -69,6 +69,41 @@ function asScreenshotContext(
   return context as Parameters<typeof screenshot>[1]
 }
 
+// A story that loads a non-same-origin http(s) resource (e.g. a remote
+// avatar image) races the capture against that request's completion over the
+// real network, so the same story can rasterize differently between runs.
+// Failing the test surfaces this instead of letting it show up as unstable
+// screenshot diffs; fix stories by inlining the resource as a data URI.
+const externalResourceUrls: string[] = []
+
+function isExternalResourceUrl(url: string): boolean {
+  const { protocol, origin } = new URL(url)
+  return (
+    (protocol === 'http:' || protocol === 'https:') &&
+    origin !== window.location.origin
+  )
+}
+
+new PerformanceObserver((list) => {
+  for (const entry of list.getEntries()) {
+    if (isExternalResourceUrl(entry.name)) {
+      externalResourceUrls.push(entry.name)
+    }
+  }
+}).observe({ type: 'resource', buffered: true })
+
+beforeEach(() => {
+  externalResourceUrls.length = 0
+})
+
 afterEach(async (context) => {
   await screenshot(page, asScreenshotContext(context))
+
+  if (externalResourceUrls.length > 0) {
+    const urls = externalResourceUrls.join('\n')
+    externalResourceUrls.length = 0
+    throw new Error(
+      `Story loaded non-same-origin resource(s), which makes VRT captures flaky:\n${urls}`,
+    )
+  }
 })
