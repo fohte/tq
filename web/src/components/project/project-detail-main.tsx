@@ -31,7 +31,7 @@ export function ProjectMainContent({
   return (
     <div className="flex max-w-[760px] flex-col gap-[18px]">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+      <nav className="flex items-center gap-1.5 font-mono text-2xs text-muted-foreground">
         <Link to="/projects" className="hover:text-foreground">
           projects
         </Link>
@@ -116,7 +116,7 @@ function EditableProjectTitle({
           }
         }}
         autoFocus
-        className="flex-1 bg-transparent font-mono text-[22px] font-bold text-foreground outline-none"
+        className="flex-1 bg-transparent font-mono text-2xl font-bold text-foreground outline-none"
       />
     )
   }
@@ -128,7 +128,7 @@ function EditableProjectTitle({
         savingRef.current = false
         setIsEditing(true)
       }}
-      className="flex-1 cursor-text text-left font-mono text-[22px] font-bold text-foreground"
+      className="flex-1 cursor-text text-left font-mono text-2xl font-bold text-foreground"
     >
       {value}
     </button>
@@ -175,7 +175,7 @@ function ProjectTaskSummary({ tasks }: { tasks: ProjectTask[] }) {
     <div className="flex flex-col gap-3 border-t border-border pt-[18px]">
       <div className="flex items-baseline gap-2.5">
         <span className="font-mono text-xs font-bold text-primary">###</span>
-        <span className="font-mono text-[13px] font-bold text-foreground">
+        <span className="font-mono text-sm font-bold text-foreground">
           tasks
         </span>
         <span className="ml-auto whitespace-nowrap font-mono text-xs text-muted-foreground-strong">
@@ -184,7 +184,7 @@ function ProjectTaskSummary({ tasks }: { tasks: ProjectTask[] }) {
         </span>
       </div>
       <ProgressBar percent={progress} className="h-[3px]" />
-      <div className="flex gap-[22px] font-mono text-[11px] text-muted-foreground">
+      <div className="flex gap-[22px] font-mono text-2xs text-muted-foreground">
         <span>Todo: {todo}</span>
         <span>
           <span className="text-primary">▍</span>
@@ -214,7 +214,7 @@ function ProjectOpenTasksPanel({
         <Link
           to="/projects/$projectId/board"
           params={{ projectId }}
-          className="ml-auto text-[10px] tracking-normal hover:text-foreground"
+          className="ml-auto text-2xs tracking-normal hover:text-foreground"
         >
           view board →
         </Link>
