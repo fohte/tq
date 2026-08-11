@@ -19,15 +19,37 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # tj-actions/changed-files needs the previous commit for `push`
-          # events (used for the push-to-main leg below); `pull_request`
-          # events diff against the PR base regardless of depth.
-          fetch-depth: 2
+          # pull_request events diff against the PR base regardless of
+          # depth. push events (this workflow only pushes on main — see
+          # `on.push.branches` above) diff against the previous commit, plus
+          # one more commit of history for the auto-format grandparent-diff
+          # below.
+          fetch-depth: ${{ github.event_name == 'push' && 3 || 2 }}
+
+      - uses: ./.github/actions/detect-auto-format-commit
+        id: detect-auto-format
+        if: github.event_name == 'push'
+
+      # An auto-format commit pushed straight to main by format.yml has its
+      # own diff be just the formatter's output (e.g. regenerated docs/db),
+      # not the human change that triggered it. Diffing against its
+      # grandparent instead unions both, so package detection below (and
+      # thus vrt/unit-test-run) doesn't miss a change that already ran once
+      # in the triggering push. Not needed on pull_request: base-to-head
+      # diffing there is already cumulative, and an auto-format commit
+      # pushed after a PR is open retriggers pull_request:synchronize.
+      - name: Find changed-files base SHA
+        id: base-sha
+        if: steps.detect-auto-format.outputs.is_auto_format == 'true'
+        run: |
+          base_sha=$(git rev-parse HEAD~2)
+          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
 
       - name: Detect changed files
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         id: changed
         with:
+          base_sha: ${{ steps.base-sha.outputs.base_sha }}
           json: true
           # Emit valid JSON; the default escapes quotes and breaks jq parsing.
           escape_json: false

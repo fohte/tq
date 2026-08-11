@@ -131,7 +131,11 @@ jobs:
     # update the single `baseline/actual/` key, where each run's diff was
     # computed against a baseline the other run is concurrently mutating.
     concurrency:
-      group: vrt-report-${{ inputs.branch }}
+      # Namespaced by is-main so a pull_request run for a fork's own "main"
+      # branch can never land in the same group as the push-triggered run
+      # for this repo's main — that would queue behind (or get queued
+      # behind by) an unrelated PR run and delay the baseline update.
+      group: vrt-report-${{ inputs.is-main && 'push' || 'pr' }}-${{ inputs.branch }}
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -149,11 +153,16 @@ jobs:
       # actual_key is this run's own report location.
       - name: Set VRT snapshot keys
         id: vrt-keys
+        env:
+          # inputs.branch is a PR head ref name on pull_request runs, so a
+          # fork PR can set it to arbitrary text — must go through env, never
+          # interpolated directly into the script below.
+          BRANCH: ${{ inputs.branch }}
         run: |
           echo "expected_key=baseline" >> "$GITHUB_OUTPUT"
           # One key per branch: re-pushing to the same branch overwrites its
           # previous snapshot instead of accumulating a new one per commit.
-          echo "actual_key=branch/${{ inputs.branch }}" >> "$GITHUB_OUTPUT"
+          echo "actual_key=branch/${BRANCH}" >> "$GITHUB_OUTPUT"
 
       - name: Compare VRT screenshots
         working-directory: web
