@@ -2,6 +2,26 @@ name: VRT
 
 on:
   workflow_call:
+    inputs:
+      branch:
+        description: >-
+          Branch name used for the S3 report path (branch/<branch>) and to
+          resolve the open PR for the comment/approval steps.
+        type: string
+        required: true
+      sha:
+        description: >-
+          Commit SHA the PR comment and vrt status are attached to (the
+          PR's head commit, not the pull_request event's merge commit).
+        type: string
+        required: true
+      is-main:
+        description: >-
+          Whether this run is for a push to main, as opposed to a pull
+          request. Gates the PR-only steps (approval check, vrt status) vs.
+          the baseline update.
+        type: boolean
+        required: true
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true
@@ -111,7 +131,11 @@ jobs:
     # update the single `baseline/actual/` key, where each run's diff was
     # computed against a baseline the other run is concurrently mutating.
     concurrency:
-      group: vrt-report-${{ github.ref }}
+      # Namespaced by is-main so a pull_request run for a fork's own "main"
+      # branch can never land in the same group as the push-triggered run
+      # for this repo's main — that would queue behind (or get queued
+      # behind by) an unrelated PR run and delay the baseline update.
+      group: vrt-report-${{ inputs.is-main && 'push' || 'pr' }}-${{ inputs.branch }}
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -129,11 +153,16 @@ jobs:
       # actual_key is this run's own report location.
       - name: Set VRT snapshot keys
         id: vrt-keys
+        env:
+          # inputs.branch is a PR head ref name on pull_request runs, so a
+          # fork PR can set it to arbitrary text — must go through env, never
+          # interpolated directly into the script below.
+          BRANCH: ${{ inputs.branch }}
         run: |
           echo "expected_key=baseline" >> "$GITHUB_OUTPUT"
           # One key per branch: re-pushing to the same branch overwrites its
           # previous snapshot instead of accumulating a new one per commit.
-          echo "actual_key=branch/${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          echo "actual_key=branch/${BRANCH}" >> "$GITHUB_OUTPUT"
 
       - name: Compare VRT screenshots
         working-directory: web
@@ -211,8 +240,8 @@ jobs:
         uses: ./.github/actions/vrt-comment
         with:
           repo: ${{ github.repository }}
-          branch: ${{ github.ref_name }}
-          sha: ${{ github.sha }}
+          branch: ${{ inputs.branch }}
+          sha: ${{ inputs.sha }}
           out-json-path: web/.reg/out.json
           report-url: https://tq-vrt.fohte.net/${{ steps.vrt-keys.outputs.actual_key }}/index.html
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -224,12 +253,12 @@ jobs:
       # result never needs this check: overwriting an existing approval with
       # `success` is a no-op either way.
       - name: Check for an existing VRT approval
-        if: github.ref != 'refs/heads/main' && steps.vrt-compare.outputs.has_diff == 'true'
+        if: ${{ !inputs.is-main && steps.vrt-compare.outputs.has_diff == 'true' }}
         id: vrt-approval
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          BRANCH: ${{ github.ref_name }}
+          BRANCH: ${{ inputs.branch }}
         run: |
           approved=$(gh pr list --repo "$REPO" --head "$BRANCH" --state open --json labels \
             --jq 'if length == 0 then false else (.[0].labels | any(.name == "vrt-approved")) end')
@@ -247,39 +276,18 @@ jobs:
       # never be un-failed — it would sit red on main's HEAD permanently.
       #
       # continue-on-error so a transient failure here (rate limit, network
-      # blip) can't skip the baseline update further down, the same
-      # reasoning the "Publish VRT commit marker" step below already applies.
+      # blip) can't skip the baseline update further down.
       - name: Set VRT commit status
-        if: github.ref != 'refs/heads/main' && steps.vrt-approval.outputs.approved != 'true'
+        if: ${{ !inputs.is-main && steps.vrt-approval.outputs.approved != 'true' }}
         continue-on-error: true
         uses: ./.github/actions/vrt-status
         with:
           repo: ${{ github.repository }}
-          sha: ${{ github.sha }}
+          sha: ${{ inputs.sha }}
           state: ${{ steps.vrt-compare.outputs.has_diff == 'true' && 'failure' || 'success' }}
           description: ${{ steps.vrt-compare.outputs.has_diff == 'true' && 'Visual differences detected' || 'No visual differences' }}
           target-url: https://tq-vrt.fohte.net/${{ steps.vrt-keys.outputs.actual_key }}/index.html
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      # branch/<ref_name> is overwritten by every push to that branch (see
-      # Set VRT snapshot keys above), so a consumer reading it later has no
-      # way to tell which commit it reflects. This marker lets
-      # vrt-comment-on-pr-open.yml confirm the branch key still matches the
-      # PR's head commit before trusting it. Safe to publish unconditionally:
-      # out.json is republished on every run too (VRT_PUBLISH_PATTERN above
-      # always matches it), so the marker never outlives the result it
-      # points at. Runs after the PR comment step (not before) and
-      # tolerates its own failure so a transient marker-write error can never
-      # skip the comment or fail the job.
-      - name: Publish VRT commit marker
-        continue-on-error: true
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-        run: |
-          echo -n "${{ github.sha }}" | aws s3 cp - "s3://tq-vrt/${{ steps.vrt-keys.outputs.actual_key }}/sha" \
-            --endpoint-url https://8d88a085ccc7b11f252419e2f3a25fd6.r2.cloudflarestorage.com
 
       # Reached only once reg-suit has successfully published this run's own
       # report, so a failure above never touches the shared baseline. Only
@@ -288,7 +296,7 @@ jobs:
       # item is already correct in baseline/actual/ and is left alone.
       # Requires has_diff == 'true': a zero-diff run has nothing to change.
       - name: Update VRT baseline
-        if: github.ref == 'refs/heads/main' && steps.vrt-compare.outputs.has_diff == 'true'
+        if: ${{ inputs.is-main && steps.vrt-compare.outputs.has_diff == 'true' }}
         working-directory: web
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

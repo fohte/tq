@@ -15,7 +15,7 @@ import { cn } from '#lib/utils'
 export function ProjectSidebar({ project }: { project: ProjectDetail }) {
   return (
     <div className="flex flex-col gap-4">
-      <span className="font-mono text-[9px] tracking-[0.1em] text-muted-foreground-faint">
+      <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
         DETAILS
       </span>
       <ProjectSidebarField label="STATUS">
@@ -53,7 +53,7 @@ export function ProjectSidebar({ project }: { project: ProjectDetail }) {
 export function ProjectSidebarMobile({ project }: { project: ProjectDetail }) {
   return (
     <div className="flex flex-col gap-3">
-      <span className="font-mono text-[9px] tracking-[0.1em] text-muted-foreground-faint">
+      <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
         DETAILS
       </span>
       <div className="flex flex-col gap-2">
@@ -103,7 +103,7 @@ function RemainingDays({ targetDate }: { targetDate: string }) {
             ? `${String(days)} days remaining`
             : `${String(Math.abs(days))} days overdue`}
         </span>
-        <span className="text-[10px] text-muted-foreground-faint">
+        <span className="text-2xs text-muted-foreground-faint">
           Target: {formattedTarget}
         </span>
       </div>
@@ -122,10 +122,10 @@ function ProjectSidebarField({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="font-mono text-[10px] text-muted-foreground-faint">
+      <span className="font-mono text-2xs text-muted-foreground-faint">
         {label}
       </span>
-      <div className="font-mono text-[12px] text-foreground">{children}</div>
+      <div className="font-mono text-xs text-foreground">{children}</div>
     </div>
   )
 }
@@ -139,7 +139,7 @@ function ProjectFieldRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="w-[100px] shrink-0 font-mono text-[10px] text-muted-foreground-faint">
+      <span className="w-[100px] shrink-0 font-mono text-2xs text-muted-foreground-faint">
         {label}
       </span>
       <div className="text-sm text-foreground">{children}</div>
@@ -163,7 +163,7 @@ function StatusSelect({
       onChange={selectHandler((value: ProjectDetail['status']) => {
         updateProject.mutate({ id: projectId, input: { status: value } })
       }, statusValues)}
-      className="border-none bg-transparent px-0 py-0 font-mono text-[12px] text-foreground outline-none"
+      className="border-none bg-transparent px-0 py-0 font-mono text-xs text-foreground outline-none"
     >
       {statusValues.map((value) => (
         <option key={value} value={value}>
@@ -195,7 +195,7 @@ function DateInput({
           input: { [field]: e.target.value || null },
         })
       }}
-      className="w-full border border-border bg-transparent px-2 py-1 font-mono text-[12px] outline-none focus:border-primary/50"
+      className="w-full border border-border bg-transparent px-2 py-1 font-mono text-xs outline-none focus:border-primary/50"
     />
   )
 }

@@ -9,6 +9,8 @@ import {
 } from '@tanstack/react-router'
 import { initialize, mswLoader } from 'msw-storybook-addon'
 
+import { unhandledApiRequestUrls } from '#storybook-config/unhandled-api-requests'
+
 initialize({
   onUnhandledRequest: ({ url: requestUrl }, print) => {
     const url = new URL(requestUrl)
@@ -17,6 +19,7 @@ initialize({
       url.origin === self.location.origin &&
       url.pathname.startsWith('/api/')
     ) {
+      unhandledApiRequestUrls.push(url.pathname)
       print.error()
     }
   },
