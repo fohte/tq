@@ -10,7 +10,7 @@ function Search() {
   const navigate = useNavigate()
 
   return (
-    <div className="h-[calc(100dvh-56px)] md:h-dvh">
+    <div className="h-full">
       <SearchView
         onBack={() => {
           void navigate({ to: '/' })
