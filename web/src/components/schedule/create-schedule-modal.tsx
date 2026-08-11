@@ -1,9 +1,14 @@
 import { Clock, Layers, Palette, Repeat, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
+import {
+  BottomSheetHeader,
+  BottomSheetPanel,
+} from '#components/ui/bottom-sheet'
 import { Button } from '#components/ui/button'
 import {
   Dialog,
+  DialogHeaderBar,
   DialogOverlay,
   DialogPopup,
   DialogPortal,
@@ -154,7 +159,7 @@ export function CreateScheduleModal({
           <div className="fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex">
             <div className="flex max-h-full w-full max-w-[500px] flex-col overflow-hidden rounded-2xl bg-card shadow-2xl ring-1 ring-foreground/10">
               {/* Header */}
-              <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-6">
+              <DialogHeaderBar>
                 <span className="text-base font-semibold text-foreground">
                   New Schedule
                 </span>
@@ -168,7 +173,7 @@ export function CreateScheduleModal({
                   <X className="size-5" />
                   <span className="sr-only">Close</span>
                 </Button>
-              </div>
+              </DialogHeaderBar>
 
               {/* Body */}
               <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
@@ -364,9 +369,9 @@ export function CreateScheduleModal({
 
           {/* SP Modal (bottom sheet) */}
           <div className="fixed inset-0 z-50 flex items-end md:hidden">
-            <div className="max-h-[85vh] w-full overflow-y-auto rounded-t-xl bg-card pb-5 shadow-2xl ring-1 ring-foreground/10">
+            <BottomSheetPanel>
               {/* Header */}
-              <div className="sticky top-0 z-10 flex h-12 items-center justify-between border-b border-border bg-card px-4">
+              <BottomSheetHeader>
                 <span className="text-base font-semibold text-foreground">
                   New Schedule
                 </span>
@@ -380,7 +385,7 @@ export function CreateScheduleModal({
                   <X className="size-5" />
                   <span className="sr-only">Close</span>
                 </Button>
-              </div>
+              </BottomSheetHeader>
 
               {/* Content */}
               <div className="flex flex-col gap-4 px-5 pt-4">
@@ -552,7 +557,7 @@ export function CreateScheduleModal({
                   Create
                 </Button>
               </div>
-            </div>
+            </BottomSheetPanel>
           </div>
         </DialogPopup>
       </DialogPortal>

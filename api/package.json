@@ -28,7 +28,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "3.1075.0",
     "@aws-sdk/s3-request-presigner": "3.1075.0",
-    "@fohte/service-kit": "0.1.8",
+    "@fohte/service-kit": "0.1.9",
     "@hono/mcp": "0.3.1",
     "@hono/node-server": "1.19.14",
     "@hono/zod-validator": "0.7.6",
@@ -44,6 +44,6 @@
     "aws-sdk-client-mock": "4.1.0",
     "drizzle-kit": "0.31.10",
     "tsup": "8.5.1",
-    "tsx": "4.23.1"
+    "tsx": "4.23.5"
   }
 }

@@ -133,6 +133,7 @@ function SidebarWithRouter({
 const meta = {
   title: 'Layout/Sidebar',
   component: SidebarWithRouter,
+  tags: ['desktop-only'],
   parameters: {
     layout: 'fullscreen',
   },

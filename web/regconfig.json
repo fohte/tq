@@ -2,7 +2,8 @@
   "core": {
     "workingDir": ".reg",
     "actualDir": "__screenshots__",
-    "matchingThreshold": 0.01
+    "matchingThreshold": 0.01,
+    "enableAntialias": true
   },
   "plugins": {
     "reg-simple-keygen-plugin": {
