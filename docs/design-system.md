@@ -206,10 +206,11 @@ fight code that's already correct.
 
 What's **not** allowed is inventing a step Tailwind doesn't ship by
 default, e.g. `gap-1.75` (7px) or `gap-4.5` (18px). Tailwind v4's dynamic
-utilities compile those without brackets, so `no-arbitrary-value` won't
-flag them — but the value is still off-grid; only the bracket syntax
-disappeared. Always resolve to a step from the table below (or a plain
-integer beyond `3.5`), never a bespoke multiplier.
+utilities compile those without brackets, so even a bracket-only
+arbitrary-value lint check wouldn't catch them — the value is still
+off-grid; only the bracket syntax disappeared. Always resolve to a step
+from the table below (or a plain integer beyond `3.5`), never a bespoke
+multiplier.
 
 ### Migration table
 
@@ -230,7 +231,7 @@ bigger). E.g. `gap-[7px]` → `gap-2`, `py-[7px]` → `py-2`.
 | `13px`         | `3.5` (14px) | Equidistant between `3` (12px) and `3.5` (14px) — ties round up                                                                                                                                                                                                                                |
 | `18px`         | `5` (20px)   | Equidistant between `4` (16px) and `5` (20px) — Tailwind has no half-step above `3.5`, so both neighbors are full steps; ties round up. Confirmed by `focus-view.tsx`'s `mt-4 md:mt-[18px]`, which must stay ≥ the base `mt-4` — rounding down would collapse the responsive change to a no-op |
 | `22px`         | `6` (24px)   | Equidistant between `5` (20px) and `6` (24px) — ties round up                                                                                                                                                                                                                                  |
-| `41px`         | `10` (40px)  | Nearest step — 40px is 1px away, 44px is 3px away, not a tie. Shared by `screen-header-bar.tsx` and `section-heading.stories.tsx`; round both together                                                                                                                                         |
+| `41px`         | `10` (40px)  | Nearest step — 40px is 1px away, 44px is 3px away, not a tie. Also used by `layout/sidebar.tsx`'s header row, which sits flush against `ScreenHeaderBar` in the app shell — round every occurrence in the same pass so their `border-b` lines stay aligned instead of drifting by 1px          |
 | `44px`         | `11` (44px)  | Already exactly on-grid (`11 × 4px`, the standard tap-target size) — not a rounding case, just swap the bracket for the equivalent named utility (`min-w-[44px]` → `min-w-11`)                                                                                                                 |
 
 ±1px visual drift from this rounding is expected and acceptable. What isn't
@@ -333,7 +334,7 @@ function ScreenHeaderBar(props: {
 }): JSX.Element
 ```
 
-A fixed-height (`h-[41px]`) bottom-bordered bar for a screen's or panel's
+A fixed-height (`h-10`) bottom-bordered bar for a screen's or panel's
 top header row. Compose it with a `SectionHeading` / plain label plus
 trailing actions (e.g. `ml-auto` button).
 
