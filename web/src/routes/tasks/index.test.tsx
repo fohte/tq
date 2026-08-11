@@ -8,13 +8,10 @@ import {
 } from '@tanstack/react-router'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ContextFilterProvider } from '#hooks/use-context-filter'
-import { TagFilterProvider } from '#hooks/use-tag-filter'
 // Import after mocks
-import { TaskList } from '#routes/tasks/index'
+import { Route as TasksRoute } from '#routes/tasks/index'
 
 const mockUseFilteredTaskList = vi.fn()
 const mockUseFilteredTaskTree = vi.fn()
@@ -43,45 +40,43 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
 
 // GithubIssueLinkModal (always mounted, just closed) calls useNavigate
 // unconditionally, so a real router is required rather than a mocked one.
-function Providers({ children }: { children: ReactNode }) {
+// TaskList itself is bound to the real TasksRoute (Route.useSearch() /
+// Route.useNavigate()), so that route must be matched for real rather than
+// rendered directly as a child element.
+function renderTaskList() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   const rootRoute = createRootRoute({
-    component: () => <>{children}</>,
+    validateSearch: (search: Record<string, unknown>) => search,
   })
-  const indexRoute = createRoute({
+  // A file route's id/path/parent are normally wired up by the generated
+  // routeTree.gen.ts (via this same `.update()` call, cast the same way) —
+  // reproduce that here so the real TasksRoute (with its real
+  // validateSearch/stripSearchParams config) can be matched against a
+  // locally-built tree instead of the app's real root.
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-type-assertion -- mirrors routeTree.gen.ts's own `as any` for wiring a file route into a route tree
+  TasksRoute.update({
+    id: '/tasks/',
+    path: '/tasks/',
     getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors routeTree.gen.ts's own `as any` for wiring a file route into a route tree
+  } as any)
   const taskRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/tasks/$taskId',
     component: () => null,
   })
-  rootRoute.addChildren([indexRoute, taskRoute])
+  rootRoute.addChildren([TasksRoute, taskRoute])
   const router = createRouter({
     routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
+    history: createMemoryHistory({ initialEntries: ['/tasks'] }),
   })
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ContextFilterProvider>
-        <TagFilterProvider>
-          <RouterProvider router={router} />
-        </TagFilterProvider>
-      </ContextFilterProvider>
-    </QueryClientProvider>
-  )
-}
-
-function renderTaskList() {
   return render(
-    <Providers>
-      <TaskList />
-    </Providers>,
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
   )
 }
 

@@ -1,10 +1,13 @@
 import '#index.css'
 
 import type { Preview } from '@storybook/react-vite'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
 import { initialize, mswLoader } from 'msw-storybook-addon'
-
-import { ContextFilterProvider } from '#hooks/use-context-filter'
-import { TagFilterProvider } from '#hooks/use-tag-filter'
 
 initialize({
   onUnhandledRequest: ({ url: requestUrl }, print) => {
@@ -50,13 +53,17 @@ const preview: Preview = {
       const theme: unknown = context.globals['theme']
       const themeValue = typeof theme === 'string' ? theme : 'dark'
       document.documentElement.classList.toggle('dark', themeValue === 'dark')
-      return (
-        <ContextFilterProvider>
-          <TagFilterProvider>
-            <Story />
-          </TagFilterProvider>
-        </ContextFilterProvider>
-      )
+
+      const rootRoute = createRootRoute({
+        validateSearch: (search: Record<string, unknown>) => search,
+        component: () => <Story />,
+      })
+      const router = createRouter({
+        routeTree: rootRoute,
+        history: createMemoryHistory({ initialEntries: ['/'] }),
+      })
+
+      return <RouterProvider router={router} />
     },
   ],
   loaders: [mswLoader],

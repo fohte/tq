@@ -40,6 +40,7 @@ function Providers({ children }: { children: ReactNode }) {
     defaultOptions: { queries: { retry: false } },
   })
   const rootRoute = createRootRoute({
+    validateSearch: (search: Record<string, unknown>) => search,
     component: () => <>{children}</>,
   })
   const indexRoute = createRoute({

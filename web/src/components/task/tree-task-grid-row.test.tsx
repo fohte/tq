@@ -1,11 +1,17 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeNode } from '#components/task/task-row-test-fixtures'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
-import { TagFilterProvider, useTagFilter } from '#hooks/use-tag-filter'
+import { useTagFilter } from '#hooks/use-tag-filter'
 import type { TreeNode } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { atIndex } from '#lib/test-utils'
@@ -29,19 +35,26 @@ vi.mock('#hooks/use-tasks', () => ({
   useUpdateTaskParent: () => ({ mutate: vi.fn() }),
 }))
 
-vi.mock('@tanstack/react-router', () => ({
-  Link: ({
-    children,
-    ...props
-  }: { children: React.ReactNode } & Record<string, unknown>) => (
-    <a
-      href={typeof props['to'] === 'string' ? props['to'] : '#'}
-      onClick={mockLinkOnClick}
-    >
-      {children}
-    </a>
-  ),
-}))
+// Only Link is stubbed (to spy on mockLinkOnClick instead of really
+// navigating) — useSearch/useNavigate/router-building exports stay real so
+// useTagFilter (via useSearch({strict: false})) keeps working.
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>()
+  return {
+    ...actual,
+    Link: ({
+      children,
+      ...props
+    }: { children: React.ReactNode } & Record<string, unknown>) => (
+      <a
+        href={typeof props['to'] === 'string' ? props['to'] : '#'}
+        onClick={mockLinkOnClick}
+      >
+        {children}
+      </a>
+    ),
+  }
+})
 
 // Base UI's Menu relies on pointer events that jsdom does not implement
 // reliably, so the picker is stubbed here to exercise TreeTaskGridRow's
@@ -111,16 +124,31 @@ function TreeHarness({ node }: { node: TreeNode }) {
   )
 }
 
-function renderTree(node: TreeNode) {
+// The router's first route match resolves asynchronously even with no
+// loaders, so router.load() is awaited before render() to avoid an initial
+// blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
+async function renderTree(node: TreeNode) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <TagFilterProvider>
+  const rootRoute = createRootRoute({
+    validateSearch: (search: Record<string, unknown>) => search,
+    component: () => (
+      <>
         <TreeHarness node={node} />
         <TagProbe />
-      </TagFilterProvider>
+      </>
+    ),
+  })
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  })
+  await router.load()
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
     </QueryClientProvider>,
   )
 }
@@ -134,25 +162,25 @@ beforeEach(() => {
 // are queryable). Assertions below pin the count to 2 rather than just
 // "at least one" so a regression in either layout alone still fails.
 describe('TreeTaskGridRow', () => {
-  it('renders task title', () => {
-    renderTree(makeNode())
+  it('renders task title', async () => {
+    await renderTree(makeNode())
     expect(screen.getAllByText('Parent Task')).toHaveLength(2)
   })
 
-  it('renders a row-actions trigger for the ⋯ menu', () => {
-    renderTree(makeNode())
+  it('renders a row-actions trigger for the ⋯ menu', async () => {
+    await renderTree(makeNode())
     // TreeRowActionsMenu itself renders one trigger per layout (desktop
     // dropdown + mobile action sheet), and the row mounts it once for the
     // desktop grid section and once for the mobile stack section: 2 x 2.
     expect(screen.getAllByLabelText('Task actions')).toHaveLength(4)
   })
 
-  it('renders the task number', () => {
-    renderTree(makeNode({ number: 42 }))
+  it('renders the task number', async () => {
+    await renderTree(makeNode({ number: 42 }))
     expect(screen.getAllByText('#42')).toHaveLength(2)
   })
 
-  it('indents deeper rows more than their ancestors', () => {
+  it('indents deeper rows more than their ancestors', async () => {
     const grandchild = makeNode({
       id: 'grandchild-1',
       title: 'Grandchild Task',
@@ -167,7 +195,7 @@ describe('TreeTaskGridRow', () => {
       children: [child],
       childCompletionCount: { completed: 0, total: 1 },
     })
-    renderTree(node)
+    await renderTree(node)
 
     const paddingLeftPx = (text: string) => {
       const el = atIndex(screen.getAllByText(text), 0).closest(
@@ -190,19 +218,19 @@ describe('TreeTaskGridRow', () => {
     )
   })
 
-  it('renders children under parent', () => {
+  it('renders children under parent', async () => {
     const node = makeNode({
       children: [
         makeNode({ id: 'child-1', title: 'Child Task', parentId: 'parent-1' }),
       ],
       childCompletionCount: { completed: 0, total: 1 },
     })
-    renderTree(node)
+    await renderTree(node)
     expect(screen.getAllByText('Parent Task')).toHaveLength(2)
     expect(screen.getAllByText('Child Task')).toHaveLength(2)
   })
 
-  it('shows child completion count', () => {
+  it('shows child completion count', async () => {
     const node = makeNode({
       children: [
         makeNode({
@@ -224,7 +252,7 @@ describe('TreeTaskGridRow', () => {
       ],
       childCompletionCount: { completed: 1, total: 3 },
     })
-    renderTree(node)
+    await renderTree(node)
     // Parent node should show 1/3, once per layout (desktop + mobile); none
     // of the children have children of their own, so they show nothing.
     const completions = screen.getAllByTestId('child-completion')
@@ -233,8 +261,8 @@ describe('TreeTaskGridRow', () => {
     expect(atIndex(completions, 1)).toHaveTextContent('1/3')
   })
 
-  it('does not show child completion count when no children', () => {
-    renderTree(makeNode())
+  it('does not show child completion count when no children', async () => {
+    await renderTree(makeNode())
     expect(screen.queryByTestId('child-completion')).not.toBeInTheDocument()
   })
 
@@ -246,7 +274,7 @@ describe('TreeTaskGridRow', () => {
       ],
       childCompletionCount: { completed: 0, total: 1 },
     })
-    renderTree(node)
+    await renderTree(node)
 
     // Children visible by default
     expect(screen.getAllByText('Child Task')).toHaveLength(2)
@@ -267,7 +295,7 @@ describe('TreeTaskGridRow', () => {
       ],
       childCompletionCount: { completed: 0, total: 1 },
     })
-    renderTree(node)
+    await renderTree(node)
 
     // Collapse
     await user.click(atIndex(screen.getAllByLabelText('Collapse'), 0))
@@ -278,7 +306,7 @@ describe('TreeTaskGridRow', () => {
     expect(screen.getAllByText('Child Task')).toHaveLength(2)
   })
 
-  it('renders nested children (grandchildren)', () => {
+  it('renders nested children (grandchildren)', async () => {
     const grandchild = makeNode({
       id: 'grandchild-1',
       title: 'Grandchild Task',
@@ -295,27 +323,27 @@ describe('TreeTaskGridRow', () => {
       children: [child],
       childCompletionCount: { completed: 0, total: 1 },
     })
-    renderTree(node)
+    await renderTree(node)
 
     expect(screen.getAllByText('Parent Task')).toHaveLength(2)
     expect(screen.getAllByText('Child Task')).toHaveLength(2)
     expect(screen.getAllByText('Grandchild Task')).toHaveLength(2)
   })
 
-  it('does not show expand toggle for leaf nodes', () => {
+  it('does not show expand toggle for leaf nodes', async () => {
     // A leaf node rendered alone has no expand toggle
     const leaf = makeNode({ id: 'leaf-1', title: 'Leaf Task' })
-    renderTree(leaf)
+    await renderTree(leaf)
     expect(screen.queryByLabelText('Collapse')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Expand')).not.toBeInTheDocument()
   })
 
-  it('does not show a GitHub badge when there is no link', () => {
-    renderTree(makeNode())
+  it('does not show a GitHub badge when there is no link', async () => {
+    await renderTree(makeNode())
     expect(screen.queryByText('tq#42')).not.toBeInTheDocument()
   })
 
-  it('shows a GitHub badge when linked', () => {
+  it('shows a GitHub badge when linked', async () => {
     const node = makeNode({
       githubLink: {
         id: 'link-1',
@@ -329,30 +357,30 @@ describe('TreeTaskGridRow', () => {
         lastSyncedAt: '2026-03-20T00:00:00.000Z',
       },
     })
-    renderTree(node)
+    await renderTree(node)
     // The LINK column only exists in the desktop grid.
     expect(screen.getAllByText('tq#42')).toHaveLength(1)
   })
 
-  it('shows a context badge for personal tasks', () => {
-    renderTree(makeNode({ context: 'personal' }))
+  it('shows a context badge for personal tasks', async () => {
+    await renderTree(makeNode({ context: 'personal' }))
     expect(screen.getAllByText('personal')).toHaveLength(2)
   })
 
-  it('shows a context badge for work tasks', () => {
-    renderTree(makeNode({ context: 'work' }))
+  it('shows a context badge for work tasks', async () => {
+    await renderTree(makeNode({ context: 'work' }))
     expect(screen.getAllByText('work')).toHaveLength(2)
   })
 
-  it('does not render tag tokens when there are no labels', () => {
-    renderTree(makeNode({ labels: [] }))
+  it('does not render tag tokens when there are no labels', async () => {
+    await renderTree(makeNode({ labels: [] }))
     // Tag tokens render as buttons; the task number label (a <span>) also
     // starts with "#", so scope the query to buttons to avoid a false match.
     expect(screen.queryByRole('button', { name: /^#/ })).not.toBeInTheDocument()
   })
 
-  it('renders a token per label', () => {
-    renderTree(makeNode({ labels: ['dev:tq', 'chore'] }))
+  it('renders a token per label', async () => {
+    await renderTree(makeNode({ labels: ['dev:tq', 'chore'] }))
     // Desktop and mobile layouts both render, so each label's token appears
     // twice, in layout order.
     expect(
@@ -360,8 +388,8 @@ describe('TreeTaskGridRow', () => {
     ).toEqual(['#dev:tq', '#chore', '#dev:tq', '#chore'])
   })
 
-  it('highlights an overdue due date', () => {
-    renderTree(makeNode({ dueDate: '2020-01-01' }))
+  it('highlights an overdue due date', async () => {
+    await renderTree(makeNode({ dueDate: '2020-01-01' }))
     const badges = screen.getAllByText('Jan 1, 2020')
     expect(badges.map((b) => b.classList.contains('text-primary'))).toEqual([
       true,
@@ -371,7 +399,7 @@ describe('TreeTaskGridRow', () => {
 
   it('sets the tag filter and stops the click from reaching the row Link when a tag token is clicked', async () => {
     const user = userEvent.setup()
-    renderTree(makeNode({ labels: ['dev:tq'] }))
+    await renderTree(makeNode({ labels: ['dev:tq'] }))
 
     expect(screen.getByTestId('tag-probe')).toHaveTextContent('none')
 
@@ -383,7 +411,7 @@ describe('TreeTaskGridRow', () => {
 
   it('selects the row and navigates when clicking its desktop non-interactive area', async () => {
     const user = userEvent.setup()
-    renderTree(makeNode())
+    await renderTree(makeNode())
 
     // The desktop grid is the first ("Parent Task" x2) instance in render
     // order.
@@ -407,7 +435,7 @@ describe('TreeTaskGridRow', () => {
     // actually observes bubbled clicks, so a row tap still navigates on the
     // touch layout, which has no onClick of its own to intercept it.
     const user = userEvent.setup()
-    renderTree(makeNode({ labels: ['dev:tq'] }))
+    await renderTree(makeNode({ labels: ['dev:tq'] }))
 
     await user.click(atIndex(screen.getAllByText('Parent Task'), 1))
 
@@ -416,7 +444,7 @@ describe('TreeTaskGridRow', () => {
 
   it('updates the status via useUpdateTaskStatus when a non-completed status is selected', async () => {
     const user = userEvent.setup()
-    renderTree(makeNode({ status: 'todo' }))
+    await renderTree(makeNode({ status: 'todo' }))
 
     await user.click(atIndex(screen.getAllByText('Set In Progress'), 0))
 
@@ -429,7 +457,7 @@ describe('TreeTaskGridRow', () => {
 
   it('completes the task via useCompleteTask when completed is selected', async () => {
     const user = userEvent.setup()
-    renderTree(makeNode({ status: 'todo' }))
+    await renderTree(makeNode({ status: 'todo' }))
 
     await user.click(atIndex(screen.getAllByText('Set Completed'), 0))
 
@@ -439,7 +467,7 @@ describe('TreeTaskGridRow', () => {
 
   it('does nothing when the currently selected status is chosen again', async () => {
     const user = userEvent.setup()
-    renderTree(makeNode({ status: 'todo' }))
+    await renderTree(makeNode({ status: 'todo' }))
 
     await user.click(atIndex(screen.getAllByText('Set Todo'), 0))
 
