@@ -21,10 +21,8 @@ export function Chip({
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, keyof ChipOwnProps> &
   Omit<HTMLAttributes<HTMLSpanElement>, keyof ChipOwnProps>) {
   const classes = cn(
-    'inline-flex items-center gap-1 border font-mono',
-    size === 'sm'
-      ? 'px-1 text-[9px] leading-[14px]'
-      : 'px-1.5 py-0.5 text-[11px]',
+    'inline-flex items-center gap-1 border font-mono text-2xs',
+    size === 'sm' ? 'px-1' : 'px-1.5 py-0.5',
     active
       ? 'border-border-strong text-foreground'
       : 'border-border text-muted-foreground',

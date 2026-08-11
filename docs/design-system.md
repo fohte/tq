@@ -128,6 +128,67 @@ Examples:
 - Nav label / tab / badge / button / keybind hint → `font-mono` (`Button` applies this by default, no class needed)
 - Markdown editor textarea → `font-editor`
 
+## Typography scale
+
+### Font-size
+
+Tailwind's built-in `text-*` scale (`text-xs` 12px, `text-sm` 14px,
+`text-base` 16px, `text-xl` 20px, `text-2xl` 24px, etc.) covers almost every
+size in the app. There is exactly **one** custom addition, for a tier
+Tailwind has no default for:
+
+| Token        | Value                                                   | Tailwind utility | Usage                                                                                                                          |
+| ------------ | ------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `--text-2xs` | `0.625rem` (10px), paired line-height `0.875rem` (14px) | `text-2xs`       | Smallest mono UI chrome tier — dim section/field labels (`PanelHeader`, `InlineFieldGroup`), `Chip`, `TabStrip`, `KeybindHint` |
+
+**Do not add another custom `--text-*` tier without updating this table.**
+`text-2xs` exists because 8/9/10/11px were the same "small mono chrome" role
+expressed with 1px-apart drift, not an intentional scale — collapse any new
+occurrence of that role into `text-2xs` instead of picking another nearby
+px value.
+
+**Migration table** for the arbitrary `text-[Npx]` values found elsewhere in
+the codebase — apply this mechanically wherever one shows up, don't invent a
+new mapping:
+
+| Current arbitrary value                               | Resolves to | Why                                                                                                                     |
+| ----------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `text-[8px]` `text-[9px]` `text-[10px]` `text-[11px]` | `text-2xs`  | Same role (small mono UI chrome), 1px-apart drift                                                                       |
+| `text-[12px]`                                         | `text-xs`   | Exact match                                                                                                             |
+| `text-[13px]`                                         | `text-sm`   | Rounds up, not down — keeps the existing size ordering intact (e.g. `SectionHeading` level 3 stays bigger than level 2) |
+| `text-[15px]`                                         | `text-sm`   | Equidistant between `text-sm` (14px) and `text-base` (16px) — see note below                                            |
+| `text-[19px]`                                         | `text-xl`   | Equidistant between `text-lg` (18px) and `text-xl` (20px) — see note below                                              |
+| `text-[22px]` `text-[23px]`                           | `text-2xl`  | Same role ("screen title") 1px apart — round both up together instead of splitting across `text-xl`/`text-2xl`          |
+
+±1px visual drift from this rounding is expected and acceptable. What isn't
+acceptable is breaking a size _ordering_ (heading vs. body, label vs. body) —
+check that before applying a row mechanically.
+
+`15px`/`19px` sit exactly between two defaults each. This table intentionally
+targets only `text-xs`/`sm`/`xl`/`2xl` rather than pulling `text-base`/`lg`
+into the mix for a single value each — round both up rather than introduce a
+fifth and sixth target size.
+
+### Letter-spacing
+
+| Current arbitrary value                | Resolves to                                   | Why                                                                                                                          |
+| -------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `tracking-[0.08em]` `tracking-[0.1em]` | `tracking-widest` (Tailwind default, `0.1em`) | Same role (dim mono chrome label, e.g. `PanelHeader`) expressed as two near-identical values — the default already covers it |
+
+This table only covers the dim-label role above. Other arbitrary tracking
+values belong to a different role (e.g. `tracking-[0.04em]` on the bottom
+tab bar's brighter, non-dim label) and are not resolved here — decide them
+alongside that role's own consolidation instead of reusing this row.
+
+### Line-height
+
+`--text-2xs` carries its own paired line-height (`0.875rem`) as part of the
+token — don't add a `leading-*` utility alongside `text-2xs`.
+
+Line-height drift outside the `text-2xs` role (e.g. task/body copy,
+headings) is not resolved by this table — decide it alongside that role's
+own font-size when that directory's PR touches it.
+
 ## Radius policy
 
 `--radius` is `0rem` globally — every corner in the app is square by
@@ -313,7 +374,7 @@ function PanelHeader(props: {
 
 `Panel` is a bordered container (`border border-border`). `PanelHeader` is
 an optional bottom-bordered header row inside it
-(`bg-secondary`, `font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint`)
+(`bg-secondary`, `font-mono text-2xs tracking-widest text-muted-foreground-faint`)
 for an uppercase-style label + trailing action. Use for grouped list/board
 sections (e.g. an "OPEN TASKS" panel with rows below the header).
 
@@ -321,7 +382,7 @@ sections (e.g. an "OPEN TASKS" panel with rows below the header).
 <Panel>
   <PanelHeader>
     OPEN TASKS
-    <span className="ml-auto text-[10px] tracking-normal">view board →</span>
+    <span className="ml-auto text-2xs tracking-normal">view board →</span>
   </PanelHeader>
   <div className="border-b border-border px-3 py-2 text-sm last:border-b-0">
     Set up CI pipeline
