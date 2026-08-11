@@ -6,6 +6,7 @@ import { FloatingActionButton } from '#components/task/floating-action-button'
 const meta = {
   title: 'Task/FloatingActionButton',
   component: FloatingActionButton,
+  tags: ['mobile-only'],
   parameters: {
     layout: 'centered',
   },
