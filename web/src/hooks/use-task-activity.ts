@@ -9,7 +9,7 @@ export type ActivityItem = InferResponseType<
   200
 >[number]
 
-const activityKeys = {
+export const activityKeys = {
   all: (taskId: string) => ['tasks', taskId, 'activity'] as const,
 }
 
