@@ -70,9 +70,9 @@ jobs:
       # A screenshot with zero standard deviation is a single solid color —
       # nothing rendered. If a component crashes and leaves the page blank,
       # a blank baseline and a blank actual screenshot are pixel-identical,
-      # so reg-suit reports no diff and the regression goes undetected (see
-      # #314). Catching it here, before the baseline can absorb it, is the
-      # only place that works.
+      # so reg-suit reports no diff and the regression goes undetected.
+      # Catching it here, before the baseline can absorb it, keeps a blank
+      # screenshot from ever reaching the shared baseline.
       - name: Check for blank screenshots
         working-directory: web
         run: |
