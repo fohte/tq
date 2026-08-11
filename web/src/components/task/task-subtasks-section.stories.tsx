@@ -7,6 +7,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
+import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { expect, within } from 'storybook/test'
 
@@ -184,6 +185,24 @@ export const AddingSubtask: SectionStoryType = {
       labels: ['dev:tq'],
     },
     project: sampleProject,
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/projects/:id', () => HttpResponse.json(sampleProject)),
+        http.get('/api/labels', () =>
+          HttpResponse.json([
+            {
+              id: 'label-1',
+              name: 'dev:tq',
+              color: null,
+              createdAt: '2026-03-20T00:00:00.000Z',
+            },
+          ]),
+        ),
+        http.get('/api/tasks', () => HttpResponse.json([])),
+      ],
+    },
   },
   play: async ({ canvasElement, userEvent }) => {
     const canvas = within(canvasElement)

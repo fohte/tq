@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 import { expect, fn, within } from 'storybook/test'
 
 import { TreeOutlinerInputRow } from '#components/task/tree-outliner-input-row'
@@ -8,11 +9,18 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 })
 
+const labelsHandler = http.get('/api/labels', () => HttpResponse.json([]))
+
 const meta = {
   title: 'Task/TreeOutlinerInputRow',
   component: TreeOutlinerInputRow,
   parameters: {
     layout: 'centered',
+    // CreateTaskInline (rendered unconditionally inside this row) always
+    // fetches labels on mount.
+    msw: {
+      handlers: [labelsHandler],
+    },
   },
   decorators: [
     (Story) => (
@@ -45,6 +53,17 @@ export const NestedChild: Story = {
     parentId: '00000000-0000-0000-0000-000000000001',
     parentNumber: 12,
     inherited: { context: 'work', projectId: null, labels: ['dev:tq'] },
+  },
+  parameters: {
+    // A non-null parentId additionally makes useExistingTaskLink fetch the
+    // full task list, so this overrides the meta handlers rather than
+    // extending them.
+    msw: {
+      handlers: [
+        labelsHandler,
+        http.get('/api/tasks', () => HttpResponse.json([])),
+      ],
+    },
   },
 }
 

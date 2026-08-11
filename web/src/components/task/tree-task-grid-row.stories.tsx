@@ -8,6 +8,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
+import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { expect } from 'storybook/test'
 
@@ -500,6 +501,17 @@ export const Selected: Story = {
 
 export const AddSubtaskInputOpen: Story = {
   args: { node: baseTreeNode },
+  parameters: {
+    // The open row renders CreateTaskInline (via TreeOutlinerInputRow),
+    // which fetches labels on mount and, since a parentId is set here, the
+    // full task list too.
+    msw: {
+      handlers: [
+        http.get('/api/labels', () => HttpResponse.json([])),
+        http.get('/api/tasks', () => HttpResponse.json([])),
+      ],
+    },
+  },
   render: () => {
     const node: TreeNode = {
       ...baseTreeNode,
