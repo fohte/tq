@@ -339,7 +339,7 @@ function FieldRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="flex w-24 shrink-0 items-center gap-1.5 font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint">
+      <span className="flex w-24 shrink-0 items-center gap-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint">
         {icon}
         {label}
       </span>

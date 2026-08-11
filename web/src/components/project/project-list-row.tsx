@@ -37,7 +37,7 @@ export function ProjectListRow({ project }: { project: Project }) {
       >
         <ProjectStatusMark status={status} />
         <div className="flex min-w-0 flex-col gap-[3px]">
-          <span className="truncate font-mono text-[13px] font-medium text-foreground">
+          <span className="truncate font-mono text-sm font-medium text-foreground">
             {project.title}
           </span>
           {project.description != null && project.description !== '' && (
@@ -53,13 +53,13 @@ export function ProjectListRow({ project }: { project: Project }) {
             fillClassName={fillClassName}
             className="flex-1"
           />
-          <span className="w-11 shrink-0 text-right font-mono text-[10px] text-muted-foreground">
+          <span className="w-11 shrink-0 text-right font-mono text-2xs text-muted-foreground">
             {completed}/{total}
           </span>
         </div>
         <span
           className={cn(
-            'text-right font-mono text-[11px]',
+            'text-right font-mono text-2xs',
             project.targetDate != null
               ? 'text-muted-foreground-strong'
               : 'text-muted-foreground-faint',
@@ -73,11 +73,11 @@ export function ProjectListRow({ project }: { project: Project }) {
       <div className="flex flex-col gap-2 border-b border-border px-3.5 py-[13px] md:hidden">
         <div className="flex items-center gap-2">
           <ProjectStatusMark status={status} />
-          <span className="font-mono text-[13px] font-medium text-foreground">
+          <span className="font-mono text-sm font-medium text-foreground">
             {project.title}
           </span>
           <ProjectStatusBadge status={project.status} />
-          <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+          <span className="ml-auto font-mono text-2xs text-muted-foreground">
             {completed}/{total}
           </span>
         </div>
