@@ -32,7 +32,7 @@ function LinkedTaskGroup({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="font-mono text-[10px] text-muted-foreground-faint">
+      <span className="font-mono text-2xs text-muted-foreground-faint">
         {label}
       </span>
       <Panel>

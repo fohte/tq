@@ -140,7 +140,7 @@ function TaskTagChips({ labels }: { labels: string[] }) {
 
 function TaskBreadcrumb({ task }: { task: TaskDetail }) {
   return (
-    <nav className="flex items-center gap-[7px] font-mono text-[11px] text-muted-foreground">
+    <nav className="flex items-center gap-[7px] font-mono text-2xs text-muted-foreground">
       <Link to="/tasks" className="hover:text-foreground">
         tasks
       </Link>
@@ -233,7 +233,7 @@ function EditableTitle({
             }
           }}
           autoFocus
-          className="h-auto flex-1 border-0 bg-transparent p-0 text-[23px] font-bold leading-[1.4] text-foreground shadow-none focus-visible:ring-0"
+          className="h-auto flex-1 border-0 bg-transparent p-0 text-2xl font-bold text-foreground shadow-none focus-visible:ring-0"
         />
       ) : (
         <button
@@ -241,7 +241,7 @@ function EditableTitle({
           onClick={() => {
             setIsEditing(true)
           }}
-          className="flex-1 cursor-text text-left text-[23px] font-bold leading-[1.4] text-foreground"
+          className="flex-1 cursor-text text-left text-2xl font-bold text-foreground"
         >
           {value}
         </button>
@@ -273,7 +273,7 @@ function TaskDescription({
   return (
     <div className="flex flex-col gap-1.5">
       <LlmAuthorLabel author={author} />
-      <div className="min-h-[120px] border border-border p-4 text-sm leading-[1.75] focus-within:border-ring">
+      <div className="min-h-[120px] border border-border p-4 text-sm leading-relaxed focus-within:border-ring">
         <MarkdownEditor
           defaultValue={defaultValue ?? ''}
           placeholder="Add description..."

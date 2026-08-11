@@ -189,6 +189,13 @@ Line-height drift outside the `text-2xs` role (e.g. task/body copy,
 headings) is not resolved by this table — decide it alongside that role's
 own font-size when that directory's PR touches it.
 
+Two roles resolved so far:
+
+| Role                                                      | Resolves to       | Why                                                                                                                                                                                                                     |
+| --------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Markdown/HTML prose body (task description, comment body) | `leading-relaxed` | `leading-[1.7]`/`leading-[1.75]` were 1px-apart drift of the same "editable prose" role; `project-detail-main.tsx`'s description editor already used `leading-relaxed` for the identical layout, so this aligns with it |
+| Screen/task title (`text-2xl`)                            | no override       | `leading-[1.4]` was ~1px off Tailwind's own paired line-height for `text-2xl`; `project-detail-main.tsx`'s title has no override either, so dropping it keeps both titles identical                                     |
+
 ## Radius policy
 
 `--radius` is `0rem` globally — every corner in the app is square by

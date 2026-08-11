@@ -26,7 +26,7 @@ import { cn } from '#lib/utils'
 
 function SidebarSectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="font-mono text-[9px] tracking-[0.1em] text-muted-foreground-faint">
+    <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
       {children}
     </span>
   )
@@ -359,10 +359,10 @@ function SidebarTimeBlocks({
 
   return (
     <div className="flex flex-col gap-[7px] border-t border-border pt-3.5">
-      <span className="font-mono text-[10px] text-muted-foreground-faint">
+      <span className="font-mono text-2xs text-muted-foreground-faint">
         TIME BLOCKS
       </span>
-      <div className="flex flex-col gap-[5px] font-mono text-[11px] text-muted-foreground-strong">
+      <div className="flex flex-col gap-[5px] font-mono text-2xs text-muted-foreground-strong">
         {timeBlocks.map((block) => (
           <span key={block.id}>
             <span className="text-muted-foreground-faint">
