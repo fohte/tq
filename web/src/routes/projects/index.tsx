@@ -42,7 +42,7 @@ function ProjectList() {
         />
         <Button
           size="xs"
-          className="ml-auto text-[11px]"
+          className="ml-auto text-2xs"
           onClick={() => {
             setShowCreate(true)
           }}
@@ -53,7 +53,7 @@ function ProjectList() {
 
       {/* Column header (desktop only) */}
       <div
-        className={`hidden border-b border-border bg-card px-3.5 py-[5px] font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint md:grid md:items-center md:gap-3 ${PROJECT_LIST_GRID_COLUMNS}`}
+        className={`hidden border-b border-border bg-card px-3.5 py-[5px] font-mono text-2xs tracking-widest text-muted-foreground-faint md:grid md:items-center md:gap-3 ${PROJECT_LIST_GRID_COLUMNS}`}
       >
         <span />
         <span>PROJECT</span>

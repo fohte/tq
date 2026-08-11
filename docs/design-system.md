@@ -196,6 +196,80 @@ Two roles resolved so far, scoped to `web/src/components/task/`:
 | Markdown/HTML prose body (task description, comment body) | `leading-relaxed` | `leading-[1.7]`/`leading-[1.75]` on these two markdown editors were 1px-apart drift of the same "editable prose" role; `project-detail-main.tsx`'s description editor already used `leading-relaxed` for the identical layout, so this aligns with it. Other `leading-[1.7]`-ish values on non-markdown elements (e.g. a plain `<textarea>`) are a different role and not resolved by this row        |
 | Screen/task title (`text-2xl` in `task-main-content.tsx`) | no override       | `leading-[1.4]` was ~1px off Tailwind's own paired line-height for `text-2xl`; `project-detail-main.tsx`'s title also carries no override, so the same "no override" call applies there once its own `text-[22px]` → `text-2xl` migration lands. Other task-title instances outside `web/src/components/task/` (e.g. `focus-view.tsx`) still carry their own override and aren't resolved by this row |
 
+## Spacing scale
+
+### Grid
+
+Tailwind v4's `--spacing` unit is `0.25rem` (4px) and `web/src/index.css`
+does not override it, so the grid is just Tailwind's default scale — no new
+custom token, unlike `--text-2xs` above.
+
+**Half-step utilities (`0.5`/`1.5`/`2.5`/`3.5` → 2/6/10/14px) are part of
+this grid, not an exception to it.** Tailwind ships them as named scale
+steps, and `web/src/components/ui/` already leans on them heavily —
+`chip.tsx`'s `px-1.5 py-0.5`, `panel.tsx`'s `py-1.5`, `badge.tsx`'s
+`py-0.5`, `modal-field.tsx`'s `px-2.5 py-1.5`, and more. Banning them would
+fight code that's already correct.
+
+What's **not** allowed is inventing a step Tailwind doesn't ship by
+default, e.g. `gap-1.75` (7px) or `gap-4.5` (18px). Tailwind v4's dynamic
+utilities compile those without brackets, so even a bracket-only
+arbitrary-value lint check wouldn't catch them — the value is still
+off-grid; only the bracket syntax disappeared. Always resolve to a step
+from the table below (or a plain integer beyond `3.5`), never a bespoke
+multiplier.
+
+### Migration table
+
+For the arbitrary `[Npx]` values found elsewhere in the codebase, apply
+this mechanically to whichever utility prefix carries the value — `gap-`,
+`p`/`px`/`py`/`pt`/`pr`/`pb`/`pl`, `m`/`mx`/`my`/`mt`/`mr`/`mb`/`ml`, or
+`w`/`h`/`min-w`/`min-h`/`max-w`/`max-h` when the box itself is ≤44px (see
+[Sizing](#sizing-grid-rounding-vs-naming-a-dimension) below for anything
+bigger). E.g. `gap-[7px]` → `gap-2`, `py-[7px]` → `py-2`.
+
+| Off-grid value | Resolves to  | Why                                                                                                                                                                                                                                                                                            |
+| -------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `3px`          | `1` (4px)    | Equidistant between `0.5` (2px) and `1` (4px) — ties round up                                                                                                                                                                                                                                  |
+| `5px`          | `1.5` (6px)  | Equidistant between `1` (4px) and `1.5` (6px) — ties round up                                                                                                                                                                                                                                  |
+| `7px`          | `2` (8px)    | Equidistant between `1.5` (6px) and `2` (8px) — ties round up                                                                                                                                                                                                                                  |
+| `9px`          | `2.5` (10px) | Equidistant between `2` (8px) and `2.5` (10px) — ties round up                                                                                                                                                                                                                                 |
+| `11px`         | `3` (12px)   | Equidistant between `2.5` (10px) and `3` (12px) — ties round up                                                                                                                                                                                                                                |
+| `13px`         | `3.5` (14px) | Equidistant between `3` (12px) and `3.5` (14px) — ties round up                                                                                                                                                                                                                                |
+| `18px`         | `5` (20px)   | Equidistant between `4` (16px) and `5` (20px) — Tailwind has no half-step above `3.5`, so both neighbors are full steps; ties round up. Confirmed by `focus-view.tsx`'s `mt-4 md:mt-[18px]`, which must stay ≥ the base `mt-4` — rounding down would collapse the responsive change to a no-op |
+| `22px`         | `6` (24px)   | Equidistant between `5` (20px) and `6` (24px) — ties round up                                                                                                                                                                                                                                  |
+| `41px`         | `10` (40px)  | Nearest step — 40px is 1px away, 44px is 3px away, not a tie. Also used by `layout/sidebar.tsx`'s header row, which sits flush against `ScreenHeaderBar` in the app shell — round every occurrence in the same pass so their `border-b` lines stay aligned instead of drifting by 1px          |
+| `44px`         | `11` (44px)  | Already exactly on-grid (`11 × 4px`, the standard tap-target size) — not a rounding case, just swap the bracket for the equivalent named utility (`min-w-[44px]` → `min-w-11`)                                                                                                                 |
+
+±1px visual drift from this rounding is expected and acceptable. What isn't
+acceptable is breaking a position/ordering relationship (e.g. a responsive
+value no longer larger than its base value) — check that before applying a
+row mechanically.
+
+### Sizing: grid rounding vs. naming a dimension
+
+Not every `w-[Npx]`/`h-[Npx]` is a grid problem. Once a
+`w`/`h`/`max-w`/`max-h`/`min-w`/`min-h` value describes an element's own
+footprint rather than the space around it, its size decides which problem
+it is:
+
+- **≤44px** — icon boxes, hairline bar thickness, tap targets. These
+  behave like spacing: round via the table above (e.g. `status-icon.tsx`'s
+  `h-[18px] w-[18px]` → `h-5 w-5`).
+- **\>44px** — this is not an off-grid problem. Every large dimension found
+  in the arbitrary-value sweep (`w-[600px]`, `w-[236px]`,
+  `max-w-[620/640/680/720/760px]`, …) is already a multiple of 4px —
+  rounding changes nothing. The actual defect is a duplicated, unnamed
+  constant: the PC modal wrapper (`max-w-[600px]` flex column,
+  `rounded-2xl`, `shadow-2xl`, `ring-1 ring-foreground/10`) is copy-pasted
+  verbatim into `create-task-modal.tsx` and `project-form-modal.tsx`, and
+  `create-schedule-modal.tsx` copies the same markup but drifted to
+  `max-w-[500px]` — a mismatch no grid table catches, because both numbers
+  are already internally grid-consistent. Fixing this means extracting a
+  shared component (or at least a named constant) with one canonical
+  width, not replacing the bracket. Leave these alone in grid-rounding
+  work — they're a separate, component-identity problem.
+
 ## Radius policy
 
 `--radius` is `0rem` globally — every corner in the app is square by
@@ -267,7 +341,7 @@ function ScreenHeaderBar(props: {
 }): JSX.Element
 ```
 
-A fixed-height (`h-[41px]`) bottom-bordered bar for a screen's or panel's
+A fixed-height (`h-10`) bottom-bordered bar for a screen's or panel's
 top header row. Compose it with a `SectionHeading` / plain label plus
 trailing actions (e.g. `ml-auto` button).
 

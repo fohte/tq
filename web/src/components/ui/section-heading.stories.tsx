@@ -23,7 +23,7 @@ export const Level2: Story = {
     children: 'tasks',
   },
   render: (args) => (
-    <div className="flex h-[41px] items-center gap-3 border border-border bg-card px-3">
+    <div className="flex h-10 items-center gap-3 border border-border bg-card px-3">
       <SectionHeading {...args} />
       <span className="font-mono text-xs text-muted-foreground">24 open</span>
     </div>
