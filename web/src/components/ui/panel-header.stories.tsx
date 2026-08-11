@@ -24,7 +24,7 @@ export const WithTrailingAction: Story = {
   render: () => (
     <PanelHeader>
       OPEN TASKS
-      <span className="ml-auto text-[10px] tracking-normal">view board →</span>
+      <span className="ml-auto text-2xs tracking-normal">view board →</span>
     </PanelHeader>
   ),
 }

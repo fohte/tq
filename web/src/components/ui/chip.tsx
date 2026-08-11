@@ -22,9 +22,7 @@ export function Chip({
   Omit<HTMLAttributes<HTMLSpanElement>, keyof ChipOwnProps>) {
   const classes = cn(
     'inline-flex items-center gap-1 border font-mono',
-    size === 'sm'
-      ? 'px-1 text-[9px] leading-[14px]'
-      : 'px-1.5 py-0.5 text-[11px]',
+    size === 'sm' ? 'px-1 text-2xs' : 'px-1.5 py-0.5 text-2xs',
     active
       ? 'border-border-strong text-foreground'
       : 'border-border text-muted-foreground',

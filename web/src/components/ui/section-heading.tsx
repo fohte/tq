@@ -19,7 +19,7 @@ export function SectionHeading({
       <span
         className={cn(
           'font-mono',
-          level === 2 ? 'text-xs font-medium' : 'text-[13px] font-bold',
+          level === 2 ? 'text-xs font-medium' : 'text-sm font-bold',
         )}
       >
         {children}

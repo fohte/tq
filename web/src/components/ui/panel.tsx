@@ -22,7 +22,7 @@ export function PanelHeader({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 border-b border-border bg-secondary px-3 py-1.5 font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint',
+        'flex items-center gap-2 border-b border-border bg-secondary px-3 py-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint',
         className,
       )}
     >

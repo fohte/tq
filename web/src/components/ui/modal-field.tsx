@@ -13,7 +13,7 @@ export function InlineFieldGroup({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="flex items-center gap-1 font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint">
+      <span className="flex items-center gap-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
         {icon}
         {label}
       </span>
