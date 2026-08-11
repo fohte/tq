@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fn } from 'storybook/test'
+import { expect, fn, waitFor } from 'storybook/test'
 
 import { TaskMentionAutocompleteMenu } from '#components/task/task-mention-autocomplete-menu'
 import {
@@ -27,7 +27,7 @@ function TaskMentionAutocompleteMenuDemo({
   onSelect: (item: MentionSuggestion) => void
 }) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
   queryClient.setQueryData(taskMentionKeys.suggestions(query), items)
 
@@ -61,6 +61,11 @@ export const Results: Story = {
   args: {
     query: '12',
     items: sampleItems,
+  },
+  play: async ({ canvas }) => {
+    await waitFor(() =>
+      expect(canvas.getByText('Deploy to production')).toBeVisible(),
+    )
   },
 }
 
