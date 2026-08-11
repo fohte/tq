@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { delay, http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 
 import { SchedulingSettingsPanel } from '#components/settings/scheduling-settings-panel'
@@ -12,6 +13,10 @@ const sampleSettings: SchedulingSettings = {
   autoRescheduleOnGcalChange: true,
   defaultContext: 'personal',
   updatedAt: '2026-01-01T00:00:00.000Z',
+}
+
+function settingsHandler(settings: SchedulingSettings) {
+  return http.get('/api/scheduling-settings', () => HttpResponse.json(settings))
 }
 
 function Providers({
@@ -54,14 +59,30 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 // settings left undefined so the query never gets a cached value, keeping
-// the component in its initial isLoading render.
+// the component in its initial isLoading render. The settings request is
+// held open (rather than errored) so the loading state stays visible.
 export const Loading: Story = {
   args: {},
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/scheduling-settings', async () => {
+          await delay('infinite')
+          return HttpResponse.json(sampleSettings)
+        }),
+      ],
+    },
+  },
 }
 
 export const Default: Story = {
   args: {
     settings: sampleSettings,
+  },
+  parameters: {
+    msw: {
+      handlers: [settingsHandler(sampleSettings)],
+    },
   },
 }
 
@@ -69,10 +90,27 @@ export const WorkContext: Story = {
   args: {
     settings: { ...sampleSettings, defaultContext: 'work' },
   },
+  parameters: {
+    msw: {
+      handlers: [
+        settingsHandler({ ...sampleSettings, defaultContext: 'work' }),
+      ],
+    },
+  },
 }
 
 export const RescheduleDisabled: Story = {
   args: {
     settings: { ...sampleSettings, autoRescheduleOnGcalChange: false },
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        settingsHandler({
+          ...sampleSettings,
+          autoRescheduleOnGcalChange: false,
+        }),
+      ],
+    },
   },
 }

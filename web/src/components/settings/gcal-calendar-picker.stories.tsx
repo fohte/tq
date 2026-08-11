@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { expect, within } from 'storybook/test'
 
@@ -62,6 +63,16 @@ const meta = {
   component: WrappedGcalCalendarPicker,
   parameters: {
     layout: 'centered',
+    // Opening the picker flips `useGcalCalendarsList`'s `enabled` from false
+    // to true, which refetches in the background even though the data is
+    // already seeded into the query cache.
+    msw: {
+      handlers: [
+        http.get('/api/calendar/accounts/:accountId/calendars', () =>
+          HttpResponse.json(sampleCalendars),
+        ),
+      ],
+    },
   },
 } satisfies Meta<typeof WrappedGcalCalendarPicker>
 

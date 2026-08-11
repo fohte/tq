@@ -1,8 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 import { fn } from 'storybook/test'
 
 import { GithubSyncRuleFormModal } from '#components/settings/github-sync-rule-form-modal'
+import { sampleProjects } from '#components/settings/sync-rule-test-fixtures'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -13,6 +15,11 @@ const meta = {
   component: GithubSyncRuleFormModal,
   parameters: {
     layout: 'fullscreen',
+    msw: {
+      handlers: [
+        http.get('/api/projects', () => HttpResponse.json(sampleProjects)),
+      ],
+    },
   },
   decorators: [
     (Story) => (
