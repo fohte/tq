@@ -1,15 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { http, HttpResponse } from 'msw'
 import { expect, fn, within } from 'storybook/test'
 
 import { TreeOutlinerInputRow } from '#components/task/tree-outliner-input-row'
+import { emptyLabelsHandler, emptyTasksHandler } from '#lib/msw-test-handlers'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 })
-
-const labelsHandler = http.get('/api/labels', () => HttpResponse.json([]))
 
 const meta = {
   title: 'Task/TreeOutlinerInputRow',
@@ -19,7 +17,7 @@ const meta = {
     // CreateTaskInline (rendered unconditionally inside this row) always
     // fetches labels on mount.
     msw: {
-      handlers: [labelsHandler],
+      handlers: [emptyLabelsHandler],
     },
   },
   decorators: [
@@ -59,10 +57,7 @@ export const NestedChild: Story = {
     // full task list, so this overrides the meta handlers rather than
     // extending them.
     msw: {
-      handlers: [
-        labelsHandler,
-        http.get('/api/tasks', () => HttpResponse.json([])),
-      ],
+      handlers: [emptyLabelsHandler, emptyTasksHandler],
     },
   },
 }

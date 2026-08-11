@@ -16,6 +16,7 @@ import { TaskSubtasksList } from '#components/task/task-subtasks-section'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { Task } from '#hooks/use-tasks'
+import { emptyLabelsHandler, emptyTasksHandler } from '#lib/msw-test-handlers'
 
 const parentTaskId = '00000000-0000-0000-0000-000000000001'
 
@@ -190,17 +191,8 @@ export const AddingSubtask: SectionStoryType = {
     msw: {
       handlers: [
         http.get('/api/projects/:id', () => HttpResponse.json(sampleProject)),
-        http.get('/api/labels', () =>
-          HttpResponse.json([
-            {
-              id: 'label-1',
-              name: 'dev:tq',
-              color: null,
-              createdAt: '2026-03-20T00:00:00.000Z',
-            },
-          ]),
-        ),
-        http.get('/api/tasks', () => HttpResponse.json([])),
+        emptyLabelsHandler,
+        emptyTasksHandler,
       ],
     },
   },
