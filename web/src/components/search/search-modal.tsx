@@ -158,7 +158,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
         >
           {/* Search input */}
           <div className="flex h-12 items-center gap-3 border-b border-border px-4">
-            <span className="font-mono text-[13px] font-bold text-primary">
+            <span className="font-mono text-sm font-bold text-primary">
               &gt;
             </span>
             <input
@@ -170,7 +170,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
               }}
               placeholder="Search tasks..."
               autoFocus
-              className="flex-1 border-0 bg-transparent font-mono text-[13px] outline-none placeholder:text-muted-foreground"
+              className="flex-1 border-0 bg-transparent font-mono text-sm outline-none placeholder:text-muted-foreground"
               aria-label="Search tasks"
             />
             {isFetching && (
@@ -192,7 +192,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
             {/* Suggestions section */}
             {hasSuggestions && (
               <>
-                <div className="px-4 py-1 font-mono text-[10px] tracking-[0.08em] text-muted-foreground-faint">
+                <div className="px-4 py-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
                   Suggestions
                 </div>
                 {suggestions.map((suggestion, i) => {
@@ -226,10 +226,10 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                           : 'hover:bg-secondary/50',
                       )}
                     >
-                      <span className="font-mono text-[13px] text-foreground">
+                      <span className="font-mono text-sm text-foreground">
                         {suggestion.value}
                       </span>
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-2xs text-muted-foreground">
                         {suggestion.display}
                       </span>
                     </button>
@@ -246,7 +246,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
             {/* Tasks section */}
             {hasTasks && (
               <>
-                <div className="px-4 py-1 font-mono text-[10px] tracking-[0.08em] text-muted-foreground-faint">
+                <div className="px-4 py-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
                   Tasks
                 </div>
                 {tasks.map((task, i) => {
@@ -308,7 +308,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
           </div>
 
           {/* Footer with keyboard hints */}
-          <div className="flex h-9 items-center gap-1.5 border-t border-border px-4 font-mono text-[11px] text-muted-foreground-ghost">
+          <div className="flex h-9 items-center gap-1.5 border-t border-border px-4 font-mono text-2xs text-muted-foreground-ghost">
             <KeybindHint variant="boxed">↑↓</KeybindHint>
             <span>navigate</span>
             <KeybindHint variant="boxed">Tab</KeybindHint>

@@ -148,9 +148,7 @@ export function SearchViewInner({
       }}
     >
       <ScreenHeaderBar>
-        <span className="font-mono text-[13px] font-bold text-primary">
-          &gt;
-        </span>
+        <span className="font-mono text-sm font-bold text-primary">&gt;</span>
         <input
           ref={inputRef}
           type="text"
@@ -159,7 +157,7 @@ export function SearchViewInner({
             setQuery(e.target.value)
           }}
           placeholder="search tasks…"
-          className="flex-1 border-0 bg-transparent font-mono text-[13px] outline-none placeholder:text-muted-foreground"
+          className="flex-1 border-0 bg-transparent font-mono text-sm outline-none placeholder:text-muted-foreground"
           data-testid="search-input"
           autoFocus
         />
@@ -179,7 +177,7 @@ export function SearchViewInner({
           <button
             type="button"
             onClick={onBack}
-            className="font-mono text-[10px] text-muted-foreground-ghost hover:text-muted-foreground"
+            className="font-mono text-2xs text-muted-foreground-ghost hover:text-muted-foreground"
           >
             esc to close
           </button>
@@ -215,7 +213,7 @@ export function SearchViewInner({
             handleFilterChange('sortBy', v)
           }}
         />
-        <span className="ml-auto font-mono text-[10px] text-muted-foreground-faint">
+        <span className="ml-auto font-mono text-2xs text-muted-foreground-faint">
           {results.length} results
         </span>
       </div>
