@@ -7,6 +7,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
+import { http, HttpResponse } from 'msw'
 
 import { AppLayout } from '#components/layout/app-layout'
 
@@ -48,6 +49,13 @@ const meta = {
   component: AppLayoutWithRouter,
   parameters: {
     layout: 'fullscreen',
+    msw: {
+      handlers: [
+        http.get('/api/tasks', () => HttpResponse.json([])),
+        http.get('/api/projects', () => HttpResponse.json([])),
+        http.get('/api/schedule/today-tasks', () => HttpResponse.json([])),
+      ],
+    },
   },
   argTypes: {
     currentPath: {

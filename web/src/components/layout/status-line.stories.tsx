@@ -60,9 +60,11 @@ const queueTasks: TodayTask[] = tasks.map((task, index) => ({
 
 function StatusLineStory() {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
-  queryClient.setQueryData(taskKeys.list(undefined), tasks)
+  // StatusLine's useFilteredTaskList() builds an empty (not undefined)
+  // filter object when no context/tag filter is active.
+  queryClient.setQueryData(taskKeys.list({}), tasks)
   queryClient.setQueryData(['today-tasks', 'list', todayStr], queueTasks)
 
   return (

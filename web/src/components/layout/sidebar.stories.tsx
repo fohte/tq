@@ -88,7 +88,7 @@ function SidebarStory({
   projects?: Project[] | undefined
 }) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
   queryClient.setQueryData(taskKeys.list(undefined), tasks ?? [])
   queryClient.setQueryData(projectKeys.list(undefined), projects ?? [])
