@@ -171,10 +171,10 @@ fifth and sixth target size.
 
 ### Letter-spacing
 
-| Current arbitrary value                | Resolves to                                   | Why                                                                                                                                                                                              |
-| -------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `tracking-[0.08em]` `tracking-[0.1em]` | `tracking-widest` (Tailwind default, `0.1em`) | Same role (dim mono chrome label, e.g. `PanelHeader`) expressed as two near-identical values — the default already covers it                                                                     |
-| `tracking-[0.04em]`                    | `tracking-wider` (Tailwind default, `0.05em`) | Distinct role (bottom tab bar's brighter, non-dim label, `BottomTabBar`) — `0.05em` is the closer of the two neighboring default steps (`tracking-wide` `0.025em` vs. `tracking-wider` `0.05em`) |
+| Current arbitrary value                | Resolves to                                   | Why                                                                                                                                                                                                                                                                                        |
+| -------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tracking-[0.08em]` `tracking-[0.1em]` | `tracking-widest` (Tailwind default, `0.1em`) | Same role (dim mono chrome label, e.g. `PanelHeader`) expressed as two near-identical values — the default already covers it                                                                                                                                                               |
+| `tracking-[0.04em]`                    | `tracking-wider` (Tailwind default, `0.05em`) | Distinct role (`BottomTabBar` tab label — color follows the tab's active state, `text-foreground`/`text-muted-foreground-faint`, unlike the always-dim role above) — `0.05em` is the closer of the two neighboring default steps (`tracking-wide` `0.025em` vs. `tracking-wider` `0.05em`) |
 
 ### Line-height
 
