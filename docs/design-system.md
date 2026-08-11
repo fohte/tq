@@ -196,6 +196,19 @@ Two roles resolved so far, scoped to `web/src/components/task/`:
 | Markdown/HTML prose body (task description, comment body) | `leading-relaxed` | `leading-[1.7]`/`leading-[1.75]` on these two markdown editors were 1px-apart drift of the same "editable prose" role; `project-detail-main.tsx`'s description editor already used `leading-relaxed` for the identical layout, so this aligns with it. Other `leading-[1.7]`-ish values on non-markdown elements (e.g. a plain `<textarea>`) are a different role and not resolved by this row        |
 | Screen/task title (`text-2xl` in `task-main-content.tsx`) | no override       | `leading-[1.4]` was ~1px off Tailwind's own paired line-height for `text-2xl`; `project-detail-main.tsx`'s title also carries no override, so the same "no override" call applies there once its own `text-[22px]` → `text-2xl` migration lands. Other task-title instances outside `web/src/components/task/` (e.g. `focus-view.tsx`) still carry their own override and aren't resolved by this row |
 
+`web/src/components/focus/` resolved its instances of this:
+
+- The focus task title (`FocusCard`'s `h1`) had `leading-[1.4]` at
+  `text-[19px]`/mobile and `leading-[1.35]` at `md:text-2xl`/desktop — the
+  same role (task title heading) expressed with two near-identical values
+  per breakpoint. Collapsed to `leading-snug` (Tailwind default, `1.375`,
+  roughly the average of the two) for both breakpoints.
+- `FocusNotes`'s notes `Textarea` keeps `leading-[1.7]` on `text-xs` — this
+  is the only occurrence of that role (editor body copy) in this directory,
+  so there is no drift to collapse here; left as-is for a future directory
+  that touches more of the editor/body-copy role to resolve alongside its
+  own occurrences.
+
 ## Spacing scale
 
 ### Grid
