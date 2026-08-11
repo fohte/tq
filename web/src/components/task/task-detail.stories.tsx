@@ -17,6 +17,8 @@ import {
 import { labelKeys } from '#hooks/use-labels'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
+import { activityKeys } from '#hooks/use-task-activity'
+import { commentKeys } from '#hooks/use-task-comments'
 import type { TaskPage } from '#hooks/use-task-pages'
 import type { Task, TaskDetail } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
@@ -131,8 +133,8 @@ function Providers({
   // TaskMainContent always mounts TaskActivity; FullPagePC/FullPageSP also
   // mount TaskSidebar (SidebarParentField/SidebarTagsField). Seed every
   // query they read so no individual story needs its own seeding.
-  queryClient.setQueryData(['tasks', baseTask.id, 'comments'], [])
-  queryClient.setQueryData(['tasks', baseTask.id, 'activity'], [])
+  queryClient.setQueryData(commentKeys.all(baseTask.id), [])
+  queryClient.setQueryData(activityKeys.all(baseTask.id), [])
   queryClient.setQueryData(taskKeys.list(undefined), [])
   queryClient.setQueryData(labelKeys.all, [])
   if (project) {

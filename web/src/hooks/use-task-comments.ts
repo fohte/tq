@@ -11,7 +11,7 @@ type Comment = InferResponseType<
 
 export type { Comment }
 
-const commentKeys = {
+export const commentKeys = {
   all: (taskId: string) => ['tasks', taskId, 'comments'] as const,
 }
 
