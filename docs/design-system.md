@@ -189,6 +189,19 @@ Line-height drift outside the `text-2xs` role (e.g. task/body copy,
 headings) is not resolved by this table — decide it alongside that role's
 own font-size when that directory's PR touches it.
 
+`web/src/components/focus/` resolved its instances of this:
+
+- The focus task title (`FocusCard`'s `h1`) had `leading-[1.4]` at
+  `text-[19px]`/mobile and `leading-[1.35]` at `md:text-2xl`/desktop — the
+  same role (task title heading) expressed with two near-identical values
+  per breakpoint. Collapsed to `leading-snug` (Tailwind default, `1.375`,
+  roughly the average of the two) for both breakpoints.
+- `FocusNotes`'s notes `Textarea` keeps `leading-[1.7]` on `text-xs` — this
+  is the only occurrence of that role (editor body copy) in this directory,
+  so there is no drift to collapse here; left as-is for a future directory
+  that touches more of the editor/body-copy role to resolve alongside its
+  own occurrences.
+
 ## Radius policy
 
 `--radius` is `0rem` globally — every corner in the app is square by

@@ -25,7 +25,7 @@ export interface FocusViewPresentationProps {
 
 function FocusLabel({ children }: { children: ReactNode }) {
   return (
-    <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground-faint">
+    <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
       {children}
     </span>
   )
@@ -35,7 +35,7 @@ function FocusHeader() {
   return (
     <ScreenHeaderBar>
       <SectionHeading level={2}>today</SectionHeading>
-      <span className="ml-auto font-mono text-[11px] whitespace-nowrap text-muted-foreground">
+      <span className="ml-auto font-mono text-2xs whitespace-nowrap text-muted-foreground">
         focus mode
       </span>
     </ScreenHeaderBar>
@@ -60,7 +60,7 @@ function FocusProgress({ tasks }: { tasks: Task[] }) {
 
   return (
     <div className="flex flex-col gap-[7px]">
-      <div className="flex items-baseline gap-3 font-mono text-[11px] whitespace-nowrap">
+      <div className="flex items-baseline gap-3 font-mono text-2xs whitespace-nowrap">
         <span className="text-muted-foreground-strong">
           {completed}
           <span className="text-muted-foreground-faint">/</span>
@@ -101,13 +101,13 @@ function FocusCard({
   return (
     <div className="border border-border bg-card p-[18px] md:p-6">
       <div className="flex items-center gap-2">
-        <span className="font-mono text-[10px] text-primary">▍</span>
+        <span className="font-mono text-2xs text-primary">▍</span>
         <FocusLabel>IN PROGRESS</FocusLabel>
-        <span className="ml-auto font-mono text-[10px] tracking-[0.08em] text-muted-foreground">
+        <span className="ml-auto font-mono text-2xs tracking-widest text-muted-foreground">
           #{task.number} · {task.context}
         </span>
       </div>
-      <h1 className="mt-3 text-[19px] leading-[1.4] font-bold text-pretty md:mt-3.5 md:text-2xl md:leading-[1.35]">
+      <h1 className="mt-3 text-xl leading-snug font-bold text-pretty md:mt-3.5 md:text-2xl">
         {task.title}
       </h1>
       <div className="mt-4 flex items-center gap-3 md:mt-[18px]">
@@ -129,7 +129,7 @@ function FocusCard({
           defer
         </Button>
         {task.estimatedMinutes != null && (
-          <span className="font-mono text-[13px] text-muted-foreground-strong md:ml-auto">
+          <span className="font-mono text-sm text-muted-foreground-strong md:ml-auto">
             {formatMinutes(task.estimatedMinutes)}
           </span>
         )}
@@ -146,7 +146,7 @@ function FocusSubtasks({ subtasks }: { subtasks: Task[] }) {
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <FocusLabel>SUBTASKS</FocusLabel>
-        <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground">
+        <span className="font-mono text-2xs tracking-widest text-muted-foreground">
           {completed}/{subtasks.length}
         </span>
       </div>
@@ -173,7 +173,7 @@ function FocusSubtasks({ subtasks }: { subtasks: Task[] }) {
                 {subtask.title}
               </span>
               {subtask.estimatedMinutes != null && (
-                <span className="ml-auto shrink-0 font-mono text-[11px] text-muted-foreground-faint">
+                <span className="ml-auto shrink-0 font-mono text-2xs text-muted-foreground-faint">
                   {formatMinutes(subtask.estimatedMinutes)}
                 </span>
               )}
@@ -208,14 +208,14 @@ function FocusUpNext({ task }: { task: Task }) {
   return (
     <Panel className="flex items-center gap-3 p-3.5">
       <FocusLabel>UP NEXT</FocusLabel>
-      <span className="hidden font-mono text-[11px] text-muted-foreground-faint md:inline">
+      <span className="hidden font-mono text-2xs text-muted-foreground-faint md:inline">
         #{task.number}
       </span>
-      <span className="truncate text-[13px] text-muted-foreground-strong">
+      <span className="truncate text-sm text-muted-foreground-strong">
         {task.title}
       </span>
       {task.estimatedMinutes != null && (
-        <span className="ml-auto shrink-0 font-mono text-[11px] text-muted-foreground">
+        <span className="ml-auto shrink-0 font-mono text-2xs text-muted-foreground">
           {formatMinutes(task.estimatedMinutes)}
         </span>
       )}

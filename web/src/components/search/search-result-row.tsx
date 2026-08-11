@@ -23,7 +23,7 @@ export function SearchResultRow({ task }: { task: SearchResult }) {
     <>
       <StatusIcon status={task.status} />
 
-      <span className="hidden shrink-0 font-mono text-[11px] text-muted-foreground-faint md:inline">
+      <span className="hidden shrink-0 font-mono text-2xs text-muted-foreground-faint md:inline">
         #{task.number}
       </span>
 
@@ -36,7 +36,7 @@ export function SearchResultRow({ task }: { task: SearchResult }) {
         >
           {task.title}
         </span>
-        <span className="font-mono text-[10px] text-muted-foreground-faint md:hidden">
+        <span className="font-mono text-2xs text-muted-foreground-faint md:hidden">
           #{task.number}
           {estimate != null && ` · ${estimate}`}
         </span>
