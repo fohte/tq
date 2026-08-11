@@ -156,19 +156,29 @@ new mapping:
 | `text-[8px]` `text-[9px]` `text-[10px]` `text-[11px]` | `text-2xs`  | Same role (small mono UI chrome), 1px-apart drift                                                                       |
 | `text-[12px]`                                         | `text-xs`   | Exact match                                                                                                             |
 | `text-[13px]`                                         | `text-sm`   | Rounds up, not down — keeps the existing size ordering intact (e.g. `SectionHeading` level 3 stays bigger than level 2) |
-| `text-[15px]`                                         | `text-sm`   | Nearest default                                                                                                         |
-| `text-[19px]`                                         | `text-xl`   | Nearest default                                                                                                         |
+| `text-[15px]`                                         | `text-sm`   | Equidistant between `text-sm` (14px) and `text-base` (16px) — see note below                                            |
+| `text-[19px]`                                         | `text-xl`   | Equidistant between `text-lg` (18px) and `text-xl` (20px) — see note below                                              |
 | `text-[22px]` `text-[23px]`                           | `text-2xl`  | Same role ("screen title") 1px apart — round both up together instead of splitting across `text-xl`/`text-2xl`          |
 
 ±1px visual drift from this rounding is expected and acceptable. What isn't
 acceptable is breaking a size _ordering_ (heading vs. body, label vs. body) —
 check that before applying a row mechanically.
 
+`15px`/`19px` sit exactly between two defaults each. This table intentionally
+targets only `text-xs`/`sm`/`xl`/`2xl` rather than pulling `text-base`/`lg`
+into the mix for a single value each — round both up rather than introduce a
+fifth and sixth target size.
+
 ### Letter-spacing
 
 | Current arbitrary value                | Resolves to                                   | Why                                                                                                                          |
 | -------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `tracking-[0.08em]` `tracking-[0.1em]` | `tracking-widest` (Tailwind default, `0.1em`) | Same role (dim mono chrome label, e.g. `PanelHeader`) expressed as two near-identical values — the default already covers it |
+
+This table only covers the dim-label role above. Other arbitrary tracking
+values belong to a different role (e.g. `tracking-[0.04em]` on the bottom
+tab bar's brighter, non-dim label) and are not resolved here — decide them
+alongside that role's own consolidation instead of reusing this row.
 
 ### Line-height
 
