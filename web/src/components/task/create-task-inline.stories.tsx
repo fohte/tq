@@ -107,6 +107,10 @@ export const LinkOrphanCandidate: Story = {
   parameters: {
     msw: {
       handlers: [
+        // Storybook merges `parameters` per key, but replaces arrays
+        // wholesale rather than merging their elements — this story's
+        // `handlers` array fully overrides meta's, so labelsHandler has to
+        // be repeated here or `/api/labels` goes unhandled.
         labelsHandler,
         // The row resets only once `useUpdateTaskParent`'s mutation actually
         // succeeds, so the PATCH it fires needs a real response — the body is
