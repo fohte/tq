@@ -15,12 +15,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <div className="flex h-screen">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <main className="flex-1 overflow-auto pb-[52px] md:pb-0">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto">{children}</main>
         <StatusLine />
+        <BottomTabBar />
       </div>
-      <BottomTabBar />
       <SearchModal open={searchOpen} onOpenChange={setSearchOpen} />
     </div>
   )

@@ -18,15 +18,3 @@ export const LlmAuthor: Story = {
     author: { kind: 'llm', agent: 'claude-opus-5' },
   },
 }
-
-export const HumanAuthor: Story = {
-  args: {
-    author: { kind: 'human', agent: null },
-  },
-}
-
-export const NullAuthor: Story = {
-  args: {
-    author: null,
-  },
-}
