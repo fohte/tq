@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { XIcon } from 'lucide-react'
 import { fn } from 'storybook/test'
 
 import { Button } from '#components/ui/button'
@@ -9,6 +10,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogHeaderBar,
   DialogTitle,
   DialogTrigger,
 } from '#components/ui/dialog'
@@ -85,4 +87,16 @@ export const WithoutCloseButton: Story = {
     open: true,
     showCloseButton: false,
   },
+}
+
+export const HeaderBar: Story = {
+  render: () => (
+    <DialogHeaderBar>
+      <span className="text-base font-semibold text-foreground">New Task</span>
+      <Button type="button" variant="ghost" size="icon">
+        <XIcon className="size-5" />
+        <span className="sr-only">Close</span>
+      </Button>
+    </DialogHeaderBar>
+  ),
 }

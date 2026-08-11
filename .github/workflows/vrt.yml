@@ -228,7 +228,7 @@ jobs:
       # result never needs this check: overwriting an existing approval with
       # `success` is a no-op either way.
       - name: Check for an existing VRT approval
-        if: steps.vrt-compare.outputs.has_diff == 'true'
+        if: github.ref != 'refs/heads/main' && steps.vrt-compare.outputs.has_diff == 'true'
         id: vrt-approval
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -245,11 +245,16 @@ jobs:
       # and clears that label (never this status directly) on the next push
       # — the new commit's own status here starts fresh anyway.
       #
+      # Skipped on main: a diff there just means a merged PR intentionally
+      # changed the UI, already reviewed and approved on that PR. There's no
+      # open PR to carry a `vrt-approved` label on main, so this status could
+      # never be un-failed — it would sit red on main's HEAD permanently.
+      #
       # continue-on-error so a transient failure here (rate limit, network
       # blip) can't skip the baseline-pointer flip further down, the same
       # reasoning the "Publish VRT commit marker" step below already applies.
       - name: Set VRT commit status
-        if: steps.vrt-approval.outputs.approved != 'true'
+        if: github.ref != 'refs/heads/main' && steps.vrt-approval.outputs.approved != 'true'
         continue-on-error: true
         uses: ./.github/actions/vrt-status
         with:

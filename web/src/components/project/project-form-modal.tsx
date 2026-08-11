@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 import { Button } from '#components/ui/button'
 import {
   Dialog,
+  DialogHeaderBar,
   DialogOverlay,
   DialogPopup,
   DialogPortal,
@@ -248,7 +249,7 @@ export function ProjectFormModal({
           <div className="fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex">
             <div className="flex max-h-full w-full max-w-[600px] flex-col overflow-hidden rounded-2xl bg-card shadow-2xl ring-1 ring-foreground/10">
               {/* Header */}
-              <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-6">
+              <DialogHeaderBar>
                 <span className="text-base font-semibold text-foreground">
                   {isEditing ? 'Edit Project' : 'New Project'}
                 </span>
@@ -262,7 +263,7 @@ export function ProjectFormModal({
                   <X />
                   <span className="sr-only">Close</span>
                 </Button>
-              </div>
+              </DialogHeaderBar>
 
               {/* Body */}
               <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
