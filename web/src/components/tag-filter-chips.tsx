@@ -11,7 +11,7 @@ function TagChip({ name, count }: { name: string; count: number }) {
       onClick={toggle}
       aria-pressed={isActive}
       className={cn(
-        'inline-flex shrink-0 items-center gap-1 whitespace-nowrap border px-2 py-1 font-mono text-[11px]',
+        'inline-flex shrink-0 items-center gap-1 whitespace-nowrap border px-2 py-1 font-mono text-2xs',
         isActive
           ? 'border-border-strong bg-surface-strong text-foreground'
           : 'border-border text-muted-foreground',

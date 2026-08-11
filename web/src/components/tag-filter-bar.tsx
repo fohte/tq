@@ -14,7 +14,7 @@ export function TagFilterBar() {
 
   return (
     <div className="flex items-center gap-2 border-b border-border px-3 py-[7px]">
-      <span className="font-mono text-[10px] whitespace-nowrap text-muted-foreground-faint">
+      <span className="font-mono text-2xs whitespace-nowrap text-muted-foreground-faint">
         filtered by
       </span>
       <Chip size="md" active>
@@ -26,7 +26,7 @@ export function TagFilterBar() {
         onClick={() => {
           setTag(null)
         }}
-        className="font-mono text-[10px] text-muted-foreground"
+        className="font-mono text-2xs text-muted-foreground"
       >
         clear
       </button>

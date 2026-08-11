@@ -31,7 +31,7 @@ export function ContextFilter() {
           }}
           aria-pressed={mode === option.mode}
           className={cn(
-            'border py-1 font-mono text-[10px]',
+            'border py-1 font-mono text-2xs',
             mode === option.mode
               ? 'border-border-strong bg-surface-strong text-foreground'
               : 'border-border text-muted-foreground-faint',

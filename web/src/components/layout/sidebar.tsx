@@ -87,7 +87,7 @@ function TagButton({ name, count }: { name: string; count: number }) {
       onClick={toggle}
       aria-pressed={isActive}
       className={cn(
-        'flex w-full items-center gap-2 px-3.5 py-1 text-left font-mono text-[11px]',
+        'flex w-full items-center gap-2 px-3.5 py-1 text-left font-mono text-2xs',
         isActive
           ? 'bg-card text-foreground'
           : 'text-muted-foreground-strong hover:bg-card hover:text-foreground',
@@ -114,7 +114,7 @@ function TagsSection() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center justify-between px-3.5 pb-1.5">
-        <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground-faint">
+        <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
           TAGS
         </span>
         {tag != null && (
@@ -123,7 +123,7 @@ function TagsSection() {
             onClick={() => {
               setTag(null)
             }}
-            className="font-mono text-[10px] text-muted-foreground-faint hover:text-foreground"
+            className="font-mono text-2xs text-muted-foreground-faint hover:text-foreground"
           >
             clear ×
           </button>
@@ -148,10 +148,10 @@ function ProjectsSection() {
   return (
     <div className="flex shrink-0 flex-col">
       <div className="flex items-center justify-between px-3.5 pb-1.5">
-        <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground-faint">
+        <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
           PROJECTS
         </span>
-        <span className="font-mono text-[10px] text-muted-foreground-faint">
+        <span className="font-mono text-2xs text-muted-foreground-faint">
           {projects?.length ?? 0}
         </span>
       </div>
@@ -165,11 +165,11 @@ function ProjectsSection() {
               key={project.id}
               to="/projects/$projectId"
               params={{ projectId: project.id }}
-              className="flex items-center gap-2 px-3.5 py-1 font-mono text-[11px] text-muted-foreground hover:bg-card hover:text-foreground"
+              className="flex items-center gap-2 px-3.5 py-1 font-mono text-2xs text-muted-foreground hover:bg-card hover:text-foreground"
             >
               <ProjectStatusMark status={status} />
               <span className="flex-1 truncate text-left">{project.title}</span>
-              <span className="shrink-0 font-mono text-[10px] text-muted-foreground-faint">
+              <span className="shrink-0 font-mono text-2xs text-muted-foreground-faint">
                 {project.taskCount.completed}/{project.taskCount.total}
               </span>
             </Link>
@@ -190,7 +190,7 @@ export function Sidebar() {
             tq
           </span>
         </Link>
-        <span className="ml-auto font-mono text-[10px] text-muted-foreground-faint">
+        <span className="ml-auto font-mono text-2xs text-muted-foreground-faint">
           task queue
         </span>
       </div>

@@ -74,7 +74,7 @@ function PageBreadcrumb({
       <span className="min-w-0 flex-1 truncate font-mono text-xs font-medium text-foreground">
         {page.title}
       </span>
-      <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground-ghost">
+      <span className="ml-auto shrink-0 font-mono text-2xs text-muted-foreground-ghost">
         saved {formatRelativeTime(page.updatedAt)}
       </span>
     </>

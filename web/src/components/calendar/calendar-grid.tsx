@@ -216,7 +216,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
             // extra live-clock state is needed to keep the label current.
             if (arg.isAxis) return undefined
             return (
-              <span className="absolute -top-3.5 right-1 hidden font-mono text-[9px] text-primary md:inline">
+              <span className="absolute -top-3.5 right-1 hidden font-mono text-2xs text-primary md:inline">
                 {formatHm(new Date())}
               </span>
             )
