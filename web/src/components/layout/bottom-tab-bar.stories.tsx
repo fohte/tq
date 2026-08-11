@@ -37,6 +37,7 @@ function BottomTabBarWithRouter({ currentPath }: { currentPath: string }) {
 const meta = {
   title: 'Layout/BottomTabBar',
   component: BottomTabBarWithRouter,
+  tags: ['mobile-only'],
   parameters: {
     layout: 'fullscreen',
     viewport: { defaultViewport: 'mobile1' },
