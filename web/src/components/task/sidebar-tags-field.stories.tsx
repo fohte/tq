@@ -2,10 +2,17 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { SidebarTagsField } from '#components/task/sidebar-tags-field'
+import { labelKeys } from '#hooks/use-labels'
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  defaultOptions: {
+    queries: { retry: false, staleTime: Infinity },
+    mutations: { retry: false },
+  },
 })
+// SidebarTagsField's TagsInput always calls useLabels() for suggestions,
+// regardless of the labels chips shown via args.
+queryClient.setQueryData(labelKeys.all, [])
 
 const meta = {
   title: 'Task/SidebarTagsField',

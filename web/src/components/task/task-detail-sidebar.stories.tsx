@@ -13,9 +13,11 @@ import {
   TaskSidebar,
   TaskSidebarMobile,
 } from '#components/task/task-detail-sidebar'
+import { labelKeys } from '#hooks/use-labels'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { TaskDetail } from '#hooks/use-tasks'
+import { taskKeys } from '#hooks/use-tasks'
 
 const baseTask: TaskDetail = {
   id: '550e8400-e29b-41d4-a716-446655440000',
@@ -52,8 +54,12 @@ function Providers({
   project?: ProjectDetail | undefined
 }) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
+  // TaskSidebar/TaskSidebarMobile always mount SidebarParentField and
+  // SidebarTagsField, which read these regardless of the story's task.
+  queryClient.setQueryData(taskKeys.list(undefined), [])
+  queryClient.setQueryData(labelKeys.all, [])
   if (project) {
     queryClient.setQueryData(projectKeys.detail(project.id), project)
   }

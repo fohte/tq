@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '#lib/api'
 import { assertOk } from '#lib/assert-response'
 
-const labelKeys = {
+export const labelKeys = {
   all: ['labels'] as const,
 }
 
