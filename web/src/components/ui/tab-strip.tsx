@@ -22,7 +22,7 @@ export function TabStrip<T extends string>({
           }}
           aria-pressed={value === option.value}
           className={cn(
-            'shrink-0 whitespace-nowrap border px-[9px] py-[3px] font-mono text-2xs',
+            'shrink-0 whitespace-nowrap border px-2.5 py-1 font-mono text-2xs',
             value === option.value
               ? 'border-border-strong bg-surface-strong text-foreground'
               : 'border-border text-muted-foreground',
