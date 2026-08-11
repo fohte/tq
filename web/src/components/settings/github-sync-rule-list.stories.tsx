@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { delay, http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 
 import { GithubSyncRuleList } from '#components/settings/github-sync-rule-list'
@@ -48,6 +49,14 @@ const sampleRules: SyncRule[] = [
   },
 ]
 
+const projectsHandler = http.get('/api/projects', () =>
+  HttpResponse.json(sampleProjects),
+)
+
+function syncRulesHandler(rules: SyncRule[]) {
+  return http.get('/api/github/sync-rules', () => HttpResponse.json(rules))
+}
+
 function Providers({
   children,
   syncRules,
@@ -92,19 +101,41 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 // syncRules left undefined so the query never gets a cached value, keeping
-// the component in its initial isLoading render.
+// the component in its initial isLoading render. The sync-rules request is
+// held open (rather than errored) so the loading state stays visible.
 export const Loading: Story = {
   args: {},
+  parameters: {
+    msw: {
+      handlers: [
+        projectsHandler,
+        http.get('/api/github/sync-rules', async () => {
+          await delay('infinite')
+          return HttpResponse.json([])
+        }),
+      ],
+    },
+  },
 }
 
 export const Empty: Story = {
   args: {
     syncRules: [],
   },
+  parameters: {
+    msw: {
+      handlers: [projectsHandler, syncRulesHandler([])],
+    },
+  },
 }
 
 export const Populated: Story = {
   args: {
     syncRules: sampleRules,
+  },
+  parameters: {
+    msw: {
+      handlers: [projectsHandler, syncRulesHandler(sampleRules)],
+    },
   },
 }

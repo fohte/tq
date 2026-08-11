@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 
 import { GithubSyncRuleRow } from '#components/settings/github-sync-rule-row'
 import type { SyncRule } from '#hooks/use-github-sync-rules'
@@ -43,6 +44,13 @@ const meta = {
   component: GithubSyncRuleRow,
   parameters: {
     layout: 'centered',
+    // The row always mounts a (closed) GithubSyncRuleFormModal for editing,
+    // which queries the project list even while hidden.
+    msw: {
+      handlers: [
+        http.get('/api/projects', () => HttpResponse.json(sampleProjects)),
+      ],
+    },
   },
   decorators: [
     (Story) => (
