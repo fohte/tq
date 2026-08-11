@@ -11,11 +11,11 @@ import { http, HttpResponse } from 'msw'
 
 import { AppLayout } from '#components/layout/app-layout'
 
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: false } },
-})
-
 function AppLayoutStory() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  })
+
   return (
     <QueryClientProvider client={queryClient}>
       <AppLayout>
