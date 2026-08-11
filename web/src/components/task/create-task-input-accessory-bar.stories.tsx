@@ -6,6 +6,7 @@ import { CreateTaskInputAccessoryBar } from '#components/task/create-task-input-
 const meta = {
   title: 'Task/CreateTaskInputAccessoryBar',
   component: CreateTaskInputAccessoryBar,
+  tags: ['mobile-only'],
   parameters: {
     layout: 'centered',
   },

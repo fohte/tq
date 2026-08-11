@@ -92,6 +92,7 @@ function StatusLineWithRouter({ currentPath }: { currentPath: string }) {
 const meta = {
   title: 'Layout/StatusLine',
   component: StatusLineWithRouter,
+  tags: ['desktop-only'],
   parameters: {
     layout: 'fullscreen',
   },
