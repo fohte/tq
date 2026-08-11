@@ -122,16 +122,3 @@ export const NoResults: Story = {
     ).toBeInTheDocument()
   },
 }
-
-export const Closed: Story = {
-  decorators: [
-    (Story) => (
-      <QueryClientProvider client={createSeededQueryClient([])}>
-        <Story />
-      </QueryClientProvider>
-    ),
-  ],
-  args: {
-    open: false,
-  },
-}
