@@ -16,6 +16,7 @@ import type { TreeTaskGridRowProps } from '#components/task/tree-task-grid-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import type { TreeNode } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
+import { emptyLabelsHandler, emptyTasksHandler } from '#lib/msw-test-handlers'
 import { atIndex } from '#lib/test-utils'
 
 const baseTreeNode: TreeNode = {
@@ -500,6 +501,14 @@ export const Selected: Story = {
 
 export const AddSubtaskInputOpen: Story = {
   args: { node: baseTreeNode },
+  parameters: {
+    // The open row renders CreateTaskInline (via TreeOutlinerInputRow),
+    // which fetches labels on mount and, since a parentId is set here, the
+    // full task list too.
+    msw: {
+      handlers: [emptyLabelsHandler, emptyTasksHandler],
+    },
+  },
   render: () => {
     const node: TreeNode = {
       ...baseTreeNode,

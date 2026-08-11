@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { expect, fn, within } from 'storybook/test'
 
 import { TreeOutlinerInputRow } from '#components/task/tree-outliner-input-row'
+import { emptyLabelsHandler, emptyTasksHandler } from '#lib/msw-test-handlers'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -13,6 +14,11 @@ const meta = {
   component: TreeOutlinerInputRow,
   parameters: {
     layout: 'centered',
+    // CreateTaskInline (rendered unconditionally inside this row) always
+    // fetches labels on mount.
+    msw: {
+      handlers: [emptyLabelsHandler],
+    },
   },
   decorators: [
     (Story) => (
@@ -45,6 +51,14 @@ export const NestedChild: Story = {
     parentId: '00000000-0000-0000-0000-000000000001',
     parentNumber: 12,
     inherited: { context: 'work', projectId: null, labels: ['dev:tq'] },
+  },
+  parameters: {
+    // A non-null parentId additionally makes useExistingTaskLink fetch the
+    // full task list, so this overrides the meta handlers rather than
+    // extending them.
+    msw: {
+      handlers: [emptyLabelsHandler, emptyTasksHandler],
+    },
   },
 }
 
