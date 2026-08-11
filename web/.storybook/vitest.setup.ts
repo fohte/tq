@@ -2,6 +2,8 @@ import { screenshot } from '@storycap-testrun/browser'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
+import { unhandledApiRequestUrls } from '#storybook-config/unhandled-api-requests'
+
 // Pin the clock so stories that read the current time (calendar "now"
 // indicators, relative timestamps, "today" fixtures built at module scope)
 // render identically regardless of when the VRT suite runs.
@@ -94,6 +96,7 @@ new PerformanceObserver((list) => {
 
 beforeEach(() => {
   externalResourceUrls.length = 0
+  unhandledApiRequestUrls.length = 0
 })
 
 afterEach(async (context) => {
@@ -104,6 +107,18 @@ afterEach(async (context) => {
     externalResourceUrls.length = 0
     throw new Error(
       `Story loaded non-same-origin resource(s), which makes VRT captures flaky:\n${urls}`,
+    )
+  }
+
+  // A story hitting an /api/ endpoint with no MSW handler gets MSW's error
+  // response instead of real data, so the screenshot captures a broken UI
+  // state without failing — see web/.storybook/preview.tsx's
+  // onUnhandledRequest, which populates this array.
+  if (unhandledApiRequestUrls.length > 0) {
+    const urls = unhandledApiRequestUrls.join('\n')
+    unhandledApiRequestUrls.length = 0
+    throw new Error(
+      `Story made unhandled /api/ request(s); add an MSW handler for:\n${urls}`,
     )
   }
 })
