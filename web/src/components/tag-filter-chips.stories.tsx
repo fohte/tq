@@ -50,7 +50,7 @@ function Providers({
   tasks?: Task[] | undefined
 }) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
   queryClient.setQueryData(taskKeys.list(undefined), tasks)
 
