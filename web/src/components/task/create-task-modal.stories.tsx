@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 import { expect, fn, within } from 'storybook/test'
 
 import { CreateTaskModal } from '#components/task/create-task-modal'
@@ -13,6 +14,9 @@ const meta = {
   component: CreateTaskModal,
   parameters: {
     layout: 'fullscreen',
+    msw: {
+      handlers: [http.get('/api/labels', () => HttpResponse.json([]))],
+    },
   },
   decorators: [
     (Story) => (

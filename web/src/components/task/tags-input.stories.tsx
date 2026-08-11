@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 import { useState } from 'react'
 import { expect } from 'storybook/test'
 
@@ -19,6 +20,9 @@ const meta = {
   component: TagsInputHarness,
   parameters: {
     layout: 'centered',
+    msw: {
+      handlers: [http.get('/api/labels', () => HttpResponse.json([]))],
+    },
   },
   decorators: [
     (Story) => (

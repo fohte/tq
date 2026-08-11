@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 
 import { ProjectChip } from '#components/task/project-chip'
 import type { ProjectDetail } from '#hooks/use-projects'
@@ -38,6 +39,18 @@ const meta = {
   component: ProjectChipStory,
   parameters: {
     layout: 'centered',
+    msw: {
+      handlers: [
+        http.get('/api/projects/:id', ({ params }) =>
+          params['id'] === sampleProject.id
+            ? HttpResponse.json(sampleProject)
+            : HttpResponse.json(
+                { error: 'Project not found' },
+                { status: 404 },
+              ),
+        ),
+      ],
+    },
   },
 } satisfies Meta<typeof ProjectChipStory>
 

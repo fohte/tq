@@ -11,11 +11,16 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 })
 
+const labelsHandler = http.get('/api/labels', () => HttpResponse.json([]))
+
 const meta = {
   title: 'Task/CreateTaskInline',
   component: CreateTaskInline,
   parameters: {
     layout: 'centered',
+    msw: {
+      handlers: [labelsHandler],
+    },
   },
   decorators: [
     (Story) => (
@@ -100,12 +105,21 @@ export const LinkOrphanCandidate: Story = {
     ),
   ],
   parameters: {
-    // The row resets only once `useUpdateTaskParent`'s mutation actually
-    // succeeds, so the PATCH it fires needs a real response — the body is
-    // unused by the caller, only the 200 status matters.
     msw: {
       handlers: [
+        // Storybook merges `parameters` per key, but replaces arrays
+        // wholesale rather than merging their elements — this story's
+        // `handlers` array fully overrides meta's, so labelsHandler has to
+        // be repeated here or `/api/labels` goes unhandled.
+        labelsHandler,
+        // The row resets only once `useUpdateTaskParent`'s mutation actually
+        // succeeds, so the PATCH it fires needs a real response — the body is
+        // unused by the caller, only the 200 status matters.
         http.patch('/api/tasks/:id/parent', () => HttpResponse.json({})),
+        // The mutation's `onSettled` invalidates the task list, which
+        // refetches it since `useExistingTaskLink` keeps it mounted — the
+        // body is unused, only the 200 status matters.
+        http.get('/api/tasks', () => HttpResponse.json([])),
       ],
     },
   },
