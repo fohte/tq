@@ -8,7 +8,9 @@ import { playwright } from '@vitest/browser-playwright'
 import { defineConfig } from 'vitest/config'
 
 import {
+  DESKTOP_ONLY_TAG,
   DESKTOP_VIEWPORT,
+  MOBILE_ONLY_TAG,
   MOBILE_VIEWPORT,
 } from './.storybook/screenshot-viewports'
 
@@ -159,14 +161,14 @@ export default defineConfig({
         viewport: DESKTOP_VIEWPORT,
         screenshotsSubdir: 'desktop',
         viewportSetupFile: './.storybook/vitest.setup.desktop.ts',
-        excludeTags: ['mobile-only'],
+        excludeTags: [MOBILE_ONLY_TAG],
       }),
       createStorybookProject({
         name: 'storybook-mobile',
         viewport: MOBILE_VIEWPORT,
         screenshotsSubdir: 'mobile',
         viewportSetupFile: './.storybook/vitest.setup.mobile.ts',
-        excludeTags: ['desktop-only'],
+        excludeTags: [DESKTOP_ONLY_TAG],
       }),
     ],
   },
