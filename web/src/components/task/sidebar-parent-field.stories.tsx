@@ -138,9 +138,13 @@ export const SearchAndSelect: Story = {
     ),
   ],
   parameters: {
+    // updateParent's onSettled invalidates taskKeys.all, which
+    // invalidateQueries refetches regardless of staleTime — a real GET
+    // response is required alongside the PATCH.
     msw: {
       handlers: [
         http.patch('/api/tasks/:id/parent', () => HttpResponse.json({})),
+        http.get('/api/tasks', () => HttpResponse.json(allTasks)),
       ],
     },
   },
@@ -185,9 +189,13 @@ export const ClearParent: Story = {
     ),
   ],
   parameters: {
+    // updateParent's onSettled invalidates taskKeys.all, which
+    // invalidateQueries refetches regardless of staleTime — a real GET
+    // response is required alongside the PATCH.
     msw: {
       handlers: [
         http.patch('/api/tasks/:id/parent', () => HttpResponse.json({})),
+        http.get('/api/tasks', () => HttpResponse.json(allTasks)),
       ],
     },
   },

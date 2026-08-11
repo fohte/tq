@@ -11,6 +11,7 @@ import type { ReactNode } from 'react'
 import { TaskActivity } from '#components/task/task-activity'
 import type { ActivityItem } from '#hooks/use-task-activity'
 import type { Comment } from '#hooks/use-task-comments'
+import { taskMentionKeys } from '#hooks/use-task-mentions'
 
 const baseComments: Comment[] = [
   {
@@ -50,12 +51,21 @@ function Providers({
   events?: ActivityItem[]
 }) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
 
   // Pre-populate query caches with comments and activity events
   queryClient.setQueryData(['tasks', 'task-1', 'comments'], comments)
   queryClient.setQueryData(['tasks', 'task-1', 'activity'], events)
+
+  // ManyComments' bodies contain "#1".."#10" task-mention text, which
+  // MarkdownEditor's mention plugin resolves via useTaskMentionPreview. Seed
+  // them as unresolved (null) so the chip falls back to raw text instead of
+  // hitting the network; harmless for stories whose comments don't mention
+  // any of these numbers.
+  for (let number = 1; number <= 10; number++) {
+    queryClient.setQueryData(taskMentionKeys.preview(number), null)
+  }
 
   const rootRoute = createRootRoute({
     component: () => <>{children}</>,

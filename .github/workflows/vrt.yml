@@ -64,6 +64,28 @@ jobs:
             --project=${{ matrix.project }} \
             --shard=${{ matrix.shard }}/2
 
+      - name: Install ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+
+      # A screenshot with zero standard deviation is a single solid color —
+      # nothing rendered. If a component crashes and leaves the page blank,
+      # a blank baseline and a blank actual screenshot are pixel-identical,
+      # so reg-suit reports no diff and the regression goes undetected.
+      # Catching it here, before the baseline can absorb it, keeps a blank
+      # screenshot from ever reaching the shared baseline.
+      - name: Check for blank screenshots
+        working-directory: web
+        run: |
+          blank=$(find __screenshots__ -name '*.png' -print0 \
+            | xargs -0 -r identify -format "%[standard-deviation] %i\n" \
+            | awk '$1 == 0')
+
+          if [ -n "$blank" ]; then
+            echo "Blank screenshot(s) detected (nothing rendered):"
+            echo "$blank"
+            exit 1
+          fi
+
       - name: Upload screenshots
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

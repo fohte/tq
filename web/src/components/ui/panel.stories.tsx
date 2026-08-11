@@ -19,9 +19,7 @@ export const WithHeader: Story = {
     <Panel>
       <PanelHeader>
         OPEN TASKS
-        <span className="ml-auto text-[10px] tracking-normal">
-          view board →
-        </span>
+        <span className="ml-auto text-2xs tracking-normal">view board →</span>
       </PanelHeader>
       <div className="flex items-center gap-2 border-b border-border px-3 py-2 text-sm last:border-b-0">
         Set up CI pipeline
