@@ -20,6 +20,9 @@ import { cn } from '#lib/utils'
 export const TASK_GRID_COLUMNS =
   'grid-cols-[26px_26px_minmax(120px,1fr)_132px_104px_72px_56px_28px]'
 
+// Shared with search/ row renderers, which dim completed tasks the same way.
+export const COMPLETED_DIM_CLASS = 'opacity-55'
+
 export function useHandleStatusChange(id: string, status: Task['status']) {
   const completeTask = useCompleteTask()
   const updateStatus = useUpdateTaskStatus()
@@ -108,7 +111,7 @@ export function gridRowWrapperClassName(
   return cn(
     'border-b border-border border-l-2 border-l-transparent px-3 py-2 transition-colors hover:bg-secondary/30',
     isInProgress && 'border-l-primary bg-card',
-    isCompleted && 'opacity-[0.55]',
+    isCompleted && COMPLETED_DIM_CLASS,
   )
 }
 

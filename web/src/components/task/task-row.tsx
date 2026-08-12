@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 import { GithubLinkBadge } from '#components/task/github-link-badge'
 import {
+  COMPLETED_DIM_CLASS,
   ContextBadge,
   DueDateBadge,
   TagTokens,
@@ -20,7 +21,7 @@ function rowWrapperClassName(isInProgress: boolean, isCompleted: boolean) {
   return cn(
     'flex items-center gap-2 border-b border-border border-l-2 border-l-transparent px-3 py-2',
     isInProgress && 'border-l-primary bg-card',
-    isCompleted && 'opacity-[0.55]',
+    isCompleted && COMPLETED_DIM_CLASS,
   )
 }
 

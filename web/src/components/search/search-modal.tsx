@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { SearchResultRow } from '#components/search/search-result-row'
+import { COMPLETED_DIM_CLASS } from '#components/task/task-row-shared'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import type { SearchResult, Suggestion } from '#hooks/use-search'
 import { useSearchSuggestions, useSearchTasks } from '#hooks/use-search'
@@ -279,7 +280,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                         selectedIndex === globalIndex
                           ? 'bg-secondary'
                           : 'hover:bg-secondary/50',
-                        task.status === 'completed' && 'opacity-[0.55]',
+                        task.status === 'completed' && COMPLETED_DIM_CLASS,
                       )}
                     >
                       <SearchResultRow task={task} />
