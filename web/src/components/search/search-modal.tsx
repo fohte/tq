@@ -279,7 +279,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                         selectedIndex === globalIndex
                           ? 'bg-secondary'
                           : 'hover:bg-secondary/50',
-                        task.status === 'completed' && 'opacity-[0.55]',
+                        task.status === 'completed' && 'dim-completed',
                       )}
                     >
                       <SearchResultRow task={task} />

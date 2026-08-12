@@ -108,7 +108,7 @@ export function gridRowWrapperClassName(
   return cn(
     'border-b border-border border-l-2 border-l-transparent px-3 py-2 transition-colors hover:bg-secondary/30',
     isInProgress && 'border-l-primary bg-card',
-    isCompleted && 'opacity-[0.55]',
+    isCompleted && 'dim-completed',
   )
 }
 

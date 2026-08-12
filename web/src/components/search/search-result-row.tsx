@@ -10,7 +10,7 @@ export function searchResultRowWrapperClassName(
   return cn(
     'flex items-center gap-2 border-b border-border border-l-2 border-l-transparent px-3 py-2',
     status === 'in_progress' && 'border-l-primary bg-card',
-    status === 'completed' && 'opacity-[0.55]',
+    status === 'completed' && 'dim-completed',
   )
 }
 

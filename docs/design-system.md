@@ -2,7 +2,9 @@
 
 Contract reference for tq's web UI design system: a near-monochrome dark
 palette with one red accent used only as punctuation, zero border-radius, 1px
-borders, and monospace UI chrome. Modeled on the
+borders, and monospace UI chrome — plus GitHub's own brand colors for
+PR/issue state, the one deliberate exception to the single-accent rule (see
+[GitHub status colors](#github-status-colors)). Modeled on the
 [fohte.net](https://fohte.net) design system.
 
 Source of truth for every value in this doc:
@@ -96,6 +98,19 @@ introduce a new gray value; use the nearest existing tier.
 | `--sidebar-accent-foreground`  | `#fafafa` | `text-sidebar-accent-foreground`              |
 | `--sidebar-border`             | `#2a2a2a` | `border-sidebar-border`                       |
 | `--sidebar-ring`               | `#ef4444` | `ring-sidebar-ring`                           |
+
+### GitHub status colors
+
+| Token             | Value     | Tailwind utility     | Usage                               |
+| ----------------- | --------- | -------------------- | ----------------------------------- |
+| `--github-open`   | `#3fb950` | `text-github-open`   | GitHub PR/issue "open" state icon   |
+| `--github-closed` | `#f85149` | `text-github-closed` | GitHub PR/issue "closed" state icon |
+| `--github-merged` | `#a371f7` | `text-github-merged` | GitHub PR "merged" state icon       |
+
+These are GitHub's own brand colors for PR/issue state, not app status
+colors — kept separate from `--primary` and the gray-tier text ladder above.
+Do not substitute an app status token here; the two systems mean different
+things even where a value might coincidentally look close.
 
 ### Radius
 
@@ -381,6 +396,11 @@ not literal bracket text.
 | `todo`        | outline circle                                 | `text-muted-foreground`                                   | —                                                                               |
 | `in_progress` | partial-pie circle                             | `text-primary` (the red accent)                           | One of the few places red fill/text is used — marks "the one thing in progress" |
 | `completed`   | filled circle + check (lucide-react's `Check`) | `bg-muted-foreground-faint` fill, `text-background` check | Accompanying title text gets `line-through` + `text-muted-foreground`           |
+
+Completed task/search-result rows (not just the status icon) are further
+dimmed via the `dim-completed` utility (`opacity: 55%`, defined in
+`web/src/index.css`) — a `@utility` rather than a `--opacity-*` token, since
+opacity has no `@theme` namespace to hang a named scale step off of.
 
 ## Primitives
 
