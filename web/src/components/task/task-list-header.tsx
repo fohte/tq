@@ -18,7 +18,7 @@ export function TaskListHeader({ tasks }: { tasks: Task[] }) {
   const progress = total > 0 ? (completed / total) * 100 : 0
 
   return (
-    <div className="flex flex-col gap-[7px] px-3">
+    <div className="flex flex-col gap-2 px-3">
       <div className="flex items-baseline gap-2.5 font-mono text-2xs">
         <span className="text-foreground">
           {completed}

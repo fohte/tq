@@ -12,7 +12,7 @@ export function SidebarField({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-[5px]">
+    <div className="flex flex-col gap-1.5">
       <span className="font-mono text-2xs text-muted-foreground-faint">
         {label}
       </span>

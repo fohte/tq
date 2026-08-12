@@ -122,7 +122,7 @@ function AddSubtaskRow({
       onClick={() => {
         setIsAdding(true)
       }}
-      className="flex min-h-[44px] w-full items-center gap-1.5 border-t border-dashed border-border px-3 font-mono text-xs text-muted-foreground-faint transition-colors hover:text-muted-foreground"
+      className="flex min-h-11 w-full items-center gap-1.5 border-t border-dashed border-border px-3 font-mono text-xs text-muted-foreground-faint transition-colors hover:text-muted-foreground"
     >
       <Plus className="size-3" />
       add subtask

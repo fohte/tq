@@ -43,7 +43,7 @@ export function TaskMainContent({
   }
 
   return (
-    <div className="flex max-w-[720px] flex-col gap-[18px]">
+    <div className="flex max-w-[720px] flex-col gap-5">
       {/* Breadcrumb */}
       <TaskBreadcrumb task={task} />
 
@@ -140,7 +140,7 @@ function TaskTagChips({ labels }: { labels: string[] }) {
 
 function TaskBreadcrumb({ task }: { task: TaskDetail }) {
   return (
-    <nav className="flex items-center gap-[7px] font-mono text-2xs text-muted-foreground">
+    <nav className="flex items-center gap-2 font-mono text-2xs text-muted-foreground">
       <Link to="/tasks" className="hover:text-foreground">
         tasks
       </Link>
