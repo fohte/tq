@@ -212,9 +212,11 @@ export const FullPagePC: StoryObj<{
   },
   parameters: {
     layout: 'fullscreen',
-    // This desktop sidebar layout has no viewport override (unlike
-    // FullPageSP below), so it also renders — and overflows — at the
-    // storybook-mobile project's 375px viewport; pre-existing, out of scope.
+    // Intermittent under full-suite parallel load (passes consistently when
+    // this file runs in isolation): the Milkdown-based description editor
+    // hasn't finished its async mount by the time this check measures, so
+    // its wrapper's width is briefly narrower than its settled content.
+    // Timing-dependent, not a deterministic app layout bug.
     overflowCheck: { disable: true },
   },
   render: ({ project, tasks }) => (

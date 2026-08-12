@@ -67,11 +67,13 @@ const meta = {
   component: CalendarGrid,
   parameters: {
     layout: 'fullscreen',
-    // FullCalendar's internal `.fc-scroller` reports scrollWidth > clientWidth
-    // by a fixed ~80px whenever its vertical scrollbar is forced on — a
-    // library-internal sizing artifact of its own scrollbar-gutter
-    // reservation, not app layout, and not deterministic across runs (which
-    // stories trip it shifts run to run with unchanged content).
+    // Two independent causes, both present on the desktop project and
+    // worse on storybook-mobile: FullCalendar's internal `.fc-scroller`
+    // reports scrollWidth > clientWidth by a fixed ~80px whenever its
+    // vertical scrollbar is forced on (library-internal sizing artifact,
+    // not app layout), and event chips / the "+more" link genuinely clip
+    // in narrow day columns (pre-existing mobile layout bug, out of scope
+    // for this PR).
     overflowCheck: { disable: true },
   },
   argTypes: {

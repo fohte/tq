@@ -1,15 +1,35 @@
 import type { StorybookCheck } from '#storybook-config/checks/check'
 import { throwIfNotEmpty } from '#storybook-config/checks/check'
 
-// addon-vitest's runStory() creates a <div>, appends it to document.body,
-// and only removes it at the start of the *next* test (see
-// @storybook/preview-api's runStory()) — not at the end of this one. This
-// setup file's afterEach never gets `context.canvasElement` itself (that's
-// populated inside composeStory().run(), a call this file doesn't make), so
-// the still-mounted container is reached the only way available here: as
-// the last element appended to body.
-function findStoryRoot(): Element | null {
-  return document.body.lastElementChild
+// addon-vitest's runStory() (inside @storybook/preview-api) creates the
+// story's container as a bare <div> and appends it to document.body before
+// mounting anything into it — this setup file's afterEach never gets
+// `context.canvasElement` itself (that's populated inside
+// composeStory().run(), a call this file doesn't make), so this is the only
+// way to reach the same element. Portal-based components (Base UI's
+// Dialog/Select/Popover/etc., this app's own SearchModal) append their own
+// <div>s directly to document.body too, but only *after* the story has
+// mounted — so the container is reliably the *first* element appended to
+// body once a story starts, not the last. A MutationObserver set up in
+// reset() (which runs before the story mounts) captures it.
+let storyRoot: Element | null = null
+let bodyObserver: MutationObserver | null = null
+
+function watchStoryRoot(): void {
+  storyRoot = null
+  bodyObserver?.disconnect()
+  bodyObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (node instanceof Element) {
+          storyRoot = node
+          bodyObserver?.disconnect()
+          return
+        }
+      }
+    }
+  })
+  bodyObserver.observe(document.body, { childList: true })
 }
 
 function describeElement(el: Element): string {
@@ -88,15 +108,13 @@ function isDisabled(storyParameters: unknown): boolean {
 }
 
 export const overflowCheck: StorybookCheck = {
-  reset: () => {},
+  reset: watchStoryRoot,
   assert: (storyParameters) => {
     if (isDisabled(storyParameters)) return
-
-    const root = findStoryRoot()
-    if (root == null) return
+    if (storyRoot == null) return
 
     throwIfNotEmpty(
-      findOverflows(root),
+      findOverflows(storyRoot),
       'Story has element(s) overflowing their container (clipped and invisible)',
     )
   },

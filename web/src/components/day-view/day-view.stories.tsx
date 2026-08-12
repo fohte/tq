@@ -237,9 +237,8 @@ const meta = {
     layout: 'fullscreen',
     // FullCalendar's internal `.fc-scroller` reports scrollWidth > clientWidth
     // by a fixed ~80px whenever its vertical scrollbar is forced on — a
-    // library-internal sizing artifact of its own scrollbar-gutter
-    // reservation, not app layout, and not deterministic across runs (which
-    // stories trip it shifts run to run with unchanged content).
+    // library-internal scrollbar-gutter sizing artifact, not app layout (same
+    // cause as CalendarGrid/CalendarView's disable).
     overflowCheck: { disable: true },
   },
   decorators: [

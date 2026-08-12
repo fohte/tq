@@ -73,13 +73,34 @@ function asScreenshotContext(
   return context as Parameters<typeof screenshot>[1]
 }
 
+// Both Vitest's browser-mode TestContext and composeStory()'s return value
+// (a composed story is called to render, with `.parameters` etc. attached to
+// the callable) are functions at runtime, so `typeof` reports 'function' for
+// them, not 'object' — the `in` operator still works on either.
+function isRecordLike(value: unknown): value is Record<string, unknown> {
+  return (
+    (typeof value === 'object' || typeof value === 'function') && value !== null
+  )
+}
+
 // @storybook/addon-vitest's generated per-story test wrapper assigns
 // `context.story = composedStory` before running the story (see its
 // vitest-plugin/test-utils.js's testStory()), but ships no type declaration
-// for it — cast through `unknown` to access the story's resolved parameters.
+// for it — narrow through `unknown` to access the story's resolved
+// parameters.
+function hasStory(
+  context: unknown,
+): context is { story: { parameters: unknown } } {
+  return (
+    isRecordLike(context) &&
+    'story' in context &&
+    isRecordLike(context['story']) &&
+    'parameters' in context['story']
+  )
+}
+
 function storyParametersOf(context: unknown): unknown {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- see comment above
-  return (context as { story: { parameters: unknown } }).story.parameters
+  return hasStory(context) ? context.story.parameters : undefined
 }
 
 // Checks that must pass for every story; add a check module under ./checks
