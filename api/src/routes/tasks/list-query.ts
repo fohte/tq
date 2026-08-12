@@ -32,7 +32,7 @@ function buildConditions(query: ListTasksQuery) {
   const parsed = query.q != null ? parseSearchQuery(query.q) : null
   const conditions = []
 
-  const statuses = parsed?.status != null ? [parsed.status] : query.status
+  const statuses = parsed?.status ?? query.status
   if (statuses != null && statuses.length > 0) {
     conditions.push(inArray(tasks.status, statuses))
   }
