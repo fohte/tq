@@ -62,7 +62,7 @@ function Providers({
 function TagFilterChipsWithProviders(props: { tasks?: Task[] }) {
   return (
     <Providers tasks={props.tasks}>
-      <div className="w-[360px] border border-border">
+      <div className="w-md border border-border">
         <TagFilterChips />
       </div>
     </Providers>

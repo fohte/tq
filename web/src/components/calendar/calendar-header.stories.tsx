@@ -20,7 +20,7 @@ function CalendarHeaderStateful({
   const [activeView, setActiveView] = useState<CalendarViewType>(initialView)
 
   return (
-    <div className="w-[600px]">
+    <div className="w-3xl">
       <CalendarHeader
         currentDate={currentDate}
         activeView={activeView}
@@ -93,7 +93,7 @@ export const InteractionTest: InteractionTestStory = {
     onViewChange: fn(),
   },
   render: (args) => (
-    <div className="w-[600px]">
+    <div className="w-3xl">
       <CalendarHeader {...args} />
     </div>
   ),

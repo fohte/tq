@@ -11,7 +11,7 @@ function TagFilterBarDemo() {
   const { setTag } = useTagFilter()
 
   return (
-    <div className="w-[400px] border border-border">
+    <div className="w-md border border-border">
       <button
         type="button"
         className="w-full border-b border-border px-3 py-2 font-mono text-2xs text-muted-foreground"

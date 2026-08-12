@@ -104,7 +104,7 @@ function InteractiveTreeTaskGridRow({ node }: { node: TreeNode }) {
 function TreeTaskGridRowWithProviders({ node }: { node: TreeNode }) {
   return (
     <Providers>
-      <div className="w-[600px]">
+      <div className="w-3xl">
         <InteractiveTreeTaskGridRow node={node} />
       </div>
     </Providers>
@@ -118,7 +118,7 @@ function StaticTreeTaskGridRow(
 ) {
   return (
     <Providers>
-      <div className="w-[600px]">
+      <div className="w-3xl">
         <TreeTaskGridRow
           isExpanded={() => true}
           onToggleExpand={() => {}}
@@ -268,7 +268,7 @@ export const TagClick: Story = {
   },
   render: (args) => (
     <Providers>
-      <div className="w-[600px]">
+      <div className="w-3xl">
         <InteractiveTreeTaskGridRow node={args.node} />
         <TagFilterBar />
       </div>
@@ -291,7 +291,7 @@ export const ClickNavigates: Story = (() => {
     },
     render: (args) => (
       <Providers history={history}>
-        <div className="w-[600px]">
+        <div className="w-3xl">
           <InteractiveTreeTaskGridRow node={args.node} />
         </div>
       </Providers>
@@ -437,7 +437,7 @@ export const AllVariants: Story = {
 
     return (
       <Providers>
-        <div className="w-[600px] divide-y divide-border">
+        <div className="w-3xl divide-y divide-border">
           {nodes.map((node) => (
             <InteractiveTreeTaskGridRow key={node.id} node={node} />
           ))}

@@ -30,7 +30,7 @@ function ProjectListRowStory(
 ) {
   const rootRoute = createRootRoute({
     component: () => (
-      <div className="dark w-[720px] bg-background">
+      <div className="dark w-3xl bg-background">
         <ProjectListRow {...props} />
       </div>
     ),
@@ -185,7 +185,7 @@ export const AllVariants: Story = {
 
     const rootRoute = createRootRoute({
       component: () => (
-        <div className="dark w-[720px] divide-y divide-border bg-background">
+        <div className="dark w-3xl divide-y divide-border bg-background">
           {projects.map((project) => (
             <ProjectListRow key={project.id} project={project} />
           ))}

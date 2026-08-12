@@ -70,7 +70,7 @@ function Providers({ children }: { children: ReactNode }) {
 function TreeTaskRowWithProviders({ node }: { node: TreeNode }) {
   return (
     <Providers>
-      <div className="w-[480px]">
+      <div className="w-3xl">
         <TreeTaskRow node={node} />
       </div>
     </Providers>
@@ -219,7 +219,7 @@ export const TagClick: Story = {
   },
   render: (args) => (
     <Providers>
-      <div className="w-[480px]">
+      <div className="w-3xl">
         <TreeTaskRow node={args.node} />
         <TagFilterBar />
       </div>
