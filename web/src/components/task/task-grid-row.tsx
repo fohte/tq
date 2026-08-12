@@ -8,7 +8,6 @@ import {
   gridRowTitleClassName,
   gridRowWrapperClassName,
   TagTokens,
-  TASK_GRID_COLUMNS,
   TaskNumberLabel,
   useHandleStatusChange,
 } from '#components/task/task-row-shared'
@@ -24,9 +23,7 @@ export function TaskGridRow({ task }: { task: Task }) {
     <Link to="/tasks/$taskId" params={{ taskId: task.id }} className="block">
       <div className={gridRowWrapperClassName(isInProgress, isCompleted)}>
         {/* Desktop: single-row grid matching the column header */}
-        <div
-          className={`hidden items-center gap-2 md:grid ${TASK_GRID_COLUMNS}`}
-        >
+        <div className="hidden grid-cols-(--task-row-columns) items-center gap-2 md:grid">
           <span />
           <TaskStatusPicker
             status={task.status}

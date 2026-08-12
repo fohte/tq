@@ -12,7 +12,6 @@ import {
   gridRowTitleClassName,
   gridRowWrapperClassName,
   TagTokens,
-  TASK_GRID_COLUMNS,
   TaskNumberLabel,
   useHandleStatusChange,
 } from '#components/task/task-row-shared'
@@ -119,7 +118,7 @@ export function TreeTaskGridRow({
         >
           {/* Desktop: single-row grid matching the column header */}
           <div
-            className={`hidden items-center gap-2 md:grid ${TASK_GRID_COLUMNS}`}
+            className="hidden grid-cols-(--task-row-columns) items-center gap-2 md:grid"
             onClick={handleSelectRow}
           >
             {expandToggle}
