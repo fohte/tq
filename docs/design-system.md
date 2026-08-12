@@ -368,6 +368,11 @@ not literal bracket text.
 | `in_progress` | partial-pie circle                             | `text-primary` (the red accent)                           | One of the few places red fill/text is used — marks "the one thing in progress" |
 | `completed`   | filled circle + check (lucide-react's `Check`) | `bg-muted-foreground-faint` fill, `text-background` check | Accompanying title text gets `line-through` + `text-muted-foreground`           |
 
+Completed task/search-result rows (not just the status icon) are further
+dimmed via the `dim-completed` utility (`opacity: 55%`, defined in
+`web/src/index.css`) — a `@utility` rather than a `--opacity-*` token, since
+opacity has no `@theme` namespace to hang a named scale step off of.
+
 ## Primitives
 
 All primitives live in `web/src/components/ui/` and are imported via the
