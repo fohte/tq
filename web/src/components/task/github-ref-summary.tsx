@@ -4,9 +4,9 @@ import type { GithubLink } from '#hooks/use-github-link'
 import { cn } from '#lib/utils'
 
 const STATE_COLORS: Record<GithubLink['state'], string> = {
-  open: 'text-[#3FB950]',
-  closed: 'text-[#F85149]',
-  merged: 'text-[#A371F7]',
+  open: 'text-github-open',
+  closed: 'text-github-closed',
+  merged: 'text-github-merged',
 }
 
 export interface GithubRef {

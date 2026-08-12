@@ -58,6 +58,14 @@
   --muted-foreground-strong: #a1a1aa;
   --muted-foreground-faint: #52525b;
   --muted-foreground-ghost: #3f3f46;
+
+  /*
+   * GitHub's own brand colors for PR/issue state — not part of the app's
+   * status/accent system, so kept separate from --primary and friends.
+   */
+  --github-open: #3fb950;
+  --github-closed: #f85149;
+  --github-merged: #a371f7;
 }
 
 @theme inline {
@@ -90,6 +98,9 @@
   --color-muted-foreground-strong: var(--muted-foreground-strong);
   --color-muted-foreground-faint: var(--muted-foreground-faint);
   --color-muted-foreground-ghost: var(--muted-foreground-ghost);
+  --color-github-open: var(--github-open);
+  --color-github-closed: var(--github-closed);
+  --color-github-merged: var(--github-merged);
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);

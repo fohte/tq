@@ -97,6 +97,19 @@ introduce a new gray value; use the nearest existing tier.
 | `--sidebar-border`             | `#2a2a2a` | `border-sidebar-border`                       |
 | `--sidebar-ring`               | `#ef4444` | `ring-sidebar-ring`                           |
 
+### GitHub status colors
+
+| Token             | Value     | Tailwind utility     | Usage                               |
+| ----------------- | --------- | -------------------- | ----------------------------------- |
+| `--github-open`   | `#3fb950` | `text-github-open`   | GitHub PR/issue "open" state icon   |
+| `--github-closed` | `#f85149` | `text-github-closed` | GitHub PR/issue "closed" state icon |
+| `--github-merged` | `#a371f7` | `text-github-merged` | GitHub PR "merged" state icon       |
+
+These are GitHub's own brand colors for PR/issue state, not app status
+colors — kept separate from `--primary` and the gray-tier text ladder above.
+Do not substitute an app status token here; the two systems mean different
+things even where a value might coincidentally look close.
+
 ### Radius
 
 | Token      | Value  |
