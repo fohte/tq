@@ -126,6 +126,29 @@
   opacity: 55%;
 }
 
+/*
+ * One-off values referenced via the css-var arbitrary-value syntax
+ * (e.g. rounded-(--btn-radius-xs)) instead of bracket arbitrary values —
+ * see docs/design-system.md.
+ */
+@theme {
+  /* Button size radii — still derived from --radius-md, so they resolve to
+   * 0rem while --radius is 0rem; see docs/design-system.md Radius policy. */
+  --btn-radius-xs: min(var(--radius-md), 10px);
+  --btn-radius-sm: min(var(--radius-md), 12px);
+
+  /* Shared by Kbd and KeybindHint's boxed variant — see docs/design-system.md Radius policy */
+  --keycap-radius: 4px;
+
+  --dialog-inset: calc(100% - 2rem);
+  --tabs-trigger-height: calc(100% - 1px);
+  --tooltip-arrow-offset: calc(-50% - 2px);
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

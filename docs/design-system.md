@@ -170,6 +170,7 @@ new mapping:
 | ----------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `text-[8px]` `text-[9px]` `text-[10px]` `text-[11px]` | `text-2xs`  | Same role (small mono UI chrome), 1px-apart drift                                                                       |
 | `text-[12px]`                                         | `text-xs`   | Exact match                                                                                                             |
+| `text-[0.8rem]` (12.8px)                              | `text-xs`   | Nearest neighbor — 0.8px from `text-xs` (12px) vs. 1.2px from `text-sm` (14px), not a tie                               |
 | `text-[13px]`                                         | `text-sm`   | Rounds up, not down — keeps the existing size ordering intact (e.g. `SectionHeading` level 3 stays bigger than level 2) |
 | `text-[15px]`                                         | `text-sm`   | Equidistant between `text-sm` (14px) and `text-base` (16px) — see note below                                            |
 | `text-[19px]`                                         | `text-xl`   | Equidistant between `text-lg` (18px) and `text-xl` (20px) — see note below                                              |
@@ -252,18 +253,19 @@ this mechanically to whichever utility prefix carries the value — `gap-`,
 [Sizing](#sizing-grid-rounding-vs-naming-a-dimension) below for anything
 bigger). E.g. `gap-[7px]` → `gap-2`, `py-[7px]` → `py-2`.
 
-| Off-grid value | Resolves to  | Why                                                                                                                                                                                                                                                                                                                                                     |
-| -------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `3px`          | `1` (4px)    | Equidistant between `0.5` (2px) and `1` (4px) — ties round up                                                                                                                                                                                                                                                                                           |
-| `5px`          | `1.5` (6px)  | Equidistant between `1` (4px) and `1.5` (6px) — ties round up                                                                                                                                                                                                                                                                                           |
-| `7px`          | `2` (8px)    | Equidistant between `1.5` (6px) and `2` (8px) — ties round up                                                                                                                                                                                                                                                                                           |
-| `9px`          | `2.5` (10px) | Equidistant between `2` (8px) and `2.5` (10px) — ties round up                                                                                                                                                                                                                                                                                          |
-| `11px`         | `3` (12px)   | Equidistant between `2.5` (10px) and `3` (12px) — ties round up                                                                                                                                                                                                                                                                                         |
-| `13px`         | `3.5` (14px) | Equidistant between `3` (12px) and `3.5` (14px) — ties round up. Exception: `project-list-row.tsx`'s mobile row rounds to `3` instead, unified with its sibling desktop row's `py-[11px]` → `3` — no PR documents an intentional 2px breakpoint difference, and `task-row.tsx` already uses one `py` value regardless of breakpoint                     |
-| `18px`         | `5` (20px)   | Equidistant between `4` (16px) and `5` (20px) — Tailwind has no half-step above `3.5`, so both neighbors are full steps; ties round up. `focus-view.tsx`'s `mt-4 md:mt-5` (rounded from `md:mt-[18px]`) is the case that motivates rounding up: it must stay ≥ the base `mt-4`, and rounding down would have collapsed the responsive change to a no-op |
-| `22px`         | `6` (24px)   | Equidistant between `5` (20px) and `6` (24px) — ties round up                                                                                                                                                                                                                                                                                           |
-| `41px`         | `10` (40px)  | Nearest step — 40px is 1px away, 44px is 3px away, not a tie. Also used by `layout/sidebar.tsx`'s header row, which sits flush against `ScreenHeaderBar` in the app shell — round every occurrence in the same pass so their `border-b` lines stay aligned instead of drifting by 1px                                                                   |
-| `44px`         | `11` (44px)  | Already exactly on-grid (`11 × 4px`, the standard tap-target size) — not a rounding case, just swap the bracket for the equivalent named utility (`min-w-[44px]` → `min-w-11`)                                                                                                                                                                          |
+| Off-grid value | Resolves to   | Why                                                                                                                                                                                                                                                                                                                                                     |
+| -------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `3px`          | `1` (4px)     | Equidistant between `0.5` (2px) and `1` (4px) — ties round up                                                                                                                                                                                                                                                                                           |
+| `5px`          | `1.5` (6px)   | Equidistant between `1` (4px) and `1.5` (6px) — ties round up                                                                                                                                                                                                                                                                                           |
+| `-5px`         | `-1.5` (-6px) | Same tie as `5px` above, applied to a negative position offset (`tabs.tsx`'s active-tab underline `bottom-[-5px]` → `-bottom-1.5`) — ties round away from zero, mirroring the positive case                                                                                                                                                             |
+| `7px`          | `2` (8px)     | Equidistant between `1.5` (6px) and `2` (8px) — ties round up                                                                                                                                                                                                                                                                                           |
+| `9px`          | `2.5` (10px)  | Equidistant between `2` (8px) and `2.5` (10px) — ties round up                                                                                                                                                                                                                                                                                          |
+| `11px`         | `3` (12px)    | Equidistant between `2.5` (10px) and `3` (12px) — ties round up                                                                                                                                                                                                                                                                                         |
+| `13px`         | `3.5` (14px)  | Equidistant between `3` (12px) and `3.5` (14px) — ties round up. Exception: `project-list-row.tsx`'s mobile row rounds to `3` instead, unified with its sibling desktop row's `py-[11px]` → `3` — no PR documents an intentional 2px breakpoint difference, and `task-row.tsx` already uses one `py` value regardless of breakpoint                     |
+| `18px`         | `5` (20px)    | Equidistant between `4` (16px) and `5` (20px) — Tailwind has no half-step above `3.5`, so both neighbors are full steps; ties round up. `focus-view.tsx`'s `mt-4 md:mt-5` (rounded from `md:mt-[18px]`) is the case that motivates rounding up: it must stay ≥ the base `mt-4`, and rounding down would have collapsed the responsive change to a no-op |
+| `22px`         | `6` (24px)    | Equidistant between `5` (20px) and `6` (24px) — ties round up                                                                                                                                                                                                                                                                                           |
+| `41px`         | `10` (40px)   | Nearest step — 40px is 1px away, 44px is 3px away, not a tie. Also used by `layout/sidebar.tsx`'s header row, which sits flush against `ScreenHeaderBar` in the app shell — round every occurrence in the same pass so their `border-b` lines stay aligned instead of drifting by 1px                                                                   |
+| `44px`         | `11` (44px)   | Already exactly on-grid (`11 × 4px`, the standard tap-target size) — not a rounding case, just swap the bracket for the equivalent named utility (`min-w-[44px]` → `min-w-11`)                                                                                                                                                                          |
 
 ±1px visual drift from this rounding is expected and acceptable. What isn't
 acceptable is breaking a position/ordering relationship (e.g. a responsive
@@ -372,17 +374,28 @@ default, including every Tailwind `rounded-*` utility that derives from the
 There are exactly **two** sanctioned exceptions, both **hardcoded** (not
 derived from the `--radius` token):
 
-| Exception                     | Where                                                                                      |
-| ----------------------------- | ------------------------------------------------------------------------------------------ |
-| `KeybindHint` `boxed` variant | `rounded-[4px]` in `web/src/components/ui/keybind-hint.tsx`                                |
-| Inline `<code>` elements      | `border-radius: 4px` on `.ProseMirror code` in `web/src/components/ui/markdown-editor.css` |
+| Exception                | Where                                                                                                                                                                                                                 |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--keycap-radius` (4px)  | Shared by `Kbd` (`web/src/components/ui/kbd.tsx`) and `KeybindHint`'s `boxed` variant (`web/src/components/ui/keybind-hint.tsx`) — both call `rounded-(--keycap-radius)`, a token defined once in `web/src/index.css` |
+| Inline `<code>` elements | `border-radius: 4px` on `.ProseMirror code` in `web/src/components/ui/markdown-editor.css`                                                                                                                            |
 
 **Do not introduce new radius exceptions without updating this doc.**
 
-Note: `Button`'s size variants use `rounded-lg` / `rounded-[min(var(--radius-md),10px)]`
-etc. — these are still driven by the `--radius` token chain (they resolve to
-`0rem` because `--radius` is `0rem`), so they are **not** exceptions to this
-policy.
+Note: `Button`'s size variants use `rounded-lg` / `rounded-(--btn-radius-xs)`
+/ `rounded-(--btn-radius-sm)` etc. — `--btn-radius-xs`/`--btn-radius-sm`
+(defined in `web/src/index.css` as `min(var(--radius-md), 10px)` /
+`min(var(--radius-md), 12px)`) are still driven by the `--radius` token chain
+(they resolve to `0rem` because `--radius` is `0rem`), so they are **not**
+exceptions to this policy.
+
+**shadcn regeneration risk:** `button.tsx`, `dialog.tsx`, `tabs.tsx`,
+`tooltip.tsx`, and `kbd.tsx` are shadcn CLI-managed (`web/components.json`
+points its `ui` alias at `web/src/components/ui/`). Running
+`pnpm dlx shadcn add <component>` on any of these overwrites the file,
+including the `rounded-(--btn-radius-*)` / `rounded-(--keycap-radius)` /
+`max-w-(--dialog-inset)` / `h-(--tabs-trigger-height)` /
+`translate-y-(--tooltip-arrow-offset)` calls documented here — re-apply them
+after a regen.
 
 ## Status convention
 
@@ -531,7 +544,7 @@ Renders a keybinding label. `plain` (default) is dim, unboxed text
 (`text-muted-foreground-ghost`) — used for e.g. sidebar nav hints; override
 the color via `className` for brighter contexts (e.g. the status line's
 `⌘K search`) rather than adding a new variant. `boxed` renders a bordered
-key-cap look (`rounded-[4px]`, one of the two [radius exceptions](#radius-policy)).
+key-cap look (`rounded-(--keycap-radius)`, one of the two [radius exceptions](#radius-policy)).
 
 ```tsx
 <KeybindHint>g t</KeybindHint>
