@@ -13,7 +13,7 @@ export function TagFilterBar() {
   }
 
   return (
-    <div className="flex items-center gap-2 border-b border-border px-3 py-[7px]">
+    <div className="flex items-center gap-2 border-b border-border px-3 py-2">
       <span className="font-mono text-2xs whitespace-nowrap text-muted-foreground-faint">
         filtered by
       </span>

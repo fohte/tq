@@ -68,7 +68,7 @@ function NavLink({ item }: { item: NavItem }) {
     >
       <span
         className={cn(
-          'h-[13px] w-0.5 shrink-0',
+          'h-3.5 w-0.5 shrink-0',
           isActive ? 'bg-primary' : 'bg-transparent',
         )}
       />
@@ -183,8 +183,8 @@ function ProjectsSection() {
 export function Sidebar() {
   return (
     <aside className="hidden h-screen w-[200px] shrink-0 flex-col border-r border-border bg-sidebar md:flex">
-      <div className="flex h-[41px] shrink-0 items-center gap-[7px] border-b border-border px-3.5">
-        <Link to="/" className="flex items-center gap-[7px]">
+      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3.5">
+        <Link to="/" className="flex items-center gap-2">
           <span className="font-mono text-sm font-bold text-primary">&gt;</span>
           <span className="font-mono text-sm font-bold tracking-tight text-foreground">
             tq
