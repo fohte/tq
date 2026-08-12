@@ -22,7 +22,7 @@ export function TaskCandidateList({
           key={candidate.id}
           type="button"
           className={cn(
-            'flex min-h-[44px] w-full items-center gap-2 px-3 text-left text-sm',
+            'flex min-h-11 w-full items-center gap-2 px-3 text-left text-sm',
             highlightedIndex === index + indexOffset
               ? 'bg-accent text-accent-foreground'
               : 'text-popover-foreground hover:bg-accent/50',
