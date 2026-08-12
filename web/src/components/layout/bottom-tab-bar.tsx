@@ -32,10 +32,8 @@ function Tab({ tab }: { tab: TabItem }) {
           : 'border-t-transparent text-muted-foreground-faint',
       )}
     >
-      <span className="font-mono text-[13px] leading-none">{tab.glyph}</span>
-      <span className="font-mono text-[9px] tracking-[0.04em]">
-        {tab.label}
-      </span>
+      <span className="font-mono text-sm leading-none">{tab.glyph}</span>
+      <span className="font-mono text-2xs tracking-wider">{tab.label}</span>
     </Link>
   )
 }

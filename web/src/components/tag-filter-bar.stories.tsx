@@ -14,7 +14,7 @@ function TagFilterBarDemo() {
     <div className="w-[400px] border border-border">
       <button
         type="button"
-        className="w-full border-b border-border px-3 py-2 font-mono text-[11px] text-muted-foreground"
+        className="w-full border-b border-border px-3 py-2 font-mono text-2xs text-muted-foreground"
         onClick={() => {
           setTag('dev:tq')
         }}

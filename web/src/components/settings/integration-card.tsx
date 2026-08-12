@@ -42,7 +42,7 @@ export function IntegrationCard({
         <div className="shrink-0">{icon}</div>
         <div className="flex min-w-0 items-center gap-3.5">
           <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="font-mono text-[13px] font-medium text-foreground">
+            <span className="font-mono text-sm font-medium text-foreground">
               {displayName}
             </span>
             {accounts.length === 0 && (

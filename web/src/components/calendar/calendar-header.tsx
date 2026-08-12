@@ -42,10 +42,10 @@ export function CalendarHeader({
 }: CalendarHeaderProps) {
   return (
     <ScreenHeaderBar>
-      <span className="font-mono text-[13px] font-bold">
+      <span className="font-mono text-sm font-bold">
         {formatLocalDate(currentDate)}
       </span>
-      <span className="font-mono text-[11px] text-muted-foreground">
+      <span className="font-mono text-2xs text-muted-foreground">
         {formatWeekday(currentDate)}
       </span>
 
