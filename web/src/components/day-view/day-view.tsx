@@ -20,7 +20,6 @@ import {
   CalendarView,
   type TimeBlockEvent,
 } from '#components/calendar/calendar-view'
-import { BacklogPreview } from '#components/task/backlog-preview'
 import { CreateTaskInline } from '#components/task/create-task-inline'
 import { QueueCandidatesSection } from '#components/task/queue-candidates-section'
 import { TaskListHeader } from '#components/task/task-list-header'
@@ -69,7 +68,6 @@ function EmptyQueueDropZone() {
 
 export interface DayViewPresentationProps {
   isLoading: boolean
-  backlogTasks: Task[]
   calendarEvents: TimeBlockEvent[]
   dndCallbacks?: CalendarDndCallbacks
   /** Google OAuth consent URL, present when Google Calendar is not connected */
@@ -88,7 +86,6 @@ export interface DayViewPresentationProps {
 
 export function DayViewPresentation({
   isLoading,
-  backlogTasks,
   calendarEvents,
   dndCallbacks,
   gcalAuthUrl,
@@ -243,8 +240,6 @@ export function DayViewPresentation({
               </DndContext>
             )}
           </div>
-
-          <BacklogPreview tasks={backlogTasks} />
         </div>
 
         {/* Right panel: Calendar */}
