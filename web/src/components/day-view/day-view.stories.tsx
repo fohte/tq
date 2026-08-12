@@ -8,12 +8,13 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { fn } from 'storybook/test'
+import { expect, fn, within } from 'storybook/test'
 
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
+import { atIndex } from '#lib/test-utils'
 
 const today = new Date()
 const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -280,6 +281,14 @@ export const Default: Story = {
     onRemoveFromQueue: fn(),
     onAutoAssign: fn(),
     isAutoAssigning: false,
+  },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await userEvent.click(canvas.getByLabelText('New schedule'))
+
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(
+      atIndex(await body.findAllByPlaceholderText('Schedule title'), 0),
+    ).toBeVisible()
   },
 }
 

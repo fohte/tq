@@ -12,7 +12,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { Plus } from 'lucide-react'
+import { CalendarPlus, Plus } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
@@ -20,6 +20,7 @@ import {
   CalendarView,
   type TimeBlockEvent,
 } from '#components/calendar/calendar-view'
+import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
 import { BacklogPreview } from '#components/task/backlog-preview'
 import { CreateTaskInline } from '#components/task/create-task-inline'
 import { QueueCandidatesSection } from '#components/task/queue-candidates-section'
@@ -105,6 +106,7 @@ export function DayViewPresentation({
 }: DayViewPresentationProps) {
   const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
   const [isCreating, setIsCreating] = useState(false)
+  const [isCreatingSchedule, setIsCreatingSchedule] = useState(false)
   const taskListRef = useRef<HTMLDivElement>(null)
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -184,7 +186,23 @@ export function DayViewPresentation({
             >
               <Plus className="h-3.5 w-3.5" />
             </Button>
+
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => {
+                setIsCreatingSchedule(true)
+              }}
+              aria-label="New schedule"
+            >
+              <CalendarPlus className="h-3.5 w-3.5" />
+            </Button>
           </ScreenHeaderBar>
+
+          <CreateScheduleModal
+            open={isCreatingSchedule}
+            onOpenChange={setIsCreatingSchedule}
+          />
 
           {/* Summary header */}
           <div className="border-b border-border py-2.5">
