@@ -157,6 +157,12 @@ const meta = {
   component: ProjectGanttViewWithProviders,
   parameters: {
     layout: 'fullscreen',
+    // @svar-ui/react-gantt sizes its internal `.wx-gantt`/`.wx-chart` divs
+    // against the fullscreen viewport rather than their actual container
+    // (`.wx-gantt` alone accounts for a fixed ~80px of the mismatch), and an
+    // empty task list makes it fall back to a very wide default date range —
+    // both are the library's own internal sizing, not app layout.
+    overflowCheck: { disable: true },
   },
 } satisfies Meta<typeof ProjectGanttViewWithProviders>
 

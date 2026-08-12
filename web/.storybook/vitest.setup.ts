@@ -3,6 +3,7 @@ import { afterEach, beforeEach, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 import { externalResourceCheck } from '#storybook-config/checks/external-resource-check'
+import { overflowCheck } from '#storybook-config/checks/overflow-check'
 import { unhandledApiRequestCheck } from '#storybook-config/checks/unhandled-api-request-check'
 
 // Pin the clock so stories that read the current time (calendar "now"
@@ -72,9 +73,18 @@ function asScreenshotContext(
   return context as Parameters<typeof screenshot>[1]
 }
 
+// @storybook/addon-vitest's generated per-story test wrapper assigns
+// `context.story = composedStory` before running the story (see its
+// vitest-plugin/test-utils.js's testStory()), but ships no type declaration
+// for it — cast through `unknown` to access the story's resolved parameters.
+function storyParametersOf(context: unknown): unknown {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- see comment above
+  return (context as { story: { parameters: unknown } }).story.parameters
+}
+
 // Checks that must pass for every story; add a check module under ./checks
 // and list it here to register it.
-const checks = [externalResourceCheck, unhandledApiRequestCheck]
+const checks = [externalResourceCheck, unhandledApiRequestCheck, overflowCheck]
 
 beforeEach(() => {
   for (const check of checks) check.reset()
@@ -83,5 +93,5 @@ beforeEach(() => {
 afterEach(async (context) => {
   await screenshot(page, asScreenshotContext(context))
 
-  for (const check of checks) check.assert()
+  for (const check of checks) check.assert(storyParametersOf(context))
 })

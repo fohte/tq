@@ -348,6 +348,10 @@ export const FullPagePC: StoryObj<{
   },
   parameters: {
     layout: 'fullscreen',
+    // This desktop sidebar layout has no viewport override (unlike
+    // FullPageSP below), so it also renders — and overflows — at the
+    // storybook-mobile project's 375px viewport; pre-existing, out of scope.
+    overflowCheck: { disable: true },
   },
   render: ({ task, pages, subtasks }) => (
     <Providers>
