@@ -29,7 +29,7 @@ export function ProjectMainContent({
     : 'active'
 
   return (
-    <div className="flex max-w-[760px] flex-col gap-[18px]">
+    <div className="flex max-w-[760px] flex-col gap-5">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 font-mono text-2xs text-muted-foreground">
         <Link to="/projects" className="hover:text-foreground">
@@ -172,7 +172,7 @@ function ProjectTaskSummary({ tasks }: { tasks: ProjectTask[] }) {
   const progress = total > 0 ? (completed / total) * 100 : 0
 
   return (
-    <div className="flex flex-col gap-3 border-t border-border pt-[18px]">
+    <div className="flex flex-col gap-3 border-t border-border pt-5">
       <div className="flex items-baseline gap-2.5">
         <span className="font-mono text-xs font-bold text-primary">###</span>
         <span className="font-mono text-sm font-bold text-foreground">
@@ -183,8 +183,8 @@ function ProjectTaskSummary({ tasks }: { tasks: ProjectTask[] }) {
           {total > 0 && ` (${String(Math.round(progress))}%)`}
         </span>
       </div>
-      <ProgressBar percent={progress} className="h-[3px]" />
-      <div className="flex gap-[22px] font-mono text-2xs text-muted-foreground">
+      <ProgressBar percent={progress} className="h-1" />
+      <div className="flex gap-6 font-mono text-2xs text-muted-foreground">
         <span>Todo: {todo}</span>
         <span>
           <span className="text-primary">▍</span>
