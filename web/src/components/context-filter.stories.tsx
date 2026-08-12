@@ -9,7 +9,8 @@ function ContextFilterDemo() {
         <p className="mb-2 text-sm font-medium text-muted-foreground">
           Sidebar variant
         </p>
-        <div className="w-[200px] border border-border bg-sidebar p-2.5">
+        {/* w-50 matches layout/sidebar.tsx's actual w-[200px] rail width. */}
+        <div className="w-50 border border-border bg-sidebar p-2.5">
           <ContextFilter />
         </div>
       </div>
@@ -38,7 +39,8 @@ export const Default: Story = {}
 
 export const Sidebar: Story = {
   render: () => (
-    <div className="w-[200px] border border-border bg-sidebar p-2.5">
+    // w-50 matches layout/sidebar.tsx's actual w-[200px] rail width.
+    <div className="w-50 border border-border bg-sidebar p-2.5">
       <ContextFilter />
     </div>
   ),

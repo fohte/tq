@@ -132,7 +132,7 @@ function WrappedProjectTaskList(
 ) {
   return (
     <Providers>
-      <div className="w-[500px]">
+      <div className="w-3xl">
         <ProjectTaskList {...props} />
       </div>
     </Providers>

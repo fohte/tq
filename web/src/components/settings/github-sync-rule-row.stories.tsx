@@ -38,7 +38,7 @@ const meta = {
   decorators: [
     (Story) => (
       <QueryClientProvider client={queryClient}>
-        <div className="w-[560px]">
+        <div className="w-3xl">
           <Story />
         </div>
       </QueryClientProvider>
