@@ -109,9 +109,7 @@ function SidebarStory({
 }) {
   return (
     <Providers project={project}>
-      <div className="w-[236px] border-l border-border p-4">
-        <TaskSidebar task={task} />
-      </div>
+      <TaskSidebar task={task} />
     </Providers>
   )
 }

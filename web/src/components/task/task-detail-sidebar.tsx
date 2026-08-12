@@ -8,6 +8,7 @@ import {
 import { SidebarParentField } from '#components/task/sidebar-parent-field'
 import { SidebarTagsField } from '#components/task/sidebar-tags-field'
 import { SidebarGithubLinkField } from '#components/task/task-github-link-field'
+import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
 import { Input } from '#components/ui/input'
 import {
   Select,
@@ -36,7 +37,7 @@ function SidebarSectionLabel({ children }: { children: React.ReactNode }) {
 
 export function TaskSidebar({ task }: { task: TaskDetail }) {
   return (
-    <div className="flex flex-col gap-4">
+    <DetailSidebarPanel>
       <SidebarSectionLabel>DETAILS</SidebarSectionLabel>
       <SidebarStatusField taskId={task.id} status={task.status} />
       <SidebarEstimateField
@@ -63,7 +64,7 @@ export function TaskSidebar({ task }: { task: TaskDetail }) {
       <SidebarTagsField taskId={task.id} labels={task.labels} />
       <SidebarGithubLinkField taskId={task.id} githubLink={task.githubLink} />
       <SidebarTimeBlocks timeBlocks={task.timeBlocks} />
-    </div>
+    </DetailSidebarPanel>
   )
 }
 

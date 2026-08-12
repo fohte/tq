@@ -286,6 +286,27 @@ it is:
   or 640px exactly, so there was no default token to prefer over naming
   the value once inside the component.
 
+The same defect showed up in the app shell's fixed-width panels: the width
+lived on each call site's wrapper `<div>` instead of on the panel component,
+so it had to be repeated at every call site and could drift. `TaskSidebar`
+(`task-detail-sidebar.tsx`) and `ProjectSidebar` (`project-detail-sidebar.tsx`)
+are the same role (a screen's PC detail-page sidebar), so both now render
+`DetailSidebarPanel` (`web/src/components/ui/detail-sidebar-panel.tsx`),
+which owns the one canonical width, `w-60` (240px) — callers render
+`<TaskSidebar task={task} />` with no wrapper. `TaskSidebar` had drifted to
+`w-[236px]`; there was no reason for a task's sidebar to be 4px narrower
+than a project's.
+
+The global nav rail (`layout/sidebar.tsx`, `w-50`/200px) exports its width
+as a named class-string constant, `SIDEBAR_WIDTH_CLASS`, because
+`context-filter.stories.tsx` renders a mock rail of the same width to
+preview `ContextFilter` in its sidebar context — a real second consumer of
+the value, not just the component's own test. The mobile `BottomTabBar`
+height (`h-13`/52px) has no such consumer, so it stays a plain literal on
+the component; its test pins the same value independently rather than
+importing the component's own constant, since a test importing the exact
+value it's meant to verify can never catch that value regressing.
+
 ## Radius policy
 
 `--radius` is `0rem` globally — every corner in the app is square by
@@ -576,6 +597,27 @@ distinct pattern (no PC/mobile split, no shared `Dialog` primitive).
     <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">...</div>
   </ModalPanel>
 </div>
+```
+
+### `DetailSidebarPanel`
+
+`web/src/components/ui/detail-sidebar-panel.tsx`
+
+```ts
+function DetailSidebarPanel(props: React.ComponentProps<'div'>): JSX.Element
+```
+
+The fixed-width (`w-60`, 240px) shell for a screen's PC detail-page
+sidebar — border, padding, and scroll all in one place (`shrink-0`,
+`overflow-y-auto`, `border-l border-border`, `p-4`). Used by `TaskSidebar`
+and `ProjectSidebar`; render it directly with no wrapper `<div>` at the
+call site.
+
+```tsx
+<DetailSidebarPanel>
+  <span>DETAILS</span>
+  ...
+</DetailSidebarPanel>
 ```
 
 ## Naming boundary with shadcn primitives

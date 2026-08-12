@@ -40,7 +40,7 @@ function Tab({ tab }: { tab: TabItem }) {
 
 export function BottomTabBar() {
   return (
-    <nav className="flex h-[52px] shrink-0 items-stretch border-t border-border bg-background md:hidden">
+    <nav className="flex h-13 shrink-0 items-stretch border-t border-border bg-background md:hidden">
       {tabs.map((tab) => (
         <Tab key={tab.to} tab={tab} />
       ))}

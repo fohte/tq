@@ -17,7 +17,7 @@ describe('BottomTabBar', () => {
   it('is hidden above the md breakpoint', () => {
     render(<BottomTabBar />)
     expect(screen.getByRole('navigation').className).toBe(
-      'flex h-[52px] shrink-0 items-stretch border-t border-border bg-background md:hidden',
+      'flex h-13 shrink-0 items-stretch border-t border-border bg-background md:hidden',
     )
   })
 })

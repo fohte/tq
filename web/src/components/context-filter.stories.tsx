@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { ContextFilter, ContextFilterInline } from '#components/context-filter'
+import { SIDEBAR_WIDTH_CLASS } from '#components/layout/sidebar'
 
 function ContextFilterDemo() {
   return (
@@ -9,8 +10,9 @@ function ContextFilterDemo() {
         <p className="mb-2 text-sm font-medium text-muted-foreground">
           Sidebar variant
         </p>
-        {/* w-50 matches layout/sidebar.tsx's actual w-[200px] rail width. */}
-        <div className="w-50 border border-border bg-sidebar p-2.5">
+        <div
+          className={`${SIDEBAR_WIDTH_CLASS} border border-border bg-sidebar p-2.5`}
+        >
           <ContextFilter />
         </div>
       </div>
@@ -39,8 +41,9 @@ export const Default: Story = {}
 
 export const Sidebar: Story = {
   render: () => (
-    // w-50 matches layout/sidebar.tsx's actual w-[200px] rail width.
-    <div className="w-50 border border-border bg-sidebar p-2.5">
+    <div
+      className={`${SIDEBAR_WIDTH_CLASS} border border-border bg-sidebar p-2.5`}
+    >
       <ContextFilter />
     </div>
   ),
