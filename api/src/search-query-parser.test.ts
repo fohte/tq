@@ -24,9 +24,10 @@ describe('parseSearchQuery', () => {
   })
 
   it('parses multiple is: prefixes into a combined status filter', () => {
-    const result = parseSearchQuery('is:todo is:in_progress')
-    expect(result.status).toEqual(['todo', 'in_progress'])
-    expect(result.freeText).toBe('')
+    expect(parseSearchQuery('is:todo is:in_progress')).toEqual({
+      freeText: '',
+      status: ['todo', 'in_progress'],
+    })
   })
 
   it('treats invalid is: value as free text', () => {
