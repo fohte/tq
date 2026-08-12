@@ -215,11 +215,14 @@ Two roles resolved so far, scoped to `web/src/components/task/`:
   same role (task title heading) expressed with two near-identical values
   per breakpoint. Collapsed to `leading-snug` (Tailwind default, `1.375`,
   roughly the average of the two) for both breakpoints.
-- `FocusNotes`'s notes `Textarea` keeps `leading-[1.7]` on `text-xs` — this
-  is the only occurrence of that role (editor body copy) in this directory,
-  so there is no drift to collapse here; left as-is for a future directory
-  that touches more of the editor/body-copy role to resolve alongside its
-  own occurrences.
+- `FocusNotes`'s notes `Textarea` had `leading-[1.7]` on `text-xs` (20.4px) —
+  close enough to `leading-relaxed` (`1.625`, 19.5px, <1px off at this size)
+  to apply the same ±1px rounding tolerance used throughout this doc rather
+  than add a dedicated `--leading-*` token for one occurrence. Resolved to
+  `leading-relaxed`, matching every other prose-like block in the app
+  (`task-activity.tsx`, `project-detail-main.tsx`, `task-main-content.tsx`)
+  and clearing the last remaining `leading-[…]` arbitrary value in the
+  codebase.
 
 ## Spacing scale
 
@@ -357,13 +360,82 @@ callers no longer wrap it in a sizing `<div>`:
   full-height editor). `HtmlPageEditor`'s `'fill'` also bakes in `h-full` on
   its own root, so the caller no longer passes that via `className` either.
 
-`create-task-modal.tsx`'s two composers (`max-h-[40vh]` on PC,
-`max-h-[30vh]` on the mobile bottom sheet) keep their `min-h` from
+`create-task-modal.tsx`'s two composers (`max-h-modal-composer` on PC,
+`max-h-sheet-composer` on the mobile bottom sheet) keep their `min-h` from
 `MarkdownEditor`'s `'compact'` default and only vary by `max-h` — that
 difference is a deliberate PC/mobile viewport split, not drift, and follows
-`BottomSheetPanel`'s existing `max-h-[85vh]` precedent of expressing a
-scroll clamp as an arbitrary `vh` value (Tailwind has no `vh`-based scale to
-round onto).
+`BottomSheetPanel`'s existing `max-h-sheet` precedent of clamping to a
+viewport-relative height (see [Overlay viewport
+units](#overlay-viewport-units) below).
+
+### Overlay viewport units
+
+A handful of overlays clamp their size or position relative to the viewport
+(`vh`), not to the spacing grid — grid rounding doesn't apply here, since
+these aren't spacing values. `vh` has no `@theme` namespace of its own, but
+each of `max-h`/`padding-top` does resolve against a per-utility theme
+namespace (`--max-height-*`, confirmed by compiling with this repo's
+tailwindcss 4.2.2), so each value gets a name instead of a bracket:
+
+| Token                                            | Utility                | Value               | Role                                                                     |
+| ------------------------------------------------ | ---------------------- | ------------------- | ------------------------------------------------------------------------ |
+| `--max-height-sheet`                             | `max-h-sheet`          | `max-height: 85vh`  | Mobile bottom sheet's overall height cap (`BottomSheetPanel`)            |
+| `--max-height-modal-composer`                    | `max-h-modal-composer` | `max-height: 40vh`  | PC create-task modal's description composer height cap                   |
+| `--max-height-sheet-composer`                    | `max-h-sheet-composer` | `max-height: 30vh`  | Mobile create-task bottom sheet's description composer height cap        |
+| n/a (`@utility`, no `--padding-top-*` namespace) | `modal-top-offset`     | `padding-top: 15vh` | Drops the search modal down from the top of the viewport (`SearchModal`) |
+
+These four values don't collapse into one token — each clamps a different
+role — but the role each one plays is now named and documented here instead
+of scattered as four unnamed `vh` brackets.
+
+## Z-index
+
+Stacking order in the app is ad hoc, not a documented scale: `z-10` marks a
+sticky element within its own scroll container (e.g. `BottomSheetHeader`,
+`select.tsx`'s scroll buttons), `z-50` marks a portal/overlay layer (modals,
+dropdowns, tooltips, the floating action button) — both are Tailwind's own
+default numeric steps, not custom tokens, and neither is meant to rank
+against the other; there's no third tier and no ordering claim between
+different `z-50` overlays.
+
+`--z-index-max` (`z-max`, `z-index: 2147483647`, int32's max value) is a
+deliberate exception, not a third tier of that scale: it's used exactly
+once, on a notice injected via `document.body.appendChild` outside the
+React tree and outside `#root` (`session-aware-fetch.ts`'s session-recovery
+notice), where the goal isn't "above the app's other overlays" but "above
+any stacking context whatsoever, including ones this app doesn't control."
+
+### Border width
+
+Border-width utilities (`border`, `border-<number>`) are **not** part of the
+4px spacing grid and are out of this table's jurisdiction. Unlike
+`gap`/`padding`/`margin`, which compile to `calc(var(--spacing) * N)`,
+Tailwind's border-width utilities resolve straight to `<N>px` (`border` →
+`border-width: 1px`, `border-2` → `2px`, and the same holds for the dynamic
+`border-<number>` utility used for values with no named step, e.g.
+`border-l-3` → `border-left-width: 3px`) — there is no `--spacing`
+multiplication to round onto. `task-activity.tsx`'s `CommentRow` accent
+border (`border-l-3`) is a plain literal for that reason, not a rounding
+case.
+
+## Grid tracks
+
+Named `grid-template-columns` tracks in `web/src/index.css`'s `@theme
+inline` block, referenced via `grid-cols-(--<name>)`. Each backs a fixed
+layout shared by multiple call sites so widths can't drift between them —
+usually a list's rows and its column header (`--task-row-columns`,
+`--project-list-columns`), but `--icon-content-columns` instead unifies an
+icon-column width across otherwise-unrelated components (`task-activity.tsx`'s
+rows, `integration-card.tsx`'s `CARD_INDENT`).
+
+| Token                    | Value                                                     | Used by                                                                                                                                                                                                                                                                                          |
+| ------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--task-row-columns`     | `26px 26px minmax(120px, 1fr) 132px 104px 72px 56px 28px` | Tasks list: column header (`TaskListColumnHeader` in `routes/tasks/index.tsx`), `TaskGridRow`, `TreeTaskGridRow` — tracks are expand-toggle, status picker, title, tags, GitHub link, estimate, due date, row actions                                                                            |
+| `--project-list-columns` | `14px 1fr 96px 190px 78px`                                | Projects list: column header (`routes/projects/index.tsx`), `ProjectListRow` — tracks are status mark, project name, status badge, progress bar, target date                                                                                                                                     |
+| `--icon-content-columns` | `20px 1fr`                                                | `task-activity.tsx`'s `EventRow`/`CommentRow` marker column, `integration-card.tsx`'s `CARD_INDENT` — same "small icon column + body" role, unified onto the 20px column width that `IntegrationCard`'s actual `size-5` icon needs (was `14px` in `task-activity.tsx`, too narrow for that icon) |
+
+The title column in `--task-row-columns` has a `minmax` floor, not a bare
+`1fr` — see the token's comment in `web/src/index.css` for why.
 
 ## Radius policy
 

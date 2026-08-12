@@ -142,7 +142,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
     <>
       {/* Backdrop + Modal wrapper (single layer to avoid z-index stacking issues) */}
       <div
-        className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-[15vh]"
+        className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 modal-top-offset"
         data-testid="search-overlay"
         onKeyDown={handleKeyDown}
         onClick={(e) => {

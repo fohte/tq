@@ -198,7 +198,7 @@ function FocusNotes({ taskId }: { taskId: string }) {
         }}
         placeholder="Jot down notes while you work..."
         rows={5}
-        className="resize-y bg-card p-3 font-editor text-xs leading-[1.7]"
+        className="resize-y bg-card p-3 font-editor text-xs leading-relaxed"
       />
     </div>
   )

@@ -11,9 +11,6 @@ import { ProgressBar } from '#components/ui/progress-bar'
 import type { Project } from '#hooks/use-projects'
 import { cn } from '#lib/utils'
 
-// Shared with the projects list column header so it stays aligned with the row grid.
-export const PROJECT_LIST_GRID_COLUMNS = 'grid-cols-[14px_1fr_96px_190px_78px]'
-
 export function ProjectListRow({ project }: { project: Project }) {
   const status: ProjectStatus = isProjectStatus(project.status)
     ? project.status
@@ -32,9 +29,7 @@ export function ProjectListRow({ project }: { project: Project }) {
       className="contents"
     >
       {/* Desktop row */}
-      <div
-        className={`hidden items-center gap-3 border-b border-border px-3.5 py-3 hover:bg-card md:grid ${PROJECT_LIST_GRID_COLUMNS}`}
-      >
+      <div className="hidden grid-cols-(--project-list-columns) items-center gap-3 border-b border-border px-3.5 py-3 hover:bg-card md:grid">
         <ProjectStatusMark status={status} />
         <div className="flex min-w-0 flex-col gap-1">
           <span className="truncate font-mono text-sm font-medium text-foreground">

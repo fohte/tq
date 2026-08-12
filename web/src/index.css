@@ -98,6 +98,14 @@
   /* Smallest tier of the mono UI chrome type scale — see docs/design-system.md */
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 0.875rem;
+
+  /* Overlay viewport-relative sizing — see docs/design-system.md */
+  --max-height-sheet: 85vh;
+  --max-height-modal-composer: 40vh;
+  --max-height-sheet-composer: 30vh;
+
+  /* Above any possible stacking context — see docs/design-system.md */
+  --z-index-max: 2147483647;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -139,6 +147,19 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Grid track definitions — see docs/design-system.md "Grid tracks".
+   *
+   * The title column has a `minmax` floor, not a bare `1fr`: a bare `1fr`
+   * track has no content-based minimum, so once the row's available width
+   * drops below what the other columns need, the title track gets squeezed
+   * to 0 and the title disappears entirely instead of truncating. The floor
+   * forces the row to overflow (scrollable, since the page body scrolls
+   * both axes) rather than hide the title.
+   */
+  --task-row-columns: 26px 26px minmax(120px, 1fr) 132px 104px 72px 56px 28px;
+  --project-list-columns: 14px 1fr 96px 190px 78px;
+  --icon-content-columns: 20px 1fr;
 }
 
 /* Dims a completed task/search-result row — see docs/design-system.md */
@@ -148,6 +169,15 @@
 
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/*
+ * Drops the search modal down from the top of the viewport — padding-top has
+ * no @theme namespace to hang a named scale step off of, see
+ * docs/design-system.md.
+ */
+@utility modal-top-offset {
+  padding-top: 15vh;
 }
 
 @layer base {

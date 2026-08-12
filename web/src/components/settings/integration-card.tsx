@@ -23,7 +23,8 @@ export interface IntegrationCardProps {
 
 // Shared between the header row and each account row below so the account
 // label's start position tracks the header's name text automatically.
-const CARD_INDENT = 'grid grid-cols-[1.25rem_1fr] items-center gap-3.5 pl-4'
+const CARD_INDENT =
+  'grid grid-cols-(--icon-content-columns) items-center gap-3.5 pl-4'
 
 export function IntegrationCard({
   icon,

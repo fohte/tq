@@ -153,7 +153,7 @@ function ActivityHeader({
 
 function EventRow({ event }: { event: ActivityItem }) {
   return (
-    <div className="grid grid-cols-[14px_1fr] gap-3">
+    <div className="grid grid-cols-(--icon-content-columns) gap-3">
       <span className="pt-px font-mono text-2xs text-muted-foreground-ghost">
         &middot;
       </span>
@@ -188,7 +188,7 @@ function CommentRow({ taskId, comment }: { taskId: string; comment: Comment }) {
   const isEdited = comment.createdAt !== comment.updatedAt
 
   return (
-    <div className="grid grid-cols-[14px_1fr] gap-3">
+    <div className="grid grid-cols-(--icon-content-columns) gap-3">
       <span className="pt-px font-mono text-2xs text-muted-foreground-ghost">
         &rsaquo;
       </span>
@@ -217,7 +217,7 @@ function CommentRow({ taskId, comment }: { taskId: string; comment: Comment }) {
         </div>
 
         {/* Body - inline editable with debounced auto-save */}
-        <div className="border-l-[3px] border-l-primary bg-card p-2.5 text-sm leading-relaxed text-muted-foreground">
+        <div className="border-l-3 border-l-primary bg-card p-2.5 text-sm leading-relaxed text-muted-foreground">
           <MarkdownEditor
             defaultValue={comment.content}
             onChange={onChange}
