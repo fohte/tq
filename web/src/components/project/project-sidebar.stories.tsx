@@ -55,9 +55,7 @@ function Providers({ children }: { children: ReactNode }) {
 function ProjectSidebarStory({ project }: { project: ProjectDetail }) {
   return (
     <Providers>
-      <div className="w-60 border-l border-border p-4">
-        <ProjectSidebar project={project} />
-      </div>
+      <ProjectSidebar project={project} />
     </Providers>
   )
 }

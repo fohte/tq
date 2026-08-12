@@ -51,6 +51,10 @@ const settingsNavItem: NavItem = {
   keys: navKeybindings.goToSettings.keys,
 }
 
+// Shared with context-filter.stories.tsx's Sidebar-variant demo, which
+// mimics this rail's width without rendering the real Sidebar.
+export const SIDEBAR_WIDTH_CLASS = 'w-50'
+
 function NavLink({ item }: { item: NavItem }) {
   const matchRoute = useMatchRoute()
   const isActive =
@@ -155,7 +159,7 @@ function ProjectsSection() {
           {projects?.length ?? 0}
         </span>
       </div>
-      <div className="flex max-h-[132px] flex-col overflow-y-auto">
+      <div className="flex max-h-33 flex-col overflow-y-auto">
         {projects?.map((project) => {
           const status: ProjectStatus = isProjectStatus(project.status)
             ? project.status
@@ -182,7 +186,9 @@ function ProjectsSection() {
 
 export function Sidebar() {
   return (
-    <aside className="hidden h-screen w-[200px] shrink-0 flex-col border-r border-border bg-sidebar md:flex">
+    <aside
+      className={`hidden h-screen ${SIDEBAR_WIDTH_CLASS} shrink-0 flex-col border-r border-border bg-sidebar md:flex`}
+    >
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3.5">
         <Link to="/" className="flex items-center gap-2">
           <span className="font-mono text-sm font-bold text-primary">&gt;</span>

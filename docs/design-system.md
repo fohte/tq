@@ -286,6 +286,22 @@ it is:
   or 640px exactly, so there was no default token to prefer over naming
   the value once inside the component.
 
+The same defect showed up in the app shell's fixed-width panels: the width
+lived on each call site's wrapper `<div>` instead of on the panel component,
+so it had to be repeated at every call site and could drift. `TaskSidebar`
+(`task-detail-sidebar.tsx`) and `ProjectSidebar` (`project-detail-sidebar.tsx`)
+are the same role (a screen's PC detail-page sidebar) and now share one
+canonical width, `w-60` (240px), owned by the component itself — callers
+render `<TaskSidebar task={task} />` with no wrapper. `TaskSidebar` had
+drifted to `w-[236px]`; there was no reason for a task's sidebar to be 4px
+narrower than a project's. The global nav rail (`layout/sidebar.tsx`,
+`w-50`/200px) and the mobile `BottomTabBar` height (`h-13`/52px) had the
+same single-value-repeated-as-a-literal problem between the component and
+its test asserting the rendered `className` — each now exports its width/
+height as a named class-string constant (`SIDEBAR_WIDTH_CLASS`,
+`BOTTOM_TAB_BAR_HEIGHT_CLASS`) that the test imports instead of
+re-hardcoding the value.
+
 ## Radius policy
 
 `--radius` is `0rem` globally — every corner in the app is square by

@@ -36,7 +36,7 @@ function SidebarSectionLabel({ children }: { children: React.ReactNode }) {
 
 export function TaskSidebar({ task }: { task: TaskDetail }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex w-60 shrink-0 flex-col gap-4 overflow-y-auto border-l border-border p-4">
       <SidebarSectionLabel>DETAILS</SidebarSectionLabel>
       <SidebarStatusField taskId={task.id} status={task.status} />
       <SidebarEstimateField

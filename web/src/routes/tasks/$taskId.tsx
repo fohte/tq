@@ -41,9 +41,7 @@ function TaskPage() {
         <div className="flex-1 overflow-y-auto px-7 py-6">
           <TaskMainContent task={task} />
         </div>
-        <div className="w-[236px] shrink-0 overflow-y-auto border-l border-border p-4">
-          <TaskSidebar task={task} />
-        </div>
+        <TaskSidebar task={task} />
       </div>
 
       {/* SP layout */}

@@ -219,9 +219,7 @@ export const FullPagePC: StoryObj<{
         <div className="flex-1 overflow-y-auto p-6">
           <ProjectMainContent project={project} tasks={tasks} />
         </div>
-        <div className="w-60 shrink-0 overflow-y-auto border-l border-border p-4">
-          <ProjectSidebar project={project} />
-        </div>
+        <ProjectSidebar project={project} />
       </div>
     </Providers>
   ),

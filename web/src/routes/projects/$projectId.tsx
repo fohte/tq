@@ -50,9 +50,7 @@ function ProjectDetailPage() {
             tasks={tasks ?? []}
           />
         </div>
-        <div className="w-60 shrink-0 overflow-y-auto border-l border-border p-4">
-          <ProjectSidebar key={project.id} project={project} />
-        </div>
+        <ProjectSidebar key={project.id} project={project} />
       </div>
 
       {/* SP layout */}

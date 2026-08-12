@@ -355,9 +355,7 @@ export const FullPagePC: StoryObj<{
         <div className="flex-1 overflow-y-auto px-7 py-6">
           <TaskMainContent task={task} pages={pages} subtasks={subtasks} />
         </div>
-        <div className="w-[236px] shrink-0 overflow-y-auto border-l border-border p-4">
-          <TaskSidebar task={task} />
-        </div>
+        <TaskSidebar task={task} />
       </div>
     </Providers>
   ),

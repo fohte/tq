@@ -62,7 +62,7 @@ function FilterChip({ label, value, options, onChange }: FilterChipProps) {
 
       {open && (
         <div
-          className="absolute top-full left-0 z-50 mt-1 min-w-[140px] border border-border bg-popover p-1 text-popover-foreground"
+          className="absolute top-full left-0 z-50 mt-1 min-w-35 border border-border bg-popover p-1 text-popover-foreground"
           data-testid={`filter-dropdown-${label.toLowerCase()}`}
         >
           {options.map((option) => (

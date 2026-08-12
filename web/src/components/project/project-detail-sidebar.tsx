@@ -14,7 +14,7 @@ import { cn } from '#lib/utils'
 
 export function ProjectSidebar({ project }: { project: ProjectDetail }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex w-60 shrink-0 flex-col gap-4 overflow-y-auto border-l border-border p-4">
       <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
         DETAILS
       </span>
@@ -139,7 +139,7 @@ function ProjectFieldRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="w-[100px] shrink-0 font-mono text-2xs text-muted-foreground-faint">
+      <span className="w-25 shrink-0 font-mono text-2xs text-muted-foreground-faint">
         {label}
       </span>
       <div className="text-sm text-foreground">{children}</div>

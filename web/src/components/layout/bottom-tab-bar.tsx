@@ -38,9 +38,13 @@ function Tab({ tab }: { tab: TabItem }) {
   )
 }
 
+export const BOTTOM_TAB_BAR_HEIGHT_CLASS = 'h-13'
+
 export function BottomTabBar() {
   return (
-    <nav className="flex h-[52px] shrink-0 items-stretch border-t border-border bg-background md:hidden">
+    <nav
+      className={`flex ${BOTTOM_TAB_BAR_HEIGHT_CLASS} shrink-0 items-stretch border-t border-border bg-background md:hidden`}
+    >
       {tabs.map((tab) => (
         <Tab key={tab.to} tab={tab} />
       ))}
