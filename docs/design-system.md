@@ -380,8 +380,11 @@ case.
 
 Named `grid-template-columns` tracks in `web/src/index.css`'s `@theme
 inline` block, referenced via `grid-cols-(--<name>)`. Each backs a fixed
-row/column layout shared by a list's rows and its column header, so widths
-can't drift between them.
+layout shared by multiple call sites so widths can't drift between them —
+usually a list's rows and its column header (`--task-row-columns`,
+`--project-list-columns`), but `--icon-content-columns` instead unifies an
+icon-column width across otherwise-unrelated components (`task-activity.tsx`'s
+rows, `integration-card.tsx`'s `CARD_INDENT`).
 
 | Token                    | Value                                                     | Used by                                                                                                                                                                                                                                                                                          |
 | ------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
