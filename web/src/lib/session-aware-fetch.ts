@@ -100,7 +100,7 @@ function showRecoveryFailedNotice(): void {
   notice.id = NOTICE_ID
   notice.setAttribute('role', 'alert')
   notice.className =
-    'fixed inset-0 z-[2147483647] flex flex-col items-center justify-center gap-4 bg-background p-8 text-center text-foreground'
+    'fixed inset-0 z-max flex flex-col items-center justify-center gap-4 bg-background p-8 text-center text-foreground'
 
   const heading = document.createElement('p')
   heading.textContent = NOTICE_TEXT.heading

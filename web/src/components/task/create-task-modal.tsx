@@ -188,7 +188,7 @@ export function CreateTaskModal({
                 />
 
                 {/* Description (WYSIWYG) */}
-                <div className="max-h-[40vh] overflow-y-auto rounded-lg border border-border p-1 text-sm focus-within:border-primary/50">
+                <div className="max-h-modal-composer overflow-y-auto rounded-lg border border-border p-1 text-sm focus-within:border-primary/50">
                   {descriptionEditor}
                 </div>
 
@@ -330,7 +330,7 @@ export function CreateTaskModal({
                 />
 
                 {/* Description (WYSIWYG) */}
-                <div className="max-h-[30vh] overflow-y-auto text-sm">
+                <div className="max-h-sheet-composer overflow-y-auto text-sm">
                   {descriptionEditor}
                 </div>
 

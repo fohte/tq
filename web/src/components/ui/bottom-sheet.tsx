@@ -8,7 +8,7 @@ function BottomSheetPanel({
     <div
       data-slot="bottom-sheet-panel"
       className={cn(
-        'max-h-[85vh] w-full overflow-y-auto rounded-t-xl bg-card pb-5 shadow-2xl ring-1 ring-foreground/10',
+        'max-h-sheet w-full overflow-y-auto rounded-t-xl bg-card pb-5 shadow-2xl ring-1 ring-foreground/10',
         className,
       )}
       {...props}
