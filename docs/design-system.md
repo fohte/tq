@@ -2,7 +2,9 @@
 
 Contract reference for tq's web UI design system: a near-monochrome dark
 palette with one red accent used only as punctuation, zero border-radius, 1px
-borders, and monospace UI chrome. Modeled on the
+borders, and monospace UI chrome — plus GitHub's own brand colors for
+PR/issue state, the one deliberate exception to the single-accent rule (see
+[GitHub status colors](#github-status-colors)). Modeled on the
 [fohte.net](https://fohte.net) design system.
 
 Source of truth for every value in this doc:
