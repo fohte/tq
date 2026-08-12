@@ -276,7 +276,7 @@ it is:
   `create-schedule-modal.tsx` copying the same markup but drifted to
   `max-w-[500px]` — a mismatch no grid table would have caught, because
   both numbers were already internally grid-consistent. This is now
-  extracted as `ModalPanel` (see [Primitives](#modalpanel)), the desktop
+  extracted as `ModalPanel` (see [ModalPanel](#modalpanel)), the desktop
   counterpart to `BottomSheetPanel`, with `600px` as the one canonical
   width. `search-modal.tsx`'s `max-w-[640px]`/`max-h-[480px]` were judged a
   separate command-palette pattern — no PC/mobile split, no shared
