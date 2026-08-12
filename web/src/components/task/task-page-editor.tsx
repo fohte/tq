@@ -126,7 +126,7 @@ export function PageEditorInner({
             placeholder="Write HTML..."
             onChange={handleContentChange}
             onExitSourceMode={flushContent}
-            className="h-full"
+            size="fill"
           />
         </div>
       </div>
@@ -146,7 +146,7 @@ export function PageEditorInner({
       </div>
 
       {/* Content editor */}
-      <div className="min-h-[400px] border border-border bg-card p-2.5 text-sm">
+      <div className="border border-border bg-card p-2.5 text-sm">
         <MarkdownEditor
           defaultValue={defaultContent}
           placeholder="Write something..."

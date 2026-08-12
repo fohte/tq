@@ -14,7 +14,7 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="h-[400px] w-[600px] border border-border bg-card p-2.5 text-sm">
+      <div className="w-3xl border border-border bg-card p-2.5 text-sm">
         <Story />
       </div>
     ),
@@ -30,6 +30,15 @@ type Story = StoryObj<typeof meta>
 export const Empty: Story = {
   args: {
     placeholder: 'Write HTML...',
+  },
+  // Regression check: the root itself carries the fixed 400px in 'default'
+  // size, with the SegmentedControl row absorbed inside it — not stacked on
+  // top, which would push the total past 400px.
+  play: async ({ canvasElement }) => {
+    const root = canvasElement.querySelector('[data-slot="html-page-editor"]')
+    if (root == null) throw new Error('HtmlPageEditor always renders its root')
+
+    await expect(root.getBoundingClientRect().height).toBe(400)
   },
 }
 
@@ -49,5 +58,31 @@ export const SwitchToSourceShowsRawHtml: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Source' }))
 
     await expect(canvas.getByRole('textbox')).toHaveValue(SAMPLE_HTML)
+  },
+}
+
+// Regression check: 'fill' (a full-page editor, e.g. task-page-editor.tsx's
+// HTML branch) must stretch to match a sized flex ancestor rather than the
+// 'default' size's fixed 400px.
+export const Fill: Story = {
+  args: {
+    defaultValue: SAMPLE_HTML,
+    size: 'fill',
+  },
+  decorators: [
+    (Story) => (
+      <div className="flex h-70 flex-col">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const iframe = canvasElement.querySelector('iframe')
+    if (iframe == null)
+      throw new Error('HtmlPageEditor always renders the preview iframe')
+
+    const height = iframe.getBoundingClientRect().height
+    await expect(height).toBeGreaterThan(200)
+    await expect(height).toBeLessThan(280)
   },
 }

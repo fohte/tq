@@ -142,6 +142,7 @@ export function CreateTaskModal({
       onChange={(md) => {
         descriptionRef.current = md
       }}
+      size="compact"
     />
   )
 
@@ -187,7 +188,7 @@ export function CreateTaskModal({
                 />
 
                 {/* Description (WYSIWYG) */}
-                <div className="max-h-[40vh] min-h-[160px] overflow-y-auto rounded-lg border border-border p-1 text-sm focus-within:border-primary/50">
+                <div className="max-h-[40vh] overflow-y-auto rounded-lg border border-border p-1 text-sm focus-within:border-primary/50">
                   {descriptionEditor}
                 </div>
 
@@ -329,7 +330,7 @@ export function CreateTaskModal({
                 />
 
                 {/* Description (WYSIWYG) */}
-                <div className="max-h-[30vh] min-h-[80px] overflow-y-auto text-sm">
+                <div className="max-h-[30vh] overflow-y-auto text-sm">
                   {descriptionEditor}
                 </div>
 

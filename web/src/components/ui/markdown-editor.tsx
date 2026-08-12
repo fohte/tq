@@ -23,6 +23,7 @@ import { slackPermalinkProvider } from '#lib/inline-reference/providers/slack-pe
 import { taskMentionProvider } from '#lib/inline-reference/providers/task-mention'
 import { taskMentionAutocompletePlugin } from '#lib/inline-reference/providers/task-mention-autocomplete-plugin'
 import { createInlineReferenceViewModeStore } from '#lib/inline-reference/view-mode'
+import { cn } from '#lib/utils'
 
 export interface ViewEditToggleOptions {
   /**
@@ -48,6 +49,11 @@ interface MarkdownEditorProps {
    * create-task-modal).
    */
   viewEditToggle?: ViewEditToggleOptions
+  /**
+   * Default min-height: 'default' (400px) for a primary/full editing
+   * surface, 'compact' (120px) for a few-lines inline editor.
+   */
+  size?: 'default' | 'compact'
 }
 
 interface CrepeEditorProps {
@@ -185,6 +191,7 @@ function isEventTargetInsideEditorUi(
 
 export function MarkdownEditor({
   viewEditToggle,
+  size = 'default',
   ...editorProps
 }: MarkdownEditorProps) {
   const isToggleEnabled = viewEditToggle != null
@@ -204,7 +211,10 @@ export function MarkdownEditor({
       <ProsemirrorAdapterProvider>
         <div
           ref={wrapperRef}
-          className="milkdown-wrapper"
+          className={cn(
+            'milkdown-wrapper',
+            size === 'compact' ? 'min-h-30' : 'min-h-100',
+          )}
           data-view-mode={isToggleEnabled ? mode : undefined}
           onMouseUp={
             isToggleEnabled && mode === 'view'

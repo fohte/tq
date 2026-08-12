@@ -24,7 +24,7 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="min-h-[400px] w-[600px] border border-border bg-card p-2.5 text-sm">
+      <div className="w-3xl border border-border bg-card p-2.5 text-sm">
         <Story />
       </div>
     ),
@@ -47,6 +47,25 @@ export const WithContent: Story = {
   args: {
     defaultValue:
       '## Discussion Points\n\n- Architecture review\n- Sprint planning\n- Performance improvements\n\nWe decided to go with option B for the following reasons:\n\n1. Better performance\n2. Simpler architecture\n3. Easier to maintain',
+  },
+}
+
+// Regression check: 'compact' (a few-lines inline editor, e.g. a task/project
+// description) must render its own min-height (120px) rather than the
+// 'default' size's 400px or collapsing to the content's own height.
+export const Compact: Story = {
+  args: {
+    placeholder: 'Write something...',
+    size: 'compact',
+  },
+  play: async ({ canvasElement }) => {
+    const wrapper = canvasElement.querySelector('.milkdown-wrapper')
+    if (wrapper == null)
+      throw new Error('MarkdownEditor always renders its wrapper')
+
+    const height = wrapper.getBoundingClientRect().height
+    await expect(height).toBeGreaterThanOrEqual(120)
+    await expect(height).toBeLessThan(200)
   },
 }
 
