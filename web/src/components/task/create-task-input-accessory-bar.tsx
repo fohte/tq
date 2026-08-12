@@ -15,7 +15,7 @@ export function CreateTaskInputAccessoryBar({
           key={trigger}
           type="button"
           className={cn(
-            'min-h-[44px] flex-1 border border-border font-mono text-xs text-muted-foreground-strong',
+            'min-h-11 flex-1 border border-border font-mono text-xs text-muted-foreground-strong',
             index > 0 && 'border-l-0',
           )}
           onMouseDown={(e) => {

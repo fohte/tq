@@ -358,11 +358,11 @@ function SidebarTimeBlocks({
   if (timeBlocks.length === 0) return null
 
   return (
-    <div className="flex flex-col gap-[7px] border-t border-border pt-3.5">
+    <div className="flex flex-col gap-2 border-t border-border pt-3.5">
       <span className="font-mono text-2xs text-muted-foreground-faint">
         TIME BLOCKS
       </span>
-      <div className="flex flex-col gap-[5px] font-mono text-2xs text-muted-foreground-strong">
+      <div className="flex flex-col gap-1.5 font-mono text-2xs text-muted-foreground-strong">
         {timeBlocks.map((block) => (
           <span key={block.id}>
             <span className="text-muted-foreground-faint">
