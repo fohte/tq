@@ -33,10 +33,10 @@ export function ProjectListRow({ project }: { project: Project }) {
     >
       {/* Desktop row */}
       <div
-        className={`hidden items-center gap-3 border-b border-border px-3.5 py-[11px] hover:bg-card md:grid ${PROJECT_LIST_GRID_COLUMNS}`}
+        className={`hidden items-center gap-3 border-b border-border px-3.5 py-3 hover:bg-card md:grid ${PROJECT_LIST_GRID_COLUMNS}`}
       >
         <ProjectStatusMark status={status} />
-        <div className="flex min-w-0 flex-col gap-[3px]">
+        <div className="flex min-w-0 flex-col gap-1">
           <span className="truncate font-mono text-sm font-medium text-foreground">
             {project.title}
           </span>
@@ -47,7 +47,7 @@ export function ProjectListRow({ project }: { project: Project }) {
           )}
         </div>
         <ProjectStatusBadge status={project.status} />
-        <div className="flex items-center gap-[9px]">
+        <div className="flex items-center gap-2.5">
           <ProgressBar
             percent={percent}
             fillClassName={fillClassName}
@@ -70,7 +70,7 @@ export function ProjectListRow({ project }: { project: Project }) {
       </div>
 
       {/* Mobile row */}
-      <div className="flex flex-col gap-2 border-b border-border px-3.5 py-[13px] md:hidden">
+      <div className="flex flex-col gap-2 border-b border-border px-3.5 py-3 md:hidden">
         <div className="flex items-center gap-2">
           <ProjectStatusMark status={status} />
           <span className="font-mono text-sm font-medium text-foreground">

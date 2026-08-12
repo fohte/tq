@@ -53,7 +53,7 @@ function ProjectList() {
 
       {/* Column header (desktop only) */}
       <div
-        className={`hidden border-b border-border bg-card px-3.5 py-[5px] font-mono text-2xs tracking-widest text-muted-foreground-faint md:grid md:items-center md:gap-3 ${PROJECT_LIST_GRID_COLUMNS}`}
+        className={`hidden border-b border-border bg-card px-3.5 py-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint md:grid md:items-center md:gap-3 ${PROJECT_LIST_GRID_COLUMNS}`}
       >
         <span />
         <span>PROJECT</span>
