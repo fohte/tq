@@ -15,6 +15,27 @@ Source of truth for every value in this doc:
 If this doc and the source ever disagree, the source wins — but please fix
 the doc in the same PR.
 
+## No arbitrary values
+
+`web/`'s ESLint config enforces this doc as a contract, not just documents
+it. Two rules combine to close off every place an arbitrary value could
+sneak in:
+
+- `tailwindcss/no-arbitrary-value` ([eslint-plugin-tailwindcss](https://github.com/francoismassart/eslint-plugin-tailwindcss)) bans bracket syntax (`w-[600px]`, `text-[11px]`) inside `class`/`className` attributes and classname-building calls (`cn()`, `cva()`, etc.).
+- `no-restricted-syntax` bans the same bracket pattern in _any_ string literal in `web/`, so a value can't be stashed in a bare constant (`const X = 'w-[600px]'`) and slip in unlinted. Arbitrary **variants** (`data-[state=open]:hidden`, `[&_svg]:size-4`, `group-[.is-open]:block`) are exempt — only a bracket at the very end of a class token counts as a value.
+
+When a value you need isn't a token yet, add one instead of writing a
+bracket. Tailwind v4 gives three ways, all confirmed compiling with this
+repo's tailwindcss 4.2.2:
+
+1. **Name it in `@theme`** and reference it by name: `--color-gh-open: #3fb950` → `text-gh-open`.
+2. **Reference a `@theme` custom property directly**, using `()` instead of `[]` on any utility: `grid-cols-(--task-row-columns)`, `max-w-(--dialog-inset)` (the value can contain `calc()`/`min()`).
+3. **Name it with `@utility`** when Tailwind has no theme namespace for it (`env()`, `vh`, etc.): `@utility pb-safe { padding-bottom: env(safe-area-inset-bottom); }`.
+
+Update this doc in the same PR that adds the token. A true one-off may use
+`eslint-disable-next-line` — none exist in `web/` today, so reach for it only
+after confirming none of the three options above fit.
+
 ## Design tokens
 
 All tokens live directly on `:root` (there is no `.dark` block — the app
