@@ -25,7 +25,7 @@ function ActionSheetContent({
       <DialogPrimitive.Popup
         data-slot="action-sheet-content"
         className={cn(
-          'fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] duration-100 outline-none data-open:animate-in data-open:slide-in-from-bottom data-open:fade-in-0 data-closed:animate-out data-closed:slide-out-to-bottom data-closed:fade-out-0',
+          'fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card pb-safe duration-100 outline-none data-open:animate-in data-open:slide-in-from-bottom data-open:fade-in-0 data-closed:animate-out data-closed:slide-out-to-bottom data-closed:fade-out-0',
           className,
         )}
         {...props}
