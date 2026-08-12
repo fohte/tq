@@ -26,7 +26,7 @@ function Tab({ tab }: { tab: TabItem }) {
     <Link
       to={tab.to}
       className={cn(
-        'flex min-h-11 flex-1 flex-col items-center justify-center gap-[3px] border-t-2',
+        'flex min-h-11 flex-1 flex-col items-center justify-center gap-1 border-t-2',
         isActive
           ? 'border-t-primary text-foreground'
           : 'border-t-transparent text-muted-foreground-faint',

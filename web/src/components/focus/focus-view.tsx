@@ -59,7 +59,7 @@ function FocusProgress({ tasks }: { tasks: Task[] }) {
   const progress = total > 0 ? (completed / total) * 100 : 0
 
   return (
-    <div className="flex flex-col gap-[7px]">
+    <div className="flex flex-col gap-2">
       <div className="flex items-baseline gap-3 font-mono text-2xs whitespace-nowrap">
         <span className="text-muted-foreground-strong">
           {completed}
@@ -99,7 +99,7 @@ function FocusCard({
   const completeTask = useCompleteTask()
 
   return (
-    <div className="border border-border bg-card p-[18px] md:p-6">
+    <div className="border border-border bg-card p-5 md:p-6">
       <div className="flex items-center gap-2">
         <span className="font-mono text-2xs text-primary">▍</span>
         <FocusLabel>IN PROGRESS</FocusLabel>
@@ -110,7 +110,7 @@ function FocusCard({
       <h1 className="mt-3 text-xl leading-snug font-bold text-pretty md:mt-3.5 md:text-2xl">
         {task.title}
       </h1>
-      <div className="mt-4 flex items-center gap-3 md:mt-[18px]">
+      <div className="mt-4 flex items-center gap-3 md:mt-5">
         <Button
           className="flex-1 md:flex-none"
           onClick={() => {

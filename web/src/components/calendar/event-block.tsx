@@ -130,7 +130,7 @@ function EventBlockShell({
       <div className="flex min-w-0 items-center gap-1.5">
         {title}
         {badge != null && (
-          <span className="shrink-0 border border-border px-[3px] font-mono text-2xs text-muted-foreground">
+          <span className="shrink-0 border border-border px-1 font-mono text-2xs text-muted-foreground">
             {badge}
           </span>
         )}

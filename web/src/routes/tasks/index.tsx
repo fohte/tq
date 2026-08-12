@@ -73,7 +73,7 @@ export const Route = createFileRoute('/tasks/')({
 function TaskListColumnHeader() {
   return (
     <div
-      className={`hidden items-center gap-2 border-b border-border bg-card px-3 py-[5px] font-mono text-2xs tracking-widest text-muted-foreground-faint md:grid ${TASK_GRID_COLUMNS}`}
+      className={`hidden items-center gap-2 border-b border-border bg-card px-3 py-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint md:grid ${TASK_GRID_COLUMNS}`}
     >
       <span />
       <span />
@@ -197,7 +197,7 @@ export function TaskList() {
             }}
             aria-label="Create task from GitHub"
           >
-            <GithubMarkIcon className="size-[11px]" />
+            <GithubMarkIcon className="size-3" />
             <span className="hidden md:inline">from issue</span>
           </Button>
           <Button
