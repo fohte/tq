@@ -282,6 +282,10 @@ export const Default: Story = {
     onAutoAssign: fn(),
     isAutoAssigning: false,
   },
+}
+
+export const OpensCreateScheduleModal: Story = {
+  args: Default.args,
   play: async ({ canvas, canvasElement, userEvent }) => {
     await userEvent.click(canvas.getByLabelText('New schedule'))
 
