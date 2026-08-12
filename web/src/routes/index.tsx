@@ -243,7 +243,6 @@ function DayView() {
   return (
     <DayViewPresentation
       isLoading={isLoading}
-      backlogTasks={categorized.backlog}
       calendarEvents={calendarEvents}
       dndCallbacks={dndCallbacks}
       {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
