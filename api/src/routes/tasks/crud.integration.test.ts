@@ -418,6 +418,21 @@ describe('tasks CRUD API', () => {
       expect(body[0].title).toBe('Deploy to production')
     })
 
+    it('matches a task number prefix via q', async () => {
+      const task = await createTask('Some unrelated title')
+      await createTask('Another task')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent(String(task.number)),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].id).toBe(task.id)
+    })
+
     it('lets a parsed q prefix win over the explicit status param', async () => {
       await createTask('Todo task')
       const completedTask = await createTask('Completed task')
