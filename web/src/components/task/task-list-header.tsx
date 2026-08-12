@@ -19,7 +19,7 @@ export function TaskListHeader({ tasks }: { tasks: Task[] }) {
 
   return (
     <div className="flex flex-col gap-[7px] px-3">
-      <div className="flex items-baseline gap-2.5 font-mono text-[11px]">
+      <div className="flex items-baseline gap-2.5 font-mono text-2xs">
         <span className="text-foreground">
           {completed}
           <span className="text-muted-foreground-faint">/</span>

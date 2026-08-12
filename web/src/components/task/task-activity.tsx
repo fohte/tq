@@ -138,7 +138,7 @@ function ActivityHeader({
   return (
     <div
       className={cn(
-        'flex items-baseline gap-2 font-mono text-[11px] text-muted-foreground',
+        'flex items-baseline gap-2 font-mono text-2xs text-muted-foreground',
         className,
       )}
     >
@@ -154,7 +154,7 @@ function ActivityHeader({
 function EventRow({ event }: { event: ActivityItem }) {
   return (
     <div className="grid grid-cols-[14px_1fr] gap-3">
-      <span className="pt-px font-mono text-[11px] text-muted-foreground-ghost">
+      <span className="pt-px font-mono text-2xs text-muted-foreground-ghost">
         &middot;
       </span>
       <div className="min-w-0">
@@ -189,7 +189,7 @@ function CommentRow({ taskId, comment }: { taskId: string; comment: Comment }) {
 
   return (
     <div className="grid grid-cols-[14px_1fr] gap-3">
-      <span className="pt-px font-mono text-[11px] text-muted-foreground-ghost">
+      <span className="pt-px font-mono text-2xs text-muted-foreground-ghost">
         &rsaquo;
       </span>
 
@@ -217,7 +217,7 @@ function CommentRow({ taskId, comment }: { taskId: string; comment: Comment }) {
         </div>
 
         {/* Body - inline editable with debounced auto-save */}
-        <div className="border-l-[3px] border-l-primary bg-card p-2.5 text-[13px] leading-[1.7] text-muted-foreground">
+        <div className="border-l-[3px] border-l-primary bg-card p-2.5 text-sm leading-relaxed text-muted-foreground">
           <MarkdownEditor
             defaultValue={comment.content}
             onChange={onChange}
@@ -250,7 +250,7 @@ function CommentInput({ taskId }: { taskId: string }) {
     <div className="flex items-start gap-2.5">
       <span className="pt-2.5 font-mono text-xs text-primary">&gt;</span>
       <div className="flex flex-1 flex-col gap-2 border border-border bg-card px-3 py-2.5">
-        <div className="text-[13px]">
+        <div className="text-sm">
           <MarkdownEditor
             key={editorKey}
             defaultValue=""

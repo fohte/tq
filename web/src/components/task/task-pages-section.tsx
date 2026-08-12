@@ -83,7 +83,7 @@ function PagesSectionHeader({
     <div className="flex flex-col gap-2.5">
       <div className="flex items-baseline gap-2">
         <SectionHeading level={3}>pages</SectionHeading>
-        <span className="font-mono text-[11px] text-muted-foreground-faint">
+        <span className="font-mono text-2xs text-muted-foreground-faint">
           {pages.length}
         </span>
         {onAddPage && (
@@ -204,7 +204,7 @@ export function PageCardPresentation({
           <LlmAuthorLabel author={page.author} />
         </button>
 
-        <span className="shrink-0 font-mono text-[10px] text-muted-foreground-ghost">
+        <span className="shrink-0 font-mono text-2xs text-muted-foreground-ghost">
           {formatRelativeTime(page.updatedAt)}
         </span>
 
@@ -233,14 +233,14 @@ export function PageCardPresentation({
 
       {/* Preview (collapsed) */}
       {!isExpanded && page.format === 'html' && (
-        <div className="flex items-center gap-1.5 border-t border-border px-2.5 py-2 font-mono text-[11px] text-muted-foreground-faint">
+        <div className="flex items-center gap-1.5 border-t border-border px-2.5 py-2 font-mono text-2xs text-muted-foreground-faint">
           <Code2 className="size-3" />
           <span>HTML page</span>
         </div>
       )}
       {!isExpanded && previewLines != null && (
         <div className="flex flex-col gap-1.5 border-t border-border px-2.5 py-2">
-          <p className="line-clamp-3 whitespace-pre-line font-editor text-[11px] leading-[1.65] text-muted-foreground">
+          <p className="line-clamp-3 whitespace-pre-line font-editor text-xs text-muted-foreground">
             {previewLines}
           </p>
           {hasMore && (
@@ -248,7 +248,7 @@ export function PageCardPresentation({
               type="button"
               variant="link"
               size="xs"
-              className="h-auto w-fit p-0 text-[11px]"
+              className="h-auto w-fit p-0 text-2xs"
               onClick={() => {
                 setInternalExpanded(true)
               }}

@@ -31,7 +31,7 @@ export function CreateTaskInlineExistingMenu({
       </div>
 
       <div className="mt-1 border-t border-border pt-1">
-        <div className="px-3 py-1 text-[10px] tracking-[0.08em] text-muted-foreground-faint">
+        <div className="px-3 py-1 text-2xs tracking-widest text-muted-foreground-faint">
           EXISTING
         </div>
         <TaskCandidateList

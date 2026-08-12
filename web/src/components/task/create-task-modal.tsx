@@ -260,7 +260,7 @@ export function CreateTaskModal({
 
                 {/* Tags */}
                 <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 font-mono text-[9px] tracking-[0.08em] text-muted-foreground-faint">
+                  <span className="flex items-center gap-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
                     <Tag className="size-3.5" />
                     TAGS
                   </span>
@@ -328,7 +328,7 @@ export function CreateTaskModal({
                 />
 
                 {/* Description (WYSIWYG) */}
-                <div className="max-h-[30vh] min-h-[80px] overflow-y-auto text-[15px]">
+                <div className="max-h-[30vh] min-h-[80px] overflow-y-auto text-sm">
                   {descriptionEditor}
                 </div>
 

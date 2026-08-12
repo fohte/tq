@@ -13,7 +13,7 @@ export function SidebarField({
 }) {
   return (
     <div className="flex flex-col gap-[5px]">
-      <span className="font-mono text-[10px] text-muted-foreground-faint">
+      <span className="font-mono text-2xs text-muted-foreground-faint">
         {label}
       </span>
       <div className="font-mono text-xs text-foreground">{children}</div>

@@ -114,7 +114,7 @@ export function PageEditorInner({
       <div className="flex h-full flex-col gap-3.5 p-6">
         {titleInput}
 
-        <div className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground-faint">
+        <div className="flex items-center gap-2 font-mono text-2xs text-muted-foreground-faint">
           <span>HTML</span>
           <span className="text-border">|</span>
           <span>autosave {DEBOUNCED_SAVE_DELAY_MS / 1000}s</span>
@@ -139,7 +139,7 @@ export function PageEditorInner({
       {titleInput}
 
       {/* Meta line */}
-      <div className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground-faint">
+      <div className="flex items-center gap-2 font-mono text-2xs text-muted-foreground-faint">
         <span>MARKDOWN</span>
         <span className="text-border">|</span>
         <span>autosave {DEBOUNCED_SAVE_DELAY_MS / 1000}s</span>

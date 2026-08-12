@@ -68,7 +68,7 @@ export function TaskSubtasksList({
       <div className="flex items-baseline gap-2">
         <SectionHeading level={3}>subtasks</SectionHeading>
         {subtasks.length > 0 && (
-          <span className="font-mono text-[11px] text-muted-foreground-faint">
+          <span className="font-mono text-2xs text-muted-foreground-faint">
             {completed}/{subtasks.length}
           </span>
         )}
@@ -155,7 +155,7 @@ function SubtaskRow({ subtask }: { subtask: Task }) {
         {subtask.title}
       </Link>
       {subtask.estimatedMinutes != null && (
-        <span className="ml-auto shrink-0 font-mono text-[11px] text-muted-foreground-faint">
+        <span className="ml-auto shrink-0 font-mono text-2xs text-muted-foreground-faint">
           {formatMinutes(subtask.estimatedMinutes)}
         </span>
       )}

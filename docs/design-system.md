@@ -185,6 +185,13 @@ Line-height drift outside the `text-2xs` role (e.g. task/body copy,
 headings) is not resolved by this table — decide it alongside that role's
 own font-size when that directory's PR touches it.
 
+Two roles resolved so far, scoped to `web/src/components/task/`:
+
+| Role                                                      | Resolves to       | Why                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Markdown/HTML prose body (task description, comment body) | `leading-relaxed` | `leading-[1.7]`/`leading-[1.75]` on these two markdown editors were 1px-apart drift of the same "editable prose" role; `project-detail-main.tsx`'s description editor already used `leading-relaxed` for the identical layout, so this aligns with it. Other `leading-[1.7]`-ish values on non-markdown elements (e.g. a plain `<textarea>`) are a different role and not resolved by this row        |
+| Screen/task title (`text-2xl` in `task-main-content.tsx`) | no override       | `leading-[1.4]` was ~1px off Tailwind's own paired line-height for `text-2xl`; `project-detail-main.tsx`'s title also carries no override, so the same "no override" call applies there once its own `text-[22px]` → `text-2xl` migration lands. Other task-title instances outside `web/src/components/task/` (e.g. `focus-view.tsx`) still carry their own override and aren't resolved by this row |
+
 `web/src/components/focus/` resolved its instances of this:
 
 - The focus task title (`FocusCard`'s `h1`) had `leading-[1.4]` at
