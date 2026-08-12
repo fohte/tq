@@ -329,10 +329,10 @@ callers no longer wrap it in a sizing `<div>`:
 
 - `MarkdownEditor`'s `size` is `'default'` (`min-h-100`, 400px) or
   `'compact'` (`min-h-30`, 120px). `'default'` is a primary/full editing
-  surface (a task page's own editor, an expanded page card). `'compact'` is
-  a few-lines inline editor (task/project description, an inline page card,
-  the create-task-modal composer) — this collapsed what used to be three
-  separate values (80/120/160px) for the same role.
+  surface (a task page's own editor). `'compact'` is a few-lines inline
+  editor (task/project description, a comment, an inline/expanded page
+  card, the create-task-modal composer) — this collapsed what used to be
+  three separate values (80/120/160px) for the same role.
 - `HtmlPageEditor` and `HtmlPageViewer` share a `size` of `'default'`
   (`h-100`, 400px, a fixed height for a standalone editor/viewer) or
   `'fill'` (`min-h-0 flex-1`, stretching to fill a flex-column ancestor that

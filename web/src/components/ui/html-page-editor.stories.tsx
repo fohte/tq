@@ -31,6 +31,15 @@ export const Empty: Story = {
   args: {
     placeholder: 'Write HTML...',
   },
+  // Regression check: the root itself carries the fixed 400px in 'default'
+  // size, with the SegmentedControl row absorbed inside it — not stacked on
+  // top, which would push the total past 400px.
+  play: async ({ canvasElement }) => {
+    const root = canvasElement.querySelector('[data-slot="html-page-editor"]')
+    if (root == null) throw new Error('HtmlPageEditor always renders its root')
+
+    await expect(root.getBoundingClientRect().height).toBe(400)
+  },
 }
 
 export const WithContent: Story = {

@@ -222,6 +222,7 @@ function CommentRow({ taskId, comment }: { taskId: string; comment: Comment }) {
             defaultValue={comment.content}
             onChange={onChange}
             viewEditToggle={{ onExitEditMode: flush }}
+            size="compact"
           />
         </div>
       </div>
@@ -259,6 +260,7 @@ function CommentInput({ taskId }: { taskId: string }) {
               contentRef.current = md
               setCanSubmit(!!md.trim())
             }}
+            size="compact"
           />
         </div>
         <div className="flex justify-end">

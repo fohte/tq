@@ -51,8 +51,7 @@ interface MarkdownEditorProps {
   viewEditToggle?: ViewEditToggleOptions
   /**
    * Default min-height: 'default' (400px) for a primary/full editing
-   * surface, 'compact' (120px) for a few-lines inline editor. Callers no
-   * longer need to wrap the editor in a min-height div.
+   * surface, 'compact' (120px) for a few-lines inline editor.
    */
   size?: 'default' | 'compact'
 }

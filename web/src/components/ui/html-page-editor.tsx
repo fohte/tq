@@ -15,10 +15,9 @@ export interface HtmlPageEditorProps {
   /** Called right before switching from source back to preview; hook up a debounced save's `flush` here. */
   onExitSourceMode?: () => void
   /**
-   * 'default' (400px, a fixed height) suits a standalone editor with no
-   * sized ancestor; 'fill' stretches to fill a flex ancestor that already
-   * has a defined height (e.g. a full-page layout) — bakes in `h-full` so
-   * callers no longer need to pass it via `className`.
+   * 'default' is a fixed 400px height, for a standalone editor with no
+   * sized ancestor. 'fill' bakes in `h-full`, stretching to match a flex
+   * ancestor that already has a defined height (e.g. a full-page layout).
    */
   size?: 'default' | 'fill'
 }
@@ -39,9 +38,10 @@ export function HtmlPageEditor({
 
   return (
     <div
+      data-slot="html-page-editor"
       className={cn(
         'flex flex-col gap-2',
-        size === 'fill' && 'h-full',
+        size === 'fill' ? 'h-full' : 'h-100',
         className,
       )}
     >
@@ -67,13 +67,10 @@ export function HtmlPageEditor({
             setValue(e.target.value)
             onChange?.(e.target.value)
           }}
-          className={cn(
-            'resize-none font-mono',
-            size === 'fill' ? 'min-h-0 flex-1' : 'h-100',
-          )}
+          className="min-h-0 flex-1 resize-none font-mono"
         />
       ) : (
-        <HtmlPageViewer content={value} size={size} />
+        <HtmlPageViewer content={value} size="fill" />
       )}
     </div>
   )
