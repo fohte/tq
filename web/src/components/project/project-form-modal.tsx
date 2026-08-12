@@ -10,6 +10,7 @@ import {
   DialogPortal,
 } from '#components/ui/dialog'
 import { Input } from '#components/ui/input'
+import { ModalPanel } from '#components/ui/modal-panel'
 import {
   Select,
   SelectContent,
@@ -247,7 +248,7 @@ export function ProjectFormModal({
         <DialogPopup onKeyDown={handleKeyDown}>
           {/* PC Modal */}
           <div className="fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex">
-            <div className="flex max-h-full w-full max-w-[600px] flex-col overflow-hidden rounded-2xl bg-card shadow-2xl ring-1 ring-foreground/10">
+            <ModalPanel>
               {/* Header */}
               <DialogHeaderBar>
                 <span className="text-base font-semibold text-foreground">
@@ -288,7 +289,7 @@ export function ProjectFormModal({
                   {isEditing ? 'Save' : 'Create Project'}
                 </Button>
               </div>
-            </div>
+            </ModalPanel>
           </div>
 
           {/* SP Full-screen form */}

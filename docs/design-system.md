@@ -268,16 +268,23 @@ it is:
 - **\>44px** — this is not an off-grid problem. Every large dimension found
   in the arbitrary-value sweep (`w-[600px]`, `w-[236px]`,
   `max-w-[620/640/680/720/760px]`, …) is already a multiple of 4px —
-  rounding changes nothing. The actual defect is a duplicated, unnamed
-  constant: the PC modal wrapper (`max-w-[600px]` flex column,
-  `rounded-2xl`, `shadow-2xl`, `ring-1 ring-foreground/10`) is copy-pasted
-  verbatim into `create-task-modal.tsx` and `project-form-modal.tsx`, and
-  `create-schedule-modal.tsx` copies the same markup but drifted to
-  `max-w-[500px]` — a mismatch no grid table catches, because both numbers
-  are already internally grid-consistent. Fixing this means extracting a
-  shared component (or at least a named constant) with one canonical
-  width, not replacing the bracket. Leave these alone in grid-rounding
-  work — they're a separate, component-identity problem.
+  rounding changes nothing. The defect, where there is one, is a
+  duplicated, unnamed constant rather than an off-grid value: the PC modal
+  wrapper (`max-w-[600px]` flex column, `rounded-2xl`, `shadow-2xl`,
+  `ring-1 ring-foreground/10`) used to be copy-pasted verbatim into
+  `create-task-modal.tsx` and `project-form-modal.tsx`, with
+  `create-schedule-modal.tsx` copying the same markup but drifted to
+  `max-w-[500px]` — a mismatch no grid table would have caught, because
+  both numbers were already internally grid-consistent. This is now
+  extracted as `ModalPanel` (see [Primitives](#modalpanel)), the desktop
+  counterpart to `BottomSheetPanel`, with `600px` as the one canonical
+  width. `search-modal.tsx`'s `max-w-[640px]`/`max-h-[480px]` were judged a
+  separate command-palette pattern — no PC/mobile split, no shared
+  `Dialog` primitive, single-layer portal for z-index reasons — and were
+  left as-is rather than folded into `ModalPanel`. None of Tailwind's
+  default `--container-*` steps (`xl` 576px, `2xl` 672px, …) land on 600px
+  or 640px exactly, so there was no default token to prefer over naming
+  the value once inside the component.
 
 ## Radius policy
 
@@ -543,6 +550,32 @@ for delete/remove actions, `link` for inline text-styled actions.
 <Button>Add Task</Button>
 <Button variant="destructive">Delete</Button>
 <Button size="icon" aria-label="Tasks"><CheckSquare /></Button>
+```
+
+### `ModalPanel`
+
+`web/src/components/ui/modal-panel.tsx`
+
+```ts
+function ModalPanel(props: React.ComponentProps<'div'>): JSX.Element
+```
+
+The desktop counterpart to `BottomSheetPanel`
+(`web/src/components/ui/bottom-sheet.tsx`) — a centered card
+(`max-w-[600px]` flex column, `rounded-2xl`, `shadow-2xl`,
+`ring-1 ring-foreground/10`, `bg-card`) for the PC layout of a form modal.
+Pair it with `DialogHeaderBar` for the header row. Use for centered
+CRUD-style form modals (create/edit task, project, schedule) — not for the
+search command palette (`search-modal.tsx`), which is a structurally
+distinct pattern (no PC/mobile split, no shared `Dialog` primitive).
+
+```tsx
+<div className="fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex">
+  <ModalPanel>
+    <DialogHeaderBar>...</DialogHeaderBar>
+    <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">...</div>
+  </ModalPanel>
+</div>
 ```
 
 ## Naming boundary with shadcn primitives

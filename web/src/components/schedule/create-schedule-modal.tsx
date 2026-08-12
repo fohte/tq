@@ -18,6 +18,7 @@ import {
   ExpandableFieldChip,
   InlineFieldGroup,
 } from '#components/ui/modal-field'
+import { ModalPanel } from '#components/ui/modal-panel'
 import {
   Select,
   SelectContent,
@@ -157,7 +158,7 @@ export function CreateScheduleModal({
         <DialogPopup onKeyDown={handleKeyDown}>
           {/* PC Modal */}
           <div className="fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex">
-            <div className="flex max-h-full w-full max-w-[500px] flex-col overflow-hidden rounded-2xl bg-card shadow-2xl ring-1 ring-foreground/10">
+            <ModalPanel>
               {/* Header */}
               <DialogHeaderBar>
                 <span className="text-base font-semibold text-foreground">
@@ -364,7 +365,7 @@ export function CreateScheduleModal({
                   Create Schedule
                 </Button>
               </div>
-            </div>
+            </ModalPanel>
           </div>
 
           {/* SP Modal (bottom sheet) */}
