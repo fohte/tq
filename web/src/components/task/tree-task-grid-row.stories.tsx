@@ -437,7 +437,12 @@ export const AllVariants: Story = {
 
     return (
       <Providers>
-        <div className="w-3xl divide-y divide-border">
+        {/* Deliberately narrower than the row-story default (w-3xl):
+            TASK_GRID_COLUMNS' fixed columns + gaps + title floor need
+            >= 644px (see task-row-shared.tsx), and the regression check
+            below only exercises the floor when this container falls
+            short of that. */}
+        <div className="w-xl divide-y divide-border">
           {nodes.map((node) => (
             <InteractiveTreeTaskGridRow key={node.id} node={node} />
           ))}
