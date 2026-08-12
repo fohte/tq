@@ -66,6 +66,26 @@
   --github-open: #3fb950;
   --github-closed: #f85149;
   --github-merged: #a371f7;
+
+  /*
+   * Values that would otherwise be bracket arbitrary values, referenced via
+   * the css-var arbitrary-value syntax (e.g. rounded-(--btn-radius-xs))
+   * instead — see docs/design-system.md. None of these match a Tailwind
+   * theme namespace (--radius-*, --spacing-*, etc.), so they don't need
+   * @theme; a plain custom property is enough for rounded-(--x)/max-w-(--x)
+   * to resolve.
+   */
+  /* Button size radii — still derived from --radius-md, so they resolve to
+   * 0rem while --radius is 0rem; see docs/design-system.md Radius policy. */
+  --btn-radius-xs: min(var(--radius-md), 10px);
+  --btn-radius-sm: min(var(--radius-md), 12px);
+
+  /* Shared by Kbd and KeybindHint's boxed variant — see docs/design-system.md Radius policy */
+  --keycap-radius: 4px;
+
+  --dialog-inset: calc(100% - 2rem);
+  --tabs-trigger-height: calc(100% - 1px);
+  --tooltip-arrow-offset: calc(-50% - 2px);
 }
 
 @theme inline {
@@ -124,25 +144,6 @@
 /* Dims a completed task/search-result row — see docs/design-system.md */
 @utility dim-completed {
   opacity: 55%;
-}
-
-/*
- * One-off values referenced via the css-var arbitrary-value syntax
- * (e.g. rounded-(--btn-radius-xs)) instead of bracket arbitrary values —
- * see docs/design-system.md.
- */
-@theme {
-  /* Button size radii — still derived from --radius-md, so they resolve to
-   * 0rem while --radius is 0rem; see docs/design-system.md Radius policy. */
-  --btn-radius-xs: min(var(--radius-md), 10px);
-  --btn-radius-sm: min(var(--radius-md), 12px);
-
-  /* Shared by Kbd and KeybindHint's boxed variant — see docs/design-system.md Radius policy */
-  --keycap-radius: 4px;
-
-  --dialog-inset: calc(100% - 2rem);
-  --tabs-trigger-height: calc(100% - 1px);
-  --tooltip-arrow-offset: calc(-50% - 2px);
 }
 
 @utility pb-safe {
