@@ -266,7 +266,7 @@ export function FocusViewPresentation({
     <div className="flex h-full flex-col">
       <FocusHeader />
       <div className="flex flex-1 justify-center overflow-y-auto px-3.5 py-4 md:px-6 md:py-10">
-        <div className="flex w-full max-w-[620px] flex-col gap-5 md:gap-7">
+        <div className="flex w-full max-w-3xl flex-col gap-5 md:gap-7">
           <FocusProgress tasks={queueTasks} />
           <FocusCard task={focusTask} onDefer={onDefer} />
           {subtasks.length > 0 && <FocusSubtasks subtasks={subtasks} />}

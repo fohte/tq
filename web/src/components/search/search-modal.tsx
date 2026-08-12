@@ -152,7 +152,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
         }}
       >
         <div
-          className="flex max-h-[480px] w-full max-w-[640px] flex-col overflow-hidden border border-border bg-popover text-popover-foreground"
+          className="flex max-h-120 w-full max-w-160 flex-col overflow-hidden border border-border bg-popover text-popover-foreground"
           role="dialog"
           aria-label="Search"
         >

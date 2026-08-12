@@ -269,22 +269,34 @@ it is:
   in the arbitrary-value sweep (`w-[600px]`, `w-[236px]`,
   `max-w-[620/640/680/720/760px]`, …) is already a multiple of 4px —
   rounding changes nothing. The defect, where there is one, is a
-  duplicated, unnamed constant rather than an off-grid value: the PC modal
-  wrapper (`max-w-[600px]` flex column, `rounded-2xl`, `shadow-2xl`,
-  `ring-1 ring-foreground/10`) used to be copy-pasted verbatim into
-  `create-task-modal.tsx` and `project-form-modal.tsx`, with
+  duplicated, unnamed constant rather than an off-grid value.
+
+  The four content screens (`focus-view.tsx` `max-w-[620px]`,
+  `settings.tsx` `max-w-[680px]`, `task-main-content.tsx` `max-w-[720px]`,
+  `project-detail-main.tsx` `max-w-[760px]`) all capped a screen's body at
+  a comfortable reading width — the same role expressed with four values
+  that tracked when each screen was written, not a deliberate per-screen
+  choice. Unified to `max-w-3xl` (768px, Tailwind's default container
+  step) — nothing was narrowed, and `task-page-editor.tsx`'s full-page
+  markdown editor already used `max-w-3xl` for the same "reading width"
+  role, so this aligns with existing usage instead of picking a fifth
+  value.
+
+  The PC modal wrapper (`max-w-[600px]` flex column, `rounded-2xl`,
+  `shadow-2xl`, `ring-1 ring-foreground/10`) used to be copy-pasted
+  verbatim into `create-task-modal.tsx` and `project-form-modal.tsx`, with
   `create-schedule-modal.tsx` copying the same markup but drifted to
   `max-w-[500px]` — a mismatch no grid table would have caught, because
   both numbers were already internally grid-consistent. This is now
   extracted as `ModalPanel` (see [ModalPanel](#modalpanel)), the desktop
   counterpart to `BottomSheetPanel`, with `600px` as the one canonical
-  width. `search-modal.tsx`'s `max-w-[640px]`/`max-h-[480px]` were judged a
-  separate command-palette pattern — no PC/mobile split, no shared
-  `Dialog` primitive, single-layer portal for z-index reasons — and were
-  left as-is rather than folded into `ModalPanel`. None of Tailwind's
-  default `--container-*` steps (`xl` 576px, `2xl` 672px, …) land on 600px
-  or 640px exactly, so there was no default token to prefer over naming
-  the value once inside the component.
+  width, expressed as `max-w-150` (Tailwind's spacing-scale dynamic
+  utility, `150 × 4px`) since no `--container-*` step lands on 600px.
+  `search-modal.tsx`'s `max-w-160`/`max-h-120` (640px/480px, same
+  spacing-scale mechanism) were judged a separate command-palette pattern
+  — no PC/mobile split, no shared `Dialog` primitive, single-layer portal
+  for z-index reasons — and were left as-is rather than folded into
+  `ModalPanel`.
 
 ## Radius policy
 
@@ -562,7 +574,7 @@ function ModalPanel(props: React.ComponentProps<'div'>): JSX.Element
 
 The desktop counterpart to `BottomSheetPanel`
 (`web/src/components/ui/bottom-sheet.tsx`) — a centered card
-(`max-w-[600px]` flex column, `rounded-2xl`, `shadow-2xl`,
+(`max-w-150` (600px) flex column, `rounded-2xl`, `shadow-2xl`,
 `ring-1 ring-foreground/10`, `bg-card`) for the PC layout of a form modal.
 Pair it with `DialogHeaderBar` for the header row. Use for centered
 CRUD-style form modals (create/edit task, project, schedule) — not for the

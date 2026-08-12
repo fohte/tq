@@ -29,7 +29,7 @@ export function ProjectMainContent({
     : 'active'
 
   return (
-    <div className="flex max-w-[760px] flex-col gap-5">
+    <div className="flex max-w-3xl flex-col gap-5">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 font-mono text-2xs text-muted-foreground">
         <Link to="/projects" className="hover:text-foreground">
