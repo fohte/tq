@@ -9,7 +9,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { Sidebar, SIDEBAR_WIDTH_CLASS } from '#components/layout/sidebar'
+import { Sidebar } from '#components/layout/sidebar'
 import type { Project } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { Task } from '#hooks/use-tasks'
@@ -106,7 +106,7 @@ describe('Sidebar', () => {
   it('is hidden below the md breakpoint', async () => {
     await renderSidebar()
     expect(screen.getByRole('complementary').className).toBe(
-      `hidden h-screen ${SIDEBAR_WIDTH_CLASS} shrink-0 flex-col border-r border-border bg-sidebar md:flex`,
+      'hidden h-screen w-50 shrink-0 flex-col border-r border-border bg-sidebar md:flex',
     )
   })
 

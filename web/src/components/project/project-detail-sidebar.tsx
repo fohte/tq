@@ -5,6 +5,7 @@ import {
   getDaysRemaining,
 } from '#components/project/project-detail-utils'
 import { statusLabels } from '#components/project/project-status-badge'
+import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { PROJECT_COLOR_PRESETS, useUpdateProject } from '#hooks/use-projects'
 import { selectHandler } from '#lib/form-utils'
@@ -14,7 +15,7 @@ import { cn } from '#lib/utils'
 
 export function ProjectSidebar({ project }: { project: ProjectDetail }) {
   return (
-    <div className="flex w-60 shrink-0 flex-col gap-4 overflow-y-auto border-l border-border p-4">
+    <DetailSidebarPanel>
       <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
         DETAILS
       </span>
@@ -44,7 +45,7 @@ export function ProjectSidebar({ project }: { project: ProjectDetail }) {
           <RemainingDays targetDate={project.targetDate} />
         </>
       )}
-    </div>
+    </DetailSidebarPanel>
   )
 }
 
