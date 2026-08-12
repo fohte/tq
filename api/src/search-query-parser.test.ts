@@ -11,16 +11,23 @@ describe('parseSearchQuery', () => {
 
   it('parses is: prefix into status filter', () => {
     const result = parseSearchQuery('is:todo')
-    expect(result.status).toBe('todo')
+    expect(result.status).toEqual(['todo'])
     expect(result.freeText).toBe('')
   })
 
   it('parses is:in_progress', () => {
-    expect(parseSearchQuery('is:in_progress').status).toBe('in_progress')
+    expect(parseSearchQuery('is:in_progress').status).toEqual(['in_progress'])
   })
 
   it('parses is:completed', () => {
-    expect(parseSearchQuery('is:completed').status).toBe('completed')
+    expect(parseSearchQuery('is:completed').status).toEqual(['completed'])
+  })
+
+  it('parses multiple is: prefixes into a combined status filter', () => {
+    expect(parseSearchQuery('is:todo is:in_progress')).toEqual({
+      freeText: '',
+      status: ['todo', 'in_progress'],
+    })
   })
 
   it('treats invalid is: value as free text', () => {
@@ -75,7 +82,7 @@ describe('parseSearchQuery', () => {
   it('combines free text with multiple prefixes', () => {
     const result = parseSearchQuery('deploy is:todo label:dev context:work')
     expect(result.freeText).toBe('deploy')
-    expect(result.status).toBe('todo')
+    expect(result.status).toEqual(['todo'])
     expect(result.label).toBe('dev')
     expect(result.context).toBe('work')
   })
@@ -83,13 +90,13 @@ describe('parseSearchQuery', () => {
   it('handles free text interspersed with prefixes', () => {
     const result = parseSearchQuery('fix is:todo urgent bug')
     expect(result.freeText).toBe('fix urgent bug')
-    expect(result.status).toBe('todo')
+    expect(result.status).toEqual(['todo'])
   })
 
   it('handles quoted strings as single free text token', () => {
     const result = parseSearchQuery('"fix bug" is:todo')
     expect(result.freeText).toBe('fix bug')
-    expect(result.status).toBe('todo')
+    expect(result.status).toEqual(['todo'])
   })
 
   it('handles empty prefix value as free text', () => {

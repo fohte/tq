@@ -485,6 +485,24 @@ describe('tasks CRUD API', () => {
       expect(body[0].id).toBe(completedTask.id)
     })
 
+    it('filters by multiple is: values via q', async () => {
+      const todoTask = await createTask('Todo task')
+      const inProgressTask = await createTask('In progress task')
+      const completedTask = await createTask('Completed task')
+      await setStatus(inProgressTask.id, 'in_progress')
+      await setStatus(completedTask.id, 'completed')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('is:todo is:in_progress'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id).toSorted()).toEqual(
+        [todoTask.id, inProgressTask.id].toSorted(),
+      )
+    })
+
     it('filters by label', async () => {
       await createLabel('urgent')
       const labeledTask = await createTask('Labeled', { labels: ['urgent'] })

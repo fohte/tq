@@ -1,6 +1,6 @@
 export interface ParsedQuery {
   freeText: string
-  status?: 'todo' | 'in_progress' | 'completed'
+  status?: Array<'todo' | 'in_progress' | 'completed'>
   label?: string
   context?: 'work' | 'personal'
   hasPages?: boolean
@@ -51,7 +51,7 @@ export function parseSearchQuery(q: string): ParsedQuery {
     switch (prefix) {
       case 'is':
         if (isOneOf(value, STATUS_VALUES)) {
-          result.status = value
+          result.status = [...(result.status ?? []), value]
         } else {
           freeTextParts.push(token)
         }
