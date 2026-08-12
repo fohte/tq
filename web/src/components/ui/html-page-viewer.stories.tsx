@@ -8,9 +8,6 @@ const meta = {
   parameters: {
     layout: 'padded',
   },
-  args: {
-    className: 'h-[400px]',
-  },
 } satisfies Meta<typeof HtmlPageViewer>
 
 export default meta

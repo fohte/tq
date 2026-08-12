@@ -319,6 +319,35 @@ the component; its test pins the same value independently rather than
 importing the component's own constant, since a test importing the exact
 value it's meant to verify can never catch that value regressing.
 
+The same defect showed up once more in the page/task editors: `MarkdownEditor`,
+`HtmlPageEditor`, and `HtmlPageViewer` (`web/src/components/ui/`) had no
+height of their own, so every call site invented a wrapper `<div>` with its
+own `min-h-[Npx]`/`h-[Npx]` — four near-duplicate values (80/120/160/400px)
+that tracked which screen wrote them rather than a deliberate choice. Each
+component now takes a `size` prop and owns its default height directly, so
+callers no longer wrap it in a sizing `<div>`:
+
+- `MarkdownEditor`'s `size` is `'default'` (`min-h-100`, 400px) or
+  `'compact'` (`min-h-30`, 120px). `'default'` is a primary/full editing
+  surface (a task page's own editor, an expanded page card). `'compact'` is
+  a few-lines inline editor (task/project description, an inline page card,
+  the create-task-modal composer) — this collapsed what used to be three
+  separate values (80/120/160px) for the same role.
+- `HtmlPageEditor` and `HtmlPageViewer` share a `size` of `'default'`
+  (`h-100`, 400px, a fixed height for a standalone editor/viewer) or
+  `'fill'` (`min-h-0 flex-1`, stretching to fill a flex-column ancestor that
+  already has a defined height — the one case is a task page's own
+  full-height editor). `HtmlPageEditor`'s `'fill'` also bakes in `h-full` on
+  its own root, so the caller no longer passes that via `className` either.
+
+`create-task-modal.tsx`'s two composers (`max-h-[40vh]` on PC,
+`max-h-[30vh]` on the mobile bottom sheet) keep their `min-h` from
+`MarkdownEditor`'s `'compact'` default and only vary by `max-h` — that
+difference is a deliberate PC/mobile viewport split, not drift, and follows
+`BottomSheetPanel`'s existing `max-h-[85vh]` precedent of expressing a
+scroll clamp as an arbitrary `vh` value (Tailwind has no `vh`-based scale to
+round onto).
+
 ## Radius policy
 
 `--radius` is `0rem` globally — every corner in the app is square by

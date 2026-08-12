@@ -273,12 +273,13 @@ function TaskDescription({
   return (
     <div className="flex flex-col gap-1.5">
       <LlmAuthorLabel author={author} />
-      <div className="min-h-[120px] border border-border p-4 text-sm leading-relaxed focus-within:border-ring">
+      <div className="border border-border p-4 text-sm leading-relaxed focus-within:border-ring">
         <MarkdownEditor
           defaultValue={defaultValue ?? ''}
           placeholder="Add description..."
           onChange={onChange}
           viewEditToggle={{ onExitEditMode: flush }}
+          size="compact"
         />
       </div>
     </div>

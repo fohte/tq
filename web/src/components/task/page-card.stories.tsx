@@ -103,17 +103,15 @@ function Story({
           deleteDialogOpen={deleteDialogOpen}
           renderEditor={(defaultValue) =>
             page.format === 'html' ? (
-              <div className="h-[400px] text-sm">
-                <HtmlPageEditor
-                  defaultValue={defaultValue}
-                  className="h-full"
-                />
+              <div className="text-sm">
+                <HtmlPageEditor defaultValue={defaultValue} />
               </div>
             ) : (
-              <div className="min-h-[80px] text-sm">
+              <div className="text-sm">
                 <MarkdownEditor
                   defaultValue={defaultValue}
                   placeholder="Write something..."
+                  size="compact"
                 />
               </div>
             )

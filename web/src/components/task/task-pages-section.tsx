@@ -289,25 +289,25 @@ function PageInlineEditor({
 
   if (format === 'html') {
     return (
-      <div className="h-[400px] text-sm">
+      <div className="text-sm">
         <HtmlPageEditor
           defaultValue={defaultValue}
           placeholder="Write HTML..."
           onChange={onChange}
           onExitSourceMode={flush}
-          className="h-full"
         />
       </div>
     )
   }
 
   return (
-    <div className="min-h-[80px] text-sm">
+    <div className="text-sm">
       <MarkdownEditor
         defaultValue={defaultValue}
         placeholder="Write something..."
         onChange={onChange}
         viewEditToggle={{ onExitEditMode: flush }}
+        size="compact"
       />
     </div>
   )

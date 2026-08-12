@@ -153,12 +153,13 @@ function ProjectDescription({
   return (
     <div className="flex flex-col gap-1">
       <span className="text-xs text-muted-foreground">Description</span>
-      <div className="min-h-[120px] border border-border p-1 text-sm leading-relaxed focus-within:border-primary/50">
+      <div className="border border-border p-1 text-sm leading-relaxed focus-within:border-primary/50">
         <MarkdownEditor
           defaultValue={defaultValue ?? ''}
           placeholder="Add description..."
           onChange={onChange}
           viewEditToggle={{ onExitEditMode: flush }}
+          size="compact"
         />
       </div>
     </div>

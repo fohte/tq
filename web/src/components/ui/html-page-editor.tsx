@@ -14,6 +14,13 @@ export interface HtmlPageEditorProps {
   className?: string
   /** Called right before switching from source back to preview; hook up a debounced save's `flush` here. */
   onExitSourceMode?: () => void
+  /**
+   * 'default' (400px, a fixed height) suits a standalone editor with no
+   * sized ancestor; 'fill' stretches to fill a flex ancestor that already
+   * has a defined height (e.g. a full-page layout) — bakes in `h-full` so
+   * callers no longer need to pass it via `className`.
+   */
+  size?: 'default' | 'fill'
 }
 
 // HTML pages can't reuse MarkdownEditor's click-to-edit view/edit toggle:
@@ -25,12 +32,19 @@ export function HtmlPageEditor({
   placeholder,
   className,
   onExitSourceMode,
+  size = 'default',
 }: HtmlPageEditorProps) {
   const [mode, setMode] = useState<HtmlEditorMode>('preview')
   const [value, setValue] = useState(defaultValue)
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div
+      className={cn(
+        'flex flex-col gap-2',
+        size === 'fill' && 'h-full',
+        className,
+      )}
+    >
       <SegmentedControl
         value={mode}
         options={[
@@ -53,10 +67,13 @@ export function HtmlPageEditor({
             setValue(e.target.value)
             onChange?.(e.target.value)
           }}
-          className="min-h-0 flex-1 resize-none font-mono"
+          className={cn(
+            'resize-none font-mono',
+            size === 'fill' ? 'min-h-0 flex-1' : 'h-100',
+          )}
         />
       ) : (
-        <HtmlPageViewer content={value} className="min-h-0 flex-1" />
+        <HtmlPageViewer content={value} size={size} />
       )}
     </div>
   )
