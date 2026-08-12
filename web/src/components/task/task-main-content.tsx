@@ -43,7 +43,7 @@ export function TaskMainContent({
   }
 
   return (
-    <div className="flex max-w-[720px] flex-col gap-5">
+    <div className="flex max-w-3xl flex-col gap-5">
       {/* Breadcrumb */}
       <TaskBreadcrumb task={task} />
 
