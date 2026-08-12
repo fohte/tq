@@ -438,10 +438,9 @@ export const AllVariants: Story = {
     return (
       <Providers>
         {/* Deliberately narrower than the row-story default (w-3xl):
-            TASK_GRID_COLUMNS' fixed columns + gaps + title floor need
-            >= 644px (see task-row-shared.tsx), and the regression check
-            below only exercises the floor when this container falls
-            short of that. */}
+            --task-row-columns' fixed columns + gaps + title floor need
+            >= 644px (see index.css), and the regression check below only
+            exercises the floor when this container falls short of that. */}
         <div className="w-xl divide-y divide-border">
           {nodes.map((node) => (
             <InteractiveTreeTaskGridRow key={node.id} node={node} />
@@ -452,9 +451,8 @@ export const AllVariants: Story = {
   },
   play: async ({ canvas }) => {
     // Regression check: this container is narrower than the row's fixed
-    // columns need, so without TASK_GRID_COLUMNS' title-column floor (see
-    // task-row-shared.tsx) the title collapses to 0 width instead of
-    // truncating.
+    // columns need, so without --task-row-columns' title-column floor (see
+    // index.css) the title collapses to 0 width instead of truncating.
     const title = atIndex(canvas.getAllByText('Todo task (personal)'), 0)
     await expect(title.getBoundingClientRect().width).toBeGreaterThan(0)
   },

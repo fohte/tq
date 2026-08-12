@@ -3,10 +3,7 @@ import { FolderKanban } from 'lucide-react'
 import { useState } from 'react'
 
 import { ProjectFormModal } from '#components/project/project-form-modal'
-import {
-  PROJECT_LIST_GRID_COLUMNS,
-  ProjectListRow,
-} from '#components/project/project-list-row'
+import { ProjectListRow } from '#components/project/project-list-row'
 import { Button } from '#components/ui/button'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
@@ -52,9 +49,7 @@ function ProjectList() {
       </ScreenHeaderBar>
 
       {/* Column header (desktop only) */}
-      <div
-        className={`hidden border-b border-border bg-card px-3.5 py-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint md:grid md:items-center md:gap-3 ${PROJECT_LIST_GRID_COLUMNS}`}
-      >
+      <div className="hidden grid-cols-(--project-list-columns) border-b border-border bg-card px-3.5 py-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint md:grid md:items-center md:gap-3">
         <span />
         <span>PROJECT</span>
         <span>STATUS</span>

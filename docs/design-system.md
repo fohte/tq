@@ -363,6 +363,35 @@ difference is a deliberate PC/mobile viewport split, not drift, and follows
 scroll clamp as an arbitrary `vh` value (Tailwind has no `vh`-based scale to
 round onto).
 
+### Border width
+
+Border-width utilities (`border`, `border-<number>`) are **not** part of the
+4px spacing grid and are out of this table's jurisdiction. Unlike
+`gap`/`padding`/`margin`, which compile to `calc(var(--spacing) * N)`,
+Tailwind's border-width utilities resolve straight to `<N>px` (`border` →
+`border-width: 1px`, `border-2` → `2px`, and the same holds for the dynamic
+`border-<number>` utility used for values with no named step, e.g.
+`border-l-3` → `border-left-width: 3px`) — there is no `--spacing`
+multiplication to round onto. `task-activity.tsx`'s `CommentRow` accent
+border (`border-l-3`) is a plain literal for that reason, not a rounding
+case.
+
+## Grid tracks
+
+Named `grid-template-columns` tracks in `web/src/index.css`'s `@theme
+inline` block, referenced via `grid-cols-(--<name>)`. Each backs a fixed
+row/column layout shared by a list's rows and its column header, so widths
+can't drift between them.
+
+| Token                    | Value                                                     | Used by                                                                                                                                                                                                                                                                                          |
+| ------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--task-row-columns`     | `26px 26px minmax(120px, 1fr) 132px 104px 72px 56px 28px` | Tasks list: column header (`TaskListColumnHeader` in `routes/tasks/index.tsx`), `TaskGridRow`, `TreeTaskGridRow` — tracks are expand-toggle, status picker, title, tags, GitHub link, estimate, due date, row actions                                                                            |
+| `--project-list-columns` | `14px 1fr 96px 190px 78px`                                | Projects list: column header (`routes/projects/index.tsx`), `ProjectListRow` — tracks are status mark, project name, status badge, progress bar, target date                                                                                                                                     |
+| `--icon-content-columns` | `20px 1fr`                                                | `task-activity.tsx`'s `EventRow`/`CommentRow` marker column, `integration-card.tsx`'s `CARD_INDENT` — same "small icon column + body" role, unified onto the 20px column width that `IntegrationCard`'s actual `size-5` icon needs (was `14px` in `task-activity.tsx`, too narrow for that icon) |
+
+The title column in `--task-row-columns` has a `minmax` floor, not a bare
+`1fr` — see the token's comment in `web/src/index.css` for why.
+
 ## Radius policy
 
 `--radius` is `0rem` globally — every corner in the app is square by

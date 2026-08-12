@@ -11,7 +11,6 @@ import {
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
 import { TaskGridRow } from '#components/task/task-grid-row'
-import { TASK_GRID_COLUMNS } from '#components/task/task-row-shared'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { Button } from '#components/ui/button'
 import { Checkbox } from '#components/ui/checkbox'
@@ -72,9 +71,7 @@ export const Route = createFileRoute('/tasks/')({
 
 function TaskListColumnHeader() {
   return (
-    <div
-      className={`hidden items-center gap-2 border-b border-border bg-card px-3 py-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint md:grid ${TASK_GRID_COLUMNS}`}
-    >
+    <div className="hidden grid-cols-(--task-row-columns) items-center gap-2 border-b border-border bg-card px-3 py-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint md:grid">
       <span />
       <span />
       <span>TITLE</span>
