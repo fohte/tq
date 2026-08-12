@@ -103,9 +103,11 @@ function buildConditions(query: ListTasksQuery) {
   if (parsed?.freeText != null && parsed.freeText !== '') {
     const freeText = parsed.freeText
     const pattern = `%${freeText}%`
-    const numberCondition = /^\d+$/.test(freeText)
-      ? sql`OR CAST(${tasks.number} AS TEXT) LIKE ${`${freeText}%`}`
-      : sql``
+    const numberQuery = freeText.startsWith('#') ? freeText.slice(1) : freeText
+    const numberCondition =
+      numberQuery !== '' && /^\d+$/.test(numberQuery)
+        ? sql`OR CAST(${tasks.number} AS TEXT) LIKE ${`${numberQuery}%`}`
+        : sql``
     conditions.push(
       sql`(${tasks.title} ILIKE ${pattern} OR ${tasks.description} ILIKE ${pattern} OR EXISTS (SELECT 1 FROM ${taskPages} WHERE ${taskPages.taskId} = ${tasks.id} AND ${taskPages.content} ILIKE ${pattern}) ${numberCondition})`,
     )

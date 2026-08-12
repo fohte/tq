@@ -418,12 +418,48 @@ describe('tasks CRUD API', () => {
       expect(body[0].title).toBe('Deploy to production')
     })
 
-    it('matches a task number prefix via q', async () => {
+    it('matches a full task number via q', async () => {
       const task = await createTask('Some unrelated title')
       await createTask('Another task')
 
       const res = await app.request(
         '/api/tasks?q=' + encodeURIComponent(String(task.number)),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].id).toBe(task.id)
+    })
+
+    it('matches a task number prefix via q', async () => {
+      // Force a 2+ digit number so `prefix` below is genuinely shorter than
+      // the full number - this guards against regressing from a
+      // LIKE-based prefix match to an exact-match comparison.
+      let task: Awaited<ReturnType<typeof createTask>>
+      do {
+        task = await createTask('Some unrelated title')
+      } while (task.number < 10)
+
+      const prefix = String(task.number).slice(0, -1)
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent(prefix),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].id).toBe(task.id)
+    })
+
+    it('matches a hash-prefixed task number via q', async () => {
+      const task = await createTask('Some unrelated title')
+      await createTask('Another task')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent(`#${String(task.number)}`),
       )
 
       expect(res.status).toBe(200)
