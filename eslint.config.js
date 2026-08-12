@@ -58,7 +58,10 @@ export default config(
       'no-restricted-syntax': [
         'error',
         {
-          selector: `Literal[value=/${ARBITRARY_VALUE_PATTERN}/]`,
+          // TemplateElement covers backtick strings (e.g. `` `w-[600px]` ``)
+          // with no interpolation — those parse as a template literal, not a
+          // plain Literal node, and would otherwise bypass this check.
+          selector: `:matches(Literal[value=/${ARBITRARY_VALUE_PATTERN}/], TemplateElement[value.raw=/${ARBITRARY_VALUE_PATTERN}/])`,
           message:
             'Arbitrary Tailwind values are not allowed, including inside string constants. Add a token to `@theme` in web/src/index.css instead (see docs/design-system.md).',
         },
