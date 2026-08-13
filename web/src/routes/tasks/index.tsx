@@ -30,8 +30,8 @@ interface TasksFilterState {
   projectId: string | undefined
 }
 
-// Mirrors the API's search-query-parser vocabulary (`is:` / `sort:` /
-// `project:`) so a `q` built here means the same thing server-side.
+// Must match api/src/search-query-parser.ts's token vocabulary (`is:` /
+// `sort:` / `project:`) — parseTasksQuery below decodes it back.
 function buildTasksQuery(state: TasksFilterState): string {
   const parts: string[] = []
   if (!state.showCompleted) parts.push('is:todo', 'is:in_progress')
@@ -44,6 +44,8 @@ function buildTasksQuery(state: TasksFilterState): string {
 
 function parseTasksQuery(q: string): TasksFilterState {
   let sortBy: TaskSortBy = 'updated'
+  // Absence of an `is:` token means "no status filter" (buildTasksQuery
+  // above omits them entirely for showCompleted: true), not "unset".
   let showCompleted = true
   let projectId: string | undefined
   for (const token of q.split(/\s+/).filter((t) => t !== '')) {
@@ -74,9 +76,25 @@ interface TasksSearch {
 }
 
 function validateSearch(search: Record<string, unknown>): TasksSearch {
-  const q =
-    typeof search['q'] === 'string' ? search['q'] : tasksSearchDefaults.q
-  return { q }
+  const rawQ = typeof search['q'] === 'string' ? search['q'] : undefined
+  if (rawQ != null && rawQ !== '') return { q: rawQ }
+
+  // Migrate URLs bookmarked/shared before the sortBy/showCompleted/projectId
+  // -> q migration, instead of silently discarding their filter.
+  if (
+    'sortBy' in search ||
+    'showCompleted' in search ||
+    'projectId' in search
+  ) {
+    const sortBy =
+      sortOptionValues.find((value) => value === search['sortBy']) ?? 'updated'
+    const showCompleted = search['showCompleted'] === true
+    const projectId =
+      typeof search['projectId'] === 'string' ? search['projectId'] : undefined
+    return { q: buildTasksQuery({ sortBy, showCompleted, projectId }) }
+  }
+
+  return { q: tasksSearchDefaults.q }
 }
 
 export const Route = createFileRoute('/tasks/')({
