@@ -56,3 +56,11 @@ export const Default: Story = {
     page: samplePage,
   },
 }
+
+export const WithoutTaskNumber: Story = {
+  args: {
+    isLoading: false,
+    taskNumber: undefined,
+    page: samplePage,
+  },
+}
