@@ -266,7 +266,6 @@ const queueCandidates = getQueueCandidates(
 export const Default: Story = {
   args: {
     isLoading: false,
-    backlogTasks: sampleCategorized.backlog,
     calendarEvents: sampleEvents,
     dndCallbacks: {
       onEventDrop: fn(),
@@ -299,7 +298,6 @@ export const OpensCreateScheduleModal: Story = {
 export const Loading: Story = {
   args: {
     isLoading: true,
-    backlogTasks: [],
     calendarEvents: [],
     queueTasks: [],
     queueCandidates: [],
@@ -315,7 +313,6 @@ export const Loading: Story = {
 export const Empty: Story = {
   args: {
     isLoading: false,
-    backlogTasks: [],
     calendarEvents: [],
     queueTasks: [],
     queueCandidates: [],
@@ -331,7 +328,6 @@ export const Empty: Story = {
 export const EmptyQueueWithCandidates: Story = {
   args: {
     isLoading: false,
-    backlogTasks: sampleCategorized.backlog,
     calendarEvents: [],
     queueTasks: [],
     queueCandidates: getQueueCandidates(

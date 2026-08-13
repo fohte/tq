@@ -2,7 +2,8 @@ import { screenshot } from '@storycap-testrun/browser'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
-import { unhandledApiRequestUrls } from '#storybook-config/unhandled-api-requests'
+import { externalResourceCheck } from '#storybook-config/checks/external-resource-check'
+import { unhandledApiRequestCheck } from '#storybook-config/checks/unhandled-api-request-check'
 
 // Pin the clock so stories that read the current time (calendar "now"
 // indicators, relative timestamps, "today" fixtures built at module scope)
@@ -71,55 +72,16 @@ function asScreenshotContext(
   return context as Parameters<typeof screenshot>[1]
 }
 
-// A story that loads a non-same-origin http(s) resource (e.g. a remote
-// avatar image) races the capture against that request's completion over the
-// real network, so the same story can rasterize differently between runs.
-// Failing the test surfaces this instead of letting it show up as unstable
-// screenshot diffs; fix stories by inlining the resource as a data URI.
-const externalResourceUrls: string[] = []
-
-function isExternalResourceUrl(url: string): boolean {
-  const { protocol, origin } = new URL(url)
-  return (
-    (protocol === 'http:' || protocol === 'https:') &&
-    origin !== window.location.origin
-  )
-}
-
-new PerformanceObserver((list) => {
-  for (const entry of list.getEntries()) {
-    if (isExternalResourceUrl(entry.name)) {
-      externalResourceUrls.push(entry.name)
-    }
-  }
-}).observe({ type: 'resource', buffered: true })
+// Checks that must pass for every story; add a check module under ./checks
+// and list it here to register it.
+const checks = [externalResourceCheck, unhandledApiRequestCheck]
 
 beforeEach(() => {
-  externalResourceUrls.length = 0
-  unhandledApiRequestUrls.length = 0
+  for (const check of checks) check.reset()
 })
-
-function throwIfNotEmpty(urls: string[], message: string): void {
-  if (urls.length === 0) return
-  const list = urls.join('\n')
-  urls.length = 0
-  throw new Error(`${message}:\n${list}`)
-}
 
 afterEach(async (context) => {
   await screenshot(page, asScreenshotContext(context))
 
-  throwIfNotEmpty(
-    externalResourceUrls,
-    'Story loaded non-same-origin resource(s), which makes VRT captures flaky',
-  )
-
-  // A story hitting an /api/ endpoint with no MSW handler gets MSW's error
-  // response instead of real data, so the screenshot captures a broken UI
-  // state without failing — see web/.storybook/preview.tsx's
-  // onUnhandledRequest, which populates this array.
-  throwIfNotEmpty(
-    unhandledApiRequestUrls,
-    'Story made unhandled /api/ request(s); add an MSW handler for',
-  )
+  for (const check of checks) check.assert()
 })
