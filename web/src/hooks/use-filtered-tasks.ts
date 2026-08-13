@@ -23,15 +23,18 @@ export function useBaseFilter(
   }
 }
 
-export function useFilteredTaskList(
-  sortBy?: TaskSortBy,
-  showCompleted = true,
-  projectId?: string,
-) {
-  const baseFilter = useBaseFilter(showCompleted, projectId)
+export function useFilteredTaskList(options?: {
+  sortBy?: TaskSortBy
+  showCompleted?: boolean
+  projectId?: string | undefined
+}) {
+  const baseFilter = useBaseFilter(
+    options?.showCompleted ?? true,
+    options?.projectId,
+  )
   const { isLoading, categorized } = useTaskList({
     ...baseFilter,
-    ...(sortBy ? { sortBy } : {}),
+    ...(options?.sortBy ? { sortBy: options.sortBy } : {}),
   })
 
   return { isLoading, ...categorized }
@@ -41,7 +44,7 @@ export function useFilteredTaskTree(options: {
   enabled: boolean
   sortBy?: TaskSortBy
   showCompleted?: boolean
-  projectId?: string
+  projectId?: string | undefined
 }) {
   const baseFilter = useBaseFilter(
     options.showCompleted ?? true,

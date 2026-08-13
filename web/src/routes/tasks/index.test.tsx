@@ -118,9 +118,7 @@ describe('TaskList sort selector', () => {
     // forbids: it's for the same reason it disallows partial per-field checks
     // on a single output — bundling unrelated values back-defeats the point).
     expect(mockUseFilteredTaskList.mock.calls[0]).toEqual([
-      'updated',
-      false,
-      undefined,
+      { sortBy: 'updated', showCompleted: false },
     ])
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
       { enabled: true, sortBy: 'updated', showCompleted: false },
@@ -138,9 +136,7 @@ describe('TaskList sort selector', () => {
 
     expect(screen.getByLabelText('Sort tasks')).toHaveValue('created')
     expect(mockUseFilteredTaskList.mock.calls.at(-1)).toEqual([
-      'created',
-      false,
-      undefined,
+      { sortBy: 'created', showCompleted: false },
     ])
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
       { enabled: true, sortBy: 'created', showCompleted: false },
@@ -174,12 +170,61 @@ describe('TaskList "show completed" toggle', () => {
       screen.getByRole('checkbox', { name: 'show completed' }),
     ).toBeChecked()
     expect(mockUseFilteredTaskList.mock.calls.at(-1)).toEqual([
-      'updated',
-      true,
-      undefined,
+      { sortBy: 'updated', showCompleted: true },
     ])
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
       { enabled: true, sortBy: 'updated', showCompleted: true },
+    ])
+  })
+})
+
+describe('TaskList project filter selector', () => {
+  beforeEach(() => {
+    mockUseProjects.mockReturnValue({
+      data: [
+        { id: 'proj-1', title: 'Website Redesign' },
+        { id: 'proj-2', title: 'Mobile App' },
+      ],
+    })
+  })
+
+  it('defaults to "All projects" and requests unfiltered data on initial render', async () => {
+    renderTaskList()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Filter by project')).toHaveValue('')
+    })
+    expect(mockUseFilteredTaskList.mock.calls[0]).toEqual([
+      { sortBy: 'updated', showCompleted: false },
+    ])
+    expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
+      { enabled: true, sortBy: 'updated', showCompleted: false },
+    ])
+  })
+
+  it('re-requests data scoped to the selected project', async () => {
+    const user = userEvent.setup()
+    renderTaskList()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Filter by project')).toBeInTheDocument()
+    })
+    await user.selectOptions(
+      screen.getByLabelText('Filter by project'),
+      'proj-1',
+    )
+
+    expect(screen.getByLabelText('Filter by project')).toHaveValue('proj-1')
+    expect(mockUseFilteredTaskList.mock.calls.at(-1)).toEqual([
+      { sortBy: 'updated', showCompleted: false, projectId: 'proj-1' },
+    ])
+    expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
+      {
+        enabled: true,
+        sortBy: 'updated',
+        showCompleted: false,
+        projectId: 'proj-1',
+      },
     ])
   })
 })

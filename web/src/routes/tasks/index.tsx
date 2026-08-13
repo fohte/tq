@@ -140,13 +140,13 @@ export function TaskList() {
   const projects = useProjects()
   const projectIdValues = ['', ...(projects.data ?? []).map((p) => p.id)]
 
-  const tasks = useFilteredTaskList(sortBy, showCompleted, projectId)
+  const tasks = useFilteredTaskList({ sortBy, showCompleted, projectId })
   const { isLoading: isTreeLoading, tree: filteredTreeData } =
     useFilteredTaskTree({
       enabled: activeTab === 'all',
       sortBy,
       showCompleted,
-      ...(projectId != null ? { projectId } : {}),
+      projectId,
     })
   const treeOutliner = useTreeOutliner(filteredTreeData, {
     enabled: activeTab === 'all',
