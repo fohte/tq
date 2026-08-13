@@ -104,7 +104,7 @@ describe('CreateScheduleModal', () => {
     })
   })
 
-  it('pre-fills the form with the schedule being edited', () => {
+  it('pre-fills the title input with the schedule being edited', () => {
     setupMocks()
     renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
 
@@ -129,11 +129,12 @@ describe('CreateScheduleModal', () => {
     const titleInputs = screen.getAllByPlaceholderText('Schedule title')
     await user.type(atIndex(titleInputs, 0), 'Team sync')
 
-    const timeInputs = Array.from(
-      document.body.querySelectorAll<HTMLInputElement>('input[type="time"]'),
-    )
-    fireEvent.change(atIndex(timeInputs, 0), { target: { value: '09:00' } })
-    fireEvent.change(atIndex(timeInputs, 1), { target: { value: '09:30' } })
+    const startTimeInputs = screen.getAllByLabelText('Start time')
+    fireEvent.change(atIndex(startTimeInputs, 0), {
+      target: { value: '09:00' },
+    })
+    const endTimeInputs = screen.getAllByLabelText('End time')
+    fireEvent.change(atIndex(endTimeInputs, 0), { target: { value: '09:30' } })
 
     await user.click(screen.getByRole('button', { name: 'Create Schedule' }))
 

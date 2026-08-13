@@ -93,6 +93,7 @@ export function ScheduleModalDesktopPanel({
                 onChange={(e) => {
                   setStartTime(e.target.value)
                 }}
+                aria-label="Start time"
                 className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
               />
             </InlineFieldGroup>
@@ -103,6 +104,7 @@ export function ScheduleModalDesktopPanel({
                 onChange={(e) => {
                   setEndTime(e.target.value)
                 }}
+                aria-label="End time"
                 className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
               />
             </InlineFieldGroup>
