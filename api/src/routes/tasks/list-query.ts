@@ -87,6 +87,8 @@ function buildConditions(query: ListTasksQuery) {
 
   const projectIdentifier = parsed?.projectId ?? query.projectId
   if (projectIdentifier != null) {
+    // UUID-shaped values are treated as an id match, not a title match, even
+    // though `projects.title` has no format constraint and could coincide.
     if (z.uuid().safeParse(projectIdentifier).success) {
       conditions.push(eq(tasks.projectId, projectIdentifier))
     } else {

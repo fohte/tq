@@ -620,9 +620,7 @@ describe('tasks CRUD API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body).toHaveLength(1)
-      assertDefined(body[0])
-      expect(body[0].id).toBe(task.id)
+      expect(body.map((t) => t.id)).toEqual([task.id])
     })
 
     it('filters by project: prefix in q parameter using the project title', async () => {
@@ -637,9 +635,7 @@ describe('tasks CRUD API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body).toHaveLength(1)
-      assertDefined(body[0])
-      expect(body[0].id).toBe(task.id)
+      expect(body.map((t) => t.id)).toEqual([task.id])
     })
 
     it('returns tasks belonging to the project', async () => {
