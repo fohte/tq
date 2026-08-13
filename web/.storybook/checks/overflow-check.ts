@@ -69,14 +69,6 @@ function isVisuallyHidden(el: Element): boolean {
   return el.clientWidth <= 1 && el.clientHeight <= 1
 }
 
-// An escape hatch narrower than the per-story/file `overflowCheck.disable`
-// parameter: mark a specific intentionally-scrollable subtree (e.g. a chip
-// row using `overflow-x-auto`) with `data-overflow-check-ignore` on the
-// component itself, and the rest of the story still gets checked.
-function isIgnored(el: Element): boolean {
-  return el.closest('[data-overflow-check-ignore]') != null
-}
-
 // el.scrollWidth > el.clientWidth means the element's content doesn't fit
 // inside its own padding box (clientWidth) — i.e. some of it is clipped and
 // invisible.
@@ -88,12 +80,13 @@ function isIgnored(el: Element): boolean {
 // `position: fixed` elements are invisible to it too — they escape the
 // containing block chain, so an off-screen fixed element never shows up in
 // any ancestor's scrollWidth.
-function findOverflows(root: Element): string[] {
+function findOverflows(root: Element, ignoreSelectors: string[]): string[] {
+  const ignoreSelector = ignoreSelectors.join(',')
   const overflows: string[] = []
   for (const el of root.querySelectorAll('*')) {
     if (el.scrollWidth <= el.clientWidth) continue
     if (isVisuallyHidden(el)) continue
-    if (isIgnored(el)) continue
+    if (ignoreSelector !== '' && el.closest(ignoreSelector) != null) continue
     if (!clipsOwnContent(getComputedStyle(el))) continue
 
     const overflowPx = el.scrollWidth - el.clientWidth
@@ -104,26 +97,47 @@ function findOverflows(root: Element): string[] {
   return overflows
 }
 
-function isDisabled(storyParameters: unknown): boolean {
+function overflowCheckParameters(storyParameters: unknown): object | undefined {
   if (typeof storyParameters !== 'object' || storyParameters === null) {
-    return false
+    return undefined
   }
-  if (!('overflowCheck' in storyParameters)) return false
+  if (!('overflowCheck' in storyParameters)) return undefined
   const { overflowCheck } = storyParameters
   if (typeof overflowCheck !== 'object' || overflowCheck === null) {
-    return false
+    return undefined
   }
-  return 'disable' in overflowCheck && overflowCheck.disable === true
+  return overflowCheck
+}
+
+function isDisabled(overflowCheck: object | undefined): boolean {
+  return (
+    overflowCheck !== undefined &&
+    'disable' in overflowCheck &&
+    overflowCheck.disable === true
+  )
+}
+
+// Narrower than `overflowCheck.disable`: exempt one intentionally-scrollable
+// subtree (e.g. a chip row using `overflow-x-auto`) via a CSS selector in
+// the story's own parameters, so the rest of the story still gets checked —
+// without adding a check-only attribute to the component being tested.
+function ignoreSelectorsOf(overflowCheck: object | undefined): string[] {
+  if (overflowCheck === undefined) return []
+  if (!('ignoreSelectors' in overflowCheck)) return []
+  const { ignoreSelectors } = overflowCheck
+  if (!Array.isArray(ignoreSelectors)) return []
+  return ignoreSelectors.filter((s): s is string => typeof s === 'string')
 }
 
 export const overflowCheck: StorybookCheck = {
   reset: watchStoryRoot,
   assert: (storyParameters) => {
-    if (isDisabled(storyParameters)) return
+    const params = overflowCheckParameters(storyParameters)
+    if (isDisabled(params)) return
     if (storyRoot == null) return
 
     throwIfNotEmpty(
-      findOverflows(storyRoot),
+      findOverflows(storyRoot, ignoreSelectorsOf(params)),
       'Story has element(s) overflowing their container (clipped and invisible)',
     )
   },
