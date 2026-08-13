@@ -14,6 +14,8 @@ import { ProjectTaskList } from '#components/project/project-task-list'
 import type { ProjectView } from '#components/project/project-view-tabs'
 import { FloatingActionButton } from '#components/task/create-task-inline'
 import { CreateTaskModal } from '#components/task/create-task-modal'
+import { FullPageLoading } from '#components/ui/full-page-loading'
+import { FullPageMessage } from '#components/ui/full-page-message'
 import { useProject, useProjectTasks } from '#hooks/use-projects'
 
 export const Route = createFileRoute('/projects/$projectId_/board')({
@@ -34,19 +36,11 @@ function ProjectBoardPage() {
   const isLoading = isProjectLoading || isTasksLoading
 
   if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        Loading...
-      </div>
-    )
+    return <FullPageLoading />
   }
 
   if (!project) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        Project not found
-      </div>
-    )
+    return <FullPageMessage>Project not found</FullPageMessage>
   }
 
   return (

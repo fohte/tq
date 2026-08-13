@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ChevronLeft, Loader2 } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 
 import {
   ProjectMainContent,
   ProjectSidebar,
   ProjectSidebarMobile,
 } from '#components/project/project-detail'
+import { FullPageLoading } from '#components/ui/full-page-loading'
+import { FullPageMessage } from '#components/ui/full-page-message'
 import { useProject, useProjectTasks } from '#hooks/use-projects'
 
 export const Route = createFileRoute('/projects/$projectId')({
@@ -24,19 +26,11 @@ function ProjectDetailPage() {
   const isLoading = isProjectLoading || isTasksLoading
 
   if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <FullPageLoading />
   }
 
   if (error || !project) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">Project not found</p>
-      </div>
-    )
+    return <FullPageMessage>Project not found</FullPageMessage>
   }
 
   return (
