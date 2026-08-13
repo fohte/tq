@@ -55,7 +55,8 @@ export const tasksSearchApp = new Hono()
   })
   // Backs the editor's `#` mention autocomplete. Search condition building
   // is shared with GET /api/tasks via queryTaskList; this endpoint only
-  // projects the result down to the fields the mention UI needs.
+  // projects the result down to the fields the mention UI needs. Result
+  // order follows queryTaskList's default (creation time), not task number.
   .get('/mentions', zValidator('query', mentionsQuerySchema), async (c) => {
     const { q, limit } = c.req.valid('query')
 

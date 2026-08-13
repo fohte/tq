@@ -93,7 +93,7 @@ describe('tasks search API', () => {
       expect(body).toEqual([toMentionSummary(deploy)])
     })
 
-    it('returns tasks ordered by number, limited to the requested count', async () => {
+    it('returns tasks in creation order, limited to the requested count', async () => {
       const task1 = await createTask('Task 1')
       const task2 = await createTask('Task 2')
       await createTask('Task 3')
