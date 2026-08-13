@@ -1,11 +1,12 @@
 import { Link } from '@tanstack/react-router'
 import { Loader2, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
 import {
   SearchResultRow,
   searchResultRowWrapperClassName,
 } from '#components/search/search-result-row'
+import { AnchoredPopup } from '#components/ui/anchored-popup'
 import { Chip } from '#components/ui/chip'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import type { SearchFilters, SearchResult } from '#hooks/use-search'
@@ -23,30 +24,13 @@ function FilterChip({ label, value, options, onChange }: FilterChipProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!open) return
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        ref.current &&
-        event.target instanceof Node &&
-        !ref.current.contains(event.target)
-      ) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [open])
-
   const activeLabel =
     value != null
       ? (options.find((o) => o.value === value)?.label ?? value)
       : label
 
   return (
-    <div className="relative" ref={ref}>
+    <div ref={ref}>
       <Chip
         as="button"
         size="md"
@@ -60,31 +44,32 @@ function FilterChip({ label, value, options, onChange }: FilterChipProps) {
         <span className="text-muted-foreground-faint">▾</span>
       </Chip>
 
-      {open && (
-        <div
-          className="absolute top-full left-0 z-50 mt-1 min-w-35 border border-border bg-popover p-1 text-popover-foreground"
-          data-testid={`filter-dropdown-${label.toLowerCase()}`}
-        >
-          {options.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => {
-                onChange(value === option.value ? undefined : option.value)
-                setOpen(false)
-              }}
-              className={cn(
-                'flex w-full items-center px-3 py-1.5 text-left font-mono text-xs',
-                value === option.value
-                  ? 'bg-secondary text-foreground'
-                  : 'text-muted-foreground hover:bg-secondary/50',
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      )}
+      <AnchoredPopup
+        open={open}
+        onOpenChange={setOpen}
+        anchor={ref}
+        className="w-auto min-w-35"
+        data-testid={`filter-dropdown-${label.toLowerCase()}`}
+      >
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => {
+              onChange(value === option.value ? undefined : option.value)
+              setOpen(false)
+            }}
+            className={cn(
+              'flex w-full items-center px-3 py-1.5 text-left font-mono text-xs',
+              value === option.value
+                ? 'bg-secondary text-foreground'
+                : 'text-muted-foreground hover:bg-secondary/50',
+            )}
+          >
+            {option.label}
+          </button>
+        ))}
+      </AnchoredPopup>
     </div>
   )
 }
