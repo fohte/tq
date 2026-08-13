@@ -79,11 +79,14 @@ function renderTaskList() {
     history: createMemoryHistory({ initialEntries: ['/tasks'] }),
   })
 
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-  )
+  return {
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    ),
+    router,
+  }
 }
 
 beforeEach(() => {
@@ -98,7 +101,7 @@ beforeEach(() => {
 
 describe('TaskList sort selector', () => {
   it('defaults to "updated" and requests updated-sorted data on initial render', async () => {
-    renderTaskList()
+    const { router } = renderTaskList()
 
     await waitFor(() => {
       expect(screen.getByLabelText('Sort tasks')).toHaveValue('updated')
@@ -106,11 +109,12 @@ describe('TaskList sort selector', () => {
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
       { sortBy: 'updated', showCompleted: false },
     ])
+    expect(router.state.location.search).toEqual({})
   })
 
   it('re-requests created-sorted data once "Created" is selected', async () => {
     const user = userEvent.setup()
-    renderTaskList()
+    const { router } = renderTaskList()
 
     await waitFor(() => {
       expect(screen.getByLabelText('Sort tasks')).toBeInTheDocument()
@@ -121,6 +125,9 @@ describe('TaskList sort selector', () => {
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
       { sortBy: 'created', showCompleted: false },
     ])
+    expect(router.state.location.search).toEqual({
+      q: 'is:todo is:in_progress sort:created',
+    })
   })
 })
 
@@ -137,7 +144,7 @@ describe('TaskList "show completed" toggle', () => {
 
   it('requests completed tasks once checked', async () => {
     const user = userEvent.setup()
-    renderTaskList()
+    const { router } = renderTaskList()
 
     await waitFor(() => {
       expect(
@@ -152,6 +159,7 @@ describe('TaskList "show completed" toggle', () => {
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
       { sortBy: 'updated', showCompleted: true },
     ])
+    expect(router.state.location.search).toEqual({ q: 'sort:updated' })
   })
 })
 
@@ -178,7 +186,7 @@ describe('TaskList project filter selector', () => {
 
   it('re-requests data scoped to the selected project', async () => {
     const user = userEvent.setup()
-    renderTaskList()
+    const { router } = renderTaskList()
 
     await waitFor(() => {
       expect(screen.getByLabelText('Filter by project')).toBeInTheDocument()
@@ -192,5 +200,8 @@ describe('TaskList project filter selector', () => {
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
       { sortBy: 'updated', showCompleted: false, projectId: 'proj-1' },
     ])
+    expect(router.state.location.search).toEqual({
+      q: 'is:todo is:in_progress sort:updated project:proj-1',
+    })
   })
 })

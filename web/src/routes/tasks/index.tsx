@@ -24,28 +24,59 @@ import { useProjects } from '#hooks/use-projects'
 import type { TaskSortBy } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
 
+interface TasksFilterState {
+  sortBy: TaskSortBy
+  showCompleted: boolean
+  projectId: string | undefined
+}
+
+// Mirrors the API's search-query-parser vocabulary (`is:` / `sort:` /
+// `project:`) so a `q` built here means the same thing server-side.
+function buildTasksQuery(state: TasksFilterState): string {
+  const parts: string[] = []
+  if (!state.showCompleted) parts.push('is:todo', 'is:in_progress')
+  // Always included, even for the default 'updated': the API falls back to
+  // sorting by `created` when no sort is specified at all.
+  parts.push(`sort:${state.sortBy}`)
+  if (state.projectId != null) parts.push(`project:${state.projectId}`)
+  return parts.join(' ')
+}
+
+function parseTasksQuery(q: string): TasksFilterState {
+  let sortBy: TaskSortBy = 'updated'
+  let showCompleted = true
+  let projectId: string | undefined
+  for (const token of q.split(/\s+/).filter((t) => t !== '')) {
+    if (token === 'is:todo' || token === 'is:in_progress') {
+      showCompleted = false
+    } else if (token.startsWith('sort:')) {
+      const value = token.slice('sort:'.length)
+      const matched = sortOptionValues.find((v) => v === value)
+      if (matched != null) sortBy = matched
+    } else if (token.startsWith('project:')) {
+      const value = token.slice('project:'.length)
+      if (value !== '') projectId = value
+    }
+  }
+  return { sortBy, showCompleted, projectId }
+}
+
 const tasksSearchDefaults = {
-  sortBy: 'updated' as TaskSortBy,
-  showCompleted: false,
+  q: buildTasksQuery({
+    sortBy: 'updated',
+    showCompleted: false,
+    projectId: undefined,
+  }),
 }
 
 interface TasksSearch {
-  sortBy?: TaskSortBy
-  showCompleted?: boolean
-  projectId?: string
+  q?: string
 }
 
 function validateSearch(search: Record<string, unknown>): TasksSearch {
-  const sortBy: TaskSortBy =
-    sortOptionValues.find((value) => value === search['sortBy']) ?? 'updated'
-  const showCompleted = search['showCompleted'] === true
-  const projectId =
-    typeof search['projectId'] === 'string' ? search['projectId'] : undefined
-  return {
-    sortBy,
-    showCompleted,
-    ...(projectId != null ? { projectId } : {}),
-  }
+  const q =
+    typeof search['q'] === 'string' ? search['q'] : tasksSearchDefaults.q
+  return { q }
 }
 
 export const Route = createFileRoute('/tasks/')({
@@ -57,11 +88,8 @@ export const Route = createFileRoute('/tasks/')({
 })
 
 export function TaskList() {
-  const {
-    sortBy = 'updated',
-    showCompleted = false,
-    projectId,
-  } = Route.useSearch()
+  const { q = tasksSearchDefaults.q } = Route.useSearch()
+  const { sortBy, showCompleted, projectId } = parseTasksQuery(q)
   const navigate = Route.useNavigate()
   const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -69,26 +97,32 @@ export function TaskList() {
 
   const setSortBy = (sort: TaskSortBy) => {
     void navigate({
-      search: (prev) => ({ ...prev, sortBy: sort }),
+      search: (prev) => ({
+        ...prev,
+        q: buildTasksQuery({ sortBy: sort, showCompleted, projectId }),
+      }),
       replace: true,
     })
   }
   const setShowCompleted = (checked: boolean) => {
     void navigate({
-      search: (prev) => ({ ...prev, showCompleted: checked }),
+      search: (prev) => ({
+        ...prev,
+        q: buildTasksQuery({ sortBy, showCompleted: checked, projectId }),
+      }),
       replace: true,
     })
   }
   const setProjectId = (id: string) => {
     void navigate({
-      search: (prev) => {
-        if (id === '') {
-          const { projectId: _projectId, ...rest } = prev
-          void _projectId
-          return rest
-        }
-        return { ...prev, projectId: id }
-      },
+      search: (prev) => ({
+        ...prev,
+        q: buildTasksQuery({
+          sortBy,
+          showCompleted,
+          projectId: id === '' ? undefined : id,
+        }),
+      }),
       replace: true,
     })
   }
