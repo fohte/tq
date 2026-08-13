@@ -42,16 +42,9 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const WithLabel: Story = {
+export const Default: Story = {
   args: {
     to: '/',
     children: 'Projects',
-  },
-}
-
-export const Back: Story = {
-  args: {
-    to: '/',
-    children: 'Back',
   },
 }
