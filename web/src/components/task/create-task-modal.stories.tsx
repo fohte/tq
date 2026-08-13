@@ -17,6 +17,11 @@ const meta = {
     msw: {
       handlers: [http.get('/api/labels', () => HttpResponse.json([]))],
     },
+    // The chip row (start/due date, tags, ...) is an intentional horizontal
+    // scroll area (`overflow-x-auto`); which stories trip it at the
+    // storybook-mobile project's 375px viewport depends on exact chip
+    // content width.
+    overflowCheck: { ignoreSelectors: ['.overflow-x-auto'] },
   },
   decorators: [
     (Story) => (
