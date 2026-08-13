@@ -11,11 +11,11 @@ import {
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
 import { TaskListColumnHeader } from '#components/task/task-list-column-header'
+import {
+  sortOptionValues,
+  TaskListToolbar,
+} from '#components/task/task-list-toolbar'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
-import { Button } from '#components/ui/button'
-import { Checkbox } from '#components/ui/checkbox'
-import { GithubMarkIcon } from '#components/ui/github-mark-icon'
-import { KeybindHint } from '#components/ui/keybind-hint'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
@@ -23,18 +23,6 @@ import { useNewTaskShortcutListener } from '#hooks/use-new-task-shortcut'
 import { useProjects } from '#hooks/use-projects'
 import type { TaskSortBy } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
-import { selectHandler } from '#lib/form-utils'
-import { newTaskKeybinding } from '#lib/keybindings'
-
-const sortOptionValues = [
-  'updated',
-  'created',
-] as const satisfies readonly TaskSortBy[]
-
-const sortLabels: Record<TaskSortBy, string> = {
-  updated: 'Updated',
-  created: 'Created',
-}
 
 const tasksSearchDefaults = {
   sortBy: 'updated' as TaskSortBy,
@@ -106,7 +94,6 @@ export function TaskList() {
   }
 
   const projects = useProjects()
-  const projectIdValues = ['', ...(projects.data ?? []).map((p) => p.id)]
 
   const { isLoading, tree: filteredTreeData } = useFilteredTaskTree({
     sortBy,
@@ -127,65 +114,21 @@ export function TaskList() {
     <div className="flex h-full flex-col">
       <ScreenHeaderBar>
         <SectionHeading level={2}>tasks</SectionHeading>
-        <div className="ml-auto flex items-center gap-2">
-          <label className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground hover:text-foreground">
-            <Checkbox
-              checked={showCompleted}
-              onCheckedChange={setShowCompleted}
-            />
-            show completed
-          </label>
-          <select
-            value={sortBy}
-            onChange={selectHandler(setSortBy, sortOptionValues)}
-            className="bg-transparent px-2 py-1 font-mono text-xs text-muted-foreground outline-none hover:text-foreground"
-            aria-label="Sort tasks"
-          >
-            {sortOptionValues.map((sort) => (
-              <option key={sort} value={sort}>
-                Sort: {sortLabels[sort]}
-              </option>
-            ))}
-          </select>
-          <select
-            value={projectId ?? ''}
-            onChange={selectHandler(setProjectId, projectIdValues)}
-            className="bg-transparent px-2 py-1 font-mono text-xs text-muted-foreground outline-none hover:text-foreground"
-            aria-label="Filter by project"
-          >
-            <option value="">All projects</option>
-            {(projects.data ?? []).map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.title}
-              </option>
-            ))}
-          </select>
-          <Button
-            type="button"
-            variant="secondary"
-            size="xs"
-            onClick={() => {
-              setIsGithubModalOpen(true)
-            }}
-            aria-label="Create task from GitHub"
-          >
-            <GithubMarkIcon className="size-3" />
-            <span className="hidden md:inline">from issue</span>
-          </Button>
-          <Button
-            type="button"
-            size="xs"
-            className="hidden md:inline-flex"
-            onClick={() => {
-              setIsCreating(true)
-            }}
-          >
-            + new
-            <KeybindHint className="text-muted-foreground">
-              {newTaskKeybinding.keys}
-            </KeybindHint>
-          </Button>
-        </div>
+        <TaskListToolbar
+          showCompleted={showCompleted}
+          onShowCompletedChange={setShowCompleted}
+          sortBy={sortBy}
+          onSortByChange={setSortBy}
+          projects={projects.data ?? []}
+          projectId={projectId}
+          onProjectIdChange={setProjectId}
+          onCreateFromGithub={() => {
+            setIsGithubModalOpen(true)
+          }}
+          onCreateNew={() => {
+            setIsCreating(true)
+          }}
+        />
       </ScreenHeaderBar>
 
       <TagFilterBar />
