@@ -22,6 +22,7 @@ export interface TaskListFilter {
   context?: TaskContext
   parentId?: string
   label?: string
+  projectId?: string
   sortBy?: TaskSortBy
   includeAncestors?: boolean
 }

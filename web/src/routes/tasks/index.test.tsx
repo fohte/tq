@@ -23,6 +23,15 @@ vi.mock('#hooks/use-filtered-tasks', () => ({
   useFilteredTaskTree: (...args: unknown[]) => mockUseFilteredTaskTree(...args),
 }))
 
+// The project filter select fetches the project list via useProjects. Stub
+// it so the route never issues a real fetch.
+const mockUseProjects = vi.fn()
+
+vi.mock('#hooks/use-projects', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+  useProjects: (...args: unknown[]) => mockUseProjects(...args),
+}))
+
 // TagFilterChips (rendered for real, not mocked below) reads tag counts via
 // useTagCounts, which calls useTaskList from '#hooks/use-tasks' directly —
 // independent of the useFilteredTaskList mock above. Stub it too so the
@@ -94,6 +103,7 @@ beforeEach(() => {
     categorized: { all: [], open: [], backlog: [], nonBacklog: [] },
     isLoading: false,
   })
+  mockUseProjects.mockReturnValue({ data: [] })
 })
 
 describe('TaskList sort selector', () => {
@@ -107,7 +117,11 @@ describe('TaskList sort selector', () => {
     // than being fused into one array (which `fohte/no-inline-object-in-expect`
     // forbids: it's for the same reason it disallows partial per-field checks
     // on a single output — bundling unrelated values back-defeats the point).
-    expect(mockUseFilteredTaskList.mock.calls[0]).toEqual(['updated', false])
+    expect(mockUseFilteredTaskList.mock.calls[0]).toEqual([
+      'updated',
+      false,
+      undefined,
+    ])
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
       { enabled: true, sortBy: 'updated', showCompleted: false },
     ])
@@ -126,6 +140,7 @@ describe('TaskList sort selector', () => {
     expect(mockUseFilteredTaskList.mock.calls.at(-1)).toEqual([
       'created',
       false,
+      undefined,
     ])
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
       { enabled: true, sortBy: 'created', showCompleted: false },
@@ -158,7 +173,11 @@ describe('TaskList "show completed" toggle', () => {
     expect(
       screen.getByRole('checkbox', { name: 'show completed' }),
     ).toBeChecked()
-    expect(mockUseFilteredTaskList.mock.calls.at(-1)).toEqual(['updated', true])
+    expect(mockUseFilteredTaskList.mock.calls.at(-1)).toEqual([
+      'updated',
+      true,
+      undefined,
+    ])
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
       { enabled: true, sortBy: 'updated', showCompleted: true },
     ])
