@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { ComponentProps } from 'react'
+import { useRef } from 'react'
 import { fn } from 'storybook/test'
 
 import { CreateTaskInlineExistingMenu } from '#components/task/create-task-inline-existing-menu'
@@ -37,23 +39,36 @@ const candidates: SearchResult[] = [
   },
 ]
 
+function CreateTaskInlineExistingMenuDemo(
+  props: Omit<ComponentProps<typeof CreateTaskInlineExistingMenu>, 'anchor'>,
+) {
+  const anchorRef = useRef<HTMLInputElement>(null)
+
+  return (
+    <div className="w-72">
+      <input
+        ref={anchorRef}
+        type="text"
+        defaultValue={props.title}
+        className="w-full rounded-md border border-input px-2 py-1 text-sm"
+      />
+      <CreateTaskInlineExistingMenu {...props} anchor={anchorRef} />
+    </div>
+  )
+}
+
 const meta = {
   title: 'Task/CreateTaskInlineExistingMenu',
-  component: CreateTaskInlineExistingMenu,
+  component: CreateTaskInlineExistingMenuDemo,
   parameters: {
     layout: 'centered',
   },
   args: {
+    open: true,
+    onOpenChange: fn(),
     onSelectCandidate: fn(),
   },
-  decorators: [
-    (Story) => (
-      <div className="relative w-72">
-        <Story />
-      </div>
-    ),
-  ],
-} satisfies Meta<typeof CreateTaskInlineExistingMenu>
+} satisfies Meta<typeof CreateTaskInlineExistingMenuDemo>
 
 export default meta
 type Story = StoryObj<typeof meta>

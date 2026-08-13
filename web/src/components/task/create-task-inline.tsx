@@ -6,6 +6,7 @@ import { CreateTaskInlineParentMenu } from '#components/task/create-task-inline-
 import { CreateTaskInputAccessoryBar } from '#components/task/create-task-input-accessory-bar'
 import { LinkExistingTaskDialog } from '#components/task/link-existing-task-dialog'
 import { ProjectChip } from '#components/task/project-chip'
+import { AnchoredPopup } from '#components/ui/anchored-popup'
 import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
@@ -61,7 +62,6 @@ export function CreateTaskInline({
   } | null>(null)
   const [isInputFocused, setIsInputFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const suggestionsRef = useRef<HTMLDivElement>(null)
 
   const createTask = useCreateTask()
   const { data: labelsData } = useLabels()
@@ -364,12 +364,12 @@ export function CreateTaskInline({
     parentId == null ? ['@', '>', '#', '%', '^'] : ['@', '>', '#', '%']
 
   return (
-    <div className="relative">
+    <div>
       <form
         onSubmit={handleSubmit}
         className="flex items-center gap-2 px-3 py-2"
       >
-        <div className="relative min-w-0 flex-1">
+        <div className="min-w-0 flex-1">
           <Input
             ref={inputRef}
             type="text"
@@ -394,36 +394,47 @@ export function CreateTaskInline({
           />
 
           {/* Suggestion dropdown */}
-          {showSuggestions && suggestions.length > 0 && (
-            <div
-              ref={suggestionsRef}
-              className="absolute top-full left-0 z-50 mt-1 w-48 rounded-md border border-border bg-popover py-1 shadow-md"
-            >
-              {suggestions.map((item, index) => (
-                <button
-                  key={item.value}
-                  type="button"
-                  className={cn(
-                    'w-full px-3 py-1.5 text-left text-sm',
-                    index === selectedIndex
-                      ? 'bg-accent text-accent-foreground'
-                      : 'text-popover-foreground hover:bg-accent/50',
-                  )}
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    applySuggestion(item)
-                  }}
-                >
-                  {cursorTrigger?.trigger}
-                  {item.display}
-                </button>
-              ))}
-            </div>
-          )}
+          <AnchoredPopup
+            open={showSuggestions && suggestions.length > 0}
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) setShowSuggestions(false)
+            }}
+            anchor={inputRef}
+            // The popup opens while the input keeps typing focus — Base
+            // UI's default initial-focus behavior would otherwise steal
+            // focus onto the first suggestion button.
+            initialFocus={false}
+            className="w-48 font-sans"
+          >
+            {suggestions.map((item, index) => (
+              <button
+                key={item.value}
+                type="button"
+                className={cn(
+                  'w-full px-3 py-1.5 text-left text-sm',
+                  index === selectedIndex
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-popover-foreground hover:bg-accent/50',
+                )}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  applySuggestion(item)
+                }}
+              >
+                {cursorTrigger?.trigger}
+                {item.display}
+              </button>
+            ))}
+          </AnchoredPopup>
 
           {/* Parent-picker dropdown */}
           {showParentMenu && (
             <CreateTaskInlineParentMenu
+              anchor={inputRef}
+              open={showParentMenu}
+              onOpenChange={(nextOpen) => {
+                if (!nextOpen) setCursorTrigger(null)
+              }}
               candidates={parentCandidates}
               highlightedIndex={parentMenuIndex}
               isLoading={isParentSearchFetching}
@@ -434,6 +445,11 @@ export function CreateTaskInline({
           {/* Combined create/existing-task dropdown */}
           {showExistingMenu && (
             <CreateTaskInlineExistingMenu
+              anchor={inputRef}
+              open={showExistingMenu}
+              onOpenChange={(nextOpen) => {
+                if (!nextOpen) dismissExistingMenu()
+              }}
               title={parsed.title.trim()}
               candidates={existingCandidates}
               highlightedIndex={existingMenuIndex}
