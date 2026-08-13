@@ -18,6 +18,7 @@ import {
   useDeleteSchedule,
   useUpdateSchedule,
 } from '#hooks/use-schedules'
+import { cn } from '#lib/utils'
 
 interface CreateScheduleModalProps {
   open: boolean
@@ -58,6 +59,37 @@ export const presetColors = [
   '#AA96DA',
   '#A8D8EA',
 ]
+
+/** Weekday toggle buttons shown when a weekly recurrence is selected. */
+export function WeekdayToggleRow({
+  daysOfWeek,
+  toggleDay,
+}: {
+  daysOfWeek: number[]
+  toggleDay: (day: number) => void
+}) {
+  return (
+    <div className="flex gap-1">
+      {dayLabels.map((label, idx) => (
+        <button
+          key={label}
+          type="button"
+          onClick={() => {
+            toggleDay(idx)
+          }}
+          className={cn(
+            'flex size-8 items-center justify-center border text-xs font-medium transition-colors',
+            daysOfWeek.includes(idx)
+              ? 'border-border-strong bg-surface-strong text-foreground'
+              : 'border-border text-muted-foreground hover:border-border-strong',
+          )}
+        >
+          {label.charAt(0)}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 /** Props shared by the PC and mobile schedule modal panels. */
 export interface SchedulePanelProps {

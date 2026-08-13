@@ -3,9 +3,9 @@ import { Clock, Layers, Palette, Repeat, X } from 'lucide-react'
 import type { SchedulePanelProps } from '#components/schedule/create-schedule-modal'
 import {
   contextValues,
-  dayLabels,
   presetColors,
   recurrenceValues,
+  WeekdayToggleRow,
 } from '#components/schedule/create-schedule-modal'
 import { Button } from '#components/ui/button'
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
@@ -143,25 +143,7 @@ export function ScheduleModalDesktopPanel({
             </InlineFieldGroup>
 
             {recurrenceType === 'weekly' && (
-              <div className="flex gap-1">
-                {dayLabels.map((label, idx) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => {
-                      toggleDay(idx)
-                    }}
-                    className={cn(
-                      'flex size-8 items-center justify-center border text-xs font-medium transition-colors',
-                      daysOfWeek.includes(idx)
-                        ? 'border-border-strong bg-surface-strong text-foreground'
-                        : 'border-border text-muted-foreground hover:border-border-strong',
-                    )}
-                  >
-                    {label.charAt(0)}
-                  </button>
-                ))}
-              </div>
+              <WeekdayToggleRow daysOfWeek={daysOfWeek} toggleDay={toggleDay} />
             )}
 
             {recurrenceType === 'monthly' && (

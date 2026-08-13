@@ -4,9 +4,9 @@ import type { SchedulePanelProps } from '#components/schedule/create-schedule-mo
 import {
   contextLabels,
   contextValues,
-  dayLabels,
   presetColors,
   recurrenceValues,
+  WeekdayToggleRow,
 } from '#components/schedule/create-schedule-modal'
 import {
   BottomSheetHeader,
@@ -179,25 +179,7 @@ export function ScheduleModalMobilePanel({
           </div>
 
           {recurrenceType === 'weekly' && (
-            <div className="flex gap-1">
-              {dayLabels.map((label, idx) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => {
-                    toggleDay(idx)
-                  }}
-                  className={cn(
-                    'flex size-8 items-center justify-center border text-xs font-medium transition-colors',
-                    daysOfWeek.includes(idx)
-                      ? 'border-border-strong bg-surface-strong text-foreground'
-                      : 'border-border text-muted-foreground hover:border-border-strong',
-                  )}
-                >
-                  {label.charAt(0)}
-                </button>
-              ))}
-            </div>
+            <WeekdayToggleRow daysOfWeek={daysOfWeek} toggleDay={toggleDay} />
           )}
 
           {startTime && endTime && startTime > endTime && (
