@@ -84,6 +84,7 @@ function TaskListColumnHeaderWithRow() {
 const meta = {
   title: 'Task/TaskListColumnHeader',
   component: TaskListColumnHeader,
+  tags: ['desktop-only'],
   parameters: {
     layout: 'centered',
   },
