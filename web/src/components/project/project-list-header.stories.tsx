@@ -42,6 +42,8 @@ const projects: Project[] = [
   },
 ]
 
+// Renders alongside ProjectListRow so a drift between the two components'
+// --project-list-columns usage shows up as a VRT diff.
 function ProjectListHeaderStory() {
   const rootRoute = createRootRoute({
     component: () => (
