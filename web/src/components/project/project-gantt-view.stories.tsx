@@ -163,8 +163,7 @@ const meta = {
     // range, and on the storybook-mobile project it collapses to
     // clientWidth=0 and overflows by hundreds to thousands of px.
     // TODO: investigate whether the Gantt view is usable at mobile width at
-    // all (or needs a different library / responsive strategy) — out of
-    // scope for this PR, which only adds the detection.
+    // all (or needs a different library / responsive strategy).
     overflowCheck: { disable: true },
   },
 } satisfies Meta<typeof ProjectGanttViewWithProviders>

@@ -353,8 +353,7 @@ export const FullPagePC: StoryObj<{
     // check varies by run (the main content area, a line-clamped
     // description, or the Milkdown editor's wrapper depending on its async
     // mount timing), so no single selector reliably scopes this out.
-    // TODO: make this layout responsive — out of scope for this PR, which
-    // only adds the detection.
+    // TODO: make this layout responsive.
     overflowCheck: { disable: true },
   },
   render: ({ task, pages, subtasks }) => (
