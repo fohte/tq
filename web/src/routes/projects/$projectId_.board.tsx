@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 
+import { LinkExistingProjectTaskMenu } from '#components/project/link-existing-project-task-menu'
 import { ProjectBoardHeader } from '#components/project/project-board-header'
 import {
   ProjectFilterBar,
@@ -27,6 +28,7 @@ function ProjectBoardPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [sortOption, setSortOption] = useState<SortOption>('manual')
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isLinkExistingOpen, setIsLinkExistingOpen] = useState(false)
   const [view, setView] = useState<ProjectView>('list')
 
   const isLoading = isProjectLoading || isTasksLoading
@@ -79,6 +81,9 @@ function ProjectBoardPage() {
             onAddTask={() => {
               setIsModalOpen(true)
             }}
+            onLinkExistingTask={() => {
+              setIsLinkExistingOpen(true)
+            }}
           />
 
           {/* Task list */}
@@ -108,6 +113,15 @@ function ProjectBoardPage() {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         projectId={projectId}
+      />
+
+      {/* Link existing task menu */}
+      <LinkExistingProjectTaskMenu
+        open={isLinkExistingOpen}
+        onOpenChange={setIsLinkExistingOpen}
+        projectId={projectId}
+        projectTitle={project.title}
+        excludedTaskIds={new Set((tasks ?? []).map((t) => t.id))}
       />
     </div>
   )

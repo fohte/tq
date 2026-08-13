@@ -58,6 +58,7 @@ vi.mock('#hooks/use-projects', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useProjectTasks: (...args: unknown[]) => mockUseProjectTasks(...args),
   useUpdateProject: () => ({ mutate: mockUpdateMutate }),
+  useProjects: () => ({ data: [] }),
   PROJECT_COLOR_PRESETS: [
     { name: 'Orange', hex: '#FF8400' },
     { name: 'Red', hex: '#FF5C33' },

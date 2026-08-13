@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 
 import { Button } from '#components/ui/button'
 import { TabStrip } from '#components/ui/tab-strip'
@@ -35,12 +35,14 @@ export function ProjectFilterBar({
   sortOption,
   onSortOptionChange,
   onAddTask,
+  onLinkExistingTask,
 }: {
   statusFilter: StatusFilter
   onStatusFilterChange: (filter: StatusFilter) => void
   sortOption: SortOption
   onSortOptionChange: (sort: SortOption) => void
   onAddTask?: () => void
+  onLinkExistingTask?: () => void
 }) {
   return (
     <div className="flex items-center gap-2 border-b border-border px-4 py-2">
@@ -64,6 +66,18 @@ export function ProjectFilterBar({
             </option>
           ))}
         </select>
+
+        {/* Link existing task button */}
+        {onLinkExistingTask && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onLinkExistingTask}
+            aria-label="Link existing task"
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+        )}
 
         {/* Add task button */}
         {onAddTask && (
