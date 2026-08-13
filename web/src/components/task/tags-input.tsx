@@ -121,6 +121,7 @@ export function TagsInput({
           <AnchoredPopup
             open={suggestions.length > 0}
             anchor={inputRef}
+            initialFocus={false}
             className="w-40"
           >
             {suggestions.map((name, index) => (

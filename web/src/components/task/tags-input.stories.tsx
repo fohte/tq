@@ -2,13 +2,26 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { useState } from 'react'
-import { expect } from 'storybook/test'
+import { expect, within } from 'storybook/test'
 
 import { TagsInput } from '#components/task/tags-input'
+import { labelKeys } from '#hooks/use-labels'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 })
+
+const suggestionsQueryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+})
+suggestionsQueryClient.setQueryData(labelKeys.all, [
+  {
+    id: '1',
+    name: 'urgent',
+    color: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  },
+])
 
 function TagsInputHarness({ initialLabels }: { initialLabels: string[] }) {
   const [labels, setLabels] = useState(initialLabels)
@@ -71,6 +84,30 @@ export const AddsNewTagOnEnter: Story = {
     await userEvent.keyboard('{Enter}')
 
     await expect(canvas.getByText('urgent')).toBeInTheDocument()
+  },
+}
+
+export const ShowsSuggestionsWithoutLosingFocus: Story = {
+  args: {
+    initialLabels: [],
+  },
+  decorators: [
+    (Story) => (
+      <QueryClientProvider client={suggestionsQueryClient}>
+        <Story />
+      </QueryClientProvider>
+    ),
+  ],
+  play: async ({ canvasElement, canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: '+ add tag' }))
+    const input = canvas.getByPlaceholderText('tag name')
+    await userEvent.type(input, 'urg')
+
+    // AnchoredPopup renders the suggestion list through a portal into
+    // document.body, so it isn't inside canvasElement.
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(await body.findByText('#urgent')).toBeVisible()
+    await expect(input).toHaveFocus()
   },
 }
 
