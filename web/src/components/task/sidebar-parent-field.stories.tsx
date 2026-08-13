@@ -137,9 +137,11 @@ export const Editing: Story = {
   ],
   play: async ({ canvasElement, userEvent }) => {
     const canvas = within(canvasElement)
+    const body = within(canvasElement.ownerDocument.body)
 
     await userEvent.click(canvas.getByText('—'))
     await canvas.findByPlaceholderText('Search tasks...')
+    await body.findByText('Type to search...')
   },
 }
 

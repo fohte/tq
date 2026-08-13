@@ -63,6 +63,13 @@ export function SidebarParentField({
           onChange={(e) => {
             setQuery(e.target.value)
           }}
+          onBlur={stopEditing}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault()
+              stopEditing()
+            }
+          }}
           placeholder="Search tasks..."
           autoFocus
           className={fieldValueClassName}
