@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { FolderKanban } from 'lucide-react'
 import { useState } from 'react'
 
 import { ProjectFormModal } from '#components/project/project-form-modal'
+import { ProjectListEmptyState } from '#components/project/project-list-empty-state'
+import { ProjectListHeader } from '#components/project/project-list-header'
 import { ProjectListRow } from '#components/project/project-list-row'
 import { Button } from '#components/ui/button'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
@@ -48,14 +49,7 @@ function ProjectList() {
         </Button>
       </ScreenHeaderBar>
 
-      {/* Column header (desktop only) */}
-      <div className="hidden grid-cols-(--project-list-columns) border-b border-border bg-card px-3.5 py-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint md:grid md:items-center md:gap-3">
-        <span />
-        <span>PROJECT</span>
-        <span>STATUS</span>
-        <span>PROGRESS</span>
-        <span className="text-right">TARGET</span>
-      </div>
+      <ProjectListHeader />
 
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
@@ -67,18 +61,11 @@ function ProjectList() {
             <ProjectListRow key={project.id} project={project} />
           ))
         ) : (
-          <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <FolderKanban className="size-10 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">No projects yet</p>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowCreate(true)
-              }}
-            >
-              Create your first project
-            </Button>
-          </div>
+          <ProjectListEmptyState
+            onCreate={() => {
+              setShowCreate(true)
+            }}
+          />
         )}
       </div>
 
