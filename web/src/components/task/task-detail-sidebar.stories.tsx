@@ -56,10 +56,15 @@ function Providers({
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
-  // TaskSidebar/TaskSidebarMobile always mount SidebarParentField and
-  // SidebarTagsField, which read these regardless of the story's task.
+  // TaskSidebar/TaskSidebarMobile always mount SidebarParentField,
+  // SidebarProjectField, and SidebarTagsField, which read these regardless
+  // of the story's task.
   queryClient.setQueryData(taskKeys.list(undefined), [])
   queryClient.setQueryData(labelKeys.all, [])
+  queryClient.setQueryData(
+    projectKeys.list(undefined),
+    project ? [project] : [],
+  )
   if (project) {
     queryClient.setQueryData(projectKeys.detail(project.id), project)
   }

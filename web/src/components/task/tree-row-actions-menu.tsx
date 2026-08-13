@@ -1,4 +1,10 @@
-import { CornerUpLeft, MoreHorizontal, Plus, Search } from 'lucide-react'
+import {
+  CornerUpLeft,
+  FolderInput,
+  MoreHorizontal,
+  Plus,
+  Search,
+} from 'lucide-react'
 
 import {
   ActionSheet,
@@ -24,11 +30,13 @@ export function TreeRowActionsMenu({
   onAddSubtask,
   onLinkExisting,
   onMoveUnder,
+  onSetProject,
 }: {
   triggerClassName?: string
   onAddSubtask: () => void
   onLinkExisting: () => void
   onMoveUnder: () => void
+  onSetProject: () => void
 }) {
   return (
     <>
@@ -62,6 +70,10 @@ export function TreeRowActionsMenu({
           <DropdownMenuItem onClick={onMoveUnder}>
             <CornerUpLeft />
             move under…
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onSetProject}>
+            <FolderInput />
+            set project…
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -99,6 +111,12 @@ export function TreeRowActionsMenu({
             onClick={onMoveUnder}
           >
             move under…
+          </ActionSheetItem>
+          <ActionSheetItem
+            icon={<FolderInput className="h-4 w-4" />}
+            onClick={onSetProject}
+          >
+            set project…
           </ActionSheetItem>
         </ActionSheetContent>
       </ActionSheet>

@@ -20,6 +20,7 @@ const meta = {
     onAddSubtask: fn(),
     onLinkExisting: fn(),
     onMoveUnder: fn(),
+    onSetProject: fn(),
   },
 } satisfies Meta<typeof TreeRowActionsMenu>
 
@@ -49,6 +50,7 @@ export const DesktopMenuOpen: Story = {
     await expect(await body.findByText('add subtask')).toBeInTheDocument()
     await expect(body.getByText('link existing task…')).toBeInTheDocument()
     await expect(body.getByText('move under…')).toBeInTheDocument()
+    await expect(body.getByText('set project…')).toBeInTheDocument()
   },
 }
 
@@ -64,5 +66,6 @@ export const MobileActionSheetOpen: Story = {
     await expect(await body.findByText('add subtask')).toBeInTheDocument()
     await expect(body.getByText('link existing task…')).toBeInTheDocument()
     await expect(body.getByText('move under…')).toBeInTheDocument()
+    await expect(body.getByText('set project…')).toBeInTheDocument()
   },
 }
