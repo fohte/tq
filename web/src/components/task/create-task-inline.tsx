@@ -3,10 +3,10 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { CreateTaskInlineExistingMenu } from '#components/task/create-task-inline-existing-menu'
 import { CreateTaskInlineParentMenu } from '#components/task/create-task-inline-parent-menu'
+import { CreateTaskInlineSuggestionMenu } from '#components/task/create-task-inline-suggestion-menu'
 import { CreateTaskInputAccessoryBar } from '#components/task/create-task-input-accessory-bar'
 import { LinkExistingTaskDialog } from '#components/task/link-existing-task-dialog'
 import { ProjectChip } from '#components/task/project-chip'
-import { AnchoredPopup } from '#components/ui/anchored-popup'
 import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
@@ -24,7 +24,6 @@ import {
   type TaskContext,
   type TriggerChar,
 } from '#lib/task-input-parser'
-import { cn } from '#lib/utils'
 
 export interface InheritedTaskAttributes {
   context: TaskContext
@@ -394,68 +393,43 @@ export function CreateTaskInline({
           />
 
           {/* Suggestion dropdown */}
-          <AnchoredPopup
+          <CreateTaskInlineSuggestionMenu
+            anchor={inputRef}
             open={showSuggestions && suggestions.length > 0}
             onOpenChange={(nextOpen) => {
               if (!nextOpen) setShowSuggestions(false)
             }}
-            anchor={inputRef}
-            // The popup opens while the input keeps typing focus — Base
-            // UI's default initial-focus behavior would otherwise steal
-            // focus onto the first suggestion button.
-            initialFocus={false}
-            className="w-48 font-sans"
-          >
-            {suggestions.map((item, index) => (
-              <button
-                key={item.value}
-                type="button"
-                className={cn(
-                  'w-full px-3 py-1.5 text-left text-sm',
-                  index === selectedIndex
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-popover-foreground hover:bg-accent/50',
-                )}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  applySuggestion(item)
-                }}
-              >
-                {cursorTrigger?.trigger}
-                {item.display}
-              </button>
-            ))}
-          </AnchoredPopup>
+            trigger={cursorTrigger?.trigger}
+            suggestions={suggestions}
+            selectedIndex={selectedIndex}
+            onSelectSuggestion={applySuggestion}
+          />
 
           {/* Parent-picker dropdown */}
-          {showParentMenu && (
-            <CreateTaskInlineParentMenu
-              anchor={inputRef}
-              open={showParentMenu}
-              onOpenChange={(nextOpen) => {
-                if (!nextOpen) setCursorTrigger(null)
-              }}
-              candidates={parentCandidates}
-              highlightedIndex={parentMenuIndex}
-              isLoading={isParentSearchFetching}
-              onSelectCandidate={applyParentSelection}
-            />
-          )}
+          <CreateTaskInlineParentMenu
+            anchor={inputRef}
+            open={showParentMenu}
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) setCursorTrigger(null)
+            }}
+            candidates={parentCandidates}
+            highlightedIndex={parentMenuIndex}
+            isLoading={isParentSearchFetching}
+            onSelectCandidate={applyParentSelection}
+          />
 
           {/* Combined create/existing-task dropdown */}
-          {showExistingMenu && (
-            <CreateTaskInlineExistingMenu
-              anchor={inputRef}
-              open={showExistingMenu}
-              onOpenChange={(nextOpen) => {
-                if (!nextOpen) dismissExistingMenu()
-              }}
-              title={parsed.title.trim()}
-              candidates={existingCandidates}
-              highlightedIndex={existingMenuIndex}
-              onSelectCandidate={selectCandidate}
-            />
-          )}
+          <CreateTaskInlineExistingMenu
+            anchor={inputRef}
+            open={showExistingMenu}
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) dismissExistingMenu()
+            }}
+            title={parsed.title.trim()}
+            candidates={existingCandidates}
+            highlightedIndex={existingMenuIndex}
+            onSelectCandidate={selectCandidate}
+          />
         </div>
 
         <Button
