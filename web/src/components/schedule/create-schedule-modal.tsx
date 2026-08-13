@@ -6,6 +6,7 @@ import {
   BottomSheetPanel,
 } from '#components/ui/bottom-sheet'
 import { Button } from '#components/ui/button'
+import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
 import {
   Dialog,
   DialogHeaderBar,
@@ -26,14 +27,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '#components/ui/select'
-import type { CreateScheduleInput } from '#hooks/use-schedules'
-import { useCreateSchedule } from '#hooks/use-schedules'
+import type {
+  CreateScheduleInput,
+  Schedule,
+  UpdateScheduleInput,
+} from '#hooks/use-schedules'
+import {
+  useCreateSchedule,
+  useDeleteSchedule,
+  useUpdateSchedule,
+} from '#hooks/use-schedules'
 import { selectValueHandler } from '#lib/form-utils'
 import { cn } from '#lib/utils'
 
 interface CreateScheduleModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Presence switches the modal into edit mode. */
+  schedule?: Schedule
 }
 
 type ContextValue = 'work' | 'personal'
@@ -67,30 +78,66 @@ const presetColors = [
   '#A8D8EA',
 ]
 
+function scheduleTimeOfDay(isoDateTime: string) {
+  return isoDateTime.slice(11, 16)
+}
+
+function scheduleContext(schedule: Schedule | undefined): ContextValue | '' {
+  if (schedule?.context === 'work' || schedule?.context === 'personal') {
+    return schedule.context
+  }
+  return ''
+}
+
 export function CreateScheduleModal({
   open,
   onOpenChange,
+  schedule,
 }: CreateScheduleModalProps) {
-  const [title, setTitle] = useState('')
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
-  const [recurrenceType, setRecurrenceType] = useState<RecurrenceType | ''>('')
-  const [daysOfWeek, setDaysOfWeek] = useState<number[]>([])
-  const [dayOfMonth, setDayOfMonth] = useState('')
-  const [context, setContext] = useState<ContextValue | ''>('')
-  const [color, setColor] = useState('')
+  const [title, setTitle] = useState(schedule?.title ?? '')
+  const [startTime, setStartTime] = useState(
+    schedule ? scheduleTimeOfDay(schedule.start) : '',
+  )
+  const [endTime, setEndTime] = useState(
+    schedule ? scheduleTimeOfDay(schedule.end) : '',
+  )
+  const [recurrenceType, setRecurrenceType] = useState<RecurrenceType | ''>(
+    schedule?.recurrence?.type ?? '',
+  )
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>(
+    schedule?.recurrence?.daysOfWeek ?? [],
+  )
+  const [dayOfMonth, setDayOfMonth] = useState(
+    schedule?.recurrence?.dayOfMonth != null
+      ? String(schedule.recurrence.dayOfMonth)
+      : '',
+  )
+  const [context, setContext] = useState<ContextValue | ''>(
+    scheduleContext(schedule),
+  )
+  const [color, setColor] = useState(schedule?.color ?? '')
   const createSchedule = useCreateSchedule()
+  const updateSchedule = useUpdateSchedule()
+  const deleteSchedule = useDeleteSchedule()
+  const isPending =
+    createSchedule.isPending ||
+    updateSchedule.isPending ||
+    deleteSchedule.isPending
 
   const resetForm = useCallback(() => {
-    setTitle('')
-    setStartTime('')
-    setEndTime('')
-    setRecurrenceType('')
-    setDaysOfWeek([])
-    setDayOfMonth('')
-    setContext('')
-    setColor('')
-  }, [])
+    setTitle(schedule?.title ?? '')
+    setStartTime(schedule ? scheduleTimeOfDay(schedule.start) : '')
+    setEndTime(schedule ? scheduleTimeOfDay(schedule.end) : '')
+    setRecurrenceType(schedule?.recurrence?.type ?? '')
+    setDaysOfWeek(schedule?.recurrence?.daysOfWeek ?? [])
+    setDayOfMonth(
+      schedule?.recurrence?.dayOfMonth != null
+        ? String(schedule.recurrence.dayOfMonth)
+        : '',
+    )
+    setContext(scheduleContext(schedule))
+    setColor(schedule?.color ?? '')
+  }, [schedule])
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -103,35 +150,53 @@ export function CreateScheduleModal({
   )
 
   const handleSubmit = () => {
-    if (!title.trim() || !startTime || !endTime || createSchedule.isPending)
+    if (!title.trim() || !startTime || !endTime || isPending) return
+
+    const recurrence = recurrenceType
+      ? {
+          type: recurrenceType,
+          interval: 1,
+          ...(recurrenceType === 'weekly' && daysOfWeek.length > 0
+            ? { daysOfWeek }
+            : {}),
+          ...(recurrenceType === 'monthly' && dayOfMonth
+            ? { dayOfMonth: Number.parseInt(dayOfMonth, 10) }
+            : {}),
+        }
+      : null
+
+    if (schedule) {
+      const input: UpdateScheduleInput = {
+        title: title.trim(),
+        startTime,
+        endTime,
+        recurrence,
+        context: context || null,
+        color: color || null,
+      }
+      updateSchedule.mutate(
+        { id: schedule.scheduleId, input },
+        {
+          onSuccess: () => {
+            handleOpenChange(false)
+          },
+        },
+      )
       return
+    }
 
     const input: CreateScheduleInput = {
       title: title.trim(),
       startTime,
       endTime,
-      ...(recurrenceType
-        ? {
-            recurrence: {
-              type: recurrenceType,
-              interval: 1,
-              ...(recurrenceType === 'weekly' && daysOfWeek.length > 0
-                ? { daysOfWeek }
-                : {}),
-              ...(recurrenceType === 'monthly' && dayOfMonth
-                ? { dayOfMonth: Number.parseInt(dayOfMonth, 10) }
-                : {}),
-            },
-          }
-        : {}),
+      ...(recurrence ? { recurrence } : {}),
       ...(context ? { context } : {}),
       ...(color ? { color } : {}),
     }
 
     createSchedule.mutate(input, {
       onSuccess: () => {
-        resetForm()
-        onOpenChange(false)
+        handleOpenChange(false)
       },
     })
   }
@@ -162,7 +227,7 @@ export function CreateScheduleModal({
               {/* Header */}
               <DialogHeaderBar>
                 <span className="text-base font-semibold text-foreground">
-                  New Schedule
+                  {schedule ? 'Edit Schedule' : 'New Schedule'}
                 </span>
                 <Button
                   variant="ghost"
@@ -348,22 +413,41 @@ export function CreateScheduleModal({
               </div>
 
               {/* Footer */}
-              <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    handleOpenChange(false)
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!canSubmit || createSchedule.isPending}
-                  className="h-9 rounded-lg px-4"
-                >
-                  Create Schedule
-                </Button>
+              <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border px-6 py-3">
+                <div>
+                  {schedule && (
+                    <DeleteConfirmButton
+                      title="Delete schedule"
+                      description="Are you sure you want to delete this schedule? This action cannot be undone."
+                      onDelete={() => {
+                        deleteSchedule.mutate(schedule.scheduleId, {
+                          onSuccess: () => {
+                            handleOpenChange(false)
+                          },
+                        })
+                      }}
+                      disabled={isPending}
+                      aria-label="Delete schedule"
+                    />
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      handleOpenChange(false)
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!canSubmit || isPending}
+                    className="h-9 rounded-lg px-4"
+                  >
+                    {schedule ? 'Save' : 'Create Schedule'}
+                  </Button>
+                </div>
               </div>
             </ModalPanel>
           </div>
@@ -374,7 +458,7 @@ export function CreateScheduleModal({
               {/* Header */}
               <BottomSheetHeader>
                 <span className="text-base font-semibold text-foreground">
-                  New Schedule
+                  {schedule ? 'Edit Schedule' : 'New Schedule'}
                 </span>
                 <Button
                   variant="ghost"
@@ -549,14 +633,32 @@ export function CreateScheduleModal({
                   </div>
                 </div>
 
-                {/* Create button */}
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!canSubmit || createSchedule.isPending}
-                  className="h-12 w-full rounded-lg text-base font-semibold"
-                >
-                  Create
-                </Button>
+                {/* Submit row */}
+                <div className="flex items-center gap-2">
+                  {schedule && (
+                    <DeleteConfirmButton
+                      title="Delete schedule"
+                      description="Are you sure you want to delete this schedule? This action cannot be undone."
+                      onDelete={() => {
+                        deleteSchedule.mutate(schedule.scheduleId, {
+                          onSuccess: () => {
+                            handleOpenChange(false)
+                          },
+                        })
+                      }}
+                      disabled={isPending}
+                      aria-label="Delete schedule"
+                      iconClassName="size-5"
+                    />
+                  )}
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!canSubmit || isPending}
+                    className="h-12 flex-1 rounded-lg text-base font-semibold"
+                  >
+                    {schedule ? 'Save' : 'Create'}
+                  </Button>
+                </div>
               </div>
             </BottomSheetPanel>
           </div>
