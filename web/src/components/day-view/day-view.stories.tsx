@@ -239,7 +239,7 @@ const meta = {
     // by a fixed ~80px whenever its vertical scrollbar is forced on — a
     // library-internal scrollbar-gutter sizing artifact, not app layout (same
     // cause as CalendarGrid/CalendarView's disable).
-    overflowCheck: { disable: true },
+    overflowCheck: { ignoreSelectors: ['.fc-scroller'] },
   },
   decorators: [
     (Story) => (

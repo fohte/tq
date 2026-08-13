@@ -348,11 +348,13 @@ export const FullPagePC: StoryObj<{
   },
   parameters: {
     layout: 'fullscreen',
-    // Intermittent under full-suite parallel load (passes consistently when
-    // this file runs in isolation): the Milkdown-based description editor
-    // hasn't finished its async mount by the time this check measures, so
-    // its wrapper's width is briefly narrower than its settled content.
-    // Timing-dependent, not a deterministic app layout bug.
+    // This sidebar layout isn't responsive, so at the storybook-mobile
+    // project's 375px viewport it overflows — but which element trips the
+    // check varies by run (the main content area, a line-clamped
+    // description, or the Milkdown editor's wrapper depending on its async
+    // mount timing), so no single selector reliably scopes this out.
+    // TODO: make this layout responsive — out of scope for this PR, which
+    // only adds the detection.
     overflowCheck: { disable: true },
   },
   render: ({ task, pages, subtasks }) => (
