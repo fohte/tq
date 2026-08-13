@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -26,26 +26,34 @@ const mockUseCreateSchedule = vi.mocked(useCreateSchedule)
 const mockUseUpdateSchedule = vi.mocked(useUpdateSchedule)
 const mockUseDeleteSchedule = vi.mocked(useDeleteSchedule)
 
+function partialMutation<T>(partial: Partial<T>): T {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
+  return partial as T
+}
+
 function setupMocks() {
   const createMutate = vi.fn()
   const updateMutate = vi.fn()
   const deleteMutate = vi.fn()
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
-  mockUseCreateSchedule.mockReturnValue({
-    mutate: createMutate,
-    isPending: false,
-  } as unknown as ReturnType<typeof useCreateSchedule>)
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
-  mockUseUpdateSchedule.mockReturnValue({
-    mutate: updateMutate,
-    isPending: false,
-  } as unknown as ReturnType<typeof useUpdateSchedule>)
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
-  mockUseDeleteSchedule.mockReturnValue({
-    mutate: deleteMutate,
-    isPending: false,
-  } as unknown as ReturnType<typeof useDeleteSchedule>)
+  mockUseCreateSchedule.mockReturnValue(
+    partialMutation<ReturnType<typeof useCreateSchedule>>({
+      mutate: createMutate,
+      isPending: false,
+    }),
+  )
+  mockUseUpdateSchedule.mockReturnValue(
+    partialMutation<ReturnType<typeof useUpdateSchedule>>({
+      mutate: updateMutate,
+      isPending: false,
+    }),
+  )
+  mockUseDeleteSchedule.mockReturnValue(
+    partialMutation<ReturnType<typeof useDeleteSchedule>>({
+      mutate: deleteMutate,
+      isPending: false,
+    }),
+  )
 
   return { createMutate, updateMutate, deleteMutate }
 }
@@ -111,6 +119,30 @@ describe('CreateScheduleModal', () => {
     expect(
       screen.queryByRole('button', { name: 'Delete schedule' }),
     ).not.toBeInTheDocument()
+  })
+
+  it('creates a new schedule with the entered values when Create Schedule is clicked', async () => {
+    const { createMutate } = setupMocks()
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, {})
+
+    const titleInputs = screen.getAllByPlaceholderText('Schedule title')
+    await user.type(atIndex(titleInputs, 0), 'Team sync')
+
+    const timeInputs = Array.from(
+      document.body.querySelectorAll<HTMLInputElement>('input[type="time"]'),
+    )
+    fireEvent.change(atIndex(timeInputs, 0), { target: { value: '09:00' } })
+    fireEvent.change(atIndex(timeInputs, 1), { target: { value: '09:30' } })
+
+    await user.click(screen.getByRole('button', { name: 'Create Schedule' }))
+
+    expect(createMutate).toHaveBeenCalledTimes(1)
+    expect(assertDefined(createMutate.mock.calls[0])[0]).toEqual({
+      title: 'Team sync',
+      startTime: '09:00',
+      endTime: '09:30',
+    })
   })
 
   it('updates the schedule with the edited values when Save is clicked', async () => {
