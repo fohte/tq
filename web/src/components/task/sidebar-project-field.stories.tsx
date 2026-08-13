@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
+import { expect, userEvent, waitFor, within } from 'storybook/test'
 
 import { SidebarProjectField } from '#components/task/sidebar-project-field'
 import { type Project, projectKeys } from '#hooks/use-projects'
@@ -83,4 +85,51 @@ export const WithProject: Story = {
       </QueryClientProvider>
     ),
   ],
+}
+
+// The Select is controlled by the `projectId` prop, so a real selection
+// never visibly updates the trigger in this story (the story's args never
+// change) — the PATCH request body is what actually proves the NO_PROJECT
+// sentinel resolves to the right projectId.
+let patchedBody: unknown = null
+
+export const SelectProject: Story = {
+  args: {
+    taskId,
+    projectId: null,
+  },
+  decorators: [
+    (Story) => (
+      <QueryClientProvider
+        client={createSeededQueryClient([projectA, projectB])}
+      >
+        <Story />
+      </QueryClientProvider>
+    ),
+  ],
+  parameters: {
+    msw: {
+      handlers: [
+        http.patch('/api/tasks/:id', async ({ request }) => {
+          patchedBody = await request.json()
+          return HttpResponse.json({})
+        }),
+        http.get('/api/projects', () =>
+          HttpResponse.json([projectA, projectB]),
+        ),
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    patchedBody = null
+    const canvas = within(canvasElement)
+    const body = within(canvasElement.ownerDocument.body)
+
+    await userEvent.click(canvas.getByRole('combobox'))
+    await userEvent.click(await body.findByText(projectB.title))
+
+    await waitFor(async () => {
+      await expect(patchedBody).toEqual({ projectId: projectB.id })
+    })
+  },
 }
