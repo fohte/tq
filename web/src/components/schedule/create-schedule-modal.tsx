@@ -117,6 +117,11 @@ export interface SchedulePanelProps {
   handleSubmit: () => void
 }
 
+/**
+ * Cross-midnight schedules are expanded into two per-date blocks by the
+ * backend, so slicing either block's start/end yields a 00:00-rounded value
+ * for the far side of midnight instead of the original startTime/endTime.
+ */
 function scheduleTimeOfDay(isoDateTime: string) {
   return isoDateTime.slice(11, 16)
 }
@@ -194,7 +199,7 @@ export function CreateScheduleModal({
     const recurrence = recurrenceType
       ? {
           type: recurrenceType,
-          interval: 1,
+          interval: schedule?.recurrence?.interval ?? 1,
           ...(recurrenceType === 'weekly' && daysOfWeek.length > 0
             ? { daysOfWeek }
             : {}),
