@@ -10,7 +10,7 @@ import {
 } from '#components/task/create-task-inline'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
-import { TaskGridRow } from '#components/task/task-grid-row'
+import { TaskListColumnHeader } from '#components/task/task-list-column-header'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { Button } from '#components/ui/button'
 import { Checkbox } from '#components/ui/checkbox'
@@ -18,19 +18,13 @@ import { GithubMarkIcon } from '#components/ui/github-mark-icon'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
-import { TabStrip } from '#components/ui/tab-strip'
-import {
-  useFilteredTaskList,
-  useFilteredTaskTree,
-} from '#hooks/use-filtered-tasks'
+import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
 import { useNewTaskShortcutListener } from '#hooks/use-new-task-shortcut'
 import { useProjects } from '#hooks/use-projects'
 import type { TaskSortBy } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { selectHandler } from '#lib/form-utils'
 import { newTaskKeybinding } from '#lib/keybindings'
-
-type Tab = 'all' | 'backlog'
 
 const sortOptionValues = [
   'updated',
@@ -43,27 +37,23 @@ const sortLabels: Record<TaskSortBy, string> = {
 }
 
 const tasksSearchDefaults = {
-  activeTab: 'all' as Tab,
   sortBy: 'updated' as TaskSortBy,
   showCompleted: false,
 }
 
 interface TasksSearch {
-  activeTab?: Tab
   sortBy?: TaskSortBy
   showCompleted?: boolean
   projectId?: string
 }
 
 function validateSearch(search: Record<string, unknown>): TasksSearch {
-  const activeTab: Tab = search['activeTab'] === 'backlog' ? 'backlog' : 'all'
   const sortBy: TaskSortBy =
     sortOptionValues.find((value) => value === search['sortBy']) ?? 'updated'
   const showCompleted = search['showCompleted'] === true
   const projectId =
     typeof search['projectId'] === 'string' ? search['projectId'] : undefined
   return {
-    activeTab,
     sortBy,
     showCompleted,
     ...(projectId != null ? { projectId } : {}),
@@ -78,24 +68,8 @@ export const Route = createFileRoute('/tasks/')({
   component: TaskList,
 })
 
-function TaskListColumnHeader() {
-  return (
-    <div className="hidden grid-cols-(--task-row-columns) items-center gap-2 border-b border-border bg-card px-3 py-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint md:grid">
-      <span />
-      <span />
-      <span>TITLE</span>
-      <span>TAGS</span>
-      <span>LINK</span>
-      <span className="text-right">EST</span>
-      <span className="text-right">DUE</span>
-      <span />
-    </div>
-  )
-}
-
 export function TaskList() {
   const {
-    activeTab = 'all',
     sortBy = 'updated',
     showCompleted = false,
     projectId,
@@ -105,12 +79,6 @@ export function TaskList() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isGithubModalOpen, setIsGithubModalOpen] = useState(false)
 
-  const setActiveTab = (tab: Tab) => {
-    void navigate({
-      search: (prev) => ({ ...prev, activeTab: tab }),
-      replace: true,
-    })
-  }
   const setSortBy = (sort: TaskSortBy) => {
     void navigate({
       search: (prev) => ({ ...prev, sortBy: sort }),
@@ -140,17 +108,12 @@ export function TaskList() {
   const projects = useProjects()
   const projectIdValues = ['', ...(projects.data ?? []).map((p) => p.id)]
 
-  const tasks = useFilteredTaskList({ sortBy, showCompleted, projectId })
-  const { isLoading: isTreeLoading, tree: filteredTreeData } =
-    useFilteredTaskTree({
-      enabled: activeTab === 'all',
-      sortBy,
-      showCompleted,
-      projectId,
-    })
-  const treeOutliner = useTreeOutliner(filteredTreeData, {
-    enabled: activeTab === 'all',
+  const { isLoading, tree: filteredTreeData } = useFilteredTaskTree({
+    sortBy,
+    showCompleted,
+    projectId,
   })
+  const treeOutliner = useTreeOutliner(filteredTreeData, { enabled: true })
 
   useNewTaskShortcutListener(
     useCallback(() => {
@@ -158,44 +121,12 @@ export function TaskList() {
     }, []),
   )
 
-  const displayTasks = (() => {
-    switch (activeTab) {
-      case 'all':
-        return tasks.all
-      case 'backlog':
-        return tasks.backlog
-    }
-  })()
-
-  const showTree = activeTab === 'all'
-  const loading = showTree ? isTreeLoading : tasks.isLoading
-  const isEmpty = showTree
-    ? filteredTreeData.length === 0
-    : displayTasks.length === 0
+  const isEmpty = filteredTreeData.length === 0
 
   return (
     <div className="flex h-full flex-col">
       <ScreenHeaderBar>
         <SectionHeading level={2}>tasks</SectionHeading>
-        <TabStrip
-          className="ml-2.5"
-          value={activeTab}
-          onChange={setActiveTab}
-          options={[
-            { value: 'all', label: 'all' },
-            {
-              value: 'backlog',
-              label: (
-                <>
-                  backlog{' '}
-                  <span className="text-muted-foreground-faint">
-                    {tasks.backlog.length}
-                  </span>
-                </>
-              ),
-            },
-          ]}
-        />
         <div className="ml-auto flex items-center gap-2">
           <label className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground hover:text-foreground">
             <Checkbox
@@ -284,15 +215,15 @@ export function TaskList() {
 
       {/* Task list */}
       <div className="flex-1 overflow-auto">
-        {loading ? (
+        {isLoading ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             Loading...
           </div>
         ) : isEmpty ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
-            {activeTab === 'backlog' ? 'No backlog tasks' : 'No tasks yet'}
+            No tasks yet
           </div>
-        ) : showTree ? (
+        ) : (
           <div className="py-1" data-testid="task-tree">
             {filteredTreeData.map((node) => (
               <TreeTaskGridRow
@@ -309,12 +240,6 @@ export function TaskList() {
                 onIndentOutlinerInput={treeOutliner.indentOutlinerInput}
                 onOutdentOutlinerInput={treeOutliner.outdentOutlinerInput}
               />
-            ))}
-          </div>
-        ) : (
-          <div className="py-1">
-            {displayTasks.map((task) => (
-              <TaskGridRow key={task.id} task={task} />
             ))}
           </div>
         )}

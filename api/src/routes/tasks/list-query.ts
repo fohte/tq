@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import {
   labels,
+  projects,
   taskComments,
   taskGithubLinks,
   taskLabels,
@@ -84,9 +85,27 @@ function buildConditions(query: ListTasksQuery) {
     conditions.push(eq(tasks.parentId, parentId))
   }
 
-  const projectId = parsed?.projectId ?? query.projectId
-  if (projectId != null) {
-    conditions.push(eq(tasks.projectId, projectId))
+  const projectIdentifier = parsed?.projectId ?? query.projectId
+  if (projectIdentifier != null) {
+    // UUID-shaped values are treated as an id match, not a title match, even
+    // though `projects.title` has no format constraint and could coincide.
+    if (z.uuid().safeParse(projectIdentifier).success) {
+      conditions.push(eq(tasks.projectId, projectIdentifier))
+    } else {
+      conditions.push(
+        exists(
+          db
+            .select({ _: sql`1` })
+            .from(projects)
+            .where(
+              and(
+                eq(projects.id, tasks.projectId),
+                eq(projects.title, projectIdentifier),
+              ),
+            ),
+        ),
+      )
+    }
   }
 
   if (query.hasEstimate === true) {

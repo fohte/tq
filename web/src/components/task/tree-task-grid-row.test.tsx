@@ -24,15 +24,16 @@ const mockUpdateStatusMutate = vi.fn()
 // actually navigating.
 const mockLinkOnClick = vi.fn()
 
-// LinkExistingTaskMenu/MoveUnderTaskMenu (rendered unconditionally by every
-// row, controlled via their own `open` prop) also pull from this module.
-// Both dialogs start closed, so their queries stay disabled — these stubs
-// only need to exist, not do anything.
+// LinkExistingTaskMenu/MoveUnderTaskMenu/SetProjectMenu (rendered
+// unconditionally by every row, controlled via their own `open` prop) also
+// pull from this module. All dialogs start closed, so their queries stay
+// disabled — these stubs only need to exist, not do anything.
 vi.mock('#hooks/use-tasks', () => ({
   useCompleteTask: () => ({ mutate: mockMutate }),
   useUpdateTaskStatus: () => ({ mutate: mockUpdateStatusMutate }),
   useTaskList: () => ({ categorized: { all: [] } }),
   useUpdateTaskParent: () => ({ mutate: vi.fn() }),
+  useUpdateTask: () => ({ mutate: vi.fn() }),
 }))
 
 // Only Link is stubbed (to spy on mockLinkOnClick instead of really

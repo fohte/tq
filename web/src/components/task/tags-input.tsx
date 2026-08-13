@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
+import { AnchoredPopup } from '#components/ui/anchored-popup'
 import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
@@ -18,6 +19,7 @@ export function TagsInput({
   const [isAdding, setIsAdding] = useState(false)
   const [input, setInput] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const suggestions = useMemo(() => {
     const existing = new Set(labels)
@@ -101,8 +103,9 @@ export function TagsInput({
       ))}
 
       {isAdding ? (
-        <div className="relative">
+        <>
           <Input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => {
@@ -115,29 +118,32 @@ export function TagsInput({
             autoFocus
             className="h-auto w-24 border-0 bg-transparent p-0 font-mono text-xs shadow-none focus-visible:ring-0"
           />
-          {suggestions.length > 0 && (
-            <div className="absolute top-full left-0 z-50 mt-1 w-40 rounded-md border border-border bg-popover py-1 shadow-md">
-              {suggestions.map((name, index) => (
-                <button
-                  key={name}
-                  type="button"
-                  className={cn(
-                    'w-full px-3 py-1.5 text-left font-mono text-xs',
-                    index === selectedIndex
-                      ? 'bg-accent text-accent-foreground'
-                      : 'text-popover-foreground hover:bg-accent/50',
-                  )}
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    addTag(name)
-                  }}
-                >
-                  #{name}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+          <AnchoredPopup
+            open={suggestions.length > 0}
+            anchor={inputRef}
+            initialFocus={false}
+            className="w-40"
+          >
+            {suggestions.map((name, index) => (
+              <button
+                key={name}
+                type="button"
+                className={cn(
+                  'w-full px-3 py-1.5 text-left font-mono text-xs',
+                  index === selectedIndex
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-popover-foreground hover:bg-accent/50',
+                )}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  addTag(name)
+                }}
+              >
+                #{name}
+              </button>
+            ))}
+          </AnchoredPopup>
+        </>
       ) : (
         <Button
           type="button"

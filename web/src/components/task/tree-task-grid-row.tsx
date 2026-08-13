@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { GithubLinkBadge } from '#components/task/github-link-badge'
 import { LinkExistingTaskMenu } from '#components/task/link-existing-task-menu'
 import { MoveUnderTaskMenu } from '#components/task/move-under-task-menu'
+import { SetProjectMenu } from '#components/task/set-project-menu'
 import {
   ContextBadge,
   DueDateBadge,
@@ -56,6 +57,7 @@ export function TreeTaskGridRow({
 }: TreeTaskGridRowProps) {
   const [linkMenuOpen, setLinkMenuOpen] = useState(false)
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false)
 
   const handleStatusChange = useHandleStatusChange(node.id, node.status)
   const hasChildren = node.children.length > 0
@@ -186,6 +188,9 @@ export function TreeTaskGridRow({
                 onMoveUnder={() => {
                   setMoveMenuOpen(true)
                 }}
+                onSetProject={() => {
+                  setProjectMenuOpen(true)
+                }}
               />
             </div>
           </div>
@@ -241,6 +246,9 @@ export function TreeTaskGridRow({
                 }}
                 onMoveUnder={() => {
                   setMoveMenuOpen(true)
+                }}
+                onSetProject={() => {
+                  setProjectMenuOpen(true)
                 }}
               />
             </div>
@@ -304,6 +312,12 @@ export function TreeTaskGridRow({
       <MoveUnderTaskMenu
         open={moveMenuOpen}
         onOpenChange={setMoveMenuOpen}
+        taskId={node.id}
+        taskNumber={node.number}
+      />
+      <SetProjectMenu
+        open={projectMenuOpen}
+        onOpenChange={setProjectMenuOpen}
         taskId={node.id}
         taskNumber={node.number}
       />

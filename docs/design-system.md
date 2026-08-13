@@ -451,7 +451,7 @@ rows, `integration-card.tsx`'s `CARD_INDENT`).
 
 | Token                    | Value                                                     | Used by                                                                                                                                                                                                                                                                                          |
 | ------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--task-row-columns`     | `26px 26px minmax(120px, 1fr) 132px 104px 72px 56px 28px` | Tasks list: column header (`TaskListColumnHeader` in `routes/tasks/index.tsx`), `TaskGridRow`, `TreeTaskGridRow` — tracks are expand-toggle, status picker, title, tags, GitHub link, estimate, due date, row actions                                                                            |
+| `--task-row-columns`     | `26px 26px minmax(120px, 1fr) 132px 104px 72px 56px 28px` | Tasks list: column header (`TaskListColumnHeader` in `components/task/task-list-column-header.tsx`), `TaskGridRow`, `TreeTaskGridRow` — tracks are expand-toggle, status picker, title, tags, GitHub link, estimate, due date, row actions                                                       |
 | `--project-list-columns` | `14px 1fr 96px 190px 78px`                                | Projects list: column header (`routes/projects/index.tsx`), `ProjectListRow` — tracks are status mark, project name, status badge, progress bar, target date                                                                                                                                     |
 | `--icon-content-columns` | `20px 1fr`                                                | `task-activity.tsx`'s `EventRow`/`CommentRow` marker column, `integration-card.tsx`'s `CARD_INDENT` — same "small icon column + body" role, unified onto the 20px column width that `IntegrationCard`'s actual `size-5` icon needs (was `14px` in `task-activity.tsx`, too narrow for that icon) |
 
@@ -572,8 +572,8 @@ A row of adjoining bordered tab buttons (borders collapse between tabs via
 `border-l-0` on all but the first). The active tab gets `border-border-strong`
 plus `bg-surface-strong`; inactive tabs get `border-border` plus
 `text-muted-foreground`. Use for switching between a small, fixed set of
-views (e.g. All/Backlog, Day/Week/Month) — this is a plain presentation
-component, not an ARIA tablist.
+views (e.g. Day/Week/Month) — this is a plain presentation component, not an
+ARIA tablist.
 
 `web/src/components/ui/segmented-control.tsx` has a near-identical generic
 shape (`value`/`options`/`onChange`) but takes its active/inactive styling as
@@ -587,8 +587,9 @@ component — extend one of these two.
 <TabStrip
   value={value}
   options={[
-    { value: 'all', label: 'All' },
-    { value: 'backlog', label: 'Backlog' },
+    { value: 'day', label: 'Day' },
+    { value: 'week', label: 'Week' },
+    { value: 'month', label: 'Month' },
   ]}
   onChange={setValue}
 />

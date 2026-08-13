@@ -1,4 +1,3 @@
-import { Link } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 
 import {
@@ -6,6 +5,7 @@ import {
   SidebarField,
 } from '#components/task/sidebar-field'
 import { SidebarParentField } from '#components/task/sidebar-parent-field'
+import { SidebarProjectField } from '#components/task/sidebar-project-field'
 import { SidebarTagsField } from '#components/task/sidebar-tags-field'
 import { SidebarGithubLinkField } from '#components/task/task-github-link-field'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
@@ -17,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '#components/ui/select'
-import { useProject } from '#hooks/use-projects'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { useUpdateTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { selectValueHandler } from '#lib/form-utils'
@@ -58,9 +57,7 @@ export function TaskSidebar({ task }: { task: TaskDetail }) {
       />
       <SidebarParentField taskId={task.id} parentId={task.parentId} />
       <SidebarContextField taskId={task.id} context={task.context} />
-      {task.projectId != null && (
-        <SidebarProjectField projectId={task.projectId} />
-      )}
+      <SidebarProjectField taskId={task.id} projectId={task.projectId} />
       <SidebarTagsField taskId={task.id} labels={task.labels} />
       <SidebarGithubLinkField taskId={task.id} githubLink={task.githubLink} />
       <SidebarTimeBlocks timeBlocks={task.timeBlocks} />
@@ -122,11 +119,9 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
         <MobileFieldCell>
           <SidebarContextField taskId={task.id} context={task.context} />
         </MobileFieldCell>
-        {task.projectId != null && (
-          <MobileFieldCell>
-            <SidebarProjectField projectId={task.projectId} />
-          </MobileFieldCell>
-        )}
+        <MobileFieldCell>
+          <SidebarProjectField taskId={task.id} projectId={task.projectId} />
+        </MobileFieldCell>
         <MobileFieldCell className="col-span-2">
           <SidebarTagsField taskId={task.id} labels={task.labels} />
         </MobileFieldCell>
@@ -311,22 +306,6 @@ function SidebarContextField({
           <SelectItem value="personal">personal</SelectItem>
         </SelectContent>
       </Select>
-    </SidebarField>
-  )
-}
-
-function SidebarProjectField({ projectId }: { projectId: string }) {
-  const { data: project } = useProject(projectId)
-
-  return (
-    <SidebarField label="PROJECT">
-      <Link
-        to="/projects/$projectId"
-        params={{ projectId }}
-        className="block w-full truncate transition-colors hover:text-muted-foreground-strong"
-      >
-        {project?.title ?? '…'}
-      </Link>
     </SidebarField>
   )
 }

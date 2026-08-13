@@ -97,7 +97,7 @@ const sampleTasks: Task[] = [
   },
 ]
 
-const backlogTasks: Task[] = [
+const noDateTasks: Task[] = [
   {
     ...baseTask,
     id: '00000000-0000-0000-0000-000000000101',
@@ -119,10 +119,7 @@ const backlogTasks: Task[] = [
 ]
 
 const sampleCategorized: CategorizedTasks = {
-  all: [...sampleTasks, ...backlogTasks],
-  open: sampleTasks,
-  backlog: backlogTasks,
-  nonBacklog: sampleTasks,
+  all: [...sampleTasks, ...noDateTasks],
 }
 
 const sampleEvents: TimeBlockEvent[] = [

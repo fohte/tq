@@ -20,6 +20,7 @@ export function DeleteConfirmButton({
   disabled,
   open,
   iconClassName,
+  'aria-label': ariaLabel,
 }: {
   title: string
   description: string
@@ -27,6 +28,7 @@ export function DeleteConfirmButton({
   disabled?: boolean | undefined
   open?: boolean | undefined
   iconClassName?: string | undefined
+  'aria-label'?: string | undefined
 }) {
   return (
     <Dialog open={open}>
@@ -35,6 +37,7 @@ export function DeleteConfirmButton({
           <button
             type="button"
             disabled={disabled}
+            aria-label={ariaLabel}
             className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-50"
           />
         }

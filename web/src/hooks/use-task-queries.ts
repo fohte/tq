@@ -36,22 +36,9 @@ export const taskKeys = {
 
 export type { LinkedTaskSummary, Task, TaskDetail }
 
-function isBacklog(t: Task): boolean {
-  return t.status === 'todo' && t.dueDate == null && t.startDate == null
-}
-
 export interface CategorizedTasks {
   /** All tasks from the API */
   all: Task[]
-  /** Non-completed, non-backlog tasks */
-  open: Task[]
-  /** Tasks with no date and status=todo */
-  backlog: Task[]
-  /**
-   * Non-backlog tasks (for header stats: includes completed, unless the
-   * caller's own filter already excludes completed tasks server-side)
-   */
-  nonBacklog: Task[]
 }
 
 export function useTaskList(
@@ -76,13 +63,7 @@ export function useTaskList(
 
   const categorized = useMemo((): CategorizedTasks => {
     const all = query.data ?? []
-    const backlog = all.filter(isBacklog)
-    const backlogIds = new Set(backlog.map((t) => t.id))
-    const open = all.filter(
-      (t) => t.status !== 'completed' && !backlogIds.has(t.id),
-    )
-    const nonBacklog = all.filter((t) => !backlogIds.has(t.id))
-    return { all, open, backlog, nonBacklog }
+    return { all }
   }, [query.data])
 
   return { ...query, categorized }

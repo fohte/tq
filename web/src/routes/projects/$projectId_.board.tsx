@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 
+import { LinkExistingProjectTaskMenu } from '#components/project/link-existing-project-task-menu'
 import { ProjectBoardHeader } from '#components/project/project-board-header'
 import {
   ProjectFilterBar,
@@ -13,6 +14,8 @@ import { ProjectTaskList } from '#components/project/project-task-list'
 import type { ProjectView } from '#components/project/project-view-tabs'
 import { FloatingActionButton } from '#components/task/create-task-inline'
 import { CreateTaskModal } from '#components/task/create-task-modal'
+import { FullPageLoading } from '#components/ui/full-page-loading'
+import { FullPageMessage } from '#components/ui/full-page-message'
 import { useProject, useProjectTasks } from '#hooks/use-projects'
 
 export const Route = createFileRoute('/projects/$projectId_/board')({
@@ -27,24 +30,17 @@ function ProjectBoardPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [sortOption, setSortOption] = useState<SortOption>('manual')
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isLinkExistingOpen, setIsLinkExistingOpen] = useState(false)
   const [view, setView] = useState<ProjectView>('list')
 
   const isLoading = isProjectLoading || isTasksLoading
 
   if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        Loading...
-      </div>
-    )
+    return <FullPageLoading />
   }
 
   if (!project) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        Project not found
-      </div>
-    )
+    return <FullPageMessage>Project not found</FullPageMessage>
   }
 
   return (
@@ -79,6 +75,9 @@ function ProjectBoardPage() {
             onAddTask={() => {
               setIsModalOpen(true)
             }}
+            onLinkExistingTask={() => {
+              setIsLinkExistingOpen(true)
+            }}
           />
 
           {/* Task list */}
@@ -108,6 +107,15 @@ function ProjectBoardPage() {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         projectId={projectId}
+      />
+
+      {/* Link existing task menu */}
+      <LinkExistingProjectTaskMenu
+        open={isLinkExistingOpen}
+        onOpenChange={setIsLinkExistingOpen}
+        projectId={projectId}
+        projectTitle={project.title}
+        excludedTaskIds={new Set((tasks ?? []).map((t) => t.id))}
       />
     </div>
   )

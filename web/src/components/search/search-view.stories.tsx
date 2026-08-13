@@ -8,7 +8,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { fn } from 'storybook/test'
+import { expect, fn, within } from 'storybook/test'
 
 import { SearchViewInner } from '#components/search/search-view'
 import type { SearchResult } from '#hooks/use-search'
@@ -170,4 +170,21 @@ export const NoResults: Story = {
 
 export const NoBackButton: Story = {
   args: {},
+}
+
+export const FilterDropdownOpen: Story = {
+  args: {
+    onBack: fn(),
+  },
+  play: async ({ canvasElement, userEvent }) => {
+    const canvas = within(canvasElement)
+    // AnchoredPopup renders via portal, so query the entire document body.
+    const body = within(canvasElement.ownerDocument.body)
+
+    await userEvent.click(canvas.getByTestId('filter-chip-status'))
+
+    await expect(
+      await body.findByTestId('filter-dropdown-status'),
+    ).toBeInTheDocument()
+  },
 }

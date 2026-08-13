@@ -608,6 +608,36 @@ describe('tasks CRUD API', () => {
       expect(body[0].title).toBe('Child')
     })
 
+    it('filters by project: prefix in q parameter using the project id', async () => {
+      const project = await createProject('My project')
+      const task = await createTask('Task in project')
+      await setProjectId(task.id, project.id)
+      await createTask('Task without project')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent(`project:${project.id}`),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id)).toEqual([task.id])
+    })
+
+    it('filters by project: prefix in q parameter using the project title', async () => {
+      const project = await createProject('My project')
+      const task = await createTask('Task in project')
+      await setProjectId(task.id, project.id)
+      await createTask('Task without project')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('project:"My project"'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id)).toEqual([task.id])
+    })
+
     it('returns tasks belonging to the project', async () => {
       const project = await createProject('My project')
       const task = await createTask('Task in project')

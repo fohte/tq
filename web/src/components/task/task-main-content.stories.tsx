@@ -131,12 +131,17 @@ function Providers({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
   // TaskMainContent always mounts TaskActivity; FullPagePC/FullPageSP also
-  // mount TaskSidebar (SidebarParentField/SidebarTagsField). Seed every
-  // query they read so no individual story needs its own seeding.
+  // mount TaskSidebar (SidebarParentField/SidebarProjectField/
+  // SidebarTagsField). Seed every query they read so no individual story
+  // needs its own seeding.
   queryClient.setQueryData(commentKeys.all(baseTask.id), [])
   queryClient.setQueryData(activityKeys.all(baseTask.id), [])
   queryClient.setQueryData(taskKeys.list(undefined), [])
   queryClient.setQueryData(labelKeys.all, [])
+  queryClient.setQueryData(
+    projectKeys.list(undefined),
+    project ? [project] : [],
+  )
   if (project) {
     queryClient.setQueryData(projectKeys.detail(project.id), project)
   }
