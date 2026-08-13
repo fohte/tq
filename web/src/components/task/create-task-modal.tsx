@@ -337,7 +337,10 @@ export function CreateTaskModal({
                 <div className="h-px bg-border" />
 
                 {/* Chip row */}
-                <div className="flex gap-2 overflow-x-auto">
+                <div
+                  className="flex gap-2 overflow-x-auto"
+                  data-overflow-check-ignore
+                >
                   <ExpandableFieldChip
                     icon={<CalendarPlus className="size-3.5" />}
                     label={startDate || 'Start'}

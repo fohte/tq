@@ -69,6 +69,14 @@ function isVisuallyHidden(el: Element): boolean {
   return el.clientWidth <= 1 && el.clientHeight <= 1
 }
 
+// An escape hatch narrower than the per-story/file `overflowCheck.disable`
+// parameter: mark a specific intentionally-scrollable subtree (e.g. a chip
+// row using `overflow-x-auto`) with `data-overflow-check-ignore` on the
+// component itself, and the rest of the story still gets checked.
+function isIgnored(el: Element): boolean {
+  return el.closest('[data-overflow-check-ignore]') != null
+}
+
 // el.scrollWidth > el.clientWidth means the element's content doesn't fit
 // inside its own padding box (clientWidth) — i.e. some of it is clipped and
 // invisible.
@@ -85,6 +93,7 @@ function findOverflows(root: Element): string[] {
   for (const el of root.querySelectorAll('*')) {
     if (el.scrollWidth <= el.clientWidth) continue
     if (isVisuallyHidden(el)) continue
+    if (isIgnored(el)) continue
     if (!clipsOwnContent(getComputedStyle(el))) continue
 
     const overflowPx = el.scrollWidth - el.clientWidth

@@ -161,10 +161,10 @@ const meta = {
     // fullscreen viewport rather than its actual container: on the desktop
     // project it overflows by a few px up to ~2000px depending on the date
     // range, and on the storybook-mobile project it collapses to
-    // clientWidth=0 and overflows by hundreds to thousands of px. Both are
-    // the library's own internal sizing, not app layout — worth a closer
-    // look at whether the Gantt view is usable at mobile width at all, but
-    // out of scope for this PR.
+    // clientWidth=0 and overflows by hundreds to thousands of px.
+    // TODO: investigate whether the Gantt view is usable at mobile width at
+    // all (or needs a different library / responsive strategy) — out of
+    // scope for this PR, which only adds the detection.
     overflowCheck: { disable: true },
   },
 } satisfies Meta<typeof ProjectGanttViewWithProviders>

@@ -71,9 +71,10 @@ const meta = {
     // worse on storybook-mobile: FullCalendar's internal `.fc-scroller`
     // reports scrollWidth > clientWidth by a fixed ~80px whenever its
     // vertical scrollbar is forced on (library-internal sizing artifact,
-    // not app layout), and event chips / the "+more" link genuinely clip
-    // in narrow day columns (pre-existing mobile layout bug, out of scope
-    // for this PR).
+    // not fixable here), and event chips / the "+more" link genuinely clip
+    // in narrow day columns.
+    // TODO: fix the event chip / "+more" link clipping at mobile widths —
+    // out of scope for this PR, which only adds the detection.
     overflowCheck: { disable: true },
   },
   argTypes: {
