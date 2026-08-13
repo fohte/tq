@@ -58,6 +58,7 @@ vi.mock('#hooks/use-projects', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useProjectTasks: (...args: unknown[]) => mockUseProjectTasks(...args),
   useUpdateProject: () => ({ mutate: mockUpdateMutate }),
+  useProjects: () => ({ data: [] }),
   PROJECT_COLOR_PRESETS: [
     { name: 'Orange', hex: '#FF8400' },
     { name: 'Red', hex: '#FF5C33' },
@@ -265,6 +266,26 @@ describe('ProjectDetailPage', () => {
         '/projects/$projectId/board',
       )
     }
+  })
+
+  it('opens the link existing task menu when the link button is clicked', async () => {
+    mockUseProject.mockReturnValue({
+      data: mockProject,
+      isLoading: false,
+      error: null,
+    })
+    renderProjectDetailPage()
+    vi.useRealTimers()
+    const user = userEvent.setup()
+
+    const linkButtons = screen.getAllByLabelText('Link existing task')
+    expect(linkButtons).toHaveLength(2)
+
+    await user.click(atIndex(linkButtons, 0))
+
+    expect(screen.getAllByText('Type to search tasks').length).toBeGreaterThan(
+      0,
+    )
   })
 
   it('shows at most 5 non-completed tasks in the OPEN TASKS panel, per layout (PC + SP)', () => {

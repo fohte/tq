@@ -1,6 +1,8 @@
 import { Link } from '@tanstack/react-router'
+import { Search } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { LinkExistingProjectTaskMenu } from '#components/project/link-existing-project-task-menu'
 import { summarizeTaskStatus } from '#components/project/project-detail-utils'
 import { ProjectStatusBadge } from '#components/project/project-status-badge'
 import {
@@ -8,6 +10,7 @@ import {
   ProjectStatusMark,
 } from '#components/project/project-status-mark'
 import { TaskRow } from '#components/task/task-row'
+import { Button } from '#components/ui/button'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { Panel, PanelHeader } from '#components/ui/panel'
 import { ProgressBar } from '#components/ui/progress-bar'
@@ -61,7 +64,11 @@ export function ProjectMainContent({
       <ProjectTaskSummary tasks={tasks} />
 
       {/* Open tasks */}
-      <ProjectOpenTasksPanel projectId={project.id} tasks={tasks} />
+      <ProjectOpenTasksPanel
+        projectId={project.id}
+        projectTitle={project.title}
+        tasks={tasks}
+      />
     </div>
   )
 }
@@ -201,21 +208,35 @@ function ProjectTaskSummary({ tasks }: { tasks: ProjectTask[] }) {
 
 function ProjectOpenTasksPanel({
   projectId,
+  projectTitle,
   tasks,
 }: {
   projectId: string
+  projectTitle: string
   tasks: ProjectTask[]
 }) {
+  const [isLinkExistingOpen, setIsLinkExistingOpen] = useState(false)
   const openTasks = tasks.filter((t) => t.status !== 'completed').slice(0, 5)
 
   return (
     <Panel>
       <PanelHeader>
         OPEN TASKS
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={() => {
+            setIsLinkExistingOpen(true)
+          }}
+          aria-label="Link existing task"
+          className="ml-auto"
+        >
+          <Search className="h-3 w-3" />
+        </Button>
         <Link
           to="/projects/$projectId/board"
           params={{ projectId }}
-          className="ml-auto text-2xs tracking-normal hover:text-foreground"
+          className="text-2xs tracking-normal hover:text-foreground"
         >
           view board →
         </Link>
@@ -231,6 +252,14 @@ function ProjectOpenTasksPanel({
           No open tasks
         </div>
       )}
+
+      <LinkExistingProjectTaskMenu
+        open={isLinkExistingOpen}
+        onOpenChange={setIsLinkExistingOpen}
+        projectId={projectId}
+        projectTitle={projectTitle}
+        excludedTaskIds={new Set(tasks.map((t) => t.id))}
+      />
     </Panel>
   )
 }

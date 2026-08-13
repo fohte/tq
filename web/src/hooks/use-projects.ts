@@ -37,7 +37,10 @@ export const projectKeys = {
   tasks: (id: string) => [...projectKeys.all, 'tasks', id] as const,
 }
 
-export function useProjects(filter?: { status?: ProjectStatus }) {
+export function useProjects(
+  filter?: { status?: ProjectStatus },
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: projectKeys.list(filter),
     queryFn: async () => {
@@ -47,6 +50,7 @@ export function useProjects(filter?: { status?: ProjectStatus }) {
       assertOk(res)
       return res.json()
     },
+    enabled: options?.enabled ?? true,
   })
 }
 

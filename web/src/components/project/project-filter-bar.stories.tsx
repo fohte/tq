@@ -26,6 +26,9 @@ function InteractiveFilterBar({
       onAddTask={() => {
         alert('Add task clicked')
       }}
+      onLinkExistingTask={() => {
+        alert('Link existing task clicked')
+      }}
     />
   )
 }
