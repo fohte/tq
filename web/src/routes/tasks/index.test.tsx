@@ -20,6 +20,15 @@ vi.mock('#hooks/use-filtered-tasks', () => ({
   useFilteredTaskTree: (...args: unknown[]) => mockUseFilteredTaskTree(...args),
 }))
 
+// The project filter select fetches the project list via useProjects. Stub
+// it so the route never issues a real fetch.
+const mockUseProjects = vi.fn()
+
+vi.mock('#hooks/use-projects', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+  useProjects: (...args: unknown[]) => mockUseProjects(...args),
+}))
+
 // TagFilterChips (rendered for real, not mocked below) reads tag counts via
 // useTagCounts, which calls useTaskList from '#hooks/use-tasks' directly —
 // independent of the useFilteredTaskTree mock above. Stub it too so the
@@ -84,6 +93,7 @@ beforeEach(() => {
     categorized: { all: [] },
     isLoading: false,
   })
+  mockUseProjects.mockReturnValue({ data: [] })
 })
 
 describe('TaskList sort selector', () => {
@@ -141,6 +151,46 @@ describe('TaskList "show completed" toggle', () => {
     ).toBeChecked()
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
       { sortBy: 'updated', showCompleted: true },
+    ])
+  })
+})
+
+describe('TaskList project filter selector', () => {
+  beforeEach(() => {
+    mockUseProjects.mockReturnValue({
+      data: [
+        { id: 'proj-1', title: 'Website Redesign' },
+        { id: 'proj-2', title: 'Mobile App' },
+      ],
+    })
+  })
+
+  it('defaults to "All projects" and requests unfiltered data on initial render', async () => {
+    renderTaskList()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Filter by project')).toHaveValue('')
+    })
+    expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
+      { sortBy: 'updated', showCompleted: false },
+    ])
+  })
+
+  it('re-requests data scoped to the selected project', async () => {
+    const user = userEvent.setup()
+    renderTaskList()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Filter by project')).toBeInTheDocument()
+    })
+    await user.selectOptions(
+      screen.getByLabelText('Filter by project'),
+      'proj-1',
+    )
+
+    expect(screen.getByLabelText('Filter by project')).toHaveValue('proj-1')
+    expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
+      { sortBy: 'updated', showCompleted: false, projectId: 'proj-1' },
     ])
   })
 })

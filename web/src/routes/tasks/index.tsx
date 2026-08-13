@@ -20,6 +20,7 @@ import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
 import { useNewTaskShortcutListener } from '#hooks/use-new-task-shortcut'
+import { useProjects } from '#hooks/use-projects'
 import type { TaskSortBy } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { selectHandler } from '#lib/form-utils'
@@ -43,13 +44,20 @@ const tasksSearchDefaults = {
 interface TasksSearch {
   sortBy?: TaskSortBy
   showCompleted?: boolean
+  projectId?: string
 }
 
 function validateSearch(search: Record<string, unknown>): TasksSearch {
   const sortBy: TaskSortBy =
     sortOptionValues.find((value) => value === search['sortBy']) ?? 'updated'
   const showCompleted = search['showCompleted'] === true
-  return { sortBy, showCompleted }
+  const projectId =
+    typeof search['projectId'] === 'string' ? search['projectId'] : undefined
+  return {
+    sortBy,
+    showCompleted,
+    ...(projectId != null ? { projectId } : {}),
+  }
 }
 
 export const Route = createFileRoute('/tasks/')({
@@ -61,7 +69,11 @@ export const Route = createFileRoute('/tasks/')({
 })
 
 export function TaskList() {
-  const { sortBy = 'updated', showCompleted = false } = Route.useSearch()
+  const {
+    sortBy = 'updated',
+    showCompleted = false,
+    projectId,
+  } = Route.useSearch()
   const navigate = Route.useNavigate()
   const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -79,10 +91,27 @@ export function TaskList() {
       replace: true,
     })
   }
+  const setProjectId = (id: string) => {
+    void navigate({
+      search: (prev) => {
+        if (id === '') {
+          const { projectId: _projectId, ...rest } = prev
+          void _projectId
+          return rest
+        }
+        return { ...prev, projectId: id }
+      },
+      replace: true,
+    })
+  }
+
+  const projects = useProjects()
+  const projectIdValues = ['', ...(projects.data ?? []).map((p) => p.id)]
 
   const { isLoading, tree: filteredTreeData } = useFilteredTaskTree({
     sortBy,
     showCompleted,
+    projectId,
   })
   const treeOutliner = useTreeOutliner(filteredTreeData, { enabled: true })
 
@@ -115,6 +144,19 @@ export function TaskList() {
             {sortOptionValues.map((sort) => (
               <option key={sort} value={sort}>
                 Sort: {sortLabels[sort]}
+              </option>
+            ))}
+          </select>
+          <select
+            value={projectId ?? ''}
+            onChange={selectHandler(setProjectId, projectIdValues)}
+            className="bg-transparent px-2 py-1 font-mono text-xs text-muted-foreground outline-none hover:text-foreground"
+            aria-label="Filter by project"
+          >
+            <option value="">All projects</option>
+            {(projects.data ?? []).map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.title}
               </option>
             ))}
           </select>
