@@ -1,11 +1,11 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { ChevronLeft } from 'lucide-react'
+import { createFileRoute } from '@tanstack/react-router'
 
 import {
   ProjectMainContent,
   ProjectSidebar,
   ProjectSidebarMobile,
 } from '#components/project/project-detail'
+import { BackHeaderBar } from '#components/ui/back-header-bar'
 import { FullPageLoading } from '#components/ui/full-page-loading'
 import { FullPageMessage } from '#components/ui/full-page-message'
 import { useProject, useProjectTasks } from '#hooks/use-projects'
@@ -49,15 +49,7 @@ function ProjectDetailPage() {
 
       {/* SP layout */}
       <div className="flex h-full flex-col overflow-y-auto md:hidden">
-        <div className="flex h-12 shrink-0 items-center gap-1 border-b border-border px-3">
-          <Link
-            to="/projects"
-            className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ChevronLeft className="size-5" />
-            Projects
-          </Link>
-        </div>
+        <BackHeaderBar to="/projects">Projects</BackHeaderBar>
         <div className="p-4">
           <ProjectMainContent
             key={project.id}
