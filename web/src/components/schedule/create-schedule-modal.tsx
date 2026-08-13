@@ -201,6 +201,15 @@ export function CreateScheduleModal({
     })
   }
 
+  const handleDelete = useCallback(() => {
+    if (!schedule) return
+    deleteSchedule.mutate(schedule.scheduleId, {
+      onSuccess: () => {
+        handleOpenChange(false)
+      },
+    })
+  }, [schedule, deleteSchedule, handleOpenChange])
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
@@ -419,13 +428,7 @@ export function CreateScheduleModal({
                     <DeleteConfirmButton
                       title="Delete schedule"
                       description="Are you sure you want to delete this schedule? This action cannot be undone."
-                      onDelete={() => {
-                        deleteSchedule.mutate(schedule.scheduleId, {
-                          onSuccess: () => {
-                            handleOpenChange(false)
-                          },
-                        })
-                      }}
+                      onDelete={handleDelete}
                       disabled={isPending}
                       aria-label="Delete schedule"
                     />
@@ -639,13 +642,7 @@ export function CreateScheduleModal({
                     <DeleteConfirmButton
                       title="Delete schedule"
                       description="Are you sure you want to delete this schedule? This action cannot be undone."
-                      onDelete={() => {
-                        deleteSchedule.mutate(schedule.scheduleId, {
-                          onSuccess: () => {
-                            handleOpenChange(false)
-                          },
-                        })
-                      }}
+                      onDelete={handleDelete}
                       disabled={isPending}
                       aria-label="Delete schedule"
                       iconClassName="size-5"
