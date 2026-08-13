@@ -1,10 +1,8 @@
 import { zValidator } from '@hono/zod-validator'
-import { ilike, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
-import { db } from '#db/connection'
-import { tasks } from '#db/schema'
+import { queryTaskList } from '#routes/tasks/list-query'
 
 const suggestQuerySchema = z.object({
   prefix: z.string(),
@@ -55,31 +53,22 @@ export const tasksSearchApp = new Hono()
 
     return c.json(suggestions, 200)
   })
-  // Backs the editor's `#` mention autocomplete: a digit query matches by
-  // task number prefix (so `#12` surfaces #12, #120, #123, ...), anything
-  // else matches by title substring.
+  // Backs the editor's `#` mention autocomplete. Search condition building
+  // is shared with GET /api/tasks via queryTaskList; this endpoint only
+  // projects the result down to the fields the mention UI needs. Result
+  // order follows queryTaskList's default (creation time), not task number.
   .get('/mentions', zValidator('query', mentionsQuerySchema), async (c) => {
     const { q, limit } = c.req.valid('query')
-    const trimmed = q?.trim() ?? ''
 
-    const condition =
-      trimmed === ''
-        ? undefined
-        : /^\d+$/.test(trimmed)
-          ? sql`CAST(${tasks.number} AS TEXT) LIKE ${`${trimmed}%`}`
-          : ilike(tasks.title, `%${trimmed}%`)
+    const { rows } = await queryTaskList({ q, limit: limit ?? 10 })
 
-    const result = await db
-      .select({
-        id: tasks.id,
-        number: tasks.number,
-        title: tasks.title,
-        status: tasks.status,
-      })
-      .from(tasks)
-      .where(condition)
-      .orderBy(tasks.number)
-      .limit(limit ?? 10)
-
-    return c.json(result, 200)
+    return c.json(
+      rows.map((r) => ({
+        id: r.task.id,
+        number: r.task.number,
+        title: r.task.title,
+        status: r.task.status,
+      })),
+      200,
+    )
   })
