@@ -125,25 +125,28 @@ export const LinkOrphanCandidate: Story = {
   },
   play: async ({ canvasElement, userEvent }) => {
     const canvas = within(canvasElement)
+    // The dropdown renders via a portal (AnchoredPopup), so it lives outside
+    // `canvasElement`.
+    const body = within(canvasElement.ownerDocument.body)
 
     const input = canvas.getByPlaceholderText(/New task/i)
     await userEvent.type(input, searchText)
 
     // Wait for the search query's debounce to settle before the combined
     // dropdown appears.
-    const candidateRow = await canvas.findByText('Deploy to production')
+    const candidateRow = await body.findByText('Deploy to production')
     await expect(candidateRow).toBeInTheDocument()
-    await expect(canvas.getByText(`Create "${searchText}"`)).toBeInTheDocument()
+    await expect(body.getByText(`Create "${searchText}"`)).toBeInTheDocument()
 
     // No parent hint for a candidate that has no parent yet.
-    await expect(canvas.queryByText(/^←/)).not.toBeInTheDocument()
+    await expect(body.queryByText(/^←/)).not.toBeInTheDocument()
 
     await userEvent.click(candidateRow)
 
     // Linking an orphan candidate is immediate: no confirmation dialog, and
     // the row resets as if a task had just been created.
     await expect(
-      canvas.queryByText(`Create "${searchText}"`),
+      body.queryByText(`Create "${searchText}"`),
     ).not.toBeInTheDocument()
     // The row only resets once the parent-update mutation's `onSuccess`
     // fires, which lands after the (mocked) network round trip.
@@ -170,17 +173,18 @@ export const LinkCandidateWithExistingParent: Story = {
   ],
   play: async ({ canvasElement, userEvent }) => {
     const canvas = within(canvasElement)
+    // The dropdown and the dialog both render via a portal, so they live
+    // outside `canvasElement`.
+    const body = within(canvasElement.ownerDocument.body)
 
     const input = canvas.getByPlaceholderText(/New task/i)
     await userEvent.type(input, searchText)
 
-    const candidateRow = await canvas.findByText('Deploy docs site')
-    await expect(canvas.getByText('← #3')).toBeInTheDocument()
+    const candidateRow = await body.findByText('Deploy docs site')
+    await expect(body.getByText('← #3')).toBeInTheDocument()
 
     await userEvent.click(candidateRow)
 
-    // The dialog renders via a portal, so it lives outside `canvasElement`.
-    const body = within(canvasElement.ownerDocument.body)
     await expect(
       await body.findByText('Change parent task?'),
     ).toBeInTheDocument()

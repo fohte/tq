@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { ComponentProps } from 'react'
+import { useRef } from 'react'
 import { fn } from 'storybook/test'
 
 import { CreateTaskInlineParentMenu } from '#components/task/create-task-inline-parent-menu'
@@ -37,23 +39,36 @@ const candidates: SearchResult[] = [
   },
 ]
 
+function CreateTaskInlineParentMenuDemo(
+  props: Omit<ComponentProps<typeof CreateTaskInlineParentMenu>, 'anchor'>,
+) {
+  const anchorRef = useRef<HTMLInputElement>(null)
+
+  return (
+    <div className="w-72">
+      <input
+        ref={anchorRef}
+        type="text"
+        defaultValue="^"
+        className="w-full rounded-md border border-input px-2 py-1 text-sm"
+      />
+      <CreateTaskInlineParentMenu {...props} anchor={anchorRef} />
+    </div>
+  )
+}
+
 const meta = {
   title: 'Task/CreateTaskInlineParentMenu',
-  component: CreateTaskInlineParentMenu,
+  component: CreateTaskInlineParentMenuDemo,
   parameters: {
     layout: 'centered',
   },
   args: {
+    open: true,
+    onOpenChange: fn(),
     onSelectCandidate: fn(),
   },
-  decorators: [
-    (Story) => (
-      <div className="relative w-72">
-        <Story />
-      </div>
-    ),
-  ],
-} satisfies Meta<typeof CreateTaskInlineParentMenu>
+} satisfies Meta<typeof CreateTaskInlineParentMenuDemo>
 
 export default meta
 type Story = StoryObj<typeof meta>

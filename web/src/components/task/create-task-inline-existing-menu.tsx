@@ -1,4 +1,7 @@
+import type { RefObject } from 'react'
+
 import { TaskCandidateList } from '#components/task/task-candidate-list'
+import { AnchoredPopup } from '#components/ui/anchored-popup'
 import type { SearchResult } from '#hooks/use-search'
 import { cn } from '#lib/utils'
 
@@ -7,18 +10,33 @@ import { cn } from '#lib/utils'
 // 1..N map to `candidates` in display order — see `CreateTaskInline`'s
 // keyboard handling for how `highlightedIndex` is driven.
 export function CreateTaskInlineExistingMenu({
+  anchor,
+  open,
+  onOpenChange,
   title,
   candidates,
   highlightedIndex,
   onSelectCandidate,
 }: {
+  anchor: RefObject<HTMLInputElement | null>
+  open: boolean
+  onOpenChange: (open: boolean) => void
   title: string
   candidates: SearchResult[]
   highlightedIndex: number
   onSelectCandidate: (candidate: SearchResult) => void
 }) {
   return (
-    <div className="absolute top-full left-0 z-50 mt-1 w-72 rounded-md border border-border bg-popover py-1 font-mono shadow-md">
+    <AnchoredPopup
+      open={open}
+      onOpenChange={onOpenChange}
+      anchor={anchor}
+      // The popup opens while the input keeps typing focus — Base UI's
+      // default initial-focus behavior would otherwise steal focus onto the
+      // first candidate button and break arrow-key navigation.
+      initialFocus={false}
+      className="w-72"
+    >
       <div
         className={cn(
           'w-full px-3 py-1.5 text-left text-sm',
@@ -41,6 +59,6 @@ export function CreateTaskInlineExistingMenu({
           onSelectCandidate={onSelectCandidate}
         />
       </div>
-    </div>
+    </AnchoredPopup>
   )
 }
