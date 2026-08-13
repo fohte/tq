@@ -30,19 +30,15 @@ export function useFilteredTaskList(sortBy?: TaskSortBy, showCompleted = true) {
 }
 
 export function useFilteredTaskTree(options: {
-  enabled: boolean
   sortBy?: TaskSortBy
   showCompleted?: boolean
 }) {
   const baseFilter = useBaseFilter(options.showCompleted ?? true)
-  const { isLoading, categorized } = useTaskList(
-    {
-      ...baseFilter,
-      ...(options.sortBy ? { sortBy: options.sortBy } : {}),
-      includeAncestors: true,
-    },
-    { enabled: options.enabled },
-  )
+  const { isLoading, categorized } = useTaskList({
+    ...baseFilter,
+    ...(options.sortBy ? { sortBy: options.sortBy } : {}),
+    includeAncestors: true,
+  })
 
   const tree = useMemo(() => buildTree(categorized.all), [categorized.all])
 
