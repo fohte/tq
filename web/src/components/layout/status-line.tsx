@@ -23,11 +23,7 @@ export function StatusLine() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const {
-    nonBacklog,
-    all,
-    isLoading: isTaskListLoading,
-  } = useFilteredTaskList()
+  const { all, isLoading: isTaskListLoading } = useFilteredTaskList()
 
   const taskMap = useTaskMap(all)
   const todayStr = useMemo(() => formatLocalDate(new Date()), [])
@@ -58,7 +54,7 @@ export function StatusLine() {
       <span>
         {isLoading
           ? '…'
-          : `${String(nonBacklog.length)} tasks · ${String(queueTasks.length)} queued · ${formatMinutes(remainingEstimate)} left`}
+          : `${String(all.length)} tasks · ${String(queueTasks.length)} queued · ${formatMinutes(remainingEstimate)} left`}
       </span>
       <div className="ml-auto flex gap-3.5 whitespace-nowrap">
         {shortcuts.map((shortcut) => (
