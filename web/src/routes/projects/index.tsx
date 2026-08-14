@@ -9,6 +9,7 @@ import {
   type ProjectFilterTab,
   ProjectListToolbar,
 } from '#components/project/project-list-toolbar'
+import { ListAreaMessage } from '#components/ui/list-area-message'
 import { useProjects } from '#hooks/use-projects'
 
 export const Route = createFileRoute('/projects/')({
@@ -37,9 +38,7 @@ function ProjectList() {
 
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="flex items-center justify-center py-12 font-mono text-xs text-muted-foreground">
-            Loading...
-          </div>
+          <ListAreaMessage>Loading...</ListAreaMessage>
         ) : projects && projects.length > 0 ? (
           projects.map((project) => (
             <ProjectListRow key={project.id} project={project} />
