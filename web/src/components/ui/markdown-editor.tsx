@@ -35,8 +35,11 @@ interface MarkdownEditorProps {
 
 // Loaded on demand: pulls in milkdown/ProseMirror/micromark, which are only
 // needed on routes that actually render an editor.
-const CrepeEditorRoot = lazy(
-  () => import('#components/ui/markdown-editor-crepe'),
+const CrepeEditorRoot = lazy(() =>
+  import('#components/ui/markdown-editor-crepe').catch((error: unknown) => {
+    console.error('Failed to load markdown editor', error)
+    throw error
+  }),
 )
 
 function isEventTargetInsideEditorUi(
