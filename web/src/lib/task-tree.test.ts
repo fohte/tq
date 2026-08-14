@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { makeTask } from '#components/task/task-row-test-fixtures'
-import { getDescendantIds } from '#lib/task-tree'
+import { computeDropMode, getDescendantIds } from '#lib/task-tree'
 
 describe('getDescendantIds', () => {
   it('returns an empty array when the task has no children', () => {
@@ -39,5 +39,31 @@ describe('getDescendantIds', () => {
     ]
 
     expect(getDescendantIds(tasks, 'unrelated')).toEqual([])
+  })
+})
+
+describe('computeDropMode', () => {
+  const overRect = { top: 100, height: 40 }
+
+  it('returns "child" when there is no active rect', () => {
+    expect(computeDropMode(overRect, null)).toBe('child')
+  })
+
+  it('returns "child" when the dragged item center is in the middle band', () => {
+    const activeRect = { top: 115, height: 10 } // center at 120, 50% through overRect
+
+    expect(computeDropMode(overRect, activeRect)).toBe('child')
+  })
+
+  it('returns "sibling" when the dragged item center is in the top band', () => {
+    const activeRect = { top: 100, height: 4 } // center at 102, 5% through overRect
+
+    expect(computeDropMode(overRect, activeRect)).toBe('sibling')
+  })
+
+  it('returns "sibling" when the dragged item center is in the bottom band', () => {
+    const activeRect = { top: 134, height: 4 } // center at 136, 90% through overRect
+
+    expect(computeDropMode(overRect, activeRect)).toBe('sibling')
   })
 })

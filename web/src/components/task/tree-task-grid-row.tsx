@@ -1,6 +1,8 @@
+import { useDraggable, useDroppable } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 import { Link } from '@tanstack/react-router'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 
 import { GithubLinkBadge } from '#components/task/github-link-badge'
 import { LinkExistingTaskMenu } from '#components/task/link-existing-task-menu'
@@ -26,6 +28,10 @@ import type {
 } from '#hooks/use-tree-outliner'
 import { cn } from '#lib/utils'
 
+// Module-level so the default has a stable reference across renders when a
+// caller (tests, stories) doesn't pass invalidDropIds.
+const EMPTY_INVALID_DROP_IDS: ReadonlySet<string> = new Set()
+
 export interface TreeTaskGridRowProps {
   node: TreeNode
   depth?: number
@@ -39,6 +45,7 @@ export interface TreeTaskGridRowProps {
   onCloseOutlinerInput: () => void
   onIndentOutlinerInput: () => void
   onOutdentOutlinerInput: () => void
+  invalidDropIds?: ReadonlySet<string>
 }
 
 export function TreeTaskGridRow({
@@ -54,10 +61,35 @@ export function TreeTaskGridRow({
   onCloseOutlinerInput,
   onIndentOutlinerInput,
   onOutdentOutlinerInput,
+  invalidDropIds = EMPTY_INVALID_DROP_IDS,
 }: TreeTaskGridRowProps) {
   const [linkMenuOpen, setLinkMenuOpen] = useState(false)
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
   const [projectMenuOpen, setProjectMenuOpen] = useState(false)
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDraggableRef,
+    transform,
+    isDragging,
+  } = useDraggable({ id: node.id, data: { node, depth } })
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
+    id: node.id,
+    data: { node, depth },
+    disabled: invalidDropIds.has(node.id),
+  })
+  const setDragDropRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      setDraggableRef(element)
+      setDroppableRef(element)
+    },
+    [setDraggableRef, setDroppableRef],
+  )
+  const dragStyle = {
+    transform: CSS.Transform.toString(transform),
+    opacity: isDragging ? 0.5 : 1,
+  }
 
   const handleStatusChange = useHandleStatusChange(node.id, node.status)
   const hasChildren = node.children.length > 0
@@ -109,108 +141,43 @@ export function TreeTaskGridRow({
 
   return (
     <>
-      <Link to="/tasks/$taskId" params={{ taskId: node.id }} className="block">
-        <div
-          className={cn(
-            'group',
-            gridRowWrapperClassName(isInProgress, isCompleted),
-            isSelected && 'ring-1 ring-inset ring-border-strong',
-          )}
-          style={{ paddingLeft: `${String(12 + depth * 14)}px` }}
+      <div
+        ref={setDragDropRef}
+        style={dragStyle}
+        {...attributes}
+        {...listeners}
+      >
+        <Link
+          to="/tasks/$taskId"
+          params={{ taskId: node.id }}
+          className="block"
         >
-          {/* Desktop: single-row grid matching the column header */}
           <div
-            className="hidden grid-cols-(--task-row-columns) items-center gap-2 md:grid"
-            onClick={handleSelectRow}
+            className={cn(
+              'group',
+              gridRowWrapperClassName(isInProgress, isCompleted),
+              (isSelected || isOver) && 'ring-1 ring-inset ring-border-strong',
+            )}
+            style={{ paddingLeft: `${String(12 + depth * 14)}px` }}
           >
-            {expandToggle}
-            <TaskStatusPicker
-              status={node.status}
-              onStatusChange={handleStatusChange}
-            />
-
-            <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-              <TaskNumberLabel number={node.number} />
-              <span
-                className={gridRowTitleClassName(isInProgress, isCompleted)}
-              >
-                {node.title}
-              </span>
-              <ContextBadge context={node.context} />
-              {node.childCompletionCount.total > 0 && (
-                <span
-                  className="shrink-0 font-mono text-xs text-muted-foreground"
-                  data-testid="child-completion"
-                >
-                  {node.childCompletionCount.completed}/
-                  {node.childCompletionCount.total}
-                </span>
-              )}
-            </div>
-
-            <div className="overflow-hidden">
-              {node.labels.length > 0 && (
-                <TagTokens labels={node.labels} isCompleted={isCompleted} />
-              )}
-            </div>
-
-            <div>
-              {node.githubLink != null && (
-                <GithubLinkBadge link={node.githubLink} />
-              )}
-            </div>
-
-            <div>
-              {node.estimatedMinutes != null && (
-                <GridEstimate
-                  estimatedMinutes={node.estimatedMinutes}
-                  isCompleted={isCompleted}
-                />
-              )}
-            </div>
-
-            <div className="text-right">
-              {node.dueDate != null && (
-                <DueDateBadge dueDate={node.dueDate} status={node.status} />
-              )}
-            </div>
-
-            {/* Fragment: TreeRowActionsMenu renders two sibling triggers
-                (desktop dropdown + mobile action sheet), so it needs a
-                single wrapping element here to occupy exactly one grid
-                cell. */}
-            <div>
-              <TreeRowActionsMenu
-                onAddSubtask={handleAddSubtask}
-                onLinkExisting={() => {
-                  setLinkMenuOpen(true)
-                }}
-                onMoveUnder={() => {
-                  setMoveMenuOpen(true)
-                }}
-                onSetProject={() => {
-                  setProjectMenuOpen(true)
-                }}
+            {/* Desktop: single-row grid matching the column header */}
+            <div
+              className="hidden grid-cols-(--task-row-columns) items-center gap-2 md:grid"
+              onClick={handleSelectRow}
+            >
+              {expandToggle}
+              <TaskStatusPicker
+                status={node.status}
+                onStatusChange={handleStatusChange}
               />
-            </div>
-          </div>
 
-          {/* Mobile: two-line stack */}
-          <div className="flex items-start gap-2 md:hidden">
-            {expandToggle}
-            <TaskStatusPicker
-              status={node.status}
-              onStatusChange={handleStatusChange}
-            />
-
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <span
-                className={gridRowTitleClassName(isInProgress, isCompleted)}
-              >
-                {node.title}
-              </span>
-              <div className="flex items-center gap-1.5 overflow-hidden">
+              <div className="flex min-w-0 items-center gap-2 overflow-hidden">
                 <TaskNumberLabel number={node.number} />
+                <span
+                  className={gridRowTitleClassName(isInProgress, isCompleted)}
+                >
+                  {node.title}
+                </span>
                 <ContextBadge context={node.context} />
                 {node.childCompletionCount.total > 0 && (
                   <span
@@ -221,40 +188,119 @@ export function TreeTaskGridRow({
                     {node.childCompletionCount.total}
                   </span>
                 )}
+              </div>
+
+              <div className="overflow-hidden">
                 {node.labels.length > 0 && (
                   <TagTokens labels={node.labels} isCompleted={isCompleted} />
                 )}
-                <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                  {node.dueDate != null && (
-                    <DueDateBadge dueDate={node.dueDate} status={node.status} />
-                  )}
-                  {node.estimatedMinutes != null && (
-                    <GridEstimate
-                      estimatedMinutes={node.estimatedMinutes}
-                      isCompleted={isCompleted}
-                    />
-                  )}
-                </div>
+              </div>
+
+              <div>
+                {node.githubLink != null && (
+                  <GithubLinkBadge link={node.githubLink} />
+                )}
+              </div>
+
+              <div>
+                {node.estimatedMinutes != null && (
+                  <GridEstimate
+                    estimatedMinutes={node.estimatedMinutes}
+                    isCompleted={isCompleted}
+                  />
+                )}
+              </div>
+
+              <div className="text-right">
+                {node.dueDate != null && (
+                  <DueDateBadge dueDate={node.dueDate} status={node.status} />
+                )}
+              </div>
+
+              {/* Fragment: TreeRowActionsMenu renders two sibling triggers
+                (desktop dropdown + mobile action sheet), so it needs a
+                single wrapping element here to occupy exactly one grid
+                cell. */}
+              <div>
+                <TreeRowActionsMenu
+                  onAddSubtask={handleAddSubtask}
+                  onLinkExisting={() => {
+                    setLinkMenuOpen(true)
+                  }}
+                  onMoveUnder={() => {
+                    setMoveMenuOpen(true)
+                  }}
+                  onSetProject={() => {
+                    setProjectMenuOpen(true)
+                  }}
+                />
               </div>
             </div>
 
-            <div className="shrink-0 self-center">
-              <TreeRowActionsMenu
-                onAddSubtask={handleAddSubtask}
-                onLinkExisting={() => {
-                  setLinkMenuOpen(true)
-                }}
-                onMoveUnder={() => {
-                  setMoveMenuOpen(true)
-                }}
-                onSetProject={() => {
-                  setProjectMenuOpen(true)
-                }}
+            {/* Mobile: two-line stack */}
+            <div className="flex items-start gap-2 md:hidden">
+              {expandToggle}
+              <TaskStatusPicker
+                status={node.status}
+                onStatusChange={handleStatusChange}
               />
+
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <span
+                  className={gridRowTitleClassName(isInProgress, isCompleted)}
+                >
+                  {node.title}
+                </span>
+                <div className="flex items-center gap-1.5 overflow-hidden">
+                  <TaskNumberLabel number={node.number} />
+                  <ContextBadge context={node.context} />
+                  {node.childCompletionCount.total > 0 && (
+                    <span
+                      className="shrink-0 font-mono text-xs text-muted-foreground"
+                      data-testid="child-completion"
+                    >
+                      {node.childCompletionCount.completed}/
+                      {node.childCompletionCount.total}
+                    </span>
+                  )}
+                  {node.labels.length > 0 && (
+                    <TagTokens labels={node.labels} isCompleted={isCompleted} />
+                  )}
+                  <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                    {node.dueDate != null && (
+                      <DueDateBadge
+                        dueDate={node.dueDate}
+                        status={node.status}
+                      />
+                    )}
+                    {node.estimatedMinutes != null && (
+                      <GridEstimate
+                        estimatedMinutes={node.estimatedMinutes}
+                        isCompleted={isCompleted}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="shrink-0 self-center">
+                <TreeRowActionsMenu
+                  onAddSubtask={handleAddSubtask}
+                  onLinkExisting={() => {
+                    setLinkMenuOpen(true)
+                  }}
+                  onMoveUnder={() => {
+                    setMoveMenuOpen(true)
+                  }}
+                  onSetProject={() => {
+                    setProjectMenuOpen(true)
+                  }}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      </Link>
+        </Link>
+      </div>
 
       {/* Children (plus a forced-visible slot for a 'child' outliner input,
           even on an otherwise-collapsed or childless node) */}
@@ -275,6 +321,7 @@ export function TreeTaskGridRow({
               onCloseOutlinerInput={onCloseOutlinerInput}
               onIndentOutlinerInput={onIndentOutlinerInput}
               onOutdentOutlinerInput={onOutdentOutlinerInput}
+              invalidDropIds={invalidDropIds}
             />
           ))}
           {attachChildInputHere && outlinerTarget && (

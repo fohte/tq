@@ -1,5 +1,17 @@
+import {
+  DndContext,
+  type DragEndEvent,
+  type DragOverEvent,
+  DragOverlay,
+  type DragStartEvent,
+  MouseSensor,
+  pointerWithin,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { ContextFilterInline } from '#components/context-filter'
 import { TagFilterBar } from '#components/tag-filter-bar'
@@ -15,14 +27,29 @@ import {
   sortOptionValues,
   TaskListToolbar,
 } from '#components/task/task-list-toolbar'
+import type { DropTarget } from '#components/task/tree-drag-overlay-content'
+import { TreeDragOverlayContent } from '#components/task/tree-drag-overlay-content'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
 import { useNewTaskShortcutListener } from '#hooks/use-new-task-shortcut'
 import { useProjects } from '#hooks/use-projects'
-import type { TaskSortBy } from '#hooks/use-tasks'
+import type { TaskSortBy, TreeNode } from '#hooks/use-tasks'
+import { useUpdateTaskParent } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
+import { computeDropMode, getDescendantIds } from '#lib/task-tree'
+
+interface TreeRowDragData extends Record<string, unknown> {
+  node: TreeNode
+  depth: number
+}
+
+function isTreeRowDragData(
+  data: Record<string, unknown> | undefined,
+): data is TreeRowDragData {
+  return data != null && typeof data['depth'] === 'number'
+}
 
 const tasksSearchDefaults = {
   sortBy: 'updated' as TaskSortBy,
@@ -95,12 +122,99 @@ export function TaskList() {
 
   const projects = useProjects()
 
-  const { isLoading, tree: filteredTreeData } = useFilteredTaskTree({
+  const {
+    isLoading,
+    tree: filteredTreeData,
+    tasks,
+  } = useFilteredTaskTree({
     sortBy,
     showCompleted,
     projectId,
   })
   const treeOutliner = useTreeOutliner(filteredTreeData, { enabled: true })
+  const updateTaskParent = useUpdateTaskParent()
+
+  const [activeNode, setActiveNode] = useState<TreeNode | null>(null)
+  const [activeWidth, setActiveWidth] = useState<number | null>(null)
+  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
+
+  // Desktop uses MouseSensor and mobile uses TouchSensor (rather than the
+  // unified PointerSensor) so each can have its own activationConstraint: a
+  // short tap must still navigate via the row's <Link>, so touch needs a
+  // ~250ms hold before a drag starts, while desktop just needs to rule out
+  // an accidental click-and-jitter.
+  const dndSensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
+    }),
+  )
+
+  // A task can't be dropped onto itself or any of its own descendants —
+  // each row's own useDroppable disables itself for these ids so `over`
+  // can never resolve to an invalid target.
+  const invalidDropIds = useMemo(
+    () =>
+      activeNode == null
+        ? new Set<string>()
+        : new Set([activeNode.id, ...getDescendantIds(tasks, activeNode.id)]),
+    [activeNode, tasks],
+  )
+
+  const resetDragState = () => {
+    setActiveNode(null)
+    setActiveWidth(null)
+    setDropTarget(null)
+  }
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const data = event.active.data.current
+    setActiveNode(isTreeRowDragData(data) ? data.node : null)
+    // DragOverlay doesn't auto-size to the source row, so its width is
+    // captured once here and held for the duration of the drag.
+    setActiveWidth(event.active.rect.current.initial?.width ?? null)
+  }
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const overData = event.over?.data.current
+    if (event.over == null || !isTreeRowDragData(overData)) {
+      setDropTarget(null)
+      return
+    }
+    const mode = computeDropMode(
+      event.over.rect,
+      event.active.rect.current.translated,
+    )
+    setDropTarget({ node: overData.node, depth: overData.depth, mode })
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const overData = event.over?.data.current
+    const activeData = event.active.data.current
+    if (
+      event.over != null &&
+      isTreeRowDragData(overData) &&
+      isTreeRowDragData(activeData)
+    ) {
+      const mode = computeDropMode(
+        event.over.rect,
+        event.active.rect.current.translated,
+      )
+      const newParentId =
+        mode === 'child' ? overData.node.id : overData.node.parentId
+      if (activeData.node.parentId !== newParentId) {
+        updateTaskParent.mutate({
+          id: activeData.node.id,
+          parentId: newParentId,
+        })
+      }
+    }
+    resetDragState()
+  }
+
+  const handleDragCancel = () => {
+    resetDragState()
+  }
 
   useNewTaskShortcutListener(
     useCallback(() => {
@@ -167,24 +281,45 @@ export function TaskList() {
             No tasks yet
           </div>
         ) : (
-          <div className="py-1" data-testid="task-tree">
-            {filteredTreeData.map((node) => (
-              <TreeTaskGridRow
-                key={node.id}
-                node={node}
-                isExpanded={treeOutliner.isExpanded}
-                onToggleExpand={treeOutliner.toggleExpand}
-                selectedRowId={treeOutliner.selectedRowId}
-                onSelectRow={treeOutliner.selectRow}
-                outlinerInput={treeOutliner.outlinerInput}
-                outlinerTarget={treeOutliner.outlinerTarget}
-                onOpenChildInput={treeOutliner.openChildInput}
-                onCloseOutlinerInput={treeOutliner.closeOutlinerInput}
-                onIndentOutlinerInput={treeOutliner.indentOutlinerInput}
-                onOutdentOutlinerInput={treeOutliner.outdentOutlinerInput}
-              />
-            ))}
-          </div>
+          <DndContext
+            sensors={dndSensors}
+            collisionDetection={pointerWithin}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
+          >
+            <div className="py-1" data-testid="task-tree">
+              {filteredTreeData.map((node) => (
+                <TreeTaskGridRow
+                  key={node.id}
+                  node={node}
+                  isExpanded={treeOutliner.isExpanded}
+                  onToggleExpand={treeOutliner.toggleExpand}
+                  selectedRowId={treeOutliner.selectedRowId}
+                  onSelectRow={treeOutliner.selectRow}
+                  outlinerInput={treeOutliner.outlinerInput}
+                  outlinerTarget={treeOutliner.outlinerTarget}
+                  onOpenChildInput={treeOutliner.openChildInput}
+                  onCloseOutlinerInput={treeOutliner.closeOutlinerInput}
+                  onIndentOutlinerInput={treeOutliner.indentOutlinerInput}
+                  onOutdentOutlinerInput={treeOutliner.outdentOutlinerInput}
+                  invalidDropIds={invalidDropIds}
+                />
+              ))}
+            </div>
+
+            <DragOverlay>
+              {activeNode && (
+                <div style={{ width: activeWidth ?? undefined }}>
+                  <TreeDragOverlayContent
+                    node={activeNode}
+                    target={dropTarget}
+                  />
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
         )}
       </div>
 

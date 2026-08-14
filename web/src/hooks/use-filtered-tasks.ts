@@ -57,5 +57,5 @@ export function useFilteredTaskTree(options: {
 
   const tree = useMemo(() => buildTree(categorized.all), [categorized.all])
 
-  return { isLoading, tree }
+  return { isLoading, tree, tasks: categorized.all }
 }
