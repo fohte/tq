@@ -1,10 +1,17 @@
 import { zValidator } from '@hono/zod-validator'
+import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
+import { db } from '#db/connection'
+import { recurrenceRules, taskGithubLinks } from '#db/schema'
 import { APP_DOMAIN } from '#env'
 import { extractAppResourceRefs } from '#lib/app-url'
-import { findTaskByIdOrNumber, taskToResponse } from '#routes/tasks/shared'
+import {
+  findTaskByIdOrNumber,
+  getLabelNamesByTaskId,
+  taskToResponse,
+} from '#routes/tasks/shared'
 
 const resolveUrlSchema = z.object({ url: z.string().min(1) })
 
@@ -29,6 +36,21 @@ export const tasksResolveUrlApp = new Hono().post(
       return c.json({ error: 'Task not found' }, 404)
     }
 
-    return c.json(taskToResponse(task), 200)
+    const [rule, githubLink, labelsByTaskId] = await Promise.all([
+      task.recurrenceRuleId != null
+        ? db.query.recurrenceRules.findFirst({
+            where: eq(recurrenceRules.id, task.recurrenceRuleId),
+          })
+        : Promise.resolve(null),
+      db.query.taskGithubLinks.findFirst({
+        where: eq(taskGithubLinks.taskId, task.id),
+      }),
+      getLabelNamesByTaskId([task.id]),
+    ])
+
+    return c.json(
+      taskToResponse(task, rule, githubLink, labelsByTaskId.get(task.id) ?? []),
+      200,
+    )
   },
 )

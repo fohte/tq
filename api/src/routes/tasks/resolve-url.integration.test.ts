@@ -36,6 +36,17 @@ describe('POST /api/tasks/resolve-url', () => {
     expect(await jsonBody(res)).toEqual(task)
   })
 
+  it('includes the task labels in the response', async () => {
+    const task = await createTask('Target', { labels: ['urgent'] })
+
+    const res = await resolveUrl(
+      `https://${APP_DOMAIN}/tasks/${String(task.number)}`,
+    )
+
+    expect(res.status).toBe(200)
+    expect(await jsonBody(res)).toEqual(task)
+  })
+
   it('returns 404 for a URL on a different domain', async () => {
     const task = await createTask('Target')
 
