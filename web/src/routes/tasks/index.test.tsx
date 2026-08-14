@@ -103,12 +103,20 @@ beforeEach(() => {
   mockUseProjects.mockReturnValue({ data: [] })
 })
 
+async function openFilterMenu(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: '+ filter' }))
+  // The menu popup mounts after an async Floating UI position computation,
+  // so wait for an item inside it rather than assuming it's mounted
+  // synchronously once the click resolves.
+  await screen.findByRole('menuitemcheckbox', { name: 'show completed' })
+}
+
 describe('TaskList sort selector', () => {
   it('defaults to "updated" and requests updated-sorted data on initial render', async () => {
     renderTaskList()
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Sort tasks')).toHaveValue('updated')
+      expect(screen.getByText('sort: Updated')).toBeInTheDocument()
     })
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
       { sortBy: 'updated', showCompleted: false },
@@ -119,12 +127,12 @@ describe('TaskList sort selector', () => {
     const user = userEvent.setup()
     renderTaskList()
 
-    await waitFor(() => {
-      expect(screen.getByLabelText('Sort tasks')).toBeInTheDocument()
-    })
-    await user.selectOptions(screen.getByLabelText('Sort tasks'), 'created')
+    await openFilterMenu(user)
+    await user.click(
+      screen.getByRole('menuitemradio', { name: 'Sort: Created' }),
+    )
 
-    expect(screen.getByLabelText('Sort tasks')).toHaveValue('created')
+    expect(screen.getByText('sort: Created')).toBeInTheDocument()
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
       { sortBy: 'created', showCompleted: false },
     ])
@@ -133,29 +141,27 @@ describe('TaskList sort selector', () => {
 
 describe('TaskList "show completed" toggle', () => {
   it('defaults to unchecked, hiding completed tasks', async () => {
+    const user = userEvent.setup()
     renderTaskList()
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole('checkbox', { name: 'show completed' }),
-      ).not.toBeChecked()
-    })
+    await openFilterMenu(user)
+    expect(
+      screen.getByRole('menuitemcheckbox', { name: 'show completed' }),
+    ).toHaveAttribute('aria-checked', 'false')
   })
 
   it('requests completed tasks once checked', async () => {
     const user = userEvent.setup()
     renderTaskList()
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole('checkbox', { name: 'show completed' }),
-      ).toBeInTheDocument()
-    })
-    await user.click(screen.getByRole('checkbox', { name: 'show completed' }))
+    await openFilterMenu(user)
+    await user.click(
+      screen.getByRole('menuitemcheckbox', { name: 'show completed' }),
+    )
 
     expect(
-      screen.getByRole('checkbox', { name: 'show completed' }),
-    ).toBeChecked()
+      screen.getByRole('menuitemcheckbox', { name: 'show completed' }),
+    ).toHaveAttribute('aria-checked', 'true')
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
       { sortBy: 'updated', showCompleted: true },
     ])
@@ -172,12 +178,13 @@ describe('TaskList project filter selector', () => {
     })
   })
 
-  it('defaults to "All projects" and requests unfiltered data on initial render', async () => {
+  it('defaults to no project chip and requests unfiltered data on initial render', async () => {
     renderTaskList()
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Filter by project')).toHaveValue('')
+      expect(screen.getByText('sort: Updated')).toBeInTheDocument()
     })
+    expect(screen.queryByText(/^project:/)).not.toBeInTheDocument()
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
       { sortBy: 'updated', showCompleted: false },
     ])
@@ -187,15 +194,14 @@ describe('TaskList project filter selector', () => {
     const user = userEvent.setup()
     renderTaskList()
 
-    await waitFor(() => {
-      expect(screen.getByLabelText('Filter by project')).toBeInTheDocument()
-    })
-    await user.selectOptions(
-      screen.getByLabelText('Filter by project'),
-      'proj-1',
+    await openFilterMenu(user)
+    await user.click(
+      screen.getByRole('menuitemradio', { name: 'Website Redesign' }),
     )
 
-    expect(screen.getByLabelText('Filter by project')).toHaveValue('proj-1')
+    expect(
+      screen.getByRole('button', { name: 'project: Website Redesign ×' }),
+    ).toBeInTheDocument()
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
       { sortBy: 'updated', showCompleted: false, projectId: 'proj-1' },
     ])
@@ -207,7 +213,7 @@ describe('TaskList URL query encoding', () => {
     const { router } = renderTaskList()
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Sort tasks')).toHaveValue('updated')
+      expect(screen.getByText('sort: Updated')).toBeInTheDocument()
     })
     expect(router.state.location.search).toEqual({})
   })
@@ -216,10 +222,10 @@ describe('TaskList URL query encoding', () => {
     const user = userEvent.setup()
     const { router } = renderTaskList()
 
-    await waitFor(() => {
-      expect(screen.getByLabelText('Sort tasks')).toBeInTheDocument()
-    })
-    await user.selectOptions(screen.getByLabelText('Sort tasks'), 'created')
+    await openFilterMenu(user)
+    await user.click(
+      screen.getByRole('menuitemradio', { name: 'Sort: Created' }),
+    )
 
     expect(router.state.location.search).toEqual({
       q: 'is:todo is:in_progress sort:created',
@@ -230,12 +236,10 @@ describe('TaskList URL query encoding', () => {
     const user = userEvent.setup()
     const { router } = renderTaskList()
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole('checkbox', { name: 'show completed' }),
-      ).toBeInTheDocument()
-    })
-    await user.click(screen.getByRole('checkbox', { name: 'show completed' }))
+    await openFilterMenu(user)
+    await user.click(
+      screen.getByRole('menuitemcheckbox', { name: 'show completed' }),
+    )
 
     expect(router.state.location.search).toEqual({ q: 'sort:updated' })
   })
@@ -247,12 +251,9 @@ describe('TaskList URL query encoding', () => {
     })
     const { router } = renderTaskList()
 
-    await waitFor(() => {
-      expect(screen.getByLabelText('Filter by project')).toBeInTheDocument()
-    })
-    await user.selectOptions(
-      screen.getByLabelText('Filter by project'),
-      'proj-1',
+    await openFilterMenu(user)
+    await user.click(
+      screen.getByRole('menuitemradio', { name: 'Website Redesign' }),
     )
 
     expect(router.state.location.search).toEqual({
@@ -264,6 +265,7 @@ describe('TaskList URL query encoding', () => {
     mockUseProjects.mockReturnValue({
       data: [{ id: 'proj-1', title: 'Website Redesign' }],
     })
+    const user = userEvent.setup()
     // Asserts against the rendered filter state (not router.state.location
     // .search): TanStack Router only re-derives `location.search` from
     // validateSearch's `q` on the next navigate, so on this initial load the
@@ -272,11 +274,16 @@ describe('TaskList URL query encoding', () => {
     renderTaskList('/tasks?sortBy=created&showCompleted=true&projectId=proj-1')
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Sort tasks')).toHaveValue('created')
+      expect(screen.getByText('sort: Created')).toBeInTheDocument()
     })
     expect(
-      screen.getByRole('checkbox', { name: 'show completed' }),
-    ).toBeChecked()
-    expect(screen.getByLabelText('Filter by project')).toHaveValue('proj-1')
+      screen.getByRole('button', { name: 'project: Website Redesign ×' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('not completed ×')).not.toBeInTheDocument()
+
+    await openFilterMenu(user)
+    expect(
+      screen.getByRole('menuitemcheckbox', { name: 'show completed' }),
+    ).toHaveAttribute('aria-checked', 'true')
   })
 })
