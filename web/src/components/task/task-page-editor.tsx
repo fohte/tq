@@ -1,7 +1,7 @@
-import { Link } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { BackLink } from '#components/ui/back-header-bar'
 import { HtmlPageEditor } from '#components/ui/html-page-editor'
 import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
@@ -172,13 +172,7 @@ export function SubpageViewPresentation({
   return (
     <div className="flex h-full flex-col">
       <ScreenHeaderBar>
-        <Link
-          to="/tasks/$taskId"
-          params={{ taskId }}
-          className="font-mono text-xs text-muted-foreground-strong hover:text-foreground"
-        >
-          ←
-        </Link>
+        <BackLink to="/tasks/$taskId" params={{ taskId }} aria-label="Back" />
         <span className="min-w-0 flex-1 truncate font-mono text-xs font-medium text-foreground">
           {pageTitle}
         </span>
