@@ -5,7 +5,7 @@ name: tq-infra
 
 services:
   db:
-    image: postgres:17
+    image: postgres:17.11
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-tq}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tq}

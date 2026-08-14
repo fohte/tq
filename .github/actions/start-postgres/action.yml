@@ -17,7 +17,7 @@ runs:
           -e POSTGRES_PASSWORD=tq \
           -e POSTGRES_DB=tq_test \
           -p 5432:5432 \
-          postgres:17
+          postgres:17.11
 
     - name: Wait for PostgreSQL to accept connections
       shell: bash
