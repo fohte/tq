@@ -310,4 +310,17 @@ describe('TaskList URL query encoding', () => {
       screen.getByRole('menuitemcheckbox', { name: 'show completed' }),
     ).toHaveAttribute('aria-checked', 'true')
   })
+
+  it('migrates a pre-migration ?tag= URL into q', async () => {
+    renderTaskList('/tasks?tag=urgent')
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: '#urgent ×' }),
+      ).toBeInTheDocument()
+    })
+    expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
+      { sortBy: 'updated', showCompleted: false, tag: 'urgent' },
+    ])
+  })
 })

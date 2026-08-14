@@ -106,19 +106,21 @@ function validateSearch(search: Record<string, unknown>): TasksSearch {
   const rawQ = typeof search['q'] === 'string' ? search['q'] : undefined
   if (rawQ != null && rawQ !== '') return { q: rawQ }
 
-  // Migrate URLs bookmarked/shared before the sortBy/showCompleted/projectId
+  // Migrate URLs bookmarked/shared before the sortBy/showCompleted/projectId/tag
   // -> q migration, instead of silently discarding their filter.
   if (
     'sortBy' in search ||
     'showCompleted' in search ||
-    'projectId' in search
+    'projectId' in search ||
+    'tag' in search
   ) {
     const sortBy =
       sortOptionValues.find((value) => value === search['sortBy']) ?? 'updated'
     const showCompleted = search['showCompleted'] === true
     const projectId =
       typeof search['projectId'] === 'string' ? search['projectId'] : undefined
-    return { q: buildTasksQuery({ sortBy, showCompleted, projectId }) }
+    const tag = typeof search['tag'] === 'string' ? search['tag'] : undefined
+    return { q: buildTasksQuery({ sortBy, showCompleted, projectId, tag }) }
   }
 
   return { q: tasksSearchDefaults.q }
