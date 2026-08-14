@@ -3,6 +3,7 @@ import { useState } from 'react'
 
 import { GithubSyncRuleFormModal } from '#components/settings/github-sync-rule-form-modal'
 import { GithubSyncRuleRow } from '#components/settings/github-sync-rule-row'
+import { QueryStateMessage } from '#components/settings/query-state-message'
 import { Button } from '#components/ui/button'
 import { useGithubSyncRules } from '#hooks/use-github-sync-rules'
 import { useProjects } from '#hooks/use-projects'
@@ -30,7 +31,7 @@ export function GithubSyncRuleList() {
       </div>
 
       {syncRules.isLoading ? (
-        <p className="text-sm text-muted-foreground">読み込み中...</p>
+        <QueryStateMessage status="loading" />
       ) : syncRules.isSuccess ? (
         syncRules.data.length > 0 ? (
           <div className="flex flex-col gap-3">
@@ -48,9 +49,10 @@ export function GithubSyncRuleList() {
           </p>
         )
       ) : (
-        <p className="text-sm text-destructive">
-          同期ルールの取得に失敗しました
-        </p>
+        <QueryStateMessage
+          status="error"
+          message="同期ルールの取得に失敗しました"
+        />
       )}
 
       <GithubSyncRuleFormModal open={createOpen} onOpenChange={setCreateOpen} />

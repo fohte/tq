@@ -6,6 +6,7 @@ import { GcalCalendarPicker } from '#components/settings/gcal-calendar-picker'
 import { GithubSyncRuleList } from '#components/settings/github-sync-rule-list'
 import { IntegrationCard } from '#components/settings/integration-card'
 import { KeybindingsList } from '#components/settings/keybindings-list'
+import { QueryStateMessage } from '#components/settings/query-state-message'
 import { SchedulingSettingsPanel } from '#components/settings/scheduling-settings-panel'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
 import { Panel } from '#components/ui/panel'
@@ -44,7 +45,7 @@ function Settings() {
           <SectionHeading level={3}>integrations</SectionHeading>
 
           {integrationsList.isLoading ? (
-            <p className="text-sm text-muted-foreground">読み込み中...</p>
+            <QueryStateMessage status="loading" />
           ) : integrationsList.isSuccess ? (
             <Panel>
               <div className="divide-y divide-border">
@@ -54,9 +55,10 @@ function Settings() {
               </div>
             </Panel>
           ) : (
-            <p className="text-sm text-destructive">
-              連携状態の取得に失敗しました
-            </p>
+            <QueryStateMessage
+              status="error"
+              message="連携状態の取得に失敗しました"
+            />
           )}
 
           <div className="mt-8">
