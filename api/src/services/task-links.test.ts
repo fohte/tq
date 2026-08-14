@@ -79,4 +79,10 @@ describe('extractMentionedTaskRefs', () => {
       ),
     ).toEqual({ numbers: [1, 2], ids: [uuid] })
   })
+
+  it('treats a numeric task URL ref past the Postgres integer range as an id, not a number', () => {
+    expect(
+      extractMentionedTaskRefs(`see https://${APP_DOMAIN}/tasks/99999999999`),
+    ).toEqual({ numbers: [], ids: ['99999999999'] })
+  })
 })

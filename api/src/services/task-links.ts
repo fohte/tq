@@ -16,6 +16,11 @@ export function extractMentionedNumbers(text: string): number[] {
 }
 
 const numericRefPattern = /^\d+$/
+// `tasks.number` is a Postgres `integer`; a URL ref past this range would
+// make the eventual `inArray(tasks.number, ...)` query throw instead of
+// simply matching nothing, so it's treated as a (always-empty) id lookup
+// instead — same guard as `findTaskByIdOrNumber` in routes/tasks/shared.ts.
+const PG_INTEGER_MAX = 2147483647
 
 // Combines `#123`-style mentions with `https://<APP_DOMAIN>/tasks/...`-style
 // URLs pasted into task text. A task URL may key off either the human-facing
@@ -28,8 +33,10 @@ export function extractMentionedTaskRefs(text: string): {
 } {
   const numbers = new Set(extractMentionedNumbers(text))
   const ids = new Set<string>()
+  // `resource` is parameterized (not hardcoded to 'tasks') so a follow-up PR
+  // resolving project URLs can call extractAppResourceRefs the same way.
   for (const ref of extractAppResourceRefs(text, APP_DOMAIN, 'tasks')) {
-    if (numericRefPattern.test(ref)) {
+    if (numericRefPattern.test(ref) && Number(ref) <= PG_INTEGER_MAX) {
       numbers.add(Number(ref))
     } else {
       ids.add(ref)
