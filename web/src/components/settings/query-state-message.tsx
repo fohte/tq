@@ -1,8 +1,8 @@
 import { cn } from '#lib/utils'
 
 type QueryStateMessageProps =
-  | { status: 'loading'; size?: 'sm' | 'xs' }
-  | { status: 'error'; message: string; size?: 'sm' | 'xs' }
+  | { status: 'loading'; size?: 'xs' }
+  | { status: 'error'; message: string; size?: 'xs' }
 
 export function QueryStateMessage(props: QueryStateMessageProps) {
   const sizeClassName = props.size === 'xs' ? 'py-1.5 text-xs' : 'text-sm'

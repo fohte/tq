@@ -29,11 +29,3 @@ export const LoadingSmall: Story = {
     size: 'xs',
   },
 }
-
-export const ErrorSmall: Story = {
-  args: {
-    status: 'error',
-    message: 'データの取得に失敗しました',
-    size: 'xs',
-  },
-}
