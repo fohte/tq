@@ -29,6 +29,7 @@ export function TaskStatusPicker({
           e.preventDefault()
           e.stopPropagation()
         }}
+        data-no-dnd=""
         className="flex shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
       >
         <StatusIcon status={status} />

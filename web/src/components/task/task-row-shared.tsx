@@ -87,6 +87,24 @@ export function TaskNumberLabel({ number }: { number: number }) {
   )
 }
 
+// Row indent is a per-instance value (depth is unbounded), so it can't be a
+// static Tailwind class. Set as a custom property via `style` and consumed
+// through `ROW_INDENT_CLASS_NAME`'s `pl-(--row-indent)` utility.
+export const ROW_INDENT_CLASS_NAME = 'pl-(--row-indent)'
+
+interface RowIndentStyle extends React.CSSProperties {
+  '--row-indent': string
+}
+
+// 3 spacing units (12px) base, +4 units (16px) per depth level — both
+// multiples of Tailwind's --spacing unit, so every depth lands on-grid
+// instead of accumulating an off-grid offset.
+export function rowIndentStyle(depth: number): RowIndentStyle {
+  return {
+    '--row-indent': `calc(var(--spacing) * ${String(3 + depth * 4)})`,
+  }
+}
+
 export function gridRowWrapperClassName(
   isInProgress: boolean,
   isCompleted: boolean,

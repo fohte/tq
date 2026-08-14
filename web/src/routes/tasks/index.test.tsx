@@ -91,7 +91,11 @@ function renderTaskList(initialEntry = '/tasks') {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockUseFilteredTaskTree.mockReturnValue({ isLoading: false, tree: [] })
+  mockUseFilteredTaskTree.mockReturnValue({
+    isLoading: false,
+    tree: [],
+    tasks: [],
+  })
   mockUseTaskList.mockReturnValue({
     categorized: { all: [] },
     isLoading: false,

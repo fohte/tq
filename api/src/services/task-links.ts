@@ -1,8 +1,12 @@
-import { eq, inArray, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 import { MENTION_PATTERN } from '#constants/mention-pattern'
 import { db } from '#db/connection'
 import { taskComments, taskLinks, taskPages, tasks } from '#db/schema'
+import { APP_DOMAIN } from '#env'
+import { extractAppResourceRefs } from '#lib/app-url'
+import { matchByIdOrNumber } from '#lib/drizzle-utils'
+import type { NumericOrId } from '#lib/numeric-id'
 
 export function extractMentionedNumbers(text: string): number[] {
   const numbers = new Set<number>()
@@ -11,6 +15,26 @@ export function extractMentionedNumbers(text: string): number[] {
     if (digits != null) numbers.add(Number(digits))
   }
   return [...numbers]
+}
+
+// Combines `#123`-style mentions with `https://<APP_DOMAIN>/tasks/...`-style
+// URLs pasted into task text. A task URL may key off either the human-facing
+// number or the UUID primary key (see `findTaskByIdOrNumber`), so a numeric
+// URL ref is folded in alongside `#123` mentions as the same `kind: 'number'`.
+export function extractMentionedTaskRefs(text: string): NumericOrId[] {
+  const numbers = new Set(extractMentionedNumbers(text))
+  const ids = new Set<string>()
+  for (const ref of extractAppResourceRefs(text, APP_DOMAIN, 'tasks')) {
+    if (ref.kind === 'number') {
+      numbers.add(ref.value)
+    } else {
+      ids.add(ref.value)
+    }
+  }
+  return [
+    ...[...numbers].map((value): NumericOrId => ({ kind: 'number', value })),
+    ...[...ids].map((value): NumericOrId => ({ kind: 'id', value })),
+  ]
 }
 
 // Recomputes every outgoing link for `sourceTaskId` from scratch by
@@ -52,15 +76,22 @@ export async function syncTaskLinks(sourceTaskId: string): Promise<void> {
       ...pages.filter((p) => p.format !== 'html').map((p) => p.content),
       ...comments.map((c) => c.content),
     ]
-    const mentionedNumbers = new Set(texts.flatMap(extractMentionedNumbers))
-    mentionedNumbers.delete(task.number)
+    // Joined with `\n` (rather than `texts.flatMap(extractMentionedTaskRefs)`)
+    // so refs are deduped across fields, not just within each one — `\n` isn't
+    // part of a `#123` mention or a URL ref, so it can't bridge a false match
+    // across the join.
+    const refs = extractMentionedTaskRefs(texts.join('\n')).filter((ref) =>
+      ref.kind === 'number'
+        ? ref.value !== task.number
+        : ref.value !== sourceTaskId,
+    )
 
     const targets =
-      mentionedNumbers.size > 0
+      refs.length > 0
         ? await tx
             .select({ id: tasks.id })
             .from(tasks)
-            .where(inArray(tasks.number, [...mentionedNumbers]))
+            .where(matchByIdOrNumber(tasks, refs))
         : []
 
     await tx.delete(taskLinks).where(eq(taskLinks.sourceTaskId, sourceTaskId))

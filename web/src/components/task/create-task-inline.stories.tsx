@@ -144,12 +144,14 @@ export const LinkOrphanCandidate: Story = {
     await userEvent.click(candidateRow)
 
     // Linking an orphan candidate is immediate: no confirmation dialog, and
-    // the row resets as if a task had just been created.
-    await expect(
-      body.queryByText(`Create "${searchText}"`),
-    ).not.toBeInTheDocument()
-    // The row only resets once the parent-update mutation's `onSuccess`
-    // fires, which lands after the (mocked) network round trip.
+    // the row resets as if a task had just been created. Both only happen
+    // once the parent-update mutation's `onSuccess` fires, which lands
+    // after the (mocked) network round trip — so both assertions must wait.
+    await waitFor(() =>
+      expect(
+        body.queryByText(`Create "${searchText}"`),
+      ).not.toBeInTheDocument(),
+    )
     await waitFor(() => expect(input).toHaveValue(''))
   },
 }
