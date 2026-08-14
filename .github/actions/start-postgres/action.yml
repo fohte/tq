@@ -1,9 +1,8 @@
 name: Start PostgreSQL
 description: >-
-  Start a PostgreSQL container for integration tests and wait until it
-  accepts connections. Unlike a job-level `services:` block (whose health
-  check only polls every `--health-interval`), this polls every second so
-  the wait is bounded by actual startup time instead of the check interval.
+  Start the docker-compose.yml PostgreSQL container for integration tests,
+  create the tq_test database, and export TEST_DATABASE_URL for subsequent
+  steps.
 
 runs:
   using: composite
@@ -11,22 +10,6 @@ runs:
     - name: Start PostgreSQL container
       shell: bash
       run: |
-        docker run -d \
-          --name postgres \
-          -e POSTGRES_USER=tq \
-          -e POSTGRES_PASSWORD=tq \
-          -e POSTGRES_DB=tq_test \
-          -p 5432:5432 \
-          postgres:17.11
-
-    - name: Wait for PostgreSQL to accept connections
-      shell: bash
-      run: |
-        for _ in $(seq 1 30); do
-          if docker exec postgres pg_isready -U tq >/dev/null 2>&1; then
-            exit 0
-          fi
-          sleep 1
-        done
-        echo "PostgreSQL did not become ready in time" >&2
-        exit 1
+        mise run db:up
+        docker compose exec db createdb -U tq tq_test
+        grep -v '^#' .env.runtime >> "$GITHUB_ENV"

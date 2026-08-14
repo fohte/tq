@@ -5,28 +5,6 @@
     'github>fohte/renovate-config:node.json5',
   ],
 
-  customManagers: [
-    {
-      // start-postgres/action.yml pins postgres inside a `docker run` shell
-      // command, which no built-in manager scans (unlike the `services:`
-      // image in format.yml or docker-compose.yml's `image:`, both covered
-      // by the github-actions/docker-compose managers).
-      customType: 'regex',
-      managerFilePatterns: [
-        '/^\\.github/actions/start-postgres/action\\.yml$/',
-      ],
-      // Renovate's regex manager matches against the whole file, not per
-      // line, so `^`/`$` would anchor to the file's start/end instead of
-      // the line — use explicit line-boundary alternation instead.
-      // https://docs.renovatebot.com/modules/manager/regex/
-      matchStrings: [
-        '(?:^|\\n)\\s+postgres:(?<currentValue>\\S+)\\s*(?:$|\\n)',
-      ],
-      depNameTemplate: 'postgres',
-      datasourceTemplate: 'docker',
-    },
-  ],
-
   packageRules: [
     // PostgreSQL minor/patch releases only contain bug fixes and stay
     // on-disk-format compatible (https://www.postgresql.org/support/versioning/),
