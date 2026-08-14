@@ -20,7 +20,7 @@ const BackAnchor = forwardRef<
   )
 })
 
-const BackLink = createLink(BackAnchor)
+export const BackLink: LinkComponent<typeof BackAnchor> = createLink(BackAnchor)
 
 export const BackHeaderBar: LinkComponent<typeof BackAnchor> = (props) => (
   <ScreenHeaderBar className="h-12 md:hidden">

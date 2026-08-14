@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 
 import { PageBreadcrumb } from '#components/task/page-breadcrumb'
 import { TaskPageEditor } from '#components/task/task-page-editor'
+import { BackLink } from '#components/ui/back-header-bar'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { useTaskPage } from '#hooks/use-task-pages'
 import { useTask } from '#hooks/use-tasks'
@@ -18,13 +19,7 @@ function TaskPageView() {
   return (
     <div className="flex h-full flex-col">
       <ScreenHeaderBar>
-        <Link
-          to="/tasks/$taskId"
-          params={{ taskId }}
-          className="shrink-0 font-mono text-xs text-muted-foreground-strong hover:text-foreground"
-        >
-          ←
-        </Link>
+        <BackLink to="/tasks/$taskId" params={{ taskId }} aria-label="Back" />
         <PageBreadcrumb
           isLoading={isLoading}
           taskNumber={task?.number}
