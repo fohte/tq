@@ -12,7 +12,7 @@ describe('extractAppResourceRefs', () => {
         APP_DOMAIN,
         'tasks',
       ),
-    ).toEqual([{ resource: 'tasks', ref: '123' }])
+    ).toEqual([{ resource: 'tasks', kind: 'number', value: 123 }])
   })
 
   it('extracts a uuid ref from an http URL', () => {
@@ -23,7 +23,7 @@ describe('extractAppResourceRefs', () => {
         APP_DOMAIN,
         'tasks',
       ),
-    ).toEqual([{ resource: 'tasks', ref: uuid }])
+    ).toEqual([{ resource: 'tasks', kind: 'id', value: uuid }])
   })
 
   it('dedupes repeated refs to the same resource', () => {
@@ -33,7 +33,7 @@ describe('extractAppResourceRefs', () => {
         APP_DOMAIN,
         'tasks',
       ),
-    ).toEqual([{ resource: 'tasks', ref: '123' }])
+    ).toEqual([{ resource: 'tasks', kind: 'number', value: 123 }])
   })
 
   it('returns an empty array when there are no matching URLs', () => {
@@ -69,7 +69,7 @@ describe('extractAppResourceRefs', () => {
         APP_DOMAIN,
         'tasks',
       ),
-    ).toEqual([{ resource: 'tasks', ref: '123' }])
+    ).toEqual([{ resource: 'tasks', kind: 'number', value: 123 }])
   })
 
   it('stops the ref before trailing sentence punctuation', () => {
@@ -79,7 +79,7 @@ describe('extractAppResourceRefs', () => {
         APP_DOMAIN,
         'tasks',
       ),
-    ).toEqual([{ resource: 'tasks', ref: '123' }])
+    ).toEqual([{ resource: 'tasks', kind: 'number', value: 123 }])
   })
 
   it('stops the ref before a query string', () => {
@@ -89,6 +89,6 @@ describe('extractAppResourceRefs', () => {
         APP_DOMAIN,
         'tasks',
       ),
-    ).toEqual([{ resource: 'tasks', ref: '123' }])
+    ).toEqual([{ resource: 'tasks', kind: 'number', value: 123 }])
   })
 })

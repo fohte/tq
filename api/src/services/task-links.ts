@@ -15,7 +15,6 @@ export function extractMentionedNumbers(text: string): number[] {
   return [...numbers]
 }
 
-const numericRefPattern = /^\d+$/
 // `tasks.number` is a Postgres `integer`; a URL ref past this range would
 // make the eventual `inArray(tasks.number, ...)` query throw instead of
 // simply matching nothing, so it's treated as a (always-empty) id lookup
@@ -33,11 +32,11 @@ export function extractMentionedTaskRefs(text: string): {
 } {
   const numbers = new Set(extractMentionedNumbers(text))
   const ids = new Set<string>()
-  for (const { ref } of extractAppResourceRefs(text, APP_DOMAIN, 'tasks')) {
-    if (numericRefPattern.test(ref) && Number(ref) <= PG_INTEGER_MAX) {
-      numbers.add(Number(ref))
+  for (const ref of extractAppResourceRefs(text, APP_DOMAIN, 'tasks')) {
+    if (ref.kind === 'number' && ref.value <= PG_INTEGER_MAX) {
+      numbers.add(ref.value)
     } else {
-      ids.add(ref)
+      ids.add(ref.kind === 'number' ? String(ref.value) : ref.value)
     }
   }
   return { numbers: [...numbers], ids: [...ids] }

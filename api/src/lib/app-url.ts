@@ -2,11 +2,14 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-// `resource` records which resource this ref was matched under.
-export interface AppResourceRef {
-  resource: string
-  ref: string
-}
+const numericRefPattern = /^\d+$/
+
+// A ref matched under `resource`, already split into a numeric task number
+// or an opaque id (e.g. a UUID) so callers don't need to re-parse the
+// captured string themselves.
+export type AppResourceRef =
+  | { resource: string; kind: 'number'; value: number }
+  | { resource: string; kind: 'id'; value: string }
 
 // Extracts the id-or-number segment from tq URLs under `resource` (e.g.
 // `https://tq.fohte.net/tasks/123` or `.../tasks/<uuid>`), so callers can
@@ -29,5 +32,9 @@ export function extractAppResourceRefs(
     const ref = match[1]
     if (ref != null) refs.add(ref)
   }
-  return [...refs].map((ref) => ({ resource, ref }))
+  return [...refs].map((ref) =>
+    numericRefPattern.test(ref)
+      ? { resource, kind: 'number' as const, value: Number(ref) }
+      : { resource, kind: 'id' as const, value: ref },
+  )
 }
