@@ -147,12 +147,12 @@ export const LinkOrphanCandidate: Story = {
     // the row resets as if a task had just been created. Both only happen
     // once the parent-update mutation's `onSuccess` fires, which lands
     // after the (mocked) network round trip — so both assertions must wait.
-    await waitFor(async () => {
-      await expect(
+    await waitFor(() =>
+      expect(
         body.queryByText(`Create "${searchText}"`),
-      ).not.toBeInTheDocument()
-      await expect(input).toHaveValue('')
-    })
+      ).not.toBeInTheDocument(),
+    )
+    await waitFor(() => expect(input).toHaveValue(''))
   },
 }
 
