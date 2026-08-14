@@ -5,14 +5,14 @@ import { extractAppResourceRefs } from '#lib/app-url'
 const APP_DOMAIN = 'tq.fohte.net'
 
 describe('extractAppResourceRefs', () => {
-  it('extracts a numeric ref from an https URL', () => {
+  it('extracts a numeric ref from an https URL, tagged with its resource', () => {
     expect(
       extractAppResourceRefs(
         `see https://${APP_DOMAIN}/tasks/123 for context`,
         APP_DOMAIN,
         'tasks',
       ),
-    ).toEqual(['123'])
+    ).toEqual([{ resource: 'tasks', ref: '123' }])
   })
 
   it('extracts a uuid ref from an http URL', () => {
@@ -23,7 +23,17 @@ describe('extractAppResourceRefs', () => {
         APP_DOMAIN,
         'tasks',
       ),
-    ).toEqual([uuid])
+    ).toEqual([{ resource: 'tasks', ref: uuid }])
+  })
+
+  it('tags refs with whichever resource was passed in', () => {
+    expect(
+      extractAppResourceRefs(
+        `https://${APP_DOMAIN}/projects/123`,
+        APP_DOMAIN,
+        'projects',
+      ),
+    ).toEqual([{ resource: 'projects', ref: '123' }])
   })
 
   it('dedupes repeated refs to the same resource', () => {
@@ -33,7 +43,7 @@ describe('extractAppResourceRefs', () => {
         APP_DOMAIN,
         'tasks',
       ),
-    ).toEqual(['123'])
+    ).toEqual([{ resource: 'tasks', ref: '123' }])
   })
 
   it('returns an empty array when there are no matching URLs', () => {
@@ -69,7 +79,7 @@ describe('extractAppResourceRefs', () => {
         APP_DOMAIN,
         'tasks',
       ),
-    ).toEqual(['123'])
+    ).toEqual([{ resource: 'tasks', ref: '123' }])
   })
 
   it('stops the ref before trailing sentence punctuation', () => {
@@ -79,7 +89,7 @@ describe('extractAppResourceRefs', () => {
         APP_DOMAIN,
         'tasks',
       ),
-    ).toEqual(['123'])
+    ).toEqual([{ resource: 'tasks', ref: '123' }])
   })
 
   it('stops the ref before a query string', () => {
@@ -89,6 +99,6 @@ describe('extractAppResourceRefs', () => {
         APP_DOMAIN,
         'tasks',
       ),
-    ).toEqual(['123'])
+    ).toEqual([{ resource: 'tasks', ref: '123' }])
   })
 })

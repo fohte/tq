@@ -2,6 +2,15 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+// A single id-or-number match, tagged with the `resource` it was matched
+// under — a bare `string[]` would leave a caller merging results across
+// multiple resources (e.g. tasks and projects) unable to tell which is
+// which.
+export interface AppResourceRef {
+  resource: string
+  ref: string
+}
+
 // Extracts the id-or-number segment from tq URLs under `resource` (e.g.
 // `https://tq.fohte.net/tasks/123` or `.../tasks/<uuid>`), so callers can
 // resolve them the same way as a `#123`-style mention. A trailing
@@ -13,7 +22,7 @@ export function extractAppResourceRefs(
   text: string,
   appDomain: string,
   resource: string,
-): string[] {
+): AppResourceRef[] {
   const pattern = new RegExp(
     `https?://${escapeRegExp(appDomain)}/${escapeRegExp(resource)}/([0-9a-zA-Z-]+)`,
     'g',
@@ -23,5 +32,5 @@ export function extractAppResourceRefs(
     const ref = match[1]
     if (ref != null) refs.add(ref)
   }
-  return [...refs]
+  return [...refs].map((ref) => ({ resource, ref }))
 }

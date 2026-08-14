@@ -35,7 +35,7 @@ export function extractMentionedTaskRefs(text: string): {
   const ids = new Set<string>()
   // `resource` is parameterized (not hardcoded to 'tasks') so a follow-up PR
   // resolving project URLs can call extractAppResourceRefs the same way.
-  for (const ref of extractAppResourceRefs(text, APP_DOMAIN, 'tasks')) {
+  for (const { ref } of extractAppResourceRefs(text, APP_DOMAIN, 'tasks')) {
     if (numericRefPattern.test(ref) && Number(ref) <= PG_INTEGER_MAX) {
       numbers.add(Number(ref))
     } else {
