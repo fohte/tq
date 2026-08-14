@@ -1,10 +1,11 @@
-import { eq, inArray, or, sql } from 'drizzle-orm'
+import { eq, inArray, or, type SQL, sql } from 'drizzle-orm'
 
 import { MENTION_PATTERN } from '#constants/mention-pattern'
 import { db } from '#db/connection'
 import { taskComments, taskLinks, taskPages, tasks } from '#db/schema'
 import { APP_DOMAIN } from '#env'
 import { extractAppResourceRefs } from '#lib/app-url'
+import type { NumericOrId } from '#lib/numeric-id'
 
 export function extractMentionedNumbers(text: string): number[] {
   const numbers = new Set<number>()
@@ -18,12 +19,8 @@ export function extractMentionedNumbers(text: string): number[] {
 // Combines `#123`-style mentions with `https://<APP_DOMAIN>/tasks/...`-style
 // URLs pasted into task text. A task URL may key off either the human-facing
 // number or the UUID primary key (see `findTaskByIdOrNumber`), so a numeric
-// URL ref is folded into `numbers` alongside `#123` mentions instead of
-// being tracked separately.
-export function extractMentionedTaskRefs(text: string): {
-  numbers: number[]
-  ids: string[]
-} {
+// URL ref is folded in alongside `#123` mentions as the same `kind: 'number'`.
+export function extractMentionedTaskRefs(text: string): NumericOrId[] {
   const numbers = new Set(extractMentionedNumbers(text))
   const ids = new Set<string>()
   for (const ref of extractAppResourceRefs(text, APP_DOMAIN, 'tasks')) {
@@ -33,7 +30,25 @@ export function extractMentionedTaskRefs(text: string): {
       ids.add(ref.value)
     }
   }
-  return { numbers: [...numbers], ids: [...ids] }
+  return [
+    ...[...numbers].map((value): NumericOrId => ({ kind: 'number', value })),
+    ...[...ids].map((value): NumericOrId => ({ kind: 'id', value })),
+  ]
+}
+
+// The Rails-`scope`-like counterpart to `classifyNumericOrId`: matches any
+// task whose `number` or `id` appears in `refs`. Callers must skip the query
+// when `refs` is empty — an empty `or()` resolves to `undefined`, which
+// would match every row instead of none.
+function matchTasksByIdOrNumber(refs: NumericOrId[]): SQL | undefined {
+  const numbers = refs
+    .filter((ref) => ref.kind === 'number')
+    .map((ref) => ref.value)
+  const ids = refs.filter((ref) => ref.kind === 'id').map((ref) => ref.value)
+  return or(
+    numbers.length > 0 ? inArray(tasks.number, numbers) : undefined,
+    ids.length > 0 ? inArray(tasks.id, ids) : undefined,
+  )
 }
 
 // Recomputes every outgoing link for `sourceTaskId` from scratch by
@@ -75,27 +90,20 @@ export async function syncTaskLinks(sourceTaskId: string): Promise<void> {
       ...pages.filter((p) => p.format !== 'html').map((p) => p.content),
       ...comments.map((c) => c.content),
     ]
-    const refs = texts.map(extractMentionedTaskRefs)
-    const mentionedNumbers = new Set(refs.flatMap((r) => r.numbers))
-    const mentionedIds = new Set(refs.flatMap((r) => r.ids))
-    mentionedNumbers.delete(task.number)
-    mentionedIds.delete(sourceTaskId)
+    const refs = texts
+      .flatMap(extractMentionedTaskRefs)
+      .filter((ref) =>
+        ref.kind === 'number'
+          ? ref.value !== task.number
+          : ref.value !== sourceTaskId,
+      )
 
     const targets =
-      mentionedNumbers.size > 0 || mentionedIds.size > 0
+      refs.length > 0
         ? await tx
             .select({ id: tasks.id })
             .from(tasks)
-            .where(
-              or(
-                mentionedNumbers.size > 0
-                  ? inArray(tasks.number, [...mentionedNumbers])
-                  : undefined,
-                mentionedIds.size > 0
-                  ? inArray(tasks.id, [...mentionedIds])
-                  : undefined,
-              ),
-            )
+            .where(matchTasksByIdOrNumber(refs))
         : []
 
     await tx.delete(taskLinks).where(eq(taskLinks.sourceTaskId, sourceTaskId))
