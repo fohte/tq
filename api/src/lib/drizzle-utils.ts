@@ -1,4 +1,14 @@
+import {
+  type Column,
+  type ColumnBaseConfig,
+  inArray,
+  or,
+  type SQL,
+  sql,
+} from 'drizzle-orm'
 import { err, ok, type Result } from 'neverthrow'
+
+import type { NumericOrId } from '#lib/numeric-id'
 
 /**
  * Extract the first element from a Drizzle `.returning()` result,
@@ -27,4 +37,34 @@ export class RowNotFoundError extends Error {
 export function firstOrErr<T>(rows: T[]): Result<T, RowNotFoundError> {
   const first = rows[0]
   return first === undefined ? err(new RowNotFoundError()) : ok(first)
+}
+
+/**
+ * Match any row of `table` whose id/number column value appears in `refs`
+ * (the Rails-`scope`-like counterpart to `classifyNumericOrId`). `number` is
+ * optional since not every id-or-number-linkable table has a human-facing
+ * number column (e.g. projects, addressed by id only). Falls back to
+ * `sql\`false\`` (matching nothing) for an empty `refs`, since an empty
+ * `or()` resolves to `undefined` and an `undefined` WHERE clause would match
+ * every row instead.
+ */
+export function matchByIdOrNumber(
+  table: {
+    id: Column<ColumnBaseConfig<'string', string>>
+    number?: Column<ColumnBaseConfig<'number', string>>
+  },
+  refs: NumericOrId[],
+): SQL {
+  const numbers = refs
+    .filter((ref) => ref.kind === 'number')
+    .map((ref) => ref.value)
+  const ids = refs.filter((ref) => ref.kind === 'id').map((ref) => ref.value)
+  return (
+    or(
+      table.number && numbers.length > 0
+        ? inArray(table.number, numbers)
+        : undefined,
+      ids.length > 0 ? inArray(table.id, ids) : undefined,
+    ) ?? sql`false`
+  )
 }

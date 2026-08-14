@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { extractMentionedNumbers } from '#services/task-links'
+import { APP_DOMAIN } from '#env'
+import {
+  extractMentionedNumbers,
+  extractMentionedTaskRefs,
+} from '#services/task-links'
 
 describe('extractMentionedNumbers', () => {
   it('extracts a single mention', () => {
@@ -37,5 +41,51 @@ describe('extractMentionedNumbers', () => {
 
   it('extracts a mention wrapped in punctuation', () => {
     expect(extractMentionedNumbers('(#7)')).toEqual([7])
+  })
+})
+
+describe('extractMentionedTaskRefs', () => {
+  it('extracts a number from a `#N` mention', () => {
+    expect(extractMentionedTaskRefs('see #123')).toEqual([
+      { kind: 'number', value: 123 },
+    ])
+  })
+
+  it('extracts a number from a numeric task URL', () => {
+    expect(
+      extractMentionedTaskRefs(`see https://${APP_DOMAIN}/tasks/123`),
+    ).toEqual([{ kind: 'number', value: 123 }])
+  })
+
+  it('extracts an id from a uuid task URL', () => {
+    const uuid = '9b1f6f0e-1c0a-4e8b-9c7a-2b6b2b6b2b6b'
+    expect(
+      extractMentionedTaskRefs(`see https://${APP_DOMAIN}/tasks/${uuid}`),
+    ).toEqual([{ kind: 'id', value: uuid }])
+  })
+
+  it('dedupes a number mentioned both as `#N` and as a task URL', () => {
+    expect(
+      extractMentionedTaskRefs(`see #123 and https://${APP_DOMAIN}/tasks/123`),
+    ).toEqual([{ kind: 'number', value: 123 }])
+  })
+
+  it('combines numbers and ids from mixed mentions', () => {
+    const uuid = '9b1f6f0e-1c0a-4e8b-9c7a-2b6b2b6b2b6b'
+    expect(
+      extractMentionedTaskRefs(
+        `see #1, https://${APP_DOMAIN}/tasks/2, and https://${APP_DOMAIN}/tasks/${uuid}`,
+      ),
+    ).toEqual([
+      { kind: 'number', value: 1 },
+      { kind: 'number', value: 2 },
+      { kind: 'id', value: uuid },
+    ])
+  })
+
+  it('treats a numeric task URL ref past the Postgres integer range as an id, not a number', () => {
+    expect(
+      extractMentionedTaskRefs(`see https://${APP_DOMAIN}/tasks/99999999999`),
+    ).toEqual([{ kind: 'id', value: '99999999999' }])
   })
 })

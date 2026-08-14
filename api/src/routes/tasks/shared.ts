@@ -12,6 +12,7 @@ import {
   tasks,
   timeBlocks,
 } from '#db/schema'
+import { classifyNumericOrId, numericIdPattern } from '#lib/numeric-id'
 import type { TaskSortBy } from '#schemas/task'
 
 export function resolveTaskListOrderBy(sortBy?: TaskSortBy) {
@@ -216,12 +217,6 @@ export type TaskEnv = {
   }
 }
 
-const numericIdPattern = /^\d+$/
-// `tasks.number` is a Postgres `integer`; a digit string past this range
-// would make the query itself throw (500) instead of yielding a normal
-// 404, so it's treated as a non-numeric (UUID-lookup, always-empty) id.
-const PG_INTEGER_MAX = 2147483647
-
 export const taskIdOrNumber = z.union([
   z.uuid(),
   z.string().regex(numericIdPattern),
@@ -232,11 +227,13 @@ export const taskIdOrNumber = z.union([
 // key or the human-facing sequential number (e.g. `/tasks/123`), so
 // bookmarked UUID links keep working alongside the short numeric form.
 export function findTaskByIdOrNumber(param: string) {
-  const isNumericId =
-    numericIdPattern.test(param) && Number(param) <= PG_INTEGER_MAX
+  const classified = classifyNumericOrId(param)
 
   return db.query.tasks.findFirst({
-    where: isNumericId ? eq(tasks.number, Number(param)) : eq(tasks.id, param),
+    where:
+      classified.kind === 'number'
+        ? eq(tasks.number, classified.value)
+        : eq(tasks.id, classified.value),
   })
 }
 
