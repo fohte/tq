@@ -1,14 +1,19 @@
 import { zValidator } from '@hono/zod-validator'
 import { and, count, eq, inArray, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
+import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { projects, tasks } from '#db/schema'
+import { APP_DOMAIN } from '#env'
+import { extractAppResourceRefs } from '#lib/app-url'
 import {
   createProjectSchema,
   listProjectsQuerySchema,
   updateProjectSchema,
 } from '#schemas/project'
+
+const resolveUrlSchema = z.object({ url: z.string().min(1) })
 
 function projectToResponse(project: typeof projects.$inferSelect) {
   return {
@@ -29,6 +34,26 @@ function taskStatsToSummary(total: number, completed: number) {
   return {
     completionRate: total > 0 ? completed / total : 0,
     taskCount: { total, completed },
+  }
+}
+
+async function findProjectWithStats(id: string) {
+  const project = await db.query.projects.findFirst({
+    where: eq(projects.id, id),
+  })
+  if (!project) return null
+
+  const [taskStats] = await db
+    .select({
+      total: count(),
+      completed: count(sql`CASE WHEN ${tasks.status} = 'completed' THEN 1 END`),
+    })
+    .from(tasks)
+    .where(eq(tasks.projectId, id))
+
+  return {
+    ...projectToResponse(project),
+    ...taskStatsToSummary(taskStats?.total ?? 0, taskStats?.completed ?? 0),
   }
 }
 
@@ -101,32 +126,32 @@ export const projectsApp = new Hono()
     )
   })
   .get('/:id', async (c) => {
-    const id = c.req.param('id')
-
-    const project = await db.query.projects.findFirst({
-      where: eq(projects.id, id),
-    })
-    if (!project) {
+    const result = await findProjectWithStats(c.req.param('id'))
+    if (!result) {
       return c.json({ error: 'Project not found' }, 404)
     }
 
-    const [taskStats] = await db
-      .select({
-        total: count(),
-        completed: count(
-          sql`CASE WHEN ${tasks.status} = 'completed' THEN 1 END`,
-        ),
-      })
-      .from(tasks)
-      .where(eq(tasks.projectId, id))
+    return c.json(result, 200)
+  })
+  // Mirrors POST /api/github/resolve: the web editor's project-url provider
+  // only matches a URL's path shape, so this endpoint is the sole authority
+  // on whether it actually points at this tq instance (APP_DOMAIN) before
+  // resolving it to a project.
+  .post('/resolve-url', zValidator('json', resolveUrlSchema), async (c) => {
+    const { url } = c.req.valid('json')
+    const [ref] = extractAppResourceRefs(url, APP_DOMAIN, 'projects')
+    // Projects have no `number` column (see `AppResourceRef`), so a
+    // numeric-looking ref can never resolve to one.
+    if (ref == null || ref.kind !== 'id') {
+      return c.json({ error: 'Not a project URL' }, 404)
+    }
 
-    return c.json(
-      {
-        ...projectToResponse(project),
-        ...taskStatsToSummary(taskStats?.total ?? 0, taskStats?.completed ?? 0),
-      },
-      200,
-    )
+    const result = await findProjectWithStats(ref.value)
+    if (!result) {
+      return c.json({ error: 'Project not found' }, 404)
+    }
+
+    return c.json(result, 200)
   })
   .patch('/:id', zValidator('json', updateProjectSchema), async (c) => {
     const id = c.req.param('id')

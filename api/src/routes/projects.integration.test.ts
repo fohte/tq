@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { APP_DOMAIN } from '#env'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -180,6 +181,60 @@ describe('projects API', () => {
 
     it('returns 404 for non-existent project', async () => {
       const res = await app.request(`/api/projects/${TEST_UUID}`)
+
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe('POST /api/projects/resolve-url', () => {
+    async function resolveUrl(url: string) {
+      return app.request('/api/projects/resolve-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+    }
+
+    it('resolves a project URL', async () => {
+      const project = await createProject('Target')
+
+      const res = await resolveUrl(
+        `https://${APP_DOMAIN}/projects/${project.id}`,
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<ProjectDetailResponse>(res)
+      expect(body).toEqual({
+        ...project,
+        completionRate: 0,
+        taskCount: { total: 0, completed: 0 },
+      })
+    })
+
+    it('returns 404 for a URL on a different domain', async () => {
+      const project = await createProject('Target')
+
+      const res = await resolveUrl(`https://example.com/projects/${project.id}`)
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 404 for a different resource on the same domain', async () => {
+      const res = await resolveUrl(`https://${APP_DOMAIN}/tasks/some-id`)
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 404 for a numeric-looking segment, since projects have no number', async () => {
+      const res = await resolveUrl(`https://${APP_DOMAIN}/projects/123`)
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 404 for a project id that does not exist', async () => {
+      const res = await resolveUrl(
+        `https://${APP_DOMAIN}/projects/${TEST_UUID}`,
+      )
 
       expect(res.status).toBe(404)
     })

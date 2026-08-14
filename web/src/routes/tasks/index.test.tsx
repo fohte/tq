@@ -24,10 +24,14 @@ vi.mock('#hooks/use-filtered-tasks', () => ({
 // it so the route never issues a real fetch.
 const mockUseProjects = vi.fn()
 
-vi.mock('#hooks/use-projects', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
-  useProjects: (...args: unknown[]) => mockUseProjects(...args),
-}))
+vi.mock('#hooks/use-projects', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-projects')>()
+  return {
+    ...actual,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+    useProjects: (...args: unknown[]) => mockUseProjects(...args),
+  }
+})
 
 // TagFilterChips (rendered for real, not mocked below) reads tag counts via
 // useTagCounts, which calls useTaskList from '#hooks/use-tasks' directly —

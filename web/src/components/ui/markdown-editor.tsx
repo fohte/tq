@@ -19,9 +19,11 @@ import {
 } from '#lib/image-upload'
 import { createInlineReferencePlugin } from '#lib/inline-reference/plugin'
 import { githubUrlProvider } from '#lib/inline-reference/providers/github-url'
+import { projectUrlProvider } from '#lib/inline-reference/providers/project-url'
 import { slackPermalinkProvider } from '#lib/inline-reference/providers/slack-permalink'
 import { taskMentionProvider } from '#lib/inline-reference/providers/task-mention'
 import { taskMentionAutocompletePlugin } from '#lib/inline-reference/providers/task-mention-autocomplete-plugin'
+import { taskUrlProvider } from '#lib/inline-reference/providers/task-url'
 import { createInlineReferenceViewModeStore } from '#lib/inline-reference/view-mode'
 import { cn } from '#lib/utils'
 
@@ -120,6 +122,20 @@ function CrepeEditor({
         ),
       )
       .use(taskMentionAutocompletePlugin)
+      .use(
+        createInlineReferencePlugin(
+          taskUrlProvider,
+          widgetViewFactory,
+          viewModeStore,
+        ),
+      )
+      .use(
+        createInlineReferencePlugin(
+          projectUrlProvider,
+          widgetViewFactory,
+          viewModeStore,
+        ),
+      )
       .use(
         createInlineReferencePlugin(
           githubUrlProvider,
