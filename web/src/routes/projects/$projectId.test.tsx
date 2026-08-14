@@ -114,6 +114,20 @@ vi.mock('@tanstack/react-router', () => {
         {children}
       </a>
     ),
+    createLink: (Component: React.ComponentType<Record<string, unknown>>) => {
+      return ({
+        children,
+        to,
+        ...props
+      }: { children: React.ReactNode; to?: unknown } & Record<
+        string,
+        unknown
+      >) => (
+        <Component {...props} href={typeof to === 'string' ? to : '#'}>
+          {children}
+        </Component>
+      )
+    },
   }
 })
 

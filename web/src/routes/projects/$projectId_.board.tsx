@@ -1,5 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowLeft } from 'lucide-react'
+import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { LinkExistingProjectTaskMenu } from '#components/project/link-existing-project-task-menu'
@@ -14,6 +13,7 @@ import { ProjectTaskList } from '#components/project/project-task-list'
 import type { ProjectView } from '#components/project/project-view-tabs'
 import { FloatingActionButton } from '#components/task/create-task-inline'
 import { CreateTaskModal } from '#components/task/create-task-modal'
+import { BackHeaderBar } from '#components/ui/back-header-bar'
 import { FullPageLoading } from '#components/ui/full-page-loading'
 import { FullPageMessage } from '#components/ui/full-page-message'
 import { useProject, useProjectTasks } from '#hooks/use-projects'
@@ -46,16 +46,9 @@ function ProjectBoardPage() {
   return (
     <div className="flex h-full flex-col">
       {/* SP: Back button header */}
-      <div className="flex h-12 items-center gap-2 border-b border-border px-3 md:hidden">
-        <Link
-          to="/projects/$projectId"
-          params={{ projectId }}
-          className="flex h-8 w-8 items-center justify-center text-muted-foreground"
-          aria-label="Back"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-      </div>
+      <BackHeaderBar to="/projects/$projectId" params={{ projectId }}>
+        Back
+      </BackHeaderBar>
 
       {/* Header */}
       <ProjectBoardHeader
