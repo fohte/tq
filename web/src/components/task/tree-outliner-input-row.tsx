@@ -1,5 +1,6 @@
 import type { InheritedTaskAttributes } from '#components/task/create-task-inline'
 import { CreateTaskInline } from '#components/task/create-task-inline'
+import { rowIndentPx } from '#components/task/task-row-shared'
 
 // Tab/Shift-Tab aren't handled inside CreateTaskInline itself (it only
 // preventDefaults Tab for its own suggestion/existing-task dropdowns), so an
@@ -38,7 +39,7 @@ export function TreeOutlinerInputRow({
     <div
       onKeyDown={handleKeyDown}
       className="border-b border-border"
-      style={{ paddingLeft: `${String(12 + depth * 14)}px` }}
+      style={{ paddingLeft: `${String(rowIndentPx(depth))}px` }}
     >
       <CreateTaskInline
         {...(parentId != null ? { parentId } : {})}

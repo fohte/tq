@@ -87,6 +87,10 @@ export function TaskNumberLabel({ number }: { number: number }) {
   )
 }
 
+export function rowIndentPx(depth: number): number {
+  return 12 + depth * 14
+}
+
 export function gridRowWrapperClassName(
   isInProgress: boolean,
   isCompleted: boolean,

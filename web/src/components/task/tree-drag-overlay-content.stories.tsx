@@ -50,6 +50,6 @@ export const ChildTarget: Story = {
 export const SiblingTarget: Story = {
   args: {
     node,
-    target: { node: targetNode, depth: 1, mode: 'sibling' },
+    target: { node: targetNode, depth: 0, mode: 'sibling' },
   },
 }
