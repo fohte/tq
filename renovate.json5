@@ -15,7 +15,13 @@
       managerFilePatterns: [
         '/^\\.github/actions/start-postgres/action\\.yml$/',
       ],
-      matchStrings: ['^\\s+postgres:(?<currentValue>\\S+)\\s*$'],
+      // Renovate's regex manager matches against the whole file, not per
+      // line, so `^`/`$` would anchor to the file's start/end instead of
+      // the line — use explicit line-boundary alternation instead.
+      // https://docs.renovatebot.com/modules/manager/regex/
+      matchStrings: [
+        '(?:^|\\n)\\s+postgres:(?<currentValue>\\S+)\\s*(?:$|\\n)',
+      ],
       depNameTemplate: 'postgres',
       datasourceTemplate: 'docker',
     },
