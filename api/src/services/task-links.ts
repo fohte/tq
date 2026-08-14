@@ -1,10 +1,11 @@
-import { eq, inArray, or, type SQL, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 import { MENTION_PATTERN } from '#constants/mention-pattern'
 import { db } from '#db/connection'
 import { taskComments, taskLinks, taskPages, tasks } from '#db/schema'
 import { APP_DOMAIN } from '#env'
 import { extractAppResourceRefs } from '#lib/app-url'
+import { matchByIdOrNumber } from '#lib/drizzle-utils'
 import type { NumericOrId } from '#lib/numeric-id'
 
 export function extractMentionedNumbers(text: string): number[] {
@@ -34,23 +35,6 @@ export function extractMentionedTaskRefs(text: string): NumericOrId[] {
     ...[...numbers].map((value): NumericOrId => ({ kind: 'number', value })),
     ...[...ids].map((value): NumericOrId => ({ kind: 'id', value })),
   ]
-}
-
-// The Rails-`scope`-like counterpart to `classifyNumericOrId`: matches any
-// task whose `number` or `id` appears in `refs`. Falls back to `sql\`false\``
-// (matching nothing) for an empty `refs`, since an empty `or()` resolves to
-// `undefined` and an `undefined` WHERE clause would match every row instead.
-function matchTasksByIdOrNumber(refs: NumericOrId[]): SQL {
-  const numbers = refs
-    .filter((ref) => ref.kind === 'number')
-    .map((ref) => ref.value)
-  const ids = refs.filter((ref) => ref.kind === 'id').map((ref) => ref.value)
-  return (
-    or(
-      numbers.length > 0 ? inArray(tasks.number, numbers) : undefined,
-      ids.length > 0 ? inArray(tasks.id, ids) : undefined,
-    ) ?? sql`false`
-  )
 }
 
 // Recomputes every outgoing link for `sourceTaskId` from scratch by
@@ -107,7 +91,7 @@ export async function syncTaskLinks(sourceTaskId: string): Promise<void> {
         ? await tx
             .select({ id: tasks.id })
             .from(tasks)
-            .where(matchTasksByIdOrNumber(refs))
+            .where(matchByIdOrNumber(tasks, refs))
         : []
 
     await tx.delete(taskLinks).where(eq(taskLinks.sourceTaskId, sourceTaskId))
