@@ -155,7 +155,7 @@ function LiveReferencesProviders({ children }: { children: ReactNode }) {
 // interfering with each other. `viewEditToggle` is required for chips to
 // render at all — an always-editable editor (no `viewEditToggle`, e.g.
 // CommentInput) stays in 'edit' mode and only ever shows raw Markdown
-// source (see markdown-editor.tsx's CrepeEditorProps.mode comment).
+// source (see markdown-editor-crepe.tsx's CrepeEditorProps.mode comment).
 export const WithLiveReferences: Story = {
   render: (args) => {
     seedLiveReferenceFixtures()
