@@ -10,6 +10,7 @@ import {
 } from '#components/task/create-task-inline'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
+import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { TaskListColumnHeader } from '#components/task/task-list-column-header'
 import { TaskListToolbar } from '#components/task/task-list-toolbar'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
@@ -130,13 +131,6 @@ export function TaskList() {
       <ScreenHeaderBar>
         <SectionHeading level={2}>tasks</SectionHeading>
         <TaskListToolbar
-          showCompleted={showCompleted}
-          onShowCompletedChange={setShowCompleted}
-          sortBy={sortBy}
-          onSortByChange={setSortBy}
-          projects={projects.data ?? []}
-          projectId={projectId}
-          onProjectIdChange={setProjectId}
           onCreateFromGithub={() => {
             setIsGithubModalOpen(true)
           }}
@@ -145,6 +139,16 @@ export function TaskList() {
           }}
         />
       </ScreenHeaderBar>
+
+      <TaskFilterChipRow
+        showCompleted={showCompleted}
+        onShowCompletedChange={setShowCompleted}
+        sortBy={sortBy}
+        onSortByChange={setSortBy}
+        projects={projects.data ?? []}
+        projectId={projectId}
+        onProjectIdChange={setProjectId}
+      />
 
       <TagFilterBar />
 
