@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import { makeTask } from '#components/task/task-row-test-fixtures'
-import { computeDropMode, getDescendantIds } from '#lib/task-tree'
+import {
+  computeDropMode,
+  getDescendantIds,
+  resolveDropParentId,
+} from '#lib/task-tree'
 
 describe('getDescendantIds', () => {
   it('returns an empty array when the task has no children', () => {
@@ -65,5 +69,29 @@ describe('computeDropMode', () => {
     const activeRect = { top: 134, height: 4 } // center at 136, 90% through overRect
 
     expect(computeDropMode(overRect, activeRect)).toBe('sibling')
+  })
+
+  it('returns "child" at the exact 25% boundary (strict "<" comparison)', () => {
+    const activeRect = { top: 110, height: 0 } // center at 110, exactly 25% through overRect
+
+    expect(computeDropMode(overRect, activeRect)).toBe('child')
+  })
+
+  it('returns "child" at the exact 75% boundary (strict ">" comparison)', () => {
+    const activeRect = { top: 130, height: 0 } // center at 130, exactly 75% through overRect
+
+    expect(computeDropMode(overRect, activeRect)).toBe('child')
+  })
+})
+
+describe('resolveDropParentId', () => {
+  const targetNode = { id: 'target', parentId: 'target-parent' }
+
+  it('returns the target node id when mode is "child"', () => {
+    expect(resolveDropParentId('child', targetNode)).toBe('target')
+  })
+
+  it('returns the target node\'s parentId when mode is "sibling"', () => {
+    expect(resolveDropParentId('sibling', targetNode)).toBe('target-parent')
   })
 })

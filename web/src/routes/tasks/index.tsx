@@ -1,7 +1,7 @@
 import {
   DndContext,
   type DragEndEvent,
-  type DragOverEvent,
+  type DragMoveEvent,
   DragOverlay,
   type DragStartEvent,
   MouseSensor,
@@ -38,7 +38,11 @@ import { useProjects } from '#hooks/use-projects'
 import type { TaskSortBy, TreeNode } from '#hooks/use-tasks'
 import { useUpdateTaskParent } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
-import { computeDropMode, getDescendantIds } from '#lib/task-tree'
+import {
+  computeDropMode,
+  getDescendantIds,
+  resolveDropParentId,
+} from '#lib/task-tree'
 
 interface TreeRowDragData extends Record<string, unknown> {
   node: TreeNode
@@ -49,6 +53,42 @@ function isTreeRowDragData(
   data: Record<string, unknown> | undefined,
 ): data is TreeRowDragData {
   return data != null && typeof data['depth'] === 'number'
+}
+
+// Nested interactive controls (status picker, actions menu, expand toggle)
+// only stopPropagation() on click, not pointerdown/touchstart, so the
+// distance/delay activation constraint below can still misfire a drag from
+// pointer jitter while a user is trying to click one of them. These sensor
+// subclasses skip activation when the pointer/touch originates inside an
+// element marked data-no-dnd, following dnd-kit's documented pattern for
+// excluding nested interactive elements from drag activation.
+function shouldHandleDrag(target: EventTarget | null): boolean {
+  let el = target instanceof HTMLElement ? target : null
+  while (el != null) {
+    if (el.dataset['noDnd'] != null) return false
+    el = el.parentElement
+  }
+  return true
+}
+
+class TreeRowMouseSensor extends MouseSensor {
+  static override activators = [
+    {
+      eventName: 'onMouseDown' as const,
+      handler: ({ nativeEvent }: React.MouseEvent) =>
+        shouldHandleDrag(nativeEvent.target),
+    },
+  ]
+}
+
+class TreeRowTouchSensor extends TouchSensor {
+  static override activators = [
+    {
+      eventName: 'onTouchStart' as const,
+      handler: ({ nativeEvent }: React.TouchEvent) =>
+        shouldHandleDrag(nativeEvent.target),
+    },
+  ]
 }
 
 const tasksSearchDefaults = {
@@ -144,8 +184,8 @@ export function TaskList() {
   // ~250ms hold before a drag starts, while desktop just needs to rule out
   // an accidental click-and-jitter.
   const dndSensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(TouchSensor, {
+    useSensor(TreeRowMouseSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TreeRowTouchSensor, {
       activationConstraint: { delay: 250, tolerance: 5 },
     }),
   )
@@ -175,7 +215,11 @@ export function TaskList() {
     setActiveWidth(event.active.rect.current.initial?.width ?? null)
   }
 
-  const handleDragOver = (event: DragOverEvent) => {
+  // Wired to both onDragOver and onDragMove: dnd-kit only fires onDragOver
+  // when the hovered droppable id changes, not on every pointer move, so
+  // moving within the same row (e.g. middle band to top band) would
+  // otherwise leave the child/sibling preview stale.
+  const handleDragOver = (event: DragMoveEvent) => {
     const overData = event.over?.data.current
     if (event.over == null || !isTreeRowDragData(overData)) {
       setDropTarget(null)
@@ -189,19 +233,14 @@ export function TaskList() {
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const overData = event.over?.data.current
     const activeData = event.active.data.current
     if (
       event.over != null &&
-      isTreeRowDragData(overData) &&
-      isTreeRowDragData(activeData)
+      isTreeRowDragData(activeData) &&
+      dropTarget != null &&
+      dropTarget.node.id === event.over.id
     ) {
-      const mode = computeDropMode(
-        event.over.rect,
-        event.active.rect.current.translated,
-      )
-      const newParentId =
-        mode === 'child' ? overData.node.id : overData.node.parentId
+      const newParentId = resolveDropParentId(dropTarget.mode, dropTarget.node)
       if (activeData.node.parentId !== newParentId) {
         updateTaskParent.mutate({
           id: activeData.node.id,
@@ -285,6 +324,7 @@ export function TaskList() {
             sensors={dndSensors}
             collisionDetection={pointerWithin}
             onDragStart={handleDragStart}
+            onDragMove={handleDragOver}
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}

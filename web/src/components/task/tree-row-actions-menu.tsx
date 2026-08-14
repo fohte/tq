@@ -44,6 +44,7 @@ export function TreeRowActionsMenu({
         <DropdownMenuTrigger
           aria-label="Task actions"
           onClick={stopRowNavigation}
+          data-no-dnd=""
           className={cn(
             'hidden h-5 w-5 shrink-0 items-center justify-center text-muted-foreground opacity-0 outline-none group-hover:opacity-100 focus-visible:opacity-100 hover:text-foreground data-popup-open:opacity-100 md:flex',
             triggerClassName,
@@ -82,6 +83,7 @@ export function TreeRowActionsMenu({
         <ActionSheetTrigger
           aria-label="Task actions"
           onClick={stopRowNavigation}
+          data-no-dnd=""
           className={cn(
             'flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground outline-none hover:text-foreground md:hidden',
             triggerClassName,

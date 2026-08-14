@@ -126,6 +126,7 @@ export function TreeTaskGridRow({
     <button
       type="button"
       onClick={handleExpand}
+      data-no-dnd=""
       className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
       aria-label={expanded ? 'Collapse' : 'Expand'}
     >
