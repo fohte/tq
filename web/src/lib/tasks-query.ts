@@ -33,6 +33,13 @@ export function buildTasksQuery(state: TasksFilterState): string {
   return parts.join(' ')
 }
 
+// The /tasks search for "default filters, scoped to this tag" — shared by
+// every tag-token click/link (sidebar, task row, task detail) so they all
+// navigate to the same place.
+export function tagFilterSearch(tag: string): { q: string } {
+  return { q: buildTasksQuery({ ...defaultTasksFilterState, tag }) }
+}
+
 export function parseTasksQuery(q: string): TasksFilterState {
   let sortBy: TaskSortBy = 'updated'
   // Absence of an `is:` token means "no status filter" (buildTasksQuery

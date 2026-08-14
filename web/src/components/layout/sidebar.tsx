@@ -10,11 +10,7 @@ import { KeybindHint } from '#components/ui/keybind-hint'
 import { useProjects } from '#hooks/use-projects'
 import { useTagCounts } from '#hooks/use-tag-counts'
 import { navKeybindings, searchKeybinding } from '#lib/keybindings'
-import {
-  buildTasksQuery,
-  defaultTasksFilterState,
-  parseTasksQuery,
-} from '#lib/tasks-query'
+import { parseTasksQuery, tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
 
 interface NavItem {
@@ -98,7 +94,7 @@ function TagLink({
   return (
     <Link
       to="/tasks"
-      search={{ q: buildTasksQuery({ ...defaultTasksFilterState, tag: name }) }}
+      search={tagFilterSearch(name)}
       className={cn(
         'flex w-full items-center gap-2 px-3.5 py-1 text-left font-mono text-2xs',
         isActive

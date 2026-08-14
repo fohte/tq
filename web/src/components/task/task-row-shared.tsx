@@ -5,7 +5,7 @@ import type { Task } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import { formatDueDate, isTaskOverdue } from '#lib/task-due-date'
-import { buildTasksQuery, defaultTasksFilterState } from '#lib/tasks-query'
+import { tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
 
 export function useHandleStatusChange(id: string, status: Task['status']) {
@@ -44,12 +44,7 @@ export function TagTokens({
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            void navigate({
-              to: '/tasks',
-              search: {
-                q: buildTasksQuery({ ...defaultTasksFilterState, tag: label }),
-              },
-            })
+            void navigate({ to: '/tasks', search: tagFilterSearch(label) })
           }}
           className={cn(
             'font-mono text-xs hover:text-foreground',
