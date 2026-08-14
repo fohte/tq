@@ -26,8 +26,10 @@ function taskUrlPreviewQueryOptions(url: string) {
       if (!res.ok) return null
       return res.json()
     },
-    // A non-ok response above already means "not resolvable"; retrying the
-    // same request would just repeat it.
+    // queryFn only throws on a genuine fetch/parse failure — a non-ok
+    // response above already resolves to `null` without throwing. Skip the
+    // default retry/backoff too, so a transient failure falls straight to
+    // the null fallback instead of adding delay.
     retry: false,
     staleTime: 60_000,
   }
