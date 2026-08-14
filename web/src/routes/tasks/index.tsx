@@ -11,10 +11,7 @@ import {
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
 import { TaskListColumnHeader } from '#components/task/task-list-column-header'
-import {
-  sortOptionValues,
-  TaskListToolbar,
-} from '#components/task/task-list-toolbar'
+import { TaskListToolbar } from '#components/task/task-list-toolbar'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
@@ -23,45 +20,11 @@ import { useNewTaskShortcutListener } from '#hooks/use-new-task-shortcut'
 import { useProjects } from '#hooks/use-projects'
 import type { TaskSortBy } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
-
-interface TasksFilterState {
-  sortBy: TaskSortBy
-  showCompleted: boolean
-  projectId: string | undefined
-}
-
-// Must match api/src/search-query-parser.ts's token vocabulary (`is:` /
-// `sort:` / `project:`) — parseTasksQuery below decodes it back.
-function buildTasksQuery(state: TasksFilterState): string {
-  const parts: string[] = []
-  if (!state.showCompleted) parts.push('is:todo', 'is:in_progress')
-  // Always included, even for the default 'updated': the API falls back to
-  // sorting by `created` when no sort is specified at all.
-  parts.push(`sort:${state.sortBy}`)
-  if (state.projectId != null) parts.push(`project:${state.projectId}`)
-  return parts.join(' ')
-}
-
-function parseTasksQuery(q: string): TasksFilterState {
-  let sortBy: TaskSortBy = 'updated'
-  // Absence of an `is:` token means "no status filter" (buildTasksQuery
-  // above omits them entirely for showCompleted: true), not "unset".
-  let showCompleted = true
-  let projectId: string | undefined
-  for (const token of q.split(/\s+/).filter((t) => t !== '')) {
-    if (token === 'is:todo' || token === 'is:in_progress') {
-      showCompleted = false
-    } else if (token.startsWith('sort:')) {
-      const value = token.slice('sort:'.length)
-      const matched = sortOptionValues.find((v) => v === value)
-      if (matched != null) sortBy = matched
-    } else if (token.startsWith('project:')) {
-      const value = token.slice('project:'.length)
-      if (value !== '') projectId = value
-    }
-  }
-  return { sortBy, showCompleted, projectId }
-}
+import {
+  buildTasksQuery,
+  parseTasksQuery,
+  sortOptionValues,
+} from '#lib/tasks-query'
 
 const tasksSearchDefaults = {
   q: buildTasksQuery({
