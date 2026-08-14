@@ -14,7 +14,7 @@ jobs:
     # tbls doc generation below needs a live DB to introspect.
     services:
       postgres:
-        image: postgres:17
+        image: postgres:17.11
         env:
           POSTGRES_USER: tq
           POSTGRES_PASSWORD: tq
