@@ -14,7 +14,8 @@ import {
   GridEstimate,
   gridRowTitleClassName,
   gridRowWrapperClassName,
-  rowIndentPx,
+  ROW_INDENT_CLASS_NAME,
+  rowIndentStyle,
   TagTokens,
   TaskNumberLabel,
   useHandleStatusChange,
@@ -157,10 +158,11 @@ export function TreeTaskGridRow({
           <div
             className={cn(
               'group',
+              ROW_INDENT_CLASS_NAME,
               gridRowWrapperClassName(isInProgress, isCompleted),
               (isSelected || isOver) && 'ring-1 ring-inset ring-border-strong',
             )}
-            style={{ paddingLeft: `${String(rowIndentPx(depth))}px` }}
+            style={rowIndentStyle(depth)}
           >
             {/* Desktop: single-row grid matching the column header */}
             <div

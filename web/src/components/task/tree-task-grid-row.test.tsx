@@ -198,20 +198,25 @@ describe('TreeTaskGridRow', () => {
     })
     await renderTree(node)
 
-    const paddingLeftPx = (text: string) => {
+    const rowIndentUnits = (text: string) => {
       const el = atIndex(screen.getAllByText(text), 0).closest(
-        '[style*="padding-left"]',
+        '[style*="--row-indent"]',
       )
       if (!(el instanceof HTMLElement)) {
-        throw new Error(`Expected an element with padding-left near "${text}"`)
+        throw new Error(`Expected an element with --row-indent near "${text}"`)
       }
-      return Number.parseInt(el.style.paddingLeft, 10)
+      const value = el.style.getPropertyValue('--row-indent')
+      const match = /\* (\d+)\)/.exec(value)
+      if (match?.[1] == null) {
+        throw new Error(`Unexpected --row-indent value: "${value}"`)
+      }
+      return Number.parseInt(match[1], 10)
     }
 
     const depths = [
-      paddingLeftPx('Parent Task'),
-      paddingLeftPx('Child Task'),
-      paddingLeftPx('Grandchild Task'),
+      rowIndentUnits('Parent Task'),
+      rowIndentUnits('Child Task'),
+      rowIndentUnits('Grandchild Task'),
     ]
 
     expect(depths.every((px, i) => i === 0 || px > (depths[i - 1] ?? 0))).toBe(

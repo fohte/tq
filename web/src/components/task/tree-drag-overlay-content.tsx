@@ -1,5 +1,9 @@
 import { StatusIcon } from '#components/task/status-icon'
-import { rowIndentPx, TaskNumberLabel } from '#components/task/task-row-shared'
+import {
+  ROW_INDENT_CLASS_NAME,
+  rowIndentStyle,
+  TaskNumberLabel,
+} from '#components/task/task-row-shared'
 import type { TreeNode } from '#hooks/use-tasks'
 
 export interface DropTarget {
@@ -29,8 +33,8 @@ export function TreeDragOverlayContent({
   return (
     <div className="border border-dashed border-border-strong bg-card">
       <div
-        className="flex items-center gap-2 px-3 py-2"
-        style={{ paddingLeft: `${String(rowIndentPx(targetDepth))}px` }}
+        className={`flex items-center gap-2 px-3 py-2 ${ROW_INDENT_CLASS_NAME}`}
+        style={rowIndentStyle(targetDepth)}
       >
         <StatusIcon status={node.status} />
         <TaskNumberLabel number={node.number} />
