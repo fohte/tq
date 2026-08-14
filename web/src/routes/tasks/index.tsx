@@ -13,6 +13,7 @@ import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
 import { TaskListColumnHeader } from '#components/task/task-list-column-header'
 import { TaskListToolbar } from '#components/task/task-list-toolbar'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
+import { ListAreaMessage } from '#components/ui/list-area-message'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
@@ -174,13 +175,9 @@ export function TaskList() {
       {/* Task list */}
       <div className="flex-1 overflow-auto">
         {isLoading ? (
-          <div className="p-4 text-center text-sm text-muted-foreground">
-            Loading...
-          </div>
+          <ListAreaMessage>Loading...</ListAreaMessage>
         ) : isEmpty ? (
-          <div className="p-4 text-center text-sm text-muted-foreground">
-            No tasks yet
-          </div>
+          <ListAreaMessage>No tasks yet</ListAreaMessage>
         ) : (
           <div className="py-1" data-testid="task-tree">
             {filteredTreeData.map((node) => (
