@@ -6,7 +6,6 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { Sidebar } from '#components/layout/sidebar'
@@ -15,18 +14,30 @@ import { projectKeys } from '#hooks/use-projects'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 
-// Only Link/useMatchRoute are stubbed — useSearch/useNavigate/router-building
-// exports stay real so useContextFilter/useTagFilter (via
-// useSearch({strict: false})) keep working.
+// Only Link/useMatchRoute are stubbed — useSearch/router-building exports
+// stay real so useContextFilter (via useSearch({strict: false})) and the
+// TAGS section's active-tag derivation keep working. The stub exposes `to`
+// as href and `search` as a data attribute so tests can assert on the link
+// target without a real router matching it.
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
   return {
     ...actual,
     Link: ({
       children,
+      to,
+      search,
       ...props
-    }: { children: React.ReactNode } & Record<string, unknown>) => (
-      <a href={typeof props['to'] === 'string' ? props['to'] : '#'}>
+    }: {
+      children: React.ReactNode
+      to?: string
+      search?: Record<string, unknown>
+    } & Record<string, unknown>) => (
+      <a
+        href={typeof to === 'string' ? to : '#'}
+        data-search={search != null ? JSON.stringify(search) : undefined}
+        {...props}
+      >
         {children}
       </a>
     ),
@@ -78,7 +89,11 @@ const baseProject: Project = {
 // The router's first route match resolves asynchronously even with no
 // loaders, so router.load() is awaited before render() to avoid an initial
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
-async function renderSidebar(tasks: Task[] = [], projects: Project[] = []) {
+async function renderSidebar(
+  tasks: Task[] = [],
+  projects: Project[] = [],
+  initialEntry = '/',
+) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -91,7 +106,7 @@ async function renderSidebar(tasks: Task[] = [], projects: Project[] = []) {
   })
   const router = createRouter({
     routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
+    history: createMemoryHistory({ initialEntries: [initialEntry] }),
   })
   await router.load()
 
@@ -114,46 +129,40 @@ describe('Sidebar', () => {
     it('shows each tag with its name and count', async () => {
       await renderSidebar(tasksWithTags)
 
-      const devTqButton = screen.getByRole('button', { name: /dev:tq/ })
-      const urgentButton = screen.getByRole('button', { name: /urgent/ })
-      expect(devTqButton).toHaveTextContent('#dev:tq2')
-      expect(urgentButton).toHaveTextContent('#urgent1')
+      const devTqLink = screen.getByRole('link', { name: /dev:tq/ })
+      const urgentLink = screen.getByRole('link', { name: /urgent/ })
+      expect(devTqLink).toHaveTextContent('#dev:tq2')
+      expect(urgentLink).toHaveTextContent('#urgent1')
     })
 
-    it('does not show the clear button when no tag is selected', async () => {
+    it('links each tag to /tasks scoped to that tag, replacing the query', async () => {
       await renderSidebar(tasksWithTags)
-      expect(
-        screen.queryByRole('button', { name: 'clear ×' }),
-      ).not.toBeInTheDocument()
+
+      const devTqLink = screen.getByRole('link', { name: /dev:tq/ })
+      expect(devTqLink).toHaveAttribute('href', '/tasks')
+      expect(devTqLink.dataset['search']).toBe(
+        JSON.stringify({
+          q: 'is:todo is:in_progress sort:updated label:dev:tq',
+        }),
+      )
     })
 
-    it('selects a tag and shows the clear button when it is clicked', async () => {
-      const user = userEvent.setup()
+    it('does not highlight any tag when the current query has none', async () => {
       await renderSidebar(tasksWithTags)
-
-      const tagButton = screen.getByRole('button', { name: /dev:tq/ })
-      expect(tagButton).toHaveAttribute('aria-pressed', 'false')
-
-      await user.click(tagButton)
-
-      expect(tagButton).toHaveAttribute('aria-pressed', 'true')
-      expect(
-        screen.getByRole('button', { name: 'clear ×' }),
-      ).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /dev:tq/ })).toHaveClass(
+        'text-muted-foreground-strong',
+      )
     })
 
-    it('deselects the tag when clicking it again', async () => {
-      const user = userEvent.setup()
-      await renderSidebar(tasksWithTags)
+    it('highlights the tag matching the current query, derived from it', async () => {
+      await renderSidebar(tasksWithTags, [], '/?q=label:dev:tq')
 
-      const tagButton = screen.getByRole('button', { name: /dev:tq/ })
-      await user.click(tagButton)
-      await user.click(tagButton)
-
-      expect(tagButton).toHaveAttribute('aria-pressed', 'false')
-      expect(
-        screen.queryByRole('button', { name: 'clear ×' }),
-      ).not.toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /dev:tq/ })).toHaveClass(
+        'bg-card',
+      )
+      expect(screen.getByRole('link', { name: /urgent/ })).toHaveClass(
+        'text-muted-foreground-strong',
+      )
     })
   })
 

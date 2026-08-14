@@ -24,6 +24,8 @@ interface TaskFilterChipRowProps {
   projects: Project[]
   projectId: string | undefined
   onProjectIdChange: (id: string) => void
+  tag: string | undefined
+  onTagChange: (tag: string | undefined) => void
 }
 
 export function TaskFilterChipRow({
@@ -34,6 +36,8 @@ export function TaskFilterChipRow({
   projects,
   projectId,
   onProjectIdChange,
+  tag,
+  onTagChange,
 }: TaskFilterChipRowProps) {
   const selectedProject = projects.find((project) => project.id === projectId)
 
@@ -64,6 +68,18 @@ export function TaskFilterChipRow({
           }}
         >
           project: {selectedProject.title} ×
+        </Chip>
+      )}
+      {tag != null && (
+        <Chip
+          as="button"
+          active
+          className="shrink-0"
+          onClick={() => {
+            onTagChange(undefined)
+          }}
+        >
+          #{tag} ×
         </Chip>
       )}
       <DropdownMenu>

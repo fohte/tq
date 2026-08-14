@@ -24,6 +24,7 @@ import type { TaskPage } from '#hooks/use-task-pages'
 import type { Task, TaskDetail } from '#hooks/use-tasks'
 import { useUpdateTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatRelativeTime } from '#lib/format'
+import { buildTasksQuery, defaultTasksFilterState } from '#lib/tasks-query'
 
 // --- Main Content ---
 
@@ -124,7 +125,9 @@ function TaskTagChips({ labels }: { labels: string[] }) {
           onClick={() => {
             void navigate({
               to: '/tasks',
-              search: (prev) => ({ ...prev, tag: label }),
+              search: {
+                q: buildTasksQuery({ ...defaultTasksFilterState, tag: label }),
+              },
             })
           }}
         >

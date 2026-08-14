@@ -32,6 +32,17 @@ describe('buildTasksQuery', () => {
       }),
     ).toBe('is:todo is:in_progress sort:created project:proj-1')
   })
+
+  it('appends a label: token when tag is set', () => {
+    expect(
+      buildTasksQuery({
+        sortBy: 'updated',
+        showCompleted: false,
+        projectId: undefined,
+        tag: 'dev:tq',
+      }),
+    ).toBe('is:todo is:in_progress sort:updated label:dev:tq')
+  })
 })
 
 describe('parseTasksQuery', () => {
@@ -75,5 +86,32 @@ describe('parseTasksQuery', () => {
       showCompleted: true,
       projectId: undefined,
     })
+  })
+
+  it('reads a label: token as tag', () => {
+    expect(parseTasksQuery('label:dev:tq')).toEqual({
+      sortBy: 'updated',
+      showCompleted: true,
+      projectId: undefined,
+      tag: 'dev:tq',
+    })
+  })
+
+  it('ignores an empty label: value', () => {
+    expect(parseTasksQuery('label:')).toEqual({
+      sortBy: 'updated',
+      showCompleted: true,
+      projectId: undefined,
+    })
+  })
+
+  it('round-trips a tag-scoped state', () => {
+    const state = {
+      sortBy: 'updated' as const,
+      showCompleted: false,
+      projectId: undefined,
+      tag: 'urgent',
+    }
+    expect(parseTasksQuery(buildTasksQuery(state))).toEqual(state)
   })
 })

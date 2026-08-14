@@ -1,9 +1,11 @@
+import { useNavigate } from '@tanstack/react-router'
+
 import { Chip } from '#components/ui/chip'
-import { useTagFilter } from '#hooks/use-tag-filter'
 import type { Task } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import { formatDueDate, isTaskOverdue } from '#lib/task-due-date'
+import { buildTasksQuery, defaultTasksFilterState } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
 
 export function useHandleStatusChange(id: string, status: Task['status']) {
@@ -31,7 +33,7 @@ export function TagTokens({
   labels: string[]
   isCompleted: boolean
 }) {
-  const { setTag } = useTagFilter()
+  const navigate = useNavigate()
 
   return (
     <div className="flex items-center gap-1.5">
@@ -42,7 +44,12 @@ export function TagTokens({
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            setTag(label)
+            void navigate({
+              to: '/tasks',
+              search: {
+                q: buildTasksQuery({ ...defaultTasksFilterState, tag: label }),
+              },
+            })
           }}
           className={cn(
             'font-mono text-xs hover:text-foreground',

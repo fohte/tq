@@ -8,9 +8,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { expect } from 'storybook/test'
 
-import { TagFilterBar } from '#components/tag-filter-bar'
 import { TaskRow } from '#components/task/task-row'
 import type { Task } from '#hooks/use-tasks'
 
@@ -223,17 +221,11 @@ export const TagClick: Story = {
   args: {
     task: { ...baseTask, title: 'Click a tag token', labels: ['dev:tq'] },
   },
-  render: (args) => (
-    <Providers>
-      <div className="w-96">
-        <TaskRow task={args.task} />
-        <TagFilterBar />
-      </div>
-    </Providers>
-  ),
   play: async ({ canvas, userEvent }) => {
+    // Clicking navigates to /tasks scoped to the tag (see task-row.test.tsx
+    // for the assertion on the resulting query); this story only exercises
+    // that the click doesn't throw.
     await userEvent.click(canvas.getByText('#dev:tq'))
-    await expect(canvas.getByText('filtered by')).toBeVisible()
   },
 }
 

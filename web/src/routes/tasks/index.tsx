@@ -14,8 +14,6 @@ import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
 import { useCallback, useMemo, useState } from 'react'
 
 import { ContextFilterInline } from '#components/context-filter'
-import { TagFilterBar } from '#components/tag-filter-bar'
-import { TagFilterChips } from '#components/tag-filter-chips'
 import {
   CreateTaskInline,
   FloatingActionButton,
@@ -44,6 +42,7 @@ import {
 } from '#lib/task-tree'
 import {
   buildTasksQuery,
+  defaultTasksFilterState,
   parseTasksQuery,
   sortOptionValues,
 } from '#lib/tasks-query'
@@ -96,11 +95,7 @@ class TreeRowTouchSensor extends TouchSensor {
 }
 
 const tasksSearchDefaults = {
-  q: buildTasksQuery({
-    sortBy: 'updated',
-    showCompleted: false,
-    projectId: undefined,
-  }),
+  q: buildTasksQuery(defaultTasksFilterState),
 }
 
 interface TasksSearch {
@@ -139,7 +134,7 @@ export const Route = createFileRoute('/tasks/')({
 
 export function TaskList() {
   const { q = tasksSearchDefaults.q } = Route.useSearch()
-  const { sortBy, showCompleted, projectId } = parseTasksQuery(q)
+  const { sortBy, showCompleted, projectId, tag } = parseTasksQuery(q)
   const navigate = Route.useNavigate()
   const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -149,7 +144,7 @@ export function TaskList() {
     void navigate({
       search: (prev) => ({
         ...prev,
-        q: buildTasksQuery({ sortBy: sort, showCompleted, projectId }),
+        q: buildTasksQuery({ sortBy: sort, showCompleted, projectId, tag }),
       }),
       replace: true,
     })
@@ -158,7 +153,12 @@ export function TaskList() {
     void navigate({
       search: (prev) => ({
         ...prev,
-        q: buildTasksQuery({ sortBy, showCompleted: checked, projectId }),
+        q: buildTasksQuery({
+          sortBy,
+          showCompleted: checked,
+          projectId,
+          tag,
+        }),
       }),
       replace: true,
     })
@@ -171,7 +171,17 @@ export function TaskList() {
           sortBy,
           showCompleted,
           projectId: id === '' ? undefined : id,
+          tag,
         }),
+      }),
+      replace: true,
+    })
+  }
+  const setTag = (nextTag: string | undefined) => {
+    void navigate({
+      search: (prev) => ({
+        ...prev,
+        q: buildTasksQuery({ sortBy, showCompleted, projectId, tag: nextTag }),
       }),
       replace: true,
     })
@@ -187,6 +197,7 @@ export function TaskList() {
     sortBy,
     showCompleted,
     projectId,
+    tag,
   })
   const treeOutliner = useTreeOutliner(filteredTreeData, { enabled: true })
   const updateTaskParent = useUpdateTaskParent()
@@ -302,18 +313,13 @@ export function TaskList() {
         projects={projects.data ?? []}
         projectId={projectId}
         onProjectIdChange={setProjectId}
+        tag={tag}
+        onTagChange={setTag}
       />
-
-      <TagFilterBar />
 
       {/* Context filter (mobile only — desktop already has it in the sidebar) */}
       <div className="border-b border-border px-3 py-2 md:hidden">
         <ContextFilterInline />
-      </div>
-
-      {/* Tag filter chips (mobile only — desktop already has TAGS in the sidebar) */}
-      <div className="md:hidden">
-        <TagFilterChips />
       </div>
 
       {/* Inline create */}
