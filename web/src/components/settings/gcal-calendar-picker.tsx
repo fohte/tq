@@ -3,6 +3,7 @@ import { useState } from 'react'
 
 import { GcalCalendarChecklist } from '#components/settings/gcal-calendar-checklist'
 import type { IntegrationAccountView } from '#components/settings/integration-card'
+import { QueryStateMessage } from '#components/settings/query-state-message'
 import {
   useGcalCalendarsList,
   useUpdateCalendarSubscription,
@@ -37,7 +38,7 @@ export function GcalCalendarPicker({ account }: GcalCalendarPickerProps) {
 
       {open &&
         (calendarsQuery.isLoading ? (
-          <p className="py-1.5 text-xs text-muted-foreground">読み込み中...</p>
+          <QueryStateMessage status="loading" size="xs" />
         ) : calendarsQuery.isSuccess ? (
           <GcalCalendarChecklist
             calendars={calendarsQuery.data}
@@ -51,9 +52,11 @@ export function GcalCalendarPicker({ account }: GcalCalendarPickerProps) {
             }
           />
         ) : (
-          <p className="py-1.5 text-xs text-destructive">
-            カレンダー一覧の取得に失敗しました
-          </p>
+          <QueryStateMessage
+            status="error"
+            message="カレンダー一覧の取得に失敗しました"
+            size="xs"
+          />
         ))}
 
       {updateSubscription.isError && (

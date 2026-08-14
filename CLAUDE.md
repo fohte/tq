@@ -75,7 +75,7 @@ Stories are the only thing the VRT job (`vrt / shard (storybook, N)` / `vrt / sh
 
 Keep in the route file: data fetching (React Query hooks), URL search param validation/updates, and composing already-extracted, already-storied components into the screen layout. Extract into `web/src/components/` (with a story) anything that has its own visual appearance or state, even a few lines of JSX, since a story is the only way it gets checked for a visual regression.
 
-Boundary in practice: `web/src/routes/index.tsx` renders nothing itself and delegates entirely to `DayViewPresentation` — the target shape for a route file. `web/src/routes/settings.tsx`'s `SettingsIntegrationRow` stays inline because it only calls a hook and forwards the result to the already-storied `IntegrationCard`; it introduces no new appearance to verify. (That same file's loading/error text in `Settings()` is the kind of inline UI this rule targets — predating the rule, not an example to follow.)
+Boundary in practice: `web/src/routes/index.tsx` renders nothing itself and delegates entirely to `DayViewPresentation` — the target shape for a route file. `web/src/routes/settings.tsx`'s `SettingsIntegrationRow` stays inline because it only calls a hook and forwards the result to the already-storied `IntegrationCard`; it introduces no new appearance to verify.
 
 ### Prefer Storybook over manual browser checks
 
