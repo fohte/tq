@@ -23,13 +23,11 @@ import {
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
 import { TaskListColumnHeader } from '#components/task/task-list-column-header'
-import {
-  sortOptionValues,
-  TaskListToolbar,
-} from '#components/task/task-list-toolbar'
+import { TaskListToolbar } from '#components/task/task-list-toolbar'
 import type { DropTarget } from '#components/task/tree-drag-overlay-content'
 import { TreeDragOverlayContent } from '#components/task/tree-drag-overlay-content'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
+import { ListAreaMessage } from '#components/ui/list-area-message'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
@@ -43,6 +41,11 @@ import {
   getDescendantIds,
   resolveDropParentId,
 } from '#lib/task-tree'
+import {
+  buildTasksQuery,
+  parseTasksQuery,
+  sortOptionValues,
+} from '#lib/tasks-query'
 
 interface TreeRowDragData extends Record<string, unknown> {
   node: TreeNode
@@ -92,27 +95,37 @@ class TreeRowTouchSensor extends TouchSensor {
 }
 
 const tasksSearchDefaults = {
-  sortBy: 'updated' as TaskSortBy,
-  showCompleted: false,
+  q: buildTasksQuery({
+    sortBy: 'updated',
+    showCompleted: false,
+    projectId: undefined,
+  }),
 }
 
 interface TasksSearch {
-  sortBy?: TaskSortBy
-  showCompleted?: boolean
-  projectId?: string
+  q?: string
 }
 
 function validateSearch(search: Record<string, unknown>): TasksSearch {
-  const sortBy: TaskSortBy =
-    sortOptionValues.find((value) => value === search['sortBy']) ?? 'updated'
-  const showCompleted = search['showCompleted'] === true
-  const projectId =
-    typeof search['projectId'] === 'string' ? search['projectId'] : undefined
-  return {
-    sortBy,
-    showCompleted,
-    ...(projectId != null ? { projectId } : {}),
+  const rawQ = typeof search['q'] === 'string' ? search['q'] : undefined
+  if (rawQ != null && rawQ !== '') return { q: rawQ }
+
+  // Migrate URLs bookmarked/shared before the sortBy/showCompleted/projectId
+  // -> q migration, instead of silently discarding their filter.
+  if (
+    'sortBy' in search ||
+    'showCompleted' in search ||
+    'projectId' in search
+  ) {
+    const sortBy =
+      sortOptionValues.find((value) => value === search['sortBy']) ?? 'updated'
+    const showCompleted = search['showCompleted'] === true
+    const projectId =
+      typeof search['projectId'] === 'string' ? search['projectId'] : undefined
+    return { q: buildTasksQuery({ sortBy, showCompleted, projectId }) }
   }
+
+  return { q: tasksSearchDefaults.q }
 }
 
 export const Route = createFileRoute('/tasks/')({
@@ -124,11 +137,8 @@ export const Route = createFileRoute('/tasks/')({
 })
 
 export function TaskList() {
-  const {
-    sortBy = 'updated',
-    showCompleted = false,
-    projectId,
-  } = Route.useSearch()
+  const { q = tasksSearchDefaults.q } = Route.useSearch()
+  const { sortBy, showCompleted, projectId } = parseTasksQuery(q)
   const navigate = Route.useNavigate()
   const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -136,26 +146,32 @@ export function TaskList() {
 
   const setSortBy = (sort: TaskSortBy) => {
     void navigate({
-      search: (prev) => ({ ...prev, sortBy: sort }),
+      search: (prev) => ({
+        ...prev,
+        q: buildTasksQuery({ sortBy: sort, showCompleted, projectId }),
+      }),
       replace: true,
     })
   }
   const setShowCompleted = (checked: boolean) => {
     void navigate({
-      search: (prev) => ({ ...prev, showCompleted: checked }),
+      search: (prev) => ({
+        ...prev,
+        q: buildTasksQuery({ sortBy, showCompleted: checked, projectId }),
+      }),
       replace: true,
     })
   }
   const setProjectId = (id: string) => {
     void navigate({
-      search: (prev) => {
-        if (id === '') {
-          const { projectId: _projectId, ...rest } = prev
-          void _projectId
-          return rest
-        }
-        return { ...prev, projectId: id }
-      },
+      search: (prev) => ({
+        ...prev,
+        q: buildTasksQuery({
+          sortBy,
+          showCompleted,
+          projectId: id === '' ? undefined : id,
+        }),
+      }),
       replace: true,
     })
   }
@@ -312,13 +328,9 @@ export function TaskList() {
       {/* Task list */}
       <div className="flex-1 overflow-auto">
         {isLoading ? (
-          <div className="p-4 text-center text-sm text-muted-foreground">
-            Loading...
-          </div>
+          <ListAreaMessage>Loading...</ListAreaMessage>
         ) : isEmpty ? (
-          <div className="p-4 text-center text-sm text-muted-foreground">
-            No tasks yet
-          </div>
+          <ListAreaMessage>No tasks yet</ListAreaMessage>
         ) : (
           <DndContext
             sensors={dndSensors}

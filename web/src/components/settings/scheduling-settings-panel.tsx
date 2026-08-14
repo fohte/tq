@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 
+import { QueryStateMessage } from '#components/settings/query-state-message'
 import { Input } from '#components/ui/input'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
@@ -97,7 +98,7 @@ export function SchedulingSettingsPanel() {
       <SectionHeading level={3}>scheduling</SectionHeading>
 
       {settings.isLoading ? (
-        <p className="text-sm text-muted-foreground">読み込み中...</p>
+        <QueryStateMessage status="loading" />
       ) : settings.isSuccess ? (
         <Panel>
           <div className="divide-y divide-border">
@@ -183,9 +184,10 @@ export function SchedulingSettingsPanel() {
           </div>
         </Panel>
       ) : (
-        <p className="text-sm text-destructive">
-          scheduling 設定の取得に失敗しました
-        </p>
+        <QueryStateMessage
+          status="error"
+          message="scheduling 設定の取得に失敗しました"
+        />
       )}
 
       {updateSettings.isError && (
