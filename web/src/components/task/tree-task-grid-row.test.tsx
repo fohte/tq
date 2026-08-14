@@ -9,6 +9,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { ROW_INDENT_CLASS_NAME } from '#components/task/task-row-shared'
 import { makeNode } from '#components/task/task-row-test-fixtures'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { useTagFilter } from '#hooks/use-tag-filter'
@@ -205,12 +206,13 @@ describe('TreeTaskGridRow', () => {
       if (!(el instanceof HTMLElement)) {
         throw new Error(`Expected an element with --row-indent near "${text}"`)
       }
+      expect(el.classList.contains(ROW_INDENT_CLASS_NAME)).toBe(true)
       const value = el.style.getPropertyValue('--row-indent')
-      const match = /\* (\d+)\)/.exec(value)
-      if (match?.[1] == null) {
+      const match = /\d+/.exec(value)
+      if (match == null) {
         throw new Error(`Unexpected --row-indent value: "${value}"`)
       }
-      return Number.parseInt(match[1], 10)
+      return Number.parseInt(match[0], 10)
     }
 
     const depths = [

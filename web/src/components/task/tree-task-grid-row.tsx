@@ -158,8 +158,11 @@ export function TreeTaskGridRow({
           <div
             className={cn(
               'group',
-              ROW_INDENT_CLASS_NAME,
               gridRowWrapperClassName(isInProgress, isCompleted),
+              // Must come after gridRowWrapperClassName: twMerge keeps
+              // both px-* and a later pl-* (CSS cascade lets pl-* win),
+              // but drops pl-* if it precedes the conflicting px-*.
+              ROW_INDENT_CLASS_NAME,
               (isSelected || isOver) && 'ring-1 ring-inset ring-border-strong',
             )}
             style={rowIndentStyle(depth)}

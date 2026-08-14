@@ -89,8 +89,7 @@ export function TaskNumberLabel({ number }: { number: number }) {
 
 // Row indent is a per-instance value (depth is unbounded), so it can't be a
 // static Tailwind class. Set as a custom property via `style` and consumed
-// through `ROW_INDENT_CLASS_NAME`'s `pl-(--row-indent)` utility instead of a
-// raw `paddingLeft` style, keeping the actual layout property on Tailwind.
+// through `ROW_INDENT_CLASS_NAME`'s `pl-(--row-indent)` utility.
 export const ROW_INDENT_CLASS_NAME = 'pl-(--row-indent)'
 
 interface RowIndentStyle extends React.CSSProperties {
