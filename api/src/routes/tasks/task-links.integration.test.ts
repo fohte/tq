@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { APP_DOMAIN } from '#env'
 import {
   callMcpTool,
   connectMcpClient,
@@ -82,6 +83,48 @@ describe('task mention links', () => {
     const target = await createTask('Target')
 
     await patchTask(source.id, { description: `See #${String(target.number)}` })
+
+    expect(await getLinks(source.id)).toEqual({
+      outgoing: [linkSummary(target)],
+      incoming: [],
+    })
+  })
+
+  it('links from a numeric task URL in the description', async () => {
+    const source = await createTask('Source')
+    const target = await createTask('Target')
+
+    await patchTask(source.id, {
+      description: `See https://${APP_DOMAIN}/tasks/${String(target.number)}`,
+    })
+
+    expect(await getLinks(source.id)).toEqual({
+      outgoing: [linkSummary(target)],
+      incoming: [],
+    })
+  })
+
+  it('links from a uuid task URL in the description', async () => {
+    const source = await createTask('Source')
+    const target = await createTask('Target')
+
+    await patchTask(source.id, {
+      description: `See https://${APP_DOMAIN}/tasks/${target.id}`,
+    })
+
+    expect(await getLinks(source.id)).toEqual({
+      outgoing: [linkSummary(target)],
+      incoming: [],
+    })
+  })
+
+  it('collapses a task URL and a `#N` mention of the same task into a single link', async () => {
+    const source = await createTask('Source')
+    const target = await createTask('Target')
+
+    await patchTask(source.id, {
+      description: `#${String(target.number)} and https://${APP_DOMAIN}/tasks/${String(target.number)}`,
+    })
 
     expect(await getLinks(source.id)).toEqual({
       outgoing: [linkSummary(target)],

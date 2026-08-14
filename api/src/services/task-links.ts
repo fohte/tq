@@ -1,8 +1,10 @@
-import { eq, inArray, sql } from 'drizzle-orm'
+import { eq, inArray, or, sql } from 'drizzle-orm'
 
 import { MENTION_PATTERN } from '#constants/mention-pattern'
 import { db } from '#db/connection'
 import { taskComments, taskLinks, taskPages, tasks } from '#db/schema'
+import { APP_DOMAIN } from '#env'
+import { extractAppResourceRefs } from '#lib/app-url'
 
 export function extractMentionedNumbers(text: string): number[] {
   const numbers = new Set<number>()
@@ -11,6 +13,29 @@ export function extractMentionedNumbers(text: string): number[] {
     if (digits != null) numbers.add(Number(digits))
   }
   return [...numbers]
+}
+
+const numericRefPattern = /^\d+$/
+
+// Combines `#123`-style mentions with `https://<APP_DOMAIN>/tasks/...`-style
+// URLs pasted into task text. A task URL may key off either the human-facing
+// number or the UUID primary key (see `findTaskByIdOrNumber`), so a numeric
+// URL ref is folded into `numbers` alongside `#123` mentions instead of
+// being tracked separately.
+export function extractMentionedTaskRefs(text: string): {
+  numbers: number[]
+  ids: string[]
+} {
+  const numbers = new Set(extractMentionedNumbers(text))
+  const ids = new Set<string>()
+  for (const ref of extractAppResourceRefs(text, APP_DOMAIN, 'tasks')) {
+    if (numericRefPattern.test(ref)) {
+      numbers.add(Number(ref))
+    } else {
+      ids.add(ref)
+    }
+  }
+  return { numbers: [...numbers], ids: [...ids] }
 }
 
 // Recomputes every outgoing link for `sourceTaskId` from scratch by
@@ -52,15 +77,27 @@ export async function syncTaskLinks(sourceTaskId: string): Promise<void> {
       ...pages.filter((p) => p.format !== 'html').map((p) => p.content),
       ...comments.map((c) => c.content),
     ]
-    const mentionedNumbers = new Set(texts.flatMap(extractMentionedNumbers))
+    const refs = texts.map(extractMentionedTaskRefs)
+    const mentionedNumbers = new Set(refs.flatMap((r) => r.numbers))
+    const mentionedIds = new Set(refs.flatMap((r) => r.ids))
     mentionedNumbers.delete(task.number)
+    mentionedIds.delete(sourceTaskId)
 
     const targets =
-      mentionedNumbers.size > 0
+      mentionedNumbers.size > 0 || mentionedIds.size > 0
         ? await tx
             .select({ id: tasks.id })
             .from(tasks)
-            .where(inArray(tasks.number, [...mentionedNumbers]))
+            .where(
+              or(
+                mentionedNumbers.size > 0
+                  ? inArray(tasks.number, [...mentionedNumbers])
+                  : undefined,
+                mentionedIds.size > 0
+                  ? inArray(tasks.id, [...mentionedIds])
+                  : undefined,
+              ),
+            )
         : []
 
     await tx.delete(taskLinks).where(eq(taskLinks.sourceTaskId, sourceTaskId))

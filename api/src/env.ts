@@ -1,5 +1,5 @@
 import { optionalEnum, parseEnv, requireString } from '@fohte/service-kit/env'
-import { err, type Result } from 'neverthrow'
+import { err, ok, type Result } from 'neverthrow'
 
 const APP_ENVS = ['development', 'test', 'production'] as const
 type AppEnv = (typeof APP_ENVS)[number]
@@ -30,9 +30,25 @@ function resolveDatabaseUrl(appEnv: AppEnv): Result<string, string> {
   )
 }
 
+// Public domain tq is served from (no scheme, e.g. `tq.fohte.net`), used to
+// recognize tq URLs pasted into task text. Required in production, since a
+// missing value there would silently disable URL resolution rather than
+// fail loudly; defaults to the local Vite dev server's origin elsewhere so
+// `pnpm dev` needs no extra setup.
+function resolveAppDomain(appEnv: AppEnv): Result<string, string> {
+  const explicit = requireString(process.env, 'APP_DOMAIN')
+  if (explicit.isOk()) return explicit
+
+  if (appEnv === 'production') {
+    return err('APP_DOMAIN environment variable is required in production')
+  }
+  return ok('localhost:5173')
+}
+
 const parsed = parseEnv({
   APP_ENV: appEnvResult,
   DATABASE_URL: resolveDatabaseUrl(appEnvResult.unwrapOr('development')),
+  APP_DOMAIN: resolveAppDomain(appEnvResult.unwrapOr('development')),
 })
 
 if (parsed.isErr()) {
@@ -42,3 +58,4 @@ if (parsed.isErr()) {
 
 export const APP_ENV: AppEnv = parsed.value.APP_ENV
 export const DATABASE_URL: string = parsed.value.DATABASE_URL
+export const APP_DOMAIN: string = parsed.value.APP_DOMAIN
