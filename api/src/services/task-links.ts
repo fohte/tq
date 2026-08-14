@@ -37,17 +37,19 @@ export function extractMentionedTaskRefs(text: string): NumericOrId[] {
 }
 
 // The Rails-`scope`-like counterpart to `classifyNumericOrId`: matches any
-// task whose `number` or `id` appears in `refs`. Callers must skip the query
-// when `refs` is empty — an empty `or()` resolves to `undefined`, which
-// would match every row instead of none.
-function matchTasksByIdOrNumber(refs: NumericOrId[]): SQL | undefined {
+// task whose `number` or `id` appears in `refs`. Falls back to `sql\`false\``
+// (matching nothing) for an empty `refs`, since an empty `or()` resolves to
+// `undefined` and an `undefined` WHERE clause would match every row instead.
+function matchTasksByIdOrNumber(refs: NumericOrId[]): SQL {
   const numbers = refs
     .filter((ref) => ref.kind === 'number')
     .map((ref) => ref.value)
   const ids = refs.filter((ref) => ref.kind === 'id').map((ref) => ref.value)
-  return or(
-    numbers.length > 0 ? inArray(tasks.number, numbers) : undefined,
-    ids.length > 0 ? inArray(tasks.id, ids) : undefined,
+  return (
+    or(
+      numbers.length > 0 ? inArray(tasks.number, numbers) : undefined,
+      ids.length > 0 ? inArray(tasks.id, ids) : undefined,
+    ) ?? sql`false`
   )
 }
 
@@ -90,13 +92,15 @@ export async function syncTaskLinks(sourceTaskId: string): Promise<void> {
       ...pages.filter((p) => p.format !== 'html').map((p) => p.content),
       ...comments.map((c) => c.content),
     ]
-    const refs = texts
-      .flatMap(extractMentionedTaskRefs)
-      .filter((ref) =>
-        ref.kind === 'number'
-          ? ref.value !== task.number
-          : ref.value !== sourceTaskId,
-      )
+    // Joined with `\n` (rather than `texts.flatMap(extractMentionedTaskRefs)`)
+    // so refs are deduped across fields, not just within each one — `\n` isn't
+    // part of a `#123` mention or a URL ref, so it can't bridge a false match
+    // across the join.
+    const refs = extractMentionedTaskRefs(texts.join('\n')).filter((ref) =>
+      ref.kind === 'number'
+        ? ref.value !== task.number
+        : ref.value !== sourceTaskId,
+    )
 
     const targets =
       refs.length > 0
