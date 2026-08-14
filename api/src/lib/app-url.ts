@@ -2,10 +2,7 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-// A single id-or-number match, tagged with the `resource` it was matched
-// under — a bare `string[]` would leave a caller merging results across
-// multiple resources (e.g. tasks and projects) unable to tell which is
-// which.
+// `resource` records which resource this ref was matched under.
 export interface AppResourceRef {
   resource: string
   ref: string
