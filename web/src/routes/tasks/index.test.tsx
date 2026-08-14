@@ -49,7 +49,7 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
 // TaskList itself is bound to the real TasksRoute (Route.useSearch() /
 // Route.useNavigate()), so that route must be matched for real rather than
 // rendered directly as a child element.
-function renderTaskList() {
+function renderTaskList(initialEntry = '/tasks') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
@@ -76,14 +76,17 @@ function renderTaskList() {
   rootRoute.addChildren([TasksRoute, taskRoute])
   const router = createRouter({
     routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/tasks'] }),
+    history: createMemoryHistory({ initialEntries: [initialEntry] }),
   })
 
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-  )
+  return {
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    ),
+    router,
+  }
 }
 
 beforeEach(() => {
@@ -192,5 +195,84 @@ describe('TaskList project filter selector', () => {
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
       { sortBy: 'updated', showCompleted: false, projectId: 'proj-1' },
     ])
+  })
+})
+
+describe('TaskList URL query encoding', () => {
+  it('drops the q param entirely when every filter is at its default', async () => {
+    const { router } = renderTaskList()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Sort tasks')).toHaveValue('updated')
+    })
+    expect(router.state.location.search).toEqual({})
+  })
+
+  it('encodes the selected sort into the q param', async () => {
+    const user = userEvent.setup()
+    const { router } = renderTaskList()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Sort tasks')).toBeInTheDocument()
+    })
+    await user.selectOptions(screen.getByLabelText('Sort tasks'), 'created')
+
+    expect(router.state.location.search).toEqual({
+      q: 'is:todo is:in_progress sort:created',
+    })
+  })
+
+  it('drops the is: tokens from the q param once "show completed" is checked', async () => {
+    const user = userEvent.setup()
+    const { router } = renderTaskList()
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('checkbox', { name: 'show completed' }),
+      ).toBeInTheDocument()
+    })
+    await user.click(screen.getByRole('checkbox', { name: 'show completed' }))
+
+    expect(router.state.location.search).toEqual({ q: 'sort:updated' })
+  })
+
+  it('encodes the selected project into the q param', async () => {
+    const user = userEvent.setup()
+    mockUseProjects.mockReturnValue({
+      data: [{ id: 'proj-1', title: 'Website Redesign' }],
+    })
+    const { router } = renderTaskList()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Filter by project')).toBeInTheDocument()
+    })
+    await user.selectOptions(
+      screen.getByLabelText('Filter by project'),
+      'proj-1',
+    )
+
+    expect(router.state.location.search).toEqual({
+      q: 'is:todo is:in_progress sort:updated project:proj-1',
+    })
+  })
+
+  it('migrates a pre-migration sortBy/showCompleted/projectId URL into q', async () => {
+    mockUseProjects.mockReturnValue({
+      data: [{ id: 'proj-1', title: 'Website Redesign' }],
+    })
+    // Asserts against the rendered filter state (not router.state.location
+    // .search): TanStack Router only re-derives `location.search` from
+    // validateSearch's `q` on the next navigate, so on this initial load the
+    // address bar still shows the raw legacy params even though the
+    // component itself already reads the migrated, correctly-filtered state.
+    renderTaskList('/tasks?sortBy=created&showCompleted=true&projectId=proj-1')
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Sort tasks')).toHaveValue('created')
+    })
+    expect(
+      screen.getByRole('checkbox', { name: 'show completed' }),
+    ).toBeChecked()
+    expect(screen.getByLabelText('Filter by project')).toHaveValue('proj-1')
   })
 })

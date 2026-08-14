@@ -6,11 +6,7 @@ import type { Project } from '#hooks/use-projects'
 import type { TaskSortBy } from '#hooks/use-tasks'
 import { selectHandler } from '#lib/form-utils'
 import { newTaskKeybinding } from '#lib/keybindings'
-
-export const sortOptionValues = [
-  'updated',
-  'created',
-] as const satisfies readonly TaskSortBy[]
+import { sortOptionValues } from '#lib/tasks-query'
 
 const sortLabels: Record<TaskSortBy, string> = {
   updated: 'Updated',
