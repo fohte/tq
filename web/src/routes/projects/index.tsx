@@ -5,20 +5,18 @@ import { ProjectFormModal } from '#components/project/project-form-modal'
 import { ProjectListEmptyState } from '#components/project/project-list-empty-state'
 import { ProjectListHeader } from '#components/project/project-list-header'
 import { ProjectListRow } from '#components/project/project-list-row'
-import { Button } from '#components/ui/button'
-import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
-import { SectionHeading } from '#components/ui/section-heading'
-import { TabStrip } from '#components/ui/tab-strip'
+import {
+  type ProjectFilterTab,
+  ProjectListToolbar,
+} from '#components/project/project-list-toolbar'
 import { useProjects } from '#hooks/use-projects'
 
 export const Route = createFileRoute('/projects/')({
   component: ProjectList,
 })
 
-type FilterTab = 'active' | 'all'
-
 function ProjectList() {
-  const [filter, setFilter] = useState<FilterTab>('active')
+  const [filter, setFilter] = useState<ProjectFilterTab>('active')
   const [showCreate, setShowCreate] = useState(false)
 
   const { data: projects, isLoading } = useProjects(
@@ -27,27 +25,13 @@ function ProjectList() {
 
   return (
     <div className="flex h-full flex-col">
-      <ScreenHeaderBar>
-        <SectionHeading level={2}>projects</SectionHeading>
-        <TabStrip
-          value={filter}
-          options={[
-            { value: 'active', label: 'active' },
-            { value: 'all', label: 'all' },
-          ]}
-          onChange={setFilter}
-          className="ml-2.5"
-        />
-        <Button
-          size="xs"
-          className="ml-auto text-2xs"
-          onClick={() => {
-            setShowCreate(true)
-          }}
-        >
-          + new
-        </Button>
-      </ScreenHeaderBar>
+      <ProjectListToolbar
+        filter={filter}
+        onFilterChange={setFilter}
+        onCreate={() => {
+          setShowCreate(true)
+        }}
+      />
 
       <ProjectListHeader />
 
