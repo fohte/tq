@@ -7,7 +7,8 @@ function escapeRegExp(value: string): string {
 // resolve them the same way as a `#123`-style mention. A trailing
 // path/query/fragment (e.g. `/tasks/123/pages/abc`) is ignored, and trailing
 // prose punctuation (e.g. a sentence-ending period) is excluded, since the
-// capture stops at the first character outside `[0-9a-zA-Z-]`.
+// capture stops at the first character outside `[0-9a-zA-Z-]`. Repeated refs
+// to the same id are deduped.
 export function extractAppResourceRefs(
   text: string,
   appDomain: string,
