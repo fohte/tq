@@ -1,8 +1,8 @@
 name: Start PostgreSQL
 description: >-
   Start the docker-compose.yml PostgreSQL container for integration tests,
-  create the tq_test database, and export TEST_DATABASE_URL for subsequent
-  steps.
+  create the tq_test database, and export DATABASE_URL/TEST_DATABASE_URL
+  from .env.runtime for subsequent steps.
 
 runs:
   using: composite

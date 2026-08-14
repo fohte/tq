@@ -19,6 +19,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      # postgres is usually ready within a couple seconds; without this,
+      # `docker compose up --wait` (used by both local dev and CI) would be
+      # bound by the 5s interval above instead of actual startup time.
+      start_period: 10s
+      start_interval: 1s
     networks:
       - tq-net
 
