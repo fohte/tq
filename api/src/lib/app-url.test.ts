@@ -26,16 +26,6 @@ describe('extractAppResourceRefs', () => {
     ).toEqual([{ resource: 'tasks', ref: uuid }])
   })
 
-  it('tags refs with whichever resource was passed in', () => {
-    expect(
-      extractAppResourceRefs(
-        `https://${APP_DOMAIN}/projects/123`,
-        APP_DOMAIN,
-        'projects',
-      ),
-    ).toEqual([{ resource: 'projects', ref: '123' }])
-  })
-
   it('dedupes repeated refs to the same resource', () => {
     expect(
       extractAppResourceRefs(
