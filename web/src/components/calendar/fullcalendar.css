@@ -231,8 +231,11 @@
 }
 
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-more-link {
+  display: block;
+  overflow: hidden;
   color: var(--muted-foreground);
   font-weight: 500;
+  text-overflow: ellipsis;
 }
 
 .tq-calendar .fc-dayGridMonth-view .fc-daygrid-more-link:hover {
