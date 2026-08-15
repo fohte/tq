@@ -1,10 +1,18 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { projectUrlProvider } from '#lib/inline-reference/providers/project-url'
 
 describe('projectUrlProvider.findMatches', () => {
+  beforeEach(() => {
+    vi.stubGlobal('location', { host: 'tq.fohte.net' })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   function urls(text: string): string[] {
-    return projectUrlProvider.findMatches(text).map((m) => m.data.url)
+    return projectUrlProvider.findMatches(text).map((m) => m.raw)
   }
 
   it('finds a project URL', () => {
@@ -14,11 +22,9 @@ describe('projectUrlProvider.findMatches', () => {
     ).toEqual([`https://tq.fohte.net/projects/${uuid}`])
   })
 
-  it('matches any host, since the API is the authoritative domain check', () => {
+  it('ignores a URL on a different host', () => {
     const uuid = '9b1f6f0e-1c0a-4e8b-9c7a-2b6b2b6b2b6b'
-    expect(urls(`see http://localhost:5173/projects/${uuid}`)).toEqual([
-      `http://localhost:5173/projects/${uuid}`,
-    ])
+    expect(urls(`see https://evil.example.com/projects/${uuid}`)).toEqual([])
   })
 
   it('returns no matches when there are none', () => {
@@ -49,7 +55,7 @@ describe('projectUrlProvider.findMatches', () => {
         start: 4,
         end: 41,
         raw: 'https://tq.fohte.net/projects/abc-123',
-        data: { url: 'https://tq.fohte.net/projects/abc-123' },
+        data: { id: 'abc-123' },
       },
     ])
   })

@@ -14,8 +14,10 @@ import { ProjectUrlChip } from '#components/task/project-url-chip'
 import type { ProjectUrlPreview } from '#hooks/use-project-url-preview'
 import { projectUrlPreviewKeys } from '#hooks/use-project-url-preview'
 
+const PROJECT_ID = 'aaaa0000-0000-0000-0000-000000000000'
 const PROJECT_URL =
   'https://tq.fohte.net/projects/aaaa0000-0000-0000-0000-000000000000'
+const UNRESOLVED_ID = 'unknown'
 const UNRESOLVED_URL = 'https://tq.fohte.net/projects/unknown'
 
 const baseProject: ProjectUrlPreview = {
@@ -34,18 +36,18 @@ const baseProject: ProjectUrlPreview = {
 }
 
 function Providers({
-  url,
+  id,
   project,
   children,
 }: {
-  url: string
+  id: string
   project: ProjectUrlPreview | null
   children: ReactNode
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  queryClient.setQueryData(projectUrlPreviewKeys.preview(url), project)
+  queryClient.setQueryData(projectUrlPreviewKeys.preview(id), project)
 
   const rootRoute = createRootRoute({
     component: () => <>{children}</>,
@@ -69,18 +71,18 @@ function Providers({
 }
 
 function ProjectUrlChipWithProviders({
-  url,
+  id,
   raw,
   project,
 }: {
-  url: string
+  id: string
   raw: string
   project: ProjectUrlPreview | null
 }) {
   return (
-    <Providers url={url} project={project}>
+    <Providers id={id} project={project}>
       <p className="text-sm">
-        See <ProjectUrlChip data={{ url }} raw={raw} /> for details.
+        See <ProjectUrlChip data={{ id }} raw={raw} /> for details.
       </p>
     </Providers>
   )
@@ -98,7 +100,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Active: Story = {
-  args: { url: PROJECT_URL, raw: PROJECT_URL, project: baseProject },
+  args: { id: PROJECT_ID, raw: PROJECT_URL, project: baseProject },
   play: async ({ canvas, canvasElement, userEvent }) => {
     // The chip renders as a portal into the app's own React tree in
     // production (see plugin.tsx), so this exercises the same tree shape:
@@ -117,7 +119,7 @@ export const Active: Story = {
 
 export const Paused: Story = {
   args: {
-    url: PROJECT_URL,
+    id: PROJECT_ID,
     raw: PROJECT_URL,
     project: { ...baseProject, status: 'paused' },
   },
@@ -125,17 +127,17 @@ export const Paused: Story = {
 
 export const Completed: Story = {
   args: {
-    url: PROJECT_URL,
+    id: PROJECT_ID,
     raw: PROJECT_URL,
     project: { ...baseProject, status: 'completed' },
   },
 }
 
-// The project preview hasn't resolved yet (or the URL doesn't point at an
+// The project preview hasn't resolved yet (or the id doesn't point at an
 // actual project): the chip falls back to rendering the raw matched text
 // instead of a card.
 export const Unresolved: Story = {
-  args: { url: UNRESOLVED_URL, raw: UNRESOLVED_URL, project: null },
+  args: { id: UNRESOLVED_ID, raw: UNRESOLVED_URL, project: null },
   play: async ({ canvas }) => {
     await expect(canvas.getByText(UNRESOLVED_URL)).toBeVisible()
   },

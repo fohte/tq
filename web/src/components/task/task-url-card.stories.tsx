@@ -14,7 +14,9 @@ import { TaskUrlCard } from '#components/task/task-url-card'
 import type { TaskUrlPreview } from '#hooks/use-task-url-preview'
 import { taskUrlPreviewKeys } from '#hooks/use-task-url-preview'
 
+const TASK_ID = '42'
 const TASK_URL = 'https://tq.fohte.net/tasks/42'
+const UNRESOLVED_ID = '999'
 const UNRESOLVED_URL = 'https://tq.fohte.net/tasks/999'
 
 const baseTask: TaskUrlPreview = {
@@ -36,21 +38,27 @@ const baseTask: TaskUrlPreview = {
   githubLink: null,
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
+  titleAuthor: null,
+  descriptionAuthor: null,
+  childCompletionCount: { completed: 0, total: 0 },
+  pages: [],
+  timeBlocks: [],
+  links: { outgoing: [], incoming: [] },
 }
 
 function Providers({
-  url,
+  id,
   task,
   children,
 }: {
-  url: string
+  id: string
   task: TaskUrlPreview | null
   children: ReactNode
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  queryClient.setQueryData(taskUrlPreviewKeys.preview(url), task)
+  queryClient.setQueryData(taskUrlPreviewKeys.preview(id), task)
 
   const rootRoute = createRootRoute({
     component: () => <>{children}</>,
@@ -74,18 +82,18 @@ function Providers({
 }
 
 function TaskUrlCardWithProviders({
-  url,
+  id,
   raw,
   task,
 }: {
-  url: string
+  id: string
   raw: string
   task: TaskUrlPreview | null
 }) {
   return (
-    <Providers url={url} task={task}>
+    <Providers id={id} task={task}>
       <div className="w-96">
-        <TaskUrlCard data={{ url }} raw={raw} />
+        <TaskUrlCard data={{ id }} raw={raw} />
       </div>
     </Providers>
   )
@@ -103,7 +111,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Todo: Story = {
-  args: { url: TASK_URL, raw: TASK_URL, task: baseTask },
+  args: { id: TASK_ID, raw: TASK_URL, task: baseTask },
   play: async ({ canvas }) => {
     await expect(canvas.getByText(baseTask.title)).toBeVisible()
     await expect(canvas.getByText(baseTask.description ?? '')).toBeVisible()
@@ -112,7 +120,7 @@ export const Todo: Story = {
 
 export const InProgress: Story = {
   args: {
-    url: TASK_URL,
+    id: TASK_ID,
     raw: TASK_URL,
     task: { ...baseTask, status: 'in_progress', title: 'Review pull request' },
   },
@@ -120,17 +128,17 @@ export const InProgress: Story = {
 
 export const Completed: Story = {
   args: {
-    url: TASK_URL,
+    id: TASK_ID,
     raw: TASK_URL,
     task: { ...baseTask, status: 'completed', title: 'Set up CI pipeline' },
   },
 }
 
-// The task preview hasn't resolved yet (or the URL doesn't point at an
+// The task preview hasn't resolved yet (or the id doesn't point at an
 // actual task): the card falls back to rendering the raw matched text while
 // its data is unresolved.
 export const Unresolved: Story = {
-  args: { url: UNRESOLVED_URL, raw: UNRESOLVED_URL, task: null },
+  args: { id: UNRESOLVED_ID, raw: UNRESOLVED_URL, task: null },
   play: async ({ canvas }) => {
     await expect(canvas.getByText(UNRESOLVED_URL)).toBeVisible()
   },

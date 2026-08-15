@@ -1,10 +1,18 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { taskUrlProvider } from '#lib/inline-reference/providers/task-url'
 
 describe('taskUrlProvider.findMatches', () => {
+  beforeEach(() => {
+    vi.stubGlobal('location', { host: 'tq.fohte.net' })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   function urls(text: string): string[] {
-    return taskUrlProvider.findMatches(text).map((m) => m.data.url)
+    return taskUrlProvider.findMatches(text).map((m) => m.raw)
   }
 
   it('finds a numeric task URL', () => {
@@ -20,10 +28,14 @@ describe('taskUrlProvider.findMatches', () => {
     ])
   })
 
-  it('matches any host, since the API is the authoritative domain check', () => {
-    expect(urls('see http://localhost:5173/tasks/123')).toEqual([
-      'http://localhost:5173/tasks/123',
+  it('matches the current page host', () => {
+    expect(urls('see http://tq.fohte.net/tasks/123')).toEqual([
+      'http://tq.fohte.net/tasks/123',
     ])
+  })
+
+  it('ignores a URL on a different host', () => {
+    expect(urls('see https://evil.example.com/tasks/123')).toEqual([])
   })
 
   it('finds multiple distinct URLs', () => {
@@ -82,7 +94,7 @@ describe('taskUrlProvider.findMatches', () => {
         start: 4,
         end: 34,
         raw: 'https://tq.fohte.net/tasks/123',
-        data: { url: 'https://tq.fohte.net/tasks/123' },
+        data: { id: '123' },
       },
     ])
   })

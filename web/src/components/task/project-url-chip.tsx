@@ -22,7 +22,7 @@ export function ProjectUrlChip({
   data: ProjectUrlData
   raw: string
 }) {
-  const { data: project } = useProjectUrlPreview(data.url)
+  const { data: project } = useProjectUrlPreview(data.id)
 
   if (project == null) return <span>{raw}</span>
   const status = isProjectStatus(project.status) ? project.status : 'active'

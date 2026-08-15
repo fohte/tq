@@ -1,32 +1,29 @@
+import { matchAppResourceUrls } from 'api/lib/app-url'
+
 import { ProjectUrlCard } from '#components/task/project-url-card'
 import { ProjectUrlChip } from '#components/task/project-url-chip'
 import type { InlineReferenceProvider } from '#lib/inline-reference/types'
 
 export interface ProjectUrlData {
-  url: string
+  id: string
 }
-
-// Matches a project URL's path shape only (`/projects/<id>`), on any host:
-// the API's POST /api/projects/resolve-url is the authoritative check for
-// whether the host is actually this tq instance (see api/src/routes/projects.ts),
-// so this only needs to be permissive enough to trigger a resolve attempt.
-const PROJECT_URL_PATTERN =
-  /https?:\/\/[^/\s]+\/projects\/[0-9a-zA-Z-]+\/?(?![\w/-])/g
 
 export const projectUrlProvider: InlineReferenceProvider<ProjectUrlData> = {
   id: 'project-url',
 
+  // Matches a project URL's path shape (`/projects/<id>`) on this page's
+  // own host, then hands the extracted id straight to
+  // `GET /api/projects/:id` — the same endpoint the project detail page
+  // resolves through (see `useProject`).
   findMatches(text) {
-    const matches = []
-    for (const match of text.matchAll(PROJECT_URL_PATTERN)) {
-      matches.push({
-        start: match.index,
-        end: match.index + match[0].length,
-        raw: match[0],
-        data: { url: match[0] },
-      })
-    }
-    return matches
+    return matchAppResourceUrls(text, window.location.host, 'projects').map(
+      (match) => ({
+        start: match.start,
+        end: match.end,
+        raw: match.raw,
+        data: { id: match.id },
+      }),
+    )
   },
 
   Chip: ProjectUrlChip,
