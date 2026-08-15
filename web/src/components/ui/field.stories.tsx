@@ -72,6 +72,11 @@ export const WithMultipleErrors: Story = {
 }
 
 export const Horizontal: Story = {
+  parameters: {
+    // Checkbox's hit-slop pseudo-element overflows its own box on purpose —
+    // see checkbox.stories.tsx for the same exemption.
+    overflowCheck: { ignoreSelectors: ['[data-slot="checkbox"]'] },
+  },
   render: () => (
     <Field orientation="horizontal" className="w-80">
       <Checkbox id="field-story-notify" />

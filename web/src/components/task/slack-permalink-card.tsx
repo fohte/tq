@@ -12,7 +12,7 @@ export function SlackPermalinkCard({
   raw: string
 }) {
   const { data: preview } = useSlackPermalinkPreview(data.url)
-  if (preview == null) return <span>{raw}</span>
+  if (preview == null) return <span className="break-all">{raw}</span>
 
   return (
     <div className="block border border-border bg-card p-3">

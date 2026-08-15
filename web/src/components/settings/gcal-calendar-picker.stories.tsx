@@ -85,6 +85,11 @@ export const Collapsed: Story = {
 
 export const Expanded: Story = {
   args: {},
+  parameters: {
+    // Checkbox's hit-slop pseudo-element overflows its own box on purpose —
+    // see checkbox.stories.tsx for the same exemption.
+    overflowCheck: { ignoreSelectors: ['[data-slot="checkbox"]'] },
+  },
   play: async ({ canvasElement, userEvent }) => {
     const canvas = within(canvasElement)
     await userEvent.click(

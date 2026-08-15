@@ -404,6 +404,12 @@ export const WithCompletionCount: Story = {
 
 export const AllVariants: Story = {
   args: { node: baseTreeNode },
+  parameters: {
+    // Deliberately overflows (see the render comment below) as a regression
+    // check that the title floor keeps working rather than collapsing to 0
+    // width — not a layout bug to fix.
+    overflowCheck: { disable: true },
+  },
   render: () => {
     const nodes: TreeNode[] = [
       { ...baseTreeNode, id: '1', title: 'Todo task (personal)' },
