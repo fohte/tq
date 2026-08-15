@@ -351,9 +351,6 @@ export const FullPagePC: StoryObj<{
     pages: samplePages,
     subtasks: [],
   },
-  // The mobile layout is covered separately by FullPageSP; this desktop
-  // sidebar layout isn't meant to render at the storybook-mobile project's
-  // 375px viewport.
   tags: ['desktop-only'],
   parameters: {
     layout: 'fullscreen',
