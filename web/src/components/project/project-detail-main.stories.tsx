@@ -210,15 +210,12 @@ export const FullPagePC: StoryObj<{
     project: { ...baseProject },
     tasks: sampleTasks,
   },
+  // The mobile layout is covered separately by FullPageSP; this desktop
+  // sidebar layout isn't meant to render at the storybook-mobile project's
+  // 375px viewport.
+  tags: ['desktop-only'],
   parameters: {
     layout: 'fullscreen',
-    // This sidebar layout isn't responsive, so at the storybook-mobile
-    // project's 375px viewport it overflows — but which element trips the
-    // check varies by run (the main content area, a line-clamped
-    // description, or the Milkdown editor's wrapper depending on its async
-    // mount timing), so no single selector reliably scopes this out.
-    // TODO: make this layout responsive.
-    overflowCheck: { disable: true },
   },
   render: ({ project, tasks }) => (
     <Providers>
