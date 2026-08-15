@@ -163,11 +163,14 @@ export function TaskFilterChipRow({
         </Chip>
       )}
       {extraTokens.map((token, index) => (
+        // Not `active`: unlike the other chips, this token isn't wired
+        // into useFilteredTaskTree, so it must not look like an applied
+        // filter.
         <Chip
           key={`${token}-${String(index)}`}
           as="button"
-          active
           className="shrink-0"
+          title="This token isn't understood by any filter — it has no effect on the task list"
           onClick={() => {
             const remaining = extraTokens.filter((_, i) => i !== index)
             onExtraChange(
