@@ -113,5 +113,6 @@ beforeEach(() => {
 
 afterEach(async (context) => {
   await screenshot(page, asScreenshotContext(context))
+
   for (const check of checks) check.assert(storyParametersOf(context))
 })
