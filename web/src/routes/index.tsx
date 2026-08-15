@@ -131,6 +131,7 @@ function DayView() {
         end: schedule.end,
         type: 'schedule' as const,
         color: scheduleColorToEventColor(schedule.color),
+        scheduleId: schedule.scheduleId,
         redacted: !matchesContextFilter(schedule.context, contextMode),
       }
     })
@@ -244,6 +245,7 @@ function DayView() {
     <DayViewPresentation
       isLoading={isLoading}
       calendarEvents={calendarEvents}
+      schedules={schedulesData ?? []}
       dndCallbacks={dndCallbacks}
       {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
         ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }

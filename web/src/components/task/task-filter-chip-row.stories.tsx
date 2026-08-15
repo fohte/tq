@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import type { Project } from '#hooks/use-projects'
@@ -227,6 +227,15 @@ export const SelectProjectInMobileFilterSheet: Story = {
     )
     if (trigger == null) throw new Error('mobile trigger not found')
     await userEvent.click(trigger)
+
+    // Base UI moves focus to the dialog's first tabbable element (the close
+    // button) asynchronously via requestAnimationFrame. Wait for it to land
+    // before clicking "Mobile App", otherwise it can race the click and
+    // steal focus back afterward, making the VRT screenshot's focus ring
+    // non-deterministic.
+    await waitFor(() =>
+      expect(body.getByRole('button', { name: 'Close' })).toHaveFocus(),
+    )
 
     await userEvent.click(
       await body.findByRole('button', { name: 'Mobile App' }),
