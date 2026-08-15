@@ -24,10 +24,14 @@ vi.mock('#hooks/use-filtered-tasks', () => ({
 // it so the route never issues a real fetch.
 const mockUseProjects = vi.fn()
 
-vi.mock('#hooks/use-projects', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
-  useProjects: (...args: unknown[]) => mockUseProjects(...args),
-}))
+vi.mock('#hooks/use-projects', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-projects')>()
+  return {
+    ...actual,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+    useProjects: (...args: unknown[]) => mockUseProjects(...args),
+  }
+})
 
 // GithubIssueLinkModal (always mounted, just closed) calls useNavigate
 // unconditionally, so a real router is required rather than a mocked one.
