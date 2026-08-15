@@ -115,12 +115,21 @@ export const RemoveTagChip: Story = {
   },
 }
 
-export const OpenFilterMenu: Story = {
-  play: async ({ canvasElement, canvas, args }) => {
+// Both `+ filter` triggers exist in the DOM at once (only one is visible per
+// the `hidden md:inline-flex` / `inline-flex md:hidden` split, resolved by
+// the real browser viewport `web/vitest.config.ts` sets per project) —
+// select each by its `data-slot` rather than an ambiguous accessible-name
+// query.
+export const DesktopFilterMenuOpen: Story = {
+  play: async ({ canvasElement, args }) => {
     // Menu renders via portal, so query the entire document body
     const body = within(canvasElement.ownerDocument.body)
 
-    await userEvent.click(canvas.getByRole('button', { name: '+ filter' }))
+    const trigger = canvasElement.querySelector<HTMLElement>(
+      '[data-slot="dropdown-menu-trigger"]',
+    )
+    if (trigger == null) throw new Error('desktop trigger not found')
+    await userEvent.click(trigger)
 
     await expect(
       await body.findByRole('menuitemcheckbox', { name: 'show completed' }),
@@ -140,5 +149,47 @@ export const OpenFilterMenu: Story = {
       'proj-2',
       expect.anything(),
     )
+  },
+}
+
+export const MobileFilterSheetOpen: Story = {
+  play: async ({ canvasElement }) => {
+    // Sheet renders via portal, so query the entire document body
+    const body = within(canvasElement.ownerDocument.body)
+
+    const trigger = canvasElement.querySelector<HTMLElement>(
+      '[data-slot="dialog-trigger"]',
+    )
+    if (trigger == null) throw new Error('mobile trigger not found')
+    await userEvent.click(trigger)
+
+    await expect(
+      await body.findByRole('checkbox', { name: 'show completed' }),
+    ).toBeInTheDocument()
+    await expect(
+      body.getByRole('button', { name: 'Created' }),
+    ).toBeInTheDocument()
+    await expect(
+      body.getByRole('button', { name: 'Mobile App' }),
+    ).toBeInTheDocument()
+    await expect(body.getByRole('button', { name: 'work' })).toBeInTheDocument()
+  },
+}
+
+export const SelectProjectInMobileFilterSheet: Story = {
+  play: async ({ canvasElement, args }) => {
+    // Sheet renders via portal, so query the entire document body
+    const body = within(canvasElement.ownerDocument.body)
+
+    const trigger = canvasElement.querySelector<HTMLElement>(
+      '[data-slot="dialog-trigger"]',
+    )
+    if (trigger == null) throw new Error('mobile trigger not found')
+    await userEvent.click(trigger)
+
+    await userEvent.click(
+      await body.findByRole('button', { name: 'Mobile App' }),
+    )
+    await expect(args.onProjectIdChange).toHaveBeenCalledWith('proj-2')
   },
 }

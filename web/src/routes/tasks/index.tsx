@@ -13,7 +13,6 @@ import {
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
 import { useCallback, useMemo, useState } from 'react'
 
-import { ContextFilterInline } from '#components/context-filter'
 import {
   CreateTaskInline,
   FloatingActionButton,
@@ -318,11 +317,6 @@ export function TaskList() {
         tag={tag}
         onTagChange={setTag}
       />
-
-      {/* Context filter (mobile only — desktop already has it in the sidebar) */}
-      <div className="border-b border-border px-3 py-2 md:hidden">
-        <ContextFilterInline />
-      </div>
 
       {/* Inline create */}
       {isCreating && (
