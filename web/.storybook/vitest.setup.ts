@@ -122,15 +122,22 @@ function nextAnimationFrame(): Promise<void> {
 // @storycap-testrun/browser's screenshot() temporarily resizes the story's
 // iframe to the full configured viewport to capture it (its prepareViewport
 // browser command), then resizes it back (restoreViewport) once the capture
-// is done. A component that corrects its own inline pixel sizing from a
-// ResizeObserver (e.g. @svar-ui/react-gantt's `.wx-gantt` width) reacts to
-// that restore asynchronously, so without a wait here the checks below can
-// observe a stale, wider-than-container size for one element that was never
-// actually visible to a user. Two frames is what's observed to be enough for
-// @svar-ui/react-gantt's own ResizeObserver-plus-rAF correction to land.
-async function waitForLayoutSettle(): Promise<void> {
-  await nextAnimationFrame()
-  await nextAnimationFrame()
+// is done. A component whose ResizeObserver reacts to that restore by
+// writing a corrected pixel width onto a descendant element (e.g.
+// @svar-ui/react-gantt observes `.wx-gantt`'s size but applies the
+// correction to its `.wx-stuck` descendant) does so asynchronously, so
+// without a wait here the checks below can observe a stale,
+// wider-than-container size that was never actually visible to a user. Poll
+// until the page stops resizing, capped so a correction that never lands
+// doesn't hang the check forever.
+async function waitForLayoutSettle(maxFrames = 10): Promise<void> {
+  let previousWidth = document.body.scrollWidth
+  for (let i = 0; i < maxFrames; i++) {
+    await nextAnimationFrame()
+    const currentWidth = document.body.scrollWidth
+    if (currentWidth === previousWidth) return
+    previousWidth = currentWidth
+  }
 }
 
 afterEach(async (context) => {
