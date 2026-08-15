@@ -11,7 +11,6 @@ import {
 import type { ReactNode } from 'react'
 import { expect } from 'storybook/test'
 
-import { TagFilterBar } from '#components/tag-filter-bar'
 import type { TreeTaskGridRowProps } from '#components/task/tree-task-grid-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import type { TreeNode } from '#hooks/use-tasks'
@@ -59,12 +58,19 @@ function Providers({
     path: '/',
     component: () => null,
   })
+  // A tag token navigates to /tasks, so that route must be registered for
+  // the navigation to resolve instead of erroring on an unmatched route.
+  const tasksRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/tasks',
+    component: () => null,
+  })
   const taskRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/tasks/$taskId',
     component: () => null,
   })
-  rootRoute.addChildren([indexRoute, taskRoute])
+  rootRoute.addChildren([indexRoute, tasksRoute, taskRoute])
 
   const router = createRouter({
     routeTree: rootRoute,
@@ -258,29 +264,32 @@ export const WithTags: Story = {
   },
 }
 
-export const TagClick: Story = {
-  args: {
-    node: {
-      ...baseTreeNode,
-      title: 'Click a tag token',
-      labels: ['dev:tq'],
+export const TagClick: Story = (() => {
+  const history = createMemoryHistory({ initialEntries: ['/'] })
+
+  return {
+    args: {
+      node: {
+        ...baseTreeNode,
+        title: 'Click a tag token',
+        labels: ['dev:tq'],
+      },
     },
-  },
-  render: (args) => (
-    <Providers>
-      <div className="w-3xl">
-        <InteractiveTreeTaskGridRow node={args.node} />
-        <TagFilterBar />
-      </div>
-    </Providers>
-  ),
-  play: async ({ canvas, userEvent }) => {
-    // Both the desktop and mobile layouts render at once (only CSS toggles
-    // which is visible), so the tag token exists twice — click either one.
-    await userEvent.click(atIndex(canvas.getAllByText('#dev:tq'), 0))
-    await expect(canvas.getByText('filtered by')).toBeVisible()
-  },
-}
+    render: (args) => (
+      <Providers history={history}>
+        <div className="w-3xl">
+          <InteractiveTreeTaskGridRow node={args.node} />
+        </div>
+      </Providers>
+    ),
+    play: async ({ canvas, userEvent }) => {
+      // Both the desktop and mobile layouts render at once (only CSS toggles
+      // which is visible), so the tag token exists twice — click either one.
+      await userEvent.click(atIndex(canvas.getAllByText('#dev:tq'), 0))
+      await expect(history.location.pathname).toBe('/tasks')
+    },
+  }
+})()
 
 export const ClickNavigates: Story = (() => {
   const history = createMemoryHistory({ initialEntries: ['/'] })

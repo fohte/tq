@@ -29,21 +29,6 @@ vi.mock('#hooks/use-projects', () => ({
   useProjects: (...args: unknown[]) => mockUseProjects(...args),
 }))
 
-// TagFilterChips (rendered for real, not mocked below) reads tag counts via
-// useTagCounts, which calls useTaskList from '#hooks/use-tasks' directly —
-// independent of the useFilteredTaskTree mock above. Stub it too so the
-// route never issues a real fetch.
-const mockUseTaskList = vi.fn()
-
-vi.mock('#hooks/use-tasks', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('#hooks/use-tasks')>()
-  return {
-    ...actual,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
-    useTaskList: (...args: unknown[]) => mockUseTaskList(...args),
-  }
-})
-
 // GithubIssueLinkModal (always mounted, just closed) calls useNavigate
 // unconditionally, so a real router is required rather than a mocked one.
 // TaskList itself is bound to the real TasksRoute (Route.useSearch() /
@@ -95,10 +80,6 @@ beforeEach(() => {
     isLoading: false,
     tree: [],
     tasks: [],
-  })
-  mockUseTaskList.mockReturnValue({
-    categorized: { all: [] },
-    isLoading: false,
   })
   mockUseProjects.mockReturnValue({ data: [] })
 })
@@ -208,6 +189,49 @@ describe('TaskList project filter selector', () => {
   })
 })
 
+describe('TaskList tag filter', () => {
+  it('shows no tag chip and requests unscoped data by default', async () => {
+    renderTaskList()
+
+    await waitFor(() => {
+      expect(screen.getByText('sort: Updated')).toBeInTheDocument()
+    })
+    expect(screen.queryByRole('button', { name: /^#/ })).not.toBeInTheDocument()
+    expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
+      { sortBy: 'updated', showCompleted: false },
+    ])
+  })
+
+  it('shows the tag chip and requests data scoped to the tag from a label: query', async () => {
+    renderTaskList(
+      '/tasks?q=is%3Atodo%20is%3Ain_progress%20sort%3Aupdated%20label%3Adev%3Atq',
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: '#dev:tq ×' }),
+      ).toBeInTheDocument()
+    })
+    expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
+      { sortBy: 'updated', showCompleted: false, tag: 'dev:tq' },
+    ])
+  })
+
+  it('removes the tag from the q param when the tag chip is removed', async () => {
+    const user = userEvent.setup()
+    const { router } = renderTaskList(
+      '/tasks?q=is%3Atodo%20is%3Ain_progress%20sort%3Aupdated%20label%3Adev%3Atq',
+    )
+
+    await user.click(await screen.findByRole('button', { name: '#dev:tq ×' }))
+
+    // Removing the tag brings q back to the exact default
+    // (is:todo is:in_progress sort:updated), which stripSearchParams
+    // drops from the URL entirely.
+    expect(router.state.location.search).toEqual({})
+  })
+})
+
 describe('TaskList URL query encoding', () => {
   it('drops the q param entirely when every filter is at its default', async () => {
     const { router } = renderTaskList()
@@ -285,5 +309,18 @@ describe('TaskList URL query encoding', () => {
     expect(
       screen.getByRole('menuitemcheckbox', { name: 'show completed' }),
     ).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('migrates a pre-migration ?tag= URL into q', async () => {
+    renderTaskList('/tasks?tag=urgent')
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: '#urgent ×' }),
+      ).toBeInTheDocument()
+    })
+    expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
+      { sortBy: 'updated', showCompleted: false, tag: 'urgent' },
+    ])
   })
 })

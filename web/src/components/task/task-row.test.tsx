@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   createMemoryHistory,
   createRootRoute,
+  createRoute,
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
@@ -11,7 +12,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { TreeTaskRow } from '#components/task/task-row'
 import { makeNode } from '#components/task/task-row-test-fixtures'
-import { useTagFilter } from '#hooks/use-tag-filter'
 import type { TreeNode } from '#hooks/use-tasks'
 import { atIndex } from '#lib/test-utils'
 
@@ -29,8 +29,8 @@ vi.mock('#hooks/use-tasks', () => ({
 }))
 
 // Only Link is stubbed (to spy on mockLinkOnClick instead of really
-// navigating) — useSearch/useNavigate/router-building exports stay real so
-// useTagFilter (via useSearch({strict: false})) keeps working.
+// navigating) — useNavigate/router-building exports stay real so a tag
+// token's navigate({ to: '/tasks', ... }) keeps working.
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
   return {
@@ -89,11 +89,6 @@ vi.mock('#components/task/task-status-picker', () => ({
   ),
 }))
 
-function TagProbe() {
-  const { tag } = useTagFilter()
-  return <div data-testid="tag-probe">{tag ?? 'none'}</div>
-}
-
 // The router's first route match resolves asynchronously even with no
 // loaders, so router.load() is awaited before render() to avoid an initial
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
@@ -103,24 +98,30 @@ async function renderTree(node: TreeNode) {
   })
   const rootRoute = createRootRoute({
     validateSearch: (search: Record<string, unknown>) => search,
-    component: () => (
-      <>
-        <TreeTaskRow node={node} />
-        <TagProbe />
-      </>
-    ),
+    component: () => <TreeTaskRow node={node} />,
   })
+  // A tag token navigates to /tasks, so that route must be registered for
+  // the navigation to resolve instead of erroring on an unmatched route.
+  const tasksRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/tasks',
+    component: () => null,
+  })
+  rootRoute.addChildren([tasksRoute])
   const router = createRouter({
     routeTree: rootRoute,
     history: createMemoryHistory({ initialEntries: ['/'] }),
   })
   await router.load()
 
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-  )
+  return {
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    ),
+    router,
+  }
 }
 
 beforeEach(() => {
@@ -302,15 +303,16 @@ describe('TreeTaskRow', () => {
     ).toEqual(['#dev:tq', '#chore'])
   })
 
-  it('sets the tag filter and stops the click from reaching the row Link when a tag token is clicked', async () => {
+  it('navigates to /tasks scoped to the tag and stops the click from reaching the row Link when a tag token is clicked', async () => {
     const user = userEvent.setup()
-    await renderTree(makeNode({ labels: ['dev:tq'] }))
-
-    expect(screen.getByTestId('tag-probe')).toHaveTextContent('none')
+    const { router } = await renderTree(makeNode({ labels: ['dev:tq'] }))
 
     await user.click(screen.getByText('#dev:tq'))
 
-    expect(screen.getByTestId('tag-probe')).toHaveTextContent('dev:tq')
+    expect(router.state.location.pathname).toBe('/tasks')
+    expect(router.state.location.search).toEqual({
+      q: 'is:todo is:in_progress sort:updated label:dev:tq',
+    })
     expect(mockLinkOnClick).not.toHaveBeenCalled()
   })
 

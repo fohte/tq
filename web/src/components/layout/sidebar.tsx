@@ -1,4 +1,4 @@
-import { Link, useMatchRoute } from '@tanstack/react-router'
+import { Link, useMatchRoute, useSearch } from '@tanstack/react-router'
 
 import { ContextFilter } from '#components/context-filter'
 import {
@@ -9,8 +9,8 @@ import {
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useProjects } from '#hooks/use-projects'
 import { useTagCounts } from '#hooks/use-tag-counts'
-import { useTagFilter, useTagToggle } from '#hooks/use-tag-filter'
 import { navKeybindings, searchKeybinding } from '#lib/keybindings'
+import { parseTasksQuery, tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
 
 interface NavItem {
@@ -82,14 +82,19 @@ function NavLink({ item }: { item: NavItem }) {
   )
 }
 
-function TagButton({ name, count }: { name: string; count: number }) {
-  const { isActive, toggle } = useTagToggle(name)
-
+function TagLink({
+  name,
+  count,
+  isActive,
+}: {
+  name: string
+  count: number
+  isActive: boolean
+}) {
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-pressed={isActive}
+    <Link
+      to="/tasks"
+      search={tagFilterSearch(name)}
       className={cn(
         'flex w-full items-center gap-2 px-3.5 py-1 text-left font-mono text-2xs',
         isActive
@@ -107,13 +112,16 @@ function TagButton({ name, count }: { name: string; count: number }) {
       </span>
       <span className="flex-1 truncate text-left">{name}</span>
       <span className="shrink-0 text-muted-foreground-faint">{count}</span>
-    </button>
+    </Link>
   )
 }
 
 function TagsSection() {
   const { tagCounts } = useTagCounts()
-  const { tag, setTag } = useTagFilter()
+  // `q` only exists on the /tasks route's search schema, so this reads
+  // undefined (no active tag) everywhere else.
+  const { q } = useSearch({ strict: false })
+  const activeTag = q != null ? parseTasksQuery(q).tag : undefined
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -121,24 +129,14 @@ function TagsSection() {
         <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
           TAGS
         </span>
-        {tag != null && (
-          <button
-            type="button"
-            onClick={() => {
-              setTag(null)
-            }}
-            className="font-mono text-2xs text-muted-foreground-faint hover:text-foreground"
-          >
-            clear ×
-          </button>
-        )}
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {tagCounts.map((tagCount) => (
-          <TagButton
+          <TagLink
             key={tagCount.name}
             name={tagCount.name}
             count={tagCount.count}
+            isActive={activeTag === tagCount.name}
           />
         ))}
       </div>

@@ -44,6 +44,8 @@ const meta = {
     projects,
     projectId: undefined,
     onProjectIdChange: fn(),
+    tag: undefined,
+    onTagChange: fn(),
   },
 } satisfies Meta<typeof TaskFilterChipRow>
 
@@ -76,6 +78,12 @@ export const NoProjects: Story = {
   },
 }
 
+export const TagSelected: Story = {
+  args: {
+    tag: 'dev:tq',
+  },
+}
+
 export const RemoveNotCompletedChip: Story = {
   play: async ({ canvas, args }) => {
     await userEvent.click(
@@ -94,6 +102,16 @@ export const RemoveProjectChip: Story = {
       canvas.getByRole('button', { name: 'project: Website Redesign ×' }),
     )
     await expect(args.onProjectIdChange).toHaveBeenCalledWith('')
+  },
+}
+
+export const RemoveTagChip: Story = {
+  args: {
+    tag: 'dev:tq',
+  },
+  play: async ({ canvas, args }) => {
+    await userEvent.click(canvas.getByRole('button', { name: '#dev:tq ×' }))
+    await expect(args.onTagChange).toHaveBeenCalledWith(undefined)
   },
 }
 
