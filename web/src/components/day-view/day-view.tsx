@@ -141,8 +141,13 @@ export function DayViewPresentation({
     onReorderQueue(arrayMove(queueTasks, oldIndex, newIndex).map((t) => t.id))
   }
 
-  const handleScheduleClick = (scheduleId: string) => {
-    const schedule = schedules.find((s) => s.scheduleId === scheduleId)
+  const handleScheduleClick = (scheduleId: string, start: string) => {
+    // Cross-midnight schedules expand into two blocks sharing a scheduleId
+    // (see expandScheduleForDate) — match on start too so the clicked block
+    // resolves to itself, not whichever block happens to sort first.
+    const schedule = schedules.find(
+      (s) => s.scheduleId === scheduleId && s.start === start,
+    )
     if (!schedule) return
     setEditingSchedule(schedule)
     setIsScheduleModalOpen(true)

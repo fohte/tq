@@ -6,6 +6,8 @@ export interface CalendarEventProps {
   color?: { accent: string }
   taskId?: string
   scheduleId?: string
+  /** Raw start ISO string, used to disambiguate cross-midnight blocks sharing a scheduleId */
+  scheduleStart?: string
   redacted?: boolean
   calendarColor?: string | null
 }

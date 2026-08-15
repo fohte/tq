@@ -41,7 +41,7 @@ interface CalendarViewProps {
   initialView?: CalendarViewType
   selectedDate: Date
   onDateChange: (date: Date) => void
-  onScheduleClick?: ((scheduleId: string) => void) | undefined
+  onScheduleClick?: ((scheduleId: string, start: string) => void) | undefined
 }
 
 export function CalendarView({

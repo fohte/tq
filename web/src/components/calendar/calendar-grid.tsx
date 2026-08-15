@@ -53,7 +53,7 @@ interface CalendarGridProps {
   dndCallbacks?: CalendarDndCallbacks | undefined
   externalDragContainerRef?: React.RefObject<HTMLElement | null> | undefined
   onDateClick?: (date: Date) => void
-  onScheduleClick?: ((scheduleId: string) => void) | undefined
+  onScheduleClick?: ((scheduleId: string, start: string) => void) | undefined
   initialDate?: Date
 }
 
@@ -120,6 +120,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         parentRef: event.parentRef,
         color: event.color,
         scheduleId: event.scheduleId,
+        scheduleStart: event.start,
         redacted: event.redacted,
         calendarColor: event.calendarColor,
       },
@@ -157,9 +158,18 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
 
     const handleEventClick = (info: EventClickArg) => {
       if (!onScheduleClick) return
-      const { type, scheduleId } = getEventProps(info.event)
-      if (type !== 'schedule' || scheduleId == null) return
-      onScheduleClick(scheduleId)
+      const { type, scheduleId, scheduleStart, redacted } = getEventProps(
+        info.event,
+      )
+      if (
+        type !== 'schedule' ||
+        scheduleId == null ||
+        scheduleStart == null ||
+        redacted === true
+      ) {
+        return
+      }
+      onScheduleClick(scheduleId, scheduleStart)
     }
 
     const handleReceive = (info: EventReceiveArg) => {
