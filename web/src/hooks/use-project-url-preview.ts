@@ -5,6 +5,9 @@ import { api } from '#lib/api'
 
 export type ProjectUrlPreview = ProjectDetail
 
+// Uses its own key namespace instead of projectKeys.detail(id): a
+// 404/failed lookup caches `null` here, which would be unsound to share
+// with useProject's cache — callers there assume a non-null ProjectDetail.
 const projectUrlPreviewKeyPrefix = [
   ...projectKeys.all,
   'project-url-preview',
@@ -19,13 +22,17 @@ function projectUrlPreviewQueryOptions(id: string) {
     queryKey: projectUrlPreviewKeys.preview(id),
     queryFn: async (): Promise<ProjectUrlPreview | null> => {
       const res = await api.api.projects[':id'].$get({ param: { id } })
-      // A 404 here means the id doesn't match a project; the caller just
-      // leaves the match as plain text, no error surfaced.
-      if (res.status === 404) return null
+      // A non-2xx here means the id doesn't match a project or the request
+      // otherwise failed; the caller just leaves the match as plain text,
+      // no error surfaced.
+      if (!res.ok) return null
       return res.json()
     },
-    // A 404 above already resolves to `null` without throwing — retrying
-    // the same request would just 404 again.
+    // queryFn only throws on a genuine fetch/parse failure (network error,
+    // bad JSON, ...) — the non-ok → `null` path above resolves successfully
+    // and never triggers a retry. Skip the default retry/backoff too, so a
+    // transient failure falls straight to the null fallback instead of
+    // adding delay.
     retry: false,
     staleTime: 60_000,
   }
@@ -34,7 +41,7 @@ function projectUrlPreviewQueryOptions(id: string) {
 export function useProjectUrlPreview(id: string) {
   return useQuery({
     ...projectUrlPreviewQueryOptions(id),
-    // A 404 above already resolves to `null` without throwing; reaching
+    // A non-2xx above already resolves to `null` without throwing; reaching
     // here means `queryFn` itself threw (network error, bad JSON, ...),
     // which is unexpected and worth surfacing for debugging. The chip still
     // falls back to the raw matched text either way, so this only logs — it

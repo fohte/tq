@@ -17,14 +17,17 @@ export interface AppResourceUrlMatch {
 
 // Matches `https?://<host>/<resource>/<id>` URLs in free text and captures
 // the id segment. A trailing path segment (`/tasks/123/pages/abc`) or a
-// trailing word character (`/tasks/123abc`) excludes the whole match, since
+// trailing underscore (`/tasks/123abc_`, the only word character not already
+// absorbed into the id by `[0-9a-zA-Z-]+`) excludes the whole match, since
 // the URL then points at something more specific than the resource itself; a
 // trailing query string, fragment, or single optional slash does not. Callers
 // decide what to do with the raw matches themselves (dedup, classify the id,
 // place editor widgets, ...) since that differs per call site — `web`'s
 // task-url/project-url providers call this directly (via the `api` package's
-// `./lib/app-url` export) with `window.location.host` instead of `APP_DOMAIN`,
-// since only the API can authoritatively check a URL against `APP_DOMAIN`.
+// `./lib/app-url` export) with `window.location.host` as a client-side
+// pre-filter, then hand the extracted id to the existing
+// `GET /api/tasks/:id` / `GET /api/projects/:id` endpoints, which resolve by
+// id alone with no domain check.
 export function matchAppResourceUrls(
   text: string,
   host: string,

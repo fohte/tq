@@ -29,8 +29,9 @@ describe('taskUrlProvider.findMatches', () => {
   })
 
   it('matches the current page host', () => {
-    expect(urls('see http://tq.fohte.net/tasks/123')).toEqual([
-      'http://tq.fohte.net/tasks/123',
+    vi.stubGlobal('location', { host: 'other.tq.example' })
+    expect(urls('see http://other.tq.example/tasks/123')).toEqual([
+      'http://other.tq.example/tasks/123',
     ])
   })
 
