@@ -24,7 +24,7 @@ interface CreateScheduleModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   /** Presence switches the modal into edit mode. */
-  schedule?: Schedule
+  schedule?: Schedule | undefined
 }
 
 export type ContextValue = 'work' | 'personal'
