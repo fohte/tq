@@ -7,6 +7,7 @@ import { SearchResultRow } from '#components/search/search-result-row'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import type { SearchResult, Suggestion } from '#hooks/use-search'
 import {
+  applySuggestionToQuery,
   extractCurrentPrefix,
   useSearchSuggestions,
   useSearchTasks,
@@ -72,10 +73,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
 
   const applySuggestion = useCallback(
     (suggestion: Suggestion) => {
-      const parts = query.split(/\s+/)
-      parts[parts.length - 1] = suggestion.value
-      const newQuery = parts.join(' ') + ' '
-      setQuery(newQuery)
+      setQuery(applySuggestionToQuery(query, suggestion))
       inputRef.current?.focus()
     },
     [query],

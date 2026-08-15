@@ -2,7 +2,11 @@ import { useRef, useState } from 'react'
 
 import { AnchoredPopup } from '#components/ui/anchored-popup'
 import type { Suggestion } from '#hooks/use-search'
-import { extractCurrentPrefix, useSearchSuggestions } from '#hooks/use-search'
+import {
+  applySuggestionToQuery,
+  extractCurrentPrefix,
+  useSearchSuggestions,
+} from '#hooks/use-search'
 import { cn } from '#lib/utils'
 
 interface TaskFilterQueryInputProps {
@@ -26,9 +30,7 @@ export function TaskFilterQueryInput({
     suggestions != null && suggestions.length > 0 && currentPrefix.length > 0
 
   const applySuggestion = (suggestion: Suggestion) => {
-    const parts = value.split(/\s+/)
-    parts[parts.length - 1] = suggestion.value
-    setValue(parts.join(' ') + ' ')
+    setValue(applySuggestionToQuery(value, suggestion))
     setSelectedIndex(0)
   }
 

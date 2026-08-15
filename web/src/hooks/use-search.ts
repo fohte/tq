@@ -245,6 +245,20 @@ export function extractCurrentPrefix(query: string): string {
   return last
 }
 
+/**
+ * Replace the token currently being typed (the last whitespace-delimited
+ * word, i.e. what extractCurrentPrefix matched) with a chosen suggestion,
+ * leaving a trailing space so the next word can start immediately.
+ */
+export function applySuggestionToQuery(
+  query: string,
+  suggestion: Suggestion,
+): string {
+  const parts = query.split(/\s+/)
+  parts[parts.length - 1] = suggestion.value
+  return parts.join(' ') + ' '
+}
+
 export function useSearchSuggestions(prefix: string) {
   const debouncedPrefix = useDebounce(prefix, 150)
 

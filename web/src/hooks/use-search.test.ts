@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  applySuggestionToQuery,
   buildQueryFromFilters,
   extractCurrentPrefix,
   parseQueryToFilters,
@@ -109,6 +110,28 @@ describe('extractCurrentPrefix', () => {
 
   it('returns empty for an empty query', () => {
     expect(extractCurrentPrefix('')).toBe('')
+  })
+})
+
+describe('applySuggestionToQuery', () => {
+  it('replaces the last word being typed with the suggestion value', () => {
+    expect(
+      applySuggestionToQuery('sort:updated is', {
+        value: 'is:todo',
+        display: 'Todo',
+        category: 'is',
+      }),
+    ).toBe('sort:updated is:todo ')
+  })
+
+  it('replaces the sole token when the query is a single bare word', () => {
+    expect(
+      applySuggestionToQuery('is', {
+        value: 'is:todo',
+        display: 'Todo',
+        category: 'is',
+      }),
+    ).toBe('is:todo ')
   })
 })
 
