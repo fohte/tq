@@ -24,6 +24,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '#components/ui/dropdown-menu'
+import { SectionLabel } from '#components/ui/section-label'
 import { TabStrip } from '#components/ui/tab-strip'
 import type { Project } from '#hooks/use-projects'
 import type { TaskSortBy } from '#hooks/use-tasks'
@@ -48,14 +49,6 @@ interface TaskFilterChipRowProps {
   onProjectIdChange: (id: string) => void
   tag: string | undefined
   onTagChange: (tag: string | undefined) => void
-}
-
-function FilterSectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
-      {children}
-    </span>
-  )
 }
 
 function ProjectOptionButton({
@@ -216,7 +209,7 @@ export function TaskFilterChipRow({
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <FilterSectionLabel>SORT</FilterSectionLabel>
+                    <SectionLabel>SORT</SectionLabel>
                     <TabStrip
                       value={sortBy}
                       options={sortOptionValues.map((sort) => ({
@@ -229,7 +222,7 @@ export function TaskFilterChipRow({
 
                   {projects.length > 0 && (
                     <div className="flex flex-col gap-1.5">
-                      <FilterSectionLabel>PROJECT</FilterSectionLabel>
+                      <SectionLabel>PROJECT</SectionLabel>
                       <div>
                         <ProjectOptionButton
                           active={projectId == null || projectId === ''}
@@ -255,7 +248,7 @@ export function TaskFilterChipRow({
                   )}
 
                   <div className="flex flex-col gap-1.5">
-                    <FilterSectionLabel>CONTEXT</FilterSectionLabel>
+                    <SectionLabel>CONTEXT</SectionLabel>
                     <ContextFilterInline />
                   </div>
                 </div>

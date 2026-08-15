@@ -153,7 +153,7 @@ export const DesktopFilterMenuOpen: Story = {
 }
 
 export const MobileFilterSheetOpen: Story = {
-  play: async ({ canvasElement, args }) => {
+  play: async ({ canvasElement }) => {
     // Sheet renders via portal, so query the entire document body
     const body = within(canvasElement.ownerDocument.body)
 
@@ -173,8 +173,23 @@ export const MobileFilterSheetOpen: Story = {
       body.getByRole('button', { name: 'Mobile App' }),
     ).toBeInTheDocument()
     await expect(body.getByRole('button', { name: 'work' })).toBeInTheDocument()
+  },
+}
 
-    await userEvent.click(body.getByRole('button', { name: 'Mobile App' }))
+export const SelectProjectInMobileFilterSheet: Story = {
+  play: async ({ canvasElement, args }) => {
+    // Sheet renders via portal, so query the entire document body
+    const body = within(canvasElement.ownerDocument.body)
+
+    const trigger = canvasElement.querySelector<HTMLElement>(
+      '[data-slot="dialog-trigger"]',
+    )
+    if (trigger == null) throw new Error('mobile trigger not found')
+    await userEvent.click(trigger)
+
+    await userEvent.click(
+      await body.findByRole('button', { name: 'Mobile App' }),
+    )
     await expect(args.onProjectIdChange).toHaveBeenCalledWith('proj-2')
   },
 }
