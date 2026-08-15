@@ -121,14 +121,14 @@ function nextAnimationFrame(): Promise<void> {
 
 // document.body.scrollWidth alone misses a correction that lands on an
 // element clipped by a closer ancestor (overflow-x: hidden/auto/scroll) —
-// that ancestor absorbs the change before it can widen body. Summing every
-// element's scrollWidth catches it regardless of where in the tree it lands.
-function layoutFingerprint(): number {
-  let total = 0
-  for (const el of document.body.querySelectorAll('*')) {
-    total += el.scrollWidth
-  }
-  return total
+// that ancestor absorbs the change before it can widen body. Snapshotting
+// every element's scrollWidth (not summing them) catches it regardless of
+// where in the tree it lands, without losing per-element changes to a sum
+// that unrelated elements could coincidentally cancel out.
+function layoutFingerprint(): string {
+  return Array.from(document.body.querySelectorAll('*'))
+    .map((el) => el.scrollWidth)
+    .join(',')
 }
 
 // @storycap-testrun/browser's screenshot() temporarily resizes the story's
