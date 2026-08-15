@@ -5,6 +5,7 @@ import { fn } from 'storybook/test'
 import { Button } from '#components/ui/button'
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuRadioGroup,
@@ -30,6 +31,30 @@ function DropdownMenuDemo({
           <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="type">Type</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function DropdownMenuCheckboxDemo({
+  open,
+  onOpenChange,
+}: {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}) {
+  const [checked, setChecked] = useState(true)
+
+  return (
+    <DropdownMenu open={open} onOpenChange={onOpenChange}>
+      <DropdownMenuTrigger render={<Button />}>Options</DropdownMenuTrigger>
+      <DropdownMenuContent>
+        <DropdownMenuCheckboxItem
+          checked={checked}
+          onCheckedChange={setChecked}
+        >
+          Show archived
+        </DropdownMenuCheckboxItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -90,6 +115,14 @@ export const ItemsClosedTrigger: StoryObj<typeof DropdownMenuItemsDemo> = {
 
 export const ItemsOpen: StoryObj<typeof DropdownMenuItemsDemo> = {
   render: (args) => <DropdownMenuItemsDemo {...args} />,
+  args: {
+    open: true,
+    onOpenChange: fn(),
+  },
+}
+
+export const CheckboxOpen: StoryObj<typeof DropdownMenuCheckboxDemo> = {
+  render: (args) => <DropdownMenuCheckboxDemo {...args} />,
   args: {
     open: true,
     onOpenChange: fn(),

@@ -10,6 +10,7 @@ import { SidebarTagsField } from '#components/task/sidebar-tags-field'
 import { SidebarGithubLinkField } from '#components/task/task-github-link-field'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
 import { Input } from '#components/ui/input'
+import { SectionLabel } from '#components/ui/section-label'
 import {
   Select,
   SelectContent,
@@ -24,20 +25,12 @@ import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
 import { cn } from '#lib/utils'
 
-function SidebarSectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
-      {children}
-    </span>
-  )
-}
-
 // --- Sidebar (PC) ---
 
 export function TaskSidebar({ task }: { task: TaskDetail }) {
   return (
     <DetailSidebarPanel>
-      <SidebarSectionLabel>DETAILS</SidebarSectionLabel>
+      <SectionLabel>DETAILS</SectionLabel>
       <SidebarStatusField taskId={task.id} status={task.status} />
       <SidebarEstimateField
         taskId={task.id}
@@ -86,7 +79,7 @@ function MobileFieldCell({
 export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
   return (
     <div className="flex flex-col gap-3">
-      <SidebarSectionLabel>DETAILS</SidebarSectionLabel>
+      <SectionLabel>DETAILS</SectionLabel>
       <div className="grid grid-cols-2 border border-border">
         <MobileFieldCell>
           <SidebarStatusField taskId={task.id} status={task.status} />

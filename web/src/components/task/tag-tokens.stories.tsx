@@ -1,14 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect } from 'storybook/test'
 
-import { TagFilterBar } from '#components/tag-filter-bar'
 import { TagTokens } from '#components/task/task-row-shared'
 
-// TagTokens only reads/writes tag state via useTagFilter (URL search state
-// via useSearch/useNavigate), and the Storybook preview already wraps every
-// story in a router, so no extra provider setup is needed here (see
-// .storybook/preview.tsx and tag-filter-bar.stories.tsx for the same
-// pattern).
+// Clicking a tag navigates to /tasks via useNavigate, and the Storybook
+// preview already wraps every story in a router (see .storybook/preview.tsx),
+// so no extra provider setup is needed here.
 function TagTokensDemo({
   labels,
   isCompleted,
@@ -19,7 +15,6 @@ function TagTokensDemo({
   return (
     <div className="w-80 border border-border p-3">
       <TagTokens labels={labels} isCompleted={isCompleted} />
-      <TagFilterBar />
     </div>
   )
 }
@@ -59,7 +54,9 @@ export const TagClick: Story = {
     isCompleted: false,
   },
   play: async ({ canvas, userEvent }) => {
+    // Clicking navigates to /tasks scoped to the tag (see task-row.test.tsx
+    // and tree-task-grid-row.test.tsx for the assertion on the resulting
+    // query); this story only exercises that the click doesn't throw.
     await userEvent.click(canvas.getByText('#dev:tq'))
-    await expect(canvas.getByText('filtered by')).toBeVisible()
   },
 }

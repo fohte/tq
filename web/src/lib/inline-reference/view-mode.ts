@@ -6,7 +6,7 @@ export interface InlineReferenceViewModeStore {
 }
 
 // One store per editor instance (created alongside its Crepe instance in
-// markdown-editor.tsx): multiple MarkdownEditor instances can be mounted at
+// markdown-editor-crepe.tsx): multiple MarkdownEditor instances can be mounted at
 // once (e.g. one per comment), and their view/edit mode must not leak into
 // each other.
 //

@@ -9,10 +9,19 @@ export interface TasksFilterState {
   sortBy: TaskSortBy
   showCompleted: boolean
   projectId: string | undefined
+  tag?: string | undefined
+}
+
+// The default state tasks/index.tsx and sidebar tag links build from —
+// "everything not yet done, most-recently-updated first".
+export const defaultTasksFilterState: TasksFilterState = {
+  sortBy: 'updated',
+  showCompleted: false,
+  projectId: undefined,
 }
 
 // Must match api/src/search-query-parser.ts's token vocabulary (`is:` /
-// `sort:` / `project:`) — parseTasksQuery below decodes it back.
+// `sort:` / `project:` / `label:`) — parseTasksQuery below decodes it back.
 export function buildTasksQuery(state: TasksFilterState): string {
   const parts: string[] = []
   if (!state.showCompleted) parts.push('is:todo', 'is:in_progress')
@@ -20,7 +29,15 @@ export function buildTasksQuery(state: TasksFilterState): string {
   // sorting by `created` when no sort is specified at all.
   parts.push(`sort:${state.sortBy}`)
   if (state.projectId != null) parts.push(`project:${state.projectId}`)
+  if (state.tag != null) parts.push(`label:${state.tag}`)
   return parts.join(' ')
+}
+
+// The /tasks search for "default filters, scoped to this tag" — shared by
+// every tag-token click/link (sidebar, task row, task detail) so they all
+// navigate to the same place.
+export function tagFilterSearch(tag: string): { q: string } {
+  return { q: buildTasksQuery({ ...defaultTasksFilterState, tag }) }
 }
 
 export function parseTasksQuery(q: string): TasksFilterState {
@@ -29,6 +46,7 @@ export function parseTasksQuery(q: string): TasksFilterState {
   // above omits them entirely for showCompleted: true), not "unset".
   let showCompleted = true
   let projectId: string | undefined
+  let tag: string | undefined
 
   for (const token of q.split(/\s+/).filter((t) => t !== '')) {
     const colonIndex = token.indexOf(':')
@@ -48,8 +66,11 @@ export function parseTasksQuery(q: string): TasksFilterState {
       case 'project':
         if (value !== '') projectId = value
         break
+      case 'label':
+        if (value !== '') tag = value
+        break
     }
   }
 
-  return { sortBy, showCompleted, projectId }
+  return { sortBy, showCompleted, projectId, tag }
 }

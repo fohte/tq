@@ -4,4 +4,16 @@
     'github>fohte/renovate-config:base.json5',
     'github>fohte/renovate-config:node.json5',
   ],
+
+  packageRules: [
+    // PostgreSQL minor/patch releases only contain bug fixes and stay
+    // on-disk-format compatible (https://www.postgresql.org/support/versioning/),
+    // so automerge them to keep the pinned image from going stale.
+    {
+      matchDatasources: ['docker'],
+      matchPackageNames: ['postgres'],
+      matchUpdateTypes: ['minor', 'patch'],
+      automerge: true,
+    },
+  ],
 }

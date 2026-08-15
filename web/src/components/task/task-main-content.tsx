@@ -24,6 +24,7 @@ import type { TaskPage } from '#hooks/use-task-pages'
 import type { Task, TaskDetail } from '#hooks/use-tasks'
 import { useUpdateTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatRelativeTime } from '#lib/format'
+import { tagFilterSearch } from '#lib/tasks-query'
 
 // --- Main Content ---
 
@@ -122,10 +123,7 @@ function TaskTagChips({ labels }: { labels: string[] }) {
           as="button"
           size="sm"
           onClick={() => {
-            void navigate({
-              to: '/tasks',
-              search: (prev) => ({ ...prev, tag: label }),
-            })
+            void navigate({ to: '/tasks', search: tagFilterSearch(label) })
           }}
         >
           <span className="text-primary font-bold">#</span>
