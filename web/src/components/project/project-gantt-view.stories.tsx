@@ -158,13 +158,9 @@ const meta = {
   parameters: {
     layout: 'fullscreen',
     // @svar-ui/react-gantt sizes its internal `.wx-chart` div against the
-    // fullscreen viewport rather than its actual container: on the desktop
-    // project it overflows by a few px up to ~2000px depending on the date
-    // range, and on the storybook-mobile project it collapses to
-    // clientWidth=0 and overflows by hundreds to thousands of px.
-    // TODO: investigate whether the Gantt view is usable at mobile width at
-    // all (or needs a different library / responsive strategy).
-    overflowCheck: { disable: true },
+    // fullscreen viewport rather than its actual container, so it overflows
+    // independently of the rest of this story's markup.
+    overflowCheck: { ignoreSelectors: ['.wx-chart'] },
   },
 } satisfies Meta<typeof ProjectGanttViewWithProviders>
 
