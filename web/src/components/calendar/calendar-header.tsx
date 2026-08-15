@@ -13,6 +13,24 @@ export const FULLCALENDAR_VIEW_MAP: Record<CalendarViewType, string> = {
   month: 'dayGridMonth',
 }
 
+/** Custom FullCalendar view name for the narrow-viewport week view (see resolveFullCalendarView). */
+export const FULLCALENDAR_THREE_DAY_VIEW = 'timeGridThreeDay'
+
+/**
+ * On narrow viewports, 7 day columns leave too little width for event chips
+ * (title gets squeezed to 0px by the fixed-width type badge). Desktop
+ * calendar apps solve this by dropping down to a single view, not scrolling
+ * horizontally; here we substitute a 3-day view for week, matching the
+ * pattern Fantastical's "Days in Week View" setting exposes.
+ */
+export function resolveFullCalendarView(
+  view: CalendarViewType,
+  isDesktop: boolean,
+): string {
+  if (view === 'week' && !isDesktop) return FULLCALENDAR_THREE_DAY_VIEW
+  return FULLCALENDAR_VIEW_MAP[view]
+}
+
 const VIEW_OPTIONS: { value: CalendarViewType; label: string }[] = [
   { value: 'day', label: 'day' },
   { value: 'week', label: 'week' },

@@ -34,6 +34,26 @@ if (typeof Range.prototype.getBoundingClientRect === 'undefined') {
   })
 }
 
+// jsdom does not implement matchMedia. Default to desktop (matches: true) so
+// components using useIsDesktop render their default layout; tests exercising
+// the narrow-viewport branch override this per-suite (see project-gantt-view.test.tsx).
+if (typeof window.matchMedia !== 'function') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    configurable: true,
+    value: (query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  })
+}
+
 // Milkdown throws contextNotFound during async cleanup in jsdom, and
 // prosemirror-virtual-cursor hits the getClientRects stub above during the
 // same teardown. Both are jsdom limitations, not real application bugs.
