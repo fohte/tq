@@ -43,6 +43,17 @@ describe('buildTasksQuery', () => {
       }),
     ).toBe('is:todo is:in_progress sort:updated label:dev:tq')
   })
+
+  it('appends extra tokens verbatim after the known fields', () => {
+    expect(
+      buildTasksQuery({
+        sortBy: 'updated',
+        showCompleted: false,
+        projectId: undefined,
+        extra: 'has:pages is:completed',
+      }),
+    ).toBe('is:todo is:in_progress sort:updated has:pages is:completed')
+  })
 })
 
 describe('parseTasksQuery', () => {
@@ -72,19 +83,21 @@ describe('parseTasksQuery', () => {
     expect(parseTasksQuery(buildTasksQuery(state))).toEqual(state)
   })
 
-  it('ignores an unrecognized sort: value', () => {
+  it('keeps an unrecognized sort: value as extra instead of dropping it', () => {
     expect(parseTasksQuery('sort:due')).toEqual({
       sortBy: 'updated',
       showCompleted: true,
       projectId: undefined,
+      extra: 'sort:due',
     })
   })
 
-  it('ignores an empty project: value', () => {
+  it('keeps an empty project: value as extra instead of dropping it', () => {
     expect(parseTasksQuery('project:')).toEqual({
       sortBy: 'updated',
       showCompleted: true,
       projectId: undefined,
+      extra: 'project:',
     })
   })
 
@@ -97,11 +110,12 @@ describe('parseTasksQuery', () => {
     })
   })
 
-  it('ignores an empty label: value', () => {
+  it('keeps an empty label: value as extra instead of dropping it', () => {
     expect(parseTasksQuery('label:')).toEqual({
       sortBy: 'updated',
       showCompleted: true,
       projectId: undefined,
+      extra: 'label:',
     })
   })
 
@@ -111,6 +125,43 @@ describe('parseTasksQuery', () => {
       showCompleted: false,
       projectId: undefined,
       tag: 'urgent',
+    }
+    expect(parseTasksQuery(buildTasksQuery(state))).toEqual(state)
+  })
+
+  it('preserves an unrecognized token (e.g. has:pages) as extra', () => {
+    expect(parseTasksQuery('sort:updated has:pages')).toEqual({
+      sortBy: 'updated',
+      showCompleted: true,
+      projectId: undefined,
+      extra: 'has:pages',
+    })
+  })
+
+  it('preserves free text without a colon as extra', () => {
+    expect(parseTasksQuery('sort:updated deploy')).toEqual({
+      sortBy: 'updated',
+      showCompleted: true,
+      projectId: undefined,
+      extra: 'deploy',
+    })
+  })
+
+  it('preserves an unrecognized is: value (e.g. is:completed) as extra', () => {
+    expect(parseTasksQuery('is:completed')).toEqual({
+      sortBy: 'updated',
+      showCompleted: true,
+      projectId: undefined,
+      extra: 'is:completed',
+    })
+  })
+
+  it('keeps extra tokens through a structured-field edit round-trip', () => {
+    const state = {
+      sortBy: 'created' as const,
+      showCompleted: false,
+      projectId: 'proj-1',
+      extra: 'has:pages',
     }
     expect(parseTasksQuery(buildTasksQuery(state))).toEqual(state)
   })
