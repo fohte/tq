@@ -157,14 +157,15 @@ const meta = {
   component: ProjectGanttViewWithProviders,
   parameters: {
     layout: 'fullscreen',
-    // @svar-ui/react-gantt sizes its internal `.wx-chart` div against the
-    // fullscreen viewport rather than its actual container: on the desktop
-    // project it overflows by a few px up to ~2000px depending on the date
-    // range, and on the storybook-mobile project it collapses to
-    // clientWidth=0 and overflows by hundreds to thousands of px.
-    // TODO: investigate whether the Gantt view is usable at mobile width at
-    // all (or needs a different library / responsive strategy).
-    overflowCheck: { disable: true },
+    // `.wx-gantt` is @svar-ui/react-gantt's internal wrapper. Overflow
+    // reported inside it comes from its `.wx-stuck` descendant holding a
+    // stale ResizeObserver-derived inline width — a library-internal
+    // sizing artifact, not app layout, and not something tq's code can
+    // fix. It doesn't depend on story data (`.wx-chart`, the timeline's
+    // own horizontal scroll viewport, is inside `.wx-gantt` and covered
+    // by the same exclusion). ProjectGanttView's own toolbar (the Today
+    // button, the TabStrip) sits outside `.wx-gantt` and stays checked.
+    overflowCheck: { ignoreSelectors: ['.wx-gantt'] },
   },
 } satisfies Meta<typeof ProjectGanttViewWithProviders>
 
