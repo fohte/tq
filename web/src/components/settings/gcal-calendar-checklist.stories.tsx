@@ -33,9 +33,6 @@ const meta = {
   component: GcalCalendarChecklist,
   parameters: {
     layout: 'centered',
-    // Checkbox's hit-slop pseudo-element overflows its own box on purpose —
-    // see checkbox.stories.tsx for the same exemption.
-    overflowCheck: { ignoreSelectors: ['[data-slot="checkbox"]'] },
   },
   render: (args) => (
     <Panel className="w-72 p-3">

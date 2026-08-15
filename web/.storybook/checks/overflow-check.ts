@@ -157,6 +157,12 @@ function ignoreSelectorsOf(overflowCheck: object | undefined): string[] {
   return ignoreSelectors.filter((s): s is string => typeof s === 'string')
 }
 
+// Exempted everywhere, not per-story: Checkbox's `after:-inset-x-3
+// after:-inset-y-2` pseudo-element enlarges its click/touch target past its
+// visible box on purpose, but paints nothing (no border/background), so
+// nothing is ever visibly cut off wherever Checkbox renders.
+const GLOBAL_IGNORE_SELECTORS = ['[data-slot="checkbox"]']
+
 export const overflowCheck: StorybookCheck = {
   reset: watchStoryRoot,
   assert: (storyParameters) => {
@@ -165,7 +171,10 @@ export const overflowCheck: StorybookCheck = {
     if (storyRoot == null) return
 
     throwIfNotEmpty(
-      findOverflows(storyRoot, ignoreSelectorsOf(params)),
+      findOverflows(storyRoot, [
+        ...GLOBAL_IGNORE_SELECTORS,
+        ...ignoreSelectorsOf(params),
+      ]),
       'Story has element(s) overflowing their container (clipped and invisible)',
     )
   },
