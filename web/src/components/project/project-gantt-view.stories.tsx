@@ -157,16 +157,15 @@ const meta = {
   component: ProjectGanttViewWithProviders,
   parameters: {
     layout: 'fullscreen',
-    // `.wx-chart` is @svar-ui/react-gantt's horizontal scroll viewport for
-    // the timeline, sized to the full date range rather than the container —
-    // `scrollWidth > clientWidth` there is expected and permanent.
-    //
-    // Separately, `.wx-gantt` (overflow-x: hidden) reports a fixed 80px
-    // overflow in CI's desktop project. It isn't pinned to one story —
-    // excluding the story that fails moves the failure to another story —
-    // and waiting for layout to settle (tried with several different
-    // strategies) doesn't clear it either. Root cause unidentified.
-    overflowCheck: { disable: true },
+    // `.wx-gantt` is @svar-ui/react-gantt's internal wrapper. Overflow
+    // reported inside it comes from its `.wx-stuck` descendant holding a
+    // stale ResizeObserver-derived inline width — a library-internal
+    // sizing artifact, not app layout, and not something tq's code can
+    // fix. It doesn't depend on story data (`.wx-chart`, the timeline's
+    // own horizontal scroll viewport, is inside `.wx-gantt` and covered
+    // by the same exclusion). ProjectGanttView's own toolbar (the Today
+    // button, the TabStrip) sits outside `.wx-gantt` and stays checked.
+    overflowCheck: { ignoreSelectors: ['.wx-gantt'] },
   },
 } satisfies Meta<typeof ProjectGanttViewWithProviders>
 
