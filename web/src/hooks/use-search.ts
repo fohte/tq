@@ -232,6 +232,19 @@ export function useSearchTasks(query: string) {
   })
 }
 
+/**
+ * Extract the token currently being typed (the last whitespace-delimited
+ * word) so it can be used as the suggest API's `prefix`. Returns '' once
+ * that word is already a complete `key:value` token, since there's nothing
+ * left to suggest for it.
+ */
+export function extractCurrentPrefix(query: string): string {
+  const parts = query.split(/\s+/)
+  const last = parts[parts.length - 1] ?? ''
+  if (last.includes(':') && !last.endsWith(':')) return ''
+  return last
+}
+
 export function useSearchSuggestions(prefix: string) {
   const debouncedPrefix = useDebounce(prefix, 150)
 
