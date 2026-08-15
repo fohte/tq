@@ -111,8 +111,31 @@ beforeEach(() => {
   for (const check of checks) check.reset()
 })
 
+function nextAnimationFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      resolve()
+    })
+  })
+}
+
+// @storycap-testrun/browser's screenshot() temporarily resizes the story's
+// iframe to the full configured viewport to capture it (its prepareViewport
+// browser command), then resizes it back (restoreViewport) once the capture
+// is done. A component that corrects its own inline pixel sizing from a
+// ResizeObserver (e.g. @svar-ui/react-gantt's `.wx-gantt` width) reacts to
+// that restore asynchronously, so without a wait here the checks below can
+// observe a stale, wider-than-container size for one element that was never
+// actually visible to a user. Two frames is what's observed to be enough for
+// @svar-ui/react-gantt's own ResizeObserver-plus-rAF correction to land.
+async function waitForLayoutSettle(): Promise<void> {
+  await nextAnimationFrame()
+  await nextAnimationFrame()
+}
+
 afterEach(async (context) => {
   await screenshot(page, asScreenshotContext(context))
+  await waitForLayoutSettle()
 
   for (const check of checks) check.assert(storyParametersOf(context))
 })
