@@ -69,15 +69,19 @@ const mockSuggestions = [
 let mockSearchData: typeof mockTasks = []
 let mockSuggestionData: typeof mockSuggestions = []
 
-vi.mock('#hooks/use-search', () => ({
-  useSearchTasks: () => ({
-    data: mockSearchData.length > 0 ? mockSearchData : undefined,
-    isFetching: false,
-  }),
-  useSearchSuggestions: () => ({
-    data: mockSuggestionData.length > 0 ? mockSuggestionData : undefined,
-  }),
-}))
+vi.mock('#hooks/use-search', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-search')>()
+  return {
+    ...actual,
+    useSearchTasks: () => ({
+      data: mockSearchData.length > 0 ? mockSearchData : undefined,
+      isFetching: false,
+    }),
+    useSearchSuggestions: () => ({
+      data: mockSuggestionData.length > 0 ? mockSuggestionData : undefined,
+    }),
+  }
+})
 
 const mockNavigate = vi.fn()
 vi.mock('@tanstack/react-router', () => ({

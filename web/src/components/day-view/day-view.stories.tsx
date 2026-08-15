@@ -12,6 +12,7 @@ import { expect, fn, within } from 'storybook/test'
 
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
+import type { Schedule } from '#hooks/use-schedules'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { atIndex } from '#lib/test-utils'
@@ -130,6 +131,7 @@ const sampleEvents: TimeBlockEvent[] = [
     end: `${dateStr}T07:00:00`,
     type: 'schedule',
     color: { accent: '#6C63FF' },
+    scheduleId: 'sched-sleep',
   },
   {
     id: 'tb-2',
@@ -181,6 +183,7 @@ const sampleEvents: TimeBlockEvent[] = [
     end: `${dateStr}T19:00:00`,
     type: 'schedule',
     color: { accent: '#52B788' },
+    scheduleId: 'sched-gym',
   },
   {
     id: 'tb-9',
@@ -189,6 +192,33 @@ const sampleEvents: TimeBlockEvent[] = [
     end: `${dateStr}T16:00:00`,
     type: 'manual',
     redacted: true,
+  },
+]
+
+const sampleSchedules: Schedule[] = [
+  {
+    scheduleId: 'sched-sleep',
+    title: 'Sleep',
+    start: `${dateStr}T00:00:00`,
+    end: `${dateStr}T07:00:00`,
+    context: 'personal',
+    color: '#6C63FF',
+    recurrence: {
+      id: 'rule-sleep',
+      type: 'daily',
+      interval: 1,
+      daysOfWeek: null,
+      dayOfMonth: null,
+    },
+  },
+  {
+    scheduleId: 'sched-gym',
+    title: 'Gym',
+    start: `${dateStr}T18:00:00`,
+    end: `${dateStr}T19:00:00`,
+    context: 'personal',
+    color: '#52B788',
+    recurrence: null,
   },
 ]
 
@@ -269,6 +299,7 @@ export const Default: Story = {
   args: {
     isLoading: false,
     calendarEvents: sampleEvents,
+    schedules: sampleSchedules,
     dndCallbacks: {
       onEventDrop: fn(),
       onEventResize: fn(),
@@ -297,10 +328,23 @@ export const OpensCreateScheduleModal: Story = {
   },
 }
 
+export const OpensEditScheduleModal: Story = {
+  args: Default.args,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await userEvent.click(await canvas.findByText('Sleep'))
+
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(
+      atIndex(await body.findAllByPlaceholderText('Schedule title'), 0),
+    ).toHaveValue('Sleep')
+  },
+}
+
 export const Loading: Story = {
   args: {
     isLoading: true,
     calendarEvents: [],
+    schedules: [],
     queueTasks: [],
     queueCandidates: [],
     onReorderQueue: fn(),
@@ -316,6 +360,7 @@ export const Empty: Story = {
   args: {
     isLoading: false,
     calendarEvents: [],
+    schedules: [],
     queueTasks: [],
     queueCandidates: [],
     onReorderQueue: fn(),
@@ -331,6 +376,7 @@ export const EmptyQueueWithCandidates: Story = {
   args: {
     isLoading: false,
     calendarEvents: [],
+    schedules: [],
     queueTasks: [],
     queueCandidates: getQueueCandidates(
       sampleCategorized.all,

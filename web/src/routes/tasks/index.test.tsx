@@ -24,10 +24,14 @@ vi.mock('#hooks/use-filtered-tasks', () => ({
 // it so the route never issues a real fetch.
 const mockUseProjects = vi.fn()
 
-vi.mock('#hooks/use-projects', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
-  useProjects: (...args: unknown[]) => mockUseProjects(...args),
-}))
+vi.mock('#hooks/use-projects', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-projects')>()
+  return {
+    ...actual,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+    useProjects: (...args: unknown[]) => mockUseProjects(...args),
+  }
+})
 
 // GithubIssueLinkModal (always mounted, just closed) calls useNavigate
 // unconditionally, so a real router is required rather than a mocked one.
@@ -84,8 +88,14 @@ beforeEach(() => {
   mockUseProjects.mockReturnValue({ data: [] })
 })
 
+// Two `+ filter` triggers are always in the DOM (desktop dropdown + mobile
+// bottom sheet, split only by `md:` CSS classes jsdom doesn't apply), so
+// disambiguate by data-slot rather than an ambiguous accessible-name query.
 async function openFilterMenu(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: '+ filter' }))
+  const trigger = await screen.findByText('+ filter', {
+    selector: '[data-slot="dropdown-menu-trigger"]',
+  })
+  await user.click(trigger)
   // The menu popup mounts after an async Floating UI position computation,
   // so wait for an item inside it rather than assuming it's mounted
   // synchronously once the click resolves.
@@ -309,6 +319,22 @@ describe('TaskList URL query encoding', () => {
     expect(
       screen.getByRole('menuitemcheckbox', { name: 'show completed' }),
     ).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('keeps a token none of the filter pickers understand when a known field changes', async () => {
+    const user = userEvent.setup()
+    const { router } = renderTaskList(
+      '/tasks?q=is%3Atodo%20is%3Ain_progress%20sort%3Aupdated%20has%3Apages',
+    )
+
+    await openFilterMenu(user)
+    await user.click(
+      screen.getByRole('menuitemradio', { name: 'Sort: Created' }),
+    )
+
+    expect(router.state.location.search).toEqual({
+      q: 'is:todo is:in_progress sort:created has:pages',
+    })
   })
 
   it('migrates a pre-migration ?tag= URL into q', async () => {

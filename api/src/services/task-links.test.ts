@@ -88,4 +88,10 @@ describe('extractMentionedTaskRefs', () => {
       extractMentionedTaskRefs(`see https://${APP_DOMAIN}/tasks/99999999999`),
     ).toEqual([{ kind: 'id', value: '99999999999' }])
   })
+
+  it('ignores a task URL with a trailing path segment', () => {
+    expect(
+      extractMentionedTaskRefs(`see https://${APP_DOMAIN}/tasks/123/pages/abc`),
+    ).toEqual([])
+  })
 })

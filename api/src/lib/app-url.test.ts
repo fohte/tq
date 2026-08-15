@@ -1,8 +1,31 @@
 import { describe, expect, it } from 'vitest'
 
-import { extractAppResourceRefs } from '#lib/app-url'
+import { extractAppResourceRefs, matchAppResourceUrls } from '#lib/app-url'
 
 const APP_DOMAIN = 'tq.fohte.net'
+
+describe('matchAppResourceUrls', () => {
+  it('reports every occurrence, undeduped, with start/end offsets', () => {
+    const raw = `https://${APP_DOMAIN}/tasks/123`
+    const text = `${raw} again, see ${raw}`
+    expect(matchAppResourceUrls(text, APP_DOMAIN, 'tasks')).toEqual([
+      { start: 0, end: raw.length, raw, id: '123' },
+      {
+        start: text.lastIndexOf(raw),
+        end: text.lastIndexOf(raw) + raw.length,
+        raw,
+        id: '123',
+      },
+    ])
+  })
+
+  it('includes an optional trailing slash in raw, but not in id', () => {
+    const raw = `https://${APP_DOMAIN}/tasks/123/`
+    expect(matchAppResourceUrls(raw, APP_DOMAIN, 'tasks')).toEqual([
+      { start: 0, end: raw.length, raw, id: '123' },
+    ])
+  })
+})
 
 describe('extractAppResourceRefs', () => {
   it('extracts a numeric ref from an https URL, tagged with its resource', () => {
@@ -62,14 +85,24 @@ describe('extractAppResourceRefs', () => {
     ).toEqual([])
   })
 
-  it('stops the ref at a trailing path segment', () => {
+  it('ignores a URL with a trailing path segment', () => {
     expect(
       extractAppResourceRefs(
         `https://${APP_DOMAIN}/tasks/123/pages/abc`,
         APP_DOMAIN,
         'tasks',
       ),
-    ).toEqual([{ resource: 'tasks', kind: 'number', value: 123 }])
+    ).toEqual([])
+  })
+
+  it('ignores a URL whose id is followed by a word character', () => {
+    expect(
+      extractAppResourceRefs(
+        `https://${APP_DOMAIN}/tasks/123abc_`,
+        APP_DOMAIN,
+        'tasks',
+      ),
+    ).toEqual([])
   })
 
   it('stops the ref before trailing sentence punctuation', () => {

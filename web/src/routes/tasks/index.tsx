@@ -13,7 +13,6 @@ import {
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
 import { useCallback, useMemo, useState } from 'react'
 
-import { ContextFilterInline } from '#components/context-filter'
 import {
   CreateTaskInline,
   FloatingActionButton,
@@ -136,17 +135,29 @@ export const Route = createFileRoute('/tasks/')({
 
 export function TaskList() {
   const { q = tasksSearchDefaults.q } = Route.useSearch()
-  const { sortBy, showCompleted, projectId, tag } = parseTasksQuery(q)
+  const { sortBy, showCompleted, projectId, tag, extra } = parseTasksQuery(q)
   const navigate = Route.useNavigate()
   const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isGithubModalOpen, setIsGithubModalOpen] = useState(false)
 
+  const setQuery = (newQuery: string) => {
+    void navigate({
+      search: (prev) => ({ ...prev, q: newQuery }),
+      replace: true,
+    })
+  }
   const setSortBy = (sort: TaskSortBy) => {
     void navigate({
       search: (prev) => ({
         ...prev,
-        q: buildTasksQuery({ sortBy: sort, showCompleted, projectId, tag }),
+        q: buildTasksQuery({
+          sortBy: sort,
+          showCompleted,
+          projectId,
+          tag,
+          extra,
+        }),
       }),
       replace: true,
     })
@@ -160,6 +171,7 @@ export function TaskList() {
           showCompleted: checked,
           projectId,
           tag,
+          extra,
         }),
       }),
       replace: true,
@@ -174,6 +186,7 @@ export function TaskList() {
           showCompleted,
           projectId: id === '' ? undefined : id,
           tag,
+          extra,
         }),
       }),
       replace: true,
@@ -183,7 +196,28 @@ export function TaskList() {
     void navigate({
       search: (prev) => ({
         ...prev,
-        q: buildTasksQuery({ sortBy, showCompleted, projectId, tag: nextTag }),
+        q: buildTasksQuery({
+          sortBy,
+          showCompleted,
+          projectId,
+          tag: nextTag,
+          extra,
+        }),
+      }),
+      replace: true,
+    })
+  }
+  const setExtra = (nextExtra: string | undefined) => {
+    void navigate({
+      search: (prev) => ({
+        ...prev,
+        q: buildTasksQuery({
+          sortBy,
+          showCompleted,
+          projectId,
+          tag,
+          extra: nextExtra,
+        }),
       }),
       replace: true,
     })
@@ -308,6 +342,8 @@ export function TaskList() {
       </ScreenHeaderBar>
 
       <TaskFilterChipRow
+        query={q}
+        onQueryChange={setQuery}
         showCompleted={showCompleted}
         onShowCompletedChange={setShowCompleted}
         sortBy={sortBy}
@@ -317,12 +353,9 @@ export function TaskList() {
         onProjectIdChange={setProjectId}
         tag={tag}
         onTagChange={setTag}
+        extra={extra}
+        onExtraChange={setExtra}
       />
-
-      {/* Context filter (mobile only — desktop already has it in the sidebar) */}
-      <div className="border-b border-border px-3 py-2 md:hidden">
-        <ContextFilterInline />
-      </div>
 
       {/* Inline create */}
       {isCreating && (
