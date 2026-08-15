@@ -159,8 +159,7 @@ const meta = {
     layout: 'fullscreen',
     // `.wx-chart` is @svar-ui/react-gantt's horizontal scroll viewport for
     // the timeline, sized to the full date range rather than the container —
-    // `scrollWidth > clientWidth` there is expected, same as `.fc-scroller`
-    // in day-view.stories.tsx.
+    // `scrollWidth > clientWidth` there is expected.
     overflowCheck: { ignoreSelectors: ['.wx-chart'] },
   },
 } satisfies Meta<typeof ProjectGanttViewWithProviders>
