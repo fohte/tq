@@ -13,6 +13,8 @@ function EventBlockPreview({
   color,
   calendarColor,
   allDay = false,
+  widthPx = 288,
+  short = false,
 }: {
   type?: EventType
   title?: string
@@ -21,11 +23,15 @@ function EventBlockPreview({
   color?: { accent: string }
   calendarColor?: string | null
   allDay?: boolean
+  widthPx?: number
+  short?: boolean
 }) {
   const arg = {
     event: {
       title,
       allDay,
+      start: short ? new Date(2025, 2, 7, 11, 0) : undefined,
+      end: short ? new Date(2025, 2, 7, 11, 30) : undefined,
       extendedProps: { type, parentRef, color, calendarColor },
     },
     timeText,
@@ -33,7 +39,7 @@ function EventBlockPreview({
   }
 
   return (
-    <div className="w-72">
+    <div style={{ width: widthPx }}>
       <div className="h-20">
         {/* eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- story mock data doesn't match full EventContentArg */}
         <EventBlock {...(arg as unknown as Parameters<typeof EventBlock>[0])} />
@@ -148,5 +154,18 @@ export const ScheduleGreen: Story = {
     title: 'Gym',
     timeText: '07:00–08:00',
     color: { accent: '#52B788' },
+  },
+}
+
+// Reproduces a week-view column split by an overlapping event: badge and
+// time both hide via container query so the title stays readable instead of
+// being squeezed to 0px.
+export const NarrowOverlappingColumn: Story = {
+  args: {
+    type: 'gcal',
+    title: 'Team standup',
+    timeText: '11:00–11:30',
+    widthPx: 84,
+    short: true,
   },
 }
