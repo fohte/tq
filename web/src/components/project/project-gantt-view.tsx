@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { Button } from '#components/ui/button'
 import { TabStrip } from '#components/ui/tab-strip'
-import { DESKTOP_QUERY, useIsDesktop } from '#hooks/use-is-desktop'
+import { useIsDesktop } from '#hooks/use-is-desktop'
 import type { ProjectTask } from '#hooks/use-projects'
 import { useUpdateTask } from '#hooks/use-tasks'
 import {
@@ -28,7 +28,7 @@ const GANTT_COLUMNS = [{ id: 'text', header: 'Task', flexgrow: 1 }]
 export function ProjectGanttView({ tasks }: { tasks: ProjectTask[] }) {
   const navigate = useNavigate()
   const updateTask = useUpdateTask()
-  const isDesktop = useIsDesktop(DESKTOP_QUERY)
+  const isDesktop = useIsDesktop()
   const [scale, setScale] = useState<GanttScale>('week')
   const [api, setApi] = useState<IApi | null>(null)
 

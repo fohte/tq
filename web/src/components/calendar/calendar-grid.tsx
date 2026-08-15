@@ -16,7 +16,7 @@ import {
 } from '#components/calendar/calendar-header'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { EventBlock } from '#components/calendar/event-block'
-import { DESKTOP_QUERY, useIsDesktop } from '#hooks/use-is-desktop'
+import { useIsDesktop } from '#hooks/use-is-desktop'
 import { getEventProps } from '#lib/calendar-utils'
 
 export interface CalendarDndCallbacks {
@@ -71,7 +71,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     },
     ref,
   ) {
-    const isDesktop = useIsDesktop(DESKTOP_QUERY)
+    const isDesktop = useIsDesktop()
     const fullCalendarRef = useRef<FullCalendar>(null)
     useImperativeHandle<FullCalendar | null, FullCalendar | null>(
       ref,

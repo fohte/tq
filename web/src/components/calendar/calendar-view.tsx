@@ -10,7 +10,7 @@ import {
   type CalendarViewType,
   resolveFullCalendarView,
 } from '#components/calendar/calendar-header'
-import { DESKTOP_QUERY, useIsDesktop } from '#hooks/use-is-desktop'
+import { useIsDesktop } from '#hooks/use-is-desktop'
 import { formatLocalDate } from '#lib/date-range'
 
 export interface TimeBlockEvent {
@@ -51,7 +51,7 @@ export function CalendarView({
   onDateChange,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendarType>(null)
-  const isDesktop = useIsDesktop(DESKTOP_QUERY)
+  const isDesktop = useIsDesktop()
   const [activeView, setActiveView] = useState<CalendarViewType>(initialView)
   // Set while the sync effect below drives FullCalendar via gotoDate, so
   // handleDatesSet can ignore the datesSet it synchronously triggers.

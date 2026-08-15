@@ -7,7 +7,7 @@ import { formatLocalDate } from '#lib/date-range'
 
 export type CalendarViewType = 'day' | 'week' | 'month'
 
-export const FULLCALENDAR_VIEW_MAP: Record<CalendarViewType, string> = {
+const FULLCALENDAR_VIEW_MAP: Record<CalendarViewType, string> = {
   day: 'timeGridDay',
   week: 'timeGridWeek',
   month: 'dayGridMonth',
@@ -18,10 +18,8 @@ export const FULLCALENDAR_THREE_DAY_VIEW = 'timeGridThreeDay'
 
 /**
  * On narrow viewports, 7 day columns leave too little width for event chips
- * (title gets squeezed to 0px by the fixed-width type badge). Desktop
- * calendar apps solve this by dropping down to a single view, not scrolling
- * horizontally; here we substitute a 3-day view for week, matching the
- * pattern Fantastical's "Days in Week View" setting exposes.
+ * (title gets squeezed to 0px by the fixed-width type badge), so week view
+ * substitutes a 3-day view instead.
  */
 export function resolveFullCalendarView(
   view: CalendarViewType,

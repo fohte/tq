@@ -81,12 +81,11 @@ function isVisuallyHidden(el: Element): boolean {
 // containing block chain, so an off-screen fixed element never shows up in
 // any ancestor's scrollWidth.
 function findOverflows(root: Element, ignoreSelectors: string[]): string[] {
-  const ignoreSelector = ignoreSelectors.join(',')
   const overflows: string[] = []
   for (const el of root.querySelectorAll('*')) {
     if (el.scrollWidth <= el.clientWidth) continue
     if (isVisuallyHidden(el)) continue
-    if (ignoreSelector !== '' && el.closest(ignoreSelector) != null) continue
+    if (ignoreSelectors.some((selector) => el.matches(selector))) continue
     if (!clipsOwnContent(getComputedStyle(el))) continue
 
     const overflowPx = el.scrollWidth - el.clientWidth
@@ -117,10 +116,11 @@ function isDisabled(overflowCheck: object | undefined): boolean {
   )
 }
 
-// Narrower than `overflowCheck.disable`: exempt one intentionally-scrollable
-// subtree (e.g. a chip row using `overflow-x-auto`) via a CSS selector in
-// the story's own parameters, so the rest of the story still gets checked —
-// without adding a check-only attribute to the component being tested.
+// Narrower than `overflowCheck.disable`: exempt one intentionally-overflowing
+// element (e.g. a chip row using `overflow-x-auto`, or a fixed-scrollbar
+// sizing artifact) by CSS selector via the story's own parameters, matching
+// only the element itself — not its descendants — so the rest of the story
+// (including anything nested inside the matched element) still gets checked.
 function ignoreSelectorsOf(overflowCheck: object | undefined): string[] {
   if (overflowCheck === undefined) return []
   if (!('ignoreSelectors' in overflowCheck)) return []

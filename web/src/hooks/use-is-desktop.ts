@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 
-export const DESKTOP_QUERY = '(min-width: 768px)'
+const DESKTOP_QUERY = '(min-width: 768px)'
 
-export function useIsDesktop(query: string): boolean {
+export function useIsDesktop(): boolean {
   const [isDesktop, setIsDesktop] = useState(
-    () => window.matchMedia(query).matches,
+    () => window.matchMedia(DESKTOP_QUERY).matches,
   )
 
   useEffect(() => {
-    const mql = window.matchMedia(query)
+    const mql = window.matchMedia(DESKTOP_QUERY)
     const handler = (e: MediaQueryListEvent) => {
       setIsDesktop(e.matches)
     }
@@ -16,7 +16,7 @@ export function useIsDesktop(query: string): boolean {
     return () => {
       mql.removeEventListener('change', handler)
     }
-  }, [query])
+  }, [])
 
   return isDesktop
 }
