@@ -321,6 +321,22 @@ describe('TaskList URL query encoding', () => {
     ).toHaveAttribute('aria-checked', 'true')
   })
 
+  it('keeps a token none of the filter pickers understand when a known field changes', async () => {
+    const user = userEvent.setup()
+    const { router } = renderTaskList(
+      '/tasks?q=is%3Atodo%20is%3Ain_progress%20sort%3Aupdated%20has%3Apages',
+    )
+
+    await openFilterMenu(user)
+    await user.click(
+      screen.getByRole('menuitemradio', { name: 'Sort: Created' }),
+    )
+
+    expect(router.state.location.search).toEqual({
+      q: 'is:todo is:in_progress sort:created has:pages',
+    })
+  })
+
   it('migrates a pre-migration ?tag= URL into q', async () => {
     renderTaskList('/tasks?tag=urgent')
 
