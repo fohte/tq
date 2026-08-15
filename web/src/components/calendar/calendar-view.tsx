@@ -24,6 +24,8 @@ export interface TimeBlockEvent {
   color?: {
     accent: string
   }
+  /** Underlying schedule id, present when type is 'schedule' */
+  scheduleId?: string
   /** Google Calendar's color for the event's calendar, used as an accent on gcal events */
   calendarColor?: string | null
   /** When true, content is hidden and rendered as a generic "busy" block */
@@ -39,6 +41,7 @@ interface CalendarViewProps {
   initialView?: CalendarViewType
   selectedDate: Date
   onDateChange: (date: Date) => void
+  onScheduleClick?: ((scheduleId: string) => void) | undefined
 }
 
 export function CalendarView({
@@ -48,6 +51,7 @@ export function CalendarView({
   initialView = 'day',
   selectedDate,
   onDateChange,
+  onScheduleClick,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendarType>(null)
   const [activeView, setActiveView] = useState<CalendarViewType>(initialView)
@@ -161,6 +165,7 @@ export function CalendarView({
           dndCallbacks={dndCallbacks}
           externalDragContainerRef={externalDragContainerRef}
           onDateClick={handleDateClick}
+          onScheduleClick={onScheduleClick}
           initialDate={selectedDate}
         />
       </div>

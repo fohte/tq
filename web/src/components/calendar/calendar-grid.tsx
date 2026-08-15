@@ -1,4 +1,4 @@
-import type { EventDropArg } from '@fullcalendar/core'
+import type { EventClickArg, EventDropArg } from '@fullcalendar/core'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import type {
   EventReceiveArg,
@@ -53,6 +53,7 @@ interface CalendarGridProps {
   dndCallbacks?: CalendarDndCallbacks | undefined
   externalDragContainerRef?: React.RefObject<HTMLElement | null> | undefined
   onDateClick?: (date: Date) => void
+  onScheduleClick?: ((scheduleId: string) => void) | undefined
   initialDate?: Date
 }
 
@@ -65,6 +66,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       dndCallbacks,
       externalDragContainerRef,
       onDateClick,
+      onScheduleClick,
       initialDate,
     },
     ref,
@@ -117,6 +119,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         type: event.type,
         parentRef: event.parentRef,
         color: event.color,
+        scheduleId: event.scheduleId,
         redacted: event.redacted,
         calendarColor: event.calendarColor,
       },
@@ -150,6 +153,13 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         newEnd: event.end,
         revert,
       })
+    }
+
+    const handleEventClick = (info: EventClickArg) => {
+      if (!onScheduleClick) return
+      const { type, scheduleId } = getEventProps(info.event)
+      if (type !== 'schedule' || scheduleId == null) return
+      onScheduleClick(scheduleId)
     }
 
     const handleReceive = (info: EventReceiveArg) => {
@@ -256,6 +266,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           eventDrop={handleEventDrop}
           eventResize={handleEventResize}
           eventReceive={handleReceive}
+          eventClick={handleEventClick}
           snapDuration="00:15:00"
           {...(onDateClick
             ? {

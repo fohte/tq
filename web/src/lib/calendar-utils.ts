@@ -5,6 +5,7 @@ export interface CalendarEventProps {
   parentRef?: string
   color?: { accent: string }
   taskId?: string
+  scheduleId?: string
   redacted?: boolean
   calendarColor?: string | null
 }

@@ -29,6 +29,7 @@ import { Button } from '#components/ui/button'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { TabStrip } from '#components/ui/tab-strip'
+import type { Schedule } from '#hooks/use-schedules'
 import type { Task } from '#hooks/use-tasks'
 import type { QueueCandidate } from '#lib/queue-candidates'
 import { cn } from '#lib/utils'
@@ -70,6 +71,7 @@ function EmptyQueueDropZone() {
 export interface DayViewPresentationProps {
   isLoading: boolean
   calendarEvents: TimeBlockEvent[]
+  schedules: Schedule[]
   dndCallbacks?: CalendarDndCallbacks
   /** Google OAuth consent URL, present when Google Calendar is not connected */
   gcalAuthUrl?: string
@@ -88,6 +90,7 @@ export interface DayViewPresentationProps {
 export function DayViewPresentation({
   isLoading,
   calendarEvents,
+  schedules,
   dndCallbacks,
   gcalAuthUrl,
   queueTasks,
@@ -103,7 +106,10 @@ export function DayViewPresentation({
 }: DayViewPresentationProps) {
   const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
   const [isCreating, setIsCreating] = useState(false)
-  const [isCreatingSchedule, setIsCreatingSchedule] = useState(false)
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
+  const [editingSchedule, setEditingSchedule] = useState<Schedule | undefined>(
+    undefined,
+  )
   const taskListRef = useRef<HTMLDivElement>(null)
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -133,6 +139,13 @@ export function DayViewPresentation({
     const newIndex = queueTasks.findIndex((t) => t.id === over.id)
     if (oldIndex === -1 || newIndex === -1) return
     onReorderQueue(arrayMove(queueTasks, oldIndex, newIndex).map((t) => t.id))
+  }
+
+  const handleScheduleClick = (scheduleId: string) => {
+    const schedule = schedules.find((s) => s.scheduleId === scheduleId)
+    if (!schedule) return
+    setEditingSchedule(schedule)
+    setIsScheduleModalOpen(true)
   }
 
   return (
@@ -188,7 +201,8 @@ export function DayViewPresentation({
               variant="ghost"
               size="icon-xs"
               onClick={() => {
-                setIsCreatingSchedule(true)
+                setEditingSchedule(undefined)
+                setIsScheduleModalOpen(true)
               }}
               aria-label="New schedule"
             >
@@ -197,8 +211,10 @@ export function DayViewPresentation({
           </ScreenHeaderBar>
 
           <CreateScheduleModal
-            open={isCreatingSchedule}
-            onOpenChange={setIsCreatingSchedule}
+            key={editingSchedule?.scheduleId ?? 'new'}
+            open={isScheduleModalOpen}
+            onOpenChange={setIsScheduleModalOpen}
+            schedule={editingSchedule}
           />
 
           {/* Summary header */}
@@ -289,6 +305,7 @@ export function DayViewPresentation({
               externalDragContainerRef={taskListRef}
               selectedDate={selectedDate}
               onDateChange={onDateChange}
+              onScheduleClick={handleScheduleClick}
             />
           </div>
         </div>
