@@ -84,8 +84,14 @@ beforeEach(() => {
   mockUseProjects.mockReturnValue({ data: [] })
 })
 
+// Two `+ filter` triggers are always in the DOM (desktop dropdown + mobile
+// bottom sheet, split only by `md:` CSS classes jsdom doesn't apply), so
+// disambiguate by data-slot rather than an ambiguous accessible-name query.
 async function openFilterMenu(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: '+ filter' }))
+  const trigger = await screen.findByText('+ filter', {
+    selector: '[data-slot="dropdown-menu-trigger"]',
+  })
+  await user.click(trigger)
   // The menu popup mounts after an async Floating UI position computation,
   // so wait for an item inside it rather than assuming it's mounted
   // synchronously once the click resolves.
