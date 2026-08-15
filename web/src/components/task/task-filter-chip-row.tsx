@@ -1,6 +1,8 @@
 import { CheckIcon, X } from 'lucide-react'
+import { useState } from 'react'
 
 import { ContextFilterInline } from '#components/context-filter'
+import { TaskFilterQueryInput } from '#components/task/task-filter-query-input'
 import {
   BottomSheetHeader,
   BottomSheetPanel,
@@ -40,6 +42,8 @@ const filterTriggerClassName =
   'shrink-0 cursor-pointer items-center gap-1 border border-border px-1 font-mono text-2xs text-muted-foreground outline-none hover:text-foreground'
 
 interface TaskFilterChipRowProps {
+  query: string
+  onQueryChange: (query: string) => void
   showCompleted: boolean
   onShowCompletedChange: (checked: boolean) => void
   sortBy: TaskSortBy
@@ -49,6 +53,11 @@ interface TaskFilterChipRowProps {
   onProjectIdChange: (id: string) => void
   tag: string | undefined
   onTagChange: (tag: string | undefined) => void
+  // Tokens the chip row has no dedicated picker for (has:pages, is:completed,
+  // free text, ...). Shown as their own removable chips so editing a known
+  // field never silently drops what the user typed — see tasks-query.ts.
+  extra: string | undefined
+  onExtraChange: (extra: string | undefined) => void
 }
 
 function ProjectOptionButton({
@@ -76,6 +85,8 @@ function ProjectOptionButton({
 }
 
 export function TaskFilterChipRow({
+  query,
+  onQueryChange,
   showCompleted,
   onShowCompletedChange,
   sortBy,
@@ -85,8 +96,30 @@ export function TaskFilterChipRow({
   onProjectIdChange,
   tag,
   onTagChange,
+  extra,
+  onExtraChange,
 }: TaskFilterChipRowProps) {
   const selectedProject = projects.find((project) => project.id === projectId)
+  const extraTokens =
+    extra != null ? extra.split(/\s+/).filter((t) => t !== '') : []
+  const [isEditing, setIsEditing] = useState(false)
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-1.5 border-b border-border px-3 py-2">
+        <TaskFilterQueryInput
+          query={query}
+          onCommit={(newQuery) => {
+            onQueryChange(newQuery)
+            setIsEditing(false)
+          }}
+          onCancel={() => {
+            setIsEditing(false)
+          }}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="flex items-center gap-1.5 overflow-x-auto border-b border-border px-3 py-2">
@@ -129,6 +162,37 @@ export function TaskFilterChipRow({
           #{tag} ×
         </Chip>
       )}
+      {extraTokens.map((token, index) => (
+        // Not `active`: unlike the other chips, this token isn't wired
+        // into useFilteredTaskTree, so it must not look like an applied
+        // filter.
+        <Chip
+          key={`${token}-${String(index)}`}
+          as="button"
+          className="shrink-0"
+          title="This token isn't understood by any filter — it has no effect on the task list"
+          onClick={() => {
+            const remaining = extraTokens.filter((_, i) => i !== index)
+            onExtraChange(
+              remaining.length > 0 ? remaining.join(' ') : undefined,
+            )
+          }}
+        >
+          {token} ×
+        </Chip>
+      ))}
+
+      {/* PC: click to edit the query directly */}
+      <button
+        type="button"
+        onClick={() => {
+          setIsEditing(true)
+        }}
+        className={cn('hidden md:inline-flex', filterTriggerClassName)}
+      >
+        <span aria-hidden="true">&gt;</span>
+        <span className="sr-only">Edit filter query</span>
+      </button>
 
       {/* PC: dropdown menu */}
       <DropdownMenu>

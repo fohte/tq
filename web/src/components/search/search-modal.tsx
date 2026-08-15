@@ -6,7 +6,12 @@ import { createPortal } from 'react-dom'
 import { SearchResultRow } from '#components/search/search-result-row'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import type { SearchResult, Suggestion } from '#hooks/use-search'
-import { useSearchSuggestions, useSearchTasks } from '#hooks/use-search'
+import {
+  applySuggestionToQuery,
+  extractCurrentPrefix,
+  useSearchSuggestions,
+  useSearchTasks,
+} from '#hooks/use-search'
 import { cn } from '#lib/utils'
 
 interface SearchModalProps {
@@ -17,13 +22,6 @@ interface SearchModalProps {
 type ListItem =
   | { type: 'suggestion'; data: Suggestion }
   | { type: 'task'; data: SearchResult }
-
-function extractCurrentPrefix(query: string): string {
-  const parts = query.split(/\s+/)
-  const last = parts[parts.length - 1] ?? ''
-  if (last.includes(':') && !last.endsWith(':')) return ''
-  return last
-}
 
 export function SearchModal({ open, onOpenChange }: SearchModalProps) {
   const [query, setQuery] = useState('')
@@ -75,10 +73,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
 
   const applySuggestion = useCallback(
     (suggestion: Suggestion) => {
-      const parts = query.split(/\s+/)
-      parts[parts.length - 1] = suggestion.value
-      const newQuery = parts.join(' ') + ' '
-      setQuery(newQuery)
+      setQuery(applySuggestionToQuery(query, suggestion))
       inputRef.current?.focus()
     },
     [query],

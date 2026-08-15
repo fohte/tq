@@ -1,8 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import type { Project } from '#hooks/use-projects'
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+})
+
+const emptySuggestHandler = http.get('/api/tasks/search/suggest', () =>
+  HttpResponse.json([]),
+)
 
 const projectA: Project = {
   id: 'proj-1',
@@ -35,8 +45,18 @@ const meta = {
     // (overflow-x-auto) so it never breaks the tasks page header at mobile
     // widths — see create-task-modal.stories.tsx for the same exemption.
     overflowCheck: { ignoreSelectors: ['.overflow-x-auto'] },
+    msw: { handlers: [emptySuggestHandler] },
   },
+  decorators: [
+    (Story) => (
+      <QueryClientProvider client={queryClient}>
+        <Story />
+      </QueryClientProvider>
+    ),
+  ],
   args: {
+    query: 'is:todo is:in_progress sort:updated',
+    onQueryChange: fn(),
     showCompleted: false,
     onShowCompletedChange: fn(),
     sortBy: 'updated',
@@ -46,6 +66,8 @@ const meta = {
     onProjectIdChange: fn(),
     tag: undefined,
     onTagChange: fn(),
+    extra: undefined,
+    onExtraChange: fn(),
   },
 } satisfies Meta<typeof TaskFilterChipRow>
 
@@ -112,6 +134,25 @@ export const RemoveTagChip: Story = {
   play: async ({ canvas, args }) => {
     await userEvent.click(canvas.getByRole('button', { name: '#dev:tq ×' }))
     await expect(args.onTagChange).toHaveBeenCalledWith(undefined)
+  },
+}
+
+// A token typed into the inline query input that none of the structured
+// pickers (is:/sort:/project:/label:) understand — e.g. `has:pages` — still
+// shows up as its own chip instead of silently vanishing on the next edit.
+export const ExtraTokenChip: Story = {
+  args: {
+    extra: 'has:pages',
+  },
+}
+
+export const RemoveExtraTokenChip: Story = {
+  args: {
+    extra: 'has:pages parent:abc',
+  },
+  play: async ({ canvas, args }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'has:pages ×' }))
+    await expect(args.onExtraChange).toHaveBeenCalledWith('parent:abc')
   },
 }
 
@@ -200,5 +241,57 @@ export const SelectProjectInMobileFilterSheet: Story = {
       await body.findByRole('button', { name: 'Mobile App' }),
     )
     await expect(args.onProjectIdChange).toHaveBeenCalledWith('proj-2')
+  },
+}
+
+// PC only: clicking the `>` trigger swaps the chip list for the raw query
+// input, pre-filled with the current query.
+export const EnterEditModeOnDesktop: Story = {
+  play: async ({ canvas }) => {
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'Edit filter query' }),
+    )
+
+    await expect(
+      canvas.getByRole('textbox', { name: 'Edit filter query' }),
+    ).toHaveValue('is:todo is:in_progress sort:updated')
+  },
+}
+
+export const CommitEditOnBlur: Story = {
+  play: async ({ canvas, args }) => {
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'Edit filter query' }),
+    )
+
+    const input = canvas.getByRole('textbox', { name: 'Edit filter query' })
+    await userEvent.clear(input)
+    await userEvent.type(input, 'sort:created has:pages')
+    await userEvent.tab()
+
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      'sort:created has:pages',
+    )
+    // Back to the chip display once the edit commits.
+    await expect(
+      canvas.queryByRole('textbox', { name: 'Edit filter query' }),
+    ).not.toBeInTheDocument()
+  },
+}
+
+export const CancelEditOnEscape: Story = {
+  play: async ({ canvas, args }) => {
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'Edit filter query' }),
+    )
+
+    const input = canvas.getByRole('textbox', { name: 'Edit filter query' })
+    await userEvent.type(input, ' has:pages')
+    await userEvent.keyboard('{Escape}')
+
+    await expect(args.onQueryChange).not.toHaveBeenCalled()
+    await expect(
+      canvas.queryByRole('textbox', { name: 'Edit filter query' }),
+    ).not.toBeInTheDocument()
   },
 }
