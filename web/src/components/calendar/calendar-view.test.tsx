@@ -101,6 +101,11 @@ describe('CalendarView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockViewType = 'timeGridDay'
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })
   })
 
   it('renders with day view by default', () => {
@@ -124,6 +129,21 @@ describe('CalendarView', () => {
     expect(screen.getByTestId('fullcalendar')).toHaveAttribute(
       'data-view',
       'dayGridMonth',
+    )
+  })
+
+  it('substitutes a 3-day view for week view on narrow viewports', () => {
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })
+
+    renderCalendarView({ initialView: 'week' })
+
+    expect(screen.getByTestId('fullcalendar')).toHaveAttribute(
+      'data-view',
+      'timeGridThreeDay',
     )
   })
 

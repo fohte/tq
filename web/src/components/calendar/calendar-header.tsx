@@ -17,9 +17,9 @@ const FULLCALENDAR_VIEW_MAP: Record<CalendarViewType, string> = {
 export const FULLCALENDAR_THREE_DAY_VIEW = 'timeGridThreeDay'
 
 /**
- * On narrow viewports, 7 day columns leave too little width for event chips
- * (title gets squeezed to 0px by the fixed-width type badge), so week view
- * substitutes a 3-day view instead.
+ * On narrow viewports, 7 day columns leave chips too narrow to read even
+ * with the badge/time hidden (see EventBlockShell's container query), so
+ * week view substitutes a 3-day view instead.
  */
 export function resolveFullCalendarView(
   view: CalendarViewType,
