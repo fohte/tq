@@ -6,6 +6,7 @@
     "./types": "./src/app.ts",
     "./constants/images": "./src/constants/images.ts",
     "./constants/mention-pattern": "./src/constants/mention-pattern.ts",
+    "./lib/app-url": "./src/lib/app-url.ts",
     "./schemas/project": "./src/schemas/project.ts",
     "./schemas/task": "./src/schemas/task.ts",
     "./schemas/task-comment": "./src/schemas/task-comment.ts",
