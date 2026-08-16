@@ -38,6 +38,7 @@ interface MarkdownEditorProps {
 const CrepeEditorRoot = lazy(() =>
   import('#components/ui/markdown-editor-crepe').catch((error: unknown) => {
     console.error('Failed to load markdown editor', error)
+    // eslint-disable-next-line no-restricted-syntax -- React.lazy's loader is a throwing contract: it must reject/throw to signal a failed dynamic import
     throw error
   }),
 )

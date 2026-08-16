@@ -34,8 +34,7 @@ export function useTaskPage(taskId: string, pageId: string) {
       const res = await api.api.tasks[':taskId'].pages[':pageId'].$get({
         param: { taskId, pageId },
       })
-      if (!res.ok) throw new Error('Failed to fetch task page')
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
   })
 }
@@ -77,8 +76,7 @@ export function useUpdateTaskPage(taskId: string) {
         param: { taskId, pageId },
         json: input,
       })
-      if (!res.ok) throw new Error('Failed to update task page')
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onMutate: async ({ pageId, input }) => {
       await queryClient.cancelQueries({
@@ -153,7 +151,8 @@ export function useDeleteTaskPage(taskId: string) {
       const res = await api.api.tasks[':taskId'].pages[':pageId'].$delete({
         param: { taskId, pageId },
       })
-      if (!res.ok) throw new Error('Failed to delete task page')
+      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
+      unwrapOrThrow(assertOk(res))
     },
     onMutate: async (pageId) => {
       await queryClient.cancelQueries({

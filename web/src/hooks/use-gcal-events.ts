@@ -36,6 +36,7 @@ export function useGcalEvents(date: string) {
         query: { timeMin, timeMax },
       })
       if (res.status === 401) {
+        // eslint-disable-next-line no-restricted-syntax -- React Query queryFn boundary: must throw a typed error so callers can check `error instanceof GcalAuthRequiredError`
         throw new GcalAuthRequiredError()
       }
       return unwrapOrThrow(assertStatus(res, 200)).json()

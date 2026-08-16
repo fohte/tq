@@ -88,8 +88,7 @@ export function useUpdateSchedule() {
         param: { id },
         json: input,
       })
-      if (!res.ok) throw new Error('Failed to update schedule')
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
@@ -105,7 +104,8 @@ export function useDeleteSchedule() {
       const res = await api.api.schedule.recurring[':id'].$delete({
         param: { id },
       })
-      if (!res.ok) throw new Error('Failed to delete schedule')
+      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
+      unwrapOrThrow(assertOk(res))
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: scheduleKeys.lists })

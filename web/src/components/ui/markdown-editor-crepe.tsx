@@ -59,6 +59,7 @@ function CrepeEditor({
             uploadImageFile(file).match(
               (src) => src,
               (error) => {
+                // eslint-disable-next-line no-restricted-syntax -- Crepe's onUpload/proxyDomURL callbacks are a throwing contract (external SDK), not Result-aware
                 throw error
               },
             ),
@@ -66,6 +67,7 @@ function CrepeEditor({
             resolveImageSrc(src).match(
               (resolvedSrc) => resolvedSrc,
               (error) => {
+                // eslint-disable-next-line no-restricted-syntax -- Crepe's onUpload/proxyDomURL callbacks are a throwing contract (external SDK), not Result-aware
                 throw error
               },
             ),

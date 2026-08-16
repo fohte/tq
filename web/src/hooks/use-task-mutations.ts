@@ -4,6 +4,7 @@ import { projectKeys } from '#hooks/use-projects'
 import type { Task, TaskDetail } from '#hooks/use-task-queries'
 import { taskKeys } from '#hooks/use-task-queries'
 import { api } from '#lib/api'
+import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 export interface CreateTaskInput {
   title: string
@@ -35,8 +36,7 @@ export function useCreateTask() {
       const res = await api.api.tasks.$post({
         json: input,
       })
-      if (!res.ok) throw new Error('Failed to create task')
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists })
@@ -110,8 +110,7 @@ export function useUpdateTaskStatus() {
         param: { id },
         json: { status },
       })
-      if (!res.ok) throw new Error('Failed to update task status')
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onMutate: async ({ id, status }) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists })
@@ -186,8 +185,7 @@ export function useUpdateTask() {
         param: { id },
         json: input,
       })
-      if (!res.ok) throw new Error('Failed to update task')
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onMutate: async ({ id, input }) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
@@ -257,8 +255,7 @@ export function useUpdateTaskParent() {
         param: { id },
         json: { parentId },
       })
-      if (!res.ok) throw new Error('Failed to update task parent')
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onMutate: async ({ id, parentId }) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
@@ -317,8 +314,7 @@ export function useCompleteTask() {
   return useMutation({
     mutationFn: async (id: string) => {
       const res = await api.api.tasks[':id'].complete.$post({ param: { id } })
-      if (!res.ok) throw new Error('Failed to complete task')
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists })
@@ -380,7 +376,8 @@ export function useDeleteTask() {
       const res = await api.api.tasks[':id'].$delete({
         param: { id },
       })
-      if (!res.ok) throw new Error('Failed to delete task')
+      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
+      unwrapOrThrow(assertOk(res))
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists })

@@ -1,5 +1,12 @@
 import type { SuccessStatusCode } from 'hono/utils/http-status'
-import { err, ok, type Result } from 'neverthrow'
+import {
+  err,
+  errAsync,
+  ok,
+  okAsync,
+  type Result,
+  ResultAsync,
+} from 'neverthrow'
 
 /**
  * Check that a Hono client response is successful, narrowing the returned
@@ -39,10 +46,29 @@ export function assertStatus<R extends { status: number }, S extends number>(
 }
 
 /**
+ * Like `assertOk`, but extract the server-provided `{ error: string }` body
+ * on failure instead of a generic status-code message. Use for endpoints
+ * whose error message is shown to the user.
+ */
+export function assertOkWithMessage<
+  R extends { status: number; ok: boolean; json: () => Promise<unknown> },
+>(res: R): ResultAsync<Extract<R, { status: SuccessStatusCode }>, Error> {
+  if (!res.ok) {
+    return ResultAsync.fromSafePromise(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- TS can't narrow a generic R's json() return by the res.ok check above; the check itself is the runtime guarantee
+      res.json() as Promise<{ error: string }>,
+    ).andThen((body) => errAsync(new Error(body.error)))
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- TS can't narrow a generic R by the res.ok check above; the check itself is the runtime guarantee
+  return okAsync(res as Extract<R, { status: SuccessStatusCode }>)
+}
+
+/**
  * Unwrap a `Result`'s Ok value, or throw its Err value. Use at a boundary
  * (e.g. a React Query queryFn/mutationFn) that must throw to signal failure.
  */
 export function unwrapOrThrow<T, E extends Error>(result: Result<T, E>): T {
+  // eslint-disable-next-line no-restricted-syntax -- this function's entire purpose is to throw at a React Query queryFn/mutationFn boundary, which must throw to signal failure
   if (result.isErr()) throw result.error
   return result.value
 }

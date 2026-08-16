@@ -86,8 +86,7 @@ export function useTask(id: string) {
       const res = await api.api.tasks[':id'].$get({
         param: { id },
       })
-      if (!res.ok) throw new Error('Failed to fetch task')
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
   })
 }

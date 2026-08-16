@@ -81,6 +81,7 @@ export function useDeleteGithubSyncRule() {
       const res = await api.api.github['sync-rules'][':id'].$delete({
         param: { id },
       })
+      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
       unwrapOrThrow(assertOk(res))
     },
     onSettled: () => {

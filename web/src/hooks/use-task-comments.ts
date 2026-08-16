@@ -93,8 +93,7 @@ export function useUpdateComment(taskId: string) {
         param: { taskId, commentId },
         json: { content },
       })
-      if (!res.ok) throw new Error('Failed to update comment')
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onMutate: async ({ commentId, content }) => {
       await queryClient.cancelQueries({
@@ -141,7 +140,8 @@ export function useDeleteComment(taskId: string) {
           param: { taskId, commentId },
         },
       )
-      if (!res.ok) throw new Error('Failed to delete comment')
+      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
+      unwrapOrThrow(assertOk(res))
     },
     onMutate: async (commentId) => {
       await queryClient.cancelQueries({
