@@ -9,8 +9,7 @@ function isPwaPlugin(plugin: Plugin): boolean {
 // including this Storybook build — it then tries to precache Storybook's own
 // runtime chunk (sb-manager/globals-runtime.js, ~3.2 MB), which exceeds
 // workbox's default precache size limit and fails the build. Storybook's
-// static output isn't a PWA, so drop the plugin here instead of raising the
-// limit (which would just hide oversized-chunk warnings in the real app).
+// static output isn't a PWA, so drop the plugin here.
 function withoutPwaPlugins(plugins: PluginOption[]): PluginOption[] {
   return plugins.flatMap((plugin): PluginOption[] => {
     if (plugin === false || plugin == null) return []
