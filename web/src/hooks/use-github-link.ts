@@ -4,7 +4,11 @@ import type { InferResponseType } from 'hono/client'
 import { projectKeys } from '#hooks/use-projects'
 import { taskKeys } from '#hooks/use-tasks'
 import { api } from '#lib/api'
-import { assertOk, unwrapOrThrow } from '#lib/assert-response'
+import {
+  assertOk,
+  assertOkWithMessage,
+  unwrapOrThrow,
+} from '#lib/assert-response'
 
 export type ResolveGithubUrlResult = InferResponseType<
   typeof api.api.github.resolve.$post,
@@ -19,9 +23,7 @@ export function useResolveGithubUrl() {
   return useMutation({
     mutationFn: async (url: string) => {
       const res = await api.api.github.resolve.$post({ json: { url } })
-      // eslint-disable-next-line no-restricted-syntax -- React Query mutationFn boundary: must throw with the server-provided error message to signal failure
-      if (!res.ok) throw new Error((await res.json()).error)
-      return res.json()
+      return unwrapOrThrow(await assertOkWithMessage(res)).json()
     },
   })
 }
@@ -32,9 +34,7 @@ export function useCreateTaskFromGithubUrl() {
   return useMutation({
     mutationFn: async (url: string) => {
       const res = await api.api.tasks['from-github'].$post({ json: { url } })
-      // eslint-disable-next-line no-restricted-syntax -- React Query mutationFn boundary: must throw with the server-provided error message to signal failure
-      if (!res.ok) throw new Error((await res.json()).error)
-      return res.json()
+      return unwrapOrThrow(await assertOkWithMessage(res)).json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
@@ -52,9 +52,7 @@ export function useLinkTaskToGithub(taskId: string) {
         param: { taskId },
         json: { url },
       })
-      // eslint-disable-next-line no-restricted-syntax -- React Query mutationFn boundary: must throw with the server-provided error message to signal failure
-      if (!res.ok) throw new Error((await res.json()).error)
-      return res.json()
+      return unwrapOrThrow(await assertOkWithMessage(res)).json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) })
@@ -72,8 +70,8 @@ export function useUnlinkTaskFromGithub(taskId: string) {
       const res = await api.api.tasks[':taskId']['github-link'].$delete({
         param: { taskId },
       })
-      // eslint-disable-next-line no-restricted-syntax -- React Query mutationFn boundary: must throw with the server-provided error message to signal failure
-      if (!res.ok) throw new Error((await res.json()).error)
+      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
+      unwrapOrThrow(await assertOkWithMessage(res))
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) })
