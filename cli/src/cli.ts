@@ -63,6 +63,10 @@ export async function runCli(
   stdin: ReadableStdin = process.stdin,
 ): Promise<number> {
   const program = buildProgram(fetchImpl, stdin)
+  // This is the top-level Result/exception boundary: commander's
+  // parseAsync rejects via exceptions (a CommanderError, or whatever an
+  // action handler threw/unwrap()ed), and this is where CLI exit codes
+  // get decided.
   try {
     await program.parseAsync(argv, { from: 'user' })
     return 0

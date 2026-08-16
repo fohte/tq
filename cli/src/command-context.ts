@@ -1,4 +1,5 @@
 import type { Command } from 'commander'
+import { err, ok, Result } from 'neverthrow'
 
 import type { Client } from '#client'
 import { createClient } from '#client'
@@ -9,12 +10,14 @@ export interface GlobalOptions {
   header: Record<string, string>
 }
 
-function resolveApiUrl(options: GlobalOptions): string {
+function resolveApiUrl(options: GlobalOptions): Result<string, Error> {
   if (options.apiUrl != null && options.apiUrl.length > 0) {
-    return options.apiUrl
+    return ok(options.apiUrl)
   }
-  throw new Error(
-    'API URL is not set. Pass --api-url or set the TQ_API_URL environment variable.',
+  return err(
+    new Error(
+      'API URL is not set. Pass --api-url or set the TQ_API_URL environment variable.',
+    ),
   )
 }
 
@@ -25,8 +28,12 @@ function resolveHeaders(options: GlobalOptions): Record<string, string> {
   return { 'X-Author': `llm:${options.author}`, ...options.header }
 }
 
-export function buildClient(command: Command, fetchImpl: typeof fetch): Client {
+export function buildClient(
+  command: Command,
+  fetchImpl: typeof fetch,
+): Result<Client, Error> {
   const options = command.optsWithGlobals<GlobalOptions>()
-  const apiUrl = resolveApiUrl(options)
-  return createClient({ apiUrl, headers: resolveHeaders(options) }, fetchImpl)
+  return resolveApiUrl(options).map((apiUrl) =>
+    createClient({ apiUrl, headers: resolveHeaders(options) }, fetchImpl),
+  )
 }

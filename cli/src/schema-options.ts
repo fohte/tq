@@ -1,4 +1,5 @@
 import { Command, InvalidArgumentError, Option } from 'commander'
+import { err, ok, Result } from 'neverthrow'
 import { z } from 'zod'
 
 function toKebabCase(key: string): string {
@@ -18,6 +19,9 @@ function parseValue(inner: z.ZodType, raw: string): unknown {
   const value = inner instanceof z.ZodNumber ? Number(raw) : raw
   const result = inner.safeParse(value)
   if (!result.success) {
+    // commander's argParser contract requires throwing InvalidArgumentError;
+    // commander itself catches it and converts it into user-facing CLI error
+    // output, so this can't return a Result.
     throw new InvalidArgumentError(
       result.error.issues[0]?.message ?? 'Invalid value',
     )
@@ -68,15 +72,17 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
   command: Command,
   schema: z.ZodObject<Shape>,
   exclude: readonly string[] = [],
-): Command {
+): Result<Command, Error> {
   for (const [key, field] of Object.entries(schema.shape)) {
     if (exclude.includes(key)) continue
     const inner = unwrapOptional(field)
     if (inner === undefined) continue
 
     if (!isSupportedLeaf(inner)) {
-      throw new Error(
-        `addSchemaOptions: unsupported schema type for field "${key}"`,
+      return err(
+        new Error(
+          `addSchemaOptions: unsupported schema type for field "${key}"`,
+        ),
       )
     }
 
@@ -91,7 +97,7 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
     option.argParser((raw: string) => parseValue(inner, raw))
     command.addOption(option)
   }
-  return command
+  return ok(command)
 }
 
 /**
@@ -114,7 +120,7 @@ export function pickSchemaFields<Shape extends z.core.$ZodShape>(
 
   const result = schema.partial().safeParse(picked)
   if (!result.success) {
-    throw new Error(result.error.issues[0]?.message ?? 'Invalid value')
+    return err(new Error(result.error.issues[0]?.message ?? 'Invalid value'))
   }
-  return result.data
+  return ok(result.data)
 }

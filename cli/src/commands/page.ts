@@ -8,6 +8,7 @@ import { buildClient } from '#command-context'
 import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
 import { printJson, printJsonList, writeContentFile } from '#output'
+import { unwrap, unwrapAsync } from '#result'
 import { addSchemaOptions, pickSchemaFields } from '#schema-options'
 
 type CreatePageJson = InferRequestType<
@@ -39,7 +40,7 @@ export function registerPageCommands(
     .option('--full', 'Include full page content in the output')
     .action(
       async (taskId: string, options: { full?: boolean }, command: Command) => {
-        const client = buildClient(command, fetchImpl)
+        const client = unwrap(buildClient(command, fetchImpl))
         const res = await client.api.tasks[':taskId'].pages.$get({
           param: { taskId },
         })
@@ -63,7 +64,7 @@ export function registerPageCommands(
         options: { output?: string },
         command: Command,
       ) => {
-        const client = buildClient(command, fetchImpl)
+        const client = unwrap(buildClient(command, fetchImpl))
         const res = await client.api.tasks[':taskId'].pages[':pageId'].$get({
           param: { taskId, pageId },
         })
@@ -72,7 +73,7 @@ export function registerPageCommands(
 
         if (options.output != null) {
           const { content, ...metadata } = page
-          await writeContentFile(options.output, content)
+          await unwrapAsync(writeContentFile(options.output, content))
           printJson(metadata)
           return
         }
@@ -81,13 +82,15 @@ export function registerPageCommands(
       },
     )
 
-  addSchemaOptions(
-    page
-      .command('create <taskId> <title>')
-      .description('Create a page')
-      .option('--file <path>', 'Read content from a file instead of stdin'),
-    createPageSchema,
-    ['content'],
+  unwrap(
+    addSchemaOptions(
+      page
+        .command('create <taskId> <title>')
+        .description('Create a page')
+        .option('--file <path>', 'Read content from a file instead of stdin'),
+      createPageSchema,
+      ['content'],
+    ),
   ).action(
     async (
       taskId: string,
@@ -95,11 +98,11 @@ export function registerPageCommands(
       options: CreateOptions,
       command: Command,
     ) => {
-      const client = buildClient(command, fetchImpl)
-      const content = await readContentInput(options.file, stdin)
+      const client = unwrap(buildClient(command, fetchImpl))
+      const content = await unwrapAsync(readContentInput(options.file, stdin))
 
       const json: CreatePageJson = {
-        ...pickSchemaFields(createPageSchema, options, ['content']),
+        ...unwrap(pickSchemaFields(createPageSchema, options, ['content'])),
         title,
         ...(content !== undefined ? { content } : {}),
       }
@@ -114,13 +117,15 @@ export function registerPageCommands(
     },
   )
 
-  addSchemaOptions(
-    page
-      .command('update <taskId> <pageId>')
-      .description('Update a page')
-      .option('--file <path>', 'Read content from a file instead of stdin'),
-    updatePageSchema,
-    ['content'],
+  unwrap(
+    addSchemaOptions(
+      page
+        .command('update <taskId> <pageId>')
+        .description('Update a page')
+        .option('--file <path>', 'Read content from a file instead of stdin'),
+      updatePageSchema,
+      ['content'],
+    ),
   ).action(
     async (
       taskId: string,
@@ -128,11 +133,11 @@ export function registerPageCommands(
       options: UpdateOptions,
       command: Command,
     ) => {
-      const client = buildClient(command, fetchImpl)
-      const content = await readContentInput(options.file, stdin)
+      const client = unwrap(buildClient(command, fetchImpl))
+      const content = await unwrapAsync(readContentInput(options.file, stdin))
 
       const json: UpdatePageJson = {
-        ...pickSchemaFields(updatePageSchema, options, ['content']),
+        ...unwrap(pickSchemaFields(updatePageSchema, options, ['content'])),
         ...(content !== undefined ? { content } : {}),
       }
 
@@ -155,7 +160,7 @@ export function registerPageCommands(
         _options: unknown,
         command: Command,
       ) => {
-        const client = buildClient(command, fetchImpl)
+        const client = unwrap(buildClient(command, fetchImpl))
         const res = await client.api.tasks[':taskId'].pages[':pageId'].$delete({
           param: { taskId, pageId },
         })

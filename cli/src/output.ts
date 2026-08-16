@@ -1,5 +1,7 @@
 import { writeFile } from 'node:fs/promises'
 
+import { ResultAsync } from 'neverthrow'
+
 import { FileIoError } from '#errors'
 
 export function printJson(data: unknown): void {
@@ -33,24 +35,22 @@ export function printJsonList(
   printJson(full ? data : omitDeep(data, omitKey))
 }
 
-export async function writeContentFile(
+export function writeContentFile(
   filePath: string,
   content: string,
-): Promise<void> {
-  try {
-    await writeFile(filePath, content, 'utf8')
-  } catch (cause) {
-    throw new FileIoError(`Failed to write ${filePath}`, cause)
-  }
+): ResultAsync<void, FileIoError> {
+  return ResultAsync.fromPromise(
+    writeFile(filePath, content, 'utf8'),
+    (cause) => new FileIoError(`Failed to write ${filePath}`, cause),
+  )
 }
 
-export async function writeBinaryFile(
+export function writeBinaryFile(
   filePath: string,
   data: Uint8Array,
-): Promise<void> {
-  try {
-    await writeFile(filePath, data)
-  } catch (cause) {
-    throw new FileIoError(`Failed to write ${filePath}`, cause)
-  }
+): ResultAsync<void, FileIoError> {
+  return ResultAsync.fromPromise(
+    writeFile(filePath, data),
+    (cause) => new FileIoError(`Failed to write ${filePath}`, cause),
+  )
 }
