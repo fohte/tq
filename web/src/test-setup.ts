@@ -103,7 +103,6 @@ process.on('unhandledRejection', (reason) => {
   }
 
   // Re-throwing here is what surfaces a genuine unhandled rejection as a
-  // failed test run — there is no test-scoped `expect`/`assert` to delegate
-  // to from inside a process-level rejection handler.
+  // failed test run.
   throw reason
 })
