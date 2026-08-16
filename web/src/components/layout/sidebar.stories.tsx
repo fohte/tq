@@ -140,7 +140,7 @@ const meta = {
   argTypes: {
     currentPath: {
       control: 'select',
-      options: ['/', '/tasks', '/search', '/today', '/projects', '/settings'],
+      options: ['/', '/tasks', '/today', '/projects', '/settings'],
     },
   },
 } satisfies Meta<typeof SidebarWithRouter>
@@ -157,12 +157,6 @@ export const Default: Story = {
 export const TasksActive: Story = {
   args: {
     currentPath: '/tasks',
-  },
-}
-
-export const SearchActive: Story = {
-  args: {
-    currentPath: '/search',
   },
 }
 
