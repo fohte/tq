@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferRequestType, InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
-import { assertOk } from '#lib/assert-response'
+import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 export type SchedulingSettings = InferResponseType<
   (typeof api.api)['scheduling-settings']['$get'],
@@ -22,9 +22,7 @@ export function useSchedulingSettings() {
     queryKey: schedulingSettingsKeys.detail,
     queryFn: async () => {
       const res = await api.api['scheduling-settings'].$get()
-      const result = assertOk(res)
-      if (result.isErr()) throw result.error
-      return result.value.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
   })
 }
@@ -35,9 +33,7 @@ export function useUpdateSchedulingSettings() {
   return useMutation({
     mutationFn: async (input: UpdateSchedulingSettingsInput) => {
       const res = await api.api['scheduling-settings'].$patch({ json: input })
-      const result = assertOk(res)
-      if (result.isErr()) throw result.error
-      return result.value.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({

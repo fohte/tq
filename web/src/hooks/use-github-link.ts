@@ -4,7 +4,7 @@ import type { InferResponseType } from 'hono/client'
 import { projectKeys } from '#hooks/use-projects'
 import { taskKeys } from '#hooks/use-tasks'
 import { api } from '#lib/api'
-import { assertOk } from '#lib/assert-response'
+import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 export type ResolveGithubUrlResult = InferResponseType<
   typeof api.api.github.resolve.$post,
@@ -94,8 +94,7 @@ export function useGithubSync() {
     queryKey: ['github-sync'],
     queryFn: async () => {
       const res = await api.api.github.sync.$post()
-      const result = assertOk(res)
-      if (result.isErr()) throw result.error
+      unwrapOrThrow(assertOk(res))
       await queryClient.invalidateQueries({ queryKey: taskKeys.all })
       return null
     },
@@ -118,8 +117,7 @@ export function useSyncTaskGithubLink(taskId: string, hasLink: boolean) {
       const res = await api.api.tasks[':taskId']['github-link'].sync.$post({
         param: { taskId },
       })
-      const result = assertOk(res)
-      if (result.isErr()) throw result.error
+      unwrapOrThrow(assertOk(res))
       await queryClient.invalidateQueries({
         queryKey: taskKeys.detail(taskId),
       })

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
-import { assertOk } from '#lib/assert-response'
+import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 export type ActivityItem = InferResponseType<
   (typeof api.api.tasks)[':id']['activity']['$get'],
@@ -20,9 +20,7 @@ export function useTaskActivity(taskId: string) {
       const res = await api.api.tasks[':id'].activity.$get({
         param: { id: taskId },
       })
-      const result = assertOk(res)
-      if (result.isErr()) throw result.error
-      return result.value.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
   })
 }

@@ -3,7 +3,7 @@ import type { InferResponseType } from 'hono/client'
 import { useMemo } from 'react'
 
 import { api } from '#lib/api'
-import { assertOk } from '#lib/assert-response'
+import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 type Task = InferResponseType<typeof api.api.tasks.$get>[number]
 
@@ -55,9 +55,7 @@ export function useTaskList(
             filter?.includeAncestors === true ? 'true' : undefined,
         },
       })
-      const result = assertOk(res)
-      if (result.isErr()) throw result.error
-      return result.value.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     enabled: options?.enabled ?? true,
   })

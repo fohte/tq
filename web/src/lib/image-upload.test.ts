@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   handleImageLoadError,
+  ImageTooLargeError,
   parseImageId,
   resolveImageSrc,
+  UnsupportedImageTypeError,
   uploadImageFile,
   uploadImageFiles,
 } from '#lib/image-upload'
@@ -66,7 +68,7 @@ describe('uploadImageFile', () => {
 
     const result = await uploadImageFile(makeFile('photo.png', 'image/png', 10))
 
-    expect(result.isOk() && result.value).toBe('/api/images/new-id')
+    expect(result._unsafeUnwrap()).toBe('/api/images/new-id')
   })
 
   it('rejects unsupported file types without calling the API', async () => {
@@ -76,9 +78,7 @@ describe('uploadImageFile', () => {
       makeFile('doc.pdf', 'application/pdf', 10),
     )
 
-    expect(result.isErr() && result.error.message).toBe(
-      'Unsupported image type. Allowed types: image/jpeg, image/png, image/gif, image/webp',
-    )
+    expect(result._unsafeUnwrapErr()).toEqual(new UnsupportedImageTypeError())
     expect(mocks['mockPost']).not.toHaveBeenCalled()
   })
 
@@ -89,9 +89,7 @@ describe('uploadImageFile', () => {
       makeFile('big.png', 'image/png', 10 * 1024 * 1024 + 1),
     )
 
-    expect(result.isErr() && result.error.message).toBe(
-      'Image too large. Maximum size is 10485760 bytes',
-    )
+    expect(result._unsafeUnwrapErr()).toEqual(new ImageTooLargeError())
     expect(mocks['mockPost']).not.toHaveBeenCalled()
   })
 
@@ -101,9 +99,7 @@ describe('uploadImageFile', () => {
 
     const result = await uploadImageFile(makeFile('photo.png', 'image/png', 10))
 
-    expect(result.isErr() && result.error.message).toBe(
-      'Failed to upload image',
-    )
+    expect(result._unsafeUnwrapErr().message).toBe('Failed to upload image')
   })
 })
 
@@ -173,7 +169,7 @@ describe('resolveImageSrc', () => {
 
     const result = await resolveImageSrc('https://example.com/foo.png')
 
-    expect(result.isOk() && result.value).toBe('https://example.com/foo.png')
+    expect(result._unsafeUnwrap()).toBe('https://example.com/foo.png')
     expect(mocks['mockGet']).not.toHaveBeenCalled()
   })
 
@@ -187,8 +183,8 @@ describe('resolveImageSrc', () => {
     const first = await resolveImageSrc('/api/images/cache-test-1')
     const second = await resolveImageSrc('/api/images/cache-test-1')
 
-    expect(first.isOk() && first.value).toBe('https://signed.example.com/a')
-    expect(second.isOk() && second.value).toBe('https://signed.example.com/a')
+    expect(first._unsafeUnwrap()).toBe('https://signed.example.com/a')
+    expect(second._unsafeUnwrap()).toBe('https://signed.example.com/a')
     expect(mocks['mockGet']).toHaveBeenCalledTimes(1)
   })
 
@@ -212,12 +208,8 @@ describe('resolveImageSrc', () => {
       vi.advanceTimersByTime(56 * 60 * 1000)
       const second = await resolveImageSrc('/api/images/cache-test-2')
 
-      expect(first.isOk() && first.value).toBe(
-        'https://signed.example.com/first',
-      )
-      expect(second.isOk() && second.value).toBe(
-        'https://signed.example.com/second',
-      )
+      expect(first._unsafeUnwrap()).toBe('https://signed.example.com/first')
+      expect(second._unsafeUnwrap()).toBe('https://signed.example.com/second')
       expect(mocks['mockGet']).toHaveBeenCalledTimes(2)
     } finally {
       vi.useRealTimers()
@@ -230,7 +222,7 @@ describe('resolveImageSrc', () => {
 
     const result = await resolveImageSrc('/api/images/cache-test-3')
 
-    expect(result.isErr() && result.error.message).toBe(
+    expect(result._unsafeUnwrapErr().message).toBe(
       'Failed to fetch signed image URL',
     )
   })
@@ -277,7 +269,7 @@ describe('handleImageLoadError', () => {
 
     const resolved = await resolveImageSrc('/api/images/error-test')
     const img = document.createElement('img')
-    img.src = resolved.isOk() ? resolved.value : ''
+    img.src = resolved._unsafeUnwrap()
 
     await handleImageLoadError(makeErrorEvent(img))
 

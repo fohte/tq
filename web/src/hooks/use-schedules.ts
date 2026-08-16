@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
-import { assertOk } from '#lib/assert-response'
+import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 type Schedule = InferResponseType<
   typeof api.api.schedule.recurring.$get,
@@ -24,9 +24,7 @@ export function useScheduleList(date: string) {
       const res = await api.api.schedule.recurring.$get({
         query: { date },
       })
-      const result = assertOk(res)
-      if (result.isErr()) throw result.error
-      return result.value.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
   })
 }
@@ -53,9 +51,7 @@ export function useCreateSchedule() {
       const res = await api.api.schedule.recurring.$post({
         json: input,
       })
-      const result = assertOk(res)
-      if (result.isErr()) throw result.error
-      return result.value.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: scheduleKeys.all })

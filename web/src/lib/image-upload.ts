@@ -38,13 +38,15 @@ export function uploadImageFile(
     return errAsync(new ImageTooLargeError())
   }
 
-  return ResultAsync.fromSafePromise(
+  return ResultAsync.fromPromise(
     api.api.images.$post({ form: { file } }),
+    (cause) => new Error('Failed to upload image', { cause }),
   ).andThen((res) => {
     if (!res.ok) return errAsync(new Error('Failed to upload image'))
-    return ResultAsync.fromSafePromise(res.json()).map(
-      ({ id }) => `/api/images/${id}`,
-    )
+    return ResultAsync.fromPromise(
+      res.json(),
+      (cause) => new Error('Failed to upload image', { cause }),
+    ).map(({ id }) => `/api/images/${id}`)
   })
 }
 
@@ -94,11 +96,15 @@ const cacheById = new Map<string, CacheEntry>()
 const idBySignedUrl = new Map<string, string>()
 
 function fetchSignedUrl(id: string): ResultAsync<string, Error> {
-  return ResultAsync.fromSafePromise(
+  return ResultAsync.fromPromise(
     api.api.images[':id'].$get({ param: { id } }),
+    (cause) => new Error('Failed to fetch signed image URL', { cause }),
   ).andThen((res) => {
     if (!res.ok) return errAsync(new Error('Failed to fetch signed image URL'))
-    return ResultAsync.fromSafePromise(res.json()).map(({ url }) => {
+    return ResultAsync.fromPromise(
+      res.json(),
+      (cause) => new Error('Failed to fetch signed image URL', { cause }),
+    ).map(({ url }) => {
       cacheById.set(id, {
         url,
         expiresAt: Date.now() + SIGNED_URL_CACHE_TTL_MS,

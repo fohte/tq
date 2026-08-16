@@ -3,7 +3,7 @@ import type { InferResponseType } from 'hono/client'
 import { useEffect, useRef } from 'react'
 
 import { api } from '#lib/api'
-import { assertStatus } from '#lib/assert-response'
+import { assertStatus, unwrapOrThrow } from '#lib/assert-response'
 import { getDayIsoRange } from '#lib/date-range'
 
 export type GcalEvent = InferResponseType<
@@ -38,9 +38,7 @@ export function useGcalEvents(date: string) {
       if (res.status === 401) {
         throw new GcalAuthRequiredError()
       }
-      const result = assertStatus(res, 200)
-      if (result.isErr()) throw result.error
-      return result.value.json()
+      return unwrapOrThrow(assertStatus(res, 200)).json()
     },
     retry: false,
     refetchInterval: GCAL_POLL_INTERVAL_MS,

@@ -37,3 +37,12 @@ export function assertStatus<R extends { status: number }, S extends number>(
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- TS can't narrow a generic R by the res.status check above; the check itself is the runtime guarantee
   return ok(res as Extract<R, { status: S }>)
 }
+
+/**
+ * Unwrap a `Result`'s Ok value, or throw its Err value. Use at a boundary
+ * (e.g. a React Query queryFn/mutationFn) that must throw to signal failure.
+ */
+export function unwrapOrThrow<T, E extends Error>(result: Result<T, E>): T {
+  if (result.isErr()) throw result.error
+  return result.value
+}

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
-import { assertOk } from '#lib/assert-response'
+import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 type Project = InferResponseType<typeof api.api.projects.$get, 200>[number]
 
@@ -47,9 +47,7 @@ export function useProjects(
       const res = await api.api.projects.$get({
         query: filter ?? {},
       })
-      const result = assertOk(res)
-      if (result.isErr()) throw result.error
-      return result.value.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     enabled: options?.enabled ?? true,
   })
@@ -73,9 +71,7 @@ export function useProjectTasks(id: string) {
     queryKey: projectKeys.tasks(id),
     queryFn: async () => {
       const res = await api.api.tasks.$get({ query: { projectId: id } })
-      const result = assertOk(res)
-      if (result.isErr()) throw result.error
-      return result.value.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
   })
 }

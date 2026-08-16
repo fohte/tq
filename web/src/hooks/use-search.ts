@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useDebounce } from '#hooks/use-debounce'
 import { api } from '#lib/api'
-import { assertOk } from '#lib/assert-response'
+import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 type SearchResult = InferResponseType<typeof api.api.tasks.$get, 200>[number]
 
@@ -170,9 +170,7 @@ export function useSearch() {
       const res = await api.api.tasks.$get({
         query: { q: debouncedQuery, limit: '20' },
       })
-      const result = assertOk(res)
-      if (result.isErr()) throw result.error
-      return result.value.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     enabled: debouncedQuery.trim() !== '',
     placeholderData: (prev) => prev,
@@ -225,9 +223,7 @@ export function useSearchTasks(query: string) {
       const res = await api.api.tasks.$get({
         query: { q: debouncedQuery, limit: '20' },
       })
-      const result = assertOk(res)
-      if (result.isErr()) throw result.error
-      return result.value.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     enabled: debouncedQuery.length > 0,
     placeholderData: (prev) => prev,
@@ -270,9 +266,7 @@ export function useSearchSuggestions(prefix: string) {
       const res = await api.api.tasks.search.suggest.$get({
         query: { prefix: debouncedPrefix },
       })
-      const result = assertOk(res)
-      if (result.isErr()) throw result.error
-      return result.value.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     enabled: debouncedPrefix.length > 0,
   })

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
-import { assertStatus } from '#lib/assert-response'
+import { assertStatus, unwrapOrThrow } from '#lib/assert-response'
 
 export type GcalCalendar = InferResponseType<
   (typeof api.api.calendar.accounts)[':accountId']['calendars']['$get'],
@@ -20,9 +20,7 @@ export function useGcalCalendarsList(accountId: string, enabled: boolean) {
       const res = await api.api.calendar.accounts[':accountId'].calendars.$get({
         param: { accountId },
       })
-      const result = assertStatus(res, 200)
-      if (result.isErr()) throw result.error
-      return result.value.json()
+      return unwrapOrThrow(assertStatus(res, 200)).json()
     },
     enabled,
     retry: false,
@@ -46,9 +44,7 @@ export function useUpdateCalendarSubscription(accountId: string) {
         param: { accountId, calendarId },
         json: { subscribed },
       })
-      const result = assertStatus(res, 200)
-      if (result.isErr()) throw result.error
-      return result.value.json()
+      return unwrapOrThrow(assertStatus(res, 200)).json()
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
