@@ -60,7 +60,7 @@ const meta = {
   argTypes: {
     currentPath: {
       control: 'select',
-      options: ['/', '/tasks', '/search', '/today', '/projects'],
+      options: ['/', '/tasks', '/today', '/projects'],
     },
   },
 } satisfies Meta<typeof AppLayoutWithRouter>

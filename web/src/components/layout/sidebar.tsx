@@ -9,7 +9,7 @@ import {
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useProjects } from '#hooks/use-projects'
 import { useTagCounts } from '#hooks/use-tag-counts'
-import { navKeybindings, searchKeybinding } from '#lib/keybindings'
+import { navKeybindings } from '#lib/keybindings'
 import { parseTasksQuery, tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
 
@@ -42,7 +42,6 @@ const navItems: NavItem[] = [
     label: 'Projects',
     keys: navKeybindings.goToProjects.keys,
   },
-  { to: '/search', label: 'Search', keys: searchKeybinding.keys },
 ]
 
 const settingsNavItem: NavItem = {
