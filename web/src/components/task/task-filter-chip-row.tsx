@@ -1,3 +1,5 @@
+import type { ParsedQuery } from 'api/search-query-parser'
+import { buildSearchQuery } from 'api/search-query-parser'
 import { CheckIcon, X } from 'lucide-react'
 import { useState } from 'react'
 
@@ -33,10 +35,11 @@ import type { TaskSortBy } from '#hooks/use-tasks'
 import { sortOptionValues } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
 
-const sortLabels: Record<TaskSortBy, string> = {
-  updated: 'Updated',
-  created: 'Created',
-}
+const sortLabels: Partial<Record<NonNullable<ParsedQuery['sortBy']>, string>> =
+  {
+    updated: 'Updated',
+    created: 'Created',
+  }
 
 const filterTriggerClassName =
   'shrink-0 cursor-pointer items-center gap-1 border border-border px-1 font-mono text-2xs text-muted-foreground outline-none hover:text-foreground'
@@ -44,20 +47,12 @@ const filterTriggerClassName =
 interface TaskFilterChipRowProps {
   query: string
   onQueryChange: (query: string) => void
-  showCompleted: boolean
+  parsed: ParsedQuery
   onShowCompletedChange: (checked: boolean) => void
-  sortBy: TaskSortBy
   onSortByChange: (sortBy: TaskSortBy) => void
   projects: Project[]
-  projectId: string | undefined
   onProjectIdChange: (id: string) => void
-  tag: string | undefined
   onTagChange: (tag: string | undefined) => void
-  // Tokens the chip row has no dedicated picker for (has:pages, is:completed,
-  // free text, ...). Shown as their own removable chips so editing a known
-  // field never silently drops what the user typed — see tasks-query.ts.
-  extra: string | undefined
-  onExtraChange: (extra: string | undefined) => void
 }
 
 function ProjectOptionButton({
@@ -87,21 +82,29 @@ function ProjectOptionButton({
 export function TaskFilterChipRow({
   query,
   onQueryChange,
-  showCompleted,
+  parsed,
   onShowCompletedChange,
-  sortBy,
   onSortByChange,
   projects,
-  projectId,
   onProjectIdChange,
-  tag,
   onTagChange,
-  extra,
-  onExtraChange,
 }: TaskFilterChipRowProps) {
-  const selectedProject = projects.find((project) => project.id === projectId)
-  const extraTokens =
-    extra != null ? extra.split(/\s+/).filter((t) => t !== '') : []
+  const showCompleted = parsed.status == null
+  // The chip label falls back to the raw value for a sort the picker below
+  // doesn't offer (e.g. a hand-edited `sort:due` in the URL), but the picker
+  // controls themselves only ever offer sortOptionValues, so they take a
+  // narrowed value instead.
+  const sortBy = parsed.sortBy ?? 'updated'
+  const pickerSortBy =
+    sortOptionValues.find((value) => value === sortBy) ?? 'updated'
+  const tag = parsed.label
+  const selectedProject = projects.find(
+    (project) => project.id === parsed.projectId,
+  )
+  const freeTextWords =
+    parsed.freeText !== ''
+      ? parsed.freeText.split(/\s+/).filter((w) => w !== '')
+      : []
   const [isEditing, setIsEditing] = useState(false)
 
   if (isEditing) {
@@ -136,7 +139,7 @@ export function TaskFilterChipRow({
         </Chip>
       )}
       <Chip active className="shrink-0">
-        sort: {sortLabels[sortBy]}
+        sort: {sortLabels[sortBy] ?? sortBy}
       </Chip>
       {selectedProject != null && (
         <Chip
@@ -162,23 +165,52 @@ export function TaskFilterChipRow({
           #{tag} ×
         </Chip>
       )}
-      {extraTokens.map((token, index) => (
-        // Not `active`: unlike the other chips, this token isn't wired
-        // into useFilteredTaskTree, so it must not look like an applied
-        // filter.
+      {parsed.hasPages === true && (
         <Chip
-          key={`${token}-${String(index)}`}
           as="button"
+          active
           className="shrink-0"
-          title="This token isn't understood by any filter — it has no effect on the task list"
           onClick={() => {
-            const remaining = extraTokens.filter((_, i) => i !== index)
-            onExtraChange(
-              remaining.length > 0 ? remaining.join(' ') : undefined,
+            // exactOptionalPropertyTypes forbids `{ ...parsed, hasPages:
+            // undefined }` (hasPages's type is `boolean`, not `boolean |
+            // undefined`) — delete is the sanctioned way to unset an
+            // optional property under that flag.
+            const next = { ...parsed }
+            delete next.hasPages
+            onQueryChange(buildSearchQuery(next))
+          }}
+        >
+          has:pages ×
+        </Chip>
+      )}
+      {parsed.parentId != null && (
+        <Chip
+          as="button"
+          active
+          className="shrink-0"
+          onClick={() => {
+            const next = { ...parsed }
+            delete next.parentId
+            onQueryChange(buildSearchQuery(next))
+          }}
+        >
+          parent:{parsed.parentId} ×
+        </Chip>
+      )}
+      {freeTextWords.map((word, index) => (
+        <Chip
+          key={`${word}-${String(index)}`}
+          as="button"
+          active
+          className="shrink-0"
+          onClick={() => {
+            const remaining = freeTextWords.filter((_, i) => i !== index)
+            onQueryChange(
+              buildSearchQuery({ ...parsed, freeText: remaining.join(' ') }),
             )
           }}
         >
-          {token} ×
+          {word} ×
         </Chip>
       ))}
 
@@ -208,16 +240,19 @@ export function TaskFilterChipRow({
           >
             show completed
           </DropdownMenuCheckboxItem>
-          <DropdownMenuRadioGroup value={sortBy} onValueChange={onSortByChange}>
+          <DropdownMenuRadioGroup
+            value={pickerSortBy}
+            onValueChange={onSortByChange}
+          >
             {sortOptionValues.map((sort) => (
               <DropdownMenuRadioItem key={sort} value={sort}>
-                Sort: {sortLabels[sort]}
+                Sort: {sortLabels[sort] ?? sort}
               </DropdownMenuRadioItem>
             ))}
           </DropdownMenuRadioGroup>
           {projects.length > 0 && (
             <DropdownMenuRadioGroup
-              value={projectId ?? ''}
+              value={parsed.projectId ?? ''}
               onValueChange={onProjectIdChange}
             >
               <DropdownMenuRadioItem value="">
@@ -275,10 +310,10 @@ export function TaskFilterChipRow({
                   <div className="flex flex-col gap-1.5">
                     <SectionLabel>SORT</SectionLabel>
                     <TabStrip
-                      value={sortBy}
+                      value={pickerSortBy}
                       options={sortOptionValues.map((sort) => ({
                         value: sort,
-                        label: sortLabels[sort],
+                        label: sortLabels[sort] ?? sort,
                       }))}
                       onChange={onSortByChange}
                     />
@@ -289,7 +324,9 @@ export function TaskFilterChipRow({
                       <SectionLabel>PROJECT</SectionLabel>
                       <div>
                         <ProjectOptionButton
-                          active={projectId == null || projectId === ''}
+                          active={
+                            parsed.projectId == null || parsed.projectId === ''
+                          }
                           onClick={() => {
                             onProjectIdChange('')
                           }}
@@ -299,7 +336,7 @@ export function TaskFilterChipRow({
                         {projects.map((project) => (
                           <ProjectOptionButton
                             key={project.id}
-                            active={projectId === project.id}
+                            active={parsed.projectId === project.id}
                             onClick={() => {
                               onProjectIdChange(project.id)
                             }}

@@ -18,6 +18,7 @@ type TaskContext = 'work' | 'personal'
 export type TaskSortBy = 'created' | 'updated'
 
 export interface TaskListFilter {
+  q?: string
   status?: TaskStatus | TaskStatus[]
   context?: TaskContext
   parentId?: string

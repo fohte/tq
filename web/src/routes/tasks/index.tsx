@@ -11,6 +11,7 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
+import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
 import { useCallback, useMemo, useState } from 'react'
 
 import {
@@ -39,12 +40,7 @@ import {
   getDescendantIds,
   resolveDropParentId,
 } from '#lib/task-tree'
-import {
-  buildTasksQuery,
-  defaultTasksFilterState,
-  parseTasksQuery,
-  sortOptionValues,
-} from '#lib/tasks-query'
+import { sortOptionValues } from '#lib/tasks-query'
 
 interface TreeRowDragData extends Record<string, unknown> {
   node: TreeNode
@@ -94,7 +90,11 @@ class TreeRowTouchSensor extends TouchSensor {
 }
 
 const tasksSearchDefaults = {
-  q: buildTasksQuery(defaultTasksFilterState),
+  q: buildSearchQuery({
+    freeText: '',
+    status: ['todo', 'in_progress'],
+    sortBy: 'updated',
+  }),
 }
 
 interface TasksSearch {
@@ -119,7 +119,15 @@ function validateSearch(search: Record<string, unknown>): TasksSearch {
     const projectId =
       typeof search['projectId'] === 'string' ? search['projectId'] : undefined
     const tag = typeof search['tag'] === 'string' ? search['tag'] : undefined
-    return { q: buildTasksQuery({ sortBy, showCompleted, projectId, tag }) }
+    return {
+      q: buildSearchQuery({
+        freeText: '',
+        ...(showCompleted ? {} : { status: ['todo', 'in_progress'] }),
+        sortBy,
+        ...(projectId != null ? { projectId } : {}),
+        ...(tag != null ? { label: tag } : {}),
+      }),
+    }
   }
 
   return { q: tasksSearchDefaults.q }
@@ -135,7 +143,7 @@ export const Route = createFileRoute('/tasks/')({
 
 export function TaskList() {
   const { q = tasksSearchDefaults.q } = Route.useSearch()
-  const { sortBy, showCompleted, projectId, tag, extra } = parseTasksQuery(q)
+  const parsed = parseSearchQuery(q)
   const navigate = Route.useNavigate()
   const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -151,74 +159,38 @@ export function TaskList() {
     void navigate({
       search: (prev) => ({
         ...prev,
-        q: buildTasksQuery({
-          sortBy: sort,
-          showCompleted,
-          projectId,
-          tag,
-          extra,
-        }),
+        q: buildSearchQuery({ ...parsed, sortBy: sort }),
       }),
       replace: true,
     })
   }
   const setShowCompleted = (checked: boolean) => {
+    // exactOptionalPropertyTypes forbids `{ ...parsed, status: undefined }`
+    // (status's type is an array, not `Array<...> | undefined`) — delete is
+    // the sanctioned way to unset an optional property under that flag.
+    const next = { ...parsed }
+    if (checked) delete next.status
+    else next.status = ['todo', 'in_progress']
     void navigate({
-      search: (prev) => ({
-        ...prev,
-        q: buildTasksQuery({
-          sortBy,
-          showCompleted: checked,
-          projectId,
-          tag,
-          extra,
-        }),
-      }),
+      search: (prev) => ({ ...prev, q: buildSearchQuery(next) }),
       replace: true,
     })
   }
   const setProjectId = (id: string) => {
+    const next = { ...parsed }
+    if (id === '') delete next.projectId
+    else next.projectId = id
     void navigate({
-      search: (prev) => ({
-        ...prev,
-        q: buildTasksQuery({
-          sortBy,
-          showCompleted,
-          projectId: id === '' ? undefined : id,
-          tag,
-          extra,
-        }),
-      }),
+      search: (prev) => ({ ...prev, q: buildSearchQuery(next) }),
       replace: true,
     })
   }
   const setTag = (nextTag: string | undefined) => {
+    const next = { ...parsed }
+    if (nextTag == null) delete next.label
+    else next.label = nextTag
     void navigate({
-      search: (prev) => ({
-        ...prev,
-        q: buildTasksQuery({
-          sortBy,
-          showCompleted,
-          projectId,
-          tag: nextTag,
-          extra,
-        }),
-      }),
-      replace: true,
-    })
-  }
-  const setExtra = (nextExtra: string | undefined) => {
-    void navigate({
-      search: (prev) => ({
-        ...prev,
-        q: buildTasksQuery({
-          sortBy,
-          showCompleted,
-          projectId,
-          tag,
-          extra: nextExtra,
-        }),
-      }),
+      search: (prev) => ({ ...prev, q: buildSearchQuery(next) }),
       replace: true,
     })
   }
@@ -229,12 +201,7 @@ export function TaskList() {
     isLoading,
     tree: filteredTreeData,
     tasks,
-  } = useFilteredTaskTree({
-    sortBy,
-    showCompleted,
-    projectId,
-    tag,
-  })
+  } = useFilteredTaskTree({ q })
   const treeOutliner = useTreeOutliner(filteredTreeData, { enabled: true })
   const updateTaskParent = useUpdateTaskParent()
 
@@ -344,17 +311,12 @@ export function TaskList() {
       <TaskFilterChipRow
         query={q}
         onQueryChange={setQuery}
-        showCompleted={showCompleted}
+        parsed={parsed}
         onShowCompletedChange={setShowCompleted}
-        sortBy={sortBy}
         onSortByChange={setSortBy}
         projects={projects.data ?? []}
-        projectId={projectId}
         onProjectIdChange={setProjectId}
-        tag={tag}
         onTagChange={setTag}
-        extra={extra}
-        onExtraChange={setExtra}
       />
 
       {/* Inline create */}

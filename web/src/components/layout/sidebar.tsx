@@ -1,4 +1,5 @@
 import { Link, useMatchRoute, useSearch } from '@tanstack/react-router'
+import { parseSearchQuery } from 'api/search-query-parser'
 
 import { ContextFilter } from '#components/context-filter'
 import {
@@ -10,7 +11,7 @@ import { KeybindHint } from '#components/ui/keybind-hint'
 import { useProjects } from '#hooks/use-projects'
 import { useTagCounts } from '#hooks/use-tag-counts'
 import { navKeybindings, searchKeybinding } from '#lib/keybindings'
-import { parseTasksQuery, tagFilterSearch } from '#lib/tasks-query'
+import { tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
 
 interface NavItem {
@@ -121,7 +122,7 @@ function TagsSection() {
   // `q` only exists on the /tasks route's search schema, so this reads
   // undefined (no active tag) everywhere else.
   const { q } = useSearch({ strict: false })
-  const activeTag = q != null ? parseTasksQuery(q).tag : undefined
+  const activeTag = q != null ? parseSearchQuery(q).label : undefined
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
