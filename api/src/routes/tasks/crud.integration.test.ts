@@ -422,15 +422,16 @@ describe('tasks CRUD API', () => {
       const task = await createTask('tq で PR とリンクする')
       await createTask('Unrelated task')
 
+      // Query words are in the opposite order from how they appear in the
+      // title, so this exercises order-independence rather than
+      // coincidentally passing under an order-dependent match too.
       const res = await app.request(
-        '/api/tasks?q=' + encodeURIComponent('tq PR'),
+        '/api/tasks?q=' + encodeURIComponent('PR tq'),
       )
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body).toHaveLength(1)
-      assertDefined(body[0])
-      expect(body[0].id).toBe(task.id)
+      expect(body.map((t) => t.id)).toEqual([task.id])
     })
 
     it('matches a task when each word is found in a different field', async () => {
@@ -446,9 +447,7 @@ describe('tasks CRUD API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body).toHaveLength(1)
-      assertDefined(body[0])
-      expect(body[0].id).toBe(task.id)
+      expect(body.map((t) => t.id)).toEqual([task.id])
     })
 
     it('matches a word found only in a page instead of title/description', async () => {
@@ -462,9 +461,7 @@ describe('tasks CRUD API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body).toHaveLength(1)
-      assertDefined(body[0])
-      expect(body[0].id).toBe(task.id)
+      expect(body.map((t) => t.id)).toEqual([task.id])
     })
 
     it('does not match a task containing only one of the words', async () => {
@@ -489,9 +486,20 @@ describe('tasks CRUD API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body).toHaveLength(1)
-      assertDefined(body[0])
-      expect(body[0].id).toBe(task.id)
+      expect(body.map((t) => t.id)).toEqual([task.id])
+    })
+
+    it('ignores words in q past the per-query word cap', async () => {
+      const words = Array.from({ length: 20 }, (_, i) => `keyword${String(i)}`)
+      const task = await createTask(words.join(' '))
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent([...words, 'excess'].join(' ')),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id)).toEqual([task.id])
     })
 
     it('matches a full task number via q', async () => {
