@@ -8,7 +8,7 @@ export default config(
     // Keep web/ on design tokens (see docs/design-system.md) instead of
     // Tailwind arbitrary values.
     tailwind: {
-      files: ['web/**/*.ts', 'web/**/*.tsx'],
+      files: ['web/**/*.ts{,x}'],
       cssConfigPath: 'web/src/index.css',
     },
   },
