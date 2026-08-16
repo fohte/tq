@@ -16,7 +16,7 @@ function buildCommand(exclude: string[] = []): Command {
     new Command('test').exitOverride(),
     testSchema,
     exclude,
-  )
+  )._unsafeUnwrap()
 }
 
 function captureError(run: () => void): Error {
@@ -83,14 +83,12 @@ Options:
     )
   })
 
-  it('throws at registration time for a schema field type it does not support', () => {
+  it('returns an Err at registration time for a schema field type it does not support', () => {
     const unsupportedSchema = z.object({ flag: z.boolean().optional() })
 
-    const error = captureError(() =>
-      addSchemaOptions(new Command(), unsupportedSchema),
-    )
+    const result = addSchemaOptions(new Command(), unsupportedSchema)
 
-    expect(error.message).toBe(
+    expect(result._unsafeUnwrapErr().message).toBe(
       'addSchemaOptions: unsupported schema type for field "flag"',
     )
   })
@@ -100,7 +98,7 @@ Options:
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       uuidSchema,
-    )
+    )._unsafeUnwrap()
 
     expect(command.helpInformation()).toBe(
       `Usage: test [options]
@@ -117,7 +115,7 @@ Options:
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       uuidSchema,
-    )
+    )._unsafeUnwrap()
 
     command.parse(['--id', '123e4567-e89b-12d3-a456-426614174000'], {
       from: 'user',
@@ -130,11 +128,12 @@ Options:
 
   it('rejects a value that does not match the z.uuid() format', () => {
     const uuidSchema = z.object({ id: z.uuid().optional() })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      uuidSchema,
+    )._unsafeUnwrap()
     const error = captureError(() =>
-      addSchemaOptions(new Command('test').exitOverride(), uuidSchema).parse(
-        ['--id', 'not-a-uuid'],
-        { from: 'user' },
-      ),
+      command.parse(['--id', 'not-a-uuid'], { from: 'user' }),
     )
 
     expect(error.message).toBe(
@@ -147,7 +146,7 @@ Options:
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       nullableSchema,
-    )
+    )._unsafeUnwrap()
 
     command.parse(['--note', 'hello'], { from: 'user' })
 
@@ -163,25 +162,23 @@ describe('pickSchemaFields', () => {
       ['note'],
     )
 
-    expect(result).toEqual({ status: 'open' })
+    expect(result._unsafeUnwrap()).toEqual({ status: 'open' })
   })
 
   it('returns an empty object when nothing is set', () => {
-    expect(pickSchemaFields(testSchema, {})).toEqual({})
+    expect(pickSchemaFields(testSchema, {})._unsafeUnwrap()).toEqual({})
   })
 
   it('includes required schema fields too when present in options', () => {
     const result = pickSchemaFields(testSchema, { name: 'value' })
 
-    expect(result).toEqual({ name: 'value' })
+    expect(result._unsafeUnwrap()).toEqual({ name: 'value' })
   })
 
-  it('validates values even when called directly, bypassing addSchemaOptions', () => {
-    const error = captureError(() =>
-      pickSchemaFields(testSchema, { priority: 'not-a-number' }),
-    )
+  it('returns an Err when called directly with an invalid value, bypassing addSchemaOptions', () => {
+    const result = pickSchemaFields(testSchema, { priority: 'not-a-number' })
 
-    expect(error.message).toBe(
+    expect(result._unsafeUnwrapErr().message).toBe(
       'Invalid input: expected number, received string',
     )
   })
@@ -196,7 +193,7 @@ describe('a nullable optional field (z.string().nullable().optional())', () => {
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       nullableSchema,
-    )
+    )._unsafeUnwrap()
 
     expect(command.helpInformation()).toBe(
       `Usage: test [options]
@@ -213,6 +210,6 @@ Options:
       description: 'hello',
     })
 
-    expect(result).toEqual({ description: 'hello' })
+    expect(result._unsafeUnwrap()).toEqual({ description: 'hello' })
   })
 })

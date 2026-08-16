@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { expect, fn, within } from 'storybook/test'
 
 import { CreateTaskModal } from '#components/task/create-task-modal'
+import { atIndex } from '#lib/test-utils'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -62,8 +63,7 @@ export const Default: Story = {
     // Enables create button after entering a title
     const titleInputs =
       body.getAllByPlaceholderText(/task title|タスクのタイトル/i)
-    const titleInput = titleInputs[0]
-    if (titleInput == null) throw new Error('Title input not found')
+    const titleInput = atIndex(titleInputs, 0)
     await userEvent.type(titleInput, 'Test task')
 
     const enabledButton = body
@@ -80,13 +80,11 @@ export const AddsTag: Story = {
     const addTagButtons = await body.findAllByRole('button', {
       name: '+ add tag',
     })
-    const addTagButton = addTagButtons[0]
-    if (addTagButton == null) throw new Error('Add tag button not found')
+    const addTagButton = atIndex(addTagButtons, 0)
     await userEvent.click(addTagButton)
 
     const tagInputs = body.getAllByPlaceholderText('tag name')
-    const tagInput = tagInputs[0]
-    if (tagInput == null) throw new Error('Tag name input not found')
+    const tagInput = atIndex(tagInputs, 0)
     await userEvent.type(tagInput, 'urgent')
     await userEvent.keyboard('{Enter}')
 
@@ -101,13 +99,11 @@ export const EscapeInTagInputDoesNotCloseModal: Story = {
     const addTagButtons = await body.findAllByRole('button', {
       name: '+ add tag',
     })
-    const addTagButton = addTagButtons[0]
-    if (addTagButton == null) throw new Error('Add tag button not found')
+    const addTagButton = atIndex(addTagButtons, 0)
     await userEvent.click(addTagButton)
 
     const tagInputs = body.getAllByPlaceholderText('tag name')
-    const tagInput = tagInputs[0]
-    if (tagInput == null) throw new Error('Tag name input not found')
+    const tagInput = atIndex(tagInputs, 0)
     await userEvent.type(tagInput, 'urgent')
     await userEvent.keyboard('{Escape}')
 

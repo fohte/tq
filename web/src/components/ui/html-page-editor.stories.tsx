@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn } from 'storybook/test'
 
 import { HtmlPageEditor } from '#components/ui/html-page-editor'
+import { assertDefined } from '#lib/test-utils'
 
 const SAMPLE_HTML =
   '<!doctype html><html><body style="font-family: sans-serif; margin: 0; padding: 16px;"><h1>Hello from HTML page</h1><p>This is rendered inside a sandboxed iframe.</p></body></html>'
@@ -35,8 +36,10 @@ export const Empty: Story = {
   // size, with the SegmentedControl row absorbed inside it — not stacked on
   // top, which would push the total past 400px.
   play: async ({ canvasElement }) => {
-    const root = canvasElement.querySelector('[data-slot="html-page-editor"]')
-    if (root == null) throw new Error('HtmlPageEditor always renders its root')
+    const root = assertDefined(
+      canvasElement.querySelector('[data-slot="html-page-editor"]'),
+      'HtmlPageEditor always renders its root',
+    )
 
     await expect(root.getBoundingClientRect().height).toBe(400)
   },
@@ -77,9 +80,10 @@ export const Fill: Story = {
     ),
   ],
   play: async ({ canvasElement }) => {
-    const iframe = canvasElement.querySelector('iframe')
-    if (iframe == null)
-      throw new Error('HtmlPageEditor always renders the preview iframe')
+    const iframe = assertDefined(
+      canvasElement.querySelector('iframe'),
+      'HtmlPageEditor always renders the preview iframe',
+    )
 
     const height = iframe.getBoundingClientRect().height
     await expect(height).toBeGreaterThan(200)

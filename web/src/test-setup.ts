@@ -102,5 +102,7 @@ process.on('unhandledRejection', (reason) => {
     return
   }
 
+  // Re-throwing here is what surfaces a genuine unhandled rejection as a
+  // failed test run.
   throw reason
 })

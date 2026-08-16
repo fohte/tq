@@ -5,6 +5,7 @@ import type { Client } from '#client'
 import { toApiError } from '#client'
 import { buildClient } from '#command-context'
 import { printJson } from '#output'
+import { unwrap } from '#result'
 
 type ResolveJson = InferRequestType<
   Client['api']['slack']['resolve']['$post']
@@ -20,7 +21,7 @@ export function registerSlackCommands(
     .command('resolve <url>')
     .description('Resolve a Slack permalink URL to a message preview')
     .action(async (url: string, _options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl)
+      const client = unwrap(buildClient(command, fetchImpl))
       const json: ResolveJson = { url }
       const res = await client.api.slack.resolve.$post({ json })
       if (!res.ok) throw await toApiError(res)

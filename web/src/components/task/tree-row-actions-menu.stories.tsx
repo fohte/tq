@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
 
 import { TreeRowActionsMenu } from '#components/task/tree-row-actions-menu'
+import { assertDefined } from '#lib/test-utils'
 
 const meta = {
   title: 'Task/TreeRowActionsMenu',
@@ -40,10 +41,12 @@ export const Default: Story = {
 // `data-slot` rather than an ambiguous accessible-name query.
 export const DesktopMenuOpen: Story = {
   play: async ({ canvasElement, userEvent }) => {
-    const trigger = canvasElement.querySelector<HTMLElement>(
-      '[data-slot="dropdown-menu-trigger"]',
+    const trigger = assertDefined(
+      canvasElement.querySelector<HTMLElement>(
+        '[data-slot="dropdown-menu-trigger"]',
+      ),
+      'desktop trigger not found',
     )
-    if (trigger == null) throw new Error('desktop trigger not found')
     await userEvent.click(trigger)
 
     const body = within(canvasElement.ownerDocument.body)
@@ -56,10 +59,12 @@ export const DesktopMenuOpen: Story = {
 
 export const MobileActionSheetOpen: Story = {
   play: async ({ canvasElement, userEvent }) => {
-    const trigger = canvasElement.querySelector<HTMLElement>(
-      '[data-slot="action-sheet-trigger"]',
+    const trigger = assertDefined(
+      canvasElement.querySelector<HTMLElement>(
+        '[data-slot="action-sheet-trigger"]',
+      ),
+      'mobile trigger not found',
     )
-    if (trigger == null) throw new Error('mobile trigger not found')
     await userEvent.click(trigger)
 
     const body = within(canvasElement.ownerDocument.body)
