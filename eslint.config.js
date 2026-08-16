@@ -19,15 +19,19 @@ export default config(
     ignores: ['**/routeTree.gen.ts'],
   },
   ...storybook.configs['flat/recommended'],
-  // errorHandling now bans throw/try-catch across all of api/, including
-  // api's own config files (drizzle.config.ts, tsup.config.ts,
-  // vitest.config.ts) — not just api/src. The rest of the repo (web/,
-  // config files at the root) keeps using throw/try-catch.
+  // errorHandling bans throw/try-catch and requires every returned Result
+  // to be consumed (neverthrow/must-use-result). Both rules are enforced
+  // across all of api/, including api's own config files (drizzle.config.ts,
+  // tsup.config.ts, vitest.config.ts) — not just api/src. The rest of the
+  // repo (cli/, web/, config files at the root) is still migrating to
+  // Result-based error handling and keeps both rules off until its
+  // migration is complete; turn a rule on for a directory only then.
   {
     files: ['**/*.ts', '**/*.tsx'],
     ignores: ['api/**/*.ts', 'api/**/*.tsx'],
     rules: {
       'no-restricted-syntax': 'off',
+      'neverthrow/must-use-result': 'off',
     },
   },
   // vite.config.ts/vitest.config.ts are loaded through Vite's own
