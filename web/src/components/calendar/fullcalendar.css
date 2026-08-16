@@ -61,9 +61,10 @@
   left: 0;
 }
 
-/* Week view — targets both the desktop 7-day view and the narrow-viewport
-   3-day view (`timeGridThreeDay` in calendar-header.tsx), which FullCalendar
-   renders under a separate `.fc-timeGridThreeDay-view` root class. */
+/* Hide now indicator arrow — line only, no marker overlapping time labels.
+   Targets both the desktop 7-day view and the narrow-viewport 3-day view
+   (`timeGridThreeDay` in calendar-header.tsx), which FullCalendar renders
+   under a separate `.fc-timeGridThreeDay-view` root class. */
 .tq-calendar
   :is(.fc-timeGridWeek-view, .fc-timeGridThreeDay-view)
   .fc-timegrid-now-indicator-arrow {
