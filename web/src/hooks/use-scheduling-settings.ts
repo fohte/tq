@@ -22,8 +22,9 @@ export function useSchedulingSettings() {
     queryKey: schedulingSettingsKeys.detail,
     queryFn: async () => {
       const res = await api.api['scheduling-settings'].$get()
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
   })
 }
@@ -34,8 +35,9 @@ export function useUpdateSchedulingSettings() {
   return useMutation({
     mutationFn: async (input: UpdateSchedulingSettingsInput) => {
       const res = await api.api['scheduling-settings'].$patch({ json: input })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({

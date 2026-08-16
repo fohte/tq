@@ -47,8 +47,9 @@ export function useProjects(
       const res = await api.api.projects.$get({
         query: filter ?? {},
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     enabled: options?.enabled ?? true,
   })
@@ -72,8 +73,9 @@ export function useProjectTasks(id: string) {
     queryKey: projectKeys.tasks(id),
     queryFn: async () => {
       const res = await api.api.tasks.$get({ query: { projectId: id } })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
   })
 }

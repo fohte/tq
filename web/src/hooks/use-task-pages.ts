@@ -22,8 +22,9 @@ export function useTaskPages(taskId: string) {
       const res = await api.api.tasks[':taskId'].pages.$get({
         param: { taskId },
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
   })
 }
@@ -50,8 +51,9 @@ export function useCreateTaskPage(taskId: string) {
         param: { taskId },
         json: input,
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({

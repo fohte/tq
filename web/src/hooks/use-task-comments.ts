@@ -22,8 +22,9 @@ export function useTaskComments(taskId: string) {
       const res = await api.api.tasks[':taskId'].comments.$get({
         param: { taskId },
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
   })
 }
@@ -37,8 +38,9 @@ export function useCreateComment(taskId: string) {
         param: { taskId },
         json: { content },
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     onMutate: async (content) => {
       await queryClient.cancelQueries({

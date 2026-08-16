@@ -25,8 +25,9 @@ export function useTimeBlocks(date: string) {
           tzOffset: String(new Date().getTimezoneOffset()),
         },
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
   })
 }

@@ -55,8 +55,20 @@ function CrepeEditor({
       ...(placeholder != null ? { placeholder } : {}),
       featureConfigs: {
         [Crepe.Feature.ImageBlock]: {
-          onUpload: uploadImageFile,
-          proxyDomURL: resolveImageSrc,
+          onUpload: (file) =>
+            uploadImageFile(file).match(
+              (src) => src,
+              (error) => {
+                throw error
+              },
+            ),
+          proxyDomURL: (src) =>
+            resolveImageSrc(src).match(
+              (resolvedSrc) => resolvedSrc,
+              (error) => {
+                throw error
+              },
+            ),
           onImageLoadError: handleImageLoadError,
         },
       },

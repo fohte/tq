@@ -29,8 +29,9 @@ export function useIntegrationsList() {
     queryKey: integrationsKeys.list,
     queryFn: async () => {
       const res = await api.api.integrations.$get()
-      assertStatus(res, 200)
-      return res.json()
+      const result = assertStatus(res, 200)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     retry: false,
   })
@@ -43,8 +44,9 @@ export function useIntegrationAuthUrl(id: string, enabled: boolean) {
       const res = await api.api.integrations[':id']['auth-url'].$get({
         param: { id },
       })
-      assertStatus(res, 200)
-      return res.json()
+      const result = assertStatus(res, 200)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     enabled,
     retry: false,
@@ -59,8 +61,9 @@ export function useDisconnectIntegrationAccount(providerId: string) {
       const res = await api.api.integrations[':id'].accounts[
         ':accountId'
       ].$delete({ param: { id: providerId, accountId } })
-      assertStatus(res, 200)
-      return res.json()
+      const result = assertStatus(res, 200)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: integrationsKeys.list })

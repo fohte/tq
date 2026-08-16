@@ -20,8 +20,9 @@ export function useGcalCalendarsList(accountId: string, enabled: boolean) {
       const res = await api.api.calendar.accounts[':accountId'].calendars.$get({
         param: { accountId },
       })
-      assertStatus(res, 200)
-      return res.json()
+      const result = assertStatus(res, 200)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     enabled,
     retry: false,
@@ -45,8 +46,9 @@ export function useUpdateCalendarSubscription(accountId: string) {
         param: { accountId, calendarId },
         json: { subscribed },
       })
-      assertStatus(res, 200)
-      return res.json()
+      const result = assertStatus(res, 200)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({

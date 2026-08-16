@@ -20,8 +20,9 @@ export function useTaskActivity(taskId: string) {
       const res = await api.api.tasks[':id'].activity.$get({
         param: { id: taskId },
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
   })
 }

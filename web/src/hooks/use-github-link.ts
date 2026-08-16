@@ -94,7 +94,8 @@ export function useGithubSync() {
     queryKey: ['github-sync'],
     queryFn: async () => {
       const res = await api.api.github.sync.$post()
-      assertOk(res)
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
       await queryClient.invalidateQueries({ queryKey: taskKeys.all })
       return null
     },
@@ -117,7 +118,8 @@ export function useSyncTaskGithubLink(taskId: string, hasLink: boolean) {
       const res = await api.api.tasks[':taskId']['github-link'].sync.$post({
         param: { taskId },
       })
-      assertOk(res)
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
       await queryClient.invalidateQueries({
         queryKey: taskKeys.detail(taskId),
       })

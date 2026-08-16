@@ -170,8 +170,9 @@ export function useSearch() {
       const res = await api.api.tasks.$get({
         query: { q: debouncedQuery, limit: '20' },
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     enabled: debouncedQuery.trim() !== '',
     placeholderData: (prev) => prev,
@@ -224,8 +225,9 @@ export function useSearchTasks(query: string) {
       const res = await api.api.tasks.$get({
         query: { q: debouncedQuery, limit: '20' },
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     enabled: debouncedQuery.length > 0,
     placeholderData: (prev) => prev,
@@ -268,8 +270,9 @@ export function useSearchSuggestions(prefix: string) {
       const res = await api.api.tasks.search.suggest.$get({
         query: { prefix: debouncedPrefix },
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     enabled: debouncedPrefix.length > 0,
   })

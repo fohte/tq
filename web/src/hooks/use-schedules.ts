@@ -24,8 +24,9 @@ export function useScheduleList(date: string) {
       const res = await api.api.schedule.recurring.$get({
         query: { date },
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
   })
 }
@@ -52,8 +53,9 @@ export function useCreateSchedule() {
       const res = await api.api.schedule.recurring.$post({
         json: input,
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: scheduleKeys.all })

@@ -64,36 +64,46 @@ describe('uploadImageFile', () => {
       json: () => Promise.resolve({ id: 'new-id' }),
     })
 
-    const path = await uploadImageFile(makeFile('photo.png', 'image/png', 10))
+    const result = await uploadImageFile(makeFile('photo.png', 'image/png', 10))
 
-    expect(path).toBe('/api/images/new-id')
+    expect(result.isOk() && result.value).toBe('/api/images/new-id')
   })
 
   it('rejects unsupported file types without calling the API', async () => {
     const mocks = await getMocks()
 
-    await expect(
-      uploadImageFile(makeFile('doc.pdf', 'application/pdf', 10)),
-    ).rejects.toThrow('Unsupported image type')
+    const result = await uploadImageFile(
+      makeFile('doc.pdf', 'application/pdf', 10),
+    )
+
+    expect(result.isErr() && result.error.message).toBe(
+      'Unsupported image type. Allowed types: image/jpeg, image/png, image/gif, image/webp',
+    )
     expect(mocks['mockPost']).not.toHaveBeenCalled()
   })
 
   it('rejects files exceeding the size limit without calling the API', async () => {
     const mocks = await getMocks()
 
-    await expect(
-      uploadImageFile(makeFile('big.png', 'image/png', 10 * 1024 * 1024 + 1)),
-    ).rejects.toThrow('Image too large')
+    const result = await uploadImageFile(
+      makeFile('big.png', 'image/png', 10 * 1024 * 1024 + 1),
+    )
+
+    expect(result.isErr() && result.error.message).toBe(
+      'Image too large. Maximum size is 10485760 bytes',
+    )
     expect(mocks['mockPost']).not.toHaveBeenCalled()
   })
 
-  it('throws when the upload request fails', async () => {
+  it('fails when the upload request fails', async () => {
     const mocks = await getMocks()
     assertDefined(mocks['mockPost']).mockResolvedValue({ ok: false })
 
-    await expect(
-      uploadImageFile(makeFile('photo.png', 'image/png', 10)),
-    ).rejects.toThrow('Failed to upload image')
+    const result = await uploadImageFile(makeFile('photo.png', 'image/png', 10))
+
+    expect(result.isErr() && result.error.message).toBe(
+      'Failed to upload image',
+    )
   })
 })
 
@@ -163,7 +173,7 @@ describe('resolveImageSrc', () => {
 
     const result = await resolveImageSrc('https://example.com/foo.png')
 
-    expect(result).toBe('https://example.com/foo.png')
+    expect(result.isOk() && result.value).toBe('https://example.com/foo.png')
     expect(mocks['mockGet']).not.toHaveBeenCalled()
   })
 
@@ -177,8 +187,8 @@ describe('resolveImageSrc', () => {
     const first = await resolveImageSrc('/api/images/cache-test-1')
     const second = await resolveImageSrc('/api/images/cache-test-1')
 
-    expect(first).toBe('https://signed.example.com/a')
-    expect(second).toBe('https://signed.example.com/a')
+    expect(first.isOk() && first.value).toBe('https://signed.example.com/a')
+    expect(second.isOk() && second.value).toBe('https://signed.example.com/a')
     expect(mocks['mockGet']).toHaveBeenCalledTimes(1)
   })
 
@@ -202,19 +212,25 @@ describe('resolveImageSrc', () => {
       vi.advanceTimersByTime(56 * 60 * 1000)
       const second = await resolveImageSrc('/api/images/cache-test-2')
 
-      expect(first).toBe('https://signed.example.com/first')
-      expect(second).toBe('https://signed.example.com/second')
+      expect(first.isOk() && first.value).toBe(
+        'https://signed.example.com/first',
+      )
+      expect(second.isOk() && second.value).toBe(
+        'https://signed.example.com/second',
+      )
       expect(mocks['mockGet']).toHaveBeenCalledTimes(2)
     } finally {
       vi.useRealTimers()
     }
   })
 
-  it('throws when the signed URL request fails', async () => {
+  it('fails when the signed URL request fails', async () => {
     const mocks = await getMocks()
     assertDefined(mocks['mockGet']).mockResolvedValue({ ok: false })
 
-    await expect(resolveImageSrc('/api/images/cache-test-3')).rejects.toThrow(
+    const result = await resolveImageSrc('/api/images/cache-test-3')
+
+    expect(result.isErr() && result.error.message).toBe(
       'Failed to fetch signed image URL',
     )
   })
@@ -261,7 +277,7 @@ describe('handleImageLoadError', () => {
 
     const resolved = await resolveImageSrc('/api/images/error-test')
     const img = document.createElement('img')
-    img.src = resolved
+    img.src = resolved.isOk() ? resolved.value : ''
 
     await handleImageLoadError(makeErrorEvent(img))
 

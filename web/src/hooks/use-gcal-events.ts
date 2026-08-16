@@ -38,8 +38,9 @@ export function useGcalEvents(date: string) {
       if (res.status === 401) {
         throw new GcalAuthRequiredError()
       }
-      assertStatus(res, 200)
-      return res.json()
+      const result = assertStatus(res, 200)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     retry: false,
     refetchInterval: GCAL_POLL_INTERVAL_MS,

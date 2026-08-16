@@ -12,8 +12,9 @@ export function useLabels() {
     queryKey: labelKeys.all,
     queryFn: async () => {
       const res = await api.api.labels.$get()
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
   })
 }

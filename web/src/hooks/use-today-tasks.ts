@@ -23,8 +23,9 @@ export function useTodayTasks(date: string) {
       const res = await api.api.schedule['today-tasks'].$get({
         query: { date },
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
   })
 }
@@ -43,8 +44,9 @@ export function useSetTodayTasks() {
       const res = await api.api.schedule['today-tasks'].$put({
         json: { date, taskIds },
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     onSuccess: (data, { date }) => {
       queryClient.setQueryData(todayTaskKeys.list(date), data)
@@ -66,8 +68,9 @@ export function useAutoAssign() {
       const res = await api.api.schedule['auto-assign'].$post({
         json: { date, tzOffset },
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: timeBlockKeys.all })

@@ -18,8 +18,9 @@ export function useGithubSyncRules() {
     queryKey: githubSyncRuleKeys.list,
     queryFn: async () => {
       const res = await api.api.github['sync-rules'].$get()
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
   })
 }
@@ -38,8 +39,9 @@ export function useCreateGithubSyncRule() {
   return useMutation({
     mutationFn: async (input: CreateGithubSyncRuleInput) => {
       const res = await api.api.github['sync-rules'].$post({ json: input })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: githubSyncRuleKeys.list })
@@ -67,8 +69,9 @@ export function useUpdateGithubSyncRule() {
         param: { id },
         json: input,
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: githubSyncRuleKeys.list })
@@ -84,7 +87,8 @@ export function useDeleteGithubSyncRule() {
       const res = await api.api.github['sync-rules'][':id'].$delete({
         param: { id },
       })
-      assertOk(res)
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: githubSyncRuleKeys.list })

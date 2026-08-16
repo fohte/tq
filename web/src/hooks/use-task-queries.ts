@@ -55,8 +55,9 @@ export function useTaskList(
             filter?.includeAncestors === true ? 'true' : undefined,
         },
       })
-      assertOk(res)
-      return res.json()
+      const result = assertOk(res)
+      if (result.isErr()) throw result.error
+      return result.value.json()
     },
     enabled: options?.enabled ?? true,
   })
