@@ -15,6 +15,7 @@ import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
 import { taskMentionKeys } from '#hooks/use-task-mentions'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { queryClient } from '#lib/query-client'
+import { assertDefined } from '#lib/test-utils'
 
 const meta = {
   title: 'UI/MarkdownEditor',
@@ -59,9 +60,10 @@ export const Compact: Story = {
     size: 'compact',
   },
   play: async ({ canvasElement }) => {
-    const wrapper = canvasElement.querySelector('.milkdown-wrapper')
-    if (wrapper == null)
-      throw new Error('MarkdownEditor always renders its wrapper')
+    const wrapper = assertDefined(
+      canvasElement.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
+    )
 
     const height = wrapper.getBoundingClientRect().height
     await expect(height).toBeGreaterThanOrEqual(120)
@@ -199,8 +201,10 @@ export const ClickToEditRevealsSource: Story = {
   },
   play: async ({ canvas, canvasElement, userEvent }) => {
     await canvas.findByText(MENTION_FIXTURE_TITLE)
-    const paragraph = canvasElement.querySelector('.milkdown .ProseMirror p')
-    if (paragraph == null) throw new Error('editor always renders a paragraph')
+    const paragraph = assertDefined(
+      canvasElement.querySelector('.milkdown .ProseMirror p'),
+      'editor always renders a paragraph',
+    )
 
     await userEvent.click(paragraph)
 
@@ -238,17 +242,18 @@ export const SwitchingModeWithoutEditingDoesNotAutosave: Story = {
     viewEditToggle: {},
   },
   play: async ({ canvasElement, userEvent, args }) => {
-    const wrapper = canvasElement.querySelector('.milkdown-wrapper')
-    const proseMirrorRoot = canvasElement.querySelector(
-      '.milkdown .ProseMirror',
+    const wrapper = assertDefined(
+      canvasElement.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper and root',
     )
-    if (wrapper == null || proseMirrorRoot == null)
-      throw new Error('MarkdownEditor always renders its wrapper and root')
-    const blockquote = canvasElement.querySelector(
-      '.milkdown .ProseMirror blockquote',
+    const proseMirrorRoot = assertDefined(
+      canvasElement.querySelector('.milkdown .ProseMirror'),
+      'MarkdownEditor always renders its wrapper and root',
     )
-    if (blockquote == null)
-      throw new Error('editor always renders the blockquote')
+    const blockquote = assertDefined(
+      canvasElement.querySelector('.milkdown .ProseMirror blockquote'),
+      'editor always renders the blockquote',
+    )
 
     const blockCountBefore = proseMirrorRoot.children.length
 
@@ -280,14 +285,14 @@ export const TypingAfterEnteringEditModeChangesDocument: Story = {
     viewEditToggle: {},
   },
   play: async ({ canvas, canvasElement, userEvent }) => {
-    const wrapper = canvasElement.querySelector('.milkdown-wrapper')
-    if (wrapper == null)
-      throw new Error('MarkdownEditor always renders its wrapper')
-    const blockquote = canvasElement.querySelector(
-      '.milkdown .ProseMirror blockquote',
+    const wrapper = assertDefined(
+      canvasElement.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
     )
-    if (blockquote == null)
-      throw new Error('editor always renders the blockquote')
+    const blockquote = assertDefined(
+      canvasElement.querySelector('.milkdown .ProseMirror blockquote'),
+      'editor always renders the blockquote',
+    )
 
     await userEvent.click(blockquote)
     await userEvent.click(blockquote)
@@ -374,9 +379,10 @@ export const ClickingCardStaysInViewMode: Story = {
     viewEditToggle: {},
   },
   play: async ({ canvas, canvasElement, userEvent }) => {
-    const wrapper = canvasElement.querySelector('.milkdown-wrapper')
-    if (wrapper == null)
-      throw new Error('MarkdownEditor always renders its wrapper')
+    const wrapper = assertDefined(
+      canvasElement.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
+    )
 
     await canvas.findByText(MENTION_FIXTURE_TITLE)
     await canvas.findByText(LINKED_TASK_LINK_TEXT)

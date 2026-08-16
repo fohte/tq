@@ -16,7 +16,7 @@ import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import type { TreeNode } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { emptyLabelsHandler, emptyTasksHandler } from '#lib/msw-test-handlers'
-import { atIndex } from '#lib/test-utils'
+import { assertDefined, atIndex } from '#lib/test-utils'
 
 const baseTreeNode: TreeNode = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -495,15 +495,18 @@ export const Hovered: Story = {
     // `[data-slot="dropdown-menu-trigger"]` alone also matches the row's
     // status picker, which sits earlier in the DOM — scope to the
     // row-actions menu by its accessible name.
-    const desktopTrigger = canvasElement.querySelector<HTMLElement>(
-      '[data-slot="dropdown-menu-trigger"][aria-label="Task actions"]',
+    const desktopTrigger = assertDefined(
+      canvasElement.querySelector<HTMLElement>(
+        '[data-slot="dropdown-menu-trigger"][aria-label="Task actions"]',
+      ),
+      'row-actions triggers not found',
     )
-    const mobileTrigger = canvasElement.querySelector<HTMLElement>(
-      '[data-slot="action-sheet-trigger"]',
+    const mobileTrigger = assertDefined(
+      canvasElement.querySelector<HTMLElement>(
+        '[data-slot="action-sheet-trigger"]',
+      ),
+      'row-actions triggers not found',
     )
-    if (desktopTrigger == null || mobileTrigger == null) {
-      throw new Error('row-actions triggers not found')
-    }
 
     // The mobile ⋯ is always visible; the desktop one only reveals on
     // hover/focus, so the reveal-on-hover behavior only applies there.

@@ -10,6 +10,7 @@ import {
 import { expect, fn, within } from 'storybook/test'
 
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
+import { atIndex } from '#lib/test-utils'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -87,8 +88,7 @@ export const CreateTask: Story = {
     const inputs = body.getAllByPlaceholderText(
       'https://github.com/owner/repo/issues/123',
     )
-    const input = inputs[0]
-    if (input == null) throw new Error('URL input not found')
+    const input = atIndex(inputs, 0)
     await userEvent.type(input, 'https://github.com/fohte/tq/issues/1')
 
     const stillDisabled = body

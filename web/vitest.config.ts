@@ -80,6 +80,8 @@ const storycapNetworkIdle = {
       match.replace('500', String(NETWORK_IDLE_MS)),
     )
     if (patched === code) {
+      // This throw fails config loading itself, before any test runs, so
+      // there is no test-scoped assertion to delegate to.
       throw new Error(
         `storycap-network-idle: no 500ms network-idle default found in ${id}. Drop this plugin if @storycap-testrun made the wait configurable, otherwise re-derive the pattern.`,
       )

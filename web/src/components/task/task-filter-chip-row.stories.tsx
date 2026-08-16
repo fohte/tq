@@ -5,6 +5,7 @@ import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import type { Project } from '#hooks/use-projects'
+import { assertDefined } from '#lib/test-utils'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -166,10 +167,12 @@ export const DesktopFilterMenuOpen: Story = {
     // Menu renders via portal, so query the entire document body
     const body = within(canvasElement.ownerDocument.body)
 
-    const trigger = canvasElement.querySelector<HTMLElement>(
-      '[data-slot="dropdown-menu-trigger"]',
+    const trigger = assertDefined(
+      canvasElement.querySelector<HTMLElement>(
+        '[data-slot="dropdown-menu-trigger"]',
+      ),
+      'desktop trigger not found',
     )
-    if (trigger == null) throw new Error('desktop trigger not found')
     await userEvent.click(trigger)
 
     await expect(
@@ -198,10 +201,10 @@ export const MobileFilterSheetOpen: Story = {
     // Sheet renders via portal, so query the entire document body
     const body = within(canvasElement.ownerDocument.body)
 
-    const trigger = canvasElement.querySelector<HTMLElement>(
-      '[data-slot="dialog-trigger"]',
+    const trigger = assertDefined(
+      canvasElement.querySelector<HTMLElement>('[data-slot="dialog-trigger"]'),
+      'mobile trigger not found',
     )
-    if (trigger == null) throw new Error('mobile trigger not found')
     await userEvent.click(trigger)
 
     await expect(
@@ -222,10 +225,10 @@ export const SelectProjectInMobileFilterSheet: Story = {
     // Sheet renders via portal, so query the entire document body
     const body = within(canvasElement.ownerDocument.body)
 
-    const trigger = canvasElement.querySelector<HTMLElement>(
-      '[data-slot="dialog-trigger"]',
+    const trigger = assertDefined(
+      canvasElement.querySelector<HTMLElement>('[data-slot="dialog-trigger"]'),
+      'mobile trigger not found',
     )
-    if (trigger == null) throw new Error('mobile trigger not found')
     await userEvent.click(trigger)
 
     // Base UI moves focus to the dialog's first tabbable element (the close
