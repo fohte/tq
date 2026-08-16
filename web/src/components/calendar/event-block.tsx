@@ -47,7 +47,7 @@ export function EventBlock(arg: EventContentArg) {
         isShort={isShort}
         className="border-dashed border-l-muted-foreground-faint bg-transparent"
         title={
-          <span className="truncate font-mono text-2xs text-muted-foreground">
+          <span className="min-w-0 truncate font-mono text-2xs text-muted-foreground">
             予定あり
           </span>
         }
@@ -86,7 +86,7 @@ export function EventBlock(arg: EventContentArg) {
       title={
         <span
           className={cn(
-            'truncate text-2xs',
+            'min-w-0 truncate text-2xs',
             type === 'gcal'
               ? 'text-muted-foreground-strong'
               : 'font-mono text-foreground',
@@ -121,7 +121,7 @@ function EventBlockShell({
   return (
     <div
       className={cn(
-        'flex h-full min-w-0 gap-1.5 overflow-hidden border border-l-2 px-2',
+        '@container/chip flex h-full min-w-0 gap-1.5 overflow-hidden border border-l-2 px-2',
         isShort ? 'flex-row items-center py-px' : 'flex-col py-1',
         className,
       )}
@@ -130,7 +130,7 @@ function EventBlockShell({
       <div className="flex min-w-0 items-center gap-1.5">
         {title}
         {badge != null && (
-          <span className="shrink-0 border border-border px-1 font-mono text-2xs text-muted-foreground">
+          <span className="hidden shrink-0 border border-border px-1 font-mono text-2xs text-muted-foreground @min-[100px]/chip:inline">
             {badge}
           </span>
         )}
@@ -138,7 +138,7 @@ function EventBlockShell({
       <span
         className={cn(
           'shrink-0 truncate font-mono text-2xs whitespace-nowrap text-muted-foreground-faint',
-          isShort && 'ml-auto',
+          isShort && 'ml-auto hidden @min-[100px]/chip:inline',
         )}
       >
         {meta}

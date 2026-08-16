@@ -8,8 +8,9 @@ import {
 import {
   CalendarHeader,
   type CalendarViewType,
-  FULLCALENDAR_VIEW_MAP,
+  resolveFullCalendarView,
 } from '#components/calendar/calendar-header'
+import { useIsDesktop } from '#hooks/use-is-desktop'
 import { formatLocalDate } from '#lib/date-range'
 
 export interface TimeBlockEvent {
@@ -54,6 +55,7 @@ export function CalendarView({
   onScheduleClick,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendarType>(null)
+  const isDesktop = useIsDesktop()
   const [activeView, setActiveView] = useState<CalendarViewType>(initialView)
   // Set while the sync effect below drives FullCalendar via gotoDate, so
   // handleDatesSet can ignore the datesSet it synchronously triggers.
@@ -87,12 +89,12 @@ export function CalendarView({
     (view: CalendarViewType) => {
       const api = calendarRef.current?.getApi()
       if (api) {
-        api.changeView(FULLCALENDAR_VIEW_MAP[view])
+        api.changeView(resolveFullCalendarView(view, isDesktop))
         setActiveView(view)
         onDateChange(api.getDate())
       }
     },
-    [onDateChange],
+    [isDesktop, onDateChange],
   )
 
   const handleDateClick = useCallback(
@@ -110,18 +112,6 @@ export function CalendarView({
     },
     [activeView, onDateChange],
   )
-
-  // Sync FullCalendar view when activeView changes from external source (e.g. initialView)
-  useEffect(() => {
-    const api = calendarRef.current?.getApi()
-    if (api) {
-      const currentFcView = api.view.type
-      const expectedFcView = FULLCALENDAR_VIEW_MAP[activeView]
-      if (currentFcView !== expectedFcView) {
-        api.changeView(expectedFcView)
-      }
-    }
-  }, [activeView])
 
   const handleDatesSet = useCallback(
     (info: { start: Date; end: Date; view: { currentStart: Date } }) => {

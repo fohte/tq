@@ -7,14 +7,16 @@ import type {
 import interactionPlugin, { Draggable } from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
-import { forwardRef, useEffect } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 
 import {
   type CalendarViewType,
-  FULLCALENDAR_VIEW_MAP,
+  FULLCALENDAR_THREE_DAY_VIEW,
+  resolveFullCalendarView,
 } from '#components/calendar/calendar-header'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { EventBlock } from '#components/calendar/event-block'
+import { useIsDesktop } from '#hooks/use-is-desktop'
 import { getEventProps } from '#lib/calendar-utils'
 
 export interface CalendarDndCallbacks {
@@ -71,6 +73,28 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     },
     ref,
   ) {
+    const isDesktop = useIsDesktop()
+    const fullCalendarRef = useRef<FullCalendar>(null)
+    useImperativeHandle<FullCalendar | null, FullCalendar | null>(
+      ref,
+      () => fullCalendarRef.current,
+      [],
+    )
+
+    // `initialView` only applies on FullCalendar's first mount, so if
+    // isDesktop's value flips afterward (e.g. the test runner resizes the
+    // viewport post-mount, or an actual viewport/orientation change) the
+    // rendered view would otherwise stay stuck on the stale one.
+    useEffect(() => {
+      const api = fullCalendarRef.current?.getApi()
+      if (api) {
+        const expectedView = resolveFullCalendarView(activeView, isDesktop)
+        if (api.view.type !== expectedView) {
+          api.changeView(expectedView)
+        }
+      }
+    }, [activeView, isDesktop])
+
     // Initialize external draggable for Today's Queue
     useEffect(() => {
       if (!externalDragContainerRef?.current) return
@@ -193,9 +217,15 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     return (
       <div className="tq-calendar h-full">
         <FullCalendar
-          ref={ref}
+          ref={fullCalendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-          initialView={FULLCALENDAR_VIEW_MAP[activeView]}
+          initialView={resolveFullCalendarView(activeView, isDesktop)}
+          views={{
+            [FULLCALENDAR_THREE_DAY_VIEW]: {
+              type: 'timeGrid',
+              duration: { days: 3 },
+            },
+          }}
           {...(initialDate ? { initialDate } : {})}
           headerToolbar={false}
           events={calendarEvents}

@@ -413,9 +413,14 @@ export const AllVariants: Story = {
     // (see the play function verifying the title never collapses), not a
     // bug to fix. Scoped to `narrow-row-container` below rather than
     // disabling the whole story, so overflow added elsewhere in this story
-    // would still be caught.
+    // would still be caught. `* below the container is needed alongside
+    // the container itself because ignoreSelectors only exempts the
+    // elements it matches, not their descendants.
     overflowCheck: {
-      ignoreSelectors: ['[data-testid="narrow-row-container"]'],
+      ignoreSelectors: [
+        '[data-testid="narrow-row-container"]',
+        '[data-testid="narrow-row-container"] *',
+      ],
     },
   },
   render: () => {

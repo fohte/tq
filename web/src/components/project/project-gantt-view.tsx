@@ -1,10 +1,11 @@
 import type { IApi } from '@svar-ui/react-gantt'
 import { Gantt } from '@svar-ui/react-gantt'
 import { useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { Button } from '#components/ui/button'
 import { TabStrip } from '#components/ui/tab-strip'
+import { useIsDesktop } from '#hooks/use-is-desktop'
 import type { ProjectTask } from '#hooks/use-projects'
 import { useUpdateTask } from '#hooks/use-tasks'
 import {
@@ -16,32 +17,11 @@ import {
   toDateOnlyString,
 } from '#lib/gantt-utils'
 
-const DESKTOP_QUERY = '(min-width: 768px)'
-
 const SCALE_OPTIONS: Array<{ value: GanttScale; label: string }> = [
   { value: 'day', label: 'Day' },
   { value: 'week', label: 'Week' },
   { value: 'month', label: 'Month' },
 ]
-
-function useIsDesktop(): boolean {
-  const [isDesktop, setIsDesktop] = useState(
-    () => window.matchMedia(DESKTOP_QUERY).matches,
-  )
-
-  useEffect(() => {
-    const mql = window.matchMedia(DESKTOP_QUERY)
-    const handler = (e: MediaQueryListEvent) => {
-      setIsDesktop(e.matches)
-    }
-    mql.addEventListener('change', handler)
-    return () => {
-      mql.removeEventListener('change', handler)
-    }
-  }, [])
-
-  return isDesktop
-}
 
 const GANTT_COLUMNS = [{ id: 'text', header: 'Task', flexgrow: 1 }]
 

@@ -165,7 +165,10 @@ const meta = {
     // own horizontal scroll viewport, is inside `.wx-gantt` and covered
     // by the same exclusion). ProjectGanttView's own toolbar (the Today
     // button, the TabStrip) sits outside `.wx-gantt` and stays checked.
-    overflowCheck: { ignoreSelectors: ['.wx-gantt'] },
+    // `.wx-gantt *` is needed alongside `.wx-gantt` itself because
+    // ignoreSelectors only exempts the elements it matches, not their
+    // descendants.
+    overflowCheck: { ignoreSelectors: ['.wx-gantt', '.wx-gantt *'] },
   },
 } satisfies Meta<typeof ProjectGanttViewWithProviders>
 

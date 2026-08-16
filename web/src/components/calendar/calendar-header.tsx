@@ -7,10 +7,26 @@ import { formatLocalDate } from '#lib/date-range'
 
 export type CalendarViewType = 'day' | 'week' | 'month'
 
-export const FULLCALENDAR_VIEW_MAP: Record<CalendarViewType, string> = {
+const FULLCALENDAR_VIEW_MAP: Record<CalendarViewType, string> = {
   day: 'timeGridDay',
   week: 'timeGridWeek',
   month: 'dayGridMonth',
+}
+
+/** Custom FullCalendar view name for the narrow-viewport week view (see resolveFullCalendarView). */
+export const FULLCALENDAR_THREE_DAY_VIEW = 'timeGridThreeDay'
+
+/**
+ * On narrow viewports, 7 day columns leave chips too narrow to read even
+ * with the badge/time hidden (see EventBlockShell's container query), so
+ * week view substitutes a 3-day view instead.
+ */
+export function resolveFullCalendarView(
+  view: CalendarViewType,
+  isDesktop: boolean,
+): string {
+  if (view === 'week' && !isDesktop) return FULLCALENDAR_THREE_DAY_VIEW
+  return FULLCALENDAR_VIEW_MAP[view]
 }
 
 const VIEW_OPTIONS: { value: CalendarViewType; label: string }[] = [

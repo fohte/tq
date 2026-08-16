@@ -7,7 +7,10 @@ import { CalendarView } from '#components/calendar/calendar-view'
 import { atIndex } from '#lib/test-utils'
 
 // Mock FullCalendar to avoid complex DOM rendering
-const mockChangeView = vi.fn()
+let mockViewType = 'timeGridDay'
+const mockChangeView = vi.fn((viewType: string) => {
+  mockViewType = viewType
+})
 const mockGotoDate = vi.fn()
 const mockPrev = vi.fn()
 const mockNext = vi.fn()
@@ -39,11 +42,22 @@ vi.mock('@fullcalendar/react', async () => {
           next: mockNext,
           today: mockToday,
           getDate: mockGetDate,
-          view: { type: 'timeGridDay' },
+          view: {
+            get type() {
+              return mockViewType
+            },
+          },
         }),
       }))
       const initialView =
         typeof props['initialView'] === 'string' ? props['initialView'] : ''
+      // Real FullCalendar's `view.type` reflects `initialView` from the
+      // first render onward; mirror that here (once, via useState's lazy
+      // initializer) so the mock doesn't itself trigger CalendarGrid's
+      // mount-time view sync effect.
+      React.useState(() => {
+        if (initialView !== '') mockViewType = initialView
+      })
       return (
         <div
           data-testid="fullcalendar"
@@ -86,6 +100,12 @@ function renderCalendarView(
 describe('CalendarView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockViewType = 'timeGridDay'
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })
   })
 
   it('renders with day view by default', () => {
@@ -112,6 +132,21 @@ describe('CalendarView', () => {
     )
   })
 
+  it('substitutes a 3-day view for week view on narrow viewports', () => {
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })
+
+    renderCalendarView({ initialView: 'week' })
+
+    expect(screen.getByTestId('fullcalendar')).toHaveAttribute(
+      'data-view',
+      'timeGridThreeDay',
+    )
+  })
+
   it('switches to week view when week button is clicked', async () => {
     const user = userEvent.setup()
     renderCalendarView()
@@ -119,7 +154,7 @@ describe('CalendarView', () => {
     const weekButtons = screen.getAllByText('week')
     await user.click(atIndex(weekButtons, weekButtons.length - 1))
 
-    expect(mockChangeView).toHaveBeenCalledWith('timeGridWeek')
+    expect(mockChangeView).toHaveBeenCalledExactlyOnceWith('timeGridWeek')
   })
 
   it('switches to month view when month button is clicked', async () => {
@@ -129,7 +164,7 @@ describe('CalendarView', () => {
     const monthButtons = screen.getAllByText('month')
     await user.click(atIndex(monthButtons, monthButtons.length - 1))
 
-    expect(mockChangeView).toHaveBeenCalledWith('dayGridMonth')
+    expect(mockChangeView).toHaveBeenCalledExactlyOnceWith('dayGridMonth')
   })
 
   it('switches back to day view when day button is clicked from week view', async () => {
@@ -139,7 +174,7 @@ describe('CalendarView', () => {
     const dayButtons = screen.getAllByText('day')
     await user.click(atIndex(dayButtons, dayButtons.length - 1))
 
-    expect(mockChangeView).toHaveBeenCalledWith('timeGridDay')
+    expect(mockChangeView).toHaveBeenCalledExactlyOnceWith('timeGridDay')
   })
 
   it('navigates to day view on date click in month view', async () => {
@@ -150,7 +185,7 @@ describe('CalendarView', () => {
     await user.click(screen.getByTestId('fullcalendar'))
 
     expect(mockGotoDate).toHaveBeenCalledWith(new Date(2025, 2, 15))
-    expect(mockChangeView).toHaveBeenCalledWith('timeGridDay')
+    expect(mockChangeView).toHaveBeenCalledExactlyOnceWith('timeGridDay')
   })
 
   it('highlights active view button', () => {
