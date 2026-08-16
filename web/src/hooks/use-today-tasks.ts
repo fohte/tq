@@ -3,7 +3,7 @@ import type { InferResponseType } from 'hono/client'
 
 import { timeBlockKeys } from '#hooks/use-time-blocks'
 import { api } from '#lib/api'
-import { assertOk } from '#lib/assert-response'
+import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 type TodayTask = InferResponseType<
   (typeof api.api.schedule)['today-tasks']['$get']
@@ -23,8 +23,7 @@ export function useTodayTasks(date: string) {
       const res = await api.api.schedule['today-tasks'].$get({
         query: { date },
       })
-      assertOk(res)
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
   })
 }
@@ -43,8 +42,7 @@ export function useSetTodayTasks() {
       const res = await api.api.schedule['today-tasks'].$put({
         json: { date, taskIds },
       })
-      assertOk(res)
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onSuccess: (data, { date }) => {
       queryClient.setQueryData(todayTaskKeys.list(date), data)
@@ -66,8 +64,7 @@ export function useAutoAssign() {
       const res = await api.api.schedule['auto-assign'].$post({
         json: { date, tzOffset },
       })
-      assertOk(res)
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: timeBlockKeys.all })

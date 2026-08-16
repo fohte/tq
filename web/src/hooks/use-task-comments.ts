@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
-import { assertOk } from '#lib/assert-response'
+import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 type Comment = InferResponseType<
   (typeof api.api.tasks)[':taskId']['comments']['$get'],
@@ -22,8 +22,7 @@ export function useTaskComments(taskId: string) {
       const res = await api.api.tasks[':taskId'].comments.$get({
         param: { taskId },
       })
-      assertOk(res)
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
   })
 }
@@ -37,8 +36,7 @@ export function useCreateComment(taskId: string) {
         param: { taskId },
         json: { content },
       })
-      assertOk(res)
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onMutate: async (content) => {
       await queryClient.cancelQueries({

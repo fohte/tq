@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
-import { assertOk } from '#lib/assert-response'
+import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 export type SyncRule = InferResponseType<
   (typeof api.api.github)['sync-rules']['$get'],
@@ -18,8 +18,7 @@ export function useGithubSyncRules() {
     queryKey: githubSyncRuleKeys.list,
     queryFn: async () => {
       const res = await api.api.github['sync-rules'].$get()
-      assertOk(res)
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
   })
 }
@@ -38,8 +37,7 @@ export function useCreateGithubSyncRule() {
   return useMutation({
     mutationFn: async (input: CreateGithubSyncRuleInput) => {
       const res = await api.api.github['sync-rules'].$post({ json: input })
-      assertOk(res)
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: githubSyncRuleKeys.list })
@@ -67,8 +65,7 @@ export function useUpdateGithubSyncRule() {
         param: { id },
         json: input,
       })
-      assertOk(res)
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: githubSyncRuleKeys.list })
@@ -84,7 +81,7 @@ export function useDeleteGithubSyncRule() {
       const res = await api.api.github['sync-rules'][':id'].$delete({
         param: { id },
       })
-      assertOk(res)
+      unwrapOrThrow(assertOk(res))
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: githubSyncRuleKeys.list })

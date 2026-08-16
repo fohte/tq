@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { api } from '#lib/api'
-import { assertOk } from '#lib/assert-response'
+import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 export const labelKeys = {
   all: ['labels'] as const,
@@ -12,8 +12,7 @@ export function useLabels() {
     queryKey: labelKeys.all,
     queryFn: async () => {
       const res = await api.api.labels.$get()
-      assertOk(res)
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
   })
 }

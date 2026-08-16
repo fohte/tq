@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
-import { assertOk } from '#lib/assert-response'
+import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 export type TaskPage = InferResponseType<
   (typeof api.api.tasks)[':taskId']['pages']['$get'],
@@ -22,8 +22,7 @@ export function useTaskPages(taskId: string) {
       const res = await api.api.tasks[':taskId'].pages.$get({
         param: { taskId },
       })
-      assertOk(res)
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
   })
 }
@@ -50,8 +49,7 @@ export function useCreateTaskPage(taskId: string) {
         param: { taskId },
         json: input,
       })
-      assertOk(res)
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({

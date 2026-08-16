@@ -1,3 +1,5 @@
+import { Result } from 'neverthrow'
+
 // Cloudflare Access redirects an expired session cross-origin to its login
 // page. Fetch follows that redirect by default, and the browser then blocks
 // it as a CORS error since the redirect target has no CORS headers. Using
@@ -41,12 +43,12 @@ export const SESSION_RELOAD_MARKER_KEY =
   'tq:session-aware-fetch:reload-attempted'
 
 function trySessionStorage<T>(op: () => T, fallback: T): T {
-  try {
-    return op()
-  } catch (error) {
-    console.error('sessionStorage access failed for the reload marker', error)
-    return fallback
-  }
+  return Result.fromThrowable(op, (error) => error)()
+    .mapErr((error) => {
+      console.error('sessionStorage access failed for the reload marker', error)
+      return error
+    })
+    .unwrapOr(fallback)
 }
 
 function readReloadMarker(): boolean {

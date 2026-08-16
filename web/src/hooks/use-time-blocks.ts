@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
-import { assertOk } from '#lib/assert-response'
+import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 type TimeBlock = InferResponseType<
   (typeof api.api.schedule)['time-blocks']['$get']
@@ -25,8 +25,7 @@ export function useTimeBlocks(date: string) {
           tzOffset: String(new Date().getTimezoneOffset()),
         },
       })
-      assertOk(res)
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
   })
 }

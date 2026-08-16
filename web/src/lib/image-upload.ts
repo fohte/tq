@@ -1,4 +1,5 @@
 import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from 'api/constants/images'
+import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 
 import { api } from '#lib/api'
 
@@ -27,18 +28,26 @@ export class ImageTooLargeError extends Error {
   }
 }
 
-export async function uploadImageFile(file: File): Promise<string> {
+export function uploadImageFile(
+  file: File,
+): ResultAsync<string, UnsupportedImageTypeError | ImageTooLargeError | Error> {
   if (!(ALLOWED_CONTENT_TYPES as readonly string[]).includes(file.type)) {
-    throw new UnsupportedImageTypeError()
+    return errAsync(new UnsupportedImageTypeError())
   }
   if (file.size > MAX_SIZE_BYTES) {
-    throw new ImageTooLargeError()
+    return errAsync(new ImageTooLargeError())
   }
 
-  const res = await api.api.images.$post({ form: { file } })
-  if (!res.ok) throw new Error('Failed to upload image')
-  const { id } = await res.json()
-  return `/api/images/${id}`
+  return ResultAsync.fromPromise(
+    api.api.images.$post({ form: { file } }),
+    (cause) => new Error('Failed to upload image', { cause }),
+  ).andThen((res) => {
+    if (!res.ok) return errAsync(new Error('Failed to upload image'))
+    return ResultAsync.fromPromise(
+      res.json(),
+      (cause) => new Error('Failed to upload image', { cause }),
+    ).map(({ id }) => `/api/images/${id}`)
+  })
 }
 
 /**
@@ -55,17 +64,22 @@ export async function uploadImageFiles<T>(
   const results = await Promise.allSettled(
     Array.from(files).map(async (file) => ({
       file,
-      src: await uploadImageFile(file),
+      result: await uploadImageFile(file),
     })),
   )
 
   const nodes: T[] = []
-  for (const result of results) {
-    if (result.status === 'rejected') {
-      console.error('Failed to upload pasted/dropped image', result.reason)
+  for (const settled of results) {
+    if (settled.status === 'rejected') {
+      console.error('Failed to upload pasted/dropped image', settled.reason)
       continue
     }
-    const node = createNode(result.value.src, result.value.file.name)
+    const { file, result } = settled.value
+    if (result.isErr()) {
+      console.error('Failed to upload pasted/dropped image', result.error)
+      continue
+    }
+    const node = createNode(result.value, file.name)
     if (node != null) nodes.push(node)
   }
   return nodes
@@ -81,22 +95,33 @@ const cacheById = new Map<string, CacheEntry>()
 // signed URL, not the original /api/images/:id path) can find its image id.
 const idBySignedUrl = new Map<string, string>()
 
-async function fetchSignedUrl(id: string): Promise<string> {
-  const res = await api.api.images[':id'].$get({ param: { id } })
-  if (!res.ok) throw new Error('Failed to fetch signed image URL')
-  const { url } = await res.json()
-  cacheById.set(id, { url, expiresAt: Date.now() + SIGNED_URL_CACHE_TTL_MS })
-  idBySignedUrl.set(url, id)
-  return url
+function fetchSignedUrl(id: string): ResultAsync<string, Error> {
+  return ResultAsync.fromPromise(
+    api.api.images[':id'].$get({ param: { id } }),
+    (cause) => new Error('Failed to fetch signed image URL', { cause }),
+  ).andThen((res) => {
+    if (!res.ok) return errAsync(new Error('Failed to fetch signed image URL'))
+    return ResultAsync.fromPromise(
+      res.json(),
+      (cause) => new Error('Failed to fetch signed image URL', { cause }),
+    ).map(({ url }) => {
+      cacheById.set(id, {
+        url,
+        expiresAt: Date.now() + SIGNED_URL_CACHE_TTL_MS,
+      })
+      idBySignedUrl.set(url, id)
+      return url
+    })
+  })
 }
 
-export async function resolveImageSrc(src: string): Promise<string> {
+export function resolveImageSrc(src: string): ResultAsync<string, Error> {
   const id = parseImageId(src)
-  if (id == null) return src
+  if (id == null) return okAsync(src)
 
   const cached = cacheById.get(id)
   if (cached && cached.expiresAt > Date.now()) {
-    return cached.url
+    return okAsync(cached.url)
   }
 
   return fetchSignedUrl(id)
@@ -110,5 +135,10 @@ export async function handleImageLoadError(event: Event): Promise<void> {
   if (id == null) return
 
   cacheById.delete(id)
-  target.src = await fetchSignedUrl(id)
+  const result = await fetchSignedUrl(id)
+  if (result.isErr()) {
+    console.error('Failed to refresh signed image URL', result.error)
+    return
+  }
+  target.src = result.value
 }
