@@ -1,6 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import type { ParsedQuery } from 'api/search-query-parser'
-import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
+import {
+  buildSearchQuery,
+  CONTEXT_VALUES,
+  isOneOf,
+  parseSearchQuery,
+  SORT_VALUES,
+  STATUS_VALUES,
+} from 'api/search-query-parser'
 import type { InferResponseType } from 'hono/client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
@@ -18,30 +25,6 @@ type Suggestion = InferResponseType<
 export type { SearchResult, Suggestion }
 
 export type SearchFilterKey = 'status' | 'context' | 'sortBy'
-
-type StatusValue = NonNullable<ParsedQuery['status']>[number]
-type ContextValue = NonNullable<ParsedQuery['context']>
-type SortByValue = NonNullable<ParsedQuery['sortBy']>
-
-const STATUS_VALUES: ReadonlySet<StatusValue> = new Set([
-  'todo',
-  'in_progress',
-  'completed',
-])
-const CONTEXT_VALUES: ReadonlySet<ContextValue> = new Set(['work', 'personal'])
-const SORT_VALUES: ReadonlySet<SortByValue> = new Set([
-  'due',
-  'created',
-  'updated',
-  'estimate',
-])
-
-function isOneOf<T extends string>(
-  value: string,
-  set: ReadonlySet<T>,
-): value is T {
-  return (set as ReadonlySet<string>).has(value)
-}
 
 /**
  * Toggle a filter value within a parsed query: `status` accumulates (a

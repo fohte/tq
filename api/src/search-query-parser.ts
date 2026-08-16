@@ -10,16 +10,17 @@ export interface ParsedQuery {
   sortBy?: 'due' | 'created' | 'updated' | 'estimate'
 }
 
-const STATUS_VALUES: ReadonlySet<'todo' | 'in_progress' | 'completed'> =
+export const STATUS_VALUES: ReadonlySet<'todo' | 'in_progress' | 'completed'> =
   new Set(['todo', 'in_progress', 'completed'])
-const CONTEXT_VALUES: ReadonlySet<'work' | 'personal'> = new Set([
+export const CONTEXT_VALUES: ReadonlySet<'work' | 'personal'> = new Set([
   'work',
   'personal',
 ])
-const SORT_VALUES: ReadonlySet<'due' | 'created' | 'updated' | 'estimate'> =
-  new Set(['due', 'created', 'updated', 'estimate'])
+export const SORT_VALUES: ReadonlySet<
+  'due' | 'created' | 'updated' | 'estimate'
+> = new Set(['due', 'created', 'updated', 'estimate'])
 
-function isOneOf<T extends string>(
+export function isOneOf<T extends string>(
   value: string,
   set: ReadonlySet<T>,
 ): value is T {
