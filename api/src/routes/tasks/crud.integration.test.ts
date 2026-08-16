@@ -419,14 +419,14 @@ describe('tasks CRUD API', () => {
     })
 
     it('matches a task whose title contains all words regardless of order', async () => {
-      const task = await createTask('tq で PR とリンクする')
+      const task = await createTask('foo と bar を統合する')
       await createTask('Unrelated task')
 
       // Query words are in the opposite order from how they appear in the
       // title, so this exercises order-independence rather than
       // coincidentally passing under an order-dependent match too.
       const res = await app.request(
-        '/api/tasks?q=' + encodeURIComponent('PR tq'),
+        '/api/tasks?q=' + encodeURIComponent('bar foo'),
       )
 
       expect(res.status).toBe(200)
