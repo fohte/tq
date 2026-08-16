@@ -5,6 +5,7 @@ import type { Client } from '#client'
 import { toApiError } from '#client'
 import { buildClient } from '#command-context'
 import { printJson } from '#output'
+import { unwrap } from '#result'
 
 type LinkJson = InferRequestType<
   Client['api']['tasks'][':taskId']['github-link']['$post']
@@ -30,7 +31,7 @@ export function registerGithubCommands(
         _options: unknown,
         command: Command,
       ) => {
-        const client = buildClient(command, fetchImpl)
+        const client = unwrap(buildClient(command, fetchImpl))
         const json: LinkJson = { url }
         const res = await client.api.tasks[':taskId']['github-link'].$post({
           param: { taskId },
@@ -45,7 +46,7 @@ export function registerGithubCommands(
     .command('unlink <taskId>')
     .description("Remove a task's GitHub link")
     .action(async (taskId: string, _options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl)
+      const client = unwrap(buildClient(command, fetchImpl))
       const res = await client.api.tasks[':taskId']['github-link'].$delete({
         param: { taskId },
       })
@@ -64,7 +65,7 @@ export function registerGithubCommands(
         _options: unknown,
         command: Command,
       ) => {
-        const client = buildClient(command, fetchImpl)
+        const client = unwrap(buildClient(command, fetchImpl))
 
         if (taskId != null) {
           const res = await client.api.tasks[':taskId'][
@@ -88,7 +89,7 @@ export function registerGithubCommands(
       'Resolve a GitHub issue/pull request URL to its linked task, or a preview if unlinked',
     )
     .action(async (url: string, _options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl)
+      const client = unwrap(buildClient(command, fetchImpl))
       const json: ResolveJson = { url }
       const res = await client.api.github.resolve.$post({ json })
       if (!res.ok) throw await toApiError(res)

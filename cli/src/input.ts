@@ -1,5 +1,7 @@
 import { readFile } from 'node:fs/promises'
 
+import { okAsync, ResultAsync } from 'neverthrow'
+
 import { FileIoError } from '#errors'
 
 export interface ReadableStdin {
@@ -7,33 +9,33 @@ export interface ReadableStdin {
   [Symbol.asyncIterator](): AsyncIterator<Buffer | string>
 }
 
-export async function readContentInput(
+export function readContentInput(
   filePath: string | undefined,
   stdin: ReadableStdin = process.stdin,
-): Promise<string | undefined> {
+): ResultAsync<string | undefined, FileIoError> {
   if (filePath != null) {
     return readFileContent(filePath)
   }
   if (stdin.isTTY === true) {
-    return undefined
+    return okAsync(undefined)
   }
-  return readStreamText(stdin)
+  return ResultAsync.fromSafePromise(readStreamText(stdin))
 }
 
-async function readFileContent(filePath: string): Promise<string> {
-  try {
-    return await readFile(filePath, 'utf8')
-  } catch (cause) {
-    throw new FileIoError(`Failed to read ${filePath}`, cause)
-  }
+function readFileContent(filePath: string): ResultAsync<string, FileIoError> {
+  return ResultAsync.fromPromise(
+    readFile(filePath, 'utf8'),
+    (cause) => new FileIoError(`Failed to read ${filePath}`, cause),
+  )
 }
 
-export async function readBinaryFile(filePath: string): Promise<Buffer> {
-  try {
-    return await readFile(filePath)
-  } catch (cause) {
-    throw new FileIoError(`Failed to read ${filePath}`, cause)
-  }
+export function readBinaryFile(
+  filePath: string,
+): ResultAsync<Buffer, FileIoError> {
+  return ResultAsync.fromPromise(
+    readFile(filePath),
+    (cause) => new FileIoError(`Failed to read ${filePath}`, cause),
+  )
 }
 
 async function readStreamText(

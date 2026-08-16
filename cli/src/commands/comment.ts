@@ -11,6 +11,7 @@ import { buildClient } from '#command-context'
 import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
 import { printJson, printJsonList } from '#output'
+import { unwrap, unwrapAsync } from '#result'
 import { addSchemaOptions } from '#schema-options'
 
 type CreateCommentJson = InferRequestType<
@@ -38,7 +39,7 @@ export function registerCommentCommands(
     .option('--full', 'Include full comment content in the output')
     .action(
       async (taskId: string, options: { full?: boolean }, command: Command) => {
-        const client = buildClient(command, fetchImpl)
+        const client = unwrap(buildClient(command, fetchImpl))
         const res = await client.api.tasks[':taskId'].comments.$get({
           param: { taskId },
         })
@@ -48,17 +49,19 @@ export function registerCommentCommands(
       },
     )
 
-  addSchemaOptions(
-    comment
-      .command('create <taskId>')
-      .description('Create a comment')
-      .option('--file <path>', 'Read content from a file instead of stdin'),
-    createCommentSchema,
-    ['content'],
+  unwrap(
+    addSchemaOptions(
+      comment
+        .command('create <taskId>')
+        .description('Create a comment')
+        .option('--file <path>', 'Read content from a file instead of stdin'),
+      createCommentSchema,
+      ['content'],
+    ),
   ).action(
     async (taskId: string, options: ContentOptions, command: Command) => {
-      const client = buildClient(command, fetchImpl)
-      const content = await readContentInput(options.file, stdin)
+      const client = unwrap(buildClient(command, fetchImpl))
+      const content = await unwrapAsync(readContentInput(options.file, stdin))
       if (content === undefined) {
         throw new Error(
           'Comment content is required. Provide --file <path> or pipe content via stdin.',
@@ -77,13 +80,15 @@ export function registerCommentCommands(
     },
   )
 
-  addSchemaOptions(
-    comment
-      .command('update <taskId> <commentId>')
-      .description('Update a comment')
-      .option('--file <path>', 'Read content from a file instead of stdin'),
-    updateCommentSchema,
-    ['content'],
+  unwrap(
+    addSchemaOptions(
+      comment
+        .command('update <taskId> <commentId>')
+        .description('Update a comment')
+        .option('--file <path>', 'Read content from a file instead of stdin'),
+      updateCommentSchema,
+      ['content'],
+    ),
   ).action(
     async (
       taskId: string,
@@ -91,8 +96,8 @@ export function registerCommentCommands(
       options: ContentOptions,
       command: Command,
     ) => {
-      const client = buildClient(command, fetchImpl)
-      const content = await readContentInput(options.file, stdin)
+      const client = unwrap(buildClient(command, fetchImpl))
+      const content = await unwrapAsync(readContentInput(options.file, stdin))
       if (content === undefined) {
         throw new Error(
           'Comment content is required. Provide --file <path> or pipe content via stdin.',
@@ -122,7 +127,7 @@ export function registerCommentCommands(
         _options: unknown,
         command: Command,
       ) => {
-        const client = buildClient(command, fetchImpl)
+        const client = unwrap(buildClient(command, fetchImpl))
         const res = await client.api.tasks[':taskId'].comments[
           ':commentId'
         ].$delete({

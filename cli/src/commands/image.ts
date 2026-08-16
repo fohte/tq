@@ -7,6 +7,7 @@ import { toApiError } from '#client'
 import { buildClient } from '#command-context'
 import { readBinaryFile } from '#input'
 import { printJson, writeBinaryFile } from '#output'
+import { unwrap, unwrapAsync } from '#result'
 
 const EXTENSION_CONTENT_TYPES: Record<string, string> = {
   '.jpg': 'image/jpeg',
@@ -36,8 +37,8 @@ export function registerImageCommands(
     .command('upload <filePath>')
     .description('Upload an image')
     .action(async (filePath: string, _options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl)
-      const data = await readBinaryFile(filePath)
+      const client = unwrap(buildClient(command, fetchImpl))
+      const data = await unwrapAsync(readBinaryFile(filePath))
       const file = new File([data], basename(filePath), {
         type: detectContentType(filePath),
       })
@@ -58,7 +59,7 @@ export function registerImageCommands(
     )
     .action(
       async (id: string, options: { output?: string }, command: Command) => {
-        const client = buildClient(command, fetchImpl)
+        const client = unwrap(buildClient(command, fetchImpl))
         const res = await client.api.images[':id'].$get({ param: { id } })
         if (!res.ok) throw await toApiError(res)
         const { url } = await res.json()
@@ -66,9 +67,11 @@ export function registerImageCommands(
         if (options.output != null) {
           const download = await fetchImpl(url)
           if (!download.ok) throw await toApiError(download)
-          await writeBinaryFile(
-            options.output,
-            new Uint8Array(await download.arrayBuffer()),
+          await unwrapAsync(
+            writeBinaryFile(
+              options.output,
+              new Uint8Array(await download.arrayBuffer()),
+            ),
           )
           printJson({ id, output: options.output })
           return
@@ -82,7 +85,7 @@ export function registerImageCommands(
     .command('delete <id>')
     .description('Delete an image')
     .action(async (id: string, _options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl)
+      const client = unwrap(buildClient(command, fetchImpl))
       const res = await client.api.images[':id'].$delete({ param: { id } })
       if (!res.ok) throw await toApiError(res)
       printJson({ deleted: true, id })

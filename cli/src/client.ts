@@ -1,5 +1,6 @@
 import type { AppType } from 'api/types'
 import { hc } from 'hono/client'
+import { Result } from 'neverthrow'
 
 import { ApiError, NetworkError } from '#errors'
 
@@ -20,6 +21,9 @@ export function createClient(
       for (const [name, value] of Object.entries(headers)) {
         merged.set(name, value)
       }
+      // hc()'s fetch option must satisfy the standard fetch contract (reject
+      // the returned promise on failure), so this boundary can't return a
+      // Result — it wraps and rethrows instead.
       try {
         return await fetchImpl(input, { ...init, headers: merged })
       } catch (cause) {
@@ -34,21 +38,20 @@ export async function toApiError(res: Response): Promise<ApiError> {
   return new ApiError(res.status, extractErrorMessage(body))
 }
 
+const tryParseJson = Result.fromThrowable((body: string): unknown =>
+  JSON.parse(body),
+)
+
 function extractErrorMessage(body: string): string {
   if (body.length === 0) return body
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(body)
-  } catch {
-    return body
-  }
-  if (
-    typeof parsed === 'object' &&
-    parsed !== null &&
-    'error' in parsed &&
-    typeof parsed.error === 'string'
-  ) {
-    return parsed.error
-  }
-  return body
+  return tryParseJson(body).match(
+    (parsed) =>
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'error' in parsed &&
+      typeof parsed.error === 'string'
+        ? parsed.error
+        : body,
+    () => body,
+  )
 }

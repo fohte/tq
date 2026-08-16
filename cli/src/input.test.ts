@@ -5,7 +5,6 @@ import { Readable } from 'node:stream'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { FileIoError } from '#errors'
 import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
 
@@ -31,35 +30,38 @@ describe('readContentInput', () => {
     const filePath = join(tmpDir, 'content.md')
     await writeFile(filePath, '# Hello', 'utf8')
 
-    await expect(readContentInput(filePath, fakeStdin([], true))).resolves.toBe(
-      '# Hello',
-    )
+    const result = await readContentInput(filePath, fakeStdin([], true))
+
+    expect(result._unsafeUnwrap()).toBe('# Hello')
   })
 
-  it('throws FileIoError when the file does not exist', async () => {
+  it('returns an Err(FileIoError) when the file does not exist', async () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-input-'))
     const filePath = join(tmpDir, 'missing.md')
 
-    await expect(
-      readContentInput(filePath, fakeStdin([], true)),
-    ).rejects.toThrow(FileIoError)
+    const result = await readContentInput(filePath, fakeStdin([], true))
+
+    expect(result._unsafeUnwrapErr().message).toBe(`Failed to read ${filePath}`)
   })
 
   it('returns undefined when stdin is a TTY', async () => {
-    await expect(
-      readContentInput(undefined, fakeStdin([], true)),
-    ).resolves.toBeUndefined()
+    const result = await readContentInput(undefined, fakeStdin([], true))
+
+    expect(result._unsafeUnwrap()).toBeUndefined()
   })
 
   it('returns the piped text when stdin is not a TTY and has data', async () => {
-    await expect(
-      readContentInput(undefined, fakeStdin(['# From stdin'], false)),
-    ).resolves.toBe('# From stdin')
+    const result = await readContentInput(
+      undefined,
+      fakeStdin(['# From stdin'], false),
+    )
+
+    expect(result._unsafeUnwrap()).toBe('# From stdin')
   })
 
   it('returns undefined when stdin is not a TTY but is empty', async () => {
-    await expect(
-      readContentInput(undefined, fakeStdin([], false)),
-    ).resolves.toBeUndefined()
+    const result = await readContentInput(undefined, fakeStdin([], false))
+
+    expect(result._unsafeUnwrap()).toBeUndefined()
   })
 })

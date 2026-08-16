@@ -4,7 +4,6 @@ import { join } from 'node:path'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { FileIoError } from '#errors'
 import { printJson, printJsonList, writeContentFile } from '#output'
 
 afterEach(() => {
@@ -106,16 +105,19 @@ describe('writeContentFile', () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-output-'))
     const filePath = join(tmpDir, 'content.md')
 
-    await writeContentFile(filePath, '# Hello')
+    const result = await writeContentFile(filePath, '# Hello')
+    result._unsafeUnwrap()
 
     await expect(readFile(filePath, 'utf8')).resolves.toBe('# Hello')
   })
 
-  it('throws FileIoError when the file cannot be written', async () => {
+  it('returns an Err(FileIoError) when the file cannot be written', async () => {
     const filePath = join(tmpdir(), 'tq-cli-output-missing-dir', 'content.md')
 
-    await expect(writeContentFile(filePath, '# Hello')).rejects.toThrow(
-      FileIoError,
+    const result = await writeContentFile(filePath, '# Hello')
+
+    expect(result._unsafeUnwrapErr().message).toBe(
+      `Failed to write ${filePath}`,
     )
   })
 })

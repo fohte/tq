@@ -5,6 +5,7 @@ import type { Client } from '#client'
 import { toApiError } from '#client'
 import { buildClient } from '#command-context'
 import { printJson } from '#output'
+import { unwrap } from '#result'
 
 type EventsQuery = InferRequestType<
   Client['api']['calendar']['events']['$get']
@@ -28,7 +29,7 @@ export function registerCalendarCommands(
         _options: unknown,
         command: Command,
       ) => {
-        const client = buildClient(command, fetchImpl)
+        const client = unwrap(buildClient(command, fetchImpl))
         const query: EventsQuery = { timeMin, timeMax }
         const res = await client.api.calendar.events.$get({ query })
         if (!res.ok) throw await toApiError(res)
