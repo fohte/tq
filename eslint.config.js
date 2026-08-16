@@ -19,15 +19,15 @@ export default config(
     ignores: ['**/routeTree.gen.ts'],
   },
   ...storybook.configs['flat/recommended'],
-  // errorHandling only targets api/src; the rest of the repo (web/, config
-  // files at the root) keeps using throw/try-catch and never imports
-  // neverthrow.
+  // errorHandling now bans throw/try-catch across all of api/, including
+  // api's own config files (drizzle.config.ts, tsup.config.ts,
+  // vitest.config.ts) — not just api/src. The rest of the repo (web/,
+  // config files at the root) keeps using throw/try-catch.
   {
     files: ['**/*.ts', '**/*.tsx'],
-    ignores: ['api/src/**/*.ts', 'api/src/**/*.tsx'],
+    ignores: ['api/**/*.ts', 'api/**/*.tsx'],
     rules: {
       'no-restricted-syntax': 'off',
-      'neverthrow/must-use-result': 'off',
     },
   },
   // vite.config.ts/vitest.config.ts are loaded through Vite's own
