@@ -97,15 +97,61 @@ export function parseSearchQuery(q: string): ParsedQuery {
   return result
 }
 
+export function buildSearchQuery(query: ParsedQuery): string {
+  const parts: string[] = []
+
+  if (query.freeText !== '') {
+    parts.push(query.freeText)
+  }
+  for (const status of query.status ?? []) {
+    parts.push(`is:${status}`)
+  }
+  if (query.label !== undefined) {
+    parts.push(`label:${quoteIfNeeded(query.label)}`)
+  }
+  if (query.context !== undefined) {
+    parts.push(`context:${query.context}`)
+  }
+  if (query.hasPages === true) {
+    parts.push('has:pages')
+  }
+  if (query.hasComments === true) {
+    parts.push('has:comments')
+  }
+  if (query.parentId !== undefined) {
+    parts.push(`parent:${quoteIfNeeded(query.parentId)}`)
+  }
+  if (query.projectId !== undefined) {
+    parts.push(`project:${quoteIfNeeded(query.projectId)}`)
+  }
+  if (query.sortBy !== undefined) {
+    parts.push(`sort:${query.sortBy}`)
+  }
+
+  return parts.join(' ')
+}
+
+// Symmetric with tokenize()'s quote handling: a value containing whitespace
+// or a quote character must round-trip through parseSearchQuery as a single
+// token, with embedded double quotes escaped so tokenize() doesn't treat
+// them as the closing quote.
+function quoteIfNeeded(value: string): string {
+  return /[\s"']/.test(value) ? `"${value.replace(/"/g, '\\"')}"` : value
+}
+
 function tokenize(input: string): string[] {
   const tokens: string[] = []
   let current = ''
   let inQuote = false
   let quoteChar = ''
 
-  for (const ch of input) {
+  for (let i = 0; i < input.length; i++) {
+    const ch = input.charAt(i)
     if (inQuote) {
-      if (ch === quoteChar) {
+      if (ch === '\\' && input.charAt(i + 1) === quoteChar) {
+        current += quoteChar
+        i++
+      } else if (ch === quoteChar) {
         inQuote = false
       } else {
         current += ch

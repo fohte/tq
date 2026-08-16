@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseSearchQuery } from '#search-query-parser'
+import { buildSearchQuery, parseSearchQuery } from '#search-query-parser'
 
 describe('parseSearchQuery', () => {
   it('extracts free text when no prefixes are present', () => {
@@ -107,5 +107,73 @@ describe('parseSearchQuery', () => {
 
   it('handles empty string', () => {
     expect(parseSearchQuery('')).toEqual({ freeText: '' })
+  })
+})
+
+describe('buildSearchQuery', () => {
+  it('builds a query string from a ParsedQuery', () => {
+    expect(
+      buildSearchQuery({
+        freeText: 'deploy',
+        status: ['todo'],
+        label: 'dev',
+        context: 'work',
+        hasPages: true,
+        hasComments: true,
+        parentId: 'parent-1',
+        projectId: 'proj-1',
+        sortBy: 'due',
+      }),
+    ).toBe(
+      'deploy is:todo label:dev context:work has:pages has:comments parent:parent-1 project:proj-1 sort:due',
+    )
+  })
+
+  it('omits freeText when empty', () => {
+    expect(buildSearchQuery({ freeText: '', status: ['todo'] })).toBe('is:todo')
+  })
+
+  it('quotes values containing spaces', () => {
+    expect(buildSearchQuery({ freeText: '', label: 'my label' })).toBe(
+      'label:"my label"',
+    )
+  })
+})
+
+describe('parseSearchQuery and buildSearchQuery round-trip', () => {
+  it('round-trips multiple status values', () => {
+    const q = 'is:todo is:in_progress'
+    expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
+      freeText: '',
+      status: ['todo', 'in_progress'],
+    })
+  })
+
+  it('round-trips a quoted value containing spaces', () => {
+    const q = 'label:"my label" project:"my project"'
+    expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
+      freeText: '',
+      label: 'my label',
+      projectId: 'my project',
+    })
+  })
+
+  it('round-trips free text mixed with tokens', () => {
+    const q = 'fix is:todo urgent bug label:dev'
+    expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
+      freeText: 'fix urgent bug',
+      status: ['todo'],
+      label: 'dev',
+    })
+  })
+
+  it('round-trips a value containing a literal double quote', () => {
+    const query = { freeText: '', label: 'she said "hi"' }
+    expect(parseSearchQuery(buildSearchQuery(query))).toEqual(query)
+  })
+
+  it('round-trips a value containing a literal single quote', () => {
+    const query = { freeText: '', label: "Bob's project" }
+    expect(parseSearchQuery(buildSearchQuery(query))).toEqual(query)
   })
 })
