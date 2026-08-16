@@ -132,9 +132,11 @@ export function buildSearchQuery(query: ParsedQuery): string {
 }
 
 // Symmetric with tokenize()'s quote handling: a value containing whitespace
-// must round-trip through parseSearchQuery as a single token.
+// or a quote character must round-trip through parseSearchQuery as a single
+// token, with embedded double quotes escaped so tokenize() doesn't treat
+// them as the closing quote.
 function quoteIfNeeded(value: string): string {
-  return /\s/.test(value) ? `"${value}"` : value
+  return /[\s"']/.test(value) ? `"${value.replace(/"/g, '\\"')}"` : value
 }
 
 function tokenize(input: string): string[] {
@@ -143,9 +145,13 @@ function tokenize(input: string): string[] {
   let inQuote = false
   let quoteChar = ''
 
-  for (const ch of input) {
+  for (let i = 0; i < input.length; i++) {
+    const ch = input.charAt(i)
     if (inQuote) {
-      if (ch === quoteChar) {
+      if (ch === '\\' && input.charAt(i + 1) === quoteChar) {
+        current += quoteChar
+        i++
+      } else if (ch === quoteChar) {
         inQuote = false
       } else {
         current += ch

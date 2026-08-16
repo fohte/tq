@@ -166,4 +166,14 @@ describe('parseSearchQuery and buildSearchQuery round-trip', () => {
       label: 'dev',
     })
   })
+
+  it('round-trips a value containing a literal double quote', () => {
+    const query = { freeText: '', label: 'she said "hi"' }
+    expect(parseSearchQuery(buildSearchQuery(query))).toEqual(query)
+  })
+
+  it('round-trips a value containing a literal single quote', () => {
+    const query = { freeText: '', label: "Bob's project" }
+    expect(parseSearchQuery(buildSearchQuery(query))).toEqual(query)
+  })
 })
