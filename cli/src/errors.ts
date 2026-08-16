@@ -18,3 +18,10 @@ export class ApiError extends Error {
     this.status = status
   }
 }
+
+export function formatError(err: unknown): string {
+  if (err instanceof ApiError) {
+    return `${err.message} (HTTP ${String(err.status)})`
+  }
+  return err instanceof Error ? err.message : String(err)
+}

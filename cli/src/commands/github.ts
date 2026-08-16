@@ -5,7 +5,7 @@ import type { Client } from '#client'
 import { toApiError } from '#client'
 import { buildClient } from '#command-context'
 import { printJson } from '#output'
-import { unwrap } from '#result'
+import { fail } from '#result'
 
 type LinkJson = InferRequestType<
   Client['api']['tasks'][':taskId']['github-link']['$post']
@@ -31,13 +31,16 @@ export function registerGithubCommands(
         _options: unknown,
         command: Command,
       ) => {
-        const client = unwrap(buildClient(command, fetchImpl))
+        const client = buildClient(command, fetchImpl).match(
+          (value) => value,
+          (error) => fail(command, error),
+        )
         const json: LinkJson = { url }
         const res = await client.api.tasks[':taskId']['github-link'].$post({
           param: { taskId },
           json,
         })
-        if (!res.ok) throw await toApiError(res)
+        if (!res.ok) return fail(command, await toApiError(res))
         printJson(await res.json())
       },
     )
@@ -46,11 +49,14 @@ export function registerGithubCommands(
     .command('unlink <taskId>')
     .description("Remove a task's GitHub link")
     .action(async (taskId: string, _options: unknown, command: Command) => {
-      const client = unwrap(buildClient(command, fetchImpl))
+      const client = buildClient(command, fetchImpl).match(
+        (value) => value,
+        (error) => fail(command, error),
+      )
       const res = await client.api.tasks[':taskId']['github-link'].$delete({
         param: { taskId },
       })
-      if (!res.ok) throw await toApiError(res)
+      if (!res.ok) return fail(command, await toApiError(res))
       printJson({ unlinked: true, taskId })
     })
 
@@ -65,20 +71,23 @@ export function registerGithubCommands(
         _options: unknown,
         command: Command,
       ) => {
-        const client = unwrap(buildClient(command, fetchImpl))
+        const client = buildClient(command, fetchImpl).match(
+          (value) => value,
+          (error) => fail(command, error),
+        )
 
         if (taskId != null) {
           const res = await client.api.tasks[':taskId'][
             'github-link'
           ].sync.$post({ param: { taskId } })
-          if (!res.ok) throw await toApiError(res)
+          if (!res.ok) return fail(command, await toApiError(res))
           printJson({ synced: true, taskId })
           return
         }
 
         const res = await client.api.github.sync.$post()
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 204 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
-        if (!res.ok) throw await toApiError(res)
+        if (!res.ok) return fail(command, await toApiError(res))
         printJson({ synced: true })
       },
     )
@@ -89,10 +98,13 @@ export function registerGithubCommands(
       'Resolve a GitHub issue/pull request URL to its linked task, or a preview if unlinked',
     )
     .action(async (url: string, _options: unknown, command: Command) => {
-      const client = unwrap(buildClient(command, fetchImpl))
+      const client = buildClient(command, fetchImpl).match(
+        (value) => value,
+        (error) => fail(command, error),
+      )
       const json: ResolveJson = { url }
       const res = await client.api.github.resolve.$post({ json })
-      if (!res.ok) throw await toApiError(res)
+      if (!res.ok) return fail(command, await toApiError(res))
       printJson(await res.json())
     })
 }
