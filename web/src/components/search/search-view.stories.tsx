@@ -144,8 +144,18 @@ export const WithFilters: Story = {
   args: {
     query: 'is:todo context:work',
     hasQuery: true,
-    filters: { status: 'todo', context: 'work' },
+    filters: { status: ['todo'], context: 'work' },
     results: mockResults.slice(0, 1),
+    onBack: fn(),
+  },
+}
+
+export const WithMultipleStatuses: Story = {
+  args: {
+    query: 'is:todo is:in_progress',
+    hasQuery: true,
+    filters: { status: ['todo', 'in_progress'] },
+    results: mockResults.slice(0, 2),
     onBack: fn(),
   },
 }

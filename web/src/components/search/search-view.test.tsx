@@ -64,13 +64,12 @@ let mockSearchReturn = {
   query: '',
   setQuery: vi.fn(),
   freeText: '',
-  filters: {} as Record<string, string | undefined>,
+  filters: {} as { status?: string[]; context?: string; sortBy?: string },
   results: [] as typeof mockResults,
   isLoading: false,
   isFetching: false,
   hasQuery: false,
   updateFilter: vi.fn(),
-  clearFilter: vi.fn(),
 }
 
 vi.mock('#hooks/use-search', () => ({
@@ -115,7 +114,6 @@ beforeEach(() => {
     isFetching: false,
     hasQuery: false,
     updateFilter: vi.fn(),
-    clearFilter: vi.fn(),
   }
 })
 
@@ -223,15 +221,24 @@ describe('SearchView', () => {
     })
 
     it('shows active filter value in chip label', () => {
-      mockSearchReturn.filters = { status: 'todo' }
+      mockSearchReturn.filters = { status: ['todo'] }
       renderSearchView()
 
       expect(screen.getByTestId('filter-chip-status')).toHaveTextContent('Todo')
     })
 
-    it('deselects filter when clicking active option', async () => {
+    it('shows all active statuses in chip label', () => {
+      mockSearchReturn.filters = { status: ['todo', 'in_progress'] }
+      renderSearchView()
+
+      expect(screen.getByTestId('filter-chip-status')).toHaveTextContent(
+        'Todo, In Progress',
+      )
+    })
+
+    it('calls updateFilter with the clicked value regardless of current selection', async () => {
       const user = userEvent.setup()
-      mockSearchReturn.filters = { status: 'todo' }
+      mockSearchReturn.filters = { status: ['todo'] }
       renderSearchView()
 
       await user.click(screen.getByTestId('filter-chip-status'))
@@ -240,7 +247,7 @@ describe('SearchView', () => {
 
       expect(mockSearchReturn.updateFilter).toHaveBeenCalledWith(
         'status',
-        undefined,
+        'todo',
       )
     })
   })

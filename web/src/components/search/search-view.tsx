@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import type { ParsedQuery } from 'api/search-query-parser'
 import { Loader2, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 
@@ -9,24 +10,33 @@ import {
 import { AnchoredPopup } from '#components/ui/anchored-popup'
 import { Chip } from '#components/ui/chip'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
-import type { SearchFilters, SearchResult } from '#hooks/use-search'
+import type { SearchFilterKey, SearchResult } from '#hooks/use-search'
 import { useSearch } from '#hooks/use-search'
 import { cn } from '#lib/utils'
 
 interface FilterChipProps {
   label: string
-  value: string | undefined
+  selectedValues: string[]
   options: Array<{ value: string; label: string }>
-  onChange: (value: string | undefined) => void
+  onToggle: (value: string) => void
 }
 
-function FilterChip({ label, value, options, onChange }: FilterChipProps) {
+function FilterChip({
+  label,
+  selectedValues,
+  options,
+  onToggle,
+}: FilterChipProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   const activeLabel =
-    value != null
-      ? (options.find((o) => o.value === value)?.label ?? value)
+    selectedValues.length > 0
+      ? selectedValues
+          .map(
+            (value) => options.find((o) => o.value === value)?.label ?? value,
+          )
+          .join(', ')
       : label
 
   return (
@@ -34,7 +44,7 @@ function FilterChip({ label, value, options, onChange }: FilterChipProps) {
       <Chip
         as="button"
         size="md"
-        active={value != null}
+        active={selectedValues.length > 0}
         onClick={() => {
           setOpen(!open)
         }}
@@ -56,12 +66,12 @@ function FilterChip({ label, value, options, onChange }: FilterChipProps) {
             key={option.value}
             type="button"
             onClick={() => {
-              onChange(value === option.value ? undefined : option.value)
+              onToggle(option.value)
               setOpen(false)
             }}
             className={cn(
               'flex w-full items-center px-3 py-1.5 text-left font-mono text-xs',
-              value === option.value
+              selectedValues.includes(option.value)
                 ? 'bg-secondary text-foreground'
                 : 'text-muted-foreground hover:bg-secondary/50',
             )}
@@ -95,11 +105,11 @@ const SORT_OPTIONS = [
 export interface SearchViewInnerProps {
   query: string
   setQuery: (query: string) => void
-  filters: SearchFilters
+  filters: Pick<ParsedQuery, 'status' | 'context' | 'sortBy'>
   results: SearchResult[]
   isFetching: boolean
   hasQuery: boolean
-  updateFilter: (key: keyof SearchFilters, value: string | undefined) => void
+  updateFilter: (key: SearchFilterKey, value: string) => void
   onBack?: (() => void) | undefined
 }
 
@@ -114,13 +124,6 @@ export function SearchViewInner({
   onBack,
 }: SearchViewInnerProps) {
   const inputRef = useRef<HTMLInputElement>(null)
-
-  const handleFilterChange = (
-    key: keyof SearchFilters,
-    value: string | undefined,
-  ) => {
-    updateFilter(key, value)
-  }
 
   return (
     <div
@@ -176,26 +179,26 @@ export function SearchViewInner({
       >
         <FilterChip
           label="Status"
-          value={filters.status}
+          selectedValues={filters.status ?? []}
           options={STATUS_OPTIONS}
-          onChange={(v) => {
-            handleFilterChange('status', v)
+          onToggle={(v) => {
+            updateFilter('status', v)
           }}
         />
         <FilterChip
           label="Context"
-          value={filters.context}
+          selectedValues={filters.context != null ? [filters.context] : []}
           options={CONTEXT_OPTIONS}
-          onChange={(v) => {
-            handleFilterChange('context', v)
+          onToggle={(v) => {
+            updateFilter('context', v)
           }}
         />
         <FilterChip
           label="Sort"
-          value={filters.sortBy}
+          selectedValues={filters.sortBy != null ? [filters.sortBy] : []}
           options={SORT_OPTIONS}
-          onChange={(v) => {
-            handleFilterChange('sortBy', v)
+          onToggle={(v) => {
+            updateFilter('sortBy', v)
           }}
         />
         <span className="ml-auto font-mono text-2xs text-muted-foreground-faint">

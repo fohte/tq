@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
+import type { ParsedQuery } from 'api/search-query-parser'
+import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
 import type { InferResponseType } from 'hono/client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
@@ -15,121 +17,72 @@ type Suggestion = InferResponseType<
 
 export type { SearchResult, Suggestion }
 
-export type StatusFilter = 'todo' | 'in_progress' | 'completed'
-export type ContextFilter = 'work' | 'personal'
+export type SearchFilterKey = 'status' | 'context' | 'sortBy'
 
-export interface SearchFilters {
-  status?: StatusFilter | undefined
-  context?: ContextFilter | undefined
-  label?: string | undefined
-  sortBy?: 'due' | 'created' | 'updated' | 'estimate' | undefined
-}
+type StatusValue = NonNullable<ParsedQuery['status']>[number]
+type ContextValue = NonNullable<ParsedQuery['context']>
+type SortByValue = NonNullable<ParsedQuery['sortBy']>
 
-const STATUS_VALUES: ReadonlySet<StatusFilter> = new Set([
+const STATUS_VALUES: ReadonlySet<StatusValue> = new Set([
   'todo',
   'in_progress',
   'completed',
 ])
-const CONTEXT_VALUES: ReadonlySet<ContextFilter> = new Set(['work', 'personal'])
-type SortBy = NonNullable<SearchFilters['sortBy']>
-const SORT_VALUES: ReadonlySet<SortBy> = new Set([
+const CONTEXT_VALUES: ReadonlySet<ContextValue> = new Set(['work', 'personal'])
+const SORT_VALUES: ReadonlySet<SortByValue> = new Set([
   'due',
   'created',
   'updated',
   'estimate',
 ])
 
-function isStatus(value: string): value is StatusFilter {
-  return (STATUS_VALUES as ReadonlySet<string>).has(value)
-}
-
-function isContext(value: string): value is ContextFilter {
-  return (CONTEXT_VALUES as ReadonlySet<string>).has(value)
-}
-
-function isSortBy(value: string): value is SortBy {
-  return (SORT_VALUES as ReadonlySet<string>).has(value)
+function isOneOf<T extends string>(
+  value: string,
+  set: ReadonlySet<T>,
+): value is T {
+  return (set as ReadonlySet<string>).has(value)
 }
 
 /**
- * Parse a query string into free text and structured filters.
- * Mirrors the API's search-query-parser logic on the frontend.
+ * Toggle a filter value within a parsed query: `status` accumulates (a
+ * search can have multiple `is:` tokens), `context`/`sortBy` are exclusive
+ * (clicking the already-active value clears it, clicking another replaces
+ * it). Values that aren't valid for the given key are ignored — FilterChip
+ * only ever offers values from its own option list, so this only guards
+ * against them widening to `string` for the no-unsafe-type-assertion rule.
  */
-export function parseQueryToFilters(query: string): {
-  freeText: string
-  filters: SearchFilters
-} {
-  const filters: SearchFilters = {}
-  const freeTextParts: string[] = []
+export function toggleSearchFilter(
+  parsed: ParsedQuery,
+  key: SearchFilterKey,
+  value: string,
+): ParsedQuery {
+  const next: ParsedQuery = { ...parsed }
 
-  const tokens = query.split(/\s+/).filter((t) => t !== '')
-
-  for (const token of tokens) {
-    const colonIndex = token.indexOf(':')
-    if (colonIndex === -1) {
-      freeTextParts.push(token)
-      continue
+  if (key === 'status' && isOneOf(value, STATUS_VALUES)) {
+    const status = parsed.status ?? []
+    const nextStatus = status.includes(value)
+      ? status.filter((s) => s !== value)
+      : [...status, value]
+    if (nextStatus.length > 0) {
+      next.status = nextStatus
+    } else {
+      delete next.status
     }
-
-    const prefix = token.slice(0, colonIndex).toLowerCase()
-    const value = token.slice(colonIndex + 1)
-
-    if (value === '') {
-      freeTextParts.push(token)
-      continue
+  } else if (key === 'context' && isOneOf(value, CONTEXT_VALUES)) {
+    if (parsed.context === value) {
+      delete next.context
+    } else {
+      next.context = value
     }
-
-    switch (prefix) {
-      case 'is':
-        if (isStatus(value)) {
-          filters.status = value
-        } else {
-          freeTextParts.push(token)
-        }
-        break
-      case 'context':
-        if (isContext(value)) {
-          filters.context = value
-        } else {
-          freeTextParts.push(token)
-        }
-        break
-      case 'label':
-        filters.label = value
-        break
-      case 'sort':
-        if (isSortBy(value)) {
-          filters.sortBy = value
-        } else {
-          freeTextParts.push(token)
-        }
-        break
-      default:
-        freeTextParts.push(token)
+  } else if (key === 'sortBy' && isOneOf(value, SORT_VALUES)) {
+    if (parsed.sortBy === value) {
+      delete next.sortBy
+    } else {
+      next.sortBy = value
     }
   }
 
-  return { freeText: freeTextParts.join(' '), filters }
-}
-
-/**
- * Build a query string from free text and structured filters.
- */
-export function buildQueryFromFilters(
-  freeText: string,
-  filters: SearchFilters,
-): string {
-  const parts: string[] = []
-
-  if (filters.status != null) parts.push(`is:${filters.status}`)
-  if (filters.context != null) parts.push(`context:${filters.context}`)
-  if (filters.label != null) parts.push(`label:${filters.label}`)
-  if (filters.sortBy != null) parts.push(`sort:${filters.sortBy}`)
-
-  const trimmed = freeText.trim()
-  if (trimmed !== '') parts.push(trimmed)
-
-  return parts.join(' ')
+  return next
 }
 
 export const searchKeys = {
@@ -156,10 +109,8 @@ export function useSearch() {
     }
   }, [query])
 
-  const { freeText, filters } = useMemo(
-    () => parseQueryToFilters(query),
-    [query],
-  )
+  const parsed = useMemo(() => parseSearchQuery(query), [query])
+  const { freeText, ...filters } = parsed
 
   const hasQuery = query.trim() !== ''
   const isDebouncing = query !== debouncedQuery
@@ -178,24 +129,10 @@ export function useSearch() {
   })
 
   const updateFilter = useCallback(
-    (key: keyof SearchFilters, value: string | undefined) => {
-      const base = Object.fromEntries(
-        Object.entries(filters).filter(([k]) => k !== key),
-      ) as SearchFilters
-      const newFilters: SearchFilters = {
-        ...base,
-        ...(value !== undefined ? { [key]: value } : {}),
-      }
-      setQuery(buildQueryFromFilters(freeText, newFilters))
+    (key: SearchFilterKey, value: string) => {
+      setQuery(buildSearchQuery(toggleSearchFilter(parsed, key, value)))
     },
-    [freeText, filters],
-  )
-
-  const clearFilter = useCallback(
-    (key: keyof SearchFilters) => {
-      updateFilter(key, undefined)
-    },
-    [updateFilter],
+    [parsed],
   )
 
   return {
@@ -208,7 +145,6 @@ export function useSearch() {
     isFetching: searchQuery.isFetching || isDebouncing,
     hasQuery,
     updateFilter,
-    clearFilter,
   }
 }
 
