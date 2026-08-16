@@ -4,6 +4,7 @@ const config: StorybookConfig = {
   stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   staticDirs: ['../public'],
   addons: [
+    '@fohte/storybook-addon',
     '@storybook/addon-docs',
     '@storybook/addon-a11y',
     '@storybook/addon-vitest',

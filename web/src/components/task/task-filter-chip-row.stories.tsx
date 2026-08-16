@@ -53,7 +53,12 @@ const meta = {
     // The chip row is intentionally horizontally scrollable
     // (overflow-x-auto) so it never breaks the tasks page header at mobile
     // widths — see create-task-modal.stories.tsx for the same exemption.
-    overflowCheck: { ignoreSelectors: ['.overflow-x-auto'] },
+    // This story-level override replaces (rather than merges with) the
+    // global overflowCheck default in preview.tsx, so the checkbox exemption
+    // needs restating here too.
+    overflowCheck: {
+      ignoreSelectors: ['.overflow-x-auto', '[data-slot="checkbox"]'],
+    },
     msw: { handlers: [emptySuggestHandler] },
   },
   decorators: [

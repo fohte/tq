@@ -1,5 +1,9 @@
 import '#index.css'
 
+import {
+  configureUnhandledApiRequestCheck,
+  reportUnhandledApiRequest,
+} from '@fohte/storybook-addon/preview'
 import type { Preview } from '@storybook/react-vite'
 import {
   createMemoryHistory,
@@ -9,17 +13,11 @@ import {
 } from '@tanstack/react-router'
 import { initialize, mswLoader } from 'msw-storybook-addon'
 
-import { unhandledApiRequestUrls } from '#storybook-config/unhandled-api-requests'
+configureUnhandledApiRequestCheck({ pathPrefixes: ['/api/'] })
 
 initialize({
-  onUnhandledRequest: ({ url: requestUrl }, print) => {
-    const url = new URL(requestUrl)
-    // Only error on same-origin API requests; let Storybook assets, HMR, and third-party requests pass through
-    if (
-      url.origin === self.location.origin &&
-      url.pathname.startsWith('/api/')
-    ) {
-      unhandledApiRequestUrls.push(url.pathname)
+  onUnhandledRequest: ({ url }, print) => {
+    if (reportUnhandledApiRequest(url)) {
       print.error()
     }
   },
@@ -34,6 +32,11 @@ const preview: Preview = {
       },
     },
     backgrounds: { disable: true },
+    // Checkbox's `after:-inset-x-3 after:-inset-y-2` pseudo-element enlarges
+    // its click/touch target past its visible box on purpose, but paints
+    // nothing (no border/background), so nothing is ever visibly cut off
+    // wherever Checkbox renders.
+    overflowCheck: { ignoreSelectors: ['[data-slot="checkbox"]'] },
   },
   globalTypes: {
     theme: {
