@@ -6,7 +6,7 @@
 export function atIndex<T>(arr: T[], index: number): T {
   const value = arr[index]
   if (value === undefined) {
-    // eslint-disable-next-line no-restricted-syntax -- test-only assertion helper; test files themselves are exempt from this ban, so wrapping in a Result would only add boilerplate without extending real enforcement
+    // eslint-disable-next-line no-restricted-syntax -- test-only assertion helper called from *.test.tsx and *.stories.tsx; wrapping in a Result would force every .stories.tsx call site (not exempt from must-use-result) to unwrap it for no real safety gain
     throw new Error(
       `Expected element at index ${String(index)}, but array length is ${String(arr.length)}`,
     )
@@ -23,7 +23,7 @@ export function assertDefined<T>(
   message = 'Expected value to be defined',
 ): T {
   if (value == null) {
-    // eslint-disable-next-line no-restricted-syntax -- test-only assertion helper; test files themselves are exempt from this ban, so wrapping in a Result would only add boilerplate without extending real enforcement
+    // eslint-disable-next-line no-restricted-syntax -- test-only assertion helper called from *.test.tsx and *.stories.tsx; wrapping in a Result would force every .stories.tsx call site (not exempt from must-use-result) to unwrap it for no real safety gain
     throw new Error(message)
   }
   return value
