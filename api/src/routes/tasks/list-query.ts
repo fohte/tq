@@ -15,6 +15,10 @@ import { parentTasks, resolveTaskListOrderBy } from '#routes/tasks/shared'
 import type { ListTasksQuery } from '#schemas/task'
 import { parseSearchQuery } from '#search-query-parser'
 
+// Each word adds an EXISTS subquery for task_pages, so cap the word count
+// to keep an adversarial `q` from generating an unbounded number of them.
+const MAX_FREE_TEXT_WORDS = 20
+
 function selectTaskListRows() {
   return db
     .select({
@@ -121,15 +125,26 @@ function buildConditions(query: ListTasksQuery) {
 
   if (parsed?.freeText != null && parsed.freeText !== '') {
     const freeText = parsed.freeText
-    const pattern = `%${freeText}%`
+    // `freeText` is `parseSearchQuery`'s tokens re-joined with spaces (see
+    // search-query-parser.ts), so splitting on whitespace here treats each
+    // resulting word as an independent AND term. A quoted multi-word token
+    // (e.g. `"fix bug"`) therefore matches as separate words rather than
+    // an adjacent phrase, and a word with no ASCII whitespace (e.g.
+    // Japanese text) matches as a substring.
+    const words = freeText
+      .split(/\s+/)
+      .filter((word) => word !== '')
+      .slice(0, MAX_FREE_TEXT_WORDS)
     const numberQuery = freeText.startsWith('#') ? freeText.slice(1) : freeText
     const numberCondition =
       numberQuery !== '' && /^\d+$/.test(numberQuery)
         ? sql`OR CAST(${tasks.number} AS TEXT) LIKE ${`${numberQuery}%`}`
         : sql``
-    conditions.push(
-      sql`(${tasks.title} ILIKE ${pattern} OR ${tasks.description} ILIKE ${pattern} OR EXISTS (SELECT 1 FROM ${taskPages} WHERE ${taskPages.taskId} = ${tasks.id} AND ${taskPages.content} ILIKE ${pattern}) ${numberCondition})`,
-    )
+    const wordConditions = words.map((word) => {
+      const pattern = `%${word}%`
+      return sql`(${tasks.title} ILIKE ${pattern} OR ${tasks.description} ILIKE ${pattern} OR EXISTS (SELECT 1 FROM ${taskPages} WHERE ${taskPages.taskId} = ${tasks.id} AND ${taskPages.content} ILIKE ${pattern}))`
+    })
+    conditions.push(sql`(${and(...wordConditions)} ${numberCondition})`)
   }
 
   if (query.descendantOf != null) {

@@ -418,6 +418,90 @@ describe('tasks CRUD API', () => {
       expect(body[0].title).toBe('Deploy to production')
     })
 
+    it('matches a task whose title contains all words regardless of order', async () => {
+      const task = await createTask('foo と bar を統合する')
+      await createTask('Unrelated task')
+
+      // Query words are in the opposite order from how they appear in the
+      // title, so this exercises order-independence rather than
+      // coincidentally passing under an order-dependent match too.
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('bar foo'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id)).toEqual([task.id])
+    })
+
+    it('matches a task when each word is found in a different field', async () => {
+      const task = await createTask('overflow handling', {
+        description: 'needs suppression tuning',
+      })
+      await createTask('overflow only')
+      await createTask('suppression only')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('overflow suppression'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id)).toEqual([task.id])
+    })
+
+    it('matches a word found only in a page instead of title/description', async () => {
+      const task = await createTask('overflow handling')
+      await createPage(task.id, 'Notes', 'needs suppression tuning')
+      await createTask('overflow only')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('overflow suppression'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id)).toEqual([task.id])
+    })
+
+    it('does not match a task containing only one of the words', async () => {
+      await createTask('overflow only')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('overflow suppression'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toEqual([])
+    })
+
+    it('matches by substring for whitespace-less Japanese text', async () => {
+      const task = await createTask('デプロイ手順を確認する')
+      await createTask('Unrelated task')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('デプロイ手順'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id)).toEqual([task.id])
+    })
+
+    it('ignores words in q past the per-query word cap', async () => {
+      const words = Array.from({ length: 20 }, (_, i) => `keyword${String(i)}`)
+      const task = await createTask(words.join(' '))
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent([...words, 'excess'].join(' ')),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id)).toEqual([task.id])
+    })
+
     it('matches a full task number via q', async () => {
       const task = await createTask('Some unrelated title')
       await createTask('Another task')
