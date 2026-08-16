@@ -8,7 +8,7 @@ import { buildClient } from '#command-context'
 import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
 import { printJson, printJsonList, writeContentFile } from '#output'
-import { unwrap, unwrapAsync } from '#result'
+import { fail } from '#result'
 import { addSchemaOptions, pickSchemaFields } from '#schema-options'
 
 type CreatePageJson = InferRequestType<
@@ -40,12 +40,15 @@ export function registerPageCommands(
     .option('--full', 'Include full page content in the output')
     .action(
       async (taskId: string, options: { full?: boolean }, command: Command) => {
-        const client = unwrap(buildClient(command, fetchImpl))
+        const client = buildClient(command, fetchImpl).match(
+          (value) => value,
+          (error) => fail(command, error),
+        )
         const res = await client.api.tasks[':taskId'].pages.$get({
           param: { taskId },
         })
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
-        if (!res.ok) throw await toApiError(res)
+        if (!res.ok) return fail(command, await toApiError(res))
         printJsonList(await res.json(), 'content', { full: options.full })
       },
     )
@@ -64,16 +67,22 @@ export function registerPageCommands(
         options: { output?: string },
         command: Command,
       ) => {
-        const client = unwrap(buildClient(command, fetchImpl))
+        const client = buildClient(command, fetchImpl).match(
+          (value) => value,
+          (error) => fail(command, error),
+        )
         const res = await client.api.tasks[':taskId'].pages[':pageId'].$get({
           param: { taskId, pageId },
         })
-        if (!res.ok) throw await toApiError(res)
+        if (!res.ok) return fail(command, await toApiError(res))
         const page = await res.json()
 
         if (options.output != null) {
           const { content, ...metadata } = page
-          await unwrapAsync(writeContentFile(options.output, content))
+          await writeContentFile(options.output, content).match(
+            (value) => value,
+            (error) => fail(command, error),
+          )
           printJson(metadata)
           return
         }
@@ -82,73 +91,97 @@ export function registerPageCommands(
       },
     )
 
-  unwrap(
-    addSchemaOptions(
-      page
-        .command('create <taskId> <title>')
-        .description('Create a page')
-        .option('--file <path>', 'Read content from a file instead of stdin'),
-      createPageSchema,
-      ['content'],
-    ),
-  ).action(
-    async (
-      taskId: string,
-      title: string,
-      options: CreateOptions,
-      command: Command,
-    ) => {
-      const client = unwrap(buildClient(command, fetchImpl))
-      const content = await unwrapAsync(readContentInput(options.file, stdin))
-
-      const json: CreatePageJson = {
-        ...unwrap(pickSchemaFields(createPageSchema, options, ['content'])),
-        title,
-        ...(content !== undefined ? { content } : {}),
-      }
-
-      const res = await client.api.tasks[':taskId'].pages.$post({
-        param: { taskId },
-        json,
-      })
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 201 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
-      if (!res.ok) throw await toApiError(res)
-      printJson(await res.json())
-    },
+  addSchemaOptions(
+    page
+      .command('create <taskId> <title>')
+      .description('Create a page')
+      .option('--file <path>', 'Read content from a file instead of stdin'),
+    createPageSchema,
+    ['content'],
   )
+    .match(
+      (cmd) => cmd,
+      (error) => fail(page, error),
+    )
+    .action(
+      async (
+        taskId: string,
+        title: string,
+        options: CreateOptions,
+        command: Command,
+      ) => {
+        const client = buildClient(command, fetchImpl).match(
+          (value) => value,
+          (error) => fail(command, error),
+        )
+        const content = await readContentInput(options.file, stdin).match(
+          (value) => value,
+          (error) => fail(command, error),
+        )
 
-  unwrap(
-    addSchemaOptions(
-      page
-        .command('update <taskId> <pageId>')
-        .description('Update a page')
-        .option('--file <path>', 'Read content from a file instead of stdin'),
-      updatePageSchema,
-      ['content'],
-    ),
-  ).action(
-    async (
-      taskId: string,
-      pageId: string,
-      options: UpdateOptions,
-      command: Command,
-    ) => {
-      const client = unwrap(buildClient(command, fetchImpl))
-      const content = await unwrapAsync(readContentInput(options.file, stdin))
+        const json: CreatePageJson = {
+          ...pickSchemaFields(createPageSchema, options, ['content']).match(
+            (value) => value,
+            (error) => fail(command, error),
+          ),
+          title,
+          ...(content !== undefined ? { content } : {}),
+        }
 
-      const json: UpdatePageJson = {
-        ...unwrap(pickSchemaFields(updatePageSchema, options, ['content'])),
-        ...(content !== undefined ? { content } : {}),
-      }
+        const res = await client.api.tasks[':taskId'].pages.$post({
+          param: { taskId },
+          json,
+        })
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 201 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
+        if (!res.ok) return fail(command, await toApiError(res))
+        printJson(await res.json())
+      },
+    )
 
-      const res = await client.api.tasks[':taskId'].pages[':pageId'].$patch({
-        param: { taskId, pageId },
-        json,
-      })
-      if (!res.ok) throw await toApiError(res)
-      printJson(await res.json())
-    },
+  addSchemaOptions(
+    page
+      .command('update <taskId> <pageId>')
+      .description('Update a page')
+      .option('--file <path>', 'Read content from a file instead of stdin'),
+    updatePageSchema,
+    ['content'],
   )
+    .match(
+      (cmd) => cmd,
+      (error) => fail(page, error),
+    )
+    .action(
+      async (
+        taskId: string,
+        pageId: string,
+        options: UpdateOptions,
+        command: Command,
+      ) => {
+        const client = buildClient(command, fetchImpl).match(
+          (value) => value,
+          (error) => fail(command, error),
+        )
+        const content = await readContentInput(options.file, stdin).match(
+          (value) => value,
+          (error) => fail(command, error),
+        )
+
+        const json: UpdatePageJson = {
+          ...pickSchemaFields(updatePageSchema, options, ['content']).match(
+            (value) => value,
+            (error) => fail(command, error),
+          ),
+          ...(content !== undefined ? { content } : {}),
+        }
+
+        const res = await client.api.tasks[':taskId'].pages[':pageId'].$patch({
+          param: { taskId, pageId },
+          json,
+        })
+        if (!res.ok) return fail(command, await toApiError(res))
+        printJson(await res.json())
+      },
+    )
 
   page
     .command('delete <taskId> <pageId>')
@@ -160,11 +193,14 @@ export function registerPageCommands(
         _options: unknown,
         command: Command,
       ) => {
-        const client = unwrap(buildClient(command, fetchImpl))
+        const client = buildClient(command, fetchImpl).match(
+          (value) => value,
+          (error) => fail(command, error),
+        )
         const res = await client.api.tasks[':taskId'].pages[':pageId'].$delete({
           param: { taskId, pageId },
         })
-        if (!res.ok) throw await toApiError(res)
+        if (!res.ok) return fail(command, await toApiError(res))
         printJson({ deleted: true, taskId, pageId })
       },
     )

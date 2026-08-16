@@ -22,6 +22,7 @@ function parseValue(inner: z.ZodType, raw: string): unknown {
     // commander's argParser contract requires throwing InvalidArgumentError;
     // commander itself catches it and converts it into user-facing CLI error
     // output, so this can't return a Result.
+    // eslint-disable-next-line no-restricted-syntax -- commander's argParser contract requires a synchronous throw
     throw new InvalidArgumentError(
       result.error.issues[0]?.message ?? 'Invalid value',
     )

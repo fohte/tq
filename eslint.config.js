@@ -19,26 +19,20 @@ export default config(
     ignores: ['**/routeTree.gen.ts'],
   },
   ...storybook.configs['flat/recommended'],
-  // no-restricted-syntax (throw/try-catch ban) is enforced only in api/,
-  // including api's own config files (drizzle.config.ts, tsup.config.ts,
-  // vitest.config.ts) — not just api/src. cli/ and web/ still throw, since
-  // cli's command handlers run through commander's throw-based flow and
-  // web hasn't moved off throw/try-catch.
+  // no-restricted-syntax (throw/try-catch ban) is enforced in api/ and cli/.
+  // web/ still throws, since it hasn't moved off throw/try-catch.
   {
     files: ['**/*.ts', '**/*.tsx'],
-    ignores: ['api/**/*.ts', 'api/**/*.tsx'],
+    ignores: ['api/**/*.ts', 'api/**/*.tsx', 'cli/**/*.ts'],
     rules: {
       'no-restricted-syntax': 'off',
     },
   },
   // neverthrow/must-use-result is enforced wherever code returns a Result:
-  // api/ everywhere, and cli/'s shared helpers (cli/src/*.ts) which already
-  // return Result. cli/src/commands/**, which still calls those helpers
-  // through the throw-based unwrap()/unwrapAsync() wrappers in
-  // cli/src/result.ts, and web/, which hasn't adopted neverthrow, keep it
-  // off; enable it there once that code returns Result directly.
+  // api/ and cli/ everywhere. web/, which hasn't adopted neverthrow, keeps
+  // it off until that code returns Result directly.
   {
-    files: ['cli/src/commands/**/*.ts', 'web/**/*.ts', 'web/**/*.tsx'],
+    files: ['web/**/*.ts', 'web/**/*.tsx'],
     rules: {
       'neverthrow/must-use-result': 'off',
     },

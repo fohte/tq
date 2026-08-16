@@ -11,7 +11,7 @@ import { registerProjectCommands } from '#commands/project'
 import { registerSlackCommands } from '#commands/slack'
 import { registerTaskCommands } from '#commands/task'
 import { registerTodayCommands } from '#commands/today'
-import { ApiError } from '#errors'
+import { formatError } from '#errors'
 import { collectHeader } from '#headers'
 import type { ReadableStdin } from '#input'
 
@@ -64,24 +64,17 @@ export async function runCli(
 ): Promise<number> {
   const program = buildProgram(fetchImpl, stdin)
   // This is the top-level Result/exception boundary: commander's
-  // parseAsync rejects via exceptions (a CommanderError, or whatever an
-  // action handler threw/unwrap()ed), and this is where CLI exit codes
-  // get decided.
-  try {
-    await program.parseAsync(argv, { from: 'user' })
-    return 0
-  } catch (err) {
-    if (err instanceof CommanderError) {
-      return err.exitCode
-    }
-    process.stderr.write(`Error: ${formatError(err)}\n`)
-    return 1
-  }
-}
-
-function formatError(err: unknown): string {
-  if (err instanceof ApiError) {
-    return `${err.message} (HTTP ${String(err.status)})`
-  }
-  return err instanceof Error ? err.message : String(err)
+  // parseAsync rejects via exceptions (a CommanderError from commander
+  // itself, or from Command#error() via cli/src/result.ts's fail()), and
+  // this is where CLI exit codes get decided.
+  return program.parseAsync(argv, { from: 'user' }).then(
+    () => 0,
+    (err: unknown) => {
+      if (err instanceof CommanderError) {
+        return err.exitCode
+      }
+      process.stderr.write(`Error: ${formatError(err)}\n`)
+      return 1
+    },
+  )
 }
