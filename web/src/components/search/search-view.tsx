@@ -19,6 +19,10 @@ interface FilterChipProps {
   selectedValues: string[]
   options: Array<{ value: string; label: string }>
   onToggle: (value: string) => void
+  // Multi-select filters (status) stay open so more values can be picked;
+  // exclusive filters (context, sort) close since one click always
+  // finishes the selection.
+  closeOnSelect?: boolean
 }
 
 function FilterChip({
@@ -26,6 +30,7 @@ function FilterChip({
   selectedValues,
   options,
   onToggle,
+  closeOnSelect = true,
 }: FilterChipProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -67,7 +72,7 @@ function FilterChip({
             type="button"
             onClick={() => {
               onToggle(option.value)
-              setOpen(false)
+              if (closeOnSelect) setOpen(false)
             }}
             className={cn(
               'flex w-full items-center px-3 py-1.5 text-left font-mono text-xs',
@@ -184,6 +189,7 @@ export function SearchViewInner({
           onToggle={(v) => {
             updateFilter('status', v)
           }}
+          closeOnSelect={false}
         />
         <FilterChip
           label="Context"
