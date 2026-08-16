@@ -9,6 +9,7 @@ repo_language: ja
 subpackages:
   - name: web
     type: node
+    spa: true
   - name: api
     type: node
     web_app: true
@@ -16,4 +17,3 @@ subpackages:
     type: node
 type: base
 use_release_please: false
-use_storybook: true
