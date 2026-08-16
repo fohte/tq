@@ -5,7 +5,6 @@ import { Readable } from 'node:stream'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { FileIoError } from '#errors'
 import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
 
@@ -42,7 +41,7 @@ describe('readContentInput', () => {
 
     const result = await readContentInput(filePath, fakeStdin([], true))
 
-    expect(result._unsafeUnwrapErr()).toBeInstanceOf(FileIoError)
+    expect(result._unsafeUnwrapErr().message).toBe(`Failed to read ${filePath}`)
   })
 
   it('returns undefined when stdin is a TTY', async () => {

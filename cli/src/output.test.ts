@@ -4,7 +4,6 @@ import { join } from 'node:path'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { FileIoError } from '#errors'
 import { printJson, printJsonList, writeContentFile } from '#output'
 
 afterEach(() => {
@@ -117,6 +116,8 @@ describe('writeContentFile', () => {
 
     const result = await writeContentFile(filePath, '# Hello')
 
-    expect(result._unsafeUnwrapErr()).toBeInstanceOf(FileIoError)
+    expect(result._unsafeUnwrapErr().message).toBe(
+      `Failed to write ${filePath}`,
+    )
   })
 })
