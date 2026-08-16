@@ -59,6 +59,22 @@ describe('toggleSearchFilter', () => {
     })
   })
 
+  it('sets sortBy when none is selected', () => {
+    const parsed: ParsedQuery = { freeText: '' }
+    expect(toggleSearchFilter(parsed, 'sortBy', 'due')).toEqual({
+      freeText: '',
+      sortBy: 'due',
+    })
+  })
+
+  it('replaces sortBy when a different value is toggled', () => {
+    const parsed: ParsedQuery = { freeText: '', sortBy: 'due' }
+    expect(toggleSearchFilter(parsed, 'sortBy', 'created')).toEqual({
+      freeText: '',
+      sortBy: 'created',
+    })
+  })
+
   it('clears sortBy when the active value is toggled again', () => {
     const parsed: ParsedQuery = { freeText: '', sortBy: 'due' }
     expect(toggleSearchFilter(parsed, 'sortBy', 'due')).toEqual({
