@@ -110,7 +110,7 @@ describe('TaskList sort selector', () => {
       expect(screen.getByText('sort: Updated')).toBeInTheDocument()
     })
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { sortBy: 'updated', showCompleted: false },
+      { q: 'is:todo is:in_progress sort:updated' },
     ])
   })
 
@@ -125,7 +125,7 @@ describe('TaskList sort selector', () => {
 
     expect(screen.getByText('sort: Created')).toBeInTheDocument()
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
-      { sortBy: 'created', showCompleted: false },
+      { q: 'is:todo is:in_progress sort:created' },
     ])
   })
 })
@@ -154,7 +154,7 @@ describe('TaskList "show completed" toggle', () => {
       screen.getByRole('menuitemcheckbox', { name: 'show completed' }),
     ).toHaveAttribute('aria-checked', 'true')
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
-      { sortBy: 'updated', showCompleted: true },
+      { q: 'sort:updated' },
     ])
   })
 })
@@ -177,7 +177,7 @@ describe('TaskList project filter selector', () => {
     })
     expect(screen.queryByText(/^project:/)).not.toBeInTheDocument()
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { sortBy: 'updated', showCompleted: false },
+      { q: 'is:todo is:in_progress sort:updated' },
     ])
   })
 
@@ -194,7 +194,7 @@ describe('TaskList project filter selector', () => {
       screen.getByRole('button', { name: 'project: Website Redesign ×' }),
     ).toBeInTheDocument()
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
-      { sortBy: 'updated', showCompleted: false, projectId: 'proj-1' },
+      { q: 'is:todo is:in_progress project:proj-1 sort:updated' },
     ])
   })
 })
@@ -208,7 +208,7 @@ describe('TaskList tag filter', () => {
     })
     expect(screen.queryByRole('button', { name: /^#/ })).not.toBeInTheDocument()
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { sortBy: 'updated', showCompleted: false },
+      { q: 'is:todo is:in_progress sort:updated' },
     ])
   })
 
@@ -223,7 +223,7 @@ describe('TaskList tag filter', () => {
       ).toBeInTheDocument()
     })
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { sortBy: 'updated', showCompleted: false, tag: 'dev:tq' },
+      { q: 'is:todo is:in_progress sort:updated label:dev:tq' },
     ])
   })
 
@@ -291,7 +291,7 @@ describe('TaskList URL query encoding', () => {
     )
 
     expect(router.state.location.search).toEqual({
-      q: 'is:todo is:in_progress sort:updated project:proj-1',
+      q: 'is:todo is:in_progress project:proj-1 sort:updated',
     })
   })
 
@@ -333,7 +333,7 @@ describe('TaskList URL query encoding', () => {
     )
 
     expect(router.state.location.search).toEqual({
-      q: 'is:todo is:in_progress sort:created has:pages',
+      q: 'is:todo is:in_progress has:pages sort:created',
     })
   })
 
@@ -346,7 +346,7 @@ describe('TaskList URL query encoding', () => {
       ).toBeInTheDocument()
     })
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { sortBy: 'updated', showCompleted: false, tag: 'urgent' },
+      { q: 'is:todo is:in_progress label:urgent sort:updated' },
     ])
   })
 })

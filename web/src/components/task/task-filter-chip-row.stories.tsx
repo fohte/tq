@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ParsedQuery } from 'api/search-query-parser'
+import { buildSearchQuery } from 'api/search-query-parser'
 import { http, HttpResponse } from 'msw'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 
@@ -38,6 +40,12 @@ const projectB: Project = {
 
 const projects = [projectA, projectB]
 
+const defaultParsed: ParsedQuery = {
+  freeText: '',
+  status: ['todo', 'in_progress'],
+  sortBy: 'updated',
+}
+
 const meta = {
   title: 'Task/TaskFilterChipRow',
   component: TaskFilterChipRow,
@@ -58,17 +66,12 @@ const meta = {
   args: {
     query: 'is:todo is:in_progress sort:updated',
     onQueryChange: fn(),
-    showCompleted: false,
+    parsed: defaultParsed,
     onShowCompletedChange: fn(),
-    sortBy: 'updated',
     onSortByChange: fn(),
     projects,
-    projectId: undefined,
     onProjectIdChange: fn(),
-    tag: undefined,
     onTagChange: fn(),
-    extra: undefined,
-    onExtraChange: fn(),
   },
 } satisfies Meta<typeof TaskFilterChipRow>
 
@@ -79,19 +82,19 @@ export const Default: Story = {}
 
 export const ShowCompleted: Story = {
   args: {
-    showCompleted: true,
+    parsed: { freeText: '', sortBy: 'updated' },
   },
 }
 
 export const SortByCreated: Story = {
   args: {
-    sortBy: 'created',
+    parsed: { ...defaultParsed, sortBy: 'created' },
   },
 }
 
 export const ProjectSelected: Story = {
   args: {
-    projectId: 'proj-1',
+    parsed: { ...defaultParsed, projectId: 'proj-1' },
   },
 }
 
@@ -103,7 +106,7 @@ export const NoProjects: Story = {
 
 export const TagSelected: Story = {
   args: {
-    tag: 'dev:tq',
+    parsed: { ...defaultParsed, label: 'dev:tq' },
   },
 }
 
@@ -118,7 +121,7 @@ export const RemoveNotCompletedChip: Story = {
 
 export const RemoveProjectChip: Story = {
   args: {
-    projectId: 'proj-1',
+    parsed: { ...defaultParsed, projectId: 'proj-1' },
   },
   play: async ({ canvas, args }) => {
     await userEvent.click(
@@ -130,7 +133,7 @@ export const RemoveProjectChip: Story = {
 
 export const RemoveTagChip: Story = {
   args: {
-    tag: 'dev:tq',
+    parsed: { ...defaultParsed, label: 'dev:tq' },
   },
   play: async ({ canvas, args }) => {
     await userEvent.click(canvas.getByRole('button', { name: '#dev:tq ×' }))
@@ -138,22 +141,62 @@ export const RemoveTagChip: Story = {
   },
 }
 
-// A token typed into the inline query input that none of the structured
-// pickers (is:/sort:/project:/label:) understand — e.g. `has:pages` — still
-// shows up as its own chip instead of silently vanishing on the next edit.
-export const ExtraTokenChip: Story = {
+// A structured field that is understood by search-query-parser but has no
+// dedicated picker in this row (has:pages) still shows up as its own
+// removable chip.
+export const HasPagesChip: Story = {
   args: {
-    extra: 'has:pages',
+    parsed: { ...defaultParsed, hasPages: true },
   },
 }
 
-export const RemoveExtraTokenChip: Story = {
+export const RemoveHasPagesChip: Story = {
   args: {
-    extra: 'has:pages parent:abc',
+    parsed: { ...defaultParsed, hasPages: true },
   },
   play: async ({ canvas, args }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'has:pages ×' }))
-    await expect(args.onExtraChange).toHaveBeenCalledWith('parent:abc')
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      buildSearchQuery(defaultParsed),
+    )
+  },
+}
+
+export const FreeTextChips: Story = {
+  args: {
+    parsed: { ...defaultParsed, freeText: 'foo bar' },
+  },
+}
+
+export const RemoveFreeTextWordChip: Story = {
+  args: {
+    parsed: { ...defaultParsed, freeText: 'foo bar' },
+  },
+  play: async ({ canvas, args }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'foo ×' }))
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      buildSearchQuery({ ...defaultParsed, freeText: 'bar' }),
+    )
+  },
+}
+
+export const ParentIdChip: Story = {
+  args: {
+    parsed: { ...defaultParsed, parentId: 'parent-abc' },
+  },
+}
+
+export const RemoveParentIdChip: Story = {
+  args: {
+    parsed: { ...defaultParsed, parentId: 'parent-abc' },
+  },
+  play: async ({ canvas, args }) => {
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'parent:parent-abc ×' }),
+    )
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      buildSearchQuery(defaultParsed),
+    )
   },
 }
 

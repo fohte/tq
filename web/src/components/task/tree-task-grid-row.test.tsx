@@ -414,7 +414,7 @@ describe('TreeTaskGridRow', () => {
 
     expect(router.state.location.pathname).toBe('/tasks')
     expect(router.state.location.search).toEqual({
-      q: 'is:todo is:in_progress sort:updated label:dev:tq',
+      q: 'is:todo is:in_progress label:dev:tq sort:updated',
     })
     expect(mockLinkOnClick).not.toHaveBeenCalled()
   })

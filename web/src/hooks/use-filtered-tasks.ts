@@ -41,20 +41,13 @@ export function useFilteredTaskList(options?: {
   return { isLoading, ...categorized }
 }
 
-export function useFilteredTaskTree(options: {
-  sortBy?: TaskSortBy
-  showCompleted?: boolean
-  projectId?: string | undefined
-  tag?: string | undefined
-}) {
-  const baseFilter = useBaseFilter(
-    options.showCompleted ?? true,
-    options.projectId,
-    options.tag,
-  )
+export function useFilteredTaskTree(options: { q: string }) {
+  const { mode } = useContextFilter()
+  const apiContext = filterModeToApiContext(mode)
+
   const { isLoading, categorized } = useTaskList({
-    ...baseFilter,
-    ...(options.sortBy ? { sortBy: options.sortBy } : {}),
+    q: options.q,
+    ...(apiContext ? { context: apiContext } : {}),
     includeAncestors: true,
   })
 
