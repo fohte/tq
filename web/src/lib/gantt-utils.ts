@@ -107,6 +107,7 @@ export function getScaleConfig(scale: GanttScale): IScaleConfig[] {
       return [{ unit: 'month', step: 1, format: formatMonthYearShort }]
     default: {
       const exhaustiveCheck: never = scale
+      // eslint-disable-next-line no-restricted-syntax -- exhaustiveness guard, unreachable as long as GanttScale stays exhaustively handled above
       throw new Error(`Unhandled GanttScale: ${String(exhaustiveCheck)}`)
     }
   }

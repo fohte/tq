@@ -19,6 +19,7 @@ export function useResolveGithubUrl() {
   return useMutation({
     mutationFn: async (url: string) => {
       const res = await api.api.github.resolve.$post({ json: { url } })
+      // eslint-disable-next-line no-restricted-syntax -- React Query mutationFn boundary: must throw with the server-provided error message to signal failure
       if (!res.ok) throw new Error((await res.json()).error)
       return res.json()
     },
@@ -31,6 +32,7 @@ export function useCreateTaskFromGithubUrl() {
   return useMutation({
     mutationFn: async (url: string) => {
       const res = await api.api.tasks['from-github'].$post({ json: { url } })
+      // eslint-disable-next-line no-restricted-syntax -- React Query mutationFn boundary: must throw with the server-provided error message to signal failure
       if (!res.ok) throw new Error((await res.json()).error)
       return res.json()
     },
@@ -50,6 +52,7 @@ export function useLinkTaskToGithub(taskId: string) {
         param: { taskId },
         json: { url },
       })
+      // eslint-disable-next-line no-restricted-syntax -- React Query mutationFn boundary: must throw with the server-provided error message to signal failure
       if (!res.ok) throw new Error((await res.json()).error)
       return res.json()
     },
@@ -69,6 +72,7 @@ export function useUnlinkTaskFromGithub(taskId: string) {
       const res = await api.api.tasks[':taskId']['github-link'].$delete({
         param: { taskId },
       })
+      // eslint-disable-next-line no-restricted-syntax -- React Query mutationFn boundary: must throw with the server-provided error message to signal failure
       if (!res.ok) throw new Error((await res.json()).error)
     },
     onSettled: () => {
@@ -94,6 +98,7 @@ export function useGithubSync() {
     queryKey: ['github-sync'],
     queryFn: async () => {
       const res = await api.api.github.sync.$post()
+      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
       unwrapOrThrow(assertOk(res))
       await queryClient.invalidateQueries({ queryKey: taskKeys.all })
       return null
@@ -117,6 +122,7 @@ export function useSyncTaskGithubLink(taskId: string, hasLink: boolean) {
       const res = await api.api.tasks[':taskId']['github-link'].sync.$post({
         param: { taskId },
       })
+      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
       unwrapOrThrow(assertOk(res))
       await queryClient.invalidateQueries({
         queryKey: taskKeys.detail(taskId),

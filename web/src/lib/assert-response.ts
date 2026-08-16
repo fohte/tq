@@ -43,6 +43,7 @@ export function assertStatus<R extends { status: number }, S extends number>(
  * (e.g. a React Query queryFn/mutationFn) that must throw to signal failure.
  */
 export function unwrapOrThrow<T, E extends Error>(result: Result<T, E>): T {
+  // eslint-disable-next-line no-restricted-syntax -- this function's entire purpose is to throw at a React Query queryFn/mutationFn boundary, which must throw to signal failure
   if (result.isErr()) throw result.error
   return result.value
 }

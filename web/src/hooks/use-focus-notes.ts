@@ -1,3 +1,4 @@
+import { Result } from 'neverthrow'
 import { useEffect, useRef, useState } from 'react'
 
 export const PERSIST_DEBOUNCE_MS = 300
@@ -6,20 +7,20 @@ function storageKey(taskId: string): string {
   return `tq:focus-notes:${taskId}`
 }
 
+const getStorageItem = Result.fromThrowable((key: string) =>
+  localStorage.getItem(key),
+)
+const setStorageItem = Result.fromThrowable((key: string, value: string) => {
+  localStorage.setItem(key, value)
+})
+
 function readNotes(taskId: string): string {
-  try {
-    return localStorage.getItem(storageKey(taskId)) ?? ''
-  } catch {
-    return ''
-  }
+  return getStorageItem(storageKey(taskId)).unwrapOr(null) ?? ''
 }
 
 function writeNotes(taskId: string, value: string): void {
-  try {
-    localStorage.setItem(storageKey(taskId), value)
-  } catch {
-    // best-effort persistence; keep the in-memory value even if storage write fails
-  }
+  // best-effort persistence; keep the in-memory value even if storage write fails
+  setStorageItem(storageKey(taskId), value).unwrapOr(undefined)
 }
 
 /**

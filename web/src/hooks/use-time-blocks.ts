@@ -48,8 +48,7 @@ export function useCreateTimeBlock() {
           endTime: input.endTime,
         },
       })
-      if (!res.ok) throw new Error('Failed to create time block')
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onMutate: async (input) => {
       const d = new Date(input.startTime)
@@ -108,8 +107,7 @@ export function useUpdateTimeBlock() {
         param: { id },
         json: updates,
       })
-      if (!res.ok) throw new Error('Failed to update time block')
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: timeBlockKeys.all })
@@ -164,7 +162,8 @@ export function useDeleteTimeBlock() {
       const res = await api.api.schedule['time-blocks'][':id'].$delete({
         param: { id },
       })
-      if (!res.ok) throw new Error('Failed to delete time block')
+      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
+      unwrapOrThrow(assertOk(res))
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: timeBlockKeys.all })

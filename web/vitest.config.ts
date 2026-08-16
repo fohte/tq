@@ -81,6 +81,7 @@ const storycapNetworkIdle = {
     )
     if (patched === code) {
       // This throw fails config loading itself, before any test runs.
+      // eslint-disable-next-line no-restricted-syntax -- Vite plugin transform hook contract: throwing is how a plugin aborts config loading
       throw new Error(
         `storycap-network-idle: no 500ms network-idle default found in ${id}. Drop this plugin if @storycap-testrun made the wait configurable, otherwise re-derive the pattern.`,
       )

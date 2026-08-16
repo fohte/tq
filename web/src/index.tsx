@@ -21,6 +21,7 @@ declare module '@tanstack/react-router' {
 
 const root = document.getElementById('root')
 if (!root) {
+  // eslint-disable-next-line no-restricted-syntax -- startup boundary: no caller exists yet to hand a Result to
   throw new Error('Failed to find the root element.')
 }
 

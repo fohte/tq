@@ -104,5 +104,6 @@ process.on('unhandledRejection', (reason) => {
 
   // Re-throwing here is what surfaces a genuine unhandled rejection as a
   // failed test run.
+  // eslint-disable-next-line no-restricted-syntax -- Node's unhandledRejection handler contract: re-throwing is what crashes the process to fail the test run
   throw reason
 })

@@ -60,8 +60,7 @@ export function useProject(id: string) {
       const res = await api.api.projects[':id'].$get({
         param: { id },
       })
-      if (!res.ok) throw new Error('Failed to fetch project')
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
   })
 }
@@ -93,8 +92,7 @@ export function useCreateProject() {
       const res = await api.api.projects.$post({
         json: input,
       })
-      if (!res.ok) throw new Error('Failed to create project')
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: projectKeys.lists })
@@ -166,8 +164,7 @@ export function useUpdateProject() {
         param: { id },
         json: input,
       })
-      if (!res.ok) throw new Error('Failed to update project')
-      return res.json()
+      return unwrapOrThrow(assertOk(res)).json()
     },
     onMutate: async ({ id, input }) => {
       await queryClient.cancelQueries({ queryKey: projectKeys.detail(id) })
@@ -229,7 +226,8 @@ export function useDeleteProject() {
       const res = await api.api.projects[':id'].$delete({
         param: { id },
       })
-      if (!res.ok) throw new Error('Failed to delete project')
+      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
+      unwrapOrThrow(assertOk(res))
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: projectKeys.lists })

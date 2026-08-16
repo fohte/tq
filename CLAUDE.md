@@ -37,7 +37,7 @@ Migrations are applied automatically by `api/src/global-setup.ts`.
 
 ### Return a `Result` instead of throwing
 
-`errorHandling` in `eslint.config.js` bans `throw`/`try-catch` in production code and requires every returned `Result` to be consumed (`no-restricted-syntax`, `neverthrow/must-use-result` in `@fohte/eslint-config`). Both rules are enforced in `api/**` and `cli/**` (including their own config files). `web/` and root config files still use `throw`/`try-catch` and don't import `neverthrow`. Return a `Result`/`ResultAsync` from [neverthrow](https://github.com/supermacro/neverthrow) instead:
+`errorHandling` in `eslint.config.js` bans `throw`/`try-catch` in production code and requires every returned `Result` to be consumed (`no-restricted-syntax`, `neverthrow/must-use-result` in `@fohte/eslint-config`). Both rules are enforced repo-wide, including `web/`. Return a `Result`/`ResultAsync` from [neverthrow](https://github.com/supermacro/neverthrow) instead:
 
 ```ts
 // bad: throws
