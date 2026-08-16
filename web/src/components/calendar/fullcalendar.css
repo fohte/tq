@@ -61,8 +61,12 @@
   left: 0;
 }
 
-/* Hide now indicator arrow in week view — line only, no marker overlapping time labels */
-.tq-calendar .fc-timeGridWeek-view .fc-timegrid-now-indicator-arrow {
+/* Week view — targets both the desktop 7-day view and the narrow-viewport
+   3-day view (`timeGridThreeDay` in calendar-header.tsx), which FullCalendar
+   renders under a separate `.fc-timeGridThreeDay-view` root class. */
+.tq-calendar
+  :is(.fc-timeGridWeek-view, .fc-timeGridThreeDay-view)
+  .fc-timegrid-now-indicator-arrow {
   display: none;
 }
 
@@ -72,7 +76,9 @@
 }
 
 /* Week view day headers */
-.tq-calendar .fc-timeGridWeek-view .fc-col-header-cell {
+.tq-calendar
+  :is(.fc-timeGridWeek-view, .fc-timeGridThreeDay-view)
+  .fc-col-header-cell {
   padding: 6px 0;
   font-family: var(--font-mono);
   font-size: 11px;
@@ -80,18 +86,25 @@
   color: var(--muted-foreground);
 }
 
-.tq-calendar .fc-timeGridWeek-view .fc-col-header-cell-cushion {
+.tq-calendar
+  :is(.fc-timeGridWeek-view, .fc-timeGridThreeDay-view)
+  .fc-col-header-cell-cushion {
   padding: 4px 8px;
 }
 
 /* Highlight today's column header in week view */
-.tq-calendar .fc-timeGridWeek-view .fc-day-today .fc-col-header-cell-cushion {
+.tq-calendar
+  :is(.fc-timeGridWeek-view, .fc-timeGridThreeDay-view)
+  .fc-day-today
+  .fc-col-header-cell-cushion {
   color: var(--primary);
   font-weight: 700;
 }
 
 /* Highlight today's column in week view */
-.tq-calendar .fc-timeGridWeek-view .fc-day-today {
+.tq-calendar
+  :is(.fc-timeGridWeek-view, .fc-timeGridThreeDay-view)
+  .fc-day-today {
   background-color: var(--card);
 }
 
