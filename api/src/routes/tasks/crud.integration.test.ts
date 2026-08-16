@@ -418,6 +418,82 @@ describe('tasks CRUD API', () => {
       expect(body[0].title).toBe('Deploy to production')
     })
 
+    it('matches a task whose title contains all words regardless of order', async () => {
+      const task = await createTask('tq で PR とリンクする')
+      await createTask('Unrelated task')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('tq PR'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].id).toBe(task.id)
+    })
+
+    it('matches a task when each word is found in a different field', async () => {
+      const task = await createTask('overflow handling', {
+        description: 'needs suppression tuning',
+      })
+      await createTask('overflow only')
+      await createTask('suppression only')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('overflow suppression'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].id).toBe(task.id)
+    })
+
+    it('matches a word found only in a page instead of title/description', async () => {
+      const task = await createTask('overflow handling')
+      await createPage(task.id, 'Notes', 'needs suppression tuning')
+      await createTask('overflow only')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('overflow suppression'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].id).toBe(task.id)
+    })
+
+    it('does not match a task containing only one of the words', async () => {
+      await createTask('overflow only')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('overflow suppression'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toEqual([])
+    })
+
+    it('matches by substring for whitespace-less Japanese text', async () => {
+      const task = await createTask('デプロイ手順を確認する')
+      await createTask('Unrelated task')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('デプロイ手順'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].id).toBe(task.id)
+    })
+
     it('matches a full task number via q', async () => {
       const task = await createTask('Some unrelated title')
       await createTask('Another task')

@@ -121,14 +121,23 @@ function buildConditions(query: ListTasksQuery) {
 
   if (parsed?.freeText != null && parsed.freeText !== '') {
     const freeText = parsed.freeText
-    const pattern = `%${freeText}%`
+    // `freeText` is `parseSearchQuery`'s tokens re-joined with spaces, so
+    // splitting on whitespace here recovers per-word matching without
+    // needing the parser to expose the token list itself. A word without
+    // ASCII whitespace (e.g. Japanese text) stays a single word and keeps
+    // matching as a substring, same as before.
+    const words = freeText.split(/\s+/).filter((word) => word !== '')
     const numberQuery = freeText.startsWith('#') ? freeText.slice(1) : freeText
     const numberCondition =
       numberQuery !== '' && /^\d+$/.test(numberQuery)
         ? sql`OR CAST(${tasks.number} AS TEXT) LIKE ${`${numberQuery}%`}`
         : sql``
+    const wordConditions = words.map((word) => {
+      const pattern = `%${word}%`
+      return sql`(${tasks.title} ILIKE ${pattern} OR ${tasks.description} ILIKE ${pattern} OR EXISTS (SELECT 1 FROM ${taskPages} WHERE ${taskPages.taskId} = ${tasks.id} AND ${taskPages.content} ILIKE ${pattern}))`
+    })
     conditions.push(
-      sql`(${tasks.title} ILIKE ${pattern} OR ${tasks.description} ILIKE ${pattern} OR EXISTS (SELECT 1 FROM ${taskPages} WHERE ${taskPages.taskId} = ${tasks.id} AND ${taskPages.content} ILIKE ${pattern}) ${numberCondition})`,
+      sql`(${sql.join(wordConditions, sql` AND `)} ${numberCondition})`,
     )
   }
 
