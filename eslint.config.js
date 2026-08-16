@@ -20,14 +20,13 @@ export default config(
   },
   ...storybook.configs['flat/recommended'],
   // errorHandling only targets api/src; the rest of the repo (web/, config
-  // files at the root) keeps using throw/try-catch and never imports
-  // neverthrow.
+  // files at the root, and api's own config files) keeps using
+  // throw/try-catch.
   {
     files: ['**/*.ts', '**/*.tsx'],
-    ignores: ['api/src/**/*.ts', 'api/src/**/*.tsx'],
+    ignores: ['api/**/*.ts', 'api/**/*.tsx'],
     rules: {
       'no-restricted-syntax': 'off',
-      'neverthrow/must-use-result': 'off',
     },
   },
   // vite.config.ts/vitest.config.ts are loaded through Vite's own
