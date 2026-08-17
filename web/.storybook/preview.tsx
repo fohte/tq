@@ -36,12 +36,7 @@ const preview: Preview = {
     // its click/touch target past its visible box on purpose, but paints
     // nothing (no border/background), so nothing is ever visibly cut off
     // wherever Checkbox renders.
-    //
-    // Storybook's parameters don't deep-merge: a story that sets its own
-    // `overflowCheck` parameter replaces this default wholesale and must
-    // restate '[data-slot="checkbox"]' if it renders a Checkbox (see
-    // task-filter-chip-row.stories.tsx for an example).
-    overflowCheck: { ignoreSelectors: ['[data-slot="checkbox"]'] },
+    overflowCheck: { globalIgnoreSelectors: ['[data-slot="checkbox"]'] },
   },
   globalTypes: {
     theme: {
