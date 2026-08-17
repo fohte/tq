@@ -129,6 +129,7 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+<<<<<<< before updating
 
 # Storybook build output
 storybook-static/
@@ -138,3 +139,9 @@ __screenshots__/
 
 # reg-suit working directory
 .reg/
+||||||| last update
+
+# Storybook build output
+storybook-static/
+=======
+>>>>>>> after updating
