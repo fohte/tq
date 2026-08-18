@@ -7,8 +7,7 @@ describe('onError', () => {
   it('returns an HTTPException as its own status and body instead of a generic 500', async () => {
     // `@hono/mcp`'s protocol-version check throws `HTTPException(404, ...)`
     // for a non-initialize request whose `Mcp-Protocol-Version` header isn't
-    // one it recognizes; this is the same trigger that previously reached
-    // production as an opaque 500.
+    // one it recognizes.
     const res = await app.request('/api/mcp', {
       method: 'POST',
       headers: {
