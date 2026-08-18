@@ -49,7 +49,8 @@ const app = new Hono()
   // reported at its own point of failure lands here, so it's never silently
   // invisible to Sentry. `{{ default }}` keeps Sentry's normal grouping
   // (exception type/value/stack trace) so unrelated errors land in separate
-  // issues, while still tagging them all as unhandled.
+  // issues, while the 'api.unhandled-error' prefix still marks them as
+  // having escaped every route's own error handling.
   .onError((err, c) => {
     captureWithFingerprint(err, ['api.unhandled-error', '{{ default }}'], {
       extras: { method: c.req.method, path: c.req.path },
