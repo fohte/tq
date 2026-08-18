@@ -47,9 +47,11 @@ const app = new Hono()
   .route('/api/mcp', mcpApp)
   // Final safety net: any error that escapes a route handler without being
   // reported at its own point of failure lands here, so it's never silently
-  // invisible to Sentry.
+  // invisible to Sentry. `{{ default }}` keeps Sentry's normal grouping
+  // (exception type/value/stack trace) so unrelated errors land in separate
+  // issues, while still tagging them all as unhandled.
   .onError((err, c) => {
-    captureWithFingerprint(err, 'api.unhandled-error', {
+    captureWithFingerprint(err, ['api.unhandled-error', '{{ default }}'], {
       extras: { method: c.req.method, path: c.req.path },
     })
     return c.json({ error: 'Internal server error' }, 500)
