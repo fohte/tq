@@ -53,7 +53,9 @@ const meta = {
     // The chip row is intentionally horizontally scrollable
     // (overflow-x-auto) so it never breaks the tasks page header at mobile
     // widths — see create-task-modal.stories.tsx for the same exemption.
-    overflowCheck: { ignoreSelectors: ['.overflow-x-auto'] },
+    overflowCheck: {
+      ignoreSelectors: ['.overflow-x-auto'],
+    },
     msw: { handlers: [emptySuggestHandler] },
   },
   decorators: [
