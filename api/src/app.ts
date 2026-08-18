@@ -1,6 +1,7 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { HTTPException } from 'hono/http-exception'
 
 import { authorMiddleware } from '#lib/author'
 import { calendarApp } from '#routes/calendar'
@@ -49,6 +50,13 @@ const app = new Hono()
   // reported at its own point of failure lands here, so it's never silently
   // invisible to Sentry.
   .onError((err, c) => {
+    // An HTTPException already carries the status and body its thrower
+    // intended (e.g. `@hono/mcp`'s protocol-version check); passing it
+    // through preserves that instead of collapsing every thrown error to a
+    // generic 500.
+    if (err instanceof HTTPException) {
+      return err.getResponse()
+    }
     captureWithFingerprint(err, 'api.unhandled-error', {
       extras: { method: c.req.method, path: c.req.path },
     })
