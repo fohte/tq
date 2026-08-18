@@ -1,31 +1,24 @@
-import { SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js'
+import { Hono } from 'hono'
+import { HTTPException } from 'hono/http-exception'
 import { describe, expect, it } from 'vitest'
 
-import { app } from '#app'
+import { onError } from '#app'
 
 describe('onError', () => {
   it('returns an HTTPException as its own status and body instead of a generic 500', async () => {
-    // `@hono/mcp`'s protocol-version check throws `HTTPException(404, ...)`
-    // for a non-initialize request whose `Mcp-Protocol-Version` header isn't
-    // one it recognizes.
-    const res = await app.request('/api/mcp', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json, text/event-stream',
-        'mcp-protocol-version': 'not-a-real-version',
-      },
-      body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/list', id: 1 }),
-    })
+    const app = new Hono()
+      .get('/throws', () => {
+        throw new HTTPException(404, {
+          res: new Response(JSON.stringify({ error: 'not found' }), {
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        })
+      })
+      .onError(onError)
+
+    const res = await app.request('/throws')
 
     expect(res.status).toBe(404)
-    expect(await res.json()).toEqual({
-      jsonrpc: '2.0',
-      error: {
-        code: -32000,
-        message: `Bad Request: Unsupported protocol version (supported versions: ${SUPPORTED_PROTOCOL_VERSIONS.join(', ')})`,
-      },
-      id: null,
-    })
+    expect(await res.json()).toEqual({ error: 'not found' })
   })
 })
