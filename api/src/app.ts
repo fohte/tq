@@ -24,12 +24,15 @@ import { tasksApp } from '#routes/tasks/index'
 // Final safety net: any error that escapes a route handler without being
 // reported at its own point of failure lands here, so it's never silently
 // invisible to Sentry — except an HTTPException, whose thrower already
-// chose its status and body on purpose.
+// chose its status and body on purpose. `{{ default }}` keeps Sentry's
+// normal grouping (exception type/value/stack trace) so unrelated errors
+// land in separate issues, while the 'api.unhandled-error' prefix still
+// marks them as having escaped every route's own error handling.
 export function onError(err: Error, c: Context): Response {
   if (err instanceof HTTPException) {
     return err.getResponse()
   }
-  captureWithFingerprint(err, 'api.unhandled-error', {
+  captureWithFingerprint(err, ['api.unhandled-error', '{{ default }}'], {
     extras: { method: c.req.method, path: c.req.path },
   })
   return c.json({ error: 'Internal server error' }, 500)
