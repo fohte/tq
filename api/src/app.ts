@@ -23,14 +23,9 @@ import { tasksApp } from '#routes/tasks/index'
 
 // Final safety net: any error that escapes a route handler without being
 // reported at its own point of failure lands here, so it's never silently
-// invisible to Sentry — except an HTTPException, handled below, whose
-// thrower already chose its status and body on purpose.
+// invisible to Sentry — except an HTTPException, whose thrower already
+// chose its status and body on purpose.
 export function onError(err: Error, c: Context): Response {
-  // An HTTPException already carries the status and body its thrower
-  // intended; passing it through preserves that instead of collapsing
-  // every thrown error to a generic 500. This also skips Sentry reporting
-  // for it, including for any HTTPException a dependency throws to signal
-  // its own internal error.
   if (err instanceof HTTPException) {
     return err.getResponse()
   }
