@@ -2,9 +2,10 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
 
 import { app } from '#app'
-import { setupTestDb } from '#testing'
+import { jsonBody, setupTestDb } from '#testing'
 
 // Per-tool schema/description/annotation detail is covered by each tool
 // group's own tests; both protocol-era tests below only pin down that every
@@ -61,8 +62,7 @@ describe('MCP endpoint', () => {
 // `initialize`/`Mcp-Session-Id` handshake: every request is fully
 // self-contained, naming the protocol version in both a header and the
 // JSON-RPC `params._meta` envelope. These requests build that shape by hand
-// (no client SDK is speaking it here) to pin down that the endpoint serves
-// it now that this era is no longer rejected.
+// (no client SDK is speaking it here) to exercise that path directly.
 describe('MCP endpoint (2026-07-28 protocol)', () => {
   setupTestDb()
 
@@ -104,14 +104,18 @@ describe('MCP endpoint (2026-07-28 protocol)', () => {
     )
 
     expect(res.status).toBe(200)
-    const body = await res.json()
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- shape asserted via the equality check below
-    const tools = (body as { result: { tools: { name: string }[] } }).result
-      .tools
-    expect(tools.map((tool) => tool.name).sort()).toEqual(REGISTERED_TOOL_NAMES)
+    const body = await jsonBody(
+      res,
+      z.object({
+        result: z.object({ tools: z.array(z.object({ name: z.string() })) }),
+      }),
+    )
+    expect(body.result.tools.map((tool) => tool.name).sort()).toEqual(
+      REGISTERED_TOOL_NAMES,
+    )
   })
 
-  it('calls a tool', async () => {
+  it("returns a tool's result without an initialize handshake", async () => {
     const res = await app.request(
       'http://localhost/api/mcp',
       modernRequestInit(
