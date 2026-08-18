@@ -1,4 +1,4 @@
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import type { CallToolResult } from '@modelcontextprotocol/server'
 import type { Hono } from 'hono'
 import { fromThrowable, ResultAsync } from 'neverthrow'
 import { z } from 'zod'

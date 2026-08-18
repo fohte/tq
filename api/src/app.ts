@@ -1,4 +1,5 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
+import type { Context } from 'hono'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
@@ -19,6 +20,20 @@ import { taskCommentsApp } from '#routes/task-comments'
 import { taskGithubLinkApp } from '#routes/task-github-link'
 import { taskPagesApp } from '#routes/task-pages'
 import { tasksApp } from '#routes/tasks/index'
+
+// Final safety net: any error that escapes a route handler without being
+// reported at its own point of failure lands here, so it's never silently
+// invisible to Sentry — except an HTTPException, whose thrower already
+// chose its status and body on purpose.
+export function onError(err: Error, c: Context): Response {
+  if (err instanceof HTTPException) {
+    return err.getResponse()
+  }
+  captureWithFingerprint(err, 'api.unhandled-error', {
+    extras: { method: c.req.method, path: c.req.path },
+  })
+  return c.json({ error: 'Internal server error' }, 500)
+}
 
 const app = new Hono()
   .use(
@@ -46,25 +61,7 @@ const app = new Hono()
   .route('/api/scheduling-settings', schedulingSettingsApp)
   .route('/api/slack', slackApp)
   .route('/api/mcp', mcpApp)
-  // Final safety net: any error that escapes a route handler without being
-  // reported at its own point of failure lands here, so it's never silently
-  // invisible to Sentry — except an HTTPException, handled below, whose
-  // thrower already chose its status and body on purpose.
-  .onError((err, c) => {
-    // An HTTPException already carries the status and body its thrower
-    // intended (e.g. `@hono/mcp`'s protocol-version check); passing it
-    // through preserves that instead of collapsing every thrown error to a
-    // generic 500. This also skips Sentry reporting for it, including for
-    // any HTTPException a dependency throws to signal its own internal
-    // error (e.g. `@hono/mcp` throws one on SSE replay failure).
-    if (err instanceof HTTPException) {
-      return err.getResponse()
-    }
-    captureWithFingerprint(err, 'api.unhandled-error', {
-      extras: { method: c.req.method, path: c.req.path },
-    })
-    return c.json({ error: 'Internal server error' }, 500)
-  })
+  .onError(onError)
 
 export { app }
 
