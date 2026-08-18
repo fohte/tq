@@ -5,8 +5,9 @@ import { projectKeys } from '#hooks/use-projects'
 import { taskKeys } from '#hooks/use-tasks'
 import { api } from '#lib/api'
 import {
-  assertOk,
+  assertOkOrThrow,
   assertOkWithMessage,
+  assertOkWithMessageOrThrow,
   unwrapOrThrow,
 } from '#lib/assert-response'
 
@@ -70,8 +71,7 @@ export function useUnlinkTaskFromGithub(taskId: string) {
       const res = await api.api.tasks[':taskId']['github-link'].$delete({
         param: { taskId },
       })
-      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
-      unwrapOrThrow(await assertOkWithMessage(res))
+      await assertOkWithMessageOrThrow(res)
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) })
@@ -96,8 +96,7 @@ export function useGithubSync() {
     queryKey: ['github-sync'],
     queryFn: async () => {
       const res = await api.api.github.sync.$post()
-      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
-      unwrapOrThrow(assertOk(res))
+      assertOkOrThrow(res)
       await queryClient.invalidateQueries({ queryKey: taskKeys.all })
       return null
     },
@@ -120,8 +119,7 @@ export function useSyncTaskGithubLink(taskId: string, hasLink: boolean) {
       const res = await api.api.tasks[':taskId']['github-link'].sync.$post({
         param: { taskId },
       })
-      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
-      unwrapOrThrow(assertOk(res))
+      assertOkOrThrow(res)
       await queryClient.invalidateQueries({
         queryKey: taskKeys.detail(taskId),
       })

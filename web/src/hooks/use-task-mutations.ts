@@ -4,7 +4,7 @@ import { projectKeys } from '#hooks/use-projects'
 import type { Task, TaskDetail } from '#hooks/use-task-queries'
 import { taskKeys } from '#hooks/use-task-queries'
 import { api } from '#lib/api'
-import { assertOk, unwrapOrThrow } from '#lib/assert-response'
+import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
 
 export interface CreateTaskInput {
   title: string
@@ -376,8 +376,7 @@ export function useDeleteTask() {
       const res = await api.api.tasks[':id'].$delete({
         param: { id },
       })
-      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
-      unwrapOrThrow(assertOk(res))
+      assertOkOrThrow(res)
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists })

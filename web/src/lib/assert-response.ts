@@ -72,3 +72,27 @@ export function unwrapOrThrow<T, E extends Error>(result: Result<T, E>): T {
   if (result.isErr()) throw result.error
   return result.value
 }
+
+/**
+ * Like `assertOk`, but throws instead of returning a `Result`. Use at a
+ * boundary (e.g. a React Query mutationFn) that only needs the
+ * throw-on-failure effect and has no Ok value worth keeping.
+ */
+export function assertOkOrThrow(res: { status: number; ok: boolean }): void {
+  // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
+  unwrapOrThrow(assertOk(res))
+}
+
+/**
+ * Like `assertOkWithMessage`, but throws instead of returning a `Result`.
+ * Use at a boundary (e.g. a React Query mutationFn) that only needs the
+ * throw-on-failure effect and has no Ok value worth keeping.
+ */
+export async function assertOkWithMessageOrThrow(res: {
+  status: number
+  ok: boolean
+  json: () => Promise<unknown>
+}): Promise<void> {
+  // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
+  unwrapOrThrow(await assertOkWithMessage(res))
+}
