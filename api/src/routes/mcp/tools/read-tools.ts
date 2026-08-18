@@ -1,5 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import type { CallToolResult, McpServer } from '@modelcontextprotocol/server'
 import type { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -71,7 +70,7 @@ export function registerReadTools(server: McpServer): void {
     {
       description:
         'List tasks, optionally filtered by status, project, parent task, or context. Returns all matching tasks with no limit or pagination; combine filters to keep the result set small. Use search_tasks instead for free-text search, label filtering, sorting, or pagination.',
-      inputSchema: {
+      inputSchema: z.object({
         status: taskStatus
           .optional()
           .describe('Only return tasks in this status.'),
@@ -88,7 +87,7 @@ export function registerReadTools(server: McpServer): void {
         context: contextEnum
           .optional()
           .describe('Only return tasks in this context.'),
-      },
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ status, projectId, parentId, context }) =>
@@ -102,11 +101,11 @@ export function registerReadTools(server: McpServer): void {
     {
       description:
         "Get the full detail of a single task by id: its attributes, recurrence rule, time blocks, page metadata, linked tasks (mentions via `#<number>` or a pasted task URL, as `links.outgoing`/`links.incoming`), labels, and the nested subtree of its subtasks (as `subtasks`, each entry including its own labels). Each entry in `pages` is metadata only (id, taskId, title, sortOrder, timestamps, author) with no `content` — pass its `id` and this task's `id` to get_page to read a page's content.",
-      inputSchema: {
+      inputSchema: z.object({
         taskId: taskIdOrNumber.describe(
           'The task id (UUID) or task number to look up.',
         ),
-      },
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ taskId }) => {
@@ -147,12 +146,12 @@ export function registerReadTools(server: McpServer): void {
     {
       description:
         "Get the full content of a single page (a task note) by id. get_task lists a task's pages as metadata only — resolve taskId and pageId from an entry in its `pages` array before calling this.",
-      inputSchema: {
+      inputSchema: z.object({
         taskId: taskIdOrNumber.describe(
           'The id (UUID) or number of the task the page belongs to.',
         ),
         pageId: z.uuid().describe('The page id to look up.'),
-      },
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ taskId, pageId }) =>
@@ -164,7 +163,7 @@ export function registerReadTools(server: McpServer): void {
     {
       description:
         'Search tasks using the same query syntax as the TQ search bar. The `q` string does a free-text match across title, description, and page content, and also accepts prefixed filter tokens that can be combined with free text and with each other: `is:todo|in_progress|completed` (repeat `is:` to match multiple statuses, e.g. `is:todo is:in_progress`), `label:<name>`, `context:work|personal`, `has:pages`, `has:comments`, `parent:<uuid>`, `project:<uuid|title>`, `sort:due|created|updated|estimate`. Example: `q: "is:todo label:urgent context:work groceries"` finds todo tasks labeled urgent in the work context whose title, description, or pages mention "groceries". The same filters are also available as explicit parameters for when a query string is not needed.',
-      inputSchema: {
+      inputSchema: z.object({
         q: z
           .string()
           .optional()
@@ -218,7 +217,7 @@ export function registerReadTools(server: McpServer): void {
           .min(0)
           .optional()
           .describe('Number of results to skip, for pagination.'),
-      },
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({
@@ -252,7 +251,7 @@ export function registerReadTools(server: McpServer): void {
     {
       description:
         "Get the tasks in the Today queue: the tasks a user has staged to work on for a given day, in queue order. Omitting date defaults to the server's current UTC date, which may not match the caller's local calendar day; pass an explicit date to get a specific (e.g. the caller's local) day.",
-      inputSchema: {
+      inputSchema: z.object({
         date: z
           .string()
           .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
@@ -260,7 +259,7 @@ export function registerReadTools(server: McpServer): void {
           .describe(
             "Date to fetch the Today queue for, as YYYY-MM-DD. Defaults to the server's current UTC date.",
           ),
-      },
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ date }) =>
@@ -276,11 +275,11 @@ export function registerReadTools(server: McpServer): void {
     {
       description:
         "List projects, optionally filtered by status. Use this to resolve a project's id before passing projectId to list_tasks or create_task.",
-      inputSchema: {
+      inputSchema: z.object({
         status: projectStatus
           .optional()
           .describe('Only return projects in this status.'),
-      },
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ status }) =>
