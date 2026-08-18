@@ -15,23 +15,27 @@ import {
 import { classifyNumericOrId, numericIdPattern } from '#lib/numeric-id'
 import type { TaskSortBy } from '#schemas/task'
 
+function resolvePrimaryTaskListOrderBy(sortBy?: TaskSortBy) {
+  switch (sortBy) {
+    case 'updated':
+      return desc(tasks.updatedAt)
+    case 'due':
+      return tasks.dueDate
+    case 'estimate':
+      return tasks.estimatedMinutes
+    case 'created':
+    default:
+      return tasks.createdAt
+  }
+}
+
 // `tasks.number` is a unique, monotonically increasing identity column, so
 // appending it as a tiebreaker makes every ordering fully deterministic even
 // when the primary sort key ties (e.g. rows created in the same
 // transaction share one `now()`-derived `createdAt`), which limit/offset
 // paging requires to avoid duplicate or skipped rows across pages.
 export function resolveTaskListOrderBy(sortBy?: TaskSortBy) {
-  switch (sortBy) {
-    case 'updated':
-      return [desc(tasks.updatedAt), tasks.number]
-    case 'due':
-      return [tasks.dueDate, tasks.number]
-    case 'estimate':
-      return [tasks.estimatedMinutes, tasks.number]
-    case 'created':
-    default:
-      return [tasks.createdAt, tasks.number]
-  }
+  return [resolvePrimaryTaskListOrderBy(sortBy), tasks.number]
 }
 
 export function recurrenceRuleToResponse(

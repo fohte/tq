@@ -319,6 +319,28 @@ describe('tasks CRUD API', () => {
       ])
     })
 
+    it('breaks createdAt ties by task number so limit/offset paging has no duplicates or gaps', async () => {
+      const taskA = await createTask('Task A')
+      const taskB = await createTask('Task B')
+      const taskC = await createTask('Task C')
+
+      // All three share one now()-derived createdAt (see setupTestDb), so
+      // this exercises the tiebreaker itself rather than createdAt ordering.
+      const page1 = await app.request('/api/tasks?limit=2&offset=0')
+      const page2 = await app.request('/api/tasks?limit=2&offset=2')
+
+      expect(page1.status).toBe(200)
+      expect(page2.status).toBe(200)
+      const ids1 = (await jsonBody<TaskListItemResponse[]>(page1)).map(
+        (t) => t.id,
+      )
+      const ids2 = (await jsonBody<TaskListItemResponse[]>(page2)).map(
+        (t) => t.id,
+      )
+      expect(ids1).toEqual([taskA.id, taskB.id])
+      expect(ids2).toEqual([taskC.id])
+    })
+
     it('sorts by updatedAt descending when sortBy=updated', async () => {
       const taskA = await createTask('Task A')
       const taskB = await createTask('Task B')
