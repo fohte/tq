@@ -15,6 +15,13 @@ inputs:
       Shell command that performs the real apt-get install on a cache miss.
       Runs from the repo root.
     required: true
+  cache-key-suffix:
+    description: >-
+      Extra fingerprint to bust the cache when install-command's required
+      packages can change independently of the runner image (e.g. a tool
+      version driving install-command's package list).
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -35,8 +42,10 @@ runs:
         path: ~/.cache/apt-debs/${{ inputs.key }}
         # Keyed on the runner image version: a newer image can ship a
         # different set of pre-installed packages, which changes which
-        # dependencies actually need a cached .deb.
-        key: ${{ runner.os }}-apt-${{ inputs.key }}-${{ steps.image-version.outputs.version }}
+        # dependencies actually need a cached .deb. cache-key-suffix covers
+        # the same kind of change coming from install-command's own tooling
+        # instead of the image.
+        key: ${{ runner.os }}-apt-${{ inputs.key }}-${{ steps.image-version.outputs.version }}-${{ inputs.cache-key-suffix }}
 
     # dpkg doesn't resolve install order across multiple files given in one
     # invocation, so a dependency can land after the package that needs it

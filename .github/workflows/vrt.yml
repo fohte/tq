@@ -92,6 +92,7 @@ jobs:
         uses: ./.github/actions/apt-install
         with:
           key: playwright-deps
+          cache-key-suffix: ${{ steps.playwright-version.outputs.version }}
           install-command: cd web && pnpm exec playwright install-deps chromium
 
       - name: Run Storybook screenshots

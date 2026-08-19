@@ -51,7 +51,7 @@ Migrations are applied automatically by the test global setup (`api/src/global-s
 pnpm --filter web run test
 ```
 
-Storybook stories render in a headless Playwright chromium browser, which must be installed once per machine. This runs separately from `pnpm --filter web run test`, both locally and in CI.
+Storybook stories render in a headless Playwright chromium browser, which must be installed once per machine. This runs separately from `pnpm --filter web run test`. CI installs the browser and its system dependencies as two separate, independently cached steps (`.github/workflows/vrt.yml`); locally, `--with-deps` does both in one command.
 
 ```sh
 pnpm --filter web exec playwright install --with-deps chromium
