@@ -1,13 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 
 import { BottomTabBar } from '#components/layout/bottom-tab-bar'
+import { StoryRouter } from '#storybook-config/story-router'
 
 function BottomTabBarStory() {
   return (
@@ -18,20 +12,7 @@ function BottomTabBarStory() {
 }
 
 function BottomTabBarWithRouter({ currentPath }: { currentPath: string }) {
-  const rootRoute = createRootRoute({ component: BottomTabBarStory })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
-  rootRoute.addChildren([indexRoute])
-
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: [currentPath] }),
-  })
-
-  return <RouterProvider router={router} />
+  return <StoryRouter component={BottomTabBarStory} initialPath={currentPath} />
 }
 
 const meta = {

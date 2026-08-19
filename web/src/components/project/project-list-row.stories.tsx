@@ -1,14 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 
 import { ProjectListRow } from '#components/project/project-list-row'
 import type { Project } from '#hooks/use-projects'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const baseProject: Project = {
   id: '1',
@@ -28,24 +22,15 @@ const baseProject: Project = {
 function ProjectListRowStory(
   props: React.ComponentProps<typeof ProjectListRow>,
 ) {
-  const rootRoute = createRootRoute({
-    component: () => (
-      <div className="dark w-3xl bg-background">
-        <ProjectListRow {...props} />
-      </div>
-    ),
-  })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
-  rootRoute.addChildren([indexRoute])
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-  return <RouterProvider router={router} />
+  return (
+    <StoryRouter
+      component={() => (
+        <div className="dark w-3xl bg-background">
+          <ProjectListRow {...props} />
+        </div>
+      )}
+    />
+  )
 }
 
 const meta = {
@@ -183,25 +168,16 @@ export const AllVariants: Story = {
       },
     ]
 
-    const rootRoute = createRootRoute({
-      component: () => (
-        <div className="dark w-3xl divide-y divide-border bg-background">
-          {projects.map((project) => (
-            <ProjectListRow key={project.id} project={project} />
-          ))}
-        </div>
-      ),
-    })
-    const indexRoute = createRoute({
-      getParentRoute: () => rootRoute,
-      path: '/',
-      component: () => null,
-    })
-    rootRoute.addChildren([indexRoute])
-    const router = createRouter({
-      routeTree: rootRoute,
-      history: createMemoryHistory({ initialEntries: ['/'] }),
-    })
-    return <RouterProvider router={router} />
+    return (
+      <StoryRouter
+        component={() => (
+          <div className="dark w-3xl divide-y divide-border bg-background">
+            {projects.map((project) => (
+              <ProjectListRow key={project.id} project={project} />
+            ))}
+          </div>
+        )}
+      />
+    )
   },
 }

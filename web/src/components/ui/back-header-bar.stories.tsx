@@ -1,33 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 
 import { BackHeaderBar } from '#components/ui/back-header-bar'
+import { StoryRouter } from '#storybook-config/story-router'
 
 function BackHeaderBarStory(props: React.ComponentProps<typeof BackHeaderBar>) {
-  const rootRoute = createRootRoute({
-    component: () => (
-      <div className="w-96 border border-border">
-        <BackHeaderBar {...props} />
-      </div>
-    ),
-  })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
-  rootRoute.addChildren([indexRoute])
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-  return <RouterProvider router={router} />
+  return (
+    <StoryRouter
+      component={() => (
+        <div className="w-96 border border-border">
+          <BackHeaderBar {...props} />
+        </div>
+      )}
+    />
+  )
 }
 
 const meta = {

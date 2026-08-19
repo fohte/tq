@@ -1,16 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { expect } from 'storybook/test'
 
 import { TaskPreviewCard } from '#components/task/task-preview-card'
 import type { TaskPreviewChipTask } from '#components/task/task-preview-chip'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const baseTask: TaskPreviewChipTask = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -21,21 +15,9 @@ const baseTask: TaskPreviewChipTask = {
 }
 
 function Providers({ children }: { children: ReactNode }) {
-  const rootRoute = createRootRoute({
-    component: () => <>{children}</>,
-  })
-  const taskRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/tasks/$taskId',
-    component: () => null,
-  })
-  rootRoute.addChildren([taskRoute])
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-
-  return <RouterProvider router={router} />
+  return (
+    <StoryRouter component={() => <>{children}</>} paths={['/tasks/$taskId']} />
+  )
 }
 
 function TaskPreviewCardWithProviders({

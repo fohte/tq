@@ -1,16 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
 import { TaskRow } from '#components/task/task-row'
 import type { Task } from '#hooks/use-tasks'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const baseTask: Task = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -37,30 +31,13 @@ function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  const rootRoute = createRootRoute({
-    validateSearch: (search: Record<string, unknown>) => search,
-    component: () => <>{children}</>,
-  })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
-  const taskRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/tasks/$taskId',
-    component: () => null,
-  })
-  rootRoute.addChildren([indexRoute, taskRoute])
-
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <StoryRouter
+        component={() => <>{children}</>}
+        paths={['/tasks/$taskId']}
+      />
     </QueryClientProvider>
   )
 }

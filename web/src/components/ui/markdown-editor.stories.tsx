@@ -1,12 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { expect, fireEvent, fn } from 'storybook/test'
 
@@ -16,6 +9,7 @@ import { taskMentionKeys } from '#hooks/use-task-mentions'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { queryClient } from '#lib/query-client'
 import { assertDefined } from '#lib/test-utils'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const meta = {
   title: 'UI/MarkdownEditor',
@@ -130,23 +124,12 @@ function seedLiveReferenceFixtures() {
 // so they need a QueryClientProvider and RouterProvider ancestor here the
 // same way the app's real root provides them.
 function LiveReferencesProviders({ children }: { children: ReactNode }) {
-  const rootRoute = createRootRoute({
-    component: () => <>{children}</>,
-  })
-  const taskRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/tasks/$taskId',
-    component: () => null,
-  })
-  rootRoute.addChildren([taskRoute])
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <StoryRouter
+        component={() => <>{children}</>}
+        paths={['/tasks/$taskId']}
+      />
     </QueryClientProvider>
   )
 }

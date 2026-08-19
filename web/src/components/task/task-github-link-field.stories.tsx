@@ -1,40 +1,21 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 
 import { SidebarGithubLinkField } from '#components/task/task-github-link-field'
 import type { GithubLink } from '#hooks/use-github-link'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 })
 
 function Providers({ children }: { children: React.ReactNode }) {
-  const rootRoute = createRootRoute({ component: () => <>{children}</> })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
-  const taskRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/tasks/$taskId',
-    component: () => null,
-  })
-  rootRoute.addChildren([indexRoute, taskRoute])
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <StoryRouter
+        component={() => <>{children}</>}
+        paths={['/tasks/$taskId']}
+      />
     </QueryClientProvider>
   )
 }

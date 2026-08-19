@@ -1,12 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { expect, within } from 'storybook/test'
@@ -17,6 +10,7 @@ import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { Task } from '#hooks/use-tasks'
 import { emptyLabelsHandler, emptyTasksHandler } from '#lib/msw-test-handlers'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const parentTaskId = '00000000-0000-0000-0000-000000000001'
 
@@ -101,29 +95,13 @@ function Providers({
   if (project) {
     queryClient.setQueryData(projectKeys.detail(project.id), project)
   }
-  const rootRoute = createRootRoute({
-    component: () => <>{children}</>,
-  })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
-  const taskRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/tasks/$taskId',
-    component: () => null,
-  })
-  rootRoute.addChildren([indexRoute, taskRoute])
-
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <StoryRouter
+        component={() => <>{children}</>}
+        paths={['/tasks/$taskId']}
+      />
     </QueryClientProvider>
   )
 }

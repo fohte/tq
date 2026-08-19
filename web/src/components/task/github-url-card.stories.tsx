@@ -1,18 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { expect } from 'storybook/test'
 
 import { GithubUrlCard } from '#components/task/github-url-card'
 import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
 import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const OPEN_ISSUE_URL = 'https://github.com/fohte/tq/issues/158'
 const MERGED_PR_URL = 'https://github.com/fohte/tq/pull/159'
@@ -35,23 +29,12 @@ function Providers({
   })
   queryClient.setQueryData(githubUrlPreviewKeys.preview(url), result)
 
-  const rootRoute = createRootRoute({
-    component: () => <>{children}</>,
-  })
-  const taskRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/tasks/$taskId',
-    component: () => null,
-  })
-  rootRoute.addChildren([taskRoute])
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <StoryRouter
+        component={() => <>{children}</>}
+        paths={['/tasks/$taskId']}
+      />
     </QueryClientProvider>
   )
 }

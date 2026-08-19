@@ -5,13 +5,9 @@ import {
   reportUnhandledApiRequest,
 } from '@fohte/storybook-addon/preview'
 import type { Preview } from '@storybook/react-vite'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 import { initialize, mswLoader } from 'msw-storybook-addon'
+
+import { StoryRouter } from '#storybook-config/story-router'
 
 configureUnhandledApiRequestCheck({ pathPrefixes: ['/api/'] })
 
@@ -60,16 +56,7 @@ const preview: Preview = {
       const themeValue = typeof theme === 'string' ? theme : 'dark'
       document.documentElement.classList.toggle('dark', themeValue === 'dark')
 
-      const rootRoute = createRootRoute({
-        validateSearch: (search: Record<string, unknown>) => search,
-        component: () => <Story />,
-      })
-      const router = createRouter({
-        routeTree: rootRoute,
-        history: createMemoryHistory({ initialEntries: ['/'] }),
-      })
-
-      return <RouterProvider router={router} />
+      return <StoryRouter component={() => <Story />} />
     },
   ],
   loaders: [mswLoader],

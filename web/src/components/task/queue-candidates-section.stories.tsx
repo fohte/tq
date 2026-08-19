@@ -1,19 +1,14 @@
 import { DndContext } from '@dnd-kit/core'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
+import { RouterProvider } from '@tanstack/react-router'
 import { createContext, type ReactNode, useContext, useState } from 'react'
 import { fn } from 'storybook/test'
 
 import { QueueCandidatesSection } from '#components/task/queue-candidates-section'
 import type { Task } from '#hooks/use-tasks'
 import type { QueueCandidate } from '#lib/queue-candidates'
+import { createStoryRouter } from '#storybook-config/story-router'
 
 const ChildrenContext = createContext<ReactNode>(null)
 
@@ -29,26 +24,12 @@ function Providers({ children }: { children: ReactNode }) {
       }),
   )
 
-  const [router] = useState(() => {
-    const rootRoute = createRootRoute({
+  const [router] = useState(() =>
+    createStoryRouter({
       component: RootRouteContent,
-    })
-    const indexRoute = createRoute({
-      getParentRoute: () => rootRoute,
-      path: '/',
-      component: () => null,
-    })
-    const taskRoute = createRoute({
-      getParentRoute: () => rootRoute,
-      path: '/tasks/$taskId',
-      component: () => null,
-    })
-    rootRoute.addChildren([indexRoute, taskRoute])
-    return createRouter({
-      routeTree: rootRoute,
-      history: createMemoryHistory({ initialEntries: ['/'] }),
-    })
-  })
+      paths: ['/tasks/$taskId'],
+    }),
+  )
 
   return (
     <QueryClientProvider client={queryClient}>

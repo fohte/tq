@@ -1,18 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { expect } from 'storybook/test'
 
 import { ProjectUrlCard } from '#components/task/project-url-card'
 import type { ProjectUrlPreview } from '#hooks/use-project-url-preview'
 import { projectUrlPreviewKeys } from '#hooks/use-project-url-preview'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const PROJECT_ID = 'aaaa0000-0000-0000-0000-000000000000'
 const PROJECT_URL =
@@ -49,23 +43,12 @@ function Providers({
   })
   queryClient.setQueryData(projectUrlPreviewKeys.preview(id), project)
 
-  const rootRoute = createRootRoute({
-    component: () => <>{children}</>,
-  })
-  const projectRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/projects/$projectId',
-    component: () => null,
-  })
-  rootRoute.addChildren([projectRoute])
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <StoryRouter
+        component={() => <>{children}</>}
+        paths={['/projects/$projectId']}
+      />
     </QueryClientProvider>
   )
 }

@@ -1,15 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 
 import { ProjectListHeader } from '#components/project/project-list-header'
 import { ProjectListRow } from '#components/project/project-list-row'
 import type { Project } from '#hooks/use-projects'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const projects: Project[] = [
   {
@@ -45,27 +39,18 @@ const projects: Project[] = [
 // Renders alongside ProjectListRow so a drift between the two components'
 // --project-list-columns usage shows up as a VRT diff.
 function ProjectListHeaderStory() {
-  const rootRoute = createRootRoute({
-    component: () => (
-      <div className="dark w-3xl bg-background">
-        <ProjectListHeader />
-        {projects.map((project) => (
-          <ProjectListRow key={project.id} project={project} />
-        ))}
-      </div>
-    ),
-  })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
-  rootRoute.addChildren([indexRoute])
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-  return <RouterProvider router={router} />
+  return (
+    <StoryRouter
+      component={() => (
+        <div className="dark w-3xl bg-background">
+          <ProjectListHeader />
+          {projects.map((project) => (
+            <ProjectListRow key={project.id} project={project} />
+          ))}
+        </div>
+      )}
+    />
+  )
 }
 
 const meta = {

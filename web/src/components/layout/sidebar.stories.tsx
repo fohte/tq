@@ -1,18 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 
 import { Sidebar } from '#components/layout/sidebar'
 import type { Project } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const baseTask: Task = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -111,23 +105,12 @@ function SidebarWithRouter({
   tasks?: Task[] | undefined
   projects?: Project[] | undefined
 }) {
-  const rootRoute = createRootRoute({
-    validateSearch: (search: Record<string, unknown>) => search,
-    component: () => <SidebarStory tasks={tasks} projects={projects} />,
-  })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
-  rootRoute.addChildren([indexRoute])
-
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: [currentPath] }),
-  })
-
-  return <RouterProvider router={router} />
+  return (
+    <StoryRouter
+      component={() => <SidebarStory tasks={tasks} projects={projects} />}
+      initialPath={currentPath}
+    />
+  )
 }
 
 const meta = {
