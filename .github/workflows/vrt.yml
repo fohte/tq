@@ -54,6 +54,15 @@ jobs:
 
       - uses: ./.github/actions/setup-workspace
 
+      # The cached browser binary depends only on the installed playwright
+      # package version, not on the rest of the lockfile — keying on
+      # hashFiles('pnpm-lock.yaml') would miss on every unrelated dependency
+      # bump.
+      - name: Get Playwright version
+        id: playwright-version
+        working-directory: web
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
       # Storybook stories run through a headless Playwright chromium browser,
       # which isn't preinstalled on the runner. ubuntu-latest ships the
       # shared libraries chromium needs to launch, but not the CJK font
@@ -65,7 +74,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright chromium
         if: steps.playwright-cache.outputs.cache-hit != 'true'
