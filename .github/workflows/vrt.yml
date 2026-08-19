@@ -49,10 +49,6 @@ jobs:
         project: [storybook, storybook-mobile]
         shard: [1, 2]
     runs-on: ubuntu-latest
-    # This job normally finishes in 2-3 minutes. apt-get can hang waiting on
-    # the mirror or a lock indefinitely, which would otherwise occupy the
-    # runner for the default 6-hour job timeout.
-    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
