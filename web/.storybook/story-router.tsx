@@ -5,7 +5,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
+import { createContext, type ReactNode, useContext, useState } from 'react'
 
 type StoryRouterOptions = {
   component: () => ReactNode
@@ -43,4 +43,31 @@ export function createStoryRouter({
 // would otherwise reset drag-and-drop state), call createStoryRouter directly.
 export function StoryRouter(props: StoryRouterOptions) {
   return <RouterProvider router={createStoryRouter(props)} />
+}
+
+const MemoizedChildrenContext = createContext<ReactNode>(null)
+
+function MemoizedRootRouteContent() {
+  return <>{useContext(MemoizedChildrenContext)}</>
+}
+
+// For stories that need the router itself to stay stable across re-renders
+// (e.g. drag-and-drop state that would otherwise reset), while children
+// still update reactively via context.
+export function MemoizedStoryRouter({
+  children,
+  ...routerOptions
+}: Omit<StoryRouterOptions, 'component'> & { children: ReactNode }) {
+  const [router] = useState(() =>
+    createStoryRouter({
+      component: MemoizedRootRouteContent,
+      ...routerOptions,
+    }),
+  )
+
+  return (
+    <MemoizedChildrenContext.Provider value={children}>
+      <RouterProvider router={router} />
+    </MemoizedChildrenContext.Provider>
+  )
 }

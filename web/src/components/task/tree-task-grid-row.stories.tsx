@@ -12,6 +12,8 @@ import { emptyLabelsHandler, emptyTasksHandler } from '#lib/msw-test-handlers'
 import { assertDefined, atIndex } from '#lib/test-utils'
 import { createStoryRouter, StoryRouter } from '#storybook-config/story-router'
 
+const TASK_LIST_ROUTES = ['/tasks', '/tasks/$taskId']
+
 const baseTreeNode: TreeNode = {
   id: '00000000-0000-0000-0000-000000000001',
   number: 1,
@@ -41,10 +43,7 @@ function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StoryRouter
-        component={() => <>{children}</>}
-        paths={['/tasks', '/tasks/$taskId']}
-      />
+      <StoryRouter component={() => <>{children}</>} paths={TASK_LIST_ROUTES} />
     </QueryClientProvider>
   )
 }
@@ -238,22 +237,25 @@ export const TagClick: Story = (() => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  const router = createStoryRouter({
-    component: () => (
-      <div className="w-3xl">
-        <InteractiveTreeTaskGridRow node={node} />
-      </div>
-    ),
-    paths: ['/tasks', '/tasks/$taskId'],
-  })
+  let router: ReturnType<typeof createStoryRouter>
 
   return {
     args: { node },
-    render: () => (
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    ),
+    render: (args) => {
+      router = createStoryRouter({
+        component: () => (
+          <div className="w-3xl">
+            <InteractiveTreeTaskGridRow node={args.node} />
+          </div>
+        ),
+        paths: TASK_LIST_ROUTES,
+      })
+      return (
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      )
+    },
     play: async ({ canvas, userEvent }) => {
       // Both the desktop and mobile layouts render at once (only CSS toggles
       // which is visible), so the tag token exists twice — click either one.
@@ -271,22 +273,25 @@ export const ClickNavigates: Story = (() => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  const router = createStoryRouter({
-    component: () => (
-      <div className="w-3xl">
-        <InteractiveTreeTaskGridRow node={node} />
-      </div>
-    ),
-    paths: ['/tasks', '/tasks/$taskId'],
-  })
+  let router: ReturnType<typeof createStoryRouter>
 
   return {
     args: { node },
-    render: () => (
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    ),
+    render: (args) => {
+      router = createStoryRouter({
+        component: () => (
+          <div className="w-3xl">
+            <InteractiveTreeTaskGridRow node={args.node} />
+          </div>
+        ),
+        paths: TASK_LIST_ROUTES,
+      })
+      return (
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      )
+    },
     play: async ({ args, canvas, userEvent }) => {
       // Both the desktop and mobile layouts render at once — click the
       // desktop one, which used to intercept this click before it reached

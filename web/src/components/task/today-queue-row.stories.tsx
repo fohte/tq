@@ -2,19 +2,12 @@ import { closestCenter, DndContext } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { RouterProvider } from '@tanstack/react-router'
-import { createContext, type ReactNode, useContext, useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { fn } from 'storybook/test'
 
 import { TodayQueueRow } from '#components/task/today-queue-row'
 import type { Task } from '#hooks/use-tasks'
-import { createStoryRouter } from '#storybook-config/story-router'
-
-const ChildrenContext = createContext<ReactNode>(null)
-
-function RootRouteContent() {
-  return <>{useContext(ChildrenContext)}</>
-}
+import { MemoizedStoryRouter } from '#storybook-config/story-router'
 
 function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -24,18 +17,11 @@ function Providers({ children }: { children: ReactNode }) {
       }),
   )
 
-  const [router] = useState(() =>
-    createStoryRouter({
-      component: RootRouteContent,
-      paths: ['/tasks/$taskId'],
-    }),
-  )
-
   return (
     <QueryClientProvider client={queryClient}>
-      <ChildrenContext.Provider value={children}>
-        <RouterProvider router={router} />
-      </ChildrenContext.Provider>
+      <MemoizedStoryRouter paths={['/tasks/$taskId']}>
+        {children}
+      </MemoizedStoryRouter>
     </QueryClientProvider>
   )
 }

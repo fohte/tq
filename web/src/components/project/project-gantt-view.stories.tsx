@@ -1,11 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { RouterProvider } from '@tanstack/react-router'
-import { createContext, type ReactNode, useContext, useState } from 'react'
+import { type ReactNode, useState } from 'react'
 
 import { ProjectGanttView } from '#components/project/project-gantt-view'
 import type { ProjectTask } from '#hooks/use-projects'
-import { createStoryRouter } from '#storybook-config/story-router'
+import { MemoizedStoryRouter } from '#storybook-config/story-router'
 
 function formatDateOffset(days: number): string {
   const d = new Date()
@@ -93,12 +92,6 @@ const sampleTasks: ProjectTask[] = [
   },
 ]
 
-const ChildrenContext = createContext<ReactNode>(null)
-
-function RootRouteContent() {
-  return <>{useContext(ChildrenContext)}</>
-}
-
 function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -107,18 +100,11 @@ function Providers({ children }: { children: ReactNode }) {
       }),
   )
 
-  const [router] = useState(() =>
-    createStoryRouter({
-      component: RootRouteContent,
-      paths: ['/tasks/$taskId'],
-    }),
-  )
-
   return (
     <QueryClientProvider client={queryClient}>
-      <ChildrenContext.Provider value={children}>
-        <RouterProvider router={router} />
-      </ChildrenContext.Provider>
+      <MemoizedStoryRouter paths={['/tasks/$taskId']}>
+        {children}
+      </MemoizedStoryRouter>
     </QueryClientProvider>
   )
 }
