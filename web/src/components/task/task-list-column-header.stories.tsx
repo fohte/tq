@@ -1,16 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 
 import { TaskListColumnHeader } from '#components/task/task-list-column-header'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import type { TreeNode } from '#hooks/use-tasks'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const baseTreeNode: TreeNode = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -41,44 +35,31 @@ function TaskListColumnHeaderWithRow() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  const rootRoute = createRootRoute({
-    component: () => (
-      <QueryClientProvider client={queryClient}>
-        <div className="w-3xl">
-          <TaskListColumnHeader />
-          <TreeTaskGridRow
-            node={baseTreeNode}
-            isExpanded={() => true}
-            onToggleExpand={() => {}}
-            selectedRowId={null}
-            onSelectRow={() => {}}
-            outlinerInput={null}
-            outlinerTarget={null}
-            onOpenChildInput={() => {}}
-            onCloseOutlinerInput={() => {}}
-            onIndentOutlinerInput={() => {}}
-            onOutdentOutlinerInput={() => {}}
-          />
-        </div>
-      </QueryClientProvider>
-    ),
-  })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
-  const taskRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/tasks/$taskId',
-    component: () => null,
-  })
-  rootRoute.addChildren([indexRoute, taskRoute])
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-  return <RouterProvider router={router} />
+  return (
+    <StoryRouter
+      component={() => (
+        <QueryClientProvider client={queryClient}>
+          <div className="w-3xl">
+            <TaskListColumnHeader />
+            <TreeTaskGridRow
+              node={baseTreeNode}
+              isExpanded={() => true}
+              onToggleExpand={() => {}}
+              selectedRowId={null}
+              onSelectRow={() => {}}
+              outlinerInput={null}
+              outlinerTarget={null}
+              onOpenChildInput={() => {}}
+              onCloseOutlinerInput={() => {}}
+              onIndentOutlinerInput={() => {}}
+              onOutdentOutlinerInput={() => {}}
+            />
+          </div>
+        </QueryClientProvider>
+      )}
+      paths={['/tasks/$taskId']}
+    />
+  )
 }
 
 const meta = {

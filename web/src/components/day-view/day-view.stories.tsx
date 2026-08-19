@@ -1,12 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { expect, fn, within } from 'storybook/test'
 
@@ -16,6 +9,7 @@ import type { Schedule } from '#hooks/use-schedules'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { atIndex } from '#lib/test-utils'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const today = new Date()
 const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -226,34 +220,12 @@ function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  const rootRoute = createRootRoute({
-    component: () => <>{children}</>,
-  })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
-  const tasksRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/tasks',
-    component: () => null,
-  })
-  const taskRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/tasks/$taskId',
-    component: () => null,
-  })
-  rootRoute.addChildren([indexRoute, tasksRoute, taskRoute])
-
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <StoryRouter
+        component={() => <>{children}</>}
+        paths={['/tasks', '/tasks/$taskId']}
+      />
     </QueryClientProvider>
   )
 }

@@ -1,12 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
 import { ProjectMainContent } from '#components/project/project-detail-main'
@@ -15,6 +8,7 @@ import {
   ProjectSidebarMobile,
 } from '#components/project/project-detail-sidebar'
 import type { ProjectDetail, ProjectTask } from '#hooks/use-projects'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const baseProject: ProjectDetail = {
   id: 'proj-001',
@@ -92,44 +86,16 @@ function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  const rootRoute = createRootRoute({
-    component: () => <>{children}</>,
-  })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
-  const projectsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/projects',
-    component: () => null,
-  })
-  const projectRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/projects/$projectId',
-    component: () => null,
-  })
-  const projectBoardRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/projects/$projectId/board',
-    component: () => null,
-  })
-  rootRoute.addChildren([
-    indexRoute,
-    projectsRoute,
-    projectRoute,
-    projectBoardRoute,
-  ])
-
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <StoryRouter
+        component={() => <>{children}</>}
+        paths={[
+          '/projects',
+          '/projects/$projectId',
+          '/projects/$projectId/board',
+        ]}
+      />
     </QueryClientProvider>
   )
 }

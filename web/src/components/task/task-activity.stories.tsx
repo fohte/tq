@@ -1,17 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
 import { TaskActivity } from '#components/task/task-activity'
 import type { ActivityItem } from '#hooks/use-task-activity'
 import type { Comment } from '#hooks/use-task-comments'
 import { taskMentionKeys } from '#hooks/use-task-mentions'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const baseComments: Comment[] = [
   {
@@ -67,18 +62,9 @@ function Providers({
     queryClient.setQueryData(taskMentionKeys.preview(number), null)
   }
 
-  const rootRoute = createRootRoute({
-    component: () => <>{children}</>,
-  })
-
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <StoryRouter component={() => <>{children}</>} />
     </QueryClientProvider>
   )
 }

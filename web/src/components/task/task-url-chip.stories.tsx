@@ -1,18 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { expect, waitFor, within } from 'storybook/test'
 
 import { TaskUrlChip } from '#components/task/task-url-chip'
 import type { TaskUrlPreview } from '#hooks/use-task-url-preview'
 import { taskUrlPreviewKeys } from '#hooks/use-task-url-preview'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const TASK_ID = '42'
 const TASK_URL = 'https://tq.fohte.net/tasks/42'
@@ -59,23 +53,12 @@ function Providers({
   })
   queryClient.setQueryData(taskUrlPreviewKeys.preview(id), task)
 
-  const rootRoute = createRootRoute({
-    component: () => <>{children}</>,
-  })
-  const taskRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/tasks/$taskId',
-    component: () => null,
-  })
-  rootRoute.addChildren([taskRoute])
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <StoryRouter
+        component={() => <>{children}</>}
+        paths={['/tasks/$taskId']}
+      />
     </QueryClientProvider>
   )
 }

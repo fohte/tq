@@ -1,18 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 
 import { StatusLine } from '#components/layout/status-line'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import type { TodayTask } from '#hooks/use-today-tasks'
 import { formatLocalDate } from '#lib/date-range'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const todayStr = formatLocalDate(new Date())
 
@@ -75,20 +69,7 @@ function StatusLineStory() {
 }
 
 function StatusLineWithRouter({ currentPath }: { currentPath: string }) {
-  const rootRoute = createRootRoute({ component: StatusLineStory })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
-  rootRoute.addChildren([indexRoute])
-
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: [currentPath] }),
-  })
-
-  return <RouterProvider router={router} />
+  return <StoryRouter component={StatusLineStory} initialPath={currentPath} />
 }
 
 const meta = {

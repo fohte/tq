@@ -1,13 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { RouterHistory } from '@tanstack/react-router'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
+import { RouterProvider } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { expect } from 'storybook/test'
 
@@ -17,6 +10,9 @@ import type { TreeNode } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { emptyLabelsHandler, emptyTasksHandler } from '#lib/msw-test-handlers'
 import { assertDefined, atIndex } from '#lib/test-utils'
+import { createStoryRouter, StoryRouter } from '#storybook-config/story-router'
+
+const TASK_LIST_ROUTES = ['/tasks', '/tasks/$taskId']
 
 const baseTreeNode: TreeNode = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -40,46 +36,14 @@ const baseTreeNode: TreeNode = {
   childCompletionCount: { completed: 0, total: 0 },
 }
 
-function Providers({
-  children,
-  history = createMemoryHistory({ initialEntries: ['/'] }),
-}: {
-  children: ReactNode
-  history?: RouterHistory
-}) {
+function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  })
-  const rootRoute = createRootRoute({
-    component: () => <>{children}</>,
-  })
-  const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: () => null,
-  })
-  // A tag token navigates to /tasks, so that route must be registered for
-  // the navigation to resolve instead of erroring on an unmatched route.
-  const tasksRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/tasks',
-    component: () => null,
-  })
-  const taskRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/tasks/$taskId',
-    component: () => null,
-  })
-  rootRoute.addChildren([indexRoute, tasksRoute, taskRoute])
-
-  const router = createRouter({
-    routeTree: rootRoute,
-    history,
   })
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <StoryRouter component={() => <>{children}</>} paths={TASK_LIST_ROUTES} />
     </QueryClientProvider>
   )
 }
@@ -265,52 +229,77 @@ export const WithTags: Story = {
 }
 
 export const TagClick: Story = (() => {
-  const history = createMemoryHistory({ initialEntries: ['/'] })
+  const node: TreeNode = {
+    ...baseTreeNode,
+    title: 'Click a tag token',
+    labels: ['dev:tq'],
+  }
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  let router: ReturnType<typeof createStoryRouter>
 
   return {
-    args: {
-      node: {
-        ...baseTreeNode,
-        title: 'Click a tag token',
-        labels: ['dev:tq'],
-      },
+    args: { node },
+    render: (args) => {
+      router = createStoryRouter({
+        component: () => (
+          <div className="w-3xl">
+            <InteractiveTreeTaskGridRow node={args.node} />
+          </div>
+        ),
+        paths: TASK_LIST_ROUTES,
+      })
+      return (
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      )
     },
-    render: (args) => (
-      <Providers history={history}>
-        <div className="w-3xl">
-          <InteractiveTreeTaskGridRow node={args.node} />
-        </div>
-      </Providers>
-    ),
     play: async ({ canvas, userEvent }) => {
       // Both the desktop and mobile layouts render at once (only CSS toggles
       // which is visible), so the tag token exists twice — click either one.
       await userEvent.click(atIndex(canvas.getAllByText('#dev:tq'), 0))
-      await expect(history.location.pathname).toBe('/tasks')
+      await expect(router.history.location.pathname).toBe('/tasks')
     },
   }
 })()
 
 export const ClickNavigates: Story = (() => {
-  const history = createMemoryHistory({ initialEntries: ['/'] })
+  const node: TreeNode = {
+    ...baseTreeNode,
+    title: 'Click this row to navigate',
+  }
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  let router: ReturnType<typeof createStoryRouter>
 
   return {
-    args: {
-      node: { ...baseTreeNode, title: 'Click this row to navigate' },
+    args: { node },
+    render: (args) => {
+      router = createStoryRouter({
+        component: () => (
+          <div className="w-3xl">
+            <InteractiveTreeTaskGridRow node={args.node} />
+          </div>
+        ),
+        paths: TASK_LIST_ROUTES,
+      })
+      return (
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      )
     },
-    render: (args) => (
-      <Providers history={history}>
-        <div className="w-3xl">
-          <InteractiveTreeTaskGridRow node={args.node} />
-        </div>
-      </Providers>
-    ),
     play: async ({ args, canvas, userEvent }) => {
       // Both the desktop and mobile layouts render at once — click the
       // desktop one, which used to intercept this click before it reached
       // the row's Link.
       await userEvent.click(atIndex(canvas.getAllByText(args.node.title), 0))
-      await expect(history.location.pathname).toBe(`/tasks/${args.node.id}`)
+      await expect(router.history.location.pathname).toBe(
+        `/tasks/${args.node.id}`,
+      )
     },
   }
 })()
