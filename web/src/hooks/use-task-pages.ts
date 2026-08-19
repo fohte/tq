@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
-import { assertOk, unwrapOrThrow } from '#lib/assert-response'
+import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
 
 export type TaskPage = InferResponseType<
   (typeof api.api.tasks)[':taskId']['pages']['$get'],
@@ -151,8 +151,7 @@ export function useDeleteTaskPage(taskId: string) {
       const res = await api.api.tasks[':taskId'].pages[':pageId'].$delete({
         param: { taskId, pageId },
       })
-      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow already handles the Result (throws on Err); the plugin can't see through a custom wrapper
-      unwrapOrThrow(assertOk(res))
+      assertOkOrThrow(res)
     },
     onMutate: async (pageId) => {
       await queryClient.cancelQueries({

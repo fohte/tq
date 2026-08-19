@@ -1,21 +1,12 @@
-import { StreamableHTTPTransport } from '@hono/mcp'
+import { createMcpHandler } from '@modelcontextprotocol/server'
 import { Hono } from 'hono'
 
 import { createMcpServer } from '#routes/mcp/server'
 
-export const mcpApp = new Hono().all('/', async (c) => {
-  // A fresh transport and server per request (rather than sharing a module-scoped
-  // instance) is required in stateless mode: the transport keys pending responses
-  // by the client's JSON-RPC request id alone, so two concurrent clients reusing
-  // the same instance can have their responses cross-delivered when ids collide.
-  //
-  // Stateless mode: omitting `sessionIdGenerator` disables session tracking.
-  // Every tool call is a synchronous CRUD operation with no server-initiated
-  // notifications, so there is no need to keep per-client state between
-  // requests. (`exactOptionalPropertyTypes` rejects passing the property as
-  // `undefined` explicitly, so it must be omitted rather than set.)
-  const transport = new StreamableHTTPTransport()
-  const mcpServer = createMcpServer()
-  await mcpServer.connect(transport)
-  return transport.handleRequest(c)
-})
+// Built once at module scope: `handler.fetch` itself calls the factory fresh
+// for every request (both the modern per-request-envelope path and the
+// legacy stateless fallback), so a fresh `McpServer` per request does not
+// require constructing a fresh handler.
+const handler = createMcpHandler(() => createMcpServer())
+
+export const mcpApp = new Hono().all('/', (c) => handler.fetch(c.req.raw))

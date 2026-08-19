@@ -1,6 +1,8 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
+import type { Context } from 'hono'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { HTTPException } from 'hono/http-exception'
 
 import { authorMiddleware } from '#lib/author'
 import { calendarApp } from '#routes/calendar'
@@ -18,6 +20,23 @@ import { taskCommentsApp } from '#routes/task-comments'
 import { taskGithubLinkApp } from '#routes/task-github-link'
 import { taskPagesApp } from '#routes/task-pages'
 import { tasksApp } from '#routes/tasks/index'
+
+// Final safety net: any error that escapes a route handler without being
+// reported at its own point of failure lands here, so it's never silently
+// invisible to Sentry — except an HTTPException, whose thrower already
+// chose its status and body on purpose. `{{ default }}` keeps Sentry's
+// normal grouping (exception type/value/stack trace) so unrelated errors
+// land in separate issues, while the 'api.unhandled-error' prefix still
+// marks them as having escaped every route's own error handling.
+export function onError(err: Error, c: Context): Response {
+  if (err instanceof HTTPException) {
+    return err.getResponse()
+  }
+  captureWithFingerprint(err, ['api.unhandled-error', '{{ default }}'], {
+    extras: { method: c.req.method, path: c.req.path },
+  })
+  return c.json({ error: 'Internal server error' }, 500)
+}
 
 const app = new Hono()
   .use(
@@ -45,15 +64,7 @@ const app = new Hono()
   .route('/api/scheduling-settings', schedulingSettingsApp)
   .route('/api/slack', slackApp)
   .route('/api/mcp', mcpApp)
-  // Final safety net: any error that escapes a route handler without being
-  // reported at its own point of failure lands here, so it's never silently
-  // invisible to Sentry.
-  .onError((err, c) => {
-    captureWithFingerprint(err, 'api.unhandled-error', {
-      extras: { method: c.req.method, path: c.req.path },
-    })
-    return c.json({ error: 'Internal server error' }, 500)
-  })
+  .onError(onError)
 
 export { app }
 

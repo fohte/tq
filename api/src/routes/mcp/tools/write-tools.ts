@@ -1,5 +1,4 @@
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import type { CallToolResult, McpServer } from '@modelcontextprotocol/server'
 import { z } from 'zod'
 
 import { app } from '#app'
@@ -80,7 +79,10 @@ export function registerWriteTools(server: McpServer): void {
         '`daysOfWeek` (0=Sunday..6=Saturday) restricts a weekly rule to ' +
         'specific days, and `dayOfMonth` (1-31) fixes the day for a ' +
         'monthly rule.',
-      inputSchema: { ...createTaskSchema.shape, agent: agentArgSchema },
+      inputSchema: z.object({
+        ...createTaskSchema.shape,
+        agent: agentArgSchema,
+      }),
     },
     async ({ agent, ...input }) =>
       callRoute('/api/tasks', agent, {
@@ -103,11 +105,11 @@ export function registerWriteTools(server: McpServer): void {
         'existing label are created automatically. `recurrenceRule` takes ' +
         'the same shape as in create_task, or null to remove recurrence ' +
         'from the task.',
-      inputSchema: {
+      inputSchema: z.object({
         taskId: taskIdOrNumber,
         ...updateTaskSchema.shape,
         agent: agentArgSchema,
-      },
+      }),
     },
     async ({ taskId, agent, ...body }) =>
       callRoute(`/api/tasks/${String(taskId)}`, agent, {
@@ -124,11 +126,11 @@ export function registerWriteTools(server: McpServer): void {
         'Change a task to todo, in_progress, or completed. Completing a ' +
         'task that has a recurrenceRule creates the next occurrence of ' +
         'that task. Completing an already-completed task is rejected.',
-      inputSchema: {
+      inputSchema: z.object({
         taskId: taskIdOrNumber,
         status: taskStatus,
         agent: agentArgSchema,
-      },
+      }),
     },
     async ({ taskId, status, agent }) =>
       status === 'completed'
@@ -155,11 +157,11 @@ export function registerWriteTools(server: McpServer): void {
         "files, since there's no guarantee an external resource stays " +
         'reachable when the page is viewed later. `sortOrder` controls ' +
         "display order among the task's pages and defaults to 0.",
-      inputSchema: {
+      inputSchema: z.object({
         taskId: taskIdOrNumber,
         ...createPageSchema.shape,
         agent: agentArgSchema,
-      },
+      }),
     },
     async ({ taskId, agent, ...body }) =>
       callRoute(`/api/tasks/${String(taskId)}/pages`, agent, {
@@ -175,12 +177,12 @@ export function registerWriteTools(server: McpServer): void {
       description:
         'Partially update an existing page by task id and page id. Only ' +
         'the fields provided are changed; omit a field to leave it as-is.',
-      inputSchema: {
+      inputSchema: z.object({
         taskId: taskIdOrNumber,
         pageId: z.uuid(),
         ...updatePageSchema.shape,
         agent: agentArgSchema,
-      },
+      }),
     },
     async ({ taskId, pageId, agent, ...body }) =>
       callRoute(`/api/tasks/${String(taskId)}/pages/${pageId}`, agent, {
@@ -194,11 +196,11 @@ export function registerWriteTools(server: McpServer): void {
     'create_comment',
     {
       description: 'Add a comment to a task.',
-      inputSchema: {
+      inputSchema: z.object({
         taskId: taskIdOrNumber,
         ...createCommentSchema.shape,
         agent: agentArgSchema,
-      },
+      }),
     },
     async ({ taskId, agent, ...body }) =>
       callRoute(`/api/tasks/${String(taskId)}/comments`, agent, {
@@ -213,12 +215,12 @@ export function registerWriteTools(server: McpServer): void {
     {
       description:
         'Update the content of an existing comment by task id and comment id.',
-      inputSchema: {
+      inputSchema: z.object({
         taskId: taskIdOrNumber,
         commentId: z.uuid(),
         ...updateCommentSchema.shape,
         agent: agentArgSchema,
-      },
+      }),
     },
     async ({ taskId, commentId, agent, ...body }) =>
       callRoute(`/api/tasks/${String(taskId)}/comments/${commentId}`, agent, {
