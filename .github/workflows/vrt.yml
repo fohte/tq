@@ -61,7 +61,9 @@ jobs:
       - name: Get Playwright version
         id: playwright-version
         working-directory: web
-        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+        run: |
+          version=$(pnpm exec playwright --version | awk '{print $2}')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       # Storybook stories run through a headless Playwright chromium browser,
       # which isn't preinstalled on the runner. ubuntu-latest ships the
