@@ -28,7 +28,7 @@
     "test:type": "tsc --noEmit",
     "test:unit": "vitest run --project=unit",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build",
+    "storybook:build": "storybook build",
     "test:storybook": "vitest run --project=storybook && vitest run --project=storybook-mobile"
   },
   "dependencies": {

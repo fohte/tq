@@ -1,0 +1,79 @@
+name: Storybook
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: storybook-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  deployments: write
+  pull-requests: write
+
+jobs:
+  detect-changes-web:
+    runs-on: ubuntu-slim
+    outputs:
+      changed: ${{ steps.changes.outputs.any_changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+
+      - name: Check for changes
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        id: changes
+        with:
+          files: |
+            web/**
+            .github/workflows/storybook.yml
+            package.json
+            pnpm-lock.yaml
+            pnpm-workspace.yaml
+
+  deploy-web:
+    needs: detect-changes-web
+    if: needs.detect-changes-web.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Build Storybook
+        run: cd "web" && pnpm run storybook:build
+
+      - name: Create Cloudflare Pages project if not exists
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: web
+          packageManager: pnpm
+          command: pages project create tq-web-storybook --production-branch=main
+        continue-on-error: true
+
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: web
+          packageManager: pnpm
+          command: pages deploy storybook-static --project-name=tq-web-storybook --branch=${{ github.head_ref || 'main' }} --commit-dirty=true
+
+      - name: Comment preview URL on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        with:
+          header: storybook-preview-web
+          message: |
+            ## Storybook Preview (web)
+
+            ${{ steps.deploy.outputs.pages-deployment-alias-url }}
