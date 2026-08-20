@@ -7,7 +7,7 @@ min_age:
   always: true
 
 rules:
-  # Owned action; min-age policy targets third-party supply chain risk.
+  # Owned actions/workflows; min-age policy targets third-party supply chain risk.
   - conditions:
-      - expr: ActionRepoFullName == "fohte/copier-update-action"
+      - expr: ActionRepoFullName in ["fohte/copier-update-action", "fohte/storybook-vrt-workflows"]
     min_age: 0
