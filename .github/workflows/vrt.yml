@@ -34,13 +34,7 @@ jobs:
 
       - uses: ./.github/actions/setup-workspace
 
-      # vrt-capture runs this as `pnpm run test:storybook:capture --
-      # --project=X --shard=Y/Z`. vitest's CLI parser treats everything after
-      # `--` as a positional test-name filter rather than options, so
-      # `--project`/`--shard` would silently no-op if passed straight through.
-      # The `sh -c` wrapper in web/package.json re-invokes vitest without that
-      # leading `--`, forwarding `--project`/`--shard` as real options.
-      - uses: fohte/storybook-vrt-workflows/vrt-capture@46d0eb34f801e2f11d497b30e69f8287f9e4af84 # v0.1.0
+      - uses: fohte/storybook-vrt-workflows/vrt-capture@9335e3288ddcbc09c348c736868bdae28d9db33e # v0.1.1
         with:
           project: ${{ matrix.project }}
           shard: ${{ matrix.shard }}
@@ -73,7 +67,7 @@ jobs:
 
       - uses: ./.github/actions/setup-workspace
 
-      - uses: fohte/storybook-vrt-workflows/vrt-report@46d0eb34f801e2f11d497b30e69f8287f9e4af84 # v0.1.0
+      - uses: fohte/storybook-vrt-workflows/vrt-report@9335e3288ddcbc09c348c736868bdae28d9db33e # v0.1.1
         with:
           package-dir: web
           r2-bucket: tq-vrt
