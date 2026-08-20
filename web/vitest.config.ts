@@ -25,8 +25,7 @@ const alias = {
 // Returns `any`: createStorybookProject()'s inferred return type embeds
 // vitest's `BrowserProviderOption<T>`, a self-referential generic that
 // TypeScript's `exactOptionalPropertyTypes` structural check reports as "two
-// different types... unrelated" once it's resolved through the package's
-// compiled .d.ts rather than inline in this file.
+// different types... unrelated" as soon as an object literal embeds it.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see comment above
 function withTailwind(project: ReturnType<typeof createStorybookProject>): any {
   return {
