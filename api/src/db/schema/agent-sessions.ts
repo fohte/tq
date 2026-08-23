@@ -1,4 +1,13 @@
-import { index, pgTable, text, timestamp, unique } from 'drizzle-orm/pg-core'
+import {
+  index,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  unique,
+} from 'drizzle-orm/pg-core'
+
+import { tasks } from '#db/schema/core'
 
 // One row per coding-agent session (e.g. a Claude Code CLI invocation),
 // reported by that agent's hook integration. No status column: "running" is
@@ -38,5 +47,25 @@ export const agentSessions = pgTable(
       table.sessionId,
     ),
     index('idx_agent_sessions_last_active_at').on(table.lastActiveAt),
+  ],
+)
+
+// Join table linking a session to every task it touched. N:N: a session can
+// span multiple tasks (e.g. an unrelated fix along the way), and a task
+// commonly spans multiple sessions (compact, resuming on another day/machine).
+export const taskAgentSessions = pgTable(
+  'task_agent_sessions',
+  {
+    taskId: text('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    agentSessionId: text('agent_session_id')
+      .notNull()
+      .references(() => agentSessions.id, { onDelete: 'cascade' }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.taskId, table.agentSessionId] }),
+    index('idx_task_agent_sessions_task_id').on(table.taskId),
+    index('idx_task_agent_sessions_agent_session_id').on(table.agentSessionId),
   ],
 )

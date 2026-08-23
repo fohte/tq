@@ -25,6 +25,7 @@
 | [public.task_events](public.task_events.md)                                         | 12      |         | BASE TABLE |
 | [public.scheduling_settings](public.scheduling_settings.md)                         | 8       |         | BASE TABLE |
 | [public.agent_sessions](public.agent_sessions.md)                                   | 11      |         | BASE TABLE |
+| [public.task_agent_sessions](public.task_agent_sessions.md)                         | 2       |         | BASE TABLE |
 
 ## Relations
 
@@ -51,6 +52,8 @@ erDiagram
 "public.github_sync_rules" }o--|| "public.projects" : "FOREIGN KEY (target_project_id) REFERENCES projects(id) ON DELETE CASCADE"
 "public.calendar_subscriptions" }o--|| "public.oauth_tokens" : "FOREIGN KEY (oauth_token_id) REFERENCES oauth_tokens(id) ON DELETE CASCADE"
 "public.task_events" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+"public.task_agent_sessions" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+"public.task_agent_sessions" }o--|| "public.agent_sessions" : "FOREIGN KEY (agent_session_id) REFERENCES agent_sessions(id) ON DELETE CASCADE"
 
 "public.images" {
   text id
@@ -261,6 +264,10 @@ erDiagram
   timestamp_with_time_zone started_at
   timestamp_with_time_zone last_active_at
   timestamp_with_time_zone ended_at
+}
+"public.task_agent_sessions" {
+  text task_id FK
+  text agent_session_id FK
 }
 ```
 

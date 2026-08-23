@@ -3,10 +3,13 @@ import { desc, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
-import { agentSessions } from '#db/schema'
+import { agentSessions, taskAgentSessions, tasks } from '#db/schema'
 import { upsertAgentSessionSchema } from '#schemas/agent-session'
+import { taskSummaryColumns } from '#services/task-links'
 
-function agentSessionToResponse(session: typeof agentSessions.$inferSelect) {
+export function agentSessionToResponse(
+  session: typeof agentSessions.$inferSelect,
+) {
   return {
     id: session.id,
     provider: session.provider,
@@ -81,4 +84,23 @@ export const agentSessionsApp = new Hono()
     }
 
     return c.json(agentSessionToResponse(session), 200)
+  })
+  .get('/:id/tasks', async (c) => {
+    const id = c.req.param('id')
+
+    const session = await db.query.agentSessions.findFirst({
+      where: eq(agentSessions.id, id),
+    })
+    if (!session) {
+      return c.json({ error: 'Agent session not found' }, 404)
+    }
+
+    const tasksLinked = await db
+      .select(taskSummaryColumns)
+      .from(taskAgentSessions)
+      .innerJoin(tasks, eq(taskAgentSessions.taskId, tasks.id))
+      .where(eq(taskAgentSessions.agentSessionId, id))
+      .orderBy(tasks.number)
+
+    return c.json(tasksLinked, 200)
   })

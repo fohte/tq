@@ -17,6 +17,7 @@ import { projectsApp } from '#routes/projects'
 import { schedulesApp } from '#routes/schedules'
 import { schedulingSettingsApp } from '#routes/scheduling-settings'
 import { slackApp } from '#routes/slack'
+import { taskAgentSessionsApp } from '#routes/task-agent-sessions'
 import { taskCommentsApp } from '#routes/task-comments'
 import { taskGithubLinkApp } from '#routes/task-github-link'
 import { taskPagesApp } from '#routes/task-pages'
@@ -55,6 +56,7 @@ const app = new Hono()
   .route('/api/tasks', taskCommentsApp)
   .route('/api/tasks/:taskId/pages', taskPagesApp)
   .route('/api/tasks/:taskId/github-link', taskGithubLinkApp)
+  .route('/api/tasks/:taskId/agent-sessions', taskAgentSessionsApp)
   .route('/api/projects', projectsApp)
   .route('/api/schedule', schedulesApp)
   .route('/api/calendar', calendarApp)

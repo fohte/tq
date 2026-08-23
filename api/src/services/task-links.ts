@@ -110,28 +110,30 @@ export interface LinkedTaskSummary {
   status: 'todo' | 'in_progress' | 'completed'
 }
 
+// Shared with other task-join queries (e.g. agent session links) that need
+// the same lightweight task shape without pulling every task column.
+export const taskSummaryColumns = {
+  id: tasks.id,
+  number: tasks.number,
+  title: tasks.title,
+  status: tasks.status,
+}
+
 export interface TaskLinks {
   outgoing: LinkedTaskSummary[]
   incoming: LinkedTaskSummary[]
 }
 
 export async function getTaskLinks(taskId: string): Promise<TaskLinks> {
-  const summaryColumns = {
-    id: tasks.id,
-    number: tasks.number,
-    title: tasks.title,
-    status: tasks.status,
-  }
-
   const [outgoing, incoming] = await Promise.all([
     db
-      .select(summaryColumns)
+      .select(taskSummaryColumns)
       .from(taskLinks)
       .innerJoin(tasks, eq(tasks.id, taskLinks.targetTaskId))
       .where(eq(taskLinks.sourceTaskId, taskId))
       .orderBy(tasks.number),
     db
-      .select(summaryColumns)
+      .select(taskSummaryColumns)
       .from(taskLinks)
       .innerJoin(tasks, eq(tasks.id, taskLinks.sourceTaskId))
       .where(eq(taskLinks.targetTaskId, taskId))
