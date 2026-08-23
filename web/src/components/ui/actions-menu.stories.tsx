@@ -1,38 +1,43 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { Pencil, Trash2 } from 'lucide-react'
 import { expect, fn, within } from 'storybook/test'
 
-import { TreeRowActionsMenu } from '#components/task/tree-row-actions-menu'
+import { ActionsMenu } from '#components/ui/actions-menu'
 import { assertDefined } from '#lib/test-utils'
 
 const meta = {
-  title: 'Task/TreeRowActionsMenu',
-  component: TreeRowActionsMenu,
+  title: 'UI/ActionsMenu',
+  component: ActionsMenu,
   parameters: {
     layout: 'centered',
   },
   decorators: [
     (Story) => (
-      <div className="group flex w-64 items-center justify-end border border-border bg-card p-2">
+      <div className="flex w-64 items-center justify-end border border-border bg-card p-2">
         <Story />
       </div>
     ),
   ],
   args: {
-    onAddSubtask: fn(),
-    onLinkExisting: fn(),
-    onMoveUnder: fn(),
-    onSetProject: fn(),
-    onDelete: fn(),
+    items: [
+      { icon: <Pencil className="h-4 w-4" />, label: 'rename…', onClick: fn() },
+      {
+        icon: <Trash2 className="h-4 w-4" />,
+        label: 'delete…',
+        onClick: fn(),
+        destructive: true,
+      },
+    ],
   },
-} satisfies Meta<typeof TreeRowActionsMenu>
+} satisfies Meta<typeof ActionsMenu>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {
+export const Closed: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body)
-    await expect(body.queryByText('add subtask')).not.toBeInTheDocument()
+    await expect(body.queryByText('rename…')).not.toBeInTheDocument()
   },
 }
 
@@ -51,10 +56,7 @@ export const DesktopMenuOpen: Story = {
     await userEvent.click(trigger)
 
     const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('add subtask')).toBeInTheDocument()
-    await expect(body.getByText('link existing task…')).toBeInTheDocument()
-    await expect(body.getByText('move under…')).toBeInTheDocument()
-    await expect(body.getByText('set project…')).toBeInTheDocument()
+    await expect(await body.findByText('rename…')).toBeInTheDocument()
     await expect(body.getByText('delete…')).toBeInTheDocument()
   },
 }
@@ -70,10 +72,7 @@ export const MobileActionSheetOpen: Story = {
     await userEvent.click(trigger)
 
     const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('add subtask')).toBeInTheDocument()
-    await expect(body.getByText('link existing task…')).toBeInTheDocument()
-    await expect(body.getByText('move under…')).toBeInTheDocument()
-    await expect(body.getByText('set project…')).toBeInTheDocument()
+    await expect(await body.findByText('rename…')).toBeInTheDocument()
     await expect(body.getByText('delete…')).toBeInTheDocument()
   },
 }

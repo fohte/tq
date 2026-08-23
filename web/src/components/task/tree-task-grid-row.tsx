@@ -4,6 +4,7 @@ import { Link } from '@tanstack/react-router'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
+import { DeleteTaskDialog } from '#components/task/delete-task-dialog'
 import { GithubLinkBadge } from '#components/task/github-link-badge'
 import { LinkExistingTaskMenu } from '#components/task/link-existing-task-menu'
 import { MoveUnderTaskMenu } from '#components/task/move-under-task-menu'
@@ -68,6 +69,7 @@ export function TreeTaskGridRow({
   const [linkMenuOpen, setLinkMenuOpen] = useState(false)
   const [moveMenuOpen, setMoveMenuOpen] = useState(false)
   const [projectMenuOpen, setProjectMenuOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   const {
     attributes,
@@ -240,6 +242,9 @@ export function TreeTaskGridRow({
                   onSetProject={() => {
                     setProjectMenuOpen(true)
                   }}
+                  onDelete={() => {
+                    setDeleteDialogOpen(true)
+                  }}
                 />
               </div>
             </div>
@@ -301,6 +306,9 @@ export function TreeTaskGridRow({
                   }}
                   onSetProject={() => {
                     setProjectMenuOpen(true)
+                  }}
+                  onDelete={() => {
+                    setDeleteDialogOpen(true)
                   }}
                 />
               </div>
@@ -374,6 +382,13 @@ export function TreeTaskGridRow({
         onOpenChange={setProjectMenuOpen}
         taskId={node.id}
         taskNumber={node.number}
+      />
+      <DeleteTaskDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        taskId={node.id}
+        taskNumber={node.number}
+        taskTitle={node.title}
       />
     </>
   )
