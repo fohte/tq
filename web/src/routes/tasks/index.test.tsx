@@ -88,13 +88,13 @@ beforeEach(() => {
   mockUseProjects.mockReturnValue({ data: [] })
 })
 
-// FilterMenu picks the dropdown container in jsdom (test-setup.ts's
+// FilterMenu picks the popover container in jsdom (test-setup.ts's
 // matchMedia mock defaults to desktop).
 async function openFilterMenu(user: ReturnType<typeof userEvent.setup>) {
   const trigger = await screen.findByRole('button', { name: '+ filter' })
   await user.click(trigger)
-  // The menu popup mounts after an async Floating UI position computation,
-  // so wait for an item inside it rather than assuming it's mounted
+  // The popup mounts after an async Floating UI position computation, so
+  // wait for an item inside it rather than assuming it's mounted
   // synchronously once the click resolves.
   await screen.findByRole('checkbox', { name: 'show completed' })
 }

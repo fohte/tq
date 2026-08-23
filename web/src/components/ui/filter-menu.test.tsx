@@ -15,7 +15,7 @@ beforeEach(() => {
 })
 
 describe('FilterMenu', () => {
-  it('opens a dropdown menu on desktop', async () => {
+  it('opens a popover on desktop', async () => {
     const user = userEvent.setup()
     render(
       <FilterMenu trigger="+ filter" title="Filter">
@@ -25,7 +25,7 @@ describe('FilterMenu', () => {
 
     await user.click(screen.getByRole('button', { name: '+ filter' }))
 
-    expect(await screen.findByRole('menu')).toBeInTheDocument()
+    expect(await screen.findByText('content')).toBeInTheDocument()
   })
 
   it('opens a bottom sheet dialog on mobile', async () => {

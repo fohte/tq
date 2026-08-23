@@ -21,8 +21,8 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-// Desktop renders content in a dropdown positioned near the trigger.
-export const DesktopDropdown: Story = {
+// Desktop renders content in a popover positioned near the trigger.
+export const DesktopPopover: Story = {
   tags: ['desktop-only'],
   play: async ({ canvas, canvasElement }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Open filter' }))

@@ -201,7 +201,7 @@ export const RemoveParentIdChip: Story = {
   },
 }
 
-// FilterMenu picks the container (dropdown vs. bottom sheet) via
+// FilterMenu picks the container (popover vs. bottom sheet) via
 // useIsDesktop(), so only one `+ filter` trigger exists in the DOM per
 // project's viewport — the accessible name alone is enough to find it.
 export const DesktopFilterMenuOpen: Story = {
@@ -209,7 +209,7 @@ export const DesktopFilterMenuOpen: Story = {
   play: async ({ canvas, canvasElement, args }) => {
     await userEvent.click(canvas.getByRole('button', { name: '+ filter' }))
 
-    // Menu renders via portal, so query the entire document body
+    // Popup renders via portal, so query the entire document body
     const body = within(canvasElement.ownerDocument.body)
     await expect(
       await body.findByRole('checkbox', { name: 'show completed' }),

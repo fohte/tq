@@ -1,5 +1,7 @@
 import { X } from 'lucide-react'
+import { useRef, useState } from 'react'
 
+import { AnchoredPopup } from '#components/ui/anchored-popup'
 import {
   BottomSheetHeader,
   BottomSheetPanel,
@@ -13,11 +15,6 @@ import {
   DialogPortal,
   DialogTrigger,
 } from '#components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '#components/ui/dropdown-menu'
 import { useIsDesktop } from '#hooks/use-is-desktop'
 
 interface FilterMenuProps {
@@ -27,9 +24,12 @@ interface FilterMenuProps {
   children: React.ReactNode
 }
 
-// Picks the container only: a dropdown on desktop, a bottom sheet below the
-// `md` breakpoint. Content passed as `children` must work in both, so it
-// can't rely on dropdown-only primitives like DropdownMenuRadioItem.
+// Picks the container only: a popover on desktop, a bottom sheet below the
+// `md` breakpoint. Content passed as `children` must work in both, so the
+// desktop side uses AnchoredPopup (a plain popover) rather than
+// DropdownMenu — Base UI's Menu only wires close-on-select and arrow-key
+// navigation into Menu.Item-family children, which plain controls like
+// Checkbox or a <button> aren't.
 export function FilterMenu({
   trigger,
   triggerClassName,
@@ -37,17 +37,32 @@ export function FilterMenu({
   children,
 }: FilterMenuProps) {
   const isDesktop = useIsDesktop()
+  const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   if (isDesktop) {
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger className={triggerClassName}>
+      <>
+        <button
+          ref={triggerRef}
+          type="button"
+          className={triggerClassName}
+          onClick={() => {
+            setOpen((prev) => !prev)
+          }}
+        >
           {trigger}
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <div className="flex flex-col gap-5 p-2">{children}</div>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </button>
+        <AnchoredPopup
+          anchor={triggerRef}
+          open={open}
+          onOpenChange={setOpen}
+          align="start"
+          className="flex w-72 flex-col gap-5 rounded-lg p-2 font-sans shadow-md"
+        >
+          {children}
+        </AnchoredPopup>
+      </>
     )
   }
 
