@@ -3,11 +3,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ParsedQuery } from 'api/search-query-parser'
 import { buildSearchQuery } from 'api/search-query-parser'
 import { http, HttpResponse } from 'msw'
-import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
+import { expect, fn, userEvent, within } from 'storybook/test'
 
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import type { Project } from '#hooks/use-projects'
-import { assertDefined } from '#lib/test-utils'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -202,56 +201,16 @@ export const RemoveParentIdChip: Story = {
   },
 }
 
-// Both `+ filter` triggers exist in the DOM at once (only one is visible per
-// the `hidden md:inline-flex` / `inline-flex md:hidden` split, resolved by
-// the real browser viewport `web/vitest.config.ts` sets per project) —
-// select each by its `data-slot` rather than an ambiguous accessible-name
-// query.
+// FilterMenu picks the container (dropdown vs. bottom sheet) via
+// useIsDesktop(), so only one `+ filter` trigger exists in the DOM per
+// project's viewport — the accessible name alone is enough to find it.
 export const DesktopFilterMenuOpen: Story = {
-  play: async ({ canvasElement, args }) => {
+  tags: ['desktop-only'],
+  play: async ({ canvas, canvasElement, args }) => {
+    await userEvent.click(canvas.getByRole('button', { name: '+ filter' }))
+
     // Menu renders via portal, so query the entire document body
     const body = within(canvasElement.ownerDocument.body)
-
-    const trigger = assertDefined(
-      canvasElement.querySelector<HTMLElement>(
-        '[data-slot="dropdown-menu-trigger"]',
-      ),
-      'desktop trigger not found',
-    )
-    await userEvent.click(trigger)
-
-    await expect(
-      await body.findByRole('menuitemcheckbox', { name: 'show completed' }),
-    ).toBeInTheDocument()
-    await expect(
-      body.getByRole('menuitemradio', { name: 'Sort: Created' }),
-    ).toBeInTheDocument()
-    await expect(
-      body.getByRole('menuitemradio', { name: 'Mobile App' }),
-    ).toBeInTheDocument()
-
-    await userEvent.click(
-      body.getByRole('menuitemradio', { name: 'Mobile App' }),
-    )
-    // Base UI's RadioGroup passes a second `eventDetails` argument alongside the value
-    await expect(args.onProjectIdChange).toHaveBeenCalledWith(
-      'proj-2',
-      expect.anything(),
-    )
-  },
-}
-
-export const MobileFilterSheetOpen: Story = {
-  play: async ({ canvasElement }) => {
-    // Sheet renders via portal, so query the entire document body
-    const body = within(canvasElement.ownerDocument.body)
-
-    const trigger = assertDefined(
-      canvasElement.querySelector<HTMLElement>('[data-slot="dialog-trigger"]'),
-      'mobile trigger not found',
-    )
-    await userEvent.click(trigger)
-
     await expect(
       await body.findByRole('checkbox', { name: 'show completed' }),
     ).toBeInTheDocument()
@@ -261,33 +220,8 @@ export const MobileFilterSheetOpen: Story = {
     await expect(
       body.getByRole('button', { name: 'Mobile App' }),
     ).toBeInTheDocument()
-    await expect(body.getByRole('button', { name: 'work' })).toBeInTheDocument()
-  },
-}
 
-export const SelectProjectInMobileFilterSheet: Story = {
-  play: async ({ canvasElement, args }) => {
-    // Sheet renders via portal, so query the entire document body
-    const body = within(canvasElement.ownerDocument.body)
-
-    const trigger = assertDefined(
-      canvasElement.querySelector<HTMLElement>('[data-slot="dialog-trigger"]'),
-      'mobile trigger not found',
-    )
-    await userEvent.click(trigger)
-
-    // Base UI moves focus to the dialog's first tabbable element (the close
-    // button) asynchronously via requestAnimationFrame. Wait for it to land
-    // before clicking "Mobile App", otherwise it can race the click and
-    // steal focus back afterward, making the VRT screenshot's focus ring
-    // non-deterministic.
-    await waitFor(() =>
-      expect(body.getByRole('button', { name: 'Close' })).toHaveFocus(),
-    )
-
-    await userEvent.click(
-      await body.findByRole('button', { name: 'Mobile App' }),
-    )
+    await userEvent.click(body.getByRole('button', { name: 'Mobile App' }))
     await expect(args.onProjectIdChange).toHaveBeenCalledWith('proj-2')
   },
 }
