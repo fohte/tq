@@ -36,8 +36,8 @@ export const agentSessionsApp = new Hono()
         label: input.label,
         lastMessage: input.lastMessage,
         lastActiveAt: now,
+        endedAt: input.ended === true ? now : null,
         ...(input.context != null ? { context: input.context } : {}),
-        ...(input.ended === true ? { endedAt: now } : {}),
       })
       .onConflictDoUpdate({
         target: [agentSessions.provider, agentSessions.sessionId],
@@ -46,8 +46,12 @@ export const agentSessionsApp = new Hono()
           label: input.label,
           lastMessage: input.lastMessage,
           lastActiveAt: now,
+          // Unconditional, not just set-when-ended: a report without `ended`
+          // means the session is active again (e.g. resumed after a prior
+          // SessionEnd), which must clear a stale endedAt so the "running"
+          // derivation (see schema/agent-sessions.ts) doesn't stay stuck.
+          endedAt: input.ended === true ? now : null,
           ...(input.context != null ? { context: input.context } : {}),
-          ...(input.ended === true ? { endedAt: now } : {}),
         },
       })
       .returning()

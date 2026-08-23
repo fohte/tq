@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
@@ -90,27 +90,35 @@ describe('agent sessions API', () => {
     })
 
     it('updates label, last message, and last active time on a later report, preserving startedAt', async () => {
-      const created = await upsertSessionAndGetBody({
-        provider: 'claude_code',
-        sessionId: 'session-1',
-        cwd: '/home/fohte/project',
-        context: 'work',
-        label: 'First label',
-        lastMessage: 'First message',
-      })
+      const created = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'session-1',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: 'First label',
+          lastMessage: 'First message',
+        },
+        '2030-01-01T00:00:00.000Z',
+      )
 
-      const res = await upsertSession({
-        provider: 'claude_code',
-        sessionId: 'session-1',
-        cwd: '/home/fohte/project',
-        context: 'work',
-        label: 'Second label',
-        lastMessage: 'Second message',
-      })
+      const body = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'session-1',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: 'Second label',
+          lastMessage: 'Second message',
+        },
+        '2030-01-02T00:00:00.000Z',
+      )
 
-      expect(res.status).toBe(200)
-      const body = await jsonBody<AgentSessionResponse>(res)
-      expect(normalizeSession(body)).toEqual({
+      // `startedAt` defaults from Postgres's `now()`, frozen at this test's
+      // transaction start (see setupTestDb), so faking JS time above only
+      // moves `lastActiveAt` — letting this check pin the exact value instead
+      // of normalizing it away.
+      expect(body).toEqual({
         id: created.id,
         provider: 'claude_code',
         sessionId: 'session-1',
@@ -119,11 +127,48 @@ describe('agent sessions API', () => {
         label: 'Second label',
         lastMessage: 'Second message',
         customLabel: null,
+        startedAt: created.startedAt,
+        lastActiveAt: '2030-01-02T00:00:00.000Z',
+        endedAt: null,
+      })
+    })
+
+    it('clears endedAt when the session reports activity again after ending', async () => {
+      const ended = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'session-1',
+        cwd: '/home/fohte/project',
+        context: 'work',
+        label: 'A label',
+        lastMessage: 'A message',
+        ended: true,
+      })
+      assertDefined(ended.endedAt)
+
+      const res = await upsertSession({
+        provider: 'claude_code',
+        sessionId: 'session-1',
+        cwd: '/home/fohte/project',
+        context: 'work',
+        label: 'A label',
+        lastMessage: 'A message',
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<AgentSessionResponse>(res)
+      expect(normalizeSession(body)).toEqual({
+        id: ended.id,
+        provider: 'claude_code',
+        sessionId: 'session-1',
+        context: 'work',
+        cwd: '/home/fohte/project',
+        label: 'A label',
+        lastMessage: 'A message',
+        customLabel: null,
         startedAt: 'DATE',
         lastActiveAt: 'DATE',
         endedAt: null,
       })
-      expect(body.startedAt).toBe(created.startedAt)
     })
 
     it('keeps a human-assigned custom label across later reports', async () => {
@@ -216,22 +261,31 @@ describe('agent sessions API', () => {
     })
 
     it('returns sessions ordered by most recently active first', async () => {
-      const older = await upsertSessionAndGetBody({
-        provider: 'claude_code',
-        sessionId: 'older',
-        cwd: '/home/fohte/project',
-        context: 'work',
-        label: null,
-        lastMessage: null,
-      })
-      const newer = await upsertSessionAndGetBody({
-        provider: 'claude_code',
-        sessionId: 'newer',
-        cwd: '/home/fohte/project',
-        context: 'work',
-        label: null,
-        lastMessage: null,
-      })
+      // lastActiveAt is set from application-side `new Date()`, not
+      // Postgres's frozen `now()`, so two real back-to-back calls aren't
+      // guaranteed distinct — fake time to force a deterministic order.
+      const older = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'older',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-01T00:00:00.000Z',
+      )
+      const newer = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'newer',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-02T00:00:00.000Z',
+      )
 
       const res = await app.request('/api/agent-sessions')
 
@@ -292,4 +346,12 @@ async function upsertSessionAndGetBody(input: UpsertSessionInput) {
     )
   }
   return jsonBody<AgentSessionResponse>(res)
+}
+
+async function upsertSessionAtTime(input: UpsertSessionInput, time: string) {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(time))
+  const body = await upsertSessionAndGetBody(input)
+  vi.useRealTimers()
+  return body
 }
