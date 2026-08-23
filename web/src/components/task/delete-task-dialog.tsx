@@ -41,7 +41,7 @@ export function DeleteTaskDialog({
         <DialogHeader>
           <DialogTitle>Delete task</DialogTitle>
           <DialogDescription>
-            {`Are you sure you want to delete #${String(taskNumber)} "${taskTitle}"? Its subtasks are kept and move up one level. This action cannot be undone.`}
+            {`Are you sure you want to delete #${String(taskNumber)} "${taskTitle}"? Its subtasks are kept and become top-level tasks. This action cannot be undone.`}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
