@@ -2024,6 +2024,70 @@
           "columns": ["provider", "session_id"]
         }
       ]
+    },
+    {
+      "name": "public.task_agent_sessions",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "task_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "agent_session_id",
+          "type": "text",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "task_agent_sessions_task_id_agent_session_id_pk",
+          "def": "CREATE UNIQUE INDEX task_agent_sessions_task_id_agent_session_id_pk ON public.task_agent_sessions USING btree (task_id, agent_session_id)",
+          "table": "public.task_agent_sessions",
+          "columns": ["task_id", "agent_session_id"]
+        },
+        {
+          "name": "idx_task_agent_sessions_task_id",
+          "def": "CREATE INDEX idx_task_agent_sessions_task_id ON public.task_agent_sessions USING btree (task_id)",
+          "table": "public.task_agent_sessions",
+          "columns": ["task_id"]
+        },
+        {
+          "name": "idx_task_agent_sessions_agent_session_id",
+          "def": "CREATE INDEX idx_task_agent_sessions_agent_session_id ON public.task_agent_sessions USING btree (agent_session_id)",
+          "table": "public.task_agent_sessions",
+          "columns": ["agent_session_id"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "task_agent_sessions_task_id_tasks_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE",
+          "table": "public.task_agent_sessions",
+          "referenced_table": "public.tasks",
+          "columns": ["task_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "task_agent_sessions_agent_session_id_agent_sessions_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (agent_session_id) REFERENCES agent_sessions(id) ON DELETE CASCADE",
+          "table": "public.task_agent_sessions",
+          "referenced_table": "public.agent_sessions",
+          "columns": ["agent_session_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "task_agent_sessions_task_id_agent_session_id_pk",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (task_id, agent_session_id)",
+          "table": "public.task_agent_sessions",
+          "referenced_table": "",
+          "columns": ["task_id", "agent_session_id"]
+        }
+      ]
     }
   ],
   "relations": [
@@ -2206,6 +2270,24 @@
       "parent_columns": ["id"],
       "parent_cardinality": "exactly_one",
       "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.task_agent_sessions",
+      "columns": ["task_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.tasks",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.task_agent_sessions",
+      "columns": ["agent_session_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.agent_sessions",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (agent_session_id) REFERENCES agent_sessions(id) ON DELETE CASCADE"
     }
   ],
   "driver": {
