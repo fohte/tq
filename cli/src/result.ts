@@ -1,6 +1,11 @@
 import type { Command } from 'commander'
+import { Result } from 'neverthrow'
 
 import { formatError } from '#errors'
+
+export const tryParseJson = Result.fromThrowable((text: string): unknown =>
+  JSON.parse(text),
+)
 
 // commands/*.ts action handlers propagate failures through commander's own
 // exit flow: Command#error() writes the message and throws internally (via

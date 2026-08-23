@@ -4,6 +4,7 @@ import { registerCalendarCommands } from '#commands/calendar'
 import { registerCommentCommands } from '#commands/comment'
 import { registerGithubCommands } from '#commands/github'
 import { registerHealthCommand } from '#commands/health'
+import { registerHookCommands } from '#commands/hook'
 import { registerImageCommands } from '#commands/image'
 import { registerLabelCommands } from '#commands/label'
 import { registerPageCommands } from '#commands/page'
@@ -53,6 +54,7 @@ export function buildProgram(
   registerCalendarCommands(program, fetchImpl)
   registerSlackCommands(program, fetchImpl)
   registerHealthCommand(program, fetchImpl)
+  registerHookCommands(program, fetchImpl, stdin)
 
   return program
 }
