@@ -43,6 +43,11 @@ const navItems: NavItem[] = [
     label: 'Projects',
     keys: navKeybindings.goToProjects.keys,
   },
+  {
+    to: navKeybindings.goToSessions.to,
+    label: 'Sessions',
+    keys: navKeybindings.goToSessions.keys,
+  },
 ]
 
 const settingsNavItem: NavItem = {
