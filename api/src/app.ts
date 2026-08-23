@@ -5,6 +5,7 @@ import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
 
 import { authorMiddleware } from '#lib/author'
+import { agentSessionsApp } from '#routes/agent-sessions'
 import { calendarApp } from '#routes/calendar'
 import { githubApp } from '#routes/github'
 import { githubSyncRulesApp } from '#routes/github-sync-rules'
@@ -49,6 +50,7 @@ const app = new Hono()
   .get('/health', (c) => {
     return c.json({ status: 'ok' })
   })
+  .route('/api/agent-sessions', agentSessionsApp)
   .route('/api/tasks', tasksApp)
   .route('/api/tasks', taskCommentsApp)
   .route('/api/tasks/:taskId/pages', taskPagesApp)
