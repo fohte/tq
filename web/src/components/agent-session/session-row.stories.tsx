@@ -3,6 +3,9 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { SessionRow } from '#components/agent-session/session-row'
 import type { AgentSession } from '#hooks/use-agent-sessions'
 
+// Kept relative to `Date.now()` (not a fixed ISO literal) so this session
+// keeps rendering as active (isAgentSessionActive) no matter when this story
+// runs.
 const baseSession: AgentSession = {
   id: '1',
   provider: 'claude_code',
@@ -12,8 +15,8 @@ const baseSession: AgentSession = {
   label: 'web sessions page',
   lastMessage: 'Implement the sessions list page',
   customLabel: null,
-  startedAt: '2026-08-23T09:00:00Z',
-  lastActiveAt: '2026-08-23T09:32:00Z',
+  startedAt: new Date(Date.now() - 34 * 60_000).toISOString(),
+  lastActiveAt: new Date(Date.now() - 2 * 60_000).toISOString(),
   endedAt: null,
 }
 

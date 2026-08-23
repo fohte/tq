@@ -9,6 +9,24 @@ export type AgentSession = InferResponseType<
   200
 >[number]
 
+// `lastActiveAt` only advances on the Stop hook (end of a turn), so a gap of
+// a few minutes between turns is normal; a gap this large means the session
+// stopped producing turns, not that the user is slow to reply. No telemetry
+// backs this cutoff yet — adjust if real usage data suggests a better number.
+const STALE_THRESHOLD_MS = 30 * 60_000
+
+/** A session is active when it hasn't ended and hasn't gone stale (see `agentSessions` schema doc). */
+export function isAgentSessionActive(
+  session: AgentSession,
+  now: Date = new Date(),
+): boolean {
+  return (
+    session.endedAt == null &&
+    now.getTime() - new Date(session.lastActiveAt).getTime() <
+      STALE_THRESHOLD_MS
+  )
+}
+
 export const agentSessionKeys = {
   all: ['agent-sessions'] as const,
   list: () => [...agentSessionKeys.all, 'list'] as const,

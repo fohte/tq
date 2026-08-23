@@ -7,7 +7,10 @@ import {
 } from '#components/agent-session/session-list-toolbar'
 import { SessionRow } from '#components/agent-session/session-row'
 import { ListAreaMessage } from '#components/ui/list-area-message'
-import { useAgentSessions } from '#hooks/use-agent-sessions'
+import {
+  isAgentSessionActive,
+  useAgentSessions,
+} from '#hooks/use-agent-sessions'
 import { useContextFilter } from '#hooks/use-context-filter'
 import { matchesContextFilter } from '#lib/context-filter'
 
@@ -21,7 +24,7 @@ function SessionsList() {
   const { data: sessions, isLoading } = useAgentSessions()
 
   const filtered = sessions?.filter(
-    (session) => filter === 'all' || session.endedAt == null,
+    (session) => filter === 'all' || isAgentSessionActive(session),
   )
 
   return (

@@ -1,5 +1,8 @@
 import { Chip } from '#components/ui/chip'
-import type { AgentSession } from '#hooks/use-agent-sessions'
+import {
+  type AgentSession,
+  isAgentSessionActive,
+} from '#hooks/use-agent-sessions'
 import { formatMinutes, formatRelativeTime } from '#lib/format'
 import { cn } from '#lib/utils'
 
@@ -27,7 +30,7 @@ export function SessionRow({
   session: AgentSession
   isDimmed: boolean
 }) {
-  const active = session.endedAt == null
+  const active = isAgentSessionActive(session)
   const label = session.customLabel ?? session.label
 
   return (
