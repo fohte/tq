@@ -6,7 +6,12 @@ import {
   captureFetch,
   fakeStdin,
   request,
+  spyStdout,
 } from '#commands/test-support'
+
+function spyStderr() {
+  return vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+}
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -17,14 +22,10 @@ describe('link', () => {
   it('resolves the current session and links it to the task', async () => {
     vi.stubEnv('TQ_SESSION_ID', 'sess-1')
     const session = { id: 'agent-session-1', sessionId: 'sess-1' }
-    const { fetchStub, calls } = captureFetch(() => {
-      // captureFetch records the call before invoking this callback, so the
-      // first call is already reflected in calls.length by the time this runs.
-      if (calls.length === 1) {
-        return new Response(JSON.stringify(session), { status: 200 })
-      }
-      return new Response(JSON.stringify(session), { status: 201 })
-    })
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(session), { status: 200 }),
+    )
+    const write = spyStdout()
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'link', '42'],
@@ -45,12 +46,16 @@ describe('link', () => {
       query: {},
       body: { agentSessionId: 'agent-session-1' },
     })
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify(session, null, 2)}\n`],
+    ])
   })
 
   it('fails before making any fetch call when TQ_SESSION_ID is not set', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify({}), { status: 200 }),
     )
+    const stderr = spyStderr()
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'link', '42'],
@@ -60,6 +65,11 @@ describe('link', () => {
 
     expect(exitCode).toBe(1)
     expect(calls.length).toBe(0)
+    expect(stderr.mock.calls).toEqual([
+      [
+        'Error: TQ_SESSION_ID is not set. Run this from within a Claude Code session with the SessionStart hook configured to run `tq hook SessionStart`.\n',
+      ],
+    ])
   })
 
   it('fails when the current session is not known to tq', async () => {
@@ -70,6 +80,7 @@ describe('link', () => {
           status: 404,
         }),
     )
+    const stderr = spyStderr()
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'link', '42'],
@@ -79,6 +90,9 @@ describe('link', () => {
 
     expect(exitCode).toBe(1)
     expect(calls.length).toBe(1)
+    expect(stderr.mock.calls).toEqual([
+      ['Error: Agent session not found (HTTP 404)\n'],
+    ])
   })
 })
 
@@ -86,14 +100,10 @@ describe('unlink', () => {
   it('resolves the current session and unlinks it from the task', async () => {
     vi.stubEnv('TQ_SESSION_ID', 'sess-1')
     const session = { id: 'agent-session-1', sessionId: 'sess-1' }
-    const { fetchStub, calls } = captureFetch(() => {
-      // captureFetch records the call before invoking this callback, so the
-      // first call is already reflected in calls.length by the time this runs.
-      if (calls.length === 1) {
-        return new Response(JSON.stringify(session), { status: 200 })
-      }
-      return new Response(null, { status: 204 })
-    })
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(session), { status: 200 }),
+    )
+    const write = spyStdout()
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'unlink', '42'],
@@ -114,12 +124,16 @@ describe('unlink', () => {
       query: {},
       body: undefined,
     })
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify({ unlinked: true, taskId: '42' }, null, 2)}\n`],
+    ])
   })
 
   it('fails before making any fetch call when TQ_SESSION_ID is not set', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify({}), { status: 200 }),
     )
+    const stderr = spyStderr()
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'unlink', '42'],
@@ -129,5 +143,10 @@ describe('unlink', () => {
 
     expect(exitCode).toBe(1)
     expect(calls.length).toBe(0)
+    expect(stderr.mock.calls).toEqual([
+      [
+        'Error: TQ_SESSION_ID is not set. Run this from within a Claude Code session with the SessionStart hook configured to run `tq hook SessionStart`.\n',
+      ],
+    ])
   })
 })

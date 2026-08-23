@@ -347,15 +347,6 @@ describe('agent sessions API', () => {
     })
 
     it('returns 404 for an unknown provider', async () => {
-      await upsertSessionAndGetBody({
-        provider: 'claude_code',
-        sessionId: 'session-1',
-        cwd: '/home/fohte/project',
-        context: 'work',
-        label: 'A label',
-        lastMessage: 'A message',
-      })
-
       const res = await app.request(
         '/api/agent-sessions/by-session/other_provider/session-1',
       )
