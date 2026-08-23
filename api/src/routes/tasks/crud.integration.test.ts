@@ -1242,7 +1242,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(404)
     })
 
-    it('sets children parentId to null on delete', async () => {
+    it('sets children parentId to null when deleting a top-level task', async () => {
       const parent = await createTask('Parent')
       const child = await createTask('Child', { parentId: parent.id })
 
@@ -1253,7 +1253,42 @@ describe('tasks CRUD API', () => {
       const res = await app.request(`/api/tasks/${child.id}`)
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
-      expect(body.parentId).toBeNull()
+      expect(body).toEqual({
+        ...child,
+        parentId: null,
+        updatedAt: body.updatedAt,
+        titleAuthor: { kind: 'human', agent: null },
+        descriptionAuthor: { kind: 'human', agent: null },
+        childCompletionCount: { total: 0, completed: 0 },
+        pages: [],
+        timeBlocks: [],
+        links: { outgoing: [], incoming: [] },
+      })
+    })
+
+    it('reparents children to the grandparent when deleting a task with a parent', async () => {
+      const grandparent = await createTask('Grandparent')
+      const parent = await createTask('Parent', { parentId: grandparent.id })
+      const child = await createTask('Child', { parentId: parent.id })
+
+      await app.request(`/api/tasks/${parent.id}`, {
+        method: 'DELETE',
+      })
+
+      const res = await app.request(`/api/tasks/${child.id}`)
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body).toEqual({
+        ...child,
+        parentId: grandparent.id,
+        updatedAt: body.updatedAt,
+        titleAuthor: { kind: 'human', agent: null },
+        descriptionAuthor: { kind: 'human', agent: null },
+        childCompletionCount: { total: 0, completed: 0 },
+        pages: [],
+        timeBlocks: [],
+        links: { outgoing: [], incoming: [] },
+      })
     })
 
     it('cleans up orphaned recurrence rule on delete', async () => {
