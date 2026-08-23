@@ -157,6 +157,35 @@ export const SavesEditedLabelOnEnter: Story = {
   },
 }
 
+export const ClearsLabelOnEmptyInput: Story = {
+  args: {
+    session: { ...baseSession, id: '10' },
+    isDimmed: false,
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.patch('/api/agent-sessions/:id', async ({ request }) => {
+          patchedBody = await request.json()
+          return HttpResponse.json({ ...baseSession, customLabel: null })
+        }),
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    patchedBody = null
+    const canvas = within(canvasElement)
+
+    await userEvent.click(canvas.getByText(baseSession.label ?? ''))
+    await userEvent.clear(canvas.getByRole('textbox'))
+    await userEvent.keyboard('{Enter}')
+
+    await waitFor(async () => {
+      await expect(patchedBody).toEqual({ customLabel: null })
+    })
+  },
+}
+
 export const CancelsEditOnEscape: Story = {
   args: {
     session: { ...baseSession, id: '9' },

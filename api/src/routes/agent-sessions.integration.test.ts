@@ -354,16 +354,7 @@ describe('agent sessions API', () => {
     })
 
     it('returns 400 for an empty custom label', async () => {
-      const created = await upsertSessionAndGetBody({
-        provider: 'claude_code',
-        sessionId: 'session-1',
-        cwd: '/home/fohte/project',
-        context: 'work',
-        label: 'A label',
-        lastMessage: 'A message',
-      })
-
-      const res = await patchCustomLabel(created.id, '')
+      const res = await patchCustomLabel(TEST_UUID, '')
 
       expect(res.status).toBe(400)
     })
