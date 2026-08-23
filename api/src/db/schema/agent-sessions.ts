@@ -1,0 +1,42 @@
+import { index, pgTable, text, timestamp, unique } from 'drizzle-orm/pg-core'
+
+// One row per coding-agent session (e.g. a Claude Code CLI invocation),
+// reported by that agent's hook integration. No status column: "running" is
+// derived as `endedAt IS NULL AND lastActiveAt` being recent, since a status
+// column would go stale forever once a process is killed without a final
+// hook firing, while a timestamp just ages visibly instead.
+export const agentSessions = pgTable(
+  'agent_sessions',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    provider: text('provider', { enum: ['claude_code'] }).notNull(),
+    sessionId: text('session_id').notNull(),
+    context: text('context', { enum: ['work', 'personal'] })
+      .notNull()
+      .default('personal'),
+    cwd: text('cwd').notNull(),
+    // Read from the transcript by the reporting agent's hook integration, not
+    // computed here; overwritten on every report.
+    label: text('label'),
+    lastMessage: text('last_message'),
+    // Set only through the tq UI; hook reports never touch this column, so a
+    // human-assigned name survives every subsequent `label` overwrite.
+    customLabel: text('custom_label'),
+    startedAt: timestamp('started_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastActiveAt: timestamp('last_active_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+  },
+  (table) => [
+    unique('uq_agent_sessions_provider_session_id').on(
+      table.provider,
+      table.sessionId,
+    ),
+    index('idx_agent_sessions_last_active_at').on(table.lastActiveAt),
+  ],
+)
