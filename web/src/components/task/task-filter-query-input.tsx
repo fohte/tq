@@ -105,7 +105,7 @@ export function TaskFilterQueryInput({
         open={hasSuggestions}
         anchor={inputRef}
         initialFocus={false}
-        className="w-64"
+        className="min-w-(--anchor-width)"
       >
         {suggestions?.map((suggestion, index) => (
           <button
