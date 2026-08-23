@@ -25,7 +25,6 @@ const activeSession: AgentSession = {
 const endedSession: AgentSession = {
   ...activeSession,
   id: '2',
-  cwd: '/Users/fohte/ghq/github.com/tq',
   label: 'Wire up task-agent-session linking',
   startedAt: '2026-08-20T09:00:00Z',
   lastActiveAt: '2026-08-20T10:15:00Z',
