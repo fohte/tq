@@ -315,6 +315,28 @@ describe('task update', () => {
     expect(exitCode).toBe(1)
     expect(calls.length).toBe(0)
   })
+
+  it('ignores TQ_CONTEXT — an update never touches context unless --context is given', async () => {
+    vi.stubEnv('TQ_CONTEXT', 'work')
+    const updated = { id: 't1', number: 1, title: 'Updated title' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'update', '42', '--title', 'Updated title'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'PATCH',
+      pathname: '/api/tasks/42',
+      query: {},
+      body: { title: 'Updated title' },
+    })
+  })
 })
 
 describe('task delete', () => {

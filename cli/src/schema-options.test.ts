@@ -214,7 +214,7 @@ Options:
   })
 })
 
-describe('a "context" field defaulted from TQ_CONTEXT', () => {
+describe('a field defaulted from an env var via envDefaults', () => {
   const contextSchema = z.object({
     context: z.enum(['work', 'personal']).optional(),
   })
@@ -223,11 +223,25 @@ describe('a "context" field defaulted from TQ_CONTEXT', () => {
     return addSchemaOptions(
       new Command('test').exitOverride(),
       contextSchema,
+      [],
+      { context: 'TQ_CONTEXT' },
     )._unsafeUnwrap()
   }
 
   afterEach(() => {
     vi.unstubAllEnvs()
+  })
+
+  it('does not default a field sharing the same name when the call site omits envDefaults', () => {
+    vi.stubEnv('TQ_CONTEXT', 'work')
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      contextSchema,
+    )._unsafeUnwrap()
+
+    command.parse([], { from: 'user' })
+
+    expect(command.opts()).toEqual({})
   })
 
   it('mentions TQ_CONTEXT in --help', () => {

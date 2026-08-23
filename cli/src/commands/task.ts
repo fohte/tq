@@ -57,6 +57,7 @@ export function registerTaskCommands(
     // 'v === "true"' transform silently, e.g. a typo'd value becomes false).
     // Excluded until that gets its own stricter boolean flag type.
     ['hasEstimate', 'hasDue', 'includeAncestors'],
+    { context: 'TQ_CONTEXT' },
   )
     .match(
       (command) => command,
@@ -106,6 +107,7 @@ export function registerTaskCommands(
     createTaskSchema,
     // labels (array) and recurrenceRule (object) aren't scalar fields, so addSchemaOptions can't turn them into flags.
     ['title', 'labels', 'recurrenceRule'],
+    { context: 'TQ_CONTEXT' },
   )
     .match(
       (command) => command,
@@ -142,6 +144,10 @@ export function registerTaskCommands(
     task.command('update <id>').description('Update a task'),
     updateTaskSchema,
     ['labels', 'recurrenceRule'],
+    // No TQ_CONTEXT default here (unlike list/create/search): update sends
+    // only the flags the caller explicitly set, so defaulting --context would
+    // silently overwrite an existing task's context on an unrelated update
+    // (e.g. `task update <id> --title x`) whenever TQ_CONTEXT is set.
   )
     .match(
       (command) => command,
@@ -290,6 +296,7 @@ export function registerTaskCommands(
     // stricter boolean flag type. `q` is excluded since it's handled via the
     // positional query argument below.
     ['q', 'hasEstimate', 'hasDue', 'includeAncestors'],
+    { context: 'TQ_CONTEXT' },
   )
     .match(
       (command) => command,
