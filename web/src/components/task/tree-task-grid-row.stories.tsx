@@ -9,7 +9,7 @@ import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import type { TreeNode } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { emptyLabelsHandler, emptyTasksHandler } from '#lib/msw-test-handlers'
-import { assertDefined, atIndex } from '#lib/test-utils'
+import { assertDefined, atIndex, findVisible } from '#lib/test-utils'
 import { createStoryRouter, StoryRouter } from '#storybook-config/story-router'
 
 const TASK_LIST_ROUTES = ['/tasks', '/tasks/$taskId']
@@ -499,16 +499,20 @@ export const Hovered: Story = {
     // ancestors instead. It ignores `opacity` by default, so the desktop
     // trigger's opacity-0 hover-reveal (checked below) still counts as
     // reachable here.
-    const dropdownTrigger = Array.from(
-      canvasElement.querySelectorAll<HTMLElement>(
-        '[data-slot="dropdown-menu-trigger"][aria-label="Task actions"]',
+    const dropdownTrigger = findVisible(
+      Array.from(
+        canvasElement.querySelectorAll<HTMLElement>(
+          '[data-slot="dropdown-menu-trigger"][aria-label="Task actions"]',
+        ),
       ),
-    ).find((el) => el.checkVisibility())
-    const actionSheetTrigger = Array.from(
-      canvasElement.querySelectorAll<HTMLElement>(
-        '[data-slot="action-sheet-trigger"]',
+    )
+    const actionSheetTrigger = findVisible(
+      Array.from(
+        canvasElement.querySelectorAll<HTMLElement>(
+          '[data-slot="action-sheet-trigger"]',
+        ),
       ),
-    ).find((el) => el.checkVisibility())
+    )
 
     // The mobile ⋯ is always visible; the desktop one only reveals on
     // hover/focus, so the reveal-on-hover behavior only applies there.

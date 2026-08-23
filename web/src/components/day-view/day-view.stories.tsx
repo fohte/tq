@@ -8,7 +8,7 @@ import { DayViewPresentation } from '#components/day-view/day-view'
 import type { Schedule } from '#hooks/use-schedules'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
-import { assertDefined, atIndex } from '#lib/test-utils'
+import { assertDefined, atIndex, findVisible } from '#lib/test-utils'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const today = new Date()
@@ -300,7 +300,7 @@ export const OpensCreateScheduleModal: Story = {
     const titleInputs = await body.findAllByPlaceholderText('Schedule title')
     await expect(
       assertDefined(
-        titleInputs.find((el) => el.checkVisibility()),
+        findVisible(titleInputs),
         'no visible "Schedule title" input found',
       ),
     ).toBeVisible()
