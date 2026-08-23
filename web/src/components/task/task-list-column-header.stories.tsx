@@ -43,6 +43,7 @@ function TaskListColumnHeaderWithRow() {
             <TaskListColumnHeader />
             <TreeTaskGridRow
               node={baseTreeNode}
+              sessionsByTaskId={new Map()}
               isExpanded={() => true}
               onToggleExpand={() => {}}
               selectedRowId={null}

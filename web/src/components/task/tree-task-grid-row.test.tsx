@@ -108,6 +108,7 @@ function TreeHarness({ node }: { node: TreeNode }) {
   return (
     <TreeTaskGridRow
       node={node}
+      sessionsByTaskId={new Map()}
       isExpanded={outliner.isExpanded}
       onToggleExpand={outliner.toggleExpand}
       selectedRowId={outliner.selectedRowId}
