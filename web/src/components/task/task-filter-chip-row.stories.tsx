@@ -1,20 +1,25 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ParsedQuery } from 'api/search-query-parser'
-import { buildSearchQuery } from 'api/search-query-parser'
 import { http, HttpResponse } from 'msw'
 import { expect, fn, userEvent, within } from 'storybook/test'
 
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import type { Project } from '#hooks/use-projects'
+import { taskKeys } from '#hooks/use-task-queries'
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: false } },
+  defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+})
+queryClient.setQueryData(taskKeys.detail('parent-abc'), {
+  id: 'parent-abc',
+  title: 'Version bump the home cluster',
 })
 
 const emptySuggestHandler = http.get('/api/tasks/search/suggest', () =>
   HttpResponse.json([]),
 )
+const emptyLabelsHandler = http.get('/api/labels', () => HttpResponse.json([]))
 
 const projectA: Project = {
   id: 'proj-1',
@@ -49,13 +54,7 @@ const meta = {
   title: 'Task/TaskFilterChipRow',
   component: TaskFilterChipRow,
   parameters: {
-    // The chip row is intentionally horizontally scrollable
-    // (overflow-x-auto) so it never breaks the tasks page header at mobile
-    // widths — see create-task-modal.stories.tsx for the same exemption.
-    overflowCheck: {
-      ignoreSelectors: ['.overflow-x-auto'],
-    },
-    msw: { handlers: [emptySuggestHandler] },
+    msw: { handlers: [emptySuggestHandler, emptyLabelsHandler] },
   },
   decorators: [
     (Story) => (
@@ -68,11 +67,7 @@ const meta = {
     query: 'is:todo is:in_progress sort:updated',
     onQueryChange: fn(),
     parsed: defaultParsed,
-    onShowCompletedChange: fn(),
-    onSortByChange: fn(),
     projects,
-    onProjectIdChange: fn(),
-    onTagChange: fn(),
   },
 } satisfies Meta<typeof TaskFilterChipRow>
 
@@ -81,7 +76,7 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
 
-export const ShowCompleted: Story = {
+export const NoFilters: Story = {
   args: {
     parsed: { freeText: '', sortBy: 'updated' },
   },
@@ -105,67 +100,126 @@ export const NoProjects: Story = {
   },
 }
 
-export const TagSelected: Story = {
+export const LabelSelected: Story = {
   args: {
     parsed: { ...defaultParsed, label: 'dev:tq' },
   },
 }
 
-export const RemoveNotCompletedChip: Story = {
-  play: async ({ canvas, args }) => {
-    await userEvent.click(
-      canvas.getByRole('button', { name: 'not completed ×' }),
-    )
-    await expect(args.onShowCompletedChange).toHaveBeenCalledWith(true)
-  },
-}
-
-export const RemoveProjectChip: Story = {
-  args: {
-    parsed: { ...defaultParsed, projectId: 'proj-1' },
-  },
-  play: async ({ canvas, args }) => {
-    await userEvent.click(
-      canvas.getByRole('button', { name: 'project: Website Redesign ×' }),
-    )
-    await expect(args.onProjectIdChange).toHaveBeenCalledWith('')
-  },
-}
-
-export const RemoveTagChip: Story = {
-  args: {
-    parsed: { ...defaultParsed, label: 'dev:tq' },
-  },
-  play: async ({ canvas, args }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '#dev:tq ×' }))
-    await expect(args.onTagChange).toHaveBeenCalledWith(undefined)
-  },
-}
-
-// A structured field that is understood by search-query-parser but has no
-// dedicated picker in this row (has:pages) still shows up as its own
-// removable chip.
 export const HasPagesChip: Story = {
   args: {
     parsed: { ...defaultParsed, hasPages: true },
   },
 }
 
-export const RemoveHasPagesChip: Story = {
+export const FreeTextChips: Story = {
   args: {
-    parsed: { ...defaultParsed, hasPages: true },
+    parsed: { ...defaultParsed, freeText: 'foo bar' },
   },
-  play: async ({ canvas, args }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'has:pages ×' }))
+}
+
+export const ParentIdChip: Story = {
+  args: {
+    parsed: { ...defaultParsed, parentId: 'parent-abc' },
+  },
+}
+
+// Every applied filter chip opens a menu scoped to just that axis, where
+// both changing the value and removing the condition happen — no more
+// removing the chip and reopening `+ filter` to pick a different value.
+export const OpenStatusMenuAndUncheck: Story = {
+  tags: ['desktop-only'],
+  play: async ({ canvas, canvasElement, args }) => {
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'is todo, doing' }),
+    )
+
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(await body.findByRole('checkbox', { name: 'Todo' }))
+
     await expect(args.onQueryChange).toHaveBeenCalledWith(
-      buildSearchQuery(defaultParsed),
+      'is:in_progress sort:updated',
     )
   },
 }
 
-export const FreeTextChips: Story = {
+export const OpenProjectMenuAndChange: Story = {
   args: {
-    parsed: { ...defaultParsed, freeText: 'foo bar' },
+    parsed: { ...defaultParsed, projectId: 'proj-1' },
+  },
+  tags: ['desktop-only'],
+  play: async ({ canvas, canvasElement, args }) => {
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'project Website Redesign' }),
+    )
+
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(
+      await body.findByRole('button', { name: 'Mobile App' }),
+    )
+
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      'is:todo is:in_progress project:proj-2 sort:updated',
+    )
+  },
+}
+
+export const OpenLabelMenuAndClear: Story = {
+  args: {
+    parsed: { ...defaultParsed, label: 'dev:tq' },
+  },
+  tags: ['desktop-only'],
+  play: async ({ canvas, canvasElement, args }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'label #dev:tq' }))
+
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(await body.findByRole('button', { name: 'No label' }))
+
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      'is:todo is:in_progress sort:updated',
+    )
+  },
+}
+
+export const OpenPagesMenuAndUncheck: Story = {
+  args: {
+    parsed: { ...defaultParsed, hasPages: true },
+  },
+  tags: ['desktop-only'],
+  play: async ({ canvas, canvasElement, args }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'has pages' }))
+
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(
+      await body.findByRole('checkbox', { name: 'has pages' }),
+    )
+
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      'is:todo is:in_progress sort:updated',
+    )
+  },
+}
+
+export const OpenParentMenuAndClear: Story = {
+  args: {
+    parsed: { ...defaultParsed, parentId: 'parent-abc' },
+  },
+  tags: ['desktop-only'],
+  play: async ({ canvas, canvasElement, args }) => {
+    await userEvent.click(
+      await canvas.findByRole('button', {
+        name: 'parent Version bump the home cluster',
+      }),
+    )
+
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(
+      await body.findByRole('button', { name: 'Clear parent filter' }),
+    )
+
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      'is:todo is:in_progress sort:updated',
+    )
   },
 }
 
@@ -176,53 +230,46 @@ export const RemoveFreeTextWordChip: Story = {
   play: async ({ canvas, args }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'foo ×' }))
     await expect(args.onQueryChange).toHaveBeenCalledWith(
-      buildSearchQuery({ ...defaultParsed, freeText: 'bar' }),
+      'bar is:todo is:in_progress sort:updated',
     )
   },
 }
 
-export const ParentIdChip: Story = {
-  args: {
-    parsed: { ...defaultParsed, parentId: 'parent-abc' },
-  },
-}
-
-export const RemoveParentIdChip: Story = {
-  args: {
-    parsed: { ...defaultParsed, parentId: 'parent-abc' },
-  },
-  play: async ({ canvas, args }) => {
-    await userEvent.click(
-      canvas.getByRole('button', { name: 'parent:parent-abc ×' }),
-    )
-    await expect(args.onQueryChange).toHaveBeenCalledWith(
-      buildSearchQuery(defaultParsed),
-    )
-  },
-}
-
-// FilterMenu picks the container (popover vs. bottom sheet) via
-// useIsDesktop(), so only one `+ filter` trigger exists in the DOM per
-// project's viewport — the accessible name alone is enough to find it.
-export const DesktopFilterMenuOpen: Story = {
+// Sort is pinned to the row's right edge, outside the wrapping chip area,
+// and opens the same kind of menu as any other axis chip.
+export const OpenSortMenuAndChange: Story = {
   tags: ['desktop-only'],
   play: async ({ canvas, canvasElement, args }) => {
+    await userEvent.click(canvas.getByRole('button', { name: /Sort by/ }))
+
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(await body.findByRole('button', { name: 'Created' }))
+
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      'is:todo is:in_progress sort:created',
+    )
+  },
+}
+
+export const DesktopFilterMenuOpen: Story = {
+  tags: ['desktop-only'],
+  play: async ({ canvas, canvasElement }) => {
     await userEvent.click(canvas.getByRole('button', { name: '+ filter' }))
 
-    // Popup renders via portal, so query the entire document body
+    // Popup renders via portal, so query the entire document body. Only
+    // checks that the STATUS/PROJECT/LABEL sections render — picking an
+    // option is covered by task-filter-menu-content.stories.tsx's own
+    // SelectProject story.
     const body = within(canvasElement.ownerDocument.body)
     await expect(
-      await body.findByRole('checkbox', { name: 'show completed' }),
-    ).toBeInTheDocument()
-    await expect(
-      body.getByRole('button', { name: 'Created' }),
+      await body.findByRole('checkbox', { name: 'Completed' }),
     ).toBeInTheDocument()
     await expect(
       body.getByRole('button', { name: 'Mobile App' }),
     ).toBeInTheDocument()
-
-    await userEvent.click(body.getByRole('button', { name: 'Mobile App' }))
-    await expect(args.onProjectIdChange).toHaveBeenCalledWith('proj-2')
+    await expect(
+      body.getByRole('button', { name: 'No label' }),
+    ).toBeInTheDocument()
   },
 }
 

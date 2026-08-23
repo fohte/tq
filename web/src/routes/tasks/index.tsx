@@ -32,7 +32,7 @@ import { SectionHeading } from '#components/ui/section-heading'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
 import { useNewTaskShortcutListener } from '#hooks/use-new-task-shortcut'
 import { useProjects } from '#hooks/use-projects'
-import type { TaskSortBy, TreeNode } from '#hooks/use-tasks'
+import type { TreeNode } from '#hooks/use-tasks'
 import { useUpdateTaskParent } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import {
@@ -155,45 +155,6 @@ export function TaskList() {
       replace: true,
     })
   }
-  const setSortBy = (sort: TaskSortBy) => {
-    void navigate({
-      search: (prev) => ({
-        ...prev,
-        q: buildSearchQuery({ ...parsed, sortBy: sort }),
-      }),
-      replace: true,
-    })
-  }
-  const setShowCompleted = (checked: boolean) => {
-    // exactOptionalPropertyTypes forbids `{ ...parsed, status: undefined }`
-    // (status's type is an array, not `Array<...> | undefined`) — delete is
-    // the sanctioned way to unset an optional property under that flag.
-    const next = { ...parsed }
-    if (checked) delete next.status
-    else next.status = ['todo', 'in_progress']
-    void navigate({
-      search: (prev) => ({ ...prev, q: buildSearchQuery(next) }),
-      replace: true,
-    })
-  }
-  const setProjectId = (id: string) => {
-    const next = { ...parsed }
-    if (id === '') delete next.projectId
-    else next.projectId = id
-    void navigate({
-      search: (prev) => ({ ...prev, q: buildSearchQuery(next) }),
-      replace: true,
-    })
-  }
-  const setTag = (nextTag: string | undefined) => {
-    const next = { ...parsed }
-    if (nextTag == null) delete next.label
-    else next.label = nextTag
-    void navigate({
-      search: (prev) => ({ ...prev, q: buildSearchQuery(next) }),
-      replace: true,
-    })
-  }
 
   const projects = useProjects()
 
@@ -312,11 +273,7 @@ export function TaskList() {
         query={q}
         onQueryChange={setQuery}
         parsed={parsed}
-        onShowCompletedChange={setShowCompleted}
-        onSortByChange={setSortBy}
         projects={projects.data ?? []}
-        onProjectIdChange={setProjectId}
-        onTagChange={setTag}
       />
 
       {/* Inline create */}
