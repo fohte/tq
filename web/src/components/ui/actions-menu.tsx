@@ -32,15 +32,17 @@ function stopRowNavigation(e: React.MouseEvent) {
 export function ActionsMenu({
   items,
   desktopTriggerClassName,
+  'aria-label': ariaLabel = 'Actions',
 }: {
   items: ActionsMenuItem[]
   desktopTriggerClassName?: string
+  'aria-label'?: string
 }) {
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger
-          aria-label="Task actions"
+          aria-label={ariaLabel}
           onClick={stopRowNavigation}
           data-no-dnd=""
           className={cn(
@@ -51,8 +53,6 @@ export function ActionsMenu({
           <MoreHorizontal className="h-3.5 w-3.5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          // The trigger sits at the row's far right, so align the menu to
-          // its right edge instead of overflowing further right.
           align="end"
           onClick={(e) => {
             e.stopPropagation()
@@ -76,7 +76,7 @@ export function ActionsMenu({
 
       <ActionSheet>
         <ActionSheetTrigger
-          aria-label="Task actions"
+          aria-label={ariaLabel}
           onClick={stopRowNavigation}
           data-no-dnd=""
           className="flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground outline-none hover:text-foreground md:hidden"

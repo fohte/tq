@@ -155,6 +155,7 @@ function TaskBreadcrumb({ task }: { task: TaskDetail }) {
         {formatRelativeTime(task.updatedAt)}
       </span>
       <ActionsMenu
+        aria-label="Task actions"
         items={[
           {
             icon: <Trash2 className="h-4 w-4" />,
