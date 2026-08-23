@@ -4,7 +4,8 @@ export interface Keybinding {
   description: string
 }
 
-export type NavRoutePath = '/today' | '/' | '/tasks' | '/projects' | '/settings'
+export type NavRoutePath =
+  '/today' | '/' | '/tasks' | '/projects' | '/sessions' | '/settings'
 
 export interface NavKeybinding extends Keybinding {
   to: NavRoutePath
@@ -46,6 +47,12 @@ export const navKeybindings = {
     keys: 'g p',
     to: '/projects',
     description: 'go to projects',
+  },
+  goToSessions: {
+    id: 'go-to-sessions',
+    keys: 'g a',
+    to: '/sessions',
+    description: 'go to sessions',
   },
   goToSettings: {
     id: 'go-to-settings',
