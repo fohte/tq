@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
@@ -92,8 +92,14 @@ describe('task <-> agent session links API', () => {
 
     it('returns linked sessions ordered by most recently active', async () => {
       const task = await createTask('My task')
-      const older = await createAgentSession('session-older')
-      const newer = await createAgentSession('session-newer')
+      const older = await createAgentSessionAtTime(
+        'session-older',
+        '2030-01-01T00:00:00.000Z',
+      )
+      const newer = await createAgentSessionAtTime(
+        'session-newer',
+        '2030-01-02T00:00:00.000Z',
+      )
       await postLink(task.id, older.id)
       await postLink(task.id, newer.id)
 
@@ -207,10 +213,10 @@ describe('task <-> agent session links API', () => {
     })
     expect(res.status).toBe(204)
 
-    const rows = await db.query.taskAgentSessions.findMany({
-      where: (row, { eq }) => eq(row.agentSessionId, session.id),
-    })
-    expect(rows).toEqual([])
+    const tasksRes = await app.request(
+      `/api/agent-sessions/${session.id}/tasks`,
+    )
+    expect(await tasksRes.json()).toEqual([])
   })
 
   it('removes the link when the linked agent session is deleted', async () => {
@@ -218,14 +224,12 @@ describe('task <-> agent session links API', () => {
     const session = await createAgentSession('session-1')
     await postLink(task.id, session.id)
 
-    // No DELETE /api/agent-sessions/:id route exists yet, so this deletes
-    // directly to exercise the FK's ON DELETE CASCADE.
     await db.delete(agentSessions).where(eq(agentSessions.id, session.id))
 
-    const rows = await db.query.taskAgentSessions.findMany({
-      where: (row, { eq }) => eq(row.taskId, task.id),
-    })
-    expect(rows).toEqual([])
+    const sessionsRes = await app.request(
+      `/api/tasks/${task.id}/agent-sessions`,
+    )
+    expect(await sessionsRes.json()).toEqual([])
   })
 })
 
@@ -261,6 +265,14 @@ async function createAgentSession(sessionId: string) {
     )
   }
   return jsonBody<AgentSessionResponse>(res)
+}
+
+async function createAgentSessionAtTime(sessionId: string, time: string) {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(time))
+  const body = await createAgentSession(sessionId)
+  vi.useRealTimers()
+  return body
 }
 
 async function postLink(taskId: string, agentSessionId: string) {

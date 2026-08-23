@@ -5,15 +5,7 @@ import { Hono } from 'hono'
 import { db } from '#db/connection'
 import { agentSessions, taskAgentSessions, tasks } from '#db/schema'
 import { upsertAgentSessionSchema } from '#schemas/agent-session'
-
-function taskLinkToResponse(task: typeof tasks.$inferSelect) {
-  return {
-    id: task.id,
-    number: task.number,
-    title: task.title,
-    status: task.status,
-  }
-}
+import { taskSummaryColumns } from '#services/task-links'
 
 export function agentSessionToResponse(
   session: typeof agentSessions.$inferSelect,
@@ -103,15 +95,12 @@ export const agentSessionsApp = new Hono()
       return c.json({ error: 'Agent session not found' }, 404)
     }
 
-    const rows = await db
-      .select({ task: tasks })
+    const tasksLinked = await db
+      .select(taskSummaryColumns)
       .from(taskAgentSessions)
       .innerJoin(tasks, eq(taskAgentSessions.taskId, tasks.id))
       .where(eq(taskAgentSessions.agentSessionId, id))
       .orderBy(tasks.number)
 
-    return c.json(
-      rows.map((row) => taskLinkToResponse(row.task)),
-      200,
-    )
+    return c.json(tasksLinked, 200)
   })

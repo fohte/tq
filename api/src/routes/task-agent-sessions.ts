@@ -52,19 +52,18 @@ export const taskAgentSessionsApp = new Hono<TaskEnv>()
       return c.json({ error: 'Agent session not found' }, 404)
     }
 
-    const existing = await db.query.taskAgentSessions.findFirst({
-      where: and(
-        eq(taskAgentSessions.taskId, taskId),
-        eq(taskAgentSessions.agentSessionId, agentSessionId),
-      ),
-    })
-    if (existing) {
-      return c.json(agentSessionToResponse(session), 200)
-    }
+    const inserted = await db
+      .insert(taskAgentSessions)
+      .values({ taskId, agentSessionId })
+      .onConflictDoNothing({
+        target: [taskAgentSessions.taskId, taskAgentSessions.agentSessionId],
+      })
+      .returning()
 
-    await db.insert(taskAgentSessions).values({ taskId, agentSessionId })
-
-    return c.json(agentSessionToResponse(session), 201)
+    return c.json(
+      agentSessionToResponse(session),
+      inserted.length > 0 ? 201 : 200,
+    )
   })
   .delete('/:agentSessionId', async (c) => {
     const taskId = c.get('task').id
