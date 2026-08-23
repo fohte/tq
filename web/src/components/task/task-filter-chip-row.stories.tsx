@@ -274,8 +274,12 @@ export const DesktopFilterMenuOpen: Story = {
 }
 
 // PC only: clicking the `>` trigger swaps the chip list for the raw query
-// input, pre-filled with the current query.
+// input, pre-filled with the current query. The trigger itself is `hidden
+// md:inline-flex` with no mobile equivalent, so edit mode is unreachable
+// below the `md` breakpoint — CSF's static tags parser requires a literal
+// here, not the imported DESKTOP_ONLY_TAG constant.
 export const EnterEditModeOnDesktop: Story = {
+  tags: ['desktop-only'],
   play: async ({ canvas }) => {
     await userEvent.click(
       canvas.getByRole('button', { name: 'Edit filter query' }),
@@ -287,7 +291,10 @@ export const EnterEditModeOnDesktop: Story = {
   },
 }
 
+// Also desktop-only: reaches edit mode via the same PC-only trigger as
+// EnterEditModeOnDesktop above.
 export const CommitEditOnBlur: Story = {
+  tags: ['desktop-only'],
   play: async ({ canvas, args }) => {
     await userEvent.click(
       canvas.getByRole('button', { name: 'Edit filter query' }),
@@ -308,7 +315,10 @@ export const CommitEditOnBlur: Story = {
   },
 }
 
+// Also desktop-only: reaches edit mode via the same PC-only trigger as
+// EnterEditModeOnDesktop above.
 export const CancelEditOnEscape: Story = {
+  tags: ['desktop-only'],
   play: async ({ canvas, args }) => {
     await userEvent.click(
       canvas.getByRole('button', { name: 'Edit filter query' }),

@@ -334,6 +334,22 @@ export function registerTaskCommands(
     )
 
   task
+    .command('sessions <id>')
+    .description('List agent sessions linked to a task')
+    .action(async (id: string, _options: unknown, command: Command) => {
+      const client = buildClient(command, fetchImpl).match(
+        (value) => value,
+        (error) => fail(command, error),
+      )
+      const res = await client.api.tasks[':taskId']['agent-sessions'].$get({
+        param: { taskId: id },
+      })
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
+      if (!res.ok) return fail(command, await toApiError(res))
+      printJson(await res.json())
+    })
+
+  task
     .command('from-github <url>')
     .description('Create a task from a GitHub issue or pull request URL')
     .action(async (url: string, _options: unknown, command: Command) => {
