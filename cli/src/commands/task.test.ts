@@ -56,6 +56,7 @@ const apiUrl = 'http://api.test'
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllEnvs()
 })
 
 describe('task list', () => {
@@ -208,6 +209,74 @@ describe('task create', () => {
     expect(exitCode).toBe(1)
     expect(calls.length).toBe(0)
   })
+
+  it('uses TQ_CONTEXT as the default context when --context is omitted', async () => {
+    vi.stubEnv('TQ_CONTEXT', 'work')
+    const created = { id: 't1', number: 1, title: 'New task' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'create', 'New task'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'POST',
+      pathname: '/api/tasks',
+      query: {},
+      body: { title: 'New task', context: 'work' },
+    })
+  })
+
+  it('prefers an explicit --context over TQ_CONTEXT', async () => {
+    vi.stubEnv('TQ_CONTEXT', 'work')
+    const created = { id: 't1', number: 1, title: 'New task' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'New task',
+        '--context',
+        'personal',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'POST',
+      pathname: '/api/tasks',
+      query: {},
+      body: { title: 'New task', context: 'personal' },
+    })
+  })
+
+  it('rejects an invalid TQ_CONTEXT before making any fetch call', async () => {
+    vi.stubEnv('TQ_CONTEXT', 'nonsense')
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify({}), { status: 201 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'create', 'New task'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(1)
+    expect(calls.length).toBe(0)
+  })
 })
 
 describe('task update', () => {
@@ -245,6 +314,28 @@ describe('task update', () => {
 
     expect(exitCode).toBe(1)
     expect(calls.length).toBe(0)
+  })
+
+  it('ignores TQ_CONTEXT — an update never touches context unless --context is given', async () => {
+    vi.stubEnv('TQ_CONTEXT', 'work')
+    const updated = { id: 't1', number: 1, title: 'Updated title' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'update', '42', '--title', 'Updated title'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'PATCH',
+      pathname: '/api/tasks/42',
+      query: {},
+      body: { title: 'Updated title' },
+    })
   })
 })
 

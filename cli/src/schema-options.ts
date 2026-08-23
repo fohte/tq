@@ -68,11 +68,19 @@ function unwrapOptional(field: z.core.$ZodType): z.core.$ZodType | undefined {
  * Only wraps `z.optional()` fields into flags; required fields are left
  * for the caller to add as positional arguments instead, keeping the
  * flag/positional split without a per-command exclude list.
+ *
+ * `envDefaults` opts a field into falling back to an environment variable
+ * when its flag is omitted (e.g. `{ context: 'TQ_CONTEXT' }`). It's
+ * caller-supplied per call site, like `exclude`, rather than inferred from
+ * the field name — a mutating command (e.g. `task update`) can share the
+ * same schema field without silently picking up the env default and
+ * overwriting an existing value the caller never asked to change.
  */
 export function addSchemaOptions<Shape extends z.core.$ZodShape>(
   command: Command,
   schema: z.ZodObject<Shape>,
   exclude: readonly string[] = [],
+  envDefaults: Readonly<Record<string, string>> = {},
 ): Result<Command, Error> {
   for (const [key, field] of Object.entries(schema.shape)) {
     if (exclude.includes(key)) continue
@@ -87,15 +95,27 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
       )
     }
 
-    const option = new Option(
-      `--${toKebabCase(key)} <value>`,
-      inner.description ?? toLabel(key),
-    )
+    const envVar = envDefaults[key]
+    const description =
+      envVar != null
+        ? `${inner.description ?? toLabel(key)} (or set ${envVar})`
+        : (inner.description ?? toLabel(key))
+    const option = new Option(`--${toKebabCase(key)} <value>`, description)
     if (inner instanceof z.ZodEnum) {
       option.choices(inner.options.map(String))
     }
 
     option.argParser((raw: string) => parseValue(inner, raw))
+    if (envVar != null) {
+      const envValue = process.env[envVar]
+      // Left unvalidated here (unlike an explicit flag, which goes through
+      // parseValue above): pickSchemaFields re-validates the full options
+      // object against the schema before it reaches the API, so an invalid
+      // env value is still rejected by the CLI rather than sent.
+      option.default(
+        envValue != null && envValue.length > 0 ? envValue : undefined,
+      )
+    }
     command.addOption(option)
   }
   return ok(command)
