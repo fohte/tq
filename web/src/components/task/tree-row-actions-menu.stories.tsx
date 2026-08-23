@@ -22,6 +22,7 @@ const meta = {
     onLinkExisting: fn(),
     onMoveUnder: fn(),
     onSetProject: fn(),
+    onDelete: fn(),
   },
 } satisfies Meta<typeof TreeRowActionsMenu>
 
@@ -54,6 +55,7 @@ export const DesktopMenuOpen: Story = {
     await expect(body.getByText('link existing task…')).toBeInTheDocument()
     await expect(body.getByText('move under…')).toBeInTheDocument()
     await expect(body.getByText('set project…')).toBeInTheDocument()
+    await expect(body.getByText('delete…')).toBeInTheDocument()
   },
 }
 
@@ -72,5 +74,6 @@ export const MobileActionSheetOpen: Story = {
     await expect(body.getByText('link existing task…')).toBeInTheDocument()
     await expect(body.getByText('move under…')).toBeInTheDocument()
     await expect(body.getByText('set project…')).toBeInTheDocument()
+    await expect(body.getByText('delete…')).toBeInTheDocument()
   },
 }

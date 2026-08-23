@@ -1,4 +1,4 @@
-import { CornerUpLeft, FolderInput, Plus, Search } from 'lucide-react'
+import { CornerUpLeft, FolderInput, Plus, Search, Trash2 } from 'lucide-react'
 
 import { ActionsMenu } from '#components/ui/actions-menu'
 
@@ -7,11 +7,13 @@ export function TreeRowActionsMenu({
   onLinkExisting,
   onMoveUnder,
   onSetProject,
+  onDelete,
 }: {
   onAddSubtask: () => void
   onLinkExisting: () => void
   onMoveUnder: () => void
   onSetProject: () => void
+  onDelete: () => void
 }) {
   return (
     <ActionsMenu
@@ -36,6 +38,12 @@ export function TreeRowActionsMenu({
           icon: <FolderInput className="h-4 w-4" />,
           label: 'set project…',
           onClick: onSetProject,
+        },
+        {
+          icon: <Trash2 className="h-4 w-4" />,
+          label: 'delete…',
+          onClick: onDelete,
+          destructive: true,
         },
       ]}
     />
