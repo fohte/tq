@@ -1,13 +1,4 @@
-import { Button } from '#components/ui/button'
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '#components/ui/dialog'
+import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import { useDeleteTask } from '#hooks/use-tasks'
 
 export function DeleteTaskDialog({
@@ -36,26 +27,12 @@ export function DeleteTaskDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Delete task</DialogTitle>
-          <DialogDescription>
-            {`Are you sure you want to delete #${String(taskNumber)} "${taskTitle}"? Its subtasks are kept and become top-level tasks. This action cannot be undone.`}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <DialogClose render={<Button variant="outline" />}>
-            Cancel
-          </DialogClose>
-          <DialogClose
-            render={<Button variant="destructive" />}
-            onClick={handleDelete}
-          >
-            Delete
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <DeleteConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Delete task"
+      description={`Are you sure you want to delete #${String(taskNumber)} "${taskTitle}"? Its subtasks are kept and become top-level tasks. This action cannot be undone.`}
+      onDelete={handleDelete}
+    />
   )
 }

@@ -1,16 +1,7 @@
 import { Trash2 } from 'lucide-react'
 
-import { Button } from '#components/ui/button'
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '#components/ui/dialog'
+import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
+import { DialogTrigger } from '#components/ui/dialog'
 import { cn } from '#lib/utils'
 
 export function DeleteConfirmButton({
@@ -31,7 +22,12 @@ export function DeleteConfirmButton({
   'aria-label'?: string | undefined
 }) {
   return (
-    <Dialog open={open}>
+    <DeleteConfirmDialog
+      title={title}
+      description={description}
+      onDelete={onDelete}
+      open={open}
+    >
       <DialogTrigger
         render={
           <button
@@ -47,23 +43,6 @@ export function DeleteConfirmButton({
       >
         <Trash2 className={cn('size-3.5', iconClassName)} />
       </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <DialogClose render={<Button variant="outline" />}>
-            Cancel
-          </DialogClose>
-          <DialogClose
-            render={<Button variant="destructive" />}
-            onClick={onDelete}
-          >
-            Delete
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </DeleteConfirmDialog>
   )
 }
