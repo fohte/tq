@@ -79,7 +79,7 @@ export function useTaskMap(tasks: Task[]): Map<string, Task> {
   }, [tasks])
 }
 
-export function useTask(id: string) {
+export function useTask(id: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: taskKeys.detail(id),
     queryFn: async () => {
@@ -88,5 +88,6 @@ export function useTask(id: string) {
       })
       return unwrapOrThrow(assertOk(res)).json()
     },
+    enabled: options?.enabled ?? true,
   })
 }

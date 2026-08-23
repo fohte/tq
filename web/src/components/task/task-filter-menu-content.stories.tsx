@@ -1,9 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ParsedQuery } from 'api/search-query-parser'
+import { http, HttpResponse } from 'msw'
 import { expect, fn, userEvent } from 'storybook/test'
 
 import { TaskFilterMenuContent } from '#components/task/task-filter-menu-content'
 import type { Project } from '#hooks/use-projects'
 import { StoryRouter } from '#storybook-config/story-router'
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+})
+
+const emptyLabelsHandler = http.get('/api/labels', () => HttpResponse.json([]))
 
 const projectA: Project = {
   id: 'proj-1',
@@ -28,27 +37,32 @@ const projectB: Project = {
 
 const projects = [projectA, projectB]
 
+const defaultParsed: ParsedQuery = {
+  freeText: '',
+  status: ['todo', 'in_progress'],
+  sortBy: 'updated',
+}
+
 const meta = {
   title: 'Task/TaskFilterMenuContent',
   component: TaskFilterMenuContent,
   parameters: {
     layout: 'centered',
+    msw: { handlers: [emptyLabelsHandler] },
   },
   decorators: [
     (Story) => (
-      <div className="flex w-64 flex-col gap-5 p-4">
-        <Story />
-      </div>
+      <QueryClientProvider client={queryClient}>
+        <div className="flex w-64 flex-col gap-5 p-4">
+          <Story />
+        </div>
+      </QueryClientProvider>
     ),
   ],
   args: {
-    showCompleted: false,
-    onShowCompletedChange: fn(),
-    sortBy: 'updated',
-    onSortByChange: fn(),
+    parsed: defaultParsed,
+    onQueryChange: fn(),
     projects,
-    selectedProjectId: undefined,
-    onProjectIdChange: fn(),
     showContext: false,
   },
 } satisfies Meta<typeof TaskFilterMenuContent>
@@ -71,7 +85,7 @@ export const WithContext: Story = {
 
 export const ProjectSelected: Story = {
   args: {
-    selectedProjectId: 'proj-1',
+    parsed: { ...defaultParsed, projectId: 'proj-1' },
   },
 }
 
@@ -81,30 +95,20 @@ export const NoProjects: Story = {
   },
 }
 
-export const CheckShowCompleted: Story = {
+export const CheckCompleted: Story = {
   play: async ({ canvas, args }) => {
-    await userEvent.click(
-      canvas.getByRole('checkbox', { name: 'show completed' }),
+    await userEvent.click(canvas.getByRole('checkbox', { name: 'Completed' }))
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      'is:todo is:in_progress is:completed sort:updated',
     )
-    // Base UI's Checkbox passes a second `eventDetails` argument alongside
-    // the checked value.
-    await expect(args.onShowCompletedChange).toHaveBeenCalledWith(
-      true,
-      expect.anything(),
-    )
-  },
-}
-
-export const ChangeSort: Story = {
-  play: async ({ canvas, args }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'Created' }))
-    await expect(args.onSortByChange).toHaveBeenCalledWith('created')
   },
 }
 
 export const SelectProject: Story = {
   play: async ({ canvas, args }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Mobile App' }))
-    await expect(args.onProjectIdChange).toHaveBeenCalledWith('proj-2')
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      'is:todo is:in_progress project:proj-2 sort:updated',
+    )
   },
 }
