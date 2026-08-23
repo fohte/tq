@@ -24,6 +24,7 @@
 | [public.calendar_subscriptions](public.calendar_subscriptions.md)                   | 7       |         | BASE TABLE |
 | [public.task_events](public.task_events.md)                                         | 12      |         | BASE TABLE |
 | [public.scheduling_settings](public.scheduling_settings.md)                         | 8       |         | BASE TABLE |
+| [public.agent_sessions](public.agent_sessions.md)                                   | 11      |         | BASE TABLE |
 
 ## Relations
 
@@ -247,6 +248,19 @@ erDiagram
   text default_context
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+}
+"public.agent_sessions" {
+  text id
+  text provider
+  text session_id
+  text context
+  text cwd
+  text label
+  text last_message
+  text custom_label
+  timestamp_with_time_zone started_at
+  timestamp_with_time_zone last_active_at
+  timestamp_with_time_zone ended_at
 }
 ```
 

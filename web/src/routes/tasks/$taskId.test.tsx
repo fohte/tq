@@ -42,6 +42,7 @@ vi.mock('#hooks/use-tasks', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useTaskList: (...args: unknown[]) => mockUseTaskList(...args),
   useUpdateTaskParent: () => ({ mutate: mockParentMutate }),
+  useDeleteTask: () => ({ mutate: vi.fn() }),
 }))
 
 vi.mock('#components/ui/markdown-editor', () => ({

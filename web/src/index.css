@@ -86,6 +86,19 @@
   --dialog-inset: calc(100% - 2rem);
   --tabs-trigger-height: calc(100% - 1px);
   --tooltip-arrow-offset: calc(-50% - 2px);
+
+  /*
+   * Popup width floors — the trigger's own width (--anchor-width, set by
+   * Base UI) so a narrow trigger never forces a wider content list to wrap.
+   */
+  --dropdown-menu-min-width: max(
+    var(--anchor-width),
+    calc(var(--spacing) * 32)
+  );
+  --select-content-min-width: max(
+    var(--anchor-width),
+    calc(var(--spacing) * 36)
+  );
 }
 
 @theme inline {

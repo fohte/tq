@@ -1,7 +1,9 @@
 import { Link, useNavigate } from '@tanstack/react-router'
+import { Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { InheritedTaskAttributes } from '#components/task/create-task-inline'
+import { DeleteTaskDialog } from '#components/task/delete-task-dialog'
 import { GithubLinkBadge } from '#components/task/github-link-badge'
 import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { ProjectChip } from '#components/task/project-chip'
@@ -16,6 +18,7 @@ import {
   TaskSubtasksList,
   TaskSubtasksSection,
 } from '#components/task/task-subtasks-section'
+import { ActionsMenu } from '#components/ui/actions-menu'
 import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
@@ -137,6 +140,9 @@ function TaskTagChips({ labels }: { labels: string[] }) {
 // --- Breadcrumb ---
 
 function TaskBreadcrumb({ task }: { task: TaskDetail }) {
+  const navigate = useNavigate()
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
   return (
     <nav className="flex items-center gap-2 font-mono text-2xs text-muted-foreground">
       <Link to="/tasks" className="hover:text-foreground">
@@ -148,6 +154,30 @@ function TaskBreadcrumb({ task }: { task: TaskDetail }) {
         opened {task.createdAt.slice(0, 10)} · updated{' '}
         {formatRelativeTime(task.updatedAt)}
       </span>
+      <ActionsMenu
+        aria-label="Task actions"
+        items={[
+          {
+            icon: <Trash2 className="h-4 w-4" />,
+            label: 'delete…',
+            onClick: () => {
+              setDeleteDialogOpen(true)
+            },
+            destructive: true,
+          },
+        ]}
+      />
+      <DeleteTaskDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        taskId={task.id}
+        taskNumber={task.number}
+        taskTitle={task.title}
+        taskHasParent={task.parentId != null}
+        onDeleted={() => {
+          void navigate({ to: '/tasks' })
+        }}
+      />
     </nav>
   )
 }

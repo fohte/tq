@@ -1922,6 +1922,108 @@
           "columns": ["id"]
         }
       ]
+    },
+    {
+      "name": "public.agent_sessions",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "provider",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "session_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "context",
+          "type": "text",
+          "nullable": false,
+          "default": "'personal'::text"
+        },
+        {
+          "name": "cwd",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "label",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "last_message",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "custom_label",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "last_active_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "ended_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "agent_sessions_pkey",
+          "def": "CREATE UNIQUE INDEX agent_sessions_pkey ON public.agent_sessions USING btree (id)",
+          "table": "public.agent_sessions",
+          "columns": ["id"]
+        },
+        {
+          "name": "uq_agent_sessions_provider_session_id",
+          "def": "CREATE UNIQUE INDEX uq_agent_sessions_provider_session_id ON public.agent_sessions USING btree (provider, session_id)",
+          "table": "public.agent_sessions",
+          "columns": ["provider", "session_id"]
+        },
+        {
+          "name": "idx_agent_sessions_last_active_at",
+          "def": "CREATE INDEX idx_agent_sessions_last_active_at ON public.agent_sessions USING btree (last_active_at)",
+          "table": "public.agent_sessions",
+          "columns": ["last_active_at"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "agent_sessions_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.agent_sessions",
+          "referenced_table": "",
+          "columns": ["id"]
+        },
+        {
+          "name": "uq_agent_sessions_provider_session_id",
+          "type": "UNIQUE",
+          "def": "UNIQUE (provider, session_id)",
+          "table": "public.agent_sessions",
+          "referenced_table": "",
+          "columns": ["provider", "session_id"]
+        }
+      ]
     }
   ],
   "relations": [
