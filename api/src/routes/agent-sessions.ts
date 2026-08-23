@@ -3,10 +3,21 @@ import { desc, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
-import { agentSessions } from '#db/schema'
+import { agentSessions, taskAgentSessions, tasks } from '#db/schema'
 import { upsertAgentSessionSchema } from '#schemas/agent-session'
 
-function agentSessionToResponse(session: typeof agentSessions.$inferSelect) {
+function taskLinkToResponse(task: typeof tasks.$inferSelect) {
+  return {
+    id: task.id,
+    number: task.number,
+    title: task.title,
+    status: task.status,
+  }
+}
+
+export function agentSessionToResponse(
+  session: typeof agentSessions.$inferSelect,
+) {
   return {
     id: session.id,
     provider: session.provider,
@@ -81,4 +92,26 @@ export const agentSessionsApp = new Hono()
     }
 
     return c.json(agentSessionToResponse(session), 200)
+  })
+  .get('/:id/tasks', async (c) => {
+    const id = c.req.param('id')
+
+    const session = await db.query.agentSessions.findFirst({
+      where: eq(agentSessions.id, id),
+    })
+    if (!session) {
+      return c.json({ error: 'Agent session not found' }, 404)
+    }
+
+    const rows = await db
+      .select({ task: tasks })
+      .from(taskAgentSessions)
+      .innerJoin(tasks, eq(taskAgentSessions.taskId, tasks.id))
+      .where(eq(taskAgentSessions.agentSessionId, id))
+      .orderBy(tasks.number)
+
+    return c.json(
+      rows.map((row) => taskLinkToResponse(row.task)),
+      200,
+    )
   })

@@ -85,6 +85,17 @@ export const EXCLUDED_ROUTES = {
     'written by the Claude Code hook integration, not a CLI concern',
   'GET /api/agent-sessions': 'session browsing is covered by the web UI',
   'GET /api/agent-sessions/:id': 'session browsing is covered by the web UI',
+  'GET /api/agent-sessions/:id/tasks':
+    'session browsing is covered by the web UI',
+
+  // Task <-> agent session links: written and read by the `tq link`
+  // subcommand, a separate PR.
+  'POST /api/tasks/:taskId/agent-sessions':
+    'linked by the tq link subcommand, a separate PR',
+  'GET /api/tasks/:taskId/agent-sessions':
+    'linked by the tq link subcommand, a separate PR',
+  'DELETE /api/tasks/:taskId/agent-sessions/:agentSessionId':
+    'linked by the tq link subcommand, a separate PR',
 
   // OAuth callbacks are a browser/server contract, not something a CLI invokes.
   'GET /api/calendar/oauth-callback': 'oauth callback: browser/server contract',
