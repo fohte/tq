@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { expect, fn, within } from 'storybook/test'
 
-import { TaskFilterQueryInput } from '#components/task/task-filter-query-input'
+import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -27,8 +27,8 @@ const emptySuggestHandler = http.get('/api/tasks/search/suggest', () =>
 )
 
 const meta = {
-  title: 'Task/TaskFilterQueryInput',
-  component: TaskFilterQueryInput,
+  title: 'Task/TaskFilterFreeTextInput',
+  component: TaskFilterFreeTextInput,
   parameters: {
     layout: 'centered',
     msw: { handlers: [emptySuggestHandler] },
@@ -43,26 +43,34 @@ const meta = {
     ),
   ],
   args: {
-    query: 'is:todo sort:updated',
+    id: 'story-free-text',
+    freeText: 'hello',
     onCommit: fn(),
-    onCancel: fn(),
+    onBackspaceEmpty: fn(),
   },
-} satisfies Meta<typeof TaskFilterQueryInput>
+} satisfies Meta<typeof TaskFilterFreeTextInput>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
 
+export const Empty: Story = {
+  args: {
+    freeText: '',
+    placeholder: 'Filter…',
+  },
+}
+
 export const ShowsSuggestionsWithoutLosingFocus: Story = {
   args: {
-    query: '',
+    freeText: '',
   },
   parameters: {
     msw: { handlers: [suggestHandler] },
   },
   play: async ({ canvasElement, canvas, userEvent }) => {
-    const input = canvas.getByRole('textbox', { name: 'Edit filter query' })
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
     // `extractCurrentPrefix` only surfaces suggestions once the token ends
     // with the `:` separator (or has no colon at all) — see its doc comment
     // in use-search.ts.
@@ -78,14 +86,14 @@ export const ShowsSuggestionsWithoutLosingFocus: Story = {
 
 export const AppliesSuggestionOnTab: Story = {
   args: {
-    query: '',
+    freeText: '',
   },
   parameters: {
     msw: { handlers: [suggestHandler] },
   },
   play: async ({ canvasElement, canvas, userEvent }) => {
     const input = canvas.getByRole<HTMLInputElement>('textbox', {
-      name: 'Edit filter query',
+      name: 'Filter query',
     })
     await userEvent.type(input, 'is:')
 
@@ -99,10 +107,10 @@ export const AppliesSuggestionOnTab: Story = {
 
 export const CommitsOnEnterWhenNoSuggestions: Story = {
   args: {
-    query: 'sort:updated',
+    freeText: 'sort:updated',
   },
   play: async ({ canvas, userEvent, args }) => {
-    const input = canvas.getByRole('textbox', { name: 'Edit filter query' })
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
     // Overwrite the whole value instead of appending, so the result doesn't
     // depend on where the browser places the caret after a click.
     await userEvent.clear(input)
@@ -113,43 +121,40 @@ export const CommitsOnEnterWhenNoSuggestions: Story = {
   },
 }
 
-export const CancelsOnEscape: Story = {
+export const ResetsOnEscapeWithoutCommitting: Story = {
   args: {
-    query: 'sort:updated',
+    freeText: 'sort:updated',
   },
   play: async ({ canvas, userEvent, args }) => {
-    const input = canvas.getByRole('textbox', { name: 'Edit filter query' })
-    // Overwrite the whole value instead of appending, so the result doesn't
-    // depend on where the browser places the caret after a click.
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
     await userEvent.clear(input)
     await userEvent.type(input, 'sort:updated has:pages')
     await userEvent.keyboard('{Escape}')
 
-    await expect(args.onCancel).toHaveBeenCalled()
+    await expect(input).toHaveValue('sort:updated')
     await expect(args.onCommit).not.toHaveBeenCalled()
   },
 }
 
-export const CancelsOnBlurWithoutChange: Story = {
+export const DoesNotCommitOnBlurWithoutChange: Story = {
   args: {
-    query: 'sort:updated',
+    freeText: 'sort:updated',
   },
   play: async ({ canvas, userEvent, args }) => {
-    const input = canvas.getByRole('textbox', { name: 'Edit filter query' })
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
     await userEvent.click(input)
     await userEvent.tab()
 
-    await expect(args.onCancel).toHaveBeenCalled()
     await expect(args.onCommit).not.toHaveBeenCalled()
   },
 }
 
 export const CommitsOnBlurAfterChange: Story = {
   args: {
-    query: 'sort:updated',
+    freeText: 'sort:updated',
   },
   play: async ({ canvas, userEvent, args }) => {
-    const input = canvas.getByRole('textbox', { name: 'Edit filter query' })
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
     // Overwrite the whole value instead of appending, so the result doesn't
     // depend on where the browser places the caret after a click.
     await userEvent.clear(input)
@@ -157,5 +162,31 @@ export const CommitsOnBlurAfterChange: Story = {
     await userEvent.tab()
 
     await expect(args.onCommit).toHaveBeenCalledWith('sort:updated has:pages')
+  },
+}
+
+export const BackspaceOnEmptyNotifiesParent: Story = {
+  args: {
+    freeText: '',
+  },
+  play: async ({ canvas, userEvent, args }) => {
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
+    await userEvent.click(input)
+    await userEvent.keyboard('{Backspace}')
+
+    await expect(args.onBackspaceEmpty).toHaveBeenCalled()
+  },
+}
+
+export const BackspaceWithTextDoesNotNotifyParent: Story = {
+  args: {
+    freeText: 'hello',
+  },
+  play: async ({ canvas, userEvent, args }) => {
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
+    await userEvent.click(input)
+    await userEvent.keyboard('{Backspace}')
+
+    await expect(args.onBackspaceEmpty).not.toHaveBeenCalled()
   },
 }

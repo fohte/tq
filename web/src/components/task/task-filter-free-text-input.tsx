@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { AnchoredPopup } from '#components/ui/anchored-popup'
 import type { Suggestion } from '#hooks/use-search'
@@ -9,20 +9,38 @@ import {
 } from '#hooks/use-search'
 import { cn } from '#lib/utils'
 
-interface TaskFilterQueryInputProps {
-  query: string
-  onCommit: (query: string) => void
-  onCancel: () => void
+interface TaskFilterFreeTextInputProps {
+  id: string
+  freeText: string
+  onCommit: (freeText: string) => void
+  onBackspaceEmpty: () => void
+  placeholder?: string
 }
 
-export function TaskFilterQueryInput({
-  query,
+// The tail of the filter row's token input: a plain text box for the parts
+// of the query that aren't a structured `key:value` condition. Always
+// mounted (no edit-mode toggle) so it stays visible across viewports.
+// Typing a recognized token (e.g. `is:todo`) and committing hands it to the
+// caller, which lifts it out into a chip; anything left over round-trips
+// back here as plain freeText.
+export function TaskFilterFreeTextInput({
+  id,
+  freeText,
   onCommit,
-  onCancel,
-}: TaskFilterQueryInputProps) {
-  const [value, setValue] = useState(query)
+  onBackspaceEmpty,
+  placeholder,
+}: TaskFilterFreeTextInputProps) {
+  const [value, setValue] = useState(freeText)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Resync when freeText changes for a reason other than our own commit
+  // below (e.g. a chip removed elsewhere in the row), but never while the
+  // user has this field focused with unsent edits.
+  useEffect(() => {
+    if (document.activeElement === inputRef.current) return
+    setValue(freeText)
+  }, [freeText])
 
   const currentPrefix = extractCurrentPrefix(value)
   const { data: suggestions } = useSearchSuggestions(currentPrefix)
@@ -34,11 +52,9 @@ export function TaskFilterQueryInput({
     setSelectedIndex(0)
   }
 
-  const commitOrCancel = () => {
+  const commit = () => {
     const trimmed = value.trim()
-    if (trimmed === query.trim()) {
-      onCancel()
-    } else {
+    if (trimmed !== freeText.trim()) {
       onCommit(trimmed)
     }
   }
@@ -73,21 +89,26 @@ export function TaskFilterQueryInput({
         if (selected != null) {
           applySuggestion(selected)
         } else {
-          commitOrCancel()
+          commit()
         }
         break
       }
       case 'Escape':
         e.preventDefault()
-        onCancel()
+        setValue(freeText)
+        break
+      case 'Backspace':
+        if (value === '') {
+          onBackspaceEmpty()
+        }
         break
     }
   }
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-2">
-      <span className="font-mono text-sm font-bold text-primary">&gt;</span>
+    <div className="flex min-w-32 flex-1 items-center">
       <input
+        id={id}
         ref={inputRef}
         type="text"
         value={value}
@@ -96,10 +117,10 @@ export function TaskFilterQueryInput({
           setSelectedIndex(0)
         }}
         onKeyDown={handleKeyDown}
-        onBlur={commitOrCancel}
-        autoFocus
-        className="min-w-0 flex-1 border-0 bg-transparent font-mono text-sm outline-none"
-        aria-label="Edit filter query"
+        onBlur={commit}
+        placeholder={placeholder}
+        className="min-w-0 flex-1 border-0 bg-transparent font-mono text-sm outline-none placeholder:text-muted-foreground"
+        aria-label="Filter query"
       />
       <AnchoredPopup
         open={hasSuggestions}

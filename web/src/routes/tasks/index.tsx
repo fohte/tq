@@ -270,7 +270,6 @@ export function TaskList() {
       </ScreenHeaderBar>
 
       <TaskFilterChipRow
-        query={q}
         onQueryChange={setQuery}
         parsed={parsed}
         projects={projects.data ?? []}
