@@ -88,6 +88,7 @@ export const EXCLUDED_ROUTES = {
   'GET /api/agent-sessions/:id': 'session browsing is covered by the web UI',
   'GET /api/agent-sessions/:id/tasks':
     'session browsing is covered by the web UI',
+  'PATCH /api/agent-sessions/:id': 'custom label editing is a web UI action',
 
   // Task <-> agent session links: written and read by the `tq link`
   // subcommand.
