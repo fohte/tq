@@ -1,10 +1,6 @@
 import { basename } from 'node:path'
 
-import { Result } from 'neverthrow'
-
-const tryParseJson = Result.fromThrowable((line: string): unknown =>
-  JSON.parse(line),
-)
+import { tryParseJson } from '#result'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -32,18 +28,19 @@ export interface ResolvedSession {
   lastMessage: string | null
 }
 
+const MAX_LABEL_LENGTH = 120
+
+function truncate(text: string): string {
+  return text.length > MAX_LABEL_LENGTH
+    ? `${text.slice(0, MAX_LABEL_LENGTH)}…`
+    : text
+}
+
 /**
  * Resolves a session's display label and last assistant message from its
- * Claude Code transcript (.jsonl content). Priority order, matching
- * armyknife's `get_session_title`
- * (src/commands/cc/claude_sessions.rs:172): the last `custom-title` entry (a
- * user-set name) > the last `ai-title` entry (Claude Code's generated
- * title) > the first user prompt > cwd's basename.
- *
- * Unlike armyknife's reverse-scan-from-EOF reader, this always scans
- * forward: a hook reads exactly one transcript once, so it doesn't share
- * armyknife's cost pressure (every `cc list`/TUI refresh re-scanning every
- * session's transcript).
+ * Claude Code transcript (.jsonl content). Priority order: the last
+ * `custom-title` entry (a user-set name) > the last `ai-title` entry
+ * (Claude Code's generated title) > the first user prompt > cwd's basename.
  */
 export function resolveSessionLabel(
   transcript: string,
@@ -90,7 +87,9 @@ export function resolveSessionLabel(
   }
 
   return {
-    label: lastCustomTitle ?? lastAiTitle ?? firstUserPrompt ?? basename(cwd),
+    label: truncate(
+      lastCustomTitle ?? lastAiTitle ?? firstUserPrompt ?? basename(cwd),
+    ),
     lastMessage: lastAssistantMessage ?? null,
   }
 }

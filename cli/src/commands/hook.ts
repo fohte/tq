@@ -3,14 +3,13 @@ import { readFile } from 'node:fs/promises'
 import { upsertAgentSessionSchema } from 'api/schemas/agent-session'
 import type { Command } from 'commander'
 import type { InferRequestType } from 'hono/client'
-import { Result } from 'neverthrow'
 import { z } from 'zod'
 
 import type { Client } from '#client'
 import { buildClient } from '#command-context'
 import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
-import { fail } from '#result'
+import { fail, tryParseJson } from '#result'
 import { addSchemaOptions, pickSchemaFields } from '#schema-options'
 import { resolveSessionLabel } from '#transcript'
 
@@ -38,10 +37,6 @@ const hookInputSchema = z.object({
   cwd: z.string().min(1),
   transcript_path: z.string().optional(),
 })
-
-const tryParseJson = Result.fromThrowable((text: string): unknown =>
-  JSON.parse(text),
-)
 
 async function readTranscript(
   transcriptPath: string | undefined,
@@ -75,7 +70,12 @@ export function registerHookCommands(
       options: Record<string, unknown>,
       command: Command,
     ) => {
-      await reportHookEvent(event, options, fetchImpl, stdin, command)
+      // Guards the whole pipeline, not just the fetch call: this command
+      // must never fail (see description above), and a stream-level error
+      // event on stdin would otherwise reject unhandled.
+      await reportHookEvent(event, options, fetchImpl, stdin, command).catch(
+        () => undefined,
+      )
     },
   )
 }
@@ -109,6 +109,11 @@ async function reportHookEvent(
   if (client == null) return
 
   const json: UpsertAgentSessionJson = {
+    // Unlike every other pickSchemaFields caller (e.g. task.ts's `task
+    // create`), an invalid TQ_CONTEXT is dropped silently here instead of
+    // being surfaced via fail(): this command must never fail (see
+    // description above), so the session is still reported, just without
+    // `context`.
     ...pickSchemaFields(upsertAgentSessionSchema, options, [
       ...HOOK_MANAGED_FIELDS,
     ]).match(

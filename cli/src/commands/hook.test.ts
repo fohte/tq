@@ -60,20 +60,21 @@ describe('hook', () => {
     )
 
     expect(exitCode).toBe(0)
-    expect(calls.length).toBe(1)
-    expect(calls[0]).toEqual({
-      method: 'POST',
-      url: `${apiUrl}/api/agent-sessions`,
-      headers: { 'content-type': 'application/json' },
-      body: {
-        provider: 'claude_code',
-        sessionId: 'sess-1',
-        cwd: '/home/user/app',
-        label: 'Fix login bug',
-        lastMessage: 'Done',
-        ended: false,
+    expect(calls).toEqual([
+      {
+        method: 'POST',
+        url: `${apiUrl}/api/agent-sessions`,
+        headers: { 'content-type': 'application/json' },
+        body: {
+          provider: 'claude_code',
+          sessionId: 'sess-1',
+          cwd: '/home/user/app',
+          label: 'Fix login bug',
+          lastMessage: 'Done',
+          ended: false,
+        },
       },
-    })
+    ])
   })
 
   it('sets ended: true only for SessionEnd', async () => {

@@ -60,7 +60,7 @@ describe('resolveSessionLabel', () => {
     })
   })
 
-  it('normalizes ANSI escapes and newlines in titles and the first prompt', () => {
+  it('normalizes ANSI escapes and newlines in the first prompt', () => {
     const transcript = jsonl({
       type: 'user',
       message: { content: '[31mFix[0m the bug\nplease' },
@@ -106,6 +106,18 @@ describe('resolveSessionLabel', () => {
     expect(resolveSessionLabel(transcript, '/home/user/app')).toEqual({
       label: 'app',
       lastMessage: 'Part one. Part two.',
+    })
+  })
+
+  it('truncates a label longer than 120 characters', () => {
+    const longPrompt = 'x'.repeat(200)
+    const transcript = jsonl({
+      type: 'user',
+      message: { content: longPrompt },
+    })
+    expect(resolveSessionLabel(transcript, '/home/user/app')).toEqual({
+      label: `${'x'.repeat(120)}…`,
+      lastMessage: null,
     })
   })
 
