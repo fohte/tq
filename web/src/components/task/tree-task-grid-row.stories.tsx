@@ -393,6 +393,15 @@ export const WithCompletionCount: Story = {
 
 export const AllVariants: Story = {
   args: { node: baseTreeNode },
+  // `--task-row-columns` (see index.css) is only consumed by the desktop
+  // grid layout (`md:grid`); the mobile stack layout is a plain flexbox and
+  // has no fixed-column-width to collapse. Below the `md` breakpoint the
+  // desktop grid is `display: none` entirely, so the play function's target
+  // element doesn't exist to measure — this check is inherently
+  // desktop-only, not just narrower on mobile.
+  // CSF's static tags parser requires a literal here, not the imported
+  // DESKTOP_ONLY_TAG constant.
+  tags: ['desktop-only'],
   parameters: {
     // --task-row-columns' title column has a content-sized floor (see
     // index.css), not a bare `1fr` — without it, the title collapses to 0
@@ -481,28 +490,37 @@ export const Hovered: Story = {
     node: { ...baseTreeNode, title: 'Hover to reveal the ⋯ actions menu' },
   },
   play: async ({ canvasElement }) => {
-    // `[data-slot="dropdown-menu-trigger"]` alone also matches the row's
-    // status picker, which sits earlier in the DOM — scope to the
-    // row-actions menu by its accessible name.
-    const desktopTrigger = assertDefined(
-      canvasElement.querySelector<HTMLElement>(
+    // The row renders its desktop-grid and mobile-stack layouts
+    // simultaneously, each with its own action menu, so both trigger kinds
+    // exist twice. Only one instance of each is ever reachable: the other
+    // layout's *wrapper* is `display: none`, which a plain `getComputedStyle`
+    // on the trigger itself can't see (the trigger's own class alone may
+    // still compute to a visible `display`) — checkVisibility() walks
+    // ancestors instead. It ignores `opacity` by default, so the desktop
+    // trigger's opacity-0 hover-reveal (checked below) still counts as
+    // reachable here.
+    const dropdownTrigger = Array.from(
+      canvasElement.querySelectorAll<HTMLElement>(
         '[data-slot="dropdown-menu-trigger"][aria-label="Task actions"]',
       ),
-      'row-actions triggers not found',
-    )
-    const mobileTrigger = assertDefined(
-      canvasElement.querySelector<HTMLElement>(
+    ).find((el) => el.checkVisibility())
+    const actionSheetTrigger = Array.from(
+      canvasElement.querySelectorAll<HTMLElement>(
         '[data-slot="action-sheet-trigger"]',
       ),
-      'row-actions triggers not found',
-    )
+    ).find((el) => el.checkVisibility())
 
     // The mobile ⋯ is always visible; the desktop one only reveals on
     // hover/focus, so the reveal-on-hover behavior only applies there.
-    if (getComputedStyle(mobileTrigger).display !== 'none') {
-      await expect(mobileTrigger).toBeVisible()
+    if (actionSheetTrigger) {
+      await expect(actionSheetTrigger).toBeVisible()
       return
     }
+
+    const desktopTrigger = assertDefined(
+      dropdownTrigger,
+      'row-actions trigger not found',
+    )
 
     // `userEvent.hover()` dispatches synthetic pointer events, which real
     // browsers don't honor for `:hover`/`group-hover` matching — the trigger
