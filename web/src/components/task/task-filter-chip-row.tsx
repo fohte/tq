@@ -20,6 +20,9 @@ import {
   sortLabels,
   sortOptionValues,
   statusChipLabels,
+  withLabel,
+  withProjectId,
+  withStatus,
 } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
 
@@ -43,10 +46,10 @@ export function TaskFilterChipRow({
   const isDesktop = useIsDesktop()
 
   const sortBy = parsed.sortBy ?? 'updated'
-  // The chip label/picker fall back to 'updated' for a sort the picker
-  // below doesn't offer (e.g. a hand-edited `sort:due` in the URL); the
-  // picker itself only ever offers sortOptionValues, so it takes a narrowed
-  // value instead.
+  // The chip label falls back to the raw value for a sort the picker below
+  // doesn't offer (e.g. a hand-edited `sort:due` in the URL), but the
+  // picker itself only ever offers sortOptionValues, so it takes a
+  // narrowed value instead.
   const pickerSortBy =
     sortOptionValues.find((value) => value === sortBy) ?? 'updated'
   const selectedProject = projects.find(
@@ -112,10 +115,7 @@ export function TaskFilterChipRow({
             <TaskStatusFilterFields
               status={parsed.status}
               onStatusChange={(status) => {
-                const next = { ...parsed }
-                if (status.length === 0) delete next.status
-                else next.status = status
-                setParsed(next)
+                setParsed(withStatus(parsed, status))
               }}
             />
           </TaskFilterChip>
@@ -131,10 +131,7 @@ export function TaskFilterChipRow({
               projects={projects}
               selectedProjectId={parsed.projectId}
               onProjectIdChange={(id) => {
-                const next = { ...parsed }
-                if (id === '') delete next.projectId
-                else next.projectId = id
-                setParsed(next)
+                setParsed(withProjectId(parsed, id))
               }}
             />
           </TaskFilterChip>
@@ -149,10 +146,7 @@ export function TaskFilterChipRow({
             <TaskLabelFilterFields
               selectedLabel={parsed.label}
               onLabelChange={(label) => {
-                const next = { ...parsed }
-                if (label == null) delete next.label
-                else next.label = label
-                setParsed(next)
+                setParsed(withLabel(parsed, label))
               }}
             />
           </TaskFilterChip>

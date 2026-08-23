@@ -153,16 +153,11 @@ describe('TaskList status filter', () => {
     await user.click(
       await screen.findByRole('button', { name: 'is todo, doing' }),
     )
-    expect(
-      await screen.findByRole('checkbox', { name: 'Todo' }),
-    ).toHaveAttribute('aria-checked', 'true')
-    expect(
-      screen.getByRole('checkbox', { name: 'In Progress' }),
-    ).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('checkbox', { name: 'Completed' })).toHaveAttribute(
-      'aria-checked',
-      'false',
+    await screen.findByRole('checkbox', { name: 'Todo' })
+    const checkedStates = ['Todo', 'In Progress', 'Completed'].map((name) =>
+      screen.getByRole('checkbox', { name }).getAttribute('aria-checked'),
     )
+    expect(checkedStates).toEqual(['true', 'true', 'false'])
   })
 
   it('requests all statuses once "Completed" is also checked', async () => {
@@ -352,17 +347,10 @@ describe('TaskList URL query encoding', () => {
     ).not.toBeInTheDocument()
 
     await openFilterMenu(user)
-    expect(screen.getByRole('checkbox', { name: 'Todo' })).toHaveAttribute(
-      'aria-checked',
-      'false',
+    const checkedStates = ['Todo', 'In Progress', 'Completed'].map((name) =>
+      screen.getByRole('checkbox', { name }).getAttribute('aria-checked'),
     )
-    expect(
-      screen.getByRole('checkbox', { name: 'In Progress' }),
-    ).toHaveAttribute('aria-checked', 'false')
-    expect(screen.getByRole('checkbox', { name: 'Completed' })).toHaveAttribute(
-      'aria-checked',
-      'false',
-    )
+    expect(checkedStates).toEqual(['false', 'false', 'false'])
   })
 
   it('keeps a token none of the filter pickers understand when a known field changes', async () => {

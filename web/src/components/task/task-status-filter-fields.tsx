@@ -27,12 +27,21 @@ export function TaskStatusFilterFields({
     <div className="flex flex-col gap-1.5">
       {STATUS_OPTIONS.map((option) => {
         const id = `${idPrefix}-${option.value}`
+        // Unchecking the last remaining status would leave an empty array,
+        // which round-trips through buildSearchQuery/parseSearchQuery as
+        // "no status filter" (match everything) rather than "match
+        // nothing" — the opposite of what an all-unchecked group implies.
+        // "Show everything" stays reachable by checking all three instead.
+        const isLastChecked =
+          status.length === 1 && status.includes(option.value)
         return (
           <div key={option.value} className="flex items-center gap-2">
             <Checkbox
               id={id}
               checked={status.includes(option.value)}
+              disabled={isLastChecked}
               onCheckedChange={(checked) => {
+                if (!checked && isLastChecked) return
                 onStatusChange(
                   checked
                     ? [...status, option.value]

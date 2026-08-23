@@ -56,3 +56,29 @@ export const UncheckTodo: Story = {
     await expect(args.onStatusChange).toHaveBeenCalledWith(['in_progress'])
   },
 }
+
+// Unchecking the last remaining status would silently mean "show
+// everything" (no is: tokens at all) rather than "show nothing" — so the
+// sole checked box is disabled instead of lying about being clickable.
+export const SingleSelected: Story = {
+  args: {
+    status: ['todo'],
+  },
+}
+
+export const CannotUncheckLastStatus: Story = {
+  args: {
+    status: ['todo'],
+  },
+  play: async ({ canvas, args }) => {
+    // The checkbox is a Base UI `<span role="checkbox">`, not a native
+    // form control, so `disabled` only ever surfaces as `aria-disabled`
+    // (jest-dom's toBeDisabled() only recognizes native disabled form
+    // elements and would report false negatives here).
+    await expect(
+      canvas.getByRole('checkbox', { name: 'Todo' }),
+    ).toHaveAttribute('aria-disabled', 'true')
+    await userEvent.click(canvas.getByRole('checkbox', { name: 'Todo' }))
+    await expect(args.onStatusChange).not.toHaveBeenCalled()
+  },
+}

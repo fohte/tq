@@ -7,6 +7,7 @@ import { TaskProjectFilterFields } from '#components/task/task-project-filter-fi
 import { TaskStatusFilterFields } from '#components/task/task-status-filter-fields'
 import { SectionLabel } from '#components/ui/section-label'
 import type { Project } from '#hooks/use-projects'
+import { withLabel, withProjectId, withStatus } from '#lib/tasks-query'
 
 interface TaskFilterMenuContentProps {
   parsed: ParsedQuery
@@ -36,10 +37,7 @@ export function TaskFilterMenuContent({
         <TaskStatusFilterFields
           status={parsed.status ?? []}
           onStatusChange={(status) => {
-            const next = { ...parsed }
-            if (status.length === 0) delete next.status
-            else next.status = status
-            onQueryChange(buildSearchQuery(next))
+            onQueryChange(buildSearchQuery(withStatus(parsed, status)))
           }}
         />
       </div>
@@ -51,10 +49,7 @@ export function TaskFilterMenuContent({
             projects={projects}
             selectedProjectId={parsed.projectId}
             onProjectIdChange={(id) => {
-              const next = { ...parsed }
-              if (id === '') delete next.projectId
-              else next.projectId = id
-              onQueryChange(buildSearchQuery(next))
+              onQueryChange(buildSearchQuery(withProjectId(parsed, id)))
             }}
           />
         </div>
@@ -65,10 +60,7 @@ export function TaskFilterMenuContent({
         <TaskLabelFilterFields
           selectedLabel={parsed.label}
           onLabelChange={(label) => {
-            const next = { ...parsed }
-            if (label == null) delete next.label
-            else next.label = label
-            onQueryChange(buildSearchQuery(next))
+            onQueryChange(buildSearchQuery(withLabel(parsed, label)))
           }}
         />
       </div>
