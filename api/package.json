@@ -31,7 +31,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "3.1075.0",
     "@aws-sdk/s3-request-presigner": "3.1075.0",
-    "@fohte/service-kit": "0.1.11",
+    "@fohte/service-kit": "0.1.12",
     "@hono/node-server": "1.19.17",
     "@hono/zod-validator": "0.7.6",
     "@modelcontextprotocol/server": "2.0.0",
