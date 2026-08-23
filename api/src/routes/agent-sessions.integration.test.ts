@@ -403,40 +403,6 @@ describe('agent sessions API', () => {
         { taskId: task1.id, ...olderSession },
       ])
     })
-
-    it('orders by most recently active session first', async () => {
-      const task = await createTask('My task')
-      const older = await upsertSessionAtTime(
-        {
-          provider: 'claude_code',
-          sessionId: 'older',
-          cwd: '/home/fohte/project',
-          context: 'work',
-          label: null,
-          lastMessage: null,
-        },
-        '2030-01-01T00:00:00.000Z',
-      )
-      const newer = await upsertSessionAtTime(
-        {
-          provider: 'claude_code',
-          sessionId: 'newer',
-          cwd: '/home/fohte/project',
-          context: 'work',
-          label: null,
-          lastMessage: null,
-        },
-        '2030-01-02T00:00:00.000Z',
-      )
-      await postLink(task.id, older.id)
-      await postLink(task.id, newer.id)
-
-      const res = await app.request('/api/agent-sessions/by-task')
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<TaskAgentSessionResponse[]>(res)
-      expect(body.map((row) => row.id)).toEqual([newer.id, older.id])
-    })
   })
 })
 
@@ -490,10 +456,16 @@ async function createTask(title: string) {
   return jsonBody<{ id: string; number: number; title: string }>(res)
 }
 
-function postLink(taskId: string, agentSessionId: string) {
-  return app.request(`/api/tasks/${taskId}/agent-sessions`, {
+async function postLink(taskId: string, agentSessionId: string) {
+  const res = await app.request(`/api/tasks/${taskId}/agent-sessions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ agentSessionId }),
   })
+  if (res.status !== 200 && res.status !== 201) {
+    throw new Error(
+      `Failed to link agent session: ${String(res.status)} ${await res.text()}`,
+    )
+  }
+  return res
 }

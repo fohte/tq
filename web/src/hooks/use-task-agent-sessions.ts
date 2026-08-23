@@ -9,9 +9,15 @@ export type TaskAgentSession = InferResponseType<
   200
 >[number]
 
+// Not nested under use-agent-sessions.ts's agentSessionKeys — that file is
+// being edited by a concurrent PR, so this query gets its own key root here.
+export const taskAgentSessionKeys = {
+  all: ['agent-sessions', 'by-task'] as const,
+}
+
 export function useTaskAgentSessionsByTaskId() {
   return useQuery({
-    queryKey: ['agent-sessions', 'by-task'] as const,
+    queryKey: taskAgentSessionKeys.all,
     queryFn: async () => {
       const res = await api.api['agent-sessions']['by-task'].$get()
       return unwrapOrThrow(assertOk(res)).json()

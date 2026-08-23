@@ -423,7 +423,9 @@ export const CollapsedWithActiveSessionBadge: Story = {
     <StaticTreeTaskGridRow
       node={{ ...baseTreeNode, title: 'Collapsed task with active sessions' }}
       isExpanded={() => false}
-      sessionsByTaskId={new Map([[baseTreeNode.id, [activeSession]]])}
+      sessionsByTaskId={
+        new Map([[baseTreeNode.id, [activeSession, endedSession]]])
+      }
     />
   ),
   play: async ({ canvas }) => {
