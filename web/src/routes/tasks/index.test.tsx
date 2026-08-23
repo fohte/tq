@@ -88,18 +88,15 @@ beforeEach(() => {
   mockUseProjects.mockReturnValue({ data: [] })
 })
 
-// Two `+ filter` triggers are always in the DOM (desktop dropdown + mobile
-// bottom sheet, split only by `md:` CSS classes jsdom doesn't apply), so
-// disambiguate by data-slot rather than an ambiguous accessible-name query.
+// FilterMenu picks the popover container in jsdom (test-setup.ts's
+// matchMedia mock defaults to desktop).
 async function openFilterMenu(user: ReturnType<typeof userEvent.setup>) {
-  const trigger = await screen.findByText('+ filter', {
-    selector: '[data-slot="dropdown-menu-trigger"]',
-  })
+  const trigger = await screen.findByRole('button', { name: '+ filter' })
   await user.click(trigger)
-  // The menu popup mounts after an async Floating UI position computation,
-  // so wait for an item inside it rather than assuming it's mounted
+  // The popup mounts after an async Floating UI position computation, so
+  // wait for an item inside it rather than assuming it's mounted
   // synchronously once the click resolves.
-  await screen.findByRole('menuitemcheckbox', { name: 'show completed' })
+  await screen.findByRole('checkbox', { name: 'show completed' })
 }
 
 describe('TaskList sort selector', () => {
@@ -119,9 +116,7 @@ describe('TaskList sort selector', () => {
     renderTaskList()
 
     await openFilterMenu(user)
-    await user.click(
-      screen.getByRole('menuitemradio', { name: 'Sort: Created' }),
-    )
+    await user.click(screen.getByRole('button', { name: 'Created' }))
 
     expect(screen.getByText('sort: Created')).toBeInTheDocument()
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
@@ -137,7 +132,7 @@ describe('TaskList "show completed" toggle', () => {
 
     await openFilterMenu(user)
     expect(
-      screen.getByRole('menuitemcheckbox', { name: 'show completed' }),
+      screen.getByRole('checkbox', { name: 'show completed' }),
     ).toHaveAttribute('aria-checked', 'false')
   })
 
@@ -146,12 +141,10 @@ describe('TaskList "show completed" toggle', () => {
     renderTaskList()
 
     await openFilterMenu(user)
-    await user.click(
-      screen.getByRole('menuitemcheckbox', { name: 'show completed' }),
-    )
+    await user.click(screen.getByRole('checkbox', { name: 'show completed' }))
 
     expect(
-      screen.getByRole('menuitemcheckbox', { name: 'show completed' }),
+      screen.getByRole('checkbox', { name: 'show completed' }),
     ).toHaveAttribute('aria-checked', 'true')
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
       { q: 'sort:updated' },
@@ -186,9 +179,7 @@ describe('TaskList project filter selector', () => {
     renderTaskList()
 
     await openFilterMenu(user)
-    await user.click(
-      screen.getByRole('menuitemradio', { name: 'Website Redesign' }),
-    )
+    await user.click(screen.getByRole('button', { name: 'Website Redesign' }))
 
     expect(
       screen.getByRole('button', { name: 'project: Website Redesign ×' }),
@@ -257,9 +248,7 @@ describe('TaskList URL query encoding', () => {
     const { router } = renderTaskList()
 
     await openFilterMenu(user)
-    await user.click(
-      screen.getByRole('menuitemradio', { name: 'Sort: Created' }),
-    )
+    await user.click(screen.getByRole('button', { name: 'Created' }))
 
     expect(router.state.location.search).toEqual({
       q: 'is:todo is:in_progress sort:created',
@@ -271,9 +260,7 @@ describe('TaskList URL query encoding', () => {
     const { router } = renderTaskList()
 
     await openFilterMenu(user)
-    await user.click(
-      screen.getByRole('menuitemcheckbox', { name: 'show completed' }),
-    )
+    await user.click(screen.getByRole('checkbox', { name: 'show completed' }))
 
     expect(router.state.location.search).toEqual({ q: 'sort:updated' })
   })
@@ -286,9 +273,7 @@ describe('TaskList URL query encoding', () => {
     const { router } = renderTaskList()
 
     await openFilterMenu(user)
-    await user.click(
-      screen.getByRole('menuitemradio', { name: 'Website Redesign' }),
-    )
+    await user.click(screen.getByRole('button', { name: 'Website Redesign' }))
 
     expect(router.state.location.search).toEqual({
       q: 'is:todo is:in_progress project:proj-1 sort:updated',
@@ -317,7 +302,7 @@ describe('TaskList URL query encoding', () => {
 
     await openFilterMenu(user)
     expect(
-      screen.getByRole('menuitemcheckbox', { name: 'show completed' }),
+      screen.getByRole('checkbox', { name: 'show completed' }),
     ).toHaveAttribute('aria-checked', 'true')
   })
 
@@ -328,9 +313,7 @@ describe('TaskList URL query encoding', () => {
     )
 
     await openFilterMenu(user)
-    await user.click(
-      screen.getByRole('menuitemradio', { name: 'Sort: Created' }),
-    )
+    await user.click(screen.getByRole('button', { name: 'Created' }))
 
     expect(router.state.location.search).toEqual({
       q: 'is:todo is:in_progress has:pages sort:created',
