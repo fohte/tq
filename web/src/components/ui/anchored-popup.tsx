@@ -54,7 +54,7 @@ function AnchoredPopup({
           <PopoverPrimitive.Popup
             data-slot="anchored-popup-content"
             className={cn(
-              'rounded-md border border-border bg-popover py-1 font-mono shadow-md',
+              'max-w-(--available-width) rounded-md border border-border bg-popover py-1 font-mono shadow-md',
               className,
             )}
             {...props}
