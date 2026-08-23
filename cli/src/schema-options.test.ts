@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
 import { addSchemaOptions, pickSchemaFields } from '#schema-options'
@@ -211,5 +211,72 @@ Options:
     })
 
     expect(result._unsafeUnwrap()).toEqual({ description: 'hello' })
+  })
+})
+
+describe('a "context" field defaulted from TQ_CONTEXT', () => {
+  const contextSchema = z.object({
+    context: z.enum(['work', 'personal']).optional(),
+  })
+
+  function buildContextCommand(): Command {
+    return addSchemaOptions(
+      new Command('test').exitOverride(),
+      contextSchema,
+    )._unsafeUnwrap()
+  }
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('mentions TQ_CONTEXT in --help', () => {
+    expect(buildContextCommand().helpInformation()).toBe(
+      `Usage: test [options]
+
+Options:
+  --context <value>  Context (or set TQ_CONTEXT) (choices: "work", "personal")
+  -h, --help         display help for command
+`,
+    )
+  })
+
+  it('defaults --context from TQ_CONTEXT when the flag is omitted', () => {
+    vi.stubEnv('TQ_CONTEXT', 'work')
+    const command = buildContextCommand()
+
+    command.parse([], { from: 'user' })
+
+    expect(command.opts()).toEqual({ context: 'work' })
+  })
+
+  it('leaves context unset when TQ_CONTEXT is unset', () => {
+    vi.stubEnv('TQ_CONTEXT', '')
+    const command = buildContextCommand()
+
+    command.parse([], { from: 'user' })
+
+    expect(command.opts()).toEqual({})
+  })
+
+  it('lets an explicit --context flag override TQ_CONTEXT', () => {
+    vi.stubEnv('TQ_CONTEXT', 'work')
+    const command = buildContextCommand()
+
+    command.parse(['--context', 'personal'], { from: 'user' })
+
+    expect(command.opts()).toEqual({ context: 'personal' })
+  })
+
+  it('gets rejected by pickSchemaFields when TQ_CONTEXT is not a valid choice', () => {
+    vi.stubEnv('TQ_CONTEXT', 'nonsense')
+    const command = buildContextCommand()
+    command.parse([], { from: 'user' })
+
+    const result = pickSchemaFields(contextSchema, command.opts())
+
+    expect(result._unsafeUnwrapErr().message).toBe(
+      'Invalid option: expected one of "work"|"personal"',
+    )
   })
 })

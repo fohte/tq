@@ -87,15 +87,26 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
       )
     }
 
-    const option = new Option(
-      `--${toKebabCase(key)} <value>`,
-      inner.description ?? toLabel(key),
-    )
+    const description =
+      key === 'context'
+        ? `${inner.description ?? toLabel(key)} (or set TQ_CONTEXT)`
+        : (inner.description ?? toLabel(key))
+    const option = new Option(`--${toKebabCase(key)} <value>`, description)
     if (inner instanceof z.ZodEnum) {
       option.choices(inner.options.map(String))
     }
 
     option.argParser((raw: string) => parseValue(inner, raw))
+    if (key === 'context') {
+      const envContext = process.env['TQ_CONTEXT']
+      // Left unvalidated here (unlike an explicit --context flag, which goes
+      // through parseValue above): pickSchemaFields re-validates the full
+      // options object against the schema before it reaches the API, so an
+      // invalid TQ_CONTEXT is still rejected by the CLI rather than sent.
+      option.default(
+        envContext != null && envContext.length > 0 ? envContext : undefined,
+      )
+    }
     command.addOption(option)
   }
   return ok(command)
