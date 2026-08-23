@@ -1253,7 +1253,17 @@ describe('tasks CRUD API', () => {
       const res = await app.request(`/api/tasks/${child.id}`)
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
-      expect(body.parentId).toBeNull()
+      expect(body).toEqual({
+        ...child,
+        parentId: null,
+        updatedAt: body.updatedAt,
+        titleAuthor: { kind: 'human', agent: null },
+        descriptionAuthor: { kind: 'human', agent: null },
+        childCompletionCount: { total: 0, completed: 0 },
+        pages: [],
+        timeBlocks: [],
+        links: { outgoing: [], incoming: [] },
+      })
     })
 
     it('reparents children to the grandparent when deleting a task with a parent', async () => {
@@ -1268,7 +1278,17 @@ describe('tasks CRUD API', () => {
       const res = await app.request(`/api/tasks/${child.id}`)
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
-      expect(body.parentId).toBe(grandparent.id)
+      expect(body).toEqual({
+        ...child,
+        parentId: grandparent.id,
+        updatedAt: body.updatedAt,
+        titleAuthor: { kind: 'human', agent: null },
+        descriptionAuthor: { kind: 'human', agent: null },
+        childCompletionCount: { total: 0, completed: 0 },
+        pages: [],
+        timeBlocks: [],
+        links: { outgoing: [], incoming: [] },
+      })
     })
 
     it('cleans up orphaned recurrence rule on delete', async () => {

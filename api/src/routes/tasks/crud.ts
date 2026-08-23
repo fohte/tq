@@ -374,28 +374,37 @@ export const tasksCrudApp = new Hono()
     const existing = c.get('task')
     const id = existing.id
 
-    // Reparent children to the deleted task's parent (or top-level if none)
-    // before deleting, so the tree structure above the deleted task is preserved.
-    await db
-      .update(tasks)
-      .set({ parentId: existing.parentId, updatedAt: new Date() })
-      .where(eq(tasks.parentId, id))
+    await db.transaction(async (tx) => {
+      // Reparent children to the deleted task's parent (or top-level if
+      // none) before deleting, so the tree structure above the deleted task
+      // is preserved. The parent is re-read from the row here rather than
+      // taken from `existing` so a concurrent delete of an ancestor (which
+      // takes the same row lock via its own reparent update) can't leave
+      // this pointing at an already-deleted parent.
+      await tx
+        .update(tasks)
+        .set({
+          parentId: sql`(select ${tasks.parentId} from ${tasks} where ${tasks.id} = ${id})`,
+          updatedAt: new Date(),
+        })
+        .where(eq(tasks.parentId, id))
 
-    await db.delete(tasks).where(eq(tasks.id, id))
+      await tx.delete(tasks).where(eq(tasks.id, id))
 
-    // Clean up orphaned recurrence rule
-    if (existing.recurrenceRuleId != null) {
-      const [otherRef] = await db
-        .select({ id: tasks.id })
-        .from(tasks)
-        .where(eq(tasks.recurrenceRuleId, existing.recurrenceRuleId))
-        .limit(1)
-      if (!otherRef) {
-        await db
-          .delete(recurrenceRules)
-          .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
+      // Clean up orphaned recurrence rule
+      if (existing.recurrenceRuleId != null) {
+        const [otherRef] = await tx
+          .select({ id: tasks.id })
+          .from(tasks)
+          .where(eq(tasks.recurrenceRuleId, existing.recurrenceRuleId))
+          .limit(1)
+        if (!otherRef) {
+          await tx
+            .delete(recurrenceRules)
+            .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
+        }
       }
-    }
+    })
 
     return c.body(null, 204)
   })
