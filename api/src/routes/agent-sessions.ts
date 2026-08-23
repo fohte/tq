@@ -1,5 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
@@ -98,6 +98,28 @@ export const agentSessionsApp = new Hono()
       .where(eq(agentSessions.id, id))
       .returning()
 
+    if (!session) {
+      return c.json({ error: 'Agent session not found' }, 404)
+    }
+
+    return c.json(agentSessionToResponse(session), 200)
+  })
+  // Resolves tq's internal id from the (provider, session_id) pair a hook
+  // integration knows about, e.g. Claude Code's session_id — the only
+  // identifier `tq link`/`tq unlink` has on hand at runtime.
+  .get('/by-session/:provider/:sessionId', async (c) => {
+    const provider = c.req.param('provider')
+    if (provider !== 'claude_code') {
+      return c.json({ error: 'Agent session not found' }, 404)
+    }
+    const sessionId = c.req.param('sessionId')
+
+    const session = await db.query.agentSessions.findFirst({
+      where: and(
+        eq(agentSessions.provider, provider),
+        eq(agentSessions.sessionId, sessionId),
+      ),
+    })
     if (!session) {
       return c.json({ error: 'Agent session not found' }, 404)
     }

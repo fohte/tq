@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
@@ -213,6 +213,50 @@ describe('hook', () => {
     )
 
     expect(exitCode).toBe(0)
+  })
+
+  it('appends TQ_SESSION_ID to CLAUDE_ENV_FILE on SessionStart', async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-hook-'))
+    const envFile = join(tmpDir, 'env.sh')
+    await writeFile(envFile, 'export EXISTING=1\n', 'utf8')
+    vi.stubEnv('CLAUDE_ENV_FILE', envFile)
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify({ id: 's1' }), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'hook', 'SessionStart'],
+      fetchStub,
+      stdinWith(
+        JSON.stringify({ session_id: "sess-1'quote", cwd: '/home/user/app' }),
+      ),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(await readFile(envFile, 'utf8')).toBe(
+      "export EXISTING=1\nexport TQ_SESSION_ID='sess-1'\\''quote'\n",
+    )
+  })
+
+  it('does not touch CLAUDE_ENV_FILE for events other than SessionStart', async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-hook-'))
+    const envFile = join(tmpDir, 'env.sh')
+    await writeFile(envFile, 'export EXISTING=1\n', 'utf8')
+    vi.stubEnv('CLAUDE_ENV_FILE', envFile)
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify({ id: 's1' }), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'hook', 'Stop'],
+      fetchStub,
+      stdinWith(
+        JSON.stringify({ session_id: 'sess-1', cwd: '/home/user/app' }),
+      ),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(await readFile(envFile, 'utf8')).toBe('export EXISTING=1\n')
   })
 
   it('exits 0 without calling fetch when the API URL is not set', async () => {

@@ -61,6 +61,12 @@ export const COVERED_ROUTES = [
 
   // hook
   'POST /api/agent-sessions',
+  'GET /api/agent-sessions/by-session/:provider/:sessionId',
+
+  // task <-> agent session links
+  'POST /api/tasks/:taskId/agent-sessions',
+  'GET /api/tasks/:taskId/agent-sessions',
+  'DELETE /api/tasks/:taskId/agent-sessions/:agentSessionId',
 
   // comment
   'GET /api/tasks/:taskId/comments',
@@ -89,13 +95,6 @@ export const EXCLUDED_ROUTES = {
   'GET /api/agent-sessions/:id/tasks':
     'session browsing is covered by the web UI',
   'PATCH /api/agent-sessions/:id': 'custom label editing is a web UI action',
-
-  // Task <-> agent session links: written and read by the `tq link`
-  // subcommand.
-  'POST /api/tasks/:taskId/agent-sessions': 'linked by the tq link subcommand',
-  'GET /api/tasks/:taskId/agent-sessions': 'linked by the tq link subcommand',
-  'DELETE /api/tasks/:taskId/agent-sessions/:agentSessionId':
-    'linked by the tq link subcommand',
 
   // OAuth callbacks are a browser/server contract, not something a CLI invokes.
   'GET /api/calendar/oauth-callback': 'oauth callback: browser/server contract',
