@@ -30,6 +30,7 @@ const meta = {
     taskId: '00000000-0000-0000-0000-000000000001',
     taskNumber: 42,
     taskTitle: 'Fix the login redirect',
+    taskHasParent: false,
   },
 } satisfies Meta<typeof DeleteTaskDialog>
 
@@ -40,6 +41,21 @@ export const Default: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body)
     await expect(await body.findByText('Delete task')).toBeInTheDocument()
+    await expect(
+      await body.findByText(/become top-level tasks/),
+    ).toBeInTheDocument()
+  },
+}
+
+export const WithParent: Story = {
+  args: {
+    taskHasParent: true,
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(
+      await body.findByText(/moved under its parent/),
+    ).toBeInTheDocument()
   },
 }
 

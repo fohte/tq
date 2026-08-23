@@ -1242,7 +1242,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(404)
     })
 
-    it('sets children parentId to null on delete', async () => {
+    it('sets children parentId to null when deleting a top-level task', async () => {
       const parent = await createTask('Parent')
       const child = await createTask('Child', { parentId: parent.id })
 
@@ -1254,6 +1254,21 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body.parentId).toBeNull()
+    })
+
+    it('reparents children to the grandparent when deleting a task with a parent', async () => {
+      const grandparent = await createTask('Grandparent')
+      const parent = await createTask('Parent', { parentId: grandparent.id })
+      const child = await createTask('Child', { parentId: parent.id })
+
+      await app.request(`/api/tasks/${parent.id}`, {
+        method: 'DELETE',
+      })
+
+      const res = await app.request(`/api/tasks/${child.id}`)
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.parentId).toBe(grandparent.id)
     })
 
     it('cleans up orphaned recurrence rule on delete', async () => {

@@ -7,6 +7,7 @@ export function DeleteTaskDialog({
   taskId,
   taskNumber,
   taskTitle,
+  taskHasParent,
   onDeleted,
 }: {
   open: boolean
@@ -14,6 +15,7 @@ export function DeleteTaskDialog({
   taskId: string
   taskNumber: number
   taskTitle: string
+  taskHasParent: boolean
   onDeleted?: (() => void) | undefined
 }) {
   const deleteTask = useDeleteTask()
@@ -26,12 +28,16 @@ export function DeleteTaskDialog({
     })
   }
 
+  const subtasksNote = taskHasParent
+    ? 'Its subtasks are kept and moved under its parent.'
+    : 'Its subtasks are kept and become top-level tasks.'
+
   return (
     <DeleteConfirmDialog
       open={open}
       onOpenChange={onOpenChange}
       title="Delete task"
-      description={`Are you sure you want to delete #${String(taskNumber)} "${taskTitle}"? Its subtasks are kept and become top-level tasks. This action cannot be undone.`}
+      description={`Are you sure you want to delete #${String(taskNumber)} "${taskTitle}"? ${subtasksNote} This action cannot be undone.`}
       onDelete={handleDelete}
     />
   )

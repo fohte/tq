@@ -374,10 +374,11 @@ export const tasksCrudApp = new Hono()
     const existing = c.get('task')
     const id = existing.id
 
-    // Set children's parentId to null before deleting
+    // Reparent children to the deleted task's parent (or top-level if none)
+    // before deleting, so the tree structure above the deleted task is preserved.
     await db
       .update(tasks)
-      .set({ parentId: null, updatedAt: new Date() })
+      .set({ parentId: existing.parentId, updatedAt: new Date() })
       .where(eq(tasks.parentId, id))
 
     await db.delete(tasks).where(eq(tasks.id, id))

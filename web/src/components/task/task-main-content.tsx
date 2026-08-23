@@ -173,6 +173,7 @@ function TaskBreadcrumb({ task }: { task: TaskDetail }) {
         taskId={task.id}
         taskNumber={task.number}
         taskTitle={task.title}
+        taskHasParent={task.parentId != null}
         onDeleted={() => {
           void navigate({ to: '/tasks' })
         }}

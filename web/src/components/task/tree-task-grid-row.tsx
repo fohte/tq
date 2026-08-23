@@ -389,6 +389,7 @@ export function TreeTaskGridRow({
         taskId={node.id}
         taskNumber={node.number}
         taskTitle={node.title}
+        taskHasParent={node.parentId != null}
       />
     </>
   )
