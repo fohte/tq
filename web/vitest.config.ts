@@ -61,7 +61,10 @@ export default defineConfig({
           rootDir: dirname,
           viewport: DESKTOP_VIEWPORT,
           screenshotsSubdir: 'desktop',
-          setupFiles: ['./.storybook/vitest.setup.ts'],
+          setupFiles: [
+            './.storybook/vitest.setup.desktop.ts',
+            './.storybook/vitest.setup.ts',
+          ],
           excludeTags: [MOBILE_ONLY_TAG],
         }),
       ),
@@ -71,7 +74,10 @@ export default defineConfig({
           rootDir: dirname,
           viewport: MOBILE_VIEWPORT,
           screenshotsSubdir: 'mobile',
-          setupFiles: ['./.storybook/vitest.setup.ts'],
+          setupFiles: [
+            './.storybook/vitest.setup.mobile.ts',
+            './.storybook/vitest.setup.ts',
+          ],
           excludeTags: [DESKTOP_ONLY_TAG],
         }),
       ),
