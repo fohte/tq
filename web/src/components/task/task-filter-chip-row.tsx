@@ -18,7 +18,9 @@ import {
   sortLabels,
   sortOptionValues,
   statusChipLabels,
+  withHasPages,
   withLabel,
+  withParentId,
   withProjectId,
   withStatus,
 } from '#lib/tasks-query'
@@ -63,10 +65,27 @@ export function TaskFilterChipRow({
 
   // Merges newly typed free text back into the applied query: anything that
   // parses as a structured `key:value` token is lifted out as a condition,
-  // the rest round-trips back into parsed.freeText.
+  // the rest stays as parsed.freeText. Parses only the typed fragment (not
+  // parsed re-serialized as a string) so an already-applied `is:` value
+  // typed again unions into the existing status array instead of
+  // duplicating it — parseSearchQuery accumulates every `is:` token it
+  // sees, applied or not.
   const commitFreeText = (freeText: string) => {
-    const structuredOnly = buildSearchQuery({ ...parsed, freeText: '' })
-    setParsed(parseSearchQuery(`${structuredOnly} ${freeText}`.trim()))
+    const typed = parseSearchQuery(freeText)
+    let next: ParsedQuery = { ...parsed, freeText: typed.freeText }
+    if (typed.status != null && typed.status.length > 0) {
+      next = withStatus(next, [
+        ...new Set([...(next.status ?? []), ...typed.status]),
+      ])
+    }
+    if (typed.label != null) next = withLabel(next, typed.label)
+    if (typed.context != null) next.context = typed.context
+    if (typed.hasPages === true) next = withHasPages(next, true)
+    if (typed.hasComments === true) next.hasComments = true
+    if (typed.parentId != null) next = withParentId(next, typed.parentId)
+    if (typed.projectId != null) next = withProjectId(next, typed.projectId)
+    if (typed.sortBy != null) next.sortBy = typed.sortBy
+    setParsed(next)
   }
 
   // Backspace on the empty free-text input clears whichever applied
@@ -74,13 +93,9 @@ export function TaskFilterChipRow({
   // input, in reverse of the render order below.
   const removeLastChip = () => {
     if (parsed.parentId != null) {
-      const next = { ...parsed }
-      delete next.parentId
-      setParsed(next)
+      setParsed(withParentId(parsed, undefined))
     } else if (parsed.hasPages === true) {
-      const next = { ...parsed }
-      delete next.hasPages
-      setParsed(next)
+      setParsed(withHasPages(parsed, false))
     } else if (parsed.label != null) {
       setParsed(withLabel(parsed, undefined))
     } else if (selectedProject != null) {
@@ -165,10 +180,7 @@ export function TaskFilterChipRow({
                 id="task-filter-has-pages"
                 checked
                 onCheckedChange={(checked) => {
-                  const next = { ...parsed }
-                  if (checked) next.hasPages = true
-                  else delete next.hasPages
-                  setParsed(next)
+                  setParsed(withHasPages(parsed, checked))
                 }}
               />
               <label
@@ -195,9 +207,7 @@ export function TaskFilterChipRow({
               variant="outline"
               size="sm"
               onClick={() => {
-                const next = { ...parsed }
-                delete next.parentId
-                setParsed(next)
+                setParsed(withParentId(parsed, undefined))
               }}
             >
               Clear parent filter

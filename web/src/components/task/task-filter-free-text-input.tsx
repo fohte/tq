@@ -1,3 +1,4 @@
+import { parseSearchQuery } from 'api/search-query-parser'
 import { useEffect, useRef, useState } from 'react'
 
 import { AnchoredPopup } from '#components/ui/anchored-popup'
@@ -54,9 +55,15 @@ export function TaskFilterFreeTextInput({
 
   const commit = () => {
     const trimmed = value.trim()
-    if (trimmed !== freeText.trim()) {
-      onCommit(trimmed)
-    }
+    if (trimmed === freeText.trim()) return
+    onCommit(trimmed)
+    // Reflect the leftover text immediately rather than waiting for the
+    // caller's merged `freeText` to round-trip back down as a prop — that
+    // round trip can leave `value` unchanged (e.g. committing an
+    // already-applied `is:todo` again) or never resync while this input
+    // stays focused, either of which would strand the just-lifted token
+    // visibly in the box even though it already became a chip.
+    setValue(parseSearchQuery(trimmed).freeText)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

@@ -59,6 +59,26 @@ export function withLabel(
   return next
 }
 
+export function withHasPages(
+  parsed: ParsedQuery,
+  hasPages: boolean,
+): ParsedQuery {
+  const next = { ...parsed }
+  if (hasPages) next.hasPages = true
+  else delete next.hasPages
+  return next
+}
+
+export function withParentId(
+  parsed: ParsedQuery,
+  parentId: string | undefined,
+): ParsedQuery {
+  const next = { ...parsed }
+  if (parentId == null) delete next.parentId
+  else next.parentId = parentId
+  return next
+}
+
 // The /tasks search for "default filters, scoped to this tag" — shared by
 // every tag-token click/link (sidebar, task row, task detail) so they all
 // navigate to the same place.

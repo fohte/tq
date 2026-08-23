@@ -301,6 +301,22 @@ export const TypingStructuredTokenLiftsIntoChip: Story = {
   },
 }
 
+// Committing a `key:value` token that's already applied (e.g. `is:todo` when
+// the status chip already shows it) must not duplicate it — the merge
+// dedupes against the currently-applied status array instead of blindly
+// concatenating and re-parsing the whole query string.
+export const TypingAlreadyAppliedStatusTokenDoesNotDuplicate: Story = {
+  play: async ({ canvas, args }) => {
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
+    await userEvent.type(input, 'is:todo')
+    await userEvent.keyboard('{Enter}')
+
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      'is:todo is:in_progress sort:updated',
+    )
+  },
+}
+
 export const EscapeResetsFreeTextInput: Story = {
   play: async ({ canvas, args }) => {
     const input = canvas.getByRole('textbox', { name: 'Filter query' })
@@ -326,6 +342,24 @@ export const BackspaceOnEmptyInputRemovesLastChip: Story = {
 
     await expect(args.onQueryChange).toHaveBeenCalledWith(
       'is:todo is:in_progress sort:updated',
+    )
+  },
+}
+
+// Pins the priority order documented on removeLastChip: with both a parent
+// and a label chip applied, Backspace clears the parent chip (closest to
+// the input) and leaves the label chip untouched.
+export const BackspaceOnEmptyInputRemovesParentBeforeLabel: Story = {
+  args: {
+    parsed: { ...defaultParsed, parentId: 'parent-abc', label: 'dev:tq' },
+  },
+  play: async ({ canvas, args }) => {
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
+    await userEvent.click(input)
+    await userEvent.keyboard('{Backspace}')
+
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      'is:todo is:in_progress label:dev:tq sort:updated',
     )
   },
 }
