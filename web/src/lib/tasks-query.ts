@@ -15,6 +15,50 @@ export const sortLabels: Partial<
   created: 'Created',
 }
 
+// Compact terms for the `is` chip's value (e.g. "is todo, doing"), distinct
+// from the full "In Progress"-style wording used in status pickers.
+export const statusChipLabels: Record<
+  NonNullable<ParsedQuery['status']>[number],
+  string
+> = {
+  todo: 'todo',
+  in_progress: 'doing',
+  completed: 'done',
+}
+
+// One delete-or-set helper per structured ParsedQuery field, shared by
+// TaskFilterChipRow's per-axis chips and TaskFilterMenuContent's "+ filter"
+// sections so both build the exact same next-query shape.
+export function withStatus(
+  parsed: ParsedQuery,
+  status: NonNullable<ParsedQuery['status']>,
+): ParsedQuery {
+  const next = { ...parsed }
+  if (status.length === 0) delete next.status
+  else next.status = status
+  return next
+}
+
+export function withProjectId(
+  parsed: ParsedQuery,
+  projectId: string,
+): ParsedQuery {
+  const next = { ...parsed }
+  if (projectId === '') delete next.projectId
+  else next.projectId = projectId
+  return next
+}
+
+export function withLabel(
+  parsed: ParsedQuery,
+  label: string | undefined,
+): ParsedQuery {
+  const next = { ...parsed }
+  if (label == null) delete next.label
+  else next.label = label
+  return next
+}
+
 // The /tasks search for "default filters, scoped to this tag" — shared by
 // every tag-token click/link (sidebar, task row, task detail) so they all
 // navigate to the same place.

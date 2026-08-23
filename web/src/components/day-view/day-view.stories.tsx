@@ -8,7 +8,7 @@ import { DayViewPresentation } from '#components/day-view/day-view'
 import type { Schedule } from '#hooks/use-schedules'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
-import { atIndex } from '#lib/test-utils'
+import { assertDefined, atIndex, findVisible } from '#lib/test-utils'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const today = new Date()
@@ -293,9 +293,16 @@ export const OpensCreateScheduleModal: Story = {
   play: async ({ canvas, canvasElement, userEvent }) => {
     await userEvent.click(canvas.getByLabelText('New schedule'))
 
+    // CreateScheduleModal always renders both its desktop and mobile panels
+    // and lets CSS pick which is shown, so the "Schedule title" input exists
+    // twice — only the one matching the current viewport is visible.
     const body = within(canvasElement.ownerDocument.body)
+    const titleInputs = await body.findAllByPlaceholderText('Schedule title')
     await expect(
-      atIndex(await body.findAllByPlaceholderText('Schedule title'), 0),
+      assertDefined(
+        findVisible(titleInputs),
+        'no visible "Schedule title" input found',
+      ),
     ).toBeVisible()
   },
 }

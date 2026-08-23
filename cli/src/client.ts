@@ -1,8 +1,8 @@
 import type { AppType } from 'api/types'
 import { hc } from 'hono/client'
-import { Result } from 'neverthrow'
 
 import { ApiError, NetworkError } from '#errors'
+import { tryParseJson } from '#result'
 
 export type Client = ReturnType<typeof hc<AppType>>
 
@@ -36,10 +36,6 @@ export async function toApiError(res: Response): Promise<ApiError> {
   const body = await res.text()
   return new ApiError(res.status, extractErrorMessage(body))
 }
-
-const tryParseJson = Result.fromThrowable((body: string): unknown =>
-  JSON.parse(body),
-)
 
 function extractErrorMessage(body: string): string {
   if (body.length === 0) return body

@@ -176,6 +176,13 @@
       "when": 1787487524726,
       "tag": "0024_fluffy_cassandra_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787493727200,
+      "tag": "0025_complete_sugar_man",
+      "breakpoints": true
     }
   ]
 }

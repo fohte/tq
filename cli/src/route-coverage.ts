@@ -59,6 +59,9 @@ export const COVERED_ROUTES = [
   'GET /api/tasks/:id/activity',
   'POST /api/tasks/from-github',
 
+  // hook
+  'POST /api/agent-sessions',
+
   // comment
   'GET /api/tasks/:taskId/comments',
   'POST /api/tasks/:taskId/comments',
@@ -79,12 +82,19 @@ export const COVERED_ROUTES = [
 type CoveredRoutes = (typeof COVERED_ROUTES)[number]
 
 export const EXCLUDED_ROUTES = {
-  // Written by the Claude Code hook integration and browsed via the web UI;
-  // neither side is a CLI concern.
-  'POST /api/agent-sessions':
-    'written by the Claude Code hook integration, not a CLI concern',
+  // Written by `tq hook` (the Claude Code hook integration) and browsed via
+  // the web UI, so only reading is left out.
   'GET /api/agent-sessions': 'session browsing is covered by the web UI',
   'GET /api/agent-sessions/:id': 'session browsing is covered by the web UI',
+  'GET /api/agent-sessions/:id/tasks':
+    'session browsing is covered by the web UI',
+
+  // Task <-> agent session links: written and read by the `tq link`
+  // subcommand.
+  'POST /api/tasks/:taskId/agent-sessions': 'linked by the tq link subcommand',
+  'GET /api/tasks/:taskId/agent-sessions': 'linked by the tq link subcommand',
+  'DELETE /api/tasks/:taskId/agent-sessions/:agentSessionId':
+    'linked by the tq link subcommand',
 
   // OAuth callbacks are a browser/server contract, not something a CLI invokes.
   'GET /api/calendar/oauth-callback': 'oauth callback: browser/server contract',
