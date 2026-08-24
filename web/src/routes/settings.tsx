@@ -8,6 +8,7 @@ import { IntegrationCard } from '#components/settings/integration-card'
 import { KeybindingsList } from '#components/settings/keybindings-list'
 import { QueryStateMessage } from '#components/settings/query-state-message'
 import { SchedulingSettingsPanel } from '#components/settings/scheduling-settings-panel'
+import { SessionOpenSettingsPanel } from '#components/settings/session-open-settings-panel'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
 import { Panel } from '#components/ui/panel'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
@@ -63,6 +64,10 @@ function Settings() {
 
           <div className="mt-8">
             <SchedulingSettingsPanel />
+          </div>
+
+          <div className="mt-8">
+            <SessionOpenSettingsPanel />
           </div>
 
           <div className="mt-8">

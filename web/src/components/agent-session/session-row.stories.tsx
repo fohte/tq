@@ -23,10 +23,26 @@ const baseSession: AgentSession = {
   endedAt: null,
 }
 
-function SessionRowStory(props: React.ComponentProps<typeof SessionRow>) {
+function SessionRowStory({
+  localContext,
+  ...props
+}: React.ComponentProps<typeof SessionRow> & {
+  // Seeds the same localStorage key `useSessionOpenSettings` reads, reset on
+  // every render so stories stay deterministic regardless of run order.
+  localContext?: 'work' | 'personal' | undefined
+}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
+
+  localStorage.setItem(
+    'tq:session-open-settings',
+    JSON.stringify({
+      localContext: localContext ?? null,
+      focusUrlTemplate: null,
+      resumeUrlTemplate: null,
+    }),
+  )
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -201,5 +217,31 @@ export const CancelsEditOnEscape: Story = {
     // No msw handler is registered for this story, so a PATCH request here
     // would fail the story via the unhandled-request check in preview.tsx.
     await expect(canvas.getByText(baseSession.label ?? '')).toBeInTheDocument()
+  },
+}
+
+export const CopiesResumeCommandOnClick: Story = {
+  args: {
+    session: { ...baseSession, id: '11' },
+    isDimmed: false,
+  },
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: 'Focus session' })
+    await userEvent.click(button)
+
+    await waitFor(() => expect(button).toHaveAttribute('title', 'Copied'))
+  },
+}
+
+export const NotOpenableFromAnotherContext: Story = {
+  args: {
+    session: { ...baseSession, id: '12' },
+    isDimmed: false,
+    localContext: 'personal',
+  },
+  play: async ({ canvas }) => {
+    await expect(
+      canvas.queryByRole('button', { name: /Focus session|Resume session/ }),
+    ).not.toBeInTheDocument()
   },
 }
