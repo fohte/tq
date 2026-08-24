@@ -5,19 +5,12 @@ import {
   reportUnhandledApiRequest,
 } from '@fohte/storybook-addon/preview'
 import type { Preview } from '@storybook/react-vite'
-import { initialize, mswLoader } from 'msw-storybook-addon'
+import { setupWorker } from 'msw/browser'
+import { mswLoader } from 'msw-storybook-addon/csf3'
 
 import { StoryRouter } from '#storybook-config/story-router'
 
 configureUnhandledApiRequestCheck({ pathPrefixes: ['/api/'] })
-
-initialize({
-  onUnhandledRequest: ({ url }, print) => {
-    if (reportUnhandledApiRequest(url)) {
-      print.error()
-    }
-  },
-})
 
 const preview: Preview = {
   parameters: {
@@ -59,7 +52,19 @@ const preview: Preview = {
       return <StoryRouter component={() => <Story />} />
     },
   ],
-  loaders: [mswLoader],
+  loaders: [
+    mswLoader(async () => {
+      const worker = setupWorker()
+      await worker.start({
+        onUnhandledRequest: ({ url }, print) => {
+          if (reportUnhandledApiRequest(url)) {
+            print.error()
+          }
+        },
+      })
+      return worker
+    }),
+  ],
 }
 
 export default preview

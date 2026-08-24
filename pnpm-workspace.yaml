@@ -6,15 +6,14 @@ packages:
 allowBuilds:
   # required by vitest's transformer
   esbuild: true
-  # msw is only used as a transitive dependency; the postinstall sets up a browser
-  # service worker that we don't need
-  msw: false
   # required by @opentelemetry/exporter-trace-otlp-proto
   protobufjs: true
   # required by @fohte/eslint-config -> eslint-plugin-import-x for module resolution
   unrs-resolver: true
-  # required by wrangler (CI-only install for the Storybook Cloudflare Pages deploy)
+  # required by cloudflare/wrangler-action's internal `pnpm add wrangler` step (Storybook deploy)
   workerd: true
+  # no-op unless package.json sets "msw.workerDirectory", which we don't use
+  msw: true
 
 # Dodge short-lived supply-chain attacks (e.g. shai-hulud, tinycolor) by
 # holding off freshly published versions. Unit is minutes; 10080 = 7 days.
