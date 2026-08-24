@@ -9,3 +9,8 @@ export const upsertAgentSessionSchema = z.object({
   lastMessage: z.string().nullable(),
   ended: z.boolean().optional(),
 })
+
+// `null` clears the override and falls back to the hook-reported `label`.
+export const updateAgentSessionSchema = z.object({
+  customLabel: z.string().trim().min(1).nullable(),
+})

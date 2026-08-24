@@ -589,6 +589,35 @@ describe('task search', () => {
   })
 })
 
+describe('task sessions', () => {
+  it('fetches the sessions linked to a task and prints them', async () => {
+    const sessions = [
+      { id: 's1', provider: 'claude_code', sessionId: 'sess-1' },
+    ]
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(sessions), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'sessions', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'GET',
+      pathname: '/api/tasks/42/agent-sessions',
+      query: {},
+      body: undefined,
+    })
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify(sessions, null, 2)}\n`],
+    ])
+  })
+})
+
 describe('task from-github', () => {
   it('sends the url and prints the response', async () => {
     const created = {

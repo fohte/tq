@@ -1,9 +1,6 @@
-import { eq } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
-import { db } from '#db/connection'
-import { agentSessions } from '#db/schema'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -181,12 +178,7 @@ describe('agent sessions API', () => {
         lastMessage: 'First message',
       })
 
-      // Simulates a human assigning a custom label through a future tq-UI
-      // feature; no API endpoint sets this column in this PR.
-      await db
-        .update(agentSessions)
-        .set({ customLabel: 'My custom name' })
-        .where(eq(agentSessions.id, created.id))
+      await patchCustomLabel(created.id, 'My custom name')
 
       const res = await upsertSession({
         provider: 'claude_code',
@@ -318,6 +310,91 @@ describe('agent sessions API', () => {
       expect(res.status).toBe(404)
     })
   })
+
+  describe('PATCH /api/agent-sessions/:id', () => {
+    it('sets the custom label', async () => {
+      const created = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'session-1',
+        cwd: '/home/fohte/project',
+        context: 'work',
+        label: 'A label',
+        lastMessage: 'A message',
+      })
+
+      const res = await patchCustomLabel(created.id, 'my renamed session')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<AgentSessionResponse>(res)
+      expect(body).toEqual({ ...created, customLabel: 'my renamed session' })
+    })
+
+    it('clears the custom label when set to null', async () => {
+      const created = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'session-1',
+        cwd: '/home/fohte/project',
+        context: 'work',
+        label: 'A label',
+        lastMessage: 'A message',
+      })
+      await patchCustomLabel(created.id, 'temporary name')
+
+      const res = await patchCustomLabel(created.id, null)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<AgentSessionResponse>(res)
+      expect(body).toEqual({ ...created, customLabel: null })
+    })
+
+    it('returns 404 for a non-existent session', async () => {
+      const res = await patchCustomLabel(TEST_UUID, 'name')
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 400 for an empty custom label', async () => {
+      const res = await patchCustomLabel(TEST_UUID, '')
+
+      expect(res.status).toBe(400)
+    })
+  })
+
+  describe('GET /api/agent-sessions/by-session/:provider/:sessionId', () => {
+    it('resolves a session by provider and session id', async () => {
+      const created = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'session-1',
+        cwd: '/home/fohte/project',
+        context: 'work',
+        label: 'A label',
+        lastMessage: 'A message',
+      })
+
+      const res = await app.request(
+        '/api/agent-sessions/by-session/claude_code/session-1',
+      )
+
+      expect(res.status).toBe(200)
+      expect(await jsonBody<AgentSessionResponse>(res)).toEqual(created)
+    })
+
+    it('returns 404 for a non-existent session id', async () => {
+      const res = await app.request(
+        '/api/agent-sessions/by-session/claude_code/nonexistent',
+      )
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 404 for an unknown provider', async () => {
+      const res = await app.request(
+        '/api/agent-sessions/by-session/other_provider/session-1',
+      )
+
+      expect(res.status).toBe(404)
+    })
+  })
 })
 
 interface UpsertSessionInput {
@@ -354,4 +431,12 @@ async function upsertSessionAtTime(input: UpsertSessionInput, time: string) {
   const body = await upsertSessionAndGetBody(input)
   vi.useRealTimers()
   return body
+}
+
+function patchCustomLabel(id: string, customLabel: string | null) {
+  return app.request(`/api/agent-sessions/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ customLabel }),
+  })
 }

@@ -7,6 +7,7 @@ import {
   TaskSidebar,
   TaskSidebarMobile,
 } from '#components/task/task-detail'
+import type { AgentSession } from '#hooks/use-agent-sessions'
 import { labelKeys } from '#hooks/use-labels'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
@@ -114,6 +115,22 @@ const sampleSubtasks: Task[] = [
   },
 ]
 
+const sampleSessions: AgentSession[] = [
+  {
+    id: 'session-001',
+    provider: 'claude_code',
+    sessionId: 'session-001',
+    context: 'work',
+    cwd: '/Users/fohte/ghq/github.com/tq',
+    label: 'Add inline editing',
+    lastMessage: 'Implement the inline title editor',
+    customLabel: null,
+    startedAt: '2026-03-20T09:00:00.000Z',
+    lastActiveAt: '2026-03-20T09:34:00.000Z',
+    endedAt: '2026-03-20T09:34:00.000Z',
+  },
+]
+
 function Providers({
   children,
   project,
@@ -156,17 +173,24 @@ function MainContentStory({
   task,
   pages,
   subtasks,
+  sessions,
   project,
 }: {
   task: TaskDetail
   pages: TaskPage[]
   subtasks: Task[]
+  sessions: AgentSession[]
   project?: ProjectDetail | undefined
 }) {
   return (
     <Providers project={project}>
       <div className="max-w-2xl p-6">
-        <TaskMainContent task={task} pages={pages} subtasks={subtasks} />
+        <TaskMainContent
+          task={task}
+          pages={pages}
+          subtasks={subtasks}
+          sessions={sessions}
+        />
       </div>
     </Providers>
   )
@@ -177,6 +201,9 @@ const mainContentMeta = {
   component: MainContentStory,
   parameters: {
     layout: 'fullscreen',
+  },
+  args: {
+    sessions: [],
   },
 } satisfies Meta<typeof MainContentStory>
 
@@ -263,6 +290,15 @@ export const WithSubtasks: Story = {
   },
 }
 
+export const WithSessions: Story = {
+  args: {
+    task: { ...baseTask, title: 'Task with sessions' },
+    pages: [],
+    subtasks: [],
+    sessions: sampleSessions,
+  },
+}
+
 export const LlmAuthored: Story = {
   args: {
     task: {
@@ -313,21 +349,28 @@ export const FullPagePC: StoryObj<{
   task: TaskDetail
   pages: TaskPage[]
   subtasks: Task[]
+  sessions: AgentSession[]
 }> = {
   args: {
     task: { ...baseTask },
     pages: samplePages,
     subtasks: [],
+    sessions: sampleSessions,
   },
   tags: ['desktop-only'],
   parameters: {
     layout: 'fullscreen',
   },
-  render: ({ task, pages, subtasks }) => (
+  render: ({ task, pages, subtasks, sessions }) => (
     <Providers>
       <div className="flex h-screen">
         <div className="flex-1 overflow-y-auto px-7 py-6">
-          <TaskMainContent task={task} pages={pages} subtasks={subtasks} />
+          <TaskMainContent
+            task={task}
+            pages={pages}
+            subtasks={subtasks}
+            sessions={sessions}
+          />
         </div>
         <TaskSidebar task={task} />
       </div>
@@ -339,22 +382,29 @@ export const FullPageSP: StoryObj<{
   task: TaskDetail
   pages: TaskPage[]
   subtasks: Task[]
+  sessions: AgentSession[]
 }> = {
   args: {
     task: { ...baseTask },
     pages: samplePages,
     subtasks: [],
+    sessions: sampleSessions,
   },
   parameters: {
     layout: 'fullscreen',
     viewport: { defaultViewport: 'mobile1' },
   },
-  render: ({ task, pages, subtasks }) => (
+  render: ({ task, pages, subtasks, sessions }) => (
     <Providers>
       <div className="flex h-screen flex-col overflow-y-auto p-4">
         <TaskSidebarMobile task={task} />
         <div className="mt-4 border-t border-border pt-4">
-          <TaskMainContent task={task} pages={pages} subtasks={subtasks} />
+          <TaskMainContent
+            task={task}
+            pages={pages}
+            subtasks={subtasks}
+            sessions={sessions}
+          />
         </div>
       </div>
     </Providers>

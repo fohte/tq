@@ -15,6 +15,10 @@ import {
   TaskPagesSection,
 } from '#components/task/task-pages-section'
 import {
+  TaskSessionsList,
+  TaskSessionsSection,
+} from '#components/task/task-sessions-section'
+import {
   TaskSubtasksList,
   TaskSubtasksSection,
 } from '#components/task/task-subtasks-section'
@@ -22,6 +26,7 @@ import { ActionsMenu } from '#components/ui/actions-menu'
 import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
+import type { AgentSession } from '#hooks/use-agent-sessions'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
 import type { TaskPage } from '#hooks/use-task-pages'
 import type { Task, TaskDetail } from '#hooks/use-tasks'
@@ -35,10 +40,12 @@ export function TaskMainContent({
   task,
   pages,
   subtasks,
+  sessions,
 }: {
   task: TaskDetail
   pages?: TaskPage[]
   subtasks?: Task[]
+  sessions?: AgentSession[]
 }) {
   const inheritedSubtaskAttributes: InheritedTaskAttributes = {
     context: task.context,
@@ -104,6 +111,13 @@ export function TaskMainContent({
         outgoing={task.links.outgoing}
         incoming={task.links.incoming}
       />
+
+      {/* Sessions */}
+      {sessions ? (
+        <TaskSessionsList sessions={sessions} />
+      ) : (
+        <TaskSessionsSection taskId={task.id} />
+      )}
 
       {/* Activity */}
       <div className="border-t border-border pt-4">
