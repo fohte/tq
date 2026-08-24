@@ -1,4 +1,4 @@
-import { Check, Terminal } from 'lucide-react'
+import { Check, Terminal, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { Button } from '#components/ui/button'
@@ -121,7 +121,9 @@ function SessionOpenButton({
   active: boolean
   settings: SessionOpenSettings
 }) {
-  const [copied, setCopied] = useState(false)
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>(
+    'idle',
+  )
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -132,6 +134,14 @@ function SessionOpenButton({
 
   const action = resolveSessionOpenAction(sessionId, active, settings)
 
+  const showCopyFeedback = (state: 'copied' | 'failed') => {
+    setCopyState(state)
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    copyTimerRef.current = setTimeout(() => {
+      setCopyState('idle')
+    }, COPY_FEEDBACK_MS)
+  }
+
   return (
     <Button
       variant="ghost"
@@ -140,14 +150,11 @@ function SessionOpenButton({
         if (action.kind === 'copy') {
           navigator.clipboard.writeText(action.text).then(
             () => {
-              setCopied(true)
-              if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
-              copyTimerRef.current = setTimeout(() => {
-                setCopied(false)
-              }, COPY_FEEDBACK_MS)
+              showCopyFeedback('copied')
             },
             (error: unknown) => {
               console.error('Failed to copy resume command', error)
+              showCopyFeedback('failed')
             },
           )
         } else {
@@ -155,17 +162,21 @@ function SessionOpenButton({
         }
       }}
       title={
-        copied
+        copyState === 'copied'
           ? 'Copied'
-          : action.kind === 'copy'
-            ? `Copy: ${action.text}`
-            : `Open: ${action.url}`
+          : copyState === 'failed'
+            ? 'Copy failed — see console'
+            : action.kind === 'copy'
+              ? `Copy: ${action.text}`
+              : `Open: ${action.url}`
       }
       aria-label={active ? 'Focus session' : 'Resume session'}
       className="shrink-0 text-muted-foreground hover:text-foreground"
     >
-      {copied ? (
+      {copyState === 'copied' ? (
         <Check className="h-4 w-4" />
+      ) : copyState === 'failed' ? (
+        <X className="h-4 w-4" />
       ) : (
         <Terminal className="h-4 w-4" />
       )}

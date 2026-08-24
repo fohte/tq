@@ -1,9 +1,10 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { useSessionOpenSettings } from '#hooks/use-session-open-settings'
-
-const STORAGE_KEY = 'tq:session-open-settings'
+import {
+  STORAGE_KEY,
+  useSessionOpenSettings,
+} from '#hooks/use-session-open-settings'
 
 beforeEach(() => {
   localStorage.clear()

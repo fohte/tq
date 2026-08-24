@@ -26,11 +26,15 @@ const baseSession: AgentSession = {
 
 function SessionRowStory({
   localContext,
+  focusUrlTemplate,
+  resumeUrlTemplate,
   ...props
 }: React.ComponentProps<typeof SessionRow> & {
   // Seeds the same localStorage key `useSessionOpenSettings` reads, reset on
   // every render so stories stay deterministic regardless of run order.
   localContext?: 'work' | 'personal' | undefined
+  focusUrlTemplate?: string | undefined
+  resumeUrlTemplate?: string | undefined
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -40,8 +44,8 @@ function SessionRowStory({
     STORAGE_KEY,
     JSON.stringify({
       localContext: localContext ?? null,
-      focusUrlTemplate: null,
-      resumeUrlTemplate: null,
+      focusUrlTemplate: focusUrlTemplate ?? null,
+      resumeUrlTemplate: resumeUrlTemplate ?? null,
     }),
   )
 
@@ -236,8 +240,11 @@ export const CopiesResumeCommandOnClick: Story = {
     const button = canvas.getByRole('button', { name: 'Focus session' })
     await userEvent.click(button)
 
-    await waitFor(() => expect(button).toHaveAttribute('title', 'Copied'))
+    // Synchronous inside the click handler, so it's already settled once the
+    // click resolves — no need to wait for the "Copied" state that follows.
     await expect(writeText).toHaveBeenCalledWith("claude --resume 'session-1'")
+
+    await waitFor(() => expect(button).toHaveAttribute('title', 'Copied'))
   },
 }
 
@@ -251,5 +258,25 @@ export const NotOpenableFromAnotherContext: Story = {
     await expect(
       canvas.queryByRole('button', { name: /Focus session|Resume session/ }),
     ).not.toBeInTheDocument()
+  },
+}
+
+export const OpensConfiguredUrlTemplate: Story = {
+  args: {
+    session: { ...baseSession, id: '13' },
+    isDimmed: false,
+    focusUrlTemplate: 'hammerspoon://cc-focus?session={sessionId}',
+  },
+  play: async ({ canvas }) => {
+    // Doesn't click — clicking would assign `window.location.href` and
+    // navigate the story away. The button's title already shows exactly
+    // what a click would open, which is enough to prove the template was
+    // picked and expanded correctly.
+    const button = canvas.getByRole('button', { name: 'Focus session' })
+
+    await expect(button).toHaveAttribute(
+      'title',
+      'Open: hammerspoon://cc-focus?session=session-1',
+    )
   },
 }
