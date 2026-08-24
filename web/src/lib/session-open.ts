@@ -27,9 +27,8 @@ export function canOpenSessionLocally(
   return localContext == null || sessionContext === localContext
 }
 
-// Active sessions resume via a "focus" action, ended ones via "resume" — the
-// two map to different armyknife commands (`a cc focus` / `a cc resume`), so
-// a configured template must pick the same way.
+// Active sessions focus an already-running process, while ended ones resume
+// a new one, so a configured template picks the corresponding action.
 export function resolveSessionOpenAction(
   sessionId: string,
   active: boolean,

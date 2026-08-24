@@ -4,8 +4,8 @@ import { http, HttpResponse } from 'msw'
 import { expect, spyOn, userEvent, waitFor, within } from 'storybook/test'
 
 import { SessionRow } from '#components/agent-session/session-row'
+import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { AgentSession } from '#hooks/use-agent-sessions'
-import { STORAGE_KEY } from '#hooks/use-session-open-settings'
 
 // Kept relative to `Date.now()` (not a fixed ISO literal) so this session
 // keeps rendering as active (isAgentSessionActive) no matter when this story
@@ -40,14 +40,11 @@ function SessionRowStory({
     defaultOptions: { queries: { retry: false } },
   })
 
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({
-      localContext: localContext ?? null,
-      focusUrlTemplate: focusUrlTemplate ?? null,
-      resumeUrlTemplate: resumeUrlTemplate ?? null,
-    }),
-  )
+  resetSessionOpenSettings({
+    localContext: localContext ?? null,
+    focusUrlTemplate: focusUrlTemplate ?? null,
+    resumeUrlTemplate: resumeUrlTemplate ?? null,
+  })
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -245,6 +242,25 @@ export const CopiesResumeCommandOnClick: Story = {
     await expect(writeText).toHaveBeenCalledWith("claude --resume 'session-1'")
 
     await waitFor(() => expect(button).toHaveAttribute('title', 'Copied'))
+  },
+}
+
+export const ShowsFailureWhenCopyRejects: Story = {
+  args: {
+    session: { ...baseSession, id: '14' },
+    isDimmed: false,
+  },
+  play: async ({ canvas }) => {
+    spyOn(navigator.clipboard, 'writeText').mockRejectedValue(
+      new Error('denied'),
+    )
+
+    const button = canvas.getByRole('button', { name: 'Focus session' })
+    await userEvent.click(button)
+
+    await waitFor(() =>
+      expect(button).toHaveAttribute('title', 'Copy failed — see console'),
+    )
   },
 }
 
