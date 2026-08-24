@@ -52,6 +52,25 @@ describe('useSessionOpenSettings', () => {
     })
   })
 
+  it('discards an unrecognized localContext value from a syntactically valid stored object', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        localContext: 'invalid',
+        focusUrlTemplate: null,
+        resumeUrlTemplate: null,
+      }),
+    )
+
+    const { result } = renderHook(() => useSessionOpenSettings())
+
+    expect(result.current[0]).toEqual({
+      localContext: null,
+      focusUrlTemplate: null,
+      resumeUrlTemplate: null,
+    })
+  })
+
   it('merges a partial update with the existing settings', () => {
     const { result } = renderHook(() => useSessionOpenSettings())
 

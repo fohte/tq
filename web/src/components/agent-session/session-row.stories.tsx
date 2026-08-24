@@ -237,9 +237,20 @@ export const CopiesResumeCommandOnClick: Story = {
     const button = canvas.getByRole('button', { name: 'Focus session' })
     await userEvent.click(button)
 
-    // Synchronous inside the click handler, so it's already settled once the
-    // click resolves — no need to wait for the "Copied" state that follows.
     await expect(writeText).toHaveBeenCalledWith("claude --resume 'session-1'")
+  },
+}
+
+export const ShowsCopiedFeedbackAfterCopy: Story = {
+  args: {
+    session: { ...baseSession, id: '15' },
+    isDimmed: false,
+  },
+  play: async ({ canvas }) => {
+    spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
+
+    const button = canvas.getByRole('button', { name: 'Focus session' })
+    await userEvent.click(button)
 
     await waitFor(() => expect(button).toHaveAttribute('title', 'Copied'))
   },
