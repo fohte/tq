@@ -1,4 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
+import { expect, userEvent, waitFor, within } from 'storybook/test'
 
 import { SessionRow } from '#components/agent-session/session-row'
 import type { AgentSession } from '#hooks/use-agent-sessions'
@@ -21,10 +24,16 @@ const baseSession: AgentSession = {
 }
 
 function SessionRowStory(props: React.ComponentProps<typeof SessionRow>) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+
   return (
-    <div className="dark w-3xl bg-background">
-      <SessionRow {...props} />
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <div className="dark w-3xl bg-background">
+        <SessionRow {...props} />
+      </div>
+    </QueryClientProvider>
   )
 }
 
@@ -97,5 +106,100 @@ export const LongCwdAndLabel: Story = {
         'a very long session label describing exactly what this agent session is working on right now',
     },
     isDimmed: false,
+  },
+}
+
+export const EditingLabel: Story = {
+  args: {
+    session: { ...baseSession, id: '7' },
+    isDimmed: false,
+  },
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByText(baseSession.label ?? ''))
+
+    await expect(canvas.getByRole('textbox')).toHaveValue(baseSession.label)
+  },
+}
+
+let patchedBody: unknown = null
+
+export const SavesEditedLabelOnEnter: Story = {
+  args: {
+    session: { ...baseSession, id: '8' },
+    isDimmed: false,
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.patch('/api/agent-sessions/:id', async ({ request }) => {
+          patchedBody = await request.json()
+          return HttpResponse.json({
+            ...baseSession,
+            customLabel: 'renamed session',
+          })
+        }),
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    patchedBody = null
+    const canvas = within(canvasElement)
+
+    await userEvent.click(canvas.getByText(baseSession.label ?? ''))
+    const input = canvas.getByRole('textbox')
+    await userEvent.clear(input)
+    await userEvent.type(input, 'renamed session')
+    await userEvent.keyboard('{Enter}')
+
+    await waitFor(async () => {
+      await expect(patchedBody).toEqual({ customLabel: 'renamed session' })
+    })
+  },
+}
+
+export const ClearsLabelOnEmptyInput: Story = {
+  args: {
+    session: { ...baseSession, id: '10' },
+    isDimmed: false,
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.patch('/api/agent-sessions/:id', async ({ request }) => {
+          patchedBody = await request.json()
+          return HttpResponse.json({ ...baseSession, customLabel: null })
+        }),
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    patchedBody = null
+    const canvas = within(canvasElement)
+
+    await userEvent.click(canvas.getByText(baseSession.label ?? ''))
+    await userEvent.clear(canvas.getByRole('textbox'))
+    await userEvent.keyboard('{Enter}')
+
+    await waitFor(async () => {
+      await expect(patchedBody).toEqual({ customLabel: null })
+    })
+  },
+}
+
+export const CancelsEditOnEscape: Story = {
+  args: {
+    session: { ...baseSession, id: '9' },
+    isDimmed: false,
+  },
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByText(baseSession.label ?? ''))
+    const input = canvas.getByRole('textbox')
+    await userEvent.clear(input)
+    await userEvent.type(input, 'discarded edit')
+    await userEvent.keyboard('{Escape}')
+
+    // No msw handler is registered for this story, so a PATCH request here
+    // would fail the story via the unhandled-request check in preview.tsx.
+    await expect(canvas.getByText(baseSession.label ?? '')).toBeInTheDocument()
   },
 }
