@@ -4,7 +4,10 @@ import { Hono } from 'hono'
 
 import { db } from '#db/connection'
 import { agentSessions, taskAgentSessions, tasks } from '#db/schema'
-import { upsertAgentSessionSchema } from '#schemas/agent-session'
+import {
+  updateAgentSessionSchema,
+  upsertAgentSessionSchema,
+} from '#schemas/agent-session'
 import { taskSummaryColumns } from '#services/task-links'
 
 export function agentSessionToResponse(
@@ -97,6 +100,22 @@ export const agentSessionsApp = new Hono()
     const session = await db.query.agentSessions.findFirst({
       where: eq(agentSessions.id, id),
     })
+    if (!session) {
+      return c.json({ error: 'Agent session not found' }, 404)
+    }
+
+    return c.json(agentSessionToResponse(session), 200)
+  })
+  .patch('/:id', zValidator('json', updateAgentSessionSchema), async (c) => {
+    const id = c.req.param('id')
+    const input = c.req.valid('json')
+
+    const [session] = await db
+      .update(agentSessions)
+      .set({ customLabel: input.customLabel })
+      .where(eq(agentSessions.id, id))
+      .returning()
+
     if (!session) {
       return c.json({ error: 'Agent session not found' }, 404)
     }

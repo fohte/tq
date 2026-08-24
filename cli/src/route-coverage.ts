@@ -96,6 +96,7 @@ export const EXCLUDED_ROUTES = {
     'session browsing is covered by the web UI',
   'GET /api/agent-sessions/by-task':
     'session browsing is covered by the web UI',
+  'PATCH /api/agent-sessions/:id': 'custom label editing is a web UI action',
 
   // OAuth callbacks are a browser/server contract, not something a CLI invokes.
   'GET /api/calendar/oauth-callback': 'oauth callback: browser/server contract',

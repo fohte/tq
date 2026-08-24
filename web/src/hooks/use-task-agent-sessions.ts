@@ -13,6 +13,8 @@ export type TaskAgentSession = InferResponseType<
 // being edited by a concurrent PR, so this query gets its own key root here.
 export const taskAgentSessionKeys = {
   all: ['agent-sessions', 'by-task'] as const,
+  byTaskId: (taskId: string) =>
+    ['tasks', 'detail', taskId, 'agent-sessions'] as const,
 }
 
 export function useTaskAgentSessionsByTaskId() {
@@ -30,6 +32,18 @@ export function useTaskAgentSessionsByTaskId() {
         map.set(row.taskId, list)
       }
       return map
+    },
+  })
+}
+
+export function useTaskAgentSessions(taskId: string) {
+  return useQuery({
+    queryKey: taskAgentSessionKeys.byTaskId(taskId),
+    queryFn: async () => {
+      const res = await api.api.tasks[':taskId']['agent-sessions'].$get({
+        param: { taskId },
+      })
+      return unwrapOrThrow(assertOk(res)).json()
     },
   })
 }
