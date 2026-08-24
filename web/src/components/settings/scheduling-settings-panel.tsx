@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 
 import { QueryStateMessage } from '#components/settings/query-state-message'
+import { SettingsRow } from '#components/settings/settings-row'
 import { Input } from '#components/ui/input'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
@@ -32,26 +32,6 @@ const AUTO_RESCHEDULE_OPTIONS = [
   { value: 'on', label: '有効' },
   { value: 'off', label: '無効' },
 ] as const satisfies ReadonlyArray<{ value: 'on' | 'off'; label: string }>
-
-function SettingsRow({
-  label,
-  description,
-  children,
-}: {
-  label: string
-  description: string
-  children: ReactNode
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 p-4">
-      <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-foreground">{label}</span>
-        <span className="text-xs text-muted-foreground">{description}</span>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">{children}</div>
-    </div>
-  )
-}
 
 export function SchedulingSettingsPanel() {
   const settings = useSchedulingSettings()

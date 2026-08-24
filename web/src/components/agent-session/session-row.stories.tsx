@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
-import { expect, userEvent, waitFor, within } from 'storybook/test'
+import { expect, spyOn, userEvent, waitFor, within } from 'storybook/test'
 
 import { SessionRow } from '#components/agent-session/session-row'
+import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { AgentSession } from '#hooks/use-agent-sessions'
 
 // Kept relative to `Date.now()` (not a fixed ISO literal) so this session
@@ -23,9 +24,26 @@ const baseSession: AgentSession = {
   endedAt: null,
 }
 
-function SessionRowStory(props: React.ComponentProps<typeof SessionRow>) {
+function SessionRowStory({
+  localContext,
+  focusUrlTemplate,
+  resumeUrlTemplate,
+  ...props
+}: React.ComponentProps<typeof SessionRow> & {
+  // Seeds the same localStorage key `useSessionOpenSettings` reads, reset on
+  // every render so stories stay deterministic regardless of run order.
+  localContext?: 'work' | 'personal' | undefined
+  focusUrlTemplate?: string | undefined
+  resumeUrlTemplate?: string | undefined
+}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
+  })
+
+  resetSessionOpenSettings({
+    localContext: localContext ?? null,
+    focusUrlTemplate: focusUrlTemplate ?? null,
+    resumeUrlTemplate: resumeUrlTemplate ?? null,
   })
 
   return (
@@ -201,5 +219,91 @@ export const CancelsEditOnEscape: Story = {
     // No msw handler is registered for this story, so a PATCH request here
     // would fail the story via the unhandled-request check in preview.tsx.
     await expect(canvas.getByText(baseSession.label ?? '')).toBeInTheDocument()
+  },
+}
+
+export const CopiesResumeCommandOnClick: Story = {
+  args: {
+    session: { ...baseSession, id: '11' },
+    isDimmed: false,
+  },
+  play: async ({ canvas }) => {
+    // Headless Chromium denies the clipboard-write permission by default, so
+    // this stubs it out rather than exercising a real write.
+    const writeText = spyOn(navigator.clipboard, 'writeText').mockResolvedValue(
+      undefined,
+    )
+
+    const button = canvas.getByRole('button', { name: 'Focus session' })
+    await userEvent.click(button)
+
+    await expect(writeText).toHaveBeenCalledWith("claude --resume 'session-1'")
+  },
+}
+
+export const ShowsCopiedFeedbackAfterCopy: Story = {
+  args: {
+    session: { ...baseSession, id: '15' },
+    isDimmed: false,
+  },
+  play: async ({ canvas }) => {
+    spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
+
+    const button = canvas.getByRole('button', { name: 'Focus session' })
+    await userEvent.click(button)
+
+    await waitFor(() => expect(button).toHaveAttribute('title', 'Copied'))
+  },
+}
+
+export const ShowsFailureWhenCopyRejects: Story = {
+  args: {
+    session: { ...baseSession, id: '14' },
+    isDimmed: false,
+  },
+  play: async ({ canvas }) => {
+    spyOn(navigator.clipboard, 'writeText').mockRejectedValue(
+      new Error('denied'),
+    )
+
+    const button = canvas.getByRole('button', { name: 'Focus session' })
+    await userEvent.click(button)
+
+    await waitFor(() =>
+      expect(button).toHaveAttribute('title', 'Copy failed — see console'),
+    )
+  },
+}
+
+export const NotOpenableFromAnotherContext: Story = {
+  args: {
+    session: { ...baseSession, id: '12' },
+    isDimmed: false,
+    localContext: 'personal',
+  },
+  play: async ({ canvas }) => {
+    await expect(
+      canvas.queryByRole('button', { name: /Focus session|Resume session/ }),
+    ).not.toBeInTheDocument()
+  },
+}
+
+export const OpensConfiguredUrlTemplate: Story = {
+  args: {
+    session: { ...baseSession, id: '13' },
+    isDimmed: false,
+    focusUrlTemplate: 'hammerspoon://cc-focus?session={sessionId}',
+  },
+  play: async ({ canvas }) => {
+    // Doesn't click — clicking would assign `window.location.href` and
+    // navigate the story away. The button's title already shows exactly
+    // what a click would open, which is enough to prove the template was
+    // picked and expanded correctly.
+    const button = canvas.getByRole('button', { name: 'Focus session' })
+
+    await expect(button).toHaveAttribute(
+      'title',
+      'Open: hammerspoon://cc-focus?session=session-1',
+    )
   },
 }
