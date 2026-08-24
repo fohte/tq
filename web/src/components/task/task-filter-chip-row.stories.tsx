@@ -261,28 +261,6 @@ export const OpenSortMenuAndChange: Story = {
   },
 }
 
-export const DesktopFilterMenuOpen: Story = {
-  tags: ['desktop-only'],
-  play: async ({ canvas, canvasElement }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '+ filter' }))
-
-    // Popup renders via portal, so query the entire document body. Only
-    // checks that the STATUS/PROJECT/LABEL sections render — picking an
-    // option is covered by task-filter-menu-content.stories.tsx's own
-    // SelectProject story.
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(
-      await body.findByRole('checkbox', { name: 'Completed' }),
-    ).toBeInTheDocument()
-    await expect(
-      body.getByRole('button', { name: 'Mobile App' }),
-    ).toBeInTheDocument()
-    await expect(
-      body.getByRole('button', { name: 'No label' }),
-    ).toBeInTheDocument()
-  },
-}
-
 // Typing a recognized `key:value` token into the trailing free-text box and
 // confirming lifts it out into its own chip instead of staying as literal
 // text — the token-input behavior this row is built around.

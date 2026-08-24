@@ -27,8 +27,8 @@ export const statusChipLabels: Record<
 }
 
 // One delete-or-set helper per structured ParsedQuery field, shared by
-// TaskFilterChipRow's per-axis chips and TaskFilterMenuContent's "+ filter"
-// sections so both build the exact same next-query shape.
+// TaskFilterChipRow's per-axis chips and its free-text token input so both
+// build the exact same next-query shape.
 export function withStatus(
   parsed: ParsedQuery,
   status: NonNullable<ParsedQuery['status']>,

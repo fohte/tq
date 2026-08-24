@@ -46,6 +46,21 @@ vi.mock('#hooks/use-labels', async (importOriginal) => {
   }
 })
 
+// The free-text input's autosuggest self-fetches via useSearchSuggestions
+// while the user is mid-token. Stub it the same way so typing a structured
+// token never issues a real fetch.
+const mockUseSearchSuggestions = vi.fn()
+
+vi.mock('#hooks/use-search', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-search')>()
+  return {
+    ...actual,
+    useSearchSuggestions: (...args: unknown[]) =>
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+      mockUseSearchSuggestions(...args),
+  }
+})
+
 // GithubIssueLinkModal (always mounted, just closed) calls useNavigate
 // unconditionally, so a real router is required rather than a mocked one.
 // TaskList itself is bound to the real TasksRoute (Route.useSearch() /
@@ -100,20 +115,8 @@ beforeEach(() => {
   })
   mockUseProjects.mockReturnValue({ data: [] })
   mockUseLabels.mockReturnValue({ data: [] })
+  mockUseSearchSuggestions.mockReturnValue({ data: [] })
 })
-
-// FilterMenu picks the popover container in jsdom (test-setup.ts's
-// matchMedia mock defaults to desktop).
-async function openFilterMenu(user: ReturnType<typeof userEvent.setup>) {
-  const trigger = await screen.findByRole('button', { name: '+ filter' })
-  await user.click(trigger)
-  // The popup mounts after an async Floating UI position computation, so
-  // wait for an item inside it rather than assuming it's mounted
-  // synchronously once the click resolves. The STATUS section (and its
-  // "Todo" checkbox) is always rendered regardless of projects/labels, so
-  // it's a stable landmark.
-  await screen.findByRole('checkbox', { name: 'Todo' })
-}
 
 describe('TaskList sort selector', () => {
   it('defaults to "updated" and requests updated-sorted data on initial render', async () => {
@@ -205,8 +208,9 @@ describe('TaskList project filter selector', () => {
     const user = userEvent.setup()
     renderTaskList()
 
-    await openFilterMenu(user)
-    await user.click(screen.getByRole('button', { name: 'Website Redesign' }))
+    const input = await screen.findByRole('textbox', { name: 'Filter query' })
+    await user.type(input, 'project:proj-1')
+    await user.keyboard('{Enter}')
 
     expect(
       screen.getByRole('button', { name: 'project Website Redesign' }),
@@ -312,8 +316,9 @@ describe('TaskList URL query encoding', () => {
     })
     const { router } = renderTaskList()
 
-    await openFilterMenu(user)
-    await user.click(screen.getByRole('button', { name: 'Website Redesign' }))
+    const input = await screen.findByRole('textbox', { name: 'Filter query' })
+    await user.type(input, 'project:proj-1')
+    await user.keyboard('{Enter}')
 
     expect(router.state.location.search).toEqual({
       q: 'is:todo is:in_progress project:proj-1 sort:updated',
@@ -324,7 +329,6 @@ describe('TaskList URL query encoding', () => {
     mockUseProjects.mockReturnValue({
       data: [{ id: 'proj-1', title: 'Website Redesign' }],
     })
-    const user = userEvent.setup()
     // Asserts against the rendered filter state (not router.state.location
     // .search): TanStack Router only re-derives `location.search` from
     // validateSearch's `q` on the next navigate, so on this initial load the
@@ -345,12 +349,6 @@ describe('TaskList URL query encoding', () => {
     expect(
       screen.queryByRole('button', { name: /^is / }),
     ).not.toBeInTheDocument()
-
-    await openFilterMenu(user)
-    const checkedStates = ['Todo', 'In Progress', 'Completed'].map((name) =>
-      screen.getByRole('checkbox', { name }).getAttribute('aria-checked'),
-    )
-    expect(checkedStates).toEqual(['false', 'false', 'false'])
   })
 
   it('keeps a token none of the filter pickers understand when a known field changes', async () => {
