@@ -11,9 +11,9 @@ const STATUS_OPTIONS: { value: TaskStatusValue; label: string }[] = [
   { value: 'completed', label: 'Completed' },
 ]
 
-// Rendered both inside the applied `is` chip's own menu and inside the
-// `+ filter` panel's STATUS section, so ids are scoped per instance via
-// useId() to stay unique when both are mounted at once.
+// Rendered inside the applied `is` chip's own menu; ids are scoped per
+// instance via useId() to stay unique if multiple chips are ever open at
+// once.
 export function TaskStatusFilterFields({
   status,
   onStatusChange,

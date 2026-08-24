@@ -14,7 +14,7 @@ interface TaskFilterChipProps {
 // value part (e.g. "is  todo, doing ▾"), pressable like any other chip:
 // pressing it opens a FilterMenu scoped to just that axis, so changing the
 // value or removing the condition both happen in the same place instead of
-// removing the chip and reopening `+ filter`.
+// leaving the chip to re-add the condition elsewhere.
 export function TaskFilterChip({
   attribute,
   value,

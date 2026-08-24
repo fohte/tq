@@ -129,8 +129,8 @@ export const ParentIdChip: Story = {
 }
 
 // Every applied filter chip opens a menu scoped to just that axis, where
-// both changing the value and removing the condition happen — no more
-// removing the chip and reopening `+ filter` to pick a different value.
+// both changing the value and removing the condition happen — no need to
+// leave the chip and re-add the condition elsewhere.
 export const OpenStatusMenuAndUncheck: Story = {
   tags: ['desktop-only'],
   play: async ({ canvas, canvasElement, args }) => {
@@ -258,28 +258,6 @@ export const OpenSortMenuAndChange: Story = {
     await expect(args.onQueryChange).toHaveBeenCalledWith(
       'is:todo is:in_progress sort:created',
     )
-  },
-}
-
-export const DesktopFilterMenuOpen: Story = {
-  tags: ['desktop-only'],
-  play: async ({ canvas, canvasElement }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '+ filter' }))
-
-    // Popup renders via portal, so query the entire document body. Only
-    // checks that the STATUS/PROJECT/LABEL sections render — picking an
-    // option is covered by task-filter-menu-content.stories.tsx's own
-    // SelectProject story.
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(
-      await body.findByRole('checkbox', { name: 'Completed' }),
-    ).toBeInTheDocument()
-    await expect(
-      body.getByRole('button', { name: 'Mobile App' }),
-    ).toBeInTheDocument()
-    await expect(
-      body.getByRole('button', { name: 'No label' }),
-    ).toBeInTheDocument()
   },
 }
 

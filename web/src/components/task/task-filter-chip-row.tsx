@@ -3,15 +3,12 @@ import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
 
 import { TaskFilterChip } from '#components/task/task-filter-chip'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
-import { TaskFilterMenuContent } from '#components/task/task-filter-menu-content'
 import { TaskLabelFilterFields } from '#components/task/task-label-filter-fields'
 import { TaskProjectFilterFields } from '#components/task/task-project-filter-fields'
 import { TaskSortFilterFields } from '#components/task/task-sort-filter-fields'
 import { TaskStatusFilterFields } from '#components/task/task-status-filter-fields'
 import { Button } from '#components/ui/button'
 import { Checkbox } from '#components/ui/checkbox'
-import { FilterMenu } from '#components/ui/filter-menu'
-import { useIsDesktop } from '#hooks/use-is-desktop'
 import type { Project } from '#hooks/use-projects'
 import { useTask } from '#hooks/use-task-queries'
 import {
@@ -42,8 +39,6 @@ export function TaskFilterChipRow({
   parsed,
   projects,
 }: TaskFilterChipRowProps) {
-  const isDesktop = useIsDesktop()
-
   const sortBy = parsed.sortBy ?? 'updated'
   // The chip label falls back to the raw value for a sort the picker below
   // doesn't offer (e.g. a hand-edited `sort:due` in the URL), but the
@@ -214,19 +209,6 @@ export function TaskFilterChipRow({
             </Button>
           </TaskFilterChip>
         )}
-
-        <FilterMenu
-          trigger="+ filter"
-          triggerClassName={cn('inline-flex shrink-0', filterTriggerClassName)}
-          title="Filter"
-        >
-          <TaskFilterMenuContent
-            parsed={parsed}
-            onQueryChange={onQueryChange}
-            projects={projects}
-            showContext={!isDesktop}
-          />
-        </FilterMenu>
 
         <TaskFilterFreeTextInput
           id={freeTextInputId}
