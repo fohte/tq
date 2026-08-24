@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { expect, waitFor } from 'storybook/test'
+import { expect, userEvent } from 'storybook/test'
 
 import type { TreeTaskGridRowProps } from '#components/task/tree-task-grid-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
@@ -625,14 +625,22 @@ export const Hovered: Story = {
     )
     console.log('DEBUG stylesheet count', document.styleSheets.length)
 
+    // A prior story's play function can leave the real pointer resting over
+    // this row's on-screen position, which genuinely satisfies `:hover` here
+    // before any interaction of our own — move the pointer away first so the
+    // check below starts from a known unhovered state.
+    await userEvent.unhover(desktopTrigger)
+    console.log(
+      'DEBUG matches(:hover) after unhover',
+      desktopTrigger.closest('.group')?.matches(':hover'),
+    )
+
     // `userEvent.hover()` dispatches synthetic pointer events, which real
     // browsers don't honor for `:hover`/`group-hover` matching — the trigger
     // reveals on focus too, so drive it with a real focus change instead.
-    // waitFor absorbs the CI-only race where this check runs before the
-    // Tailwind CSS injected for the story's `opacity-0` class takes effect.
-    await waitFor(() => expect(desktopTrigger).not.toBeVisible())
+    await expect(desktopTrigger).not.toBeVisible()
     desktopTrigger.focus()
-    await waitFor(() => expect(desktopTrigger).toBeVisible())
+    await expect(desktopTrigger).toBeVisible()
   },
 }
 
