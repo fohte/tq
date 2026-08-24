@@ -12,7 +12,10 @@ allowBuilds:
   unrs-resolver: true
   # required by cloudflare/wrangler-action's internal `pnpm add wrangler` step (Storybook deploy)
   workerd: true
-  # no-op unless package.json sets "msw.workerDirectory", which we don't use
+  # runs `msw init`, regenerating web/public/mockServiceWorker.js from the
+  # installed msw version — web/package.json sets "msw.workerDirectory".
+  # Reads the package.json at $INIT_CWD, so this only fires on a `pnpm
+  # install` run from web/, not from the workspace root.
   msw: true
 
 # Dodge short-lived supply-chain attacks (e.g. shai-hulud, tinycolor) by
