@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { expect } from 'storybook/test'
+import { expect, waitFor } from 'storybook/test'
 
 import type { TreeTaskGridRowProps } from '#components/task/tree-task-grid-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
@@ -610,9 +610,11 @@ export const Hovered: Story = {
     // `userEvent.hover()` dispatches synthetic pointer events, which real
     // browsers don't honor for `:hover`/`group-hover` matching — the trigger
     // reveals on focus too, so drive it with a real focus change instead.
-    await expect(desktopTrigger).not.toBeVisible()
+    // waitFor absorbs the CI-only race where this check runs before the
+    // Tailwind CSS injected for the story's `opacity-0` class takes effect.
+    await waitFor(() => expect(desktopTrigger).not.toBeVisible())
     desktopTrigger.focus()
-    await expect(desktopTrigger).toBeVisible()
+    await waitFor(() => expect(desktopTrigger).toBeVisible())
   },
 }
 
