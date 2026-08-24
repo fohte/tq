@@ -2,8 +2,22 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, waitFor, within } from 'storybook/test'
 
 import { SessionOpenSettingsPanel } from '#components/settings/session-open-settings-panel'
+import { STORAGE_KEY } from '#hooks/use-session-open-settings'
 
+// Reset on every render so this story's initial state and its own
+// `TypingAFocusTemplateUpdatesTheInput` assertion stay deterministic
+// regardless of what else last wrote to this key in the same browser
+// context (mirrors session-row.stories.tsx's `SessionRowStory`).
 function WrappedSessionOpenSettingsPanel() {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({
+      localContext: null,
+      focusUrlTemplate: null,
+      resumeUrlTemplate: null,
+    }),
+  )
+
   return (
     <div className="w-3xl">
       <SessionOpenSettingsPanel />

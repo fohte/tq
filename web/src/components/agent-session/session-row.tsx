@@ -138,12 +138,18 @@ function SessionOpenButton({
       size="icon-xs"
       onClick={() => {
         if (action.kind === 'copy') {
-          void navigator.clipboard.writeText(action.text)
-          setCopied(true)
-          if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
-          copyTimerRef.current = setTimeout(() => {
-            setCopied(false)
-          }, COPY_FEEDBACK_MS)
+          navigator.clipboard.writeText(action.text).then(
+            () => {
+              setCopied(true)
+              if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+              copyTimerRef.current = setTimeout(() => {
+                setCopied(false)
+              }, COPY_FEEDBACK_MS)
+            },
+            (error: unknown) => {
+              console.error('Failed to copy resume command', error)
+            },
+          )
         } else {
           window.location.href = action.url
         }

@@ -1,9 +1,10 @@
 import { Result } from 'neverthrow'
 import { useState } from 'react'
 
+import { getStorageItem, setStorageItem } from '#lib/local-storage'
 import type { SessionOpenSettings } from '#lib/session-open'
 
-const STORAGE_KEY = 'tq:session-open-settings'
+export const STORAGE_KEY = 'tq:session-open-settings'
 
 const DEFAULT_SETTINGS: SessionOpenSettings = {
   localContext: null,
@@ -11,12 +12,6 @@ const DEFAULT_SETTINGS: SessionOpenSettings = {
   resumeUrlTemplate: null,
 }
 
-const getStorageItem = Result.fromThrowable((key: string) =>
-  localStorage.getItem(key),
-)
-const setStorageItem = Result.fromThrowable((key: string, value: string) => {
-  localStorage.setItem(key, value)
-})
 const parseJson = Result.fromThrowable(
   (raw: string) => JSON.parse(raw) as unknown,
 )

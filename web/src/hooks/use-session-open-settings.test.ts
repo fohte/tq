@@ -51,7 +51,7 @@ describe('useSessionOpenSettings', () => {
     })
   })
 
-  it('persists a partial update and merges it with the existing settings', () => {
+  it('merges a partial update with the existing settings', () => {
     const { result } = renderHook(() => useSessionOpenSettings())
 
     act(() => {
@@ -63,7 +63,18 @@ describe('useSessionOpenSettings', () => {
       focusUrlTemplate: null,
       resumeUrlTemplate: null,
     })
-    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '')).toEqual({
+  })
+
+  it('persists an update so a newly mounted instance reads it back', () => {
+    const { result } = renderHook(() => useSessionOpenSettings())
+
+    act(() => {
+      result.current[1]({ localContext: 'personal' })
+    })
+
+    const { result: reloaded } = renderHook(() => useSessionOpenSettings())
+
+    expect(reloaded.current[0]).toEqual({
       localContext: 'personal',
       focusUrlTemplate: null,
       resumeUrlTemplate: null,

@@ -1,10 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
-import { expect, userEvent, waitFor, within } from 'storybook/test'
+import { expect, spyOn, userEvent, waitFor, within } from 'storybook/test'
 
 import { SessionRow } from '#components/agent-session/session-row'
 import type { AgentSession } from '#hooks/use-agent-sessions'
+import { STORAGE_KEY } from '#hooks/use-session-open-settings'
 
 // Kept relative to `Date.now()` (not a fixed ISO literal) so this session
 // keeps rendering as active (isAgentSessionActive) no matter when this story
@@ -36,7 +37,7 @@ function SessionRowStory({
   })
 
   localStorage.setItem(
-    'tq:session-open-settings',
+    STORAGE_KEY,
     JSON.stringify({
       localContext: localContext ?? null,
       focusUrlTemplate: null,
@@ -226,10 +227,17 @@ export const CopiesResumeCommandOnClick: Story = {
     isDimmed: false,
   },
   play: async ({ canvas }) => {
+    // Headless Chromium denies the clipboard-write permission by default, so
+    // this stubs it out rather than exercising a real write.
+    const writeText = spyOn(navigator.clipboard, 'writeText').mockResolvedValue(
+      undefined,
+    )
+
     const button = canvas.getByRole('button', { name: 'Focus session' })
     await userEvent.click(button)
 
     await waitFor(() => expect(button).toHaveAttribute('title', 'Copied'))
+    await expect(writeText).toHaveBeenCalledWith("claude --resume 'session-1'")
   },
 }
 

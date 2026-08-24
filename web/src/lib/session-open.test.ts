@@ -27,7 +27,10 @@ describe('resolveSessionOpenAction', () => {
       resumeUrlTemplate: null,
     })
 
-    expect(result).toEqual({ kind: 'copy', text: 'claude --resume session-1' })
+    expect(result).toEqual({
+      kind: 'copy',
+      text: "claude --resume 'session-1'",
+    })
   })
 
   it('falls back to the same copy command for an ended session', () => {
@@ -36,7 +39,34 @@ describe('resolveSessionOpenAction', () => {
       resumeUrlTemplate: null,
     })
 
-    expect(result).toEqual({ kind: 'copy', text: 'claude --resume session-1' })
+    expect(result).toEqual({
+      kind: 'copy',
+      text: "claude --resume 'session-1'",
+    })
+  })
+
+  it('shell-quotes a session id containing a space in the copy command', () => {
+    const result = resolveSessionOpenAction('a/b c', true, {
+      focusUrlTemplate: null,
+      resumeUrlTemplate: null,
+    })
+
+    expect(result).toEqual({
+      kind: 'copy',
+      text: "claude --resume 'a/b c'",
+    })
+  })
+
+  it('shell-quotes a session id containing a single quote in the copy command', () => {
+    const result = resolveSessionOpenAction("a'b", true, {
+      focusUrlTemplate: null,
+      resumeUrlTemplate: null,
+    })
+
+    expect(result).toEqual({
+      kind: 'copy',
+      text: "claude --resume 'a'\\''b'",
+    })
   })
 
   it('expands the focus template for an active session', () => {

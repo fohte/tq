@@ -13,6 +13,13 @@ export interface SessionOpenSettings {
 export type SessionOpenAction =
   { kind: 'url'; url: string } | { kind: 'copy'; text: string }
 
+// POSIX single-quote wrapping: end the quoted string, emit an escaped quote,
+// reopen it. The resume command is pasted straight into a shell, so a raw
+// sessionId containing a space or quote would otherwise word-split.
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`
+}
+
 export function canOpenSessionLocally(
   sessionContext: string,
   localContext: SessionOpenSettings['localContext'],
@@ -39,5 +46,5 @@ export function resolveSessionOpenAction(
     }
   }
 
-  return { kind: 'copy', text: `claude --resume ${sessionId}` }
+  return { kind: 'copy', text: `claude --resume ${shellQuote(sessionId)}` }
 }
