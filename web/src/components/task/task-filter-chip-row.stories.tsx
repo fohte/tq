@@ -64,7 +64,6 @@ const meta = {
     ),
   ],
   args: {
-    query: 'is:todo is:in_progress sort:updated',
     onQueryChange: fn(),
     parsed: defaultParsed,
     projects,
@@ -112,9 +111,14 @@ export const HasPagesChip: Story = {
   },
 }
 
-export const FreeTextChips: Story = {
+export const FreeTextInInput: Story = {
   args: {
     parsed: { ...defaultParsed, freeText: 'foo bar' },
+  },
+  play: async ({ canvas }) => {
+    await expect(
+      canvas.getByRole('textbox', { name: 'Filter query' }),
+    ).toHaveValue('foo bar')
   },
 }
 
@@ -223,14 +227,20 @@ export const OpenParentMenuAndClear: Story = {
   },
 }
 
-export const RemoveFreeTextWordChip: Story = {
+export const EditFreeTextDirectly: Story = {
   args: {
     parsed: { ...defaultParsed, freeText: 'foo bar' },
   },
   play: async ({ canvas, args }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'foo ×' }))
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
+    // Overwrite the whole value instead of appending, so the result doesn't
+    // depend on where the browser places the caret after a click.
+    await userEvent.clear(input)
+    await userEvent.type(input, 'foo')
+    await userEvent.tab()
+
     await expect(args.onQueryChange).toHaveBeenCalledWith(
-      'bar is:todo is:in_progress sort:updated',
+      'foo is:todo is:in_progress sort:updated',
     )
   },
 }
@@ -273,64 +283,83 @@ export const DesktopFilterMenuOpen: Story = {
   },
 }
 
-// PC only: clicking the `>` trigger swaps the chip list for the raw query
-// input, pre-filled with the current query. The trigger itself is `hidden
-// md:inline-flex` with no mobile equivalent, so edit mode is unreachable
-// below the `md` breakpoint — CSF's static tags parser requires a literal
-// here, not the imported DESKTOP_ONLY_TAG constant.
-export const EnterEditModeOnDesktop: Story = {
-  tags: ['desktop-only'],
-  play: async ({ canvas }) => {
-    await userEvent.click(
-      canvas.getByRole('button', { name: 'Edit filter query' }),
-    )
-
-    await expect(
-      canvas.getByRole('textbox', { name: 'Edit filter query' }),
-    ).toHaveValue('is:todo is:in_progress sort:updated')
+// Typing a recognized `key:value` token into the trailing free-text box and
+// confirming lifts it out into its own chip instead of staying as literal
+// text — the token-input behavior this row is built around.
+export const TypingStructuredTokenLiftsIntoChip: Story = {
+  args: {
+    parsed: { freeText: '', sortBy: 'updated' },
   },
-}
-
-// Also desktop-only: reaches edit mode via the same PC-only trigger as
-// EnterEditModeOnDesktop above.
-export const CommitEditOnBlur: Story = {
-  tags: ['desktop-only'],
   play: async ({ canvas, args }) => {
-    await userEvent.click(
-      canvas.getByRole('button', { name: 'Edit filter query' }),
-    )
-
-    const input = canvas.getByRole('textbox', { name: 'Edit filter query' })
-    await userEvent.clear(input)
-    await userEvent.type(input, 'sort:created has:pages')
-    await userEvent.tab()
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
+    await userEvent.type(input, 'has:pages')
+    await userEvent.keyboard('{Enter}')
 
     await expect(args.onQueryChange).toHaveBeenCalledWith(
-      'sort:created has:pages',
+      'has:pages sort:updated',
     )
-    // Back to the chip display once the edit commits.
-    await expect(
-      canvas.queryByRole('textbox', { name: 'Edit filter query' }),
-    ).not.toBeInTheDocument()
   },
 }
 
-// Also desktop-only: reaches edit mode via the same PC-only trigger as
-// EnterEditModeOnDesktop above.
-export const CancelEditOnEscape: Story = {
-  tags: ['desktop-only'],
+// Committing a `key:value` token that's already applied (e.g. `is:todo` when
+// the status chip already shows it) must not duplicate it — the merge
+// dedupes against the currently-applied status array instead of blindly
+// concatenating and re-parsing the whole query string.
+export const TypingAlreadyAppliedStatusTokenDoesNotDuplicate: Story = {
   play: async ({ canvas, args }) => {
-    await userEvent.click(
-      canvas.getByRole('button', { name: 'Edit filter query' }),
-    )
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
+    await userEvent.type(input, 'is:todo')
+    await userEvent.keyboard('{Enter}')
 
-    const input = canvas.getByRole('textbox', { name: 'Edit filter query' })
-    await userEvent.type(input, ' has:pages')
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      'is:todo is:in_progress sort:updated',
+    )
+  },
+}
+
+export const EscapeResetsFreeTextInput: Story = {
+  play: async ({ canvas, args }) => {
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
+    await userEvent.type(input, 'has:pages')
     await userEvent.keyboard('{Escape}')
 
+    await expect(input).toHaveValue('')
     await expect(args.onQueryChange).not.toHaveBeenCalled()
-    await expect(
-      canvas.queryByRole('textbox', { name: 'Edit filter query' }),
-    ).not.toBeInTheDocument()
+  },
+}
+
+// Backspace at the start of the (empty) free-text input clears whichever
+// applied condition sits closest to it, without requiring a trip through
+// that chip's own menu.
+export const BackspaceOnEmptyInputRemovesLastChip: Story = {
+  args: {
+    parsed: { ...defaultParsed, label: 'dev:tq' },
+  },
+  play: async ({ canvas, args }) => {
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
+    await userEvent.click(input)
+    await userEvent.keyboard('{Backspace}')
+
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      'is:todo is:in_progress sort:updated',
+    )
+  },
+}
+
+// Pins the priority order documented on removeLastChip: with both a parent
+// and a label chip applied, Backspace clears the parent chip (closest to
+// the input) and leaves the label chip untouched.
+export const BackspaceOnEmptyInputRemovesParentBeforeLabel: Story = {
+  args: {
+    parsed: { ...defaultParsed, parentId: 'parent-abc', label: 'dev:tq' },
+  },
+  play: async ({ canvas, args }) => {
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
+    await userEvent.click(input)
+    await userEvent.keyboard('{Backspace}')
+
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      'is:todo is:in_progress label:dev:tq sort:updated',
+    )
   },
 }

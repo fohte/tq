@@ -1,17 +1,15 @@
 import type { ParsedQuery } from 'api/search-query-parser'
-import { buildSearchQuery } from 'api/search-query-parser'
-import { useState } from 'react'
+import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
 
 import { TaskFilterChip } from '#components/task/task-filter-chip'
+import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
 import { TaskFilterMenuContent } from '#components/task/task-filter-menu-content'
-import { TaskFilterQueryInput } from '#components/task/task-filter-query-input'
 import { TaskLabelFilterFields } from '#components/task/task-label-filter-fields'
 import { TaskProjectFilterFields } from '#components/task/task-project-filter-fields'
 import { TaskSortFilterFields } from '#components/task/task-sort-filter-fields'
 import { TaskStatusFilterFields } from '#components/task/task-status-filter-fields'
 import { Button } from '#components/ui/button'
 import { Checkbox } from '#components/ui/checkbox'
-import { Chip } from '#components/ui/chip'
 import { FilterMenu } from '#components/ui/filter-menu'
 import { useIsDesktop } from '#hooks/use-is-desktop'
 import type { Project } from '#hooks/use-projects'
@@ -20,7 +18,9 @@ import {
   sortLabels,
   sortOptionValues,
   statusChipLabels,
+  withHasPages,
   withLabel,
+  withParentId,
   withProjectId,
   withStatus,
 } from '#lib/tasks-query'
@@ -29,20 +29,19 @@ import { cn } from '#lib/utils'
 const filterTriggerClassName =
   'shrink-0 cursor-pointer items-center gap-1 border border-border px-1 font-mono text-2xs text-muted-foreground outline-none hover:text-foreground'
 
+const freeTextInputId = 'task-filter-free-text'
+
 interface TaskFilterChipRowProps {
-  query: string
   onQueryChange: (query: string) => void
   parsed: ParsedQuery
   projects: Project[]
 }
 
 export function TaskFilterChipRow({
-  query,
   onQueryChange,
   parsed,
   projects,
 }: TaskFilterChipRowProps) {
-  const [isEditing, setIsEditing] = useState(false)
   const isDesktop = useIsDesktop()
 
   const sortBy = parsed.sortBy ?? 'updated'
@@ -55,10 +54,6 @@ export function TaskFilterChipRow({
   const selectedProject = projects.find(
     (project) => project.id === parsed.projectId,
   )
-  const freeTextWords =
-    parsed.freeText !== ''
-      ? parsed.freeText.split(/\s+/).filter((w) => w !== '')
-      : []
 
   const parentTaskQuery = useTask(parsed.parentId ?? '', {
     enabled: parsed.parentId != null,
@@ -68,38 +63,64 @@ export function TaskFilterChipRow({
     onQueryChange(buildSearchQuery(next))
   }
 
-  if (isEditing) {
-    return (
-      <div className="flex items-center gap-1.5 border-b border-border px-3 py-2">
-        <TaskFilterQueryInput
-          query={query}
-          onCommit={(newQuery) => {
-            onQueryChange(newQuery)
-            setIsEditing(false)
-          }}
-          onCancel={() => {
-            setIsEditing(false)
-          }}
-        />
-      </div>
-    )
+  // Merges newly typed free text back into the applied query: anything that
+  // parses as a structured `key:value` token is lifted out as a condition,
+  // the rest stays as parsed.freeText. Parses only the typed fragment (not
+  // parsed re-serialized as a string) so an already-applied `is:` value
+  // typed again unions into the existing status array instead of
+  // duplicating it — parseSearchQuery accumulates every `is:` token it
+  // sees, applied or not.
+  const commitFreeText = (freeText: string) => {
+    const typed = parseSearchQuery(freeText)
+    let next: ParsedQuery = { ...parsed, freeText: typed.freeText }
+    if (typed.status != null && typed.status.length > 0) {
+      next = withStatus(next, [
+        ...new Set([...(next.status ?? []), ...typed.status]),
+      ])
+    }
+    if (typed.label != null) next = withLabel(next, typed.label)
+    if (typed.context != null) next.context = typed.context
+    if (typed.hasPages === true) next = withHasPages(next, true)
+    if (typed.hasComments === true) next.hasComments = true
+    if (typed.parentId != null) next = withParentId(next, typed.parentId)
+    if (typed.projectId != null) next = withProjectId(next, typed.projectId)
+    if (typed.sortBy != null) next.sortBy = typed.sortBy
+    setParsed(next)
+  }
+
+  // Backspace on the empty free-text input clears whichever applied
+  // condition sits closest to it — i.e. the last chip rendered before the
+  // input, in reverse of the render order below.
+  const removeLastChip = () => {
+    if (parsed.parentId != null) {
+      setParsed(withParentId(parsed, undefined))
+    } else if (parsed.hasPages === true) {
+      setParsed(withHasPages(parsed, false))
+    } else if (parsed.label != null) {
+      setParsed(withLabel(parsed, undefined))
+    } else if (selectedProject != null) {
+      setParsed(withProjectId(parsed, ''))
+    } else if (parsed.status != null && parsed.status.length > 0) {
+      setParsed(withStatus(parsed, []))
+    }
   }
 
   return (
     <div className="flex items-start gap-1.5 border-b border-border px-3 py-2">
-      {/* PC: click to edit the query directly. Kept as its own flex item
-          (not inside the wrapping chip area below) so a future edit-mode
-          toggle can grow here without touching the chip/sort layout. */}
-      <button
-        type="button"
-        onClick={() => {
-          setIsEditing(true)
-        }}
-        className={cn('hidden shrink-0 md:inline-flex', filterTriggerClassName)}
+      {/* Always-visible left column marking the row as a token input.
+          Kept as its own flex item (not inside the wrapping chip area
+          below) so a wrapped second line hangs indented under it instead
+          of tucking underneath. Clicking it focuses the free-text input
+          via the native label/input association below — no JS needed. */}
+      <label
+        htmlFor={freeTextInputId}
+        className={cn(
+          'inline-flex shrink-0 cursor-text',
+          filterTriggerClassName,
+        )}
       >
         <span aria-hidden="true">&gt;</span>
-        <span className="sr-only">Edit filter query</span>
-      </button>
+      </label>
 
       {/* Wraps onto multiple lines as conditions accumulate, instead of
           scrolling horizontally and hiding chips off-screen. */}
@@ -159,10 +180,7 @@ export function TaskFilterChipRow({
                 id="task-filter-has-pages"
                 checked
                 onCheckedChange={(checked) => {
-                  const next = { ...parsed }
-                  if (checked) next.hasPages = true
-                  else delete next.hasPages
-                  setParsed(next)
+                  setParsed(withHasPages(parsed, checked))
                 }}
               />
               <label
@@ -189,30 +207,13 @@ export function TaskFilterChipRow({
               variant="outline"
               size="sm"
               onClick={() => {
-                const next = { ...parsed }
-                delete next.parentId
-                setParsed(next)
+                setParsed(withParentId(parsed, undefined))
               }}
             >
               Clear parent filter
             </Button>
           </TaskFilterChip>
         )}
-
-        {freeTextWords.map((word, index) => (
-          <Chip
-            key={`${word}-${String(index)}`}
-            as="button"
-            active
-            className="shrink-0"
-            onClick={() => {
-              const remaining = freeTextWords.filter((_, i) => i !== index)
-              setParsed({ ...parsed, freeText: remaining.join(' ') })
-            }}
-          >
-            {word} ×
-          </Chip>
-        ))}
 
         <FilterMenu
           trigger="+ filter"
@@ -226,6 +227,14 @@ export function TaskFilterChipRow({
             showContext={!isDesktop}
           />
         </FilterMenu>
+
+        <TaskFilterFreeTextInput
+          id={freeTextInputId}
+          freeText={parsed.freeText}
+          onCommit={commitFreeText}
+          onBackspaceEmpty={removeLastChip}
+          placeholder="Filter…"
+        />
       </div>
 
       {/* Pinned to the row's right edge, outside the wrapping chip area, so
