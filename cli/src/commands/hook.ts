@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises'
+import { appendFile, readFile } from 'node:fs/promises'
 
 import { upsertAgentSessionSchema } from 'api/schemas/agent-session'
 import type { Command } from 'commander'
@@ -43,6 +43,21 @@ async function readTranscript(
 ): Promise<string> {
   if (transcriptPath == null) return ''
   return readFile(transcriptPath, 'utf8').catch(() => '')
+}
+
+// CLAUDE_ENV_FILE is only set by Claude Code during SessionStart (and a few
+// other lifecycle hooks tq doesn't use). Appending an `export` line here
+// makes TQ_SESSION_ID available to every Bash command for the rest of the
+// session, which is how `tq link`/`tq unlink` find their own session_id:
+// https://code.claude.com/docs/en/hooks#persist-environment-variables
+async function persistSessionIdToEnvFile(sessionId: string): Promise<void> {
+  const envFile = process.env['CLAUDE_ENV_FILE']
+  if (envFile == null || envFile.length === 0) return
+
+  const quoted = sessionId.replace(/'/g, `'\\''`)
+  await appendFile(envFile, `export TQ_SESSION_ID='${quoted}'\n`, 'utf8').catch(
+    () => undefined,
+  )
 }
 
 export function registerHookCommands(
@@ -98,6 +113,10 @@ async function reportHookEvent(
 
   const input = hookInputSchema.safeParse(parsed.value)
   if (!input.success) return
+
+  if (event === 'SessionStart') {
+    await persistSessionIdToEnvFile(input.data.session_id)
+  }
 
   const transcript = await readTranscript(input.data.transcript_path)
   const { label, lastMessage } = resolveSessionLabel(transcript, input.data.cwd)

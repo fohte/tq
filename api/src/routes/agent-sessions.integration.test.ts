@@ -404,6 +404,42 @@ describe('agent sessions API', () => {
       ])
     })
   })
+
+  describe('GET /api/agent-sessions/by-session/:provider/:sessionId', () => {
+    it('resolves a session by provider and session id', async () => {
+      const created = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'session-1',
+        cwd: '/home/fohte/project',
+        context: 'work',
+        label: 'A label',
+        lastMessage: 'A message',
+      })
+
+      const res = await app.request(
+        '/api/agent-sessions/by-session/claude_code/session-1',
+      )
+
+      expect(res.status).toBe(200)
+      expect(await jsonBody<AgentSessionResponse>(res)).toEqual(created)
+    })
+
+    it('returns 404 for a non-existent session id', async () => {
+      const res = await app.request(
+        '/api/agent-sessions/by-session/claude_code/nonexistent',
+      )
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 404 for an unknown provider', async () => {
+      const res = await app.request(
+        '/api/agent-sessions/by-session/other_provider/session-1',
+      )
+
+      expect(res.status).toBe(404)
+    })
+  })
 })
 
 interface UpsertSessionInput {
