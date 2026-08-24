@@ -607,6 +607,24 @@ export const Hovered: Story = {
       'row-actions trigger not found',
     )
 
+    // TEMP DEBUG
+    console.log('DEBUG opacity', getComputedStyle(desktopTrigger).opacity)
+    console.log('DEBUG display', getComputedStyle(desktopTrigger).display)
+    console.log('DEBUG matches(:hover)', desktopTrigger.matches(':hover'))
+    console.log(
+      'DEBUG matches(:focus-visible)',
+      desktopTrigger.matches(':focus-visible'),
+    )
+    console.log(
+      'DEBUG matches(group-hover parent :hover)',
+      desktopTrigger.closest('.group')?.matches(':hover'),
+    )
+    console.log(
+      'DEBUG data-popup-open',
+      desktopTrigger.getAttribute('data-popup-open'),
+    )
+    console.log('DEBUG stylesheet count', document.styleSheets.length)
+
     // `userEvent.hover()` dispatches synthetic pointer events, which real
     // browsers don't honor for `:hover`/`group-hover` matching — the trigger
     // reveals on focus too, so drive it with a real focus change instead.
