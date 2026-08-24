@@ -32,6 +32,7 @@ import { SectionHeading } from '#components/ui/section-heading'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
 import { useNewTaskShortcutListener } from '#hooks/use-new-task-shortcut'
 import { useProjects } from '#hooks/use-projects'
+import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
 import type { TreeNode } from '#hooks/use-tasks'
 import { useUpdateTaskParent } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
@@ -163,6 +164,7 @@ export function TaskList() {
     tree: filteredTreeData,
     tasks,
   } = useFilteredTaskTree({ q })
+  const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
   const treeOutliner = useTreeOutliner(filteredTreeData, { enabled: true })
   const updateTaskParent = useUpdateTaskParent()
 
@@ -310,6 +312,7 @@ export function TaskList() {
                 <TreeTaskGridRow
                   key={node.id}
                   node={node}
+                  sessionsByTaskId={sessionsByTaskId}
                   isExpanded={treeOutliner.isExpanded}
                   onToggleExpand={treeOutliner.toggleExpand}
                   selectedRowId={treeOutliner.selectedRowId}

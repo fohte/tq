@@ -21,6 +21,10 @@ interface AgentSessionResponse {
   endedAt: string | null
 }
 
+interface TaskAgentSessionResponse extends AgentSessionResponse {
+  taskId: string
+}
+
 function normalizeSession(session: AgentSessionResponse) {
   return {
     ...session,
@@ -311,6 +315,88 @@ describe('agent sessions API', () => {
     })
   })
 
+  describe('GET /api/agent-sessions/by-task', () => {
+    it('returns an empty list when no sessions are linked', async () => {
+      const res = await app.request('/api/agent-sessions/by-task')
+
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual([])
+    })
+
+    it('returns both sessions linked to a single task', async () => {
+      const task = await createTask('My task')
+      const older = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'session-1',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-01T00:00:00.000Z',
+      )
+      const newer = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'session-2',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-02T00:00:00.000Z',
+      )
+      await postLink(task.id, older.id)
+      await postLink(task.id, newer.id)
+
+      const res = await app.request('/api/agent-sessions/by-task')
+
+      expect(res.status).toBe(200)
+      expect(await jsonBody<TaskAgentSessionResponse[]>(res)).toEqual([
+        { taskId: task.id, ...newer },
+        { taskId: task.id, ...older },
+      ])
+    })
+
+    it('returns each session with the taskId of the task it is linked to', async () => {
+      const task1 = await createTask('Task 1')
+      const task2 = await createTask('Task 2')
+      const olderSession = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'session-1',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-01T00:00:00.000Z',
+      )
+      const newerSession = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'session-2',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-02T00:00:00.000Z',
+      )
+      await postLink(task1.id, olderSession.id)
+      await postLink(task2.id, newerSession.id)
+
+      const res = await app.request('/api/agent-sessions/by-task')
+
+      expect(res.status).toBe(200)
+      expect(await jsonBody<TaskAgentSessionResponse[]>(res)).toEqual([
+        { taskId: task2.id, ...newerSession },
+        { taskId: task1.id, ...olderSession },
+      ])
+    })
+  })
+
   describe('PATCH /api/agent-sessions/:id', () => {
     it('sets the custom label', async () => {
       const created = await upsertSessionAndGetBody({
@@ -431,6 +517,34 @@ async function upsertSessionAtTime(input: UpsertSessionInput, time: string) {
   const body = await upsertSessionAndGetBody(input)
   vi.useRealTimers()
   return body
+}
+
+async function createTask(title: string) {
+  const res = await app.request('/api/tasks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  })
+  if (res.status !== 201) {
+    throw new Error(
+      `Failed to create task: ${String(res.status)} ${await res.text()}`,
+    )
+  }
+  return jsonBody<{ id: string; number: number; title: string }>(res)
+}
+
+async function postLink(taskId: string, agentSessionId: string) {
+  const res = await app.request(`/api/tasks/${taskId}/agent-sessions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ agentSessionId }),
+  })
+  if (res.status !== 200 && res.status !== 201) {
+    throw new Error(
+      `Failed to link agent session: ${String(res.status)} ${await res.text()}`,
+    )
+  }
+  return res
 }
 
 function patchCustomLabel(id: string, customLabel: string | null) {

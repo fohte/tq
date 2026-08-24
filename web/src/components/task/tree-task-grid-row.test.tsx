@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ROW_INDENT_CLASS_NAME } from '#components/task/task-row-shared'
 import { makeNode } from '#components/task/task-row-test-fixtures'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
+import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TreeNode } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { atIndex } from '#lib/test-utils'
@@ -102,12 +103,19 @@ vi.mock('#components/task/task-status-picker', () => ({
 // Expand/collapse, selection, and the outliner input are all owned by
 // useTreeOutliner rather than local state, so the row under test is driven
 // through the real hook instead of a hand-rolled prop harness.
-function TreeHarness({ node }: { node: TreeNode }) {
+function TreeHarness({
+  node,
+  sessionsByTaskId = new Map(),
+}: {
+  node: TreeNode
+  sessionsByTaskId?: ReadonlyMap<string, TaskAgentSession[]>
+}) {
   const outliner = useTreeOutliner([node], { enabled: true })
 
   return (
     <TreeTaskGridRow
       node={node}
+      sessionsByTaskId={sessionsByTaskId}
       isExpanded={outliner.isExpanded}
       onToggleExpand={outliner.toggleExpand}
       selectedRowId={outliner.selectedRowId}
@@ -125,13 +133,18 @@ function TreeHarness({ node }: { node: TreeNode }) {
 // The router's first route match resolves asynchronously even with no
 // loaders, so router.load() is awaited before render() to avoid an initial
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
-async function renderTree(node: TreeNode) {
+async function renderTree(
+  node: TreeNode,
+  sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]> = new Map(),
+) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   const rootRoute = createRootRoute({
     validateSearch: (search: Record<string, unknown>) => search,
-    component: () => <TreeHarness node={node} />,
+    component: () => (
+      <TreeHarness node={node} sessionsByTaskId={sessionsByTaskId} />
+    ),
   })
   // A tag token navigates to /tasks, so that route must be registered for
   // the navigation to resolve instead of erroring on an unmatched route.
@@ -346,6 +359,42 @@ describe('TreeTaskGridRow', () => {
     await renderTree(leaf)
     expect(screen.queryByLabelText('Collapse')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Expand')).not.toBeInTheDocument()
+  })
+
+  it('shows an expand toggle and toggles session visibility for a childless task with sessions', async () => {
+    const user = userEvent.setup()
+    const node = makeNode({ id: 'parent-1', children: [] })
+    const session: TaskAgentSession = {
+      id: 'session-1',
+      taskId: 'parent-1',
+      provider: 'claude_code',
+      sessionId: 'sess-1',
+      context: 'work',
+      cwd: '/home/fohte/project',
+      label: 'Fix bug',
+      lastMessage: null,
+      customLabel: null,
+      startedAt: '2026-03-20T00:00:00.000Z',
+      lastActiveAt: new Date().toISOString(),
+      endedAt: null,
+    }
+    await renderTree(node, new Map([['parent-1', [session]]]))
+
+    // Expanded by default: session row visible, no collapsed-only badge
+    expect(screen.getByText('Fix bug')).toBeInTheDocument()
+    expect(screen.queryByTestId('active-session-count')).not.toBeInTheDocument()
+
+    await user.click(atIndex(screen.getAllByLabelText('Collapse'), 0))
+
+    // Collapsed: session row hidden, active count badge shown per layout
+    expect(screen.queryByText('Fix bug')).not.toBeInTheDocument()
+    expect(screen.getAllByTestId('active-session-count')).toHaveLength(2)
+
+    await user.click(atIndex(screen.getAllByLabelText('Expand'), 0))
+
+    // Expanded again: session row back, badge gone
+    expect(screen.getByText('Fix bug')).toBeInTheDocument()
+    expect(screen.queryByTestId('active-session-count')).not.toBeInTheDocument()
   })
 
   it('does not show a GitHub badge when there is no link', async () => {

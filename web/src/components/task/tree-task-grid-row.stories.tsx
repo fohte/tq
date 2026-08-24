@@ -6,6 +6,7 @@ import { expect } from 'storybook/test'
 
 import type { TreeTaskGridRowProps } from '#components/task/tree-task-grid-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
+import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TreeNode } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { emptyLabelsHandler, emptyTasksHandler } from '#lib/msw-test-handlers'
@@ -51,12 +52,19 @@ function Providers({ children }: { children: ReactNode }) {
 // Expand/collapse, selection, and the outliner input are all owned by
 // useTreeOutliner rather than local state, so interactive stories drive the
 // row through the real hook instead of a hand-rolled prop harness.
-function InteractiveTreeTaskGridRow({ node }: { node: TreeNode }) {
+function InteractiveTreeTaskGridRow({
+  node,
+  sessionsByTaskId = new Map(),
+}: {
+  node: TreeNode
+  sessionsByTaskId?: ReadonlyMap<string, TaskAgentSession[]>
+}) {
   const outliner = useTreeOutliner([node], { enabled: true })
 
   return (
     <TreeTaskGridRow
       node={node}
+      sessionsByTaskId={sessionsByTaskId}
       isExpanded={outliner.isExpanded}
       onToggleExpand={outliner.toggleExpand}
       selectedRowId={outliner.selectedRowId}
@@ -90,6 +98,7 @@ function StaticTreeTaskGridRow(
     <Providers>
       <div className="w-3xl">
         <TreeTaskGridRow
+          sessionsByTaskId={new Map()}
           isExpanded={() => true}
           onToggleExpand={() => {}}
           selectedRowId={null}
@@ -353,6 +362,78 @@ export const Nested: Story = {
       ],
       childCompletionCount: { completed: 0, total: 1 },
     },
+  },
+}
+
+// Kept relative to `Date.now()` (not a fixed ISO literal) so this session
+// keeps rendering as active (isAgentSessionActive) no matter when this story
+// runs.
+const activeSession: TaskAgentSession = {
+  id: '00000000-0000-0000-0000-0000000000a1',
+  taskId: baseTreeNode.id,
+  provider: 'claude_code',
+  sessionId: 'session-active',
+  context: 'work',
+  cwd: '/Users/fohte/ghq/github.com/fohte/tq',
+  label: 'Implement tree session rows',
+  lastMessage: 'Wiring up the sessions endpoint',
+  customLabel: null,
+  startedAt: new Date(Date.now() - 34 * 60_000).toISOString(),
+  lastActiveAt: new Date(Date.now() - 2 * 60_000).toISOString(),
+  endedAt: null,
+}
+
+const endedSession: TaskAgentSession = {
+  ...activeSession,
+  id: '00000000-0000-0000-0000-0000000000a2',
+  sessionId: 'session-ended',
+  label: 'Write the release notes',
+  startedAt: '2026-08-20T09:00:00Z',
+  lastActiveAt: '2026-08-20T10:15:00Z',
+  endedAt: '2026-08-20T10:15:00Z',
+}
+
+export const WithActiveSessions: Story = {
+  args: { node: baseTreeNode },
+  render: () => (
+    <Providers>
+      <div className="w-3xl">
+        <InteractiveTreeTaskGridRow
+          node={{ ...baseTreeNode, title: 'Task with agent sessions' }}
+          sessionsByTaskId={
+            new Map([[baseTreeNode.id, [activeSession, endedSession]]])
+          }
+        />
+      </div>
+    </Providers>
+  ),
+  play: async ({ canvas }) => {
+    await expect(
+      canvas.getByText('Implement tree session rows'),
+    ).toBeInTheDocument()
+    await expect(
+      canvas.getByText('Write the release notes'),
+    ).toBeInTheDocument()
+  },
+}
+
+export const CollapsedWithActiveSessionBadge: Story = {
+  args: { node: baseTreeNode },
+  render: () => (
+    <StaticTreeTaskGridRow
+      node={{ ...baseTreeNode, title: 'Collapsed task with active sessions' }}
+      isExpanded={() => false}
+      sessionsByTaskId={
+        new Map([[baseTreeNode.id, [activeSession, endedSession]]])
+      }
+    />
+  ),
+  play: async ({ canvas }) => {
+    const badges = canvas.getAllByTestId('active-session-count')
+    await expect(badges).toHaveLength(2)
+    for (const badge of badges) {
+      await expect(badge).toHaveTextContent('1')
+    }
   },
 }
 
