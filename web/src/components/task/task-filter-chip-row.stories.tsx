@@ -129,8 +129,8 @@ export const ParentIdChip: Story = {
 }
 
 // Every applied filter chip opens a menu scoped to just that axis, where
-// both changing the value and removing the condition happen — no more
-// removing the chip and reopening `+ filter` to pick a different value.
+// both changing the value and removing the condition happen — no need to
+// leave the chip and re-add the condition elsewhere.
 export const OpenStatusMenuAndUncheck: Story = {
   tags: ['desktop-only'],
   play: async ({ canvas, canvasElement, args }) => {

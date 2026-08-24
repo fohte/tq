@@ -49,12 +49,19 @@ describe('BottomTabBar', () => {
     )
   })
 
-  it('renders the context filter switch', async () => {
+  it('renders the context filter switch, defaulting to "all" pressed', async () => {
     await renderBottomTabBar()
     expect(
-      screen.getByRole('button', { name: 'all', pressed: true }),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'work' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'personal' })).toBeInTheDocument()
+      screen
+        .getAllByRole('button', { name: /^(all|work|personal)$/ })
+        .map((button) => ({
+          name: button.textContent,
+          pressed: button.getAttribute('aria-pressed'),
+        })),
+    ).toEqual([
+      { name: 'all', pressed: 'true' },
+      { name: 'work', pressed: 'false' },
+      { name: 'personal', pressed: 'false' },
+    ])
   })
 })
