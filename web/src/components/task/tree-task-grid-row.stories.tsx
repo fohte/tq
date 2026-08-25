@@ -609,12 +609,13 @@ export const Hovered: Story = {
 
     // storybook/test's userEvent only dispatches synthetic (untrusted)
     // pointer events, which real browsers never honor for the native
-    // `:hover` pseudo-class — confirmed experimentally: even hovering
-    // directly onto this trigger via userEvent.hover() leaves both it and
-    // its `.group` ancestor not matching `:hover`. So it can't force-clear
-    // a prior story's real ambient hover left over on this shared browser
-    // tab either. Only assert the hidden-by-default precondition when
-    // `.group` genuinely isn't in the live `:hover` chain right now.
+    // `:hover` pseudo-class, so it can't force-clear a prior story's real
+    // ambient hover left over on this shared browser tab. Only assert the
+    // hidden-by-default precondition when `.group` genuinely isn't in the
+    // live `:hover` chain right now — on a run where it is, this story
+    // provides no regression coverage for the default-hidden behavior, but
+    // the focus-reveal assertion below still exercises the same
+    // opacity-driven reveal mechanism deterministically.
     const groupEl = desktopTrigger.closest('.group')
     const groupIsHovered = groupEl?.matches(':hover') ?? false
     if (!groupIsHovered) {
