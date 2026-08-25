@@ -631,20 +631,30 @@ export const Hovered: Story = {
     await userEvent.hover(document.body, hoverAwayFromRow)
 
     const canvasRect = canvasElement.getBoundingClientRect()
-    const bodyRect = document.body.getBoundingClientRect()
-    const docElRect = document.documentElement.getBoundingClientRect()
     const triggerRect = desktopTrigger.getBoundingClientRect()
+    const groupEl = desktopTrigger.closest('.group')
+    const groupRect = groupEl?.getBoundingClientRect()
+    const pointEl = document.elementFromPoint(
+      hoverAwayFromRow.position.x,
+      hoverAwayFromRow.position.y,
+    )
     console.log('DEBUG hover-away', {
       canvasRect: { top: canvasRect.top, bottom: canvasRect.bottom },
-      bodyRect: { top: bodyRect.top, bottom: bodyRect.bottom },
-      docElRect: { top: docElRect.top, bottom: docElRect.bottom },
+      groupRect: groupRect && { top: groupRect.top, bottom: groupRect.bottom },
+      groupTag: groupEl?.tagName,
+      groupClass: groupEl?.className,
+      groupContainsCanvas: groupEl && canvasElement.contains(groupEl),
+      canvasContainsGroup: groupEl && groupEl.contains(canvasElement),
       innerWidth: window.innerWidth,
       innerHeight: window.innerHeight,
-      scrollX: window.scrollX,
-      scrollY: window.scrollY,
       triggerRect: { top: triggerRect.top, left: triggerRect.left },
       triggerMatchesHover: desktopTrigger.matches(':hover'),
-      groupMatchesHover: desktopTrigger.closest('.group')?.matches(':hover'),
+      groupMatchesHover: groupEl?.matches(':hover'),
+      pointElTag: pointEl?.tagName,
+      pointElClass: pointEl?.className,
+      pointElIsGroup: pointEl === groupEl,
+      pointElInGroup: groupEl && pointEl && groupEl.contains(pointEl),
+      allGroupCount: document.querySelectorAll('.group').length,
       hoverAwayFromRow,
     })
 
