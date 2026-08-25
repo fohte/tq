@@ -2,8 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { expect } from 'storybook/test'
-import { userEvent } from 'vitest/browser'
+import { expect, userEvent } from 'storybook/test'
 
 import type { TreeTaskGridRowProps } from '#components/task/tree-task-grid-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
@@ -610,11 +609,10 @@ export const Hovered: Story = {
 
     // A prior story's play function can leave the real pointer resting over
     // this row's on-screen position, which genuinely satisfies `:hover` here
-    // before any interaction of our own. The row spans almost the full width
-    // of `<body>` near its top edge, so any x at y near 0 still lands inside
-    // it — move the pointer well below the row instead, which nothing else
-    // on this page occupies.
-    await userEvent.hover(document.body, { position: { x: 0, y: 500 } })
+    // before any interaction of our own. The row occupies only a thin strip
+    // near the top of the page, so hovering `<body>` at its default (center)
+    // point lands well below it and clears the stale hover.
+    await userEvent.hover(document.body)
 
     // The trigger reveals on focus too, so drive that with a real focus
     // change rather than a hover simulation.
