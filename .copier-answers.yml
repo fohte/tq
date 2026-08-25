@@ -5,7 +5,7 @@ description: 個人向けタスク管理ツール (task queue)
 is_public: true
 monorepo_node_workspace: true
 project_name: tq
-repo_id: ''
+repo_id: '1183869860'
 repo_language: ja
 subpackages:
   - name: web
