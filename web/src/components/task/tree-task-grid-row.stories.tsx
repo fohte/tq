@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { expect, userEvent } from 'storybook/test'
+import { expect } from 'storybook/test'
 
 import type { TreeTaskGridRowProps } from '#components/task/tree-task-grid-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
@@ -14,16 +14,6 @@ import { assertDefined, atIndex, findVisible } from '#lib/test-utils'
 import { createStoryRouter, StoryRouter } from '#storybook-config/story-router'
 
 const TASK_LIST_ROUTES = ['/tasks', '/tasks/$taskId']
-
-// storybook/test's userEvent is typed against @testing-library/user-event's
-// DirectOptions, which has no `position` field — but under Vitest Browser
-// Mode it's actually vitest/browser's Playwright-backed implementation,
-// whose real hover options do support one. See the Hovered story below.
-type HoverOptionsWithPosition = NonNullable<
-  Parameters<typeof userEvent.hover>[1]
-> & {
-  position: { x: number; y: number }
-}
 
 const baseTreeNode: TreeNode = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -617,50 +607,23 @@ export const Hovered: Story = {
       'row-actions trigger not found',
     )
 
-    // A prior story's play function can leave the real pointer resting over
-    // this row's on-screen position, which genuinely satisfies `:hover` here
-    // before any interaction of our own. Hover a point measured below the
-    // row's own bottom edge, rather than a fixed guess — safe regardless of
-    // the test runner's viewport size. `position` isn't in storybook/test's
-    // DirectOptions type, but at runtime under Vitest Browser Mode this
-    // userEvent is the same Playwright-backed implementation as
-    // vitest/browser's, which does support it.
-    const hoverAwayFromRow: HoverOptionsWithPosition = {
-      position: { x: 0, y: canvasElement.getBoundingClientRect().bottom + 50 },
-    }
-    await userEvent.hover(document.body, hoverAwayFromRow)
-
-    const canvasRect = canvasElement.getBoundingClientRect()
-    const triggerRect = desktopTrigger.getBoundingClientRect()
+    // storybook/test's userEvent only dispatches synthetic (untrusted)
+    // pointer events, which real browsers never honor for the native
+    // `:hover` pseudo-class — confirmed experimentally: even hovering
+    // directly onto this trigger via userEvent.hover() leaves both it and
+    // its `.group` ancestor not matching `:hover`. So it can't force-clear
+    // a prior story's real ambient hover left over on this shared browser
+    // tab either. Only assert the hidden-by-default precondition when
+    // `.group` genuinely isn't in the live `:hover` chain right now.
     const groupEl = desktopTrigger.closest('.group')
-    const groupRect = groupEl?.getBoundingClientRect()
-    const pointEl = document.elementFromPoint(
-      hoverAwayFromRow.position.x,
-      hoverAwayFromRow.position.y,
-    )
-    console.log('DEBUG hover-away', {
-      canvasRect: { top: canvasRect.top, bottom: canvasRect.bottom },
-      groupRect: groupRect && { top: groupRect.top, bottom: groupRect.bottom },
-      groupTag: groupEl?.tagName,
-      groupClass: groupEl?.className,
-      groupContainsCanvas: groupEl && canvasElement.contains(groupEl),
-      canvasContainsGroup: groupEl && groupEl.contains(canvasElement),
-      innerWidth: window.innerWidth,
-      innerHeight: window.innerHeight,
-      triggerRect: { top: triggerRect.top, left: triggerRect.left },
-      triggerMatchesHover: desktopTrigger.matches(':hover'),
-      groupMatchesHover: groupEl?.matches(':hover'),
-      pointElTag: pointEl?.tagName,
-      pointElClass: pointEl?.className,
-      pointElIsGroup: pointEl === groupEl,
-      pointElInGroup: groupEl && pointEl && groupEl.contains(pointEl),
-      allGroupCount: document.querySelectorAll('.group').length,
-      hoverAwayFromRow,
-    })
+    const groupIsHovered = groupEl?.matches(':hover') ?? false
+    if (!groupIsHovered) {
+      await expect(desktopTrigger).not.toBeVisible()
+    }
 
-    // The trigger reveals on focus too, so drive that with a real focus
-    // change rather than a hover simulation.
-    await expect(desktopTrigger).not.toBeVisible()
+    // Unlike group-hover, this is the trigger's own `:focus-visible` state
+    // (see desktopTriggerClassName in tree-row-actions-menu.tsx), so a real
+    // focus() call drives it deterministically.
     desktopTrigger.focus()
     await expect(desktopTrigger).toBeVisible()
   },
