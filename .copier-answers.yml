@@ -8,13 +8,13 @@ project_name: tq
 repo_id: ''
 repo_language: ja
 subpackages:
--   name: web
+  - name: web
     spa: true
     type: node
--   name: api
+  - name: api
     type: node
     web_app: true
--   name: cli
+  - name: cli
     type: node
 type: base
 use_release_please: false
