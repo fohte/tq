@@ -630,6 +630,24 @@ export const Hovered: Story = {
     }
     await userEvent.hover(document.body, hoverAwayFromRow)
 
+    const canvasRect = canvasElement.getBoundingClientRect()
+    const bodyRect = document.body.getBoundingClientRect()
+    const docElRect = document.documentElement.getBoundingClientRect()
+    const triggerRect = desktopTrigger.getBoundingClientRect()
+    console.log('DEBUG hover-away', {
+      canvasRect: { top: canvasRect.top, bottom: canvasRect.bottom },
+      bodyRect: { top: bodyRect.top, bottom: bodyRect.bottom },
+      docElRect: { top: docElRect.top, bottom: docElRect.bottom },
+      innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+      triggerRect: { top: triggerRect.top, left: triggerRect.left },
+      triggerMatchesHover: desktopTrigger.matches(':hover'),
+      groupMatchesHover: desktopTrigger.closest('.group')?.matches(':hover'),
+      hoverAwayFromRow,
+    })
+
     // The trigger reveals on focus too, so drive that with a real focus
     // change rather than a hover simulation.
     await expect(desktopTrigger).not.toBeVisible()
