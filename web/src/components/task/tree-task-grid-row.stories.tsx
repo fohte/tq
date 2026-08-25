@@ -15,6 +15,16 @@ import { createStoryRouter, StoryRouter } from '#storybook-config/story-router'
 
 const TASK_LIST_ROUTES = ['/tasks', '/tasks/$taskId']
 
+// storybook/test's userEvent is typed against @testing-library/user-event's
+// DirectOptions, which has no `position` field — but under Vitest Browser
+// Mode it's actually vitest/browser's Playwright-backed implementation,
+// whose real hover options do support one. See the Hovered story below.
+type HoverOptionsWithPosition = NonNullable<
+  Parameters<typeof userEvent.hover>[1]
+> & {
+  position: { x: number; y: number }
+}
+
 const baseTreeNode: TreeNode = {
   id: '00000000-0000-0000-0000-000000000001',
   number: 1,
@@ -609,10 +619,16 @@ export const Hovered: Story = {
 
     // A prior story's play function can leave the real pointer resting over
     // this row's on-screen position, which genuinely satisfies `:hover` here
-    // before any interaction of our own. The row occupies only a thin strip
-    // near the top of the page, so hovering `<body>` at its default (center)
-    // point lands well below it and clears the stale hover.
-    await userEvent.hover(document.body)
+    // before any interaction of our own. Hover a point measured below the
+    // row's own bottom edge, rather than a fixed guess — safe regardless of
+    // the test runner's viewport size. `position` isn't in storybook/test's
+    // DirectOptions type, but at runtime under Vitest Browser Mode this
+    // userEvent is the same Playwright-backed implementation as
+    // vitest/browser's, which does support it.
+    const hoverAwayFromRow: HoverOptionsWithPosition = {
+      position: { x: 0, y: canvasElement.getBoundingClientRect().bottom + 50 },
+    }
+    await userEvent.hover(document.body, hoverAwayFromRow)
 
     // The trigger reveals on focus too, so drive that with a real focus
     // change rather than a hover simulation.
