@@ -45,22 +45,19 @@ function fakeWidgetViewFactory(): CreateReactWidgetView {
     Decoration.widget(pos, () => document.createElement('span'), spec)
 }
 
-function docWithText(text: string) {
-  return schema.node('doc', null, [
-    schema.node('paragraph', null, [schema.text(text)]),
-  ])
-}
-
-// Used by the card-selection tests below: a trailing paragraph gives the
-// selection somewhere to sit that isn't the reference paragraph itself,
-// since a paragraph that's entirely one reference leaves no other position
-// in a single-paragraph doc.
+// A paragraph that's entirely one reference leaves no other position in a
+// single-paragraph doc for a selection to sit outside it, so tests needing
+// that use multiple paragraphs.
 function docWithParagraphs(...texts: string[]) {
   return schema.node(
     'doc',
     null,
     texts.map((text) => schema.node('paragraph', null, [schema.text(text)])),
   )
+}
+
+function docWithText(text: string) {
+  return docWithParagraphs(text)
 }
 
 async function buildPlugin(mode: 'view' | 'edit') {
@@ -151,10 +148,8 @@ describe('createInlineReferencePlugin', () => {
     expect(decorations).toEqual([])
   })
 
-  // These three each use a trailing second paragraph and place the
-  // selection at the doc's end (in that paragraph), so the reference
-  // paragraph's own card isn't suppressed by the selection-overlap check
-  // covered separately below.
+  // Selection sits in the trailing paragraph, outside the reference, so the
+  // selection-overlap check doesn't suppress this card.
   it('renders a card when a paragraph is exactly one reference', async () => {
     const doc = docWithParagraphs('@1', 'x')
     const decorations = await decorationsForDoc(
@@ -173,6 +168,8 @@ describe('createInlineReferencePlugin', () => {
     ])
   })
 
+  // Selection sits in the trailing paragraph, outside the reference, so the
+  // selection-overlap check doesn't suppress this card.
   it('renders a card when a paragraph is one reference plus surrounding whitespace, hiding the whole run', async () => {
     const doc = docWithParagraphs('  @1  ', 'x')
     const decorations = await decorationsForDoc(
@@ -191,6 +188,9 @@ describe('createInlineReferencePlugin', () => {
     ])
   })
 
+  // Selection sits in the trailing paragraph, outside the reference, so the
+  // selection-overlap check doesn't suppress this chip (this textblock is a
+  // heading, not a paragraph, so it's a chip rather than a card).
   it('does not render a card for a non-paragraph textblock, even when its whole text is one reference', async () => {
     const doc = schema.node('doc', null, [
       schema.node('heading', null, [schema.text('@1')]),
@@ -240,6 +240,17 @@ describe('createInlineReferencePlugin', () => {
       doc,
       'view',
       TextSelection.create(doc, 7),
+    )
+
+    expect(decorations).toEqual([])
+  })
+
+  it('suppresses the chip when a non-collapsed range selection straddles the match', async () => {
+    const doc = docWithText('see @1 here')
+    const decorations = await decorationsForDoc(
+      doc,
+      'view',
+      TextSelection.create(doc, 4, 8),
     )
 
     expect(decorations).toEqual([])
