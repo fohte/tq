@@ -142,3 +142,21 @@
 .milkdown-wrapper[data-view-mode='view'] .milkdown-block-handle {
   display: none;
 }
+
+/* Image source reveal (see lib/image-source-reveal/plugin.tsx): while the
+   cursor is on an image's line, its rendered form (Crepe's own
+   `.milkdown-image-inline`/`.milkdown-image-block` NodeView) is hidden and
+   replaced by an editable `![alt](src "title")` text overlay. */
+.milkdown-image-inline.image-source-active,
+.milkdown-image-block.image-source-active {
+  display: none;
+}
+
+.image-source-text {
+  display: inline-block;
+  width: 100%;
+  outline: none;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: var(--font-editor);
+}
