@@ -11,7 +11,10 @@ const schema = new Schema({
     text: { group: 'inline' },
     hard_break: { inline: true, group: 'inline' },
   },
-  marks: {},
+  marks: {
+    inlineCode: {},
+    link: { attrs: { href: {}, title: { default: null } } },
+  },
 })
 
 function describeRun(run: ReturnType<typeof collectTextBlockRuns>[number]) {
@@ -95,6 +98,68 @@ describe('collectTextBlockRuns', () => {
       text: 'title',
       offsets: [1, 2, 3, 4, 5, 6],
       nodeType: 'heading',
+    }
+    expect(actual).toEqual(expected)
+  })
+
+  it('masks code span content so it never matches a reference pattern', () => {
+    const inlineCode = assertDefined(schema.marks['inlineCode'])
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [
+        schema.text('see '),
+        schema.text('#76', [inlineCode.create()]),
+        schema.text(' here'),
+      ]),
+    ])
+
+    const runs = collectTextBlockRuns(doc)
+
+    const actual = describeRun(atIndex(runs, 0))
+    const expected = {
+      text: 'see ￼￼￼ here',
+      offsets: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      nodeType: 'paragraph',
+    }
+    expect(actual).toEqual(expected)
+  })
+
+  it('masks a link display text that differs from its href', () => {
+    const link = assertDefined(schema.marks['link'])
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [
+        schema.text('#76', [
+          link.create({ href: 'https://example.com/pull/76' }),
+        ]),
+      ]),
+    ])
+
+    const runs = collectTextBlockRuns(doc)
+
+    const actual = describeRun(atIndex(runs, 0))
+    const expected = {
+      text: '￼￼￼',
+      offsets: [1, 2, 3, 4],
+      nodeType: 'paragraph',
+    }
+    expect(actual).toEqual(expected)
+  })
+
+  it('does not mask a raw autolink whose display text equals its href', () => {
+    const link = assertDefined(schema.marks['link'])
+    const url = 'https://x.io/76'
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [
+        schema.text(url, [link.create({ href: url })]),
+      ]),
+    ])
+
+    const runs = collectTextBlockRuns(doc)
+
+    const actual = describeRun(atIndex(runs, 0))
+    const expected = {
+      text: url,
+      offsets: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+      nodeType: 'paragraph',
     }
     expect(actual).toEqual(expected)
   })
