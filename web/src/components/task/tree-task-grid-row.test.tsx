@@ -361,8 +361,7 @@ describe('TreeTaskGridRow', () => {
     expect(screen.queryByLabelText('Expand')).not.toBeInTheDocument()
   })
 
-  it('shows an expand toggle and toggles session visibility for a childless task with sessions', async () => {
-    const user = userEvent.setup()
+  it('shows a session indicator but no expand toggle for a childless task with sessions', async () => {
     const node = makeNode({ id: 'parent-1', children: [] })
     const session: TaskAgentSession = {
       id: 'session-1',
@@ -380,21 +379,15 @@ describe('TreeTaskGridRow', () => {
     }
     await renderTree(node, new Map([['parent-1', [session]]]))
 
-    // Expanded by default: session row visible, no collapsed-only badge
-    expect(screen.getByText('Fix bug')).toBeInTheDocument()
-    expect(screen.queryByTestId('active-session-count')).not.toBeInTheDocument()
+    // Sessions no longer drive expand/collapse — only children do.
+    expect(screen.queryByLabelText('Collapse')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Expand')).not.toBeInTheDocument()
+    expect(screen.getAllByTestId('session-indicator')).toHaveLength(2)
+  })
 
-    await user.click(atIndex(screen.getAllByLabelText('Collapse'), 0))
-
-    // Collapsed: session row hidden, active count badge shown per layout
-    expect(screen.queryByText('Fix bug')).not.toBeInTheDocument()
-    expect(screen.getAllByTestId('active-session-count')).toHaveLength(2)
-
-    await user.click(atIndex(screen.getAllByLabelText('Expand'), 0))
-
-    // Expanded again: session row back, badge gone
-    expect(screen.getByText('Fix bug')).toBeInTheDocument()
-    expect(screen.queryByTestId('active-session-count')).not.toBeInTheDocument()
+  it('does not show a session indicator when there are no sessions', async () => {
+    await renderTree(makeNode())
+    expect(screen.queryByTestId('session-indicator')).not.toBeInTheDocument()
   })
 
   it('does not show a GitHub badge when there is no link', async () => {
