@@ -15,7 +15,6 @@ import { getValidAccessToken } from '#integrations/oauth'
 import { isQuietProviderError } from '#integrations/quiet-errors'
 import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
 import { syncGithubAssignedIssues } from '#services/github-sync-rules'
-import { syncTaskLinks } from '#services/task-links'
 
 type LinkRow = typeof taskGithubLinks.$inferSelect
 
@@ -80,65 +79,62 @@ export function syncLinkFromGithub(
       ).map(() => undefined)
     }
 
+    // Task-link recomputation (see `#services/task-links`) is deliberately
+    // skipped here, unlike the task PATCH route. GitHub issue/PR numbers
+    // (`#76`) live in GitHub's own numbering space, not tq's task numbers, so
+    // scanning a GitHub-sourced body for `#<number>` mentions would link
+    // unrelated tq tasks together. Any task_links rows created by this bug
+    // before this fix are left in place rather than swept up in a migration
+    // — they get recomputed away the next time a human edits the task's
+    // description through the PATCH route.
     return ResultAsync.fromSafePromise(
-      db
-        .transaction(async (tx) => {
-          if (titleChanged || bodyChanged) {
-            const updated = await tx
-              .update(tasks)
-              .set({
-                ...(titleChanged ? { title: issue.title } : {}),
-                ...(bodyChanged ? { description: issue.body } : {}),
-                updatedAt: now,
-              })
-              .where(eq(tasks.id, link.taskId))
-              .returning({ id: tasks.id })
-
-            // The task may have been deleted concurrently between the
-            // sync's link lookup and this write; its link row
-            // cascade-deletes with it, so there's nothing left to sync
-            // (mirrors syncTaskLinks' own guard for the same race).
-            if (updated.length === 0) return
-
-            if (titleChanged) {
-              await recordEdit(
-                tx,
-                { taskId: link.taskId },
-                { action: 'update', field: 'title' },
-                SYSTEM_AUTHOR,
-              )
-            }
-            if (bodyChanged) {
-              await recordEdit(
-                tx,
-                { taskId: link.taskId },
-                { action: 'update', field: 'description' },
-                SYSTEM_AUTHOR,
-              )
-            }
-          }
-
-          await tx
-            .update(taskGithubLinks)
+      db.transaction(async (tx) => {
+        if (titleChanged || bodyChanged) {
+          const updated = await tx
+            .update(tasks)
             .set({
-              title: issue.title,
-              body: issue.body,
-              state: issue.state,
-              etag,
-              lastSyncedAt: now,
+              ...(titleChanged ? { title: issue.title } : {}),
+              ...(bodyChanged ? { description: issue.body } : {}),
+              updatedAt: now,
             })
-            .where(eq(taskGithubLinks.id, link.id))
-        })
-        // Mirrors the task PATCH route: re-scan for `#number` mentions after
-        // a description change commits, so a GitHub-sourced body is treated
-        // the same as a human edit for task-link purposes. Run after the
-        // transaction settles — syncTaskLinks opens its own transaction and
-        // must see the description update as already committed.
-        .then(async () => {
-          if (bodyChanged) {
-            await syncTaskLinks(link.taskId)
+            .where(eq(tasks.id, link.taskId))
+            .returning({ id: tasks.id })
+
+          // The task may have been deleted concurrently between the
+          // sync's link lookup and this write; its link row
+          // cascade-deletes with it, so there's nothing left to sync
+          // (mirrors syncTaskLinks' own guard for the same race).
+          if (updated.length === 0) return
+
+          if (titleChanged) {
+            await recordEdit(
+              tx,
+              { taskId: link.taskId },
+              { action: 'update', field: 'title' },
+              SYSTEM_AUTHOR,
+            )
           }
-        }),
+          if (bodyChanged) {
+            await recordEdit(
+              tx,
+              { taskId: link.taskId },
+              { action: 'update', field: 'description' },
+              SYSTEM_AUTHOR,
+            )
+          }
+        }
+
+        await tx
+          .update(taskGithubLinks)
+          .set({
+            title: issue.title,
+            body: issue.body,
+            state: issue.state,
+            etag,
+            lastSyncedAt: now,
+          })
+          .where(eq(taskGithubLinks.id, link.id))
+      }),
     ).map(() => undefined)
   })
 }
