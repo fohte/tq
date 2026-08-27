@@ -133,7 +133,7 @@ function CrepeEditor({
           viewModeStore,
         ),
       )
-      .use(createImageSourceRevealPlugin(widgetViewFactory))
+      .use(createImageSourceRevealPlugin(widgetViewFactory, viewModeStore))
 
     if (onChange) {
       crepe.on((listener) => {

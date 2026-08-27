@@ -1,10 +1,5 @@
-// Mirrors @milkdown/preset-commonmark's `image` toMarkdown (plain
-// `![alt](src "title")`) and @milkdown/components' `image-block` toMarkdown
-// (which reuses the `image` mdast shape but stores the resize ratio in the
-// `alt` slot, see @milkdown/components/src/image-block/schema.ts) — the two
-// serializers this text has to stay interchangeable with.
-const IMAGE_TEXT_PATTERN =
-  /^!\[(?<alt>[^\]]*)\]\((?<src>[^\s)]*)(?:\s+"(?<title>[^"]*)")?\)$/
+import { fromMarkdown } from 'mdast-util-from-markdown'
+import { toMarkdown } from 'mdast-util-to-markdown'
 
 export interface ImageAttrs {
   src: string
@@ -18,12 +13,25 @@ export interface ImageBlockAttrs {
   ratio: number
 }
 
-function toImageText(src: string, alt: string, title: string): string {
-  return title ? `![${alt}](${src} "${title}")` : `![${alt}](${src})`
+// @milkdown/preset-commonmark's `image` toMarkdown and @milkdown/components'
+// `image-block` toMarkdown (which reuses the `image` mdast shape but stores
+// the resize ratio in the `alt` slot, see
+// @milkdown/components/src/image-block/schema.ts) both serialize through
+// mdast-util-to-markdown's own `image` handler, so this does too — a
+// hand-rolled `![alt](src "title")` template wouldn't escape characters
+// (quotes in a title, brackets in an alt, parens/whitespace in a src) the
+// same way, breaking the round-trip for any image that has them.
+function imageToText(url: string, alt: string, title: string): string {
+  return toMarkdown({
+    type: 'root',
+    children: [
+      { type: 'paragraph', children: [{ type: 'image', url, alt, title }] },
+    ],
+  }).trim()
 }
 
 export function imageAttrsToText({ src, alt, title }: ImageAttrs): string {
-  return toImageText(src, alt, title)
+  return imageToText(src, alt, title)
 }
 
 export function imageBlockAttrsToText({
@@ -31,14 +39,21 @@ export function imageBlockAttrsToText({
   caption,
   ratio,
 }: ImageBlockAttrs): string {
-  return toImageText(src, Number.parseFloat(String(ratio)).toFixed(2), caption)
+  return imageToText(src, ratio.toFixed(2), caption)
+}
+
+function parseImageNode(text: string) {
+  const [paragraph] = fromMarkdown(text.trim()).children
+  if (paragraph?.type !== 'paragraph' || paragraph.children.length !== 1)
+    return null
+  const [node] = paragraph.children
+  return node?.type === 'image' ? node : null
 }
 
 export function parseImageText(text: string): ImageAttrs | null {
-  const match = IMAGE_TEXT_PATTERN.exec(text.trim())
-  if (match?.groups == null) return null
-  const { alt = '', src = '', title = '' } = match.groups
-  return { src, alt, title }
+  const node = parseImageNode(text)
+  if (node == null) return null
+  return { src: node.url, alt: node.alt ?? '', title: node.title ?? '' }
 }
 
 export function textToImageAttrs(text: string): ImageAttrs | null {

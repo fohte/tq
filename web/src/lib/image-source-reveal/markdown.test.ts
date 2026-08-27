@@ -82,6 +82,42 @@ describe('textToImageAttrs', () => {
   it('returns null for text that is not image markdown', () => {
     expect(textToImageAttrs('not an image')).toBeNull()
   })
+
+  it('round-trips a title containing a double quote', () => {
+    const attrs = {
+      src: 'https://example.com/a.png',
+      alt: 'a cat',
+      title: 'a "cool" cat',
+    }
+    expect(textToImageAttrs(imageAttrsToText(attrs))).toEqual(attrs)
+  })
+
+  it('round-trips an alt containing a bracket', () => {
+    const attrs = {
+      src: 'https://example.com/a.png',
+      alt: 'cat [1]',
+      title: 'my cat',
+    }
+    expect(textToImageAttrs(imageAttrsToText(attrs))).toEqual(attrs)
+  })
+
+  it('round-trips a src containing a paren', () => {
+    const attrs = {
+      src: 'https://example.com/a(1).png',
+      alt: 'a cat',
+      title: 'my cat',
+    }
+    expect(textToImageAttrs(imageAttrsToText(attrs))).toEqual(attrs)
+  })
+
+  it('round-trips a src containing whitespace', () => {
+    const attrs = {
+      src: 'https://example.com/a b.png',
+      alt: 'a cat',
+      title: 'my cat',
+    }
+    expect(textToImageAttrs(imageAttrsToText(attrs))).toEqual(attrs)
+  })
 })
 
 describe('textToImageBlockAttrs', () => {

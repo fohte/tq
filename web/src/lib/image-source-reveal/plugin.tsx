@@ -12,19 +12,24 @@ import type { CreateReactWidgetView } from '@prosemirror-adapter/react'
 import { useWidgetViewContext } from '@prosemirror-adapter/react'
 
 import { ImageSourceText } from '#components/ui/image-source-text'
+import type {
+  ImageAttrs,
+  ImageBlockAttrs,
+} from '#lib/image-source-reveal/markdown'
 import {
   imageAttrsToText,
   imageBlockAttrsToText,
   textToImageAttrs,
   textToImageBlockAttrs,
 } from '#lib/image-source-reveal/markdown'
+import type { InlineReferenceViewModeStore } from '#lib/inline-reference/view-mode'
 
 function nodeToText(node: Node): string {
   return node.type.name === 'image-block'
     ? // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- attrs shape is fixed by @milkdown/components' image-block schema
-      imageBlockAttrsToText(node.attrs as never)
+      imageBlockAttrsToText(node.attrs as ImageBlockAttrs)
     : // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- attrs shape is fixed by @milkdown/preset-commonmark's image schema
-      imageAttrsToText(node.attrs as never)
+      imageAttrsToText(node.attrs as ImageAttrs)
 }
 
 function textToAttrs(nodeType: string, text: string): Node['attrs'] | null {
@@ -65,34 +70,38 @@ function isCursorOnImageLine(
 function ImageSourceWidget() {
   const { view, getPos } = useWidgetViewContext()
 
-  const pos = getPos()
-  const node = pos != null ? view.state.doc.nodeAt(pos) : null
-  if (node == null) return null
+  function resolveCurrent(): { pos: number; node: Node } | null {
+    const pos = getPos()
+    const node = pos != null ? view.state.doc.nodeAt(pos) : null
+    return pos != null && node != null ? { pos, node } : null
+  }
+
+  const current = resolveCurrent()
+  if (current == null) return null
 
   function commit(text: string) {
-    const currentPos = getPos()
-    const currentNode =
-      currentPos != null ? view.state.doc.nodeAt(currentPos) : null
-    if (currentPos == null || currentNode == null) return
-    const attrs = textToAttrs(currentNode.type.name, text)
-    if (attrs == null) return
-    view.dispatch(view.state.tr.setNodeMarkup(currentPos, undefined, attrs))
+    const current = resolveCurrent()
+    if (current == null) return
+    const attrs = textToAttrs(current.node.type.name, text)
+    if (attrs == null) {
+      console.error('Failed to parse image markdown', text)
+      return
+    }
+    view.dispatch(view.state.tr.setNodeMarkup(current.pos, undefined, attrs))
   }
 
   function commitAndMoveOut(text: string) {
     commit(text)
-    const currentPos = getPos()
-    const currentNode =
-      currentPos != null ? view.state.doc.nodeAt(currentPos) : null
-    if (currentPos == null || currentNode == null) return
-    const after = view.state.doc.resolve(currentPos + currentNode.nodeSize)
+    const current = resolveCurrent()
+    if (current == null) return
+    const after = view.state.doc.resolve(current.pos + current.node.nodeSize)
     view.dispatch(view.state.tr.setSelection(TextSelection.near(after)))
     view.focus()
   }
 
   return (
     <ImageSourceText
-      initialText={nodeToText(node)}
+      initialText={nodeToText(current.node)}
       editable={view.editable}
       onCommit={commit}
       onCommitAndMoveOut={commitAndMoveOut}
@@ -105,9 +114,14 @@ function ImageSourceWidget() {
 // moves away — the image-node counterpart to inline-reference/plugin.tsx's
 // chip reveal. Unlike that plugin, the raw text isn't already in the doc
 // (image/image-block are atom nodes), so it's reconstructed from the node's
-// attrs (see markdown.ts) rather than just un-hidden.
+// attrs (see markdown.ts) rather than just un-hidden. Gated on the same
+// `viewModeStore` (see view-mode.ts) as the other plugins at this call site:
+// without it, a document whose default selection lands on a leading image
+// (ProseMirror's initial selection is Selection.atStart(doc)) would reveal
+// raw Markdown even in read-only view mode.
 export function createImageSourceRevealPlugin(
   widgetViewFactory: CreateReactWidgetView,
+  viewModeStore: InlineReferenceViewModeStore,
 ) {
   const createInlineWidget = widgetViewFactory({
     as: 'span',
@@ -123,6 +137,8 @@ export function createImageSourceRevealPlugin(
       key: new PluginKey('image-source-reveal'),
       props: {
         decorations(state) {
+          if (viewModeStore.getMode() !== 'edit') return DecorationSet.empty
+
           const decorations: Decoration[] = []
           state.doc.descendants((node, pos) => {
             if (node.type.name !== 'image' && node.type.name !== 'image-block')
