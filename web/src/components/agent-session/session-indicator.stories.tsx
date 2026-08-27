@@ -47,7 +47,7 @@ function SessionIndicatorStory({ sessions }: { sessions: TaskAgentSession[] }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="dark flex items-center bg-background p-4">
+      <div className="dark flex items-center border border-border bg-background p-4">
         <SessionIndicator sessions={sessions} />
       </div>
     </QueryClientProvider>
