@@ -1,4 +1,5 @@
 import type { Node } from '@milkdown/kit/prose/model'
+import type { Selection } from '@milkdown/kit/prose/state'
 import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
 import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
@@ -14,11 +15,19 @@ import { collectTextBlockRuns } from '#lib/inline-reference/text-scan'
 import type { InlineReferenceProvider } from '#lib/inline-reference/types'
 import type { InlineReferenceViewModeStore } from '#lib/inline-reference/view-mode'
 
+// The cursor (or either edge of a range selection) touching a match's range
+// at all — including sitting exactly on `from`/`to` — counts as "on" it, so
+// typing right before/after the raw text doesn't still show a chip.
+function selectionOverlaps(selection: Selection, from: number, to: number) {
+  return selection.to >= from && selection.from <= to
+}
+
 function buildDecorations<TData>(
   provider: InlineReferenceProvider<TData>,
   createChipWidget: ReturnType<CreateReactWidgetView>,
   createCardWidget: ReturnType<CreateReactWidgetView>,
   doc: Node,
+  selection: Selection,
 ): Decoration[] {
   const decorations: Decoration[] = []
 
@@ -35,9 +44,13 @@ function buildDecorations<TData>(
       soleMatch != null &&
       soleMatch.raw === run.text.trim()
     ) {
+      const hideFrom = run.posAt(0)
+      const hideTo = run.posAt(run.text.length)
+      if (selectionOverlaps(selection, hideFrom, hideTo)) continue
+
       const from = run.posAt(soleMatch.start)
       decorations.push(
-        Decoration.inline(run.posAt(0), run.posAt(run.text.length), {
+        Decoration.inline(hideFrom, hideTo, {
           class: 'inline-reference-source',
         }),
         createCardWidget(from, {
@@ -53,6 +66,7 @@ function buildDecorations<TData>(
     for (const match of matches) {
       const from = run.posAt(match.start)
       const to = run.posAt(match.end)
+      if (selectionOverlaps(selection, from, to)) continue
 
       decorations.push(
         Decoration.inline(from, to, { class: 'inline-reference-source' }),
@@ -152,8 +166,10 @@ function createCardWidgetComponent<TData>(
 
 // Wires one InlineReferenceProvider up as a Milkdown/ProseMirror plugin: in
 // 'view' mode (see view-mode.ts), text matching its pattern is hidden and
-// replaced by the provider's chip (or card, see buildDecorations) widget; in
-// 'edit' mode, decorations are suppressed entirely and the raw Markdown
+// replaced by the provider's chip (or card, see buildDecorations) widget,
+// except for a match the selection currently overlaps — that one stays as
+// raw, editable source until the selection moves off it (selectionOverlaps);
+// in 'edit' mode, decorations are suppressed entirely and the raw Markdown
 // source is shown as-is. `widgetViewFactory` comes from
 // @prosemirror-adapter/react's useWidgetViewFactory(), so this must be
 // called from within a component tree that has a ProsemirrorAdapterProvider
@@ -179,10 +195,16 @@ export function createInlineReferencePlugin<TData>(
       props: {
         decorations(state) {
           if (viewModeStore.getMode() !== 'view') return DecorationSet.empty
-          const { doc } = state
+          const { doc, selection } = state
           return DecorationSet.create(
             doc,
-            buildDecorations(provider, createChipWidget, createCardWidget, doc),
+            buildDecorations(
+              provider,
+              createChipWidget,
+              createCardWidget,
+              doc,
+              selection,
+            ),
           )
         },
       },
