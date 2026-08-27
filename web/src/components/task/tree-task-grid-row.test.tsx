@@ -361,7 +361,7 @@ describe('TreeTaskGridRow', () => {
     expect(screen.queryByLabelText('Expand')).not.toBeInTheDocument()
   })
 
-  it('shows a session indicator but no expand toggle for a childless task with sessions', async () => {
+  it('does not show an expand toggle for a childless task with sessions', async () => {
     const node = makeNode({ id: 'parent-1', children: [] })
     const session: TaskAgentSession = {
       id: 'session-1',
@@ -379,9 +379,28 @@ describe('TreeTaskGridRow', () => {
     }
     await renderTree(node, new Map([['parent-1', [session]]]))
 
-    // Sessions no longer drive expand/collapse — only children do.
     expect(screen.queryByLabelText('Collapse')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Expand')).not.toBeInTheDocument()
+  })
+
+  it('shows a session indicator for a task with sessions', async () => {
+    const node = makeNode({ id: 'parent-1', children: [] })
+    const session: TaskAgentSession = {
+      id: 'session-1',
+      taskId: 'parent-1',
+      provider: 'claude_code',
+      sessionId: 'sess-1',
+      context: 'work',
+      cwd: '/home/fohte/project',
+      label: 'Fix bug',
+      lastMessage: null,
+      customLabel: null,
+      startedAt: '2026-03-20T00:00:00.000Z',
+      lastActiveAt: new Date().toISOString(),
+      endedAt: null,
+    }
+    await renderTree(node, new Map([['parent-1', [session]]]))
+
     expect(screen.getAllByTestId('session-indicator')).toHaveLength(2)
   })
 

@@ -408,8 +408,6 @@ export const WithActiveSessions: Story = {
     </Providers>
   ),
   play: async ({ canvas, canvasElement, userEvent }) => {
-    // Sessions no longer render as child rows — hovering the indicator opens
-    // a card (portalled to document.body) that reuses SessionRow as-is.
     await userEvent.hover(
       atIndex(canvas.getAllByTestId('session-indicator'), 0),
     )

@@ -12,10 +12,6 @@ import { isAgentSessionActive } from '#hooks/use-agent-sessions'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import { cn } from '#lib/utils'
 
-// The only signal a task row surfaces about its sessions: whether any exist,
-// and whether any of them is active. Multiple sessions collapse with OR (one
-// active session is enough to show ▶) — counts and per-session detail live
-// only in the hover/tap card, reusing SessionRow as-is.
 export function SessionIndicator({
   sessions,
 }: {

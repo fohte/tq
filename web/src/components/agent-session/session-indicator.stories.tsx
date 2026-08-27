@@ -91,8 +91,6 @@ export const OpensCardOnHover: Story = {
   play: async ({ canvas, canvasElement, userEvent }) => {
     await userEvent.hover(canvas.getByTestId('session-indicator'))
 
-    // The popup renders via a portal, so it must be queried against the
-    // document body.
     const body = within(canvasElement.ownerDocument.body)
     await waitFor(() => expect(body.getByText('SESSIONS (2)')).toBeVisible())
     await expect(body.getByText('Implement session indicator')).toBeVisible()
