@@ -79,14 +79,11 @@ export function syncLinkFromGithub(
       ).map(() => undefined)
     }
 
-    // Task-link recomputation (see `#services/task-links`) is deliberately
-    // skipped here, unlike the task PATCH route. GitHub issue/PR numbers
+    // Unlike the task PATCH route, task-link recomputation (see
+    // `#services/task-links`) is skipped here: GitHub issue/PR numbers
     // (`#76`) live in GitHub's own numbering space, not tq's task numbers, so
     // scanning a GitHub-sourced body for `#<number>` mentions would link
-    // unrelated tq tasks together. Any task_links rows created by this bug
-    // before this fix are left in place rather than swept up in a migration
-    // — they get recomputed away the next time a human edits the task's
-    // description through the PATCH route.
+    // unrelated tq tasks together.
     return ResultAsync.fromSafePromise(
       db.transaction(async (tx) => {
         if (titleChanged || bodyChanged) {
