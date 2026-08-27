@@ -6,7 +6,7 @@ import {
 import type { EditorView } from '@milkdown/kit/prose/view'
 import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import type { CreateReactWidgetView } from '@prosemirror-adapter/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { createInlineReferencePlugin } from '#lib/inline-reference/plugin'
 import { fakeCtx, schema } from '#lib/inline-reference/test-helpers'
@@ -72,13 +72,28 @@ async function buildPlugin(mode: 'view' | 'edit') {
   return wrapped.plugin()
 }
 
-// A minimal stand-in for the real EditorView the plugin only uses for
-// `hasFocus()`. `focused` defaults to true since most tests are exercising
-// selection-overlap behavior, which only matters once the view has focus —
-// see the dedicated "lacks focus" test for the unfocused case.
+// A minimal stand-in for the real EditorView. `dom` is needed because the
+// plugin's `view()` hook always attaches focus/blur listeners to it; `focused`
+// defaults to true since most tests are exercising selection-overlap
+// behavior, which only matters once the view has focus — see the dedicated
+// "lacks focus" test for the unfocused case.
 function fakeEditorView(focused: boolean) {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the plugin only calls hasFocus() on the view it's given, so a full EditorView isn't needed
-  return { hasFocus: () => focused } as unknown as EditorView
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the plugin only calls hasFocus() and attaches dom listeners on the view it's given, so a full EditorView isn't needed
+  return {
+    dom: document.createElement('div'),
+    hasFocus: () => focused,
+  } as unknown as EditorView
+}
+
+// A stand-in for the real EditorView the plugin's `view()` hook uses to
+// listen for native focus/blur events and force a redecoration.
+function fakeDispatchableEditorView() {
+  const dom = document.createElement('div')
+  const dispatch = vi.fn()
+  const state = EditorState.create({ doc: docWithText('x'), schema })
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the plugin's view() hook only reads `.dom`, `.state`, and `.dispatch()` off the view it's given, so a full EditorView isn't needed
+  const view = { dom, state, dispatch } as unknown as EditorView
+  return { view, dom, dispatch }
 }
 
 async function decorationsForDoc(
@@ -317,5 +332,30 @@ describe('createInlineReferencePlugin', () => {
       },
       { from: 1, to: 3, spec: {} },
     ])
+  })
+
+  // ProseMirror's blur/focus handling never dispatches a transaction on its
+  // own, so without this listener a match's suppressed/shown state could get
+  // stuck past the focus change that should have flipped it.
+  it('dispatches a no-op transaction to force decorations to re-run when focus changes', async () => {
+    const plugin = await buildPlugin('view')
+    const { view, dom, dispatch } = fakeDispatchableEditorView()
+
+    plugin.spec.view?.(view)
+    dom.dispatchEvent(new FocusEvent('focus'))
+    dom.dispatchEvent(new FocusEvent('blur'))
+
+    expect(dispatch).toHaveBeenCalledTimes(2)
+  })
+
+  it('stops redecorating on focus change once the plugin view is destroyed', async () => {
+    const plugin = await buildPlugin('view')
+    const { view, dom, dispatch } = fakeDispatchableEditorView()
+
+    const pluginView = plugin.spec.view?.(view)
+    pluginView?.destroy?.()
+    dom.dispatchEvent(new FocusEvent('blur'))
+
+    expect(dispatch).not.toHaveBeenCalled()
   })
 })

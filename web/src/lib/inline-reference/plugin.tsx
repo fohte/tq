@@ -204,9 +204,25 @@ export function createInlineReferencePlugin<TData>(
 
     return new Plugin({
       key: new PluginKey(`inline-reference-${provider.id}`),
+      // ProseMirror's own focus/blur handling only flips `view.focused`
+      // internally — it never dispatches a transaction — so decorations()
+      // wouldn't otherwise be re-run when focus changes, leaving a match
+      // stuck showing raw source (or a chip) past the focus change that
+      // should have flipped it. Dispatching a no-op transaction here forces
+      // that re-run.
       view(view) {
         editorView = view
-        return {}
+        const redecorate = () => {
+          view.dispatch(view.state.tr)
+        }
+        view.dom.addEventListener('focus', redecorate)
+        view.dom.addEventListener('blur', redecorate)
+        return {
+          destroy() {
+            view.dom.removeEventListener('focus', redecorate)
+            view.dom.removeEventListener('blur', redecorate)
+          },
+        }
       },
       props: {
         decorations(state) {
