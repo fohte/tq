@@ -76,22 +76,20 @@ async function buildPlugin(mode: 'view' | 'edit') {
 // plugin's `view()` hook always attaches focus/blur listeners to it; `focused`
 // defaults to true since most tests are exercising selection-overlap
 // behavior, which only matters once the view has focus — see the dedicated
-// "lacks focus" test for the unfocused case.
+// "lacks focus" test for the unfocused case. These tests never dispatch a
+// focus/blur event on `dom`, so the listeners the plugin attaches are never
+// invoked — no `setProps` stub is needed here.
 function fakeEditorView(focused: boolean) {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the plugin only calls hasFocus() and attaches dom listeners/setProps() on the view it's given, so a full EditorView isn't needed
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the plugin only calls hasFocus() and attaches dom listeners on the view it's given, so a full EditorView isn't needed
   return {
     dom: document.createElement('div'),
     hasFocus: () => focused,
-    setProps: () => {
-      // no-op: these tests read decorations directly rather than through a
-      // real view update cycle
-    },
   } as unknown as EditorView
 }
 
 // A stand-in for the real EditorView the plugin's `view()` hook uses to
-// listen for native focus/blur events and force a redecoration.
-function fakeDispatchableEditorView() {
+// listen for native focus/blur events and force a redecoration via setProps.
+function fakeRedecoratingEditorView() {
   const dom = document.createElement('div')
   const setProps = vi.fn()
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the plugin's view() hook only reads `.dom` and calls `.setProps()` off the view it's given, so a full EditorView isn't needed
@@ -342,7 +340,7 @@ describe('createInlineReferencePlugin', () => {
   // stuck past the focus change that should have flipped it.
   it('calls setProps to force decorations to re-run when focus changes', async () => {
     const plugin = await buildPlugin('view')
-    const { view, dom, setProps } = fakeDispatchableEditorView()
+    const { view, dom, setProps } = fakeRedecoratingEditorView()
 
     plugin.spec.view?.(view)
     dom.dispatchEvent(new FocusEvent('focus'))
@@ -353,7 +351,7 @@ describe('createInlineReferencePlugin', () => {
 
   it('stops redecorating on focus change once the plugin view is destroyed', async () => {
     const plugin = await buildPlugin('view')
-    const { view, dom, setProps } = fakeDispatchableEditorView()
+    const { view, dom, setProps } = fakeRedecoratingEditorView()
 
     const pluginView = plugin.spec.view?.(view)
     pluginView?.destroy?.()
