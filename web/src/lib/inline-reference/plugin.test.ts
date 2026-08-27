@@ -3,6 +3,7 @@ import {
   Selection,
   TextSelection,
 } from '@milkdown/kit/prose/state'
+import type { EditorView } from '@milkdown/kit/prose/view'
 import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import type { CreateReactWidgetView } from '@prosemirror-adapter/react'
 import { describe, expect, it } from 'vitest'
@@ -71,12 +72,23 @@ async function buildPlugin(mode: 'view' | 'edit') {
   return wrapped.plugin()
 }
 
+// A minimal stand-in for the real EditorView the plugin only uses for
+// `hasFocus()`. `focused` defaults to true since most tests are exercising
+// selection-overlap behavior, which only matters once the view has focus —
+// see the dedicated "lacks focus" test for the unfocused case.
+function fakeEditorView(focused: boolean) {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the plugin only calls hasFocus() on the view it's given, so a full EditorView isn't needed
+  return { hasFocus: () => focused } as unknown as EditorView
+}
+
 async function decorationsForDoc(
   doc: ReturnType<typeof docWithText>,
   mode: 'view' | 'edit',
   selection?: Selection,
+  focused = true,
 ) {
   const plugin = await buildPlugin(mode)
+  plugin.spec.view?.(fakeEditorView(focused))
   const state = EditorState.create({
     doc,
     schema,
@@ -283,5 +295,27 @@ describe('createInlineReferencePlugin', () => {
     )
 
     expect(decorations).toEqual([])
+  })
+
+  // A freshly mounted view's selection defaults to the doc start before the
+  // user has focused it, which would otherwise suppress whatever reference
+  // sits there — see the `hasFocus()` check in createInlineReferencePlugin.
+  it('does not suppress a card whose paragraph the selection overlaps when the view lacks focus', async () => {
+    const doc = docWithParagraphs('@1', 'x')
+    const decorations = await decorationsForDoc(
+      doc,
+      'view',
+      Selection.atStart(doc),
+      false,
+    )
+
+    expect(normalize(decorations)).toEqual([
+      {
+        from: 1,
+        to: 1,
+        spec: { key: 'fake:card:@1:1', side: 1, data: { n: 1 }, raw: '@1' },
+      },
+      { from: 1, to: 3, spec: {} },
+    ])
   })
 })
