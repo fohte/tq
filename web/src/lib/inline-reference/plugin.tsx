@@ -208,12 +208,15 @@ export function createInlineReferencePlugin<TData>(
       // internally — it never dispatches a transaction — so decorations()
       // wouldn't otherwise be re-run when focus changes, leaving a match
       // stuck showing raw source (or a chip) past the focus change that
-      // should have flipped it. Dispatching a no-op transaction here forces
-      // that re-run.
+      // should have flipped it. `setProps({})` re-runs `decorations()`
+      // without touching `state`, unlike `dispatch()`, which would also
+      // invoke every other plugin's `appendTransaction` (e.g. Milkdown's
+      // `trailing` plugin, which appends a paragraph on any transaction —
+      // dispatching here would fire it on every focus change).
       view(view) {
         editorView = view
         const redecorate = () => {
-          view.dispatch(view.state.tr)
+          view.setProps({})
         }
         view.dom.addEventListener('focus', redecorate)
         view.dom.addEventListener('blur', redecorate)

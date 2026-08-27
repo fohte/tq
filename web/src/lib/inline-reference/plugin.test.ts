@@ -78,10 +78,14 @@ async function buildPlugin(mode: 'view' | 'edit') {
 // behavior, which only matters once the view has focus — see the dedicated
 // "lacks focus" test for the unfocused case.
 function fakeEditorView(focused: boolean) {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the plugin only calls hasFocus() and attaches dom listeners on the view it's given, so a full EditorView isn't needed
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the plugin only calls hasFocus() and attaches dom listeners/setProps() on the view it's given, so a full EditorView isn't needed
   return {
     dom: document.createElement('div'),
     hasFocus: () => focused,
+    setProps: () => {
+      // no-op: these tests read decorations directly rather than through a
+      // real view update cycle
+    },
   } as unknown as EditorView
 }
 
@@ -89,11 +93,10 @@ function fakeEditorView(focused: boolean) {
 // listen for native focus/blur events and force a redecoration.
 function fakeDispatchableEditorView() {
   const dom = document.createElement('div')
-  const dispatch = vi.fn()
-  const state = EditorState.create({ doc: docWithText('x'), schema })
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the plugin's view() hook only reads `.dom`, `.state`, and `.dispatch()` off the view it's given, so a full EditorView isn't needed
-  const view = { dom, state, dispatch } as unknown as EditorView
-  return { view, dom, dispatch }
+  const setProps = vi.fn()
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the plugin's view() hook only reads `.dom` and calls `.setProps()` off the view it's given, so a full EditorView isn't needed
+  const view = { dom, setProps } as unknown as EditorView
+  return { view, dom, setProps }
 }
 
 async function decorationsForDoc(
@@ -334,28 +337,28 @@ describe('createInlineReferencePlugin', () => {
     ])
   })
 
-  // ProseMirror's blur/focus handling never dispatches a transaction on its
+  // ProseMirror's blur/focus handling never re-runs decorations() on its
   // own, so without this listener a match's suppressed/shown state could get
   // stuck past the focus change that should have flipped it.
-  it('dispatches a no-op transaction to force decorations to re-run when focus changes', async () => {
+  it('calls setProps to force decorations to re-run when focus changes', async () => {
     const plugin = await buildPlugin('view')
-    const { view, dom, dispatch } = fakeDispatchableEditorView()
+    const { view, dom, setProps } = fakeDispatchableEditorView()
 
     plugin.spec.view?.(view)
     dom.dispatchEvent(new FocusEvent('focus'))
     dom.dispatchEvent(new FocusEvent('blur'))
 
-    expect(dispatch).toHaveBeenCalledTimes(2)
+    expect(setProps).toHaveBeenCalledTimes(2)
   })
 
   it('stops redecorating on focus change once the plugin view is destroyed', async () => {
     const plugin = await buildPlugin('view')
-    const { view, dom, dispatch } = fakeDispatchableEditorView()
+    const { view, dom, setProps } = fakeDispatchableEditorView()
 
     const pluginView = plugin.spec.view?.(view)
     pluginView?.destroy?.()
     dom.dispatchEvent(new FocusEvent('blur'))
 
-    expect(dispatch).not.toHaveBeenCalled()
+    expect(setProps).not.toHaveBeenCalled()
   })
 })
