@@ -139,7 +139,7 @@ describe('syncLinkFromGithub', () => {
     expect(await loadEdits(task.id)).toEqual([])
   })
 
-  it('re-syncs task-link mentions when the GitHub body changed', async () => {
+  it('does not create task-link mentions from a GitHub body change', async () => {
     const other = await createTask('Other task')
     const { task, link } = await createSyncedLink()
 
@@ -150,7 +150,7 @@ describe('syncLinkFromGithub', () => {
       .select({ targetTaskId: taskLinks.targetTaskId })
       .from(taskLinks)
       .where(eq(taskLinks.sourceTaskId, task.id))
-    expect(outgoingLinks).toEqual([{ targetTaskId: other.id }])
+    expect(outgoingLinks).toEqual([])
   })
 
   it('does not overwrite a task edited in TQ when GitHub is unchanged', async () => {
