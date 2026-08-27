@@ -77,6 +77,9 @@ export const WithProjects: Story = {
         ),
       ],
     },
+    // By the time the play function resolves, the dialog has closed —
+    // skip the capture since the assertions below cover the behavior.
+    screenshot: { skip: true },
   },
   play: async ({ canvasElement, userEvent, args }) => {
     const body = within(canvasElement.ownerDocument.body)

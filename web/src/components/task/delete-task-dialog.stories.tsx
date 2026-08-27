@@ -74,6 +74,9 @@ export const Confirmed: Story = {
     msw: {
       handlers: [http.delete('/api/tasks/:id', () => HttpResponse.json({}))],
     },
+    // By the time the play function resolves, the dialog has closed —
+    // skip the capture since the assertion below covers the behavior.
+    screenshot: { skip: true },
   },
   play: async ({ canvasElement, userEvent, args }) => {
     const body = within(canvasElement.ownerDocument.body)

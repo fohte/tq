@@ -249,6 +249,12 @@ export const EditFreeTextDirectly: Story = {
 // and opens the same kind of menu as any other axis chip.
 export const OpenSortMenuAndChange: Story = {
   tags: ['desktop-only'],
+  parameters: {
+    // By the time the play function resolves, the menu has closed and only
+    // the focus ring's position (a timing-dependent detail) remains —
+    // skip the capture since the assertion below covers the behavior.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, canvasElement, args }) => {
     await userEvent.click(canvas.getByRole('button', { name: /Sort by/ }))
 
