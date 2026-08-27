@@ -250,9 +250,11 @@ export const EditFreeTextDirectly: Story = {
 export const OpenSortMenuAndChange: Story = {
   tags: ['desktop-only'],
   parameters: {
-    // By the time the play function resolves, the menu has closed and only
-    // the focus ring's position (a timing-dependent detail) remains —
-    // skip the capture since the assertion below covers the behavior.
+    // This story's screenshot has been flaky in CI VRT runs for a reason
+    // that isn't confirmed — the popover itself stays open throughout
+    // (nothing in TaskSortFilterFields closes it). This is the only story
+    // that captures the open sort menu, so skipping trades that visual
+    // coverage for a reliable VRT signal.
     screenshot: { skip: true },
   },
   play: async ({ canvas, canvasElement, args }) => {

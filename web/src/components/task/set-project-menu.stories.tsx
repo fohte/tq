@@ -77,8 +77,12 @@ export const WithProjects: Story = {
         ),
       ],
     },
-    // By the time the play function resolves, the dialog has closed —
-    // skip the capture since the assertions below cover the behavior.
+    // This story's screenshot has been flaky in CI VRT runs for a reason
+    // that isn't confirmed — the dialog itself stays mounted throughout
+    // (`open` is a static arg here, so `onOpenChange` never actually
+    // closes it). This is the only story that captures the populated
+    // project list (NoProjects only covers the empty state), so skipping
+    // trades that visual coverage for a reliable VRT signal.
     screenshot: { skip: true },
   },
   play: async ({ canvasElement, userEvent, args }) => {
