@@ -11,6 +11,7 @@ import {
 } from '@prosemirror-adapter/react'
 import { useEffect, useRef } from 'react'
 
+import { createImageSourceRevealPlugin } from '#lib/image-source-reveal/plugin'
 import {
   handleImageLoadError,
   resolveImageSrc,
@@ -132,6 +133,7 @@ function CrepeEditor({
           viewModeStore,
         ),
       )
+      .use(createImageSourceRevealPlugin(widgetViewFactory, viewModeStore))
 
     if (onChange) {
       crepe.on((listener) => {
