@@ -4,7 +4,7 @@ import { Link } from '@tanstack/react-router'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
-import { SessionRow } from '#components/agent-session/session-row'
+import { SessionIndicator } from '#components/agent-session/session-indicator'
 import { DeleteTaskDialog } from '#components/task/delete-task-dialog'
 import { GithubLinkBadge } from '#components/task/github-link-badge'
 import { LinkExistingTaskMenu } from '#components/task/link-existing-task-menu'
@@ -25,7 +25,6 @@ import {
 import { TaskStatusPicker } from '#components/task/task-status-picker'
 import { TreeOutlinerInputRow } from '#components/task/tree-outliner-input-row'
 import { TreeRowActionsMenu } from '#components/task/tree-row-actions-menu'
-import { isAgentSessionActive } from '#hooks/use-agent-sessions'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TreeNode } from '#hooks/use-tasks'
 import type {
@@ -103,10 +102,6 @@ export function TreeTaskGridRow({
   const handleStatusChange = useHandleStatusChange(node.id, node.status)
   const hasChildren = node.children.length > 0
   const sessions = sessionsByTaskId.get(node.id) ?? []
-  const hasSessions = sessions.length > 0
-  const activeSessionCount = sessions.filter((s) =>
-    isAgentSessionActive(s),
-  ).length
   const expanded = isExpanded(node.id)
   const isInProgress = node.status === 'in_progress'
   const isCompleted = node.status === 'completed'
@@ -136,24 +131,23 @@ export function TreeTaskGridRow({
     onOpenChildInput(node.id)
   }
 
-  const expandToggle =
-    hasChildren || hasSessions ? (
-      <button
-        type="button"
-        onClick={handleExpand}
-        data-no-dnd=""
-        className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
-        aria-label={expanded ? 'Collapse' : 'Expand'}
-      >
-        {expanded ? (
-          <ChevronDown className="h-3.5 w-3.5" />
-        ) : (
-          <ChevronRight className="h-3.5 w-3.5" />
-        )}
-      </button>
-    ) : (
-      <span className="w-5 shrink-0" />
-    )
+  const expandToggle = hasChildren ? (
+    <button
+      type="button"
+      onClick={handleExpand}
+      data-no-dnd=""
+      className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+      aria-label={expanded ? 'Collapse' : 'Expand'}
+    >
+      {expanded ? (
+        <ChevronDown className="h-3.5 w-3.5" />
+      ) : (
+        <ChevronRight className="h-3.5 w-3.5" />
+      )}
+    </button>
+  ) : (
+    <span className="w-5 shrink-0" />
+  )
 
   return (
     <>
@@ -208,15 +202,7 @@ export function TreeTaskGridRow({
                     {node.childCompletionCount.total}
                   </span>
                 )}
-                {!expanded && activeSessionCount > 0 && (
-                  <span
-                    className="flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground"
-                    data-testid="active-session-count"
-                  >
-                    <span className="size-1.5 shrink-0 rounded-full bg-primary" />
-                    {activeSessionCount}
-                  </span>
-                )}
+                <SessionIndicator sessions={sessions} />
               </div>
 
               <div className="overflow-hidden">
@@ -295,15 +281,7 @@ export function TreeTaskGridRow({
                       {node.childCompletionCount.total}
                     </span>
                   )}
-                  {!expanded && activeSessionCount > 0 && (
-                    <span
-                      className="flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground"
-                      data-testid="active-session-count"
-                    >
-                      <span className="size-1.5 shrink-0 rounded-full bg-primary" />
-                      {activeSessionCount}
-                    </span>
-                  )}
+                  <SessionIndicator sessions={sessions} />
                   {node.labels.length > 0 && (
                     <TagTokens labels={node.labels} isCompleted={isCompleted} />
                   )}
@@ -380,21 +358,6 @@ export function TreeTaskGridRow({
               onOutdent={onOutdentOutlinerInput}
             />
           )}
-        </div>
-      )}
-
-      {/* Sessions render after subtasks, at the same indent depth. */}
-      {expanded && hasSessions && (
-        <div data-testid="tree-sessions">
-          {sessions.map((session) => (
-            <div
-              key={session.id}
-              className={ROW_INDENT_CLASS_NAME}
-              style={rowIndentStyle(depth + 1)}
-            >
-              <SessionRow session={session} isDimmed={false} />
-            </div>
-          ))}
         </div>
       )}
 

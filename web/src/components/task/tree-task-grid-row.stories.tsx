@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { expect } from 'storybook/test'
+import { expect, waitFor, within } from 'storybook/test'
 
 import type { TreeTaskGridRowProps } from '#components/task/tree-task-grid-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
@@ -407,33 +407,16 @@ export const WithActiveSessions: Story = {
       </div>
     </Providers>
   ),
-  play: async ({ canvas }) => {
-    await expect(
-      canvas.getByText('Implement tree session rows'),
-    ).toBeInTheDocument()
-    await expect(
-      canvas.getByText('Write the release notes'),
-    ).toBeInTheDocument()
-  },
-}
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await userEvent.hover(
+      atIndex(canvas.getAllByTestId('session-indicator'), 0),
+    )
 
-export const CollapsedWithActiveSessionBadge: Story = {
-  args: { node: baseTreeNode },
-  render: () => (
-    <StaticTreeTaskGridRow
-      node={{ ...baseTreeNode, title: 'Collapsed task with active sessions' }}
-      isExpanded={() => false}
-      sessionsByTaskId={
-        new Map([[baseTreeNode.id, [activeSession, endedSession]]])
-      }
-    />
-  ),
-  play: async ({ canvas }) => {
-    const badges = canvas.getAllByTestId('active-session-count')
-    await expect(badges).toHaveLength(2)
-    for (const badge of badges) {
-      await expect(badge).toHaveTextContent('1')
-    }
+    const body = within(canvasElement.ownerDocument.body)
+    await waitFor(() =>
+      expect(body.getByText('Implement tree session rows')).toBeVisible(),
+    )
+    await expect(body.getByText('Write the release notes')).toBeVisible()
   },
 }
 
