@@ -9,7 +9,6 @@ import {
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
-import { TaskListColumnHeader } from '#components/task/task-list-column-header'
 import { TaskListToolbar } from '#components/task/task-list-toolbar'
 import { TaskTreeList } from '#components/task/task-tree-list'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
@@ -132,8 +131,6 @@ export function TaskList() {
           />
         </div>
       )}
-
-      <TaskListColumnHeader />
 
       <TaskTreeList
         isLoading={isLoading}

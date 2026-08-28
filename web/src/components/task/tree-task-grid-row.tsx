@@ -11,15 +11,14 @@ import { LinkExistingTaskMenu } from '#components/task/link-existing-task-menu'
 import { MoveUnderTaskMenu } from '#components/task/move-under-task-menu'
 import { SetProjectMenu } from '#components/task/set-project-menu'
 import {
-  ContextBadge,
-  DueDateBadge,
-  GridEstimate,
-  gridRowTitleClassName,
-  gridRowWrapperClassName,
   ROW_INDENT_CLASS_NAME,
   rowIndentStyle,
+  rowTitleClassName,
+  rowWrapperClassName,
+  StartDateBadge,
   TagTokens,
   TaskNumberLabel,
+  TaskProjectLabel,
   useHandleStatusChange,
 } from '#components/task/task-row-shared'
 import { TaskStatusPicker } from '#components/task/task-status-picker'
@@ -149,6 +148,9 @@ export function TreeTaskGridRow({
     <span className="w-5 shrink-0" />
   )
 
+  const hasSecondLine =
+    node.labels.length > 0 || node.startDate != null || node.githubLink != null
+
   return (
     <>
       <div
@@ -165,8 +167,8 @@ export function TreeTaskGridRow({
           <div
             className={cn(
               'group',
-              gridRowWrapperClassName(isInProgress, isCompleted),
-              // Must come after gridRowWrapperClassName: twMerge keeps
+              rowWrapperClassName(isInProgress, isCompleted),
+              // Must come after rowWrapperClassName: twMerge keeps
               // both px-* and a later pl-* (CSS cascade lets pl-* win),
               // but drops pl-* if it precedes the conflicting px-*.
               ROW_INDENT_CLASS_NAME,
@@ -174,89 +176,7 @@ export function TreeTaskGridRow({
             )}
             style={rowIndentStyle(depth)}
           >
-            {/* Desktop: single-row grid matching the column header */}
-            <div
-              className="hidden grid-cols-(--task-row-columns) items-center gap-2 md:grid"
-              onClick={handleSelectRow}
-            >
-              {expandToggle}
-              <TaskStatusPicker
-                status={node.status}
-                onStatusChange={handleStatusChange}
-              />
-
-              <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-                <TaskNumberLabel number={node.number} />
-                <span
-                  className={gridRowTitleClassName(isInProgress, isCompleted)}
-                >
-                  {node.title}
-                </span>
-                <ContextBadge context={node.context} />
-                {node.childCompletionCount.total > 0 && (
-                  <span
-                    className="shrink-0 font-mono text-xs text-muted-foreground"
-                    data-testid="child-completion"
-                  >
-                    {node.childCompletionCount.completed}/
-                    {node.childCompletionCount.total}
-                  </span>
-                )}
-                <SessionIndicator sessions={sessions} />
-              </div>
-
-              <div className="overflow-hidden">
-                {node.labels.length > 0 && (
-                  <TagTokens labels={node.labels} isCompleted={isCompleted} />
-                )}
-              </div>
-
-              <div>
-                {node.githubLink != null && (
-                  <GithubLinkBadge link={node.githubLink} />
-                )}
-              </div>
-
-              <div>
-                {node.estimatedMinutes != null && (
-                  <GridEstimate
-                    estimatedMinutes={node.estimatedMinutes}
-                    isCompleted={isCompleted}
-                  />
-                )}
-              </div>
-
-              <div className="text-right">
-                {node.dueDate != null && (
-                  <DueDateBadge dueDate={node.dueDate} status={node.status} />
-                )}
-              </div>
-
-              {/* Fragment: TreeRowActionsMenu renders two sibling triggers
-                (desktop dropdown + mobile action sheet), so it needs a
-                single wrapping element here to occupy exactly one grid
-                cell. */}
-              <div>
-                <TreeRowActionsMenu
-                  onAddSubtask={handleAddSubtask}
-                  onLinkExisting={() => {
-                    setLinkMenuOpen(true)
-                  }}
-                  onMoveUnder={() => {
-                    setMoveMenuOpen(true)
-                  }}
-                  onSetProject={() => {
-                    setProjectMenuOpen(true)
-                  }}
-                  onDelete={() => {
-                    setDeleteDialogOpen(true)
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Mobile: two-line stack */}
-            <div className="flex items-start gap-2 md:hidden">
+            <div className="flex items-start gap-2" onClick={handleSelectRow}>
               {expandToggle}
               <TaskStatusPicker
                 status={node.status}
@@ -264,14 +184,21 @@ export function TreeTaskGridRow({
               />
 
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <span
-                  className={gridRowTitleClassName(isInProgress, isCompleted)}
-                >
-                  {node.title}
-                </span>
-                <div className="flex items-center gap-1.5 overflow-hidden">
+                <div className="flex items-center gap-2 overflow-hidden">
                   <TaskNumberLabel number={node.number} />
-                  <ContextBadge context={node.context} />
+                  {/* min-w-30 (120px): without a floor, this flex item's
+                    default min-width would shrink to 0 once its siblings
+                    need more room than the row has, hiding the title
+                    entirely instead of truncating it or letting the row
+                    overflow. */}
+                  <span
+                    className={cn(
+                      rowTitleClassName(isInProgress, isCompleted),
+                      'min-w-30 flex-1',
+                    )}
+                  >
+                    {node.title}
+                  </span>
                   {node.childCompletionCount.total > 0 && (
                     <span
                       className="shrink-0 font-mono text-xs text-muted-foreground"
@@ -281,25 +208,28 @@ export function TreeTaskGridRow({
                       {node.childCompletionCount.total}
                     </span>
                   )}
-                  <SessionIndicator sessions={sessions} />
-                  {node.labels.length > 0 && (
-                    <TagTokens labels={node.labels} isCompleted={isCompleted} />
+                  {node.projectId != null && (
+                    <TaskProjectLabel projectId={node.projectId} />
                   )}
-                  <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                    {node.dueDate != null && (
-                      <DueDateBadge
-                        dueDate={node.dueDate}
-                        status={node.status}
-                      />
-                    )}
-                    {node.estimatedMinutes != null && (
-                      <GridEstimate
-                        estimatedMinutes={node.estimatedMinutes}
+                  <SessionIndicator sessions={sessions} />
+                </div>
+
+                {hasSecondLine && (
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    {node.labels.length > 0 && (
+                      <TagTokens
+                        labels={node.labels}
                         isCompleted={isCompleted}
                       />
                     )}
+                    {node.startDate != null && (
+                      <StartDateBadge startDate={node.startDate} />
+                    )}
+                    {node.githubLink != null && (
+                      <GithubLinkBadge link={node.githubLink} />
+                    )}
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="shrink-0 self-center">

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatDueDate, isTaskOverdue } from '#lib/task-due-date'
+import { formatShortDate, isTaskOverdue } from '#lib/task-due-date'
 
 describe('isTaskOverdue', () => {
   const now = new Date('2026-03-20T12:00:00')
@@ -43,14 +43,14 @@ describe('isTaskOverdue', () => {
   })
 })
 
-describe('formatDueDate', () => {
+describe('formatShortDate', () => {
   const now = new Date('2026-03-20T12:00:00')
 
-  it('omits the year when the due date is in the current year', () => {
-    expect(formatDueDate('2026-03-25', now)).toBe('Mar 25')
+  it('omits the year when the date is in the current year', () => {
+    expect(formatShortDate('2026-03-25', now)).toBe('Mar 25')
   })
 
-  it('includes the year when the due date is in a different year', () => {
-    expect(formatDueDate('2027-01-05', now)).toBe('Jan 5, 2027')
+  it('includes the year when the date is in a different year', () => {
+    expect(formatShortDate('2027-01-05', now)).toBe('Jan 5, 2027')
   })
 })

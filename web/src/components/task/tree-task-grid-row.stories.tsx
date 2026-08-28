@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
+import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { expect, waitFor, within } from 'storybook/test'
 
@@ -153,60 +154,6 @@ export const Completed: Story = {
   },
 }
 
-export const WithEstimate: Story = {
-  args: {
-    node: {
-      ...baseTreeNode,
-      title: 'Write API documentation',
-      estimatedMinutes: 120,
-    },
-  },
-}
-
-export const WorkContext: Story = {
-  args: {
-    node: {
-      ...baseTreeNode,
-      title: 'Deploy to production',
-      context: 'work',
-      estimatedMinutes: 30,
-    },
-  },
-}
-
-export const WithDueDate: Story = {
-  args: {
-    node: {
-      ...baseTreeNode,
-      title: 'Submit expense report',
-      // Far future so this story never flips to overdue.
-      dueDate: '2099-06-15',
-    },
-  },
-}
-
-export const Overdue: Story = {
-  args: {
-    node: {
-      ...baseTreeNode,
-      title: 'Renew SSL certificate',
-      // Fixed past date so this story always renders as overdue.
-      dueDate: '2020-01-01',
-    },
-  },
-}
-
-export const OverdueCompleted: Story = {
-  args: {
-    node: {
-      ...baseTreeNode,
-      status: 'completed',
-      title: 'Renew SSL certificate',
-      dueDate: '2020-01-01',
-    },
-  },
-}
-
 export const WithGithubLink: Story = {
   args: {
     node: {
@@ -233,6 +180,48 @@ export const WithTags: Story = {
       ...baseTreeNode,
       title: 'Ship the release notes',
       labels: ['dev:tq', 'chore'],
+    },
+  },
+}
+
+export const WithStartDate: Story = {
+  args: {
+    node: {
+      ...baseTreeNode,
+      title: 'Task with a start date',
+      startDate: '2026-03-25',
+    },
+  },
+}
+
+export const WithProject: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/projects/:id', () =>
+          HttpResponse.json({
+            id: 'project-1',
+            title: 'tq',
+            description: null,
+            status: 'active',
+            startDate: null,
+            targetDate: null,
+            color: null,
+            sortOrder: 0,
+            createdAt: '2026-03-20T00:00:00.000Z',
+            updatedAt: '2026-03-20T00:00:00.000Z',
+            completionRate: 0.4,
+            taskCount: { total: 10, completed: 4 },
+          }),
+        ),
+      ],
+    },
+  },
+  args: {
+    node: {
+      ...baseTreeNode,
+      title: 'Ship the release notes',
+      projectId: 'project-1',
     },
   },
 }
@@ -266,9 +255,7 @@ export const TagClick: Story = (() => {
       )
     },
     play: async ({ canvas, userEvent }) => {
-      // Both the desktop and mobile layouts render at once (only CSS toggles
-      // which is visible), so the tag token exists twice — click either one.
-      await userEvent.click(atIndex(canvas.getAllByText('#dev:tq'), 0))
+      await userEvent.click(canvas.getByText('#dev:tq'))
       await expect(router.history.location.pathname).toBe('/tasks')
     },
   }
@@ -302,10 +289,7 @@ export const ClickNavigates: Story = (() => {
       )
     },
     play: async ({ args, canvas, userEvent }) => {
-      // Both the desktop and mobile layouts render at once — click the
-      // desktop one, which used to intercept this click before it reached
-      // the row's Link.
-      await userEvent.click(atIndex(canvas.getAllByText(args.node.title), 0))
+      await userEvent.click(canvas.getByText(args.node.title))
       await expect(router.history.location.pathname).toBe(
         `/tasks/${args.node.id}`,
       )
@@ -457,27 +441,19 @@ export const WithCompletionCount: Story = {
 
 export const AllVariants: Story = {
   args: { node: baseTreeNode },
-  // `--task-row-columns` (see index.css) is only consumed by the desktop
-  // grid layout (`md:grid`); the mobile stack layout is a plain flexbox and
-  // has no fixed-column-width to collapse. Below the `md` breakpoint the
-  // desktop grid is `display: none` entirely, so the play function's target
-  // element doesn't exist to measure — this check is inherently
-  // desktop-only, not just narrower on mobile.
-  // CSF's static tags parser requires a literal here, not the imported
-  // DESKTOP_ONLY_TAG constant.
-  tags: ['desktop-only'],
   parameters: {
-    // --task-row-columns' title column has a content-sized floor (see
-    // index.css), not a bare `1fr` — without it, the title collapses to 0
-    // width instead of the row overflowing once the container is narrower
-    // than the columns need. The container below is deliberately that
-    // narrow, so every row overflowing here is the regression check itself
-    // (see the play function verifying the title never collapses), not a
-    // bug to fix. Scoped to `narrow-row-container` below rather than
-    // disabling the whole story, so overflow added elsewhere in this story
-    // would still be caught. `* below the container is needed alongside
-    // the container itself because ignoreSelectors only exempts the
-    // elements it matches, not their descendants.
+    // The title `<span>` has a `min-w-30` (120px) floor, not `min-w-0` —
+    // without it, the title would shrink to 0 width instead of the row
+    // overflowing once the container is narrower than the row's content
+    // needs (see tree-task-grid-row.tsx). The container below is
+    // deliberately that narrow, so every row overflowing here is the
+    // regression check itself (see the play function verifying the title
+    // never collapses), not a bug to fix. Scoped to `narrow-row-container`
+    // below rather than disabling the whole story, so overflow added
+    // elsewhere in this story would still be caught. `* below the
+    // container is needed alongside the container itself because
+    // ignoreSelectors only exempts the elements it matches, not their
+    // descendants.
     overflowCheck: {
       ignoreSelectors: [
         '[data-testid="narrow-row-container"]',
@@ -541,10 +517,11 @@ export const AllVariants: Story = {
     )
   },
   play: async ({ canvas }) => {
-    // Regression check: this container is narrower than the row's fixed
-    // columns need, so without --task-row-columns' title-column floor (see
-    // index.css) the title collapses to 0 width instead of truncating.
-    const title = atIndex(canvas.getAllByText('Todo task (personal)'), 0)
+    // Regression check: this container is narrower than the row's content
+    // needs, so without the title span's `min-w-30` floor (see
+    // tree-task-grid-row.tsx) the title collapses to 0 width instead of
+    // truncating.
+    const title = canvas.getByText('Todo task (personal)')
     await expect(title.getBoundingClientRect().width).toBeGreaterThan(0)
   },
 }
@@ -554,15 +531,16 @@ export const Hovered: Story = {
     node: { ...baseTreeNode, title: 'Hover to reveal the ⋯ actions menu' },
   },
   play: async ({ canvasElement }) => {
-    // The row renders its desktop-grid and mobile-stack layouts
-    // simultaneously, each with its own action menu, so both trigger kinds
-    // exist twice. Only one instance of each is ever reachable: the other
-    // layout's *wrapper* is `display: none`, which a plain `getComputedStyle`
-    // on the trigger itself can't see (the trigger's own class alone may
-    // still compute to a visible `display`) — checkVisibility() walks
-    // ancestors instead. It ignores `opacity` by default, so the desktop
-    // trigger's opacity-0 hover-reveal (checked below) still counts as
-    // reachable here.
+    // ActionsMenu itself renders a responsive pair — a dropdown trigger and
+    // an action-sheet trigger — and toggles which is visible via `hidden
+    // md:flex` / `flex md:hidden` (see actions-menu.tsx), so only one of the
+    // two candidates below is ever reachable at a given viewport. The
+    // hidden one's *wrapper* is `display: none`, which a plain
+    // `getComputedStyle` on the trigger itself can't see (the trigger's own
+    // class alone may still compute to a visible `display`) —
+    // checkVisibility() walks ancestors instead. It ignores `opacity` by
+    // default, so the desktop trigger's opacity-0 hover-reveal (checked
+    // below) still counts as reachable here.
     const dropdownTrigger = findVisible(
       Array.from(
         canvasElement.querySelectorAll<HTMLElement>(
