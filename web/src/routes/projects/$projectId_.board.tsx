@@ -37,11 +37,17 @@ function ProjectBoardPage() {
   const [isLinkExistingOpen, setIsLinkExistingOpen] = useState(false)
   const [view, setView] = useState<ProjectView>('list')
 
-  const { isLoading: isFilteredTasksLoading, categorized } = useTaskList({
-    projectId,
-    ...(statusFilter === 'all' ? {} : { status: statusFilter }),
-    ...(sortOption === 'manual' ? {} : { sortBy: sortOption }),
-  })
+  // Skipped when the gantt view is active: it renders from the unfiltered
+  // `tasks` above, and this filtered query would otherwise fire a request
+  // whose result never gets used.
+  const { isLoading: isFilteredTasksLoading, categorized } = useTaskList(
+    {
+      projectId,
+      ...(statusFilter === 'all' ? {} : { status: statusFilter }),
+      ...(sortOption === 'manual' ? {} : { sortBy: sortOption }),
+    },
+    { enabled: view === 'list' },
+  )
   const filteredTree = useMemo(
     () => buildTree(categorized.all),
     [categorized.all],
