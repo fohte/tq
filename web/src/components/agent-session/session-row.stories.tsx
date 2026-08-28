@@ -246,6 +246,12 @@ export const ShowsCopiedFeedbackAfterCopy: Story = {
     session: { ...baseSession, id: '15' },
     isDimmed: false,
   },
+  parameters: {
+    // The copied state reverts to idle after COPY_FEEDBACK_MS, and a slow CI
+    // run can cross that window before the screenshot is taken — skip the
+    // capture since the play function already asserts the feedback state.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas }) => {
     spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
 
@@ -260,6 +266,11 @@ export const ShowsFailureWhenCopyRejects: Story = {
   args: {
     session: { ...baseSession, id: '14' },
     isDimmed: false,
+  },
+  parameters: {
+    // Same COPY_FEEDBACK_MS timeout as ShowsCopiedFeedbackAfterCopy — skip
+    // the capture for the same reason.
+    screenshot: { skip: true },
   },
   play: async ({ canvas }) => {
     spyOn(navigator.clipboard, 'writeText').mockRejectedValue(
