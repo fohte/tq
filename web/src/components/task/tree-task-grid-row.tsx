@@ -178,15 +178,6 @@ export function TreeTaskGridRow({
           >
             <div className="flex items-start gap-2" onClick={handleSelectRow}>
               {expandToggle}
-              {node.childCompletionCount.total > 0 && (
-                <span
-                  className="shrink-0 self-center font-mono text-xs text-muted-foreground"
-                  data-testid="child-completion"
-                >
-                  {node.childCompletionCount.completed}/
-                  {node.childCompletionCount.total}
-                </span>
-              )}
               <TaskStatusPicker
                 status={node.status}
                 onStatusChange={handleStatusChange}
@@ -208,6 +199,15 @@ export function TreeTaskGridRow({
                   >
                     {node.title}
                   </span>
+                  {node.childCompletionCount.total > 0 && (
+                    <span
+                      className="shrink-0 font-mono text-xs text-muted-foreground"
+                      data-testid="child-completion"
+                    >
+                      {node.childCompletionCount.completed}/
+                      {node.childCompletionCount.total}
+                    </span>
+                  )}
                   {node.projectId != null && (
                     <TaskProjectLabel projectId={node.projectId} />
                   )}
