@@ -178,9 +178,6 @@ export function TreeTaskGridRow({
           >
             <div className="flex items-start gap-2" onClick={handleSelectRow}>
               {expandToggle}
-              {/* Placed next to the expand toggle, not the title: whether
-                this badge exists is the same fact as whether the toggle
-                does (both hinge on hasChildren), so they read as one unit. */}
               {node.childCompletionCount.total > 0 && (
                 <span
                   className="shrink-0 self-center font-mono text-xs text-muted-foreground"
@@ -202,10 +199,7 @@ export function TreeTaskGridRow({
                     default min-width would shrink to 0 once its siblings
                     need more room than the row has, hiding the title
                     entirely instead of truncating it or letting the row
-                    overflow. No flex-1: the title (and its siblings below)
-                    should stay only as wide as their content and leave
-                    unused space at the row's right edge, not stretch into
-                    it. */}
+                    overflow. */}
                   <span
                     className={cn(
                       rowTitleClassName(isInProgress, isCompleted),

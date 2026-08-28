@@ -117,9 +117,6 @@ export const Empty: Story = {
   },
 }
 
-// None of `sampleTasks` populate labels/startDate/githubLink, so `Default`
-// never renders a row's second line — this story exists so VRT still
-// captures it.
 export const WithSecondLine: Story = {
   args: {
     isLoading: false,
