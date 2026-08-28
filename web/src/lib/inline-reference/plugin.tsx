@@ -1,5 +1,7 @@
 import type { Node } from '@milkdown/kit/prose/model'
+import type { Selection } from '@milkdown/kit/prose/state'
 import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
+import type { EditorView } from '@milkdown/kit/prose/view'
 import { Decoration, DecorationSet } from '@milkdown/kit/prose/view'
 import { $prose } from '@milkdown/kit/utils'
 import type {
@@ -14,11 +16,27 @@ import { collectTextBlockRuns } from '#lib/inline-reference/text-scan'
 import type { InlineReferenceProvider } from '#lib/inline-reference/types'
 import type { InlineReferenceViewModeStore } from '#lib/inline-reference/view-mode'
 
+// The cursor (or either edge of a range selection) touching a match's range
+// at all — including sitting exactly on `from`/`to` — counts as "on" it, so
+// typing right before/after the raw text doesn't still show a chip.
+// `selection` is null when the editor doesn't have focus: a freshly mounted
+// view's selection defaults to the doc start, which would otherwise suppress
+// whatever reference sits there before the user has touched anything.
+function selectionOverlaps(
+  selection: Selection | null,
+  from: number,
+  to: number,
+) {
+  if (selection == null) return false
+  return selection.to >= from && selection.from <= to
+}
+
 function buildDecorations<TData>(
   provider: InlineReferenceProvider<TData>,
   createChipWidget: ReturnType<CreateReactWidgetView>,
   createCardWidget: ReturnType<CreateReactWidgetView>,
   doc: Node,
+  selection: Selection | null,
 ): Decoration[] {
   const decorations: Decoration[] = []
 
@@ -35,9 +53,13 @@ function buildDecorations<TData>(
       soleMatch != null &&
       soleMatch.raw === run.text.trim()
     ) {
+      const hideFrom = run.posAt(0)
+      const hideTo = run.posAt(run.text.length)
+      if (selectionOverlaps(selection, hideFrom, hideTo)) continue
+
       const from = run.posAt(soleMatch.start)
       decorations.push(
-        Decoration.inline(run.posAt(0), run.posAt(run.text.length), {
+        Decoration.inline(hideFrom, hideTo, {
           class: 'inline-reference-source',
         }),
         createCardWidget(from, {
@@ -53,6 +75,7 @@ function buildDecorations<TData>(
     for (const match of matches) {
       const from = run.posAt(match.start)
       const to = run.posAt(match.end)
+      if (selectionOverlaps(selection, from, to)) continue
 
       decorations.push(
         Decoration.inline(from, to, { class: 'inline-reference-source' }),
@@ -152,13 +175,16 @@ function createCardWidgetComponent<TData>(
 
 // Wires one InlineReferenceProvider up as a Milkdown/ProseMirror plugin: in
 // 'view' mode (see view-mode.ts), text matching its pattern is hidden and
-// replaced by the provider's chip (or card, see buildDecorations) widget; in
-// 'edit' mode, decorations are suppressed entirely and the raw Markdown
-// source is shown as-is. `widgetViewFactory` comes from
-// @prosemirror-adapter/react's useWidgetViewFactory(), so this must be
-// called from within a component tree that has a ProsemirrorAdapterProvider
-// ancestor. `viewModeStore` is read directly (not from ProseMirror state) so
-// that switching modes never needs a transaction dispatch — see view-mode.ts.
+// replaced by the provider's chip (or card, see buildDecorations) widget,
+// except for a match the selection currently overlaps while the view has
+// focus — that one stays as raw, editable source until the selection moves
+// off it (selectionOverlaps); in 'edit' mode, decorations are suppressed
+// entirely and the raw Markdown source is shown as-is. `widgetViewFactory`
+// comes from @prosemirror-adapter/react's useWidgetViewFactory(), so this
+// must be called from within a component tree that has a
+// ProsemirrorAdapterProvider ancestor. `viewModeStore` is read directly (not
+// from ProseMirror state) so that switching modes never needs a transaction
+// dispatch — see view-mode.ts.
 export function createInlineReferencePlugin<TData>(
   provider: InlineReferenceProvider<TData>,
   widgetViewFactory: CreateReactWidgetView,
@@ -174,15 +200,46 @@ export function createInlineReferencePlugin<TData>(
   })
 
   return $prose(() => {
+    let editorView: EditorView | null = null
+
     return new Plugin({
       key: new PluginKey(`inline-reference-${provider.id}`),
+      // ProseMirror's own focus/blur handling only flips `view.focused`
+      // internally — it never dispatches a transaction — so decorations()
+      // wouldn't otherwise be re-run when focus changes, leaving a match
+      // stuck showing raw source (or a chip) past the focus change that
+      // should have flipped it. `setProps({})` re-runs `decorations()`
+      // without touching `state`, unlike `dispatch()`, which would also
+      // invoke every other plugin's `appendTransaction` (e.g. Milkdown's
+      // `trailing` plugin, which appends a paragraph on any transaction —
+      // dispatching here would fire it on every focus change).
+      view(view) {
+        editorView = view
+        const redecorate = () => {
+          view.setProps({})
+        }
+        view.dom.addEventListener('focus', redecorate)
+        view.dom.addEventListener('blur', redecorate)
+        return {
+          destroy() {
+            view.dom.removeEventListener('focus', redecorate)
+            view.dom.removeEventListener('blur', redecorate)
+          },
+        }
+      },
       props: {
         decorations(state) {
           if (viewModeStore.getMode() !== 'view') return DecorationSet.empty
-          const { doc } = state
+          const { doc, selection } = state
           return DecorationSet.create(
             doc,
-            buildDecorations(provider, createChipWidget, createCardWidget, doc),
+            buildDecorations(
+              provider,
+              createChipWidget,
+              createCardWidget,
+              doc,
+              editorView?.hasFocus() === true ? selection : null,
+            ),
           )
         },
       },
