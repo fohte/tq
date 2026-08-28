@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
+import type { Task } from '#hooks/use-task-queries'
+import { taskKeys } from '#hooks/use-task-queries'
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
 
@@ -11,7 +13,7 @@ type ProjectDetail = InferResponseType<
   200
 >
 
-type ProjectTask = InferResponseType<typeof api.api.tasks.$get, 200>[number]
+type ProjectTask = Task
 
 export type { Project, ProjectDetail, ProjectTask }
 
@@ -34,7 +36,6 @@ export const projectKeys = {
   list: (filter?: { status?: string }) =>
     [...projectKeys.lists, filter] as const,
   detail: (id: string) => [...projectKeys.all, 'detail', id] as const,
-  tasks: (id: string) => [...projectKeys.all, 'tasks', id] as const,
 }
 
 export function useProjects(
@@ -67,7 +68,7 @@ export function useProject(id: string) {
 
 export function useProjectTasks(id: string) {
   return useQuery({
-    queryKey: projectKeys.tasks(id),
+    queryKey: taskKeys.list({ projectId: id }),
     queryFn: async () => {
       const res = await api.api.tasks.$get({ query: { projectId: id } })
       return unwrapOrThrow(assertOk(res)).json()
