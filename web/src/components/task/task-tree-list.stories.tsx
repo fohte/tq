@@ -128,6 +128,8 @@ export const WithSecondLine: Story = {
         title: 'Task with a full second line',
         labels: ['dev:tq', 'chore'],
         startDate: '2026-03-25',
+        // Far future so this story never flips to overdue.
+        dueDate: '2099-06-15',
         githubLink: {
           id: 'link-1',
           owner: 'fohte',

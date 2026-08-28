@@ -11,12 +11,14 @@ import { LinkExistingTaskMenu } from '#components/task/link-existing-task-menu'
 import { MoveUnderTaskMenu } from '#components/task/move-under-task-menu'
 import { SetProjectMenu } from '#components/task/set-project-menu'
 import {
+  DueDateBadge,
   ROW_INDENT_CLASS_NAME,
   rowIndentStyle,
   rowTitleClassName,
   rowWrapperClassName,
   StartDateBadge,
   TagTokens,
+  TaskContextLabel,
   TaskNumberLabel,
   TaskProjectLabel,
   useHandleStatusChange,
@@ -148,9 +150,6 @@ export function TreeTaskGridRow({
     <span className="w-5 shrink-0" />
   )
 
-  const hasSecondLine =
-    node.labels.length > 0 || node.startDate != null || node.githubLink != null
-
   return (
     <>
       <div
@@ -208,28 +207,27 @@ export function TreeTaskGridRow({
                       {node.childCompletionCount.total}
                     </span>
                   )}
-                  {node.projectId != null && (
-                    <TaskProjectLabel projectId={node.projectId} />
-                  )}
                   <SessionIndicator sessions={sessions} />
                 </div>
 
-                {hasSecondLine && (
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    {node.labels.length > 0 && (
-                      <TagTokens
-                        labels={node.labels}
-                        isCompleted={isCompleted}
-                      />
-                    )}
-                    {node.startDate != null && (
-                      <StartDateBadge startDate={node.startDate} />
-                    )}
-                    {node.githubLink != null && (
-                      <GithubLinkBadge link={node.githubLink} />
-                    )}
-                  </div>
-                )}
+                <div className="flex items-center gap-2 overflow-hidden">
+                  {node.labels.length > 0 && (
+                    <TagTokens labels={node.labels} isCompleted={isCompleted} />
+                  )}
+                  {node.projectId != null && (
+                    <TaskProjectLabel projectId={node.projectId} />
+                  )}
+                  <TaskContextLabel context={node.context} />
+                  {node.startDate != null && (
+                    <StartDateBadge startDate={node.startDate} />
+                  )}
+                  {node.dueDate != null && (
+                    <DueDateBadge dueDate={node.dueDate} status={node.status} />
+                  )}
+                  {node.githubLink != null && (
+                    <GithubLinkBadge link={node.githubLink} />
+                  )}
+                </div>
               </div>
 
               <div className="shrink-0 self-center">

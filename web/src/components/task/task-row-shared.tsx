@@ -100,6 +100,14 @@ export function TaskProjectLabel({ projectId }: { projectId: string }) {
   )
 }
 
+export function TaskContextLabel({ context }: { context: Task['context'] }) {
+  return (
+    <span className="shrink-0 font-mono text-xs text-muted-foreground">
+      {context}
+    </span>
+  )
+}
+
 export function TaskNumberLabel({ number }: { number: number }) {
   return (
     <span className="shrink-0 font-mono text-xs text-muted-foreground-faint">

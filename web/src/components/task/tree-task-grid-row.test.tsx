@@ -462,6 +462,21 @@ describe('TreeTaskGridRow', () => {
     expect(screen.queryByText('Mar 25')).not.toBeInTheDocument()
   })
 
+  it('shows the context', async () => {
+    await renderTree(makeNode({ context: 'work' }))
+    expect(screen.getByText('work')).toBeInTheDocument()
+  })
+
+  it('shows a due date badge when the task has a due date', async () => {
+    await renderTree(makeNode({ dueDate: '2026-03-25' }))
+    expect(screen.getByText('Mar 25')).toBeInTheDocument()
+  })
+
+  it('does not show a due date badge when the task has no due date', async () => {
+    await renderTree(makeNode({ dueDate: null }))
+    expect(screen.queryByText('Mar 25')).not.toBeInTheDocument()
+  })
+
   it('does not render tag tokens when there are no labels', async () => {
     await renderTree(makeNode({ labels: [] }))
     // Tag tokens render as buttons; the task number label (a <span>) also
