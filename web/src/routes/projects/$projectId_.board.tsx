@@ -12,7 +12,6 @@ import { ProjectGanttView } from '#components/project/project-gantt-view'
 import type { ProjectView } from '#components/project/project-view-tabs'
 import { FloatingActionButton } from '#components/task/create-task-inline'
 import { CreateTaskModal } from '#components/task/create-task-modal'
-import { TaskListColumnHeader } from '#components/task/task-list-column-header'
 import { TaskTreeList } from '#components/task/task-tree-list'
 import { BackHeaderBar } from '#components/ui/back-header-bar'
 import { FullPageLoading } from '#components/ui/full-page-loading'
@@ -95,7 +94,6 @@ function ProjectBoardPage() {
           />
 
           {/* Task list */}
-          <TaskListColumnHeader />
           <TaskTreeList
             isLoading={isFilteredTasksLoading}
             tree={filteredTree}
