@@ -116,3 +116,34 @@ export const Empty: Story = {
     sessionsByTaskId: new Map(),
   },
 }
+
+// None of `sampleTasks` populate labels/startDate/githubLink, so `Default`
+// never renders a row's second line — this story exists so VRT still
+// captures it.
+export const WithSecondLine: Story = {
+  args: {
+    isLoading: false,
+    tasks: [
+      {
+        ...baseTask,
+        id: '4',
+        number: 4,
+        title: 'Task with a full second line',
+        labels: ['dev:tq', 'chore'],
+        startDate: '2026-03-25',
+        githubLink: {
+          id: 'link-1',
+          owner: 'fohte',
+          repo: 'tq',
+          number: 42,
+          kind: 'pull_request',
+          url: 'https://github.com/fohte/tq/pull/42',
+          state: 'merged',
+          title: 'Fix flaky test',
+          lastSyncedAt: '2026-03-20T00:00:00.000Z',
+        },
+      },
+    ],
+    sessionsByTaskId: new Map(),
+  },
+}
