@@ -1,8 +1,8 @@
 import { Schema } from '@milkdown/kit/prose/model'
 import { describe, expect, it } from 'vitest'
 
-import { collectTextBlockRuns } from '#lib/inline-reference/text-scan'
 import { assertDefined, atIndex } from '#lib/test-utils'
+import { collectTextBlockRuns } from '#lib/text-scan'
 
 const schema = new Schema({
   nodes: {

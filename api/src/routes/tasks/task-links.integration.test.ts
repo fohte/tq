@@ -301,6 +301,27 @@ describe('task mention links', () => {
     })
   })
 
+  it('does not let an unterminated backtick in one field mask a mention in the next field as code', async () => {
+    // Each field is parsed on its own rather than joined into one string
+    // first: an unmatched backtick ending the description would otherwise
+    // pair up with the closing backtick in the page below, turning the page's
+    // mention into the content of one inline code span spanning both fields
+    // and masking it out.
+    const source = await createTask('Source')
+    const target = await createTask('Target')
+    await patchTask(source.id, { description: 'see `' })
+    await createPage(
+      source.id,
+      'Notes',
+      `code #${String(target.number)} more\``,
+    )
+
+    expect(await getLinks(source.id)).toEqual({
+      outgoing: [linkSummary(target)],
+      incoming: [],
+    })
+  })
+
   it('removes the link once the mention is gone from every field', async () => {
     const source = await createTask('Source')
     const target = await createTask('Target')

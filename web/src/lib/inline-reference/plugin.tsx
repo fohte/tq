@@ -9,10 +9,10 @@ import type {
   ReactWidgetViewComponent,
 } from '@prosemirror-adapter/react'
 import { useWidgetViewContext } from '@prosemirror-adapter/react'
+import { collectTextBlockRuns } from 'api/lib/text-scan'
 import type { RefObject } from 'react'
 import { useEffect, useRef } from 'react'
 
-import { collectTextBlockRuns } from '#lib/inline-reference/text-scan'
 import type { InlineReferenceProvider } from '#lib/inline-reference/types'
 import type { InlineReferenceViewModeStore } from '#lib/inline-reference/view-mode'
 

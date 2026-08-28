@@ -6,8 +6,14 @@ import { taskComments, taskLinks, taskPages, tasks } from '#db/schema'
 import { APP_DOMAIN } from '#env'
 import { extractAppResourceRefs } from '#lib/app-url'
 import { matchByIdOrNumber } from '#lib/drizzle-utils'
+import { parseMarkdown } from '#lib/markdown-parser'
 import type { NumericOrId } from '#lib/numeric-id'
+import { collectTextBlockRuns } from '#lib/text-scan'
 
+// Only safe to run against a single textblock run's masked text (see
+// `extractMentionedTaskRefs` below) — a raw markdown string can still
+// contain `#123` inside a code span or a link's display text, which isn't a
+// real reference.
 export function extractMentionedNumbers(text: string): number[] {
   const numbers = new Set<number>()
   for (const match of text.matchAll(MENTION_PATTERN)) {
@@ -17,14 +23,13 @@ export function extractMentionedNumbers(text: string): number[] {
   return [...numbers]
 }
 
-// Combines `#123`-style mentions with `https://<APP_DOMAIN>/tasks/...`-style
-// URLs pasted into task text. A task URL may key off either the human-facing
-// number or the UUID primary key (see `findTaskByIdOrNumber`), so a numeric
-// URL ref is folded in alongside `#123` mentions as the same `kind: 'number'`.
-export function extractMentionedTaskRefs(text: string): NumericOrId[] {
-  const numbers = new Set(extractMentionedNumbers(text))
+// Shared by `extractMentionedTaskRefs` (within one field) and `syncTaskLinks`
+// (across a task's fields) so both dedupe refs the same way regardless of
+// how many source texts they were scanned from.
+function dedupeRefs(refs: Iterable<NumericOrId>): NumericOrId[] {
+  const numbers = new Set<number>()
   const ids = new Set<string>()
-  for (const ref of extractAppResourceRefs(text, APP_DOMAIN, 'tasks')) {
+  for (const ref of refs) {
     if (ref.kind === 'number') {
       numbers.add(ref.value)
     } else {
@@ -35,6 +40,32 @@ export function extractMentionedTaskRefs(text: string): NumericOrId[] {
     ...[...numbers].map((value): NumericOrId => ({ kind: 'number', value })),
     ...[...ids].map((value): NumericOrId => ({ kind: 'id', value })),
   ]
+}
+
+// Combines `#123`-style mentions with `https://<APP_DOMAIN>/tasks/...`-style
+// URLs pasted into task text. A task URL may key off either the human-facing
+// number or the UUID primary key (see `findTaskByIdOrNumber`), so a numeric
+// URL ref is folded in alongside `#123` mentions as the same `kind: 'number'`.
+//
+// Parses `text` into the same ProseMirror doc shape the frontend editor
+// produces and runs the regex matchers per textblock run rather than against
+// the raw string, so a `#123` inside a code span or a link's display text
+// (masked by `collectTextBlockRuns`, shared with `web` via the `api`
+// package) is excluded the same way it is in the editor.
+export async function extractMentionedTaskRefs(
+  text: string,
+): Promise<NumericOrId[]> {
+  const doc = await parseMarkdown(text)
+  const refs: NumericOrId[] = []
+  for (const run of collectTextBlockRuns(doc)) {
+    for (const value of extractMentionedNumbers(run.text)) {
+      refs.push({ kind: 'number', value })
+    }
+    for (const ref of extractAppResourceRefs(run.text, APP_DOMAIN, 'tasks')) {
+      refs.push(ref)
+    }
+  }
+  return dedupeRefs(refs)
 }
 
 // Recomputes every outgoing link for `sourceTaskId` from scratch by
@@ -76,11 +107,14 @@ export async function syncTaskLinks(sourceTaskId: string): Promise<void> {
       ...pages.filter((p) => p.format !== 'html').map((p) => p.content),
       ...comments.map((c) => c.content),
     ]
-    // Joined with `\n` (rather than `texts.flatMap(extractMentionedTaskRefs)`)
-    // so refs are deduped across fields, not just within each one — `\n` isn't
-    // part of a `#123` mention or a URL ref, so it can't bridge a false match
-    // across the join.
-    const refs = extractMentionedTaskRefs(texts.join('\n')).filter((ref) =>
+    // Each field is parsed separately (not joined into one string first):
+    // joining would let e.g. an unterminated inline-code backtick ending one
+    // field pair up with a closing backtick that starts the next, masking a
+    // real mention in the next field as code (see the "unterminated
+    // backtick" case in task-links.integration.test.ts). Refs are still
+    // deduped across fields via `dedupeRefs`, not just within each one.
+    const refsPerField = await Promise.all(texts.map(extractMentionedTaskRefs))
+    const refs = dedupeRefs(refsPerField.flat()).filter((ref) =>
       ref.kind === 'number'
         ? ref.value !== task.number
         : ref.value !== sourceTaskId,
