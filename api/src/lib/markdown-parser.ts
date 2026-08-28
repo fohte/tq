@@ -14,6 +14,9 @@ import { Clock, Container, Ctx } from '@milkdown/kit/ctx'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import type { Node } from '@milkdown/kit/prose/model'
+import { fromThrowable, type Result } from 'neverthrow'
+
+import { BoundaryError } from '#errors'
 
 // milkdown's internal Timer (see @milkdown/ctx) dispatches CustomEvents via
 // bare global addEventListener/dispatchEvent, which only exist in a browser
@@ -39,6 +42,13 @@ if (typeof globalEventTarget.dispatchEvent !== 'function') {
     dispatchEvent: target.dispatchEvent.bind(target),
   })
 }
+
+// milkdown's remark-based parser throws (e.g. `RangeError: Maximum call
+// stack size exceeded` on deeply nested input such as thousands of nested
+// blockquotes) rather than returning a Result, so `parseMarkdown` wraps it
+// at this interop boundary instead of letting it escape as an uncaught
+// exception.
+export class MarkdownParseError extends BoundaryError {}
 
 let ctxPromise: Promise<Ctx> | undefined
 
@@ -87,7 +97,13 @@ async function getCtx(): Promise<Ctx> {
 // can run identically on both sides. `ctx.get(parserCtx)` is a synchronous,
 // stateless function (see @milkdown/transformer's `ParserState.create`), so
 // it's safe to call repeatedly/concurrently once the ctx is built.
-export async function parseMarkdown(markdown: string): Promise<Node> {
+export async function parseMarkdown(
+  markdown: string,
+): Promise<Result<Node, MarkdownParseError>> {
   const ctx = await getCtx()
-  return ctx.get(parserCtx)(markdown)
+  const parse = fromThrowable(
+    ctx.get(parserCtx),
+    (cause) => new MarkdownParseError('failed to parse markdown', cause),
+  )
+  return parse(markdown)
 }

@@ -1,3 +1,4 @@
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { eq, sql } from 'drizzle-orm'
 
 import { MENTION_PATTERN } from '#constants/mention-pattern'
@@ -55,7 +56,15 @@ function dedupeRefs(refs: Iterable<NumericOrId>): NumericOrId[] {
 export async function extractMentionedTaskRefs(
   text: string,
 ): Promise<NumericOrId[]> {
-  const doc = await parseMarkdown(text)
+  const parsed = await parseMarkdown(text)
+  if (parsed.isErr()) {
+    // A pathological field (e.g. deeply nested blockquotes) must not turn an
+    // otherwise-successful task/page/comment write into a failed sync — this
+    // field just contributes no refs.
+    captureWithFingerprint(parsed.error, 'api.task-links.parse-failed')
+    return []
+  }
+  const doc = parsed.value
   const refs: NumericOrId[] = []
   for (const run of collectTextBlockRuns(doc)) {
     for (const value of extractMentionedNumbers(run.text)) {

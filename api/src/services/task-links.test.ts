@@ -112,4 +112,11 @@ describe('extractMentionedTaskRefs', () => {
       ),
     ).toEqual([])
   })
+
+  it('returns an empty array instead of throwing when the input fails to parse', async () => {
+    // Thousands of nested blockquote markers overflow the markdown parser
+    // (see markdown-parser.test.ts); this must degrade to no refs rather
+    // than fail the whole sync.
+    expect(await extractMentionedTaskRefs('> '.repeat(5000) + 'x')).toEqual([])
+  })
 })

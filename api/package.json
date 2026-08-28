@@ -8,6 +8,7 @@
     "./constants/mention-pattern": "./src/constants/mention-pattern.ts",
     "./lib/app-url": "./src/lib/app-url.ts",
     "./lib/markdown-parser": "./src/lib/markdown-parser.ts",
+    "./lib/test-utils": "./src/lib/test-utils.ts",
     "./lib/text-scan": "./src/lib/text-scan.ts",
     "./schemas/agent-session": "./src/schemas/agent-session.ts",
     "./schemas/project": "./src/schemas/project.ts",

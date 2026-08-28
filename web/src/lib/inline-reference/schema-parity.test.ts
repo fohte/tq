@@ -18,7 +18,7 @@ describe('frontend/backend markdown parser schema parity', () => {
     try {
       const crepeMarks = Object.keys(editor.ctx.get(schemaCtx).marks).sort()
 
-      const doc = await parseMarkdown('')
+      const doc = (await parseMarkdown(''))._unsafeUnwrap()
       const apiMarks = Object.keys(doc.type.schema.marks).sort()
 
       expect(crepeMarks).toEqual(apiMarks)
