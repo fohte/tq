@@ -1,4 +1,4 @@
-import type { Node } from '@milkdown/kit/prose/model'
+import type { Mark, Node } from '@milkdown/kit/prose/model'
 
 export interface TextBlockRun {
   text: string
@@ -8,10 +8,26 @@ export interface TextBlockRun {
   nodeType: string
 }
 
-// Non-text inline leaves (hard breaks, images, ...) are represented by this
-// placeholder so a pattern can't accidentally match across them, while
-// keeping every character of `text` mapped to exactly one doc position.
+// Non-text inline leaves (hard breaks, images, ...) — and masked text runs,
+// see isNonReferenceText below — are represented by this placeholder so a
+// pattern can't accidentally match across/into them, while keeping every
+// character of `text` mapped to exactly one doc position.
 const LEAF_PLACEHOLDER = '￼'
+
+// A code span's content is code, not prose, so it's never a reference. A
+// link's display text describes wherever the link points, not a tq
+// resource — except a GFM autolink literal, whose display text is the URL
+// itself (href === text), which the taskUrl/projectUrl/githubUrl/
+// slackPermalink providers still need to see.
+function isNonReferenceText(marks: readonly Mark[], text: string): boolean {
+  return marks.some((mark) => {
+    if (mark.type.name === 'inlineCode') return true
+    if (mark.type.name === 'link' && typeof mark.attrs['href'] === 'string') {
+      return mark.attrs['href'] !== text
+    }
+    return false
+  })
+}
 
 // Scans the document one textblock at a time (paragraphs, headings, code
 // blocks, ...) rather than the whole document at once, since an inline
@@ -28,10 +44,13 @@ export function collectTextBlockRuns(doc: Node): TextBlockRun[] {
 
     node.forEach((child) => {
       if (child.isText && child.text != null) {
-        for (let i = 0; i < child.text.length; i++) {
+        const childText = child.text
+        for (let i = 0; i < childText.length; i++) {
           offsets.push(pos + childOffset + i)
         }
-        text += child.text
+        text += isNonReferenceText(child.marks, childText)
+          ? LEAF_PLACEHOLDER.repeat(childText.length)
+          : childText
       } else {
         offsets.push(pos + childOffset)
         text += LEAF_PLACEHOLDER
