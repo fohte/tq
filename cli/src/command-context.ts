@@ -4,7 +4,7 @@ import { err, ok, Result } from 'neverthrow'
 import type { Client } from '#client'
 import { createClient } from '#client'
 
-export interface GlobalOptions {
+interface GlobalOptions {
   apiUrl?: string
   author?: string
   header: Record<string, string>

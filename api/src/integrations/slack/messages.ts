@@ -292,7 +292,7 @@ function resolveAuthor(
  * only unwraps the `<...>` link/mention/channel syntax that would otherwise
  * show up as raw markup in a preview.
  */
-export function stripSlackMrkdwn(text: string): string {
+function stripSlackMrkdwn(text: string): string {
   return (
     text
       // <@U0123456> or <@U0123456|display> -> @user. Resolving the mentioned

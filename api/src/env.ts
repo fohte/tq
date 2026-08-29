@@ -65,6 +65,5 @@ if (parsed.isErr()) {
   throw parsed.error
 }
 
-export const APP_ENV: AppEnv = parsed.value.APP_ENV
 export const DATABASE_URL: string = parsed.value.DATABASE_URL
 export const APP_DOMAIN: string = parsed.value.APP_DOMAIN

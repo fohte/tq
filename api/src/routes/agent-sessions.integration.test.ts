@@ -397,6 +397,39 @@ describe('agent sessions API', () => {
       )
       expect(await tasksRes.json()).toEqual([])
     })
+
+    it('prunes sessions inactive for more than 30 days on any later report', async () => {
+      const stale = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'stale-session',
+          cwd: '/home/fohte/project',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-01T00:00:00.000Z',
+      )
+
+      // 41 days later, comfortably past the 30-day threshold.
+      await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'fresh-session',
+          cwd: '/home/fohte/project',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-02-11T00:00:00.000Z',
+      )
+
+      const staleRes = await app.request(`/api/agent-sessions/${stale.id}`)
+      expect(staleRes.status).toBe(404)
+
+      const freshRes = await app.request(
+        '/api/agent-sessions/by-session/claude_code/fresh-session',
+      )
+      expect(freshRes.status).toBe(200)
+    })
   })
 
   describe('GET /api/agent-sessions', () => {
@@ -681,6 +714,46 @@ describe('agent sessions API', () => {
     it('returns 404 for an unknown provider', async () => {
       const res = await app.request(
         '/api/agent-sessions/by-session/other_provider/session-1',
+      )
+
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe('DELETE /api/agent-sessions/by-session/:provider/:sessionId', () => {
+    it('deletes a session by provider and session id', async () => {
+      const created = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'session-1',
+        cwd: '/home/fohte/project',
+        context: 'work',
+        label: 'A label',
+        lastMessage: 'A message',
+      })
+
+      const res = await app.request(
+        '/api/agent-sessions/by-session/claude_code/session-1',
+        { method: 'DELETE' },
+      )
+
+      expect(res.status).toBe(204)
+      const getRes = await app.request(`/api/agent-sessions/${created.id}`)
+      expect(getRes.status).toBe(404)
+    })
+
+    it('returns 404 for a non-existent session id', async () => {
+      const res = await app.request(
+        '/api/agent-sessions/by-session/claude_code/nonexistent',
+        { method: 'DELETE' },
+      )
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 404 for an unknown provider', async () => {
+      const res = await app.request(
+        '/api/agent-sessions/by-session/other_provider/session-1',
+        { method: 'DELETE' },
       )
 
       expect(res.status).toBe(404)

@@ -62,6 +62,7 @@ export const COVERED_ROUTES = [
   // hook
   'POST /api/agent-sessions',
   'GET /api/agent-sessions/by-session/:provider/:sessionId',
+  'DELETE /api/agent-sessions/by-session/:provider/:sessionId',
 
   // session
   'GET /api/agent-sessions',

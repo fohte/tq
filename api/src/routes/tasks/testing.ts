@@ -18,7 +18,7 @@ export interface TimeBlockResponse {
   updatedAt: string
 }
 
-export interface RecurrenceRuleResponse {
+interface RecurrenceRuleResponse {
   id: string
   type: 'daily' | 'weekly' | 'monthly' | 'custom'
   interval: number
