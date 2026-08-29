@@ -30,8 +30,8 @@ export interface TaskRowAppearanceProps {
   trailing?: React.ReactNode
   onClick?: () => void
   draggable?: boolean
-  // Appended after the #472-established labels/project/context/startDate/
-  // dueDate/githubLink items — callers must not reorder those.
+  // Appended after the row's canonical labels/project/context/startDate/
+  // dueDate/githubLink items — keep their order intact.
   secondLineExtras?: React.ReactNode[]
 }
 
