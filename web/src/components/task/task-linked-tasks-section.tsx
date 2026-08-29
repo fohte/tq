@@ -1,25 +1,7 @@
-import { Link } from '@tanstack/react-router'
-
-import { StatusIcon } from '#components/task/status-icon'
+import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import type { LinkedTaskSummary } from '#hooks/use-tasks'
-
-function LinkedTaskRow({ task }: { task: LinkedTaskSummary }) {
-  return (
-    <Link
-      to="/tasks/$taskId"
-      params={{ taskId: task.id }}
-      className="flex items-center gap-2 border-b border-border px-3 py-2 text-sm transition-colors last:border-b-0 hover:bg-secondary/30"
-    >
-      <StatusIcon status={task.status} />
-      <span className="shrink-0 font-mono text-xs text-muted-foreground">
-        #{task.number}
-      </span>
-      <span className="truncate">{task.title}</span>
-    </Link>
-  )
-}
 
 function LinkedTaskGroup({
   label,
@@ -37,7 +19,7 @@ function LinkedTaskGroup({
       </span>
       <Panel>
         {tasks.map((task) => (
-          <LinkedTaskRow key={task.id} task={task} />
+          <TaskRowAppearance key={task.id} task={task} />
         ))}
       </Panel>
     </div>
