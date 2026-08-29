@@ -1,8 +1,8 @@
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Link } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 
+import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Button } from '#components/ui/button'
 import { DragHandle } from '#components/ui/drag-handle'
 import type { Task } from '#hooks/use-tasks'
@@ -32,6 +32,17 @@ export function QueueCandidateRow({
     opacity: isDragging ? 0.5 : 1,
   }
 
+  const reasonItem = (
+    <span
+      className={cn(
+        'shrink-0 font-mono text-xs',
+        reason.kind === 'overdue' ? 'text-primary' : 'text-muted-foreground',
+      )}
+    >
+      {formatCandidateReason(reason)}
+    </span>
+  )
+
   return (
     <div
       ref={setNodeRef}
@@ -44,22 +55,9 @@ export function QueueCandidateRow({
         aria-label="Drag to today's queue"
       />
 
-      <Link
-        to="/tasks/$taskId"
-        params={{ taskId: task.id }}
-        className="min-w-0 flex-1 truncate py-2 text-sm hover:underline"
-      >
-        {task.title}
-      </Link>
-
-      <span
-        className={cn(
-          'shrink-0 font-mono text-xs',
-          reason.kind === 'overdue' ? 'text-primary' : 'text-muted-foreground',
-        )}
-      >
-        {formatCandidateReason(reason)}
-      </span>
+      <div className="min-w-0 flex-1">
+        <TaskRowAppearance task={task} secondLineExtras={[reasonItem]} />
+      </div>
 
       <Button
         variant="ghost"
