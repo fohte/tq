@@ -26,6 +26,7 @@ interface TaskAgentSessionResponse extends AgentSessionResponse {
   taskId: string
   taskNumber: number
   taskTitle: string
+  taskParentId: string | null
 }
 
 function normalizeSession(session: AgentSessionResponse) {
@@ -508,12 +509,14 @@ describe('agent sessions API', () => {
           taskId: task.id,
           taskNumber: task.number,
           taskTitle: task.title,
+          taskParentId: null,
           ...newer,
         },
         {
           taskId: task.id,
           taskNumber: task.number,
           taskTitle: task.title,
+          taskParentId: null,
           ...older,
         },
       ])
@@ -555,13 +558,45 @@ describe('agent sessions API', () => {
           taskId: task2.id,
           taskNumber: task2.number,
           taskTitle: task2.title,
+          taskParentId: null,
           ...newerSession,
         },
         {
           taskId: task1.id,
           taskNumber: task1.number,
           taskTitle: task1.title,
+          taskParentId: null,
           ...olderSession,
+        },
+      ])
+    })
+
+    it('returns the parent task id for a subtask', async () => {
+      const parent = await createTask('Parent task')
+      const child = await createTask('Child task', parent.id)
+      const session = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'session-1',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-01T00:00:00.000Z',
+      )
+      await postLink(child.id, session.id)
+
+      const res = await app.request('/api/agent-sessions/by-task')
+
+      expect(res.status).toBe(200)
+      expect(await jsonBody<TaskAgentSessionResponse[]>(res)).toEqual([
+        {
+          taskId: child.id,
+          taskNumber: child.number,
+          taskTitle: child.title,
+          taskParentId: parent.id,
+          ...session,
         },
       ])
     })
@@ -690,11 +725,11 @@ async function upsertSessionAtTime(input: UpsertSessionInput, time: string) {
   return body
 }
 
-async function createTask(title: string) {
+async function createTask(title: string, parentId?: string) {
   const res = await app.request('/api/tasks', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title }),
+    body: JSON.stringify({ title, parentId }),
   })
   if (res.status !== 201) {
     throw new Error(
