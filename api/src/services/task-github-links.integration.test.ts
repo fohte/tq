@@ -262,4 +262,25 @@ describe('unlinkTask', () => {
     const links = (await findLinksByTaskId(task.id))._unsafeUnwrap()
     expect(links.map(normalizeLink)).toEqual([normalizeLink(second)])
   })
+
+  it('rejects unlinking a link that belongs to a different task', async () => {
+    const taskA = await createTask('Task A')
+    const taskB = await createTask('Task B')
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
+    ;(await linkTaskToGithubUrl(taskA.id, ref, author))._unsafeUnwrap()
+
+    mockGithubIssueResponse({
+      html_url: 'https://github.com/fohte/tq/issues/43',
+    })
+    const linkB = (
+      await linkTaskToGithubUrl(taskB.id, { ...ref, number: 43 }, author)
+    )._unsafeUnwrap()
+
+    const error = (await unlinkTask(db, taskA.id, linkB.id))._unsafeUnwrapErr()
+
+    expect(error).toEqual(new GithubLinkNotFoundError())
+    const links = (await findLinksByTaskId(taskB.id))._unsafeUnwrap()
+    expect(links.map(normalizeLink)).toEqual([normalizeLink(linkB)])
+  })
 })

@@ -321,8 +321,6 @@ describe('POST /api/tasks/:taskId/github-link/sync', () => {
       method: 'POST',
     })
 
-    // Same title for both: findLinksByTaskId doesn't order its rows, so
-    // which link the loop visits first isn't guaranteed.
     mockGithubIssueResponse({ title: 'Synced' })
     mockGithubIssueResponse({ title: 'Synced' })
     const res = await app.request(`/api/tasks/${task.id}/github-link/sync`, {
@@ -332,18 +330,64 @@ describe('POST /api/tasks/:taskId/github-link/sync', () => {
     expect(res.status).toBe(204)
     const detailRes = await app.request(`/api/tasks/${task.id}`)
     const detailBody = await jsonBody<TaskResponse>(detailRes)
-    // Both links share this test's transaction-frozen `createdAt` (see
-    // setupTestDb), so sort by `number` rather than relying on read-back
-    // order to break the tie.
-    const byNumber = (a: GithubLinkResponse, b: GithubLinkResponse) =>
-      a.number - b.number
-    expect(
-      [...detailBody.githubLinks].sort(byNumber).map(normalizeLink),
-    ).toEqual(
-      [firstLink, secondLink]
-        .sort(byNumber)
-        .map((link) => ({ ...normalizeLink(link), title: 'Synced' })),
+    expect(detailBody.githubLinks.map(normalizeLink)).toEqual(
+      [firstLink, secondLink].map((link) => ({
+        ...normalizeLink(link),
+        title: 'Synced',
+      })),
     )
+  })
+
+  it('continues syncing the other link when one link fails to fetch from GitHub', async () => {
+    const task = await createTask('My task')
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
+    const firstLinkRes = await app.request(
+      `/api/tasks/${task.id}/github-link`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/42' }),
+      },
+    )
+    const firstLink = await jsonBody<GithubLinkResponse>(firstLinkRes)
+
+    mockGithubIssueResponse({
+      html_url: 'https://github.com/fohte/tq/issues/43',
+    })
+    const secondLinkRes = await app.request(
+      `/api/tasks/${task.id}/github-link`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/43' }),
+      },
+    )
+    const secondLink = await jsonBody<GithubLinkResponse>(secondLinkRes)
+
+    // Consume both links' first sync (seed-only, see syncLinkFromGithub).
+    mockGithubIssueResponse()
+    mockGithubIssueResponse()
+    await app.request(`/api/tasks/${task.id}/github-link/sync`, {
+      method: 'POST',
+    })
+
+    // firstLink's fetch fails; secondLink's still succeeds.
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response('boom', { status: 500 }),
+    )
+    mockGithubIssueResponse({ title: 'Synced' })
+    const res = await app.request(`/api/tasks/${task.id}/github-link/sync`, {
+      method: 'POST',
+    })
+
+    expect(res.status).toBe(204)
+    const detailRes = await app.request(`/api/tasks/${task.id}`)
+    const detailBody = await jsonBody<TaskResponse>(detailRes)
+    expect(detailBody.githubLinks.map(normalizeLink)).toEqual([
+      normalizeLink(firstLink),
+      { ...normalizeLink(secondLink), title: 'Synced' },
+    ])
   })
 
   it('is a no-op when the task has no link', async () => {

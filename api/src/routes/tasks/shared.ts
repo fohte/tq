@@ -212,9 +212,10 @@ export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
 export type TaskListItemResponse = ReturnType<typeof taskListItemToResponse>
 
 // Batch-hydrates a set of list-query rows (as returned by `selectTaskListRows`)
-// with labels and child-completion counts in 2 queries total regardless of
-// row count, for any endpoint that renders task rows via `TaskListItemResponse`
-// (the `/api/tasks` list endpoint, and the task-detail page's linked tasks).
+// with labels, child-completion counts, and GitHub links in 3 queries total
+// regardless of row count, for any endpoint that renders task rows via
+// `TaskListItemResponse` (the `/api/tasks` list endpoint, and the
+// task-detail page's linked tasks).
 export async function hydrateTaskListRows(
   rows: {
     task: typeof tasks.$inferSelect
