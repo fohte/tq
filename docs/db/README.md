@@ -24,7 +24,7 @@
 | [public.calendar_subscriptions](public.calendar_subscriptions.md)                   | 7       |         | BASE TABLE |
 | [public.task_events](public.task_events.md)                                         | 12      |         | BASE TABLE |
 | [public.scheduling_settings](public.scheduling_settings.md)                         | 8       |         | BASE TABLE |
-| [public.agent_sessions](public.agent_sessions.md)                                   | 11      |         | BASE TABLE |
+| [public.agent_sessions](public.agent_sessions.md)                                   | 12      |         | BASE TABLE |
 | [public.task_agent_sessions](public.task_agent_sessions.md)                         | 2       |         | BASE TABLE |
 
 ## Relations
@@ -264,6 +264,7 @@ erDiagram
   timestamp_with_time_zone started_at
   timestamp_with_time_zone last_active_at
   timestamp_with_time_zone ended_at
+  text parent_session_id
 }
 "public.task_agent_sessions" {
   text task_id FK

@@ -5,6 +5,9 @@ export const upsertAgentSessionSchema = z.object({
   sessionId: z.string().min(1),
   cwd: z.string().min(1),
   context: z.enum(['work', 'personal']).optional(),
+  // Only takes effect on this session's first report (see
+  // agent-sessions.ts); a later report never clears an already-recorded parent.
+  parentSessionId: z.string().min(1).optional(),
   label: z.string().nullable(),
   lastMessage: z.string().nullable(),
   ended: z.boolean().optional(),
