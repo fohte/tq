@@ -50,7 +50,7 @@ function GithubUrlCardWithProviders({
 }) {
   return (
     <Providers url={url} result={result}>
-      <div className="w-96">
+      <div className="w-full max-w-96">
         <GithubUrlCard data={{ url }} raw={raw} />
       </div>
     </Providers>

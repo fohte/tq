@@ -70,7 +70,7 @@ function TaskMentionCardWithProviders({
 }) {
   return (
     <Providers number={number} task={task}>
-      <div className="w-96">
+      <div className="w-full max-w-96">
         <TaskMentionCard data={{ number }} raw={raw} />
       </div>
     </Providers>

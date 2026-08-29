@@ -2,19 +2,20 @@
 
 ## Columns
 
-| Name           | Type                     | Default          | Nullable | Children                                                    | Parents | Comment |
-| -------------- | ------------------------ | ---------------- | -------- | ----------------------------------------------------------- | ------- | ------- |
-| id             | text                     |                  | false    | [public.task_agent_sessions](public.task_agent_sessions.md) |         |         |
-| provider       | text                     |                  | false    |                                                             |         |         |
-| session_id     | text                     |                  | false    |                                                             |         |         |
-| context        | text                     | 'personal'::text | false    |                                                             |         |         |
-| cwd            | text                     |                  | false    |                                                             |         |         |
-| label          | text                     |                  | true     |                                                             |         |         |
-| last_message   | text                     |                  | true     |                                                             |         |         |
-| custom_label   | text                     |                  | true     |                                                             |         |         |
-| started_at     | timestamp with time zone | now()            | false    |                                                             |         |         |
-| last_active_at | timestamp with time zone | now()            | false    |                                                             |         |         |
-| ended_at       | timestamp with time zone |                  | true     |                                                             |         |         |
+| Name              | Type                     | Default          | Nullable | Children                                                    | Parents | Comment |
+| ----------------- | ------------------------ | ---------------- | -------- | ----------------------------------------------------------- | ------- | ------- |
+| id                | text                     |                  | false    | [public.task_agent_sessions](public.task_agent_sessions.md) |         |         |
+| provider          | text                     |                  | false    |                                                             |         |         |
+| session_id        | text                     |                  | false    |                                                             |         |         |
+| context           | text                     | 'personal'::text | false    |                                                             |         |         |
+| cwd               | text                     |                  | false    |                                                             |         |         |
+| label             | text                     |                  | true     |                                                             |         |         |
+| last_message      | text                     |                  | true     |                                                             |         |         |
+| custom_label      | text                     |                  | true     |                                                             |         |         |
+| started_at        | timestamp with time zone | now()            | false    |                                                             |         |         |
+| last_active_at    | timestamp with time zone | now()            | false    |                                                             |         |         |
+| ended_at          | timestamp with time zone |                  | true     |                                                             |         |         |
+| parent_session_id | text                     |                  | true     |                                                             |         |         |
 
 ## Constraints
 
@@ -50,6 +51,7 @@ erDiagram
   timestamp_with_time_zone started_at
   timestamp_with_time_zone last_active_at
   timestamp_with_time_zone ended_at
+  text parent_session_id
 }
 "public.task_agent_sessions" {
   text task_id FK

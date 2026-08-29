@@ -456,7 +456,10 @@ export function CreateTaskInline({
         inheritedContextChip != null ||
         inheritedLabelChips.length > 0 ||
         hasInheritedProjectChip) && (
-        <div className="flex flex-wrap gap-1.5 px-3 pb-2">
+        <div
+          className="flex flex-wrap gap-1.5 px-3 pb-2"
+          data-testid="create-task-preview-chips"
+        >
           {ownChips.map((chip) => (
             <Chip key={chip.key} size="sm" active>
               {chip.label}

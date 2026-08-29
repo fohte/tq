@@ -54,7 +54,7 @@ function SlackPermalinkCardWithProviders({
 }) {
   return (
     <Providers url={url} preview={preview}>
-      <div className="w-96">
+      <div className="w-full max-w-96">
         <SlackPermalinkCard data={{ url }} raw={raw} />
       </div>
     </Providers>

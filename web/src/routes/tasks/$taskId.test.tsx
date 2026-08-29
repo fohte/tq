@@ -31,6 +31,7 @@ const mockUseTask = vi.fn()
 const mockUseTaskList = vi.fn()
 const mockUpdateMutate = vi.fn()
 const mockStatusMutate = vi.fn()
+const mockCompleteMutate = vi.fn()
 
 const mockParentMutate = vi.fn()
 
@@ -39,6 +40,7 @@ vi.mock('#hooks/use-tasks', () => ({
   useTask: (...args: unknown[]) => mockUseTask(...args),
   useUpdateTask: () => ({ mutate: mockUpdateMutate }),
   useUpdateTaskStatus: () => ({ mutate: mockStatusMutate }),
+  useCompleteTask: () => ({ mutate: mockCompleteMutate }),
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useTaskList: (...args: unknown[]) => mockUseTaskList(...args),
   useUpdateTaskParent: () => ({ mutate: mockParentMutate }),
@@ -262,6 +264,7 @@ describe('TaskPage', () => {
       githubLink: null,
       createdAt: '2026-03-20T00:00:00.000Z',
       updatedAt: '2026-03-20T00:00:00.000Z',
+      childCompletionCount: { completed: 0, total: 0 },
     }
     const subtasks = [
       {
@@ -293,24 +296,20 @@ describe('TaskPage', () => {
 
     expect(mockUseTaskList).toHaveBeenCalledWith({ parentId: mockTask.id })
 
-    // PC and SP layouts both render TaskMainContent, so each subtask appears twice.
-    const finishedLinks = screen.getAllByRole('link', {
-      name: 'Finished subtask',
-    })
-    expect(finishedLinks.map((el) => el.getAttribute('href'))).toEqual([
-      '/tasks/subtask-001',
-      '/tasks/subtask-001',
-    ])
-    expect(atIndex(finishedLinks, 0)).toHaveClass('line-through')
+    // PC and SP layouts both render TaskMainContent, so each subtask appears
+    // twice. The row's title sits inside a larger `<Link>` alongside the
+    // status picker and metadata, so match by text and walk up to the anchor.
+    const finishedTitles = screen.getAllByText('Finished subtask')
+    expect(
+      finishedTitles.map((el) => el.closest('a')?.getAttribute('href')),
+    ).toEqual(['/tasks/subtask-001', '/tasks/subtask-001'])
+    expect(atIndex(finishedTitles, 0)).toHaveClass('line-through')
 
-    const pendingLinks = screen.getAllByRole('link', {
-      name: 'Pending subtask',
-    })
-    expect(pendingLinks.map((el) => el.getAttribute('href'))).toEqual([
-      '/tasks/subtask-002',
-      '/tasks/subtask-002',
-    ])
-    expect(atIndex(pendingLinks, 0)).not.toHaveClass('line-through')
+    const pendingTitles = screen.getAllByText('Pending subtask')
+    expect(
+      pendingTitles.map((el) => el.closest('a')?.getAttribute('href')),
+    ).toEqual(['/tasks/subtask-002', '/tasks/subtask-002'])
+    expect(atIndex(pendingTitles, 0)).not.toHaveClass('line-through')
 
     expect(screen.getAllByText('1/2').length).toBeGreaterThan(0)
   })

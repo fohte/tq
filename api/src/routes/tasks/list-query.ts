@@ -19,7 +19,7 @@ import { parseSearchQuery } from '#search-query-parser'
 // to keep an adversarial `q` from generating an unbounded number of them.
 const MAX_FREE_TEXT_WORDS = 20
 
-function selectTaskListRows() {
+export function selectTaskListRows() {
   return db
     .select({
       task: tasks,

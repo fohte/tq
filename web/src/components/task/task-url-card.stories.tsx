@@ -75,7 +75,7 @@ function TaskUrlCardWithProviders({
 }) {
   return (
     <Providers id={id} task={task}>
-      <div className="w-96">
+      <div className="w-full max-w-96">
         <TaskUrlCard data={{ id }} raw={raw} />
       </div>
     </Providers>

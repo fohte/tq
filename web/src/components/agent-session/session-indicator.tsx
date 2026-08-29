@@ -52,7 +52,12 @@ export function SessionIndicator({
       </PreviewCardTrigger>
       <PreviewCardPortal>
         <PreviewCardPositioner>
-          <PreviewCardPopup className="w-auto min-w-md p-0">
+          {/* An explicit width (not `min-w-*` on `w-auto`) is required here:
+              with `w-auto`, the popup's shrink-to-fit width is driven by its
+              children's untruncated max-content width regardless of any
+              min-width, since min-width only raises a floor and never caps
+              growth. */}
+          <PreviewCardPopup className="w-(--width-session-popup) p-0">
             <div className="border-b border-border px-3 py-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint">
               SESSIONS ({sessions.length})
             </div>

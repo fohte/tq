@@ -18,8 +18,8 @@ type UpsertAgentSessionJson = InferRequestType<
 >['json']
 
 // Fields tq's hook integration sets itself (from the hook input JSON or the
-// resolved transcript), as opposed to `context`, the only field left for
-// addSchemaOptions to expose as a flag/env default.
+// resolved transcript), as opposed to `context` and `parentSessionId`, the
+// fields left for addSchemaOptions to expose as a flag/env default.
 const HOOK_MANAGED_FIELDS = [
   'provider',
   'sessionId',
@@ -73,7 +73,7 @@ export function registerHookCommands(
       ),
     upsertAgentSessionSchema,
     HOOK_MANAGED_FIELDS,
-    { context: 'TQ_CONTEXT' },
+    { context: 'TQ_CONTEXT', parentSessionId: 'TQ_PARENT_SESSION_ID' },
   ).match(
     (command) => command,
     (error) => fail(program, error),

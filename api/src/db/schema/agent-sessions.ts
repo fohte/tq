@@ -22,6 +22,10 @@ export const agentSessions = pgTable(
       .$defaultFn(() => crypto.randomUUID()),
     provider: text('provider', { enum: ['claude_code'] }).notNull(),
     sessionId: text('session_id').notNull(),
+    // Stores the parent's raw session_id, not a FK to agentSessions.id,
+    // since a delegated/handed-off session can report before its parent's
+    // own row exists.
+    parentSessionId: text('parent_session_id'),
     context: text('context', { enum: ['work', 'personal'] })
       .notNull()
       .default('personal'),

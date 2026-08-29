@@ -7,7 +7,7 @@ function BackHeaderBarStory(props: React.ComponentProps<typeof BackHeaderBar>) {
   return (
     <StoryRouter
       component={() => (
-        <div className="w-96 border border-border">
+        <div className="w-full max-w-96 border border-border">
           <BackHeaderBar {...props} />
         </div>
       )}

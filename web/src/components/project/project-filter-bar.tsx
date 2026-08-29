@@ -45,7 +45,7 @@ export function ProjectFilterBar({
   onLinkExistingTask?: () => void
 }) {
   return (
-    <div className="flex items-center gap-2 border-b border-border px-4 py-2">
+    <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2">
       {/* Filter chips */}
       <TabStrip
         value={statusFilter}

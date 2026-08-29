@@ -189,6 +189,41 @@ export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
 
 export type TaskListItemResponse = ReturnType<typeof taskListItemToResponse>
 
+// Batch-hydrates a set of list-query rows (as returned by `selectTaskListRows`)
+// with labels and child-completion counts in 2 queries total regardless of
+// row count, for any endpoint that renders task rows via `TaskListItemResponse`
+// (the `/api/tasks` list endpoint, and the task-detail page's linked tasks).
+export async function hydrateTaskListRows(
+  rows: {
+    task: typeof tasks.$inferSelect
+    parentNumber: number | null
+    githubLink?: typeof taskGithubLinks.$inferSelect | null
+  }[],
+): Promise<
+  (TaskListItemResponse & {
+    childCompletionCount: { completed: number; total: number }
+  })[]
+> {
+  const ids = rows.map((r) => r.task.id)
+  const [labelsByTaskId, childCompletionCountsByTaskId] = await Promise.all([
+    getLabelNamesByTaskId(ids),
+    getChildCompletionCountsByTaskId(ids),
+  ])
+
+  return rows.map((r) => ({
+    ...taskListItemToResponse(
+      r.task,
+      r.parentNumber,
+      r.githubLink,
+      labelsByTaskId.get(r.task.id) ?? [],
+    ),
+    childCompletionCount: childCompletionCountsByTaskId.get(r.task.id) ?? {
+      completed: 0,
+      total: 0,
+    },
+  }))
+}
+
 export type TaskListItemWithChildren<
   T extends { id: string; parentId: string | null },
 > = T & { children: TaskListItemWithChildren<T>[] }

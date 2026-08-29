@@ -16,6 +16,7 @@ const activeSession: TaskAgentSession = {
   taskTitle: 'Sample task',
   provider: 'claude_code',
   sessionId: 'session-1',
+  parentSessionId: null,
   context: 'work',
   cwd: '/Users/fohte/ghq/github.com/fohte/tq',
   label: 'Implement session indicator',
