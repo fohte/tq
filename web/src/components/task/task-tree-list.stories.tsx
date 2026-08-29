@@ -75,7 +75,7 @@ function WrappedTaskTreeList({
 
   return (
     <Providers>
-      <div className="h-96 w-3xl">
+      <div className="h-96 w-full max-w-3xl">
         <TaskTreeList {...props} tree={tree} tasks={tasks} />
       </div>
     </Providers>
@@ -113,6 +113,36 @@ export const Empty: Story = {
   args: {
     isLoading: false,
     tasks: [],
+    sessionsByTaskId: new Map(),
+  },
+}
+
+export const WithSecondLine: Story = {
+  args: {
+    isLoading: false,
+    tasks: [
+      {
+        ...baseTask,
+        id: '4',
+        number: 4,
+        title: 'Task with a full second line',
+        labels: ['dev:tq', 'chore'],
+        startDate: '2026-03-25',
+        // Far future so this story never flips to overdue.
+        dueDate: '2099-06-15',
+        githubLink: {
+          id: 'link-1',
+          owner: 'fohte',
+          repo: 'tq',
+          number: 42,
+          kind: 'pull_request',
+          url: 'https://github.com/fohte/tq/pull/42',
+          state: 'merged',
+          title: 'Fix flaky test',
+          lastSyncedAt: '2026-03-20T00:00:00.000Z',
+        },
+      },
+    ],
     sessionsByTaskId: new Map(),
   },
 }

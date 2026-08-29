@@ -1,10 +1,10 @@
 import { useNavigate } from '@tanstack/react-router'
 
 import { Chip } from '#components/ui/chip'
+import { useProject } from '#hooks/use-projects'
 import type { Task } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
-import { formatMinutes } from '#lib/format'
-import { formatDueDate, isTaskOverdue } from '#lib/task-due-date'
+import { formatShortDate, isTaskOverdue } from '#lib/task-due-date'
 import { tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
 
@@ -76,7 +76,34 @@ export function DueDateBadge({
         overdue ? 'text-primary' : 'text-muted-foreground',
       )}
     >
-      {formatDueDate(dueDate)}
+      {formatShortDate(dueDate)}
+    </span>
+  )
+}
+
+export function StartDateBadge({ startDate }: { startDate: string }) {
+  return (
+    <span className="shrink-0 font-mono text-xs text-muted-foreground">
+      {formatShortDate(startDate)}
+    </span>
+  )
+}
+
+export function TaskProjectLabel({ projectId }: { projectId: string }) {
+  const { data: project } = useProject(projectId)
+  if (project == null) return null
+
+  return (
+    <span className="max-w-32 shrink-0 truncate font-mono text-xs text-muted-foreground">
+      {project.title}
+    </span>
+  )
+}
+
+export function TaskContextLabel({ context }: { context: Task['context'] }) {
+  return (
+    <span className="shrink-0 font-mono text-xs text-muted-foreground">
+      {context}
     </span>
   )
 }
@@ -107,7 +134,7 @@ export function rowIndentStyle(depth: number): RowIndentStyle {
   }
 }
 
-export function gridRowWrapperClassName(
+export function rowWrapperClassName(
   isInProgress: boolean,
   isCompleted: boolean,
 ) {
@@ -118,32 +145,10 @@ export function gridRowWrapperClassName(
   )
 }
 
-export function gridRowTitleClassName(
-  isInProgress: boolean,
-  isCompleted: boolean,
-) {
+export function rowTitleClassName(isInProgress: boolean, isCompleted: boolean) {
   return cn(
     'truncate text-sm',
     isInProgress ? 'font-semibold' : 'font-normal',
     isCompleted && 'text-muted-foreground line-through',
-  )
-}
-
-export function GridEstimate({
-  estimatedMinutes,
-  isCompleted,
-}: {
-  estimatedMinutes: number
-  isCompleted: boolean
-}) {
-  return (
-    <span
-      className={cn(
-        'shrink-0 text-right font-mono text-xs',
-        isCompleted ? 'text-muted-foreground-faint' : 'text-muted-foreground',
-      )}
-    >
-      {formatMinutes(estimatedMinutes)}
-    </span>
   )
 }

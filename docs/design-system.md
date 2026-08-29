@@ -29,7 +29,7 @@ bracket. Tailwind v4 gives three ways, all confirmed compiling with this
 repo's tailwindcss 4.2.2:
 
 1. **Name it in `@theme`** and reference it by name: `--color-gh-open: #3fb950` → `text-gh-open`.
-2. **Reference a `@theme` custom property directly**, using `()` instead of `[]` on any utility: `grid-cols-(--task-row-columns)`, `max-w-(--dialog-inset)` (the value can contain `calc()`/`min()`).
+2. **Reference a `@theme` custom property directly**, using `()` instead of `[]` on any utility: `grid-cols-(--project-list-columns)`, `max-w-(--dialog-inset)` (the value can contain `calc()`/`min()`).
 3. **Name it with `@utility`** when Tailwind has no theme namespace for it (`env()`, `vh`, etc.): `@utility pb-safe { padding-bottom: env(safe-area-inset-bottom); }`.
 
 Update this doc in the same PR that adds the token. A true one-off may use
@@ -444,19 +444,19 @@ case.
 Named `grid-template-columns` tracks in `web/src/index.css`'s `@theme
 inline` block, referenced via `grid-cols-(--<name>)`. Each backs a fixed
 layout shared by multiple call sites so widths can't drift between them —
-usually a list's rows and its column header (`--task-row-columns`,
-`--project-list-columns`), but `--icon-content-columns` instead unifies an
-icon-column width across otherwise-unrelated components (`task-activity.tsx`'s
-rows, `integration-card.tsx`'s `CARD_INDENT`).
+usually a list's rows and its column header (`--project-list-columns`), but
+`--icon-content-columns` instead unifies an icon-column width across
+otherwise-unrelated components (`task-activity.tsx`'s rows,
+`integration-card.tsx`'s `CARD_INDENT`).
 
-| Token                    | Value                                                     | Used by                                                                                                                                                                                                                                                                                          |
-| ------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--task-row-columns`     | `26px 26px minmax(120px, 1fr) 132px 104px 72px 56px 28px` | Tasks list: column header (`TaskListColumnHeader` in `components/task/task-list-column-header.tsx`), `TaskGridRow`, `TreeTaskGridRow` — tracks are expand-toggle, status picker, title, tags, GitHub link, estimate, due date, row actions                                                       |
-| `--project-list-columns` | `14px 1fr 96px 190px 78px`                                | Projects list: column header (`routes/projects/index.tsx`), `ProjectListRow` — tracks are status mark, project name, status badge, progress bar, target date                                                                                                                                     |
-| `--icon-content-columns` | `20px 1fr`                                                | `task-activity.tsx`'s `EventRow`/`CommentRow` marker column, `integration-card.tsx`'s `CARD_INDENT` — same "small icon column + body" role, unified onto the 20px column width that `IntegrationCard`'s actual `size-5` icon needs (was `14px` in `task-activity.tsx`, too narrow for that icon) |
+| Token                    | Value                      | Used by                                                                                                                                                                                                                                                                                          |
+| ------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--project-list-columns` | `14px 1fr 96px 190px 78px` | Projects list: column header (`routes/projects/index.tsx`), `ProjectListRow` — tracks are status mark, project name, status badge, progress bar, target date                                                                                                                                     |
+| `--icon-content-columns` | `20px 1fr`                 | `task-activity.tsx`'s `EventRow`/`CommentRow` marker column, `integration-card.tsx`'s `CARD_INDENT` — same "small icon column + body" role, unified onto the 20px column width that `IntegrationCard`'s actual `size-5` icon needs (was `14px` in `task-activity.tsx`, too narrow for that icon) |
 
-The title column in `--task-row-columns` has a `minmax` floor, not a bare
-`1fr` — see the token's comment in `web/src/index.css` for why.
+The tasks list (`TreeTaskGridRow`) is a flex-based two-line stack instead of
+a fixed grid — see the `min-w-30` comment on its title `<span>` for how it
+keeps the title from collapsing to 0 width when the row overflows.
 
 ## Radius policy
 

@@ -25,6 +25,7 @@ const mockUpdateStatusMutate = vi.fn()
 // reaches the Link (i.e. no navigation), without relying on jsdom's <a> not
 // actually navigating.
 const mockLinkOnClick = vi.fn()
+const mockUseProject = vi.fn()
 
 // LinkExistingTaskMenu/MoveUnderTaskMenu/SetProjectMenu/DeleteTaskDialog
 // (rendered unconditionally by every row, controlled via their own `open`
@@ -38,6 +39,15 @@ vi.mock('#hooks/use-tasks', () => ({
   useUpdateTask: () => ({ mutate: vi.fn() }),
   useDeleteTask: () => ({ mutate: vi.fn() }),
 }))
+
+vi.mock('#hooks/use-projects', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-projects')>()
+  return {
+    ...actual,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+    useProject: (...args: unknown[]) => mockUseProject(...args),
+  }
+})
 
 // Only Link is stubbed (to spy on mockLinkOnClick instead of really
 // navigating) — useNavigate/router-building exports stay real so a tag
@@ -172,29 +182,27 @@ async function renderTree(
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockUseProject.mockReturnValue({ data: undefined })
 })
 
-// The component renders a desktop grid and a mobile stack simultaneously
-// (CSS media queries choose which is visible; jsdom has no viewport so both
-// are queryable). Assertions below pin the count to 2 rather than just
-// "at least one" so a regression in either layout alone still fails.
+// The row renders its content exactly once, as a single two-line flex
+// layout used for both desktop and mobile.
 describe('TreeTaskGridRow', () => {
   it('renders task title', async () => {
     await renderTree(makeNode())
-    expect(screen.getAllByText('Parent Task')).toHaveLength(2)
+    expect(screen.getByText('Parent Task')).toBeInTheDocument()
   })
 
   it('renders a row-actions trigger for the ⋯ menu', async () => {
     await renderTree(makeNode())
-    // TreeRowActionsMenu itself renders one trigger per layout (desktop
-    // dropdown + mobile action sheet), and the row mounts it once for the
-    // desktop grid section and once for the mobile stack section: 2 x 2.
-    expect(screen.getAllByLabelText('Task actions')).toHaveLength(4)
+    // ActionsMenu itself renders one trigger per layout (desktop dropdown +
+    // mobile action sheet), and the row mounts TreeRowActionsMenu once.
+    expect(screen.getAllByLabelText('Task actions')).toHaveLength(2)
   })
 
   it('renders the task number', async () => {
     await renderTree(makeNode({ number: 42 }))
-    expect(screen.getAllByText('#42')).toHaveLength(2)
+    expect(screen.getByText('#42')).toBeInTheDocument()
   })
 
   it('indents deeper rows more than their ancestors', async () => {
@@ -249,8 +257,8 @@ describe('TreeTaskGridRow', () => {
       childCompletionCount: { completed: 0, total: 1 },
     })
     await renderTree(node)
-    expect(screen.getAllByText('Parent Task')).toHaveLength(2)
-    expect(screen.getAllByText('Child Task')).toHaveLength(2)
+    expect(screen.getByText('Parent Task')).toBeInTheDocument()
+    expect(screen.getByText('Child Task')).toBeInTheDocument()
   })
 
   it('shows child completion count', async () => {
@@ -276,12 +284,9 @@ describe('TreeTaskGridRow', () => {
       childCompletionCount: { completed: 1, total: 3 },
     })
     await renderTree(node)
-    // Parent node should show 1/3, once per layout (desktop + mobile); none
-    // of the children have children of their own, so they show nothing.
-    const completions = screen.getAllByTestId('child-completion')
-    expect(completions).toHaveLength(2)
-    expect(atIndex(completions, 0)).toHaveTextContent('1/3')
-    expect(atIndex(completions, 1)).toHaveTextContent('1/3')
+    // Parent node should show 1/3; none of the children have children of
+    // their own, so they show nothing.
+    expect(screen.getByTestId('child-completion')).toHaveTextContent('1/3')
   })
 
   it('does not show child completion count when no children', async () => {
@@ -300,7 +305,7 @@ describe('TreeTaskGridRow', () => {
     await renderTree(node)
 
     // Children visible by default
-    expect(screen.getAllByText('Child Task')).toHaveLength(2)
+    expect(screen.getByText('Child Task')).toBeInTheDocument()
 
     // Click collapse button
     const collapseBtn = atIndex(screen.getAllByLabelText('Collapse'), 0)
@@ -326,7 +331,7 @@ describe('TreeTaskGridRow', () => {
 
     // Expand
     await user.click(atIndex(screen.getAllByLabelText('Expand'), 0))
-    expect(screen.getAllByText('Child Task')).toHaveLength(2)
+    expect(screen.getByText('Child Task')).toBeInTheDocument()
   })
 
   it('renders nested children (grandchildren)', async () => {
@@ -348,9 +353,9 @@ describe('TreeTaskGridRow', () => {
     })
     await renderTree(node)
 
-    expect(screen.getAllByText('Parent Task')).toHaveLength(2)
-    expect(screen.getAllByText('Child Task')).toHaveLength(2)
-    expect(screen.getAllByText('Grandchild Task')).toHaveLength(2)
+    expect(screen.getByText('Parent Task')).toBeInTheDocument()
+    expect(screen.getByText('Child Task')).toBeInTheDocument()
+    expect(screen.getByText('Grandchild Task')).toBeInTheDocument()
   })
 
   it('does not show expand toggle for leaf nodes', async () => {
@@ -401,7 +406,7 @@ describe('TreeTaskGridRow', () => {
     }
     await renderTree(node, new Map([['parent-1', [session]]]))
 
-    expect(screen.getAllByTestId('session-indicator')).toHaveLength(2)
+    expect(screen.getByTestId('session-indicator')).toBeInTheDocument()
   })
 
   it('does not show a session indicator when there are no sessions', async () => {
@@ -429,18 +434,47 @@ describe('TreeTaskGridRow', () => {
       },
     })
     await renderTree(node)
-    // The LINK column only exists in the desktop grid.
+    // The badge only renders in the row's second line when present.
     expect(screen.getAllByText('tq#42')).toHaveLength(1)
   })
 
-  it('shows a context badge for personal tasks', async () => {
-    await renderTree(makeNode({ context: 'personal' }))
-    expect(screen.getAllByText('personal')).toHaveLength(2)
+  it('does not show a project label when the task has no project', async () => {
+    await renderTree(makeNode({ projectId: null }))
+    expect(mockUseProject).not.toHaveBeenCalled()
   })
 
-  it('shows a context badge for work tasks', async () => {
+  it('shows a project label when the task has a project', async () => {
+    mockUseProject.mockReturnValue({
+      data: { id: 'project-1', title: 'tq' },
+    })
+    await renderTree(makeNode({ projectId: 'project-1' }))
+    expect(mockUseProject).toHaveBeenCalledWith('project-1')
+    expect(screen.getByText('tq')).toBeInTheDocument()
+  })
+
+  it('shows a start date badge when the task has a start date', async () => {
+    await renderTree(makeNode({ startDate: '2026-03-25' }))
+    expect(screen.getByText('Mar 25')).toBeInTheDocument()
+  })
+
+  it('does not show a start date badge when the task has no start date', async () => {
+    await renderTree(makeNode({ startDate: null }))
+    expect(screen.queryByText('Mar 25')).not.toBeInTheDocument()
+  })
+
+  it('shows the context', async () => {
     await renderTree(makeNode({ context: 'work' }))
-    expect(screen.getAllByText('work')).toHaveLength(2)
+    expect(screen.getByText('work')).toBeInTheDocument()
+  })
+
+  it('shows a due date badge when the task has a due date', async () => {
+    await renderTree(makeNode({ dueDate: '2026-03-25' }))
+    expect(screen.getByText('Mar 25')).toBeInTheDocument()
+  })
+
+  it('does not show a due date badge when the task has no due date', async () => {
+    await renderTree(makeNode({ dueDate: null }))
+    expect(screen.queryByText('Mar 25')).not.toBeInTheDocument()
   })
 
   it('does not render tag tokens when there are no labels', async () => {
@@ -452,20 +486,9 @@ describe('TreeTaskGridRow', () => {
 
   it('renders a token per label', async () => {
     await renderTree(makeNode({ labels: ['dev:tq', 'chore'] }))
-    // Desktop and mobile layouts both render, so each label's token appears
-    // twice, in layout order.
     expect(
       screen.getAllByRole('button', { name: /^#/ }).map((el) => el.textContent),
-    ).toEqual(['#dev:tq', '#chore', '#dev:tq', '#chore'])
-  })
-
-  it('highlights an overdue due date', async () => {
-    await renderTree(makeNode({ dueDate: '2020-01-01' }))
-    const badges = screen.getAllByText('Jan 1, 2020')
-    expect(badges.map((b) => b.classList.contains('text-primary'))).toEqual([
-      true,
-      true,
-    ])
+    ).toEqual(['#dev:tq', '#chore'])
   })
 
   it('navigates to /tasks scoped to the tag and stops the click from reaching the row Link when a tag token is clicked', async () => {
@@ -481,16 +504,14 @@ describe('TreeTaskGridRow', () => {
     expect(mockLinkOnClick).not.toHaveBeenCalled()
   })
 
-  it('selects the row and navigates when clicking its desktop non-interactive area', async () => {
+  it('selects the row and navigates when clicking its non-interactive area', async () => {
     const user = userEvent.setup()
     await renderTree(makeNode())
 
-    // The desktop grid is the first ("Parent Task" x2) instance in render
-    // order.
-    const desktopTitle = atIndex(screen.getAllByText('Parent Task'), 0)
-    await user.click(desktopTitle)
+    const title = screen.getByText('Parent Task')
+    await user.click(title)
 
-    const wrapper = desktopTitle.closest('.group')
+    const wrapper = title.closest('.group')
     if (!(wrapper instanceof HTMLElement)) {
       throw new Error('Expected a row wrapper carrying the "group" class')
     }
@@ -500,18 +521,6 @@ describe('TreeTaskGridRow', () => {
     observed.push(mockLinkOnClick.mock.calls.length)
 
     expect(observed).toEqual([true, 1])
-  })
-
-  it('still lets a click bubble to the row Link from the mobile layout', async () => {
-    // Control for the desktop-selection test above: proves mockLinkOnClick
-    // actually observes bubbled clicks, so a row tap still navigates on the
-    // touch layout, which has no onClick of its own to intercept it.
-    const user = userEvent.setup()
-    await renderTree(makeNode({ labels: ['dev:tq'] }))
-
-    await user.click(atIndex(screen.getAllByText('Parent Task'), 1))
-
-    expect(mockLinkOnClick).toHaveBeenCalled()
   })
 
   it('updates the status via useUpdateTaskStatus when a non-completed status is selected', async () => {
