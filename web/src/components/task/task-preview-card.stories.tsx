@@ -29,7 +29,7 @@ function TaskPreviewCardWithProviders({
 }) {
   return (
     <Providers>
-      <div className="w-96">
+      <div className="w-full max-w-96">
         <TaskPreviewCard task={task} raw={raw} />
       </div>
     </Providers>

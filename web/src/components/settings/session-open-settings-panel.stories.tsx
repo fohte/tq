@@ -12,7 +12,7 @@ function WrappedSessionOpenSettingsPanel() {
   resetSessionOpenSettings()
 
   return (
-    <div className="w-3xl">
+    <div className="w-full max-w-3xl">
       <SessionOpenSettingsPanel />
     </div>
   )
