@@ -8,6 +8,7 @@ const schema = new Schema({
   nodes: {
     doc: { content: 'block+' },
     paragraph: { content: 'inline*', group: 'block' },
+    code_block: { content: 'text*', group: 'block', marks: '' },
     text: { group: 'inline' },
     hard_break: { inline: true, group: 'inline' },
   },
@@ -140,6 +141,22 @@ describe('collectTextBlockRuns', () => {
       text: '￼￼￼',
       offsets: [1, 2, 3, 4],
       nodeType: 'paragraph',
+    }
+    expect(actual).toEqual(expected)
+  })
+
+  it('masks the entire content of a code block, even text without an inlineCode mark', () => {
+    const doc = schema.node('doc', null, [
+      schema.node('code_block', null, [schema.text('see #76 here')]),
+    ])
+
+    const runs = collectTextBlockRuns(doc)
+
+    const actual = describeRun(atIndex(runs, 0))
+    const expected = {
+      text: '￼￼￼￼￼￼￼￼￼￼￼￼',
+      offsets: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      nodeType: 'code_block',
     }
     expect(actual).toEqual(expected)
   })

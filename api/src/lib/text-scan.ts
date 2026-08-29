@@ -14,12 +14,17 @@ export interface TextBlockRun {
 // character of `text` mapped to exactly one doc position.
 const LEAF_PLACEHOLDER = '￼'
 
-// A code span's content is code, not prose, so it's never a reference. A
-// link's display text describes wherever the link points, not a tq
-// resource — except a GFM autolink literal, whose display text is the URL
-// itself (href === text), which the taskUrl/projectUrl/githubUrl/
+// A code span's or code block's content is code, not prose, so it's never a
+// reference. A link's display text describes wherever the link points, not
+// a tq resource — except a GFM autolink literal, whose display text is the
+// URL itself (href === text), which the taskUrl/projectUrl/githubUrl/
 // slackPermalink providers still need to see.
-function isNonReferenceText(marks: readonly Mark[], text: string): boolean {
+function isNonReferenceText(
+  marks: readonly Mark[],
+  text: string,
+  nodeType: string,
+): boolean {
+  if (nodeType === 'code_block') return true
   return marks.some((mark) => {
     if (mark.type.name === 'inlineCode') return true
     if (mark.type.name === 'link' && typeof mark.attrs['href'] === 'string') {
@@ -48,7 +53,7 @@ export function collectTextBlockRuns(doc: Node): TextBlockRun[] {
         for (let i = 0; i < childText.length; i++) {
           offsets.push(pos + childOffset + i)
         }
-        text += isNonReferenceText(child.marks, childText)
+        text += isNonReferenceText(child.marks, childText, node.type.name)
           ? LEAF_PLACEHOLDER.repeat(childText.length)
           : childText
       } else {
