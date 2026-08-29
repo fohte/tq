@@ -8,6 +8,7 @@ import {
   ProjectSidebarMobile,
 } from '#components/project/project-detail-sidebar'
 import type { ProjectDetail, ProjectTask } from '#hooks/use-projects'
+import { projectKeys } from '#hooks/use-projects'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const baseProject: ProjectDetail = {
@@ -82,10 +83,25 @@ const sampleTasks: ProjectTask[] = [
   },
 ]
 
-function Providers({ children }: { children: ReactNode }) {
+function Providers({
+  project,
+  children,
+}: {
+  project: ProjectDetail
+  children: ReactNode
+}) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    // staleTime: Infinity keeps the seeded data below from being treated as
+    // stale and refetched on mount (the app's real QueryClient uses a
+    // shorter staleTime, but relies on the seed being fresh from a fetch
+    // moments earlier — this story has no server to refetch from).
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
+  // Mirrors the real /projects/$projectId route, which already calls
+  // useProject(projectId) before ProjectMainContent renders its task rows —
+  // without this, TaskProjectLabel's useProject(task.projectId) would fire
+  // an unmocked fetch.
+  queryClient.setQueryData(projectKeys.detail(project.id), project)
   return (
     <QueryClientProvider client={queryClient}>
       <StoryRouter
@@ -110,7 +126,7 @@ function MainContentStory({
   tasks: ProjectTask[]
 }) {
   return (
-    <Providers>
+    <Providers project={project}>
       <div className="max-w-2xl p-6">
         <ProjectMainContent project={project} tasks={tasks} />
       </div>
@@ -181,7 +197,7 @@ export const FullPagePC: StoryObj<{
     layout: 'fullscreen',
   },
   render: ({ project, tasks }) => (
-    <Providers>
+    <Providers project={project}>
       <div className="flex h-screen">
         <div className="flex-1 overflow-y-auto p-6">
           <ProjectMainContent project={project} tasks={tasks} />
@@ -205,7 +221,7 @@ export const FullPageSP: StoryObj<{
     viewport: { defaultViewport: 'mobile1' },
   },
   render: ({ project, tasks }) => (
-    <Providers>
+    <Providers project={project}>
       <div className="flex h-screen flex-col overflow-y-auto">
         <div className="p-4">
           <ProjectMainContent project={project} tasks={tasks} />

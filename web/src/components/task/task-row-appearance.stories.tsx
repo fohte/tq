@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 
-import { TaskRow } from '#components/task/task-row'
+import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import type { Task } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -42,23 +43,23 @@ function Providers({ children }: { children: ReactNode }) {
   )
 }
 
-function TaskRowWithProviders({ task }: { task: Task }) {
+function TaskRowAppearanceWithProviders({ task }: { task: Task }) {
   return (
     <Providers>
-      <div className="w-96">
-        <TaskRow task={task} />
+      <div className="w-full max-w-3xl">
+        <TaskRowAppearance task={task} />
       </div>
     </Providers>
   )
 }
 
 const meta = {
-  title: 'Task/TaskRow',
-  component: TaskRowWithProviders,
+  title: 'Task/TaskRowAppearance',
+  component: TaskRowAppearanceWithProviders,
   parameters: {
     layout: 'centered',
   },
-} satisfies Meta<typeof TaskRowWithProviders>
+} satisfies Meta<typeof TaskRowAppearanceWithProviders>
 
 export default meta
 type Story = StoryObj<typeof meta>
@@ -79,17 +80,6 @@ export const InProgress: Story = {
   },
 }
 
-export const InProgressWithEstimate: Story = {
-  args: {
-    task: {
-      ...baseTask,
-      status: 'in_progress',
-      title: 'Reviewing code changes',
-      estimatedMinutes: 30,
-    },
-  },
-}
-
 export const Completed: Story = {
   args: {
     task: {
@@ -100,33 +90,12 @@ export const Completed: Story = {
   },
 }
 
-export const WithEstimate: Story = {
-  args: {
-    task: {
-      ...baseTask,
-      title: 'Write API documentation',
-      estimatedMinutes: 120,
-    },
-  },
-}
-
 export const WorkContext: Story = {
   args: {
     task: {
       ...baseTask,
       title: 'Deploy to production',
       context: 'work',
-      estimatedMinutes: 30,
-    },
-  },
-}
-
-export const WithParent: Story = {
-  args: {
-    task: {
-      ...baseTask,
-      title: 'Add unit tests',
-      parentId: 'abcd0000-0000-0000-0000-000000000000',
     },
   },
 }
@@ -160,6 +129,16 @@ export const OverdueCompleted: Story = {
       status: 'completed',
       title: 'Renew SSL certificate',
       dueDate: '2020-01-01',
+    },
+  },
+}
+
+export const WithStartDate: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Task with a start date',
+      startDate: '2026-03-25',
     },
   },
 }
@@ -199,10 +178,52 @@ export const TagClick: Story = {
     task: { ...baseTask, title: 'Click a tag token', labels: ['dev:tq'] },
   },
   play: async ({ canvas, userEvent }) => {
-    // Clicking navigates to /tasks scoped to the tag (see task-row.test.tsx
-    // for the assertion on the resulting query); this story only exercises
-    // that the click doesn't throw.
+    // Clicking navigates to /tasks scoped to the tag; this story only
+    // exercises that the click doesn't throw.
     await userEvent.click(canvas.getByText('#dev:tq'))
+  },
+}
+
+export const WithProject: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/projects/:id', () =>
+          HttpResponse.json({
+            id: 'project-1',
+            title: 'tq',
+            description: null,
+            status: 'active',
+            startDate: null,
+            targetDate: null,
+            color: null,
+            sortOrder: 0,
+            createdAt: '2026-03-20T00:00:00.000Z',
+            updatedAt: '2026-03-20T00:00:00.000Z',
+            completionRate: 0.4,
+            taskCount: { total: 10, completed: 4 },
+          }),
+        ),
+      ],
+    },
+  },
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Ship the release notes',
+      projectId: 'project-1',
+    },
+  },
+}
+
+export const WithCompletionCount: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Sprint planning',
+      context: 'work',
+      childCompletionCount: { completed: 2, total: 3 },
+    },
   },
 }
 
@@ -216,45 +237,32 @@ export const AllVariants: Story = {
         id: '2',
         title: 'In progress task',
         status: 'in_progress',
-        estimatedMinutes: 60,
       },
       {
         ...baseTask,
         id: '3',
         title: 'Completed task',
         status: 'completed',
-        estimatedMinutes: 30,
       },
       {
         ...baseTask,
         id: '4',
-        title: 'Work context with estimate',
+        title: 'Work context task',
         context: 'work',
-        estimatedMinutes: 120,
       },
       {
         ...baseTask,
-        id: '6',
-        title: 'Task with parent reference',
-        parentId: 'abcd0000-0000-0000-0000-000000000000',
-        estimatedMinutes: 45,
-      },
-      {
-        ...baseTask,
-        id: '7',
-        title: 'All features combined',
-        status: 'in_progress',
-        context: 'work',
-        estimatedMinutes: 180,
-        parentId: 'abcd0000-0000-0000-0000-000000000000',
+        id: '5',
+        title: 'Task with children',
+        childCompletionCount: { completed: 1, total: 2 },
       },
     ]
 
     return (
       <Providers>
-        <div className="w-96 divide-y divide-border">
+        <div className="w-full max-w-3xl divide-y divide-border">
           {tasks.map((task) => (
-            <TaskRow key={task.id} task={task} />
+            <TaskRowAppearance key={task.id} task={task} />
           ))}
         </div>
       </Providers>

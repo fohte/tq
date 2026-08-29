@@ -33,6 +33,7 @@ const baseTask = {
   recurrenceRule: null,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
+  childCompletionCount: { completed: 0, total: 0 },
 }
 
 const mockTasks = [
@@ -197,8 +198,11 @@ describe('ProjectDetailPage', () => {
     expect(screen.getAllByText('projects')).toHaveLength(2)
     // SP back-nav "Projects" link
     expect(screen.getAllByText('Projects')).toHaveLength(1)
-    // breadcrumb leaf + title button, per layout
-    expect(screen.getAllByText('ISUCON14')).toHaveLength(4)
+    // breadcrumb leaf + title button (per layout: 2*2=4), plus each open
+    // task row's project label in the OPEN TASKS panel (3 open tasks *
+    // 2 layouts = 6), since TaskRowAppearance renders a project label
+    // whenever a task has a projectId set.
+    expect(screen.getAllByText('ISUCON14')).toHaveLength(10)
   })
 
   it('renders description editor with project description', () => {

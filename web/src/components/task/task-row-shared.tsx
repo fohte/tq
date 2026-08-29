@@ -1,6 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
 
-import { Chip } from '#components/ui/chip'
 import { useProject } from '#hooks/use-projects'
 import type { Task } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
@@ -20,10 +19,6 @@ export function useHandleStatusChange(id: string, status: Task['status']) {
       updateStatus.mutate({ id, status: newStatus })
     }
   }
-}
-
-export function ContextBadge({ context }: { context: Task['context'] }) {
-  return <Chip>{context}</Chip>
 }
 
 export function TagTokens({

@@ -3,7 +3,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { X } from 'lucide-react'
 import { useRef, useState } from 'react'
 
-import { TaskRow } from '#components/task/task-row'
+import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
 import { DragHandle } from '#components/ui/drag-handle'
@@ -64,42 +64,48 @@ export function TodayQueueRow({
       />
 
       <div className="min-w-0 flex-1">
-        <TaskRow task={task} draggable={task.status !== 'completed'} />
+        <TaskRowAppearance
+          task={task}
+          draggable={task.status !== 'completed'}
+        />
       </div>
 
-      {task.estimatedMinutes == null &&
-        (isEditingEstimate ? (
-          <Input
-            autoFocus
-            value={estimateInput}
-            onChange={(e) => {
-              setEstimateInput(e.target.value)
-            }}
-            onBlur={commitEstimate}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') e.currentTarget.blur()
-              if (e.key === 'Escape') {
-                cancelingRef.current = true
-                setIsEditingEstimate(false)
-              }
-            }}
-            placeholder={formatMinutes(30)}
-            className="h-6 w-16 shrink-0 py-0.5 font-mono text-xs"
-          />
-        ) : (
-          <Chip
-            as="button"
-            size="md"
-            onClick={() => {
-              setEstimateInput('')
-              setIsEditingEstimate(true)
-            }}
-            title="No estimate set — excluded from auto-scheduling"
-            className="shrink-0 whitespace-nowrap border-destructive text-destructive"
-          >
-            No estimate
-          </Chip>
-        ))}
+      {task.estimatedMinutes != null ? (
+        <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
+          {formatMinutes(task.estimatedMinutes)}
+        </span>
+      ) : isEditingEstimate ? (
+        <Input
+          autoFocus
+          value={estimateInput}
+          onChange={(e) => {
+            setEstimateInput(e.target.value)
+          }}
+          onBlur={commitEstimate}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+            if (e.key === 'Escape') {
+              cancelingRef.current = true
+              setIsEditingEstimate(false)
+            }
+          }}
+          placeholder={formatMinutes(30)}
+          className="h-6 w-16 shrink-0 py-0.5 font-mono text-xs"
+        />
+      ) : (
+        <Chip
+          as="button"
+          size="md"
+          onClick={() => {
+            setEstimateInput('')
+            setIsEditingEstimate(true)
+          }}
+          title="No estimate set — excluded from auto-scheduling"
+          className="shrink-0 whitespace-nowrap border-destructive text-destructive"
+        >
+          No estimate
+        </Chip>
+      )}
 
       <Button
         variant="ghost"
