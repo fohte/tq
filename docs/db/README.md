@@ -17,7 +17,7 @@
 | [public.time_blocks](public.time_blocks.md)                                         | 7       |         | BASE TABLE |
 | [public.today_tasks](public.today_tasks.md)                                         | 6       |         | BASE TABLE |
 | [public.edits](public.edits.md)                                                     | 10      |         | BASE TABLE |
-| [public.task_github_links](public.task_github_links.md)                             | 14      |         | BASE TABLE |
+| [public.task_github_links](public.task_github_links.md)                             | 15      |         | BASE TABLE |
 | [public.task_links](public.task_links.md)                                           | 3       |         | BASE TABLE |
 | [public.github_sync_rule_ignored_issues](public.github_sync_rule_ignored_issues.md) | 6       |         | BASE TABLE |
 | [public.github_sync_rules](public.github_sync_rules.md)                             | 11      |         | BASE TABLE |
@@ -45,7 +45,7 @@ erDiagram
 "public.edits" }o--o| "public.task_comments" : "FOREIGN KEY (comment_id) REFERENCES task_comments(id) ON DELETE CASCADE"
 "public.edits" }o--o| "public.task_pages" : "FOREIGN KEY (page_id) REFERENCES task_pages(id) ON DELETE CASCADE"
 "public.edits" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
-"public.task_github_links" |o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+"public.task_github_links" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_links" }o--|| "public.tasks" : "FOREIGN KEY (source_task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_links" }o--|| "public.tasks" : "FOREIGN KEY (target_task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.github_sync_rule_ignored_issues" }o--|| "public.github_sync_rules" : "FOREIGN KEY (rule_id) REFERENCES github_sync_rules(id) ON DELETE CASCADE"
@@ -192,6 +192,7 @@ erDiagram
   timestamp_with_time_zone updated_at
   text body
   text etag
+  bigint seq
 }
 "public.task_links" {
   text source_task_id FK
