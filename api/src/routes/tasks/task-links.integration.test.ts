@@ -60,6 +60,10 @@ function linkedTaskDetail(
     | 'createdAt'
     | 'updatedAt'
   >,
+  childCompletionCount: { completed: number; total: number } = {
+    completed: 0,
+    total: 0,
+  },
 ): TaskListItemResponse {
   return {
     id: task.id,
@@ -79,7 +83,7 @@ function linkedTaskDetail(
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
     parentNumber: null,
-    childCompletionCount: { completed: 0, total: 0 },
+    childCompletionCount,
   }
 }
 
@@ -134,6 +138,19 @@ describe('task mention links', () => {
 
     expect(await getLinks(source.id)).toEqual({
       outgoing: [linkedTaskDetail(target)],
+      incoming: [],
+    })
+  })
+
+  it("reflects a linked task's own labels and child-completion count", async () => {
+    const source = await createTask('Source')
+    const target = await createTask('Target', { labels: ['foo'] })
+    await createTask('Child', { parentId: target.id })
+
+    await patchTask(source.id, { description: `See #${String(target.number)}` })
+
+    expect(await getLinks(source.id)).toEqual({
+      outgoing: [linkedTaskDetail(target, { completed: 0, total: 1 })],
       incoming: [],
     })
   })
