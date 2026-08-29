@@ -237,6 +237,32 @@ export const agentSessionsApp = new Hono()
 
     return c.json(agentSessionToResponse(session), 200)
   })
+  // Lets an external session manager (e.g. armyknife) that only knows the
+  // (provider, session_id) pair tell tq a session will never resume, without
+  // waiting for it to age out via the 30-day prune above.
+  .delete('/by-session/:provider/:sessionId', async (c) => {
+    const provider = c.req.param('provider')
+    if (provider !== 'claude_code') {
+      return c.json({ error: 'Agent session not found' }, 404)
+    }
+    const sessionId = c.req.param('sessionId')
+
+    const deleted = await db
+      .delete(agentSessions)
+      .where(
+        and(
+          eq(agentSessions.provider, provider),
+          eq(agentSessions.sessionId, sessionId),
+        ),
+      )
+      .returning()
+
+    if (deleted.length === 0) {
+      return c.json({ error: 'Agent session not found' }, 404)
+    }
+
+    return c.body(null, 204)
+  })
   .get('/:id/tasks', async (c) => {
     const id = c.req.param('id')
 

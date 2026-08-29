@@ -141,3 +141,56 @@ describe('session list', () => {
     expect(stderr.mock.calls).toEqual([['Error: Internal error (HTTP 500)\n']])
   })
 })
+
+describe('session delete', () => {
+  it('deletes a session by provider and session id', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(null, { status: 204 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'session', 'delete', 'claude_code', 'sess-1'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'DELETE',
+      pathname: '/api/agent-sessions/by-session/claude_code/sess-1',
+      query: {},
+      body: undefined,
+    })
+    expect(write.mock.calls).toEqual([
+      [
+        `${JSON.stringify(
+          { deleted: true, provider: 'claude_code', sessionId: 'sess-1' },
+          null,
+          2,
+        )}\n`,
+      ],
+    ])
+  })
+
+  it('reports the API error when the session is not found', async () => {
+    const { fetchStub } = captureFetch(
+      () =>
+        new Response(JSON.stringify({ error: 'Agent session not found' }), {
+          status: 404,
+        }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'session', 'delete', 'claude_code', 'sess-1'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(1)
+    expect(stderr.mock.calls).toEqual([
+      ['Error: Agent session not found (HTTP 404)\n'],
+    ])
+  })
+})
