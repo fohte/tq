@@ -1,11 +1,8 @@
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
 import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 
-import {
-  CreateTaskInline,
-  FloatingActionButton,
-} from '#components/task/create-task-inline'
+import { FloatingActionButton } from '#components/task/create-task-inline'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
@@ -14,7 +11,6 @@ import { TaskTreeList } from '#components/task/task-tree-list'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
-import { useNewTaskShortcutListener } from '#hooks/use-new-task-shortcut'
 import { useProjects } from '#hooks/use-projects'
 import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
 import { sortOptionValues } from '#lib/tasks-query'
@@ -75,7 +71,6 @@ export function TaskList() {
   const { q = tasksSearchDefaults.q } = Route.useSearch()
   const parsed = parseSearchQuery(q)
   const navigate = Route.useNavigate()
-  const [isCreating, setIsCreating] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isGithubModalOpen, setIsGithubModalOpen] = useState(false)
 
@@ -95,12 +90,6 @@ export function TaskList() {
   } = useFilteredTaskTree({ q })
   const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
 
-  useNewTaskShortcutListener(
-    useCallback(() => {
-      setIsCreating(true)
-    }, []),
-  )
-
   return (
     <div className="flex h-full flex-col">
       <ScreenHeaderBar>
@@ -110,7 +99,7 @@ export function TaskList() {
             setIsGithubModalOpen(true)
           }}
           onCreateNew={() => {
-            setIsCreating(true)
+            setIsModalOpen(true)
           }}
         />
       </ScreenHeaderBar>
@@ -120,17 +109,6 @@ export function TaskList() {
         parsed={parsed}
         projects={projects.data ?? []}
       />
-
-      {/* Inline create */}
-      {isCreating && (
-        <div className="border-b border-border">
-          <CreateTaskInline
-            onClose={() => {
-              setIsCreating(false)
-            }}
-          />
-        </div>
-      )}
 
       <TaskTreeList
         isLoading={isLoading}
