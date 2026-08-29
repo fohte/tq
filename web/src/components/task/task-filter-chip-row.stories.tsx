@@ -82,6 +82,10 @@ export const NoFilters: Story = {
 }
 
 export const SortByCreated: Story = {
+  // The sort chip's value text is hidden below `md` (see the `hidden
+  // md:inline` span in TaskFilterChipRow), so this story is visually
+  // identical to Default on the mobile viewport.
+  tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, sortBy: 'created' },
   },
@@ -90,12 +94,6 @@ export const SortByCreated: Story = {
 export const ProjectSelected: Story = {
   args: {
     parsed: { ...defaultParsed, projectId: 'proj-1' },
-  },
-}
-
-export const NoProjects: Story = {
-  args: {
-    projects: [],
   },
 }
 
