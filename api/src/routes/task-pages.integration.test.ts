@@ -211,7 +211,18 @@ describe('task pages API', () => {
 
       expect(res.status).toBe(201)
       const body = await jsonBody<PageResponse>(res)
-      expect(body.content).toBe(content)
+      expect(normalizePage(body)).toEqual({
+        id: 'ID',
+        taskId: task.id,
+        title: 'Page',
+        content,
+        format: 'html',
+        sortOrder: 0,
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+        author: { kind: 'human', agent: null },
+        linkSync: { outgoing: [], unresolvedRefs: [] },
+      })
     })
 
     it('returns 400 for html content over the html length limit', async () => {
@@ -331,7 +342,35 @@ describe('task pages API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<PageResponse>(res)
-      expect(body.content).toBe(content)
+      expect(normalizePage(body)).toEqual({
+        id: 'ID',
+        taskId: task.id,
+        title: 'Page',
+        content,
+        format: 'html',
+        sortOrder: 0,
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+        author: { kind: 'human', agent: null },
+        linkSync: { outgoing: [], unresolvedRefs: [] },
+      })
+    })
+
+    it('returns 400 when downgrading an oversized html page to markdown without resending content', async () => {
+      const task = await createTask('Task')
+      const page = await createPage(task.id, {
+        title: 'Page',
+        format: 'html',
+        content: `<p>${'a'.repeat(150_000)}</p>`,
+      })
+
+      const res = await app.request(`/api/tasks/${task.id}/pages/${page.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ format: 'markdown' }),
+      })
+
+      expect(res.status).toBe(400)
     })
 
     it('returns 404 for non-existent page', async () => {

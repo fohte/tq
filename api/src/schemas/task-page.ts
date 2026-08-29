@@ -1,5 +1,18 @@
 import { z } from 'zod'
 
+import {
+  MAX_HTML_CONTENT_LENGTH,
+  MAX_MARKDOWN_CONTENT_LENGTH,
+} from '#constants/content-length'
+
+const contentSchema = z
+  .string()
+  .describe(
+    `Max ${String(MAX_MARKDOWN_CONTENT_LENGTH)} characters for format ` +
+      `"markdown", ${String(MAX_HTML_CONTENT_LENGTH)} for format "html".`,
+  )
+  .optional()
+
 const pageFormatSchema = z
   .enum(['markdown', 'html'])
   .describe(
@@ -14,14 +27,14 @@ const pageFormatSchema = z
 
 export const createPageSchema = z.object({
   title: z.string().min(1),
-  content: z.string().optional(),
+  content: contentSchema,
   format: pageFormatSchema.optional(),
   sortOrder: z.number().int().optional(),
 })
 
 export const updatePageSchema = z.object({
   title: z.string().min(1).optional(),
-  content: z.string().optional(),
+  content: contentSchema,
   format: pageFormatSchema.optional(),
   sortOrder: z.number().int().optional(),
 })

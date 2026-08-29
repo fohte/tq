@@ -25,6 +25,23 @@ function maxContentLengthFor(format: 'markdown' | 'html'): number {
     : MAX_MARKDOWN_CONTENT_LENGTH
 }
 
+// Validates the content that will actually end up on the row after this
+// write, not just the content present in the request: a PATCH that changes
+// only `format` (e.g. html -> markdown) keeps the existing, unvalidated
+// content, so checking `input.content` alone would let an oversized string
+// through under the new, stricter format.
+function validateContentLength(
+  content: string,
+  format: 'markdown' | 'html',
+): { error: string } | null {
+  const maxLength = maxContentLengthFor(format)
+  return content.length > maxLength
+    ? {
+        error: `content must have <=${String(maxLength)} characters for format "${format}"`,
+      }
+    : null
+}
+
 export function pageToResponse(
   page: typeof taskPages.$inferSelect,
   author: EditAuthorInfo | null = null,
@@ -78,15 +95,11 @@ export const taskPagesApp = new Hono<TaskEnv>()
     const input = c.req.valid('json')
     const author = c.get('author')
     const format = input.format ?? 'markdown'
+    const content = input.content ?? ''
 
-    const maxLength = maxContentLengthFor(format)
-    if (input.content != null && input.content.length > maxLength) {
-      return c.json(
-        {
-          error: `content must have <=${String(maxLength)} characters for format "${format}"`,
-        },
-        400,
-      )
+    const lengthError = validateContentLength(content, format)
+    if (lengthError) {
+      return c.json(lengthError, 400)
     }
 
     const page = await db.transaction(async (tx) => {
@@ -96,7 +109,7 @@ export const taskPagesApp = new Hono<TaskEnv>()
           .values({
             taskId,
             title: input.title,
-            content: input.content ?? '',
+            content,
             format,
             sortOrder: input.sortOrder ?? 0,
           })
@@ -147,14 +160,11 @@ export const taskPagesApp = new Hono<TaskEnv>()
     }
 
     const format = input.format ?? existing.format
-    const maxLength = maxContentLengthFor(format)
-    if (input.content != null && input.content.length > maxLength) {
-      return c.json(
-        {
-          error: `content must have <=${String(maxLength)} characters for format "${format}"`,
-        },
-        400,
-      )
+    const content = input.content ?? existing.content
+
+    const lengthError = validateContentLength(content, format)
+    if (lengthError) {
+      return c.json(lengthError, 400)
     }
 
     const changedFields = diffFields(existing, input, ['title', 'content'])
