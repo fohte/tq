@@ -83,7 +83,7 @@ function InteractiveTreeTaskGridRow({
 function TreeTaskGridRowWithProviders({ node }: { node: TreeNode }) {
   return (
     <Providers>
-      <div className="w-3xl">
+      <div className="w-full max-w-3xl">
         <InteractiveTreeTaskGridRow node={node} />
       </div>
     </Providers>
@@ -97,7 +97,7 @@ function StaticTreeTaskGridRow(
 ) {
   return (
     <Providers>
-      <div className="w-3xl">
+      <div className="w-full max-w-3xl">
         <TreeTaskGridRow
           sessionsByTaskId={new Map()}
           isExpanded={() => true}
@@ -264,7 +264,7 @@ export const TagClick: Story = (() => {
     render: (args) => {
       router = createStoryRouter({
         component: () => (
-          <div className="w-3xl">
+          <div className="w-full max-w-3xl">
             <InteractiveTreeTaskGridRow node={args.node} />
           </div>
         ),
@@ -298,7 +298,7 @@ export const ClickNavigates: Story = (() => {
     render: (args) => {
       router = createStoryRouter({
         component: () => (
-          <div className="w-3xl">
+          <div className="w-full max-w-3xl">
             <InteractiveTreeTaskGridRow node={args.node} />
           </div>
         ),
@@ -403,7 +403,7 @@ export const WithActiveSessions: Story = {
   args: { node: baseTreeNode },
   render: () => (
     <Providers>
-      <div className="w-3xl">
+      <div className="w-full max-w-3xl">
         <InteractiveTreeTaskGridRow
           node={{ ...baseTreeNode, title: 'Task with agent sessions' }}
           sessionsByTaskId={
@@ -461,6 +461,11 @@ export const WithCompletionCount: Story = {
 
 export const AllVariants: Story = {
   args: { node: baseTreeNode },
+  // The narrow container below (w-xl, 576px) is wider than the mobile
+  // viewport (375px) on purpose — see the comment on it — so it always
+  // overflows the mobile project regardless of content. desktop-only skips
+  // that project instead of fixing the width or disabling the check.
+  tags: ['desktop-only'],
   parameters: {
     // The title `<span>` has a `min-w-30` (120px) floor, not `min-w-0` —
     // without it, the title would shrink to 0 width instead of the row
@@ -520,8 +525,8 @@ export const AllVariants: Story = {
 
     return (
       <Providers>
-        {/* Narrower than the row-story default (w-3xl) on purpose — see the
-            overflowCheck comment above for why. */}
+        {/* Narrower than the row-story default (max-w-3xl) on purpose — see
+            the overflowCheck comment above for why. */}
         <div
           data-testid="narrow-row-container"
           className="w-xl divide-y divide-border"

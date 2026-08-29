@@ -29,7 +29,7 @@ const baseTask: SearchResult = {
 
 function SearchResultRowWithWrapper({ task }: { task: SearchResult }) {
   return (
-    <div className="w-96">
+    <div className="w-full max-w-96">
       <div className={searchResultRowWrapperClassName(task.status)}>
         <SearchResultRow task={task} />
       </div>
@@ -157,7 +157,7 @@ export const AllVariants: Story = {
     ]
 
     return (
-      <div className="w-96 divide-y divide-border">
+      <div className="w-full max-w-96 divide-y divide-border">
         {tasks.map((task) => (
           <div
             key={task.id}

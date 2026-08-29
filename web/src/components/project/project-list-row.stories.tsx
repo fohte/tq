@@ -25,7 +25,7 @@ function ProjectListRowStory(
   return (
     <StoryRouter
       component={() => (
-        <div className="dark w-3xl bg-background">
+        <div className="dark w-full max-w-3xl bg-background">
           <ProjectListRow {...props} />
         </div>
       )}
@@ -171,7 +171,7 @@ export const AllVariants: Story = {
     return (
       <StoryRouter
         component={() => (
-          <div className="dark w-3xl divide-y divide-border bg-background">
+          <div className="dark w-full max-w-3xl divide-y divide-border bg-background">
             {projects.map((project) => (
               <ProjectListRow key={project.id} project={project} />
             ))}

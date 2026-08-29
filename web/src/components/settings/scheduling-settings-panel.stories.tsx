@@ -43,7 +43,7 @@ function WrappedSchedulingSettingsPanel(props: {
 }) {
   return (
     <Providers settings={props.settings}>
-      <div className="w-3xl">
+      <div className="w-full max-w-3xl">
         <SchedulingSettingsPanel />
       </div>
     </Providers>

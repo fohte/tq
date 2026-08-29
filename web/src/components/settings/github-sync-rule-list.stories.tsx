@@ -66,7 +66,7 @@ function Providers({
 function WrappedGithubSyncRuleList(props: { syncRules?: SyncRule[] }) {
   return (
     <Providers syncRules={props.syncRules}>
-      <div className="w-3xl">
+      <div className="w-full max-w-3xl">
         <GithubSyncRuleList />
       </div>
     </Providers>
