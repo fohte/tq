@@ -1,3 +1,5 @@
+import { Loader2 } from 'lucide-react'
+
 import { Checkbox } from '#components/ui/checkbox'
 import type { GcalCalendar } from '#hooks/use-gcal-calendars'
 import { cn } from '#lib/utils'
@@ -25,13 +27,16 @@ export function GcalCalendarChecklist({
     <ul className="flex flex-col gap-0.5 border-l border-border pl-3">
       {calendars.map((calendar) => (
         <li key={calendar.id} className="flex items-center gap-2 py-1">
-          <Checkbox
-            checked={calendar.subscribed}
-            disabled={updatingCalendarId === calendar.id}
-            onCheckedChange={(checked) => {
-              onToggle(calendar.id, checked)
-            }}
-          />
+          {updatingCalendarId === calendar.id ? (
+            <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
+          ) : (
+            <Checkbox
+              checked={calendar.subscribed}
+              onCheckedChange={(checked) => {
+                onToggle(calendar.id, checked)
+              }}
+            />
+          )}
           <span
             className="size-2 shrink-0 rounded-full"
             style={{ backgroundColor: calendar.color ?? '#71717a' }}
