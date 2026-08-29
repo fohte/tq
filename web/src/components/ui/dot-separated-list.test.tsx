@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
 
 describe('DotSeparatedList', () => {
-  it('skips null and undefined items, matching the rendered items without them', () => {
+  it('skips null and undefined items', () => {
     const withNullish = render(
       <DotSeparatedList
         items={['Design system setup', null, 'work', undefined, 'Mar 25']}

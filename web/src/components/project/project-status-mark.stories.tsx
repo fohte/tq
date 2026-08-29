@@ -32,8 +32,7 @@ export const Completed: Story = {
 }
 
 // `paused` and `archived` are intentionally styled identically (see
-// project-status-mark.tsx), so they're covered by one combined story instead
-// of two stories that would render to the same screenshot.
+// project-status-mark.tsx).
 export const PausedAndArchived: Story = {
   args: { status: 'paused' },
   render: () => (
