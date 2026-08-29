@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -198,11 +198,16 @@ describe('ProjectDetailPage', () => {
     expect(screen.getAllByText('projects')).toHaveLength(2)
     // SP back-nav "Projects" link
     expect(screen.getAllByText('Projects')).toHaveLength(1)
-    // breadcrumb leaf + title button (per layout: 2*2=4), plus each open
-    // task row's project label in the OPEN TASKS panel (3 open tasks *
-    // 2 layouts = 6), since TaskRowAppearance renders a project label
-    // whenever a task has a projectId set.
-    expect(screen.getAllByText('ISUCON14')).toHaveLength(10)
+    // breadcrumb leaf, once per layout (PC + SP) — scoped to each <nav> so
+    // this stays unaffected by unrelated "ISUCON14" text elsewhere on the
+    // page (e.g. the OPEN TASKS panel's per-row project labels).
+    const breadcrumbNavs = screen.getAllByRole('navigation')
+    expect(breadcrumbNavs).toHaveLength(2)
+    for (const nav of breadcrumbNavs) {
+      expect(within(nav).getByText('ISUCON14')).toBeInTheDocument()
+    }
+    // editable title button, once per layout (PC + SP)
+    expect(screen.getAllByRole('button', { name: 'ISUCON14' })).toHaveLength(2)
   })
 
   it('renders description editor with project description', () => {
