@@ -106,12 +106,6 @@ export const AddsTag: Story = {
 }
 
 export const EscapeInTagInputDoesNotCloseModal: Story = {
-  parameters: {
-    // Renders the same untouched "New Task" modal as the other two
-    // Cmd/Escape stories below — none of these plays leave a visually
-    // distinct trace, only callback/DOM assertions.
-    screenshot: { skip: true },
-  },
   play: async ({ canvasElement, userEvent, args }) => {
     const body = within(canvasElement.ownerDocument.body)
 
@@ -137,8 +131,8 @@ export const EscapeInTagInputDoesNotCloseModal: Story = {
 
 export const SubmitsOnCmdEnterFromTitle: Story = {
   parameters: {
-    // Same reasoning as EscapeInTagInputDoesNotCloseModal above — the modal
-    // renders unchanged regardless of the typed title.
+    // resetForm() on submit success clears the form back to the same blank
+    // state EscapeInTagInputDoesNotCloseModal captures.
     screenshot: { skip: true },
   },
   play: async ({ canvasElement, userEvent, args }) => {
@@ -157,8 +151,7 @@ export const SubmitsOnCmdEnterFromTitle: Story = {
 
 export const SubmitsOnCmdEnterFromDescription: Story = {
   parameters: {
-    // Same reasoning as EscapeInTagInputDoesNotCloseModal above — the modal
-    // renders unchanged regardless of the typed description.
+    // Same reasoning as SubmitsOnCmdEnterFromTitle above.
     screenshot: { skip: true },
   },
   play: async ({ canvasElement, userEvent, args }) => {

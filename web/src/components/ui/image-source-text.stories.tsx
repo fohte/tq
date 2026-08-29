@@ -73,10 +73,8 @@ export const CommitsAndMovesOutOnEscape: Story = {
     editable: true,
   },
   parameters: {
-    // onKeyDown only fires onCommitAndMoveOut; revealing the image and
-    // hiding the raw source is the parent's image-source-active class
-    // toggle, not this component, so the span is unchanged after Escape —
-    // identical to InlineImage.
+    // Image visibility is toggled by the parent, leaving this component
+    // visually unchanged after Escape.
     screenshot: { skip: true },
   },
   play: async ({ canvasElement, args }) => {

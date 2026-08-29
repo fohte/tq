@@ -64,10 +64,7 @@ export const NestedChild: Story = {
 
 export const IndentsOnTab: Story = {
   parameters: {
-    // onIndent is a mock the story never wires back into a re-render, so the
-    // row still shows the typed input afterward — identical to
-    // OutdentsOnShiftTab/ClosesOnEscape. The play only proves the callback
-    // fired, not a distinct look.
+    // onIndent is a mock that does not change the row's rendered appearance.
     screenshot: { skip: true },
   },
   play: async ({ canvasElement, args, userEvent }) => {

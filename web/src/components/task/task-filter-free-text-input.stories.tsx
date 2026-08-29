@@ -111,10 +111,8 @@ export const CommitsOnEnterWhenNoSuggestions: Story = {
     freeText: 'sort:updated',
   },
   parameters: {
-    // Commits immediately clear the input to match `onCommit` (a bare mock
-    // that never round-trips `freeText`), landing on the same empty-input
-    // render as ResetsOnEscapeWithoutCommitting/DoesNotCommitOnBlurWithoutChange's
-    // group below — none of these plays leave a visually distinct trace.
+    // Committing immediately clears the input, rendering identically to the
+    // empty state.
     screenshot: { skip: true },
   },
   play: async ({ canvas, userEvent, args }) => {

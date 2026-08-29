@@ -242,10 +242,8 @@ export const CopiesResumeCommandOnClick: Story = {
     isDimmed: false,
   },
   parameters: {
-    // Same COPY_FEEDBACK_MS race as ShowsCopiedFeedbackAfterCopy below —
-    // this play doesn't wait for the copied-state re-render, so the
-    // screenshot nondeterministically lands on idle (matching Active) or
-    // copied depending on scheduling.
+    // The transient copied state is not waited on, making screenshot
+    // capture timing nondeterministic.
     screenshot: { skip: true },
   },
   play: async ({ canvas }) => {
