@@ -13,7 +13,7 @@ import {
   type R2OperationError,
 } from '#services/r2'
 
-export { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES }
+export { MAX_SIZE_BYTES }
 
 const SIGNED_URL_EXPIRES_IN_SECONDS = 60 * 60
 

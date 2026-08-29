@@ -77,4 +77,31 @@ export function registerSessionCommands(
         })),
       )
     })
+
+  session
+    .command('delete <provider> <sessionId>')
+    .description(
+      'Delete an agent session by provider and session id, e.g. when an external session manager knows the session will never resume',
+    )
+    .action(
+      async (
+        provider: string,
+        sessionId: string,
+        _options: unknown,
+        command: Command,
+      ) => {
+        const client = buildClient(command, fetchImpl).match(
+          (value) => value,
+          (error) => fail(command, error),
+        )
+
+        const res = await client.api['agent-sessions']['by-session'][
+          ':provider'
+        ][':sessionId'].$delete({
+          param: { provider, sessionId },
+        })
+        if (!res.ok) return fail(command, await toApiError(res))
+        printJson({ deleted: true, provider, sessionId })
+      },
+    )
 }
