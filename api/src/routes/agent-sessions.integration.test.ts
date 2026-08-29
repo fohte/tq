@@ -573,7 +573,7 @@ describe('agent sessions API', () => {
 
     it('returns the parent task id for a subtask', async () => {
       const parent = await createTask('Parent task')
-      const child = await createTask('Child task', parent.id)
+      const child = await createTask('Child task', { parentId: parent.id })
       const session = await upsertSessionAtTime(
         {
           provider: 'claude_code',
@@ -725,11 +725,11 @@ async function upsertSessionAtTime(input: UpsertSessionInput, time: string) {
   return body
 }
 
-async function createTask(title: string, parentId?: string) {
+async function createTask(title: string, opts: { parentId?: string } = {}) {
   const res = await app.request('/api/tasks', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, parentId }),
+    body: JSON.stringify({ title, ...opts }),
   })
   if (res.status !== 201) {
     throw new Error(
