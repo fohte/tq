@@ -321,4 +321,11 @@ export const OvernightEvents: Story = {
       },
     ],
   },
+  play: async ({ canvas }) => {
+    // The initial scroll position (CalendarGrid's scrollTime="08:00:00")
+    // sits above the 23:00 events this story exists to cover, so the
+    // screenshot needs an explicit scroll to bring them into view.
+    const overnightEvent = await canvas.findByText('Overnight deploy')
+    overnightEvent.scrollIntoView({ block: 'center' })
+  },
 }

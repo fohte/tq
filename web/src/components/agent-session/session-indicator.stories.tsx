@@ -87,6 +87,14 @@ export const EndedSession: Story = {
 
 export const ShowsActiveWhenOneOfManyIsActive: Story = {
   args: { sessions: [endedSession, activeSession] },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await userEvent.hover(canvas.getByTestId('session-indicator'))
+
+    const body = within(canvasElement.ownerDocument.body)
+    await waitFor(() => expect(body.getByText('SESSIONS (2)')).toBeVisible())
+    await expect(body.getByText('Write the release notes')).toBeVisible()
+    await expect(body.getByText('Implement session indicator')).toBeVisible()
+  },
 }
 
 export const OpensCardOnHover: Story = {

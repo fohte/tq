@@ -12,9 +12,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  args: {
-    placeholder: 'Add description...',
-  },
+  args: {},
 }
 
 export const WithValue: Story = {

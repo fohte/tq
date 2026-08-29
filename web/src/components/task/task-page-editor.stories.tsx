@@ -74,6 +74,7 @@ export const Default: SubpageStory = {
       '## Discussion Points\n\n- Architecture review\n- Sprint planning\n- Performance improvements\n\nWe decided to go with option B for the following reasons:\n\n1. Better performance\n2. Simpler architecture\n3. Easier to maintain',
     format: 'markdown',
   },
+  tags: ['desktop-only'],
 }
 
 export const Empty: SubpageStory = {
@@ -88,6 +89,7 @@ export const Empty: SubpageStory = {
 
 export const DefaultSP: SubpageStory = {
   args: Default.args,
+  tags: ['mobile-only'],
   parameters: {
     layout: 'fullscreen',
     viewport: { defaultViewport: 'mobile1' },
