@@ -6,6 +6,13 @@ export interface TextBlockRun {
   posAt: (index: number) => number
   /** Node type name of the textblock itself (e.g. 'paragraph', 'heading', 'code_block'). */
   nodeType: string
+  /**
+   * hrefs of labeled links (display text differs from the href, so
+   * isNonReferenceText masks it out of `text`) in this textblock — the only
+   * place their target URL is still visible to a caller that needs it (e.g.
+   * a `[label](https://.../tasks/123)` reference).
+   */
+  hrefs: string[]
 }
 
 // Non-text inline leaves (hard breaks, images, ...) — and masked text runs,
@@ -34,6 +41,25 @@ function isNonReferenceText(
   })
 }
 
+// The href of a masked link mark (see isNonReferenceText above) — undefined
+// for anything else, including an unmasked autolink, whose href already
+// equals `text` and needs no separate exposure.
+function maskedLinkHref(
+  marks: readonly Mark[],
+  text: string,
+): string | undefined {
+  for (const mark of marks) {
+    if (
+      mark.type.name === 'link' &&
+      typeof mark.attrs['href'] === 'string' &&
+      mark.attrs['href'] !== text
+    ) {
+      return mark.attrs['href']
+    }
+  }
+  return undefined
+}
+
 // Scans the document one textblock at a time (paragraphs, headings, code
 // blocks, ...) rather than the whole document at once, since an inline
 // pattern like `#123` never spans a block boundary.
@@ -45,6 +71,7 @@ export function collectTextBlockRuns(doc: Node): TextBlockRun[] {
 
     let text = ''
     const offsets: number[] = []
+    const hrefs: string[] = []
     let childOffset = 1
 
     node.forEach((child) => {
@@ -53,9 +80,13 @@ export function collectTextBlockRuns(doc: Node): TextBlockRun[] {
         for (let i = 0; i < childText.length; i++) {
           offsets.push(pos + childOffset + i)
         }
-        text += isNonReferenceText(child.marks, childText, node.type)
-          ? LEAF_PLACEHOLDER.repeat(childText.length)
-          : childText
+        if (isNonReferenceText(child.marks, childText, node.type)) {
+          text += LEAF_PLACEHOLDER.repeat(childText.length)
+          const href = maskedLinkHref(child.marks, childText)
+          if (href != null) hrefs.push(href)
+        } else {
+          text += childText
+        }
       } else {
         offsets.push(pos + childOffset)
         text += LEAF_PLACEHOLDER
@@ -68,6 +99,7 @@ export function collectTextBlockRuns(doc: Node): TextBlockRun[] {
       text,
       posAt: (index) => offsets[index] ?? contentEnd,
       nodeType: node.type.name,
+      hrefs,
     })
 
     // Already extracted this block's text manually; don't descend into its

@@ -73,6 +73,15 @@ export async function extractMentionedTaskRefs(
     for (const ref of extractAppResourceRefs(run.text, APP_DOMAIN, 'tasks')) {
       refs.push(ref)
     }
+    // A labeled link's href (e.g. `[label](https://.../tasks/123)`) is
+    // masked out of `run.text` (see isNonReferenceText in text-scan.ts) so
+    // the display text itself isn't mistaken for a reference; scan it here
+    // instead, from the side channel `collectTextBlockRuns` exposes it on.
+    for (const href of run.hrefs) {
+      for (const ref of extractAppResourceRefs(href, APP_DOMAIN, 'tasks')) {
+        refs.push(ref)
+      }
+    }
   }
   return dedupeRefs(refs)
 }
