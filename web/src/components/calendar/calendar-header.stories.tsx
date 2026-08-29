@@ -92,6 +92,12 @@ export const InteractionTest: InteractionTestStory = {
     onToday: fn(),
     onViewChange: fn(),
   },
+  parameters: {
+    // Callbacks are bare mocks, so clicking prev/next/today/view never
+    // re-renders with new args — the screenshot always shows the initial
+    // day-view render, identical to Default.
+    screenshot: { skip: true },
+  },
   render: (args) => (
     <div className="w-full max-w-3xl">
       <CalendarHeader {...args} />

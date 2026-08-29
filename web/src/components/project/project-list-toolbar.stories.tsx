@@ -56,6 +56,12 @@ export const All: Story = {
 }
 
 export const InteractionTest: Story = {
+  parameters: {
+    // Clicking the "all" tab drives real internal state, so the final
+    // render matches the All story — this only proves the callback and
+    // aria-pressed update, not a distinct look.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, args, userEvent }) => {
     const activeTab = canvas.getByText('active')
     const allTab = canvas.getByText('all')

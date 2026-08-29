@@ -130,6 +130,11 @@ export const EscapeInTagInputDoesNotCloseModal: Story = {
 }
 
 export const SubmitsOnCmdEnterFromTitle: Story = {
+  parameters: {
+    // resetForm() on submit success clears the form back to the same blank
+    // state EscapeInTagInputDoesNotCloseModal captures.
+    screenshot: { skip: true },
+  },
   play: async ({ canvasElement, userEvent, args }) => {
     const body = within(canvasElement.ownerDocument.body)
     const titleInputs =
@@ -145,6 +150,10 @@ export const SubmitsOnCmdEnterFromTitle: Story = {
 }
 
 export const SubmitsOnCmdEnterFromDescription: Story = {
+  parameters: {
+    // Same reasoning as SubmitsOnCmdEnterFromTitle above.
+    screenshot: { skip: true },
+  },
   play: async ({ canvasElement, userEvent, args }) => {
     const body = within(canvasElement.ownerDocument.body)
     const titleInputs =

@@ -70,6 +70,12 @@ export const CannotUncheckLastStatus: Story = {
   args: {
     status: ['todo'],
   },
+  parameters: {
+    // Same status args as SingleSelected, and the click on the disabled
+    // checkbox is a no-op — the play only proves onStatusChange isn't
+    // called, not a distinct look.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, args }) => {
     // The checkbox is a Base UI `<span role="checkbox">`, not a native
     // form control, so `disabled` only ever surfaces as `aria-disabled`

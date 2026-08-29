@@ -108,6 +108,10 @@ export const SelectProject: Story = {
     ),
   ],
   parameters: {
+    // The Select is controlled by the `projectId` prop, which this story
+    // never updates after selecting — the trigger still reads null,
+    // identical to NoProject.
+    screenshot: { skip: true },
     msw: {
       handlers: [
         http.patch('/api/tasks/:id', async ({ request }) => {

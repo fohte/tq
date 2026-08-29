@@ -276,6 +276,12 @@ export const TypingStructuredTokenLiftsIntoChip: Story = {
   args: {
     parsed: { freeText: '', sortBy: 'updated' },
   },
+  parameters: {
+    // `parsed` is a static prop that onQueryChange (a bare mock) never
+    // feeds back, so the chip row renders unchanged — identical to
+    // NoFilters, whose args match this story's.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, args }) => {
     const input = canvas.getByRole('textbox', { name: 'Filter query' })
     await userEvent.type(input, 'has:pages')
@@ -292,6 +298,12 @@ export const TypingStructuredTokenLiftsIntoChip: Story = {
 // dedupes against the currently-applied status array instead of blindly
 // concatenating and re-parsing the whole query string.
 export const TypingAlreadyAppliedStatusTokenDoesNotDuplicate: Story = {
+  parameters: {
+    // `parsed` is a static prop that onQueryChange (a bare mock) never
+    // feeds back, so the chip row renders the default args — identical to
+    // Default.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, args }) => {
     const input = canvas.getByRole('textbox', { name: 'Filter query' })
     await userEvent.type(input, 'is:todo')
@@ -304,6 +316,12 @@ export const TypingAlreadyAppliedStatusTokenDoesNotDuplicate: Story = {
 }
 
 export const EscapeResetsFreeTextInput: Story = {
+  parameters: {
+    // `parsed` is a static prop that onQueryChange (a bare mock) never
+    // feeds back, so the chip row renders the default args — identical to
+    // Default.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, args }) => {
     const input = canvas.getByRole('textbox', { name: 'Filter query' })
     await userEvent.type(input, 'has:pages')
@@ -320,6 +338,12 @@ export const EscapeResetsFreeTextInput: Story = {
 export const BackspaceOnEmptyInputRemovesLastChip: Story = {
   args: {
     parsed: { ...defaultParsed, label: 'dev:tq' },
+  },
+  parameters: {
+    // `parsed` is a static prop that onQueryChange (a bare mock) never
+    // feeds back, so the chip row renders unchanged — identical to
+    // LabelSelected, whose args match this story's.
+    screenshot: { skip: true },
   },
   play: async ({ canvas, args }) => {
     const input = canvas.getByRole('textbox', { name: 'Filter query' })

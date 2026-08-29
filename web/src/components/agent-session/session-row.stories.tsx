@@ -148,6 +148,10 @@ export const SavesEditedLabelOnEnter: Story = {
     isDimmed: false,
   },
   parameters: {
+    // The row's label reverts to `label ?? ''` from props (not the mutation
+    // response) once editing stops, so this renders identically to Active —
+    // the play only proves the PATCH body, not a distinct look.
+    screenshot: { skip: true },
     msw: {
       handlers: [
         http.patch('/api/agent-sessions/:id', async ({ request }) => {
@@ -182,6 +186,10 @@ export const ClearsLabelOnEmptyInput: Story = {
     isDimmed: false,
   },
   parameters: {
+    // The row's label reverts to `label ?? ''` from props (not the mutation
+    // response) once editing stops, so this renders identically to Active —
+    // the play only proves the PATCH body, not a distinct look.
+    screenshot: { skip: true },
     msw: {
       handlers: [
         http.patch('/api/agent-sessions/:id', async ({ request }) => {
@@ -210,6 +218,12 @@ export const CancelsEditOnEscape: Story = {
     session: { ...baseSession, id: '9' },
     isDimmed: false,
   },
+  parameters: {
+    // Escape reverts the label button to its pre-edit text, identical to
+    // Active's rendered row — the play only proves the cancel behavior, not
+    // a distinct look.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas }) => {
     await userEvent.click(canvas.getByText(baseSession.label ?? ''))
     const input = canvas.getByRole('textbox')
@@ -227,6 +241,11 @@ export const CopiesResumeCommandOnClick: Story = {
   args: {
     session: { ...baseSession, id: '11' },
     isDimmed: false,
+  },
+  parameters: {
+    // The transient copied state is not waited on, making screenshot
+    // capture timing nondeterministic.
+    screenshot: { skip: true },
   },
   play: async ({ canvas }) => {
     // Headless Chromium denies the clipboard-write permission by default, so
@@ -305,6 +324,11 @@ export const OpensConfiguredUrlTemplate: Story = {
     session: { ...baseSession, id: '13' },
     isDimmed: false,
     focusUrlTemplate: 'hammerspoon://cc-focus?session={sessionId}',
+  },
+  parameters: {
+    // The play asserts the button's `title` attribute, a tooltip that isn't
+    // rendered in the screenshot — the row looks identical to Active.
+    screenshot: { skip: true },
   },
   play: async ({ canvas }) => {
     // Doesn't click — clicking would assign `window.location.href` and
