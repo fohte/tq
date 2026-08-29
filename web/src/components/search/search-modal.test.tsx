@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -291,6 +291,36 @@ describe('SearchModal', () => {
       to: '/tasks/$taskId',
       params: { taskId: '00000000-0000-0000-0000-000000000001' },
     })
+  })
+
+  it('closes modal when clicking a task row', async () => {
+    mockSearchData = mockTasks
+    const onOpenChange = vi.fn()
+
+    const user = userEvent.setup()
+    renderSearchModal({ onOpenChange })
+
+    const input = screen.getByLabelText('Search tasks')
+    await user.type(input, 'task')
+
+    await user.click(screen.getByText('Implement task list UI'))
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('does not close modal when opening a task row in a new tab', async () => {
+    mockSearchData = mockTasks
+    const onOpenChange = vi.fn()
+
+    const user = userEvent.setup()
+    renderSearchModal({ onOpenChange })
+
+    const input = screen.getByLabelText('Search tasks')
+    await user.type(input, 'task')
+
+    fireEvent.click(screen.getByText('Implement task list UI'), {
+      metaKey: true,
+    })
+    expect(onOpenChange).not.toHaveBeenCalled()
   })
 
   it('closes modal when clicking backdrop', async () => {

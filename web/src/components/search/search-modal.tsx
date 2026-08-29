@@ -273,7 +273,18 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                     >
                       <TaskRowAppearance
                         task={task}
-                        onClick={() => {
+                        onClick={(e) => {
+                          // Let the router's own modifier/middle-click handling
+                          // open a new tab without closing this one's search.
+                          if (
+                            e.button !== 0 ||
+                            e.metaKey ||
+                            e.ctrlKey ||
+                            e.shiftKey ||
+                            e.altKey
+                          ) {
+                            return
+                          }
                           onOpenChange(false)
                         }}
                       />

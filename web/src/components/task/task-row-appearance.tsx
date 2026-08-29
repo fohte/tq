@@ -30,7 +30,7 @@ export interface TaskRowAppearanceProps {
   selected?: boolean
   leading?: React.ReactNode
   trailing?: React.ReactNode
-  onClick?: () => void
+  onClick?: (e: React.MouseEvent) => void
   draggable?: boolean
   // Appended after the row's canonical second-line items (labels, project,
   // context, parent, startDate, dueDate, estimate, githubLink) — keep their
