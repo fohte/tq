@@ -297,10 +297,8 @@ describe('TaskPage', () => {
     expect(mockUseTaskList).toHaveBeenCalledWith({ parentId: mockTask.id })
 
     // PC and SP layouts both render TaskMainContent, so each subtask appears
-    // twice. The row's title text sits inside a much larger `<Link>` (status
-    // picker, number, second metadata line), so its accessible name is no
-    // longer just the title — look up the title text and walk up to its
-    // enclosing link instead of querying the link by accessible name.
+    // twice. The row's title sits inside a larger `<Link>` alongside the
+    // status picker and metadata, so match by text and walk up to the anchor.
     const finishedTitles = screen.getAllByText('Finished subtask')
     expect(
       finishedTitles.map((el) => el.closest('a')?.getAttribute('href')),
