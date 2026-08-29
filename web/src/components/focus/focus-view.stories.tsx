@@ -5,6 +5,7 @@ import { fn } from 'storybook/test'
 
 import { FocusViewPresentation } from '#components/focus/focus-view'
 import type { Task } from '#hooks/use-tasks'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const baseTask: Task = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -65,7 +66,12 @@ function Providers({ children }: { children: ReactNode }) {
     defaultOptions: { queries: { retry: false } },
   })
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <StoryRouter
+        component={() => <>{children}</>}
+        paths={['/tasks/$taskId']}
+      />
+    </QueryClientProvider>
   )
 }
 
