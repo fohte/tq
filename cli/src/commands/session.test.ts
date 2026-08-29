@@ -107,7 +107,9 @@ describe('session list', () => {
     ])
   })
 
-  it('reports the API error when the sessions request fails', async () => {
+  it('reports the API error when either request fails', async () => {
+    // Both requests fire concurrently (Promise.all), so both come back with
+    // this same error response regardless of which one the command reports.
     const { fetchStub, calls } = captureFetch(
       () =>
         new Response(JSON.stringify({ error: 'Internal error' }), {
@@ -123,7 +125,7 @@ describe('session list', () => {
     )
 
     expect(exitCode).toBe(1)
-    expect(calls.length).toBe(1)
+    expect(calls.length).toBe(2)
     expect(stderr.mock.calls).toEqual([['Error: Internal error (HTTP 500)\n']])
   })
 })

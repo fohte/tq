@@ -52,14 +52,15 @@ export function registerSessionCommands(
         (error) => fail(command, error),
       )
 
-      const sessionsRes = await client.api['agent-sessions'].$get()
+      const [sessionsRes, byTaskRes] = await Promise.all([
+        client.api['agent-sessions'].$get(),
+        client.api['agent-sessions']['by-task'].$get(),
+      ])
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
       if (!sessionsRes.ok) return fail(command, await toApiError(sessionsRes))
-      const sessions: AgentSession[] = await sessionsRes.json()
-
-      const byTaskRes = await client.api['agent-sessions']['by-task'].$get()
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
       if (!byTaskRes.ok) return fail(command, await toApiError(byTaskRes))
+      const sessions: AgentSession[] = await sessionsRes.json()
       const byTask: AgentSessionByTask[] = await byTaskRes.json()
 
       const tasksBySessionId = groupTasksBySessionId(byTask)
