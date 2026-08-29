@@ -166,6 +166,10 @@ export const AddingSubtask: SectionStoryType = {
     project: sampleProject,
   },
   parameters: {
+    // Escape closes the add-subtask row back to the trigger button, so the
+    // final render matches Default — the play only proves the intermediate
+    // typing/notation behavior, not a distinct look.
+    screenshot: { skip: true },
     msw: {
       handlers: [
         http.get('/api/projects/:id', () => HttpResponse.json(sampleProject)),

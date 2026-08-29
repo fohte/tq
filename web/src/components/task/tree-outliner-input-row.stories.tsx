@@ -63,6 +63,13 @@ export const NestedChild: Story = {
 }
 
 export const IndentsOnTab: Story = {
+  parameters: {
+    // onIndent is a mock the story never wires back into a re-render, so the
+    // row still shows the typed input afterward — identical to
+    // OutdentsOnShiftTab/ClosesOnEscape. The play only proves the callback
+    // fired, not a distinct look.
+    screenshot: { skip: true },
+  },
   play: async ({ canvasElement, args, userEvent }) => {
     const canvas = within(canvasElement)
     const input = canvas.getByPlaceholderText(/New task/i)
@@ -76,6 +83,11 @@ export const IndentsOnTab: Story = {
 }
 
 export const OutdentsOnShiftTab: Story = {
+  parameters: {
+    // Same as IndentsOnTab: onOutdent is a mock that doesn't feed back into
+    // the render, so this looks identical to the other two.
+    screenshot: { skip: true },
+  },
   play: async ({ canvasElement, args, userEvent }) => {
     const canvas = within(canvasElement)
     const input = canvas.getByPlaceholderText(/New task/i)
@@ -89,6 +101,11 @@ export const OutdentsOnShiftTab: Story = {
 }
 
 export const ClosesOnEscape: Story = {
+  parameters: {
+    // Same as IndentsOnTab: onClose is a mock the story doesn't act on (this
+    // row isn't unmounted by it), so this looks identical to the other two.
+    screenshot: { skip: true },
+  },
   play: async ({ canvasElement, args, userEvent }) => {
     const canvas = within(canvasElement)
     const input = canvas.getByPlaceholderText(/New task/i)

@@ -105,6 +105,10 @@ export const LinkOrphanCandidate: Story = {
     ),
   ],
   parameters: {
+    // Linking resets the row to its initial blank state, identical to
+    // Default — the play only proves the reset happens, not a distinct
+    // look.
+    screenshot: { skip: true },
     msw: {
       handlers: [
         // Storybook merges `parameters` per key, but replaces arrays

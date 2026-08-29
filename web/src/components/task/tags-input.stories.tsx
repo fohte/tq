@@ -115,6 +115,10 @@ export const RemovesTagOnClick: Story = {
   args: {
     initialLabels: ['urgent'],
   },
+  parameters: {
+    // Removing the only tag leaves an empty tag list, identical to Empty.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Remove urgent' }))
 

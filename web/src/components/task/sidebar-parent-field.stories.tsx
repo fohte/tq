@@ -165,6 +165,10 @@ export const SearchAndSelect: Story = {
     ),
   ],
   parameters: {
+    // currentParent is derived from the `parentId` prop, which this story
+    // never updates after selecting — the row still reads null, identical
+    // to NoParent's closed state.
+    screenshot: { skip: true },
     // updateParent's onSettled invalidates taskKeys.all, which
     // invalidateQueries refetches regardless of staleTime — a real GET
     // response is required alongside the PATCH.
@@ -217,6 +221,10 @@ export const ClearParent: Story = {
     ),
   ],
   parameters: {
+    // currentParent is derived from the `parentId` prop, which this story
+    // never updates after clearing — the row still reads the original
+    // parent id, identical to WithParent's closed state.
+    screenshot: { skip: true },
     // updateParent's onSettled invalidates taskKeys.all, which
     // invalidateQueries refetches regardless of staleTime — a real GET
     // response is required alongside the PATCH.

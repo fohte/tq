@@ -110,6 +110,13 @@ export const CommitsOnEnterWhenNoSuggestions: Story = {
   args: {
     freeText: 'sort:updated',
   },
+  parameters: {
+    // Commits immediately clear the input to match `onCommit` (a bare mock
+    // that never round-trips `freeText`), landing on the same empty-input
+    // render as ResetsOnEscapeWithoutCommitting/DoesNotCommitOnBlurWithoutChange's
+    // group below — none of these plays leave a visually distinct trace.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, userEvent, args }) => {
     const input = canvas.getByRole('textbox', { name: 'Filter query' })
     // Overwrite the whole value instead of appending, so the result doesn't
@@ -131,6 +138,11 @@ export const ResetsOnEscapeWithoutCommitting: Story = {
   args: {
     freeText: 'sort:updated',
   },
+  parameters: {
+    // Escape reverts the input to its starting `freeText` prop value — the
+    // play only proves the revert happened, not a distinct look.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, userEvent, args }) => {
     const input = canvas.getByRole('textbox', { name: 'Filter query' })
     await userEvent.clear(input)
@@ -146,6 +158,11 @@ export const DoesNotCommitOnBlurWithoutChange: Story = {
   args: {
     freeText: 'sort:updated',
   },
+  parameters: {
+    // Blurring without any change leaves the input exactly as it started —
+    // the play only proves onCommit wasn't called, not a distinct look.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, userEvent, args }) => {
     const input = canvas.getByRole('textbox', { name: 'Filter query' })
     await userEvent.click(input)
@@ -158,6 +175,12 @@ export const DoesNotCommitOnBlurWithoutChange: Story = {
 export const CommitsOnBlurAfterChange: Story = {
   args: {
     freeText: 'sort:updated',
+  },
+  parameters: {
+    // `onCommit` is a bare mock that never round-trips `freeText` back down
+    // as a prop, so the typed text stays in the input — the play only
+    // proves the callback fired, not a distinct look.
+    screenshot: { skip: true },
   },
   play: async ({ canvas, userEvent, args }) => {
     const input = canvas.getByRole('textbox', { name: 'Filter query' })
@@ -174,6 +197,11 @@ export const CommitsOnBlurAfterChange: Story = {
 export const BackspaceOnEmptyNotifiesParent: Story = {
   args: {
     freeText: '',
+  },
+  parameters: {
+    // The input starts and stays empty — the play only proves
+    // onBackspaceEmpty fired, not a distinct look.
+    screenshot: { skip: true },
   },
   play: async ({ canvas, userEvent, args }) => {
     const input = canvas.getByRole('textbox', { name: 'Filter query' })

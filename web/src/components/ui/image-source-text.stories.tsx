@@ -23,6 +23,12 @@ export const InlineImage: Story = {
     initialText: '![a cat](https://example.com/cat.png)',
     editable: true,
   },
+  parameters: {
+    // The play only asserts focus, which `.image-source-text { outline:
+    // none }` (markdown-editor.css) renders with no visible affordance —
+    // identical to CommitsAndMovesOutOnEscape's post-Escape state.
+    screenshot: { skip: true },
+  },
   play: async ({ canvasElement }) => {
     await expect(
       within(canvasElement).getByText('![a cat](https://example.com/cat.png)'),
@@ -65,6 +71,13 @@ export const CommitsAndMovesOutOnEscape: Story = {
   args: {
     initialText: '![a cat](https://example.com/cat.png)',
     editable: true,
+  },
+  parameters: {
+    // onKeyDown only fires onCommitAndMoveOut; revealing the image and
+    // hiding the raw source is the parent's image-source-active class
+    // toggle, not this component, so the span is unchanged after Escape —
+    // identical to InlineImage.
+    screenshot: { skip: true },
   },
   play: async ({ canvasElement, args }) => {
     const text = within(canvasElement).getByText(

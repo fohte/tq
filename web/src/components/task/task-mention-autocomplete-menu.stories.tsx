@@ -97,6 +97,10 @@ export const FetchFailure: Story = {
     query: '12',
   },
   parameters: {
+    // Resolves to the same empty-list markup NoResults renders directly via
+    // `items: []` — the play only proves the failed fetch settles on zero
+    // results, not a distinct look.
+    screenshot: { skip: true },
     msw: {
       handlers: [
         http.get('/api/tasks/mentions', () =>
