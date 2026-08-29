@@ -98,7 +98,13 @@ describe('comment create', () => {
       content: '# From file',
       linkSync: {
         outgoing: [{ number: 76, title: 'Fix bug' }],
-        unresolvedRefs: [{ kind: 'id', value: 'abc123' }],
+        unresolvedRefs: [
+          {
+            kind: 'id',
+            value: 'abc123',
+            sources: [{ kind: 'comment', id: 'c1' }],
+          },
+        ],
       },
     }
     const { fetchStub } = captureFetch(
@@ -119,7 +125,11 @@ describe('comment create', () => {
     expect(exitCode).toBe(0)
     expect(stderr.mock.calls).toEqual([
       [
-        'Linked tasks:\n  #76 Fix bug\nUnresolved references (no matching task): abc123\n',
+        'Linked tasks:\n' +
+          '  #76 Fix bug\n' +
+          'Task references with no matching task:\n' +
+          '  abc123 in comment c1\n' +
+          "If these aren't tq task numbers, write them as a link or in backticks.\n",
       ],
     ])
   })
@@ -209,7 +219,13 @@ describe('comment update', () => {
       content: '# Updated',
       linkSync: {
         outgoing: [{ number: 76, title: 'Fix bug' }],
-        unresolvedRefs: [{ kind: 'id', value: 'abc123' }],
+        unresolvedRefs: [
+          {
+            kind: 'id',
+            value: 'abc123',
+            sources: [{ kind: 'comment', id: 'c1' }],
+          },
+        ],
       },
     }
     const { fetchStub } = captureFetch(
@@ -239,7 +255,11 @@ describe('comment update', () => {
     expect(exitCode).toBe(0)
     expect(stderr.mock.calls).toEqual([
       [
-        'Linked tasks:\n  #76 Fix bug\nUnresolved references (no matching task): abc123\n',
+        'Linked tasks:\n' +
+          '  #76 Fix bug\n' +
+          'Task references with no matching task:\n' +
+          '  abc123 in comment c1\n' +
+          "If these aren't tq task numbers, write them as a link or in backticks.\n",
       ],
     ])
   })

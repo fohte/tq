@@ -33,11 +33,16 @@ export interface LinkedTaskResponse {
   status: 'todo' | 'in_progress' | 'completed'
 }
 
+export type RefSourceResponse =
+  | { kind: 'description' }
+  | { kind: 'page'; id: string; title: string }
+  | { kind: 'comment'; id: string }
+
 export interface LinkSyncResponse {
   outgoing: LinkedTaskResponse[]
-  unresolvedRefs: (
+  unresolvedRefs: ((
     { kind: 'number'; value: number } | { kind: 'id'; value: string }
-  )[]
+  ) & { sources: RefSourceResponse[] })[]
 }
 
 export interface GithubLinkResponse {
@@ -138,12 +143,26 @@ const linkedTaskResponseSchema = z.object({
   status: z.enum(['todo', 'in_progress', 'completed']),
 })
 
+const refSourceResponseSchema = z.union([
+  z.object({ kind: z.literal('description') }),
+  z.object({ kind: z.literal('page'), id: z.string(), title: z.string() }),
+  z.object({ kind: z.literal('comment'), id: z.string() }),
+])
+
 const linkSyncResponseSchema = z.object({
   outgoing: z.array(linkedTaskResponseSchema),
   unresolvedRefs: z.array(
     z.union([
-      z.object({ kind: z.literal('number'), value: z.number() }),
-      z.object({ kind: z.literal('id'), value: z.string() }),
+      z.object({
+        kind: z.literal('number'),
+        value: z.number(),
+        sources: z.array(refSourceResponseSchema),
+      }),
+      z.object({
+        kind: z.literal('id'),
+        value: z.string(),
+        sources: z.array(refSourceResponseSchema),
+      }),
     ]),
   ),
 })

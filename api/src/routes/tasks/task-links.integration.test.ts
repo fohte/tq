@@ -455,7 +455,59 @@ describe('linkSync on write responses', () => {
 
     expect(body.linkSync).toEqual({
       outgoing: [linkSummary(target)],
-      unresolvedRefs: [{ kind: 'number', value: 999999999 }],
+      unresolvedRefs: [
+        {
+          kind: 'number',
+          value: 999999999,
+          sources: [{ kind: 'description' }],
+        },
+      ],
+    })
+  })
+
+  it('reports the page as the source of an unresolved ref found in a page', async () => {
+    const source = await createTask('Source')
+
+    const res = await app.request(`/api/tasks/${source.id}/pages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Notes', content: 'See #999999999' }),
+    })
+    expect(res.status).toBe(201)
+    const body = await jsonBody<{ id: string; linkSync: LinkSyncResponse }>(res)
+
+    expect(body.linkSync).toEqual({
+      outgoing: [],
+      unresolvedRefs: [
+        {
+          kind: 'number',
+          value: 999999999,
+          sources: [{ kind: 'page', id: body.id, title: 'Notes' }],
+        },
+      ],
+    })
+  })
+
+  it('reports every field an unresolved ref appears in', async () => {
+    const source = await createTask('Source')
+    const page = await createPage(source.id, 'Notes', 'See #999999999')
+
+    const body = await patchTask(source.id, {
+      description: 'Also #999999999',
+    })
+
+    expect(body.linkSync).toEqual({
+      outgoing: [],
+      unresolvedRefs: [
+        {
+          kind: 'number',
+          value: 999999999,
+          sources: [
+            { kind: 'description' },
+            { kind: 'page', id: page.id, title: 'Notes' },
+          ],
+        },
+      ],
     })
   })
 

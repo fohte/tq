@@ -35,11 +35,16 @@ export function printJsonList(
   printJson(full ? data : omitDeep(data, omitKey))
 }
 
+type RefSource =
+  | { kind: 'description' }
+  | { kind: 'page'; id: string; title: string }
+  | { kind: 'comment'; id: string }
+
 interface LinkSyncSummary {
   outgoing: { number: number; title: string }[]
-  unresolvedRefs: (
+  unresolvedRefs: ((
     { kind: 'number'; value: number } | { kind: 'id'; value: string }
-  )[]
+  ) & { sources: RefSource[] })[]
 }
 
 // Task titles are free text (e.g. set via the web UI or MCP), so a title
@@ -48,6 +53,17 @@ interface LinkSyncSummary {
 // JSON.stringify via printJson.
 function stripControlChars(text: string): string {
   return text.replace(/[\x00-\x1f\x7f-\x9f]/g, '')
+}
+
+function formatRefSource(source: RefSource): string {
+  switch (source.kind) {
+    case 'description':
+      return 'description'
+    case 'page':
+      return `page "${stripControlChars(source.title)}"`
+    case 'comment':
+      return `comment ${source.id.slice(0, 8)}`
+  }
 }
 
 // Surfaces the task_links a write just created, since the write itself gives
@@ -65,12 +81,19 @@ export function printLinkSync(linkSync: LinkSyncSummary | undefined): void {
     }
   }
   if (linkSync.unresolvedRefs.length > 0) {
-    const refs = linkSync.unresolvedRefs
-      .map((ref) =>
-        ref.kind === 'number' ? `#${String(ref.value)}` : ref.value,
-      )
-      .join(', ')
-    lines.push(`Unresolved references (no matching task): ${refs}`)
+    // Framed as "you wrote a task reference" rather than "tq failed to
+    // resolve it": the writer, not tq, is the one who needs to act on this —
+    // either the number is a real tq task that doesn't exist yet, or the
+    // text was never meant as a tq reference and should be escaped.
+    lines.push('Task references with no matching task:')
+    for (const ref of linkSync.unresolvedRefs) {
+      const value = ref.kind === 'number' ? `#${String(ref.value)}` : ref.value
+      const sources = ref.sources.map(formatRefSource).join(', ')
+      lines.push(`  ${value} in ${sources}`)
+    }
+    lines.push(
+      "If these aren't tq task numbers, write them as a link or in backticks.",
+    )
   }
 
   if (lines.length === 0) return
