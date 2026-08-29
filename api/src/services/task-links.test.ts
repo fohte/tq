@@ -45,35 +45,37 @@ describe('extractMentionedNumbers', () => {
 })
 
 describe('extractMentionedTaskRefs', () => {
-  it('extracts a number from a `#N` mention', () => {
-    expect(extractMentionedTaskRefs('see #123')).toEqual([
+  it('extracts a number from a `#N` mention', async () => {
+    expect(await extractMentionedTaskRefs('see #123')).toEqual([
       { kind: 'number', value: 123 },
     ])
   })
 
-  it('extracts a number from a numeric task URL', () => {
+  it('extracts a number from a numeric task URL', async () => {
     expect(
-      extractMentionedTaskRefs(`see https://${APP_DOMAIN}/tasks/123`),
+      await extractMentionedTaskRefs(`see https://${APP_DOMAIN}/tasks/123`),
     ).toEqual([{ kind: 'number', value: 123 }])
   })
 
-  it('extracts an id from a uuid task URL', () => {
+  it('extracts an id from a uuid task URL', async () => {
     const uuid = '9b1f6f0e-1c0a-4e8b-9c7a-2b6b2b6b2b6b'
     expect(
-      extractMentionedTaskRefs(`see https://${APP_DOMAIN}/tasks/${uuid}`),
+      await extractMentionedTaskRefs(`see https://${APP_DOMAIN}/tasks/${uuid}`),
     ).toEqual([{ kind: 'id', value: uuid }])
   })
 
-  it('dedupes a number mentioned both as `#N` and as a task URL', () => {
+  it('dedupes a number mentioned both as `#N` and as a task URL', async () => {
     expect(
-      extractMentionedTaskRefs(`see #123 and https://${APP_DOMAIN}/tasks/123`),
+      await extractMentionedTaskRefs(
+        `see #123 and https://${APP_DOMAIN}/tasks/123`,
+      ),
     ).toEqual([{ kind: 'number', value: 123 }])
   })
 
-  it('combines numbers and ids from mixed mentions', () => {
+  it('combines numbers and ids from mixed mentions', async () => {
     const uuid = '9b1f6f0e-1c0a-4e8b-9c7a-2b6b2b6b2b6b'
     expect(
-      extractMentionedTaskRefs(
+      await extractMentionedTaskRefs(
         `see #1, https://${APP_DOMAIN}/tasks/2, and https://${APP_DOMAIN}/tasks/${uuid}`,
       ),
     ).toEqual([
@@ -83,15 +85,38 @@ describe('extractMentionedTaskRefs', () => {
     ])
   })
 
-  it('treats a numeric task URL ref past the Postgres integer range as an id, not a number', () => {
+  it('treats a numeric task URL ref past the Postgres integer range as an id, not a number', async () => {
     expect(
-      extractMentionedTaskRefs(`see https://${APP_DOMAIN}/tasks/99999999999`),
+      await extractMentionedTaskRefs(
+        `see https://${APP_DOMAIN}/tasks/99999999999`,
+      ),
     ).toEqual([{ kind: 'id', value: '99999999999' }])
   })
 
-  it('ignores a task URL with a trailing path segment', () => {
+  it('ignores a task URL with a trailing path segment', async () => {
     expect(
-      extractMentionedTaskRefs(`see https://${APP_DOMAIN}/tasks/123/pages/abc`),
+      await extractMentionedTaskRefs(
+        `see https://${APP_DOMAIN}/tasks/123/pages/abc`,
+      ),
     ).toEqual([])
+  })
+
+  it('ignores a mention inside a code span', async () => {
+    expect(await extractMentionedTaskRefs('see `#123` here')).toEqual([])
+  })
+
+  it('ignores a mention inside a link display text whose href points elsewhere', async () => {
+    expect(
+      await extractMentionedTaskRefs(
+        '[fix #123](https://github.com/example/example/pull/1)',
+      ),
+    ).toEqual([])
+  })
+
+  it('returns an empty array instead of throwing when the input fails to parse', async () => {
+    // Thousands of nested blockquote markers overflow the markdown parser
+    // (see markdown-parser.test.ts); this must degrade to no refs rather
+    // than fail the whole sync.
+    expect(await extractMentionedTaskRefs('> '.repeat(5000) + 'x')).toEqual([])
   })
 })

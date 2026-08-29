@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { MAX_MARKDOWN_CONTENT_LENGTH } from '#constants/content-length'
+
 const pageFormatSchema = z
   .enum(['markdown', 'html'])
   .describe(
@@ -14,14 +16,14 @@ const pageFormatSchema = z
 
 export const createPageSchema = z.object({
   title: z.string().min(1),
-  content: z.string().optional(),
+  content: z.string().max(MAX_MARKDOWN_CONTENT_LENGTH).optional(),
   format: pageFormatSchema.optional(),
   sortOrder: z.number().int().optional(),
 })
 
 export const updatePageSchema = z.object({
   title: z.string().min(1).optional(),
-  content: z.string().optional(),
+  content: z.string().max(MAX_MARKDOWN_CONTENT_LENGTH).optional(),
   format: pageFormatSchema.optional(),
   sortOrder: z.number().int().optional(),
 })

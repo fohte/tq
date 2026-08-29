@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { MAX_MARKDOWN_CONTENT_LENGTH } from '#constants/content-length'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 
 export const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
@@ -15,7 +16,7 @@ const hasFlagSchema = z
 
 export const createTaskSchema = z.object({
   title: z.string().min(1),
-  description: z.string().optional(),
+  description: z.string().max(MAX_MARKDOWN_CONTENT_LENGTH).optional(),
   startDate: z.string().optional(),
   dueDate: z.string().optional(),
   estimatedMinutes: z.number().int().positive().optional(),
@@ -28,7 +29,11 @@ export const createTaskSchema = z.object({
 
 export const updateTaskSchema = z.object({
   title: z.string().min(1).optional(),
-  description: z.string().nullable().optional(),
+  description: z
+    .string()
+    .max(MAX_MARKDOWN_CONTENT_LENGTH)
+    .nullable()
+    .optional(),
   startDate: z.string().nullable().optional(),
   dueDate: z.string().nullable().optional(),
   estimatedMinutes: z.number().int().positive().nullable().optional(),

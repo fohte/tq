@@ -1,8 +1,8 @@
 import { Schema } from '@milkdown/kit/prose/model'
 import { describe, expect, it } from 'vitest'
 
-import { collectTextBlockRuns } from '#lib/inline-reference/text-scan'
-import { assertDefined, atIndex } from '#lib/test-utils'
+import { atIndex, defined } from '#lib/test-utils'
+import { collectTextBlockRuns } from '#lib/text-scan'
 
 const schema = new Schema({
   nodes: {
@@ -60,7 +60,7 @@ describe('collectTextBlockRuns', () => {
     const doc = schema.node('doc', null, [
       schema.node('paragraph', null, [
         schema.text('a'),
-        assertDefined(schema.nodes['hard_break']).create(),
+        defined(schema.nodes['hard_break']).create(),
         schema.text('b'),
       ]),
     ])
@@ -103,7 +103,7 @@ describe('collectTextBlockRuns', () => {
   })
 
   it('masks code span content so it never matches a reference pattern', () => {
-    const inlineCode = assertDefined(schema.marks['inlineCode'])
+    const inlineCode = defined(schema.marks['inlineCode'])
     const doc = schema.node('doc', null, [
       schema.node('paragraph', null, [
         schema.text('see '),
@@ -124,7 +124,7 @@ describe('collectTextBlockRuns', () => {
   })
 
   it('masks a link display text that differs from its href', () => {
-    const link = assertDefined(schema.marks['link'])
+    const link = defined(schema.marks['link'])
     const doc = schema.node('doc', null, [
       schema.node('paragraph', null, [
         schema.text('#76', [
@@ -145,7 +145,7 @@ describe('collectTextBlockRuns', () => {
   })
 
   it('does not mask a raw autolink whose display text equals its href', () => {
-    const link = assertDefined(schema.marks['link'])
+    const link = defined(schema.marks['link'])
     const url = 'https://x.io/76'
     const doc = schema.node('doc', null, [
       schema.node('paragraph', null, [
