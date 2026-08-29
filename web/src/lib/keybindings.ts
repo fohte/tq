@@ -4,7 +4,7 @@ export interface Keybinding {
   description: string
 }
 
-export type NavRoutePath = '/today' | '/' | '/tasks' | '/projects' | '/settings'
+type NavRoutePath = '/today' | '/' | '/tasks' | '/projects' | '/settings'
 
 export interface NavKeybinding extends Keybinding {
   to: NavRoutePath

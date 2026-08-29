@@ -47,7 +47,7 @@ export const contextLabels: Record<ContextValue, string> = {
   personal: 'Personal',
 }
 
-export const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export const presetColors = [
   '#6C63FF',

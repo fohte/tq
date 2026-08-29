@@ -67,7 +67,7 @@ export const Route = createFileRoute('/tasks/')({
   component: TaskList,
 })
 
-export function TaskList() {
+function TaskList() {
   const { q = tasksSearchDefaults.q } = Route.useSearch()
   const parsed = parseSearchQuery(q)
   const navigate = Route.useNavigate()
