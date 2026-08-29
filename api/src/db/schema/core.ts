@@ -95,6 +95,14 @@ export const tasks = pgTable(
     })
       .notNull()
       .default('personal'),
+    // GTD-style commitment: whether the task has been decided on yet.
+    // `inbox` = not triaged, `someday` = decided not to commit (for now),
+    // `active` = committed. Existing tasks default to `active`.
+    commitment: text('commitment', {
+      enum: ['inbox', 'active', 'someday'],
+    })
+      .notNull()
+      .default('active'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -109,6 +117,7 @@ export const tasks = pgTable(
     index('idx_tasks_due_date').on(table.dueDate),
     index('idx_tasks_project_id').on(table.projectId),
     index('idx_tasks_project_status').on(table.projectId, table.status),
+    index('idx_tasks_commitment').on(table.commitment),
   ],
 )
 

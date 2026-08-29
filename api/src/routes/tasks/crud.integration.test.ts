@@ -123,6 +123,7 @@ describe('tasks CRUD API', () => {
         description: null,
         status: 'todo',
         context: 'work',
+        commitment: 'active',
         labels: [],
         startDate: null,
         dueDate: null,
@@ -149,6 +150,7 @@ describe('tasks CRUD API', () => {
           dueDate: '2026-03-25',
           estimatedMinutes: 120,
           context: 'work',
+          commitment: 'inbox',
         }),
       })
 
@@ -160,6 +162,19 @@ describe('tasks CRUD API', () => {
       expect(body.dueDate).toBe('2026-03-25')
       expect(body.estimatedMinutes).toBe(120)
       expect(body.context).toBe('work')
+      expect(body.commitment).toBe('inbox')
+    })
+
+    it('defaults commitment to active when unspecified', async () => {
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Untriaged by default' }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.commitment).toBe('active')
     })
 
     it('returns 400 for empty title', async () => {
@@ -666,6 +681,21 @@ describe('tasks CRUD API', () => {
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Work task')
+    })
+
+    it('filters by commitment: prefix in q parameter', async () => {
+      await createTask('Someday task', { commitment: 'someday' })
+      await createTask('Active task')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('commitment:someday'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Someday task')
     })
 
     it('filters by has:pages prefix in q parameter', async () => {

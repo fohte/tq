@@ -78,6 +78,7 @@ function taskCoreToResponse(
     description: task.description,
     status: task.status,
     context: task.context,
+    commitment: task.commitment,
     labels: labelNames,
     startDate: task.startDate,
     dueDate: task.dueDate,

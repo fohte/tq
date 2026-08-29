@@ -31,6 +31,11 @@ export const tasksSearchApp = new Hono()
         { value: 'context:work', display: 'Work' },
         { value: 'context:personal', display: 'Personal' },
       ],
+      commitment: [
+        { value: 'commitment:inbox', display: 'Inbox' },
+        { value: 'commitment:active', display: 'Active' },
+        { value: 'commitment:someday', display: 'Someday' },
+      ],
       sort: [
         { value: 'sort:due', display: 'Sort by due date' },
         { value: 'sort:created', display: 'Sort by creation date' },

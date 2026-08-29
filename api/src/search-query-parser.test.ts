@@ -50,6 +50,16 @@ describe('parseSearchQuery', () => {
     expect(result.freeText).toBe('context:invalid')
   })
 
+  it('parses commitment: prefix', () => {
+    expect(parseSearchQuery('commitment:active').commitment).toBe('active')
+  })
+
+  it('treats invalid commitment: value as free text', () => {
+    const result = parseSearchQuery('commitment:invalid')
+    expect(result.commitment).toBeUndefined()
+    expect(result.freeText).toBe('commitment:invalid')
+  })
+
   it('parses has:pages prefix', () => {
     expect(parseSearchQuery('has:pages').hasPages).toBe(true)
   })
@@ -80,11 +90,14 @@ describe('parseSearchQuery', () => {
   })
 
   it('combines free text with multiple prefixes', () => {
-    const result = parseSearchQuery('deploy is:todo label:dev context:work')
+    const result = parseSearchQuery(
+      'deploy is:todo label:dev context:work commitment:active',
+    )
     expect(result.freeText).toBe('deploy')
     expect(result.status).toEqual(['todo'])
     expect(result.label).toBe('dev')
     expect(result.context).toBe('work')
+    expect(result.commitment).toBe('active')
   })
 
   it('handles free text interspersed with prefixes', () => {
@@ -118,6 +131,7 @@ describe('buildSearchQuery', () => {
         status: ['todo'],
         label: 'dev',
         context: 'work',
+        commitment: 'active',
         hasPages: true,
         hasComments: true,
         parentId: 'parent-1',
@@ -125,7 +139,7 @@ describe('buildSearchQuery', () => {
         sortBy: 'due',
       }),
     ).toBe(
-      'deploy is:todo label:dev context:work has:pages has:comments parent:parent-1 project:proj-1 sort:due',
+      'deploy is:todo label:dev context:work commitment:active has:pages has:comments parent:parent-1 project:proj-1 sort:due',
     )
   })
 
@@ -155,6 +169,14 @@ describe('parseSearchQuery and buildSearchQuery round-trip', () => {
       freeText: '',
       label: 'my label',
       projectId: 'my project',
+    })
+  })
+
+  it('round-trips a commitment value', () => {
+    const q = 'commitment:someday'
+    expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
+      freeText: '',
+      commitment: 'someday',
     })
   })
 

@@ -21,6 +21,7 @@ const baseTask: TaskUrlPreview = {
     'Adds live preview cards for pasted tq task URLs when they are the entire content of a paragraph.',
   status: 'todo',
   context: 'personal',
+  commitment: 'active',
   labels: [],
   startDate: null,
   dueDate: null,
