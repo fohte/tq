@@ -75,7 +75,7 @@ function WrappedTaskTreeList({
 
   return (
     <Providers>
-      <div className="h-96 w-3xl">
+      <div className="h-96 w-full max-w-3xl">
         <TaskTreeList {...props} tree={tree} tasks={tasks} />
       </div>
     </Providers>
