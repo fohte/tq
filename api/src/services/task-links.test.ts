@@ -123,6 +123,22 @@ describe('extractMentionedTaskRefs', () => {
     ).toEqual([])
   })
 
+  it('extracts a number from a labeled link whose href is a numeric task URL', async () => {
+    expect(
+      await extractMentionedTaskRefs(
+        `see [details](https://${APP_DOMAIN}/tasks/123)`,
+      ),
+    ).toEqual([{ kind: 'number', value: 123 }])
+  })
+
+  it('dedupes a number referenced both as a labeled link and a bare task URL', async () => {
+    expect(
+      await extractMentionedTaskRefs(
+        `see [details](https://${APP_DOMAIN}/tasks/123) and https://${APP_DOMAIN}/tasks/123`,
+      ),
+    ).toEqual([{ kind: 'number', value: 123 }])
+  })
+
   it('returns an empty array instead of throwing when the input fails to parse', async () => {
     // Thousands of nested blockquote markers overflow the markdown parser
     // (see markdown-parser.test.ts); this must degrade to no refs rather

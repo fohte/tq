@@ -73,6 +73,13 @@ export async function extractMentionedTaskRefs(
     for (const ref of extractAppResourceRefs(run.text, APP_DOMAIN, 'tasks')) {
       refs.push(ref)
     }
+    // A labeled link's href is masked out of `run.text` (see text-scan.ts);
+    // scan it via this side channel instead.
+    for (const href of run.hrefs) {
+      for (const ref of extractAppResourceRefs(href, APP_DOMAIN, 'tasks')) {
+        refs.push(ref)
+      }
+    }
   }
   return dedupeRefs(refs)
 }

@@ -25,6 +25,7 @@ function describeRun(run: ReturnType<typeof collectTextBlockRuns>[number]) {
       run.posAt(i),
     ),
     nodeType: run.nodeType,
+    hrefs: run.hrefs,
   }
 }
 
@@ -42,6 +43,7 @@ describe('collectTextBlockRuns', () => {
       text: 'hello #123 world',
       offsets: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
       nodeType: 'paragraph',
+      hrefs: [],
     }
     expect(actual).toEqual(expected)
   })
@@ -73,6 +75,7 @@ describe('collectTextBlockRuns', () => {
       text: 'a￼b',
       offsets: [1, 2, 3, 4],
       nodeType: 'paragraph',
+      hrefs: [],
     }
     expect(actual).toEqual(expected)
   })
@@ -99,6 +102,7 @@ describe('collectTextBlockRuns', () => {
       text: 'title',
       offsets: [1, 2, 3, 4, 5, 6],
       nodeType: 'heading',
+      hrefs: [],
     }
     expect(actual).toEqual(expected)
   })
@@ -120,6 +124,7 @@ describe('collectTextBlockRuns', () => {
       text: 'see ￼￼￼ here',
       offsets: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
       nodeType: 'paragraph',
+      hrefs: [],
     }
     expect(actual).toEqual(expected)
   })
@@ -141,6 +146,7 @@ describe('collectTextBlockRuns', () => {
       text: '￼￼￼',
       offsets: [1, 2, 3, 4],
       nodeType: 'paragraph',
+      hrefs: ['https://example.com/pull/76'],
     }
     expect(actual).toEqual(expected)
   })
@@ -157,6 +163,7 @@ describe('collectTextBlockRuns', () => {
       text: '￼￼￼￼￼￼￼￼￼￼￼￼',
       offsets: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
       nodeType: 'code_block',
+      hrefs: [],
     }
     expect(actual).toEqual(expected)
   })
@@ -181,6 +188,7 @@ describe('collectTextBlockRuns', () => {
       text: '￼￼￼',
       offsets: [1, 2, 3, 4],
       nodeType: 'fence',
+      hrefs: [],
     }
     expect(actual).toEqual(expected)
   })
@@ -212,6 +220,7 @@ describe('collectTextBlockRuns', () => {
       text: 'see ￼￼￼ here',
       offsets: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
       nodeType: 'paragraph',
+      hrefs: [],
     }
     expect(actual).toEqual(expected)
   })
@@ -232,6 +241,7 @@ describe('collectTextBlockRuns', () => {
       text: url,
       offsets: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
       nodeType: 'paragraph',
+      hrefs: [],
     }
     expect(actual).toEqual(expected)
   })
