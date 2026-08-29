@@ -248,6 +248,39 @@ describe('page update', () => {
     expect(exitCode).toBe(0)
     expect(calls[0]?.body).toEqual({ title: 'New title' })
   })
+
+  it('prints the linkSync summary to stderr when the response includes one', async () => {
+    const updated = {
+      id: 'p1',
+      title: 'New title',
+      linkSync: {
+        outgoing: [{ number: 76, title: 'Fix bug' }],
+        unresolvedRefs: [],
+      },
+    }
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'page',
+        'update',
+        '42',
+        'p1',
+        '--title',
+        'New title',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(stderr.mock.calls).toEqual([['Linked tasks:\n  #76 Fix bug\n']])
+  })
 })
 
 describe('global options', () => {

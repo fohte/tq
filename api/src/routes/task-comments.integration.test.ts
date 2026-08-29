@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { withoutLinkSync } from '#routes/tasks/testing'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -15,17 +16,6 @@ interface CommentResponse {
   updatedAt: string
   author: { kind: 'human' | 'llm' | 'system'; agent: string | null } | null
   linkSync?: unknown
-}
-
-// The list endpoint has no `linkSync` key, unlike create/update responses,
-// so building a list expectation out of a create response needs the key
-// dropped rather than left behind as a stray value.
-function withoutLinkSync<T extends { linkSync?: unknown }>(
-  comment: T,
-): Omit<T, 'linkSync'> {
-  const { linkSync, ...rest } = comment
-  void linkSync
-  return rest
 }
 
 describe('task comments API', () => {

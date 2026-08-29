@@ -95,11 +95,7 @@ export const taskSummaryColumns = {
 
 export interface TaskLinkSyncResult {
   outgoing: LinkedTaskSummary[]
-  // Refs extracted from the synced text that didn't match any existing
-  // task, surfaced so a CLI write can flag e.g. a GitHub PR number like
-  // `#76` that happened to also be a valid tq task number — the write
-  // itself looks unremarkable, and the accidental link only shows up once
-  // some later task reaches that number.
+  // Refs extracted from the synced text that didn't match any existing task.
   unresolvedRefs: NumericOrId[]
 }
 

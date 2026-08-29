@@ -10,7 +10,12 @@ import type { InferRequestType } from 'hono/client'
 import type { Client } from '#client'
 import { toApiError } from '#client'
 import { buildClient } from '#command-context'
-import { printJson, printJsonList, printLinkSync } from '#output'
+import {
+  printJson,
+  printJsonList,
+  printJsonWithLinkSync,
+  printLinkSync,
+} from '#output'
 import { fail } from '#result'
 import { addSchemaOptions, pickSchemaFields } from '#schema-options'
 
@@ -136,9 +141,7 @@ export function registerTaskCommands(
         }
         const res = await client.api.tasks.$post({ json })
         if (!res.ok) return fail(command, await toApiError(res))
-        const body = await res.json()
-        printJson(body)
-        printLinkSync(body.linkSync)
+        printJsonWithLinkSync(await res.json())
       },
     )
 
@@ -182,9 +185,7 @@ export function registerTaskCommands(
           json,
         })
         if (!res.ok) return fail(command, await toApiError(res))
-        const body = await res.json()
-        printJson(body)
-        printLinkSync(body.linkSync)
+        printJsonWithLinkSync(await res.json())
       },
     )
 
@@ -269,7 +270,9 @@ export function registerTaskCommands(
         param: { id },
       })
       if (!res.ok) return fail(command, await toApiError(res))
-      printJson(await res.json())
+      const body = await res.json()
+      printJson(body)
+      printLinkSync(body.nextTask?.linkSync)
     })
 
   task

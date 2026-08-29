@@ -14,6 +14,7 @@ import {
   TaskResponse,
   TEST_UUID,
   TimeBlockResponse,
+  withoutLinkSync,
   withoutRecurrenceRule,
 } from '#routes/tasks/testing'
 import {
@@ -308,12 +309,12 @@ describe('tasks CRUD API', () => {
       const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body.map(normalizeTask)).toEqual([
         {
-          ...normalizeTask(withoutRecurrenceRule(taskA)),
+          ...normalizeTask(withoutLinkSync(withoutRecurrenceRule(taskA))),
           parentNumber: null,
           childCompletionCount: { completed: 0, total: 0 },
         },
         {
-          ...normalizeTask(withoutRecurrenceRule(taskB)),
+          ...normalizeTask(withoutLinkSync(withoutRecurrenceRule(taskB))),
           parentNumber: null,
           childCompletionCount: { completed: 0, total: 0 },
         },
@@ -913,7 +914,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...created,
+        ...withoutLinkSync(created),
         titleAuthor: { kind: 'human', agent: null },
         descriptionAuthor: { kind: 'human', agent: null },
         childCompletionCount: { total: 0, completed: 0 },
@@ -937,7 +938,7 @@ describe('tasks CRUD API', () => {
       const body = await jsonBody<TaskResponse>(res)
       body.labels.sort()
       expect(body).toEqual({
-        ...created,
+        ...withoutLinkSync(created),
         titleAuthor: { kind: 'human', agent: null },
         descriptionAuthor: { kind: 'human', agent: null },
         childCompletionCount: { total: 0, completed: 0 },
@@ -1165,7 +1166,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...created,
+        ...withoutLinkSync(created),
         labels: ['bug'],
         updatedAt: body.updatedAt,
       })
@@ -1183,7 +1184,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...created,
+        ...withoutLinkSync(created),
         labels: ['new-label'],
         updatedAt: body.updatedAt,
       })
@@ -1201,7 +1202,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...created,
+        ...withoutLinkSync(created),
         labels: [],
         updatedAt: body.updatedAt,
       })
@@ -1255,7 +1256,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...child,
+        ...withoutLinkSync(child),
         parentId: null,
         updatedAt: body.updatedAt,
         titleAuthor: { kind: 'human', agent: null },
@@ -1280,7 +1281,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...child,
+        ...withoutLinkSync(child),
         parentId: grandparent.id,
         updatedAt: body.updatedAt,
         titleAuthor: { kind: 'human', agent: null },

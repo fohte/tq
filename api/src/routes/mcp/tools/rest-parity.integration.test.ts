@@ -11,6 +11,7 @@ import {
 import {
   createTask,
   type TaskResponse,
+  withoutLinkSync,
   withoutRecurrenceRule,
 } from '#routes/tasks/testing'
 import {
@@ -29,18 +30,6 @@ setupTestDb()
 
 type CompletedTaskResponse = TaskResponse & {
   nextTask: TaskResponse | null
-}
-
-// create/update responses carry a `linkSync` key (see
-// api/src/services/task-links.ts); the REST GET endpoints these tests
-// compare against never do, so it must be dropped before comparing rather
-// than left behind as a stray value.
-function withoutLinkSync<T extends { linkSync?: unknown }>(
-  data: T,
-): Omit<T, 'linkSync'> {
-  const { linkSync, ...rest } = data
-  void linkSync
-  return rest
 }
 
 let client: Client
@@ -91,7 +80,7 @@ async function completeRecurringTask(): Promise<{
       status: 'completed',
       updatedAt: completedResult.updatedAt,
     },
-    nextTask: completedResult.nextTask,
+    nextTask: withoutLinkSync(completedResult.nextTask),
   }
 }
 

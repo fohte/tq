@@ -10,7 +10,7 @@ import { readContentInput } from '#input'
 import {
   printJson,
   printJsonList,
-  printLinkSync,
+  printJsonWithLinkSync,
   writeContentFile,
 } from '#output'
 import { fail } from '#result'
@@ -139,9 +139,7 @@ export function registerPageCommands(
         })
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 201 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
         if (!res.ok) return fail(command, await toApiError(res))
-        const body = await res.json()
-        printJson(body)
-        printLinkSync(body.linkSync)
+        printJsonWithLinkSync(await res.json())
       },
     )
 
@@ -186,9 +184,7 @@ export function registerPageCommands(
           json,
         })
         if (!res.ok) return fail(command, await toApiError(res))
-        const body = await res.json()
-        printJson(body)
-        printLinkSync(body.linkSync)
+        printJsonWithLinkSync(await res.json())
       },
     )
 

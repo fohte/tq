@@ -203,6 +203,47 @@ describe('comment update', () => {
     ])
   })
 
+  it('prints the linkSync summary to stderr when the response includes one', async () => {
+    const updated = {
+      id: 'c1',
+      content: '# Updated',
+      linkSync: {
+        outgoing: [{ number: 76, title: 'Fix bug' }],
+        unresolvedRefs: [{ kind: 'id', value: 'abc123' }],
+      },
+    }
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+    const stderr = spyStderr()
+
+    tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-comment-update-'))
+    const filePath = join(tmpDir, 'content.md')
+    await writeFile(filePath, '# Updated', 'utf8')
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'comment',
+        'update',
+        '42',
+        'c1',
+        '--file',
+        filePath,
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(stderr.mock.calls).toEqual([
+      [
+        'Linked tasks:\n  #76 Fix bug\nUnresolved references (no matching task): abc123\n',
+      ],
+    ])
+  })
+
   it('sends piped stdin content as the request body content when --file is not given', async () => {
     const updated = { id: 'c1', content: 'some piped content' }
     const { fetchStub, calls } = captureFetch(

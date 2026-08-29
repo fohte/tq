@@ -461,6 +461,10 @@ describe('update_task_status tool', () => {
         githubLink: null,
         createdAt: '<timestamp>',
         updatedAt: '<timestamp>',
+        linkSync: {
+          outgoing: [],
+          unresolvedRefs: [],
+        },
       },
     })
   })

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { withoutLinkSync } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -22,17 +23,6 @@ interface PageResponse {
 
 function normalizePage(page: PageResponse) {
   return { ...page, id: 'ID', createdAt: 'DATE', updatedAt: 'DATE' }
-}
-
-// The list endpoint has no `linkSync` key, unlike create/update responses,
-// so building a list expectation out of a create response needs the key
-// dropped rather than left behind as a stray value.
-function withoutLinkSync<T extends { linkSync?: unknown }>(
-  page: T,
-): Omit<T, 'linkSync'> {
-  const { linkSync, ...rest } = page
-  void linkSync
-  return rest
 }
 
 describe('task pages API', () => {
