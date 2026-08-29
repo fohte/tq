@@ -1,5 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, lt } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import type { DbTransaction } from '#db/connection'
@@ -10,6 +10,12 @@ import {
   upsertAgentSessionSchema,
 } from '#schemas/agent-session'
 import { taskSummaryColumns } from '#services/task-links'
+
+// Claude Code's own `cleanupPeriodDays` setting (default 30 days) already
+// deletes the transcript a session would resume from, so a row idle past
+// this age can never be resumed regardless of what tq does with it:
+// https://code.claude.com/docs/en/settings-reference#cleanupperioddays
+const STALE_SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 
 function findAgentSessionBySessionId(
   tx: DbTransaction,
@@ -130,6 +136,18 @@ export const agentSessionsApp = new Hono()
     if (!session) {
       return c.json({ error: 'Failed to upsert agent session' }, 500)
     }
+
+    // The API has no cron (see api/src/app.ts), so pruning rides along on
+    // this endpoint's own traffic instead — `tq hook` posts here dozens of
+    // times a day regardless of whether any session is actually stale.
+    await db
+      .delete(agentSessions)
+      .where(
+        lt(
+          agentSessions.lastActiveAt,
+          new Date(now.getTime() - STALE_SESSION_MAX_AGE_MS),
+        ),
+      )
 
     return c.json(agentSessionToResponse(session), 200)
   })
