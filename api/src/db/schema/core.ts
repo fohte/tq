@@ -95,9 +95,8 @@ export const tasks = pgTable(
     })
       .notNull()
       .default('personal'),
-    // GTD-style commitment: whether the task has been decided on yet.
-    // `inbox` = not triaged, `someday` = decided not to commit (for now),
-    // `active` = committed. Existing tasks default to `active`.
+    // GTD-style commitment: `inbox` = not triaged, `someday` = deferred,
+    // `active` = committed.
     commitment: text('commitment', {
       enum: ['inbox', 'active', 'someday'],
     })

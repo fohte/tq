@@ -174,7 +174,27 @@ describe('tasks CRUD API', () => {
 
       expect(res.status).toBe(201)
       const body = await jsonBody<TaskResponse>(res)
-      expect(body.commitment).toBe('active')
+      expect(normalizeTask(body)).toEqual({
+        id: 'ID',
+        number: -1,
+        title: 'Untriaged by default',
+        description: null,
+        status: 'todo',
+        context: 'personal',
+        commitment: 'active',
+        labels: [],
+        startDate: null,
+        dueDate: null,
+        estimatedMinutes: null,
+        parentId: null,
+        projectId: null,
+        recurrenceRuleId: null,
+        recurrenceRule: null,
+        githubLink: null,
+        createdAt: 'TIMESTAMP',
+        updatedAt: 'TIMESTAMP',
+        linkSync: { outgoing: [], unresolvedRefs: [] },
+      })
     })
 
     it('returns 400 for empty title', async () => {
