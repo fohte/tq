@@ -9,6 +9,7 @@ import {
   apiUrl,
   captureFetch,
   fakeStdin,
+  spyStderr,
   spyStdout,
 } from '#commands/test-support'
 
@@ -162,6 +163,46 @@ describe('page create', () => {
     expect(calls[0]?.body).toEqual({ title: 'Notes', content: '# From file' })
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(created, null, 2)}\n`],
+    ])
+  })
+
+  it('prints the linkSync summary to stderr when the response includes one', async () => {
+    const created = {
+      id: 'p1',
+      title: 'Notes',
+      content: '# From file',
+      linkSync: {
+        outgoing: [],
+        unresolvedRefs: [{ kind: 'number', value: 465 }],
+      },
+    }
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+    const stderr = spyStderr()
+
+    tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-page-create-'))
+    const filePath = join(tmpDir, 'content.md')
+    await writeFile(filePath, '# From file', 'utf8')
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'page',
+        'create',
+        '42',
+        'Notes',
+        '--file',
+        filePath,
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(stderr.mock.calls).toEqual([
+      ['Unresolved references (no matching task): #465\n'],
     ])
   })
 

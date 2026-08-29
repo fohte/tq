@@ -14,6 +14,18 @@ interface CommentResponse {
   createdAt: string
   updatedAt: string
   author: { kind: 'human' | 'llm' | 'system'; agent: string | null } | null
+  linkSync?: unknown
+}
+
+// The list endpoint has no `linkSync` key, unlike create/update responses,
+// so building a list expectation out of a create response needs the key
+// dropped rather than left behind as a stray value.
+function withoutLinkSync<T extends { linkSync?: unknown }>(
+  comment: T,
+): Omit<T, 'linkSync'> {
+  const { linkSync, ...rest } = comment
+  void linkSync
+  return rest
 }
 
 describe('task comments API', () => {
@@ -98,7 +110,7 @@ describe('task comments API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<CommentResponse[]>(res)
-      expect(body).toEqual([comment])
+      expect(body).toEqual([withoutLinkSync(comment)])
     })
 
     it('does not return comments from other tasks', async () => {
@@ -128,8 +140,14 @@ describe('task comments API', () => {
 
       expect(res.status).toBe(200)
       expect(await jsonBody<CommentResponse[]>(res)).toEqual([
-        { ...humanComment, author: { kind: 'human', agent: null } },
-        { ...llmComment, author: { kind: 'llm', agent: 'claude-opus-5' } },
+        {
+          ...withoutLinkSync(humanComment),
+          author: { kind: 'human', agent: null },
+        },
+        {
+          ...withoutLinkSync(llmComment),
+          author: { kind: 'llm', agent: 'claude-opus-5' },
+        },
       ])
     })
   })

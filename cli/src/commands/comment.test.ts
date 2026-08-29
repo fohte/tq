@@ -10,6 +10,7 @@ import {
   apiUrl,
   captureFetch,
   fakeStdin,
+  spyStderr,
   spyStdout,
 } from '#commands/test-support'
 
@@ -88,6 +89,38 @@ describe('comment create', () => {
     expect(calls[0]?.body).toEqual({ content: '# From file' })
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(created, null, 2)}\n`],
+    ])
+  })
+
+  it('prints the linkSync summary to stderr when the response includes one', async () => {
+    const created = {
+      id: 'c1',
+      content: '# From file',
+      linkSync: {
+        outgoing: [{ number: 76, title: 'Fix bug' }],
+        unresolvedRefs: [{ kind: 'id', value: 'abc123' }],
+      },
+    }
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+    const stderr = spyStderr()
+
+    tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-comment-create-'))
+    const filePath = join(tmpDir, 'content.md')
+    await writeFile(filePath, '# From file', 'utf8')
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'comment', 'create', '42', '--file', filePath],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(stderr.mock.calls).toEqual([
+      [
+        'Linked tasks:\n  #76 Fix bug\nUnresolved references (no matching task): abc123\n',
+      ],
     ])
   })
 

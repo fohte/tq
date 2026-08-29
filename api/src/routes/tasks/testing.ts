@@ -66,6 +66,7 @@ export interface TaskResponse {
   childCompletionCount?: { completed: number; total: number }
   children?: TaskResponse[]
   links?: { outgoing: LinkedTaskResponse[]; incoming: LinkedTaskResponse[] }
+  linkSync?: unknown
 }
 
 // Shape returned by the list-returning endpoint (`/api/tasks`): no

@@ -35,6 +35,40 @@ export function printJsonList(
   printJson(full ? data : omitDeep(data, omitKey))
 }
 
+interface LinkSyncSummary {
+  outgoing: { number: number; title: string }[]
+  unresolvedRefs: (
+    { kind: 'number'; value: number } | { kind: 'id'; value: string }
+  )[]
+}
+
+// Surfaces task_links created/removed by a task/page/comment write, since
+// the write itself gives no other sign that e.g. a GitHub PR number like
+// `#76` in the body was parsed as a tq task reference. Written to stderr so
+// stdout stays clean JSON for `| jq`.
+export function printLinkSync(linkSync: LinkSyncSummary | undefined): void {
+  if (linkSync == null) return
+
+  const lines: string[] = []
+  if (linkSync.outgoing.length > 0) {
+    lines.push('Linked tasks:')
+    for (const task of linkSync.outgoing) {
+      lines.push(`  #${String(task.number)} ${task.title}`)
+    }
+  }
+  if (linkSync.unresolvedRefs.length > 0) {
+    const refs = linkSync.unresolvedRefs
+      .map((ref) =>
+        ref.kind === 'number' ? `#${String(ref.value)}` : ref.value,
+      )
+      .join(', ')
+    lines.push(`Unresolved references (no matching task): ${refs}`)
+  }
+
+  if (lines.length === 0) return
+  process.stderr.write(`${lines.join('\n')}\n`)
+}
+
 export function writeContentFile(
   filePath: string,
   content: string,

@@ -4,7 +4,12 @@ import { join } from 'node:path'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { printJson, printJsonList, writeContentFile } from '#output'
+import {
+  printJson,
+  printJsonList,
+  printLinkSync,
+  writeContentFile,
+} from '#output'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -88,6 +93,81 @@ describe('printJsonList', () => {
     printJsonList(items, 'content', { full: true })
 
     expect(write.mock.calls).toEqual([[`${JSON.stringify(items, null, 2)}\n`]])
+  })
+})
+
+describe('printLinkSync', () => {
+  it('writes nothing when linkSync is undefined', () => {
+    const write = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+
+    printLinkSync(undefined)
+
+    expect(write.mock.calls).toEqual([])
+  })
+
+  it('writes nothing when both outgoing and unresolvedRefs are empty', () => {
+    const write = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+
+    printLinkSync({ outgoing: [], unresolvedRefs: [] })
+
+    expect(write.mock.calls).toEqual([])
+  })
+
+  it('writes only the linked-tasks block when only outgoing is non-empty', () => {
+    const write = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+
+    printLinkSync({
+      outgoing: [
+        { number: 76, title: 'Fix bug' },
+        { number: 12, title: 'Add feature' },
+      ],
+      unresolvedRefs: [],
+    })
+
+    expect(write.mock.calls).toEqual([
+      ['Linked tasks:\n  #76 Fix bug\n  #12 Add feature\n'],
+    ])
+  })
+
+  it('writes only the unresolved-refs line when only unresolvedRefs is non-empty', () => {
+    const write = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+
+    printLinkSync({
+      outgoing: [],
+      unresolvedRefs: [
+        { kind: 'number', value: 465 },
+        { kind: 'id', value: 'abc123' },
+      ],
+    })
+
+    expect(write.mock.calls).toEqual([
+      ['Unresolved references (no matching task): #465, abc123\n'],
+    ])
+  })
+
+  it('writes both blocks when outgoing and unresolvedRefs are both non-empty', () => {
+    const write = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+
+    printLinkSync({
+      outgoing: [{ number: 76, title: 'Fix bug' }],
+      unresolvedRefs: [{ kind: 'number', value: 465 }],
+    })
+
+    expect(write.mock.calls).toEqual([
+      [
+        'Linked tasks:\n  #76 Fix bug\nUnresolved references (no matching task): #465\n',
+      ],
+    ])
   })
 })
 

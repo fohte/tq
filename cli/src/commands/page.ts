@@ -7,7 +7,12 @@ import { toApiError } from '#client'
 import { buildClient } from '#command-context'
 import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
-import { printJson, printJsonList, writeContentFile } from '#output'
+import {
+  printJson,
+  printJsonList,
+  printLinkSync,
+  writeContentFile,
+} from '#output'
 import { fail } from '#result'
 import { addSchemaOptions, pickSchemaFields } from '#schema-options'
 
@@ -134,7 +139,9 @@ export function registerPageCommands(
         })
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 201 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
         if (!res.ok) return fail(command, await toApiError(res))
-        printJson(await res.json())
+        const body = await res.json()
+        printJson(body)
+        printLinkSync(body.linkSync)
       },
     )
 
@@ -179,7 +186,9 @@ export function registerPageCommands(
           json,
         })
         if (!res.ok) return fail(command, await toApiError(res))
-        printJson(await res.json())
+        const body = await res.json()
+        printJson(body)
+        printLinkSync(body.linkSync)
       },
     )
 

@@ -17,10 +17,22 @@ interface PageResponse {
   createdAt: string
   updatedAt: string
   author: { kind: 'human' | 'llm' | 'system'; agent: string | null } | null
+  linkSync?: unknown
 }
 
 function normalizePage(page: PageResponse) {
   return { ...page, id: 'ID', createdAt: 'DATE', updatedAt: 'DATE' }
+}
+
+// The list endpoint has no `linkSync` key, unlike create/update responses,
+// so building a list expectation out of a create response needs the key
+// dropped rather than left behind as a stray value.
+function withoutLinkSync<T extends { linkSync?: unknown }>(
+  page: T,
+): Omit<T, 'linkSync'> {
+  const { linkSync, ...rest } = page
+  void linkSync
+  return rest
 }
 
 describe('task pages API', () => {
@@ -62,7 +74,9 @@ describe('task pages API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<PageResponse[]>(res)
-      expect(body.map(normalizePage)).toEqual([normalizePage(page)])
+      expect(body.map(normalizePage)).toEqual([
+        normalizePage(withoutLinkSync(page)),
+      ])
     })
 
     it('reports each page author independently', async () => {
@@ -78,8 +92,14 @@ describe('task pages API', () => {
 
       expect(res.status).toBe(200)
       expect(await jsonBody<PageResponse[]>(res)).toEqual([
-        { ...humanPage, author: { kind: 'human', agent: null } },
-        { ...llmPage, author: { kind: 'llm', agent: 'claude-opus-5' } },
+        {
+          ...withoutLinkSync(humanPage),
+          author: { kind: 'human', agent: null },
+        },
+        {
+          ...withoutLinkSync(llmPage),
+          author: { kind: 'llm', agent: 'claude-opus-5' },
+        },
       ])
     })
   })
@@ -106,6 +126,7 @@ describe('task pages API', () => {
         createdAt: 'DATE',
         updatedAt: 'DATE',
         author: { kind: 'human', agent: null },
+        linkSync: { outgoing: [], unresolvedRefs: [] },
       })
     })
 
@@ -150,6 +171,7 @@ describe('task pages API', () => {
         createdAt: 'DATE',
         updatedAt: 'DATE',
         author: { kind: 'human', agent: null },
+        linkSync: { outgoing: [], unresolvedRefs: [] },
       })
     })
 

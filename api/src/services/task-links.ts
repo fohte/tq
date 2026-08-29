@@ -77,11 +77,39 @@ export async function extractMentionedTaskRefs(
   return dedupeRefs(refs)
 }
 
+export interface LinkedTaskSummary {
+  id: string
+  number: number
+  title: string
+  status: 'todo' | 'in_progress' | 'completed'
+}
+
+// Shared with other task-join queries (e.g. agent session links) that need
+// the same lightweight task shape without pulling every task column.
+export const taskSummaryColumns = {
+  id: tasks.id,
+  number: tasks.number,
+  title: tasks.title,
+  status: tasks.status,
+}
+
+export interface TaskLinkSyncResult {
+  outgoing: LinkedTaskSummary[]
+  // Refs extracted from the synced text that didn't match any existing
+  // task, surfaced so a CLI write can flag e.g. a GitHub PR number like
+  // `#76` that happened to also be a valid tq task number — the write
+  // itself looks unremarkable, and the accidental link only shows up once
+  // some later task reaches that number.
+  unresolvedRefs: NumericOrId[]
+}
+
 // Recomputes every outgoing link for `sourceTaskId` from scratch by
 // re-scanning all of its body text (description + pages + comments), since a
 // mention can be removed from one field while still present in another.
-export async function syncTaskLinks(sourceTaskId: string): Promise<void> {
-  await db.transaction(async (tx) => {
+export async function syncTaskLinks(
+  sourceTaskId: string,
+): Promise<TaskLinkSyncResult> {
+  return db.transaction(async (tx) => {
     // Serializes concurrent syncs for the same source: without this, two
     // requests racing to resync the same task (e.g. two near-simultaneous
     // description PATCHes) can each delete every existing link and then
@@ -106,7 +134,7 @@ export async function syncTaskLinks(sourceTaskId: string): Promise<void> {
 
     // The task may already be gone (e.g. deleted concurrently); its links
     // were removed by the FK cascade, so there's nothing left to sync.
-    if (!task) return
+    if (!task) return { outgoing: [], unresolvedRefs: [] }
 
     // HTML pages are excluded: their markup can contain numeric character
     // references (e.g. `&#47;`) that MENTION_PATTERN would misread as a task
@@ -132,7 +160,7 @@ export async function syncTaskLinks(sourceTaskId: string): Promise<void> {
     const targets =
       refs.length > 0
         ? await tx
-            .select({ id: tasks.id })
+            .select(taskSummaryColumns)
             .from(tasks)
             .where(matchByIdOrNumber(tasks, refs))
         : []
@@ -143,23 +171,20 @@ export async function syncTaskLinks(sourceTaskId: string): Promise<void> {
         .insert(taskLinks)
         .values(targets.map((t) => ({ sourceTaskId, targetTaskId: t.id })))
     }
+
+    const resolvedNumbers = new Set(targets.map((t) => t.number))
+    const resolvedIds = new Set(targets.map((t) => t.id))
+    const unresolvedRefs = refs.filter((ref) =>
+      ref.kind === 'number'
+        ? !resolvedNumbers.has(ref.value)
+        : !resolvedIds.has(ref.value),
+    )
+
+    return {
+      outgoing: [...targets].sort((a, b) => a.number - b.number),
+      unresolvedRefs,
+    }
   })
-}
-
-export interface LinkedTaskSummary {
-  id: string
-  number: number
-  title: string
-  status: 'todo' | 'in_progress' | 'completed'
-}
-
-// Shared with other task-join queries (e.g. agent session links) that need
-// the same lightweight task shape without pulling every task column.
-export const taskSummaryColumns = {
-  id: tasks.id,
-  number: tasks.number,
-  title: tasks.title,
-  status: tasks.status,
 }
 
 export interface TaskLinks {

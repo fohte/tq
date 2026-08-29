@@ -187,6 +187,31 @@ describe('task create', () => {
     ])
   })
 
+  it('prints the linkSync summary to stderr when the response includes one', async () => {
+    const created = {
+      id: 't1',
+      number: 1,
+      title: 'New task',
+      linkSync: {
+        outgoing: [{ number: 76, title: 'Fix bug' }],
+        unresolvedRefs: [],
+      },
+    }
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'create', 'New task'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(stderr.mock.calls).toEqual([['Linked tasks:\n  #76 Fix bug\n']])
+  })
+
   it('rejects a non-UUID --parent-id before making any fetch call', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify({}), { status: 201 }),

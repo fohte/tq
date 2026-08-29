@@ -133,6 +133,7 @@ describe('tasks CRUD API', () => {
         githubLink: null,
         createdAt: 'TIMESTAMP',
         updatedAt: 'TIMESTAMP',
+        linkSync: { outgoing: [], unresolvedRefs: [] },
       })
     })
 

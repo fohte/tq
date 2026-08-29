@@ -92,9 +92,9 @@ export const taskPagesApp = new Hono<TaskEnv>()
       return page
     })
 
-    await syncTaskLinks(taskId)
+    const linkSync = await syncTaskLinks(taskId)
 
-    return c.json(pageToResponse(page, author), 201)
+    return c.json({ ...pageToResponse(page, author), linkSync }, 201)
   })
   .get('/:pageId', async (c) => {
     const taskId = c.get('task').id
@@ -153,13 +153,18 @@ export const taskPagesApp = new Hono<TaskEnv>()
       return c.json({ error: 'Page not found' }, 404)
     }
 
-    if ('content' in input) {
-      await syncTaskLinks(taskId)
-    }
+    const linkSync =
+      'content' in input ? await syncTaskLinks(taskId) : undefined
 
     const authors = await getPageAuthors([pageId])
 
-    return c.json(pageToResponse(updated, authors.get(pageId) ?? null), 200)
+    return c.json(
+      {
+        ...pageToResponse(updated, authors.get(pageId) ?? null),
+        ...(linkSync ? { linkSync } : {}),
+      },
+      200,
+    )
   })
   .delete('/:pageId', async (c) => {
     const taskId = c.get('task').id

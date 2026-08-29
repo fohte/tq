@@ -134,6 +134,7 @@ describe('create_task tool', () => {
       githubLink: null,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
+      linkSync: { outgoing: [], unresolvedRefs: [] },
     })
   })
 
@@ -225,6 +226,7 @@ describe('update_task tool', () => {
       githubLink: null,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
+      linkSync: { outgoing: [], unresolvedRefs: [] },
     })
   })
 
@@ -484,6 +486,7 @@ describe('create_page tool', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'mcp' },
+      linkSync: { outgoing: [], unresolvedRefs: [] },
     })
   })
 
@@ -506,6 +509,7 @@ describe('create_page tool', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'claude-opus-5' },
+      linkSync: { outgoing: [], unresolvedRefs: [] },
     })
   })
 
@@ -529,6 +533,7 @@ describe('create_page tool', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'mcp' },
+      linkSync: { outgoing: [], unresolvedRefs: [] },
     })
   })
 
@@ -590,6 +595,7 @@ describe('update_page tool', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'claude-opus-5' },
+      linkSync: { outgoing: [], unresolvedRefs: [] },
     })
   })
 
@@ -653,6 +659,7 @@ describe('create_comment tool', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'mcp' },
+      linkSync: { outgoing: [], unresolvedRefs: [] },
     })
   })
 
@@ -672,6 +679,7 @@ describe('create_comment tool', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'claude-opus-5' },
+      linkSync: { outgoing: [], unresolvedRefs: [] },
     })
   })
 
@@ -706,6 +714,7 @@ describe('update_comment tool', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'mcp' },
+      linkSync: { outgoing: [], unresolvedRefs: [] },
     })
   })
 
@@ -727,6 +736,7 @@ describe('update_comment tool', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'claude-opus-5' },
+      linkSync: { outgoing: [], unresolvedRefs: [] },
     })
   })
 
