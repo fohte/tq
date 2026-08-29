@@ -138,7 +138,6 @@ export const SubmitsOnCmdEnterFromTitle: Story = {
     await userEvent.type(titleInput, 'Cmd enter from title')
     await userEvent.keyboard('{Meta>}{Enter}{/Meta}')
 
-    // The create mutation resolves asynchronously before onOpenChange(false) fires.
     await waitFor(async () => {
       await expect(args.onOpenChange).toHaveBeenCalledWith(false)
     })

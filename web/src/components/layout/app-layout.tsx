@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useCallback, useState } from 'react'
 
 import { BottomTabBar } from '#components/layout/bottom-tab-bar'
 import { Sidebar } from '#components/layout/sidebar'
@@ -14,9 +14,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   useGlobalKeybindings({
     searchOpen,
     onSearchOpenChange: setSearchOpen,
-    onNewTask: () => {
+    onNewTask: useCallback(() => {
       setNewTaskOpen(true)
-    },
+    }, []),
   })
 
   return (
