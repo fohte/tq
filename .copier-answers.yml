@@ -1,5 +1,5 @@
 # Changes here will be overwritten by Copier
-_commit: v0.10.8
+_commit: v0.10.7
 _src_path: https://github.com/fohte/generic-boilerplate
 description: 個人向けタスク管理ツール (task queue)
 is_public: true
@@ -11,6 +11,7 @@ subpackages:
 -   name: web
     spa: true
     type: node
+    vrt: true
 -   name: api
     type: node
     web_app: true
