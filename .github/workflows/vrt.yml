@@ -34,7 +34,7 @@ jobs:
 
       - uses: ./.github/actions/setup-workspace
 
-      - uses: fohte/storybook-vrt-workflows/vrt-capture@b00e0f55e330d098c0d7f57b8f8b5ccab19b37dd # v0.1.2
+      - uses: fohte/storybook-vrt-workflows/vrt-capture@f4edf05525de52a621ea54513fd2088ff6c8309c # v0-do-not-merge-verify-duplicate-check
         with:
           project: ${{ matrix.project }}
           shard: ${{ matrix.shard }}
