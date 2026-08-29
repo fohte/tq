@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -33,6 +33,7 @@ const baseTask = {
   recurrenceRule: null,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
+  childCompletionCount: { completed: 0, total: 0 },
 }
 
 const mockTasks = [
@@ -197,8 +198,16 @@ describe('ProjectDetailPage', () => {
     expect(screen.getAllByText('projects')).toHaveLength(2)
     // SP back-nav "Projects" link
     expect(screen.getAllByText('Projects')).toHaveLength(1)
-    // breadcrumb leaf + title button, per layout
-    expect(screen.getAllByText('ISUCON14')).toHaveLength(4)
+    // breadcrumb leaf, once per layout (PC + SP) — scoped to each <nav> so
+    // this stays unaffected by unrelated "ISUCON14" text elsewhere on the
+    // page (e.g. the OPEN TASKS panel's per-row project labels).
+    const breadcrumbNavs = screen.getAllByRole('navigation')
+    expect(breadcrumbNavs).toHaveLength(2)
+    for (const nav of breadcrumbNavs) {
+      expect(within(nav).getByText('ISUCON14')).toBeInTheDocument()
+    }
+    // editable title button, once per layout (PC + SP)
+    expect(screen.getAllByRole('button', { name: 'ISUCON14' })).toHaveLength(2)
   })
 
   it('renders description editor with project description', () => {

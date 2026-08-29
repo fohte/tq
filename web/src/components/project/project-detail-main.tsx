@@ -9,7 +9,7 @@ import {
   isProjectStatus,
   ProjectStatusMark,
 } from '#components/project/project-status-mark'
-import { TaskRow } from '#components/task/task-row'
+import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Button } from '#components/ui/button'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { Panel, PanelHeader } from '#components/ui/panel'
@@ -244,7 +244,7 @@ function ProjectOpenTasksPanel({
       {openTasks.length > 0 ? (
         <div>
           {openTasks.map((task) => (
-            <TaskRow key={task.id} task={task} />
+            <TaskRowAppearance key={task.id} task={task} />
           ))}
         </div>
       ) : (

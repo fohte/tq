@@ -1,9 +1,9 @@
 import { useNavigate } from '@tanstack/react-router'
 
-import { Chip } from '#components/ui/chip'
 import { useProject } from '#hooks/use-projects'
 import type { Task } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
+import { formatMinutes } from '#lib/format'
 import { formatShortDate, isTaskOverdue } from '#lib/task-due-date'
 import { tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
@@ -20,10 +20,6 @@ export function useHandleStatusChange(id: string, status: Task['status']) {
       updateStatus.mutate({ id, status: newStatus })
     }
   }
-}
-
-export function ContextBadge({ context }: { context: Task['context'] }) {
-  return <Chip>{context}</Chip>
 }
 
 export function TagTokens({
@@ -104,6 +100,22 @@ export function TaskContextLabel({ context }: { context: Task['context'] }) {
   return (
     <span className="shrink-0 font-mono text-xs text-muted-foreground">
       {context}
+    </span>
+  )
+}
+
+export function ParentTaskLabel({ parentNumber }: { parentNumber: number }) {
+  return (
+    <span className="shrink-0 font-mono text-xs text-muted-foreground">
+      ← #{parentNumber}
+    </span>
+  )
+}
+
+export function EstimateLabel({ minutes }: { minutes: number }) {
+  return (
+    <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
+      {formatMinutes(minutes)}
     </span>
   )
 }
