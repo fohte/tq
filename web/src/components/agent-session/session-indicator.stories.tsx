@@ -14,6 +14,7 @@ const activeSession: TaskAgentSession = {
   taskId: 'task-1',
   taskNumber: 1,
   taskTitle: 'Sample task',
+  taskParentId: null,
   provider: 'claude_code',
   sessionId: 'session-1',
   parentSessionId: null,
