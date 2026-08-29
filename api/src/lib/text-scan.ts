@@ -1,4 +1,4 @@
-import type { Mark, Node } from '@milkdown/kit/prose/model'
+import type { Mark, Node, NodeType } from '@milkdown/kit/prose/model'
 
 export interface TextBlockRun {
   text: string
@@ -14,14 +14,19 @@ export interface TextBlockRun {
 // character of `text` mapped to exactly one doc position.
 const LEAF_PLACEHOLDER = '￼'
 
-// A code span's content is code, not prose, so it's never a reference. A
+// Code content (NodeSpec.code / MarkSpec.code) is never a reference. A
 // link's display text describes wherever the link points, not a tq
 // resource — except a GFM autolink literal, whose display text is the URL
 // itself (href === text), which the taskUrl/projectUrl/githubUrl/
 // slackPermalink providers still need to see.
-function isNonReferenceText(marks: readonly Mark[], text: string): boolean {
+function isNonReferenceText(
+  marks: readonly Mark[],
+  text: string,
+  nodeType: NodeType,
+): boolean {
+  if (nodeType.spec.code === true) return true
   return marks.some((mark) => {
-    if (mark.type.name === 'inlineCode') return true
+    if (mark.type.spec.code === true) return true
     if (mark.type.name === 'link' && typeof mark.attrs['href'] === 'string') {
       return mark.attrs['href'] !== text
     }
@@ -48,7 +53,7 @@ export function collectTextBlockRuns(doc: Node): TextBlockRun[] {
         for (let i = 0; i < childText.length; i++) {
           offsets.push(pos + childOffset + i)
         }
-        text += isNonReferenceText(child.marks, childText)
+        text += isNonReferenceText(child.marks, childText, node.type)
           ? LEAF_PLACEHOLDER.repeat(childText.length)
           : childText
       } else {
