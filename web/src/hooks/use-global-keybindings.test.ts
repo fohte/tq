@@ -2,7 +2,6 @@ import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useGlobalKeybindings } from '#hooks/use-global-keybindings'
-import { useNewTaskShortcutListener } from '#hooks/use-new-task-shortcut'
 
 const navigateMock = vi.fn(() => Promise.resolve())
 
@@ -27,26 +26,17 @@ function fireKey(
 
 function setup(searchOpen = false) {
   const onSearchOpenChange = vi.fn()
+  const onNewTask = vi.fn()
   renderHook(() => {
-    useGlobalKeybindings({ searchOpen, onSearchOpenChange })
+    useGlobalKeybindings({ searchOpen, onSearchOpenChange, onNewTask })
   })
-  return { onSearchOpenChange }
+  return { onSearchOpenChange, onNewTask }
 }
 
 describe('useGlobalKeybindings', () => {
   beforeEach(() => {
     navigateMock.mockClear()
     document.documentElement.removeAttribute('data-base-ui-scroll-locked')
-  })
-
-  // A prior test's `n` press may have dispatched the new-task shortcut without
-  // any listener mounted to consume it (see use-new-task-shortcut.ts's pending
-  // flag); drain it so later tests don't see a stale trigger on mount.
-  afterEach(() => {
-    const { unmount } = renderHook(() => {
-      useNewTaskShortcutListener(() => {})
-    })
-    unmount()
   })
 
   it('toggles search open on Cmd+K', () => {
@@ -124,54 +114,41 @@ describe('useGlobalKeybindings', () => {
     })
   })
 
-  it('navigates to /tasks on n', () => {
-    setup()
+  it('calls onNewTask on n', () => {
+    const { onNewTask } = setup()
 
     fireKey('n')
 
-    expect(navigateMock).toHaveBeenCalledWith({ to: '/tasks' })
-  })
-
-  it('dispatches the new-task shortcut once navigation resolves on n', async () => {
-    const onTrigger = vi.fn()
-    renderHook(() => {
-      useNewTaskShortcutListener(onTrigger)
-    })
-    setup()
-
-    fireKey('n')
-    await Promise.resolve()
-
-    expect(onTrigger).toHaveBeenCalledTimes(1)
+    expect(onNewTask).toHaveBeenCalledTimes(1)
   })
 
   it('ignores single-key shortcuts while typing in an input', () => {
     const input = document.createElement('input')
     document.body.appendChild(input)
-    setup()
+    const { onNewTask } = setup()
 
     fireKey('n', {}, input)
 
-    expect(navigateMock).not.toHaveBeenCalled()
+    expect(onNewTask).not.toHaveBeenCalled()
     input.remove()
   })
 
   it('ignores single-key shortcuts while a Base UI dialog is open', () => {
     document.documentElement.setAttribute('data-base-ui-scroll-locked', '')
-    setup()
+    const { onNewTask } = setup()
 
     fireKey('n')
 
-    expect(navigateMock).not.toHaveBeenCalled()
+    expect(onNewTask).not.toHaveBeenCalled()
     document.documentElement.removeAttribute('data-base-ui-scroll-locked')
   })
 
   it('ignores single-key shortcuts while the search modal is open', () => {
-    setup(true)
+    const { onNewTask } = setup(true)
 
     fireKey('n')
 
-    expect(navigateMock).not.toHaveBeenCalled()
+    expect(onNewTask).not.toHaveBeenCalled()
   })
 
   it('still handles Cmd+K while typing in an input', () => {

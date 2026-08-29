@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
-import { expect, fn, within } from 'storybook/test'
+import { expect, fn, waitFor, within } from 'storybook/test'
 
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { atIndex } from '#lib/test-utils'
@@ -16,7 +16,20 @@ const meta = {
   parameters: {
     layout: 'fullscreen',
     msw: {
-      handlers: [http.get('/api/labels', () => HttpResponse.json([]))],
+      handlers: [
+        http.get('/api/labels', () => HttpResponse.json([])),
+        http.post('/api/tasks', () =>
+          HttpResponse.json({
+            id: 'temp-id',
+            number: 1,
+            title: 'temp',
+            description: null,
+            status: 'todo',
+            context: 'personal',
+            labels: [],
+          }),
+        ),
+      ],
     },
     // The chip row (start/due date, tags, ...) is an intentional horizontal
     // scroll area (`overflow-x-auto`); which stories trip it at the
@@ -113,6 +126,46 @@ export const EscapeInTagInputDoesNotCloseModal: Story = {
       body.queryByPlaceholderText('tag name'),
     ).not.toBeInTheDocument()
     await expect(args.onOpenChange).not.toHaveBeenCalled()
+  },
+}
+
+export const SubmitsOnCmdEnterFromTitle: Story = {
+  play: async ({ canvasElement, userEvent, args }) => {
+    const body = within(canvasElement.ownerDocument.body)
+    const titleInputs =
+      body.getAllByPlaceholderText(/task title|タスクのタイトル/i)
+    const titleInput = atIndex(titleInputs, 0)
+    await userEvent.type(titleInput, 'Cmd enter from title')
+    await userEvent.keyboard('{Meta>}{Enter}{/Meta}')
+
+    // The create mutation resolves asynchronously before onOpenChange(false) fires.
+    await waitFor(async () => {
+      await expect(args.onOpenChange).toHaveBeenCalledWith(false)
+    })
+  },
+}
+
+export const SubmitsOnCmdEnterFromDescription: Story = {
+  play: async ({ canvasElement, userEvent, args }) => {
+    const body = within(canvasElement.ownerDocument.body)
+    const titleInputs =
+      body.getAllByPlaceholderText(/task title|タスクのタイトル/i)
+    const titleInput = atIndex(titleInputs, 0)
+    await userEvent.type(titleInput, 'Cmd enter from description')
+
+    const editors = Array.from(
+      canvasElement.ownerDocument.body.querySelectorAll(
+        '[contenteditable="true"]',
+      ),
+    )
+    const editor = atIndex(editors, 0)
+    await userEvent.click(editor)
+    await userEvent.keyboard('some description text')
+    await userEvent.keyboard('{Meta>}{Enter}{/Meta}')
+
+    await waitFor(async () => {
+      await expect(args.onOpenChange).toHaveBeenCalledWith(false)
+    })
   },
 }
 
