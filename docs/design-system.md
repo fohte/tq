@@ -44,15 +44,15 @@ palette is the only palette).
 
 ### Surfaces
 
-| Token              | Value     | Tailwind utility    | Usage                                                                                     |
-| ------------------ | --------- | ------------------- | ----------------------------------------------------------------------------------------- |
-| `--background`     | `#0a0a0a` | `bg-background`     | Page background                                                                           |
-| `--card`           | `#141414` | `bg-card`           | Raised surface (cards, popovers)                                                          |
-| `--popover`        | `#141414` | `bg-popover`        | Popover/menu surface (same value as `--card`)                                             |
-| `--secondary`      | `#141414` | `bg-secondary`      | Secondary fill (e.g. `PanelHeader` background)                                            |
-| `--muted`          | `#141414` | `bg-muted`          | Muted fill (e.g. button hover background)                                                 |
-| `--accent`         | `#141414` | `bg-accent`         | Accent fill (menu item hover, etc.)                                                       |
-| `--surface-strong` | `#1f1f1f` | `bg-surface-strong` | Emphasized _enabled_ surface fill — active tab, primary button, progress track background |
+| Token              | Value     | Tailwind utility    | Usage                                                                                                                          |
+| ------------------ | --------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `--background`     | `#0a0a0a` | `bg-background`     | Page background                                                                                                                |
+| `--card`           | `#141414` | `bg-card`           | Raised surface (cards, popovers)                                                                                               |
+| `--popover`        | `#141414` | `bg-popover`        | Popover/menu surface (same value as `--card`)                                                                                  |
+| `--secondary`      | `#141414` | `bg-secondary`      | Secondary fill (e.g. `PanelHeader` background)                                                                                 |
+| `--muted`          | `#141414` | `bg-muted`          | Muted fill (e.g. button hover background)                                                                                      |
+| `--accent`         | `#1f1f1f` | `bg-accent`         | Accent fill (menu item hover, keyboard-highlighted row) — kept distinct from `--popover`/`--card` so it's visible against them |
+| `--surface-strong` | `#1f1f1f` | `bg-surface-strong` | Emphasized _enabled_ surface fill — active tab, primary button, progress track background                                      |
 
 ### Text
 
