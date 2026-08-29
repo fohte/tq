@@ -158,7 +158,7 @@ describe('printLinkSync', () => {
       [
         'Task references with no matching task:\n' +
           '  #465 in description\n' +
-          '  abc123 in comment 3f2a1c9e\n' +
+          '  abc123 in comment 3f2a1c9e-0000-0000-0000-000000000000\n' +
           "If these aren't tq task numbers, write them as a link or in backticks.\n",
       ],
     ])

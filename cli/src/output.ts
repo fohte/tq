@@ -62,7 +62,7 @@ function formatRefSource(source: RefSource): string {
     case 'page':
       return `page "${stripControlChars(source.title)}"`
     case 'comment':
-      return `comment ${source.id.slice(0, 8)}`
+      return `comment ${source.id}`
   }
 }
 
@@ -81,10 +81,6 @@ export function printLinkSync(linkSync: LinkSyncSummary | undefined): void {
     }
   }
   if (linkSync.unresolvedRefs.length > 0) {
-    // Framed as "you wrote a task reference" rather than "tq failed to
-    // resolve it": the writer, not tq, is the one who needs to act on this —
-    // either the number is a real tq task that doesn't exist yet, or the
-    // text was never meant as a tq reference and should be escaped.
     lines.push('Task references with no matching task:')
     for (const ref of linkSync.unresolvedRefs) {
       const value = ref.kind === 'number' ? `#${String(ref.value)}` : ref.value

@@ -93,9 +93,6 @@ export const taskSummaryColumns = {
   status: tasks.status,
 }
 
-// Identifies which body field a ref was found in, so the write-time summary
-// (see `cli/src/output.ts#printLinkSync`) can tell the writer where to look
-// instead of just naming the ref.
 export type RefSource =
   | { kind: 'description' }
   | { kind: 'page'; id: string; title: string }
