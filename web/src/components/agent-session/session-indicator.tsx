@@ -56,12 +56,8 @@ export function SessionIndicator({
               with `w-auto`, the popup's shrink-to-fit width is driven by its
               children's untruncated max-content width regardless of any
               min-width, since min-width only raises a floor and never caps
-              growth. Set via inline style rather than an arbitrary Tailwind
-              value, which the repo's eslint config disallows. */}
-          <PreviewCardPopup
-            className="p-0"
-            style={{ width: 'min(28rem, calc(100vw - 2rem))' }}
-          >
+              growth. */}
+          <PreviewCardPopup className="w-(--width-session-popup) p-0">
             <div className="border-b border-border px-3 py-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint">
               SESSIONS ({sessions.length})
             </div>
