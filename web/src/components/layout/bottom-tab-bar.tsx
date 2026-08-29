@@ -39,8 +39,8 @@ function Tab({ tab }: { tab: TabItem }) {
   )
 }
 
-// Context is global state (also read by the sessions page), so it lives in
-// app chrome rather than the tasks page's own filter row. Desktop has room
+// Context is global state, so it lives in app chrome rather than the tasks
+// page's own filter row. Desktop has room
 // for it in the sidebar footer; below md, this bar is the only chrome that's
 // always on screen, so it goes here instead.
 export function BottomTabBar() {
