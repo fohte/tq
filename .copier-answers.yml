@@ -11,6 +11,7 @@ subpackages:
 -   name: web
     spa: true
     type: node
+    vrt: true
 -   name: api
     type: node
     web_app: true
