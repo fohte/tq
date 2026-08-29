@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-import { SearchResultRow } from '#components/search/search-result-row'
+import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import type { SearchResult, Suggestion } from '#hooks/use-search'
 import {
@@ -248,15 +248,11 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                   const globalIndex =
                     (hasSuggestions ? suggestions.length : 0) + i
                   return (
-                    <button
-                      type="button"
+                    <div
                       key={task.id}
                       role="option"
                       aria-selected={selectedIndex === globalIndex}
                       data-selected={selectedIndex === globalIndex}
-                      onClick={() => {
-                        openTask(task)
-                      }}
                       onMouseMove={(e) => {
                         if (
                           e.clientX !== lastMousePos.current.x ||
@@ -270,15 +266,29 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                         }
                       }}
                       className={cn(
-                        'flex w-full items-center gap-3 px-4 py-3 text-left',
                         selectedIndex === globalIndex
                           ? 'bg-secondary'
                           : 'hover:bg-secondary/50',
-                        task.status === 'completed' && 'dim-completed',
                       )}
                     >
-                      <SearchResultRow task={task} />
-                    </button>
+                      <TaskRowAppearance
+                        task={task}
+                        onClick={(e) => {
+                          // Let the router's own modifier/middle-click handling
+                          // open a new tab without closing this one's search.
+                          if (
+                            e.button !== 0 ||
+                            e.metaKey ||
+                            e.ctrlKey ||
+                            e.shiftKey ||
+                            e.altKey
+                          ) {
+                            return
+                          }
+                          onOpenChange(false)
+                        }}
+                      />
+                    </div>
                   )
                 })}
               </>
