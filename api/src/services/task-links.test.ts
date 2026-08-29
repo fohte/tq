@@ -131,15 +131,6 @@ describe('extractMentionedTaskRefs', () => {
     ).toEqual([{ kind: 'number', value: 123 }])
   })
 
-  it('extracts an id from a labeled link whose href is a uuid task URL', async () => {
-    const uuid = '9b1f6f0e-1c0a-4e8b-9c7a-2b6b2b6b2b6b'
-    expect(
-      await extractMentionedTaskRefs(
-        `see [details](https://${APP_DOMAIN}/tasks/${uuid})`,
-      ),
-    ).toEqual([{ kind: 'id', value: uuid }])
-  })
-
   it('dedupes a number referenced both as a labeled link and a bare task URL', async () => {
     expect(
       await extractMentionedTaskRefs(

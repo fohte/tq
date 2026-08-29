@@ -21,29 +21,9 @@ export interface TextBlockRun {
 // character of `text` mapped to exactly one doc position.
 const LEAF_PLACEHOLDER = '￼'
 
-// Code content (NodeSpec.code / MarkSpec.code) is never a reference. A
-// link's display text describes wherever the link points, not a tq
-// resource — except a GFM autolink literal, whose display text is the URL
-// itself (href === text), which the taskUrl/projectUrl/githubUrl/
-// slackPermalink providers still need to see.
-function isNonReferenceText(
-  marks: readonly Mark[],
-  text: string,
-  nodeType: NodeType,
-): boolean {
-  if (nodeType.spec.code === true) return true
-  return marks.some((mark) => {
-    if (mark.type.spec.code === true) return true
-    if (mark.type.name === 'link' && typeof mark.attrs['href'] === 'string') {
-      return mark.attrs['href'] !== text
-    }
-    return false
-  })
-}
-
-// The href of a masked link mark (see isNonReferenceText above) — undefined
-// for anything else, including an unmasked autolink, whose href already
-// equals `text` and needs no separate exposure.
+// The href of a link mark whose display text doesn't match it (a labeled
+// link) — undefined for anything else, including an unmasked autolink, whose
+// href already equals `text`.
 function maskedLinkHref(
   marks: readonly Mark[],
   text: string,
@@ -58,6 +38,21 @@ function maskedLinkHref(
     }
   }
   return undefined
+}
+
+// Code content (NodeSpec.code / MarkSpec.code) is never a reference. A
+// labeled link's display text describes wherever the link points, not a tq
+// resource — except a GFM autolink literal, whose display text is the URL
+// itself (href === text), which the taskUrl/projectUrl/githubUrl/
+// slackPermalink providers still need to see.
+function isNonReferenceText(
+  marks: readonly Mark[],
+  text: string,
+  nodeType: NodeType,
+): boolean {
+  if (nodeType.spec.code === true) return true
+  if (marks.some((mark) => mark.type.spec.code === true)) return true
+  return maskedLinkHref(marks, text) != null
 }
 
 // Scans the document one textblock at a time (paragraphs, headings, code
