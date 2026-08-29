@@ -75,7 +75,7 @@ export const FirstHighlighted: Story = {
 export const WithIndexOffset: Story = {
   args: {
     candidates,
-    highlightedIndex: 1,
+    highlightedIndex: 2,
     indexOffset: 1,
   },
 }
