@@ -105,6 +105,16 @@ describe('extractMentionedTaskRefs', () => {
     expect(await extractMentionedTaskRefs('see `#123` here')).toEqual([])
   })
 
+  it('ignores a mention inside a fenced code block', async () => {
+    expect(await extractMentionedTaskRefs('```\n$ tq show #123\n```')).toEqual(
+      [],
+    )
+  })
+
+  it('ignores a mention inside an indented code block', async () => {
+    expect(await extractMentionedTaskRefs('    $ tq show #123')).toEqual([])
+  })
+
   it('ignores a mention inside a link display text whose href points elsewhere', async () => {
     expect(
       await extractMentionedTaskRefs(
