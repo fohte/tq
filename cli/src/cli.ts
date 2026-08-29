@@ -10,6 +10,7 @@ import { registerLabelCommands } from '#commands/label'
 import { registerLinkCommands } from '#commands/link'
 import { registerPageCommands } from '#commands/page'
 import { registerProjectCommands } from '#commands/project'
+import { registerSessionCommands } from '#commands/session'
 import { registerSlackCommands } from '#commands/slack'
 import { registerTaskCommands } from '#commands/task'
 import { registerTodayCommands } from '#commands/today'
@@ -57,6 +58,7 @@ export function buildProgram(
   registerHealthCommand(program, fetchImpl)
   registerHookCommands(program, fetchImpl, stdin)
   registerLinkCommands(program, fetchImpl)
+  registerSessionCommands(program, fetchImpl)
 
   return program
 }

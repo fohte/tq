@@ -371,6 +371,8 @@ describe('TreeTaskGridRow', () => {
     const session: TaskAgentSession = {
       id: 'session-1',
       taskId: 'parent-1',
+      taskNumber: 1,
+      taskTitle: 'Parent task',
       provider: 'claude_code',
       sessionId: 'sess-1',
       context: 'work',
@@ -393,6 +395,8 @@ describe('TreeTaskGridRow', () => {
     const session: TaskAgentSession = {
       id: 'session-1',
       taskId: 'parent-1',
+      taskNumber: 1,
+      taskTitle: 'Parent task',
       provider: 'claude_code',
       sessionId: 'sess-1',
       context: 'work',

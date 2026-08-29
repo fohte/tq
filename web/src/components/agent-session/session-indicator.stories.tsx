@@ -12,6 +12,8 @@ import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 const activeSession: TaskAgentSession = {
   id: '1',
   taskId: 'task-1',
+  taskNumber: 1,
+  taskTitle: 'Sample task',
   provider: 'claude_code',
   sessionId: 'session-1',
   context: 'work',
