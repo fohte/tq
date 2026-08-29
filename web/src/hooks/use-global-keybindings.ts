@@ -1,7 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
 
-import { dispatchNewTaskShortcut } from '#hooks/use-new-task-shortcut'
 import { type NavKeybinding, navKeybindings } from '#lib/keybindings'
 
 const CHORD_TIMEOUT_MS = 1000
@@ -33,9 +32,11 @@ function isBaseUiDialogOpen(): boolean {
 export function useGlobalKeybindings({
   searchOpen,
   onSearchOpenChange,
+  onNewTask,
 }: {
   searchOpen: boolean
   onSearchOpenChange: (open: boolean) => void
+  onNewTask: () => void
 }) {
   const navigate = useNavigate()
 
@@ -92,9 +93,7 @@ export function useGlobalKeybindings({
 
       if (key === 'n') {
         e.preventDefault()
-        void navigate({ to: '/tasks' }).then(() => {
-          dispatchNewTaskShortcut()
-        })
+        onNewTask()
       }
     }
 
@@ -103,5 +102,5 @@ export function useGlobalKeybindings({
       document.removeEventListener('keydown', handleKeyDown)
       resetChord()
     }
-  }, [navigate, onSearchOpenChange, searchOpen])
+  }, [navigate, onNewTask, onSearchOpenChange, searchOpen])
 }
