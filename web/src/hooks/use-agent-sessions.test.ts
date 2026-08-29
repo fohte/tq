@@ -9,6 +9,7 @@ const baseSession: AgentSession = {
   id: '1',
   provider: 'claude_code',
   sessionId: 'session-1',
+  parentSessionId: null,
   context: 'work',
   cwd: '/tmp/example',
   label: null,
