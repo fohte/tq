@@ -85,18 +85,25 @@ export const EndedSession: Story = {
   args: { sessions: [endedSession] },
 }
 
+const opensSessionCardOnHover: NonNullable<Story['play']> = async ({
+  canvas,
+  canvasElement,
+  userEvent,
+}) => {
+  await userEvent.hover(canvas.getByTestId('session-indicator'))
+
+  const body = within(canvasElement.ownerDocument.body)
+  await waitFor(() => expect(body.getByText('SESSIONS (2)')).toBeVisible())
+  await expect(body.getByText('Implement session indicator')).toBeVisible()
+  await expect(body.getByText('Write the release notes')).toBeVisible()
+}
+
 export const ShowsActiveWhenOneOfManyIsActive: Story = {
   args: { sessions: [endedSession, activeSession] },
+  play: opensSessionCardOnHover,
 }
 
 export const OpensCardOnHover: Story = {
   args: { sessions: [activeSession, endedSession] },
-  play: async ({ canvas, canvasElement, userEvent }) => {
-    await userEvent.hover(canvas.getByTestId('session-indicator'))
-
-    const body = within(canvasElement.ownerDocument.body)
-    await waitFor(() => expect(body.getByText('SESSIONS (2)')).toBeVisible())
-    await expect(body.getByText('Implement session indicator')).toBeVisible()
-    await expect(body.getByText('Write the release notes')).toBeVisible()
-  },
+  play: opensSessionCardOnHover,
 }

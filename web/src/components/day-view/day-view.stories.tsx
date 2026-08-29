@@ -319,6 +319,22 @@ export const OpensEditScheduleModal: Story = {
   },
 }
 
+// The queue panel — where isLoading/queueTasks/queueCandidates differences
+// actually render — is hidden behind the mobile pane switcher's 'calendar'
+// default, so the mobile screenshot needs the 'queue' tab opened to show it.
+// The switcher itself is `md:hidden`, so on desktop it's absent from the
+// accessibility tree and there's nothing to click (the panel is already
+// visible there regardless of the switcher).
+const openMobileQueueTab: NonNullable<Story['play']> = async ({
+  canvas,
+  userEvent,
+}) => {
+  const queueTab = canvas.queryByRole('button', { name: 'queue' })
+  if (queueTab) {
+    await userEvent.click(queueTab)
+  }
+}
+
 export const Loading: Story = {
   args: {
     isLoading: true,
@@ -333,6 +349,7 @@ export const Loading: Story = {
     onAutoAssign: fn(),
     isAutoAssigning: false,
   },
+  play: openMobileQueueTab,
 }
 
 export const Empty: Story = {
@@ -349,6 +366,7 @@ export const Empty: Story = {
     onAutoAssign: fn(),
     isAutoAssigning: false,
   },
+  play: openMobileQueueTab,
 }
 
 export const EmptyQueueWithCandidates: Story = {
@@ -369,4 +387,5 @@ export const EmptyQueueWithCandidates: Story = {
     onAutoAssign: fn(),
     isAutoAssigning: false,
   },
+  play: openMobileQueueTab,
 }
