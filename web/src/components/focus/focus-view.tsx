@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 
 import { TaskStatusPicker } from '#components/task/task-status-picker'
 import { Button } from '#components/ui/button'
+import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import { Panel } from '#components/ui/panel'
 import { ProgressBar } from '#components/ui/progress-bar'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
@@ -104,7 +105,7 @@ function FocusCard({
         <span className="font-mono text-2xs text-primary">▍</span>
         <FocusLabel>IN PROGRESS</FocusLabel>
         <span className="ml-auto font-mono text-2xs tracking-widest text-muted-foreground">
-          #{task.number} · {task.context}
+          <DotSeparatedList items={[`#${String(task.number)}`, task.context]} />
         </span>
       </div>
       <h1 className="mt-3 text-xl leading-snug font-bold text-pretty md:mt-3.5 md:text-2xl">

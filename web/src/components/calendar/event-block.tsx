@@ -1,5 +1,6 @@
 import type { EventContentArg } from '@fullcalendar/core'
 
+import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import { getEventProps } from '#lib/calendar-utils'
 import { cn } from '#lib/utils'
 
@@ -33,13 +34,11 @@ export function EventBlock(arg: EventContentArg) {
   const isShort = arg.isStart && (event.allDay || isShortEvent(event))
   const isCompleted = type === 'completed'
 
-  // Build time detail line: "10:30–11:30  ·  ← #488"
-  const timeDetails = [
-    timeText,
-    parentRef != null ? `← ${parentRef}` : undefined,
-  ]
-    .filter(Boolean)
-    .join('  ·  ')
+  const timeDetails = (
+    <DotSeparatedList
+      items={[timeText, parentRef != null ? `← ${parentRef}` : undefined]}
+    />
+  )
 
   if (redacted) {
     return (
@@ -116,7 +115,7 @@ function EventBlockShell({
   style?: React.CSSProperties | undefined
   title: React.ReactNode
   badge?: string | undefined
-  meta: string
+  meta: React.ReactNode
 }) {
   return (
     <div

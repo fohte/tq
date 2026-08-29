@@ -1,5 +1,6 @@
 import { ContextBadge } from '#components/search/context-badge'
 import { StatusIcon } from '#components/task/status-icon'
+import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import type { SearchResult } from '#hooks/use-search'
 import { formatMinutes } from '#lib/format'
 import { cn } from '#lib/utils'
@@ -37,8 +38,7 @@ export function SearchResultRow({ task }: { task: SearchResult }) {
           {task.title}
         </span>
         <span className="font-mono text-2xs text-muted-foreground-faint md:hidden">
-          #{task.number}
-          {estimate != null && ` · ${estimate}`}
+          <DotSeparatedList items={[`#${String(task.number)}`, estimate]} />
         </span>
       </div>
 
