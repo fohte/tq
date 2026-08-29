@@ -1,7 +1,7 @@
 import { Loader2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-import { TaskStatusPicker } from '#components/task/task-status-picker'
+import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Button } from '#components/ui/button'
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import { Panel } from '#components/ui/panel'
@@ -11,9 +11,8 @@ import { SectionHeading } from '#components/ui/section-heading'
 import { Textarea } from '#components/ui/textarea'
 import { useFocusNotes } from '#hooks/use-focus-notes'
 import type { Task } from '#hooks/use-tasks'
-import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
+import { useCompleteTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
-import { cn } from '#lib/utils'
 
 export interface FocusViewPresentationProps {
   isLoading: boolean
@@ -140,7 +139,6 @@ function FocusCard({
 }
 
 function FocusSubtasks({ subtasks }: { subtasks: Task[] }) {
-  const updateStatus = useUpdateTaskStatus()
   const completed = subtasks.filter((t) => t.status === 'completed').length
 
   return (
@@ -152,35 +150,9 @@ function FocusSubtasks({ subtasks }: { subtasks: Task[] }) {
         </span>
       </div>
       <Panel>
-        {subtasks.map((subtask) => {
-          const isCompleted = subtask.status === 'completed'
-          return (
-            <div
-              key={subtask.id}
-              className="flex items-center gap-2.5 border-b border-border px-3 py-2.5 last:border-b-0"
-            >
-              <TaskStatusPicker
-                status={subtask.status}
-                onStatusChange={(status) => {
-                  updateStatus.mutate({ id: subtask.id, status })
-                }}
-              />
-              <span
-                className={cn(
-                  'text-sm',
-                  isCompleted && 'text-muted-foreground line-through',
-                )}
-              >
-                {subtask.title}
-              </span>
-              {subtask.estimatedMinutes != null && (
-                <span className="ml-auto shrink-0 font-mono text-2xs text-muted-foreground-faint">
-                  {formatMinutes(subtask.estimatedMinutes)}
-                </span>
-              )}
-            </div>
-          )
-        })}
+        {subtasks.map((subtask) => (
+          <TaskRowAppearance key={subtask.id} task={subtask} />
+        ))}
       </Panel>
     </div>
   )

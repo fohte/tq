@@ -120,6 +120,7 @@ const sampleSessions: AgentSession[] = [
     id: 'session-001',
     provider: 'claude_code',
     sessionId: 'session-001',
+    parentSessionId: null,
     context: 'work',
     cwd: '/Users/fohte/ghq/github.com/tq',
     label: 'Add inline editing',

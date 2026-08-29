@@ -379,6 +379,7 @@ const activeSession: TaskAgentSession = {
   taskId: baseTreeNode.id,
   provider: 'claude_code',
   sessionId: 'session-active',
+  parentSessionId: null,
   context: 'work',
   cwd: '/Users/fohte/ghq/github.com/fohte/tq',
   label: 'Implement tree session rows',
