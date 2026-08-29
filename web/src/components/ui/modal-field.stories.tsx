@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { CalendarPlus, Layers } from 'lucide-react'
 import { useState } from 'react'
-import { expect, waitFor, within } from 'storybook/test'
+import { expect, within } from 'storybook/test'
 
 import { Input } from '#components/ui/input'
 import {
@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '#components/ui/select'
 import { selectValueHandler } from '#lib/form-utils'
+import { clickSelectOption } from '#lib/test-utils'
 
 const meta = {
   title: 'UI/ModalField',
@@ -151,10 +152,10 @@ export const ExpandableFieldChipExpandedWithSelect: Story = {
 
     await userEvent.click(canvas.getByRole('button', { name: 'Context' }))
     await userEvent.click(canvas.getByRole('combobox'))
-    // The Select popup keeps `pointer-events: none` until Base UI commits
-    // `open: true`, so clicking the option must retry rather than fire once.
-    const option = await body.findByRole('option', { name: 'Work' })
-    await waitFor(() => userEvent.click(option))
+    await clickSelectOption(
+      userEvent,
+      await body.findByRole('option', { name: 'Work' }),
+    )
 
     // Picking a value closes the chip via the `close()` callback rather than
     // its blur handler, so the collapsed label updates immediately.

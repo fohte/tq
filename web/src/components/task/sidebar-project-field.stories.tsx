@@ -5,6 +5,7 @@ import { expect, userEvent, waitFor, within } from 'storybook/test'
 
 import { SidebarProjectField } from '#components/task/sidebar-project-field'
 import { type Project, projectKeys } from '#hooks/use-projects'
+import { clickSelectOption } from '#lib/test-utils'
 
 const taskId = '00000000-0000-0000-0000-000000000001'
 
@@ -130,10 +131,7 @@ export const SelectProject: Story = {
     const body = within(canvasElement.ownerDocument.body)
 
     await userEvent.click(canvas.getByRole('combobox'))
-    // The Select popup keeps `pointer-events: none` until Base UI commits
-    // `open: true`, so clicking the option must retry rather than fire once.
-    const option = await body.findByText(projectB.title)
-    await waitFor(() => userEvent.click(option))
+    await clickSelectOption(userEvent, await body.findByText(projectB.title))
 
     await waitFor(async () => {
       await expect(patchedBody).toEqual({ projectId: projectB.id })
