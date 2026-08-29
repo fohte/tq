@@ -2,6 +2,7 @@ import { zValidator } from '@hono/zod-validator'
 import { and, desc, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 
+import type { DbTransaction } from '#db/connection'
 import { db } from '#db/connection'
 import { agentSessions, taskAgentSessions, tasks } from '#db/schema'
 import {
@@ -9,6 +10,19 @@ import {
   upsertAgentSessionSchema,
 } from '#schemas/agent-session'
 import { taskSummaryColumns } from '#services/task-links'
+
+function findAgentSessionBySessionId(
+  tx: DbTransaction,
+  provider: 'claude_code',
+  sessionId: string,
+) {
+  return tx.query.agentSessions.findFirst({
+    where: and(
+      eq(agentSessions.provider, provider),
+      eq(agentSessions.sessionId, sessionId),
+    ),
+  })
+}
 
 export function agentSessionToResponse(
   session: typeof agentSessions.$inferSelect,
@@ -35,12 +49,11 @@ export const agentSessionsApp = new Hono()
     const now = new Date()
 
     const session = await db.transaction(async (tx) => {
-      const existing = await tx.query.agentSessions.findFirst({
-        where: and(
-          eq(agentSessions.provider, input.provider),
-          eq(agentSessions.sessionId, input.sessionId),
-        ),
-      })
+      const existing = await findAgentSessionBySessionId(
+        tx,
+        input.provider,
+        input.sessionId,
+      )
 
       const [session] = await tx
         .insert(agentSessions)
@@ -72,17 +85,14 @@ export const agentSessionsApp = new Hono()
         })
         .returning()
 
-      // Default inheritance: a freshly-seen session with a known parent
-      // starts out linked to every task the parent is linked to. Gated on
-      // `existing == null` so a later report (resume/compact) never re-adds
-      // a link the user has since removed.
+      // Inherit parent task links on creation only, so later reports never
+      // re-add a link the user has since removed.
       if (session && existing == null && input.parentSessionId != null) {
-        const parent = await tx.query.agentSessions.findFirst({
-          where: and(
-            eq(agentSessions.provider, input.provider),
-            eq(agentSessions.sessionId, input.parentSessionId),
-          ),
-        })
+        const parent = await findAgentSessionBySessionId(
+          tx,
+          input.provider,
+          input.parentSessionId,
+        )
 
         if (parent) {
           const parentTasks = await tx
@@ -91,12 +101,25 @@ export const agentSessionsApp = new Hono()
             .where(eq(taskAgentSessions.agentSessionId, parent.id))
 
           if (parentTasks.length > 0) {
-            await tx.insert(taskAgentSessions).values(
-              parentTasks.map(({ taskId }) => ({
-                taskId,
-                agentSessionId: session.id,
-              })),
-            )
+            await tx
+              .insert(taskAgentSessions)
+              .values(
+                parentTasks.map(({ taskId }) => ({
+                  taskId,
+                  agentSessionId: session.id,
+                })),
+              )
+              // Concurrent first reports of the same (provider, sessionId)
+              // can both resolve `existing == null` before either commits;
+              // the loser then retries this insert against the same
+              // agent_session_id the winner already created, which would
+              // otherwise violate task_agent_sessions's primary key.
+              .onConflictDoNothing({
+                target: [
+                  taskAgentSessions.taskId,
+                  taskAgentSessions.agentSessionId,
+                ],
+              })
           }
         }
       }
