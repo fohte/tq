@@ -50,12 +50,14 @@ describe('session list', () => {
         taskId: 'task-1',
         taskNumber: 1,
         taskTitle: 'First task',
+        taskParentId: null,
         ...session1,
       },
       {
         taskId: 'task-2',
         taskNumber: 2,
         taskTitle: 'Second task',
+        taskParentId: 'task-1',
         ...session1,
       },
     ]
@@ -94,8 +96,18 @@ describe('session list', () => {
             {
               ...session1,
               tasks: [
-                { id: 'task-1', number: 1, title: 'First task' },
-                { id: 'task-2', number: 2, title: 'Second task' },
+                {
+                  id: 'task-1',
+                  number: 1,
+                  title: 'First task',
+                  parentId: null,
+                },
+                {
+                  id: 'task-2',
+                  number: 2,
+                  title: 'Second task',
+                  parentId: 'task-1',
+                },
               ],
             },
             { ...session2, tasks: [] },

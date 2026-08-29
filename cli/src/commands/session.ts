@@ -21,6 +21,7 @@ interface LinkedTask {
   id: string
   number: number
   title: string
+  parentId: string | null
 }
 
 function groupTasksBySessionId(
@@ -29,7 +30,12 @@ function groupTasksBySessionId(
   const map = new Map<string, LinkedTask[]>()
   for (const row of rows) {
     const list = map.get(row.id) ?? []
-    list.push({ id: row.taskId, number: row.taskNumber, title: row.taskTitle })
+    list.push({
+      id: row.taskId,
+      number: row.taskNumber,
+      title: row.taskTitle,
+      parentId: row.taskParentId,
+    })
     map.set(row.id, list)
   }
   return map

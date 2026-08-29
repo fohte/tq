@@ -147,6 +147,7 @@ export const agentSessionsApp = new Hono()
         taskId: taskAgentSessions.taskId,
         taskNumber: tasks.number,
         taskTitle: tasks.title,
+        taskParentId: tasks.parentId,
         session: agentSessions,
       })
       .from(taskAgentSessions)
@@ -162,6 +163,7 @@ export const agentSessionsApp = new Hono()
         taskId: row.taskId,
         taskNumber: row.taskNumber,
         taskTitle: row.taskTitle,
+        taskParentId: row.taskParentId,
         ...agentSessionToResponse(row.session),
       })),
       200,
