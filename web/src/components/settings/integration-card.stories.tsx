@@ -15,7 +15,7 @@ const meta = {
     layout: 'centered',
   },
   render: (args) => (
-    <Panel className="w-96">
+    <Panel className="w-full max-w-96">
       <IntegrationCard {...args} />
     </Panel>
   ),

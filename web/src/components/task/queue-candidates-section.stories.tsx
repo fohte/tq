@@ -59,7 +59,7 @@ const meta = {
   decorators: [
     (Story) => (
       <Providers>
-        <div className="w-96 border border-border">
+        <div className="w-full max-w-96 border border-border">
           <DndContext>
             <Story />
           </DndContext>

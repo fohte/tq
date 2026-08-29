@@ -37,7 +37,7 @@ const meta = {
   decorators: [
     (Story) => (
       <QueryClientProvider client={queryClient}>
-        <div className="flex w-96 border border-border bg-background px-3 py-2">
+        <div className="flex w-full max-w-96 border border-border bg-background px-3 py-2">
           <Story />
         </div>
       </QueryClientProvider>
@@ -209,7 +209,7 @@ function FreeTextInputHarness({
 }) {
   const [freeText, setFreeText] = useState(initialFreeText)
   return (
-    <div className="flex w-96 flex-col gap-2">
+    <div className="flex w-full max-w-96 flex-col gap-2">
       <div className="flex border border-border bg-background px-3 py-2">
         <TaskFilterFreeTextInput
           id="harness-free-text"

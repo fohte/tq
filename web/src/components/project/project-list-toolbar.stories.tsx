@@ -19,7 +19,7 @@ function ProjectListToolbarStateful({
   const [filter, setFilter] = useState<ProjectFilterTab>(initialFilter)
 
   return (
-    <div className="w-2xl">
+    <div className="w-full max-w-2xl">
       <ProjectListToolbar
         filter={filter}
         onFilterChange={(next) => {

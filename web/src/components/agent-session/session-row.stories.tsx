@@ -48,7 +48,7 @@ function SessionRowStory({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="dark w-3xl bg-background">
+      <div className="dark w-full max-w-3xl bg-background">
         <SessionRow {...props} />
       </div>
     </QueryClientProvider>

@@ -17,7 +17,7 @@ function SessionListToolbarStateful({
   const [filter, setFilter] = useState<SessionFilterTab>(initialFilter)
 
   return (
-    <div className="w-2xl">
+    <div className="w-full max-w-2xl">
       <SessionListToolbar
         filter={filter}
         onFilterChange={(next) => {

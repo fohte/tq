@@ -11,7 +11,7 @@ export function SettingsRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-4 p-4">
-      <div className="flex flex-col gap-1">
+      <div className="flex min-w-0 flex-col gap-1 break-words">
         <span className="text-sm font-medium text-foreground">{label}</span>
         <span className="text-xs text-muted-foreground">{description}</span>
       </div>

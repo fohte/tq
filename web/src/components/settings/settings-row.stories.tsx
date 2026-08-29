@@ -9,7 +9,7 @@ const meta = {
   component: SettingsRow,
   decorators: [
     (Story) => (
-      <Panel className="w-lg">
+      <Panel className="w-full max-w-lg">
         <Story />
       </Panel>
     ),

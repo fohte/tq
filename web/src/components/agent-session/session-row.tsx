@@ -205,7 +205,14 @@ export function SessionRow({
           (isDimmed || !canOpen) && 'opacity-55',
         )}
       >
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+        {/* flex-wrap: only the label (via EditableSessionLabel) has flex-1
+            (flex-basis 0); cwd keeps its default content-based, nonzero
+            basis. When the row can't fit both plus the chip, the shrink
+            algorithm assigns cwd the entire deficit and pins the label at
+            exactly 0 width instead of splitting the shortage. Wrapping the
+            label onto its own line keeps it in the flex-grow branch, where
+            it always gets its fair share of space. */}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <span className="truncate font-mono text-xs text-foreground">
             {session.cwd}
           </span>
