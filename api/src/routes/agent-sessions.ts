@@ -1,6 +1,8 @@
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, lt } from 'drizzle-orm'
 import { Hono } from 'hono'
+import { ResultAsync } from 'neverthrow'
 
 import type { DbTransaction } from '#db/connection'
 import { db } from '#db/connection'
@@ -10,6 +12,12 @@ import {
   upsertAgentSessionSchema,
 } from '#schemas/agent-session'
 import { taskSummaryColumns } from '#services/task-links'
+
+// Claude Code's own `cleanupPeriodDays` setting (default 30 days) already
+// deletes the transcript a session would resume from, so a row idle past
+// this age can never be resumed regardless of what tq does with it:
+// https://code.claude.com/docs/en/settings-reference#cleanupperioddays
+const STALE_SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 
 function findAgentSessionBySessionId(
   tx: DbTransaction,
@@ -131,6 +139,27 @@ export const agentSessionsApp = new Hono()
       return c.json({ error: 'Failed to upsert agent session' }, 500)
     }
 
+    // No cron exists to run this on a schedule (see api/src/app.ts), so it
+    // piggybacks on every write instead. Isolated from the upsert above: a
+    // failure here must not turn an already-successful report into a 500.
+    const pruneResult = await ResultAsync.fromPromise(
+      db
+        .delete(agentSessions)
+        .where(
+          lt(
+            agentSessions.lastActiveAt,
+            new Date(now.getTime() - STALE_SESSION_MAX_AGE_MS),
+          ),
+        ),
+      (error) => error,
+    )
+    if (pruneResult.isErr()) {
+      captureWithFingerprint(
+        pruneResult.error,
+        'api.agent-sessions.prune-failed',
+      )
+    }
+
     return c.json(agentSessionToResponse(session), 200)
   })
   .get('/', async (c) => {
@@ -218,6 +247,32 @@ export const agentSessionsApp = new Hono()
     }
 
     return c.json(agentSessionToResponse(session), 200)
+  })
+  // Keyed by (provider, session_id), not the internal id used everywhere
+  // else in this file: an external session manager only ever knows the
+  // former, since it never sees a session until it reports through here.
+  .delete('/by-session/:provider/:sessionId', async (c) => {
+    const provider = c.req.param('provider')
+    if (provider !== 'claude_code') {
+      return c.json({ error: 'Agent session not found' }, 404)
+    }
+    const sessionId = c.req.param('sessionId')
+
+    const deleted = await db
+      .delete(agentSessions)
+      .where(
+        and(
+          eq(agentSessions.provider, provider),
+          eq(agentSessions.sessionId, sessionId),
+        ),
+      )
+      .returning()
+
+    if (deleted.length === 0) {
+      return c.json({ error: 'Agent session not found' }, 404)
+    }
+
+    return c.body(null, 204)
   })
   .get('/:id/tasks', async (c) => {
     const id = c.req.param('id')

@@ -6,5 +6,3 @@ export const recurrenceRuleSchema = z.object({
   daysOfWeek: z.array(z.number().int().min(0).max(6)).optional(),
   dayOfMonth: z.number().int().min(1).max(31).optional(),
 })
-
-export type RecurrenceRuleInput = z.infer<typeof recurrenceRuleSchema>

@@ -217,8 +217,8 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                       className={cn(
                         'flex w-full items-center gap-2 px-4 py-2 text-left',
                         selectedIndex === globalIndex
-                          ? 'bg-secondary'
-                          : 'hover:bg-secondary/50',
+                          ? 'bg-accent'
+                          : 'hover:bg-accent/50',
                       )}
                     >
                       <span className="font-mono text-sm text-foreground">
@@ -267,8 +267,8 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
                       }}
                       className={cn(
                         selectedIndex === globalIndex
-                          ? 'bg-secondary'
-                          : 'hover:bg-secondary/50',
+                          ? 'bg-accent'
+                          : 'hover:bg-accent/50',
                       )}
                     >
                       <TaskRowAppearance
