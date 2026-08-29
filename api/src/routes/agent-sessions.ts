@@ -143,17 +143,25 @@ export const agentSessionsApp = new Hono()
   })
   .get('/by-task', async (c) => {
     const rows = await db
-      .select({ taskId: taskAgentSessions.taskId, session: agentSessions })
+      .select({
+        taskId: taskAgentSessions.taskId,
+        taskNumber: tasks.number,
+        taskTitle: tasks.title,
+        session: agentSessions,
+      })
       .from(taskAgentSessions)
       .innerJoin(
         agentSessions,
         eq(taskAgentSessions.agentSessionId, agentSessions.id),
       )
+      .innerJoin(tasks, eq(taskAgentSessions.taskId, tasks.id))
       .orderBy(desc(agentSessions.lastActiveAt))
 
     return c.json(
       rows.map((row) => ({
         taskId: row.taskId,
+        taskNumber: row.taskNumber,
+        taskTitle: row.taskTitle,
         ...agentSessionToResponse(row.session),
       })),
       200,

@@ -377,6 +377,8 @@ export const Nested: Story = {
 const activeSession: TaskAgentSession = {
   id: '00000000-0000-0000-0000-0000000000a1',
   taskId: baseTreeNode.id,
+  taskNumber: 1,
+  taskTitle: baseTreeNode.title,
   provider: 'claude_code',
   sessionId: 'session-active',
   parentSessionId: null,

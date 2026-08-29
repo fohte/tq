@@ -63,6 +63,10 @@ export const COVERED_ROUTES = [
   'POST /api/agent-sessions',
   'GET /api/agent-sessions/by-session/:provider/:sessionId',
 
+  // session
+  'GET /api/agent-sessions',
+  'GET /api/agent-sessions/by-task',
+
   // task <-> agent session links
   'POST /api/tasks/:taskId/agent-sessions',
   'GET /api/tasks/:taskId/agent-sessions',
@@ -88,13 +92,11 @@ export const COVERED_ROUTES = [
 type CoveredRoutes = (typeof COVERED_ROUTES)[number]
 
 export const EXCLUDED_ROUTES = {
-  // Written by `tq hook` (the Claude Code hook integration) and browsed via
-  // the web UI, so only reading is left out.
-  'GET /api/agent-sessions': 'session browsing is covered by the web UI',
+  // Written by `tq hook` (the Claude Code hook integration). Bulk session
+  // browsing (`tq session list`) is covered; single-session lookup and
+  // custom-label editing remain web UI actions.
   'GET /api/agent-sessions/:id': 'session browsing is covered by the web UI',
   'GET /api/agent-sessions/:id/tasks':
-    'session browsing is covered by the web UI',
-  'GET /api/agent-sessions/by-task':
     'session browsing is covered by the web UI',
   'PATCH /api/agent-sessions/:id': 'custom label editing is a web UI action',
 

@@ -24,6 +24,8 @@ interface AgentSessionResponse {
 
 interface TaskAgentSessionResponse extends AgentSessionResponse {
   taskId: string
+  taskNumber: number
+  taskTitle: string
 }
 
 function normalizeSession(session: AgentSessionResponse) {
@@ -502,8 +504,18 @@ describe('agent sessions API', () => {
 
       expect(res.status).toBe(200)
       expect(await jsonBody<TaskAgentSessionResponse[]>(res)).toEqual([
-        { taskId: task.id, ...newer },
-        { taskId: task.id, ...older },
+        {
+          taskId: task.id,
+          taskNumber: task.number,
+          taskTitle: task.title,
+          ...newer,
+        },
+        {
+          taskId: task.id,
+          taskNumber: task.number,
+          taskTitle: task.title,
+          ...older,
+        },
       ])
     })
 
@@ -539,8 +551,18 @@ describe('agent sessions API', () => {
 
       expect(res.status).toBe(200)
       expect(await jsonBody<TaskAgentSessionResponse[]>(res)).toEqual([
-        { taskId: task2.id, ...newerSession },
-        { taskId: task1.id, ...olderSession },
+        {
+          taskId: task2.id,
+          taskNumber: task2.number,
+          taskTitle: task2.title,
+          ...newerSession,
+        },
+        {
+          taskId: task1.id,
+          taskNumber: task1.number,
+          taskTitle: task1.title,
+          ...olderSession,
+        },
       ])
     })
   })
