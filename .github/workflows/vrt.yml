@@ -34,7 +34,7 @@ jobs:
 
       - uses: ./.github/actions/setup-workspace
 
-      - uses: fohte/storybook-vrt-workflows/vrt-capture@b00e0f55e330d098c0d7f57b8f8b5ccab19b37dd # v0.1.2
+      - uses: fohte/storybook-vrt-workflows/vrt-capture@d466efc41e02b5ab567585915565d27b042d871b # v0.1.3
         with:
           project: ${{ matrix.project }}
           shard: ${{ matrix.shard }}
@@ -67,7 +67,7 @@ jobs:
 
       - uses: ./.github/actions/setup-workspace
 
-      - uses: fohte/storybook-vrt-workflows/vrt-report@b00e0f55e330d098c0d7f57b8f8b5ccab19b37dd # v0.1.2
+      - uses: fohte/storybook-vrt-workflows/vrt-report@d466efc41e02b5ab567585915565d27b042d871b # v0.1.3
         with:
           package-dir: web
           r2-bucket: tq-vrt
