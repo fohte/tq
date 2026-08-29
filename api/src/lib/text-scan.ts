@@ -14,13 +14,11 @@ export interface TextBlockRun {
 // character of `text` mapped to exactly one doc position.
 const LEAF_PLACEHOLDER = '￼'
 
-// A node/mark with NodeSpec.code/MarkSpec.code set (code_block, inlineCode)
-// holds code, not prose, so it's never a reference — checked via the spec
-// flag rather than a name so any other code-flagged node/mark the schema
-// gains is covered without listing it here. A link's display text describes
-// wherever the link points, not a tq resource — except a GFM autolink
-// literal, whose display text is the URL itself (href === text), which the
-// taskUrl/projectUrl/githubUrl/slackPermalink providers still need to see.
+// Code content (NodeSpec.code / MarkSpec.code) is never a reference. A
+// link's display text describes wherever the link points, not a tq
+// resource — except a GFM autolink literal, whose display text is the URL
+// itself (href === text), which the taskUrl/projectUrl/githubUrl/
+// slackPermalink providers still need to see.
 function isNonReferenceText(
   marks: readonly Mark[],
   text: string,

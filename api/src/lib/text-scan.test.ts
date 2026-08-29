@@ -161,6 +161,61 @@ describe('collectTextBlockRuns', () => {
     expect(actual).toEqual(expected)
   })
 
+  it('masks a code-flagged block node whose name is not code_block', () => {
+    const fenceSchema = new Schema({
+      nodes: {
+        doc: { content: 'block+' },
+        fence: { content: 'text*', group: 'block', marks: '', code: true },
+        text: { group: 'inline' },
+      },
+      marks: {},
+    })
+    const doc = fenceSchema.node('doc', null, [
+      fenceSchema.node('fence', null, [fenceSchema.text('#76')]),
+    ])
+
+    const runs = collectTextBlockRuns(doc)
+
+    const actual = describeRun(atIndex(runs, 0))
+    const expected = {
+      text: '￼￼￼',
+      offsets: [1, 2, 3, 4],
+      nodeType: 'fence',
+    }
+    expect(actual).toEqual(expected)
+  })
+
+  it('masks a code-flagged mark whose name is not inlineCode', () => {
+    const ttSchema = new Schema({
+      nodes: {
+        doc: { content: 'block+' },
+        paragraph: { content: 'inline*', group: 'block' },
+        text: { group: 'inline' },
+      },
+      marks: {
+        tt: { code: true },
+      },
+    })
+    const tt = defined(ttSchema.marks['tt'])
+    const doc = ttSchema.node('doc', null, [
+      ttSchema.node('paragraph', null, [
+        ttSchema.text('see '),
+        ttSchema.text('#76', [tt.create()]),
+        ttSchema.text(' here'),
+      ]),
+    ])
+
+    const runs = collectTextBlockRuns(doc)
+
+    const actual = describeRun(atIndex(runs, 0))
+    const expected = {
+      text: 'see ￼￼￼ here',
+      offsets: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      nodeType: 'paragraph',
+    }
+    expect(actual).toEqual(expected)
+  })
+
   it('does not mask a raw autolink whose display text equals its href', () => {
     const link = defined(schema.marks['link'])
     const url = 'https://x.io/76'
