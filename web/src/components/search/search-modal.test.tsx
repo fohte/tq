@@ -8,37 +8,47 @@ import { SearchModal } from '#components/search/search-modal'
 
 interface MockTask {
   id: string
+  number: number
   title: string
   description: null
   status: 'todo' | 'in_progress' | 'completed'
   context: 'work' | 'personal'
+  labels: string[]
   startDate: null
   dueDate: null
   estimatedMinutes: number
   parentId: null
+  parentNumber: null
   projectId: null
   recurrenceRuleId: null
   recurrenceRule: null
+  githubLink: null
   createdAt: string
   updatedAt: string
+  childCompletionCount: { completed: number; total: number }
 }
 
 function makeTask(overrides: Partial<MockTask> = {}): MockTask {
   return {
     id: '00000000-0000-0000-0000-000000000001',
+    number: 1,
     title: 'Implement task list UI',
     description: null,
     status: 'todo',
     context: 'personal',
+    labels: [],
     startDate: null,
     dueDate: null,
     estimatedMinutes: 120,
     parentId: null,
+    parentNumber: null,
     projectId: null,
     recurrenceRuleId: null,
     recurrenceRule: null,
+    githubLink: null,
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
+    childCompletionCount: { completed: 0, total: 0 },
     ...overrides,
   }
 }
@@ -47,6 +57,7 @@ const mockTasks = [
   makeTask(),
   makeTask({
     id: '00000000-0000-0000-0000-000000000002',
+    number: 2,
     title: 'Review pull request',
     status: 'in_progress',
     context: 'work',
@@ -56,6 +67,7 @@ const mockTasks = [
 
 const personalTask = makeTask({
   id: '00000000-0000-0000-0000-000000000003',
+  number: 3,
   title: 'Plan weekend trip',
   context: 'personal',
   estimatedMinutes: 60,
@@ -84,9 +96,21 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
 })
 
 const mockNavigate = vi.fn()
-vi.mock('@tanstack/react-router', () => ({
-  useNavigate: () => mockNavigate,
-}))
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>()
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    Link: ({
+      children,
+      ...props
+    }: { children: ReactNode } & Record<string, unknown>) => (
+      <a href={typeof props['to'] === 'string' ? props['to'] : '#'}>
+        {children}
+      </a>
+    ),
+  }
+})
 
 function Wrapper({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
