@@ -26,6 +26,7 @@ import {
 import { TaskStatusPicker } from '#components/task/task-status-picker'
 import { TreeOutlinerInputRow } from '#components/task/tree-outliner-input-row'
 import { TreeRowActionsMenu } from '#components/task/tree-row-actions-menu'
+import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TreeNode } from '#hooks/use-tasks'
 import type {
@@ -150,6 +151,23 @@ export function TreeTaskGridRow({
     <span className="w-5 shrink-0" />
   )
 
+  const secondLineItems: React.ReactNode[] = [
+    node.labels.length > 0 ? (
+      <TagTokens labels={node.labels} isCompleted={isCompleted} />
+    ) : null,
+    node.projectId != null ? (
+      <TaskProjectLabel projectId={node.projectId} />
+    ) : null,
+    <TaskContextLabel context={node.context} />,
+    node.startDate != null ? (
+      <StartDateBadge startDate={node.startDate} />
+    ) : null,
+    node.dueDate != null ? (
+      <DueDateBadge dueDate={node.dueDate} status={node.status} />
+    ) : null,
+    node.githubLink != null ? <GithubLinkBadge link={node.githubLink} /> : null,
+  ]
+
   return (
     <>
       <div
@@ -210,23 +228,8 @@ export function TreeTaskGridRow({
                   <SessionIndicator sessions={sessions} />
                 </div>
 
-                <div className="flex items-center gap-2 overflow-hidden">
-                  {node.labels.length > 0 && (
-                    <TagTokens labels={node.labels} isCompleted={isCompleted} />
-                  )}
-                  {node.projectId != null && (
-                    <TaskProjectLabel projectId={node.projectId} />
-                  )}
-                  <TaskContextLabel context={node.context} />
-                  {node.startDate != null && (
-                    <StartDateBadge startDate={node.startDate} />
-                  )}
-                  {node.dueDate != null && (
-                    <DueDateBadge dueDate={node.dueDate} status={node.status} />
-                  )}
-                  {node.githubLink != null && (
-                    <GithubLinkBadge link={node.githubLink} />
-                  )}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <DotSeparatedList items={secondLineItems} />
                 </div>
               </div>
 
