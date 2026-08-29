@@ -22,9 +22,3 @@ export const SingleItem: Story = {
     items: ['Design system setup'],
   },
 }
-
-export const SkipsNullAndUndefinedItems: Story = {
-  args: {
-    items: ['Design system setup', null, 'work', undefined, 'Mar 25'],
-  },
-}

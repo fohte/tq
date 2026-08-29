@@ -27,16 +27,20 @@ export const Active: Story = {
   args: { status: 'active' },
 }
 
-export const Paused: Story = {
-  args: { status: 'paused' },
-}
-
 export const Completed: Story = {
   args: { status: 'completed' },
 }
 
-export const Archived: Story = {
-  args: { status: 'archived' },
+// `paused` and `archived` are intentionally styled identically (see
+// project-status-mark.tsx).
+export const PausedAndArchived: Story = {
+  args: { status: 'paused' },
+  render: () => (
+    <div className="flex items-center gap-4">
+      <ProjectStatusMark status="paused" />
+      <ProjectStatusMark status="archived" />
+    </div>
+  ),
 }
 
 export const Large: Story = {
