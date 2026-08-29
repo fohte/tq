@@ -77,7 +77,7 @@ export interface TaskResponse {
   updatedAt: string
   childCompletionCount?: { completed: number; total: number }
   children?: TaskResponse[]
-  links?: { outgoing: LinkedTaskResponse[]; incoming: LinkedTaskResponse[] }
+  links?: { outgoing: TaskListItemResponse[]; incoming: TaskListItemResponse[] }
   linkSync?: LinkSyncResponse
 }
 
@@ -179,6 +179,29 @@ const githubLinkResponseSchema = z.object({
   lastSyncedAt: z.string(),
 })
 
+const taskListItemResponseSchema = z.object({
+  id: z.string(),
+  number: z.number(),
+  title: z.string(),
+  description: z.string().nullable(),
+  status: z.enum(['todo', 'in_progress', 'completed']),
+  context: z.enum(['work', 'personal']),
+  labels: z.array(z.string()),
+  startDate: z.string().nullable(),
+  dueDate: z.string().nullable(),
+  estimatedMinutes: z.number().nullable(),
+  parentId: z.string().nullable(),
+  projectId: z.string().nullable(),
+  recurrenceRuleId: z.string().nullable(),
+  githubLink: githubLinkResponseSchema.nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  parentNumber: z.number().nullable(),
+  childCompletionCount: z
+    .object({ completed: z.number(), total: z.number() })
+    .optional(),
+})
+
 const taskResponseSchema = z.object({
   id: z.string(),
   number: z.number(),
@@ -203,8 +226,8 @@ const taskResponseSchema = z.object({
   children: z.array(z.any()).optional(),
   links: z
     .object({
-      outgoing: z.array(linkedTaskResponseSchema),
-      incoming: z.array(linkedTaskResponseSchema),
+      outgoing: z.array(taskListItemResponseSchema),
+      incoming: z.array(taskListItemResponseSchema),
     })
     .optional(),
   linkSync: linkSyncResponseSchema.optional(),
