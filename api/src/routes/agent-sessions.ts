@@ -1,6 +1,8 @@
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
 import { and, desc, eq, lt } from 'drizzle-orm'
 import { Hono } from 'hono'
+import { ResultAsync } from 'neverthrow'
 
 import type { DbTransaction } from '#db/connection'
 import { db } from '#db/connection'
@@ -137,17 +139,26 @@ export const agentSessionsApp = new Hono()
       return c.json({ error: 'Failed to upsert agent session' }, 500)
     }
 
-    // The API has no cron (see api/src/app.ts), so pruning rides along on
-    // this endpoint's own traffic instead — `tq hook` posts here dozens of
-    // times a day regardless of whether any session is actually stale.
-    await db
-      .delete(agentSessions)
-      .where(
-        lt(
-          agentSessions.lastActiveAt,
-          new Date(now.getTime() - STALE_SESSION_MAX_AGE_MS),
+    // No cron exists to run this on a schedule (see api/src/app.ts), so it
+    // piggybacks on every write instead. Isolated from the upsert above: a
+    // failure here must not turn an already-successful report into a 500.
+    const pruneResult = await ResultAsync.fromPromise(
+      db
+        .delete(agentSessions)
+        .where(
+          lt(
+            agentSessions.lastActiveAt,
+            new Date(now.getTime() - STALE_SESSION_MAX_AGE_MS),
+          ),
         ),
+      (error) => error,
+    )
+    if (pruneResult.isErr()) {
+      captureWithFingerprint(
+        pruneResult.error,
+        'api.agent-sessions.prune-failed',
       )
+    }
 
     return c.json(agentSessionToResponse(session), 200)
   })
@@ -237,9 +248,9 @@ export const agentSessionsApp = new Hono()
 
     return c.json(agentSessionToResponse(session), 200)
   })
-  // Lets an external session manager (e.g. armyknife) that only knows the
-  // (provider, session_id) pair tell tq a session will never resume, without
-  // waiting for it to age out via the 30-day prune above.
+  // Keyed by (provider, session_id), not the internal id used everywhere
+  // else in this file: an external session manager only ever knows the
+  // former, since it never sees a session until it reports through here.
   .delete('/by-session/:provider/:sessionId', async (c) => {
     const provider = c.req.param('provider')
     if (provider !== 'claude_code') {
