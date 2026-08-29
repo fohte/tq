@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { expect, within } from 'storybook/test'
 
 import { SearchModal } from '#components/search/search-modal'
-import type { SearchResult } from '#hooks/use-search'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import { StoryRouter } from '#storybook-config/story-router'
 
 function Providers({ children }: { children: ReactNode }) {
@@ -56,53 +56,24 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
 
-const mockTasks: SearchResult[] = [
-  {
-    id: '00000000-0000-0000-0000-000000000001',
-    number: 1,
+const mockTasks = [
+  makeTask({
+    id: 'task-1',
     title: 'Implement task list UI',
-    description: null,
-    status: 'todo',
-    context: 'personal',
-    labels: [],
-    startDate: null,
-    dueDate: null,
     estimatedMinutes: 120,
-    parentId: null,
-    parentNumber: null,
-    projectId: null,
-    recurrenceRuleId: null,
-    githubLink: null,
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-    childCompletionCount: { completed: 0, total: 0 },
-  },
-  {
-    id: '00000000-0000-0000-0000-000000000002',
+  }),
+  makeTask({
+    id: 'task-2',
     number: 2,
     title: 'Review pull request',
-    description: null,
     status: 'in_progress',
     context: 'work',
-    labels: [],
-    startDate: null,
-    dueDate: null,
     estimatedMinutes: 30,
-    parentId: null,
-    parentNumber: null,
-    projectId: null,
-    recurrenceRuleId: null,
-    githubLink: null,
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-    childCompletionCount: { completed: 0, total: 0 },
-  },
+  }),
 ]
 
-// Regression coverage for the bug where the keyboard-selected row's
-// highlight was invisible against the panel background (both used
-// --secondary). Renders actual result rows so the highlighted one is
-// captured by VRT — the Default story never renders any rows.
+// Renders actual result rows (unlike Default, which never types a query) so
+// the selected row's highlight is captured by VRT.
 export const ResultsWithSelectedRow: Story = {
   parameters: {
     msw: {
@@ -121,5 +92,6 @@ export const ResultsWithSelectedRow: Story = {
 
     const options = body.getAllByRole('option')
     await expect(options[0]).toHaveAttribute('aria-selected', 'true')
+    await expect(options[0]).toHaveClass('bg-accent')
   },
 }
