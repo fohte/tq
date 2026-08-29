@@ -130,7 +130,10 @@ export const SelectProject: Story = {
     const body = within(canvasElement.ownerDocument.body)
 
     await userEvent.click(canvas.getByRole('combobox'))
-    await userEvent.click(await body.findByText(projectB.title))
+    // The Select popup keeps `pointer-events: none` until Base UI commits
+    // `open: true`, so clicking the option must retry rather than fire once.
+    const option = await body.findByText(projectB.title)
+    await waitFor(() => userEvent.click(option))
 
     await waitFor(async () => {
       await expect(patchedBody).toEqual({ projectId: projectB.id })
