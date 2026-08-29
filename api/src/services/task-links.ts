@@ -50,9 +50,9 @@ function dedupeRefs(refs: Iterable<NumericOrId>): NumericOrId[] {
 //
 // Parses `text` into the same ProseMirror doc shape the frontend editor
 // produces and runs the regex matchers per textblock run rather than against
-// the raw string, so a `#123` inside a code span or a link's display text
-// (masked by `collectTextBlockRuns`, shared with `web` via the `api`
-// package) is excluded the same way it is in the editor.
+// the raw string, so a `#123` inside a code span, a code block, or a link's
+// display text (masked by `collectTextBlockRuns`, shared with `web` via the
+// `api` package) is excluded the same way it is in the editor.
 export async function extractMentionedTaskRefs(
   text: string,
 ): Promise<NumericOrId[]> {
