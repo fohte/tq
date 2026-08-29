@@ -4,6 +4,8 @@ import { SessionIndicator } from '#components/agent-session/session-indicator'
 import { GithubLinkBadge } from '#components/task/github-link-badge'
 import {
   DueDateBadge,
+  EstimateLabel,
+  ParentTaskLabel,
   ROW_INDENT_CLASS_NAME,
   rowIndentStyle,
   rowTitleClassName,
@@ -30,8 +32,9 @@ export interface TaskRowAppearanceProps {
   trailing?: React.ReactNode
   onClick?: () => void
   draggable?: boolean
-  // Appended after the row's canonical labels/project/context/startDate/
-  // dueDate/githubLink items — keep their order intact.
+  // Appended after the row's canonical second-line items (labels, project,
+  // context, parent, startDate, dueDate, estimate, githubLink) — keep their
+  // order intact.
   secondLineExtras?: React.ReactNode[]
 }
 
@@ -62,11 +65,17 @@ export function TaskRowAppearance({
       <TaskProjectLabel projectId={task.projectId} />
     ) : null,
     <TaskContextLabel context={task.context} />,
+    task.parentNumber != null ? (
+      <ParentTaskLabel parentNumber={task.parentNumber} />
+    ) : null,
     task.startDate != null ? (
       <StartDateBadge startDate={task.startDate} />
     ) : null,
     task.dueDate != null ? (
       <DueDateBadge dueDate={task.dueDate} status={task.status} />
+    ) : null,
+    task.estimatedMinutes != null ? (
+      <EstimateLabel minutes={task.estimatedMinutes} />
     ) : null,
     task.githubLink != null ? <GithubLinkBadge link={task.githubLink} /> : null,
     ...secondLineExtras,

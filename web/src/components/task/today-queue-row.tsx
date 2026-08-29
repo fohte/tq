@@ -51,12 +51,10 @@ export function TodayQueueRow({
     setIsEditingEstimate(false)
   }
 
+  // The value itself renders through TaskRowAppearance's own second line;
+  // this only supplies the null-estimate affordances (chip / input).
   const estimateItem =
-    task.estimatedMinutes != null ? (
-      <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
-        {formatMinutes(task.estimatedMinutes)}
-      </span>
-    ) : isEditingEstimate ? (
+    task.estimatedMinutes != null ? null : isEditingEstimate ? (
       <Input
         autoFocus
         value={estimateInput}

@@ -143,6 +143,26 @@ export const WithStartDate: Story = {
   },
 }
 
+export const WithParentTask: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Task with a parent',
+      parentNumber: 12,
+    },
+  },
+}
+
+export const WithEstimate: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Task with an estimate',
+      estimatedMinutes: 90,
+    },
+  },
+}
+
 export const WithGithubLink: Story = {
   args: {
     task: {
