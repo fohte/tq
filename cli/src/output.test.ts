@@ -135,7 +135,7 @@ describe('printLinkSync', () => {
     ])
   })
 
-  it('writes only the unresolved-refs line when only unresolvedRefs is non-empty', () => {
+  it('writes only the unresolved-refs block when only unresolvedRefs is non-empty', () => {
     const write = vi
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true)
@@ -143,13 +143,24 @@ describe('printLinkSync', () => {
     printLinkSync({
       outgoing: [],
       unresolvedRefs: [
-        { kind: 'number', value: 465 },
-        { kind: 'id', value: 'abc123' },
+        { kind: 'number', value: 465, sources: [{ kind: 'description' }] },
+        {
+          kind: 'id',
+          value: 'abc123',
+          sources: [
+            { kind: 'comment', id: '3f2a1c9e-0000-0000-0000-000000000000' },
+          ],
+        },
       ],
     })
 
     expect(write.mock.calls).toEqual([
-      ['Unresolved references (no matching task): #465, abc123\n'],
+      [
+        'Task references with no matching task:\n' +
+          '  #465 in description\n' +
+          '  abc123 in comment 3f2a1c9e-0000-0000-0000-000000000000\n' +
+          "If these aren't tq task numbers, write them as a link or in backticks.\n",
+      ],
     ])
   })
 
@@ -160,12 +171,50 @@ describe('printLinkSync', () => {
 
     printLinkSync({
       outgoing: [{ number: 76, title: 'Fix bug' }],
-      unresolvedRefs: [{ kind: 'number', value: 465 }],
+      unresolvedRefs: [
+        {
+          kind: 'number',
+          value: 465,
+          sources: [{ kind: 'page', id: 'p1', title: 'Notes' }],
+        },
+      ],
     })
 
     expect(write.mock.calls).toEqual([
       [
-        'Linked tasks:\n  #76 Fix bug\nUnresolved references (no matching task): #465\n',
+        'Linked tasks:\n' +
+          '  #76 Fix bug\n' +
+          'Task references with no matching task:\n' +
+          '  #465 in page "Notes"\n' +
+          "If these aren't tq task numbers, write them as a link or in backticks.\n",
+      ],
+    ])
+  })
+
+  it('lists every field a ref appeared in when it is unresolved in more than one', () => {
+    const write = vi
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true)
+
+    printLinkSync({
+      outgoing: [],
+      unresolvedRefs: [
+        {
+          kind: 'number',
+          value: 465,
+          sources: [
+            { kind: 'description' },
+            { kind: 'page', id: 'p1', title: 'Notes' },
+          ],
+        },
+      ],
+    })
+
+    expect(write.mock.calls).toEqual([
+      [
+        'Task references with no matching task:\n' +
+          '  #465 in description, page "Notes"\n' +
+          "If these aren't tq task numbers, write them as a link or in backticks.\n",
       ],
     ])
   })

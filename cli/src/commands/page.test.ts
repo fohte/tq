@@ -173,7 +173,13 @@ describe('page create', () => {
       content: '# From file',
       linkSync: {
         outgoing: [],
-        unresolvedRefs: [{ kind: 'number', value: 465 }],
+        unresolvedRefs: [
+          {
+            kind: 'number',
+            value: 465,
+            sources: [{ kind: 'page', id: 'p1', title: 'Notes' }],
+          },
+        ],
       },
     }
     const { fetchStub } = captureFetch(
@@ -202,7 +208,11 @@ describe('page create', () => {
 
     expect(exitCode).toBe(0)
     expect(stderr.mock.calls).toEqual([
-      ['Unresolved references (no matching task): #465\n'],
+      [
+        'Task references with no matching task:\n' +
+          '  #465 in page "Notes"\n' +
+          "If these aren't tq task numbers, write them as a link or in backticks.\n",
+      ],
     ])
   })
 

@@ -100,10 +100,17 @@ export const taskSummaryColumns = {
   status: tasks.status,
 }
 
+export type RefSource =
+  | { kind: 'description' }
+  | { kind: 'page'; id: string; title: string }
+  | { kind: 'comment'; id: string }
+
+export type UnresolvedRef = NumericOrId & { sources: RefSource[] }
+
 export interface TaskLinkSyncResult {
   outgoing: LinkedTaskSummary[]
   // Refs extracted from the synced text that didn't match any existing task.
-  unresolvedRefs: NumericOrId[]
+  unresolvedRefs: UnresolvedRef[]
 }
 
 // Recomputes every outgoing link for `sourceTaskId` from scratch by
@@ -126,11 +133,16 @@ export async function syncTaskLinks(
     const [task, pages, comments] = await Promise.all([
       tx.query.tasks.findFirst({ where: eq(tasks.id, sourceTaskId) }),
       tx
-        .select({ content: taskPages.content, format: taskPages.format })
+        .select({
+          id: taskPages.id,
+          title: taskPages.title,
+          content: taskPages.content,
+          format: taskPages.format,
+        })
         .from(taskPages)
         .where(eq(taskPages.taskId, sourceTaskId)),
       tx
-        .select({ content: taskComments.content })
+        .select({ id: taskComments.id, content: taskComments.content })
         .from(taskComments)
         .where(eq(taskComments.taskId, sourceTaskId)),
     ])
@@ -142,10 +154,18 @@ export async function syncTaskLinks(
     // HTML pages are excluded: their markup can contain numeric character
     // references (e.g. `&#47;`) that MENTION_PATTERN would misread as a task
     // mention.
-    const texts = [
-      task.description ?? '',
-      ...pages.filter((p) => p.format !== 'html').map((p) => p.content),
-      ...comments.map((c) => c.content),
+    const fields: { source: RefSource; text: string }[] = [
+      { source: { kind: 'description' }, text: task.description ?? '' },
+      ...pages
+        .filter((p) => p.format !== 'html')
+        .map((p) => ({
+          source: { kind: 'page' as const, id: p.id, title: p.title },
+          text: p.content,
+        })),
+      ...comments.map((c) => ({
+        source: { kind: 'comment' as const, id: c.id },
+        text: c.content,
+      })),
     ]
     // Each field is parsed separately (not joined into one string first):
     // joining would let e.g. an unterminated inline-code backtick ending one
@@ -153,8 +173,13 @@ export async function syncTaskLinks(
     // real mention in the next field as code (see the "unterminated
     // backtick" case in task-links.integration.test.ts). Refs are still
     // deduped across fields via `dedupeRefs`, not just within each one.
-    const refsPerField = await Promise.all(texts.map(extractMentionedTaskRefs))
-    const refs = dedupeRefs(refsPerField.flat()).filter((ref) =>
+    const fieldRefs = await Promise.all(
+      fields.map(async (field) => ({
+        source: field.source,
+        refs: await extractMentionedTaskRefs(field.text),
+      })),
+    )
+    const refs = dedupeRefs(fieldRefs.flatMap((f) => f.refs)).filter((ref) =>
       ref.kind === 'number'
         ? ref.value !== task.number
         : ref.value !== sourceTaskId,
@@ -177,11 +202,20 @@ export async function syncTaskLinks(
 
     const resolvedNumbers = new Set(targets.map((t) => t.number))
     const resolvedIds = new Set(targets.map((t) => t.id))
-    const unresolvedRefs = refs.filter((ref) =>
-      ref.kind === 'number'
-        ? !resolvedNumbers.has(ref.value)
-        : !resolvedIds.has(ref.value),
-    )
+    const unresolvedRefs: UnresolvedRef[] = refs
+      .filter((ref) =>
+        ref.kind === 'number'
+          ? !resolvedNumbers.has(ref.value)
+          : !resolvedIds.has(ref.value),
+      )
+      .map((ref) => ({
+        ...ref,
+        sources: fieldRefs
+          .filter((f) =>
+            f.refs.some((r) => r.kind === ref.kind && r.value === ref.value),
+          )
+          .map((f) => f.source),
+      }))
 
     return {
       outgoing: [...targets].sort((a, b) => a.number - b.number),
