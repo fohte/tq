@@ -81,8 +81,9 @@ export interface TaskResponse {
   linkSync?: LinkSyncResponse
 }
 
-// Shape returned by the list-returning endpoint (`/api/tasks`): no
-// `recurrenceRule` key (unlike `TaskResponse`), plus `parentNumber`.
+// Shape returned by the list-returning endpoint (`/api/tasks`) and by a task
+// detail's `links` field: no `recurrenceRule` key (unlike `TaskResponse`),
+// plus `parentNumber`.
 export interface TaskListItemResponse {
   id: string
   number: number

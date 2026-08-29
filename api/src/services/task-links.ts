@@ -12,10 +12,8 @@ import type { NumericOrId } from '#lib/numeric-id'
 import { collectTextBlockRuns } from '#lib/text-scan'
 import { selectTaskListRows } from '#routes/tasks/list-query'
 import {
-  getChildCompletionCountsByTaskId,
-  getLabelNamesByTaskId,
+  hydrateTaskListRows,
   type TaskListItemResponse,
-  taskListItemToResponse,
 } from '#routes/tasks/shared'
 
 // Only safe to run against a single textblock run's masked text (see
@@ -255,29 +253,13 @@ export async function getTaskLinks(taskId: string): Promise<TaskLinks> {
       .orderBy(tasks.number),
   ])
 
-  const ids = [...outgoingRows, ...incomingRows].map((row) => row.task.id)
-  const [labelsByTaskId, childCompletionCountsByTaskId] = await Promise.all([
-    getLabelNamesByTaskId(ids),
-    getChildCompletionCountsByTaskId(ids),
-  ])
-
-  const toLinkedTaskDetail = (
-    row: (typeof outgoingRows)[number],
-  ): LinkedTaskDetail => ({
-    ...taskListItemToResponse(
-      row.task,
-      row.parentNumber,
-      row.githubLink,
-      labelsByTaskId.get(row.task.id) ?? [],
-    ),
-    childCompletionCount: childCompletionCountsByTaskId.get(row.task.id) ?? {
-      completed: 0,
-      total: 0,
-    },
-  })
+  // Hydrated together (not per-direction) so labels/child-completion counts
+  // are still fetched in 2 queries total regardless of how many outgoing vs.
+  // incoming links exist.
+  const hydrated = await hydrateTaskListRows([...outgoingRows, ...incomingRows])
 
   return {
-    outgoing: outgoingRows.map(toLinkedTaskDetail),
-    incoming: incomingRows.map(toLinkedTaskDetail),
+    outgoing: hydrated.slice(0, outgoingRows.length),
+    incoming: hydrated.slice(outgoingRows.length),
   }
 }
