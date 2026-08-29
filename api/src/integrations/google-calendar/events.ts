@@ -11,7 +11,7 @@ import { listSubscribedCalendars } from '#integrations/google-calendar/subscript
 import { ensureValidAccessToken, listAccountTokens } from '#integrations/oauth'
 import type { ExternalEvent } from '#integrations/types'
 
-export type AccountEventsError =
+type AccountEventsError =
   IntegrationConfigError | TokenRefreshError | CalendarApiError
 
 export interface AccountEventsResult {
@@ -124,7 +124,7 @@ export async function getEvents(
   )
 }
 
-export interface PartitionedAccountEvents {
+interface PartitionedAccountEvents {
   events: ExternalEvent[]
   successCount: number
   authRejectedCount: number

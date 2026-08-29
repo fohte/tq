@@ -3,7 +3,7 @@ import { taskEvents } from '#db/schema'
 import type { EditAuthor } from '#lib/edits'
 
 export type TaskStatus = 'todo' | 'in_progress' | 'completed'
-export type GithubLinkKind = 'issue' | 'pull_request'
+type GithubLinkKind = 'issue' | 'pull_request'
 
 export type GithubLinkRef = {
   owner: string

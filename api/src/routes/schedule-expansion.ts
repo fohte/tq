@@ -7,7 +7,7 @@ import type { recurrenceRules, schedules } from '#db/schema'
  * - weekly: matches if the date's day-of-week is in daysOfWeek
  * - monthly: matches if the date's day-of-month equals dayOfMonth
  */
-export function matchesDate(
+function matchesDate(
   rule: typeof recurrenceRules.$inferSelect | null,
   date: Date,
 ): boolean {
