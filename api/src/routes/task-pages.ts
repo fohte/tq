@@ -2,6 +2,10 @@ import { zValidator } from '@hono/zod-validator'
 import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 
+import {
+  MAX_HTML_CONTENT_LENGTH,
+  MAX_MARKDOWN_CONTENT_LENGTH,
+} from '#constants/content-length'
 import { db } from '#db/connection'
 import { taskPages } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
@@ -14,6 +18,12 @@ import {
 import { findTaskByIdOrNumber, type TaskEnv } from '#routes/tasks/shared'
 import { createPageSchema, updatePageSchema } from '#schemas/task-page'
 import { syncTaskLinks } from '#services/task-links'
+
+function maxContentLengthFor(format: 'markdown' | 'html'): number {
+  return format === 'html'
+    ? MAX_HTML_CONTENT_LENGTH
+    : MAX_MARKDOWN_CONTENT_LENGTH
+}
 
 export function pageToResponse(
   page: typeof taskPages.$inferSelect,
@@ -67,6 +77,17 @@ export const taskPagesApp = new Hono<TaskEnv>()
     const taskId = c.get('task').id
     const input = c.req.valid('json')
     const author = c.get('author')
+    const format = input.format ?? 'markdown'
+
+    const maxLength = maxContentLengthFor(format)
+    if (input.content != null && input.content.length > maxLength) {
+      return c.json(
+        {
+          error: `content must have <=${String(maxLength)} characters for format "${format}"`,
+        },
+        400,
+      )
+    }
 
     const page = await db.transaction(async (tx) => {
       const page = firstOrThrow(
@@ -76,7 +97,7 @@ export const taskPagesApp = new Hono<TaskEnv>()
             taskId,
             title: input.title,
             content: input.content ?? '',
-            format: input.format ?? 'markdown',
+            format,
             sortOrder: input.sortOrder ?? 0,
           })
           .returning(),
@@ -123,6 +144,17 @@ export const taskPagesApp = new Hono<TaskEnv>()
     })
     if (!existing) {
       return c.json({ error: 'Page not found' }, 404)
+    }
+
+    const format = input.format ?? existing.format
+    const maxLength = maxContentLengthFor(format)
+    if (input.content != null && input.content.length > maxLength) {
+      return c.json(
+        {
+          error: `content must have <=${String(maxLength)} characters for format "${format}"`,
+        },
+        400,
+      )
     }
 
     const changedFields = diffFields(existing, input, ['title', 'content'])
