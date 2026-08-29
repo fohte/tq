@@ -51,11 +51,12 @@ export function TodayQueueRow({
     setIsEditingEstimate(false)
   }
 
-  // estimatedMinutes itself is never rendered, even when set: production
-  // data shows 0/95 open tasks with a value, so only the "missing estimate"
-  // state is worth surfacing.
   const estimateItem =
-    task.estimatedMinutes != null ? null : isEditingEstimate ? (
+    task.estimatedMinutes != null ? (
+      <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
+        {formatMinutes(task.estimatedMinutes)}
+      </span>
+    ) : isEditingEstimate ? (
       <Input
         autoFocus
         value={estimateInput}
