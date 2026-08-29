@@ -4,7 +4,7 @@ import type { InferResponseType } from 'hono/client'
 import type { Task } from '#hooks/use-task-queries'
 import { taskKeys } from '#hooks/use-task-queries'
 import { api } from '#lib/api'
-import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
+import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 type Project = InferResponseType<typeof api.api.projects.$get, 200>[number]
 
@@ -214,46 +214,6 @@ export function useUpdateProject() {
     },
     onSettled: (_data, _err, { id }) => {
       void queryClient.invalidateQueries({ queryKey: projectKeys.detail(id) })
-      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
-    },
-  })
-}
-
-export function useDeleteProject() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const res = await api.api.projects[':id'].$delete({
-        param: { id },
-      })
-      assertOkOrThrow(res)
-    },
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: projectKeys.lists })
-
-      const previousLists = queryClient.getQueriesData<Project[]>({
-        queryKey: projectKeys.lists,
-      })
-
-      queryClient.setQueriesData<Project[]>(
-        { queryKey: projectKeys.lists },
-        (old) => {
-          if (!old) return old
-          return old.filter((project) => project.id !== id)
-        },
-      )
-
-      return { previousLists }
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previousLists) {
-        for (const [key, data] of context.previousLists) {
-          queryClient.setQueryData(key, data)
-        }
-      }
-    },
-    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
   })
