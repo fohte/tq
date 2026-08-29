@@ -183,6 +183,13 @@
       "when": 1787493727200,
       "tag": "0025_complete_sugar_man",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1787993474786,
+      "tag": "0026_fancy_spiral",
+      "breakpoints": true
     }
   ]
 }
