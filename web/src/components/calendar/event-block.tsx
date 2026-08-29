@@ -35,9 +35,11 @@ export function EventBlock(arg: EventContentArg) {
   const isCompleted = type === 'completed'
 
   const timeDetails = (
-    <DotSeparatedList
-      items={[timeText, parentRef != null ? `← ${parentRef}` : undefined]}
-    />
+    <span className="inline-flex items-center gap-x-1">
+      <DotSeparatedList
+        items={[timeText, parentRef != null ? `← ${parentRef}` : undefined]}
+      />
+    </span>
   )
 
   if (redacted) {

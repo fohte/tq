@@ -37,7 +37,7 @@ export function SearchResultRow({ task }: { task: SearchResult }) {
         >
           {task.title}
         </span>
-        <span className="font-mono text-2xs text-muted-foreground-faint md:hidden">
+        <span className="inline-flex items-center gap-x-1 font-mono text-2xs text-muted-foreground-faint md:hidden">
           <DotSeparatedList items={[`#${String(task.number)}`, estimate]} />
         </span>
       </div>

@@ -104,7 +104,7 @@ function FocusCard({
       <div className="flex items-center gap-2">
         <span className="font-mono text-2xs text-primary">▍</span>
         <FocusLabel>IN PROGRESS</FocusLabel>
-        <span className="ml-auto font-mono text-2xs tracking-widest text-muted-foreground">
+        <span className="ml-auto inline-flex items-center gap-x-1 font-mono text-2xs tracking-widest text-muted-foreground">
           <DotSeparatedList items={[`#${String(task.number)}`, task.context]} />
         </span>
       </div>
