@@ -461,10 +461,8 @@ export const WithCompletionCount: Story = {
 
 export const AllVariants: Story = {
   args: { node: baseTreeNode },
-  // The narrow container below (w-xl, 576px) is wider than the mobile
-  // viewport (375px) on purpose — see the comment on it — so it always
-  // overflows the mobile project regardless of content. desktop-only skips
-  // that project instead of fixing the width or disabling the check.
+  // The narrow container below (w-xl, 576px) is intentionally wider than
+  // the mobile viewport (375px) — see the comment on it.
   tags: ['desktop-only'],
   parameters: {
     // The title `<span>` has a `min-w-30` (120px) floor, not `min-w-0` —
