@@ -29,7 +29,7 @@ const baseTask: TaskDetail = {
   projectId: null,
   recurrenceRuleId: null,
   recurrenceRule: null,
-  githubLink: null,
+  githubLinks: [],
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
   titleAuthor: null,
@@ -121,17 +121,19 @@ export const SidebarWithGithubLink: Story = {
   args: {
     task: {
       ...baseTask,
-      githubLink: {
-        id: 'link-1',
-        owner: 'fohte',
-        repo: 'tq',
-        number: 42,
-        kind: 'issue',
-        url: 'https://github.com/fohte/tq/issues/42',
-        state: 'open',
-        title: 'Implement task detail page',
-        lastSyncedAt: '2026-03-20T00:00:00.000Z',
-      },
+      githubLinks: [
+        {
+          id: 'link-1',
+          owner: 'fohte',
+          repo: 'tq',
+          number: 42,
+          kind: 'issue',
+          url: 'https://github.com/fohte/tq/issues/42',
+          state: 'open',
+          title: 'Implement task detail page',
+          lastSyncedAt: '2026-03-20T00:00:00.000Z',
+        },
+      ],
     },
   },
 }

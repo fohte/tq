@@ -32,7 +32,7 @@ export const COVERED_ROUTES = [
 
   // github
   'POST /api/tasks/:taskId/github-link',
-  'DELETE /api/tasks/:taskId/github-link',
+  'DELETE /api/tasks/:taskId/github-link/:linkId',
   'POST /api/tasks/:taskId/github-link/sync',
   'POST /api/github/resolve',
   'POST /api/github/sync',

@@ -44,7 +44,7 @@ const baseSubtask: Task = {
   parentNumber: 1,
   projectId: null,
   recurrenceRuleId: null,
-  githubLink: null,
+  githubLinks: [],
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
   childCompletionCount: { completed: 0, total: 0 },

@@ -129,15 +129,16 @@ describe('POST /api/tasks/:taskId/github-link', () => {
     })
   })
 
-  it('returns 409 when the task is already linked', async () => {
+  it('allows linking a second, different issue to an already-linked task', async () => {
     const task = await createTask('My task')
     await upsertGithubToken('valid-token')
     mockGithubIssueResponse()
-    await app.request(`/api/tasks/${task.id}/github-link`, {
+    const firstRes = await app.request(`/api/tasks/${task.id}/github-link`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/42' }),
     })
+    const firstLink = await jsonBody<GithubLinkResponse>(firstRes)
 
     mockGithubIssueResponse({
       html_url: 'https://github.com/fohte/tq/issues/43',
@@ -148,7 +149,12 @@ describe('POST /api/tasks/:taskId/github-link', () => {
       body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/43' }),
     })
 
-    expect(res.status).toBe(409)
+    expect(res.status).toBe(201)
+    const secondLink = await jsonBody<GithubLinkResponse>(res)
+
+    const detailRes = await app.request(`/api/tasks/${task.id}`)
+    const detailBody = await jsonBody<TaskResponse>(detailRes)
+    expect(detailBody.githubLinks).toEqual([firstLink, secondLink])
   })
 
   it('returns 409 with the linked task id when the issue is linked to another task', async () => {
@@ -177,34 +183,37 @@ describe('POST /api/tasks/:taskId/github-link', () => {
   })
 })
 
-describe('DELETE /api/tasks/:taskId/github-link', () => {
+describe('DELETE /api/tasks/:taskId/github-link/:linkId', () => {
   it('removes the link, leaving the task intact', async () => {
     const task = await createTask('My task')
     await upsertGithubToken('valid-token')
     mockGithubIssueResponse()
-    await app.request(`/api/tasks/${task.id}/github-link`, {
+    const linkRes = await app.request(`/api/tasks/${task.id}/github-link`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/42' }),
     })
+    const link = await jsonBody<GithubLinkResponse>(linkRes)
 
-    const res = await app.request(`/api/tasks/${task.id}/github-link`, {
-      method: 'DELETE',
-    })
+    const res = await app.request(
+      `/api/tasks/${task.id}/github-link/${link.id}`,
+      { method: 'DELETE' },
+    )
 
     expect(res.status).toBe(204)
 
     const detailRes = await app.request(`/api/tasks/${task.id}`)
     const detailBody = await jsonBody<TaskResponse>(detailRes)
-    expect(detailBody.githubLink).toBeNull()
+    expect(detailBody.githubLinks).toEqual([])
   })
 
   it('returns 404 when the task has no link', async () => {
     const task = await createTask('My task')
 
-    const res = await app.request(`/api/tasks/${task.id}/github-link`, {
-      method: 'DELETE',
-    })
+    const res = await app.request(
+      `/api/tasks/${task.id}/github-link/${TEST_UUID}`,
+      { method: 'DELETE' },
+    )
 
     expect(res.status).toBe(404)
   })
@@ -213,13 +222,14 @@ describe('DELETE /api/tasks/:taskId/github-link', () => {
     const task = await createTask('My task')
     await upsertGithubToken('valid-token')
     mockGithubIssueResponse()
-    await app.request(`/api/tasks/${task.id}/github-link`, {
+    const linkRes = await app.request(`/api/tasks/${task.id}/github-link`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/42' }),
     })
+    const link = await jsonBody<GithubLinkResponse>(linkRes)
 
-    await app.request(`/api/tasks/${task.id}/github-link`, {
+    await app.request(`/api/tasks/${task.id}/github-link/${link.id}`, {
       method: 'DELETE',
     })
 
@@ -277,6 +287,65 @@ describe('POST /api/tasks/:taskId/github-link/sync', () => {
     expect(detailBody.title).toBe('Renamed on GitHub')
   })
 
+  it('syncs every linked issue, not just the first', async () => {
+    const task = await createTask('My task')
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
+    const firstLinkRes = await app.request(
+      `/api/tasks/${task.id}/github-link`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/42' }),
+      },
+    )
+    const firstLink = await jsonBody<GithubLinkResponse>(firstLinkRes)
+
+    mockGithubIssueResponse({
+      html_url: 'https://github.com/fohte/tq/issues/43',
+    })
+    const secondLinkRes = await app.request(
+      `/api/tasks/${task.id}/github-link`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/43' }),
+      },
+    )
+    const secondLink = await jsonBody<GithubLinkResponse>(secondLinkRes)
+
+    // Consume both links' first sync (seed-only, see syncLinkFromGithub).
+    mockGithubIssueResponse()
+    mockGithubIssueResponse()
+    await app.request(`/api/tasks/${task.id}/github-link/sync`, {
+      method: 'POST',
+    })
+
+    // Same title for both: findLinksByTaskId doesn't order its rows, so
+    // which link the loop visits first isn't guaranteed.
+    mockGithubIssueResponse({ title: 'Synced' })
+    mockGithubIssueResponse({ title: 'Synced' })
+    const res = await app.request(`/api/tasks/${task.id}/github-link/sync`, {
+      method: 'POST',
+    })
+
+    expect(res.status).toBe(204)
+    const detailRes = await app.request(`/api/tasks/${task.id}`)
+    const detailBody = await jsonBody<TaskResponse>(detailRes)
+    // Both links share this test's transaction-frozen `createdAt` (see
+    // setupTestDb), so sort by `number` rather than relying on read-back
+    // order to break the tie.
+    const byNumber = (a: GithubLinkResponse, b: GithubLinkResponse) =>
+      a.number - b.number
+    expect(
+      [...detailBody.githubLinks].sort(byNumber).map(normalizeLink),
+    ).toEqual(
+      [firstLink, secondLink]
+        .sort(byNumber)
+        .map((link) => ({ ...normalizeLink(link), title: 'Synced' })),
+    )
+  })
+
   it('is a no-op when the task has no link', async () => {
     const task = await createTask('My task')
 
@@ -296,23 +365,23 @@ describe('POST /api/tasks/:taskId/github-link/sync', () => {
   })
 })
 
-describe('githubLink embedded in task responses', () => {
-  it('is null for a task with no link', async () => {
+describe('githubLinks embedded in task responses', () => {
+  it('is an empty array for a task with no link', async () => {
     const task = await createTask('My task')
 
     const detailRes = await app.request(`/api/tasks/${task.id}`)
     const detailBody = await jsonBody<TaskResponse>(detailRes)
-    expect(detailBody.githubLink).toBeNull()
+    expect(detailBody.githubLinks).toEqual([])
 
     const listRes = await app.request('/api/tasks')
     const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
-    expect(listBody.find((t) => t.id === task.id)?.githubLink).toBeNull()
+    expect(listBody.find((t) => t.id === task.id)?.githubLinks).toEqual([])
 
     const searchRes = await app.request(
       '/api/tasks?q=' + encodeURIComponent('My task'),
     )
     const searchBody = await jsonBody<TaskListItemResponse[]>(searchRes)
-    expect(searchBody.find((t) => t.id === task.id)?.githubLink).toBeNull()
+    expect(searchBody.find((t) => t.id === task.id)?.githubLinks).toEqual([])
   })
 
   it('appears in the detail, list, and search responses once linked', async () => {
@@ -328,16 +397,60 @@ describe('githubLink embedded in task responses', () => {
 
     const detailRes = await app.request(`/api/tasks/${task.id}`)
     const detailBody = await jsonBody<TaskResponse>(detailRes)
-    expect(detailBody.githubLink).toEqual(link)
+    expect(detailBody.githubLinks).toEqual([link])
 
     const listRes = await app.request('/api/tasks')
     const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
-    expect(listBody.find((t) => t.id === task.id)?.githubLink).toEqual(link)
+    expect(listBody.find((t) => t.id === task.id)?.githubLinks).toEqual([link])
 
     const searchRes = await app.request(
       '/api/tasks?q=' + encodeURIComponent('My task'),
     )
     const searchBody = await jsonBody<TaskListItemResponse[]>(searchRes)
-    expect(searchBody.find((t) => t.id === task.id)?.githubLink).toEqual(link)
+    expect(searchBody.find((t) => t.id === task.id)?.githubLinks).toEqual([
+      link,
+    ])
+  })
+
+  it('contains both links, in creation order, once a second issue is linked', async () => {
+    const task = await createTask('My task')
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
+    const firstRes = await app.request(`/api/tasks/${task.id}/github-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/42' }),
+    })
+    const firstLink = await jsonBody<GithubLinkResponse>(firstRes)
+
+    mockGithubIssueResponse({
+      html_url: 'https://github.com/fohte/tq/issues/43',
+    })
+    const secondRes = await app.request(`/api/tasks/${task.id}/github-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/43' }),
+    })
+    const secondLink = await jsonBody<GithubLinkResponse>(secondRes)
+
+    const detailRes = await app.request(`/api/tasks/${task.id}`)
+    const detailBody = await jsonBody<TaskResponse>(detailRes)
+    expect(detailBody.githubLinks).toEqual([firstLink, secondLink])
+
+    const listRes = await app.request('/api/tasks')
+    const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
+    expect(listBody.find((t) => t.id === task.id)?.githubLinks).toEqual([
+      firstLink,
+      secondLink,
+    ])
+
+    const searchRes = await app.request(
+      '/api/tasks?q=' + encodeURIComponent('My task'),
+    )
+    const searchBody = await jsonBody<TaskListItemResponse[]>(searchRes)
+    expect(searchBody.find((t) => t.id === task.id)?.githubLinks).toEqual([
+      firstLink,
+      secondLink,
+    ])
   })
 })

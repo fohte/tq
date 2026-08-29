@@ -77,7 +77,9 @@ export function TaskRowAppearance({
     task.estimatedMinutes != null ? (
       <EstimateLabel minutes={task.estimatedMinutes} />
     ) : null,
-    task.githubLink != null ? <GithubLinkBadge link={task.githubLink} /> : null,
+    task.githubLinks[0] != null ? (
+      <GithubLinkBadge link={task.githubLinks[0]} />
+    ) : null,
     ...secondLineExtras,
   ]
 

@@ -72,7 +72,7 @@ export interface TaskResponse {
   projectId: string | null
   recurrenceRuleId: string | null
   recurrenceRule: RecurrenceRuleResponse | null
-  githubLink: GithubLinkResponse | null
+  githubLinks: GithubLinkResponse[]
   createdAt: string
   updatedAt: string
   childCompletionCount?: { completed: number; total: number }
@@ -98,7 +98,7 @@ export interface TaskListItemResponse {
   parentId: string | null
   projectId: string | null
   recurrenceRuleId: string | null
-  githubLink: GithubLinkResponse | null
+  githubLinks: GithubLinkResponse[]
   createdAt: string
   updatedAt: string
   parentNumber: number | null
@@ -194,7 +194,7 @@ const taskListItemResponseSchema = z.object({
   parentId: z.string().nullable(),
   projectId: z.string().nullable(),
   recurrenceRuleId: z.string().nullable(),
-  githubLink: githubLinkResponseSchema.nullable(),
+  githubLinks: z.array(githubLinkResponseSchema),
   createdAt: z.string(),
   updatedAt: z.string(),
   parentNumber: z.number().nullable(),
@@ -218,7 +218,7 @@ const taskResponseSchema = z.object({
   projectId: z.string().nullable(),
   recurrenceRuleId: z.string().nullable(),
   recurrenceRule: recurrenceRuleResponseSchema.nullable(),
-  githubLink: githubLinkResponseSchema.nullable(),
+  githubLinks: z.array(githubLinkResponseSchema),
   createdAt: z.string(),
   updatedAt: z.string(),
   childCompletionCount: z

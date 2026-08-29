@@ -11,7 +11,6 @@ import { InvalidGithubUrlError } from '#integrations/github/issues'
 import {
   GithubLinkNotFoundError,
   GithubResourceAlreadyLinkedError,
-  TaskAlreadyLinkedError,
   TaskNotFoundError,
 } from '#services/task-github-links'
 
@@ -32,9 +31,6 @@ export function githubLinkErrorResponse(
     error instanceof GithubLinkNotFoundError
   ) {
     return c.json({ error: error.message }, 404)
-  }
-  if (error instanceof TaskAlreadyLinkedError) {
-    return c.json({ error: error.message }, 409)
   }
   if (error instanceof GithubResourceAlreadyLinkedError) {
     return c.json(

@@ -16,9 +16,10 @@ export type ResolveGithubUrlResult = InferResponseType<
   200
 >
 
-export type GithubLink = NonNullable<
-  InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>['githubLink']
->
+export type GithubLink = InferResponseType<
+  (typeof api.api.tasks)[':id']['$get'],
+  200
+>['githubLinks'][number]
 
 export function useResolveGithubUrl() {
   return useMutation({
@@ -67,9 +68,11 @@ export function useUnlinkTaskFromGithub(taskId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async () => {
-      const res = await api.api.tasks[':taskId']['github-link'].$delete({
-        param: { taskId },
+    mutationFn: async (linkId: string) => {
+      const res = await api.api.tasks[':taskId']['github-link'][
+        ':linkId'
+      ].$delete({
+        param: { taskId, linkId },
       })
       await assertOkWithMessageOrThrow(res)
     },

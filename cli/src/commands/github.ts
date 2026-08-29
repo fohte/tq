@@ -46,19 +46,28 @@ export function registerGithubCommands(
     )
 
   github
-    .command('unlink <taskId>')
-    .description("Remove a task's GitHub link")
-    .action(async (taskId: string, _options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl).match(
-        (value) => value,
-        (error) => fail(command, error),
-      )
-      const res = await client.api.tasks[':taskId']['github-link'].$delete({
-        param: { taskId },
-      })
-      if (!res.ok) return fail(command, await toApiError(res))
-      printJson({ unlinked: true, taskId })
-    })
+    .command('unlink <taskId> <linkId>')
+    .description("Remove one of a task's GitHub links, by link id")
+    .action(
+      async (
+        taskId: string,
+        linkId: string,
+        _options: unknown,
+        command: Command,
+      ) => {
+        const client = buildClient(command, fetchImpl).match(
+          (value) => value,
+          (error) => fail(command, error),
+        )
+        const res = await client.api.tasks[':taskId']['github-link'][
+          ':linkId'
+        ].$delete({
+          param: { taskId, linkId },
+        })
+        if (!res.ok) return fail(command, await toApiError(res))
+        printJson({ unlinked: true, taskId, linkId })
+      },
+    )
 
   github
     .command('sync [taskId]')

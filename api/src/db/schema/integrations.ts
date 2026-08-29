@@ -21,7 +21,6 @@ export const taskGithubLinks = pgTable(
       .$defaultFn(() => crypto.randomUUID()),
     taskId: text('task_id')
       .notNull()
-      .unique()
       .references(() => tasks.id, { onDelete: 'cascade' }),
     owner: text('owner').notNull(),
     repo: text('repo').notNull(),
@@ -42,6 +41,16 @@ export const taskGithubLinks = pgTable(
     lastSyncedAt: timestamp('last_synced_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
+    // Tiebreaker for ordering by creation time: `now()` is fixed for the
+    // whole transaction, so links inserted in the same transaction (e.g. two
+    // requests handled inside one test transaction) can share an identical
+    // `createdAt`, leaving `ORDER BY created_at` alone to Postgres's
+    // undefined tie order. This identity column advances on every insert
+    // regardless of transaction boundaries, so it always reflects true
+    // insertion order.
+    seq: bigint('seq', { mode: 'number' })
+      .notNull()
+      .generatedAlwaysAsIdentity(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -61,6 +70,12 @@ export const taskGithubLinks = pgTable(
     check(
       'task_github_links_state_kind_check',
       sql`${table.kind} = 'pull_request' OR ${table.state} <> 'merged'`,
+    ),
+    // Mirrors `idx_edits_task_id_created_at`: covers taskId-only lookups via
+    // leftmost-prefix and the createdAt ordering used to list a task's links.
+    index('idx_task_github_links_task_id_created_at').on(
+      table.taskId,
+      table.createdAt,
     ),
   ],
 )

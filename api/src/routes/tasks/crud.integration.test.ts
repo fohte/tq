@@ -131,7 +131,7 @@ describe('tasks CRUD API', () => {
         projectId: null,
         recurrenceRuleId: null,
         recurrenceRule: null,
-        githubLink: null,
+        githubLinks: [],
         createdAt: 'TIMESTAMP',
         updatedAt: 'TIMESTAMP',
         linkSync: { outgoing: [], unresolvedRefs: [] },

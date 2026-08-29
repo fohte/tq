@@ -190,6 +190,27 @@
       "when": 1787993474786,
       "tag": "0026_fancy_spiral",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1788014988513,
+      "tag": "0027_heavy_dazzler",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1788017111694,
+      "tag": "0028_abandoned_kang",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1788019088008,
+      "tag": "0029_huge_odin",
+      "breakpoints": true
     }
   ]
 }

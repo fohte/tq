@@ -1,6 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
-import { okAsync } from 'neverthrow'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
@@ -14,7 +13,7 @@ import {
 } from '#routes/tasks/shared'
 import { syncLinkFromGithub } from '#services/github-sync'
 import {
-  findLinkByTaskId,
+  findLinksByTaskId,
   linkTaskToGithubUrl,
   unlinkTask,
 } from '#services/task-github-links'
@@ -50,12 +49,13 @@ export const taskGithubLinkApp = new Hono<TaskEnv>()
       (error) => githubLinkErrorResponse(c, error, 'task-github-link.link'),
     )
   })
-  .delete('/', async (c) => {
+  .delete('/:linkId', async (c) => {
     const taskId = c.get('task').id
+    const linkId = c.req.param('linkId')
     const author = c.get('author')
 
     const result = await db.transaction(async (tx) => {
-      const unlinkResult = await unlinkTask(tx, taskId)
+      const unlinkResult = await unlinkTask(tx, taskId, linkId)
       if (unlinkResult.isOk()) {
         const link = unlinkResult.value
         await recordGithubUnlinked(
@@ -78,20 +78,21 @@ export const taskGithubLinkApp = new Hono<TaskEnv>()
       (error) => githubLinkErrorResponse(c, error, 'task-github-link.unlink'),
     )
   })
-  // Triggered by the web client when it opens this task's detail view, for
-  // an immediate single-task refresh instead of waiting for the next
-  // whole-account sync (POST /api/github/sync). A no-op (204) when the task
-  // exists but isn't linked; a nonexistent task 404s via the middleware
-  // above.
+  // Immediately syncs all of this task's GitHub links.
   .post('/sync', async (c) => {
     const taskId = c.get('task').id
 
-    const result = await findLinkByTaskId(taskId).andThen((link) =>
-      link ? syncLinkFromGithub(link) : okAsync(undefined),
-    )
+    const links = await findLinksByTaskId(taskId).unwrapOr([])
+    let firstError: Error | undefined
+    for (const link of links) {
+      const syncResult = await syncLinkFromGithub(link)
+      if (syncResult.isErr()) {
+        firstError ??= syncResult.error
+      }
+    }
 
-    return result.match(
-      () => c.body(null, 204),
-      (error) => githubLinkErrorResponse(c, error, 'task-github-link.sync'),
-    )
+    if (firstError) {
+      return githubLinkErrorResponse(c, firstError, 'task-github-link.sync')
+    }
+    return c.body(null, 204)
   })
