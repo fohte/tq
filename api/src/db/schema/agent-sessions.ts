@@ -22,6 +22,12 @@ export const agentSessions = pgTable(
       .$defaultFn(() => crypto.randomUUID()),
     provider: text('provider', { enum: ['claude_code'] }).notNull(),
     sessionId: text('session_id').notNull(),
+    // The immediate parent only, not the full ancestor chain: an ancestor is
+    // reachable by following this column one hop at a time. Stores the raw
+    // session_id the parent reported (not a FK to agentSessions.id) since a
+    // delegated/handed-off session's SessionStart can be reported before its
+    // parent's own row exists.
+    parentSessionId: text('parent_session_id'),
     context: text('context', { enum: ['work', 'personal'] })
       .notNull()
       .default('personal'),

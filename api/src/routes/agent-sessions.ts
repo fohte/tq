@@ -17,6 +17,7 @@ export function agentSessionToResponse(
     id: session.id,
     provider: session.provider,
     sessionId: session.sessionId,
+    parentSessionId: session.parentSessionId,
     context: session.context,
     cwd: session.cwd,
     label: session.label,
@@ -33,34 +34,75 @@ export const agentSessionsApp = new Hono()
     const input = c.req.valid('json')
     const now = new Date()
 
-    const [session] = await db
-      .insert(agentSessions)
-      .values({
-        provider: input.provider,
-        sessionId: input.sessionId,
-        cwd: input.cwd,
-        label: input.label,
-        lastMessage: input.lastMessage,
-        lastActiveAt: now,
-        endedAt: input.ended === true ? now : null,
-        ...(input.context != null ? { context: input.context } : {}),
+    const session = await db.transaction(async (tx) => {
+      const existing = await tx.query.agentSessions.findFirst({
+        where: and(
+          eq(agentSessions.provider, input.provider),
+          eq(agentSessions.sessionId, input.sessionId),
+        ),
       })
-      .onConflictDoUpdate({
-        target: [agentSessions.provider, agentSessions.sessionId],
-        set: {
+
+      const [session] = await tx
+        .insert(agentSessions)
+        .values({
+          provider: input.provider,
+          sessionId: input.sessionId,
+          parentSessionId: input.parentSessionId ?? null,
           cwd: input.cwd,
           label: input.label,
           lastMessage: input.lastMessage,
           lastActiveAt: now,
-          // Unconditional, not just set-when-ended: a report without `ended`
-          // means the session is active again (e.g. resumed after a prior
-          // SessionEnd), which must clear a stale endedAt so the "running"
-          // derivation (see schema/agent-sessions.ts) doesn't stay stuck.
           endedAt: input.ended === true ? now : null,
           ...(input.context != null ? { context: input.context } : {}),
-        },
-      })
-      .returning()
+        })
+        .onConflictDoUpdate({
+          target: [agentSessions.provider, agentSessions.sessionId],
+          set: {
+            cwd: input.cwd,
+            label: input.label,
+            lastMessage: input.lastMessage,
+            lastActiveAt: now,
+            // Unconditional, not just set-when-ended: a report without `ended`
+            // means the session is active again (e.g. resumed after a prior
+            // SessionEnd), which must clear a stale endedAt so the "running"
+            // derivation (see schema/agent-sessions.ts) doesn't stay stuck.
+            endedAt: input.ended === true ? now : null,
+            ...(input.context != null ? { context: input.context } : {}),
+          },
+        })
+        .returning()
+
+      // Default inheritance: a freshly-seen session with a known parent
+      // starts out linked to every task the parent is linked to. Gated on
+      // `existing == null` so a later report (resume/compact) never re-adds
+      // a link the user has since removed.
+      if (session && existing == null && input.parentSessionId != null) {
+        const parent = await tx.query.agentSessions.findFirst({
+          where: and(
+            eq(agentSessions.provider, input.provider),
+            eq(agentSessions.sessionId, input.parentSessionId),
+          ),
+        })
+
+        if (parent) {
+          const parentTasks = await tx
+            .select({ taskId: taskAgentSessions.taskId })
+            .from(taskAgentSessions)
+            .where(eq(taskAgentSessions.agentSessionId, parent.id))
+
+          if (parentTasks.length > 0) {
+            await tx.insert(taskAgentSessions).values(
+              parentTasks.map(({ taskId }) => ({
+                taskId,
+                agentSessionId: session.id,
+              })),
+            )
+          }
+        }
+      }
+
+      return session
+    })
 
     if (!session) {
       return c.json({ error: 'Failed to upsert agent session' }, 500)

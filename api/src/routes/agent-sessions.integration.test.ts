@@ -11,6 +11,7 @@ interface AgentSessionResponse {
   id: string
   provider: string
   sessionId: string
+  parentSessionId: string | null
   context: 'work' | 'personal'
   cwd: string
   label: string | null
@@ -53,6 +54,7 @@ describe('agent sessions API', () => {
         id: body.id,
         provider: 'claude_code',
         sessionId: 'session-1',
+        parentSessionId: null,
         context: 'work',
         cwd: '/home/fohte/project',
         label: 'Working on tq',
@@ -79,6 +81,7 @@ describe('agent sessions API', () => {
         id: body.id,
         provider: 'claude_code',
         sessionId: 'session-1',
+        parentSessionId: null,
         context: 'personal',
         cwd: '/home/fohte/project',
         label: null,
@@ -123,6 +126,7 @@ describe('agent sessions API', () => {
         id: created.id,
         provider: 'claude_code',
         sessionId: 'session-1',
+        parentSessionId: null,
         context: 'work',
         cwd: '/home/fohte/project',
         label: 'Second label',
@@ -161,6 +165,7 @@ describe('agent sessions API', () => {
         id: ended.id,
         provider: 'claude_code',
         sessionId: 'session-1',
+        parentSessionId: null,
         context: 'work',
         cwd: '/home/fohte/project',
         label: 'A label',
@@ -199,6 +204,7 @@ describe('agent sessions API', () => {
         id: created.id,
         provider: 'claude_code',
         sessionId: 'session-1',
+        parentSessionId: null,
         context: 'work',
         cwd: '/home/fohte/project',
         label: 'Second label',
@@ -236,6 +242,7 @@ describe('agent sessions API', () => {
         id: created.id,
         provider: 'claude_code',
         sessionId: 'session-1',
+        parentSessionId: null,
         context: 'work',
         cwd: '/home/fohte/project',
         label: 'A label',
@@ -245,6 +252,91 @@ describe('agent sessions API', () => {
         lastActiveAt: 'DATE',
         endedAt: 'DATE',
       })
+    })
+
+    it('records the parent session id and links to every task the parent is linked to', async () => {
+      const task = await createTask('My task')
+      const parent = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'parent-session',
+        cwd: '/home/fohte/project',
+        label: null,
+        lastMessage: null,
+      })
+      await postLink(task.id, parent.id)
+
+      const res = await upsertSession({
+        provider: 'claude_code',
+        sessionId: 'child-session',
+        parentSessionId: 'parent-session',
+        cwd: '/home/fohte/project',
+        label: null,
+        lastMessage: null,
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<AgentSessionResponse>(res)
+      expect(body.parentSessionId).toBe('parent-session')
+
+      const tasksRes = await app.request(`/api/agent-sessions/${body.id}/tasks`)
+      expect(await jsonBody<{ id: string }[]>(tasksRes)).toEqual([
+        { id: task.id, number: task.number, title: 'My task', status: 'todo' },
+      ])
+    })
+
+    it('does not link to any task when the parent session is unresolvable', async () => {
+      const res = await upsertSession({
+        provider: 'claude_code',
+        sessionId: 'child-session',
+        parentSessionId: 'nonexistent-parent',
+        cwd: '/home/fohte/project',
+        label: null,
+        lastMessage: null,
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<AgentSessionResponse>(res)
+      expect(body.parentSessionId).toBe('nonexistent-parent')
+
+      const tasksRes = await app.request(`/api/agent-sessions/${body.id}/tasks`)
+      expect(await tasksRes.json()).toEqual([])
+    })
+
+    it('does not re-add a task link on a later report of an already-known session', async () => {
+      const task = await createTask('My task')
+      const parent = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'parent-session',
+        cwd: '/home/fohte/project',
+        label: null,
+        lastMessage: null,
+      })
+      await postLink(task.id, parent.id)
+      const child = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'child-session',
+        parentSessionId: 'parent-session',
+        cwd: '/home/fohte/project',
+        label: null,
+        lastMessage: null,
+      })
+      await app.request(`/api/tasks/${task.id}/agent-sessions/${child.id}`, {
+        method: 'DELETE',
+      })
+
+      await upsertSession({
+        provider: 'claude_code',
+        sessionId: 'child-session',
+        parentSessionId: 'parent-session',
+        cwd: '/home/fohte/project',
+        label: null,
+        lastMessage: null,
+      })
+
+      const tasksRes = await app.request(
+        `/api/agent-sessions/${child.id}/tasks`,
+      )
+      expect(await tasksRes.json()).toEqual([])
     })
   })
 
@@ -486,6 +578,7 @@ describe('agent sessions API', () => {
 interface UpsertSessionInput {
   provider: 'claude_code'
   sessionId: string
+  parentSessionId?: string
   cwd: string
   context?: 'work' | 'personal'
   label: string | null

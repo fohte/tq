@@ -14,6 +14,7 @@ interface AgentSessionResponse {
   id: string
   provider: string
   sessionId: string
+  parentSessionId: string | null
   context: string
   cwd: string
   label: string | null

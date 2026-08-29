@@ -127,6 +127,32 @@ describe('hook', () => {
     })
   })
 
+  it('uses TQ_PARENT_SESSION_ID as the parentSessionId default', async () => {
+    vi.stubEnv('TQ_PARENT_SESSION_ID', 'parent-sess')
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify({ id: 's1' }), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'hook', 'SessionStart'],
+      fetchStub,
+      stdinWith(
+        JSON.stringify({ session_id: 'sess-1', cwd: '/home/user/app' }),
+      ),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(calls[0]?.body).toEqual({
+      provider: 'claude_code',
+      sessionId: 'sess-1',
+      cwd: '/home/user/app',
+      label: 'app',
+      lastMessage: null,
+      ended: false,
+      parentSessionId: 'parent-sess',
+    })
+  })
+
   it('falls back to the cwd basename when the transcript file does not exist', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify({ id: 's1' }), { status: 200 }),
