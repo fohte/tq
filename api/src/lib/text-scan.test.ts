@@ -8,12 +8,12 @@ const schema = new Schema({
   nodes: {
     doc: { content: 'block+' },
     paragraph: { content: 'inline*', group: 'block' },
-    code_block: { content: 'text*', group: 'block', marks: '' },
+    code_block: { content: 'text*', group: 'block', marks: '', code: true },
     text: { group: 'inline' },
     hard_break: { inline: true, group: 'inline' },
   },
   marks: {
-    inlineCode: {},
+    inlineCode: { code: true },
     link: { attrs: { href: {}, title: { default: null } } },
   },
 })
