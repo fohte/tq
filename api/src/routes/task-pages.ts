@@ -2,6 +2,10 @@ import { zValidator } from '@hono/zod-validator'
 import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 
+import {
+  MAX_HTML_CONTENT_LENGTH,
+  MAX_MARKDOWN_CONTENT_LENGTH,
+} from '#constants/content-length'
 import { db } from '#db/connection'
 import { taskPages } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
@@ -14,6 +18,29 @@ import {
 import { findTaskByIdOrNumber, type TaskEnv } from '#routes/tasks/shared'
 import { createPageSchema, updatePageSchema } from '#schemas/task-page'
 import { syncTaskLinks } from '#services/task-links'
+
+function maxContentLengthFor(format: 'markdown' | 'html'): number {
+  return format === 'html'
+    ? MAX_HTML_CONTENT_LENGTH
+    : MAX_MARKDOWN_CONTENT_LENGTH
+}
+
+// Validates the content that will actually end up on the row after this
+// write, not just the content present in the request: a PATCH that changes
+// only `format` (e.g. html -> markdown) keeps the existing, unvalidated
+// content, so checking `input.content` alone would let an oversized string
+// through under the new, stricter format.
+function validateContentLength(
+  content: string,
+  format: 'markdown' | 'html',
+): { error: string } | null {
+  const maxLength = maxContentLengthFor(format)
+  return content.length > maxLength
+    ? {
+        error: `content must have <=${String(maxLength)} characters for format "${format}"`,
+      }
+    : null
+}
 
 export function pageToResponse(
   page: typeof taskPages.$inferSelect,
@@ -67,6 +94,13 @@ export const taskPagesApp = new Hono<TaskEnv>()
     const taskId = c.get('task').id
     const input = c.req.valid('json')
     const author = c.get('author')
+    const format = input.format ?? 'markdown'
+    const content = input.content ?? ''
+
+    const lengthError = validateContentLength(content, format)
+    if (lengthError) {
+      return c.json(lengthError, 400)
+    }
 
     const page = await db.transaction(async (tx) => {
       const page = firstOrThrow(
@@ -75,8 +109,8 @@ export const taskPagesApp = new Hono<TaskEnv>()
           .values({
             taskId,
             title: input.title,
-            content: input.content ?? '',
-            format: input.format ?? 'markdown',
+            content,
+            format,
             sortOrder: input.sortOrder ?? 0,
           })
           .returning(),
@@ -123,6 +157,14 @@ export const taskPagesApp = new Hono<TaskEnv>()
     })
     if (!existing) {
       return c.json({ error: 'Page not found' }, 404)
+    }
+
+    const format = input.format ?? existing.format
+    const content = input.content ?? existing.content
+
+    const lengthError = validateContentLength(content, format)
+    if (lengthError) {
+      return c.json(lengthError, 400)
     }
 
     const changedFields = diffFields(existing, input, ['title', 'content'])
