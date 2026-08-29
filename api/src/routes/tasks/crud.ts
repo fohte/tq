@@ -110,9 +110,15 @@ export const tasksCrudApp = new Hono()
       },
     )
 
-    await syncTaskLinks(task.id)
+    const linkSync = await syncTaskLinks(task.id)
 
-    return c.json(taskToResponse(task, createdRule, undefined, labelNames), 201)
+    return c.json(
+      {
+        ...taskToResponse(task, createdRule, undefined, labelNames),
+        linkSync,
+      },
+      201,
+    )
   })
   .get('/', zValidator('query', listTasksQuerySchema), async (c) => {
     const query = c.req.valid('query')
@@ -348,9 +354,8 @@ export const tasksCrudApp = new Hono()
         return { updatedTask, updatedRule }
       })
 
-      if ('description' in taskFields) {
-        await syncTaskLinks(id)
-      }
+      const linkSync =
+        'description' in taskFields ? await syncTaskLinks(id) : undefined
 
       const [githubLink, labelsByTaskId] = await Promise.all([
         db.query.taskGithubLinks.findFirst({
@@ -360,12 +365,15 @@ export const tasksCrudApp = new Hono()
       ])
 
       return c.json(
-        taskToResponse(
-          updatedTask,
-          updatedRule,
-          githubLink,
-          labelsByTaskId.get(id) ?? [],
-        ),
+        {
+          ...taskToResponse(
+            updatedTask,
+            updatedRule,
+            githubLink,
+            labelsByTaskId.get(id) ?? [],
+          ),
+          ...(linkSync ? { linkSync } : {}),
+        },
         200,
       )
     },

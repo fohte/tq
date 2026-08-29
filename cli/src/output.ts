@@ -35,6 +35,59 @@ export function printJsonList(
   printJson(full ? data : omitDeep(data, omitKey))
 }
 
+interface LinkSyncSummary {
+  outgoing: { number: number; title: string }[]
+  unresolvedRefs: (
+    { kind: 'number'; value: number } | { kind: 'id'; value: string }
+  )[]
+}
+
+// Task titles are free text (e.g. set via the web UI or MCP), so a title
+// containing a raw control/escape character must not reach the terminal
+// unescaped here — unlike every other CLI output, which goes through
+// JSON.stringify via printJson.
+function stripControlChars(text: string): string {
+  return text.replace(/[\x00-\x1f\x7f-\x9f]/g, '')
+}
+
+// Surfaces the task_links a write just created, since the write itself gives
+// no other sign that e.g. a GitHub PR number like `#76` in the body was
+// parsed as a tq task reference. Written to stderr so stdout stays clean
+// JSON for `| jq`.
+export function printLinkSync(linkSync: LinkSyncSummary | undefined): void {
+  if (linkSync == null) return
+
+  const lines: string[] = []
+  if (linkSync.outgoing.length > 0) {
+    lines.push('Linked tasks:')
+    for (const task of linkSync.outgoing) {
+      lines.push(`  #${String(task.number)} ${stripControlChars(task.title)}`)
+    }
+  }
+  if (linkSync.unresolvedRefs.length > 0) {
+    const refs = linkSync.unresolvedRefs
+      .map((ref) =>
+        ref.kind === 'number' ? `#${String(ref.value)}` : ref.value,
+      )
+      .join(', ')
+    lines.push(`Unresolved references (no matching task): ${refs}`)
+  }
+
+  if (lines.length === 0) return
+  process.stderr.write(`${lines.join('\n')}\n`)
+}
+
+// Every task/page/comment write action prints its JSON body to stdout and
+// then, if the write triggered a task_links resync, the linkSync summary to
+// stderr — combined here so a future write endpoint can't add the former
+// while forgetting the latter.
+export function printJsonWithLinkSync(data: {
+  linkSync?: LinkSyncSummary | undefined
+}): void {
+  printJson(data)
+  printLinkSync(data.linkSync)
+}
+
 export function writeContentFile(
   filePath: string,
   content: string,

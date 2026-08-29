@@ -187,6 +187,31 @@ describe('task create', () => {
     ])
   })
 
+  it('prints the linkSync summary to stderr when the response includes one', async () => {
+    const created = {
+      id: 't1',
+      number: 1,
+      title: 'New task',
+      linkSync: {
+        outgoing: [{ number: 76, title: 'Fix bug' }],
+        unresolvedRefs: [],
+      },
+    }
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'create', 'New task'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(stderr.mock.calls).toEqual([['Linked tasks:\n  #76 Fix bug\n']])
+  })
+
   it('rejects a non-UUID --parent-id before making any fetch call', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify({}), { status: 201 }),
@@ -299,6 +324,31 @@ describe('task update', () => {
       query: {},
       body: { title: 'Updated title' },
     })
+  })
+
+  it('prints the linkSync summary to stderr when the response includes one', async () => {
+    const updated = {
+      id: 't1',
+      number: 1,
+      title: 'Updated title',
+      linkSync: {
+        outgoing: [{ number: 76, title: 'Fix bug' }],
+        unresolvedRefs: [],
+      },
+    }
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'update', '42', '--title', 'Updated title'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(stderr.mock.calls).toEqual([['Linked tasks:\n  #76 Fix bug\n']])
   })
 
   it('rejects the call before making any fetch call when no flags are given', async () => {
@@ -490,6 +540,36 @@ describe('task complete', () => {
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(completed, null, 2)}\n`],
     ])
+  })
+
+  it('prints the linkSync summary to stderr when nextTask includes one', async () => {
+    const completed = {
+      id: 't1',
+      number: 1,
+      status: 'completed',
+      nextTask: {
+        id: 't2',
+        number: 2,
+        status: 'todo',
+        linkSync: {
+          outgoing: [{ number: 76, title: 'Fix bug' }],
+          unresolvedRefs: [],
+        },
+      },
+    }
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify(completed), { status: 200 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'complete', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(stderr.mock.calls).toEqual([['Linked tasks:\n  #76 Fix bug\n']])
   })
 })
 

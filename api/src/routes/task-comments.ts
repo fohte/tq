@@ -84,9 +84,9 @@ export const taskCommentsApp = new Hono<TaskEnv>()
         return comment
       })
 
-      await syncTaskLinks(taskId)
+      const linkSync = await syncTaskLinks(taskId)
 
-      return c.json(commentToResponse(comment, author), 201)
+      return c.json({ ...commentToResponse(comment, author), linkSync }, 201)
     },
   )
   .patch(
@@ -131,12 +131,15 @@ export const taskCommentsApp = new Hono<TaskEnv>()
         return updated
       })
 
-      await syncTaskLinks(taskId)
+      const linkSync = await syncTaskLinks(taskId)
 
       const authors = await getCommentAuthors([commentId])
 
       return c.json(
-        commentToResponse(updated, authors.get(commentId) ?? null),
+        {
+          ...commentToResponse(updated, authors.get(commentId) ?? null),
+          linkSync,
+        },
         200,
       )
     },

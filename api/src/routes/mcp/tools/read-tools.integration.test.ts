@@ -10,6 +10,7 @@ import {
   createPage,
   createTask,
   TEST_UUID,
+  withoutLinkSync,
   withoutRecurrenceRule,
 } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
@@ -129,7 +130,7 @@ describe('read tools', () => {
 
       expect(parseJson(toolResult)).toEqual([
         {
-          ...withoutRecurrenceRule(task),
+          ...withoutLinkSync(withoutRecurrenceRule(task)),
           parentNumber: null,
           labels: [],
           childCompletionCount: { total: 0, completed: 0 },
@@ -152,7 +153,7 @@ describe('read tools', () => {
       const toolResult = await callTool('get_task', { taskId: parent.id })
 
       expect(parseJson(toolResult)).toEqual({
-        ...parent,
+        ...withoutLinkSync(parent),
         titleAuthor: { kind: 'human', agent: null },
         descriptionAuthor: { kind: 'human', agent: null },
         childCompletionCount: { total: 1, completed: 0 },
@@ -162,7 +163,7 @@ describe('read tools', () => {
         labels: [],
         subtasks: [
           {
-            ...withoutRecurrenceRule(child),
+            ...withoutLinkSync(withoutRecurrenceRule(child)),
             parentNumber: parent.number,
             children: [],
             childCompletionCount: { total: 0, completed: 0 },
@@ -204,7 +205,7 @@ describe('read tools', () => {
       const toolResult = await callTool('get_task', { taskId: task.id })
 
       expect(parseJson(toolResult)).toEqual({
-        ...task,
+        ...withoutLinkSync(task),
         titleAuthor: { kind: 'human', agent: null },
         descriptionAuthor: { kind: 'human', agent: null },
         childCompletionCount: { total: 0, completed: 0 },
@@ -294,7 +295,7 @@ describe('read tools', () => {
 
       expect(parseJson(toolResult)).toEqual([
         {
-          ...withoutRecurrenceRule(match),
+          ...withoutLinkSync(withoutRecurrenceRule(match)),
           parentNumber: null,
           childCompletionCount: { total: 0, completed: 0 },
         },
@@ -309,7 +310,7 @@ describe('read tools', () => {
 
       expect(parseJson(toolResult)).toEqual([
         {
-          ...withoutRecurrenceRule(withoutEstimate),
+          ...withoutLinkSync(withoutRecurrenceRule(withoutEstimate)),
           parentNumber: null,
           childCompletionCount: { total: 0, completed: 0 },
         },
@@ -326,7 +327,7 @@ describe('read tools', () => {
 
       expect(parseJson(toolResult)).toEqual([
         {
-          ...withoutRecurrenceRule(withDue),
+          ...withoutLinkSync(withoutRecurrenceRule(withDue)),
           parentNumber: null,
           childCompletionCount: { total: 0, completed: 0 },
         },

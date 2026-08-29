@@ -16,7 +16,7 @@ import {
 } from '#routes/tasks/shared'
 import { taskStatus } from '#schemas/task'
 import { buildNextTaskData } from '#services/recurrence'
-import { syncTaskLinks } from '#services/task-links'
+import { syncTaskLinks, type TaskLinkSyncResult } from '#services/task-links'
 
 const updateStatusSchema = z.object({
   status: taskStatus,
@@ -179,6 +179,7 @@ export const tasksActionsApp = new Hono()
 
     let createdTask: typeof tasks.$inferSelect | null = null
     let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
+    let linkSync: TaskLinkSyncResult | undefined
     if (updatedTask.recurrenceRuleId != null) {
       completedTaskRule =
         (await db.query.recurrenceRules.findFirst({
@@ -206,7 +207,7 @@ export const tasksActionsApp = new Hono()
           )
           return created
         })
-        await syncTaskLinks(created.id)
+        linkSync = await syncTaskLinks(created.id)
         createdTask = created
       }
     }
@@ -216,12 +217,15 @@ export const tasksActionsApp = new Hono()
     )
     const nextTask =
       createdTask != null
-        ? taskToResponse(
-            createdTask,
-            completedTaskRule,
-            undefined,
-            labelsByTaskId.get(createdTask.id) ?? [],
-          )
+        ? {
+            ...taskToResponse(
+              createdTask,
+              completedTaskRule,
+              undefined,
+              labelsByTaskId.get(createdTask.id) ?? [],
+            ),
+            linkSync,
+          }
         : null
 
     return c.json(

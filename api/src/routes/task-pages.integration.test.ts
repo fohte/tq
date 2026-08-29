@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { withoutLinkSync } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -17,6 +18,7 @@ interface PageResponse {
   createdAt: string
   updatedAt: string
   author: { kind: 'human' | 'llm' | 'system'; agent: string | null } | null
+  linkSync?: unknown
 }
 
 function normalizePage(page: PageResponse) {
@@ -62,7 +64,9 @@ describe('task pages API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<PageResponse[]>(res)
-      expect(body.map(normalizePage)).toEqual([normalizePage(page)])
+      expect(body.map(normalizePage)).toEqual([
+        normalizePage(withoutLinkSync(page)),
+      ])
     })
 
     it('reports each page author independently', async () => {
@@ -78,8 +82,14 @@ describe('task pages API', () => {
 
       expect(res.status).toBe(200)
       expect(await jsonBody<PageResponse[]>(res)).toEqual([
-        { ...humanPage, author: { kind: 'human', agent: null } },
-        { ...llmPage, author: { kind: 'llm', agent: 'claude-opus-5' } },
+        {
+          ...withoutLinkSync(humanPage),
+          author: { kind: 'human', agent: null },
+        },
+        {
+          ...withoutLinkSync(llmPage),
+          author: { kind: 'llm', agent: 'claude-opus-5' },
+        },
       ])
     })
   })
@@ -106,6 +116,7 @@ describe('task pages API', () => {
         createdAt: 'DATE',
         updatedAt: 'DATE',
         author: { kind: 'human', agent: null },
+        linkSync: { outgoing: [], unresolvedRefs: [] },
       })
     })
 
@@ -150,6 +161,7 @@ describe('task pages API', () => {
         createdAt: 'DATE',
         updatedAt: 'DATE',
         author: { kind: 'human', agent: null },
+        linkSync: { outgoing: [], unresolvedRefs: [] },
       })
     })
 

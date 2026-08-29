@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { withoutLinkSync } from '#routes/tasks/testing'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -14,6 +15,7 @@ interface CommentResponse {
   createdAt: string
   updatedAt: string
   author: { kind: 'human' | 'llm' | 'system'; agent: string | null } | null
+  linkSync?: unknown
 }
 
 describe('task comments API', () => {
@@ -98,7 +100,7 @@ describe('task comments API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<CommentResponse[]>(res)
-      expect(body).toEqual([comment])
+      expect(body).toEqual([withoutLinkSync(comment)])
     })
 
     it('does not return comments from other tasks', async () => {
@@ -128,8 +130,14 @@ describe('task comments API', () => {
 
       expect(res.status).toBe(200)
       expect(await jsonBody<CommentResponse[]>(res)).toEqual([
-        { ...humanComment, author: { kind: 'human', agent: null } },
-        { ...llmComment, author: { kind: 'llm', agent: 'claude-opus-5' } },
+        {
+          ...withoutLinkSync(humanComment),
+          author: { kind: 'human', agent: null },
+        },
+        {
+          ...withoutLinkSync(llmComment),
+          author: { kind: 'llm', agent: 'claude-opus-5' },
+        },
       ])
     })
   })

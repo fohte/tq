@@ -59,4 +59,8 @@ export function spyStdout() {
   return vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
 }
 
+export function spyStderr() {
+  return vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+}
+
 export const apiUrl = 'http://api.test'

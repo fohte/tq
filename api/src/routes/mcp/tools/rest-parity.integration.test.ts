@@ -11,6 +11,7 @@ import {
 import {
   createTask,
   type TaskResponse,
+  withoutLinkSync,
   withoutRecurrenceRule,
 } from '#routes/tasks/testing'
 import {
@@ -75,11 +76,11 @@ async function completeRecurringTask(): Promise<{
 
   return {
     completedTask: {
-      ...createdData,
+      ...withoutLinkSync(createdData),
       status: 'completed',
       updatedAt: completedResult.updatedAt,
     },
-    nextTask: completedResult.nextTask,
+    nextTask: withoutLinkSync(completedResult.nextTask),
   }
 }
 
@@ -95,7 +96,7 @@ describe('REST/MCP parity', () => {
     expect(res.status).toBe(200)
 
     expect(await jsonBody(res)).toEqual({
-      ...data,
+      ...withoutLinkSync(data),
       titleAuthor: { kind: 'llm', agent: 'mcp' },
       descriptionAuthor: { kind: 'llm', agent: 'mcp' },
       childCompletionCount: { total: 0, completed: 0 },
@@ -117,7 +118,7 @@ describe('REST/MCP parity', () => {
     expect(res.status).toBe(200)
 
     expect(await jsonBody(res)).toEqual({
-      ...data,
+      ...withoutLinkSync(data),
       titleAuthor: { kind: 'llm', agent: 'claude-opus-5' },
       descriptionAuthor: { kind: 'llm', agent: 'claude-opus-5' },
       childCompletionCount: { total: 0, completed: 0 },
@@ -140,7 +141,7 @@ describe('REST/MCP parity', () => {
 
     expect(await jsonBody<unknown[]>(res)).toEqual([
       {
-        ...withoutRecurrenceRule(data),
+        ...withoutRecurrenceRule(withoutLinkSync(data)),
         parentNumber: null,
         labels: [],
         childCompletionCount: { total: 0, completed: 0 },
@@ -281,7 +282,11 @@ describe('REST/MCP parity', () => {
       title: 'Notes',
       content: 'Some content',
     })
-    const data = parseToolJson(created)
+    const data = withoutLinkSync(
+      passthroughSchema<Record<string, unknown>>().parse(
+        parseToolJson(created),
+      ),
+    )
 
     const res = await app.request(`/api/tasks/${task.id}/pages`)
     expect(res.status).toBe(200)
@@ -305,7 +310,11 @@ describe('REST/MCP parity', () => {
       content: 'Updated content',
       agent: 'claude-opus-5',
     })
-    const data = parseToolJson(updated)
+    const data = withoutLinkSync(
+      passthroughSchema<Record<string, unknown>>().parse(
+        parseToolJson(updated),
+      ),
+    )
 
     const res = await app.request(`/api/tasks/${task.id}/pages`)
     expect(res.status).toBe(200)
@@ -320,7 +329,11 @@ describe('REST/MCP parity', () => {
       taskId: task.id,
       content: 'A comment',
     })
-    const data = parseToolJson(created)
+    const data = withoutLinkSync(
+      passthroughSchema<Record<string, unknown>>().parse(
+        parseToolJson(created),
+      ),
+    )
 
     const res = await app.request(`/api/tasks/${task.id}/comments`)
     expect(res.status).toBe(200)
@@ -344,7 +357,11 @@ describe('REST/MCP parity', () => {
       content: 'Updated content',
       agent: 'claude-opus-5',
     })
-    const data = parseToolJson(updated)
+    const data = withoutLinkSync(
+      passthroughSchema<Record<string, unknown>>().parse(
+        parseToolJson(updated),
+      ),
+    )
 
     const res = await app.request(`/api/tasks/${task.id}/comments`)
     expect(res.status).toBe(200)

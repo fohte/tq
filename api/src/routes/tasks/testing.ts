@@ -33,6 +33,13 @@ export interface LinkedTaskResponse {
   status: 'todo' | 'in_progress' | 'completed'
 }
 
+export interface LinkSyncResponse {
+  outgoing: LinkedTaskResponse[]
+  unresolvedRefs: (
+    { kind: 'number'; value: number } | { kind: 'id'; value: string }
+  )[]
+}
+
 export interface GithubLinkResponse {
   id: string
   owner: string
@@ -66,6 +73,7 @@ export interface TaskResponse {
   childCompletionCount?: { completed: number; total: number }
   children?: TaskResponse[]
   links?: { outgoing: LinkedTaskResponse[]; incoming: LinkedTaskResponse[] }
+  linkSync?: LinkSyncResponse
 }
 
 // Shape returned by the list-returning endpoint (`/api/tasks`): no
@@ -104,6 +112,17 @@ export function withoutRecurrenceRule<T extends { recurrenceRule: unknown }>(
   return rest
 }
 
+// create/update responses carry a `linkSync` key (see
+// api/src/services/task-links.ts); list/GET responses never do, so it must
+// be dropped before comparing rather than left behind as a stray value.
+export function withoutLinkSync<T extends { linkSync?: unknown }>(
+  task: T,
+): Omit<T, 'linkSync'> {
+  const { linkSync, ...rest } = task
+  void linkSync
+  return rest
+}
+
 const recurrenceRuleResponseSchema = z.object({
   id: z.string(),
   type: z.enum(['daily', 'weekly', 'monthly', 'custom']),
@@ -117,6 +136,16 @@ const linkedTaskResponseSchema = z.object({
   number: z.number(),
   title: z.string(),
   status: z.enum(['todo', 'in_progress', 'completed']),
+})
+
+const linkSyncResponseSchema = z.object({
+  outgoing: z.array(linkedTaskResponseSchema),
+  unresolvedRefs: z.array(
+    z.union([
+      z.object({ kind: z.literal('number'), value: z.number() }),
+      z.object({ kind: z.literal('id'), value: z.string() }),
+    ]),
+  ),
 })
 
 const githubLinkResponseSchema = z.object({
@@ -159,6 +188,7 @@ const taskResponseSchema = z.object({
       incoming: z.array(linkedTaskResponseSchema),
     })
     .optional(),
+  linkSync: linkSyncResponseSchema.optional(),
 })
 
 const idResponseSchema = z.object({ id: z.string() })

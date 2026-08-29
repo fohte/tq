@@ -13,6 +13,7 @@ import {
   createRecurringTask,
   createTask,
   type LinkedTaskResponse,
+  type LinkSyncResponse,
   type TaskResponse,
 } from '#routes/tasks/testing'
 import {
@@ -440,5 +441,62 @@ describe('task mention links', () => {
     } finally {
       await client.close()
     }
+  })
+})
+
+describe('linkSync on write responses', () => {
+  it('reports resolved and unresolved refs in the PATCH response', async () => {
+    const target = await createTask('Target')
+    const source = await createTask('Source')
+
+    const body = await patchTask(source.id, {
+      description: `See #${String(target.number)} and #999999999`,
+    })
+
+    expect(body.linkSync).toEqual({
+      outgoing: [linkSummary(target)],
+      unresolvedRefs: [{ kind: 'number', value: 999999999 }],
+    })
+  })
+
+  it('includes the resolved link in a comment creation response', async () => {
+    const target = await createTask('Target')
+    const source = await createTask('Source')
+
+    const res = await app.request(`/api/tasks/${source.id}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: `cc #${String(target.number)}` }),
+    })
+    expect(res.status).toBe(201)
+    const body = await jsonBody<{ linkSync: LinkSyncResponse }>(res)
+
+    expect(body.linkSync).toEqual({
+      outgoing: [linkSummary(target)],
+      unresolvedRefs: [],
+    })
+  })
+
+  it('omits linkSync from the PATCH response when the patch does not touch description', async () => {
+    const source = await createTask('Source')
+
+    const body = await patchTask(source.id, { title: 'New title' })
+
+    expect('linkSync' in body).toBe(false)
+  })
+
+  it('omits linkSync from a page PATCH response when the patch does not touch content', async () => {
+    const source = await createTask('Source')
+    const page = await createPage(source.id, 'Notes', 'Body')
+
+    const res = await app.request(`/api/tasks/${source.id}/pages/${page.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'New title' }),
+    })
+    expect(res.status).toBe(200)
+    const body = await jsonBody<Record<string, unknown>>(res)
+
+    expect('linkSync' in body).toBe(false)
   })
 })
