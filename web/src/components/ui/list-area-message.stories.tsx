@@ -7,7 +7,7 @@ const meta = {
   component: ListAreaMessage,
   decorators: [
     (Story) => (
-      <div className="w-96 border border-border">
+      <div className="w-full max-w-96 border border-border">
         <Story />
       </div>
     ),

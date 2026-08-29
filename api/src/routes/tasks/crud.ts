@@ -21,10 +21,9 @@ import {
 import { pageToResponse } from '#routes/task-pages'
 import { queryTaskList } from '#routes/tasks/list-query'
 import {
-  getChildCompletionCountsByTaskId,
   getLabelNamesByTaskId,
+  hydrateTaskListRows,
   requireTask,
-  taskListItemToResponse,
   taskToResponse,
   timeBlockToResponse,
 } from '#routes/tasks/shared'
@@ -124,25 +123,12 @@ export const tasksCrudApp = new Hono()
     const query = c.req.valid('query')
     const { rows, ancestorOnlyIds } = await queryTaskList(query)
 
-    const ids = rows.map((r) => r.task.id)
-    const [labelsByTaskId, childCompletionCountsByTaskId] = await Promise.all([
-      getLabelNamesByTaskId(ids),
-      getChildCompletionCountsByTaskId(ids),
-    ])
+    const hydratedRows = await hydrateTaskListRows(rows)
 
     return c.json(
-      rows.map((r) => ({
-        ...taskListItemToResponse(
-          r.task,
-          r.parentNumber,
-          r.githubLink,
-          labelsByTaskId.get(r.task.id) ?? [],
-        ),
-        childCompletionCount: childCompletionCountsByTaskId.get(r.task.id) ?? {
-          completed: 0,
-          total: 0,
-        },
-        ...(ancestorOnlyIds.has(r.task.id) ? { ancestorOnly: true } : {}),
+      hydratedRows.map((item) => ({
+        ...item,
+        ...(ancestorOnlyIds.has(item.id) ? { ancestorOnly: true } : {}),
       })),
       200,
     )

@@ -14,6 +14,7 @@ const baseSession: AgentSession = {
   id: '1',
   provider: 'claude_code',
   sessionId: 'session-1',
+  parentSessionId: null,
   context: 'work',
   cwd: '/Users/fohte/ghq/github.com/fohte/tq',
   label: 'web sessions page',
@@ -48,7 +49,7 @@ function SessionRowStory({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="dark w-3xl bg-background">
+      <div className="dark w-full max-w-3xl bg-background">
         <SessionRow {...props} />
       </div>
     </QueryClientProvider>

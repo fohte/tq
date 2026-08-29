@@ -14,6 +14,7 @@ import {
   createTask,
   type LinkedTaskResponse,
   type LinkSyncResponse,
+  type TaskListItemResponse,
   type TaskResponse,
 } from '#routes/tasks/testing'
 import {
@@ -33,6 +34,56 @@ function linkSummary(
     number: task.number,
     title: task.title,
     status: task.status,
+  }
+}
+
+// `getLinks` (the task-detail `links` field) renders the same row appearance
+// as every other task list, so it returns the full list-item shape. None of
+// the tasks linked in these tests have a parent or children of their own.
+function linkedTaskDetail(
+  task: Pick<
+    TaskResponse,
+    | 'id'
+    | 'number'
+    | 'title'
+    | 'description'
+    | 'status'
+    | 'context'
+    | 'labels'
+    | 'startDate'
+    | 'dueDate'
+    | 'estimatedMinutes'
+    | 'parentId'
+    | 'projectId'
+    | 'recurrenceRuleId'
+    | 'githubLink'
+    | 'createdAt'
+    | 'updatedAt'
+  >,
+  childCompletionCount: { completed: number; total: number } = {
+    completed: 0,
+    total: 0,
+  },
+): TaskListItemResponse {
+  return {
+    id: task.id,
+    number: task.number,
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    context: task.context,
+    labels: task.labels,
+    startDate: task.startDate,
+    dueDate: task.dueDate,
+    estimatedMinutes: task.estimatedMinutes,
+    parentId: task.parentId,
+    projectId: task.projectId,
+    recurrenceRuleId: task.recurrenceRuleId,
+    githubLink: task.githubLink,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+    parentNumber: null,
+    childCompletionCount,
   }
 }
 
@@ -86,7 +137,20 @@ describe('task mention links', () => {
     await patchTask(source.id, { description: `See #${String(target.number)}` })
 
     expect(await getLinks(source.id)).toEqual({
-      outgoing: [linkSummary(target)],
+      outgoing: [linkedTaskDetail(target)],
+      incoming: [],
+    })
+  })
+
+  it("reflects a linked task's own labels and child-completion count", async () => {
+    const source = await createTask('Source')
+    const target = await createTask('Target', { labels: ['foo'] })
+    await createTask('Child', { parentId: target.id })
+
+    await patchTask(source.id, { description: `See #${String(target.number)}` })
+
+    expect(await getLinks(source.id)).toEqual({
+      outgoing: [linkedTaskDetail(target, { completed: 0, total: 1 })],
       incoming: [],
     })
   })
@@ -100,7 +164,7 @@ describe('task mention links', () => {
     })
 
     expect(await getLinks(source.id)).toEqual({
-      outgoing: [linkSummary(target)],
+      outgoing: [linkedTaskDetail(target)],
       incoming: [],
     })
   })
@@ -114,7 +178,7 @@ describe('task mention links', () => {
     })
 
     expect(await getLinks(source.id)).toEqual({
-      outgoing: [linkSummary(target)],
+      outgoing: [linkedTaskDetail(target)],
       incoming: [],
     })
   })
@@ -128,7 +192,7 @@ describe('task mention links', () => {
     })
 
     expect(await getLinks(source.id)).toEqual({
-      outgoing: [linkSummary(target)],
+      outgoing: [linkedTaskDetail(target)],
       incoming: [],
     })
   })
@@ -137,11 +201,13 @@ describe('task mention links', () => {
     const source = await createTask('Source')
     const target = await createTask('Target')
 
-    await patchTask(source.id, { description: `See #${String(target.number)}` })
+    const updatedSource = await patchTask(source.id, {
+      description: `See #${String(target.number)}`,
+    })
 
     expect(await getLinks(target.id)).toEqual({
       outgoing: [],
-      incoming: [linkSummary(source)],
+      incoming: [linkedTaskDetail(updatedSource)],
     })
   })
 
@@ -152,7 +218,7 @@ describe('task mention links', () => {
     await createPage(source.id, 'Notes', `Related to #${String(target.number)}`)
 
     expect(await getLinks(source.id)).toEqual({
-      outgoing: [linkSummary(target)],
+      outgoing: [linkedTaskDetail(target)],
       incoming: [],
     })
   })
@@ -192,7 +258,7 @@ describe('task mention links', () => {
     await createComment(source.id, `cc #${String(target.number)}`)
 
     expect(await getLinks(source.id)).toEqual({
-      outgoing: [linkSummary(target)],
+      outgoing: [linkedTaskDetail(target)],
       incoming: [],
     })
   })
@@ -268,7 +334,7 @@ describe('task mention links', () => {
     })
 
     expect(await getLinks(source.id)).toEqual({
-      outgoing: [linkSummary(target)],
+      outgoing: [linkedTaskDetail(target)],
       incoming: [],
     })
   })
@@ -283,7 +349,7 @@ describe('task mention links', () => {
     })
 
     expect(await getLinks(source.id)).toEqual({
-      outgoing: [linkSummary(lowerNumber), linkSummary(higherNumber)],
+      outgoing: [linkedTaskDetail(lowerNumber), linkedTaskDetail(higherNumber)],
       incoming: [],
     })
   })
@@ -297,7 +363,7 @@ describe('task mention links', () => {
     await patchTask(source.id, { description: 'No longer mentions anyone' })
 
     expect(await getLinks(source.id)).toEqual({
-      outgoing: [linkSummary(target)],
+      outgoing: [linkedTaskDetail(target)],
       incoming: [],
     })
   })
@@ -318,7 +384,7 @@ describe('task mention links', () => {
     )
 
     expect(await getLinks(source.id)).toEqual({
-      outgoing: [linkSummary(target)],
+      outgoing: [linkedTaskDetail(target)],
       incoming: [],
     })
   })
@@ -353,7 +419,7 @@ describe('task mention links', () => {
     })
 
     expect(await getLinks(source.id)).toEqual({
-      outgoing: [linkSummary(targetB)],
+      outgoing: [linkedTaskDetail(targetB)],
       incoming: [],
     })
   })
@@ -392,7 +458,7 @@ describe('task mention links', () => {
     })
 
     expect(await getLinks(source.id)).toEqual({
-      outgoing: [linkSummary(target)],
+      outgoing: [linkedTaskDetail(target)],
       incoming: [],
     })
   })
@@ -415,7 +481,7 @@ describe('task mention links', () => {
     assertDefined(body.nextTask)
 
     expect(await getLinks(body.nextTask.id)).toEqual({
-      outgoing: [linkSummary(target)],
+      outgoing: [linkedTaskDetail(target)],
       incoming: [],
     })
   })
@@ -435,7 +501,7 @@ describe('task mention links', () => {
       )
 
       expect(data.links).toEqual({
-        outgoing: [linkSummary(target)],
+        outgoing: [linkedTaskDetail(target)],
         incoming: [],
       })
     } finally {

@@ -10,6 +10,11 @@ import { matchByIdOrNumber } from '#lib/drizzle-utils'
 import { parseMarkdown } from '#lib/markdown-parser'
 import type { NumericOrId } from '#lib/numeric-id'
 import { collectTextBlockRuns } from '#lib/text-scan'
+import { selectTaskListRows } from '#routes/tasks/list-query'
+import {
+  hydrateTaskListRows,
+  type TaskListItemResponse,
+} from '#routes/tasks/shared'
 
 // Only safe to run against a single textblock run's masked text (see
 // `extractMentionedTaskRefs` below) — a raw markdown string can still
@@ -224,26 +229,37 @@ export async function syncTaskLinks(
   })
 }
 
+// The task-detail page renders linked tasks with the same row appearance as
+// every other task list, so this carries the full list-item shape rather
+// than the minimal `LinkedTaskSummary` used for a link-sync result.
+export type LinkedTaskDetail = TaskListItemResponse & {
+  childCompletionCount: { completed: number; total: number }
+}
+
 export interface TaskLinks {
-  outgoing: LinkedTaskSummary[]
-  incoming: LinkedTaskSummary[]
+  outgoing: LinkedTaskDetail[]
+  incoming: LinkedTaskDetail[]
 }
 
 export async function getTaskLinks(taskId: string): Promise<TaskLinks> {
-  const [outgoing, incoming] = await Promise.all([
-    db
-      .select(taskSummaryColumns)
-      .from(taskLinks)
-      .innerJoin(tasks, eq(tasks.id, taskLinks.targetTaskId))
+  const [outgoingRows, incomingRows] = await Promise.all([
+    selectTaskListRows()
+      .innerJoin(taskLinks, eq(taskLinks.targetTaskId, tasks.id))
       .where(eq(taskLinks.sourceTaskId, taskId))
       .orderBy(tasks.number),
-    db
-      .select(taskSummaryColumns)
-      .from(taskLinks)
-      .innerJoin(tasks, eq(tasks.id, taskLinks.sourceTaskId))
+    selectTaskListRows()
+      .innerJoin(taskLinks, eq(taskLinks.sourceTaskId, tasks.id))
       .where(eq(taskLinks.targetTaskId, taskId))
       .orderBy(tasks.number),
   ])
 
-  return { outgoing, incoming }
+  // Hydrated together (not per-direction) so labels/child-completion counts
+  // are still fetched in 2 queries total regardless of how many outgoing vs.
+  // incoming links exist.
+  const hydrated = await hydrateTaskListRows([...outgoingRows, ...incomingRows])
+
+  return {
+    outgoing: hydrated.slice(0, outgoingRows.length),
+    incoming: hydrated.slice(outgoingRows.length),
+  }
 }

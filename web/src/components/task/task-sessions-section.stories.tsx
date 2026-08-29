@@ -13,6 +13,7 @@ const activeSession: AgentSession = {
   id: '1',
   provider: 'claude_code',
   sessionId: 'session-1',
+  parentSessionId: null,
   context: 'work',
   cwd: '/Users/fohte/ghq/github.com/tq',
   label: 'Add agent session list view',

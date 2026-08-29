@@ -59,7 +59,7 @@ const meta = {
   decorators: [
     (Story) => (
       <Providers>
-        <div className="w-96">
+        <div className="w-full max-w-96">
           <DndContext collisionDetection={closestCenter}>
             <SortableContext
               items={['00000000-0000-0000-0000-000000000001']}

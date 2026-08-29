@@ -1984,6 +1984,11 @@
           "name": "ended_at",
           "type": "timestamp with time zone",
           "nullable": true
+        },
+        {
+          "name": "parent_session_id",
+          "type": "text",
+          "nullable": true
         }
       ],
       "indexes": [

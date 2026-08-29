@@ -188,15 +188,22 @@ export const AddingSubtask: SectionStoryType = {
 
     const input = await canvas.findByPlaceholderText(/New task/i)
 
+    // Scoped to the preview-chip row specifically: every subtask row above
+    // also renders its own `context` text (e.g. "work"), so an unscoped
+    // query would match both.
+    const previewChips = within(
+      await canvas.findByTestId('create-task-preview-chips'),
+    )
+
     // Inherited context/labels/project show as dim preview chips before typing.
-    await expect(canvas.getByText('work')).toBeInTheDocument()
-    await expect(canvas.getByText(/dev:tq/)).toBeInTheDocument()
-    await expect(canvas.getByText(/project: tq/)).toBeInTheDocument()
+    await expect(previewChips.getByText('work')).toBeInTheDocument()
+    await expect(previewChips.getByText(/dev:tq/)).toBeInTheDocument()
+    await expect(previewChips.getByText(/project: tq/)).toBeInTheDocument()
 
     // Typed notation overrides the inherited context.
     await userEvent.type(input, '%personal ')
-    await expect(canvas.getByText('personal')).toBeInTheDocument()
-    await expect(canvas.queryByText('work')).not.toBeInTheDocument()
+    await expect(previewChips.getByText('personal')).toBeInTheDocument()
+    await expect(previewChips.queryByText('work')).not.toBeInTheDocument()
 
     // Escape closes the row back to the trigger button.
     await userEvent.keyboard('{Escape}')

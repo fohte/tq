@@ -42,7 +42,7 @@ function ProjectListHeaderStory() {
   return (
     <StoryRouter
       component={() => (
-        <div className="dark w-3xl bg-background">
+        <div className="dark w-full max-w-3xl bg-background">
           <ProjectListHeader />
           {projects.map((project) => (
             <ProjectListRow key={project.id} project={project} />

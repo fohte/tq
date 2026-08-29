@@ -64,7 +64,7 @@ function ProjectUrlCardWithProviders({
 }) {
   return (
     <Providers id={id} project={project}>
-      <div className="w-96">
+      <div className="w-full max-w-96">
         <ProjectUrlCard data={{ id }} raw={raw} />
       </div>
     </Providers>

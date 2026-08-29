@@ -23,7 +23,7 @@ const meta = {
   decorators: [
     (Story) => (
       <QueryClientProvider client={queryClient}>
-        <div className="w-96">
+        <div className="w-full max-w-96">
           <Story />
         </div>
       </QueryClientProvider>

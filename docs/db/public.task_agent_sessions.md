@@ -63,6 +63,7 @@ erDiagram
   timestamp_with_time_zone started_at
   timestamp_with_time_zone last_active_at
   timestamp_with_time_zone ended_at
+  text parent_session_id
 }
 ```
 

@@ -58,7 +58,7 @@ const meta = {
   decorators: [
     (Story) => (
       <Providers>
-        <div className="w-96">
+        <div className="w-full max-w-96">
           <DndContext>
             <Story />
           </DndContext>

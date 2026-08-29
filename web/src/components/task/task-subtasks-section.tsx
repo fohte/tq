@@ -1,17 +1,14 @@
-import { Link } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import type { InheritedTaskAttributes } from '#components/task/create-task-inline'
 import { CreateTaskInline } from '#components/task/create-task-inline'
-import { TaskStatusPicker } from '#components/task/task-status-picker'
+import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import { SectionLoadingIndicator } from '#components/ui/section-loading-indicator'
 import type { Task } from '#hooks/use-tasks'
-import { useTaskList, useUpdateTaskStatus } from '#hooks/use-tasks'
-import { formatMinutes } from '#lib/format'
-import { cn } from '#lib/utils'
+import { useTaskList } from '#hooks/use-tasks'
 
 // --- Subtasks Section (in task detail, self-fetching) ---
 
@@ -75,7 +72,7 @@ export function TaskSubtasksList({
       </div>
       <Panel>
         {subtasks.map((subtask) => (
-          <SubtaskRow key={subtask.id} subtask={subtask} />
+          <TaskRowAppearance key={subtask.id} task={subtask} />
         ))}
         <AddSubtaskRow
           taskId={taskId}
@@ -127,38 +124,5 @@ function AddSubtaskRow({
       <Plus className="size-3" />
       add subtask
     </button>
-  )
-}
-
-// --- Subtask Row ---
-
-function SubtaskRow({ subtask }: { subtask: Task }) {
-  const updateStatus = useUpdateTaskStatus()
-  const isCompleted = subtask.status === 'completed'
-
-  return (
-    <div className="flex items-center gap-2.5 border-b border-border px-3 py-2.5 last:border-b-0">
-      <TaskStatusPicker
-        status={subtask.status}
-        onStatusChange={(status) => {
-          updateStatus.mutate({ id: subtask.id, status })
-        }}
-      />
-      <Link
-        to="/tasks/$taskId"
-        params={{ taskId: subtask.id }}
-        className={cn(
-          'truncate text-sm transition-colors hover:text-muted-foreground-strong',
-          isCompleted && 'text-muted-foreground line-through',
-        )}
-      >
-        {subtask.title}
-      </Link>
-      {subtask.estimatedMinutes != null && (
-        <span className="ml-auto shrink-0 font-mono text-2xs text-muted-foreground-faint">
-          {formatMinutes(subtask.estimatedMinutes)}
-        </span>
-      )}
-    </div>
   )
 }

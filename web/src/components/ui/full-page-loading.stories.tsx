@@ -7,7 +7,7 @@ const meta = {
   component: FullPageLoading,
   decorators: [
     (Story) => (
-      <div className="h-64 w-96 border border-border">
+      <div className="h-64 w-full max-w-96 border border-border">
         <Story />
       </div>
     ),

@@ -19,7 +19,7 @@ export const WithLabelAndAction: Story = {
     children: null,
   },
   render: () => (
-    <div className="w-96 border border-border">
+    <div className="w-full max-w-96 border border-border">
       <ScreenHeaderBar>
         <span className="font-mono text-xs font-bold text-primary">##</span>
         <span className="font-mono text-xs font-medium">queue</span>
@@ -39,7 +39,7 @@ export const WithScreenTitle: Story = {
     children: null,
   },
   render: () => (
-    <div className="w-96 border border-border">
+    <div className="w-full max-w-96 border border-border">
       <ScreenHeaderBar>
         <span className="font-mono text-xs font-bold">tasks</span>
       </ScreenHeaderBar>
