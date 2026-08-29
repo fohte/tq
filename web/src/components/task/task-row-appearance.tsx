@@ -30,6 +30,9 @@ export interface TaskRowAppearanceProps {
   trailing?: React.ReactNode
   onClick?: () => void
   draggable?: boolean
+  // Appended after the #472-established labels/project/context/startDate/
+  // dueDate/githubLink items — callers must not reorder those.
+  secondLineExtras?: React.ReactNode[]
 }
 
 // Shared row body: status picker + number/title line + a dot-separated
@@ -45,6 +48,7 @@ export function TaskRowAppearance({
   trailing,
   onClick,
   draggable = false,
+  secondLineExtras = [],
 }: TaskRowAppearanceProps) {
   const handleStatusChange = useHandleStatusChange(task.id, task.status)
   const isInProgress = task.status === 'in_progress'
@@ -65,6 +69,7 @@ export function TaskRowAppearance({
       <DueDateBadge dueDate={task.dueDate} status={task.status} />
     ) : null,
     task.githubLink != null ? <GithubLinkBadge link={task.githubLink} /> : null,
+    ...secondLineExtras,
   ]
 
   return (
