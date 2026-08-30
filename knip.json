@@ -1,0 +1,35 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "ignoreDependencies": ["@commitlint/cli"],
+      "ignore": ["commitlint-plugin-no-external-refs.cjs"],
+      "ignoreBinaries": ["playwright"]
+    },
+    "web": {
+      "entry": ["src/lib/**"],
+      "ignore": [
+        "public/mockServiceWorker.js",
+        "src/components/ui/badge.tsx",
+        "src/components/ui/button.tsx",
+        "src/components/ui/field.tsx",
+        "src/components/ui/progress.tsx",
+        "src/components/ui/select.tsx",
+        "src/components/ui/tabs.tsx"
+      ],
+      "ignoreDependencies": [
+        "neverthrow",
+        "reg-suit",
+        "reg-publish-s3-plugin",
+        "reg-simple-keygen-plugin"
+      ]
+    },
+    "api": {
+      "ignoreDependencies": ["neverthrow"]
+    },
+    "cli": {
+      "entry": ["src/route-coverage.ts"],
+      "ignoreDependencies": ["neverthrow"]
+    }
+  }
+}

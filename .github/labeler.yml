@@ -1,0 +1,9 @@
+scope/web:
+  - changed-files:
+      - any-glob-to-any-file: web/**
+scope/api:
+  - changed-files:
+      - any-glob-to-any-file: api/**
+scope/cli:
+  - changed-files:
+      - any-glob-to-any-file: cli/**

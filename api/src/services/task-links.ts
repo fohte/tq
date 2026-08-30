@@ -105,12 +105,12 @@ export const taskSummaryColumns = {
   status: tasks.status,
 }
 
-export type RefSource =
+type RefSource =
   | { kind: 'description' }
   | { kind: 'page'; id: string; title: string }
   | { kind: 'comment'; id: string }
 
-export type UnresolvedRef = NumericOrId & { sources: RefSource[] }
+type UnresolvedRef = NumericOrId & { sources: RefSource[] }
 
 export interface TaskLinkSyncResult {
   outgoing: LinkedTaskSummary[]
@@ -232,7 +232,7 @@ export async function syncTaskLinks(
 // The task-detail page renders linked tasks with the same row appearance as
 // every other task list, so this carries the full list-item shape rather
 // than the minimal `LinkedTaskSummary` used for a link-sync result.
-export type LinkedTaskDetail = TaskListItemResponse & {
+type LinkedTaskDetail = TaskListItemResponse & {
   childCompletionCount: { completed: number; total: number }
 }
 

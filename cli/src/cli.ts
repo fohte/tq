@@ -19,7 +19,7 @@ import { formatError } from '#errors'
 import { collectHeader } from '#headers'
 import type { ReadableStdin } from '#input'
 
-export function buildProgram(
+function buildProgram(
   fetchImpl: typeof fetch = fetch,
   stdin: ReadableStdin = process.stdin,
 ): Command {
