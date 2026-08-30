@@ -113,6 +113,10 @@ export const projectsApp = new Hono()
     const [taskStats] = await db
       .select({
         total: count(),
+        todo: count(sql`CASE WHEN ${tasks.status} = 'todo' THEN 1 END`),
+        inProgress: count(
+          sql`CASE WHEN ${tasks.status} = 'in_progress' THEN 1 END`,
+        ),
         completed: count(
           sql`CASE WHEN ${tasks.status} = 'completed' THEN 1 END`,
         ),
@@ -120,11 +124,33 @@ export const projectsApp = new Hono()
       .from(tasks)
       .where(eq(tasks.projectId, id))
 
+    const total = taskStats?.total ?? 0
+    const completed = taskStats?.completed ?? 0
+
     return c.json(
       {
         ...projectToResponse(project),
-        ...taskStatsToSummary(taskStats?.total ?? 0, taskStats?.completed ?? 0),
+        completionRate: total > 0 ? completed / total : 0,
+        taskCount: {
+          total,
+          todo: taskStats?.todo ?? 0,
+          inProgress: taskStats?.inProgress ?? 0,
+          completed,
+        },
       },
+      200,
+    )
+  })
+  .get('/:id/task-ids', async (c) => {
+    const id = c.req.param('id')
+
+    const result = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(eq(tasks.projectId, id))
+
+    return c.json(
+      result.map((task) => task.id),
       200,
     )
   })

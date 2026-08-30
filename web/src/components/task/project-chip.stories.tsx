@@ -18,7 +18,7 @@ const sampleProject: ProjectDetail = {
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
   completionRate: 0.4,
-  taskCount: { total: 10, completed: 4 },
+  taskCount: { total: 10, todo: 4, inProgress: 2, completed: 4 },
 }
 
 function ProjectChipStory({ projectId }: { projectId: string }) {

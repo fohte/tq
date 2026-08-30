@@ -26,7 +26,7 @@ const baseProject: ProjectUrlPreview = {
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
   completionRate: 0.4,
-  taskCount: { total: 10, completed: 4 },
+  taskCount: { total: 10, todo: 4, inProgress: 2, completed: 4 },
 }
 
 function Providers({
@@ -97,7 +97,7 @@ export const NoTasksYet: Story = {
     project: {
       ...baseProject,
       completionRate: 0,
-      taskCount: { total: 0, completed: 0 },
+      taskCount: { total: 0, todo: 0, inProgress: 0, completed: 0 },
     },
   },
 }
@@ -110,7 +110,7 @@ export const Completed: Story = {
       ...baseProject,
       status: 'completed',
       completionRate: 1,
-      taskCount: { total: 10, completed: 10 },
+      taskCount: { total: 10, todo: 0, inProgress: 0, completed: 10 },
     },
   },
 }
