@@ -49,7 +49,7 @@ palette is the only palette).
 | `--background`     | `#0a0a0a` | `bg-background`     | Page background                                                                                                                |
 | `--card`           | `#141414` | `bg-card`           | Raised surface (cards, popovers)                                                                                               |
 | `--popover`        | `#141414` | `bg-popover`        | Popover/menu surface (same value as `--card`)                                                                                  |
-| `--secondary`      | `#141414` | `bg-secondary`      | Secondary fill (e.g. `PanelHeader` background)                                                                                 |
+| `--secondary`      | `#141414` | `bg-secondary`      | Secondary fill (e.g. day-group header row background in `DayView`)                                                             |
 | `--muted`          | `#141414` | `bg-muted`          | Muted fill (e.g. button hover background)                                                                                      |
 | `--accent`         | `#1f1f1f` | `bg-accent`         | Accent fill (menu item hover, keyboard-highlighted row) — kept distinct from `--popover`/`--card` so it's visible against them |
 | `--surface-strong` | `#1f1f1f` | `bg-surface-strong` | Emphasized _enabled_ surface fill — active tab, primary button, progress track background                                      |
@@ -61,7 +61,7 @@ palette is the only palette).
 | `--foreground`              | `#fafafa` | `text-foreground`              | Primary text                                                                                |
 | `--muted-foreground-strong` | `#a1a1aa` | `text-muted-foreground-strong` | Brighter secondary text — between `--foreground` and `--muted-foreground`                   |
 | `--muted-foreground`        | `#71717a` | `text-muted-foreground`        | Standard secondary/muted text                                                               |
-| `--muted-foreground-faint`  | `#52525b` | `text-muted-foreground-faint`  | Dim tertiary text — e.g. `PanelHeader` label, completed-task `[x]`                          |
+| `--muted-foreground-faint`  | `#52525b` | `text-muted-foreground-faint`  | Dim tertiary text — e.g. `SectionLabel`, completed-task `[x]`                               |
 | `--muted-foreground-ghost`  | `#3f3f46` | `text-muted-foreground-ghost`  | Dimmest tier — e.g. tree-line glyphs, sidebar keybind hints (`KeybindHint` `plain` variant) |
 | `--card-foreground`         | `#fafafa` | `text-card-foreground`         | Text on `--card` surface                                                                    |
 | `--popover-foreground`      | `#fafafa` | `text-popover-foreground`      | Text on `--popover` surface                                                                 |
@@ -173,9 +173,9 @@ Tailwind's built-in `text-*` scale (`text-xs` 12px, `text-sm` 14px,
 size in the app. There is exactly **one** custom addition, for a tier
 Tailwind has no default for:
 
-| Token        | Value                                                   | Tailwind utility | Usage                                                                                                                          |
-| ------------ | ------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `--text-2xs` | `0.625rem` (10px), paired line-height `0.875rem` (14px) | `text-2xs`       | Smallest mono UI chrome tier — dim section/field labels (`PanelHeader`, `InlineFieldGroup`), `Chip`, `TabStrip`, `KeybindHint` |
+| Token        | Value                                                   | Tailwind utility | Usage                                                                                                                           |
+| ------------ | ------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `--text-2xs` | `0.625rem` (10px), paired line-height `0.875rem` (14px) | `text-2xs`       | Smallest mono UI chrome tier — dim section/field labels (`SectionLabel`, `InlineFieldGroup`), `Chip`, `TabStrip`, `KeybindHint` |
 
 **Do not add another custom `--text-*` tier without updating this table.**
 `text-2xs` exists because 8/9/10/11px were the same "small mono chrome" role
@@ -210,7 +210,7 @@ fifth and sixth target size.
 
 | Current arbitrary value                | Resolves to                                   | Why                                                                                                                                                                                                                                                                                        |
 | -------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `tracking-[0.08em]` `tracking-[0.1em]` | `tracking-widest` (Tailwind default, `0.1em`) | Same role (dim mono chrome label, e.g. `PanelHeader`) expressed as two near-identical values — the default already covers it                                                                                                                                                               |
+| `tracking-[0.08em]` `tracking-[0.1em]` | `tracking-widest` (Tailwind default, `0.1em`) | Same role (dim mono chrome label, e.g. `SectionLabel`) expressed as two near-identical values — the default already covers it                                                                                                                                                              |
 | `tracking-[0.04em]`                    | `tracking-wider` (Tailwind default, `0.05em`) | Distinct role (`BottomTabBar` tab label — color follows the tab's active state, `text-foreground`/`text-muted-foreground-faint`, unlike the always-dim role above) — `0.05em` is the closer of the two neighboring default steps (`tracking-wide` `0.025em` vs. `tracking-wider` `0.05em`) |
 
 ### Line-height
@@ -646,30 +646,19 @@ key-cap look (`rounded-(--keycap-radius)`, one of the two [radius exceptions](#r
 <KeybindHint variant="boxed">⌘K</KeybindHint>
 ```
 
-### `Panel` / `PanelHeader`
+### `Panel`
 
 `web/src/components/ui/panel.tsx`
 
 ```ts
 function Panel(props: { children: ReactNode; className?: string }): JSX.Element
-function PanelHeader(props: {
-  children: ReactNode
-  className?: string
-}): JSX.Element
 ```
 
-`Panel` is a bordered container (`border border-border`). `PanelHeader` is
-an optional bottom-bordered header row inside it
-(`bg-secondary`, `font-mono text-2xs tracking-widest text-muted-foreground-faint`)
-for an uppercase-style label + trailing action. Use for grouped list/board
-sections (e.g. an "OPEN TASKS" panel with rows below the header).
+A bordered container (`border border-border`) for a grouped list of rows,
+each typically bottom-bordered with `last:border-b-0`.
 
 ```tsx
 <Panel>
-  <PanelHeader>
-    OPEN TASKS
-    <span className="ml-auto text-2xs tracking-normal">view board →</span>
-  </PanelHeader>
   <div className="border-b border-border px-3 py-2 text-sm last:border-b-0">
     Set up CI pipeline
   </div>

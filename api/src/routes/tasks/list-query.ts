@@ -120,7 +120,11 @@ function buildConditions(query: ListTasksQuery) {
     conditions.push(eq(tasks.parentId, parentId))
   }
 
-  const projectIdentifier = parsed?.projectId ?? query.projectId
+  // Unlike the other filters above, an explicit `projectId` param wins over
+  // one embedded in `q` — a route that pins its own scope (e.g.
+  // /projects/$projectId) can't have that scope silently overridden by a
+  // stray `project:` token typed into `q`.
+  const projectIdentifier = query.projectId ?? parsed?.projectId
   if (projectIdentifier != null) {
     // UUID-shaped values are treated as an id match, not a title match, even
     // though `projects.title` has no format constraint and could coincide.

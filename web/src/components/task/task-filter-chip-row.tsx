@@ -33,12 +33,25 @@ interface TaskFilterChipRowProps {
   onQueryChange: (query: string) => void
   parsed: ParsedQuery
   projects: Project[]
+  // Saved views aren't scoped to a project (see api/src/db/schema/core.ts),
+  // so a screen whose scope already comes from elsewhere (e.g. the
+  // /projects/$projectId route param) hides the button rather than saving a
+  // view that silently drops that scope.
+  hideSaveView?: boolean
+  // A screen whose project scope comes from its route param (e.g.
+  // /projects/$projectId) rather than from `parsed`/`q` disables this axis
+  // entirely — otherwise a `project:` chip or typed token could suggest the
+  // list is scoped to a different project than the one the rest of the
+  // screen (title, task summary, "Add task") actually targets.
+  disableProjectFilter?: boolean
 }
 
 export function TaskFilterChipRow({
   onQueryChange,
   parsed,
   projects,
+  hideSaveView = false,
+  disableProjectFilter = false,
 }: TaskFilterChipRowProps) {
   const sortBy = parsed.sortBy ?? 'updated'
   // The chip label falls back to the raw value for a sort the picker below
@@ -47,9 +60,9 @@ export function TaskFilterChipRow({
   // narrowed value instead.
   const pickerSortBy =
     sortOptionValues.find((value) => value === sortBy) ?? 'updated'
-  const selectedProject = projects.find(
-    (project) => project.id === parsed.projectId,
-  )
+  const selectedProject = disableProjectFilter
+    ? undefined
+    : projects.find((project) => project.id === parsed.projectId)
 
   const parentTaskQuery = useTask(parsed.parentId ?? '', {
     enabled: parsed.parentId != null,
@@ -80,7 +93,9 @@ export function TaskFilterChipRow({
     if (typed.hasComments === true) next.hasComments = true
     if (typed.hasNoChildren === true) next.hasNoChildren = true
     if (typed.parentId != null) next = withParentId(next, typed.parentId)
-    if (typed.projectId != null) next = withProjectId(next, typed.projectId)
+    if (!disableProjectFilter && typed.projectId != null) {
+      next = withProjectId(next, typed.projectId)
+    }
     if (typed.sortBy != null) next.sortBy = typed.sortBy
     setParsed(next)
   }
@@ -248,7 +263,7 @@ export function TaskFilterChipRow({
         />
       </TaskFilterChip>
 
-      <SaveViewButton query={buildSearchQuery(parsed)} />
+      {!hideSaveView && <SaveViewButton query={buildSearchQuery(parsed)} />}
     </div>
   )
 }

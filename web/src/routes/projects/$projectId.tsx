@@ -1,4 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
+import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
 
 import {
   ProjectMainContent,
@@ -8,20 +9,63 @@ import {
 import { BackHeaderBar } from '#components/ui/back-header-bar'
 import { FullPageLoading } from '#components/ui/full-page-loading'
 import { FullPageMessage } from '#components/ui/full-page-message'
-import { useProject, useProjectTasks } from '#hooks/use-projects'
+import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
+import { useProject, useProjects, useProjectTasks } from '#hooks/use-projects'
+import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
+
+const projectTasksSearchDefaults = {
+  q: buildSearchQuery({
+    freeText: '',
+    status: ['todo', 'in_progress'],
+    sortBy: 'updated',
+  }),
+}
+
+interface ProjectDetailSearch {
+  q?: string
+}
+
+function validateSearch(search: Record<string, unknown>): ProjectDetailSearch {
+  const rawQ = typeof search['q'] === 'string' ? search['q'] : undefined
+  return rawQ != null && rawQ !== ''
+    ? { q: rawQ }
+    : { q: projectTasksSearchDefaults.q }
+}
 
 export const Route = createFileRoute('/projects/$projectId')({
+  validateSearch,
+  search: {
+    middlewares: [stripSearchParams(projectTasksSearchDefaults)],
+  },
   component: ProjectDetailPage,
 })
 
 function ProjectDetailPage() {
   const { projectId } = Route.useParams()
+  const { q = projectTasksSearchDefaults.q } = Route.useSearch()
+  const navigate = Route.useNavigate()
   const {
     data: project,
     isLoading: isProjectLoading,
     error,
   } = useProject(projectId)
   const { data: tasks, isLoading: isTasksLoading } = useProjectTasks(projectId)
+  const projects = useProjects()
+
+  const setQuery = (newQuery: string) => {
+    void navigate({
+      search: (prev) => ({ ...prev, q: newQuery }),
+      replace: true,
+    })
+  }
+
+  const parsedQuery = parseSearchQuery(q)
+  const {
+    isLoading: isFilteredTasksLoading,
+    tree,
+    tasks: filteredTasks,
+  } = useFilteredTaskTree({ q, projectId })
+  const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
 
   const isLoading = isProjectLoading || isTasksLoading
 
@@ -42,6 +86,13 @@ function ProjectDetailPage() {
             key={project.id}
             project={project}
             tasks={tasks ?? []}
+            parsedQuery={parsedQuery}
+            onQueryChange={setQuery}
+            projects={projects.data ?? []}
+            tree={tree}
+            filteredTasks={filteredTasks}
+            isTasksLoading={isFilteredTasksLoading}
+            sessionsByTaskId={sessionsByTaskId}
           />
         </div>
         <ProjectSidebar key={project.id} project={project} />
@@ -55,6 +106,13 @@ function ProjectDetailPage() {
             key={project.id}
             project={project}
             tasks={tasks ?? []}
+            parsedQuery={parsedQuery}
+            onQueryChange={setQuery}
+            projects={projects.data ?? []}
+            tree={tree}
+            filteredTasks={filteredTasks}
+            isTasksLoading={isFilteredTasksLoading}
+            sessionsByTaskId={sessionsByTaskId}
           />
         </div>
         <div className="border-t border-border p-4">
