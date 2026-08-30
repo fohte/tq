@@ -36,7 +36,7 @@ if (typeof Range.prototype.getBoundingClientRect === 'undefined') {
 
 // jsdom does not implement matchMedia. Default to desktop (matches: true) so
 // components using useIsDesktop render their default layout; tests exercising
-// the narrow-viewport branch override this per-suite (see project-gantt-view.test.tsx).
+// the narrow-viewport branch override this per-suite (see calendar-view.test.tsx).
 if (typeof window.matchMedia !== 'function') {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,

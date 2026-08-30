@@ -6,8 +6,6 @@
 @import '@fontsource/ibm-plex-mono/500.css';
 @import '@fontsource/ibm-plex-mono/600.css';
 @import '#components/calendar/fullcalendar.css';
-@import '@svar-ui/react-gantt/all.css';
-@import '#components/project/project-gantt.css';
 
 @custom-variant dark (&:is(.dark *));
 
