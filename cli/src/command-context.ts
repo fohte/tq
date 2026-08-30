@@ -6,11 +6,13 @@ import { createClient } from '#client'
 
 interface GlobalOptions {
   apiUrl?: string
+  webUrl?: string
   author?: string
   header: Record<string, string>
 }
 
-function resolveApiUrl(options: GlobalOptions): Result<string, Error> {
+export function resolveApiUrl(command: Command): Result<string, Error> {
+  const options = command.optsWithGlobals<GlobalOptions>()
   if (options.apiUrl != null && options.apiUrl.length > 0) {
     return ok(options.apiUrl)
   }
@@ -19,6 +21,18 @@ function resolveApiUrl(options: GlobalOptions): Result<string, Error> {
       'API URL is not set. Pass --api-url or set the TQ_API_URL environment variable.',
     ),
   )
+}
+
+// Separate from the API base URL because they differ outside the production
+// deployment (e.g. the API and Vite dev servers run on different ports in
+// development), even though the production nginx config serves both from
+// the same origin — see README.md's "Web (nginx runtime)" section.
+export function resolveWebUrl(command: Command): Result<string, Error> {
+  const options = command.optsWithGlobals<GlobalOptions>()
+  if (options.webUrl != null && options.webUrl.length > 0) {
+    return ok(options.webUrl)
+  }
+  return resolveApiUrl(command)
 }
 
 function resolveHeaders(options: GlobalOptions): Record<string, string> {
@@ -33,7 +47,7 @@ export function buildClient(
   fetchImpl: typeof fetch,
 ): Result<Client, Error> {
   const options = command.optsWithGlobals<GlobalOptions>()
-  return resolveApiUrl(options).map((apiUrl) =>
+  return resolveApiUrl(command).map((apiUrl) =>
     createClient({ apiUrl, headers: resolveHeaders(options) }, fetchImpl),
   )
 }
