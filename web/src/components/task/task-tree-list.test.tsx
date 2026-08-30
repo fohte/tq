@@ -9,6 +9,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { ROW_INDENT_CLASS_NAME } from '#components/task/task-row-shared'
 import { makeNode } from '#components/task/task-row-test-fixtures'
 import { TaskTreeList } from '#components/task/task-tree-list'
 import type { TreeNode } from '#hooks/use-tasks'
@@ -99,6 +100,7 @@ describe('TaskTreeList', () => {
       if (!(el instanceof HTMLElement)) {
         throw new Error(`Expected an element with --row-indent near "${text}"`)
       }
+      expect(el.classList.contains(ROW_INDENT_CLASS_NAME)).toBe(true)
       const value = el.style.getPropertyValue('--row-indent')
       const match = /\d+/.exec(value)
       if (match == null) {
@@ -228,5 +230,21 @@ describe('TaskTreeList', () => {
 
     expect(isBefore(childRow, input)).toBe(true)
     expect(isBefore(input, nextRootRow)).toBe(true)
+  })
+
+  it('does not carry typed-but-unsubmitted text over when the outliner input switches to a different anchor row', async () => {
+    const user = userEvent.setup()
+    const a = makeNode({ id: 'a', number: 1, title: 'Task A' })
+    const b = makeNode({ id: 'b', number: 2, title: 'Task B' })
+    await renderTaskTreeList([a, b])
+
+    fireEvent.click(screen.getByText('Task A'))
+    fireEvent.keyDown(document.body, { key: 'o' })
+    await user.type(screen.getByPlaceholderText(/New task/i), 'Leftover text')
+
+    fireEvent.click(screen.getByText('Task B'))
+    fireEvent.keyDown(document.body, { key: 'o' })
+
+    expect(screen.getByPlaceholderText(/New task/i)).toHaveValue('')
   })
 })

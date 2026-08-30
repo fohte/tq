@@ -222,7 +222,11 @@ export function TaskTreeList({
 
               return (
                 <TreeOutlinerInputRow
-                  key="outliner-input"
+                  // Keyed by anchor+mode, not a fixed literal, so switching
+                  // the outliner input to a different anchor row remounts
+                  // CreateTaskInline instead of reusing the old instance
+                  // (which would carry over its unsubmitted typed text).
+                  key={`outliner-input-${treeOutliner.outlinerTarget.anchorRowId}-${treeOutliner.outlinerTarget.mode}`}
                   depth={treeOutliner.outlinerTarget.depth}
                   parentId={treeOutliner.outlinerTarget.parentId}
                   parentNumber={treeOutliner.outlinerTarget.parentNumber}
