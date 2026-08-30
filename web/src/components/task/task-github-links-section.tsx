@@ -26,7 +26,12 @@ export function TaskGithubLinksSection({
         <div className="flex flex-col gap-1">
           {githubLinks.map((link) => (
             <div key={link.id} className="flex items-center gap-2">
-              <div className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex min-w-0 flex-1 items-center gap-2 text-sm hover:underline"
+              >
                 <GithubRefSummary
                   kind={link.kind}
                   state={link.state}
@@ -35,18 +40,20 @@ export function TaskGithubLinksSection({
                   number={link.number}
                   title={link.title}
                 />
-              </div>
-              <button
+              </a>
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-xs"
                 onClick={() => {
                   unlink.mutate(link.id)
                 }}
                 disabled={unlink.isPending}
                 aria-label={`Unlink ${link.owner}/${link.repo}#${String(link.number)}`}
-                className="shrink-0 text-muted-foreground-faint transition-colors hover:text-destructive disabled:pointer-events-none disabled:opacity-50"
+                className="shrink-0 text-muted-foreground-faint hover:text-destructive"
               >
                 <X className="size-3.5" />
-              </button>
+              </Button>
             </div>
           ))}
         </div>
