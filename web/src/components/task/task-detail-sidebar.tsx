@@ -50,6 +50,7 @@ export function TaskSidebar({ task }: { task: TaskDetail }) {
       />
       <SidebarParentField taskId={task.id} parentId={task.parentId} />
       <SidebarContextField taskId={task.id} context={task.context} />
+      <SidebarCommitmentField taskId={task.id} commitment={task.commitment} />
       <SidebarProjectField taskId={task.id} projectId={task.projectId} />
       <SidebarTagsField taskId={task.id} labels={task.labels} />
       <SidebarGithubLinkField taskId={task.id} githubLink={task.githubLink} />
@@ -111,6 +112,12 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
         </MobileFieldCell>
         <MobileFieldCell>
           <SidebarContextField taskId={task.id} context={task.context} />
+        </MobileFieldCell>
+        <MobileFieldCell>
+          <SidebarCommitmentField
+            taskId={task.id}
+            commitment={task.commitment}
+          />
         </MobileFieldCell>
         <MobileFieldCell>
           <SidebarProjectField taskId={task.id} projectId={task.projectId} />
@@ -297,6 +304,39 @@ function SidebarContextField({
         <SelectContent>
           <SelectItem value="work">work</SelectItem>
           <SelectItem value="personal">personal</SelectItem>
+        </SelectContent>
+      </Select>
+    </SidebarField>
+  )
+}
+
+function SidebarCommitmentField({
+  taskId,
+  commitment,
+}: {
+  taskId: string
+  commitment: TaskDetail['commitment']
+}) {
+  const updateTask = useUpdateTask()
+
+  return (
+    <SidebarField label="COMMITMENT">
+      <Select
+        value={commitment}
+        onValueChange={selectValueHandler(
+          (value: TaskDetail['commitment']) => {
+            updateTask.mutate({ id: taskId, input: { commitment: value } })
+          },
+          ['inbox', 'active', 'someday'],
+        )}
+      >
+        <SelectTrigger size="sm" className={fieldValueClassName}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="inbox">inbox</SelectItem>
+          <SelectItem value="active">active</SelectItem>
+          <SelectItem value="someday">someday</SelectItem>
         </SelectContent>
       </Select>
     </SidebarField>

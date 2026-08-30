@@ -168,6 +168,7 @@ export interface UpdateTaskInput {
   estimatedMinutes?: number | null
   projectId?: string | null
   context?: 'work' | 'personal'
+  commitment?: 'inbox' | 'active' | 'someday'
   labels?: string[]
 }
 
