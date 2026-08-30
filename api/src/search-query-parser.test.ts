@@ -68,6 +68,10 @@ describe('parseSearchQuery', () => {
     expect(parseSearchQuery('has:comments').hasComments).toBe(true)
   })
 
+  it('parses has:no-children prefix', () => {
+    expect(parseSearchQuery('has:no-children').hasNoChildren).toBe(true)
+  })
+
   it('parses parent: prefix', () => {
     expect(parseSearchQuery('parent:abc-123').parentId).toBe('abc-123')
   })
@@ -134,12 +138,13 @@ describe('buildSearchQuery', () => {
         commitment: 'active',
         hasPages: true,
         hasComments: true,
+        hasNoChildren: true,
         parentId: 'parent-1',
         projectId: 'proj-1',
         sortBy: 'due',
       }),
     ).toBe(
-      'deploy is:todo label:dev context:work commitment:active has:pages has:comments parent:parent-1 project:proj-1 sort:due',
+      'deploy is:todo label:dev context:work commitment:active has:pages has:comments has:no-children parent:parent-1 project:proj-1 sort:due',
     )
   })
 
@@ -177,6 +182,14 @@ describe('parseSearchQuery and buildSearchQuery round-trip', () => {
     expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
       freeText: '',
       commitment: 'someday',
+    })
+  })
+
+  it('round-trips has:no-children', () => {
+    const q = 'has:no-children'
+    expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
+      freeText: '',
+      hasNoChildren: true,
     })
   })
 

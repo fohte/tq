@@ -45,6 +45,7 @@ export const tasksSearchApp = new Hono()
       has: [
         { value: 'has:pages', display: 'Has pages' },
         { value: 'has:comments', display: 'Has comments' },
+        { value: 'has:no-children', display: 'Has no children' },
       ],
     }
 
