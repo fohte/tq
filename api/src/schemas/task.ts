@@ -5,6 +5,7 @@ import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 
 export const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
 export const contextEnum = z.enum(['work', 'personal'])
+export const commitmentEnum = z.enum(['inbox', 'active', 'someday'])
 
 export const taskSortBy = z.enum(['created', 'updated', 'due', 'estimate'])
 export type TaskSortBy = z.infer<typeof taskSortBy>
@@ -23,6 +24,7 @@ export const createTaskSchema = z.object({
   parentId: z.uuid().optional(),
   projectId: z.uuid().optional(),
   context: contextEnum.optional(),
+  commitment: commitmentEnum.optional(),
   labels: z.array(z.string().trim().min(1)).optional(),
   recurrenceRule: recurrenceRuleSchema.optional(),
 })
@@ -39,6 +41,7 @@ export const updateTaskSchema = z.object({
   estimatedMinutes: z.number().int().positive().nullable().optional(),
   projectId: z.uuid().nullable().optional(),
   context: contextEnum.optional(),
+  commitment: commitmentEnum.optional(),
   labels: z.array(z.string().trim().min(1)).optional(),
   recurrenceRule: recurrenceRuleSchema.nullable().optional(),
 })
@@ -53,6 +56,7 @@ export const listTasksQuerySchema = z.object({
   hasEstimate: hasFlagSchema,
   hasDue: hasFlagSchema,
   context: contextEnum.optional(),
+  commitment: commitmentEnum.optional(),
   projectId: z.uuid().optional(),
   parentId: z.uuid().optional(),
   descendantOf: z.uuid().optional(),

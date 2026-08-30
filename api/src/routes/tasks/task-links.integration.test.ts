@@ -49,6 +49,7 @@ function linkedTaskDetail(
     | 'description'
     | 'status'
     | 'context'
+    | 'commitment'
     | 'labels'
     | 'startDate'
     | 'dueDate'
@@ -72,6 +73,7 @@ function linkedTaskDetail(
     description: task.description,
     status: task.status,
     context: task.context,
+    commitment: task.commitment,
     labels: task.labels,
     startDate: task.startDate,
     dueDate: task.dueDate,

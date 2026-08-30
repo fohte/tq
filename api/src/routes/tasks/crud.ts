@@ -93,6 +93,7 @@ export const tasksCrudApp = new Hono()
               parentId: input.parentId ?? null,
               projectId: input.projectId ?? null,
               context: input.context ?? schedulingSettings.defaultContext,
+              commitment: input.commitment,
               recurrenceRuleId,
             })
             .returning(),

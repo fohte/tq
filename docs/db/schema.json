@@ -766,6 +766,12 @@
           "name": "number",
           "type": "integer",
           "nullable": false
+        },
+        {
+          "name": "commitment",
+          "type": "text",
+          "nullable": false,
+          "default": "'active'::text"
         }
       ],
       "indexes": [
@@ -816,6 +822,12 @@
           "def": "CREATE UNIQUE INDEX tasks_number_unique ON public.tasks USING btree (number)",
           "table": "public.tasks",
           "columns": ["number"]
+        },
+        {
+          "name": "idx_tasks_commitment",
+          "def": "CREATE INDEX idx_tasks_commitment ON public.tasks USING btree (commitment)",
+          "table": "public.tasks",
+          "columns": ["commitment"]
         }
       ],
       "constraints": [
