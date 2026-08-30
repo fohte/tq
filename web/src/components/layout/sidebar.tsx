@@ -1,5 +1,6 @@
 import { Link, useMatchRoute, useSearch } from '@tanstack/react-router'
 import { parseSearchQuery } from 'api/search-query-parser'
+import type { ReactNode } from 'react'
 
 import { ContextFilter } from '#components/context-filter'
 import {
@@ -182,6 +183,28 @@ function ProjectsSection() {
   )
 }
 
+export function SidebarContent({ footerExtra }: { footerExtra?: ReactNode }) {
+  return (
+    <>
+      <nav className="flex flex-col gap-px py-2">
+        {navItems.map((item) => (
+          <NavLink key={item.to} item={item} />
+        ))}
+      </nav>
+
+      <div className="mx-3.5 mt-1.5 mb-2 border-t border-border" />
+
+      <TagsSection />
+      <ProjectsSection />
+
+      <div className="mt-auto border-t border-border">
+        {footerExtra}
+        <NavLink item={settingsNavItem} />
+      </div>
+    </>
+  )
+}
+
 export function Sidebar() {
   return (
     <aside
@@ -199,23 +222,13 @@ export function Sidebar() {
         </span>
       </div>
 
-      <nav className="flex flex-col gap-px py-2">
-        {navItems.map((item) => (
-          <NavLink key={item.to} item={item} />
-        ))}
-      </nav>
-
-      <div className="mx-3.5 mt-1.5 mb-2 border-t border-border" />
-
-      <TagsSection />
-      <ProjectsSection />
-
-      <div className="mt-auto border-t border-border">
-        <div className="px-2.5 py-2">
-          <ContextFilter />
-        </div>
-        <NavLink item={settingsNavItem} />
-      </div>
+      <SidebarContent
+        footerExtra={
+          <div className="px-2.5 py-2">
+            <ContextFilter />
+          </div>
+        }
+      />
     </aside>
   )
 }

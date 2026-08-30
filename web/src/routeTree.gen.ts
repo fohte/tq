@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TodayRouteImport } from './routes/today'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
@@ -27,6 +28,11 @@ const TodayRoute = TodayRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrowseRoute = BrowseRouteImport.update({
+  id: '/browse',
+  path: '/browse',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -67,6 +73,7 @@ const TasksTaskIdPagesPageIdRoute = TasksTaskIdPagesPageIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/browse': typeof BrowseRoute
   '/settings': typeof SettingsRoute
   '/today': typeof TodayRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/browse': typeof BrowseRoute
   '/settings': typeof SettingsRoute
   '/today': typeof TodayRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -90,6 +98,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/browse': typeof BrowseRoute
   '/settings': typeof SettingsRoute
   '/today': typeof TodayRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -103,6 +112,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/browse'
     | '/settings'
     | '/today'
     | '/projects/$projectId'
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/browse'
     | '/settings'
     | '/today'
     | '/projects/$projectId'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/browse'
     | '/settings'
     | '/today'
     | '/projects/$projectId'
@@ -137,6 +149,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BrowseRoute: typeof BrowseRoute
   SettingsRoute: typeof SettingsRoute
   TodayRoute: typeof TodayRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
@@ -161,6 +174,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/browse': {
+      id: '/browse'
+      path: '/browse'
+      fullPath: '/browse'
+      preLoaderRoute: typeof BrowseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -217,6 +237,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BrowseRoute: BrowseRoute,
   SettingsRoute: SettingsRoute,
   TodayRoute: TodayRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
