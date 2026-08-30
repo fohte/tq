@@ -20,16 +20,8 @@ const baseLink: GithubLink = {
   lastSyncedAt: '2026-03-20T00:00:00.000Z',
 }
 
-const openIssueLink: GithubLink = {
-  ...baseLink,
-  id: 'link-1',
-  number: 412,
-  kind: 'issue',
-  state: 'open',
-}
-
 const mixedLinks: GithubLink[] = [
-  openIssueLink,
+  baseLink,
   {
     ...baseLink,
     id: 'link-2',
@@ -89,7 +81,7 @@ export const Empty: SectionStoryType = {
 }
 
 export const SingleLink: SectionStoryType = {
-  args: { githubLinks: [openIssueLink] },
+  args: { githubLinks: [baseLink] },
 }
 
 export const MixedIssueAndPullRequests: SectionStoryType = {
