@@ -73,10 +73,14 @@ export const NoLinks: Story = {
   },
 }
 
-// A single link renders exactly like the plain GithubLinkBadge — no "+N",
-// no hover popup.
 export const SingleLink: Story = {
   args: { links: [issueLink] },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('tq#412')).toBeVisible()
+    await expect(
+      canvas.queryByTestId('github-links-chip'),
+    ).not.toBeInTheDocument()
+  },
 }
 
 export const RepresentativeIsLatestPullRequest: Story = {

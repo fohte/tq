@@ -2,16 +2,15 @@ import { GithubLinkBadge } from '#components/task/github-link-badge'
 import { GithubRefSummary } from '#components/task/github-ref-summary'
 import {
   PreviewCard,
-  PreviewCardPopup,
   PreviewCardPortal,
   PreviewCardPositioner,
   PreviewCardTrigger,
+  PreviewListPopup,
 } from '#components/ui/preview-card'
 import type { GithubLink } from '#hooks/use-github-link'
 
-// The chip row / list row only has room for one representative link, so we
-// pick the one most likely to answer "what implements this": the latest PR,
-// or the latest issue when there's no PR yet.
+// Prefers the latest linked PR over the latest issue, since a PR is what
+// actually implements the task.
 function pickRepresentativeGithubLink(links: GithubLink[]): GithubLink | null {
   return (
     links.findLast((link) => link.kind === 'pull_request') ??
@@ -35,10 +34,7 @@ export function GithubLinksChipGroup({ links }: { links: GithubLink[] }) {
       </PreviewCardTrigger>
       <PreviewCardPortal>
         <PreviewCardPositioner>
-          <PreviewCardPopup className="w-(--width-preview-popup) p-0">
-            <div className="border-b border-border px-3 py-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint">
-              GITHUB ({links.length})
-            </div>
+          <PreviewListPopup label="GITHUB" count={links.length}>
             {links.map((link) => (
               <a
                 key={link.id}
@@ -57,7 +53,7 @@ export function GithubLinksChipGroup({ links }: { links: GithubLink[] }) {
                 />
               </a>
             ))}
-          </PreviewCardPopup>
+          </PreviewListPopup>
         </PreviewCardPositioner>
       </PreviewCardPortal>
     </PreviewCard>

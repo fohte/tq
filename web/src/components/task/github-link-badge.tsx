@@ -18,8 +18,6 @@ export function GithubLinkBadge({
   extraCount,
 }: {
   link: GithubLink
-  // Set when this badge represents more than one linked issue/PR, to append
-  // a "+N" for the rest — see GithubLinksChipGroup.
   extraCount?: number
 }) {
   return (
