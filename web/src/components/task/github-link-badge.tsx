@@ -13,7 +13,15 @@ const STATE_COLORS: Record<GithubLink['state'], string> = {
 // Rendered as a <button>, never an <a>: call sites (e.g. task rows) nest
 // this inside their own navigation <Link>, and a nested <a> would be
 // invalid HTML and hijack the outer navigation's click.
-export function GithubLinkBadge({ link }: { link: GithubLink }) {
+export function GithubLinkBadge({
+  link,
+  extraCount,
+}: {
+  link: GithubLink
+  // Set when this badge represents more than one linked issue/PR, to append
+  // a "+N" for the rest — see GithubLinksChipGroup.
+  extraCount?: number
+}) {
   return (
     <Chip
       as="button"
@@ -30,6 +38,9 @@ export function GithubLinkBadge({ link }: { link: GithubLink }) {
         <CircleDot className="size-3" />
       )}
       {link.repo}#{link.number}
+      {extraCount != null && extraCount > 0 && (
+        <span className="text-muted-foreground-faint">+{extraCount}</span>
+      )}
     </Chip>
   )
 }

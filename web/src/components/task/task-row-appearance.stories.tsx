@@ -186,6 +186,39 @@ export const WithGithubLink: Story = {
   },
 }
 
+export const WithMultipleGithubLinks: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Add multi-link support',
+      githubLinks: [
+        {
+          id: 'link-1',
+          owner: 'fohte',
+          repo: 'tq',
+          number: 412,
+          kind: 'issue',
+          url: 'https://github.com/fohte/tq/issues/412',
+          state: 'open',
+          title: 'Support multiple GitHub links per task',
+          lastSyncedAt: '2026-03-20T00:00:00.000Z',
+        },
+        {
+          id: 'link-2',
+          owner: 'fohte',
+          repo: 'tq',
+          number: 436,
+          kind: 'pull_request',
+          url: 'https://github.com/fohte/tq/pull/436',
+          state: 'merged',
+          title: 'api: allow associating multiple GitHub links with a task',
+          lastSyncedAt: '2026-03-20T00:00:00.000Z',
+        },
+      ],
+    },
+  },
+}
+
 export const WithTags: Story = {
   args: {
     task: {

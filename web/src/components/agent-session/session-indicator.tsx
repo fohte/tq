@@ -57,7 +57,7 @@ export function SessionIndicator({
               children's untruncated max-content width regardless of any
               min-width, since min-width only raises a floor and never caps
               growth. */}
-          <PreviewCardPopup className="w-(--width-session-popup) p-0">
+          <PreviewCardPopup className="w-(--width-preview-popup) p-0">
             <div className="border-b border-border px-3 py-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint">
               SESSIONS ({sessions.length})
             </div>
