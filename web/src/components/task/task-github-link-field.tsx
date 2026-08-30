@@ -9,13 +9,14 @@ import { useUnlinkTaskFromGithub } from '#hooks/use-github-link'
 
 export function SidebarGithubLinkField({
   taskId,
-  githubLink,
+  githubLinks,
 }: {
   taskId: string
-  githubLink: GithubLink | null
+  githubLinks: GithubLink[]
 }) {
   const [modalOpen, setModalOpen] = useState(false)
   const unlink = useUnlinkTaskFromGithub(taskId)
+  const githubLink = githubLinks[0] ?? null
 
   return (
     <SidebarField label="GITHUB">
@@ -28,7 +29,7 @@ export function SidebarGithubLinkField({
             size="xs"
             className="h-auto p-0 text-muted-foreground-faint hover:text-destructive"
             onClick={() => {
-              unlink.mutate()
+              unlink.mutate(githubLink.id)
             }}
             disabled={unlink.isPending}
           >

@@ -132,7 +132,7 @@ describe('create_task tool', () => {
       projectId: null,
       recurrenceRuleId: null,
       recurrenceRule: null,
-      githubLink: null,
+      githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       linkSync: { outgoing: [], unresolvedRefs: [] },
@@ -194,7 +194,7 @@ describe('update_task tool', () => {
       projectId: null,
       recurrenceRuleId: null,
       recurrenceRule: null,
-      githubLink: null,
+      githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
@@ -226,7 +226,7 @@ describe('update_task tool', () => {
       projectId: null,
       recurrenceRuleId: null,
       recurrenceRule: null,
-      githubLink: null,
+      githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       linkSync: { outgoing: [], unresolvedRefs: [] },
@@ -269,7 +269,7 @@ describe('update_task tool', () => {
       projectId: null,
       recurrenceRuleId: null,
       recurrenceRule: null,
-      githubLink: null,
+      githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
@@ -301,7 +301,7 @@ describe('update_task_status tool', () => {
       projectId: null,
       recurrenceRuleId: null,
       recurrenceRule: null,
-      githubLink: null,
+      githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
@@ -332,7 +332,7 @@ describe('update_task_status tool', () => {
       projectId: null,
       recurrenceRuleId: null,
       recurrenceRule: null,
-      githubLink: null,
+      githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
@@ -366,7 +366,7 @@ describe('update_task_status tool', () => {
       projectId: null,
       recurrenceRuleId: null,
       recurrenceRule: null,
-      githubLink: null,
+      githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
@@ -400,7 +400,7 @@ describe('update_task_status tool', () => {
       projectId: null,
       recurrenceRuleId: null,
       recurrenceRule: null,
-      githubLink: null,
+      githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
@@ -443,7 +443,7 @@ describe('update_task_status tool', () => {
         daysOfWeek: null,
         dayOfMonth: null,
       },
-      githubLink: null,
+      githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       nextTask: {
@@ -468,7 +468,7 @@ describe('update_task_status tool', () => {
           daysOfWeek: null,
           dayOfMonth: null,
         },
-        githubLink: null,
+        githubLinks: [],
         createdAt: '<timestamp>',
         updatedAt: '<timestamp>',
         linkSync: {

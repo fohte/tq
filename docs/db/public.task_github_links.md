@@ -18,6 +18,7 @@
 | updated_at     | timestamp with time zone | now()   | false    |          |                                 |         |
 | body           | text                     |         | true     |          |                                 |         |
 | etag           | text                     |         | true     |          |                                 |         |
+| seq            | bigint                   |         | false    |          |                                 |         |
 
 ## Constraints
 
@@ -26,23 +27,22 @@
 | task_github_links_state_kind_check    | CHECK       | CHECK (((kind = 'pull_request'::text) OR (state <> 'merged'::text))) |
 | task_github_links_task_id_tasks_id_fk | FOREIGN KEY | FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE         |
 | task_github_links_pkey                | PRIMARY KEY | PRIMARY KEY (id)                                                     |
-| task_github_links_task_id_unique      | UNIQUE      | UNIQUE (task_id)                                                     |
 | uq_task_github_links_repo_number      | UNIQUE      | UNIQUE (owner, repo, number)                                         |
 
 ## Indexes
 
-| Name                             | Definition                                                                                                         |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| task_github_links_pkey           | CREATE UNIQUE INDEX task_github_links_pkey ON public.task_github_links USING btree (id)                            |
-| task_github_links_task_id_unique | CREATE UNIQUE INDEX task_github_links_task_id_unique ON public.task_github_links USING btree (task_id)             |
-| uq_task_github_links_repo_number | CREATE UNIQUE INDEX uq_task_github_links_repo_number ON public.task_github_links USING btree (owner, repo, number) |
+| Name                                     | Definition                                                                                                          |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| task_github_links_pkey                   | CREATE UNIQUE INDEX task_github_links_pkey ON public.task_github_links USING btree (id)                             |
+| uq_task_github_links_repo_number         | CREATE UNIQUE INDEX uq_task_github_links_repo_number ON public.task_github_links USING btree (owner, repo, number)  |
+| idx_task_github_links_task_id_created_at | CREATE INDEX idx_task_github_links_task_id_created_at ON public.task_github_links USING btree (task_id, created_at) |
 
 ## Relations
 
 ```mermaid
 erDiagram
 
-"public.task_github_links" |o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+"public.task_github_links" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 
 "public.task_github_links" {
   text id
@@ -59,6 +59,7 @@ erDiagram
   timestamp_with_time_zone updated_at
   text body
   text etag
+  bigint seq
 }
 "public.tasks" {
   text id

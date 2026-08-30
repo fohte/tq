@@ -64,7 +64,7 @@ describe('github unlink', () => {
     const write = spyStdout()
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'github', 'unlink', 'task1'],
+      ['--api-url', apiUrl, 'github', 'unlink', 'task1', 'link1'],
       fetchStub,
       fakeStdin(true),
     )
@@ -73,13 +73,19 @@ describe('github unlink', () => {
     expect(calls).toEqual([
       {
         method: 'DELETE',
-        url: `${apiUrl}/api/tasks/task1/github-link`,
+        url: `${apiUrl}/api/tasks/task1/github-link/link1`,
         headers: {},
         body: undefined,
       },
     ])
     expect(write.mock.calls).toEqual([
-      [`${JSON.stringify({ unlinked: true, taskId: 'task1' }, null, 2)}\n`],
+      [
+        `${JSON.stringify(
+          { unlinked: true, taskId: 'task1', linkId: 'link1' },
+          null,
+          2,
+        )}\n`,
+      ],
     ])
   })
 })

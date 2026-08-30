@@ -11,11 +11,11 @@ import { createTask, TEST_UUID } from '#routes/tasks/testing'
 import {
   createTaskFromGithubUrl,
   createTaskFromIssueData,
+  findLinksByTaskId,
   GithubLinkNotFoundError,
   GithubResourceAlreadyLinkedError,
   linkTaskToGithubUrl,
   resolveGithubUrl,
-  TaskAlreadyLinkedError,
   TaskNotFoundError,
   unlinkTask,
 } from '#services/task-github-links'
@@ -31,6 +31,7 @@ function normalizeLink(link: typeof taskGithubLinks.$inferSelect) {
   return {
     ...link,
     id: 'ID',
+    seq: 'SEQ',
     lastSyncedAt: 'DATE',
     createdAt: 'DATE',
     updatedAt: 'DATE',
@@ -87,6 +88,7 @@ describe('createTaskFromGithubUrl', () => {
     expect(created).toBe(true)
     expect(normalizeLink(link)).toEqual({
       id: 'ID',
+      seq: 'SEQ',
       taskId: task.id,
       owner: 'fohte',
       repo: 'tq',
@@ -153,6 +155,7 @@ describe('linkTaskToGithubUrl', () => {
 
     expect(normalizeLink(link)).toEqual({
       id: 'ID',
+      seq: 'SEQ',
       taskId: task.id,
       owner: 'fohte',
       repo: 'tq',
@@ -177,20 +180,27 @@ describe('linkTaskToGithubUrl', () => {
     expect(error).toEqual(new TaskNotFoundError())
   })
 
-  it('returns a TaskAlreadyLinkedError when the task already has a link', async () => {
+  it('allows a task to hold multiple links to different issues', async () => {
     const task = await createTask('My task')
     await upsertGithubToken('valid-token')
     mockGithubIssueResponse()
-    ;(await linkTaskToGithubUrl(task.id, ref, author))._unsafeUnwrap()
+    const first = (
+      await linkTaskToGithubUrl(task.id, ref, author)
+    )._unsafeUnwrap()
 
     mockGithubIssueResponse({
       html_url: 'https://github.com/fohte/tq/issues/43',
     })
-    const error = (
+    const second = (
       await linkTaskToGithubUrl(task.id, { ...ref, number: 43 }, author)
-    )._unsafeUnwrapErr()
+    )._unsafeUnwrap()
 
-    expect(error).toEqual(new TaskAlreadyLinkedError())
+    const links = (await findLinksByTaskId(task.id))._unsafeUnwrap()
+    const byNumber = (a: { number: number }, b: { number: number }) =>
+      a.number - b.number
+    expect([...links].sort(byNumber).map(normalizeLink)).toEqual(
+      [first, second].sort(byNumber).map(normalizeLink),
+    )
   })
 
   it('returns a GithubResourceAlreadyLinkedError when the issue is linked to another task', async () => {
@@ -213,9 +223,11 @@ describe('unlinkTask', () => {
     const task = await createTask('My task')
     await upsertGithubToken('valid-token')
     mockGithubIssueResponse()
-    ;(await linkTaskToGithubUrl(task.id, ref, author))._unsafeUnwrap()
+    const link = (
+      await linkTaskToGithubUrl(task.id, ref, author)
+    )._unsafeUnwrap()
 
-    ;(await unlinkTask(db, task.id))._unsafeUnwrap()
+    ;(await unlinkTask(db, task.id, link.id))._unsafeUnwrap()
 
     mockGithubIssueResponse()
     const resolved = (await resolveGithubUrl(ref))._unsafeUnwrap()
@@ -225,8 +237,50 @@ describe('unlinkTask', () => {
   it('returns a GithubLinkNotFoundError when the task has no link', async () => {
     const task = await createTask('My task')
 
-    const error = (await unlinkTask(db, task.id))._unsafeUnwrapErr()
+    const error = (await unlinkTask(db, task.id, TEST_UUID))._unsafeUnwrapErr()
 
     expect(error).toEqual(new GithubLinkNotFoundError())
+  })
+
+  it('deletes only the given link, leaving the task other links intact', async () => {
+    const task = await createTask('My task')
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
+    const first = (
+      await linkTaskToGithubUrl(task.id, ref, author)
+    )._unsafeUnwrap()
+
+    mockGithubIssueResponse({
+      html_url: 'https://github.com/fohte/tq/issues/43',
+    })
+    const second = (
+      await linkTaskToGithubUrl(task.id, { ...ref, number: 43 }, author)
+    )._unsafeUnwrap()
+
+    ;(await unlinkTask(db, task.id, first.id))._unsafeUnwrap()
+
+    const links = (await findLinksByTaskId(task.id))._unsafeUnwrap()
+    expect(links.map(normalizeLink)).toEqual([normalizeLink(second)])
+  })
+
+  it('rejects unlinking a link that belongs to a different task', async () => {
+    const taskA = await createTask('Task A')
+    const taskB = await createTask('Task B')
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
+    ;(await linkTaskToGithubUrl(taskA.id, ref, author))._unsafeUnwrap()
+
+    mockGithubIssueResponse({
+      html_url: 'https://github.com/fohte/tq/issues/43',
+    })
+    const linkB = (
+      await linkTaskToGithubUrl(taskB.id, { ...ref, number: 43 }, author)
+    )._unsafeUnwrap()
+
+    const error = (await unlinkTask(db, taskA.id, linkB.id))._unsafeUnwrapErr()
+
+    expect(error).toEqual(new GithubLinkNotFoundError())
+    const links = (await findLinksByTaskId(taskB.id))._unsafeUnwrap()
+    expect(links.map(normalizeLink)).toEqual([normalizeLink(linkB)])
   })
 })

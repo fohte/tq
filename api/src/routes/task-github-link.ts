@@ -1,23 +1,21 @@
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
-import { okAsync } from 'neverthrow'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { parseGithubIssueUrl } from '#integrations/github/issues'
+import { isQuietProviderError } from '#integrations/quiet-errors'
 import { recordGithubUnlinked } from '#lib/task-events'
 import { githubLinkErrorResponse } from '#routes/github-link-error'
 import {
   findTaskByIdOrNumber,
+  getGithubLinksByTaskId,
   githubLinkToResponse,
   type TaskEnv,
 } from '#routes/tasks/shared'
 import { syncLinkFromGithub } from '#services/github-sync'
-import {
-  findLinkByTaskId,
-  linkTaskToGithubUrl,
-  unlinkTask,
-} from '#services/task-github-links'
+import { linkTaskToGithubUrl, unlinkTask } from '#services/task-github-links'
 
 const linkSchema = z.object({ url: z.string().min(1) })
 
@@ -50,12 +48,13 @@ export const taskGithubLinkApp = new Hono<TaskEnv>()
       (error) => githubLinkErrorResponse(c, error, 'task-github-link.link'),
     )
   })
-  .delete('/', async (c) => {
+  .delete('/:linkId', async (c) => {
     const taskId = c.get('task').id
+    const linkId = c.req.param('linkId')
     const author = c.get('author')
 
     const result = await db.transaction(async (tx) => {
-      const unlinkResult = await unlinkTask(tx, taskId)
+      const unlinkResult = await unlinkTask(tx, taskId, linkId)
       if (unlinkResult.isOk()) {
         const link = unlinkResult.value
         await recordGithubUnlinked(
@@ -78,20 +77,24 @@ export const taskGithubLinkApp = new Hono<TaskEnv>()
       (error) => githubLinkErrorResponse(c, error, 'task-github-link.unlink'),
     )
   })
-  // Triggered by the web client when it opens this task's detail view, for
-  // an immediate single-task refresh instead of waiting for the next
-  // whole-account sync (POST /api/github/sync). A no-op (204) when the task
-  // exists but isn't linked; a nonexistent task 404s via the middleware
-  // above.
+  // Continues past a failing link and reports failures via
+  // captureWithFingerprint instead of the response, so one broken link
+  // doesn't stop the client from seeing the others' updates (mirrors
+  // syncAllGithubLinks's runSync).
   .post('/sync', async (c) => {
     const taskId = c.get('task').id
 
-    const result = await findLinkByTaskId(taskId).andThen((link) =>
-      link ? syncLinkFromGithub(link) : okAsync(undefined),
-    )
+    const links = (await getGithubLinksByTaskId([taskId])).get(taskId) ?? []
+    for (const link of links) {
+      const result = await syncLinkFromGithub(link)
+      if (result.isErr() && !isQuietProviderError(result.error)) {
+        captureWithFingerprint(
+          result.error,
+          'api.task-github-link.sync-link-failed',
+          { extras: { linkId: link.id } },
+        )
+      }
+    }
 
-    return result.match(
-      () => c.body(null, 204),
-      (error) => githubLinkErrorResponse(c, error, 'task-github-link.sync'),
-    )
+    return c.body(null, 204)
   })

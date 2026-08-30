@@ -31,6 +31,7 @@ const baseTask = {
   projectId: 'p1',
   recurrenceRuleId: null,
   recurrenceRule: null,
+  githubLinks: [],
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
   childCompletionCount: { completed: 0, total: 0 },

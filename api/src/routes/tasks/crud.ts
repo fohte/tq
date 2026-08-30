@@ -4,13 +4,7 @@ import { and, count, eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
-import {
-  recurrenceRules,
-  taskGithubLinks,
-  taskPages,
-  tasks,
-  timeBlocks,
-} from '#db/schema'
+import { recurrenceRules, taskPages, tasks, timeBlocks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import {
   diffFields,
@@ -21,6 +15,7 @@ import {
 import { pageToResponse } from '#routes/task-pages'
 import { queryTaskList } from '#routes/tasks/list-query'
 import {
+  getGithubLinksByTaskId,
   getLabelNamesByTaskId,
   hydrateTaskListRows,
   requireTask,
@@ -114,7 +109,7 @@ export const tasksCrudApp = new Hono()
 
     return c.json(
       {
-        ...taskToResponse(task, createdRule, undefined, labelNames),
+        ...taskToResponse(task, createdRule, [], labelNames),
         linkSync,
       },
       201,
@@ -143,7 +138,7 @@ export const tasksCrudApp = new Hono()
       pages,
       taskTimeBlocks,
       rule,
-      githubLink,
+      githubLinksByTaskId,
       links,
       taskFieldAuthors,
       labelsByTaskId,
@@ -172,9 +167,7 @@ export const tasksCrudApp = new Hono()
             where: eq(recurrenceRules.id, task.recurrenceRuleId),
           })
         : Promise.resolve(null),
-      db.query.taskGithubLinks.findFirst({
-        where: eq(taskGithubLinks.taskId, id),
-      }),
+      getGithubLinksByTaskId([id]),
       getTaskLinks(id),
       getTaskFieldAuthors(id),
       getLabelNamesByTaskId([id]),
@@ -184,7 +177,12 @@ export const tasksCrudApp = new Hono()
 
     return c.json(
       {
-        ...taskToResponse(task, rule, githubLink, labelsByTaskId.get(id) ?? []),
+        ...taskToResponse(
+          task,
+          rule,
+          githubLinksByTaskId.get(id) ?? [],
+          labelsByTaskId.get(id) ?? [],
+        ),
         titleAuthor: taskFieldAuthors.title,
         descriptionAuthor: taskFieldAuthors.description,
         childCompletionCount: {
@@ -344,10 +342,8 @@ export const tasksCrudApp = new Hono()
       const linkSync =
         'description' in taskFields ? await syncTaskLinks(id) : undefined
 
-      const [githubLink, labelsByTaskId] = await Promise.all([
-        db.query.taskGithubLinks.findFirst({
-          where: eq(taskGithubLinks.taskId, id),
-        }),
+      const [githubLinksByTaskId, labelsByTaskId] = await Promise.all([
+        getGithubLinksByTaskId([id]),
         getLabelNamesByTaskId([id]),
       ])
 
@@ -356,7 +352,7 @@ export const tasksCrudApp = new Hono()
           ...taskToResponse(
             updatedTask,
             updatedRule,
-            githubLink,
+            githubLinksByTaskId.get(id) ?? [],
             labelsByTaskId.get(id) ?? [],
           ),
           ...(linkSync ? { linkSync } : {}),

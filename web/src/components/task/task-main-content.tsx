@@ -72,7 +72,9 @@ export function TaskMainContent({
       <div className="flex flex-wrap gap-2">
         {task.labels.length > 0 && <TaskTagChips labels={task.labels} />}
         <Chip>{task.context}</Chip>
-        {task.githubLink != null && <GithubLinkBadge link={task.githubLink} />}
+        {task.githubLinks[0] != null && (
+          <GithubLinkBadge link={task.githubLinks[0]} />
+        )}
         {task.projectId != null && <ProjectChip projectId={task.projectId} />}
       </div>
 

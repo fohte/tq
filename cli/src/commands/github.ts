@@ -46,19 +46,28 @@ export function registerGithubCommands(
     )
 
   github
-    .command('unlink <taskId>')
-    .description("Remove a task's GitHub link")
-    .action(async (taskId: string, _options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl).match(
-        (value) => value,
-        (error) => fail(command, error),
-      )
-      const res = await client.api.tasks[':taskId']['github-link'].$delete({
-        param: { taskId },
-      })
-      if (!res.ok) return fail(command, await toApiError(res))
-      printJson({ unlinked: true, taskId })
-    })
+    .command('unlink <taskId> <linkId>')
+    .description("Remove one of a task's GitHub links, by link id")
+    .action(
+      async (
+        taskId: string,
+        linkId: string,
+        _options: unknown,
+        command: Command,
+      ) => {
+        const client = buildClient(command, fetchImpl).match(
+          (value) => value,
+          (error) => fail(command, error),
+        )
+        const res = await client.api.tasks[':taskId']['github-link'][
+          ':linkId'
+        ].$delete({
+          param: { taskId, linkId },
+        })
+        if (!res.ok) return fail(command, await toApiError(res))
+        printJson({ unlinked: true, taskId, linkId })
+      },
+    )
 
   github
     .command('sync [taskId]')
@@ -80,6 +89,7 @@ export function registerGithubCommands(
           const res = await client.api.tasks[':taskId'][
             'github-link'
           ].sync.$post({ param: { taskId } })
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 204 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
           if (!res.ok) return fail(command, await toApiError(res))
           printJson({ synced: true, taskId })
           return

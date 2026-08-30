@@ -66,7 +66,7 @@ export function githubLinkToResponse(
 
 function taskCoreToResponse(
   task: typeof tasks.$inferSelect,
-  githubLink?: typeof taskGithubLinks.$inferSelect | null,
+  githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
   labelNames: string[] = [],
 ) {
   return {
@@ -84,7 +84,7 @@ function taskCoreToResponse(
     parentId: task.parentId,
     projectId: task.projectId,
     recurrenceRuleId: task.recurrenceRuleId,
-    githubLink: githubLink ? githubLinkToResponse(githubLink) : null,
+    githubLinks: githubLinks.map(githubLinkToResponse),
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   }
@@ -93,11 +93,11 @@ function taskCoreToResponse(
 export function taskToResponse(
   task: typeof tasks.$inferSelect,
   rule?: typeof recurrenceRules.$inferSelect | null,
-  githubLink?: typeof taskGithubLinks.$inferSelect | null,
+  githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
   labelNames: string[] = [],
 ) {
   return {
-    ...taskCoreToResponse(task, githubLink, labelNames),
+    ...taskCoreToResponse(task, githubLinks, labelNames),
     recurrenceRule: rule ? recurrenceRuleToResponse(rule) : null,
   }
 }
@@ -119,6 +119,28 @@ export async function getLabelNamesByTaskId(
   for (const row of rows) {
     const list = map.get(row.taskId) ?? []
     list.push(row.name)
+    map.set(row.taskId, list)
+  }
+  return map
+}
+
+// Batch-fetches GitHub links grouped by task ID, ordered by createdAt
+// ascending; seq breaks ties (see its column comment).
+export async function getGithubLinksByTaskId(
+  taskIds: string[],
+): Promise<Map<string, (typeof taskGithubLinks.$inferSelect)[]>> {
+  if (taskIds.length === 0) return new Map()
+
+  const rows = await db
+    .select()
+    .from(taskGithubLinks)
+    .where(inArray(taskGithubLinks.taskId, taskIds))
+    .orderBy(taskGithubLinks.createdAt, taskGithubLinks.seq)
+
+  const map = new Map<string, (typeof taskGithubLinks.$inferSelect)[]>()
+  for (const row of rows) {
+    const list = map.get(row.taskId) ?? []
+    list.push(row)
     map.set(row.taskId, list)
   }
   return map
@@ -165,11 +187,11 @@ export const parentTasks = alias(tasks, 'parent_task')
 export function taskListItemToResponse(
   task: typeof tasks.$inferSelect,
   parentNumber: number | null,
-  githubLink?: typeof taskGithubLinks.$inferSelect | null,
+  githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
   labelNames: string[] = [],
 ) {
   return {
-    ...taskCoreToResponse(task, githubLink, labelNames),
+    ...taskCoreToResponse(task, githubLinks, labelNames),
     parentNumber,
   }
 }
@@ -189,14 +211,14 @@ export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
 export type TaskListItemResponse = ReturnType<typeof taskListItemToResponse>
 
 // Batch-hydrates a set of list-query rows (as returned by `selectTaskListRows`)
-// with labels and child-completion counts in 2 queries total regardless of
-// row count, for any endpoint that renders task rows via `TaskListItemResponse`
-// (the `/api/tasks` list endpoint, and the task-detail page's linked tasks).
+// with labels, child-completion counts, and GitHub links in 3 queries total
+// regardless of row count, for any endpoint that renders task rows via
+// `TaskListItemResponse` (the `/api/tasks` list endpoint, and the
+// task-detail page's linked tasks).
 export async function hydrateTaskListRows(
   rows: {
     task: typeof tasks.$inferSelect
     parentNumber: number | null
-    githubLink?: typeof taskGithubLinks.$inferSelect | null
   }[],
 ): Promise<
   (TaskListItemResponse & {
@@ -204,16 +226,18 @@ export async function hydrateTaskListRows(
   })[]
 > {
   const ids = rows.map((r) => r.task.id)
-  const [labelsByTaskId, childCompletionCountsByTaskId] = await Promise.all([
-    getLabelNamesByTaskId(ids),
-    getChildCompletionCountsByTaskId(ids),
-  ])
+  const [labelsByTaskId, childCompletionCountsByTaskId, githubLinksByTaskId] =
+    await Promise.all([
+      getLabelNamesByTaskId(ids),
+      getChildCompletionCountsByTaskId(ids),
+      getGithubLinksByTaskId(ids),
+    ])
 
   return rows.map((r) => ({
     ...taskListItemToResponse(
       r.task,
       r.parentNumber,
-      r.githubLink,
+      githubLinksByTaskId.get(r.task.id) ?? [],
       labelsByTaskId.get(r.task.id) ?? [],
     ),
     childCompletionCount: childCompletionCountsByTaskId.get(r.task.id) ?? {

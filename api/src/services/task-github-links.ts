@@ -25,13 +25,6 @@ export class TaskNotFoundError extends Error {
   }
 }
 
-export class TaskAlreadyLinkedError extends Error {
-  constructor() {
-    super('Task is already linked to a GitHub issue or pull request')
-    this.name = 'TaskAlreadyLinkedError'
-  }
-}
-
 export class GithubResourceAlreadyLinkedError extends Error {
   readonly linkedTaskId: string
 
@@ -75,14 +68,14 @@ function findLinkByRef(
   ).map((link) => link ?? null)
 }
 
-export function findLinkByTaskId(
+export function findLinksByTaskId(
   taskId: string,
-): ResultAsync<LinkRow | null, never> {
+): ResultAsync<LinkRow[], never> {
   return ResultAsync.fromSafePromise(
-    db.query.taskGithubLinks.findFirst({
+    db.query.taskGithubLinks.findMany({
       where: eq(taskGithubLinks.taskId, taskId),
     }),
-  ).map((link) => link ?? null)
+  )
 }
 
 function findTaskForLink(
@@ -127,41 +120,21 @@ function isUniqueViolation(cause: unknown, constraintName: string): boolean {
 // to make their link write and its task_events row atomic.
 type Executor = typeof db | DbTransaction
 
-type LinkConflictError =
-  TaskAlreadyLinkedError | GithubResourceAlreadyLinkedError | RowNotFoundError
+type LinkConflictError = GithubResourceAlreadyLinkedError | RowNotFoundError
 
-// The caller already checked findLinkByTaskId/findLinkByRef before calling
-// this, but that check-then-insert isn't atomic: a concurrent request can
-// insert the conflicting row in between, which the DB's unique constraints
-// (task_github_links_task_id_unique, uq_task_github_links_repo_number) still
-// catch. Converting that race into the same business error the pre-check
-// returns keeps the route's response a 409 instead of an unhandled 500.
-//
-// If `cause` is already one of this function's own error types, it's passed
-// through unchanged — createTaskFromIssueData relies on this to route a
-// RowNotFoundError it threw itself back into a Result without reclassifying
-// it as an unrecognized conflict.
-//
-// The uq_task_github_links_repo_number branch queries for the task that
-// already holds the conflicting link, which requires a connection that
-// isn't mid-rollback: a still-open, now-aborted transaction/savepoint (see
-// createTaskFromIssueData) rejects any further query until the rollback
-// completes. Safe to call directly after a non-transactional insert, or
-// once an owning transaction has fully settled.
+// Converts a concurrent insert conflict on uq_task_github_links_repo_number
+// into GithubResourceAlreadyLinkedError; a cause already in LinkConflictError
+// passes through unchanged.
 async function classifyLinkConflict(
   cause: unknown,
   taskId: string,
   ref: GithubResourceRef,
 ): Promise<Result<never, LinkConflictError>> {
   if (
-    cause instanceof TaskAlreadyLinkedError ||
     cause instanceof GithubResourceAlreadyLinkedError ||
     cause instanceof RowNotFoundError
   ) {
     return err(cause)
-  }
-  if (isUniqueViolation(cause, 'task_github_links_task_id_unique')) {
-    return err(new TaskAlreadyLinkedError())
   }
   if (isUniqueViolation(cause, 'uq_task_github_links_repo_number')) {
     const existing = await findLinkByRef(ref).unwrapOr(null)
@@ -303,7 +276,6 @@ export function createTaskFromGithubUrl(
   | TokenRefreshError
   | GithubLinkConsistencyError
   | RowNotFoundError
-  | TaskAlreadyLinkedError
   | GithubResourceAlreadyLinkedError
 > {
   return findLinkByRef(ref).andThen((existing) => {
@@ -347,7 +319,6 @@ export function linkTaskToGithubUrl(
 ): ResultAsync<
   LinkRow,
   | TaskNotFoundError
-  | TaskAlreadyLinkedError
   | GithubResourceAlreadyLinkedError
   | GithubApiError
   | OAuthTokenMissingError
@@ -360,46 +331,42 @@ export function linkTaskToGithubUrl(
   ).andThen((task) => {
     if (!task) return errAsync(new TaskNotFoundError())
 
-    return findLinkByTaskId(taskId).andThen((existingTaskLink) => {
-      if (existingTaskLink) return errAsync(new TaskAlreadyLinkedError())
-
-      return findLinkByRef(ref).andThen((existingResourceLink) => {
-        if (existingResourceLink) {
-          return errAsync(
-            new GithubResourceAlreadyLinkedError(existingResourceLink.taskId),
-          )
-        }
-
-        return fetchGithubIssue(ref).andThen((issue) =>
-          ResultAsync.fromPromise<LinkRow, unknown>(
-            db.transaction(async (tx) => {
-              const linkResult = await insertLink(tx, taskId, ref, issue)
-              if (linkResult.isErr()) {
-                // eslint-disable-next-line no-restricted-syntax -- interop boundary: see comment above linkTaskToGithubUrl
-                throw linkResult.error
-              }
-              const link = linkResult.value
-              await recordGithubLinked(
-                tx,
-                taskId,
-                {
-                  owner: link.owner,
-                  repo: link.repo,
-                  number: link.number,
-                  kind: link.kind,
-                },
-                author,
-              )
-              return link
-            }),
-            (cause) => cause,
-          ).orElse((cause) =>
-            ResultAsync.fromSafePromise(
-              classifyLinkConflict(cause, taskId, ref),
-            ).andThen((result) => result),
-          ),
+    return findLinkByRef(ref).andThen((existingResourceLink) => {
+      if (existingResourceLink) {
+        return errAsync(
+          new GithubResourceAlreadyLinkedError(existingResourceLink.taskId),
         )
-      })
+      }
+
+      return fetchGithubIssue(ref).andThen((issue) =>
+        ResultAsync.fromPromise<LinkRow, unknown>(
+          db.transaction(async (tx) => {
+            const linkResult = await insertLink(tx, taskId, ref, issue)
+            if (linkResult.isErr()) {
+              // eslint-disable-next-line no-restricted-syntax -- interop boundary: see comment above linkTaskToGithubUrl
+              throw linkResult.error
+            }
+            const link = linkResult.value
+            await recordGithubLinked(
+              tx,
+              taskId,
+              {
+                owner: link.owner,
+                repo: link.repo,
+                number: link.number,
+                kind: link.kind,
+              },
+              author,
+            )
+            return link
+          }),
+          (cause) => cause,
+        ).orElse((cause) =>
+          ResultAsync.fromSafePromise(
+            classifyLinkConflict(cause, taskId, ref),
+          ).andThen((result) => result),
+        ),
+      )
     })
   })
 }
@@ -407,11 +374,14 @@ export function linkTaskToGithubUrl(
 export function unlinkTask(
   executor: Executor,
   taskId: string,
+  linkId: string,
 ): ResultAsync<LinkRow, GithubLinkNotFoundError> {
   return ResultAsync.fromSafePromise(
     executor
       .delete(taskGithubLinks)
-      .where(eq(taskGithubLinks.taskId, taskId))
+      .where(
+        and(eq(taskGithubLinks.id, linkId), eq(taskGithubLinks.taskId, taskId)),
+      )
       .returning(),
   ).andThen((deleted) => {
     const [link] = deleted

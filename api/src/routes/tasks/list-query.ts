@@ -17,7 +17,6 @@ import {
   labels,
   projects,
   taskComments,
-  taskGithubLinks,
   taskLabels,
   taskPages,
   tasks,
@@ -37,11 +36,9 @@ export function selectTaskListRows() {
     .select({
       task: tasks,
       parentNumber: parentTasks.number,
-      githubLink: taskGithubLinks,
     })
     .from(tasks)
     .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
-    .leftJoin(taskGithubLinks, eq(tasks.id, taskGithubLinks.taskId))
 }
 
 export type TaskListRow = Awaited<ReturnType<typeof selectTaskListRows>>[number]

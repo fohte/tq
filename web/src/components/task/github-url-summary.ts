@@ -7,16 +7,13 @@ export interface GithubUrlSummary extends GithubRef {
   linkedTaskId: string | null
 }
 
-// Normalizes the two resolve outcomes (an already-linked TQ task vs. a bare
-// GitHub preview) into one shape the chip/card can render uniformly. Returns
-// `null` for the `linked: true` case's theoretically-impossible but
-// type-wise nullable missing `githubLink` (the task was found via that same
-// link, so it always has one).
+// githubLinks[0] is guaranteed non-null at runtime here (found via that same
+// link); null only for type completeness.
 export function toGithubUrlSummary(
   result: ResolveGithubUrlResult,
 ): GithubUrlSummary | null {
   if (result.linked) {
-    const link = result.task.githubLink
+    const link = result.task.githubLinks[0] ?? null
     if (link == null) return null
     return {
       kind: link.kind,

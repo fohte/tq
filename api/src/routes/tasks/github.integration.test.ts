@@ -34,11 +34,11 @@ function normalizeCreateResponse(body: {
       number: 'NUMBER',
       createdAt: 'DATE',
       updatedAt: 'DATE',
-      githubLink: body.task.githubLink && {
-        ...body.task.githubLink,
+      githubLinks: body.task.githubLinks.map((link) => ({
+        ...link,
         id: 'ID',
         lastSyncedAt: 'DATE',
-      },
+      })),
     },
   }
 }
@@ -72,17 +72,19 @@ describe('POST /api/tasks/from-github', () => {
         projectId: null,
         recurrenceRuleId: null,
         recurrenceRule: null,
-        githubLink: {
-          id: 'ID',
-          owner: 'fohte',
-          repo: 'tq',
-          number: 42,
-          kind: 'issue',
-          url: 'https://github.com/fohte/tq/issues/42',
-          state: 'open',
-          title: 'Bug: something broke',
-          lastSyncedAt: 'DATE',
-        },
+        githubLinks: [
+          {
+            id: 'ID',
+            owner: 'fohte',
+            repo: 'tq',
+            number: 42,
+            kind: 'issue',
+            url: 'https://github.com/fohte/tq/issues/42',
+            state: 'open',
+            title: 'Bug: something broke',
+            lastSyncedAt: 'DATE',
+          },
+        ],
         createdAt: 'DATE',
         updatedAt: 'DATE',
       },

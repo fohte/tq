@@ -41,11 +41,12 @@ export const githubApp = new Hono()
           ? c.json(
               {
                 linked: true,
-                task: taskToResponse(
-                  resolved.existingTask,
-                  undefined,
+                // Only the one link this URL resolved to, not the task's
+                // full link set — this endpoint answers "what does this
+                // GitHub resource point to", not "list this task's links".
+                task: taskToResponse(resolved.existingTask, undefined, [
                   resolved.existingLink,
-                ),
+                ]),
               },
               200,
             )

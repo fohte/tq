@@ -1270,6 +1270,11 @@
           "name": "etag",
           "type": "text",
           "nullable": true
+        },
+        {
+          "name": "seq",
+          "type": "bigint",
+          "nullable": false
         }
       ],
       "indexes": [
@@ -1280,16 +1285,16 @@
           "columns": ["id"]
         },
         {
-          "name": "task_github_links_task_id_unique",
-          "def": "CREATE UNIQUE INDEX task_github_links_task_id_unique ON public.task_github_links USING btree (task_id)",
-          "table": "public.task_github_links",
-          "columns": ["task_id"]
-        },
-        {
           "name": "uq_task_github_links_repo_number",
           "def": "CREATE UNIQUE INDEX uq_task_github_links_repo_number ON public.task_github_links USING btree (owner, repo, number)",
           "table": "public.task_github_links",
           "columns": ["owner", "repo", "number"]
+        },
+        {
+          "name": "idx_task_github_links_task_id_created_at",
+          "def": "CREATE INDEX idx_task_github_links_task_id_created_at ON public.task_github_links USING btree (task_id, created_at)",
+          "table": "public.task_github_links",
+          "columns": ["task_id", "created_at"]
         }
       ],
       "constraints": [
@@ -1317,14 +1322,6 @@
           "table": "public.task_github_links",
           "referenced_table": "",
           "columns": ["id"]
-        },
-        {
-          "name": "task_github_links_task_id_unique",
-          "type": "UNIQUE",
-          "def": "UNIQUE (task_id)",
-          "table": "public.task_github_links",
-          "referenced_table": "",
-          "columns": ["task_id"]
         },
         {
           "name": "uq_task_github_links_repo_number",
@@ -2303,7 +2300,7 @@
     {
       "table": "public.task_github_links",
       "columns": ["task_id"],
-      "cardinality": "zero_or_one",
+      "cardinality": "zero_or_more",
       "parent_table": "public.tasks",
       "parent_columns": ["id"],
       "parent_cardinality": "exactly_one",

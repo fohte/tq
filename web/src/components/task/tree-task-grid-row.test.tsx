@@ -429,17 +429,19 @@ describe('TreeTaskGridRow', () => {
 
   it('shows a GitHub badge when linked', async () => {
     const node = makeNode({
-      githubLink: {
-        id: 'link-1',
-        owner: 'fohte',
-        repo: 'tq',
-        number: 42,
-        kind: 'issue',
-        url: 'https://github.com/fohte/tq/issues/42',
-        state: 'open',
-        title: 'Linked issue',
-        lastSyncedAt: '2026-03-20T00:00:00.000Z',
-      },
+      githubLinks: [
+        {
+          id: 'link-1',
+          owner: 'fohte',
+          repo: 'tq',
+          number: 42,
+          kind: 'issue',
+          url: 'https://github.com/fohte/tq/issues/42',
+          state: 'open',
+          title: 'Linked issue',
+          lastSyncedAt: '2026-03-20T00:00:00.000Z',
+        },
+      ],
     })
     await renderTree(node)
     // The badge only renders in the row's second line when present.

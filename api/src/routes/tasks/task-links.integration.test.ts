@@ -57,7 +57,7 @@ function linkedTaskDetail(
     | 'parentId'
     | 'projectId'
     | 'recurrenceRuleId'
-    | 'githubLink'
+    | 'githubLinks'
     | 'createdAt'
     | 'updatedAt'
   >,
@@ -81,7 +81,7 @@ function linkedTaskDetail(
     parentId: task.parentId,
     projectId: task.projectId,
     recurrenceRuleId: task.recurrenceRuleId,
-    githubLink: task.githubLink,
+    githubLinks: task.githubLinks,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
     parentNumber: null,

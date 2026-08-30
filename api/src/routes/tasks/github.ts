@@ -22,7 +22,7 @@ export const tasksGithubApp = new Hono().post(
     return result.match(
       ({ task, link, created }) =>
         c.json(
-          { created, task: taskToResponse(task, undefined, link) },
+          { created, task: taskToResponse(task, undefined, [link]) },
           created ? 201 : 200,
         ),
       (error) => githubLinkErrorResponse(c, error, 'tasks.from-github'),

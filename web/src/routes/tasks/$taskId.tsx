@@ -17,7 +17,7 @@ export const Route = createFileRoute('/tasks/$taskId')({
 function TaskPage() {
   const { taskId } = Route.useParams()
   const { data: task, isLoading, error } = useTask(taskId)
-  useSyncTaskGithubLink(taskId, task?.githubLink != null)
+  useSyncTaskGithubLink(taskId, (task?.githubLinks.length ?? 0) > 0)
 
   if (isLoading) {
     return <FullPageLoading />

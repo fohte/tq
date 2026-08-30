@@ -37,12 +37,13 @@ describe('GET /api/tasks/:id/activity', () => {
     })
     await upsertGithubToken('valid-token')
     mockGithubIssueResponse()
-    await app.request(`/api/tasks/${task.id}/github-link`, {
+    const linkRes = await app.request(`/api/tasks/${task.id}/github-link`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/42' }),
     })
-    await app.request(`/api/tasks/${task.id}/github-link`, {
+    const link = await jsonBody<{ id: string }>(linkRes)
+    await app.request(`/api/tasks/${task.id}/github-link/${link.id}`, {
       method: 'DELETE',
     })
     await createComment(task.id, 'This should not appear')

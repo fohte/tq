@@ -15,7 +15,6 @@ import { isQuietProviderError } from '#integrations/quiet-errors'
 import {
   createTaskFromIssueData,
   GithubResourceAlreadyLinkedError,
-  TaskAlreadyLinkedError,
 } from '#services/task-github-links'
 
 type SyncRuleRow = typeof githubSyncRules.$inferSelect
@@ -48,7 +47,6 @@ function ruleMatches(rule: SyncRuleRow, owner: string, repo: string): boolean {
 // rule wanted to create — the desired end-state either way, not a failure.
 function isQuietRuleSyncError(error: Error): boolean {
   if (isQuietProviderError(error)) return true
-  if (error instanceof TaskAlreadyLinkedError) return true
   if (error instanceof GithubResourceAlreadyLinkedError) return true
   return false
 }

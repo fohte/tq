@@ -30,7 +30,7 @@ const baseTask: TaskUrlPreview = {
   projectId: null,
   recurrenceRuleId: null,
   recurrenceRule: null,
-  githubLink: null,
+  githubLinks: [],
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
   titleAuthor: null,

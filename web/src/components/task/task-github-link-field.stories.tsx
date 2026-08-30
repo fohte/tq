@@ -65,12 +65,12 @@ type Story = StoryObj<typeof meta>
 
 export const Unlinked: Story = {
   args: {
-    githubLink: null,
+    githubLinks: [],
   },
 }
 
 export const Linked: Story = {
   args: {
-    githubLink: sampleLink,
+    githubLinks: [sampleLink],
   },
 }

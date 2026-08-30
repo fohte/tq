@@ -31,6 +31,7 @@ function normalizeLink(link: typeof taskGithubLinks.$inferSelect) {
   return {
     ...link,
     id: 'ID',
+    seq: 'SEQ',
     lastSyncedAt: 'DATE',
     createdAt: 'DATE',
     updatedAt: 'DATE',
@@ -89,6 +90,7 @@ describe('syncGithubAssignedIssues', () => {
 
     expect(normalizeLink(link)).toEqual({
       id: 'ID',
+      seq: 'SEQ',
       taskId: task.id,
       owner: 'fohte',
       repo: 'tq',
