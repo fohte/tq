@@ -12,6 +12,6 @@ describe('tagFilterSearch', () => {
 
 describe('sortOptionValues', () => {
   it('exposes the dropdown/tab-strip sort choices', () => {
-    expect(sortOptionValues).toEqual(['updated', 'created'])
+    expect(sortOptionValues).toEqual(['updated', 'due', 'estimate', 'created'])
   })
 })

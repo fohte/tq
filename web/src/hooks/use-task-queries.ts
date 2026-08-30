@@ -15,7 +15,7 @@ type TaskStatus = 'todo' | 'in_progress' | 'completed'
 
 type TaskContext = 'work' | 'personal'
 
-export type TaskSortBy = 'created' | 'updated' | 'due'
+export type TaskSortBy = 'created' | 'updated' | 'due' | 'estimate'
 
 export interface TaskListFilter {
   q?: string

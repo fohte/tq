@@ -26,6 +26,18 @@ export const SortByCreated: Story = {
   },
 }
 
+export const SortByDue: Story = {
+  args: {
+    sortBy: 'due',
+  },
+}
+
+export const SortByEstimate: Story = {
+  args: {
+    sortBy: 'estimate',
+  },
+}
+
 export const ChangeSort: Story = {
   play: async ({ canvas, args }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Created' }))
