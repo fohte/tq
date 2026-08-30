@@ -161,6 +161,25 @@ describe('task get', () => {
   })
 })
 
+describe('task url', () => {
+  it('prints the web URL built from the resolved API base URL, without making any fetch call', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify({}), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'url', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(calls.length).toBe(0)
+    expect(write.mock.calls).toEqual([[`${apiUrl}/tasks/42\n`]])
+  })
+})
+
 describe('task create', () => {
   it('sends only the title when no optional flags are given and prints the response', async () => {
     const created = { id: 't1', number: 1, title: 'New task' }

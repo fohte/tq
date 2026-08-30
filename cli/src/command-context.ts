@@ -10,7 +10,8 @@ interface GlobalOptions {
   header: Record<string, string>
 }
 
-function resolveApiUrl(options: GlobalOptions): Result<string, Error> {
+export function resolveApiUrl(command: Command): Result<string, Error> {
+  const options = command.optsWithGlobals<GlobalOptions>()
   if (options.apiUrl != null && options.apiUrl.length > 0) {
     return ok(options.apiUrl)
   }
@@ -33,7 +34,7 @@ export function buildClient(
   fetchImpl: typeof fetch,
 ): Result<Client, Error> {
   const options = command.optsWithGlobals<GlobalOptions>()
-  return resolveApiUrl(options).map((apiUrl) =>
+  return resolveApiUrl(command).map((apiUrl) =>
     createClient({ apiUrl, headers: resolveHeaders(options) }, fetchImpl),
   )
 }

@@ -9,7 +9,7 @@ import type { InferRequestType } from 'hono/client'
 
 import type { Client } from '#client'
 import { toApiError } from '#client'
-import { buildClient } from '#command-context'
+import { buildClient, resolveApiUrl } from '#command-context'
 import {
   printJson,
   printJsonList,
@@ -105,6 +105,17 @@ export function registerTaskCommands(
       const res = await client.api.tasks[':id'].$get({ param: { id } })
       if (!res.ok) return fail(command, await toApiError(res))
       printJson(await res.json())
+    })
+
+  task
+    .command('url <id>')
+    .description("Print a task's web URL")
+    .action((id: string, _options: unknown, command: Command) => {
+      const apiUrl = resolveApiUrl(command).match(
+        (value) => value,
+        (error) => fail(command, error),
+      )
+      process.stdout.write(`${apiUrl}/tasks/${id}\n`)
     })
 
   addSchemaOptions(
