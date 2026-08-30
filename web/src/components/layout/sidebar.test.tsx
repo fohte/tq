@@ -9,6 +9,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { Sidebar } from '#components/layout/sidebar'
+import { makeProject, makeTask } from '#components/layout/sidebar-test-fixtures'
 import type { Project } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { Task } from '#hooks/use-tasks'
@@ -45,47 +46,10 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
   }
 })
 
-const baseTask: Task = {
-  id: '00000000-0000-0000-0000-000000000001',
-  number: 1,
-  title: 'Implement task list UI',
-  description: null,
-  status: 'todo',
-  context: 'personal',
-  commitment: 'active',
-  labels: [],
-  startDate: null,
-  dueDate: null,
-  estimatedMinutes: null,
-  parentId: null,
-  parentNumber: null,
-  projectId: null,
-  recurrenceRuleId: null,
-  githubLinks: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  childCompletionCount: { completed: 0, total: 0 },
-}
-
 const tasksWithTags: Task[] = [
-  { ...baseTask, id: '1', title: 'Task A', labels: ['dev:tq', 'urgent'] },
-  { ...baseTask, id: '2', title: 'Task B', labels: ['dev:tq'] },
+  makeTask({ id: '1', title: 'Task A', labels: ['dev:tq', 'urgent'] }),
+  makeTask({ id: '2', title: 'Task B', labels: ['dev:tq'] }),
 ]
-
-const baseProject: Project = {
-  id: '00000000-0000-0000-0000-000000000101',
-  title: 'tq',
-  description: null,
-  status: 'active',
-  startDate: null,
-  targetDate: null,
-  color: null,
-  sortOrder: 0,
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  completionRate: 0,
-  taskCount: { total: 0, completed: 0 },
-}
 
 // The router's first route match resolves asynchronously even with no
 // loaders, so router.load() is awaited before render() to avoid an initial
@@ -172,13 +136,12 @@ describe('Sidebar', () => {
       await renderSidebar(
         [],
         [
-          {
-            ...baseProject,
+          makeProject({
             id: '1',
             title: 'Project Alpha',
             status: 'active',
             taskCount: { completed: 3, total: 10 },
-          },
+          }),
         ],
       )
 
@@ -191,20 +154,18 @@ describe('Sidebar', () => {
       await renderSidebar(
         [],
         [
-          {
-            ...baseProject,
+          makeProject({
             id: '1',
             title: 'Project Alpha',
             status: 'active',
             taskCount: { completed: 1, total: 2 },
-          },
-          {
-            ...baseProject,
+          }),
+          makeProject({
             id: '2',
             title: 'Project Beta',
             status: 'paused',
             taskCount: { completed: 5, total: 5 },
-          },
+          }),
         ],
       )
 

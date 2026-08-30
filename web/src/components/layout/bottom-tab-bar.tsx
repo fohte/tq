@@ -4,7 +4,7 @@ import {
   FolderKanban,
   ListChecks,
   type LucideIcon,
-  Settings,
+  Menu,
   Sun,
 } from 'lucide-react'
 
@@ -19,11 +19,11 @@ interface TabItem {
 }
 
 const tabs: TabItem[] = [
+  { to: '/browse', icon: Menu, label: 'browse' },
   { to: '/today', icon: Sun, label: 'today' },
   { to: '/', icon: Calendar, label: 'calendar', exact: true },
   { to: '/tasks', icon: ListChecks, label: 'tasks' },
   { to: '/projects', icon: FolderKanban, label: 'projects' },
-  { to: '/settings', icon: Settings, label: 'settings' },
 ]
 
 function Tab({ tab }: { tab: TabItem }) {

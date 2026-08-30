@@ -26,7 +26,7 @@ const meta = {
   argTypes: {
     currentPath: {
       control: 'select',
-      options: ['/', '/tasks', '/projects', '/today', '/settings'],
+      options: ['/', '/tasks', '/projects', '/today', '/browse'],
     },
   },
 } satisfies Meta<typeof BottomTabBarWithRouter>
@@ -46,8 +46,8 @@ export const TasksActive: Story = {
   },
 }
 
-export const SettingsActive: Story = {
+export const BrowseActive: Story = {
   args: {
-    currentPath: '/settings',
+    currentPath: '/browse',
   },
 }
