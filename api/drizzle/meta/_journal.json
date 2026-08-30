@@ -197,6 +197,13 @@
       "when": 1788012741956,
       "tag": "0027_add_task_commitment",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1788059311521,
+      "tag": "0028_lethal_doorman",
+      "breakpoints": true
     }
   ]
 }

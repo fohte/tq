@@ -12,6 +12,7 @@
     "./lib/text-scan": "./src/lib/text-scan.ts",
     "./schemas/agent-session": "./src/schemas/agent-session.ts",
     "./schemas/project": "./src/schemas/project.ts",
+    "./schemas/saved-view": "./src/schemas/saved-view.ts",
     "./schemas/task": "./src/schemas/task.ts",
     "./schemas/task-comment": "./src/schemas/task-comment.ts",
     "./schemas/task-page": "./src/schemas/task-page.ts",
