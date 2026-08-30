@@ -10,6 +10,7 @@ import { registerLabelCommands } from '#commands/label'
 import { registerLinkCommands } from '#commands/link'
 import { registerPageCommands } from '#commands/page'
 import { registerProjectCommands } from '#commands/project'
+import { registerSavedViewCommands } from '#commands/saved-view'
 import { registerSessionCommands } from '#commands/session'
 import { registerSlackCommands } from '#commands/slack'
 import { registerTaskCommands } from '#commands/task'
@@ -32,6 +33,11 @@ export function buildProgram(
       process.env['TQ_API_URL'],
     )
     .option(
+      '--web-url <url>',
+      'tq web app base URL, for commands that print a web link (or set TQ_WEB_URL; defaults to --api-url, which is the same origin in the production deployment)',
+      process.env['TQ_WEB_URL'],
+    )
+    .option(
       '--author <name>',
       'Attribute writes to this LLM agent, e.g. "claude-opus-5" (or set TQ_AUTHOR); sent as X-Author: llm:<name>',
       process.env['TQ_AUTHOR'],
@@ -49,6 +55,7 @@ export function buildProgram(
   registerTaskCommands(program, fetchImpl)
   registerCommentCommands(program, fetchImpl, stdin)
   registerProjectCommands(program, fetchImpl)
+  registerSavedViewCommands(program, fetchImpl)
   registerLabelCommands(program, fetchImpl)
   registerImageCommands(program, fetchImpl)
   registerGithubCommands(program, fetchImpl)

@@ -473,6 +473,52 @@ describe('agent sessions API', () => {
       const body = await jsonBody<AgentSessionResponse[]>(res)
       expect(body.map((session) => session.id)).toEqual([newer.id, older.id])
     })
+
+    it('filters to the given sessionId values when repeated in the query', async () => {
+      const older = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'older',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-01T00:00:00.000Z',
+      )
+      const newer = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'newer',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-02T00:00:00.000Z',
+      )
+      await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'excluded',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-03T00:00:00.000Z',
+      )
+
+      const res = await app.request(
+        '/api/agent-sessions?sessionId=older&sessionId=newer',
+      )
+
+      expect(res.status).toBe(200)
+      expect(await jsonBody<AgentSessionResponse[]>(res)).toEqual([
+        newer,
+        older,
+      ])
+    })
   })
 
   describe('GET /api/agent-sessions/:id', () => {

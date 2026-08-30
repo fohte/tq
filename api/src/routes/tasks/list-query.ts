@@ -1,4 +1,15 @@
-import { and, eq, exists, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
+import {
+  and,
+  eq,
+  exists,
+  inArray,
+  isNotNull,
+  isNull,
+  ne,
+  notExists,
+  sql,
+} from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
@@ -17,6 +28,8 @@ import { parseSearchQuery } from '#search-query-parser'
 // Each word adds an EXISTS subquery for task_pages, so cap the word count
 // to keep an adversarial `q` from generating an unbounded number of them.
 const MAX_FREE_TEXT_WORDS = 20
+
+const childTasks = alias(tasks, 'child_task')
 
 export function selectTaskListRows() {
   return db
@@ -82,6 +95,22 @@ function buildConditions(query: ListTasksQuery) {
           .select({ _: sql`1` })
           .from(taskComments)
           .where(eq(taskComments.taskId, tasks.id)),
+      ),
+    )
+  }
+
+  if (parsed?.hasNoChildren === true) {
+    conditions.push(
+      notExists(
+        db
+          .select({ _: sql`1` })
+          .from(childTasks)
+          .where(
+            and(
+              eq(childTasks.parentId, tasks.id),
+              ne(childTasks.status, 'completed'),
+            ),
+          ),
       ),
     )
   }

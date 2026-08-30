@@ -17,3 +17,10 @@ export const upsertAgentSessionSchema = z.object({
 export const updateAgentSessionSchema = z.object({
   customLabel: z.string().trim().min(1).nullable(),
 })
+
+export const listAgentSessionsQuerySchema = z.object({
+  sessionId: z
+    .union([z.string(), z.array(z.string())])
+    .transform((v) => (Array.isArray(v) ? v : [v]))
+    .optional(),
+})
