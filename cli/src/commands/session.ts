@@ -1,16 +1,20 @@
 import type { Command } from 'commander'
-import type { InferResponseType } from 'hono/client'
+import type { InferRequestType, InferResponseType } from 'hono/client'
 
 import type { Client } from '#client'
 import { toApiError } from '#client'
 import { buildClient } from '#command-context'
-import { printJson } from '#output'
+import { printJson, printJsonList } from '#output'
 import { fail } from '#result'
 
 type AgentSession = InferResponseType<
   Client['api']['agent-sessions']['$get'],
   200
 >[number]
+
+type ListAgentSessionsQuery = InferRequestType<
+  Client['api']['agent-sessions']['$get']
+>['query']
 
 type AgentSessionByTask = InferResponseType<
   Client['api']['agent-sessions']['by-task']['$get'],
@@ -22,6 +26,10 @@ interface LinkedTask {
   number: number
   title: string
   parentId: string | null
+}
+
+function collectSessionId(value: string, previous: string[]): string[] {
+  return [...previous, value]
 }
 
 function groupTasksBySessionId(
@@ -52,31 +60,47 @@ export function registerSessionCommands(
   session
     .command('list')
     .description('List agent sessions with the tasks they are linked to')
-    .action(async (_options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl).match(
-        (value) => value,
-        (error) => fail(command, error),
-      )
+    .option(
+      '--session-id <id>',
+      'Only list the session with this session id (repeatable)',
+      collectSessionId,
+      [] as string[],
+    )
+    .option('--full', 'Include lastMessage in the output')
+    .action(
+      async (
+        options: { sessionId: string[]; full?: boolean },
+        command: Command,
+      ) => {
+        const client = buildClient(command, fetchImpl).match(
+          (value) => value,
+          (error) => fail(command, error),
+        )
 
-      const [sessionsRes, byTaskRes] = await Promise.all([
-        client.api['agent-sessions'].$get(),
-        client.api['agent-sessions']['by-task'].$get(),
-      ])
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
-      if (!sessionsRes.ok) return fail(command, await toApiError(sessionsRes))
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
-      if (!byTaskRes.ok) return fail(command, await toApiError(byTaskRes))
-      const sessions: AgentSession[] = await sessionsRes.json()
-      const byTask: AgentSessionByTask[] = await byTaskRes.json()
+        const query: ListAgentSessionsQuery =
+          options.sessionId.length > 0 ? { sessionId: options.sessionId } : {}
+        const [sessionsRes, byTaskRes] = await Promise.all([
+          client.api['agent-sessions'].$get({ query }),
+          client.api['agent-sessions']['by-task'].$get(),
+        ])
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
+        if (!sessionsRes.ok) return fail(command, await toApiError(sessionsRes))
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
+        if (!byTaskRes.ok) return fail(command, await toApiError(byTaskRes))
+        const sessions: AgentSession[] = await sessionsRes.json()
+        const byTask: AgentSessionByTask[] = await byTaskRes.json()
 
-      const tasksBySessionId = groupTasksBySessionId(byTask)
-      printJson(
-        sessions.map((s) => ({
-          ...s,
-          tasks: tasksBySessionId.get(s.id) ?? [],
-        })),
-      )
-    })
+        const tasksBySessionId = groupTasksBySessionId(byTask)
+        printJsonList(
+          sessions.map((s) => ({
+            ...s,
+            tasks: tasksBySessionId.get(s.id) ?? [],
+          })),
+          'lastMessage',
+          { full: options.full },
+        )
+      },
+    )
 
   session
     .command('delete <provider> <sessionId>')

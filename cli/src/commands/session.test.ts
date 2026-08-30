@@ -43,7 +43,7 @@ const session2 = {
 }
 
 describe('session list', () => {
-  it('lists sessions with the tasks each is linked to, defaulting unlinked sessions to an empty array', async () => {
+  it('lists sessions with the tasks each is linked to, omitting lastMessage and defaulting unlinked sessions to an empty array', async () => {
     const sessions = [session1, session2]
     const byTask = [
       {
@@ -94,7 +94,16 @@ describe('session list', () => {
         `${JSON.stringify(
           [
             {
-              ...session1,
+              id: 'agent-session-1',
+              provider: 'claude_code',
+              sessionId: 'sess-1',
+              context: 'work',
+              cwd: '/home/fohte/project',
+              label: 'Session 1',
+              customLabel: null,
+              startedAt: '2030-01-01T00:00:00.000Z',
+              lastActiveAt: '2030-01-01T00:00:00.000Z',
+              endedAt: null,
               tasks: [
                 {
                   id: 'task-1',
@@ -110,13 +119,81 @@ describe('session list', () => {
                 },
               ],
             },
-            { ...session2, tasks: [] },
+            {
+              id: 'agent-session-2',
+              provider: 'claude_code',
+              sessionId: 'sess-2',
+              context: 'personal',
+              cwd: '/home/fohte/other',
+              label: 'Session 2',
+              customLabel: null,
+              startedAt: '2030-01-02T00:00:00.000Z',
+              lastActiveAt: '2030-01-02T00:00:00.000Z',
+              endedAt: null,
+              tasks: [],
+            },
           ],
           null,
           2,
         )}\n`,
       ],
     ])
+  })
+
+  it('includes lastMessage when --full is passed', async () => {
+    const responses = [
+      new Response(JSON.stringify([session1]), { status: 200 }),
+      new Response(JSON.stringify([]), { status: 200 }),
+    ]
+    const { fetchStub } = captureFetch(
+      () => responses.shift() ?? new Response(null, { status: 500 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'session', 'list', '--full'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify([{ ...session1, tasks: [] }], null, 2)}\n`],
+    ])
+  })
+
+  it('sends each repeated --session-id as a query param and filters to only those sessions', async () => {
+    const responses = [
+      new Response(JSON.stringify([session1]), { status: 200 }),
+      new Response(JSON.stringify([]), { status: 200 }),
+    ]
+    const { fetchStub, calls } = captureFetch(
+      () => responses.shift() ?? new Response(null, { status: 500 }),
+    )
+    spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'session',
+        'list',
+        '--session-id',
+        'sess-1',
+        '--session-id',
+        'sess-2',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'GET',
+      pathname: '/api/agent-sessions',
+      query: { sessionId: ['sess-1', 'sess-2'] },
+      body: undefined,
+    })
   })
 
   it('reports the API error when either request fails', async () => {

@@ -42,10 +42,15 @@ export function captureFetch(respond: () => Response): {
 // `toEqual` instead of checking each part separately.
 export function request(call: CapturedRequest | undefined) {
   const url = new URL(call?.url ?? '')
+  const query: Record<string, string | string[]> = {}
+  for (const key of new Set(url.searchParams.keys())) {
+    const values = url.searchParams.getAll(key)
+    query[key] = values.length > 1 ? values : (values[0] ?? '')
+  }
   return {
     method: call?.method,
     pathname: url.pathname,
-    query: Object.fromEntries(url.searchParams),
+    query,
     body: call?.body,
   }
 }
