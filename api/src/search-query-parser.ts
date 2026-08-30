@@ -6,6 +6,7 @@ export interface ParsedQuery {
   commitment?: 'inbox' | 'active' | 'someday'
   hasPages?: boolean
   hasComments?: boolean
+  hasNoChildren?: boolean
   parentId?: string
   projectId?: string
   sortBy?: 'due' | 'created' | 'updated' | 'estimate'
@@ -84,6 +85,8 @@ export function parseSearchQuery(q: string): ParsedQuery {
           result.hasPages = true
         } else if (value === 'comments') {
           result.hasComments = true
+        } else if (value === 'no-children') {
+          result.hasNoChildren = true
         } else {
           freeTextParts.push(token)
         }
@@ -133,6 +136,9 @@ export function buildSearchQuery(query: ParsedQuery): string {
   }
   if (query.hasComments === true) {
     parts.push('has:comments')
+  }
+  if (query.hasNoChildren === true) {
+    parts.push('has:no-children')
   }
   if (query.parentId !== undefined) {
     parts.push(`parent:${quoteIfNeeded(query.parentId)}`)

@@ -750,6 +750,39 @@ describe('tasks CRUD API', () => {
       expect(body[0].title).toBe('Has comments')
     })
 
+    it('filters by has:no-children prefix in q parameter', async () => {
+      const parent = await createTask('Has incomplete child')
+      await createTask('Child', { parentId: parent.id })
+      const parentWithCompletedChild = await createTask(
+        'Has only completed children',
+      )
+      const completedChild = await createTask('Completed child', {
+        parentId: parentWithCompletedChild.id,
+      })
+      await app.request(`/api/tasks/${completedChild.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      })
+      await createTask('Leaf task')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('has:no-children'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      // "Has incomplete child" is excluded: its child ("Child") is still
+      // todo. Every other task here either has no children of its own or
+      // only completed ones, so it qualifies as a leaf.
+      expect(body.map((t) => t.title)).toEqual([
+        'Child',
+        'Has only completed children',
+        'Completed child',
+        'Leaf task',
+      ])
+    })
+
     it('filters by parent: prefix in q parameter', async () => {
       const parent = await createTask('Parent')
       await createTask('Child', { parentId: parent.id })

@@ -77,6 +77,7 @@ export function TaskFilterChipRow({
     if (typed.context != null) next.context = typed.context
     if (typed.hasPages === true) next = withHasPages(next, true)
     if (typed.hasComments === true) next.hasComments = true
+    if (typed.hasNoChildren === true) next.hasNoChildren = true
     if (typed.parentId != null) next = withParentId(next, typed.parentId)
     if (typed.projectId != null) next = withProjectId(next, typed.projectId)
     if (typed.sortBy != null) next.sortBy = typed.sortBy
