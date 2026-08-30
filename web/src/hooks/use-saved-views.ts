@@ -2,7 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
-import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
+import {
+  assertOk,
+  assertOkOrThrow,
+  assertOkWithMessage,
+  unwrapOrThrow,
+} from '#lib/assert-response'
 
 export type SavedView = InferResponseType<
   (typeof api.api)['saved-views']['$get'],
@@ -36,7 +41,7 @@ export function useCreateSavedView() {
   return useMutation({
     mutationFn: async (input: CreateSavedViewInput) => {
       const res = await api.api['saved-views'].$post({ json: input })
-      return unwrapOrThrow(assertOk(res)).json()
+      return unwrapOrThrow(await assertOkWithMessage(res)).json()
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: savedViewKeys.all })
@@ -53,7 +58,7 @@ export function useRenameSavedView() {
         param: { id },
         json: { name },
       })
-      return unwrapOrThrow(assertOk(res)).json()
+      return unwrapOrThrow(await assertOkWithMessage(res)).json()
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: savedViewKeys.all })

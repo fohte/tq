@@ -52,6 +52,16 @@ export const Default: Story = {
   },
 }
 
+export const EmptyNameDisablesSave: Story = {
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body)
+    const input = await body.findByDisplayValue('Now')
+    await userEvent.clear(input)
+
+    await expect(body.getByRole('button', { name: 'Save' })).toBeDisabled()
+  },
+}
+
 export const RenameAndSubmit: Story = {
   parameters: {
     msw: {
@@ -61,8 +71,10 @@ export const RenameAndSubmit: Story = {
         ),
       ],
     },
-    // The dialog closes on a successful rename via onOpenChange, driven by
-    // the story's own args, so there's no visible end state to capture.
+    // The dialog itself stays mounted throughout (`open` is a static arg
+    // here, so `onOpenChange` never actually closes it) — Default already
+    // covers the open dialog's appearance, so skipping this capture doesn't
+    // drop coverage.
     screenshot: { skip: true },
   },
   play: async ({ canvasElement, args }) => {

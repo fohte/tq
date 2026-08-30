@@ -37,6 +37,7 @@ export const DialogOpen: Story = {
 
     const body = within(canvasElement.ownerDocument.body)
     await expect(await body.findByPlaceholderText('View name')).toBeVisible()
+    await expect(body.getByRole('button', { name: 'Save' })).toBeDisabled()
   },
 }
 

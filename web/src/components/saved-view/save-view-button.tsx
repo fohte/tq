@@ -47,14 +47,7 @@ export function SaveViewButton({ query }: { query: string }) {
           </Button>
         }
       />
-      <DialogContent
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault()
-            handleSubmit()
-          }
-        }}
-      >
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Save view</DialogTitle>
         </DialogHeader>
@@ -64,8 +57,19 @@ export function SaveViewButton({ query }: { query: string }) {
           onChange={(e) => {
             setName(e.target.value)
           }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              handleSubmit()
+            }
+          }}
           placeholder="View name"
         />
+        {createSavedView.isError && (
+          <p className="text-sm text-destructive">
+            {createSavedView.error.message}
+          </p>
+        )}
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>
             Cancel

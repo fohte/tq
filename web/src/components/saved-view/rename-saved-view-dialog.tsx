@@ -25,8 +25,7 @@ export function RenameSavedViewDialog({
   const [name, setName] = useState(view.name)
   const renameSavedView = useRenameSavedView()
 
-  // Re-sync when the dialog opens for a (possibly different) view, since
-  // the input is otherwise left with whatever the user typed last time.
+  // Otherwise the input keeps whatever the user typed last time it was open.
   useEffect(() => {
     if (open) setName(view.name)
   }, [open, view.name])
@@ -46,14 +45,7 @@ export function RenameSavedViewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault()
-            handleSubmit()
-          }
-        }}
-      >
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Rename view</DialogTitle>
         </DialogHeader>
@@ -63,7 +55,18 @@ export function RenameSavedViewDialog({
           onChange={(e) => {
             setName(e.target.value)
           }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              handleSubmit()
+            }
+          }}
         />
+        {renameSavedView.isError && (
+          <p className="text-sm text-destructive">
+            {renameSavedView.error.message}
+          </p>
+        )}
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>
             Cancel
