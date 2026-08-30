@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { Search } from 'lucide-react'
+import type { ParsedQuery } from 'api/search-query-parser'
+import { Plus, Search } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { LinkExistingProjectTaskMenu } from '#components/project/link-existing-project-task-menu'
@@ -9,23 +10,41 @@ import {
   isProjectStatus,
   ProjectStatusMark,
 } from '#components/project/project-status-mark'
-import { TaskRowAppearance } from '#components/task/task-row-appearance'
+import { FloatingActionButton } from '#components/task/create-task-inline'
+import { CreateTaskModal } from '#components/task/create-task-modal'
+import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
+import { TaskTreeList } from '#components/task/task-tree-list'
 import { Button } from '#components/ui/button'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
-import { Panel, PanelHeader } from '#components/ui/panel'
 import { ProgressBar } from '#components/ui/progress-bar'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
-import type { ProjectDetail, ProjectTask } from '#hooks/use-projects'
+import type { Project, ProjectDetail, ProjectTask } from '#hooks/use-projects'
 import { useUpdateProject } from '#hooks/use-projects'
+import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
+import type { TreeNode } from '#hooks/use-tasks'
 
 // --- Main Content ---
 
 export function ProjectMainContent({
   project,
   tasks,
+  parsedQuery,
+  onQueryChange,
+  projects,
+  tree,
+  filteredTasks,
+  isTasksLoading,
+  sessionsByTaskId,
 }: {
   project: ProjectDetail
   tasks: ProjectTask[]
+  parsedQuery: ParsedQuery
+  onQueryChange: (query: string) => void
+  projects: Project[]
+  tree: TreeNode[]
+  filteredTasks: ProjectTask[]
+  isTasksLoading: boolean
+  sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
 }) {
   const statusOrFallback = isProjectStatus(project.status)
     ? project.status
@@ -63,11 +82,18 @@ export function ProjectMainContent({
       {/* Task summary */}
       <ProjectTaskSummary tasks={tasks} />
 
-      {/* Open tasks */}
-      <ProjectOpenTasksPanel
+      {/* Task list */}
+      <ProjectTaskList
         projectId={project.id}
         projectTitle={project.title}
-        tasks={tasks}
+        allTasks={tasks}
+        parsedQuery={parsedQuery}
+        onQueryChange={onQueryChange}
+        projects={projects}
+        tree={tree}
+        filteredTasks={filteredTasks}
+        isLoading={isTasksLoading}
+        sessionsByTaskId={sessionsByTaskId}
       />
     </div>
   )
@@ -204,62 +230,96 @@ function ProjectTaskSummary({ tasks }: { tasks: ProjectTask[] }) {
   )
 }
 
-// --- Open Tasks Panel ---
+// --- Task List ---
 
-function ProjectOpenTasksPanel({
+function ProjectTaskList({
   projectId,
   projectTitle,
-  tasks,
+  allTasks,
+  parsedQuery,
+  onQueryChange,
+  projects,
+  tree,
+  filteredTasks,
+  isLoading,
+  sessionsByTaskId,
 }: {
   projectId: string
   projectTitle: string
-  tasks: ProjectTask[]
+  allTasks: ProjectTask[]
+  parsedQuery: ParsedQuery
+  onQueryChange: (query: string) => void
+  projects: Project[]
+  tree: TreeNode[]
+  filteredTasks: ProjectTask[]
+  isLoading: boolean
+  sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
 }) {
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [isLinkExistingOpen, setIsLinkExistingOpen] = useState(false)
-  const openTasks = tasks.filter((t) => t.status !== 'completed').slice(0, 5)
 
   return (
-    <Panel>
-      <PanelHeader>
-        OPEN TASKS
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-end gap-1">
         <Button
           variant="ghost"
-          size="icon-xs"
+          size="icon-sm"
           onClick={() => {
             setIsLinkExistingOpen(true)
           }}
           aria-label="Link existing task"
-          className="ml-auto"
         >
-          <Search className="h-3 w-3" />
+          <Search className="h-4 w-4" />
         </Button>
-        <Link
-          to="/projects/$projectId/board"
-          params={{ projectId }}
-          className="text-2xs tracking-normal hover:text-foreground"
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => {
+            setIsModalOpen(true)
+          }}
+          aria-label="Add task"
         >
-          view board →
-        </Link>
-      </PanelHeader>
-      {openTasks.length > 0 ? (
-        <div>
-          {openTasks.map((task) => (
-            <TaskRowAppearance key={task.id} task={task} />
-          ))}
-        </div>
-      ) : (
-        <div className="px-3 py-2 text-sm text-muted-foreground">
-          No open tasks
-        </div>
-      )}
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
 
+      <div className="border border-border">
+        <TaskFilterChipRow
+          onQueryChange={onQueryChange}
+          parsed={parsedQuery}
+          projects={projects}
+          hideSaveView
+        />
+        <TaskTreeList
+          isLoading={isLoading}
+          tree={tree}
+          tasks={filteredTasks}
+          sessionsByTaskId={sessionsByTaskId}
+        />
+      </div>
+
+      {/* FAB (mobile only) */}
+      <FloatingActionButton
+        onClick={() => {
+          setIsModalOpen(true)
+        }}
+      />
+
+      {/* Task create modal */}
+      <CreateTaskModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        projectId={projectId}
+      />
+
+      {/* Link existing task menu */}
       <LinkExistingProjectTaskMenu
         open={isLinkExistingOpen}
         onOpenChange={setIsLinkExistingOpen}
         projectId={projectId}
         projectTitle={projectTitle}
-        excludedTaskIds={new Set(tasks.map((t) => t.id))}
+        excludedTaskIds={new Set(allTasks.map((t) => t.id))}
       />
-    </Panel>
+    </div>
   )
 }

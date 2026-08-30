@@ -76,6 +76,12 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
 
+export const SaveViewHidden: Story = {
+  args: {
+    hideSaveView: true,
+  },
+}
+
 export const NoFilters: Story = {
   args: {
     parsed: { freeText: '', sortBy: 'updated' },

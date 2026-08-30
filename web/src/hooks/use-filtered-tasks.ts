@@ -41,13 +41,17 @@ export function useFilteredTaskList(options?: {
   return { isLoading, ...categorized }
 }
 
-export function useFilteredTaskTree(options: { q: string }) {
+export function useFilteredTaskTree(options: {
+  q: string
+  projectId?: string
+}) {
   const { mode } = useContextFilter()
   const apiContext = filterModeToApiContext(mode)
 
   const { isLoading, categorized } = useTaskList({
     q: options.q,
     ...(apiContext ? { context: apiContext } : {}),
+    ...(options.projectId != null ? { projectId: options.projectId } : {}),
     includeAncestors: true,
   })
 

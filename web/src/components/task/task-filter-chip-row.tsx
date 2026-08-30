@@ -33,12 +33,18 @@ interface TaskFilterChipRowProps {
   onQueryChange: (query: string) => void
   parsed: ParsedQuery
   projects: Project[]
+  // Saved views aren't scoped to a project (see api/src/db/schema/core.ts),
+  // so a screen whose scope already comes from elsewhere (e.g. the
+  // /projects/$projectId route param) hides the button rather than saving a
+  // view that silently drops that scope.
+  hideSaveView?: boolean
 }
 
 export function TaskFilterChipRow({
   onQueryChange,
   parsed,
   projects,
+  hideSaveView = false,
 }: TaskFilterChipRowProps) {
   const sortBy = parsed.sortBy ?? 'updated'
   // The chip label falls back to the raw value for a sort the picker below
@@ -248,7 +254,7 @@ export function TaskFilterChipRow({
         />
       </TaskFilterChip>
 
-      <SaveViewButton query={buildSearchQuery(parsed)} />
+      {!hideSaveView && <SaveViewButton query={buildSearchQuery(parsed)} />}
     </div>
   )
 }

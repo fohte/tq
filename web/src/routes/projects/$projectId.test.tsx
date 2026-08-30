@@ -1,11 +1,18 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { assertDefined, atIndex } from '#lib/test-utils'
 // Import after mocks
-import { Route } from '#routes/projects/$projectId'
+import { Route as ProjectDetailRoute } from '#routes/projects/$projectId'
 
 const mockProject = {
   id: 'p1',
@@ -52,21 +59,27 @@ const mockTasks = [
 
 const mockUseProject = vi.fn()
 const mockUseProjectTasks = vi.fn()
+const mockUseProjects = vi.fn()
 const mockUpdateMutate = vi.fn()
+const mockUseFilteredTaskTree = vi.fn()
 
-vi.mock('#hooks/use-projects', () => ({
+vi.mock('#hooks/use-projects', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-projects')>()
+  return {
+    ...actual,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+    useProject: (...args: unknown[]) => mockUseProject(...args),
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+    useProjectTasks: (...args: unknown[]) => mockUseProjectTasks(...args),
+    useUpdateProject: () => ({ mutate: mockUpdateMutate }),
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+    useProjects: (...args: unknown[]) => mockUseProjects(...args),
+  }
+})
+
+vi.mock('#hooks/use-filtered-tasks', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
-  useProject: (...args: unknown[]) => mockUseProject(...args),
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
-  useProjectTasks: (...args: unknown[]) => mockUseProjectTasks(...args),
-  useUpdateProject: () => ({ mutate: mockUpdateMutate }),
-  useProjects: () => ({ data: [] }),
-  PROJECT_COLOR_PRESETS: [
-    { name: 'Orange', hex: '#FF8400' },
-    { name: 'Red', hex: '#FF5C33' },
-    { name: 'Green', hex: '#4CAF50' },
-    { name: 'Blue', hex: '#4A90D9' },
-  ],
+  useFilteredTaskTree: (...args: unknown[]) => mockUseFilteredTaskTree(...args),
 }))
 
 vi.mock('#components/ui/markdown-editor', () => ({
@@ -88,67 +101,82 @@ vi.mock('#components/ui/markdown-editor', () => ({
   ),
 }))
 
-vi.mock('@tanstack/react-router', () => {
+// Route params come from matching the real ProjectDetailRoute for real
+// (rather than stubbing @tanstack/react-router), because the task-list
+// filter chips rely on useSearch()/useNavigate() from the real router.
+// A fresh router (re-loaded) is built for both the initial render and every
+// rerender — TanStack Router memoizes matched-route rendering on unchanged
+// router state, so reusing one router across rerenders would keep stale
+// mock data on screen (see today.test.tsx for the same pattern).
+async function buildProjectDetailTree(
+  queryClient: QueryClient,
+  initialEntry: string,
+) {
+  const rootRoute = createRootRoute({
+    validateSearch: (search: Record<string, unknown>) => search,
+  })
+  // A file route's id/path/parent are normally wired up by the generated
+  // routeTree.gen.ts (via this same `.update()` call, cast the same way) —
+  // reproduce that here so the real ProjectDetailRoute (with its real
+  // validateSearch/stripSearchParams config) can be matched against a
+  // locally-built tree instead of the app's real root.
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-type-assertion -- mirrors routeTree.gen.ts's own `as any` for wiring a file route into a route tree
+  ProjectDetailRoute.update({
+    id: '/projects/$projectId',
+    path: '/projects/$projectId',
+    getParentRoute: () => rootRoute,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors routeTree.gen.ts's own `as any` for wiring a file route into a route tree
+  } as any)
+  const projectsIndexRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/projects',
+    component: () => null,
+  })
+  const taskDetailRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/tasks/$taskId',
+    component: () => null,
+  })
+  rootRoute.addChildren([
+    ProjectDetailRoute,
+    projectsIndexRoute,
+    taskDetailRoute,
+  ])
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: [initialEntry] }),
+  })
+  // The router's first route match resolves asynchronously even with no
+  // loaders, so router.load() is awaited before render() to avoid an initial
+  // blank paint.
+  await router.load()
   return {
-    createFileRoute: () => {
-      const route = Object.assign(
-        (opts: { component: React.ComponentType }) => {
-          return Object.assign(
-            {},
-            {
-              component: opts.component,
-              useParams: () => ({ projectId: 'p1' }),
-            },
-          )
-        },
-        {
-          useParams: () => ({ projectId: 'p1' }),
-        },
-      )
-
-      return route
-    },
-    Link: ({
-      children,
-      ...props
-    }: { children: React.ReactNode } & Record<string, unknown>) => (
-      <a href={typeof props['to'] === 'string' ? props['to'] : '#'}>
-        {children}
-      </a>
+    router,
+    element: (
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
     ),
-    createLink: (Component: React.ComponentType<Record<string, unknown>>) => {
-      return ({
-        children,
-        to,
-        ...props
-      }: { children: React.ReactNode; to?: unknown } & Record<
-        string,
-        unknown
-      >) => (
-        <Component {...props} href={typeof to === 'string' ? to : '#'}>
-          {children}
-        </Component>
-      )
-    },
   }
-})
+}
 
-type RouteWithComponent = { component: React.ComponentType }
-// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- extracting component from mocked Route object
-const ProjectDetailPage = (Route as unknown as RouteWithComponent).component
-
-function renderProjectDetailPage() {
+async function renderProjectDetailPage(initialEntry = '/projects/p1') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-
-  return {
-    ...render(
-      <QueryClientProvider client={queryClient}>
-        <ProjectDetailPage />
-      </QueryClientProvider>,
-    ),
+  const { router, element } = await buildProjectDetailTree(
     queryClient,
+    initialEntry,
+  )
+  const utils = render(element)
+  return {
+    ...utils,
+    router,
+    rerenderAt: async (next: string) => {
+      const built = await buildProjectDetailTree(queryClient, next)
+      utils.rerender(built.element)
+      return built.router
+    },
   }
 }
 
@@ -156,10 +184,21 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2024-11-15T09:00:00'))
+  mockUseProject.mockReturnValue({
+    data: mockProject,
+    isLoading: false,
+    error: null,
+  })
   mockUseProjectTasks.mockReturnValue({
     data: mockTasks,
     isLoading: false,
     error: null,
+  })
+  mockUseProjects.mockReturnValue({ data: [] })
+  mockUseFilteredTaskTree.mockReturnValue({
+    isLoading: false,
+    tree: [],
+    tasks: [],
   })
 })
 
@@ -168,40 +207,35 @@ afterEach(() => {
 })
 
 describe('ProjectDetailPage', () => {
-  it('shows loading state', () => {
+  it('shows loading state', async () => {
     mockUseProject.mockReturnValue({
       data: undefined,
       isLoading: true,
       error: null,
     })
-    renderProjectDetailPage()
+    await renderProjectDetailPage()
     expect(document.querySelector('.animate-spin')).toBeTruthy()
   })
 
-  it('shows not-found state when the project request errors', () => {
+  it('shows not-found state when the project request errors', async () => {
     mockUseProject.mockReturnValue({
       data: undefined,
       isLoading: false,
       error: new Error('Not found'),
     })
-    renderProjectDetailPage()
+    await renderProjectDetailPage()
     expect(screen.getByText('Project not found')).toBeInTheDocument()
   })
 
-  it('renders breadcrumb and title once per layout (PC + SP)', () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
+  it('renders breadcrumb and title once per layout (PC + SP)', async () => {
+    await renderProjectDetailPage()
     // breadcrumb "projects" link, per layout (PC + SP)
     expect(screen.getAllByText('projects')).toHaveLength(2)
     // SP back-nav "Projects" link
     expect(screen.getAllByText('Projects')).toHaveLength(1)
     // breadcrumb leaf, once per layout (PC + SP) — scoped to each <nav> so
     // this stays unaffected by unrelated "ISUCON14" text elsewhere on the
-    // page (e.g. the OPEN TASKS panel's per-row project labels).
+    // page.
     const breadcrumbNavs = screen.getAllByRole('navigation')
     expect(breadcrumbNavs).toHaveLength(2)
     for (const nav of breadcrumbNavs) {
@@ -211,13 +245,8 @@ describe('ProjectDetailPage', () => {
     expect(screen.getAllByRole('button', { name: 'ISUCON14' })).toHaveLength(2)
   })
 
-  it('renders description editor with project description', () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
+  it('renders description editor with project description', async () => {
+    await renderProjectDetailPage()
     const editors = screen.getAllByTestId('mock-markdown-editor')
     const editorWithDescription = editors.find(
       (e) =>
@@ -227,13 +256,8 @@ describe('ProjectDetailPage', () => {
     expect(editorWithDescription).toBeTruthy()
   })
 
-  it('saves the description after the debounce delay', () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
+  it('saves the description after the debounce delay', async () => {
+    await renderProjectDetailPage()
 
     const editors = screen.getAllByTestId('mock-markdown-editor')
     const editor = assertDefined(
@@ -252,53 +276,21 @@ describe('ProjectDetailPage', () => {
     })
   })
 
-  it('renders task progress summary once per layout (PC + SP)', () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
+  it('renders task progress summary once per layout (PC + SP)', async () => {
+    await renderProjectDetailPage()
     expect(screen.getAllByText(/2\/5 completed/)).toHaveLength(2)
     expect(screen.getAllByText(/\(40%\)/)).toHaveLength(2)
   })
 
-  it('renders status breakdown counts once per layout (PC + SP)', () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
+  it('renders status breakdown counts once per layout (PC + SP)', async () => {
+    await renderProjectDetailPage()
     expect(screen.getAllByText('Todo: 2')).toHaveLength(2)
     expect(screen.getAllByText('In Progress: 1')).toHaveLength(2)
     expect(screen.getAllByText('Completed: 2')).toHaveLength(2)
   })
 
-  it('renders a view board link to the project board route', () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
-    const links = screen.getAllByText('view board →')
-    expect(links).toHaveLength(2)
-    for (const link of links) {
-      expect(link.closest('a')).toHaveAttribute(
-        'href',
-        '/projects/$projectId/board',
-      )
-    }
-  })
-
   it('opens the link existing task menu when the link button is clicked', async () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
+    await renderProjectDetailPage()
     vi.useRealTimers()
     const user = userEvent.setup()
 
@@ -312,94 +304,32 @@ describe('ProjectDetailPage', () => {
     )
   })
 
-  it('shows at most 5 non-completed tasks in the OPEN TASKS panel, per layout (PC + SP)', () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    const manyOpenTasks = Array.from({ length: 7 }, (_, i) => ({
-      ...baseTask,
-      id: String(i + 1),
-      title: `Open task ${String(i + 1)}`,
-      status: 'todo' as const,
-    }))
-    mockUseProjectTasks.mockReturnValue({
-      data: manyOpenTasks,
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
-
-    expect(screen.getAllByText('OPEN TASKS')).toHaveLength(2)
-    expect(screen.getAllByText('Open task 1')).toHaveLength(2)
-    expect(screen.getAllByText('Open task 5')).toHaveLength(2)
-    expect(screen.queryAllByText('Open task 6')).toHaveLength(0)
-    expect(screen.queryAllByText('Open task 7')).toHaveLength(0)
-  })
-
-  it('still shows the OPEN TASKS panel and its view board link when there are no non-completed tasks', () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    mockUseProjectTasks.mockReturnValue({
-      data: mockTasks.map((task) => ({
-        ...task,
-        status: 'completed' as const,
-      })),
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
-
-    expect(screen.getAllByText('OPEN TASKS')).toHaveLength(2)
-    expect(screen.getAllByText('view board →')).toHaveLength(2)
-    expect(screen.getAllByText('No open tasks')).toHaveLength(2)
-  })
-
-  it('renders sidebar field labels once per layout (PC + SP)', () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
+  it('renders sidebar field labels once per layout (PC + SP)', async () => {
+    await renderProjectDetailPage()
     expect(screen.getAllByText('STATUS')).toHaveLength(2)
     expect(screen.getAllByText('START DATE')).toHaveLength(2)
     expect(screen.getAllByText('TARGET DATE')).toHaveLength(2)
     expect(screen.getAllByText('COLOR')).toHaveLength(2)
   })
 
-  it('renders remaining days based on the target date once per layout (PC + SP)', () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
+  it('renders remaining days based on the target date once per layout (PC + SP)', async () => {
+    await renderProjectDetailPage()
     expect(screen.getAllByText('23 days remaining')).toHaveLength(2)
     expect(screen.getAllByText(/Target: Dec 8, 2024/)).toHaveLength(2)
   })
 
-  it('does not render remaining days when target date is not set', () => {
+  it('does not render remaining days when target date is not set', async () => {
     mockUseProject.mockReturnValue({
       data: { ...mockProject, targetDate: null },
       isLoading: false,
       error: null,
     })
-    renderProjectDetailPage()
+    await renderProjectDetailPage()
     expect(screen.queryByText(/days remaining/)).not.toBeInTheDocument()
   })
 
   it('allows inline title editing', async () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
+    await renderProjectDetailPage()
     vi.useRealTimers()
     const user = userEvent.setup()
 
@@ -420,12 +350,7 @@ describe('ProjectDetailPage', () => {
   })
 
   it('does not swallow the next save after cancelling a title edit with Escape', async () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
+    await renderProjectDetailPage()
     vi.useRealTimers()
     const user = userEvent.setup()
 
@@ -451,12 +376,7 @@ describe('ProjectDetailPage', () => {
   })
 
   it('updates status via the sidebar select', async () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
+    await renderProjectDetailPage()
     vi.useRealTimers()
     const user = userEvent.setup()
 
@@ -469,13 +389,8 @@ describe('ProjectDetailPage', () => {
     })
   })
 
-  it('updates the target date via the sidebar date input', () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
+  it('updates the target date via the sidebar date input', async () => {
+    await renderProjectDetailPage()
 
     const dateInputs = screen.getAllByDisplayValue('2024-12-08')
     fireEvent.change(atIndex(dateInputs, 0), {
@@ -489,12 +404,7 @@ describe('ProjectDetailPage', () => {
   })
 
   it('updates the color via the sidebar swatches', async () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    renderProjectDetailPage()
+    await renderProjectDetailPage()
     vi.useRealTimers()
     const user = userEvent.setup()
 
@@ -507,36 +417,94 @@ describe('ProjectDetailPage', () => {
     })
   })
 
-  it('remounts the description editor in both layouts when switching to a different project', () => {
-    mockUseProject.mockReturnValue({
-      data: mockProject,
-      isLoading: false,
-      error: null,
-    })
-    const { rerender, queryClient } = renderProjectDetailPage()
+  it('remounts the description editor in both layouts when switching to a different project', async () => {
+    const { rerenderAt } = await renderProjectDetailPage()
 
     const editorsBefore = screen.getAllByTestId('mock-markdown-editor')
 
-    const otherProject = {
-      ...mockProject,
-      id: 'p2',
-      description: 'A different description',
-    }
     mockUseProject.mockReturnValue({
-      data: otherProject,
+      data: {
+        ...mockProject,
+        id: 'p2',
+        description: 'A different description',
+      },
       isLoading: false,
       error: null,
     })
-    rerender(
-      <QueryClientProvider client={queryClient}>
-        <ProjectDetailPage />
-      </QueryClientProvider>,
-    )
+    await rerenderAt('/projects/p2')
 
     const editorsAfter = screen.getAllByTestId('mock-markdown-editor')
     expect(editorsAfter).toHaveLength(editorsBefore.length)
     editorsAfter.forEach((editor, i) => {
       expect(editor).not.toBe(editorsBefore[i])
     })
+  })
+})
+
+describe('ProjectDetailPage task list', () => {
+  it('scopes the initial fetch to q plus a separate projectId param', async () => {
+    await renderProjectDetailPage()
+
+    expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
+      { q: 'is:todo is:in_progress sort:updated', projectId: 'p1' },
+    ])
+  })
+
+  it('hides the project filter chip and the Save view button', async () => {
+    await renderProjectDetailPage()
+
+    expect(
+      screen.queryByRole('button', { name: /^project / }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Save view' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('updates the sort in the URL and re-requests filtered data scoped to the project', async () => {
+    const user = userEvent.setup()
+    const { router } = await renderProjectDetailPage()
+    vi.useRealTimers()
+
+    await user.click(
+      atIndex(screen.getAllByRole('button', { name: /Sort by/ }), 0),
+    )
+    await user.click(await screen.findByRole('button', { name: 'Created' }))
+
+    expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
+      { q: 'is:todo is:in_progress sort:created', projectId: 'p1' },
+    ])
+    expect(router.state.location.search).toEqual({
+      q: 'is:todo is:in_progress sort:created',
+    })
+  })
+
+  it('renders TaskTreeList from the filtered tree/tasks props, not the full project task list', async () => {
+    const filteredTask = {
+      ...baseTask,
+      id: 'f1',
+      title: 'Filtered task',
+      status: 'todo' as const,
+    }
+    mockUseFilteredTaskTree.mockReturnValue({
+      isLoading: false,
+      tree: [{ ...filteredTask, children: [] }],
+      tasks: [filteredTask],
+    })
+
+    await renderProjectDetailPage()
+
+    expect(screen.getAllByText('Filtered task').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Completed 2')).not.toBeInTheDocument()
+  })
+
+  it('opens the create task modal when "Add task" is clicked', async () => {
+    await renderProjectDetailPage()
+    vi.useRealTimers()
+    const user = userEvent.setup()
+
+    await user.click(atIndex(screen.getAllByLabelText('Add task'), 0))
+
+    expect(screen.getAllByText('New Task').length).toBeGreaterThan(0)
   })
 })

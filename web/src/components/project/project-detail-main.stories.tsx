@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ParsedQuery } from 'api/search-query-parser'
 import type { ReactNode } from 'react'
 
 import { ProjectMainContent } from '#components/project/project-detail-main'
@@ -7,8 +8,9 @@ import {
   ProjectSidebar,
   ProjectSidebarMobile,
 } from '#components/project/project-detail-sidebar'
-import type { ProjectDetail, ProjectTask } from '#hooks/use-projects'
+import type { Project, ProjectDetail, ProjectTask } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
+import { buildTree } from '#lib/tree-builder'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const baseProject: ProjectDetail = {
@@ -84,6 +86,14 @@ const sampleTasks: ProjectTask[] = [
   },
 ]
 
+const sampleProjects: Project[] = [baseProject]
+
+const defaultParsedQuery: ParsedQuery = {
+  freeText: '',
+  status: ['todo', 'in_progress'],
+  sortBy: 'updated',
+}
+
 function Providers({
   project,
   children,
@@ -107,11 +117,7 @@ function Providers({
     <QueryClientProvider client={queryClient}>
       <StoryRouter
         component={() => <>{children}</>}
-        paths={[
-          '/projects',
-          '/projects/$projectId',
-          '/projects/$projectId/board',
-        ]}
+        paths={['/projects', '/tasks/$taskId']}
       />
     </QueryClientProvider>
   )
@@ -129,7 +135,17 @@ function MainContentStory({
   return (
     <Providers project={project}>
       <div className="max-w-2xl p-6">
-        <ProjectMainContent project={project} tasks={tasks} />
+        <ProjectMainContent
+          project={project}
+          tasks={tasks}
+          parsedQuery={defaultParsedQuery}
+          onQueryChange={() => {}}
+          projects={sampleProjects}
+          tree={buildTree(tasks)}
+          filteredTasks={tasks}
+          isTasksLoading={false}
+          sessionsByTaskId={new Map()}
+        />
       </div>
     </Providers>
   )
@@ -201,7 +217,17 @@ export const FullPagePC: StoryObj<{
     <Providers project={project}>
       <div className="flex h-screen">
         <div className="flex-1 overflow-y-auto p-6">
-          <ProjectMainContent project={project} tasks={tasks} />
+          <ProjectMainContent
+            project={project}
+            tasks={tasks}
+            parsedQuery={defaultParsedQuery}
+            onQueryChange={() => {}}
+            projects={sampleProjects}
+            tree={buildTree(tasks)}
+            filteredTasks={tasks}
+            isTasksLoading={false}
+            sessionsByTaskId={new Map()}
+          />
         </div>
         <ProjectSidebar project={project} />
       </div>
@@ -225,7 +251,17 @@ export const FullPageSP: StoryObj<{
     <Providers project={project}>
       <div className="flex h-screen flex-col overflow-y-auto">
         <div className="p-4">
-          <ProjectMainContent project={project} tasks={tasks} />
+          <ProjectMainContent
+            project={project}
+            tasks={tasks}
+            parsedQuery={defaultParsedQuery}
+            onQueryChange={() => {}}
+            projects={sampleProjects}
+            tree={buildTree(tasks)}
+            filteredTasks={tasks}
+            isTasksLoading={false}
+            sessionsByTaskId={new Map()}
+          />
         </div>
         <div className="border-t border-border p-4">
           <ProjectSidebarMobile project={project} />
