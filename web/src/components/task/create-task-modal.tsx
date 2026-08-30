@@ -1,4 +1,12 @@
-import { Calendar, CalendarPlus, Clock, Layers, Tag, X } from 'lucide-react'
+import {
+  Calendar,
+  CalendarPlus,
+  Clock,
+  Inbox,
+  Layers,
+  Tag,
+  X,
+} from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { TagsInput } from '#components/task/tags-input'
@@ -52,6 +60,20 @@ const contextLabels: Record<ContextValue, string> = {
   personal: 'Personal',
 }
 
+type CommitmentValue = 'inbox' | 'active' | 'someday'
+const commitmentValues = [
+  '',
+  'inbox',
+  'active',
+  'someday',
+] as const satisfies readonly (CommitmentValue | '')[]
+
+const commitmentLabels: Record<CommitmentValue, string> = {
+  inbox: 'Inbox',
+  active: 'Active',
+  someday: 'Someday',
+}
+
 export function CreateTaskModal({
   open,
   onOpenChange,
@@ -66,6 +88,7 @@ export function CreateTaskModal({
   const [dueDate, setDueDate] = useState('')
   const [estimateInput, setEstimateInput] = useState('')
   const [context, setContext] = useState<ContextValue | ''>('')
+  const [commitment, setCommitment] = useState<CommitmentValue | ''>('')
   const [labels, setLabels] = useState<string[]>([])
   const createTask = useCreateTask()
 
@@ -86,6 +109,7 @@ export function CreateTaskModal({
     setDueDate('')
     setEstimateInput('')
     setContext('')
+    setCommitment('')
     setLabels([])
   }, [defaultStartDate])
 
@@ -110,6 +134,7 @@ export function CreateTaskModal({
       ...(dueDate ? { dueDate } : {}),
       ...(parsedMinutes != null ? { estimatedMinutes: parsedMinutes } : {}),
       ...(context ? { context } : {}),
+      ...(commitment ? { commitment } : {}),
       ...(labels.length > 0 ? { labels } : {}),
       ...(projectId != null ? { projectId } : {}),
     }
@@ -255,6 +280,30 @@ export function CreateTaskModal({
                         <SelectItem value="">—</SelectItem>
                         <SelectItem value="work">Work</SelectItem>
                         <SelectItem value="personal">Personal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </InlineFieldGroup>
+                  <InlineFieldGroup
+                    label="Commitment"
+                    icon={<Inbox className="size-3.5" />}
+                  >
+                    <Select
+                      value={commitment}
+                      onValueChange={selectValueHandler(
+                        setCommitment,
+                        commitmentValues,
+                      )}
+                    >
+                      <SelectTrigger
+                        size="sm"
+                        className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                      >
+                        <SelectValue placeholder="Inbox" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Inbox</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="someday">Someday</SelectItem>
                       </SelectContent>
                     </Select>
                   </InlineFieldGroup>
@@ -410,6 +459,36 @@ export function CreateTaskModal({
                           <SelectItem value="">None</SelectItem>
                           <SelectItem value="work">Work</SelectItem>
                           <SelectItem value="personal">Personal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <ExpandableFieldChip
+                    icon={<Inbox className="size-3.5" />}
+                    label={commitment ? commitmentLabels[commitment] : 'Inbox'}
+                    active={!!commitment}
+                    expanded={(close) => (
+                      <Select
+                        value={commitment}
+                        onValueChange={(value) => {
+                          selectValueHandler(
+                            setCommitment,
+                            commitmentValues,
+                          )(value)
+                          close()
+                        }}
+                      >
+                        <SelectTrigger
+                          autoFocus
+                          size="sm"
+                          className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                        >
+                          <SelectValue placeholder="Inbox" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Inbox</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="someday">Someday</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
