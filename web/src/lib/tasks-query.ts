@@ -5,6 +5,8 @@ import type { TaskSortBy } from '#hooks/use-tasks'
 
 export const sortOptionValues = [
   'updated',
+  'due',
+  'estimate',
   'created',
 ] as const satisfies readonly TaskSortBy[]
 
@@ -12,6 +14,8 @@ export const sortLabels: Partial<
   Record<NonNullable<ParsedQuery['sortBy']>, string>
 > = {
   updated: 'Updated',
+  due: 'Due',
+  estimate: 'Estimate',
   created: 'Created',
 }
 
