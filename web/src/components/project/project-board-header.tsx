@@ -1,7 +1,5 @@
 import { ProjectStatusBadge } from '#components/project/project-status-badge'
 import { ProjectStatusMark } from '#components/project/project-status-mark'
-import type { ProjectView } from '#components/project/project-view-tabs'
-import { ProjectViewTabs } from '#components/project/project-view-tabs'
 import { ProgressBar } from '#components/ui/progress-bar'
 import type { ProjectDetail } from '#hooks/use-projects'
 
@@ -15,15 +13,7 @@ function formatDate(dateStr: string | null): string | null {
   })
 }
 
-export function ProjectBoardHeader({
-  project,
-  view,
-  onViewChange,
-}: {
-  project: ProjectDetail
-  view: ProjectView
-  onViewChange: (view: ProjectView) => void
-}) {
+export function ProjectBoardHeader({ project }: { project: ProjectDetail }) {
   const progress =
     project.taskCount.total > 0
       ? (project.taskCount.completed / project.taskCount.total) * 100
@@ -44,9 +34,6 @@ export function ProjectBoardHeader({
           {project.title}
         </h1>
         <ProjectStatusBadge status={project.status} />
-        <div className="ml-auto">
-          <ProjectViewTabs view={view} onViewChange={onViewChange} />
-        </div>
       </div>
 
       {/* Progress section */}

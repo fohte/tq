@@ -8,8 +8,6 @@ import {
   type SortOption,
   type StatusFilter,
 } from '#components/project/project-filter-bar'
-import { ProjectGanttView } from '#components/project/project-gantt-view'
-import type { ProjectView } from '#components/project/project-view-tabs'
 import { FloatingActionButton } from '#components/task/create-task-inline'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { TaskTreeList } from '#components/task/task-tree-list'
@@ -34,19 +32,12 @@ function ProjectBoardPage() {
   const [sortOption, setSortOption] = useState<SortOption>('manual')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isLinkExistingOpen, setIsLinkExistingOpen] = useState(false)
-  const [view, setView] = useState<ProjectView>('list')
 
-  // Skipped when the gantt view is active: it renders from the unfiltered
-  // `tasks` above, and this filtered query would otherwise fire a request
-  // whose result never gets used.
-  const { isLoading: isFilteredTasksLoading, categorized } = useTaskList(
-    {
-      projectId,
-      ...(statusFilter === 'all' ? {} : { status: statusFilter }),
-      ...(sortOption === 'manual' ? {} : { sortBy: sortOption }),
-    },
-    { enabled: view === 'list' },
-  )
+  const { isLoading: isFilteredTasksLoading, categorized } = useTaskList({
+    projectId,
+    ...(statusFilter === 'all' ? {} : { status: statusFilter }),
+    ...(sortOption === 'manual' ? {} : { sortBy: sortOption }),
+  })
   const filteredTree = useMemo(
     () => buildTree(categorized.all),
     [categorized.all],
@@ -71,41 +62,29 @@ function ProjectBoardPage() {
       </BackHeaderBar>
 
       {/* Header */}
-      <ProjectBoardHeader
-        project={project}
-        view={view}
-        onViewChange={setView}
+      <ProjectBoardHeader project={project} />
+
+      {/* Filter bar */}
+      <ProjectFilterBar
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        sortOption={sortOption}
+        onSortOptionChange={setSortOption}
+        onAddTask={() => {
+          setIsModalOpen(true)
+        }}
+        onLinkExistingTask={() => {
+          setIsLinkExistingOpen(true)
+        }}
       />
 
-      {view === 'list' ? (
-        <>
-          {/* Filter bar */}
-          <ProjectFilterBar
-            statusFilter={statusFilter}
-            onStatusFilterChange={setStatusFilter}
-            sortOption={sortOption}
-            onSortOptionChange={setSortOption}
-            onAddTask={() => {
-              setIsModalOpen(true)
-            }}
-            onLinkExistingTask={() => {
-              setIsLinkExistingOpen(true)
-            }}
-          />
-
-          {/* Task list */}
-          <TaskTreeList
-            isLoading={isFilteredTasksLoading}
-            tree={filteredTree}
-            tasks={categorized.all}
-            sessionsByTaskId={sessionsByTaskId}
-          />
-        </>
-      ) : (
-        <div className="min-h-0 flex-1">
-          <ProjectGanttView tasks={tasks ?? []} />
-        </div>
-      )}
+      {/* Task list */}
+      <TaskTreeList
+        isLoading={isFilteredTasksLoading}
+        tree={filteredTree}
+        tasks={categorized.all}
+        sessionsByTaskId={sessionsByTaskId}
+      />
 
       {/* FAB (mobile only) */}
       <FloatingActionButton
