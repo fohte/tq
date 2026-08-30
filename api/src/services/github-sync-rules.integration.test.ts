@@ -118,7 +118,7 @@ describe('syncGithubAssignedIssues', () => {
       projectId: project.id,
       recurrenceRuleId: null,
       context: 'personal',
-      commitment: 'active',
+      commitment: 'inbox',
       createdAt: 'DATE',
       updatedAt: 'DATE',
     })
