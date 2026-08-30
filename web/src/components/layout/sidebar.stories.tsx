@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { expect, userEvent, within } from 'storybook/test'
 
 import { Sidebar } from '#components/layout/sidebar'
 import {
@@ -13,6 +14,7 @@ import type { SavedView } from '#hooks/use-saved-views'
 import { savedViewKeys } from '#hooks/use-saved-views'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
+import { assertDefined } from '#lib/test-utils'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const tasksWithTags: Task[] = [
@@ -179,5 +181,26 @@ export const WithManyViews: Story = {
   args: {
     currentPath: '/',
     savedViews: manySavedViews,
+  },
+}
+
+export const ViewActionsMenuOpen: Story = {
+  args: {
+    currentPath: '/',
+    savedViews: fewSavedViews,
+  },
+  tags: ['desktop-only'],
+  play: async ({ canvasElement }) => {
+    const trigger = assertDefined(
+      canvasElement.querySelector<HTMLElement>(
+        '[data-slot="dropdown-menu-trigger"]',
+      ),
+      'desktop trigger not found',
+    )
+    await userEvent.click(trigger)
+
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(await body.findByText('rename…')).toBeInTheDocument()
+    await expect(body.getByText('delete…')).toBeInTheDocument()
   },
 }

@@ -1,6 +1,7 @@
 import type { ParsedQuery } from 'api/search-query-parser'
 import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
 
+import { SaveViewButton } from '#components/saved-view/save-view-button'
 import { TaskFilterChip } from '#components/task/task-filter-chip'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
 import { TaskLabelFilterFields } from '#components/task/task-label-filter-fields'
@@ -246,6 +247,8 @@ export function TaskFilterChipRow({
           }}
         />
       </TaskFilterChip>
+
+      <SaveViewButton query={buildSearchQuery(parsed)} />
     </div>
   )
 }

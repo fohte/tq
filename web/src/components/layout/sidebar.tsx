@@ -1,5 +1,6 @@
 import { Link, useMatchRoute, useSearch } from '@tanstack/react-router'
 import { parseSearchQuery } from 'api/search-query-parser'
+import { Pencil, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 
@@ -9,10 +10,13 @@ import {
   type ProjectStatus,
   ProjectStatusMark,
 } from '#components/project/project-status-mark'
+import { RenameSavedViewDialog } from '#components/saved-view/rename-saved-view-dialog'
+import { ActionsMenu } from '#components/ui/actions-menu'
+import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useProjects } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
-import { useSavedViews } from '#hooks/use-saved-views'
+import { useDeleteSavedView, useSavedViews } from '#hooks/use-saved-views'
 import { useTagCounts } from '#hooks/use-tag-counts'
 import { navKeybindings } from '#lib/keybindings'
 import { tagFilterSearch } from '#lib/tasks-query'
@@ -104,7 +108,7 @@ function SidebarRowLink({
       to="/tasks"
       search={search}
       className={cn(
-        'flex w-full items-center gap-2 px-3.5 py-1 text-left font-mono text-2xs',
+        'group flex w-full items-center gap-2 px-3.5 py-1 text-left font-mono text-2xs',
         isActive
           ? 'bg-card text-foreground'
           : 'text-muted-foreground-strong hover:bg-card hover:text-foreground',
@@ -141,10 +145,51 @@ function TagLink({
 }
 
 function ViewLink({ view, isActive }: { view: SavedView; isActive: boolean }) {
+  const [renameOpen, setRenameOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const deleteSavedView = useDeleteSavedView()
+
   return (
-    <SidebarRowLink search={{ q: view.query }} isActive={isActive}>
-      <span className="flex-1 truncate text-left">{view.name}</span>
-    </SidebarRowLink>
+    <>
+      <SidebarRowLink search={{ q: view.query }} isActive={isActive}>
+        <span className="flex-1 truncate text-left">{view.name}</span>
+        <ActionsMenu
+          aria-label="View actions"
+          desktopTriggerClassName="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
+          items={[
+            {
+              icon: <Pencil className="h-4 w-4" />,
+              label: 'rename…',
+              onClick: () => {
+                setRenameOpen(true)
+              },
+            },
+            {
+              icon: <Trash2 className="h-4 w-4" />,
+              label: 'delete…',
+              onClick: () => {
+                setDeleteOpen(true)
+              },
+              destructive: true,
+            },
+          ]}
+        />
+      </SidebarRowLink>
+      <RenameSavedViewDialog
+        view={view}
+        open={renameOpen}
+        onOpenChange={setRenameOpen}
+      />
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete view"
+        description={`Are you sure you want to delete "${view.name}"? This action cannot be undone.`}
+        onDelete={() => {
+          deleteSavedView.mutate(view.id)
+        }}
+      />
+    </>
   )
 }
 
