@@ -126,16 +126,16 @@ export const projectsApp = new Hono()
 
     const total = taskStats?.total ?? 0
     const completed = taskStats?.completed ?? 0
+    const summary = taskStatsToSummary(total, completed)
 
     return c.json(
       {
         ...projectToResponse(project),
-        completionRate: total > 0 ? completed / total : 0,
+        ...summary,
         taskCount: {
-          total,
+          ...summary.taskCount,
           todo: taskStats?.todo ?? 0,
           inProgress: taskStats?.inProgress ?? 0,
-          completed,
         },
       },
       200,

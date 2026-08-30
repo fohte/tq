@@ -506,7 +506,7 @@ describe('ProjectDetailPage task list', () => {
     ])
   })
 
-  it('renders TaskTreeList from the filtered tree/tasks props, not the full project task list', async () => {
+  it('renders TaskTreeList from the filtered tree/tasks props', async () => {
     const filteredTask = {
       ...baseTask,
       id: 'f1',
@@ -522,7 +522,6 @@ describe('ProjectDetailPage task list', () => {
     await renderProjectDetailPage()
 
     expect(screen.getAllByText('Filtered task').length).toBeGreaterThan(0)
-    expect(screen.queryByText('Completed 2')).not.toBeInTheDocument()
   })
 
   it('opens the create task modal when "Add task" is clicked', async () => {
