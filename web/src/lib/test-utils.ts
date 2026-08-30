@@ -1,4 +1,4 @@
-import { waitFor } from 'storybook/test'
+import { expect, waitFor } from 'storybook/test'
 
 export { defined as assertDefined, atIndex } from 'api/lib/test-utils'
 
@@ -8,6 +8,13 @@ export { defined as assertDefined, atIndex } from 'api/lib/test-utils'
  */
 export function findVisible<T extends Element>(elements: T[]): T | undefined {
   return elements.find((el) => el.checkVisibility())
+}
+
+/**
+ * Waits until `element` receives focus.
+ */
+export async function waitForFocus(element: Element): Promise<void> {
+  await waitFor(() => expect(element).toHaveFocus())
 }
 
 /**

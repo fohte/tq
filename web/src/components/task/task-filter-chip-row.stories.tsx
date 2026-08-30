@@ -7,6 +7,7 @@ import { expect, fn, userEvent, within } from 'storybook/test'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import type { Project } from '#hooks/use-projects'
 import { taskKeys } from '#hooks/use-task-queries'
+import { waitForFocus } from '#lib/test-utils'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, staleTime: Infinity } },
@@ -156,6 +157,13 @@ export const OpenProjectMenuAndChange: Story = {
     )
 
     const body = within(canvasElement.ownerDocument.body)
+    // "All projects" is the popup's first tabbable element, so Base UI's
+    // Popover moves focus there asynchronously (via requestAnimationFrame)
+    // right after it opens. Wait for that to land before clicking a
+    // different option, or it steals focus back afterward.
+    await waitForFocus(
+      await body.findByRole('button', { name: 'All projects' }),
+    )
     await userEvent.click(
       await body.findByRole('button', { name: 'Mobile App' }),
     )
@@ -247,18 +255,13 @@ export const EditFreeTextDirectly: Story = {
 // and opens the same kind of menu as any other axis chip.
 export const OpenSortMenuAndChange: Story = {
   tags: ['desktop-only'],
-  parameters: {
-    // This story's screenshot has been flaky in CI VRT runs for a reason
-    // that isn't confirmed — the popover itself stays open throughout
-    // (nothing in TaskSortFilterFields closes it). This is the only story
-    // that captures the open sort menu, so skipping trades that visual
-    // coverage for a reliable VRT signal.
-    screenshot: { skip: true },
-  },
   play: async ({ canvas, canvasElement, args }) => {
     await userEvent.click(canvas.getByRole('button', { name: /Sort by/ }))
 
     const body = within(canvasElement.ownerDocument.body)
+    // Same Base UI Popover async-focus race as OpenProjectMenuAndChange
+    // above — "Updated" is the popup's first tabbable element.
+    await waitForFocus(await body.findByRole('button', { name: 'Updated' }))
     await userEvent.click(await body.findByRole('button', { name: 'Created' }))
 
     await expect(args.onQueryChange).toHaveBeenCalledWith(
