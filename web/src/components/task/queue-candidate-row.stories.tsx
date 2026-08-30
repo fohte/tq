@@ -33,6 +33,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     description: null,
     status: 'todo',
     context: 'personal',
+    commitment: 'active',
     startDate: null,
     dueDate: null,
     estimatedMinutes: null,

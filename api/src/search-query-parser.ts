@@ -3,6 +3,7 @@ export interface ParsedQuery {
   status?: Array<'todo' | 'in_progress' | 'completed'>
   label?: string
   context?: 'work' | 'personal'
+  commitment?: 'inbox' | 'active' | 'someday'
   hasPages?: boolean
   hasComments?: boolean
   parentId?: string
@@ -15,6 +16,11 @@ const STATUS_VALUES: ReadonlySet<'todo' | 'in_progress' | 'completed'> =
 const CONTEXT_VALUES: ReadonlySet<'work' | 'personal'> = new Set([
   'work',
   'personal',
+])
+const COMMITMENT_VALUES: ReadonlySet<'inbox' | 'active' | 'someday'> = new Set([
+  'inbox',
+  'active',
+  'someday',
 ])
 const SORT_VALUES: ReadonlySet<'due' | 'created' | 'updated' | 'estimate'> =
   new Set(['due', 'created', 'updated', 'estimate'])
@@ -66,6 +72,13 @@ export function parseSearchQuery(q: string): ParsedQuery {
           freeTextParts.push(token)
         }
         break
+      case 'commitment':
+        if (isOneOf(value, COMMITMENT_VALUES)) {
+          result.commitment = value
+        } else {
+          freeTextParts.push(token)
+        }
+        break
       case 'has':
         if (value === 'pages') {
           result.hasPages = true
@@ -111,6 +124,9 @@ export function buildSearchQuery(query: ParsedQuery): string {
   }
   if (query.context !== undefined) {
     parts.push(`context:${query.context}`)
+  }
+  if (query.commitment !== undefined) {
+    parts.push(`commitment:${query.commitment}`)
   }
   if (query.hasPages === true) {
     parts.push('has:pages')
