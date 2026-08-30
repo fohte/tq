@@ -162,7 +162,7 @@ describe('task get', () => {
 })
 
 describe('task url', () => {
-  it('prints the web URL built from the resolved API base URL, without making any fetch call', async () => {
+  it('falls back to the API base URL when --web-url is not given, without making any fetch call', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify({}), { status: 200 }),
     )
@@ -177,6 +177,24 @@ describe('task url', () => {
     expect(exitCode).toBe(0)
     expect(calls.length).toBe(0)
     expect(write.mock.calls).toEqual([[`${apiUrl}/tasks/42\n`]])
+  })
+
+  it('prefers --web-url over the API base URL when both are given', async () => {
+    const webUrl = 'http://web.test'
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify({}), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, '--web-url', webUrl, 'task', 'url', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(calls.length).toBe(0)
+    expect(write.mock.calls).toEqual([[`${webUrl}/tasks/42\n`]])
   })
 })
 

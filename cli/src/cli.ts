@@ -32,6 +32,11 @@ export function buildProgram(
       process.env['TQ_API_URL'],
     )
     .option(
+      '--web-url <url>',
+      'tq web app base URL, for commands that print a web link (or set TQ_WEB_URL; defaults to --api-url, which is the same origin in the production deployment)',
+      process.env['TQ_WEB_URL'],
+    )
+    .option(
       '--author <name>',
       'Attribute writes to this LLM agent, e.g. "claude-opus-5" (or set TQ_AUTHOR); sent as X-Author: llm:<name>',
       process.env['TQ_AUTHOR'],
