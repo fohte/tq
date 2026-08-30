@@ -14,6 +14,7 @@ import { useMemo, useState } from 'react'
 
 import type { DropTarget } from '#components/task/tree-drag-overlay-content'
 import { TreeDragOverlayContent } from '#components/task/tree-drag-overlay-content'
+import { TreeOutlinerInputRow } from '#components/task/tree-outliner-input-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { ListAreaMessage } from '#components/ui/list-area-message'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
@@ -25,6 +26,7 @@ import {
   getDescendantIds,
   resolveDropParentId,
 } from '#lib/task-tree'
+import { buildTreeRenderRows } from '#lib/tree-outliner'
 
 interface TreeRowDragData extends Record<string, unknown> {
   node: TreeNode
@@ -116,6 +118,15 @@ export function TaskTreeList({
     [activeNode, tasks],
   )
 
+  const renderRows = useMemo(
+    () =>
+      buildTreeRenderRows(tree, {
+        isExpanded: treeOutliner.isExpanded,
+        outlinerInput: treeOutliner.outlinerInput,
+      }),
+    [tree, treeOutliner.isExpanded, treeOutliner.outlinerInput],
+  )
+
   const resetDragState = () => {
     setActiveNode(null)
     setActiveWidth(null)
@@ -189,24 +200,39 @@ export function TaskTreeList({
           onDragCancel={handleDragCancel}
         >
           <div className="py-1" data-testid="task-tree">
-            {tree.map((node) => (
-              <TreeTaskGridRow
-                key={node.id}
-                node={node}
-                sessionsByTaskId={sessionsByTaskId}
-                isExpanded={treeOutliner.isExpanded}
-                onToggleExpand={treeOutliner.toggleExpand}
-                selectedRowId={treeOutliner.selectedRowId}
-                onSelectRow={treeOutliner.selectRow}
-                outlinerInput={treeOutliner.outlinerInput}
-                outlinerTarget={treeOutliner.outlinerTarget}
-                onOpenChildInput={treeOutliner.openChildInput}
-                onCloseOutlinerInput={treeOutliner.closeOutlinerInput}
-                onIndentOutlinerInput={treeOutliner.indentOutlinerInput}
-                onOutdentOutlinerInput={treeOutliner.outdentOutlinerInput}
-                invalidDropIds={invalidDropIds}
-              />
-            ))}
+            {renderRows.map((row) => {
+              if (row.type === 'task') {
+                return (
+                  <TreeTaskGridRow
+                    key={row.node.id}
+                    node={row.node}
+                    depth={row.depth}
+                    sessionsByTaskId={sessionsByTaskId}
+                    isExpanded={treeOutliner.isExpanded}
+                    onToggleExpand={treeOutliner.toggleExpand}
+                    selectedRowId={treeOutliner.selectedRowId}
+                    onSelectRow={treeOutliner.selectRow}
+                    onOpenChildInput={treeOutliner.openChildInput}
+                    invalidDropIds={invalidDropIds}
+                  />
+                )
+              }
+
+              if (treeOutliner.outlinerTarget == null) return null
+
+              return (
+                <TreeOutlinerInputRow
+                  key="outliner-input"
+                  depth={treeOutliner.outlinerTarget.depth}
+                  parentId={treeOutliner.outlinerTarget.parentId}
+                  parentNumber={treeOutliner.outlinerTarget.parentNumber}
+                  inherited={treeOutliner.outlinerTarget.inherited}
+                  onClose={treeOutliner.closeOutlinerInput}
+                  onIndent={treeOutliner.indentOutlinerInput}
+                  onOutdent={treeOutliner.outdentOutlinerInput}
+                />
+              )
+            })}
           </div>
 
           <DragOverlay>

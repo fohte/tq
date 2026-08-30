@@ -80,6 +80,60 @@ export function resolveOutlinerTarget(
   }
 }
 
+export type TreeRenderRow =
+  { type: 'task'; node: TreeNode; depth: number } | { type: 'outliner-input' }
+
+/**
+ * Flatten a task tree into the exact row sequence a self-recursive renderer
+ * would produce: each node immediately followed by its own visible children,
+ * with a slot for the open outliner input spliced in at its anchor's
+ * position — forcing a 'child' anchor's children into view even when
+ * collapsed (matching the outliner's own inherited-attributes preview), and
+ * placing a 'sibling' input right after the anchor's entire subtree rather
+ * than immediately after the anchor row itself.
+ */
+export function buildTreeRenderRows(
+  tree: TreeNode[],
+  options: {
+    isExpanded: (id: string) => boolean
+    outlinerInput: OutlinerInput | null
+  },
+): TreeRenderRow[] {
+  const { isExpanded, outlinerInput } = options
+  const rows: TreeRenderRow[] = []
+
+  function visit(node: TreeNode, depth: number) {
+    rows.push({ type: 'task', node, depth })
+
+    const attachChildInputHere =
+      outlinerInput?.mode === 'child' && outlinerInput.anchorRowId === node.id
+
+    if (
+      attachChildInputHere ||
+      (node.children.length > 0 && isExpanded(node.id))
+    ) {
+      for (const child of node.children) {
+        visit(child, depth + 1)
+      }
+      if (attachChildInputHere) {
+        rows.push({ type: 'outliner-input' })
+      }
+    }
+
+    const attachSiblingInputAfter =
+      outlinerInput?.mode === 'sibling' && outlinerInput.anchorRowId === node.id
+    if (attachSiblingInputAfter) {
+      rows.push({ type: 'outliner-input' })
+    }
+  }
+
+  for (const node of tree) {
+    visit(node, 0)
+  }
+
+  return rows
+}
+
 export interface AncestorRef {
   id: string
   number: number
