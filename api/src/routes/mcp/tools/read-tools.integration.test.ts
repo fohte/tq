@@ -137,6 +137,22 @@ describe('read tools', () => {
         },
       ])
     })
+
+    it('returns only root tasks when parentId is "root"', async () => {
+      const parent = await createTask('Parent')
+      await createTask('Child', { parentId: parent.id })
+
+      const toolResult = await callTool('list_tasks', { parentId: 'root' })
+
+      expect(parseJson(toolResult)).toEqual([
+        {
+          ...withoutLinkSync(withoutRecurrenceRule(parent)),
+          parentNumber: null,
+          labels: [],
+          childCompletionCount: { total: 1, completed: 0 },
+        },
+      ])
+    })
   })
 
   describe('get_task', () => {
