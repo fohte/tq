@@ -283,7 +283,7 @@ describe('tasks CRUD API', () => {
       expect(body.every((t) => t.parentId === parent.id)).toBe(true)
     })
 
-    it('filters by parentId=root', async () => {
+    it('excludes tasks with a parent when parentId is "root"', async () => {
       const parent = await createTask('Parent')
       await createTask('Child', { parentId: parent.id })
       await createTask('Orphan')
