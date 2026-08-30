@@ -66,7 +66,7 @@ export function registerSessionCommands(
       collectSessionId,
       [] as string[],
     )
-    .option('--full', 'Include lastMessage in the output')
+    .option('--full', "Include the session's last message in the output")
     .action(
       async (
         options: { sessionId: string[]; full?: boolean },
