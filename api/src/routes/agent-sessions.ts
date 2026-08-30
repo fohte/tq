@@ -1,6 +1,6 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
-import { and, desc, eq, lt } from 'drizzle-orm'
+import { and, desc, eq, inArray, lt } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { ResultAsync } from 'neverthrow'
 
@@ -8,6 +8,7 @@ import type { DbTransaction } from '#db/connection'
 import { db } from '#db/connection'
 import { agentSessions, taskAgentSessions, tasks } from '#db/schema'
 import {
+  listAgentSessionsQuerySchema,
   updateAgentSessionSchema,
   upsertAgentSessionSchema,
 } from '#schemas/agent-session'
@@ -162,10 +163,15 @@ export const agentSessionsApp = new Hono()
 
     return c.json(agentSessionToResponse(session), 200)
   })
-  .get('/', async (c) => {
+  .get('/', zValidator('query', listAgentSessionsQuerySchema), async (c) => {
+    const { sessionId } = c.req.valid('query')
+
     const result = await db
       .select()
       .from(agentSessions)
+      .where(
+        sessionId ? inArray(agentSessions.sessionId, sessionId) : undefined,
+      )
       .orderBy(desc(agentSessions.lastActiveAt))
 
     return c.json(result.map(agentSessionToResponse), 200)
