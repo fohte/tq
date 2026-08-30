@@ -11,6 +11,7 @@ const candidate: SearchResult = {
   description: null,
   status: 'todo',
   context: 'work',
+  commitment: 'active',
   labels: [],
   startDate: null,
   dueDate: null,

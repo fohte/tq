@@ -18,6 +18,7 @@
 | created_at         | timestamp with time zone | now()            | false    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |                                                       |         |
 | updated_at         | timestamp with time zone | now()            | false    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |                                                       |         |
 | number             | integer                  |                  | false    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |                                                       |         |
+| commitment         | text                     | 'active'::text   | false    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |                                                       |         |
 
 ## Constraints
 
@@ -41,6 +42,7 @@
 | idx_tasks_project_id     | CREATE INDEX idx_tasks_project_id ON public.tasks USING btree (project_id)             |
 | idx_tasks_project_status | CREATE INDEX idx_tasks_project_status ON public.tasks USING btree (project_id, status) |
 | tasks_number_unique      | CREATE UNIQUE INDEX tasks_number_unique ON public.tasks USING btree (number)           |
+| idx_tasks_commitment     | CREATE INDEX idx_tasks_commitment ON public.tasks USING btree (commitment)             |
 
 ## Relations
 
@@ -77,6 +79,7 @@ erDiagram
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
   integer number
+  text commitment
 }
 "public.task_comments" {
   text id

@@ -64,6 +64,7 @@ export interface TaskResponse {
   description: string | null
   status: 'todo' | 'in_progress' | 'completed'
   context: 'work' | 'personal'
+  commitment: 'inbox' | 'active' | 'someday'
   labels: string[]
   startDate: string | null
   dueDate: string | null
@@ -91,6 +92,7 @@ export interface TaskListItemResponse {
   description: string | null
   status: 'todo' | 'in_progress' | 'completed'
   context: 'work' | 'personal'
+  commitment: 'inbox' | 'active' | 'someday'
   labels: string[]
   startDate: string | null
   dueDate: string | null
@@ -187,6 +189,7 @@ const taskListItemResponseSchema = z.object({
   description: z.string().nullable(),
   status: z.enum(['todo', 'in_progress', 'completed']),
   context: z.enum(['work', 'personal']),
+  commitment: z.enum(['inbox', 'active', 'someday']),
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
@@ -210,6 +213,7 @@ const taskResponseSchema = z.object({
   description: z.string().nullable(),
   status: z.enum(['todo', 'in_progress', 'completed']),
   context: z.enum(['work', 'personal']),
+  commitment: z.enum(['inbox', 'active', 'someday']),
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
@@ -252,6 +256,7 @@ export async function createTask(
     dueDate?: string
     estimatedMinutes?: number
     context?: string
+    commitment?: string
     labels?: string[]
   } = {},
 ) {
