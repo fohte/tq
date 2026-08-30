@@ -6,7 +6,7 @@ import {
   isNotNull,
   isNull,
   ne,
-  not,
+  notExists,
   sql,
 } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
@@ -104,18 +104,16 @@ function buildConditions(query: ListTasksQuery) {
 
   if (parsed?.hasNoChildren === true) {
     conditions.push(
-      not(
-        exists(
-          db
-            .select({ _: sql`1` })
-            .from(childTasks)
-            .where(
-              and(
-                eq(childTasks.parentId, tasks.id),
-                ne(childTasks.status, 'completed'),
-              ),
+      notExists(
+        db
+          .select({ _: sql`1` })
+          .from(childTasks)
+          .where(
+            and(
+              eq(childTasks.parentId, tasks.id),
+              ne(childTasks.status, 'completed'),
             ),
-        ),
+          ),
       ),
     )
   }
