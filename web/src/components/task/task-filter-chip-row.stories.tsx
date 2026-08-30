@@ -157,6 +157,10 @@ export const OpenProjectMenuAndChange: Story = {
     )
 
     const body = within(canvasElement.ownerDocument.body)
+    // "All projects" is the popup's first tabbable element, so Base UI's
+    // Popover moves focus there asynchronously (via requestAnimationFrame)
+    // right after it opens. Wait for that to land before clicking a
+    // different option, or it steals focus back afterward.
     await waitForFocus(
       await body.findByRole('button', { name: 'All projects' }),
     )
@@ -255,6 +259,8 @@ export const OpenSortMenuAndChange: Story = {
     await userEvent.click(canvas.getByRole('button', { name: /Sort by/ }))
 
     const body = within(canvasElement.ownerDocument.body)
+    // Same Base UI Popover async-focus race as OpenProjectMenuAndChange
+    // above — "Updated" is the popup's first tabbable element.
     await waitForFocus(await body.findByRole('button', { name: 'Updated' }))
     await userEvent.click(await body.findByRole('button', { name: 'Created' }))
 

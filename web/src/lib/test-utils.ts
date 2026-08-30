@@ -11,11 +11,7 @@ export function findVisible<T extends Element>(elements: T[]): T | undefined {
 }
 
 /**
- * Base UI's Popover moves focus into its content asynchronously (via
- * `requestAnimationFrame`) after opening, targeting the first tabbable
- * element by default. Wait for that focus to land on `element` before
- * interacting with a different one in the same popup, or it can steal focus
- * back afterward.
+ * Waits until `element` receives focus.
  */
 export async function waitForFocus(element: Element): Promise<void> {
   await waitFor(() => expect(element).toHaveFocus())
