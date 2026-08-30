@@ -2,7 +2,7 @@ import { lazy, Suspense, useRef, useState } from 'react'
 
 import { cn } from '#lib/utils'
 
-export interface ViewEditToggleOptions {
+interface ViewEditToggleOptions {
   /**
    * Mode the editor starts in. Defaults to 'view'; pass 'edit' for a route
    * where editing is the primary action (e.g. a dedicated page editor).

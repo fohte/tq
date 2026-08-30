@@ -11,7 +11,7 @@ interface GlobalOptions {
   header: Record<string, string>
 }
 
-export function resolveApiUrl(command: Command): Result<string, Error> {
+function resolveApiUrl(command: Command): Result<string, Error> {
   const options = command.optsWithGlobals<GlobalOptions>()
   if (options.apiUrl != null && options.apiUrl.length > 0) {
     return ok(options.apiUrl)

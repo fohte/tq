@@ -150,7 +150,7 @@ export async function getGithubLinksByTaskId(
 // for list endpoints that would otherwise issue one query per task. Always
 // counts every child of a task regardless of the caller's own predicate
 // filters, since it's a fresh unfiltered query keyed only by parentId.
-export async function getChildCompletionCountsByTaskId(
+async function getChildCompletionCountsByTaskId(
   taskIds: string[],
 ): Promise<Map<string, { completed: number; total: number }>> {
   if (taskIds.length === 0) return new Map()
@@ -184,7 +184,7 @@ export const parentTasks = alias(tasks, 'parent_task')
 // Shared response shape for the list-returning endpoint (`/api/tasks`). Omits
 // `recurrenceRule`: no list consumer reads it, and hydrating it would cost an
 // extra query per endpoint for a field nothing uses.
-export function taskListItemToResponse(
+function taskListItemToResponse(
   task: typeof tasks.$inferSelect,
   parentNumber: number | null,
   githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],

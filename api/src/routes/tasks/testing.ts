@@ -33,7 +33,7 @@ export interface LinkedTaskResponse {
   status: 'todo' | 'in_progress' | 'completed'
 }
 
-export type RefSourceResponse =
+type RefSourceResponse =
   | { kind: 'description' }
   | { kind: 'page'; id: string; title: string }
   | { kind: 'comment'; id: string }
