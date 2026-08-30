@@ -20,6 +20,7 @@ const baseTask: TaskUrlPreview = {
   description: 'Adds live preview chips for pasted tq task URLs.',
   status: 'todo',
   context: 'personal',
+  commitment: 'active',
   labels: [],
   startDate: null,
   dueDate: null,

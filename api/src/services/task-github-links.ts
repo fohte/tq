@@ -54,7 +54,7 @@ export class GithubLinkConsistencyError extends Error {
 type TaskRow = typeof tasks.$inferSelect
 type LinkRow = typeof taskGithubLinks.$inferSelect
 
-export function findLinkByRef(
+function findLinkByRef(
   ref: GithubResourceRef,
 ): ResultAsync<LinkRow | null, never> {
   return ResultAsync.fromSafePromise(

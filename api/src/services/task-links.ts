@@ -89,7 +89,7 @@ export async function extractMentionedTaskRefs(
   return dedupeRefs(refs)
 }
 
-export interface LinkedTaskSummary {
+interface LinkedTaskSummary {
   id: string
   number: number
   title: string

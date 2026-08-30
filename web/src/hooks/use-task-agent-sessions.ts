@@ -11,7 +11,7 @@ export type TaskAgentSession = InferResponseType<
 
 // Not nested under use-agent-sessions.ts's agentSessionKeys — that file is
 // being edited by a concurrent PR, so this query gets its own key root here.
-export const taskAgentSessionKeys = {
+const taskAgentSessionKeys = {
   all: ['agent-sessions', 'by-task'] as const,
   byTaskId: (taskId: string) =>
     ['tasks', 'detail', taskId, 'agent-sessions'] as const,

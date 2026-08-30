@@ -138,6 +138,7 @@ export const LinkedToTask: Story = {
         description: null,
         status: 'in_progress',
         context: 'personal',
+        commitment: 'active',
         labels: [],
         startDate: null,
         dueDate: null,

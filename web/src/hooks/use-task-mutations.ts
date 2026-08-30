@@ -53,6 +53,7 @@ export function useCreateTask() {
         description: input.description ?? null,
         status: 'todo',
         context: input.context ?? 'personal',
+        commitment: 'active',
         labels: input.labels ?? [],
         startDate: input.startDate ?? null,
         dueDate: input.dueDate ?? null,

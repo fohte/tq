@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '#components/ui/select'
 import { selectValueHandler } from '#lib/form-utils'
+import { clickSelectOption } from '#lib/test-utils'
 
 const meta = {
   title: 'UI/ModalField',
@@ -151,7 +152,10 @@ export const ExpandableFieldChipExpandedWithSelect: Story = {
 
     await userEvent.click(canvas.getByRole('button', { name: 'Context' }))
     await userEvent.click(canvas.getByRole('combobox'))
-    await userEvent.click(await body.findByRole('option', { name: 'Work' }))
+    await clickSelectOption(
+      userEvent,
+      await body.findByRole('option', { name: 'Work' }),
+    )
 
     // Picking a value closes the chip via the `close()` callback rather than
     // its blur handler, so the collapsed label updates immediately.

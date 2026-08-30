@@ -194,22 +194,15 @@
     {
       "idx": 27,
       "version": "7",
-      "when": 1788014988513,
-      "tag": "0027_heavy_dazzler",
+      "when": 1788012741956,
+      "tag": "0027_add_task_commitment",
       "breakpoints": true
     },
     {
       "idx": 28,
       "version": "7",
-      "when": 1788017111694,
-      "tag": "0028_abandoned_kang",
-      "breakpoints": true
-    },
-    {
-      "idx": 29,
-      "version": "7",
-      "when": 1788019088008,
-      "tag": "0029_huge_odin",
+      "when": 1788059925513,
+      "tag": "0028_lush_the_captain",
       "breakpoints": true
     }
   ]

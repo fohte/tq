@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react'
 
-export interface InlineReferenceMatch<TData> {
+interface InlineReferenceMatch<TData> {
   /** Start offset within the textblock's flattened text, inclusive. */
   start: number
   /** End offset within the textblock's flattened text, exclusive. */

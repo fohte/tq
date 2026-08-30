@@ -13,7 +13,6 @@ import { Route as TodayRouteImport } from './routes/today'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
-import { Route as SessionsIndexRouteImport } from './routes/sessions/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks/$taskId'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
@@ -38,11 +37,6 @@ const IndexRoute = IndexRouteImport.update({
 const TasksIndexRoute = TasksIndexRouteImport.update({
   id: '/tasks/',
   path: '/tasks/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SessionsIndexRoute = SessionsIndexRouteImport.update({
-  id: '/sessions/',
-  path: '/sessions/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
@@ -78,7 +72,6 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/projects/': typeof ProjectsIndexRoute
-  '/sessions/': typeof SessionsIndexRoute
   '/tasks/': typeof TasksIndexRoute
   '/projects/$projectId/board': typeof ProjectsProjectIdBoardRoute
   '/tasks/$taskId/pages/$pageId': typeof TasksTaskIdPagesPageIdRoute
@@ -90,7 +83,6 @@ export interface FileRoutesByTo {
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/projects': typeof ProjectsIndexRoute
-  '/sessions': typeof SessionsIndexRoute
   '/tasks': typeof TasksIndexRoute
   '/projects/$projectId/board': typeof ProjectsProjectIdBoardRoute
   '/tasks/$taskId/pages/$pageId': typeof TasksTaskIdPagesPageIdRoute
@@ -103,7 +95,6 @@ export interface FileRoutesById {
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/projects/': typeof ProjectsIndexRoute
-  '/sessions/': typeof SessionsIndexRoute
   '/tasks/': typeof TasksIndexRoute
   '/projects/$projectId_/board': typeof ProjectsProjectIdBoardRoute
   '/tasks/$taskId_/pages/$pageId': typeof TasksTaskIdPagesPageIdRoute
@@ -117,7 +108,6 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/tasks/$taskId'
     | '/projects/'
-    | '/sessions/'
     | '/tasks/'
     | '/projects/$projectId/board'
     | '/tasks/$taskId/pages/$pageId'
@@ -129,7 +119,6 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/tasks/$taskId'
     | '/projects'
-    | '/sessions'
     | '/tasks'
     | '/projects/$projectId/board'
     | '/tasks/$taskId/pages/$pageId'
@@ -141,7 +130,6 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/tasks/$taskId'
     | '/projects/'
-    | '/sessions/'
     | '/tasks/'
     | '/projects/$projectId_/board'
     | '/tasks/$taskId_/pages/$pageId'
@@ -154,7 +142,6 @@ export interface RootRouteChildren {
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
   TasksTaskIdRoute: typeof TasksTaskIdRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
-  SessionsIndexRoute: typeof SessionsIndexRoute
   TasksIndexRoute: typeof TasksIndexRoute
   ProjectsProjectIdBoardRoute: typeof ProjectsProjectIdBoardRoute
   TasksTaskIdPagesPageIdRoute: typeof TasksTaskIdPagesPageIdRoute
@@ -188,13 +175,6 @@ declare module '@tanstack/react-router' {
       path: '/tasks'
       fullPath: '/tasks/'
       preLoaderRoute: typeof TasksIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sessions/': {
-      id: '/sessions/'
-      path: '/sessions'
-      fullPath: '/sessions/'
-      preLoaderRoute: typeof SessionsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects/': {
@@ -242,7 +222,6 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
   TasksTaskIdRoute: TasksTaskIdRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
-  SessionsIndexRoute: SessionsIndexRoute,
   TasksIndexRoute: TasksIndexRoute,
   ProjectsProjectIdBoardRoute: ProjectsProjectIdBoardRoute,
   TasksTaskIdPagesPageIdRoute: TasksTaskIdPagesPageIdRoute,

@@ -6,7 +6,7 @@ import { calendarSubscriptions } from '#db/schema'
 import { googleCalendarProvider } from '#integrations/google-calendar/provider'
 import type { CalendarListEntry } from '#integrations/types'
 
-export type CalendarSubscriptionRow = typeof calendarSubscriptions.$inferSelect
+type CalendarSubscriptionRow = typeof calendarSubscriptions.$inferSelect
 
 // Fallback for the type-level possibility of a null accountLabel (never
 // actually happens for google_calendar: identifyAccount's userinfo schema
@@ -58,7 +58,7 @@ export function ensureDefaultCalendarSubscription(
   ).map(() => undefined)
 }
 
-export interface CalendarWithSubscriptionState extends CalendarListEntry {
+interface CalendarWithSubscriptionState extends CalendarListEntry {
   subscribed: boolean
 }
 
@@ -81,7 +81,7 @@ export function listCalendarsWithSubscriptionState(
     )
 }
 
-export interface CalendarSubscriptionUpdate {
+interface CalendarSubscriptionUpdate {
   calendarId: string
   subscribed: boolean
 }

@@ -1,5 +1,5 @@
 {
-  "id": "8dcce066-8839-4b2f-ab42-5420daa5c526",
+  "id": "6eb318f2-bbb6-4937-9c93-14d7bc8204e2",
   "prevId": "4a685aa7-115f-4b9b-a612-0c17f8dfa007",
   "version": "7",
   "dialect": "postgresql",
@@ -684,6 +684,13 @@
           "notNull": true,
           "default": "'personal'"
         },
+        "commitment": {
+          "name": "commitment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -786,6 +793,21 @@
             },
             {
               "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_tasks_commitment": {
+          "name": "idx_tasks_commitment",
+          "columns": [
+            {
+              "expression": "commitment",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1472,6 +1494,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
+        "task_github_links_task_id_unique": {
+          "name": "task_github_links_task_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["task_id"]
+        },
         "uq_task_github_links_repo_number": {
           "name": "uq_task_github_links_repo_number",
           "nullsNotDistinct": false,

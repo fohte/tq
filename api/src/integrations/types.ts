@@ -16,7 +16,7 @@ export interface OAuthConfig {
   redirectUri: string
 }
 
-export interface OAuthTokenPayload {
+interface OAuthTokenPayload {
   accessToken: string
   refreshToken?: string
   expiresAt?: Date
@@ -58,12 +58,12 @@ export interface IntegrationListItem {
   accounts: IntegrationAccount[]
 }
 
-export interface OAuthAccountIdentity {
+interface OAuthAccountIdentity {
   accountId: string
   accountLabel: string
 }
 
-export interface IntegrationOAuth {
+interface IntegrationOAuth {
   authorizationEndpoint: string
   scope: string
   /** Static params beyond client_id/redirect_uri/scope, e.g. Google's `access_type`/`prompt`. */
@@ -90,7 +90,7 @@ export interface IntegrationOAuth {
   ) => ResultAsync<OAuthAccountIdentity, AccountIdentityError>
 }
 
-export interface CalendarEventsCapability {
+interface CalendarEventsCapability {
   getEvents: (
     accessToken: string,
     params: { calendarId: string; timeMin: string; timeMax: string },
@@ -125,7 +125,7 @@ export interface CalendarListEntry {
   primary: boolean
 }
 
-export interface CalendarListCapability {
+interface CalendarListCapability {
   list: (accessToken: string) => ResultAsync<CalendarListEntry[], Error>
 }
 

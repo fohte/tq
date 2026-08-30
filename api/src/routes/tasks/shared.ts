@@ -38,9 +38,7 @@ export function resolveTaskListOrderBy(sortBy?: TaskSortBy) {
   return [resolvePrimaryTaskListOrderBy(sortBy), tasks.number]
 }
 
-export function recurrenceRuleToResponse(
-  rule: typeof recurrenceRules.$inferSelect,
-) {
+function recurrenceRuleToResponse(rule: typeof recurrenceRules.$inferSelect) {
   return {
     id: rule.id,
     type: rule.type,
@@ -78,6 +76,7 @@ function taskCoreToResponse(
     description: task.description,
     status: task.status,
     context: task.context,
+    commitment: task.commitment,
     labels: labelNames,
     startDate: task.startDate,
     dueDate: task.dueDate,

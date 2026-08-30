@@ -63,6 +63,7 @@ describe('POST /api/tasks/from-github', () => {
         description: 'Steps to reproduce...',
         status: 'todo',
         context: 'personal',
+        commitment: 'active',
         labels: [],
         startDate: null,
         dueDate: null,

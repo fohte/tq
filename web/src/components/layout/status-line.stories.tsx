@@ -17,6 +17,7 @@ const baseTask: Task = {
   description: null,
   status: 'todo',
   context: 'personal',
+  commitment: 'active',
   labels: [],
   startDate: null,
   dueDate: null,
