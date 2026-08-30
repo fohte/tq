@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { InheritedTaskAttributes } from '#components/task/create-task-inline'
 import { DeleteTaskDialog } from '#components/task/delete-task-dialog'
-import { GithubLinkBadge } from '#components/task/github-link-badge'
+import { GithubLinksChipGroup } from '#components/task/github-links-chip-group'
 import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { ProjectChip } from '#components/task/project-chip'
 import { StatusIcon } from '#components/task/status-icon'
@@ -73,9 +73,7 @@ export function TaskMainContent({
       <div className="flex flex-wrap gap-2">
         {task.labels.length > 0 && <TaskTagChips labels={task.labels} />}
         <Chip>{task.context}</Chip>
-        {task.githubLinks[0] != null && (
-          <GithubLinkBadge link={task.githubLinks[0]} />
-        )}
+        <GithubLinksChipGroup links={task.githubLinks} />
         {task.projectId != null && <ProjectChip projectId={task.projectId} />}
       </div>
 

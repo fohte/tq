@@ -76,3 +76,15 @@ export const ClosedPullRequest: Story = {
     }),
   },
 }
+
+export const WithExtraCount: Story = {
+  args: {
+    link: makeLink({
+      state: 'merged',
+      kind: 'pull_request',
+      number: 436,
+      url: 'https://github.com/fohte/tq/pull/436',
+    }),
+    extraCount: 2,
+  },
+}

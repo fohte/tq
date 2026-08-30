@@ -55,10 +55,36 @@ function PreviewCardPopup({
   )
 }
 
+// Header + list body used by every hover card that previews "all N items"
+// behind a single trigger (SessionIndicator, GithubLinksChipGroup).
+function PreviewListPopup({
+  label,
+  count,
+  children,
+}: {
+  label: string
+  count: number
+  children: React.ReactNode
+}) {
+  return (
+    // An explicit width (not `min-w-*` on `w-auto`) is required here: with
+    // `w-auto`, the popup's shrink-to-fit width is driven by its children's
+    // untruncated max-content width regardless of any min-width, since
+    // min-width only raises a floor and never caps growth.
+    <PreviewCardPopup className="w-(--width-preview-popup) p-0">
+      <div className="border-b border-border px-3 py-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint">
+        {label} ({count})
+      </div>
+      {children}
+    </PreviewCardPopup>
+  )
+}
+
 export {
   PreviewCard,
   PreviewCardPopup,
   PreviewCardPortal,
   PreviewCardPositioner,
   PreviewCardTrigger,
+  PreviewListPopup,
 }

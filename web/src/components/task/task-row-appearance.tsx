@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 
 import { SessionIndicator } from '#components/agent-session/session-indicator'
-import { GithubLinkBadge } from '#components/task/github-link-badge'
+import { GithubLinksChipGroup } from '#components/task/github-links-chip-group'
 import {
   DueDateBadge,
   EstimateLabel,
@@ -77,8 +77,8 @@ export function TaskRowAppearance({
     task.estimatedMinutes != null ? (
       <EstimateLabel minutes={task.estimatedMinutes} />
     ) : null,
-    task.githubLinks[0] != null ? (
-      <GithubLinkBadge link={task.githubLinks[0]} />
+    task.githubLinks.length > 0 ? (
+      <GithubLinksChipGroup links={task.githubLinks} />
     ) : null,
     ...secondLineExtras,
   ]
