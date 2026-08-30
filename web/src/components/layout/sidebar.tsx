@@ -1,6 +1,7 @@
 import { Link, useMatchRoute, useSearch } from '@tanstack/react-router'
 import { parseSearchQuery } from 'api/search-query-parser'
 import type { ReactNode } from 'react'
+import { useState } from 'react'
 
 import { ContextFilter } from '#components/context-filter'
 import {
@@ -10,10 +11,14 @@ import {
 } from '#components/project/project-status-mark'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useProjects } from '#hooks/use-projects'
+import type { SavedView } from '#hooks/use-saved-views'
+import { useSavedViews } from '#hooks/use-saved-views'
 import { useTagCounts } from '#hooks/use-tag-counts'
 import { navKeybindings } from '#lib/keybindings'
 import { tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
+
+const MAX_VISIBLE_VIEWS = 5
 
 interface NavItem {
   to: string
@@ -83,6 +88,33 @@ function NavLink({ item }: { item: NavItem }) {
   )
 }
 
+// Shared row shape for TagLink/ViewLink — both are a full-width link into
+// /tasks scoped by a search query, differing only in their prefix/suffix.
+function SidebarRowLink({
+  search,
+  isActive,
+  children,
+}: {
+  search: { q: string }
+  isActive: boolean
+  children: ReactNode
+}) {
+  return (
+    <Link
+      to="/tasks"
+      search={search}
+      className={cn(
+        'flex w-full items-center gap-2 px-3.5 py-1 text-left font-mono text-2xs',
+        isActive
+          ? 'bg-card text-foreground'
+          : 'text-muted-foreground-strong hover:bg-card hover:text-foreground',
+      )}
+    >
+      {children}
+    </Link>
+  )
+}
+
 function TagLink({
   name,
   count,
@@ -93,16 +125,7 @@ function TagLink({
   isActive: boolean
 }) {
   return (
-    <Link
-      to="/tasks"
-      search={tagFilterSearch(name)}
-      className={cn(
-        'flex w-full items-center gap-2 px-3.5 py-1 text-left font-mono text-2xs',
-        isActive
-          ? 'bg-card text-foreground'
-          : 'text-muted-foreground-strong hover:bg-card hover:text-foreground',
-      )}
-    >
+    <SidebarRowLink search={tagFilterSearch(name)} isActive={isActive}>
       <span
         className={cn(
           'font-bold',
@@ -113,7 +136,56 @@ function TagLink({
       </span>
       <span className="flex-1 truncate text-left">{name}</span>
       <span className="shrink-0 text-muted-foreground-faint">{count}</span>
-    </Link>
+    </SidebarRowLink>
+  )
+}
+
+function ViewLink({ view, isActive }: { view: SavedView; isActive: boolean }) {
+  return (
+    <SidebarRowLink search={{ q: view.query }} isActive={isActive}>
+      <span className="flex-1 truncate text-left">{view.name}</span>
+    </SidebarRowLink>
+  )
+}
+
+function ViewsSection() {
+  const { data: views } = useSavedViews()
+  // `q` only exists on the /tasks route's search schema, so this reads
+  // undefined (no active view) everywhere else.
+  const { q } = useSearch({ strict: false })
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  if (views == null || views.length === 0) {
+    return null
+  }
+
+  const visibleViews = isExpanded ? views : views.slice(0, MAX_VISIBLE_VIEWS)
+  const hiddenCount = views.length - MAX_VISIBLE_VIEWS
+
+  return (
+    <div className="flex shrink-0 flex-col">
+      <div className="flex items-center justify-between px-3.5 pb-1.5">
+        <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
+          VIEWS
+        </span>
+      </div>
+      <div className="flex flex-col">
+        {visibleViews.map((view) => (
+          <ViewLink key={view.id} view={view} isActive={q === view.query} />
+        ))}
+        {!isExpanded && hiddenCount > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              setIsExpanded(true)
+            }}
+            className="px-3.5 py-1 text-left font-mono text-2xs text-muted-foreground-faint hover:text-foreground"
+          >
+            + {hiddenCount} more
+          </button>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -194,6 +266,7 @@ export function SidebarContent({ footerExtra }: { footerExtra?: ReactNode }) {
 
       <div className="mx-3.5 mt-1.5 mb-2 border-t border-border" />
 
+      <ViewsSection />
       <TagsSection />
       <ProjectsSection />
 

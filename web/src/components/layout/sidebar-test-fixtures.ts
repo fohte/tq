@@ -1,4 +1,5 @@
 import type { Project } from '#hooks/use-projects'
+import type { SavedView } from '#hooks/use-saved-views'
 import type { Task } from '#hooks/use-tasks'
 
 export function makeTask(overrides: Partial<Task> = {}): Task {
@@ -40,6 +41,19 @@ export function makeProject(overrides: Partial<Project> = {}): Project {
     updatedAt: '2026-03-20T00:00:00.000Z',
     completionRate: 0,
     taskCount: { total: 0, completed: 0 },
+    ...overrides,
+  }
+}
+
+export function makeSavedView(overrides: Partial<SavedView> = {}): SavedView {
+  return {
+    id: '00000000-0000-0000-0000-000000000201',
+    name: 'Now',
+    query: 'commitment:active',
+    position: 0,
+    context: 'personal',
+    createdAt: '2026-03-20T00:00:00.000Z',
+    updatedAt: '2026-03-20T00:00:00.000Z',
     ...overrides,
   }
 }

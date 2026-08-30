@@ -2,9 +2,15 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { Sidebar } from '#components/layout/sidebar'
-import { makeProject, makeTask } from '#components/layout/sidebar-test-fixtures'
+import {
+  makeProject,
+  makeSavedView,
+  makeTask,
+} from '#components/layout/sidebar-test-fixtures'
 import type { Project } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
+import type { SavedView } from '#hooks/use-saved-views'
+import { savedViewKeys } from '#hooks/use-saved-views'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
@@ -39,15 +45,18 @@ const projectsAcrossStatuses: Project[] = [
 function SidebarStory({
   tasks,
   projects,
+  savedViews,
 }: {
   tasks?: Task[] | undefined
   projects?: Project[] | undefined
+  savedViews?: SavedView[] | undefined
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
   queryClient.setQueryData(taskKeys.list(undefined), tasks ?? [])
   queryClient.setQueryData(projectKeys.list(undefined), projects ?? [])
+  queryClient.setQueryData(savedViewKeys.list(), savedViews ?? [])
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -62,14 +71,22 @@ function SidebarWithRouter({
   currentPath,
   tasks,
   projects,
+  savedViews,
 }: {
   currentPath: string
   tasks?: Task[] | undefined
   projects?: Project[] | undefined
+  savedViews?: SavedView[] | undefined
 }) {
   return (
     <StoryRouter
-      component={() => <SidebarStory tasks={tasks} projects={projects} />}
+      component={() => (
+        <SidebarStory
+          tasks={tasks}
+          projects={projects}
+          savedViews={savedViews}
+        />
+      )}
       initialPath={currentPath}
     />
   )
@@ -128,5 +145,39 @@ export const WithProjects: Story = {
   args: {
     currentPath: '/',
     projects: projectsAcrossStatuses,
+  },
+}
+
+const fewSavedViews: SavedView[] = [
+  makeSavedView({ id: '1', name: 'Now', query: 'commitment:active' }),
+  makeSavedView({ id: '2', name: 'Someday', query: 'commitment:someday' }),
+]
+
+const manySavedViews: SavedView[] = Array.from({ length: 7 }, (_, i) =>
+  makeSavedView({
+    id: String(i + 1),
+    name: `View ${String(i + 1)}`,
+    query: `commitment:active label:view-${String(i + 1)}`,
+  }),
+)
+
+export const WithViews: Story = {
+  args: {
+    currentPath: '/',
+    savedViews: fewSavedViews,
+  },
+}
+
+export const WithActiveView: Story = {
+  args: {
+    currentPath: '/tasks?q=commitment:active',
+    savedViews: fewSavedViews,
+  },
+}
+
+export const WithManyViews: Story = {
+  args: {
+    currentPath: '/',
+    savedViews: manySavedViews,
   },
 }

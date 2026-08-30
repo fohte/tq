@@ -2,9 +2,15 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { SidebarContent } from '#components/layout/sidebar'
-import { makeProject, makeTask } from '#components/layout/sidebar-test-fixtures'
+import {
+  makeProject,
+  makeSavedView,
+  makeTask,
+} from '#components/layout/sidebar-test-fixtures'
 import type { Project } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
+import type { SavedView } from '#hooks/use-saved-views'
+import { savedViewKeys } from '#hooks/use-saved-views'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
@@ -29,12 +35,18 @@ const projectsAcrossStatuses: Project[] = [
   }),
 ]
 
+const savedViews: SavedView[] = [
+  makeSavedView({ id: '1', name: 'Now', query: 'commitment:active' }),
+  makeSavedView({ id: '2', name: 'Someday', query: 'commitment:someday' }),
+]
+
 function SidebarContentStory() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
   queryClient.setQueryData(taskKeys.list(undefined), tasksWithTags)
   queryClient.setQueryData(projectKeys.list(undefined), projectsAcrossStatuses)
+  queryClient.setQueryData(savedViewKeys.list(), savedViews)
 
   return (
     <QueryClientProvider client={queryClient}>
