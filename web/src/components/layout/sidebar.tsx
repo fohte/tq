@@ -88,6 +88,33 @@ function NavLink({ item }: { item: NavItem }) {
   )
 }
 
+// Shared row shape for TagLink/ViewLink — both are a full-width link into
+// /tasks scoped by a search query, differing only in their prefix/suffix.
+function SidebarRowLink({
+  search,
+  isActive,
+  children,
+}: {
+  search: { q: string }
+  isActive: boolean
+  children: ReactNode
+}) {
+  return (
+    <Link
+      to="/tasks"
+      search={search}
+      className={cn(
+        'flex w-full items-center gap-2 px-3.5 py-1 text-left font-mono text-2xs',
+        isActive
+          ? 'bg-card text-foreground'
+          : 'text-muted-foreground-strong hover:bg-card hover:text-foreground',
+      )}
+    >
+      {children}
+    </Link>
+  )
+}
+
 function TagLink({
   name,
   count,
@@ -98,16 +125,7 @@ function TagLink({
   isActive: boolean
 }) {
   return (
-    <Link
-      to="/tasks"
-      search={tagFilterSearch(name)}
-      className={cn(
-        'flex w-full items-center gap-2 px-3.5 py-1 text-left font-mono text-2xs',
-        isActive
-          ? 'bg-card text-foreground'
-          : 'text-muted-foreground-strong hover:bg-card hover:text-foreground',
-      )}
-    >
+    <SidebarRowLink search={tagFilterSearch(name)} isActive={isActive}>
       <span
         className={cn(
           'font-bold',
@@ -118,24 +136,15 @@ function TagLink({
       </span>
       <span className="flex-1 truncate text-left">{name}</span>
       <span className="shrink-0 text-muted-foreground-faint">{count}</span>
-    </Link>
+    </SidebarRowLink>
   )
 }
 
 function ViewLink({ view, isActive }: { view: SavedView; isActive: boolean }) {
   return (
-    <Link
-      to="/tasks"
-      search={{ q: view.query }}
-      className={cn(
-        'flex w-full items-center gap-2 px-3.5 py-1 text-left font-mono text-2xs',
-        isActive
-          ? 'bg-card text-foreground'
-          : 'text-muted-foreground-strong hover:bg-card hover:text-foreground',
-      )}
-    >
+    <SidebarRowLink search={{ q: view.query }} isActive={isActive}>
       <span className="flex-1 truncate text-left">{view.name}</span>
-    </Link>
+    </SidebarRowLink>
   )
 }
 

@@ -61,12 +61,17 @@ const tasksWithTags: Task[] = [
 // The router's first route match resolves asynchronously even with no
 // loaders, so router.load() is awaited before render() to avoid an initial
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
-async function renderSidebar(
-  tasks: Task[] = [],
-  projects: Project[] = [],
+async function renderSidebar({
+  tasks = [],
+  projects = [],
   initialEntry = '/',
-  savedViews: SavedView[] = [],
-) {
+  savedViews = [],
+}: {
+  tasks?: Task[]
+  projects?: Project[]
+  initialEntry?: string
+  savedViews?: SavedView[]
+} = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -106,14 +111,14 @@ describe('Sidebar', () => {
     ]
 
     it('shows each saved view by name', async () => {
-      await renderSidebar([], [], '/', views)
+      await renderSidebar({ savedViews: views })
 
       expect(screen.getByRole('link', { name: 'Now' })).toBeInTheDocument()
       expect(screen.getByRole('link', { name: 'Someday' })).toBeInTheDocument()
     })
 
     it('links each view to /tasks with its saved query', async () => {
-      await renderSidebar([], [], '/', views)
+      await renderSidebar({ savedViews: views })
 
       const nowLink = screen.getByRole('link', { name: 'Now' })
       expect(nowLink).toHaveAttribute('href', '/tasks')
@@ -123,7 +128,7 @@ describe('Sidebar', () => {
     })
 
     it('does not highlight any view when the current query has none', async () => {
-      await renderSidebar([], [], '/', views)
+      await renderSidebar({ savedViews: views })
 
       expect(screen.getByRole('link', { name: 'Now' })).toHaveClass(
         'text-muted-foreground-strong',
@@ -131,7 +136,10 @@ describe('Sidebar', () => {
     })
 
     it('highlights the view whose saved query matches the current query', async () => {
-      await renderSidebar([], [], '/?q=commitment:active', views)
+      await renderSidebar({
+        initialEntry: '/?q=commitment:active',
+        savedViews: views,
+      })
 
       expect(screen.getByRole('link', { name: 'Now' })).toHaveClass('bg-card')
       expect(screen.getByRole('link', { name: 'Someday' })).toHaveClass(
@@ -140,12 +148,12 @@ describe('Sidebar', () => {
     })
 
     it('does not render the section when there are no saved views', async () => {
-      await renderSidebar([], [], '/', [])
+      await renderSidebar()
 
       expect(screen.queryByText('VIEWS')).not.toBeInTheDocument()
     })
 
-    it('shows only the first 5 views, expanding the rest on click', async () => {
+    describe('with more than 5 views', () => {
       const manyViews = Array.from({ length: 7 }, (_, i) =>
         makeSavedView({
           id: String(i + 1),
@@ -153,23 +161,36 @@ describe('Sidebar', () => {
           query: `commitment:active label:view-${String(i + 1)}`,
         }),
       )
-      await renderSidebar([], [], '/', manyViews)
 
-      expect(screen.getAllByRole('link', { name: /^View \d$/ })).toHaveLength(5)
-      const moreButton = screen.getByRole('button', { name: '+ 2 more' })
+      it('shows only the first 5, with a "+ N more" button', async () => {
+        await renderSidebar({ savedViews: manyViews })
 
-      await userEvent.click(moreButton)
+        expect(screen.getAllByRole('link', { name: /^View \d$/ })).toHaveLength(
+          5,
+        )
+        expect(
+          screen.getByRole('button', { name: '+ 2 more' }),
+        ).toBeInTheDocument()
+      })
 
-      expect(screen.getAllByRole('link', { name: /^View \d$/ })).toHaveLength(7)
-      expect(
-        screen.queryByRole('button', { name: '+ 2 more' }),
-      ).not.toBeInTheDocument()
+      it('reveals the rest and hides the button on click', async () => {
+        await renderSidebar({ savedViews: manyViews })
+
+        await userEvent.click(screen.getByRole('button', { name: '+ 2 more' }))
+
+        expect(screen.getAllByRole('link', { name: /^View \d$/ })).toHaveLength(
+          7,
+        )
+        expect(
+          screen.queryByRole('button', { name: '+ 2 more' }),
+        ).not.toBeInTheDocument()
+      })
     })
   })
 
   describe('TagsSection', () => {
     it('shows each tag with its name and count', async () => {
-      await renderSidebar(tasksWithTags)
+      await renderSidebar({ tasks: tasksWithTags })
 
       const devTqLink = screen.getByRole('link', { name: /dev:tq/ })
       const urgentLink = screen.getByRole('link', { name: /urgent/ })
@@ -178,7 +199,7 @@ describe('Sidebar', () => {
     })
 
     it('links each tag to /tasks scoped to that tag, replacing the query', async () => {
-      await renderSidebar(tasksWithTags)
+      await renderSidebar({ tasks: tasksWithTags })
 
       const devTqLink = screen.getByRole('link', { name: /dev:tq/ })
       expect(devTqLink).toHaveAttribute('href', '/tasks')
@@ -190,14 +211,17 @@ describe('Sidebar', () => {
     })
 
     it('does not highlight any tag when the current query has none', async () => {
-      await renderSidebar(tasksWithTags)
+      await renderSidebar({ tasks: tasksWithTags })
       expect(screen.getByRole('link', { name: /dev:tq/ })).toHaveClass(
         'text-muted-foreground-strong',
       )
     })
 
     it('highlights the tag matching the current query, derived from it', async () => {
-      await renderSidebar(tasksWithTags, [], '/?q=label:dev:tq')
+      await renderSidebar({
+        tasks: tasksWithTags,
+        initialEntry: '/?q=label:dev:tq',
+      })
 
       expect(screen.getByRole('link', { name: /dev:tq/ })).toHaveClass(
         'bg-card',
@@ -210,9 +234,8 @@ describe('Sidebar', () => {
 
   describe('ProjectsSection', () => {
     it("shows a project's completed/total ratio", async () => {
-      await renderSidebar(
-        [],
-        [
+      await renderSidebar({
+        projects: [
           makeProject({
             id: '1',
             title: 'Project Alpha',
@@ -220,7 +243,7 @@ describe('Sidebar', () => {
             taskCount: { completed: 3, total: 10 },
           }),
         ],
-      )
+      })
 
       expect(
         screen.getByRole('link', { name: /Project Alpha/ }),
@@ -228,9 +251,8 @@ describe('Sidebar', () => {
     })
 
     it('shows both active and paused projects together', async () => {
-      await renderSidebar(
-        [],
-        [
+      await renderSidebar({
+        projects: [
           makeProject({
             id: '1',
             title: 'Project Alpha',
@@ -244,7 +266,7 @@ describe('Sidebar', () => {
             taskCount: { completed: 5, total: 5 },
           }),
         ],
-      )
+      })
 
       const projectLinks = screen.getAllByRole('link', {
         name: /^Project (Alpha|Beta)/,
