@@ -221,3 +221,32 @@ export const todayTasks = pgTable('today_tasks', {
     .notNull()
     .defaultNow(),
 })
+
+export const savedViews = pgTable(
+  'saved_views',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    name: text('name').notNull(),
+    // The raw search DSL string (see `#search-query-parser`), not a parsed
+    // structure, so extending the DSL never requires a migration here.
+    query: text('query').notNull(),
+    position: integer('position').notNull().default(0),
+    context: text('context', {
+      enum: ['work', 'personal'],
+    })
+      .notNull()
+      .default('personal'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('idx_saved_views_context').on(table.context),
+    index('idx_saved_views_position').on(table.position),
+  ],
+)

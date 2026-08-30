@@ -10,6 +10,7 @@ import { registerLabelCommands } from '#commands/label'
 import { registerLinkCommands } from '#commands/link'
 import { registerPageCommands } from '#commands/page'
 import { registerProjectCommands } from '#commands/project'
+import { registerSavedViewCommands } from '#commands/saved-view'
 import { registerSessionCommands } from '#commands/session'
 import { registerSlackCommands } from '#commands/slack'
 import { registerTaskCommands } from '#commands/task'
@@ -54,6 +55,7 @@ export function buildProgram(
   registerTaskCommands(program, fetchImpl)
   registerCommentCommands(program, fetchImpl, stdin)
   registerProjectCommands(program, fetchImpl)
+  registerSavedViewCommands(program, fetchImpl)
   registerLabelCommands(program, fetchImpl)
   registerImageCommands(program, fetchImpl)
   registerGithubCommands(program, fetchImpl)

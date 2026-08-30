@@ -26,6 +26,7 @@
 | [public.scheduling_settings](public.scheduling_settings.md)                         | 8       |         | BASE TABLE |
 | [public.agent_sessions](public.agent_sessions.md)                                   | 12      |         | BASE TABLE |
 | [public.task_agent_sessions](public.task_agent_sessions.md)                         | 2       |         | BASE TABLE |
+| [public.saved_views](public.saved_views.md)                                         | 7       |         | BASE TABLE |
 
 ## Relations
 
@@ -270,6 +271,15 @@ erDiagram
 "public.task_agent_sessions" {
   text task_id FK
   text agent_session_id FK
+}
+"public.saved_views" {
+  text id
+  text name
+  text query
+  integer position
+  text context
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
 }
 ```
 

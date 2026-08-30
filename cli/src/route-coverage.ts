@@ -88,6 +88,13 @@ export const COVERED_ROUTES = [
 
   // label
   'GET /api/labels',
+
+  // saved view
+  'POST /api/saved-views',
+  'GET /api/saved-views',
+  'GET /api/saved-views/:id',
+  'PATCH /api/saved-views/:id',
+  'DELETE /api/saved-views/:id',
 ] as const satisfies readonly AllRoutes[]
 
 type CoveredRoutes = (typeof COVERED_ROUTES)[number]
