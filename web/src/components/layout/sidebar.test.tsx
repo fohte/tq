@@ -6,12 +6,19 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { Sidebar } from '#components/layout/sidebar'
-import { makeProject, makeTask } from '#components/layout/sidebar-test-fixtures'
+import {
+  makeProject,
+  makeSavedView,
+  makeTask,
+} from '#components/layout/sidebar-test-fixtures'
 import type { Project } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
+import type { SavedView } from '#hooks/use-saved-views'
+import { savedViewKeys } from '#hooks/use-saved-views'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 
@@ -58,12 +65,14 @@ async function renderSidebar(
   tasks: Task[] = [],
   projects: Project[] = [],
   initialEntry = '/',
+  savedViews: SavedView[] = [],
 ) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   queryClient.setQueryData(taskKeys.list(undefined), tasks)
   queryClient.setQueryData(projectKeys.list(undefined), projects)
+  queryClient.setQueryData(savedViewKeys.list(), savedViews)
 
   const rootRoute = createRootRoute({
     validateSearch: (search: Record<string, unknown>) => search,
@@ -88,6 +97,74 @@ describe('Sidebar', () => {
     expect(screen.getByRole('complementary').className).toBe(
       'hidden h-screen w-50 shrink-0 flex-col border-r border-border bg-sidebar md:flex',
     )
+  })
+
+  describe('ViewsSection', () => {
+    const views: SavedView[] = [
+      makeSavedView({ id: '1', name: 'Now', query: 'commitment:active' }),
+      makeSavedView({ id: '2', name: 'Someday', query: 'commitment:someday' }),
+    ]
+
+    it('shows each saved view by name', async () => {
+      await renderSidebar([], [], '/', views)
+
+      expect(screen.getByRole('link', { name: 'Now' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Someday' })).toBeInTheDocument()
+    })
+
+    it('links each view to /tasks with its saved query', async () => {
+      await renderSidebar([], [], '/', views)
+
+      const nowLink = screen.getByRole('link', { name: 'Now' })
+      expect(nowLink).toHaveAttribute('href', '/tasks')
+      expect(nowLink.dataset['search']).toBe(
+        JSON.stringify({ q: 'commitment:active' }),
+      )
+    })
+
+    it('does not highlight any view when the current query has none', async () => {
+      await renderSidebar([], [], '/', views)
+
+      expect(screen.getByRole('link', { name: 'Now' })).toHaveClass(
+        'text-muted-foreground-strong',
+      )
+    })
+
+    it('highlights the view whose saved query matches the current query', async () => {
+      await renderSidebar([], [], '/?q=commitment:active', views)
+
+      expect(screen.getByRole('link', { name: 'Now' })).toHaveClass('bg-card')
+      expect(screen.getByRole('link', { name: 'Someday' })).toHaveClass(
+        'text-muted-foreground-strong',
+      )
+    })
+
+    it('does not render the section when there are no saved views', async () => {
+      await renderSidebar([], [], '/', [])
+
+      expect(screen.queryByText('VIEWS')).not.toBeInTheDocument()
+    })
+
+    it('shows only the first 5 views, expanding the rest on click', async () => {
+      const manyViews = Array.from({ length: 7 }, (_, i) =>
+        makeSavedView({
+          id: String(i + 1),
+          name: `View ${String(i + 1)}`,
+          query: `commitment:active label:view-${String(i + 1)}`,
+        }),
+      )
+      await renderSidebar([], [], '/', manyViews)
+
+      expect(screen.getAllByRole('link', { name: /^View \d$/ })).toHaveLength(5)
+      const moreButton = screen.getByRole('button', { name: '+ 2 more' })
+
+      await userEvent.click(moreButton)
+
+      expect(screen.getAllByRole('link', { name: /^View \d$/ })).toHaveLength(7)
+      expect(
+        screen.queryByRole('button', { name: '+ 2 more' }),
+      ).not.toBeInTheDocument()
+    })
   })
 
   describe('TagsSection', () => {

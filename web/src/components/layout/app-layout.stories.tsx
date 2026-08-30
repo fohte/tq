@@ -35,6 +35,7 @@ const meta = {
         http.get('/api/tasks', () => HttpResponse.json([])),
         http.get('/api/projects', () => HttpResponse.json([])),
         http.get('/api/schedule/today-tasks', () => HttpResponse.json([])),
+        http.get('/api/saved-views', () => HttpResponse.json([])),
       ],
     },
   },
