@@ -87,11 +87,28 @@ export const ProjectFilterDisabled: Story = {
     parsed: { ...defaultParsed, projectId: 'proj-1' },
     disableProjectFilter: true,
   },
+  parameters: {
+    // disableProjectFilter suppresses the chip regardless of projectId, so
+    // this renders identically to Default — verified by the query below
+    // instead of by appearance.
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas }) => {
+    await expect(
+      canvas.queryByRole('button', { name: /^project / }),
+    ).not.toBeInTheDocument()
+  },
 }
 
 export const ProjectFilterDisabledIgnoresTypedToken: Story = {
   args: {
     disableProjectFilter: true,
+  },
+  parameters: {
+    // `parsed` is a static prop that onQueryChange (a bare mock) never
+    // feeds back, so the chip row renders unchanged after the token is
+    // committed — identical to Default.
+    screenshot: { skip: true },
   },
   play: async ({ canvas, args }) => {
     const input = canvas.getByRole('textbox', { name: 'Filter query' })
