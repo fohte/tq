@@ -101,7 +101,7 @@ export const tasks = pgTable(
       enum: ['inbox', 'active', 'someday'],
     })
       .notNull()
-      .default('active'),
+      .default('inbox'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

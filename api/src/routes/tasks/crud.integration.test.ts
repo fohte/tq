@@ -123,7 +123,7 @@ describe('tasks CRUD API', () => {
         description: null,
         status: 'todo',
         context: 'work',
-        commitment: 'active',
+        commitment: 'inbox',
         labels: [],
         startDate: null,
         dueDate: null,
@@ -165,7 +165,7 @@ describe('tasks CRUD API', () => {
       expect(body.commitment).toBe('inbox')
     })
 
-    it('defaults commitment to active when unspecified', async () => {
+    it('defaults commitment to inbox when unspecified', async () => {
       const res = await app.request('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -181,7 +181,7 @@ describe('tasks CRUD API', () => {
         description: null,
         status: 'todo',
         context: 'personal',
-        commitment: 'active',
+        commitment: 'inbox',
         labels: [],
         startDate: null,
         dueDate: null,

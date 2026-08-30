@@ -771,7 +771,7 @@
           "name": "commitment",
           "type": "text",
           "nullable": false,
-          "default": "'active'::text"
+          "default": "'inbox'::text"
         }
       ],
       "indexes": [
