@@ -8,7 +8,7 @@ import { AppLayout } from '#components/layout/app-layout'
 import { useGithubSync } from '#hooks/use-github-link'
 import type { ContextFilterMode } from '#lib/context-filter'
 
-export interface RootSearch {
+interface RootSearch {
   context?: ContextFilterMode
 }
 

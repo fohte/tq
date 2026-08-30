@@ -27,7 +27,7 @@ export function isAgentSessionActive(
   )
 }
 
-export const agentSessionKeys = {
+const agentSessionKeys = {
   all: ['agent-sessions'] as const,
   list: () => [...agentSessionKeys.all, 'list'] as const,
 }
