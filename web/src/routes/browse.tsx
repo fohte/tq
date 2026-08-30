@@ -10,7 +10,7 @@ export const Route = createFileRoute('/browse')({
 
 function Browse() {
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col md:hidden">
       <ScreenHeaderBar>
         <SectionHeading level={2}>browse</SectionHeading>
       </ScreenHeaderBar>

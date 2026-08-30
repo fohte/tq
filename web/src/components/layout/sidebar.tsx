@@ -183,8 +183,6 @@ function ProjectsSection() {
   )
 }
 
-// Shared with the mobile /browse route, which renders it full-width without
-// the <aside> wrapper (see web/src/routes/browse.tsx).
 export function SidebarContent({ footerExtra }: { footerExtra?: ReactNode }) {
   return (
     <>
