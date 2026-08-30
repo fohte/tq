@@ -450,20 +450,65 @@ describe('ProjectDetailPage task list', () => {
     ])
   })
 
-  it('hides the project filter chip and the Save view button', async () => {
+  it('hides the Save view button', async () => {
     await renderProjectDetailPage()
 
-    expect(
-      screen.queryByRole('button', { name: /^project / }),
-    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: 'Save view' }),
     ).not.toBeInTheDocument()
   })
 
-  it('updates the sort in the URL and re-requests filtered data scoped to the project', async () => {
+  it('hides the project filter chip even when q embeds a conflicting project scope', async () => {
+    // Without disableProjectFilter, this project would resolve to a visible
+    // chip — proves the route's guard, not just an empty projects list,
+    // suppresses it.
+    mockUseProjects.mockReturnValue({
+      data: [
+        {
+          id: 'other-project',
+          title: 'Other Project',
+          description: null,
+          status: 'active' as const,
+          startDate: null,
+          targetDate: null,
+          color: null,
+          sortOrder: 0,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          taskCount: { total: 0, completed: 0 },
+          completionRate: 0,
+        },
+      ],
+    })
+
+    await renderProjectDetailPage(
+      '/projects/p1?q=' +
+        encodeURIComponent('project:other-project sort:updated'),
+    )
+
+    expect(
+      screen.queryByRole('button', { name: /^project / }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('updates the q search param in the URL when sort changes', async () => {
     const user = userEvent.setup()
     const { router } = await renderProjectDetailPage()
+    vi.useRealTimers()
+
+    await user.click(
+      atIndex(screen.getAllByRole('button', { name: /Sort by/ }), 0),
+    )
+    await user.click(await screen.findByRole('button', { name: 'Created' }))
+
+    expect(router.state.location.search).toEqual({
+      q: 'is:todo is:in_progress sort:created',
+    })
+  })
+
+  it('re-requests filtered data scoped to the project after a sort change', async () => {
+    const user = userEvent.setup()
+    await renderProjectDetailPage()
     vi.useRealTimers()
 
     await user.click(
@@ -474,9 +519,6 @@ describe('ProjectDetailPage task list', () => {
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
       { q: 'is:todo is:in_progress sort:created', projectId: 'p1' },
     ])
-    expect(router.state.location.search).toEqual({
-      q: 'is:todo is:in_progress sort:created',
-    })
   })
 
   it('renders TaskTreeList from the filtered tree/tasks props, not the full project task list', async () => {

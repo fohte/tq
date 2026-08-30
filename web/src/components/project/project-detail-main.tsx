@@ -289,6 +289,7 @@ function ProjectTaskList({
           parsed={parsedQuery}
           projects={projects}
           hideSaveView
+          disableProjectFilter
         />
         <TaskTreeList
           isLoading={isLoading}

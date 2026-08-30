@@ -828,6 +828,24 @@ describe('tasks CRUD API', () => {
       expect(body.map((t) => t.id)).toEqual([task.id])
     })
 
+    it('prefers the explicit projectId param over a conflicting project: token in q', async () => {
+      const projectA = await createProject('Project A')
+      const projectB = await createProject('Project B')
+      const taskInA = await createTask('Task in A')
+      await setProjectId(taskInA.id, projectA.id)
+      const taskInB = await createTask('Task in B')
+      await setProjectId(taskInB.id, projectB.id)
+
+      const res = await app.request(
+        `/api/tasks?projectId=${projectA.id}&q=` +
+          encodeURIComponent('project:"Project B"'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id)).toEqual([taskInA.id])
+    })
+
     it('returns tasks belonging to the project', async () => {
       const project = await createProject('My project')
       const task = await createTask('Task in project')

@@ -82,6 +82,28 @@ export const SaveViewHidden: Story = {
   },
 }
 
+export const ProjectFilterDisabled: Story = {
+  args: {
+    parsed: { ...defaultParsed, projectId: 'proj-1' },
+    disableProjectFilter: true,
+  },
+}
+
+export const ProjectFilterDisabledIgnoresTypedToken: Story = {
+  args: {
+    disableProjectFilter: true,
+  },
+  play: async ({ canvas, args }) => {
+    const input = canvas.getByRole('textbox', { name: 'Filter query' })
+    await userEvent.type(input, 'project:proj-1')
+    await userEvent.keyboard('{Enter}')
+
+    await expect(args.onQueryChange).toHaveBeenCalledWith(
+      'is:todo is:in_progress sort:updated',
+    )
+  },
+}
+
 export const NoFilters: Story = {
   args: {
     parsed: { freeText: '', sortBy: 'updated' },
