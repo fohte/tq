@@ -9,6 +9,7 @@ import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { ProjectChip } from '#components/task/project-chip'
 import { StatusIcon } from '#components/task/status-icon'
 import { TaskActivity } from '#components/task/task-activity'
+import { TaskGithubLinksSection } from '#components/task/task-github-links-section'
 import { TaskLinkedTasksSection } from '#components/task/task-linked-tasks-section'
 import {
   TaskPagesList,
@@ -107,6 +108,9 @@ export function TaskMainContent({
           inherited={inheritedSubtaskAttributes}
         />
       )}
+
+      {/* GitHub Links */}
+      <TaskGithubLinksSection taskId={task.id} githubLinks={task.githubLinks} />
 
       {/* Linked Tasks */}
       <TaskLinkedTasksSection
