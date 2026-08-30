@@ -9,6 +9,14 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import {
+  commitmentLabels,
+  type CommitmentValue,
+  commitmentValues,
+  contextLabels,
+  type ContextValue,
+  contextValues,
+} from '#components/task/create-task-modal-fields'
 import { TagsInput } from '#components/task/tags-input'
 import {
   BottomSheetHeader,
@@ -48,30 +56,6 @@ interface CreateTaskModalProps {
   defaultStartDate?: string
   defaultDescription?: string
   projectId?: string
-}
-
-type ContextValue = 'work' | 'personal'
-const contextValues = ['', 'work', 'personal'] as const satisfies readonly (
-  ContextValue | ''
-)[]
-
-const contextLabels: Record<ContextValue, string> = {
-  work: 'Work',
-  personal: 'Personal',
-}
-
-type CommitmentValue = 'inbox' | 'active' | 'someday'
-const commitmentValues = [
-  '',
-  'inbox',
-  'active',
-  'someday',
-] as const satisfies readonly (CommitmentValue | '')[]
-
-const commitmentLabels: Record<CommitmentValue, string> = {
-  inbox: 'Inbox',
-  active: 'Active',
-  someday: 'Someday',
 }
 
 export function CreateTaskModal({
