@@ -94,13 +94,6 @@ vi.mock('#components/task/task-status-picker', () => ({
       </button>
       <button
         onClick={() => {
-          onValueChange('in_progress')
-        }}
-      >
-        Set In Progress
-      </button>
-      <button
-        onClick={() => {
           onValueChange('completed')
         }}
       >
@@ -386,15 +379,15 @@ describe('TreeTaskGridRow', () => {
     expect(observed).toEqual([true, 1])
   })
 
-  it('updates the status via useUpdateTaskStatus when a non-completed status is selected', async () => {
+  it('updates the status via useUpdateTaskStatus when todo is selected', async () => {
     const user = userEvent.setup()
-    await renderTree(makeNode({ status: 'todo' }))
+    await renderTree(makeNode({ status: 'completed' }))
 
-    await user.click(atIndex(screen.getAllByText('Set In Progress'), 0))
+    await user.click(atIndex(screen.getAllByText('Set Todo'), 0))
 
     expect(mockUpdateStatusMutate).toHaveBeenCalledWith({
       id: 'parent-1',
-      status: 'in_progress',
+      status: 'todo',
     })
     expect(mockMutate).not.toHaveBeenCalled()
   })
