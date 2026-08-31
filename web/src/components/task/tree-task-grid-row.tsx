@@ -18,6 +18,7 @@ const EMPTY_INVALID_DROP_IDS: ReadonlySet<string> = new Set()
 
 export interface TreeTaskGridRowProps {
   node: TreeNode
+  hasChildren: boolean
   depth?: number
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
   isExpanded: (id: string) => boolean
@@ -30,6 +31,7 @@ export interface TreeTaskGridRowProps {
 
 export function TreeTaskGridRow({
   node,
+  hasChildren,
   depth = 0,
   sessionsByTaskId,
   isExpanded,
@@ -68,7 +70,6 @@ export function TreeTaskGridRow({
     opacity: isDragging ? 0.5 : 1,
   }
 
-  const hasChildren = node.childCompletionCount.total > 0
   const sessions = sessionsByTaskId.get(node.id) ?? []
   const expanded = isExpanded(node.id)
   const isSelected = selectedRowId === node.id

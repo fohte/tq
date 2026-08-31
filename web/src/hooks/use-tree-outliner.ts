@@ -78,7 +78,7 @@ export function useExpandedIds(defaultExpanded: boolean) {
     })
   }, [])
 
-  return { isExpanded, toggleExpand, expandedIds: toggledIds }
+  return { isExpanded, toggleExpand, toggledIds }
 }
 
 export function useTreeOutliner(

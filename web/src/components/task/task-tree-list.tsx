@@ -10,7 +10,6 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { useQueries } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 
 import type { DropTarget } from '#components/task/tree-drag-overlay-content'
@@ -18,16 +17,16 @@ import { TreeDragOverlayContent } from '#components/task/tree-drag-overlay-conte
 import { TreeOutlinerInputRow } from '#components/task/tree-outliner-input-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { ListAreaMessage } from '#components/ui/list-area-message'
+import { useLazyTaskTree } from '#hooks/use-lazy-task-tree'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { Task, TaskListFilter, TreeNode } from '#hooks/use-tasks'
-import { fetchTaskList, taskKeys, useUpdateTaskParent } from '#hooks/use-tasks'
-import { useExpandedIds, useTreeOutliner } from '#hooks/use-tree-outliner'
+import { useUpdateTaskParent } from '#hooks/use-tasks'
+import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import {
   computeDropMode,
   getDescendantIds,
   resolveDropParentId,
 } from '#lib/task-tree'
-import { mergeLazyChildren } from '#lib/tree-builder'
 import { buildTreeRenderRows } from '#lib/tree-outliner'
 
 interface TreeRowDragData extends Record<string, unknown> {
@@ -82,14 +81,7 @@ export interface TaskTreeListProps {
   tree: TreeNode[]
   tasks: Task[]
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
-  /**
-   * When set, the tree starts fully collapsed and a node's children are
-   * fetched (via this filter, with `parentId` swapped to the node's id) the
-   * first time it's expanded, instead of relying on `tree` already
-   * containing them. Omit to keep the current eager/pre-expanded behavior
-   * (used when the caller already fetched the whole matching subtree, e.g.
-   * during a free-text search).
-   */
+  /** Forwarded to useLazyTaskTree; see its docstring for behavior. */
   lazyChildrenFilter?: TaskListFilter | undefined
 }
 
@@ -100,32 +92,10 @@ export function TaskTreeList({
   sessionsByTaskId,
   lazyChildrenFilter,
 }: TaskTreeListProps) {
-  const lazy = lazyChildrenFilter != null
-  const { isExpanded, toggleExpand, expandedIds } = useExpandedIds(!lazy)
-  const expandedIdList = useMemo(() => [...expandedIds], [expandedIds])
-
-  const childQueries = useQueries({
-    queries: lazy
-      ? expandedIdList.map((parentId) => ({
-          queryKey: taskKeys.list({ ...lazyChildrenFilter, parentId }),
-          queryFn: () => fetchTaskList({ ...lazyChildrenFilter, parentId }),
-        }))
-      : [],
-  })
-
-  // Not memoized: childQueries is a fresh array reference from useQueries on
-  // every render regardless, so memoizing tree on it would recompute every
-  // render anyway.
-  const tree = lazy
-    ? mergeLazyChildren(
-        rootTree,
-        new Map(
-          expandedIdList
-            .map((parentId, i) => [parentId, childQueries[i]?.data] as const)
-            .filter((entry): entry is [string, Task[]] => entry[1] != null),
-        ),
-      )
-    : rootTree
+  const { tree, isExpanded, toggleExpand, hasChildren } = useLazyTaskTree(
+    rootTree,
+    lazyChildrenFilter,
+  )
 
   const treeOutliner = useTreeOutliner(tree, {
     enabled: true,
@@ -249,6 +219,7 @@ export function TaskTreeList({
                   <TreeTaskGridRow
                     key={row.node.id}
                     node={row.node}
+                    hasChildren={hasChildren(row.node)}
                     depth={row.depth}
                     sessionsByTaskId={sessionsByTaskId}
                     isExpanded={treeOutliner.isExpanded}
