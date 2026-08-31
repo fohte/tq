@@ -87,6 +87,8 @@ function TaskList() {
     isLoading,
     tree: filteredTreeData,
     tasks,
+    isSearching,
+    baseFilter,
   } = useFilteredTaskTree({ q })
   const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
 
@@ -115,6 +117,7 @@ function TaskList() {
         tree={filteredTreeData}
         tasks={tasks}
         sessionsByTaskId={sessionsByTaskId}
+        lazyChildrenFilter={isSearching ? undefined : baseFilter}
       />
 
       {/* FAB (mobile only) */}

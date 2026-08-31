@@ -42,22 +42,23 @@ export interface CategorizedTasks {
   all: Task[]
 }
 
+export async function fetchTaskList(filter?: TaskListFilter): Promise<Task[]> {
+  const res = await api.api.tasks.$get({
+    query: {
+      ...filter,
+      includeAncestors: filter?.includeAncestors === true ? 'true' : undefined,
+    },
+  })
+  return unwrapOrThrow(assertOk(res)).json()
+}
+
 export function useTaskList(
   filter?: TaskListFilter,
   options?: { enabled?: boolean },
 ) {
   const query = useQuery({
     queryKey: taskKeys.list(filter),
-    queryFn: async () => {
-      const res = await api.api.tasks.$get({
-        query: {
-          ...filter,
-          includeAncestors:
-            filter?.includeAncestors === true ? 'true' : undefined,
-        },
-      })
-      return unwrapOrThrow(assertOk(res)).json()
-    },
+    queryFn: () => fetchTaskList(filter),
     enabled: options?.enabled ?? true,
   })
 

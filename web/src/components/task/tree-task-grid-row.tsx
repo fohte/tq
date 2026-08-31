@@ -68,7 +68,7 @@ export function TreeTaskGridRow({
     opacity: isDragging ? 0.5 : 1,
   }
 
-  const hasChildren = node.children.length > 0
+  const hasChildren = node.childCompletionCount.total > 0
   const sessions = sessionsByTaskId.get(node.id) ?? []
   const expanded = isExpanded(node.id)
   const isSelected = selectedRowId === node.id

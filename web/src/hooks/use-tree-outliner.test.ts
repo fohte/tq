@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import { makeNode } from '#components/task/task-row-test-fixtures'
 import type { TreeNode } from '#hooks/use-tasks'
-import { useTreeOutliner } from '#hooks/use-tree-outliner'
+import { useExpandedIds, useTreeOutliner } from '#hooks/use-tree-outliner'
 
 function fireKey(
   key: string,
@@ -356,5 +356,58 @@ describe('useTreeOutliner', () => {
     })
 
     expect(result.current.selectedRowId).toBeNull()
+  })
+
+  it('uses injected isExpanded/toggleExpand instead of its own state when provided', () => {
+    const { result: expandState } = renderHook(() => useExpandedIds(false))
+    const { result } = renderHook(() =>
+      useTreeOutliner(buildTree(), {
+        enabled: true,
+        isExpanded: expandState.current.isExpanded,
+        toggleExpand: expandState.current.toggleExpand,
+      }),
+    )
+
+    expect(result.current.isExpanded('a')).toBe(false)
+
+    act(() => {
+      result.current.toggleExpand('a')
+    })
+
+    expect(expandState.current.isExpanded('a')).toBe(true)
+  })
+})
+
+describe('useExpandedIds', () => {
+  it('with defaultExpanded true, starts with everything expanded and toggling collapses', () => {
+    const { result } = renderHook(() => useExpandedIds(true))
+
+    expect(result.current.isExpanded('a')).toBe(true)
+
+    act(() => {
+      result.current.toggleExpand('a')
+    })
+    expect(result.current.isExpanded('a')).toBe(false)
+
+    act(() => {
+      result.current.toggleExpand('a')
+    })
+    expect(result.current.isExpanded('a')).toBe(true)
+  })
+
+  it('with defaultExpanded false, starts with everything collapsed and toggling expands', () => {
+    const { result } = renderHook(() => useExpandedIds(false))
+
+    expect(result.current.isExpanded('a')).toBe(false)
+
+    act(() => {
+      result.current.toggleExpand('a')
+    })
+    expect(result.current.isExpanded('a')).toBe(true)
+
+    act(() => {
+      result.current.toggleExpand('a')
+    })
+    expect(result.current.isExpanded('a')).toBe(false)
   })
 })
