@@ -101,14 +101,6 @@ export const Todo: Story = {
   },
 }
 
-export const InProgress: Story = {
-  args: {
-    number: baseTask.number,
-    raw: `#${String(baseTask.number)}`,
-    task: { ...baseTask, status: 'in_progress', title: 'Review pull request' },
-  },
-}
-
 export const Completed: Story = {
   args: {
     number: baseTask.number,

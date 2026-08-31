@@ -10,7 +10,6 @@ import type { Task } from '#hooks/use-tasks'
 
 const STATUS_OPTIONS: { value: Task['status']; label: string }[] = [
   { value: 'todo', label: 'Todo' },
-  { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
 ]
 

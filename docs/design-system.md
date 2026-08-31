@@ -494,14 +494,13 @@ after a regen.
 
 Task status is expressed via `StatusIcon`
 (`web/src/components/task/status-icon.tsx`) as a small circular icon — an
-outline circle, a partial-pie circle, or a filled circle with a check mark —
-not literal bracket text.
+outline circle or a filled circle with a check mark — not literal bracket
+text.
 
-| Status        | Icon                                           | Color token                                               | Extra styling                                                                   |
-| ------------- | ---------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `todo`        | outline circle                                 | `text-muted-foreground`                                   | —                                                                               |
-| `in_progress` | partial-pie circle                             | `text-primary` (the red accent)                           | One of the few places red fill/text is used — marks "the one thing in progress" |
-| `completed`   | filled circle + check (lucide-react's `Check`) | `bg-muted-foreground-faint` fill, `text-background` check | Accompanying title text gets `line-through` + `text-muted-foreground`           |
+| Status      | Icon                                           | Color token                                               | Extra styling                                                         |
+| ----------- | ---------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------- |
+| `todo`      | outline circle                                 | `text-muted-foreground`                                   | —                                                                     |
+| `completed` | filled circle + check (lucide-react's `Check`) | `bg-muted-foreground-faint` fill, `text-background` check | Accompanying title text gets `line-through` + `text-muted-foreground` |
 
 Completed task/search-result rows (not just the status icon) are further
 dimmed via the `dim-completed` utility (`opacity: 55%`, defined in

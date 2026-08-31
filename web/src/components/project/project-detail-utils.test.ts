@@ -39,7 +39,6 @@ describe('summarizeTaskStatus', () => {
     expect(summarizeTaskStatus(tasks)).toEqual({
       total: 4,
       todo: 2,
-      inProgress: 1,
       completed: 1,
     })
   })
@@ -48,7 +47,6 @@ describe('summarizeTaskStatus', () => {
     expect(summarizeTaskStatus([])).toEqual({
       total: 0,
       todo: 0,
-      inProgress: 0,
       completed: 0,
     })
   })

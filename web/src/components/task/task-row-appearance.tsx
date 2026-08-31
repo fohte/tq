@@ -54,7 +54,6 @@ export function TaskRowAppearance({
   secondLineExtras = [],
 }: TaskRowAppearanceProps) {
   const handleStatusChange = useHandleStatusChange(task.id, task.status)
-  const isInProgress = task.status === 'in_progress'
   const isCompleted = task.status === 'completed'
 
   const secondLineItems: React.ReactNode[] = [
@@ -101,7 +100,7 @@ export function TaskRowAppearance({
       <div
         className={cn(
           'group',
-          rowWrapperClassName(isInProgress, isCompleted),
+          rowWrapperClassName(isCompleted),
           // Must come after rowWrapperClassName: twMerge keeps
           // both px-* and a later pl-* (CSS cascade lets pl-* win),
           // but drops pl-* if it precedes the conflicting px-*.
@@ -125,12 +124,7 @@ export function TaskRowAppearance({
                 need more room than the row has, hiding the title
                 entirely instead of truncating it or letting the row
                 overflow. */}
-              <span
-                className={cn(
-                  rowTitleClassName(isInProgress, isCompleted),
-                  'min-w-30',
-                )}
-              >
+              <span className={cn(rowTitleClassName(isCompleted), 'min-w-30')}>
                 {task.title}
               </span>
               {task.childCompletionCount.total > 0 && (

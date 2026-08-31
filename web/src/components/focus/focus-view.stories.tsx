@@ -112,19 +112,6 @@ export const Default: Story = {
   },
 }
 
-export const InProgress: Story = {
-  args: {
-    isLoading: false,
-    queueTasks: [completedTask, baseTask, nextTask],
-    focusTask: {
-      ...baseTask,
-      status: 'in_progress',
-    },
-    nextTask,
-    subtasks,
-  },
-}
-
 export const NoSubtasksOrNextTask: Story = {
   args: {
     isLoading: false,

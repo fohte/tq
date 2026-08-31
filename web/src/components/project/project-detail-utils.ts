@@ -28,13 +28,11 @@ export function getDaysRemaining(
 export function summarizeTaskStatus(tasks: ProjectTask[]): {
   total: number
   todo: number
-  inProgress: number
   completed: number
 } {
   return {
     total: tasks.length,
     todo: tasks.filter((t) => t.status === 'todo').length,
-    inProgress: tasks.filter((t) => t.status === 'in_progress').length,
     completed: tasks.filter((t) => t.status === 'completed').length,
   }
 }
