@@ -116,7 +116,9 @@ function buildConditions(query: ListTasksQuery) {
   }
 
   const parentId = parsed?.parentId ?? query.parentId
-  if (parentId != null) {
+  if (parentId === 'root') {
+    conditions.push(isNull(tasks.parentId))
+  } else if (parentId != null) {
     conditions.push(eq(tasks.parentId, parentId))
   }
 

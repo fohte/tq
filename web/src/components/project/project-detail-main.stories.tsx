@@ -26,7 +26,7 @@ const baseProject: ProjectDetail = {
   createdAt: '2026-06-01T00:00:00.000Z',
   updatedAt: '2026-06-01T00:00:00.000Z',
   completionRate: 0.4,
-  taskCount: { total: 5, todo: 2, inProgress: 1, completed: 2 },
+  taskCount: { total: 5, completed: 2 },
 }
 
 const baseTask: Omit<ProjectTask, 'id' | 'title' | 'status'> = {
@@ -180,7 +180,7 @@ export const NoTasks: Story = {
     project: {
       ...baseProject,
       completionRate: 0,
-      taskCount: { total: 0, todo: 0, inProgress: 0, completed: 0 },
+      taskCount: { total: 0, completed: 0 },
     },
     tasks: [],
   },
@@ -192,7 +192,7 @@ export const Completed: Story = {
       ...baseProject,
       status: 'completed',
       completionRate: 1,
-      taskCount: { total: 5, todo: 0, inProgress: 0, completed: 5 },
+      taskCount: { total: 5, completed: 5 },
     },
     tasks: sampleTasks.map((task) => ({ ...task, status: 'completed' })),
   },

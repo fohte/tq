@@ -25,7 +25,7 @@ const mockProject = {
   sortOrder: 0,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
-  taskCount: { total: 5, todo: 2, inProgress: 1, completed: 2 },
+  taskCount: { total: 5, completed: 2 },
   completionRate: 0.4,
 }
 
@@ -269,8 +269,7 @@ describe('ProjectDetailPage', () => {
 
   it('renders status breakdown counts once per layout (PC + SP)', async () => {
     await renderProjectDetailPage()
-    expect(screen.getAllByText('Todo: 2')).toHaveLength(2)
-    expect(screen.getAllByText('In Progress: 1')).toHaveLength(2)
+    expect(screen.getAllByText('Todo: 3')).toHaveLength(2)
     expect(screen.getAllByText('Completed: 2')).toHaveLength(2)
   })
 

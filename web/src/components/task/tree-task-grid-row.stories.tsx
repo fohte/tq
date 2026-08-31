@@ -10,7 +10,6 @@ import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TreeNode } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
-import { emptyLabelsHandler, emptyTasksHandler } from '#lib/msw-test-handlers'
 import { assertDefined, atIndex, findVisible } from '#lib/test-utils'
 import { createStoryRouter, StoryRouter } from '#storybook-config/story-router'
 
@@ -71,12 +70,7 @@ function InteractiveTreeTaskGridRow({
       onToggleExpand={outliner.toggleExpand}
       selectedRowId={outliner.selectedRowId}
       onSelectRow={outliner.selectRow}
-      outlinerInput={outliner.outlinerInput}
-      outlinerTarget={outliner.outlinerTarget}
       onOpenChildInput={outliner.openChildInput}
-      onCloseOutlinerInput={outliner.closeOutlinerInput}
-      onIndentOutlinerInput={outliner.indentOutlinerInput}
-      onOutdentOutlinerInput={outliner.outdentOutlinerInput}
     />
   )
 }
@@ -105,12 +99,7 @@ function StaticTreeTaskGridRow(
           onToggleExpand={() => {}}
           selectedRowId={null}
           onSelectRow={() => {}}
-          outlinerInput={null}
-          outlinerTarget={null}
           onOpenChildInput={() => {}}
-          onCloseOutlinerInput={() => {}}
-          onIndentOutlinerInput={() => {}}
-          onOutdentOutlinerInput={() => {}}
           {...props}
         />
       </div>
@@ -132,16 +121,6 @@ type Story = StoryObj<typeof meta>
 export const Todo: Story = {
   args: {
     node: { ...baseTreeNode },
-  },
-}
-
-export const InProgress: Story = {
-  args: {
-    node: {
-      ...baseTreeNode,
-      status: 'in_progress',
-      title: 'Review pull request',
-    },
   },
 }
 
@@ -236,7 +215,7 @@ export const WithProject: Story = {
             createdAt: '2026-03-20T00:00:00.000Z',
             updatedAt: '2026-03-20T00:00:00.000Z',
             completionRate: 0.4,
-            taskCount: { total: 10, todo: 4, inProgress: 2, completed: 4 },
+            taskCount: { total: 10, completed: 4 },
           }),
         ),
       ],
@@ -343,33 +322,6 @@ export const WithChildren: Story = {
         },
       ],
       childCompletionCount: { completed: 1, total: 2 },
-    },
-  },
-}
-
-export const Nested: Story = {
-  args: {
-    node: {
-      ...baseTreeNode,
-      title: 'Root task',
-      children: [
-        {
-          ...baseTreeNode,
-          id: '00000000-0000-0000-0000-000000000002',
-          title: 'Child task',
-          parentId: baseTreeNode.id,
-          children: [
-            {
-              ...baseTreeNode,
-              id: '00000000-0000-0000-0000-000000000004',
-              title: 'Grandchild task',
-              parentId: '00000000-0000-0000-0000-000000000002',
-            },
-          ],
-          childCompletionCount: { completed: 0, total: 1 },
-        },
-      ],
-      childCompletionCount: { completed: 0, total: 1 },
     },
   },
 }
@@ -496,12 +448,6 @@ export const AllVariants: Story = {
       { ...baseTreeNode, id: '1', title: 'Todo task (personal)' },
       {
         ...baseTreeNode,
-        id: '2',
-        title: 'In progress task',
-        status: 'in_progress',
-      },
-      {
-        ...baseTreeNode,
         id: '3',
         title: 'Completed task',
         status: 'completed',
@@ -626,42 +572,4 @@ export const Selected: Story = {
       selectedRowId={baseTreeNode.id}
     />
   ),
-}
-
-export const AddSubtaskInputOpen: Story = {
-  args: { node: baseTreeNode },
-  parameters: {
-    // The open row renders CreateTaskInline (via TreeOutlinerInputRow),
-    // which fetches labels on mount and, since a parentId is set here, the
-    // full task list too.
-    msw: {
-      handlers: [emptyLabelsHandler, emptyTasksHandler],
-    },
-  },
-  render: () => {
-    const node: TreeNode = {
-      ...baseTreeNode,
-      title: 'Parent with an open add-subtask row',
-    }
-
-    return (
-      <StaticTreeTaskGridRow
-        node={node}
-        outlinerInput={{ anchorRowId: node.id, mode: 'child' }}
-        outlinerTarget={{
-          anchorRowId: node.id,
-          mode: 'child',
-          parentId: node.id,
-          parentNumber: node.number,
-          depth: 1,
-          inherited: undefined,
-        }}
-      />
-    )
-  },
-  play: async ({ canvas }) => {
-    await expect(
-      await canvas.findByPlaceholderText(/New task/i),
-    ).toBeInTheDocument()
-  },
 }

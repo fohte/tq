@@ -113,10 +113,6 @@ export const projectsApp = new Hono()
     const [taskStats] = await db
       .select({
         total: count(),
-        todo: count(sql`CASE WHEN ${tasks.status} = 'todo' THEN 1 END`),
-        inProgress: count(
-          sql`CASE WHEN ${tasks.status} = 'in_progress' THEN 1 END`,
-        ),
         completed: count(
           sql`CASE WHEN ${tasks.status} = 'completed' THEN 1 END`,
         ),
@@ -124,19 +120,10 @@ export const projectsApp = new Hono()
       .from(tasks)
       .where(eq(tasks.projectId, id))
 
-    const total = taskStats?.total ?? 0
-    const completed = taskStats?.completed ?? 0
-    const summary = taskStatsToSummary(total, completed)
-
     return c.json(
       {
         ...projectToResponse(project),
-        ...summary,
-        taskCount: {
-          ...summary.taskCount,
-          todo: taskStats?.todo ?? 0,
-          inProgress: taskStats?.inProgress ?? 0,
-        },
+        ...taskStatsToSummary(taskStats?.total ?? 0, taskStats?.completed ?? 0),
       },
       200,
     )

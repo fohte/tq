@@ -24,8 +24,6 @@ interface ProjectDetailResponse extends ProjectResponse {
   completionRate: number
   taskCount: {
     total: number
-    todo: number
-    inProgress: number
     completed: number
   }
 }
@@ -160,8 +158,6 @@ describe('projects API', () => {
       expect(body.completionRate).toBe(0)
       expect(body.taskCount).toEqual({
         total: 0,
-        todo: 0,
-        inProgress: 0,
         completed: 0,
       })
     })
@@ -187,8 +183,6 @@ describe('projects API', () => {
       expect(body.completionRate).toBeCloseTo(1 / 3)
       expect(body.taskCount).toEqual({
         total: 3,
-        todo: 2,
-        inProgress: 0,
         completed: 1,
       })
     })

@@ -19,7 +19,7 @@ const baseProject: ProjectDetail = {
   createdAt: '2026-06-01T00:00:00.000Z',
   updatedAt: '2026-06-01T00:00:00.000Z',
   completionRate: 0.4,
-  taskCount: { total: 5, todo: 2, inProgress: 1, completed: 2 },
+  taskCount: { total: 5, completed: 2 },
 }
 
 function Providers({ children }: { children: ReactNode }) {

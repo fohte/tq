@@ -222,14 +222,6 @@ export const Default: Story = {
   },
 }
 
-export const InProgress: Story = {
-  args: {
-    task: { ...baseTask, status: 'in_progress', title: 'Review pull request' },
-    pages: [],
-    subtasks: [],
-  },
-}
-
 export const Completed: Story = {
   args: {
     task: {
@@ -363,7 +355,7 @@ const sampleProject: ProjectDetail = {
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
   completionRate: 0.4,
-  taskCount: { total: 10, todo: 4, inProgress: 2, completed: 4 },
+  taskCount: { total: 10, completed: 4 },
 }
 
 export const WithProject: Story = {

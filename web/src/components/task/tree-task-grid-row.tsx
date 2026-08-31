@@ -8,14 +8,9 @@ import { LinkExistingTaskMenu } from '#components/task/link-existing-task-menu'
 import { MoveUnderTaskMenu } from '#components/task/move-under-task-menu'
 import { SetProjectMenu } from '#components/task/set-project-menu'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import { TreeOutlinerInputRow } from '#components/task/tree-outliner-input-row'
 import { TreeRowActionsMenu } from '#components/task/tree-row-actions-menu'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TreeNode } from '#hooks/use-tasks'
-import type {
-  OutlinerInput,
-  ResolvedOutlinerInput,
-} from '#hooks/use-tree-outliner'
 
 // Module-level so the default has a stable reference across renders when a
 // caller (tests, stories) doesn't pass invalidDropIds.
@@ -29,12 +24,7 @@ export interface TreeTaskGridRowProps {
   onToggleExpand: (id: string) => void
   selectedRowId: string | null
   onSelectRow: (id: string) => void
-  outlinerInput: OutlinerInput | null
-  outlinerTarget: ResolvedOutlinerInput | null
   onOpenChildInput: (rowId: string) => void
-  onCloseOutlinerInput: () => void
-  onIndentOutlinerInput: () => void
-  onOutdentOutlinerInput: () => void
   invalidDropIds?: ReadonlySet<string>
 }
 
@@ -46,12 +36,7 @@ export function TreeTaskGridRow({
   onToggleExpand,
   selectedRowId,
   onSelectRow,
-  outlinerInput,
-  outlinerTarget,
   onOpenChildInput,
-  onCloseOutlinerInput,
-  onIndentOutlinerInput,
-  onOutdentOutlinerInput,
   invalidDropIds = EMPTY_INVALID_DROP_IDS,
 }: TreeTaskGridRowProps) {
   const [linkMenuOpen, setLinkMenuOpen] = useState(false)
@@ -87,16 +72,6 @@ export function TreeTaskGridRow({
   const sessions = sessionsByTaskId.get(node.id) ?? []
   const expanded = isExpanded(node.id)
   const isSelected = selectedRowId === node.id
-
-  // The outliner input is attached to whichever row's id matches
-  // `anchorRowId` — as a forced-visible extra child (mode: 'child') or as a
-  // sibling rendered right after this row's own block (mode: 'sibling').
-  // Its visual depth tracks `outlinerTarget.depth`, not this row's own
-  // `depth`, so Tab/Shift-Tab re-indent it without moving its position.
-  const attachChildInputHere =
-    outlinerInput?.mode === 'child' && outlinerInput.anchorRowId === node.id
-  const attachSiblingInputAfter =
-    outlinerInput?.mode === 'sibling' && outlinerInput.anchorRowId === node.id
 
   const handleExpand = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -164,55 +139,6 @@ export function TreeTaskGridRow({
           onClick={handleSelectRow}
         />
       </div>
-
-      {/* Children (plus a forced-visible slot for a 'child' outliner input,
-          even on an otherwise-collapsed or childless node) */}
-      {(attachChildInputHere || (hasChildren && expanded)) && (
-        <div data-testid="tree-children">
-          {node.children.map((child) => (
-            <TreeTaskGridRow
-              key={child.id}
-              node={child}
-              depth={depth + 1}
-              sessionsByTaskId={sessionsByTaskId}
-              isExpanded={isExpanded}
-              onToggleExpand={onToggleExpand}
-              selectedRowId={selectedRowId}
-              onSelectRow={onSelectRow}
-              outlinerInput={outlinerInput}
-              outlinerTarget={outlinerTarget}
-              onOpenChildInput={onOpenChildInput}
-              onCloseOutlinerInput={onCloseOutlinerInput}
-              onIndentOutlinerInput={onIndentOutlinerInput}
-              onOutdentOutlinerInput={onOutdentOutlinerInput}
-              invalidDropIds={invalidDropIds}
-            />
-          ))}
-          {attachChildInputHere && outlinerTarget && (
-            <TreeOutlinerInputRow
-              depth={outlinerTarget.depth}
-              parentId={outlinerTarget.parentId}
-              parentNumber={outlinerTarget.parentNumber}
-              inherited={outlinerTarget.inherited}
-              onClose={onCloseOutlinerInput}
-              onIndent={onIndentOutlinerInput}
-              onOutdent={onOutdentOutlinerInput}
-            />
-          )}
-        </div>
-      )}
-
-      {attachSiblingInputAfter && outlinerTarget && (
-        <TreeOutlinerInputRow
-          depth={outlinerTarget.depth}
-          parentId={outlinerTarget.parentId}
-          parentNumber={outlinerTarget.parentNumber}
-          inherited={outlinerTarget.inherited}
-          onClose={onCloseOutlinerInput}
-          onIndent={onIndentOutlinerInput}
-          onOutdent={onOutdentOutlinerInput}
-        />
-      )}
 
       <LinkExistingTaskMenu
         open={linkMenuOpen}

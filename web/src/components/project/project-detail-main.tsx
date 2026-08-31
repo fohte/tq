@@ -198,7 +198,10 @@ function ProjectDescription({
 // --- Task Summary ---
 
 function ProjectTaskSummary({ project }: { project: ProjectDetail }) {
-  const { total, todo, inProgress, completed } = project.taskCount
+  const { total, completed } = project.taskCount
+  // Any non-completed status (including legacy in_progress rows) counts as
+  // todo, so this always sums to total.
+  const todo = total - completed
   const progress = project.completionRate * 100
 
   return (
@@ -216,10 +219,6 @@ function ProjectTaskSummary({ project }: { project: ProjectDetail }) {
       <ProgressBar percent={progress} className="h-1" />
       <div className="flex gap-6 font-mono text-2xs text-muted-foreground">
         <span>Todo: {todo}</span>
-        <span>
-          <span className="text-primary">▍</span>
-          In Progress: {inProgress}
-        </span>
         <span>Completed: {completed}</span>
       </div>
     </div>

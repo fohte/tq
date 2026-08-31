@@ -71,16 +71,6 @@ export const Todo: Story = {
   },
 }
 
-export const InProgress: Story = {
-  args: {
-    task: {
-      ...baseTask,
-      status: 'in_progress',
-      title: 'Review pull request',
-    },
-  },
-}
-
 export const Completed: Story = {
   args: {
     task: {
@@ -257,7 +247,7 @@ export const WithProject: Story = {
             createdAt: '2026-03-20T00:00:00.000Z',
             updatedAt: '2026-03-20T00:00:00.000Z',
             completionRate: 0.4,
-            taskCount: { total: 10, todo: 4, inProgress: 2, completed: 4 },
+            taskCount: { total: 10, completed: 4 },
           }),
         ),
       ],
@@ -288,12 +278,6 @@ export const AllVariants: Story = {
   render: () => {
     const tasks: Task[] = [
       { ...baseTask, id: '1', title: 'Todo task (personal)' },
-      {
-        ...baseTask,
-        id: '2',
-        title: 'In progress task',
-        status: 'in_progress',
-      },
       {
         ...baseTask,
         id: '3',
