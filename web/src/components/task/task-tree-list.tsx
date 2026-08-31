@@ -235,6 +235,7 @@ export function TaskTreeList({
         </DndContext>
       )}
       <CreateTaskModal
+        key={createModalParent?.id ?? 'new'}
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
         {...(createModalParent != null
