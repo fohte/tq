@@ -89,12 +89,12 @@ introduce a new gray value; use the nearest existing tier.
 
 ### Accent (the one color)
 
-| Token                  | Value     | Tailwind utility                                 | Usage                                                                                                                                                                                                                        |
-| ---------------------- | --------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--primary`            | `#ef4444` | `text-primary` / `bg-primary` / `border-primary` | The one red accent. Used broadly across existing components as punctuation: active nav state, links, focus borders, status icons, in-progress `[~]` status text. **Not** reused by `Button`'s primary look — see note below. |
-| `--primary-foreground` | `#fafafa` | `text-primary-foreground`                        | Text on `bg-primary`                                                                                                                                                                                                         |
-| `--destructive`        | `#ef4444` | `text-destructive` / `border-destructive`        | Same red value as `--primary` — this design has one hue for both "accent" and "danger", not two                                                                                                                              |
-| `--ring`               | `#ef4444` | `ring-ring`                                      | Focus ring color                                                                                                                                                                                                             |
+| Token                  | Value     | Tailwind utility                                 | Usage                                                                                                                                                                           |
+| ---------------------- | --------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--primary`            | `#ef4444` | `text-primary` / `bg-primary` / `border-primary` | The one red accent. Used broadly across existing components as punctuation: active nav state, links, focus borders. **Not** reused by `Button`'s primary look — see note below. |
+| `--primary-foreground` | `#fafafa` | `text-primary-foreground`                        | Text on `bg-primary`                                                                                                                                                            |
+| `--destructive`        | `#ef4444` | `text-destructive` / `border-destructive`        | Same red value as `--primary` — this design has one hue for both "accent" and "danger", not two                                                                                 |
+| `--ring`               | `#ef4444` | `ring-ring`                                      | Focus ring color                                                                                                                                                                |
 
 > **Why `Button`'s primary variant doesn't use `--primary`:** `--primary` is
 > consumed by dozens of existing components (active nav state, links, focus
