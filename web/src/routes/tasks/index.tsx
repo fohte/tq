@@ -115,6 +115,7 @@ function TaskList() {
         tree={filteredTreeData}
         tasks={tasks}
         sessionsByTaskId={sessionsByTaskId}
+        scrollRestorationId="task-tree-list"
       />
 
       {/* FAB (mobile only) */}

@@ -11,7 +11,7 @@ import { routeTree } from '#routeTree.gen'
 
 applyStandaloneViewport()
 
-const router = createRouter({ routeTree })
+const router = createRouter({ routeTree, scrollRestoration: true })
 
 declare module '@tanstack/react-router' {
   interface Register {
