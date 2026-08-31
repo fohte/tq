@@ -40,11 +40,8 @@ function asScreenshotContext(
   return context as Parameters<typeof screenshot>[1]
 }
 
-// Playwright hides the caret with a style mutation right before capturing,
-// with no wait for it to actually paint, so a story whose play() just
-// finished typing can leave a stale caret fragment in the screenshot.
-// Waiting two rendered frames here first lets any pending repaint from the
-// interaction settle before Playwright's own capture step runs.
+// Playwright's own caret-hiding mutation runs with no wait for it to paint,
+// so this settles pending repaints before that capture step runs.
 async function waitForPaint(): Promise<void> {
   await new Promise<void>((resolve) => {
     requestAnimationFrame(() => {
