@@ -1,9 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { expect, within } from 'storybook/test'
 
 import { TaskTreeList } from '#components/task/task-tree-list'
 import type { Task, TreeNode } from '#hooks/use-tasks'
+import { emptyLabelsHandler, emptyTasksHandler } from '#lib/msw-test-handlers'
+import { assertDefined, findVisible } from '#lib/test-utils'
 import { buildTree } from '#lib/tree-builder'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -147,5 +150,76 @@ export const WithSecondLine: Story = {
       },
     ],
     sessionsByTaskId: new Map(),
+  },
+}
+
+// The outliner input's position among sibling rows is decided by
+// TaskTreeList's flattened render list (buildTreeRenderRows), not by
+// TreeTaskGridRow itself, so this composed placement only has coverage here.
+export const AddSubtaskInputOpen: Story = {
+  args: {
+    isLoading: false,
+    tasks: [
+      {
+        ...baseTask,
+        id: '5',
+        number: 5,
+        title: 'Parent with an open add-subtask row',
+      },
+    ],
+    sessionsByTaskId: new Map(),
+  },
+  parameters: {
+    // The opened row renders CreateTaskInline (via TreeOutlinerInputRow),
+    // which fetches labels on mount, plus the full task list since this
+    // 'child'-mode input has a non-null parentId (see NestedChild in
+    // tree-outliner-input-row.stories.tsx).
+    msw: {
+      handlers: [emptyLabelsHandler, emptyTasksHandler],
+    },
+  },
+  play: async ({ canvasElement, userEvent }) => {
+    const canvas = within(canvasElement)
+    // Both menu widgets render their open content via a portal to
+    // document.body (see task-status-picker.stories.tsx), so queries for
+    // their items must be scoped to the body, not canvasElement.
+    const body = within(canvasElement.ownerDocument.body)
+    // The dropdown trigger (desktop) and action-sheet trigger (mobile) are
+    // both always in the DOM, split by a `hidden md:flex` / `flex md:hidden`
+    // pair — only one is actually visible for a given project's viewport
+    // (see the Hovered story in tree-task-grid-row.stories.tsx), and each
+    // opens a different widget with a different item role.
+    const dropdownTrigger = findVisible(
+      Array.from(
+        canvasElement.querySelectorAll<HTMLElement>(
+          '[data-slot="dropdown-menu-trigger"][aria-label="Task actions"]',
+        ),
+      ),
+    )
+    const actionSheetTrigger = findVisible(
+      Array.from(
+        canvasElement.querySelectorAll<HTMLElement>(
+          '[data-slot="action-sheet-trigger"][aria-label="Task actions"]',
+        ),
+      ),
+    )
+
+    if (actionSheetTrigger) {
+      await userEvent.click(actionSheetTrigger)
+      await userEvent.click(
+        await body.findByRole('button', { name: /add subtask/i }),
+      )
+    } else {
+      await userEvent.click(
+        assertDefined(dropdownTrigger, 'row-actions trigger not found'),
+      )
+      await userEvent.click(
+        await body.findByRole('menuitem', { name: /add subtask/i }),
+      )
+    }
+
+    await expect(
+      await canvas.findByPlaceholderText(/New task/i),
+    ).toBeInTheDocument()
   },
 }

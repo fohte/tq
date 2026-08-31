@@ -10,7 +10,6 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { ROW_INDENT_CLASS_NAME } from '#components/task/task-row-shared'
 import { makeNode } from '#components/task/task-row-test-fixtures'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
@@ -130,12 +129,7 @@ function TreeHarness({
       onToggleExpand={outliner.toggleExpand}
       selectedRowId={outliner.selectedRowId}
       onSelectRow={outliner.selectRow}
-      outlinerInput={outliner.outlinerInput}
-      outlinerTarget={outliner.outlinerTarget}
       onOpenChildInput={outliner.openChildInput}
-      onCloseOutlinerInput={outliner.closeOutlinerInput}
-      onIndentOutlinerInput={outliner.indentOutlinerInput}
-      onOutdentOutlinerInput={outliner.outdentOutlinerInput}
     />
   )
 }
@@ -205,157 +199,15 @@ describe('TreeTaskGridRow', () => {
     expect(screen.getByText('#42')).toBeInTheDocument()
   })
 
-  it('indents deeper rows more than their ancestors', async () => {
-    const grandchild = makeNode({
-      id: 'grandchild-1',
-      title: 'Grandchild Task',
-    })
-    const child = makeNode({
-      id: 'child-1',
-      title: 'Child Task',
-      children: [grandchild],
-      childCompletionCount: { completed: 0, total: 1 },
-    })
-    const node = makeNode({
-      children: [child],
-      childCompletionCount: { completed: 0, total: 1 },
-    })
-    await renderTree(node)
-
-    const rowIndentUnits = (text: string) => {
-      const el = atIndex(screen.getAllByText(text), 0).closest(
-        '[style*="--row-indent"]',
-      )
-      if (!(el instanceof HTMLElement)) {
-        throw new Error(`Expected an element with --row-indent near "${text}"`)
-      }
-      expect(el.classList.contains(ROW_INDENT_CLASS_NAME)).toBe(true)
-      const value = el.style.getPropertyValue('--row-indent')
-      const match = /\d+/.exec(value)
-      if (match == null) {
-        throw new Error(`Unexpected --row-indent value: "${value}"`)
-      }
-      return Number.parseInt(match[0], 10)
-    }
-
-    const depths = [
-      rowIndentUnits('Parent Task'),
-      rowIndentUnits('Child Task'),
-      rowIndentUnits('Grandchild Task'),
-    ]
-
-    expect(depths.every((px, i) => i === 0 || px > (depths[i - 1] ?? 0))).toBe(
-      true,
-    )
-  })
-
-  it('renders children under parent', async () => {
-    const node = makeNode({
-      children: [
-        makeNode({ id: 'child-1', title: 'Child Task', parentId: 'parent-1' }),
-      ],
-      childCompletionCount: { completed: 0, total: 1 },
-    })
-    await renderTree(node)
-    expect(screen.getByText('Parent Task')).toBeInTheDocument()
-    expect(screen.getByText('Child Task')).toBeInTheDocument()
-  })
-
   it('shows child completion count', async () => {
-    const node = makeNode({
-      children: [
-        makeNode({
-          id: 'child-1',
-          title: 'Child 1',
-          status: 'completed',
-          parentId: 'parent-1',
-        }),
-        makeNode({
-          id: 'child-2',
-          title: 'Child 2',
-          parentId: 'parent-1',
-        }),
-        makeNode({
-          id: 'child-3',
-          title: 'Child 3',
-          parentId: 'parent-1',
-        }),
-      ],
-      childCompletionCount: { completed: 1, total: 3 },
-    })
+    const node = makeNode({ childCompletionCount: { completed: 1, total: 3 } })
     await renderTree(node)
-    // Parent node should show 1/3; none of the children have children of
-    // their own, so they show nothing.
     expect(screen.getByTestId('child-completion')).toHaveTextContent('1/3')
   })
 
   it('does not show child completion count when no children', async () => {
     await renderTree(makeNode())
     expect(screen.queryByTestId('child-completion')).not.toBeInTheDocument()
-  })
-
-  it('collapses children when toggle is clicked', async () => {
-    const user = userEvent.setup()
-    const node = makeNode({
-      children: [
-        makeNode({ id: 'child-1', title: 'Child Task', parentId: 'parent-1' }),
-      ],
-      childCompletionCount: { completed: 0, total: 1 },
-    })
-    await renderTree(node)
-
-    // Children visible by default
-    expect(screen.getByText('Child Task')).toBeInTheDocument()
-
-    // Click collapse button
-    const collapseBtn = atIndex(screen.getAllByLabelText('Collapse'), 0)
-    await user.click(collapseBtn)
-
-    // Children hidden
-    expect(screen.queryByText('Child Task')).not.toBeInTheDocument()
-  })
-
-  it('expands children when toggle is clicked after collapse', async () => {
-    const user = userEvent.setup()
-    const node = makeNode({
-      children: [
-        makeNode({ id: 'child-1', title: 'Child Task', parentId: 'parent-1' }),
-      ],
-      childCompletionCount: { completed: 0, total: 1 },
-    })
-    await renderTree(node)
-
-    // Collapse
-    await user.click(atIndex(screen.getAllByLabelText('Collapse'), 0))
-    expect(screen.queryByText('Child Task')).not.toBeInTheDocument()
-
-    // Expand
-    await user.click(atIndex(screen.getAllByLabelText('Expand'), 0))
-    expect(screen.getByText('Child Task')).toBeInTheDocument()
-  })
-
-  it('renders nested children (grandchildren)', async () => {
-    const grandchild = makeNode({
-      id: 'grandchild-1',
-      title: 'Grandchild Task',
-      parentId: 'child-1',
-    })
-    const child = makeNode({
-      id: 'child-1',
-      title: 'Child Task',
-      parentId: 'parent-1',
-      children: [grandchild],
-      childCompletionCount: { completed: 0, total: 1 },
-    })
-    const node = makeNode({
-      children: [child],
-      childCompletionCount: { completed: 0, total: 1 },
-    })
-    await renderTree(node)
-
-    expect(screen.getByText('Parent Task')).toBeInTheDocument()
-    expect(screen.getByText('Child Task')).toBeInTheDocument()
-    expect(screen.getByText('Grandchild Task')).toBeInTheDocument()
   })
 
   it('does not show expand toggle for leaf nodes', async () => {
