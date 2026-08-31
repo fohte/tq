@@ -35,6 +35,14 @@ const mockTask = {
   links: { outgoing: [], incoming: [] },
 }
 
+const otherMockTask = {
+  ...mockTask,
+  id: '660e8400-e29b-41d4-a716-446655440001',
+  number: 99,
+  title: 'Other task title',
+  description: 'A completely different description',
+}
+
 const mockUseTask = vi.fn()
 const mockUseTaskList = vi.fn()
 const mockUpdateMutate = vi.fn()
@@ -74,20 +82,16 @@ vi.mock('#components/ui/markdown-editor', () => ({
   ),
 }))
 
-// Route params come from matching the real TaskDetailRoute for real (rather
-// than stubbing @tanstack/react-router), so a test can drive router.navigate()
-// directly against a single router instance to reproduce a browser
-// forward/back cycle between two tasks — see project-detail-main's
-// $projectId.test.tsx for the same pattern.
+// Builds against the real TaskDetailRoute (not a stubbed router) so a test
+// can call router.navigate()/router.history.back() on one router instance —
+// see routes/projects/$projectId.test.tsx for the same pattern.
 async function buildTaskDetailTree(
   queryClient: QueryClient,
   initialEntry: string,
 ) {
   const rootRoute = createRootRoute()
-  // A file route's id/path/parent are normally wired up by the generated
-  // routeTree.gen.ts (via this same `.update()` call, cast the same way) —
-  // reproduce that here so the real TaskDetailRoute can be matched against a
-  // locally-built tree instead of the app's real root.
+  // Wires TaskDetailRoute into this local tree the same way the generated
+  // routeTree.gen.ts does.
   // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-type-assertion -- mirrors routeTree.gen.ts's own `as any` for wiring a file route into a route tree
   TaskDetailRoute.update({
     id: '/tasks/$taskId',
@@ -104,9 +108,8 @@ async function buildTaskDetailTree(
   const router = createRouter({
     routeTree: rootRoute,
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
-    // Mirrors index.tsx's real router config: without this, TanStack Router
-    // reuses the mounted route component across a param change instead of
-    // remounting it (see Match.js), which is the bug under test.
+    // Mirrors index.tsx's router config, since this test relies on the same
+    // remount behavior.
     defaultRemountDeps: ({ params }) => params,
   })
   // The router's first route match resolves asynchronously even with no
@@ -315,58 +318,62 @@ describe('TaskPage', () => {
     expect(screen.getAllByText('1/2').length).toBeGreaterThan(0)
   })
 
-  it("shows this task's own description again after navigating to another task and back", async () => {
-    const taskA = mockTask
-    const taskB = {
-      ...mockTask,
-      id: '660e8400-e29b-41d4-a716-446655440001',
-      number: 99,
-      title: 'Other task title',
-      description: 'A completely different description',
-    }
-
+  it('remounts the description editor after navigating to a different task while both are cached', async () => {
     mockUseTask.mockImplementation((taskId: string) =>
-      taskId === taskB.id
-        ? { data: taskB, isLoading: false, error: null }
-        : { data: taskA, isLoading: false, error: null },
+      taskId === otherMockTask.id
+        ? { data: otherMockTask, isLoading: false, error: null }
+        : { data: mockTask, isLoading: false, error: null },
     )
 
-    const { router } = await renderTaskPage(`/tasks/${taskA.id}`)
-    const editorsAtA1 = screen.getAllByTestId('mock-markdown-editor')
+    const { router } = await renderTaskPage(`/tasks/${mockTask.id}`)
+    const editorsBefore = screen.getAllByTestId('mock-markdown-editor')
 
-    // Both tasks resolve without a loading state on this navigation, since
-    // both are already cached in the real app (React Query) by the time a
-    // user browses back — the loading branch that happens to force a remount
-    // on a cold navigation must not be the only thing keeping this correct.
+    // isLoading stays false for both tasks, matching a real navigation where
+    // both are already cached by React Query.
     await act(async () => {
       await router.navigate({
         to: '/tasks/$taskId',
-        params: { taskId: taskB.id },
+        params: { taskId: otherMockTask.id },
       })
     })
-    expect(screen.getAllByText('Other task title').length).toBeGreaterThan(0)
-    // A route param change must remount the page (not just re-render it with
-    // new props) — see index.tsx's defaultRemountDeps — for the description
-    // editor (a mock standing in for the real Crepe instance, which only
-    // reads its initial content once per mount) to pick up task B's content.
-    const editorsAtB = screen.getAllByTestId('mock-markdown-editor')
-    editorsAtB.forEach((editor, i) => {
-      expect(editor).not.toBe(editorsAtA1[i])
-    })
 
-    // The actual browser back button, as opposed to router.navigate() to the
-    // same href again — TanStack Router only reuses (rather than
-    // re-resolves) the previous match when traversing history this way,
-    // which is what the bug depends on.
+    expect(screen.getAllByText('Other task title').length).toBeGreaterThan(0)
+    // The mock editor only reads its initial content once per mount (like
+    // the real Crepe editor), so identity change is proof of a remount.
+    const editorsAfter = screen.getAllByTestId('mock-markdown-editor')
+    editorsAfter.forEach((editor, i) => {
+      expect(editor).not.toBe(editorsBefore[i])
+    })
+  })
+
+  it("shows the original task's description again after navigating back", async () => {
+    mockUseTask.mockImplementation((taskId: string) =>
+      taskId === otherMockTask.id
+        ? { data: otherMockTask, isLoading: false, error: null }
+        : { data: mockTask, isLoading: false, error: null },
+    )
+
+    const { router } = await renderTaskPage(`/tasks/${mockTask.id}`)
+    await act(async () => {
+      await router.navigate({
+        to: '/tasks/$taskId',
+        params: { taskId: otherMockTask.id },
+      })
+    })
+    const editorsAtOther = screen.getAllByTestId('mock-markdown-editor')
+
+    // router.history.back(), not router.navigate() again — TanStack Router
+    // reuses the previous match when traversing history this way.
     act(() => {
       router.history.back()
     })
+
     expect(
       (await screen.findAllByText('Test task title')).length,
     ).toBeGreaterThan(0)
-    const editorsAtA2 = screen.getAllByTestId('mock-markdown-editor')
-    editorsAtA2.forEach((editor, i) => {
-      expect(editor).not.toBe(editorsAtB[i])
+    const editorsAfter = screen.getAllByTestId('mock-markdown-editor')
+    editorsAfter.forEach((editor, i) => {
+      expect(editor).not.toBe(editorsAtOther[i])
     })
   })
 })

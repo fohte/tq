@@ -13,13 +13,10 @@ applyStandaloneViewport()
 
 const router = createRouter({
   routeTree,
-  // Remounts a route's component whenever its path params change, even when
-  // the previous and next matches are both already cached (e.g. browsing
-  // /tasks/A -> /tasks/B -> back to /tasks/A). Without this, TanStack Router
-  // reuses the mounted component across the param change (see MatchInner in
-  // @tanstack/react-router), leaving uncontrolled local state — like the
-  // Crepe editor instance backing the description field — stuck on the
-  // previous entity's data.
+  // Remounts a route's component when its path params change, instead of
+  // reusing the mounted instance — otherwise state that only initializes at
+  // mount (e.g. the Crepe editor's initial content) keeps stale data from
+  // the previous match.
   defaultRemountDeps: ({ params }) => params,
 })
 
