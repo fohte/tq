@@ -24,7 +24,7 @@ export interface TreeTaskGridRowProps {
   onToggleExpand: (id: string) => void
   selectedRowId: string | null
   onSelectRow: (id: string) => void
-  onOpenChildInput: (rowId: string) => void
+  onAddSubtask: (node: TreeNode) => void
   invalidDropIds?: ReadonlySet<string>
 }
 
@@ -36,7 +36,7 @@ export function TreeTaskGridRow({
   onToggleExpand,
   selectedRowId,
   onSelectRow,
-  onOpenChildInput,
+  onAddSubtask,
   invalidDropIds = EMPTY_INVALID_DROP_IDS,
 }: TreeTaskGridRowProps) {
   const [linkMenuOpen, setLinkMenuOpen] = useState(false)
@@ -84,7 +84,7 @@ export function TreeTaskGridRow({
   }
 
   const handleAddSubtask = () => {
-    onOpenChildInput(node.id)
+    onAddSubtask(node)
   }
 
   const expandToggle = hasChildren ? (

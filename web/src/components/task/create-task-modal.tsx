@@ -55,7 +55,15 @@ interface CreateTaskModalProps {
   onOpenChange: (open: boolean) => void
   defaultStartDate?: string
   defaultDescription?: string
+  defaultContext?: ContextValue
+  defaultLabels?: string[]
   projectId?: string
+  /** When set, the created task becomes a child of this task. */
+  parentId?: string
+  /** Shown as a read-only indicator that the task is a subtask; required
+   * together with `parentTaskTitle` whenever `parentId` is set. */
+  parentTaskNumber?: number
+  parentTaskTitle?: string
 }
 
 export function CreateTaskModal({
@@ -63,7 +71,12 @@ export function CreateTaskModal({
   onOpenChange,
   defaultStartDate,
   defaultDescription,
+  defaultContext,
+  defaultLabels,
   projectId,
+  parentId,
+  parentTaskNumber,
+  parentTaskTitle,
 }: CreateTaskModalProps) {
   const [title, setTitle] = useState('')
   const descriptionRef = useRef('')
@@ -71,17 +84,22 @@ export function CreateTaskModal({
   const [startDate, setStartDate] = useState(defaultStartDate ?? '')
   const [dueDate, setDueDate] = useState('')
   const [estimateInput, setEstimateInput] = useState('')
-  const [context, setContext] = useState<ContextValue | ''>('')
+  const [context, setContext] = useState<ContextValue | ''>(
+    defaultContext ?? '',
+  )
   const [commitment, setCommitment] = useState<CommitmentValue | ''>('')
-  const [labels, setLabels] = useState<string[]>([])
+  const [labels, setLabels] = useState<string[]>(defaultLabels ?? [])
   const createTask = useCreateTask()
 
-  // Sync startDate when defaultStartDate prop changes (e.g. tab switch)
+  // Sync defaults when they change (e.g. a different row's "Add subtask" is
+  // clicked) while the modal is closed, mirroring defaultStartDate below.
   useEffect(() => {
     if (!open) {
       setStartDate(defaultStartDate ?? '')
+      setContext(defaultContext ?? '')
+      setLabels(defaultLabels ?? [])
     }
-  }, [defaultStartDate, open])
+  }, [defaultStartDate, defaultContext, defaultLabels, open])
 
   const parsedMinutes = parseDurationToMinutes(estimateInput)
 
@@ -92,10 +110,10 @@ export function CreateTaskModal({
     setStartDate(defaultStartDate ?? '')
     setDueDate('')
     setEstimateInput('')
-    setContext('')
+    setContext(defaultContext ?? '')
     setCommitment('')
-    setLabels([])
-  }, [defaultStartDate])
+    setLabels(defaultLabels ?? [])
+  }, [defaultStartDate, defaultContext, defaultLabels])
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -121,6 +139,7 @@ export function CreateTaskModal({
       ...(commitment ? { commitment } : {}),
       ...(labels.length > 0 ? { labels } : {}),
       ...(projectId != null ? { projectId } : {}),
+      ...(parentId != null ? { parentId } : {}),
     }
 
     createTask.mutate(input, {
@@ -142,6 +161,12 @@ export function CreateTaskModal({
     parsedMinutes != null
       ? formatMinutes(parsedMinutes)
       : estimateInput || 'Estimate'
+
+  const parentIndicator = parentTaskNumber != null && (
+    <span className="font-mono text-2xs text-muted-foreground-faint">
+      subtask of #{parentTaskNumber} {parentTaskTitle}
+    </span>
+  )
 
   const descriptionEditor = (
     <MarkdownEditor
@@ -165,9 +190,12 @@ export function CreateTaskModal({
             <ModalPanel>
               {/* Header */}
               <DialogHeaderBar>
-                <span className="text-base font-semibold text-foreground">
-                  New Task
-                </span>
+                <div className="flex flex-col">
+                  <span className="text-base font-semibold text-foreground">
+                    New Task
+                  </span>
+                  {parentIndicator}
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
@@ -331,9 +359,12 @@ export function CreateTaskModal({
             <BottomSheetPanel>
               {/* Header */}
               <BottomSheetHeader>
-                <span className="text-base font-semibold text-foreground">
-                  New Task
-                </span>
+                <div className="flex flex-col">
+                  <span className="text-base font-semibold text-foreground">
+                    New Task
+                  </span>
+                  {parentIndicator}
+                </div>
                 <Button
                   type="button"
                   variant="ghost"

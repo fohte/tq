@@ -109,9 +109,9 @@ vi.mock('#components/task/task-status-picker', () => ({
   ),
 }))
 
-// Expand/collapse, selection, and the outliner input are all owned by
-// useTreeOutliner rather than local state, so the row under test is driven
-// through the real hook instead of a hand-rolled prop harness.
+// Expand/collapse and selection are owned by useTreeOutliner rather than
+// local state, so the row under test is driven through the real hook
+// instead of a hand-rolled prop harness.
 function TreeHarness({
   node,
   sessionsByTaskId = new Map(),
@@ -119,7 +119,10 @@ function TreeHarness({
   node: TreeNode
   sessionsByTaskId?: ReadonlyMap<string, TaskAgentSession[]>
 }) {
-  const outliner = useTreeOutliner([node], { enabled: true })
+  const outliner = useTreeOutliner([node], {
+    enabled: true,
+    onOpenSiblingCreate: () => {},
+  })
 
   return (
     <TreeTaskGridRow
@@ -129,7 +132,7 @@ function TreeHarness({
       onToggleExpand={outliner.toggleExpand}
       selectedRowId={outliner.selectedRowId}
       onSelectRow={outliner.selectRow}
-      onOpenChildInput={outliner.openChildInput}
+      onAddSubtask={() => {}}
     />
   )
 }
