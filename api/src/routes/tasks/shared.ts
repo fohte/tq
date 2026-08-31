@@ -14,6 +14,7 @@ import {
 } from '#db/schema'
 import { classifyNumericOrId, numericIdPattern } from '#lib/numeric-id'
 import type { TaskSortBy } from '#schemas/task'
+import { getDuplicateOfNumbersByTaskId } from '#services/task-relations'
 
 function resolvePrimaryTaskListOrderBy(sortBy?: TaskSortBy) {
   switch (sortBy) {
@@ -75,6 +76,7 @@ function taskCoreToResponse(
     title: task.title,
     description: task.description,
     status: task.status,
+    statusReason: task.statusReason,
     context: task.context,
     commitment: task.commitment,
     labels: labelNames,
@@ -189,10 +191,12 @@ function taskListItemToResponse(
   parentNumber: number | null,
   githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
   labelNames: string[] = [],
+  duplicateOfNumber: number | null = null,
 ) {
   return {
     ...taskCoreToResponse(task, githubLinks, labelNames),
     parentNumber,
+    duplicateOfNumber,
   }
 }
 
@@ -211,10 +215,10 @@ export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
 export type TaskListItemResponse = ReturnType<typeof taskListItemToResponse>
 
 // Batch-hydrates a set of list-query rows (as returned by `selectTaskListRows`)
-// with labels, child-completion counts, and GitHub links in 3 queries total
-// regardless of row count, for any endpoint that renders task rows via
-// `TaskListItemResponse` (the `/api/tasks` list endpoint, and the
-// task-detail page's linked tasks).
+// with labels, child-completion counts, GitHub links, and the duplicate-of
+// target number in 4 queries total regardless of row count, for any endpoint
+// that renders task rows via `TaskListItemResponse` (the `/api/tasks` list
+// endpoint, and the task-detail page's linked tasks).
 export async function hydrateTaskListRows(
   rows: {
     task: typeof tasks.$inferSelect
@@ -226,12 +230,17 @@ export async function hydrateTaskListRows(
   })[]
 > {
   const ids = rows.map((r) => r.task.id)
-  const [labelsByTaskId, childCompletionCountsByTaskId, githubLinksByTaskId] =
-    await Promise.all([
-      getLabelNamesByTaskId(ids),
-      getChildCompletionCountsByTaskId(ids),
-      getGithubLinksByTaskId(ids),
-    ])
+  const [
+    labelsByTaskId,
+    childCompletionCountsByTaskId,
+    githubLinksByTaskId,
+    duplicateOfNumbersByTaskId,
+  ] = await Promise.all([
+    getLabelNamesByTaskId(ids),
+    getChildCompletionCountsByTaskId(ids),
+    getGithubLinksByTaskId(ids),
+    getDuplicateOfNumbersByTaskId(ids),
+  ])
 
   return rows.map((r) => ({
     ...taskListItemToResponse(
@@ -239,6 +248,7 @@ export async function hydrateTaskListRows(
       r.parentNumber,
       githubLinksByTaskId.get(r.task.id) ?? [],
       labelsByTaskId.get(r.task.id) ?? [],
+      duplicateOfNumbersByTaskId.get(r.task.id) ?? null,
     ),
     childCompletionCount: childCompletionCountsByTaskId.get(r.task.id) ?? {
       completed: 0,

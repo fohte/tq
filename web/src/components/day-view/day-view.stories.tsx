@@ -23,6 +23,8 @@ const baseTask: Task = {
   title: '#506 fohte.net を astro で作る',
   description: null,
   status: 'todo',
+  statusReason: null,
+  duplicateOfNumber: null,
   context: 'personal',
   commitment: 'active',
   labels: [],

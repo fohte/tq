@@ -20,6 +20,9 @@ const baseTask: TaskDetail = {
   description:
     '## Why\n\nThe task detail page is needed.\n\n## What\n\n- Add inline editing\n- Add sidebar fields',
   status: 'todo',
+  statusReason: null,
+  duplicateOfNumber: null,
+  duplicateOfTask: null,
   context: 'personal',
   commitment: 'active',
   labels: [],

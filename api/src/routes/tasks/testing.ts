@@ -6,6 +6,8 @@ import { app } from '#app'
 import { db } from '#db/connection'
 import { labels, taskEvents } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
+import type { TaskStatusReason } from '#schemas/task'
+import { taskStatusReason } from '#schemas/task'
 import { jsonBody } from '#testing'
 
 export interface TimeBlockResponse {
@@ -63,6 +65,7 @@ export interface TaskResponse {
   title: string
   description: string | null
   status: 'todo' | 'in_progress' | 'completed'
+  statusReason: TaskStatusReason | null
   context: 'work' | 'personal'
   commitment: 'inbox' | 'active' | 'someday'
   labels: string[]
@@ -80,6 +83,11 @@ export interface TaskResponse {
   children?: TaskResponse[]
   links?: { outgoing: TaskListItemResponse[]; incoming: TaskListItemResponse[] }
   linkSync?: LinkSyncResponse
+  // Only present on the single-task detail response (`GET /:id`), not on any
+  // create/update mutation response.
+  duplicateOfNumber?: number | null
+  // Same shape as one entry of `links.outgoing`.
+  duplicateOfTask?: TaskListItemResponse | null
 }
 
 // Shape returned by the list-returning endpoint (`/api/tasks`) and by a task
@@ -91,6 +99,7 @@ export interface TaskListItemResponse {
   title: string
   description: string | null
   status: 'todo' | 'in_progress' | 'completed'
+  statusReason: TaskStatusReason | null
   context: 'work' | 'personal'
   commitment: 'inbox' | 'active' | 'someday'
   labels: string[]
@@ -104,6 +113,7 @@ export interface TaskListItemResponse {
   createdAt: string
   updatedAt: string
   parentNumber: number | null
+  duplicateOfNumber: number | null
   childCompletionCount?: { completed: number; total: number }
   children?: TaskListItemResponse[]
 }
@@ -188,6 +198,7 @@ const taskListItemResponseSchema = z.object({
   title: z.string(),
   description: z.string().nullable(),
   status: z.enum(['todo', 'in_progress', 'completed']),
+  statusReason: taskStatusReason.nullable(),
   context: z.enum(['work', 'personal']),
   commitment: z.enum(['inbox', 'active', 'someday']),
   labels: z.array(z.string()),
@@ -201,6 +212,7 @@ const taskListItemResponseSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   parentNumber: z.number().nullable(),
+  duplicateOfNumber: z.number().nullable(),
   childCompletionCount: z
     .object({ completed: z.number(), total: z.number() })
     .optional(),
@@ -212,6 +224,7 @@ const taskResponseSchema = z.object({
   title: z.string(),
   description: z.string().nullable(),
   status: z.enum(['todo', 'in_progress', 'completed']),
+  statusReason: taskStatusReason.nullable(),
   context: z.enum(['work', 'personal']),
   commitment: z.enum(['inbox', 'active', 'someday']),
   labels: z.array(z.string()),
@@ -236,6 +249,8 @@ const taskResponseSchema = z.object({
     })
     .optional(),
   linkSync: linkSyncResponseSchema.optional(),
+  duplicateOfNumber: z.number().nullable().optional(),
+  duplicateOfTask: taskListItemResponseSchema.nullable().optional(),
 })
 
 const idResponseSchema = z.object({ id: z.string() })
@@ -326,6 +341,7 @@ export interface TaskEventFields {
   type: 'status_changed' | 'github_linked' | 'github_unlinked'
   fromStatus: 'todo' | 'in_progress' | 'completed' | null
   toStatus: 'todo' | 'in_progress' | 'completed' | null
+  toStatusReason: TaskStatusReason | null
   githubOwner: string | null
   githubRepo: string | null
   githubNumber: number | null
@@ -346,6 +362,7 @@ export async function fetchTaskEvents(
     type: row.type,
     fromStatus: row.fromStatus,
     toStatus: row.toStatus,
+    toStatusReason: row.toStatusReason,
     githubOwner: row.githubOwner,
     githubRepo: row.githubRepo,
     githubNumber: row.githubNumber,

@@ -5,6 +5,7 @@ import { db } from '#db/connection'
 import { edits, taskEvents } from '#db/schema'
 import type { EditAuthorInfo } from '#lib/edits'
 import { requireTask } from '#routes/tasks/shared'
+import type { TaskStatusReason } from '#schemas/task'
 
 type ActivityAuthor = EditAuthorInfo
 
@@ -17,6 +18,7 @@ type ActivityItem =
       author: ActivityAuthor
       fromStatus: 'todo' | 'in_progress' | 'completed'
       toStatus: 'todo' | 'in_progress' | 'completed'
+      toStatusReason: TaskStatusReason | null
     }
   | {
       id: string
@@ -50,6 +52,7 @@ function taskEventToActivityItem(
       type: 'status_changed',
       fromStatus: row.fromStatus,
       toStatus: row.toStatus,
+      toStatusReason: row.toStatusReason,
     }
   }
 

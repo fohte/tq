@@ -9,6 +9,7 @@ import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { ProjectChip } from '#components/task/project-chip'
 import { StatusIcon } from '#components/task/status-icon'
 import { TaskActivity } from '#components/task/task-activity'
+import { TaskDuplicateOfSection } from '#components/task/task-duplicate-of-section'
 import { TaskGithubLinksSection } from '#components/task/task-github-links-section'
 import { TaskLinkedTasksSection } from '#components/task/task-linked-tasks-section'
 import {
@@ -61,7 +62,11 @@ export function TaskMainContent({
 
       {/* Status + Title */}
       <div className="flex items-start gap-3">
-        <TaskStatusToggle taskId={task.id} status={task.status} />
+        <TaskStatusToggle
+          taskId={task.id}
+          status={task.status}
+          statusReason={task.statusReason}
+        />
         <EditableTitle
           taskId={task.id}
           defaultValue={task.title}
@@ -109,6 +114,9 @@ export function TaskMainContent({
 
       {/* GitHub Links */}
       <TaskGithubLinksSection taskId={task.id} githubLinks={task.githubLinks} />
+
+      {/* Duplicate of */}
+      <TaskDuplicateOfSection duplicateOfTask={task.duplicateOfTask} />
 
       {/* Linked Tasks */}
       <TaskLinkedTasksSection
@@ -205,9 +213,11 @@ function TaskBreadcrumb({ task }: { task: TaskDetail }) {
 function TaskStatusToggle({
   taskId,
   status,
+  statusReason,
 }: {
   taskId: string
   status: TaskDetail['status']
+  statusReason: TaskDetail['statusReason']
 }) {
   const updateStatus = useUpdateTaskStatus()
 
@@ -221,7 +231,7 @@ function TaskStatusToggle({
 
   return (
     <button type="button" onClick={handleToggle} className="mt-1 shrink-0">
-      <StatusIcon status={status} />
+      <StatusIcon status={status} statusReason={statusReason} />
     </button>
   )
 }

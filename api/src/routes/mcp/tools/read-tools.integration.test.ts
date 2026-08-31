@@ -132,6 +132,7 @@ describe('read tools', () => {
         {
           ...withoutLinkSync(withoutRecurrenceRule(task)),
           parentNumber: null,
+          duplicateOfNumber: null,
           labels: [],
           childCompletionCount: { total: 0, completed: 0 },
         },
@@ -148,6 +149,7 @@ describe('read tools', () => {
         {
           ...withoutLinkSync(withoutRecurrenceRule(parent)),
           parentNumber: null,
+          duplicateOfNumber: null,
           labels: [],
           childCompletionCount: { total: 1, completed: 0 },
         },
@@ -177,10 +179,13 @@ describe('read tools', () => {
         timeBlocks: [],
         links: { outgoing: [], incoming: [] },
         labels: [],
+        duplicateOfNumber: null,
+        duplicateOfTask: null,
         subtasks: [
           {
             ...withoutLinkSync(withoutRecurrenceRule(child)),
             parentNumber: parent.number,
+            duplicateOfNumber: null,
             children: [],
             childCompletionCount: { total: 0, completed: 0 },
           },
@@ -240,6 +245,8 @@ describe('read tools', () => {
         timeBlocks: [],
         links: { outgoing: [], incoming: [] },
         labels: [],
+        duplicateOfNumber: null,
+        duplicateOfTask: null,
         subtasks: [],
       })
     })
@@ -313,6 +320,7 @@ describe('read tools', () => {
         {
           ...withoutLinkSync(withoutRecurrenceRule(match)),
           parentNumber: null,
+          duplicateOfNumber: null,
           childCompletionCount: { total: 0, completed: 0 },
         },
       ])
@@ -328,6 +336,7 @@ describe('read tools', () => {
         {
           ...withoutLinkSync(withoutRecurrenceRule(withoutEstimate)),
           parentNumber: null,
+          duplicateOfNumber: null,
           childCompletionCount: { total: 0, completed: 0 },
         },
       ])
@@ -345,6 +354,7 @@ describe('read tools', () => {
         {
           ...withoutLinkSync(withoutRecurrenceRule(withDue)),
           parentNumber: null,
+          duplicateOfNumber: null,
           childCompletionCount: { total: 0, completed: 0 },
         },
       ])

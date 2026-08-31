@@ -12,6 +12,8 @@ const baseTask: ProjectTask = {
   title: 'Task',
   description: null,
   status: 'todo',
+  statusReason: null,
+  duplicateOfNumber: null,
   context: 'personal',
   commitment: 'active',
   labels: [],

@@ -63,6 +63,14 @@
   --muted-foreground-ghost: #3f3f46;
 
   /*
+   * Second app accent, scoped to the `completed` close-reason status icon
+   * only (see docs/design-system.md Status convention) — same hex as
+   * --github-merged below, but a separate token since --github-merged is
+   * reserved for GitHub state display only.
+   */
+  --status-completed: #a371f7;
+
+  /*
    * GitHub's own brand colors for PR/issue state — not part of the app's
    * status/accent system, so kept separate from --primary and friends.
    */
@@ -143,6 +151,7 @@
   --color-muted-foreground-strong: var(--muted-foreground-strong);
   --color-muted-foreground-faint: var(--muted-foreground-faint);
   --color-muted-foreground-ghost: var(--muted-foreground-ghost);
+  --color-status-completed: var(--status-completed);
   --color-github-open: var(--github-open);
   --color-github-closed: var(--github-closed);
   --color-github-merged: var(--github-merged);

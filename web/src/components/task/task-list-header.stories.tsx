@@ -10,6 +10,8 @@ const makeTasks = (overrides: Array<Partial<Task>>): Task[] =>
     title: `Task ${String(i + 1)}`,
     description: null,
     status: 'todo' as const,
+    statusReason: null,
+    duplicateOfNumber: null,
     context: 'personal' as const,
     commitment: 'active' as const,
     labels: [],

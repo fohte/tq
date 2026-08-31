@@ -1,6 +1,8 @@
+import { sql } from 'drizzle-orm'
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -77,6 +79,9 @@ export const tasks = pgTable(
     })
       .notNull()
       .default('todo'),
+    statusReason: text('status_reason', {
+      enum: ['completed', 'not_planned', 'duplicate'],
+    }),
     startDate: date('start_date'),
     dueDate: date('due_date'),
     estimatedMinutes: integer('estimated_minutes'),
@@ -117,6 +122,10 @@ export const tasks = pgTable(
     index('idx_tasks_project_id').on(table.projectId),
     index('idx_tasks_project_status').on(table.projectId, table.status),
     index('idx_tasks_commitment').on(table.commitment),
+    check(
+      'tasks_status_reason_check',
+      sql`${table.status} = 'completed' OR ${table.statusReason} IS NULL`,
+    ),
   ],
 )
 

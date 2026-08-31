@@ -86,6 +86,45 @@ export const taskLinks = pgTable(
   ],
 )
 
+// Human-entered relations between tasks, as opposed to `task_links` (derived
+// from `#123` mentions in body text, fully rewritten by `syncTaskLinks` on
+// every body write -- primary data must never live there).
+//
+// `source` is always the side whose state depends on `target`; `type` reads
+// left-to-right as "source <type> target" (e.g. (A, B, 'duplicate_of') means
+// A is a duplicate of B). Reverse-direction values (e.g. a hypothetical
+// 'duplicated_by') are not allowed -- represent the reverse case as a row in
+// the other direction instead. This convention is shared with tq #257
+// (blocking relations), which will add a 'blocks' value later.
+export const taskRelations = pgTable(
+  'task_relations',
+  {
+    sourceTaskId: text('source_task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    targetTaskId: text('target_task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    type: text('type', { enum: ['duplicate_of'] }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.sourceTaskId, table.targetTaskId, table.type],
+    }),
+    index('idx_task_relations_target_task_id_type').on(
+      table.targetTaskId,
+      table.type,
+    ),
+    check(
+      'task_relations_no_self_relation',
+      sql`${table.sourceTaskId} != ${table.targetTaskId}`,
+    ),
+  ],
+)
+
 export const edits = pgTable(
   'edits',
   {
@@ -177,6 +216,11 @@ export const taskEvents = pgTable(
     toStatus: text('to_status', {
       enum: ['todo', 'in_progress', 'completed'],
     }),
+    // Records the reason as of that transition; null means no reason was
+    // recorded (pre-feature history, or a transition away from completed).
+    toStatusReason: text('to_status_reason', {
+      enum: ['completed', 'not_planned', 'duplicate'],
+    }),
     githubOwner: text('github_owner'),
     githubRepo: text('github_repo'),
     githubNumber: integer('github_number'),
@@ -205,6 +249,7 @@ export const taskEvents = pgTable(
           AND ${table.githubNumber} IS NULL AND ${table.githubKind} IS NULL)
         OR (${table.type} IN ('github_linked', 'github_unlinked')
           AND ${table.fromStatus} IS NULL AND ${table.toStatus} IS NULL
+          AND ${table.toStatusReason} IS NULL
           AND ${table.githubOwner} IS NOT NULL AND ${table.githubRepo} IS NOT NULL
           AND ${table.githubNumber} IS NOT NULL AND ${table.githubKind} IS NOT NULL)`,
     ),

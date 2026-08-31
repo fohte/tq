@@ -2,6 +2,7 @@ import {
   createTaskSchema,
   listTasksQuerySchema,
   taskStatus,
+  taskStatusReason,
   updateTaskSchema,
 } from 'api/schemas/task'
 import type { Command } from 'commander'
@@ -29,6 +30,9 @@ type UpdateStatusJson = InferRequestType<
 >['json']
 type UpdateParentJson = InferRequestType<
   Client['api']['tasks'][':id']['parent']['$patch']
+>['json']
+type CompleteTaskJson = InferRequestType<
+  Client['api']['tasks'][':id']['complete']['$post']
 >['json']
 type SearchQuery = InferRequestType<Client['api']['tasks']['$get']>['query']
 type FromGithubJson = InferRequestType<
@@ -272,19 +276,52 @@ export function registerTaskCommands(
   task
     .command('complete <id>')
     .description('Complete a task')
-    .action(async (id: string, _options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl).match(
-        (value) => value,
-        (error) => fail(command, error),
-      )
-      const res = await client.api.tasks[':id'].complete.$post({
-        param: { id },
-      })
-      if (!res.ok) return fail(command, await toApiError(res))
-      const body = await res.json()
-      printJson(body)
-      printLinkSync(body.nextTask?.linkSync)
-    })
+    .option(
+      '--reason <reason>',
+      `Why the task is being closed (${taskStatusReason.options.join(', ')}); defaults to completed`,
+    )
+    .option(
+      '--duplicate-of <taskId>',
+      'Task id this task is a duplicate of (only used when --reason duplicate)',
+    )
+    .action(
+      async (
+        id: string,
+        options: { reason?: string; duplicateOf?: string },
+        command: Command,
+      ) => {
+        let statusReason: CompleteTaskJson['statusReason']
+        if (options.reason !== undefined) {
+          const parsed = taskStatusReason.safeParse(options.reason)
+          if (!parsed.success) {
+            return fail(
+              command,
+              new Error(parsed.error.issues[0]?.message ?? 'Invalid value'),
+            )
+          }
+          statusReason = parsed.data
+        }
+
+        const client = buildClient(command, fetchImpl).match(
+          (value) => value,
+          (error) => fail(command, error),
+        )
+        const json: CompleteTaskJson = {
+          statusReason,
+          ...(options.duplicateOf !== undefined
+            ? { duplicateOfTaskId: options.duplicateOf }
+            : {}),
+        }
+        const res = await client.api.tasks[':id'].complete.$post({
+          param: { id },
+          json,
+        })
+        if (!res.ok) return fail(command, await toApiError(res))
+        const body = await res.json()
+        printJson(body)
+        printLinkSync(body.nextTask?.linkSync)
+      },
+    )
 
   task
     .command('activity <id>')

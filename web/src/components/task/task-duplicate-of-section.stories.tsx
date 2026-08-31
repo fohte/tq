@@ -2,11 +2,11 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
-import { TaskLinkedTasksSection } from '#components/task/task-linked-tasks-section'
+import { TaskDuplicateOfSection } from '#components/task/task-duplicate-of-section'
 import type { LinkedTaskSummary } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
 
-const baseLinkedTask: LinkedTaskSummary = {
+const duplicateOfTask: LinkedTaskSummary = {
   id: 'task-001',
   number: 12,
   title: 'Design the schema',
@@ -30,33 +30,6 @@ const baseLinkedTask: LinkedTaskSummary = {
   childCompletionCount: { completed: 0, total: 0 },
 }
 
-const outgoingTasks: LinkedTaskSummary[] = [
-  {
-    ...baseLinkedTask,
-    id: 'task-002',
-    number: 12,
-    title: 'Design the schema',
-    status: 'completed',
-  },
-  {
-    ...baseLinkedTask,
-    id: 'task-003',
-    number: 15,
-    title: 'Write the migration',
-    status: 'in_progress',
-  },
-]
-
-const incomingTasks: LinkedTaskSummary[] = [
-  {
-    ...baseLinkedTask,
-    id: 'task-004',
-    number: 20,
-    title: 'Ship the release notes',
-    status: 'todo',
-  },
-]
-
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -73,23 +46,21 @@ function Providers({ children }: { children: ReactNode }) {
 }
 
 function SectionStory({
-  outgoing,
-  incoming,
+  duplicateOfTask,
 }: {
-  outgoing: LinkedTaskSummary[]
-  incoming: LinkedTaskSummary[]
+  duplicateOfTask: LinkedTaskSummary | null
 }) {
   return (
     <Providers>
       <div className="max-w-2xl p-6">
-        <TaskLinkedTasksSection outgoing={outgoing} incoming={incoming} />
+        <TaskDuplicateOfSection duplicateOfTask={duplicateOfTask} />
       </div>
     </Providers>
   )
 }
 
 const meta = {
-  title: 'Task/LinkedTasks/Section',
+  title: 'Task/TaskDuplicateOfSection',
   component: SectionStory,
   parameters: {
     layout: 'padded',
@@ -97,20 +68,12 @@ const meta = {
 } satisfies Meta<typeof SectionStory>
 
 export default meta
-type SectionStoryType = StoryObj<typeof meta>
+type Story = StoryObj<typeof meta>
 
-export const WithBothDirections: SectionStoryType = {
-  args: { outgoing: outgoingTasks, incoming: incomingTasks },
+export const WithDuplicateOfTask: Story = {
+  args: { duplicateOfTask },
 }
 
-export const OutgoingOnly: SectionStoryType = {
-  args: { outgoing: outgoingTasks, incoming: [] },
-}
-
-export const IncomingOnly: SectionStoryType = {
-  args: { outgoing: [], incoming: incomingTasks },
-}
-
-export const Empty: SectionStoryType = {
-  args: { outgoing: [], incoming: [] },
+export const Empty: Story = {
+  args: { duplicateOfTask: null },
 }

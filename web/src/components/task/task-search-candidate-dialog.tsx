@@ -15,12 +15,14 @@ export function TaskSearchCandidateDialog({
   title,
   excludedTaskIds,
   onSelectCandidate,
+  skipAction,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string
   excludedTaskIds: Set<string>
   onSelectCandidate: (candidate: SearchResult) => void
+  skipAction?: { label: string; onSkip: () => void }
 }) {
   const [query, setQuery] = useState('')
 
@@ -86,6 +88,16 @@ export function TaskSearchCandidateDialog({
             ))
           )}
         </div>
+
+        {skipAction != null && (
+          <button
+            type="button"
+            className="min-h-11 w-full border-t border-border px-3 text-center text-sm text-muted-foreground hover:bg-accent/50"
+            onClick={skipAction.onSkip}
+          >
+            {skipAction.label}
+          </button>
+        )}
       </DialogContent>
     </Dialog>
   )

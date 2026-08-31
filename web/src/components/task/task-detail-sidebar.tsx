@@ -7,19 +7,24 @@ import {
 import { SidebarParentField } from '#components/task/sidebar-parent-field'
 import { SidebarProjectField } from '#components/task/sidebar-project-field'
 import { SidebarTagsField } from '#components/task/sidebar-tags-field'
+import { StatusIcon } from '#components/task/status-icon'
 import { SidebarGithubLinkField } from '#components/task/task-github-link-field'
+import { useHandleStatusChange } from '#components/task/task-row-shared'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
 import { Input } from '#components/ui/input'
 import { SectionLabel } from '#components/ui/section-label'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '#components/ui/select'
 import type { TaskDetail } from '#hooks/use-tasks'
-import { useUpdateTask, useUpdateTaskStatus } from '#hooks/use-tasks'
+import { useUpdateTask } from '#hooks/use-tasks'
 import { selectValueHandler } from '#lib/form-utils'
 import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
@@ -31,7 +36,11 @@ export function TaskSidebar({ task }: { task: TaskDetail }) {
   return (
     <DetailSidebarPanel>
       <SectionLabel>DETAILS</SectionLabel>
-      <SidebarStatusField taskId={task.id} status={task.status} />
+      <SidebarStatusField
+        taskId={task.id}
+        status={task.status}
+        statusReason={task.statusReason}
+      />
       <SidebarEstimateField
         taskId={task.id}
         estimatedMinutes={task.estimatedMinutes}
@@ -83,7 +92,11 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
       <SectionLabel>DETAILS</SectionLabel>
       <div className="grid grid-cols-2 border border-border">
         <MobileFieldCell>
-          <SidebarStatusField taskId={task.id} status={task.status} />
+          <SidebarStatusField
+            taskId={task.id}
+            status={task.status}
+            statusReason={task.statusReason}
+          />
         </MobileFieldCell>
         <MobileFieldCell>
           <SidebarEstimateField
@@ -139,34 +152,60 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
 function SidebarStatusField({
   taskId,
   status,
+  statusReason,
 }: {
   taskId: string
   status: TaskDetail['status']
+  statusReason: TaskDetail['statusReason']
 }) {
-  const updateStatus = useUpdateTaskStatus()
+  const { handleValueChange, duplicatePicker } = useHandleStatusChange(
+    taskId,
+    status,
+    statusReason,
+  )
+  // Legacy in_progress tasks have no matching SelectItem below, so
+  // normalize to 'todo' here — otherwise the trigger falls back to
+  // displaying the raw enum string instead of a label.
+  const value = status === 'completed' ? (statusReason ?? 'completed') : 'todo'
 
   return (
     <SidebarField label="STATUS">
       <Select
-        // Legacy in_progress tasks have no matching SelectItem below, so
-        // normalize to 'todo' here — otherwise the trigger falls back to
-        // displaying the raw enum string instead of a label.
-        value={status === 'completed' ? 'completed' : 'todo'}
-        onValueChange={selectValueHandler(
-          (value: TaskDetail['status']) => {
-            updateStatus.mutate({ id: taskId, status: value })
-          },
-          ['todo', 'completed'],
-        )}
+        value={value}
+        onValueChange={selectValueHandler(handleValueChange, [
+          'todo',
+          'completed',
+          'not_planned',
+          'duplicate',
+        ])}
       >
         <SelectTrigger size="sm" className={fieldValueClassName}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="todo">todo</SelectItem>
-          <SelectItem value="completed">completed</SelectItem>
+          <SelectItem value="todo">
+            <StatusIcon status="todo" statusReason={null} />
+            todo
+          </SelectItem>
+          <SelectSeparator />
+          <SelectGroup>
+            <SelectLabel>Close as</SelectLabel>
+            <SelectItem value="completed">
+              <StatusIcon status="completed" statusReason="completed" />
+              completed
+            </SelectItem>
+            <SelectItem value="not_planned">
+              <StatusIcon status="completed" statusReason="not_planned" />
+              not planned
+            </SelectItem>
+            <SelectItem value="duplicate">
+              <StatusIcon status="completed" statusReason="duplicate" />
+              duplicate
+            </SelectItem>
+          </SelectGroup>
         </SelectContent>
       </Select>
+      {duplicatePicker}
     </SidebarField>
   )
 }

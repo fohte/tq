@@ -10,7 +10,7 @@ import {
   type TaskListItemResponse,
 } from '#routes/tasks/shared'
 import { projectStatus } from '#schemas/project'
-import { contextEnum, taskStatus } from '#schemas/task'
+import { contextEnum, taskStatus, taskStatusReason } from '#schemas/task'
 
 async function resolveApp(): Promise<Hono> {
   // `#app` imports `mcpApp` (routes/mcp/index.ts -> server.ts -> this
@@ -74,6 +74,9 @@ export function registerReadTools(server: McpServer): void {
         status: taskStatus
           .optional()
           .describe('Only return tasks in this status.'),
+        statusReason: taskStatusReason
+          .optional()
+          .describe('Only return tasks closed with this reason.'),
         projectId: z
           .uuid()
           .optional()
@@ -92,9 +95,9 @@ export function registerReadTools(server: McpServer): void {
       }),
       annotations: { readOnlyHint: true },
     },
-    async ({ status, projectId, parentId, context }) =>
+    async ({ status, statusReason, projectId, parentId, context }) =>
       callAsResult(
-        `/api/tasks${buildQuery({ status, projectId, parentId, context })}`,
+        `/api/tasks${buildQuery({ status, statusReason, projectId, parentId, context })}`,
       ),
   )
 
@@ -164,7 +167,7 @@ export function registerReadTools(server: McpServer): void {
     'search_tasks',
     {
       description:
-        'Search tasks using the same query syntax as the TQ search bar. The `q` string does a free-text match across title, description, and page content, and also accepts prefixed filter tokens that can be combined with free text and with each other: `is:todo|in_progress|completed` (repeat `is:` to match multiple statuses, e.g. `is:todo is:in_progress`), `label:<name>`, `context:work|personal`, `commitment:inbox|active|someday`, `has:pages`, `has:comments`, `has:no-children` (excludes tasks with an incomplete child), `parent:<uuid>|root` (`root` matches tasks with no parent), `project:<uuid|title>`, `sort:due|created|updated|estimate`. Example: `q: "is:todo label:urgent context:work groceries"` finds todo tasks labeled urgent in the work context whose title, description, or pages mention "groceries". The same filters are also available as explicit parameters for when a query string is not needed.',
+        'Search tasks using the same query syntax as the TQ search bar. The `q` string does a free-text match across title, description, and page content, and also accepts prefixed filter tokens that can be combined with free text and with each other: `is:todo|in_progress|completed` (repeat `is:` to match multiple statuses, e.g. `is:todo is:in_progress`), `reason:not_planned|duplicate` (only tasks closed with this reason), `label:<name>`, `context:work|personal`, `commitment:inbox|active|someday`, `has:pages`, `has:comments`, `has:no-children` (excludes tasks with an incomplete child), `parent:<uuid>|root` (`root` matches tasks with no parent), `project:<uuid|title>`, `sort:due|created|updated|estimate`. Example: `q: "is:todo label:urgent context:work groceries"` finds todo tasks labeled urgent in the work context whose title, description, or pages mention "groceries". The same filters are also available as explicit parameters for when a query string is not needed.',
       inputSchema: z.object({
         q: z
           .string()
@@ -176,6 +179,11 @@ export function registerReadTools(server: McpServer): void {
           .optional()
           .describe(
             'Only return tasks in this status. Equivalent to is: in q.',
+          ),
+        statusReason: taskStatusReason
+          .optional()
+          .describe(
+            'Only return tasks closed with this reason. Equivalent to reason: in q.',
           ),
         label: z
           .string()
@@ -225,6 +233,7 @@ export function registerReadTools(server: McpServer): void {
     async ({
       q,
       status,
+      statusReason,
       label,
       context,
       hasEstimate,
@@ -237,6 +246,7 @@ export function registerReadTools(server: McpServer): void {
         `/api/tasks${buildQuery({
           q,
           status,
+          statusReason,
           label,
           context,
           hasEstimate: hasEstimate?.toString(),

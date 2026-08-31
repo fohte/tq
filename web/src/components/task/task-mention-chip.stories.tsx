@@ -15,6 +15,9 @@ const baseTask: TaskDetail = {
   description:
     'Adds live preview chips for #123-style task mentions in the editor.',
   status: 'todo',
+  statusReason: null,
+  duplicateOfNumber: null,
+  duplicateOfTask: null,
   context: 'personal',
   commitment: 'active',
   labels: [],

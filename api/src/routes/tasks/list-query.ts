@@ -62,6 +62,11 @@ function buildConditions(query: ListTasksQuery) {
     conditions.push(eq(tasks.commitment, commitment))
   }
 
+  const reason = parsed?.reason ?? query.statusReason?.[0]
+  if (reason != null) {
+    conditions.push(eq(tasks.statusReason, reason))
+  }
+
   const labelName = parsed?.label ?? query.label
   if (labelName != null) {
     conditions.push(

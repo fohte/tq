@@ -6,6 +6,7 @@ import {
   upsertGithubToken,
 } from '#integrations/github/testing'
 import { createComment, createTask } from '#routes/tasks/testing'
+import type { TaskStatusReason } from '#schemas/task'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -17,6 +18,7 @@ interface ActivityItem {
   author: { kind: 'human' | 'llm' | 'system'; agent: string | null }
   fromStatus?: 'todo' | 'in_progress' | 'completed'
   toStatus?: 'todo' | 'in_progress' | 'completed'
+  toStatusReason?: TaskStatusReason | null
   owner?: string
   repo?: string
   number?: number
@@ -66,6 +68,7 @@ describe('GET /api/tasks/:id/activity', () => {
         author: { kind: 'human', agent: null },
         fromStatus: 'todo',
         toStatus: 'in_progress',
+        toStatusReason: null,
       },
       {
         id: 'ID',

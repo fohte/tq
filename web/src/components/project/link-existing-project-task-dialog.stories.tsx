@@ -10,6 +10,8 @@ const candidate: SearchResult = {
   title: 'Deploy docs site',
   description: null,
   status: 'todo',
+  statusReason: null,
+  duplicateOfNumber: null,
   context: 'work',
   commitment: 'active',
   labels: [],

@@ -30,6 +30,10 @@ import {
 import { getSchedulingSettings } from '#services/scheduling-settings'
 import { syncTaskLabels } from '#services/task-labels'
 import { getTaskLinks, syncTaskLinks } from '#services/task-links'
+import {
+  getDuplicateOfNumbersByTaskId,
+  getDuplicateOfTask,
+} from '#services/task-relations'
 
 export const tasksCrudApp = new Hono()
   .post('/', zValidator('json', createTaskSchema), async (c) => {
@@ -142,6 +146,8 @@ export const tasksCrudApp = new Hono()
       links,
       taskFieldAuthors,
       labelsByTaskId,
+      duplicateOfNumbersByTaskId,
+      duplicateOfTask,
     ] = await Promise.all([
       db
         .select({
@@ -171,6 +177,8 @@ export const tasksCrudApp = new Hono()
       getTaskLinks(id),
       getTaskFieldAuthors(id),
       getLabelNamesByTaskId([id]),
+      getDuplicateOfNumbersByTaskId([id]),
+      getDuplicateOfTask(id),
     ])
 
     const pageAuthors = await getPageAuthors(pages.map((page) => page.id))
@@ -195,6 +203,8 @@ export const tasksCrudApp = new Hono()
         timeBlocks: taskTimeBlocks.map(timeBlockToResponse),
         links,
         labels: labelsByTaskId.get(id) ?? [],
+        duplicateOfNumber: duplicateOfNumbersByTaskId.get(id) ?? null,
+        duplicateOfTask,
       },
       200,
     )
