@@ -40,16 +40,26 @@ function asScreenshotContext(
   return context as Parameters<typeof screenshot>[1]
 }
 
-// Playwright's screenshot hides the caret by setting `caret-color:
-// transparent` right before capturing, with no wait for that style change
-// to actually paint. A story whose play() just finished typing can still
-// have an in-flight repaint from the live (non-hidden) caret, which
-// occasionally bleeds a stale fragment into the capture. Blurring here and
-// waiting two rendered frames lets any such repaint settle before
-// Playwright's own capture step runs.
+// Mirrors the element selector Playwright's own screenshot uses to hide
+// the caret (input, textarea, [contenteditable]) — narrower than a generic
+// "editable target" check so a focused button or <select> (e.g. relying on
+// :focus-visible for its own screenshot) doesn't get blurred here too.
+function hasCaret(element: Element | null): element is HTMLElement {
+  return (
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement ||
+    (element instanceof HTMLElement && element.isContentEditable)
+  )
+}
+
+// Playwright hides the caret with a style mutation right before capturing,
+// with no wait for it to actually paint, so a story whose play() just
+// finished typing can leave a stale caret fragment in the screenshot.
+// Blurring first and waiting two rendered frames lets it settle beforehand.
 async function settleFocusAndPaint(): Promise<void> {
-  if (document.activeElement instanceof HTMLElement) {
-    document.activeElement.blur()
+  const active = document.activeElement
+  if (hasCaret(active)) {
+    active.blur()
   }
   await new Promise<void>((resolve) => {
     requestAnimationFrame(() => {
