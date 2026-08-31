@@ -202,7 +202,7 @@ function ProjectDescription({
 // --- Task Summary ---
 
 function ProjectTaskSummary({ tasks }: { tasks: ProjectTask[] }) {
-  const { total, todo, inProgress, completed } = summarizeTaskStatus(tasks)
+  const { total, todo, completed } = summarizeTaskStatus(tasks)
   const progress = total > 0 ? (completed / total) * 100 : 0
 
   return (
@@ -220,10 +220,6 @@ function ProjectTaskSummary({ tasks }: { tasks: ProjectTask[] }) {
       <ProgressBar percent={progress} className="h-1" />
       <div className="flex gap-6 font-mono text-2xs text-muted-foreground">
         <span>Todo: {todo}</span>
-        <span>
-          <span className="text-primary">▍</span>
-          In Progress: {inProgress}
-        </span>
         <span>Completed: {completed}</span>
       </div>
     </div>

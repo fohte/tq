@@ -93,12 +93,6 @@ export const MissingEstimate: Story = {
   },
 }
 
-export const InProgress: Story = {
-  args: {
-    task: makeTask({ status: 'in_progress' }),
-  },
-}
-
 export const Overdue: Story = {
   args: {
     // Fixed past date so this story always renders as overdue.
