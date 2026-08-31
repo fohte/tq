@@ -40,6 +40,27 @@ function asScreenshotContext(
   return context as Parameters<typeof screenshot>[1]
 }
 
+// Playwright's screenshot hides the caret by setting `caret-color:
+// transparent` right before capturing, with no wait for that style change
+// to actually paint. A story whose play() just finished typing can still
+// have an in-flight repaint from the live (non-hidden) caret, which
+// occasionally bleeds a stale fragment into the capture. Blurring here and
+// waiting two rendered frames lets any such repaint settle before
+// Playwright's own capture step runs.
+async function settleFocusAndPaint(): Promise<void> {
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur()
+  }
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        resolve()
+      })
+    })
+  })
+}
+
 afterEach(async (context) => {
+  await settleFocusAndPaint()
   await screenshot(page, asScreenshotContext(context))
 })
