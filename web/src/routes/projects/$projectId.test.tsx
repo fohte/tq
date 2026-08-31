@@ -284,8 +284,7 @@ describe('ProjectDetailPage', () => {
 
   it('renders status breakdown counts once per layout (PC + SP)', async () => {
     await renderProjectDetailPage()
-    expect(screen.getAllByText('Todo: 2')).toHaveLength(2)
-    expect(screen.getAllByText('In Progress: 1')).toHaveLength(2)
+    expect(screen.getAllByText('Todo: 3')).toHaveLength(2)
     expect(screen.getAllByText('Completed: 2')).toHaveLength(2)
   })
 

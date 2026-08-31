@@ -58,7 +58,7 @@ export const listTasksQuerySchema = z.object({
   context: contextEnum.optional(),
   commitment: commitmentEnum.optional(),
   projectId: z.uuid().optional(),
-  parentId: z.uuid().optional(),
+  parentId: z.union([z.literal('root'), z.uuid()]).optional(),
   descendantOf: z.uuid().optional(),
   includeAncestors: hasFlagSchema,
   sortBy: taskSortBy.optional(),

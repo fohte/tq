@@ -148,12 +148,15 @@ function SidebarStatusField({
   return (
     <SidebarField label="STATUS">
       <Select
-        value={status}
+        // Legacy in_progress tasks have no matching SelectItem below, so
+        // normalize to 'todo' here — otherwise the trigger falls back to
+        // displaying the raw enum string instead of a label.
+        value={status === 'completed' ? 'completed' : 'todo'}
         onValueChange={selectValueHandler(
           (value: TaskDetail['status']) => {
             updateStatus.mutate({ id: taskId, status: value })
           },
-          ['todo', 'in_progress', 'completed'],
+          ['todo', 'completed'],
         )}
       >
         <SelectTrigger size="sm" className={fieldValueClassName}>
@@ -161,7 +164,6 @@ function SidebarStatusField({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="todo">todo</SelectItem>
-          <SelectItem value="in_progress">in progress</SelectItem>
           <SelectItem value="completed">completed</SelectItem>
         </SelectContent>
       </Select>

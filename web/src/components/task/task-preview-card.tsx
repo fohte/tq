@@ -6,10 +6,8 @@ import type { TaskPreviewChipTask } from '#components/task/task-preview-chip'
 import { Badge } from '#components/ui/badge'
 
 // Mirrors the label convention in task-status-picker.tsx's STATUS_OPTIONS.
-const STATUS_LABELS: Record<TaskPreviewChipTask['status'], string> = {
-  todo: 'Todo',
-  in_progress: 'In Progress',
-  completed: 'Completed',
+function statusLabel(status: TaskPreviewChipTask['status']): string {
+  return status === 'completed' ? 'Completed' : 'Todo'
 }
 
 // Shared by TaskMentionCard (`#123`) and TaskUrlCard (a pasted task URL):
@@ -39,7 +37,7 @@ export function TaskPreviewCard({
         <span className="shrink-0 font-mono text-muted-foreground">
           #{task.number}
         </span>
-        <Badge variant="outline">{STATUS_LABELS[task.status]}</Badge>
+        <Badge variant="outline">{statusLabel(task.status)}</Badge>
       </div>
       <p className="line-clamp-2 font-sans text-sm font-medium">{task.title}</p>
       {task.description != null && task.description !== '' && (

@@ -146,21 +146,16 @@ export function rowIndentStyle(depth: number): RowIndentStyle {
   }
 }
 
-export function rowWrapperClassName(
-  isInProgress: boolean,
-  isCompleted: boolean,
-) {
+export function rowWrapperClassName(isCompleted: boolean) {
   return cn(
     'border-b border-border border-l-2 border-l-transparent px-3 py-2 transition-colors hover:bg-secondary/30',
-    isInProgress && 'border-l-primary bg-card',
     isCompleted && 'dim-completed',
   )
 }
 
-export function rowTitleClassName(isInProgress: boolean, isCompleted: boolean) {
+export function rowTitleClassName(isCompleted: boolean) {
   return cn(
-    'truncate text-sm',
-    isInProgress ? 'font-semibold' : 'font-normal',
+    'truncate text-sm font-normal',
     isCompleted && 'text-muted-foreground line-through',
   )
 }
