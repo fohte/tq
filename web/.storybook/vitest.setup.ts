@@ -40,6 +40,19 @@ function asScreenshotContext(
   return context as Parameters<typeof screenshot>[1]
 }
 
+// Playwright's own caret-hiding mutation runs with no wait for it to paint,
+// so this settles pending repaints before that capture step runs.
+async function waitForPaint(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        resolve()
+      })
+    })
+  })
+}
+
 afterEach(async (context) => {
+  await waitForPaint()
   await screenshot(page, asScreenshotContext(context))
 })
