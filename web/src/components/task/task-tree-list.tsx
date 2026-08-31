@@ -173,7 +173,10 @@ export function TaskTreeList({
   const isEmpty = tree.length === 0
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div
+      className="flex-1 overflow-auto"
+      data-scroll-restoration-id="task-tree-list"
+    >
       {isLoading ? (
         <ListAreaMessage>Loading...</ListAreaMessage>
       ) : isEmpty ? (

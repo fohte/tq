@@ -81,7 +81,10 @@ function ProjectDetailPage() {
     <>
       {/* PC layout */}
       <div className="hidden h-full md:flex">
-        <div className="flex-1 overflow-y-auto p-6">
+        <div
+          className="flex-1 overflow-y-auto p-6"
+          data-scroll-restoration-id="project-detail"
+        >
           <ProjectMainContent
             key={project.id}
             project={project}
@@ -99,7 +102,10 @@ function ProjectDetailPage() {
       </div>
 
       {/* SP layout */}
-      <div className="flex h-full flex-col overflow-y-auto md:hidden">
+      <div
+        className="flex h-full flex-col overflow-y-auto md:hidden"
+        data-scroll-restoration-id="project-detail-mobile"
+      >
         <BackHeaderBar to="/projects">Projects</BackHeaderBar>
         <div className="p-4">
           <ProjectMainContent
