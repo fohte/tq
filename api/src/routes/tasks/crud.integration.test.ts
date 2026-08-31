@@ -283,6 +283,18 @@ describe('tasks CRUD API', () => {
       expect(body.every((t) => t.parentId === parent.id)).toBe(true)
     })
 
+    it('excludes tasks with a parent when parentId is "root"', async () => {
+      const parent = await createTask('Parent')
+      await createTask('Child', { parentId: parent.id })
+      await createTask('Orphan')
+
+      const res = await app.request('/api/tasks?parentId=root')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.title)).toEqual(['Parent', 'Orphan'])
+    })
+
     it('filters by status', async () => {
       const taskA = await createTask('Task A')
       await createTask('Task B')
@@ -796,6 +808,19 @@ describe('tasks CRUD API', () => {
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Child')
+    })
+
+    it('filters by parent:root prefix in q parameter', async () => {
+      const parent = await createTask('Parent')
+      await createTask('Child', { parentId: parent.id })
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('parent:root'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.title)).toEqual(['Parent'])
     })
 
     it('filters by project: prefix in q parameter using the project id', async () => {

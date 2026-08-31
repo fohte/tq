@@ -81,9 +81,11 @@ export function registerReadTools(server: McpServer): void {
             'Only return tasks belonging to this project id. Resolve project ids with list_projects.',
           ),
         parentId: z
-          .uuid()
+          .union([z.literal('root'), z.uuid()])
           .optional()
-          .describe('Only return direct subtasks of this task id.'),
+          .describe(
+            "Only return direct subtasks of this task id, or 'root' to return only tasks with no parent.",
+          ),
         context: contextEnum
           .optional()
           .describe('Only return tasks in this context.'),
@@ -162,7 +164,7 @@ export function registerReadTools(server: McpServer): void {
     'search_tasks',
     {
       description:
-        'Search tasks using the same query syntax as the TQ search bar. The `q` string does a free-text match across title, description, and page content, and also accepts prefixed filter tokens that can be combined with free text and with each other: `is:todo|in_progress|completed` (repeat `is:` to match multiple statuses, e.g. `is:todo is:in_progress`), `label:<name>`, `context:work|personal`, `commitment:inbox|active|someday`, `has:pages`, `has:comments`, `has:no-children` (excludes tasks with an incomplete child), `parent:<uuid>`, `project:<uuid|title>`, `sort:due|created|updated|estimate`. Example: `q: "is:todo label:urgent context:work groceries"` finds todo tasks labeled urgent in the work context whose title, description, or pages mention "groceries". The same filters are also available as explicit parameters for when a query string is not needed.',
+        'Search tasks using the same query syntax as the TQ search bar. The `q` string does a free-text match across title, description, and page content, and also accepts prefixed filter tokens that can be combined with free text and with each other: `is:todo|in_progress|completed` (repeat `is:` to match multiple statuses, e.g. `is:todo is:in_progress`), `label:<name>`, `context:work|personal`, `commitment:inbox|active|someday`, `has:pages`, `has:comments`, `has:no-children` (excludes tasks with an incomplete child), `parent:<uuid>|root` (`root` matches tasks with no parent), `project:<uuid|title>`, `sort:due|created|updated|estimate`. Example: `q: "is:todo label:urgent context:work groceries"` finds todo tasks labeled urgent in the work context whose title, description, or pages mention "groceries". The same filters are also available as explicit parameters for when a query string is not needed.',
       inputSchema: z.object({
         q: z
           .string()
