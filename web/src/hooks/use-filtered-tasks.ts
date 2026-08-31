@@ -63,5 +63,10 @@ export function useFilteredTaskTree(options: {
 
   const tree = useMemo(() => buildTree(categorized.all), [categorized.all])
 
-  return { isLoading, tree, tasks: categorized.all, isSearching, baseFilter }
+  return {
+    isLoading,
+    tree,
+    tasks: categorized.all,
+    lazyChildrenFilter: isSearching ? undefined : baseFilter,
+  }
 }

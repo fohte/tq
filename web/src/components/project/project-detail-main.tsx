@@ -34,8 +34,7 @@ export function ProjectMainContent({
   tree,
   filteredTasks,
   isTasksLoading,
-  isSearching,
-  baseFilter,
+  lazyChildrenFilter,
   sessionsByTaskId,
 }: {
   project: ProjectDetail
@@ -46,8 +45,7 @@ export function ProjectMainContent({
   tree: TreeNode[]
   filteredTasks: ProjectTask[]
   isTasksLoading: boolean
-  isSearching: boolean
-  baseFilter: TaskListFilter
+  lazyChildrenFilter: TaskListFilter | undefined
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
 }) {
   const statusOrFallback = isProjectStatus(project.status)
@@ -97,8 +95,7 @@ export function ProjectMainContent({
         tree={tree}
         filteredTasks={filteredTasks}
         isLoading={isTasksLoading}
-        isSearching={isSearching}
-        baseFilter={baseFilter}
+        lazyChildrenFilter={lazyChildrenFilter}
         sessionsByTaskId={sessionsByTaskId}
       />
     </div>
@@ -248,8 +245,7 @@ function ProjectTaskList({
   tree,
   filteredTasks,
   isLoading,
-  isSearching,
-  baseFilter,
+  lazyChildrenFilter,
   sessionsByTaskId,
 }: {
   projectId: string
@@ -261,8 +257,7 @@ function ProjectTaskList({
   tree: TreeNode[]
   filteredTasks: ProjectTask[]
   isLoading: boolean
-  isSearching: boolean
-  baseFilter: TaskListFilter
+  lazyChildrenFilter: TaskListFilter | undefined
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -306,7 +301,7 @@ function ProjectTaskList({
           tree={tree}
           tasks={filteredTasks}
           sessionsByTaskId={sessionsByTaskId}
-          lazyChildrenFilter={isSearching ? undefined : baseFilter}
+          lazyChildrenFilter={lazyChildrenFilter}
         />
       </div>
 

@@ -64,8 +64,7 @@ function ProjectDetailPage() {
     isLoading: isFilteredTasksLoading,
     tree,
     tasks: filteredTasks,
-    isSearching,
-    baseFilter,
+    lazyChildrenFilter,
   } = useFilteredTaskTree({ q, projectId })
   const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
 
@@ -94,8 +93,7 @@ function ProjectDetailPage() {
             tree={tree}
             filteredTasks={filteredTasks}
             isTasksLoading={isFilteredTasksLoading}
-            isSearching={isSearching}
-            baseFilter={baseFilter}
+            lazyChildrenFilter={lazyChildrenFilter}
             sessionsByTaskId={sessionsByTaskId}
           />
         </div>
@@ -116,8 +114,7 @@ function ProjectDetailPage() {
             tree={tree}
             filteredTasks={filteredTasks}
             isTasksLoading={isFilteredTasksLoading}
-            isSearching={isSearching}
-            baseFilter={baseFilter}
+            lazyChildrenFilter={lazyChildrenFilter}
             sessionsByTaskId={sessionsByTaskId}
           />
         </div>

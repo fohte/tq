@@ -199,8 +199,7 @@ beforeEach(() => {
     isLoading: false,
     tree: [],
     tasks: [],
-    isSearching: false,
-    baseFilter: {},
+    lazyChildrenFilter: {},
   })
 })
 
@@ -534,8 +533,7 @@ describe('ProjectDetailPage task list', () => {
       isLoading: false,
       tree: [{ ...filteredTask, children: [] }],
       tasks: [filteredTask],
-      isSearching: false,
-      baseFilter: {},
+      lazyChildrenFilter: {},
     })
 
     await renderProjectDetailPage()

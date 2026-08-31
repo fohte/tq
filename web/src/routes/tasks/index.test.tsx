@@ -112,8 +112,7 @@ beforeEach(() => {
     isLoading: false,
     tree: [],
     tasks: [],
-    isSearching: false,
-    baseFilter: {},
+    lazyChildrenFilter: {},
   })
   mockUseProjects.mockReturnValue({ data: [] })
   mockUseLabels.mockReturnValue({ data: [] })

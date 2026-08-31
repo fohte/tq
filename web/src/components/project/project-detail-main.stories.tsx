@@ -144,8 +144,7 @@ function MainContentStory({
           tree={buildTree(tasks)}
           filteredTasks={tasks}
           isTasksLoading={false}
-          isSearching={false}
-          baseFilter={{}}
+          lazyChildrenFilter={undefined}
           sessionsByTaskId={new Map()}
         />
       </div>
@@ -228,8 +227,7 @@ export const FullPagePC: StoryObj<{
             tree={buildTree(tasks)}
             filteredTasks={tasks}
             isTasksLoading={false}
-            isSearching={false}
-            baseFilter={{}}
+            lazyChildrenFilter={undefined}
             sessionsByTaskId={new Map()}
           />
         </div>
@@ -264,8 +262,7 @@ export const FullPageSP: StoryObj<{
             tree={buildTree(tasks)}
             filteredTasks={tasks}
             isTasksLoading={false}
-            isSearching={false}
-            baseFilter={{}}
+            lazyChildrenFilter={undefined}
             sessionsByTaskId={new Map()}
           />
         </div>
