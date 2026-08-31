@@ -336,33 +336,6 @@ export const WithChildren: Story = {
   },
 }
 
-export const Nested: Story = {
-  args: {
-    node: {
-      ...baseTreeNode,
-      title: 'Root task',
-      children: [
-        {
-          ...baseTreeNode,
-          id: '00000000-0000-0000-0000-000000000002',
-          title: 'Child task',
-          parentId: baseTreeNode.id,
-          children: [
-            {
-              ...baseTreeNode,
-              id: '00000000-0000-0000-0000-000000000004',
-              title: 'Grandchild task',
-              parentId: '00000000-0000-0000-0000-000000000002',
-            },
-          ],
-          childCompletionCount: { completed: 0, total: 1 },
-        },
-      ],
-      childCompletionCount: { completed: 0, total: 1 },
-    },
-  },
-}
-
 // Kept relative to `Date.now()` (not a fixed ISO literal) so this session
 // keeps rendering as active (isAgentSessionActive) no matter when this story
 // runs.
