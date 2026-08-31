@@ -248,7 +248,9 @@ export async function hydrateTaskListRows(
       r.parentNumber,
       githubLinksByTaskId.get(r.task.id) ?? [],
       labelsByTaskId.get(r.task.id) ?? [],
-      duplicateOfNumbersByTaskId.get(r.task.id) ?? null,
+      r.task.statusReason === 'duplicate'
+        ? (duplicateOfNumbersByTaskId.get(r.task.id) ?? null)
+        : null,
     ),
     childCompletionCount: childCompletionCountsByTaskId.get(r.task.id) ?? {
       completed: 0,

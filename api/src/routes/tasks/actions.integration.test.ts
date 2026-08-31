@@ -623,7 +623,7 @@ describe('tasks actions API', () => {
     }
 
     describe('POST /api/tasks/:id/complete', () => {
-      it('creates a task_relations row, surfaced via duplicateOfNumber/duplicateOfTask', async () => {
+      it('persists a task_relations row when closing with a duplicate target', async () => {
         const target = await createTask('Target')
         const task = await createTask('Duplicate me')
 
@@ -644,12 +644,40 @@ describe('tasks actions API', () => {
             type: 'duplicate_of',
           },
         ])
+      })
+
+      it('surfaces duplicateOfNumber/duplicateOfTask in the detail response', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+
+        await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            statusReason: 'duplicate',
+            duplicateOfTaskId: target.id,
+          }),
+        })
 
         const detailRes = await app.request(`/api/tasks/${task.id}`)
         const detailBody = await jsonBody<TaskResponse>(detailRes)
         expect(detailBody.duplicateOfNumber).toBe(target.number)
         assertDefined(detailBody.duplicateOfTask)
         expect(detailBody.duplicateOfTask.id).toBe(target.id)
+      })
+
+      it('surfaces duplicateOfNumber in the list response', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+
+        await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            statusReason: 'duplicate',
+            duplicateOfTaskId: target.id,
+          }),
+        })
 
         const listRes = await app.request('/api/tasks')
         const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
@@ -784,6 +812,117 @@ describe('tasks actions API', () => {
             type: 'duplicate_of',
           },
         ])
+      })
+    })
+
+    describe('stale duplicateOf display after reopen/reclose', () => {
+      async function closeAsDuplicate(taskId: string, targetId: string) {
+        return app.request(`/api/tasks/${taskId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'completed',
+            statusReason: 'duplicate',
+            duplicateOfTaskId: targetId,
+          }),
+        })
+      }
+
+      it('clears duplicateOfNumber/duplicateOfTask in the detail response after reopening', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+        await closeAsDuplicate(task.id, target.id)
+
+        const reopenRes = await app.request(`/api/tasks/${task.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'todo' }),
+        })
+        expect(reopenRes.status).toBe(200)
+
+        // The relation row is kept, only the exposed fields are gated.
+        expect(await fetchDuplicateOfRelations(task.id)).toEqual([
+          {
+            sourceTaskId: task.id,
+            targetTaskId: target.id,
+            type: 'duplicate_of',
+          },
+        ])
+
+        const detailRes = await app.request(`/api/tasks/${task.id}`)
+        const detailBody = await jsonBody<TaskResponse>(detailRes)
+        expect(detailBody.duplicateOfNumber).toBeNull()
+        expect(detailBody.duplicateOfTask).toBeNull()
+      })
+
+      it('clears duplicateOfNumber in the list response after reopening', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+        await closeAsDuplicate(task.id, target.id)
+
+        await app.request(`/api/tasks/${task.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'todo' }),
+        })
+
+        const listRes = await app.request('/api/tasks')
+        const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
+        const listItem = listBody.find((t) => t.id === task.id)
+        assertDefined(listItem)
+        expect(listItem.duplicateOfNumber).toBeNull()
+      })
+
+      it('clears duplicateOfNumber/duplicateOfTask in the detail response after reclosing as not_planned', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+        await closeAsDuplicate(task.id, target.id)
+
+        const recloseRes = await app.request(`/api/tasks/${task.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'completed',
+            statusReason: 'not_planned',
+          }),
+        })
+        expect(recloseRes.status).toBe(200)
+
+        // The earlier `duplicate_of` relation row is kept, only the exposed
+        // fields are gated.
+        expect(await fetchDuplicateOfRelations(task.id)).toEqual([
+          {
+            sourceTaskId: task.id,
+            targetTaskId: target.id,
+            type: 'duplicate_of',
+          },
+        ])
+
+        const detailRes = await app.request(`/api/tasks/${task.id}`)
+        const detailBody = await jsonBody<TaskResponse>(detailRes)
+        expect(detailBody.duplicateOfNumber).toBeNull()
+        expect(detailBody.duplicateOfTask).toBeNull()
+      })
+
+      it('clears duplicateOfNumber in the list response after reclosing as not_planned', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+        await closeAsDuplicate(task.id, target.id)
+
+        await app.request(`/api/tasks/${task.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'completed',
+            statusReason: 'not_planned',
+          }),
+        })
+
+        const listRes = await app.request('/api/tasks')
+        const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
+        const listItem = listBody.find((t) => t.id === task.id)
+        assertDefined(listItem)
+        expect(listItem.duplicateOfNumber).toBeNull()
       })
     })
 

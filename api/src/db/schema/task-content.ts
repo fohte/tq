@@ -245,6 +245,7 @@ export const taskEvents = pgTable(
       'task_events_payload_check',
       sql`(${table.type} = 'status_changed'
           AND ${table.fromStatus} IS NOT NULL AND ${table.toStatus} IS NOT NULL
+          AND (${table.toStatus} = 'completed' OR ${table.toStatusReason} IS NULL)
           AND ${table.githubOwner} IS NULL AND ${table.githubRepo} IS NULL
           AND ${table.githubNumber} IS NULL AND ${table.githubKind} IS NULL)
         OR (${table.type} IN ('github_linked', 'github_unlinked')

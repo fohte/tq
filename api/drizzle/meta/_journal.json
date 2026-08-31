@@ -232,6 +232,13 @@
       "when": 1788194704897,
       "tag": "0032_brainy_unus",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788197901569,
+      "tag": "0033_tired_weapon_omega",
+      "breakpoints": true
     }
   ]
 }

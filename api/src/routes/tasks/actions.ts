@@ -4,7 +4,7 @@ import { eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
-import { db } from '#db/connection'
+import { db, type DbTransaction } from '#db/connection'
 import { recurrenceRules, taskRelations, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
@@ -28,6 +28,45 @@ const updateParentSchema = z.object({
   parentId: z.uuid().nullable(),
 })
 
+// Rejects a `duplicateOfTaskId` that self-references or names a
+// non-existent task, before either close-as-duplicate handler touches the
+// database. Returns the error response body/status to send, or `null` when
+// the target is valid.
+async function checkDuplicateTarget(
+  id: string,
+  duplicateOfTaskId: string,
+): Promise<{ body: { error: string }; status: 400 | 404 } | null> {
+  if (duplicateOfTaskId === id) {
+    return {
+      body: { error: 'A task cannot be a duplicate of itself' },
+      status: 400,
+    }
+  }
+
+  const duplicateTarget = await db.query.tasks.findFirst({
+    where: eq(tasks.id, duplicateOfTaskId),
+  })
+  if (!duplicateTarget) {
+    return { body: { error: 'Duplicate target task not found' }, status: 404 }
+  }
+
+  return null
+}
+
+// Records the `duplicate_of` relation for a close-as-duplicate transition.
+// `onConflictDoNothing` makes re-closing a task as a duplicate of the same
+// target (its primary key) idempotent instead of erroring.
+async function insertDuplicateOfRelation(
+  tx: DbTransaction,
+  sourceTaskId: string,
+  targetTaskId: string,
+) {
+  await tx
+    .insert(taskRelations)
+    .values({ sourceTaskId, targetTaskId, type: 'duplicate_of' })
+    .onConflictDoNothing()
+}
+
 export const tasksActionsApp = new Hono()
   .patch(
     '/:id/status',
@@ -42,18 +81,9 @@ export const tasksActionsApp = new Hono()
         status === 'completed' ? (statusReason ?? 'completed') : null
 
       if (nextStatusReason === 'duplicate' && duplicateOfTaskId != null) {
-        if (duplicateOfTaskId === id) {
-          return c.json(
-            { error: 'A task cannot be a duplicate of itself' },
-            400,
-          )
-        }
-
-        const duplicateTarget = await db.query.tasks.findFirst({
-          where: eq(tasks.id, duplicateOfTaskId),
-        })
-        if (!duplicateTarget) {
-          return c.json({ error: 'Duplicate target task not found' }, 404)
+        const targetError = await checkDuplicateTarget(id, duplicateOfTaskId)
+        if (targetError) {
+          return c.json(targetError.body, targetError.status)
         }
       }
 
@@ -94,14 +124,7 @@ export const tasksActionsApp = new Hono()
         }
 
         if (nextStatusReason === 'duplicate' && duplicateOfTaskId != null) {
-          await tx
-            .insert(taskRelations)
-            .values({
-              sourceTaskId: id,
-              targetTaskId: duplicateOfTaskId,
-              type: 'duplicate_of',
-            })
-            .onConflictDoNothing()
+          await insertDuplicateOfRelation(tx, id, duplicateOfTaskId)
         }
 
         return updated
@@ -199,18 +222,9 @@ export const tasksActionsApp = new Hono()
       const reason = statusReason ?? 'completed'
 
       if (reason === 'duplicate' && duplicateOfTaskId != null) {
-        if (duplicateOfTaskId === id) {
-          return c.json(
-            { error: 'A task cannot be a duplicate of itself' },
-            400,
-          )
-        }
-
-        const duplicateTarget = await db.query.tasks.findFirst({
-          where: eq(tasks.id, duplicateOfTaskId),
-        })
-        if (!duplicateTarget) {
-          return c.json({ error: 'Duplicate target task not found' }, 404)
+        const targetError = await checkDuplicateTarget(id, duplicateOfTaskId)
+        if (targetError) {
+          return c.json(targetError.body, targetError.status)
         }
       }
 
@@ -252,14 +266,7 @@ export const tasksActionsApp = new Hono()
         )
 
         if (reason === 'duplicate' && duplicateOfTaskId != null) {
-          await tx
-            .insert(taskRelations)
-            .values({
-              sourceTaskId: id,
-              targetTaskId: duplicateOfTaskId,
-              type: 'duplicate_of',
-            })
-            .onConflictDoNothing()
+          await insertDuplicateOfRelation(tx, id, duplicateOfTaskId)
         }
 
         return updatedTask

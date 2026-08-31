@@ -17,7 +17,7 @@ import {
   createTask,
   TEST_UUID,
 } from '#routes/tasks/testing'
-import { passthroughSchema, setupTestDb } from '#testing'
+import { jsonBody, passthroughSchema, setupTestDb } from '#testing'
 
 setupTestDb()
 
@@ -487,6 +487,50 @@ describe('update_task_status tool', () => {
         },
       },
     })
+  })
+
+  it('closes a task as a duplicate and records the target', async () => {
+    const target = await createTask('Target')
+    const task = await createTask('Duplicate me')
+
+    const result = await callTool('update_task_status', {
+      taskId: task.id,
+      status: 'completed',
+      statusReason: 'duplicate',
+      duplicateOfTaskId: target.id,
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      number: '<number>',
+      title: 'Duplicate me',
+      description: null,
+      status: 'completed',
+      statusReason: 'duplicate',
+      context: 'personal',
+      commitment: 'inbox',
+      labels: [],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      githubLinks: [],
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+      nextTask: null,
+    })
+
+    // The tool response itself carries no duplicateOfNumber/duplicateOfTask
+    // field (see TaskResponse) — the detail endpoint is the only way to
+    // confirm `duplicateOfTaskId` actually reached the request body.
+    const detailRes = await app.request(`/api/tasks/${task.id}`)
+    const detailBody = await jsonBody<{ duplicateOfNumber: number | null }>(
+      detailRes,
+    )
+    expect(detailBody.duplicateOfNumber).toBe(target.number)
   })
 })
 

@@ -203,8 +203,12 @@ export const tasksCrudApp = new Hono()
         timeBlocks: taskTimeBlocks.map(timeBlockToResponse),
         links,
         labels: labelsByTaskId.get(id) ?? [],
-        duplicateOfNumber: duplicateOfNumbersByTaskId.get(id) ?? null,
-        duplicateOfTask,
+        duplicateOfNumber:
+          task.statusReason === 'duplicate'
+            ? (duplicateOfNumbersByTaskId.get(id) ?? null)
+            : null,
+        duplicateOfTask:
+          task.statusReason === 'duplicate' ? duplicateOfTask : null,
       },
       200,
     )

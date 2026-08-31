@@ -23,7 +23,10 @@ export function useHandleStatusChange(
   const currentValue: StatusPickerValue =
     status === 'completed' ? (statusReason ?? 'completed') : 'todo'
 
-  const closeAsDuplicate = (duplicateOfTaskId?: string) => {
+  const closeWithReason = (
+    reason: 'completed' | 'not_planned' | 'duplicate',
+    duplicateOfTaskId?: string,
+  ) => {
     // exactOptionalPropertyTypes: mutate()'s duplicateOfTaskId?: string
     // rejects an explicit `undefined` value, so the key must be omitted
     // rather than set to undefined when there's no candidate.
@@ -37,16 +40,20 @@ export function useHandleStatusChange(
       updateStatus.mutate({
         id,
         status: 'completed',
-        statusReason: 'duplicate',
+        statusReason: reason,
         ...duplicateOfTaskIdField,
       })
     } else {
       completeTask.mutate({
         id,
-        statusReason: 'duplicate',
+        statusReason: reason,
         ...duplicateOfTaskIdField,
       })
     }
+  }
+
+  const closeAsDuplicate = (duplicateOfTaskId?: string) => {
+    closeWithReason('duplicate', duplicateOfTaskId)
   }
 
   const handleValueChange = (value: StatusPickerValue) => {
@@ -59,15 +66,7 @@ export function useHandleStatusChange(
       setDuplicatePickerOpen(true)
       return
     }
-    if (status === 'completed') {
-      // Already closed — this is relabeling the close reason, not closing
-      // the task, so it must go through /status rather than /complete:
-      // /complete 409s on an already-completed task, and its recurrence
-      // side effect only belongs to the actual close transition.
-      updateStatus.mutate({ id, status: 'completed', statusReason: value })
-      return
-    }
-    completeTask.mutate({ id, statusReason: value })
+    closeWithReason(value)
   }
 
   const duplicatePicker = (

@@ -737,7 +737,7 @@ describe('tasks CRUD API', () => {
       expect(body[0].title).toBe('Someday task')
     })
 
-    it('filters by reason: prefix in q parameter', async () => {
+    it('filters by reason:not_planned in q parameter', async () => {
       const notPlanned = await createTask('Not planned task')
       await app.request(`/api/tasks/${notPlanned.id}/complete`, {
         method: 'POST',
@@ -751,24 +751,38 @@ describe('tasks CRUD API', () => {
         body: JSON.stringify({ statusReason: 'duplicate' }),
       })
 
-      const notPlannedRes = await app.request(
+      const res = await app.request(
         '/api/tasks?q=' + encodeURIComponent('reason:not_planned'),
       )
-      expect(notPlannedRes.status).toBe(200)
-      const notPlannedBody =
-        await jsonBody<TaskListItemResponse[]>(notPlannedRes)
-      expect(notPlannedBody).toHaveLength(1)
-      assertDefined(notPlannedBody[0])
-      expect(notPlannedBody[0].title).toBe('Not planned task')
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Not planned task')
+    })
 
-      const duplicateRes = await app.request(
+    it('filters by reason:duplicate in q parameter', async () => {
+      const notPlanned = await createTask('Not planned task')
+      await app.request(`/api/tasks/${notPlanned.id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statusReason: 'not_planned' }),
+      })
+      const duplicate = await createTask('Duplicate task')
+      await app.request(`/api/tasks/${duplicate.id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statusReason: 'duplicate' }),
+      })
+
+      const res = await app.request(
         '/api/tasks?q=' + encodeURIComponent('reason:duplicate'),
       )
-      expect(duplicateRes.status).toBe(200)
-      const duplicateBody = await jsonBody<TaskListItemResponse[]>(duplicateRes)
-      expect(duplicateBody).toHaveLength(1)
-      assertDefined(duplicateBody[0])
-      expect(duplicateBody[0].title).toBe('Duplicate task')
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body).toHaveLength(1)
+      assertDefined(body[0])
+      expect(body[0].title).toBe('Duplicate task')
     })
 
     it('filters by has:pages prefix in q parameter', async () => {

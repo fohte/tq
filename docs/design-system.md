@@ -517,10 +517,10 @@ text. For `status === 'completed'`, the icon further branches on
 | `completed` (reason `duplicate`)   | filled circle + `Equal` (lucide-react) | `bg-muted-foreground-faint` fill, `text-background` glyph | Same title styling as above                                           |
 
 `--status-completed` is a second accent color, spent specifically on "things
-actually done" so it stands out when scanning a list — it doesn't reopen the
-[one-accent rule](#accent-the-one-color): it's the only colored status icon,
-since the `not_planned`/`duplicate` closed states keep the neutral
-`bg-muted-foreground-faint` gray fill instead of introducing a third color.
+actually done" so it stands out when scanning a list. `not_planned` and
+`duplicate` keep the same neutral `bg-muted-foreground-faint` gray fill that
+`completed` always used, and `--status-completed` is the one new non-neutral
+color this change adds, applied narrowly to the default close reason only.
 
 Row-level metadata for `not_planned`/`duplicate` also gets a plain second-line
 token (`CloseReasonLabel` in `web/src/components/task/task-row-shared.tsx`),
