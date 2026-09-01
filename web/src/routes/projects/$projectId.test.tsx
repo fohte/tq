@@ -90,9 +90,28 @@ vi.mock('#components/ui/markdown-editor', () => ({
   ),
 }))
 
+// Every router already registers a document-level scroll listener on
+// construction and never removes it, but onScroll no-ops unless
+// router.isScrollRestoring is true. TaskTreeList's useElementScrollRestoration
+// is what flips that flag (via a forced setupScrollRestoration(router,
+// true)); with it stubbed out, isScrollRestoring stays false for every fresh
+// router this file builds, so a stray throttled callback firing after jsdom
+// teardown exits before touching `document` instead of throwing
+// "document is not defined". None of these tests assert on restored scroll
+// position. Everything else from the module stays real — see the comment
+// below on why useSearch()/useNavigate() can't be stubbed.
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>()
+  return {
+    ...actual,
+    useElementScrollRestoration: () => undefined,
+  }
+})
+
 // Route params come from matching the real ProjectDetailRoute for real
-// (rather than stubbing @tanstack/react-router), because the task-list
-// filter chips rely on useSearch()/useNavigate() from the real router.
+// (rather than replacing @tanstack/react-router's routing pieces wholesale),
+// because the task-list filter chips rely on useSearch()/useNavigate() from
+// the real router.
 // A fresh router (re-loaded) is built for both the initial render and every
 // rerender — TanStack Router memoizes matched-route rendering on unchanged
 // router state, so reusing one router across rerenders would keep stale

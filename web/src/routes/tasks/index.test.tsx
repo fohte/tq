@@ -61,6 +61,23 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
   }
 })
 
+// Every router already registers a document-level scroll listener on
+// construction and never removes it, but onScroll no-ops unless
+// router.isScrollRestoring is true. TaskTreeList's useElementScrollRestoration
+// is what flips that flag (via a forced setupScrollRestoration(router,
+// true)); with it stubbed out, isScrollRestoring stays false for every fresh
+// router this file builds, so a stray throttled callback firing after jsdom
+// teardown exits before touching `document` instead of throwing
+// "document is not defined". None of these tests assert on restored scroll
+// position.
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>()
+  return {
+    ...actual,
+    useElementScrollRestoration: () => undefined,
+  }
+})
+
 // GithubIssueLinkModal (always mounted, just closed) calls useNavigate
 // unconditionally, so a real router is required rather than a mocked one.
 // TaskList itself is bound to the real TasksRoute (Route.useSearch() /
