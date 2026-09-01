@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-slim
     outputs:
       packages: ${{ steps.set-packages.outputs.packages }}
+      test_packages: ${{ steps.set-packages.outputs.test_packages }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -89,13 +90,34 @@ jobs:
           echo "packages=$packages" >> "$GITHUB_OUTPUT"
           echo "Selected packages: $packages"
 
+          # Package directory names match their package.json `name` (api,
+          # cli, web), so workspace:-protocol dependency names below double
+          # as directory keys.
+          graph=$(for dir in "${pkgs[@]}"; do
+            jq -c --arg name "$dir" '{($name): [((.dependencies // {}) + (.devDependencies // {})) | to_entries[] | select(.value | startswith("workspace:")) | .key]}' "$dir/package.json"
+          done | jq -sc 'add')
+
+          # unit-test-run also needs to test any package that imports another
+          # package's code (e.g. cli and web both import api's zod schemas
+          # directly), so a breaking change to a dependency fails the PR that
+          # introduced it instead of shipping with a green CI.
+          test_packages=$(jq -nc --argjson graph "$graph" --argjson selected "$packages" '
+            def closure(sel):
+              ($graph | to_entries | map(select(.value | any(. as $d | sel | index($d) != null)) | .key)) as $newly
+              | (sel + $newly | unique) as $next
+              | if ($next | length) == (sel | length) then $next else closure($next) end;
+            closure($selected)
+          ')
+          echo "test_packages=$test_packages" >> "$GITHUB_OUTPUT"
+          echo "Selected test packages: $test_packages"
+
   unit-test-run:
     needs: setup
-    if: ${{ needs.setup.outputs.packages != '[]' }}
+    if: ${{ needs.setup.outputs.test_packages != '[]' }}
     strategy:
       fail-fast: false
       matrix:
-        package: ${{ fromJSON(needs.setup.outputs.packages) }}
+        package: ${{ fromJSON(needs.setup.outputs.test_packages) }}
     name: 'unit-test (${{ matrix.package }})'
     runs-on: ubuntu-latest
     steps:
