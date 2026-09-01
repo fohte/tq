@@ -68,7 +68,7 @@ const sampleTasks: ProjectTask[] = [
     id: '3',
     number: 3,
     title: 'Profile slow queries',
-    status: 'in_progress',
+    status: 'todo',
   },
   {
     ...baseTask,
@@ -90,7 +90,7 @@ const sampleProjects: Project[] = [baseProject]
 
 const defaultParsedQuery: ParsedQuery = {
   freeText: '',
-  status: ['todo', 'in_progress'],
+  status: ['todo'],
   sortBy: 'updated',
 }
 
@@ -137,13 +137,13 @@ function MainContentStory({
       <div className="max-w-2xl p-6">
         <ProjectMainContent
           project={project}
-          tasks={tasks}
           parsedQuery={defaultParsedQuery}
           onQueryChange={() => {}}
           projects={sampleProjects}
           tree={buildTree(tasks)}
           filteredTasks={tasks}
           isTasksLoading={false}
+          lazyChildrenFilter={undefined}
           sessionsByTaskId={new Map()}
         />
       </div>
@@ -219,13 +219,13 @@ export const FullPagePC: StoryObj<{
         <div className="flex-1 overflow-y-auto p-6">
           <ProjectMainContent
             project={project}
-            tasks={tasks}
             parsedQuery={defaultParsedQuery}
             onQueryChange={() => {}}
             projects={sampleProjects}
             tree={buildTree(tasks)}
             filteredTasks={tasks}
             isTasksLoading={false}
+            lazyChildrenFilter={undefined}
             sessionsByTaskId={new Map()}
           />
         </div>
@@ -253,13 +253,13 @@ export const FullPageSP: StoryObj<{
         <div className="p-4">
           <ProjectMainContent
             project={project}
-            tasks={tasks}
             parsedQuery={defaultParsedQuery}
             onQueryChange={() => {}}
             projects={sampleProjects}
             tree={buildTree(tasks)}
             filteredTasks={tasks}
             isTasksLoading={false}
+            lazyChildrenFilter={undefined}
             sessionsByTaskId={new Map()}
           />
         </div>

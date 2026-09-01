@@ -19,14 +19,12 @@ export const sortLabels: Partial<
   created: 'Created',
 }
 
-// Compact terms for the `is` chip's value (e.g. "is todo, doing"), distinct
-// from the full "In Progress"-style wording used in status pickers.
+// Compact terms for the `is` chip's value (e.g. "is todo, done").
 export const statusChipLabels: Record<
   NonNullable<ParsedQuery['status']>[number],
   string
 > = {
   todo: 'todo',
-  in_progress: 'doing',
   completed: 'done',
 }
 
@@ -90,7 +88,7 @@ export function tagFilterSearch(tag: string): { q: string } {
   return {
     q: buildSearchQuery({
       freeText: '',
-      status: ['todo', 'in_progress'],
+      status: ['todo'],
       label: tag,
       sortBy: 'updated',
     }),

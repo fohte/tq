@@ -17,8 +17,9 @@ import type { DropTarget } from '#components/task/tree-drag-overlay-content'
 import { TreeDragOverlayContent } from '#components/task/tree-drag-overlay-content'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { ListAreaMessage } from '#components/ui/list-area-message'
+import { useLazyTaskTree } from '#hooks/use-lazy-task-tree'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
-import type { Task, TreeNode } from '#hooks/use-tasks'
+import type { Task, TaskListFilter, TreeNode } from '#hooks/use-tasks'
 import { useUpdateTaskParent } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import {
@@ -80,13 +81,19 @@ export interface TaskTreeListProps {
   tree: TreeNode[]
   tasks: Task[]
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
+  /** Forwarded to useLazyTaskTree; see its docstring for behavior. */
+  lazyChildrenFilter?: TaskListFilter | undefined
+  /** Only set this when this list's own div is the scrolling element — TaskTreeList is also embedded non-scrolling inside project-detail-main.tsx, which scrolls via an ancestor container instead. */
+  scrollRestorationId?: string
 }
 
 export function TaskTreeList({
   isLoading,
-  tree,
+  tree: rootTree,
   tasks,
   sessionsByTaskId,
+  lazyChildrenFilter,
+  scrollRestorationId,
 }: TaskTreeListProps) {
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [createModalParent, setCreateModalParent] = useState<TreeNode | null>(
@@ -98,9 +105,16 @@ export function TaskTreeList({
     setCreateModalOpen(true)
   }, [])
 
+  const { tree, isExpanded, toggleExpand, hasChildren } = useLazyTaskTree(
+    rootTree,
+    lazyChildrenFilter,
+  )
+
   const treeOutliner = useTreeOutliner(tree, {
     enabled: true,
     onOpenSiblingCreate: openCreateModal,
+    isExpanded,
+    toggleExpand,
   })
   const updateTaskParent = useUpdateTaskParent()
 
@@ -193,7 +207,10 @@ export function TaskTreeList({
   const isEmpty = tree.length === 0
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div
+      className="flex-1 overflow-auto"
+      data-scroll-restoration-id={scrollRestorationId}
+    >
       {isLoading ? (
         <ListAreaMessage>Loading...</ListAreaMessage>
       ) : isEmpty ? (
@@ -213,6 +230,7 @@ export function TaskTreeList({
               <TreeTaskGridRow
                 key={node.id}
                 node={node}
+                hasChildren={hasChildren(node)}
                 depth={depth}
                 sessionsByTaskId={sessionsByTaskId}
                 isExpanded={treeOutliner.isExpanded}

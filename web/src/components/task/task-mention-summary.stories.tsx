@@ -26,14 +26,6 @@ export const Todo: Story = {
   },
 }
 
-export const InProgress: Story = {
-  args: {
-    status: 'in_progress',
-    number: 7,
-    title: 'Review pull request',
-  },
-}
-
 export const Completed: Story = {
   args: {
     status: 'completed',

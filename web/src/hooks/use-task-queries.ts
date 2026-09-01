@@ -11,7 +11,7 @@ type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
 
 type LinkedTaskSummary = TaskDetail['links']['outgoing'][number]
 
-type TaskStatus = 'todo' | 'in_progress' | 'completed'
+type TaskStatus = 'todo' | 'completed'
 
 type TaskContext = 'work' | 'personal'
 
@@ -42,22 +42,23 @@ export interface CategorizedTasks {
   all: Task[]
 }
 
+export async function fetchTaskList(filter?: TaskListFilter): Promise<Task[]> {
+  const res = await api.api.tasks.$get({
+    query: {
+      ...filter,
+      includeAncestors: filter?.includeAncestors === true ? 'true' : undefined,
+    },
+  })
+  return unwrapOrThrow(assertOk(res)).json()
+}
+
 export function useTaskList(
   filter?: TaskListFilter,
   options?: { enabled?: boolean },
 ) {
   const query = useQuery({
     queryKey: taskKeys.list(filter),
-    queryFn: async () => {
-      const res = await api.api.tasks.$get({
-        query: {
-          ...filter,
-          includeAncestors:
-            filter?.includeAncestors === true ? 'true' : undefined,
-        },
-      })
-      return unwrapOrThrow(assertOk(res)).json()
-    },
+    queryFn: () => fetchTaskList(filter),
     enabled: options?.enabled ?? true,
   })
 

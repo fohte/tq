@@ -31,26 +31,17 @@ export const Todo: Story = {
       await body.findByRole('menuitemradio', { name: 'Todo' }),
     ).toBeInTheDocument()
     await expect(
-      body.getByRole('menuitemradio', { name: 'In Progress' }),
-    ).toBeInTheDocument()
-    await expect(
       body.getByRole('menuitemradio', { name: 'Completed' }),
     ).toBeInTheDocument()
 
     await userEvent.click(
-      body.getByRole('menuitemradio', { name: 'In Progress' }),
+      body.getByRole('menuitemradio', { name: 'Completed' }),
     )
     // Base UI's RadioGroup passes a second `eventDetails` argument alongside the value
     await expect(args.onStatusChange).toHaveBeenCalledWith(
-      'in_progress',
+      'completed',
       expect.anything(),
     )
-  },
-}
-
-export const InProgress: Story = {
-  args: {
-    status: 'in_progress',
   },
 }
 

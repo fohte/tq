@@ -7,7 +7,6 @@ type TaskStatusValue = NonNullable<ParsedQuery['status']>[number]
 
 const STATUS_OPTIONS: { value: TaskStatusValue; label: string }[] = [
   { value: 'todo', label: 'Todo' },
-  { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
 ]
 
@@ -27,11 +26,9 @@ export function TaskStatusFilterFields({
     <div className="flex flex-col gap-1.5">
       {STATUS_OPTIONS.map((option) => {
         const id = `${idPrefix}-${option.value}`
-        // Unchecking the last remaining status would leave an empty array,
-        // which round-trips through buildSearchQuery/parseSearchQuery as
-        // "no status filter" (match everything) rather than "match
-        // nothing" — the opposite of what an all-unchecked group implies.
-        // "Show everything" stays reachable by checking all three instead.
+        // An empty status array round-trips as "no filter" (match
+        // everything), not "match nothing", so the last checked box stays
+        // disabled instead of allowing an all-unchecked state.
         const isLastChecked =
           status.length === 1 && status.includes(option.value)
         return (

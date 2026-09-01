@@ -89,12 +89,12 @@ introduce a new gray value; use the nearest existing tier.
 
 ### Accent (the one color)
 
-| Token                  | Value     | Tailwind utility                                 | Usage                                                                                                                                                                                                                        |
-| ---------------------- | --------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--primary`            | `#ef4444` | `text-primary` / `bg-primary` / `border-primary` | The one red accent. Used broadly across existing components as punctuation: active nav state, links, focus borders, status icons, in-progress `[~]` status text. **Not** reused by `Button`'s primary look — see note below. |
-| `--primary-foreground` | `#fafafa` | `text-primary-foreground`                        | Text on `bg-primary`                                                                                                                                                                                                         |
-| `--destructive`        | `#ef4444` | `text-destructive` / `border-destructive`        | Same red value as `--primary` — this design has one hue for both "accent" and "danger", not two                                                                                                                              |
-| `--ring`               | `#ef4444` | `ring-ring`                                      | Focus ring color                                                                                                                                                                                                             |
+| Token                  | Value     | Tailwind utility                                 | Usage                                                                                                                                                                           |
+| ---------------------- | --------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--primary`            | `#ef4444` | `text-primary` / `bg-primary` / `border-primary` | The one red accent. Used broadly across existing components as punctuation: active nav state, links, focus borders. **Not** reused by `Button`'s primary look — see note below. |
+| `--primary-foreground` | `#fafafa` | `text-primary-foreground`                        | Text on `bg-primary`                                                                                                                                                            |
+| `--destructive`        | `#ef4444` | `text-destructive` / `border-destructive`        | Same red value as `--primary` — this design has one hue for both "accent" and "danger", not two                                                                                 |
+| `--ring`               | `#ef4444` | `ring-ring`                                      | Focus ring color                                                                                                                                                                |
 
 > **Why `Button`'s primary variant doesn't use `--primary`:** `--primary` is
 > consumed by dozens of existing components (active nav state, links, focus
@@ -494,14 +494,13 @@ after a regen.
 
 Task status is expressed via `StatusIcon`
 (`web/src/components/task/status-icon.tsx`) as a small circular icon — an
-outline circle, a partial-pie circle, or a filled circle with a check mark —
-not literal bracket text.
+outline circle or a filled circle with a check mark — not literal bracket
+text.
 
-| Status        | Icon                                           | Color token                                               | Extra styling                                                                   |
-| ------------- | ---------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `todo`        | outline circle                                 | `text-muted-foreground`                                   | —                                                                               |
-| `in_progress` | partial-pie circle                             | `text-primary` (the red accent)                           | One of the few places red fill/text is used — marks "the one thing in progress" |
-| `completed`   | filled circle + check (lucide-react's `Check`) | `bg-muted-foreground-faint` fill, `text-background` check | Accompanying title text gets `line-through` + `text-muted-foreground`           |
+| Status      | Icon                                           | Color token                                               | Extra styling                                                         |
+| ----------- | ---------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------- |
+| `todo`      | outline circle                                 | `text-muted-foreground`                                   | —                                                                     |
+| `completed` | filled circle + check (lucide-react's `Check`) | `bg-muted-foreground-faint` fill, `text-background` check | Accompanying title text gets `line-through` + `text-muted-foreground` |
 
 Completed task/search-result rows (not just the status icon) are further
 dimmed via the `dim-completed` utility (`opacity: 55%`, defined in

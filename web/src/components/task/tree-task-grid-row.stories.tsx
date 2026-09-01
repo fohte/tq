@@ -68,6 +68,7 @@ function InteractiveTreeTaskGridRow({
   return (
     <TreeTaskGridRow
       node={node}
+      hasChildren={node.children.length > 0}
       sessionsByTaskId={sessionsByTaskId}
       isExpanded={outliner.isExpanded}
       onToggleExpand={outliner.toggleExpand}
@@ -97,6 +98,7 @@ function StaticTreeTaskGridRow(
     <Providers>
       <div className="w-full max-w-3xl">
         <TreeTaskGridRow
+          hasChildren={false}
           sessionsByTaskId={new Map()}
           isExpanded={() => true}
           onToggleExpand={() => {}}
@@ -124,16 +126,6 @@ type Story = StoryObj<typeof meta>
 export const Todo: Story = {
   args: {
     node: { ...baseTreeNode },
-  },
-}
-
-export const InProgress: Story = {
-  args: {
-    node: {
-      ...baseTreeNode,
-      status: 'in_progress',
-      title: 'Review pull request',
-    },
   },
 }
 
@@ -459,12 +451,6 @@ export const AllVariants: Story = {
   render: () => {
     const nodes: TreeNode[] = [
       { ...baseTreeNode, id: '1', title: 'Todo task (personal)' },
-      {
-        ...baseTreeNode,
-        id: '2',
-        title: 'In progress task',
-        status: 'in_progress',
-      },
       {
         ...baseTreeNode,
         id: '3',

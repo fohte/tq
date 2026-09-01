@@ -9,7 +9,7 @@ describe('flattenVisibleRows', () => {
   it('flattens a single root with no children', () => {
     const tree = [makeNode({ id: 'a', number: 1 })]
 
-    expect(flattenVisibleRows(tree, new Set())).toEqual([
+    expect(flattenVisibleRows(tree, alwaysExpanded)).toEqual([
       { id: 'a', number: 1, parentId: null, depth: 0 },
     ])
   })
@@ -30,7 +30,7 @@ describe('flattenVisibleRows', () => {
       }),
     ]
 
-    expect(flattenVisibleRows(tree, new Set())).toEqual([
+    expect(flattenVisibleRows(tree, alwaysExpanded)).toEqual([
       { id: 'a', number: 1, parentId: null, depth: 0 },
       { id: 'b', number: 2, parentId: 'a', depth: 1 },
       { id: 'c', number: 3, parentId: 'b', depth: 2 },
@@ -54,7 +54,7 @@ describe('flattenVisibleRows', () => {
       makeNode({ id: 'd', number: 4 }),
     ]
 
-    expect(flattenVisibleRows(tree, new Set(['b']))).toEqual([
+    expect(flattenVisibleRows(tree, (id: string) => id !== 'b')).toEqual([
       { id: 'a', number: 1, parentId: null, depth: 0 },
       { id: 'b', number: 2, parentId: 'a', depth: 1 },
       { id: 'd', number: 4, parentId: null, depth: 0 },

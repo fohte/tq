@@ -24,7 +24,6 @@ export const tasksSearchApp = new Hono()
     > = {
       is: [
         { value: 'is:todo', display: 'Todo' },
-        { value: 'is:in_progress', display: 'In Progress' },
         { value: 'is:completed', display: 'Completed' },
       ],
       context: [

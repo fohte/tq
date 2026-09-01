@@ -79,7 +79,7 @@ Boundary in practice: `web/src/routes/index.tsx` renders nothing itself and dele
 
 ### Prefer Storybook over manual browser checks
 
-When you need to check how a component looks or behaves in a given state, write or update its story and run it via `pnpm --filter web run test:storybook` (or `pnpm --filter web run storybook` for interactive inspection) before starting a dev server and driving a browser manually.
+When you need to check how a component looks or behaves in a given state, write or update its story and verify it with `pnpm --filter web exec vitest run --changed origin/main` instead of starting a dev server and driving a browser manually — dropping `origin/main` limits `--changed` to staged/unstaged files only, so it silently runs nothing once you've committed. `pnpm --filter web run storybook` is for a human watching the browser — you could screenshot it yourself instead, but that's far more wasteful than the check above.
 
 ## Visual Regression Testing (VRT)
 

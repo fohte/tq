@@ -153,7 +153,7 @@ function SidebarStatusField({
           (value: TaskDetail['status']) => {
             updateStatus.mutate({ id: taskId, status: value })
           },
-          ['todo', 'in_progress', 'completed'],
+          ['todo', 'completed'],
         )}
       >
         <SelectTrigger size="sm" className={fieldValueClassName}>
@@ -161,7 +161,6 @@ function SidebarStatusField({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="todo">todo</SelectItem>
-          <SelectItem value="in_progress">in progress</SelectItem>
           <SelectItem value="completed">completed</SelectItem>
         </SelectContent>
       </Select>

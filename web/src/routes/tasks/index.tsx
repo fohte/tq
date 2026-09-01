@@ -18,7 +18,7 @@ import { sortOptionValues } from '#lib/tasks-query'
 const tasksSearchDefaults = {
   q: buildSearchQuery({
     freeText: '',
-    status: ['todo', 'in_progress'],
+    status: ['todo'],
     sortBy: 'updated',
   }),
 }
@@ -48,7 +48,7 @@ function validateSearch(search: Record<string, unknown>): TasksSearch {
     return {
       q: buildSearchQuery({
         freeText: '',
-        ...(showCompleted ? {} : { status: ['todo', 'in_progress'] }),
+        ...(showCompleted ? {} : { status: ['todo'] }),
         sortBy,
         ...(projectId != null ? { projectId } : {}),
         ...(tag != null ? { label: tag } : {}),
@@ -87,6 +87,7 @@ function TaskList() {
     isLoading,
     tree: filteredTreeData,
     tasks,
+    lazyChildrenFilter,
   } = useFilteredTaskTree({ q })
   const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
 
@@ -115,6 +116,8 @@ function TaskList() {
         tree={filteredTreeData}
         tasks={tasks}
         sessionsByTaskId={sessionsByTaskId}
+        lazyChildrenFilter={lazyChildrenFilter}
+        scrollRestorationId="task-tree-list"
       />
 
       {/* FAB (mobile only) */}

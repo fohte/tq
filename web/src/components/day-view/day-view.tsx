@@ -234,7 +234,10 @@ export function DayViewPresentation({
           </div>
 
           {/* Task list */}
-          <div className="flex-1 overflow-auto">
+          <div
+            className="flex-1 overflow-auto"
+            data-scroll-restoration-id="day-view"
+          >
             {isLoading ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
                 Loading...

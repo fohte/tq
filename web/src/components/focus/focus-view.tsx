@@ -31,10 +31,8 @@ function FocusLabel({ children }: { children: ReactNode }) {
   )
 }
 
-const FOCUS_CARD_STATUS_LABELS: Record<Task['status'], string> = {
-  todo: 'TODO',
-  in_progress: 'IN PROGRESS',
-  completed: 'COMPLETED',
+function focusCardStatusLabel(status: Task['status']): string {
+  return status === 'completed' ? 'COMPLETED' : 'TODO'
 }
 
 function FocusHeader() {
@@ -108,7 +106,7 @@ function FocusCard({
     <div className="border border-border bg-card p-5 md:p-6">
       <div className="flex items-center gap-2">
         <span className="font-mono text-2xs text-primary">▍</span>
-        <FocusLabel>{FOCUS_CARD_STATUS_LABELS[task.status]}</FocusLabel>
+        <FocusLabel>{focusCardStatusLabel(task.status)}</FocusLabel>
         <span className="ml-auto inline-flex items-center gap-x-1 font-mono text-2xs tracking-widest text-muted-foreground">
           <DotSeparatedList items={[`#${String(task.number)}`, task.context]} />
         </span>
@@ -244,7 +242,10 @@ export function FocusViewPresentation({
   return (
     <div className="flex h-full flex-col">
       <FocusHeader />
-      <div className="flex flex-1 justify-center overflow-y-auto px-3.5 py-4 md:px-6 md:py-10">
+      <div
+        className="flex flex-1 justify-center overflow-y-auto px-3.5 py-4 md:px-6 md:py-10"
+        data-scroll-restoration-id="focus-view"
+      >
         <div className="flex w-full max-w-3xl flex-col gap-5 md:gap-7">
           <FocusProgress tasks={queueTasks} />
           <FocusCard task={focusTask} onDefer={onDefer} />

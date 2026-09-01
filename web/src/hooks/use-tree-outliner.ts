@@ -18,33 +18,26 @@ function buildNodesById(tree: TreeNode[]): Map<string, TreeNode> {
   return map
 }
 
-export function useTreeOutliner(
-  tree: TreeNode[],
-  options: {
-    enabled: boolean
-    onOpenSiblingCreate: (parent: TreeNode | null) => void
-  },
-) {
-  const { enabled, onOpenSiblingCreate } = options
-
-  const [collapsedIds, setCollapsedIds] = useState<ReadonlySet<string>>(
+/**
+ * Tracks which node ids have had their expand-state explicitly flipped away
+ * from `defaultExpanded`. `isExpanded(id) = defaultExpanded !== toggledIds.has(id)`
+ * — with `defaultExpanded: true` this is a "collapsed ids" set (today's
+ * eager-fetch behavior); with `defaultExpanded: false` it's an "expanded
+ * ids" set, needed by lazy/browse mode where nothing has children fetched
+ * yet so nothing should start expanded.
+ */
+export function useExpandedIds(defaultExpanded: boolean) {
+  const [toggledIds, setToggledIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   )
-  const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
-
-  const visibleRows = useMemo(
-    () => flattenVisibleRows(tree, collapsedIds),
-    [tree, collapsedIds],
-  )
-  const nodesById = useMemo(() => buildNodesById(tree), [tree])
 
   const isExpanded = useCallback(
-    (id: string) => !collapsedIds.has(id),
-    [collapsedIds],
+    (id: string) => defaultExpanded !== toggledIds.has(id),
+    [toggledIds, defaultExpanded],
   )
 
   const toggleExpand = useCallback((id: string) => {
-    setCollapsedIds((prev) => {
+    setToggledIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) {
         next.delete(id)
@@ -54,6 +47,31 @@ export function useTreeOutliner(
       return next
     })
   }, [])
+
+  return { isExpanded, toggleExpand, toggledIds }
+}
+
+export function useTreeOutliner(
+  tree: TreeNode[],
+  options: {
+    enabled: boolean
+    onOpenSiblingCreate: (parent: TreeNode | null) => void
+    isExpanded?: (id: string) => boolean
+    toggleExpand?: (id: string) => void
+  },
+) {
+  const { enabled, onOpenSiblingCreate } = options
+  const ownExpandState = useExpandedIds(true)
+  const isExpanded = options.isExpanded ?? ownExpandState.isExpanded
+  const toggleExpand = options.toggleExpand ?? ownExpandState.toggleExpand
+
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
+
+  const visibleRows = useMemo(
+    () => flattenVisibleRows(tree, isExpanded),
+    [tree, isExpanded],
+  )
+  const nodesById = useMemo(() => buildNodesById(tree), [tree])
 
   const selectRow = useCallback((id: string) => {
     setSelectedRowId(id)

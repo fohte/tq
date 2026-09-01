@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
 import type { Task } from '#hooks/use-task-queries'
-import { taskKeys } from '#hooks/use-task-queries'
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
@@ -36,6 +35,7 @@ export const projectKeys = {
   list: (filter?: { status?: string }) =>
     [...projectKeys.lists, filter] as const,
   detail: (id: string) => [...projectKeys.all, 'detail', id] as const,
+  taskIds: (id: string) => [...projectKeys.detail(id), 'task-ids'] as const,
 }
 
 export function useProjects(
@@ -66,13 +66,16 @@ export function useProject(id: string) {
   })
 }
 
-export function useProjectTasks(id: string) {
+export function useProjectTaskIds(id: string, options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: taskKeys.list({ projectId: id }),
+    queryKey: projectKeys.taskIds(id),
     queryFn: async () => {
-      const res = await api.api.tasks.$get({ query: { projectId: id } })
+      const res = await api.api.projects[':id']['task-ids'].$get({
+        param: { id },
+      })
       return unwrapOrThrow(assertOk(res)).json()
     },
+    enabled: options?.enabled ?? true,
   })
 }
 

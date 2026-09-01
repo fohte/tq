@@ -93,13 +93,6 @@ vi.mock('#components/task/task-status-picker', () => ({
       </button>
       <button
         onClick={() => {
-          onStatusChange('in_progress')
-        }}
-      >
-        Set In Progress
-      </button>
-      <button
-        onClick={() => {
           onStatusChange('completed')
         }}
       >
@@ -127,6 +120,7 @@ function TreeHarness({
   return (
     <TreeTaskGridRow
       node={node}
+      hasChildren={node.children.length > 0}
       sessionsByTaskId={sessionsByTaskId}
       isExpanded={outliner.isExpanded}
       onToggleExpand={outliner.toggleExpand}
@@ -364,7 +358,7 @@ describe('TreeTaskGridRow', () => {
 
     expect(router.state.location.pathname).toBe('/tasks')
     expect(router.state.location.search).toEqual({
-      q: 'is:todo is:in_progress label:dev:tq sort:updated',
+      q: 'is:todo label:dev:tq sort:updated',
     })
     expect(mockLinkOnClick).not.toHaveBeenCalled()
   })
@@ -388,15 +382,15 @@ describe('TreeTaskGridRow', () => {
     expect(observed).toEqual([true, 1])
   })
 
-  it('updates the status via useUpdateTaskStatus when a non-completed status is selected', async () => {
+  it('updates the status via useUpdateTaskStatus when reopening a completed task', async () => {
     const user = userEvent.setup()
-    await renderTree(makeNode({ status: 'todo' }))
+    await renderTree(makeNode({ status: 'completed' }))
 
-    await user.click(atIndex(screen.getAllByText('Set In Progress'), 0))
+    await user.click(atIndex(screen.getAllByText('Set Todo'), 0))
 
     expect(mockUpdateStatusMutate).toHaveBeenCalledWith({
       id: 'parent-1',
-      status: 'in_progress',
+      status: 'todo',
     })
     expect(mockMutate).not.toHaveBeenCalled()
   })

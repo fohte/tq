@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { expect, within } from 'storybook/test'
 
@@ -41,7 +42,7 @@ const sampleTasks: Task[] = [
     id: '2',
     number: 2,
     title: 'Implement sidebar navigation',
-    status: 'in_progress',
+    status: 'todo',
     estimatedMinutes: 60,
     childCompletionCount: { completed: 0, total: 1 },
   },
@@ -221,5 +222,66 @@ export const AddSubtaskInputOpen: Story = {
     await expect(
       body.getAllByText(/#5 Parent with an open add-subtask row/).length,
     ).toBeGreaterThan(0)
+  },
+}
+
+// lazyChildrenFilter mode: the task passed in has no `children` loaded yet
+// (as if fetched with parentId=root), and its expand toggle is driven by
+// childCompletionCount.total rather than children.length.
+const lazyRootTask: Task = {
+  ...baseTask,
+  id: 'root-1',
+  number: 10,
+  title: 'Root task with lazily-fetched children',
+  childCompletionCount: { completed: 0, total: 1 },
+}
+
+export const LazyChildrenCollapsed: Story = {
+  args: {
+    isLoading: false,
+    tasks: [lazyRootTask],
+    sessionsByTaskId: new Map(),
+    lazyChildrenFilter: {},
+  },
+}
+
+export const LazyChildrenExpanded: Story = {
+  args: {
+    isLoading: false,
+    tasks: [lazyRootTask],
+    sessionsByTaskId: new Map(),
+    lazyChildrenFilter: {},
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/tasks', ({ request }) => {
+          const parentId = new URL(request.url).searchParams.get('parentId')
+          return HttpResponse.json(
+            parentId === 'root-1'
+              ? [
+                  {
+                    ...baseTask,
+                    id: 'child-1',
+                    number: 11,
+                    title: 'Lazily fetched child',
+                    parentId: 'root-1',
+                    parentNumber: 10,
+                  },
+                ]
+              : [],
+          )
+        }),
+      ],
+    },
+  },
+  play: async ({ canvasElement, userEvent }) => {
+    const canvas = within(canvasElement)
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Expand' }))
+
+    await expect(
+      await canvas.findByText('Lazily fetched child'),
+    ).toBeInTheDocument()
   },
 }

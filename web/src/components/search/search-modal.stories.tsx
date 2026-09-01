@@ -66,7 +66,7 @@ const mockTasks = [
     id: 'task-2',
     number: 2,
     title: 'Review pull request',
-    status: 'in_progress',
+    status: 'todo',
     context: 'work',
     estimatedMinutes: 30,
   }),

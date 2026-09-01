@@ -10,10 +10,18 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ROW_INDENT_CLASS_NAME } from '#components/task/task-row-shared'
-import { makeNode } from '#components/task/task-row-test-fixtures'
+import { makeNode, makeTask } from '#components/task/task-row-test-fixtures'
+import type { TaskTreeListProps } from '#components/task/task-tree-list'
 import { TaskTreeList } from '#components/task/task-tree-list'
 import type { TreeNode } from '#hooks/use-tasks'
 import { atIndex } from '#lib/test-utils'
+
+// fetchTaskList is only exercised by the lazy-mode tests below (regular
+// tests never pass lazyChildrenFilter, so TaskTreeList never calls it).
+// vi.hoisted (rather than a plain top-level const) is required here: this
+// file's own imports transitively reach '#hooks/use-tasks' (e.g. via
+// task-row-shared) before a plain const's initializer would have run.
+const { mockFetchTaskList } = vi.hoisted(() => ({ mockFetchTaskList: vi.fn() }))
 
 // LinkExistingTaskMenu/MoveUnderTaskMenu/SetProjectMenu/DeleteTaskDialog
 // (rendered unconditionally by every row, controlled via their own `open`
@@ -29,6 +37,7 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
     useUpdateTaskParent: () => ({ mutate: vi.fn() }),
     useUpdateTask: () => ({ mutate: vi.fn() }),
     useDeleteTask: () => ({ mutate: vi.fn() }),
+    fetchTaskList: mockFetchTaskList,
   }
 })
 
@@ -43,7 +52,10 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
 // The router's first route match resolves asynchronously even with no
 // loaders, so router.load() is awaited before render() to avoid an initial
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
-async function renderTaskTreeList(tree: TreeNode[]) {
+async function renderTaskTreeList(
+  tree: TreeNode[],
+  extraProps: Partial<TaskTreeListProps> = {},
+) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
@@ -55,6 +67,7 @@ async function renderTaskTreeList(tree: TreeNode[]) {
         tree={tree}
         tasks={[]}
         sessionsByTaskId={new Map()}
+        {...extraProps}
       />
     ),
   })
@@ -73,6 +86,7 @@ async function renderTaskTreeList(tree: TreeNode[]) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockFetchTaskList.mockResolvedValue([])
 })
 
 describe('TaskTreeList', () => {
@@ -229,5 +243,40 @@ describe('TaskTreeList', () => {
 
     await screen.findAllByPlaceholderText(/task title|タスクのタイトル/i)
     expect(screen.queryByText(/#1 Root Task/)).toBeNull()
+  })
+})
+
+describe('TaskTreeList lazyChildrenFilter', () => {
+  it("starts collapsed and fetches a row's children only once it is expanded", async () => {
+    const user = userEvent.setup()
+    const root = makeNode({
+      id: 'root-1',
+      title: 'Root Task',
+      childCompletionCount: { completed: 0, total: 1 },
+    })
+    const child = makeTask({
+      id: 'child-1',
+      title: 'Lazily Fetched Child',
+      parentId: 'root-1',
+    })
+    mockFetchTaskList.mockImplementation((filter?: { parentId?: string }) =>
+      Promise.resolve(filter?.parentId === 'root-1' ? [child] : []),
+    )
+
+    await renderTaskTreeList([root], {
+      lazyChildrenFilter: { q: 'is:todo is:in_progress' },
+    })
+
+    expect(screen.getByLabelText('Expand')).toBeInTheDocument()
+    expect(mockFetchTaskList).not.toHaveBeenCalled()
+    expect(screen.queryByText('Lazily Fetched Child')).not.toBeInTheDocument()
+
+    await user.click(screen.getByLabelText('Expand'))
+
+    expect(await screen.findByText('Lazily Fetched Child')).toBeInTheDocument()
+    expect(mockFetchTaskList).toHaveBeenCalledWith({
+      q: 'is:todo is:in_progress',
+      parentId: 'root-1',
+    })
   })
 })

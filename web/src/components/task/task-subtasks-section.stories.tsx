@@ -49,7 +49,7 @@ const mixedSubtasks: Task[] = [
     id: '00000000-0000-0000-0000-000000000012',
     number: 12,
     title: 'Get feedback from the team',
-    status: 'in_progress',
+    status: 'todo',
     estimatedMinutes: 15,
   },
   {
