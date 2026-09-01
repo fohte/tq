@@ -5,10 +5,6 @@ import { makeNode } from '#components/task/task-row-test-fixtures'
 import type { TreeNode } from '#hooks/use-tasks'
 import { useExpandedIds, useTreeOutliner } from '#hooks/use-tree-outliner'
 
-beforeEach(() => {
-  localStorage.clear()
-})
-
 function fireKey(
   key: string,
   opts: KeyboardEventInit = {},
@@ -383,6 +379,10 @@ describe('useTreeOutliner', () => {
 })
 
 describe('useExpandedIds', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
   it('with defaultExpanded true, starts with everything expanded and toggling collapses', () => {
     const { result } = renderHook(() => useExpandedIds(true))
 
