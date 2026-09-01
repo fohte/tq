@@ -1,7 +1,7 @@
 import {
   createRootRoute,
   Outlet,
-  stripSearchParams,
+  retainSearchParams,
 } from '@tanstack/react-router'
 
 import { AppLayout } from '#components/layout/app-layout'
@@ -12,20 +12,20 @@ interface RootSearch {
   context?: ContextFilterMode
 }
 
-const rootSearchDefaults = { context: 'all' as const }
-
+// Omits `context` only when it's genuinely unset, so retainSearchParams
+// below can still carry a non-default value across navigations that don't
+// pass `search` explicitly.
 function validateSearch(search: Record<string, unknown>): RootSearch {
-  const context: ContextFilterMode =
-    search['context'] === 'work' || search['context'] === 'personal'
-      ? search['context']
-      : 'all'
-  return { context }
+  if (search['context'] === 'work' || search['context'] === 'personal') {
+    return { context: search['context'] }
+  }
+  return 'context' in search ? { context: 'all' } : {}
 }
 
 export const Route = createRootRoute({
   validateSearch,
   search: {
-    middlewares: [stripSearchParams(rootSearchDefaults)],
+    middlewares: [retainSearchParams(['context'])],
   },
   component: RootComponent,
 })

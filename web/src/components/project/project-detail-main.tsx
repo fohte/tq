@@ -4,7 +4,6 @@ import { Plus, Search } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { LinkExistingProjectTaskMenu } from '#components/project/link-existing-project-task-menu'
-import { summarizeTaskStatus } from '#components/project/project-detail-utils'
 import { ProjectStatusBadge } from '#components/project/project-status-badge'
 import {
   isProjectStatus,
@@ -27,7 +26,6 @@ import type { TaskListFilter, TreeNode } from '#hooks/use-tasks'
 
 export function ProjectMainContent({
   project,
-  tasks,
   parsedQuery,
   onQueryChange,
   projects,
@@ -38,7 +36,6 @@ export function ProjectMainContent({
   sessionsByTaskId,
 }: {
   project: ProjectDetail
-  tasks: ProjectTask[]
   parsedQuery: ParsedQuery
   onQueryChange: (query: string) => void
   projects: Project[]
@@ -82,13 +79,12 @@ export function ProjectMainContent({
       <div className="border-t border-border" />
 
       {/* Task summary */}
-      <ProjectTaskSummary tasks={tasks} />
+      <ProjectTaskSummary project={project} />
 
       {/* Task list */}
       <ProjectTaskList
         projectId={project.id}
         projectTitle={project.title}
-        allTasks={tasks}
         parsedQuery={parsedQuery}
         onQueryChange={onQueryChange}
         projects={projects}
@@ -204,9 +200,12 @@ function ProjectDescription({
 
 // --- Task Summary ---
 
-function ProjectTaskSummary({ tasks }: { tasks: ProjectTask[] }) {
-  const { total, todo, inProgress, completed } = summarizeTaskStatus(tasks)
-  const progress = total > 0 ? (completed / total) * 100 : 0
+function ProjectTaskSummary({ project }: { project: ProjectDetail }) {
+  const { total, completed } = project.taskCount
+  // Any non-completed status (including legacy in_progress rows) counts as
+  // todo, so this always sums to total.
+  const todo = total - completed
+  const progress = project.completionRate * 100
 
   return (
     <div className="flex flex-col gap-3 border-t border-border pt-5">
@@ -223,10 +222,6 @@ function ProjectTaskSummary({ tasks }: { tasks: ProjectTask[] }) {
       <ProgressBar percent={progress} className="h-1" />
       <div className="flex gap-6 font-mono text-2xs text-muted-foreground">
         <span>Todo: {todo}</span>
-        <span>
-          <span className="text-primary">▍</span>
-          In Progress: {inProgress}
-        </span>
         <span>Completed: {completed}</span>
       </div>
     </div>
@@ -238,7 +233,6 @@ function ProjectTaskSummary({ tasks }: { tasks: ProjectTask[] }) {
 function ProjectTaskList({
   projectId,
   projectTitle,
-  allTasks,
   parsedQuery,
   onQueryChange,
   projects,
@@ -250,7 +244,6 @@ function ProjectTaskList({
 }: {
   projectId: string
   projectTitle: string
-  allTasks: ProjectTask[]
   parsedQuery: ParsedQuery
   onQueryChange: (query: string) => void
   projects: Project[]
@@ -325,7 +318,6 @@ function ProjectTaskList({
         onOpenChange={setIsLinkExistingOpen}
         projectId={projectId}
         projectTitle={projectTitle}
-        excludedTaskIds={new Set(allTasks.map((t) => t.id))}
       />
     </div>
   )

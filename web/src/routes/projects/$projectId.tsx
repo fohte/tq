@@ -10,7 +10,7 @@ import { BackHeaderBar } from '#components/ui/back-header-bar'
 import { FullPageLoading } from '#components/ui/full-page-loading'
 import { FullPageMessage } from '#components/ui/full-page-message'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
-import { useProject, useProjects, useProjectTasks } from '#hooks/use-projects'
+import { useProject, useProjects } from '#hooks/use-projects'
 import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
 
 const projectTasksSearchDefaults = {
@@ -49,7 +49,6 @@ function ProjectDetailPage() {
     isLoading: isProjectLoading,
     error,
   } = useProject(projectId)
-  const { data: tasks, isLoading: isTasksLoading } = useProjectTasks(projectId)
   const projects = useProjects()
 
   const setQuery = (newQuery: string) => {
@@ -68,7 +67,7 @@ function ProjectDetailPage() {
   } = useFilteredTaskTree({ q, projectId })
   const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
 
-  const isLoading = isProjectLoading || isTasksLoading
+  const isLoading = isProjectLoading
 
   if (isLoading) {
     return <FullPageLoading />
@@ -82,11 +81,13 @@ function ProjectDetailPage() {
     <>
       {/* PC layout */}
       <div className="hidden h-full md:flex">
-        <div className="flex-1 overflow-y-auto p-6">
+        <div
+          className="flex-1 overflow-y-auto p-6"
+          data-scroll-restoration-id="project-detail"
+        >
           <ProjectMainContent
             key={project.id}
             project={project}
-            tasks={tasks ?? []}
             parsedQuery={parsedQuery}
             onQueryChange={setQuery}
             projects={projects.data ?? []}
@@ -101,13 +102,15 @@ function ProjectDetailPage() {
       </div>
 
       {/* SP layout */}
-      <div className="flex h-full flex-col overflow-y-auto md:hidden">
+      <div
+        className="flex h-full flex-col overflow-y-auto md:hidden"
+        data-scroll-restoration-id="project-detail-mobile"
+      >
         <BackHeaderBar to="/projects">Projects</BackHeaderBar>
         <div className="p-4">
           <ProjectMainContent
             key={project.id}
             project={project}
-            tasks={tasks ?? []}
             parsedQuery={parsedQuery}
             onQueryChange={setQuery}
             projects={projects.data ?? []}

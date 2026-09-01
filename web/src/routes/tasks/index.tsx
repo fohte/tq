@@ -117,6 +117,7 @@ function TaskList() {
         tasks={tasks}
         sessionsByTaskId={sessionsByTaskId}
         lazyChildrenFilter={lazyChildrenFilter}
+        scrollRestorationId="task-tree-list"
       />
 
       {/* FAB (mobile only) */}

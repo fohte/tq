@@ -126,16 +126,6 @@ export const Todo: Story = {
   },
 }
 
-export const InProgress: Story = {
-  args: {
-    node: {
-      ...baseTreeNode,
-      status: 'in_progress',
-      title: 'Review pull request',
-    },
-  },
-}
-
 export const Completed: Story = {
   args: {
     node: {
@@ -458,12 +448,6 @@ export const AllVariants: Story = {
   render: () => {
     const nodes: TreeNode[] = [
       { ...baseTreeNode, id: '1', title: 'Todo task (personal)' },
-      {
-        ...baseTreeNode,
-        id: '2',
-        title: 'In progress task',
-        status: 'in_progress',
-      },
       {
         ...baseTreeNode,
         id: '3',

@@ -222,14 +222,6 @@ export const Default: Story = {
   },
 }
 
-export const InProgress: Story = {
-  args: {
-    task: { ...baseTask, status: 'in_progress', title: 'Review pull request' },
-    pages: [],
-    subtasks: [],
-  },
-}
-
 export const Completed: Story = {
   args: {
     task: {
