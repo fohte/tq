@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-slim
     outputs:
       packages: ${{ steps.set-packages.outputs.packages }}
+      test_packages: ${{ steps.set-packages.outputs.test_packages }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -89,13 +90,36 @@ jobs:
           echo "packages=$packages" >> "$GITHUB_OUTPUT"
           echo "Selected packages: $packages"
 
+          # Directory name and package.json `name` diverging is not
+          # guaranteed, so resolve workspace:-protocol dependency names
+          # through each package's own `name` field instead of assuming it
+          # equals the directory.
+          pkg_info=$(for dir in "${pkgs[@]}"; do
+            jq -c --arg dir "$dir" '{dir: $dir, name, deps: [((.dependencies // {}) + (.devDependencies // {})) | to_entries[] | select(.value | startswith("workspace:")) | .key]}' "$dir/package.json"
+          done | jq -sc .)
+
+          # Also test packages that import a changed package's code (e.g.
+          # cli/web import api directly), so a breaking change there fails
+          # its own PR.
+          test_packages=$(jq -nc --argjson pkg_info "$pkg_info" --argjson selected "$packages" '
+            ($pkg_info | map({(.name): .dir}) | add) as $dir_of_name
+            | ($pkg_info | map({(.dir): (.deps | map($dir_of_name[.]))}) | add) as $graph
+            | def closure(sel):
+                ($graph | to_entries | map(select(.value | any(. as $d | sel | index($d) != null)) | .key)) as $newly
+                | (sel + $newly | unique) as $next
+                | if ($next | length) == (sel | length) then $next else closure($next) end;
+              closure($selected)
+          ')
+          echo "test_packages=$test_packages" >> "$GITHUB_OUTPUT"
+          echo "Selected test packages: $test_packages"
+
   unit-test-run:
     needs: setup
-    if: ${{ needs.setup.outputs.packages != '[]' }}
+    if: ${{ needs.setup.outputs.test_packages != '[]' }}
     strategy:
       fail-fast: false
       matrix:
-        package: ${{ fromJSON(needs.setup.outputs.packages) }}
+        package: ${{ fromJSON(needs.setup.outputs.test_packages) }}
     name: 'unit-test (${{ matrix.package }})'
     runs-on: ubuntu-latest
     steps:

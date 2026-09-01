@@ -163,7 +163,8 @@ export function registerTaskCommands(
   addSchemaOptions(
     task.command('update <id>').description('Update a task'),
     updateTaskSchema,
-    ['labels', 'recurrenceRule'],
+    // labels and blockedBy (arrays) and recurrenceRule (object) aren't scalar fields, so addSchemaOptions can't turn them into flags.
+    ['labels', 'recurrenceRule', 'blockedBy'],
     // No TQ_CONTEXT default here (unlike list/create/search): update sends
     // only the flags the caller explicitly set, so defaulting --context would
     // silently overwrite an existing task's context on an unrelated update
@@ -182,7 +183,7 @@ export function registerTaskCommands(
         const json: UpdateTaskJson = pickSchemaFields(
           updateTaskSchema,
           options,
-          ['labels', 'recurrenceRule'],
+          ['labels', 'recurrenceRule', 'blockedBy'],
         ).match(
           (value) => value,
           (error) => fail(command, error),
