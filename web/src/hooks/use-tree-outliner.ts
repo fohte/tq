@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { InheritedTaskAttributes } from '#components/task/create-task-inline'
 import { isEditableTarget } from '#hooks/use-global-keybindings'
 import type { TreeNode } from '#hooks/use-tasks'
+import { getStorageItem, parseJson, setStorageItem } from '#lib/local-storage'
 import {
   type AncestorRef,
   buildAncestorChain,
@@ -48,6 +49,21 @@ function buildNodesById(tree: TreeNode[]): Map<string, TreeNode> {
   return map
 }
 
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((v) => typeof v === 'string')
+}
+
+function readStoredIds(storageKey: string): ReadonlySet<string> {
+  const raw = getStorageItem(storageKey).unwrapOr(null)
+  if (raw == null) return new Set()
+  const parsed = parseJson(raw).unwrapOr(null)
+  return new Set(isStringArray(parsed) ? parsed : [])
+}
+
+function writeStoredIds(storageKey: string, ids: ReadonlySet<string>): void {
+  setStorageItem(storageKey, JSON.stringify([...ids])).unwrapOr(undefined)
+}
+
 /**
  * Tracks which node ids have had their expand-state explicitly flipped away
  * from `defaultExpanded`. `isExpanded(id) = defaultExpanded !== toggledIds.has(id)`
@@ -55,10 +71,14 @@ function buildNodesById(tree: TreeNode[]): Map<string, TreeNode> {
  * eager-fetch behavior); with `defaultExpanded: false` it's an "expanded
  * ids" set, needed by lazy/browse mode where nothing has children fetched
  * yet so nothing should start expanded.
+ *
+ * When `storageKey` is set, `toggledIds` is seeded from and mirrored to
+ * localStorage under that key, so expand state survives a remount (route
+ * navigation, reload).
  */
-export function useExpandedIds(defaultExpanded: boolean) {
-  const [toggledIds, setToggledIds] = useState<ReadonlySet<string>>(
-    () => new Set(),
+export function useExpandedIds(defaultExpanded: boolean, storageKey?: string) {
+  const [toggledIds, setToggledIds] = useState<ReadonlySet<string>>(() =>
+    storageKey != null ? readStoredIds(storageKey) : new Set(),
   )
 
   const isExpanded = useCallback(
@@ -66,17 +86,21 @@ export function useExpandedIds(defaultExpanded: boolean) {
     [toggledIds, defaultExpanded],
   )
 
-  const toggleExpand = useCallback((id: string) => {
-    setToggledIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }, [])
+  const toggleExpand = useCallback(
+    (id: string) => {
+      setToggledIds((prev) => {
+        const next = new Set(prev)
+        if (next.has(id)) {
+          next.delete(id)
+        } else {
+          next.add(id)
+        }
+        if (storageKey != null) writeStoredIds(storageKey, next)
+        return next
+      })
+    },
+    [storageKey],
+  )
 
   return { isExpanded, toggleExpand, toggledIds }
 }
