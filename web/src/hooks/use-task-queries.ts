@@ -32,12 +32,17 @@ export interface TaskListFilter {
 
 export const TASK_LIST_PAGE_SIZE = 50
 
+// infiniteLists deliberately isn't nested under `lists`: use-task-mutations.ts
+// runs optimistic updates against every `lists`-prefixed cache entry assuming
+// each holds a Task[], but an infinite query's cache entry is an InfiniteData
+// object instead, so a shared prefix would make those updates throw.
 export const taskKeys = {
   all: ['tasks'] as const,
   lists: ['tasks', 'list'] as const,
   list: (filter?: TaskListFilter) => [...taskKeys.lists, filter] as const,
+  infiniteLists: ['tasks', 'infinite-list'] as const,
   infiniteList: (filter?: TaskListFilter) =>
-    [...taskKeys.lists, 'infinite', filter] as const,
+    [...taskKeys.infiniteLists, filter] as const,
   detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
 }
 
