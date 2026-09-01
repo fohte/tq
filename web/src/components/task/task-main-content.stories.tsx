@@ -159,7 +159,7 @@ function Providers({
   queryClient.setQueryData(commentKeys.all(baseTask.id), [])
   queryClient.setQueryData(activityKeys.all(baseTask.id), [])
   queryClient.setQueryData(taskKeys.list(undefined), [])
-  queryClient.setQueryData(labelKeys.all, [])
+  queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [])
   queryClient.setQueryData(
     projectKeys.list(undefined),
     project ? [project] : [],

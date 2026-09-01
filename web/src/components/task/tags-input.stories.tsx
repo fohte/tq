@@ -14,7 +14,7 @@ const queryClient = new QueryClient({
 const suggestionsQueryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, staleTime: Infinity } },
 })
-suggestionsQueryClient.setQueryData(labelKeys.all, [
+suggestionsQueryClient.setQueryData(labelKeys.list({ context: 'personal' }), [
   {
     id: '1',
     name: 'urgent',

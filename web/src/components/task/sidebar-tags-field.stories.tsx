@@ -12,7 +12,7 @@ const queryClient = new QueryClient({
 })
 // SidebarTagsField's TagsInput always calls useLabels() for suggestions,
 // regardless of the labels chips shown via args.
-queryClient.setQueryData(labelKeys.all, [])
+queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [])
 
 const meta = {
   title: 'Task/SidebarTagsField',

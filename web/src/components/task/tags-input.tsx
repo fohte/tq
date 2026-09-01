@@ -5,6 +5,7 @@ import { AnchoredPopup } from '#components/ui/anchored-popup'
 import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
+import { useCurrentContext } from '#hooks/use-current-context'
 import { useLabels } from '#hooks/use-labels'
 import { cn } from '#lib/utils'
 
@@ -15,7 +16,8 @@ export function TagsInput({
   labels: string[]
   onLabelsChange: (next: string[]) => void
 }) {
-  const { data: labelsData } = useLabels()
+  const context = useCurrentContext()
+  const { data: labelsData } = useLabels({ context })
   const [isAdding, setIsAdding] = useState(false)
   const [input, setInput] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)

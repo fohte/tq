@@ -3,10 +3,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { SidebarContent } from '#components/layout/sidebar'
 import {
+  makeLabel,
   makeProject,
   makeSavedView,
   makeTask,
 } from '#components/layout/sidebar-test-fixtures'
+import { labelKeys } from '#hooks/use-labels'
 import type { Project } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
@@ -18,6 +20,11 @@ import { StoryRouter } from '#storybook-config/story-router'
 const tasksWithTags: Task[] = [
   makeTask({ id: '1', title: 'Task A', labels: ['dev:tq', 'urgent'] }),
   makeTask({ id: '2', title: 'Task B', labels: ['dev:tq'] }),
+]
+
+const labelsForTasksWithTags = [
+  makeLabel({ id: '1', name: 'dev:tq' }),
+  makeLabel({ id: '2', name: 'urgent' }),
 ]
 
 const projectsAcrossStatuses: Project[] = [
@@ -45,8 +52,18 @@ function SidebarContentStory() {
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
   queryClient.setQueryData(taskKeys.list(undefined), tasksWithTags)
-  queryClient.setQueryData(projectKeys.list(undefined), projectsAcrossStatuses)
-  queryClient.setQueryData(savedViewKeys.list(), savedViews)
+  queryClient.setQueryData(
+    projectKeys.list({ context: 'personal' }),
+    projectsAcrossStatuses,
+  )
+  queryClient.setQueryData(
+    savedViewKeys.list({ context: 'personal' }),
+    savedViews,
+  )
+  queryClient.setQueryData(
+    labelKeys.list({ context: 'personal' }),
+    labelsForTasksWithTags,
+  )
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -10,6 +10,7 @@ import {
   ProjectListToolbar,
 } from '#components/project/project-list-toolbar'
 import { ListAreaMessage } from '#components/ui/list-area-message'
+import { useCurrentContext } from '#hooks/use-current-context'
 import { useProjects } from '#hooks/use-projects'
 
 export const Route = createFileRoute('/projects/')({
@@ -17,12 +18,14 @@ export const Route = createFileRoute('/projects/')({
 })
 
 function ProjectList() {
+  const context = useCurrentContext()
   const [filter, setFilter] = useState<ProjectFilterTab>('active')
   const [showCreate, setShowCreate] = useState(false)
 
-  const { data: projects, isLoading } = useProjects(
-    filter === 'active' ? { status: 'active' } : undefined,
-  )
+  const { data: projects, isLoading } = useProjects({
+    context,
+    ...(filter === 'active' ? { status: 'active' as const } : {}),
+  })
 
   return (
     <div className="flex h-full flex-col">
