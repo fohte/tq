@@ -6,7 +6,7 @@ import { expect, within } from 'storybook/test'
 
 import { TaskTreeList } from '#components/task/task-tree-list'
 import type { Task, TreeNode } from '#hooks/use-tasks'
-import { emptyLabelsHandler, emptyTasksHandler } from '#lib/msw-test-handlers'
+import { emptyLabelsHandler } from '#lib/msw-test-handlers'
 import { assertDefined, findVisible } from '#lib/test-utils'
 import { buildTree } from '#lib/tree-builder'
 import { StoryRouter } from '#storybook-config/story-router'
@@ -156,9 +156,8 @@ export const WithSecondLine: Story = {
   },
 }
 
-// The outliner input's position among sibling rows is decided by
-// TaskTreeList's flattened render list (buildTreeRenderRows), not by
-// TreeTaskGridRow itself, so this composed placement only has coverage here.
+// Verifies clicking a row's "Add subtask" action opens CreateTaskModal with
+// that row pre-filled as the parent.
 export const AddSubtaskInputOpen: Story = {
   args: {
     isLoading: false,
@@ -173,16 +172,12 @@ export const AddSubtaskInputOpen: Story = {
     sessionsByTaskId: new Map(),
   },
   parameters: {
-    // The opened row renders CreateTaskInline (via TreeOutlinerInputRow),
-    // which fetches labels on mount, plus the full task list since this
-    // 'child'-mode input has a non-null parentId (see NestedChild in
-    // tree-outliner-input-row.stories.tsx).
+    // CreateTaskModal's tags input fetches /api/labels on mount.
     msw: {
-      handlers: [emptyLabelsHandler, emptyTasksHandler],
+      handlers: [emptyLabelsHandler],
     },
   },
   play: async ({ canvasElement, userEvent }) => {
-    const canvas = within(canvasElement)
     // Both menu widgets render their open content via a portal to
     // document.body (see task-status-picker.stories.tsx), so queries for
     // their items must be scoped to the body, not canvasElement.
@@ -221,9 +216,14 @@ export const AddSubtaskInputOpen: Story = {
       )
     }
 
+    // CreateTaskModal renders via a portal to document.body, not inside
+    // canvasElement, so its content is queried there instead of via canvas.
     await expect(
-      await canvas.findByPlaceholderText(/New task/i),
-    ).toBeInTheDocument()
+      await body.findAllByPlaceholderText(/task title|タスクのタイトル/i),
+    ).not.toHaveLength(0)
+    await expect(
+      body.getAllByText(/#5 Parent with an open add-subtask row/).length,
+    ).toBeGreaterThan(0)
   },
 }
 

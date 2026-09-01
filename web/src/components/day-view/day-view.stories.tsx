@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { expect, fn, within } from 'storybook/test'
 
@@ -243,6 +244,10 @@ const meta = {
     // library-internal scrollbar-gutter sizing artifact, not app layout (same
     // cause as CalendarGrid/CalendarView's disable).
     overflowCheck: { ignoreSelectors: ['.fc-scroller'] },
+    // CreateTaskModal's TagsInput fetches label suggestions.
+    msw: {
+      handlers: [http.get('/api/labels', () => HttpResponse.json([]))],
+    },
   },
   decorators: [
     (Story) => (
@@ -305,6 +310,23 @@ export const OpensCreateScheduleModal: Story = {
       assertDefined(
         findVisible(titleInputs),
         'no visible "Schedule title" input found',
+      ),
+    ).toBeVisible()
+  },
+}
+
+export const OpensCreateTaskModal: Story = {
+  args: Default.args,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await userEvent.click(canvas.getByLabelText('New task'))
+
+    const body = within(canvasElement.ownerDocument.body)
+    const titleInputs =
+      await body.findAllByPlaceholderText(/task title|タスクのタイトル/i)
+    await expect(
+      assertDefined(
+        findVisible(titleInputs),
+        'no visible task title input found',
       ),
     ).toBeVisible()
   },

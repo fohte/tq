@@ -2,7 +2,6 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import type { InheritedTaskAttributes } from '#components/task/create-task-inline'
 import { DeleteTaskDialog } from '#components/task/delete-task-dialog'
 import { GithubLinksChipGroup } from '#components/task/github-links-chip-group'
 import { LlmAuthorLabel } from '#components/task/llm-author-label'
@@ -20,6 +19,7 @@ import {
   TaskSessionsList,
   TaskSessionsSection,
 } from '#components/task/task-sessions-section'
+import type { InheritedTaskAttributes } from '#components/task/task-subtasks-section'
 import {
   TaskSubtasksList,
   TaskSubtasksSection,
@@ -101,6 +101,7 @@ export function TaskMainContent({
         <TaskSubtasksList
           taskId={task.id}
           parentTaskNumber={task.number}
+          parentTaskTitle={task.title}
           subtasks={subtasks}
           inherited={inheritedSubtaskAttributes}
         />
@@ -108,6 +109,7 @@ export function TaskMainContent({
         <TaskSubtasksSection
           taskId={task.id}
           parentTaskNumber={task.number}
+          parentTaskTitle={task.title}
           inherited={inheritedSubtaskAttributes}
         />
       )}

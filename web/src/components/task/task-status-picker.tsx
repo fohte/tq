@@ -38,8 +38,6 @@ export function TaskStatusPicker({
   statusReason: Task['statusReason']
   onValueChange: (value: StatusPickerValue) => void
 }) {
-  // Legacy in_progress tasks have no matching option below, so normalize
-  // to 'todo' here — otherwise the radio group falls back to no selection.
   const value: StatusPickerValue =
     status === 'completed' ? (statusReason ?? 'completed') : 'todo'
 

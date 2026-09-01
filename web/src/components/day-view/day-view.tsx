@@ -21,7 +21,7 @@ import {
   type TimeBlockEvent,
 } from '#components/calendar/calendar-view'
 import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
-import { CreateTaskInline } from '#components/task/create-task-inline'
+import { CreateTaskModal } from '#components/task/create-task-modal'
 import { QueueCandidatesSection } from '#components/task/queue-candidates-section'
 import { TaskListHeader } from '#components/task/task-list-header'
 import { TodayQueueRow } from '#components/task/today-queue-row'
@@ -105,7 +105,7 @@ export function DayViewPresentation({
   onDateChange,
 }: DayViewPresentationProps) {
   const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
-  const [isCreating, setIsCreating] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState<Schedule | undefined>(
     undefined,
@@ -195,7 +195,7 @@ export function DayViewPresentation({
               variant="ghost"
               size="icon-xs"
               onClick={() => {
-                setIsCreating(true)
+                setIsCreateModalOpen(true)
               }}
               aria-label="New task"
             >
@@ -222,22 +222,16 @@ export function DayViewPresentation({
             schedule={editingSchedule}
           />
 
+          <CreateTaskModal
+            open={isCreateModalOpen}
+            onOpenChange={setIsCreateModalOpen}
+            defaultStartDate={new Date().toISOString().slice(0, 10)}
+          />
+
           {/* Summary header */}
           <div className="border-b border-border py-2.5">
             <TaskListHeader tasks={queueTasks} />
           </div>
-
-          {/* Inline create */}
-          {isCreating && (
-            <div className="border-b border-border">
-              <CreateTaskInline
-                onClose={() => {
-                  setIsCreating(false)
-                }}
-                defaultStartDate={new Date().toISOString().slice(0, 10)}
-              />
-            </div>
-          )}
 
           {/* Task list */}
           <div
