@@ -16,6 +16,7 @@ interface ProjectResponse {
   targetDate: string | null
   color: string | null
   sortOrder: number
+  context: string
   createdAt: string
   updatedAt: string
 }
@@ -49,6 +50,7 @@ describe('projects API', () => {
       expect(body.title).toBe('ISUCON 2025')
       expect(body.status).toBe('active')
       expect(body.sortOrder).toBe(0)
+      expect(body.context).toBe('personal')
     })
 
     it('creates a project with all optional fields', async () => {
@@ -63,6 +65,7 @@ describe('projects API', () => {
           targetDate: '2025-05-01',
           color: '#ff0000',
           sortOrder: 5,
+          context: 'work',
         }),
       })
 
@@ -75,6 +78,7 @@ describe('projects API', () => {
       expect(body.targetDate).toBe('2025-05-01')
       expect(body.color).toBe('#ff0000')
       expect(body.sortOrder).toBe(5)
+      expect(body.context).toBe('work')
     })
 
     it('returns 400 for empty title', async () => {
@@ -118,6 +122,25 @@ describe('projects API', () => {
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].title).toBe('Active')
+    })
+
+    it('filters by context', async () => {
+      await createProject('Personal project', { context: 'personal' })
+      const workProject = await createProject('Work project', {
+        context: 'work',
+      })
+
+      const res = await app.request('/api/projects?context=work')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<ProjectDetailResponse[]>(res)
+      expect(body).toEqual([
+        {
+          ...workProject,
+          completionRate: 0,
+          taskCount: { total: 0, completed: 0 },
+        },
+      ])
     })
 
     it('includes task counts for each project', async () => {
@@ -348,6 +371,7 @@ async function createProject(
     startDate?: string
     targetDate?: string
     color?: string
+    context?: string
   } = {},
 ) {
   const res = await app.request('/api/projects', {

@@ -20,6 +20,7 @@ function projectToResponse(project: typeof projects.$inferSelect) {
     targetDate: project.targetDate,
     color: project.color,
     sortOrder: project.sortOrder,
+    context: project.context,
     createdAt: project.createdAt.toISOString(),
     updatedAt: project.updatedAt.toISOString(),
   }
@@ -46,6 +47,7 @@ export const projectsApp = new Hono()
         targetDate: input.targetDate ?? null,
         color: input.color ?? null,
         sortOrder: input.sortOrder ?? 0,
+        context: input.context ?? 'personal',
       })
       .returning()
 
@@ -61,6 +63,9 @@ export const projectsApp = new Hono()
 
     if (query.status) {
       conditions.push(eq(projects.status, query.status))
+    }
+    if (query.context) {
+      conditions.push(eq(projects.context, query.context))
     }
 
     const result = await db

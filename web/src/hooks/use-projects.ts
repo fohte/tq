@@ -115,6 +115,7 @@ export function useCreateProject() {
         targetDate: input.targetDate ?? null,
         color: input.color ?? null,
         sortOrder: 0,
+        context: 'personal',
         createdAt: now,
         updatedAt: now,
         completionRate: 0,

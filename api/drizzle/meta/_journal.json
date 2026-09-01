@@ -232,6 +232,13 @@
       "when": 1788266533044,
       "tag": "0032_nasty_the_captain",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788272800066,
+      "tag": "0033_nostalgic_bug",
+      "breakpoints": true
     }
   ]
 }

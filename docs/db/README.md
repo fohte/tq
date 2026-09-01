@@ -5,9 +5,9 @@
 | Name                                                                                | Columns | Comment | Type       |
 | ----------------------------------------------------------------------------------- | ------- | ------- | ---------- |
 | [public.images](public.images.md)                                                   | 5       |         | BASE TABLE |
-| [public.labels](public.labels.md)                                                   | 4       |         | BASE TABLE |
+| [public.labels](public.labels.md)                                                   | 5       |         | BASE TABLE |
 | [public.oauth_tokens](public.oauth_tokens.md)                                       | 9       |         | BASE TABLE |
-| [public.projects](public.projects.md)                                               | 10      |         | BASE TABLE |
+| [public.projects](public.projects.md)                                               | 11      |         | BASE TABLE |
 | [public.recurrence_rules](public.recurrence_rules.md)                               | 7       |         | BASE TABLE |
 | [public.schedules](public.schedules.md)                                             | 9       |         | BASE TABLE |
 | [public.task_comments](public.task_comments.md)                                     | 5       |         | BASE TABLE |
@@ -71,6 +71,7 @@ erDiagram
   text name
   text color
   timestamp_with_time_zone created_at
+  text context
 }
 "public.oauth_tokens" {
   text id
@@ -94,6 +95,7 @@ erDiagram
   integer sort_order
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+  text context
 }
 "public.recurrence_rules" {
   text id

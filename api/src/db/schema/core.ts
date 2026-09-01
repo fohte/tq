@@ -29,6 +29,11 @@ export const projects = pgTable(
     targetDate: date('target_date'),
     color: text('color'),
     sortOrder: integer('sort_order').notNull().default(0),
+    context: text('context', {
+      enum: ['work', 'personal'],
+    })
+      .notNull()
+      .default('personal'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -39,6 +44,7 @@ export const projects = pgTable(
   (table) => [
     index('idx_projects_status').on(table.status),
     index('idx_projects_sort_order').on(table.sortOrder),
+    index('idx_projects_context').on(table.context),
   ],
 )
 
@@ -129,16 +135,25 @@ export const tasks = pgTable(
   ],
 )
 
-export const labels = pgTable('labels', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  name: text('name').notNull().unique(),
-  color: text('color'),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-})
+export const labels = pgTable(
+  'labels',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    name: text('name').notNull().unique(),
+    color: text('color'),
+    context: text('context', {
+      enum: ['work', 'personal'],
+    })
+      .notNull()
+      .default('personal'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index('idx_labels_context').on(table.context)],
+)
 
 export const taskLabels = pgTable(
   'task_labels',

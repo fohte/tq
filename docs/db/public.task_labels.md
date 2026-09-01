@@ -58,6 +58,7 @@ erDiagram
   text name
   text color
   timestamp_with_time_zone created_at
+  text context
 }
 ```
 

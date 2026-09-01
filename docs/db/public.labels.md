@@ -2,12 +2,13 @@
 
 ## Columns
 
-| Name       | Type                     | Default | Nullable | Children                                    | Parents | Comment |
-| ---------- | ------------------------ | ------- | -------- | ------------------------------------------- | ------- | ------- |
-| id         | text                     |         | false    | [public.task_labels](public.task_labels.md) |         |         |
-| name       | text                     |         | false    |                                             |         |         |
-| color      | text                     |         | true     |                                             |         |         |
-| created_at | timestamp with time zone | now()   | false    |                                             |         |         |
+| Name       | Type                     | Default          | Nullable | Children                                    | Parents | Comment |
+| ---------- | ------------------------ | ---------------- | -------- | ------------------------------------------- | ------- | ------- |
+| id         | text                     |                  | false    | [public.task_labels](public.task_labels.md) |         |         |
+| name       | text                     |                  | false    |                                             |         |         |
+| color      | text                     |                  | true     |                                             |         |         |
+| created_at | timestamp with time zone | now()            | false    |                                             |         |         |
+| context    | text                     | 'personal'::text | false    |                                             |         |         |
 
 ## Constraints
 
@@ -22,6 +23,7 @@
 | ------------------ | -------------------------------------------------------------------------- |
 | labels_pkey        | CREATE UNIQUE INDEX labels_pkey ON public.labels USING btree (id)          |
 | labels_name_unique | CREATE UNIQUE INDEX labels_name_unique ON public.labels USING btree (name) |
+| idx_labels_context | CREATE INDEX idx_labels_context ON public.labels USING btree (context)     |
 
 ## Relations
 
@@ -35,6 +37,7 @@ erDiagram
   text name
   text color
   timestamp_with_time_zone created_at
+  text context
 }
 "public.task_labels" {
   text task_id FK

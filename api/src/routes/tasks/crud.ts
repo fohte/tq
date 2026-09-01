@@ -100,7 +100,7 @@ export const tasksCrudApp = new Hono()
 
         const labelNames =
           input.labels != null
-            ? await syncTaskLabels(tx, task.id, input.labels)
+            ? await syncTaskLabels(tx, task.id, input.labels, task.context)
             : []
 
         await recordEdit(tx, { taskId: task.id }, { action: 'create' }, author)
@@ -338,7 +338,7 @@ export const tasksCrudApp = new Hono()
         }
 
         if (labelsInput !== undefined) {
-          await syncTaskLabels(tx, id, labelsInput)
+          await syncTaskLabels(tx, id, labelsInput, updatedTask.context)
         }
 
         for (const field of changedFields) {

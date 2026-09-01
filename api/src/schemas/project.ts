@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { contextEnum } from '#schemas/task'
+
 export const projectStatus = z.enum([
   'active',
   'paused',
@@ -15,6 +17,7 @@ export const createProjectSchema = z.object({
   targetDate: z.string().optional(),
   color: z.string().optional(),
   sortOrder: z.number().int().optional(),
+  context: contextEnum.optional(),
 })
 
 export const updateProjectSchema = z.object({
@@ -25,8 +28,10 @@ export const updateProjectSchema = z.object({
   targetDate: z.string().nullable().optional(),
   color: z.string().nullable().optional(),
   sortOrder: z.number().int().optional(),
+  context: contextEnum.optional(),
 })
 
 export const listProjectsQuerySchema = z.object({
   status: projectStatus.optional(),
+  context: contextEnum.optional(),
 })
