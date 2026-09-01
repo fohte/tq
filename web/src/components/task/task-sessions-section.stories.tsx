@@ -50,10 +50,9 @@ function Providers({ children }: { children: ReactNode }) {
 }
 
 function SectionStory({ sessions }: { sessions: AgentSession[] }) {
-  // Reset on every render so this story's session-open button visibility
-  // stays deterministic regardless of what else last wrote to this key in
-  // the same browser context (mirrors session-row.stories.tsx's
-  // `SessionRowStory`).
+  // Resets the shared localStorage key so a prior story's write doesn't
+  // leak in; the default (personal) intentionally mismatches this story's
+  // `work` sessions, keeping the resume button hidden.
   resetSessionOpenSettings()
 
   return (
