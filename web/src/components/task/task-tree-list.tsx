@@ -10,7 +10,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import type { DropTarget } from '#components/task/tree-drag-overlay-content'
@@ -85,6 +85,11 @@ export interface TaskTreeListProps {
   lazyChildrenFilter?: TaskListFilter | undefined
   /** Only set this when this list's own div is the scrolling element — TaskTreeList is also embedded non-scrolling inside project-detail-main.tsx, which scrolls via an ancestor container instead. */
   scrollRestorationId?: string
+  /** Root-level pagination (see useFilteredTaskTree). Omit for a list that always fetches everything up front. */
+  hasNextPage?: boolean
+  isFetchingNextPage?: boolean
+  isFetchNextPageError?: boolean
+  fetchNextPage?: () => void
 }
 
 export function TaskTreeList({
@@ -94,6 +99,10 @@ export function TaskTreeList({
   sessionsByTaskId,
   lazyChildrenFilter,
   scrollRestorationId,
+  hasNextPage = false,
+  isFetchingNextPage = false,
+  isFetchNextPageError = false,
+  fetchNextPage,
 }: TaskTreeListProps) {
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [createModalParent, setCreateModalParent] = useState<TreeNode | null>(
@@ -206,6 +215,28 @@ export function TaskTreeList({
 
   const isEmpty = tree.length === 0
 
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!hasNextPage) return
+    const sentinel = sentinelRef.current
+    if (sentinel == null) return
+
+    const observer = new IntersectionObserver((entries) => {
+      if (
+        entries[0]?.isIntersecting === true &&
+        !isFetchingNextPage &&
+        !isFetchNextPageError
+      ) {
+        fetchNextPage?.()
+      }
+    })
+    observer.observe(sentinel)
+    return () => {
+      observer.disconnect()
+    }
+  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage])
+
   return (
     <div
       className="flex-1 overflow-auto"
@@ -242,6 +273,11 @@ export function TaskTreeList({
               />
             ))}
           </div>
+
+          {hasNextPage && <div ref={sentinelRef} aria-hidden />}
+          {isFetchingNextPage && (
+            <ListAreaMessage>Loading more...</ListAreaMessage>
+          )}
 
           <DragOverlay>
             {activeNode && (

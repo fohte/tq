@@ -124,6 +124,16 @@ export const Empty: Story = {
   },
 }
 
+export const LoadingMore: Story = {
+  args: {
+    isLoading: false,
+    tasks: sampleTasks,
+    sessionsByTaskId: new Map(),
+    hasNextPage: true,
+    isFetchingNextPage: true,
+  },
+}
+
 export const WithSecondLine: Story = {
   args: {
     isLoading: false,

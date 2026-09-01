@@ -34,6 +34,10 @@ export function ProjectMainContent({
   isTasksLoading,
   lazyChildrenFilter,
   sessionsByTaskId,
+  hasNextPage,
+  isFetchingNextPage,
+  isFetchNextPageError,
+  fetchNextPage,
 }: {
   project: ProjectDetail
   parsedQuery: ParsedQuery
@@ -44,6 +48,10 @@ export function ProjectMainContent({
   isTasksLoading: boolean
   lazyChildrenFilter: TaskListFilter | undefined
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
+  hasNextPage: boolean
+  isFetchingNextPage: boolean
+  isFetchNextPageError: boolean
+  fetchNextPage: () => void
 }) {
   const statusOrFallback = isProjectStatus(project.status)
     ? project.status
@@ -93,6 +101,10 @@ export function ProjectMainContent({
         isLoading={isTasksLoading}
         lazyChildrenFilter={lazyChildrenFilter}
         sessionsByTaskId={sessionsByTaskId}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        isFetchNextPageError={isFetchNextPageError}
+        fetchNextPage={fetchNextPage}
       />
     </div>
   )
@@ -239,6 +251,10 @@ function ProjectTaskList({
   isLoading,
   lazyChildrenFilter,
   sessionsByTaskId,
+  hasNextPage,
+  isFetchingNextPage,
+  isFetchNextPageError,
+  fetchNextPage,
 }: {
   projectId: string
   projectTitle: string
@@ -250,6 +266,10 @@ function ProjectTaskList({
   isLoading: boolean
   lazyChildrenFilter: TaskListFilter | undefined
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
+  hasNextPage: boolean
+  isFetchingNextPage: boolean
+  isFetchNextPageError: boolean
+  fetchNextPage: () => void
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isLinkExistingOpen, setIsLinkExistingOpen] = useState(false)
@@ -293,6 +313,10 @@ function ProjectTaskList({
           tasks={filteredTasks}
           sessionsByTaskId={sessionsByTaskId}
           lazyChildrenFilter={lazyChildrenFilter}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          isFetchNextPageError={isFetchNextPageError}
+          fetchNextPage={fetchNextPage}
         />
       </div>
 

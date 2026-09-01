@@ -147,6 +147,10 @@ function MainContentStory({
           isTasksLoading={false}
           lazyChildrenFilter={undefined}
           sessionsByTaskId={new Map()}
+          hasNextPage={false}
+          isFetchingNextPage={false}
+          isFetchNextPageError={false}
+          fetchNextPage={() => {}}
         />
       </div>
     </Providers>
@@ -229,6 +233,10 @@ export const FullPagePC: StoryObj<{
             isTasksLoading={false}
             lazyChildrenFilter={undefined}
             sessionsByTaskId={new Map()}
+            hasNextPage={false}
+            isFetchingNextPage={false}
+            isFetchNextPageError={false}
+            fetchNextPage={() => {}}
           />
         </div>
         <ProjectSidebar project={project} />
@@ -263,6 +271,10 @@ export const FullPageSP: StoryObj<{
             isTasksLoading={false}
             lazyChildrenFilter={undefined}
             sessionsByTaskId={new Map()}
+            hasNextPage={false}
+            isFetchingNextPage={false}
+            isFetchNextPageError={false}
+            fetchNextPage={() => {}}
           />
         </div>
         <div className="border-t border-border p-4">
