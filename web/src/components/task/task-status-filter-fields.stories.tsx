@@ -17,15 +17,13 @@ const meta = {
     ),
   ],
   args: {
-    status: ['todo', 'in_progress'],
+    status: ['todo'],
     onStatusChange: fn(),
   },
 } satisfies Meta<typeof TaskStatusFilterFields>
 
 export default meta
 type Story = StoryObj<typeof meta>
-
-export const Default: Story = {}
 
 export const NoneSelected: Story = {
   args: {
@@ -35,7 +33,7 @@ export const NoneSelected: Story = {
 
 export const AllSelected: Story = {
   args: {
-    status: ['todo', 'in_progress', 'completed'],
+    status: ['todo', 'completed'],
   },
 }
 
@@ -44,16 +42,18 @@ export const CheckCompleted: Story = {
     await userEvent.click(canvas.getByRole('checkbox', { name: 'Completed' }))
     await expect(args.onStatusChange).toHaveBeenCalledWith([
       'todo',
-      'in_progress',
       'completed',
     ])
   },
 }
 
 export const UncheckTodo: Story = {
+  args: {
+    status: ['todo', 'completed'],
+  },
   play: async ({ canvas, args }) => {
     await userEvent.click(canvas.getByRole('checkbox', { name: 'Todo' }))
-    await expect(args.onStatusChange).toHaveBeenCalledWith(['in_progress'])
+    await expect(args.onStatusChange).toHaveBeenCalledWith(['completed'])
   },
 }
 

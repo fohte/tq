@@ -277,12 +277,12 @@ describe('update_task tool', () => {
 })
 
 describe('update_task_status tool', () => {
-  it('sets a task to in_progress', async () => {
+  it('sets a task to completed', async () => {
     const task = await createTask('Start me')
 
     const result = await callTool('update_task_status', {
       taskId: task.id,
-      status: 'in_progress',
+      status: 'completed',
     })
 
     expect(parseToolData(result)).toEqual({
@@ -290,7 +290,7 @@ describe('update_task_status tool', () => {
       number: '<number>',
       title: 'Start me',
       description: null,
-      status: 'in_progress',
+      status: 'completed',
       context: 'personal',
       commitment: 'inbox',
       labels: [],
@@ -304,6 +304,7 @@ describe('update_task_status tool', () => {
       githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
+      nextTask: null,
     })
   })
 
@@ -313,7 +314,7 @@ describe('update_task_status tool', () => {
 
     const result = await callTool('update_task_status', {
       taskId: task.id,
-      status: 'in_progress',
+      status: 'completed',
     })
 
     expect(parseToolData(result)).toEqual({
@@ -321,7 +322,7 @@ describe('update_task_status tool', () => {
       number: '<number>',
       title: 'Start me',
       description: null,
-      status: 'in_progress',
+      status: 'completed',
       context: 'personal',
       commitment: 'inbox',
       labels: ['urgent'],
@@ -335,40 +336,7 @@ describe('update_task_status tool', () => {
       githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
-    })
-  })
-
-  it('moves a task back to todo', async () => {
-    const task = await createTask('Stop me')
-    await callTool('update_task_status', {
-      taskId: task.id,
-      status: 'in_progress',
-    })
-
-    const result = await callTool('update_task_status', {
-      taskId: task.id,
-      status: 'todo',
-    })
-
-    expect(parseToolData(result)).toEqual({
-      id: '<uuid>',
-      number: '<number>',
-      title: 'Stop me',
-      description: null,
-      status: 'todo',
-      context: 'personal',
-      commitment: 'inbox',
-      labels: [],
-      startDate: null,
-      dueDate: null,
-      estimatedMinutes: null,
-      parentId: null,
-      projectId: null,
-      recurrenceRuleId: null,
-      recurrenceRule: null,
-      githubLinks: [],
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
+      nextTask: null,
     })
   })
 

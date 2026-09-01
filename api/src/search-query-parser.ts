@@ -1,6 +1,6 @@
 export interface ParsedQuery {
   freeText: string
-  status?: Array<'todo' | 'in_progress' | 'completed'>
+  status?: Array<'todo' | 'completed'>
   label?: string
   context?: 'work' | 'personal'
   commitment?: 'inbox' | 'active' | 'someday'
@@ -12,8 +12,10 @@ export interface ParsedQuery {
   sortBy?: 'due' | 'created' | 'updated' | 'estimate'
 }
 
-const STATUS_VALUES: ReadonlySet<'todo' | 'in_progress' | 'completed'> =
-  new Set(['todo', 'in_progress', 'completed'])
+const STATUS_VALUES: ReadonlySet<'todo' | 'completed'> = new Set([
+  'todo',
+  'completed',
+])
 const CONTEXT_VALUES: ReadonlySet<'work' | 'personal'> = new Set([
   'work',
   'personal',

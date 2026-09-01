@@ -165,6 +165,11 @@ export const EXCLUDED_ROUTES = {
     'backs the web search bar autocomplete, not a CLI concern',
   'GET /api/tasks/mentions':
     "backs the editor's # mention autocomplete, not a CLI concern",
+
+  // Backs the web project detail page's task tree (ids only, no task data);
+  // `GET /api/projects/:id` already covers a CLI's project-summary use case.
+  'GET /api/projects/:id/task-ids':
+    'backs the web project detail page, not a CLI concern',
 } as const satisfies Partial<Record<AllRoutes, string>>
 
 type ExcludedRoutes = keyof typeof EXCLUDED_ROUTES

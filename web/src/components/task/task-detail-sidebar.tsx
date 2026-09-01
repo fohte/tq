@@ -148,10 +148,7 @@ function SidebarStatusField({
   return (
     <SidebarField label="STATUS">
       <Select
-        // Legacy in_progress tasks have no matching SelectItem below, so
-        // normalize to 'todo' here — otherwise the trigger falls back to
-        // displaying the raw enum string instead of a label.
-        value={status === 'completed' ? 'completed' : 'todo'}
+        value={status}
         onValueChange={selectValueHandler(
           (value: TaskDetail['status']) => {
             updateStatus.mutate({ id: taskId, status: value })

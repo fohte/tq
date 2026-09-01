@@ -12,7 +12,7 @@ import { createMentionAutocompleteStore } from '#lib/inline-reference/providers/
 
 const sampleItems: MentionSuggestion[] = [
   { id: '1', number: 12, title: 'Deploy to production', status: 'todo' },
-  { id: '2', number: 120, title: 'Deploy docs site', status: 'in_progress' },
+  { id: '2', number: 120, title: 'Deploy docs site', status: 'todo' },
   { id: '3', number: 123, title: 'Deprecate old API', status: 'completed' },
 ]
 

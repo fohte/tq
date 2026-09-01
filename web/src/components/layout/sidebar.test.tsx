@@ -205,7 +205,7 @@ describe('Sidebar', () => {
       expect(devTqLink).toHaveAttribute('href', '/tasks')
       expect(devTqLink.dataset['search']).toBe(
         JSON.stringify({
-          q: 'is:todo is:in_progress label:dev:tq sort:updated',
+          q: 'is:todo label:dev:tq sort:updated',
         }),
       )
     })

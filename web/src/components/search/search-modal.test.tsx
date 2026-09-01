@@ -11,7 +11,7 @@ interface MockTask {
   number: number
   title: string
   description: null
-  status: 'todo' | 'in_progress' | 'completed'
+  status: 'todo' | 'completed'
   context: 'work' | 'personal'
   labels: string[]
   startDate: null
@@ -59,7 +59,7 @@ const mockTasks = [
     id: '00000000-0000-0000-0000-000000000002',
     number: 2,
     title: 'Review pull request',
-    status: 'in_progress',
+    status: 'completed',
     context: 'work',
     estimatedMinutes: 30,
   }),
@@ -75,7 +75,7 @@ const personalTask = makeTask({
 
 const mockSuggestions = [
   { value: 'is:todo', display: 'Todo', category: 'is' },
-  { value: 'is:in_progress', display: 'In Progress', category: 'is' },
+  { value: 'is:completed', display: 'Completed', category: 'is' },
 ]
 
 let mockSearchData: typeof mockTasks = []
@@ -205,7 +205,7 @@ describe('SearchModal', () => {
     await user.type(input, 'is:')
 
     expect(screen.getByText('is:todo')).toBeInTheDocument()
-    expect(screen.getByText('is:in_progress')).toBeInTheDocument()
+    expect(screen.getByText('is:completed')).toBeInTheDocument()
   })
 
   it('navigates results with arrow keys', async () => {

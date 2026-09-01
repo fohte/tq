@@ -41,7 +41,7 @@ const sampleTasks: Task[] = [
     id: '2',
     number: 2,
     title: 'Implement sidebar navigation',
-    status: 'in_progress',
+    status: 'todo',
     estimatedMinutes: 60,
     childCompletionCount: { completed: 0, total: 1 },
   },

@@ -5,7 +5,7 @@ import { sortOptionValues, tagFilterSearch } from '#lib/tasks-query'
 describe('tagFilterSearch', () => {
   it('builds a not-completed, tag-scoped, updated-sorted search', () => {
     expect(tagFilterSearch('dev:tq')).toEqual({
-      q: 'is:todo is:in_progress label:dev:tq sort:updated',
+      q: 'is:todo label:dev:tq sort:updated',
     })
   })
 })

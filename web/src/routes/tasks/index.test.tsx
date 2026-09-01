@@ -128,7 +128,7 @@ describe('TaskList sort selector', () => {
       )
     })
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { q: 'is:todo is:in_progress sort:updated' },
+      { q: 'is:todo sort:updated' },
     ])
   })
 
@@ -143,37 +143,33 @@ describe('TaskList sort selector', () => {
       'Created',
     )
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
-      { q: 'is:todo is:in_progress sort:created' },
+      { q: 'is:todo sort:created' },
     ])
   })
 })
 
 describe('TaskList status filter', () => {
-  it('defaults to todo and in_progress checked, completed unchecked', async () => {
+  it('defaults to todo checked, completed unchecked', async () => {
     const user = userEvent.setup()
     renderTaskList()
 
-    await user.click(
-      await screen.findByRole('button', { name: 'is todo, doing' }),
-    )
+    await user.click(await screen.findByRole('button', { name: 'is todo' }))
     await screen.findByRole('checkbox', { name: 'Todo' })
-    const checkedStates = ['Todo', 'In Progress', 'Completed'].map((name) =>
+    const checkedStates = ['Todo', 'Completed'].map((name) =>
       screen.getByRole('checkbox', { name }).getAttribute('aria-checked'),
     )
-    expect(checkedStates).toEqual(['true', 'true', 'false'])
+    expect(checkedStates).toEqual(['true', 'false'])
   })
 
   it('requests all statuses once "Completed" is also checked', async () => {
     const user = userEvent.setup()
     renderTaskList()
 
-    await user.click(
-      await screen.findByRole('button', { name: 'is todo, doing' }),
-    )
+    await user.click(await screen.findByRole('button', { name: 'is todo' }))
     await user.click(await screen.findByRole('checkbox', { name: 'Completed' }))
 
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
-      { q: 'is:todo is:in_progress is:completed sort:updated' },
+      { q: 'is:todo is:completed sort:updated' },
     ])
   })
 })
@@ -193,14 +189,14 @@ describe('TaskList project filter selector', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', { name: 'is todo, doing' }),
+        screen.getByRole('button', { name: 'is todo' }),
       ).toBeInTheDocument()
     })
     expect(
       screen.queryByRole('button', { name: /^project / }),
     ).not.toBeInTheDocument()
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { q: 'is:todo is:in_progress sort:updated' },
+      { q: 'is:todo sort:updated' },
     ])
   })
 
@@ -216,7 +212,7 @@ describe('TaskList project filter selector', () => {
       screen.getByRole('button', { name: 'project Website Redesign' }),
     ).toBeInTheDocument()
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
-      { q: 'is:todo is:in_progress project:proj-1 sort:updated' },
+      { q: 'is:todo project:proj-1 sort:updated' },
     ])
   })
 })
@@ -227,21 +223,19 @@ describe('TaskList tag filter', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', { name: 'is todo, doing' }),
+        screen.getByRole('button', { name: 'is todo' }),
       ).toBeInTheDocument()
     })
     expect(
       screen.queryByRole('button', { name: /^label / }),
     ).not.toBeInTheDocument()
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { q: 'is:todo is:in_progress sort:updated' },
+      { q: 'is:todo sort:updated' },
     ])
   })
 
   it('shows the label chip and requests data scoped to the tag from a label: query', async () => {
-    renderTaskList(
-      '/tasks?q=is%3Atodo%20is%3Ain_progress%20sort%3Aupdated%20label%3Adev%3Atq',
-    )
+    renderTaskList('/tasks?q=is%3Atodo%20sort%3Aupdated%20label%3Adev%3Atq')
 
     await waitFor(() => {
       expect(
@@ -249,14 +243,14 @@ describe('TaskList tag filter', () => {
       ).toBeInTheDocument()
     })
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { q: 'is:todo is:in_progress sort:updated label:dev:tq' },
+      { q: 'is:todo sort:updated label:dev:tq' },
     ])
   })
 
   it('removes the label from the q param when the label chip is cleared', async () => {
     const user = userEvent.setup()
     const { router } = renderTaskList(
-      '/tasks?q=is%3Atodo%20is%3Ain_progress%20sort%3Aupdated%20label%3Adev%3Atq',
+      '/tasks?q=is%3Atodo%20sort%3Aupdated%20label%3Adev%3Atq',
     )
 
     await user.click(
@@ -265,7 +259,7 @@ describe('TaskList tag filter', () => {
     await user.click(await screen.findByRole('button', { name: 'No label' }))
 
     // Removing the label brings q back to the exact default
-    // (is:todo is:in_progress sort:updated), which stripSearchParams
+    // (is:todo sort:updated), which stripSearchParams
     // drops from the URL entirely.
     expect(router.state.location.search).toEqual({})
   })
@@ -277,7 +271,7 @@ describe('TaskList URL query encoding', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', { name: 'is todo, doing' }),
+        screen.getByRole('button', { name: 'is todo' }),
       ).toBeInTheDocument()
     })
     expect(router.state.location.search).toEqual({})
@@ -291,7 +285,7 @@ describe('TaskList URL query encoding', () => {
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
     expect(router.state.location.search).toEqual({
-      q: 'is:todo is:in_progress sort:created',
+      q: 'is:todo sort:created',
     })
   })
 
@@ -299,13 +293,11 @@ describe('TaskList URL query encoding', () => {
     const user = userEvent.setup()
     const { router } = renderTaskList()
 
-    await user.click(
-      await screen.findByRole('button', { name: 'is todo, doing' }),
-    )
+    await user.click(await screen.findByRole('button', { name: 'is todo' }))
     await user.click(await screen.findByRole('checkbox', { name: 'Completed' }))
 
     expect(router.state.location.search).toEqual({
-      q: 'is:todo is:in_progress is:completed sort:updated',
+      q: 'is:todo is:completed sort:updated',
     })
   })
 
@@ -321,7 +313,7 @@ describe('TaskList URL query encoding', () => {
     await user.keyboard('{Enter}')
 
     expect(router.state.location.search).toEqual({
-      q: 'is:todo is:in_progress project:proj-1 sort:updated',
+      q: 'is:todo project:proj-1 sort:updated',
     })
   })
 
@@ -354,14 +346,14 @@ describe('TaskList URL query encoding', () => {
   it('keeps a token none of the filter pickers understand when a known field changes', async () => {
     const user = userEvent.setup()
     const { router } = renderTaskList(
-      '/tasks?q=is%3Atodo%20is%3Ain_progress%20sort%3Aupdated%20has%3Apages',
+      '/tasks?q=is%3Atodo%20sort%3Aupdated%20has%3Apages',
     )
 
     await user.click(await screen.findByRole('button', { name: /Sort by/ }))
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
     expect(router.state.location.search).toEqual({
-      q: 'is:todo is:in_progress has:pages sort:created',
+      q: 'is:todo has:pages sort:created',
     })
   })
 
@@ -374,7 +366,7 @@ describe('TaskList URL query encoding', () => {
       ).toBeInTheDocument()
     })
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { q: 'is:todo is:in_progress label:urgent sort:updated' },
+      { q: 'is:todo label:urgent sort:updated' },
     ])
   })
 })

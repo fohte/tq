@@ -41,7 +41,7 @@ const outgoingTasks: LinkedTaskSummary[] = [
     id: 'task-003',
     number: 15,
     title: 'Write the migration',
-    status: 'in_progress',
+    status: 'todo',
   },
 ]
 
