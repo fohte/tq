@@ -24,6 +24,7 @@ const makeTasks = (overrides: Array<Partial<Task>>): Task[] =>
     recurrenceRuleId: null,
     recurrenceRule: null,
     githubLinks: [],
+    blockedByNumbers: [],
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
     childCompletionCount: { completed: 0, total: 0 },
