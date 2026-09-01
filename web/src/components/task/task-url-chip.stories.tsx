@@ -41,6 +41,8 @@ const baseTask: TaskUrlPreview = {
   pages: [],
   timeBlocks: [],
   links: { outgoing: [], incoming: [] },
+  blockedBy: [],
+  blocking: [],
 }
 
 function Providers({
