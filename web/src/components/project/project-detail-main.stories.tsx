@@ -46,6 +46,7 @@ const baseTask: Omit<ProjectTask, 'id' | 'title' | 'status'> = {
   projectId: 'proj-001',
   recurrenceRuleId: null,
   githubLinks: [],
+  blockedByNumbers: [],
   createdAt: '2026-06-01T00:00:00.000Z',
   updatedAt: '2026-06-01T00:00:00.000Z',
   childCompletionCount: { completed: 0, total: 0 },
