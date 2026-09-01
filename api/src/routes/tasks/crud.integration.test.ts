@@ -239,6 +239,48 @@ describe('tasks CRUD API', () => {
       expect(sortedLabels).toEqual(['foo', 'new-label'])
     })
 
+    it('creates a new label with the creating task context', async () => {
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Work task',
+          context: 'work',
+          labels: ['new-label'],
+        }),
+      })
+      expect(res.status).toBe(201)
+
+      const labelsRes = await app.request('/api/labels')
+      const body =
+        await jsonBody<{ name: string; context: string }[]>(labelsRes)
+      expect(body.map(({ name, context }) => ({ name, context }))).toEqual([
+        { name: 'new-label', context: 'work' },
+      ])
+    })
+
+    it('leaves an existing label context unchanged when attached to a task in a different context', async () => {
+      await createLabel('existing')
+
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Work task',
+          context: 'work',
+          labels: ['existing'],
+        }),
+      })
+      expect(res.status).toBe(201)
+
+      const labelsRes = await app.request('/api/labels')
+      const body =
+        await jsonBody<{ name: string; context: string }[]>(labelsRes)
+      expect(body.map(({ name, context }) => ({ name, context }))).toEqual([
+        { name: 'existing', context: 'personal' },
+      ])
+    })
+
     it('returns an empty labels array when no labels are given', async () => {
       const res = await app.request('/api/tasks', {
         method: 'POST',
@@ -1338,6 +1380,24 @@ describe('tasks CRUD API', () => {
         labels: ['new-label'],
         updatedAt: body.updatedAt,
       })
+    })
+
+    it('creates a new label with the updated task context', async () => {
+      const created = await createTask('Task')
+
+      const res = await app.request(`/api/tasks/${created.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ context: 'work', labels: ['new-label'] }),
+      })
+      expect(res.status).toBe(200)
+
+      const labelsRes = await app.request('/api/labels')
+      const body =
+        await jsonBody<{ name: string; context: string }[]>(labelsRes)
+      expect(body.map(({ name, context }) => ({ name, context }))).toEqual([
+        { name: 'new-label', context: 'work' },
+      ])
     })
 
     it('clears all labels when given an empty array', async () => {

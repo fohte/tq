@@ -19,6 +19,7 @@ const otherProject: Project = {
   targetDate: null,
   color: null,
   sortOrder: 0,
+  context: 'personal',
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
   completionRate: 0,

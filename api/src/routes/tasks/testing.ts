@@ -333,8 +333,13 @@ export async function createComment(taskId: string, content: string) {
   return jsonBody(res, idResponseSchema)
 }
 
-export async function createLabel(name: string) {
-  return firstOrThrow(await db.insert(labels).values({ name }).returning())
+export async function createLabel(
+  name: string,
+  opts: { context?: 'work' | 'personal' } = {},
+) {
+  return firstOrThrow(
+    await db.insert(labels).values({ name, context: opts.context }).returning(),
+  )
 }
 
 export interface TaskEventFields {

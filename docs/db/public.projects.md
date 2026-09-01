@@ -2,18 +2,19 @@
 
 ## Columns
 
-| Name        | Type                     | Default        | Nullable | Children                                                                                | Parents | Comment |
-| ----------- | ------------------------ | -------------- | -------- | --------------------------------------------------------------------------------------- | ------- | ------- |
-| id          | text                     |                | false    | [public.tasks](public.tasks.md) [public.github_sync_rules](public.github_sync_rules.md) |         |         |
-| title       | text                     |                | false    |                                                                                         |         |         |
-| description | text                     |                | true     |                                                                                         |         |         |
-| status      | text                     | 'active'::text | false    |                                                                                         |         |         |
-| start_date  | date                     |                | true     |                                                                                         |         |         |
-| target_date | date                     |                | true     |                                                                                         |         |         |
-| color       | text                     |                | true     |                                                                                         |         |         |
-| sort_order  | integer                  | 0              | false    |                                                                                         |         |         |
-| created_at  | timestamp with time zone | now()          | false    |                                                                                         |         |         |
-| updated_at  | timestamp with time zone | now()          | false    |                                                                                         |         |         |
+| Name        | Type                     | Default          | Nullable | Children                                                                                | Parents | Comment |
+| ----------- | ------------------------ | ---------------- | -------- | --------------------------------------------------------------------------------------- | ------- | ------- |
+| id          | text                     |                  | false    | [public.tasks](public.tasks.md) [public.github_sync_rules](public.github_sync_rules.md) |         |         |
+| title       | text                     |                  | false    |                                                                                         |         |         |
+| description | text                     |                  | true     |                                                                                         |         |         |
+| status      | text                     | 'active'::text   | false    |                                                                                         |         |         |
+| start_date  | date                     |                  | true     |                                                                                         |         |         |
+| target_date | date                     |                  | true     |                                                                                         |         |         |
+| color       | text                     |                  | true     |                                                                                         |         |         |
+| sort_order  | integer                  | 0                | false    |                                                                                         |         |         |
+| created_at  | timestamp with time zone | now()            | false    |                                                                                         |         |         |
+| updated_at  | timestamp with time zone | now()            | false    |                                                                                         |         |         |
+| context     | text                     | 'personal'::text | false    |                                                                                         |         |         |
 
 ## Constraints
 
@@ -28,6 +29,7 @@
 | projects_pkey           | CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)            |
 | idx_projects_status     | CREATE INDEX idx_projects_status ON public.projects USING btree (status)         |
 | idx_projects_sort_order | CREATE INDEX idx_projects_sort_order ON public.projects USING btree (sort_order) |
+| idx_projects_context    | CREATE INDEX idx_projects_context ON public.projects USING btree (context)       |
 
 ## Relations
 
@@ -48,6 +50,7 @@ erDiagram
   integer sort_order
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+  text context
 }
 "public.tasks" {
   text id

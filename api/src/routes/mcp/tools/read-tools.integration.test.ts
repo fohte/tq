@@ -441,6 +441,7 @@ describe('read tools', () => {
           id: label.id,
           name: 'urgent',
           color: label.color,
+          context: label.context,
           createdAt: label.createdAt.toISOString(),
         },
       ])
