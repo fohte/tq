@@ -47,7 +47,7 @@ const projects = [projectA, projectB]
 
 const defaultParsed: ParsedQuery = {
   freeText: '',
-  status: ['todo', 'in_progress'],
+  status: ['todo'],
   sortBy: 'updated',
 }
 
@@ -116,7 +116,7 @@ export const ProjectFilterDisabledIgnoresTypedToken: Story = {
     await userEvent.keyboard('{Enter}')
 
     await expect(args.onQueryChange).toHaveBeenCalledWith(
-      'is:todo is:in_progress sort:updated',
+      'is:todo sort:updated',
     )
   },
 }
@@ -177,16 +177,17 @@ export const ParentIdChip: Story = {
 // leave the chip and re-add the condition elsewhere.
 export const OpenStatusMenuAndUncheck: Story = {
   tags: ['desktop-only'],
+  args: {
+    parsed: { ...defaultParsed, status: ['todo', 'completed'] },
+  },
   play: async ({ canvas, canvasElement, args }) => {
-    await userEvent.click(
-      canvas.getByRole('button', { name: 'is todo, doing' }),
-    )
+    await userEvent.click(canvas.getByRole('button', { name: 'is todo, done' }))
 
     const body = within(canvasElement.ownerDocument.body)
     await userEvent.click(await body.findByRole('checkbox', { name: 'Todo' }))
 
     await expect(args.onQueryChange).toHaveBeenCalledWith(
-      'is:in_progress sort:updated',
+      'is:completed sort:updated',
     )
   },
 }
@@ -214,7 +215,7 @@ export const OpenProjectMenuAndChange: Story = {
     )
 
     await expect(args.onQueryChange).toHaveBeenCalledWith(
-      'is:todo is:in_progress project:proj-2 sort:updated',
+      'is:todo project:proj-2 sort:updated',
     )
   },
 }
@@ -231,7 +232,7 @@ export const OpenLabelMenuAndClear: Story = {
     await userEvent.click(await body.findByRole('button', { name: 'No label' }))
 
     await expect(args.onQueryChange).toHaveBeenCalledWith(
-      'is:todo is:in_progress sort:updated',
+      'is:todo sort:updated',
     )
   },
 }
@@ -250,7 +251,7 @@ export const OpenPagesMenuAndUncheck: Story = {
     )
 
     await expect(args.onQueryChange).toHaveBeenCalledWith(
-      'is:todo is:in_progress sort:updated',
+      'is:todo sort:updated',
     )
   },
 }
@@ -273,7 +274,7 @@ export const OpenParentMenuAndClear: Story = {
     )
 
     await expect(args.onQueryChange).toHaveBeenCalledWith(
-      'is:todo is:in_progress sort:updated',
+      'is:todo sort:updated',
     )
   },
 }
@@ -291,7 +292,7 @@ export const EditFreeTextDirectly: Story = {
     await userEvent.tab()
 
     await expect(args.onQueryChange).toHaveBeenCalledWith(
-      'foo is:todo is:in_progress sort:updated',
+      'foo is:todo sort:updated',
     )
   },
 }
@@ -310,7 +311,7 @@ export const OpenSortMenuAndChange: Story = {
     await userEvent.click(await body.findByRole('button', { name: 'Created' }))
 
     await expect(args.onQueryChange).toHaveBeenCalledWith(
-      'is:todo is:in_progress sort:created',
+      'is:todo sort:created',
     )
   },
 }
@@ -356,7 +357,7 @@ export const TypingAlreadyAppliedStatusTokenDoesNotDuplicate: Story = {
     await userEvent.keyboard('{Enter}')
 
     await expect(args.onQueryChange).toHaveBeenCalledWith(
-      'is:todo is:in_progress sort:updated',
+      'is:todo sort:updated',
     )
   },
 }
@@ -397,7 +398,7 @@ export const BackspaceOnEmptyInputRemovesLastChip: Story = {
     await userEvent.keyboard('{Backspace}')
 
     await expect(args.onQueryChange).toHaveBeenCalledWith(
-      'is:todo is:in_progress sort:updated',
+      'is:todo sort:updated',
     )
   },
 }
@@ -415,7 +416,7 @@ export const BackspaceOnEmptyInputRemovesParentBeforeLabel: Story = {
     await userEvent.keyboard('{Backspace}')
 
     await expect(args.onQueryChange).toHaveBeenCalledWith(
-      'is:todo is:in_progress label:dev:tq sort:updated',
+      'is:todo label:dev:tq sort:updated',
     )
   },
 }

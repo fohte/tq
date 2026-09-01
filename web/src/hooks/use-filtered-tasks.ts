@@ -18,7 +18,7 @@ export function useBaseFilter(
     ...(apiContext ? { context: apiContext } : {}),
     ...(tag != null ? { label: tag } : {}),
     ...(projectId != null ? { projectId } : {}),
-    ...(showCompleted ? {} : { status: ['todo', 'in_progress'] }),
+    ...(showCompleted ? {} : { status: 'todo' }),
   }
 }
 

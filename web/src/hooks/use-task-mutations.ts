@@ -106,7 +106,7 @@ export function useUpdateTaskStatus() {
       status,
     }: {
       id: string
-      status: 'todo' | 'in_progress' | 'completed'
+      status: 'todo' | 'completed'
     }) => {
       const res = await api.api.tasks[':id'].status.$patch({
         param: { id },

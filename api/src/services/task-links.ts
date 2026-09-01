@@ -93,7 +93,7 @@ interface LinkedTaskSummary {
   id: string
   number: number
   title: string
-  status: 'todo' | 'in_progress' | 'completed'
+  status: 'todo' | 'completed'
 }
 
 // Shared with other task-join queries (e.g. agent session links) that need

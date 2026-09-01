@@ -7,7 +7,6 @@ type TaskStatusValue = NonNullable<ParsedQuery['status']>[number]
 
 const STATUS_OPTIONS: { value: TaskStatusValue; label: string }[] = [
   { value: 'todo', label: 'Todo' },
-  { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
 ]
 
@@ -31,7 +30,7 @@ export function TaskStatusFilterFields({
         // which round-trips through buildSearchQuery/parseSearchQuery as
         // "no status filter" (match everything) rather than "match
         // nothing" — the opposite of what an all-unchecked group implies.
-        // "Show everything" stays reachable by checking all three instead.
+        // "Show everything" stays reachable by checking both instead.
         const isLastChecked =
           status.length === 1 && status.includes(option.value)
         return (

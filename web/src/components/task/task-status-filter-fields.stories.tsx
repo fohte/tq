@@ -17,7 +17,7 @@ const meta = {
     ),
   ],
   args: {
-    status: ['todo', 'in_progress'],
+    status: ['todo'],
     onStatusChange: fn(),
   },
 } satisfies Meta<typeof TaskStatusFilterFields>
@@ -35,7 +35,7 @@ export const NoneSelected: Story = {
 
 export const AllSelected: Story = {
   args: {
-    status: ['todo', 'in_progress', 'completed'],
+    status: ['todo', 'completed'],
   },
 }
 
@@ -44,16 +44,21 @@ export const CheckCompleted: Story = {
     await userEvent.click(canvas.getByRole('checkbox', { name: 'Completed' }))
     await expect(args.onStatusChange).toHaveBeenCalledWith([
       'todo',
-      'in_progress',
       'completed',
     ])
   },
 }
 
+// Unchecking one of two checked boxes leaves the other checked — the
+// single-checked case (where the last box is disabled instead) is covered
+// by SingleSelected/CannotUncheckLastStatus below.
 export const UncheckTodo: Story = {
+  args: {
+    status: ['todo', 'completed'],
+  },
   play: async ({ canvas, args }) => {
     await userEvent.click(canvas.getByRole('checkbox', { name: 'Todo' }))
-    await expect(args.onStatusChange).toHaveBeenCalledWith(['in_progress'])
+    await expect(args.onStatusChange).toHaveBeenCalledWith(['completed'])
   },
 }
 

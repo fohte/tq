@@ -33,8 +33,6 @@ export function summarizeTaskStatus(tasks: ProjectTask[]): {
   const completed = tasks.filter((t) => t.status === 'completed').length
   return {
     total: tasks.length,
-    // Any non-completed status (including legacy in_progress rows) counts
-    // as todo, so this always sums to total.
     todo: tasks.length - completed,
     completed,
   }

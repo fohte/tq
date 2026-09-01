@@ -11,9 +11,9 @@ import { createPageSchema, updatePageSchema } from '#schemas/task-page'
 
 // Completing a task carries a side effect (generating the next occurrence of
 // a recurring task) that a direct status write doesn't, so that transition
-// goes through its action endpoint. Moving to `todo` or `in_progress` goes
-// through `PATCH /api/tasks/:id/status` instead: `POST /:id/complete`
-// requires the task not already be completed, which would reject a no-op
+// goes through its action endpoint. Moving to `todo` goes through
+// `PATCH /api/tasks/:id/status` instead: `POST /:id/complete` requires the
+// task not already be completed, which would reject a no-op
 // completed -> completed call.
 function toolResult(data: unknown): CallToolResult {
   return { content: [{ type: 'text', text: JSON.stringify(data) }] }
@@ -123,9 +123,9 @@ export function registerWriteTools(server: McpServer): void {
     'update_task_status',
     {
       description:
-        'Change a task to todo, in_progress, or completed. Completing a ' +
-        'task that has a recurrenceRule creates the next occurrence of ' +
-        'that task. Completing an already-completed task is rejected.',
+        'Change a task to todo or completed. Completing a task that has a ' +
+        'recurrenceRule creates the next occurrence of that task. ' +
+        'Completing an already-completed task is rejected.',
       inputSchema: z.object({
         taskId: taskIdOrNumber,
         status: taskStatus,

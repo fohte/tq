@@ -26,7 +26,6 @@ export const statusChipLabels: Record<
   string
 > = {
   todo: 'todo',
-  in_progress: 'doing',
   completed: 'done',
 }
 
@@ -90,7 +89,7 @@ export function tagFilterSearch(tag: string): { q: string } {
   return {
     q: buildSearchQuery({
       freeText: '',
-      status: ['todo', 'in_progress'],
+      status: ['todo'],
       label: tag,
       sortBy: 'updated',
     }),

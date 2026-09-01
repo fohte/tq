@@ -16,7 +16,7 @@ import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
 const projectTasksSearchDefaults = {
   q: buildSearchQuery({
     freeText: '',
-    status: ['todo', 'in_progress'],
+    status: ['todo'],
     sortBy: 'updated',
   }),
 }

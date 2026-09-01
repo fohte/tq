@@ -33,7 +33,7 @@ describe('summarizeTaskStatus', () => {
     const tasks: ProjectTask[] = [
       { ...baseTask, id: '1', number: 1, status: 'todo' },
       { ...baseTask, id: '2', number: 2, status: 'todo' },
-      { ...baseTask, id: '3', number: 3, status: 'in_progress' },
+      { ...baseTask, id: '3', number: 3, status: 'todo' },
       { ...baseTask, id: '4', number: 4, status: 'completed' },
     ]
     expect(summarizeTaskStatus(tasks)).toEqual({

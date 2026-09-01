@@ -11,7 +11,7 @@ type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
 
 type LinkedTaskSummary = TaskDetail['links']['outgoing'][number]
 
-type TaskStatus = 'todo' | 'in_progress' | 'completed'
+type TaskStatus = 'todo' | 'completed'
 
 type TaskContext = 'work' | 'personal'
 

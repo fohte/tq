@@ -9,7 +9,7 @@ import type { SavedView } from '#hooks/use-saved-views'
 const view: SavedView = {
   id: '00000000-0000-0000-0000-000000000201',
   name: 'Now',
-  query: 'is:todo is:in_progress sort:updated',
+  query: 'is:todo sort:updated',
   position: 0,
   context: 'personal',
   createdAt: '2026-03-20T00:00:00.000Z',

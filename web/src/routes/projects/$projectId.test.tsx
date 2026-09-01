@@ -47,12 +47,7 @@ const baseTask = {
 const mockTasks = [
   { ...baseTask, id: '1', title: 'Todo 1', status: 'todo' as const },
   { ...baseTask, id: '2', title: 'Todo 2', status: 'todo' as const },
-  {
-    ...baseTask,
-    id: '3',
-    title: 'In progress 1',
-    status: 'in_progress' as const,
-  },
+  { ...baseTask, id: '3', title: 'Todo 3', status: 'todo' as const },
   { ...baseTask, id: '4', title: 'Completed 1', status: 'completed' as const },
   { ...baseTask, id: '5', title: 'Completed 2', status: 'completed' as const },
 ]
@@ -445,7 +440,7 @@ describe('ProjectDetailPage task list', () => {
     await renderProjectDetailPage()
 
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { q: 'is:todo is:in_progress sort:updated', projectId: 'p1' },
+      { q: 'is:todo sort:updated', projectId: 'p1' },
     ])
   })
 
@@ -501,7 +496,7 @@ describe('ProjectDetailPage task list', () => {
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
     expect(router.state.location.search).toEqual({
-      q: 'is:todo is:in_progress sort:created',
+      q: 'is:todo sort:created',
     })
   })
 
@@ -516,7 +511,7 @@ describe('ProjectDetailPage task list', () => {
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
-      { q: 'is:todo is:in_progress sort:created', projectId: 'p1' },
+      { q: 'is:todo sort:created', projectId: 'p1' },
     ])
   })
 

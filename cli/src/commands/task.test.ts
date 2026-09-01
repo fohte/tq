@@ -454,14 +454,14 @@ describe('task delete', () => {
 
 describe('task status', () => {
   it('sends the validated status and prints the response', async () => {
-    const updated = { id: 't1', number: 1, status: 'in_progress' }
+    const updated = { id: 't1', number: 1, status: 'completed' }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(updated), { status: 200 }),
     )
     const write = spyStdout()
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'task', 'status', '42', 'in_progress'],
+      ['--api-url', apiUrl, 'task', 'status', '42', 'completed'],
       fetchStub,
       fakeStdin(true),
     )
@@ -471,7 +471,7 @@ describe('task status', () => {
       method: 'PATCH',
       pathname: '/api/tasks/42/status',
       query: {},
-      body: { status: 'in_progress' },
+      body: { status: 'completed' },
     })
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(updated, null, 2)}\n`],
@@ -493,9 +493,7 @@ describe('task status', () => {
     expect(exitCode).toBe(1)
     expect(calls.length).toBe(0)
     expect(stderr.mock.calls).toEqual([
-      [
-        'Error: Invalid option: expected one of "todo"|"in_progress"|"completed"\n',
-      ],
+      ['Error: Invalid option: expected one of "todo"|"completed"\n'],
     ])
   })
 })
