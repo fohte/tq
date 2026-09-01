@@ -150,7 +150,7 @@ export async function getTaskBlockedByRelations(
 // reachable from one of the candidates by following existing `blocked_by`
 // edges. `UNION` (not `UNION ALL`) bounds the traversal to the graph's
 // distinct nodes even if a cycle already exists, so this can't loop forever.
-export async function hasBlockedByCycle(
+async function hasBlockedByCycle(
   tx: DbTransaction,
   taskId: string,
   candidateTargetIds: string[],
