@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { MAX_MARKDOWN_CONTENT_LENGTH } from '#constants/content-length'
+import { taskIdOrNumber } from '#lib/numeric-id'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 
 export const taskStatus = z.enum(['todo', 'completed'])
@@ -52,8 +53,9 @@ export const updateTaskSchema = z.object({
   labels: z.array(z.string().trim().min(1)).optional(),
   recurrenceRule: recurrenceRuleSchema.nullable().optional(),
   // Full replacement, not add/remove: the complete desired set of blocker
-  // task ids each time. An empty array clears every `blocked_by` relation.
-  blockedBy: z.array(z.uuid()).optional(),
+  // tasks (id or number) each time. An empty array clears every
+  // `blocked_by` relation.
+  blockedBy: z.array(taskIdOrNumber).optional(),
 })
 
 export const listTasksQuerySchema = z.object({

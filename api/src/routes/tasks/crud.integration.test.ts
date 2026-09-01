@@ -1569,6 +1569,18 @@ describe('tasks CRUD API', () => {
         expect(await fetchBlockedByRelations(task.id)).toEqual([])
       })
 
+      it('returns 400 when blockedBy includes the task itself by number', async () => {
+        const task = await createTask('Blocked')
+
+        const res = await setBlockedBy(task.id, [String(task.number)])
+
+        expect(res.status).toBe(400)
+        expect(await jsonBody<{ error: string }>(res)).toEqual({
+          error: 'A task cannot be blocked by itself',
+        })
+        expect(await fetchBlockedByRelations(task.id)).toEqual([])
+      })
+
       it('returns 404 when a blocker id does not reference an existing task', async () => {
         const task = await createTask('Blocked')
 
@@ -1579,6 +1591,53 @@ describe('tasks CRUD API', () => {
           error: 'Blocking task not found',
         })
         expect(await fetchBlockedByRelations(task.id)).toEqual([])
+      })
+
+      it('returns 404 when a blocker number does not reference an existing task', async () => {
+        const task = await createTask('Blocked')
+
+        const res = await setBlockedBy(task.id, ['999999999'])
+
+        expect(res.status).toBe(404)
+        expect(await jsonBody<{ error: string }>(res)).toEqual({
+          error: 'Blocking task not found',
+        })
+        expect(await fetchBlockedByRelations(task.id)).toEqual([])
+      })
+
+      it('accepts a blocker task number in place of its id', async () => {
+        const blocker = await createTask('Blocker')
+        const task = await createTask('Blocked')
+
+        const res = await setBlockedBy(task.id, [String(blocker.number)])
+
+        expect(res.status).toBe(200)
+        expect(await fetchBlockedByRelations(task.id)).toEqual([
+          {
+            sourceTaskId: task.id,
+            targetTaskId: blocker.id,
+            type: 'blocked_by',
+          },
+        ])
+      })
+
+      it('dedupes the same blocker given as both its id and its number', async () => {
+        const blocker = await createTask('Blocker')
+        const task = await createTask('Blocked')
+
+        const res = await setBlockedBy(task.id, [
+          blocker.id,
+          String(blocker.number),
+        ])
+
+        expect(res.status).toBe(200)
+        expect(await fetchBlockedByRelations(task.id)).toEqual([
+          {
+            sourceTaskId: task.id,
+            targetTaskId: blocker.id,
+            type: 'blocked_by',
+          },
+        ])
       })
 
       it('returns 409 for a direct cycle', async () => {
