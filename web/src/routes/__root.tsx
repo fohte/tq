@@ -1,7 +1,7 @@
 import {
   createRootRoute,
   Outlet,
-  stripSearchParams,
+  retainSearchParams,
 } from '@tanstack/react-router'
 
 import { AppLayout } from '#components/layout/app-layout'
@@ -12,20 +12,20 @@ interface RootSearch {
   context?: ContextFilterMode
 }
 
-const rootSearchDefaults = { context: 'all' as const }
-
-function validateSearch(search: Record<string, unknown>): RootSearch {
-  const context: ContextFilterMode =
-    search['context'] === 'work' || search['context'] === 'personal'
-      ? search['context']
-      : 'all'
-  return { context }
+// Omits `context` entirely (rather than defaulting it to 'all') when the URL
+// doesn't have it. retainSearchParams below only fills in a key that's
+// absent from the destination search, so an explicit value (including
+// 'all', set by resetting the filter) always wins over a stale retained one.
+export function validateSearch(search: Record<string, unknown>): RootSearch {
+  return search['context'] === 'work' || search['context'] === 'personal'
+    ? { context: search['context'] }
+    : {}
 }
 
 export const Route = createRootRoute({
   validateSearch,
   search: {
-    middlewares: [stripSearchParams(rootSearchDefaults)],
+    middlewares: [retainSearchParams(['context'])],
   },
   component: RootComponent,
 })

@@ -6,13 +6,17 @@ import {
 } from '@tanstack/react-router'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
-import { useContextFilter } from '#hooks/use-context-filter'
+import { STORAGE_KEY, useContextFilter } from '#hooks/use-context-filter'
 import {
   filterModeToApiContext,
   matchesContextFilter,
 } from '#lib/context-filter'
+
+beforeEach(() => {
+  localStorage.clear()
+})
 
 // The router's first route match resolves asynchronously even with no
 // loaders, so router.load() is awaited before renderHook() to avoid an
@@ -67,6 +71,24 @@ describe('useContextFilter', () => {
     })
     await waitFor(() => {
       expect(result.current.b.mode).toBe('personal')
+    })
+  })
+
+  it('falls back to a stored mode when the URL has no context param', async () => {
+    localStorage.setItem(STORAGE_KEY, 'work')
+    const wrapper = await buildWrapper()
+    const { result } = renderHook(() => useContextFilter(), { wrapper })
+    expect(result.current.mode).toBe('work')
+  })
+
+  it('persists the mode so a newly mounted instance reads it back', async () => {
+    const wrapper = await buildWrapper()
+    const { result } = renderHook(() => useContextFilter(), { wrapper })
+    act(() => {
+      result.current.setMode('personal')
+    })
+    await waitFor(() => {
+      expect(localStorage.getItem(STORAGE_KEY)).toBe('personal')
     })
   })
 })
