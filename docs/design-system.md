@@ -361,15 +361,12 @@ which owns the one canonical width, `w-60` (240px) — callers render
 `w-[236px]`; there was no reason for a task's sidebar to be 4px narrower
 than a project's.
 
-The global nav rail (`layout/sidebar.tsx`, `w-50`/200px) exports its width
-as a named class-string constant, `SIDEBAR_WIDTH_CLASS`, because
-`context-filter.stories.tsx` renders a mock rail of the same width to
-preview `ContextFilter` in its sidebar context — a real second consumer of
-the value, not just the component's own test. The mobile `BottomTabBar`
-height (`h-13`/52px) has no such consumer, so it stays a plain literal on
-the component; its test pins the same value independently rather than
-importing the component's own constant, since a test importing the exact
-value it's meant to verify can never catch that value regressing.
+The global nav rail (`layout/sidebar.tsx`, `w-50`/200px) and the mobile
+`BottomTabBar` height (`h-13`/52px) are both plain literals on their
+components — neither has a second consumer to justify extracting a shared
+constant. Each one's test pins the same value independently rather than
+importing it, since a test importing the exact value it's meant to verify
+can never catch that value regressing.
 
 The same defect showed up once more in the page/task editors: `MarkdownEditor`,
 `HtmlPageEditor`, and `HtmlPageViewer` (`web/src/components/ui/`) had no

@@ -4,7 +4,7 @@ import { useEffect, useMemo } from 'react'
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
-import { useContextFilter } from '#hooks/use-context-filter'
+import { useCurrentContext } from '#hooks/use-current-context'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
 import {
   GcalAuthRequiredError,
@@ -50,7 +50,7 @@ function DayView() {
   const { data: todayTasksData } = useTodayTasks(selectedDateStr)
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
-  const { mode: contextMode } = useContextFilter()
+  const context = useCurrentContext()
 
   const gcalEventsQuery = useGcalEvents(selectedDateStr)
   const schedulingSettings = useSchedulingSettings()
@@ -113,13 +113,10 @@ function DayView() {
         ...(parentTask != null
           ? { parentRef: `#${String(parentTask.number)} ${parentTask.title}` }
           : {}),
-        redacted: !matchesContextFilter(
-          task?.context ?? 'personal',
-          contextMode,
-        ),
+        redacted: !matchesContextFilter(task?.context ?? 'personal', context),
       }
     })
-  }, [timeBlocksData, taskMap, contextMode])
+  }, [timeBlocksData, taskMap, context])
 
   const scheduleEvents: TimeBlockEvent[] = useMemo(() => {
     if (!schedulesData) return []
@@ -132,10 +129,10 @@ function DayView() {
         type: 'schedule' as const,
         color: scheduleColorToEventColor(schedule.color),
         scheduleId: schedule.scheduleId,
-        redacted: !matchesContextFilter(schedule.context, contextMode),
+        redacted: !matchesContextFilter(schedule.context, context),
       }
     })
-  }, [schedulesData, contextMode])
+  }, [schedulesData, context])
 
   const gcalEvents: TimeBlockEvent[] = useMemo(() => {
     if (!gcalEventsQuery.data) return []

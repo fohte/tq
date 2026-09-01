@@ -6,7 +6,7 @@ import type { SessionOpenSettings } from '#lib/session-open'
 export const STORAGE_KEY = 'tq:session-open-settings'
 
 const DEFAULT_SETTINGS: SessionOpenSettings = {
-  localContext: null,
+  localContext: 'personal',
   focusUrlTemplate: null,
   resumeUrlTemplate: null,
 }
@@ -30,7 +30,7 @@ function toSettings(value: unknown): SessionOpenSettings {
   return {
     localContext: isContext(record['localContext'])
       ? record['localContext']
-      : null,
+      : DEFAULT_SETTINGS.localContext,
     focusUrlTemplate: toTemplate(record['focusUrlTemplate']),
     resumeUrlTemplate: toTemplate(record['resumeUrlTemplate']),
   }

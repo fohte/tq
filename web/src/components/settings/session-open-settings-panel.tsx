@@ -12,7 +12,7 @@ import {
 import { useSessionOpenSettings } from '#hooks/use-session-open-settings'
 import { selectValueHandler } from '#lib/form-utils'
 
-const LOCAL_CONTEXT_VALUES = ['', 'work', 'personal'] as const
+const LOCAL_CONTEXT_VALUES = ['work', 'personal'] as const
 
 export function SessionOpenSettingsPanel() {
   const [settings, updateSettings] = useSessionOpenSettings()
@@ -24,19 +24,18 @@ export function SessionOpenSettingsPanel() {
         <div className="divide-y divide-border">
           <SettingsRow
             label="This machine's context"
-            description="このマシンの context。設定すると、他の context のセッション行は開けなくなる。未設定なら常に開ける"
+            description="このマシンの context。タスク・スケジュール・カレンダーの絞り込みと、他 context のセッション行を開けなくする判定に使われる"
           >
             <Select
-              value={settings.localContext ?? ''}
+              value={settings.localContext}
               onValueChange={selectValueHandler((value) => {
-                updateSettings({ localContext: value === '' ? null : value })
+                updateSettings({ localContext: value })
               }, LOCAL_CONTEXT_VALUES)}
             >
               <SelectTrigger size="sm">
-                <SelectValue placeholder="未設定" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">未設定</SelectItem>
                 <SelectItem value="work">work</SelectItem>
                 <SelectItem value="personal">personal</SelectItem>
               </SelectContent>

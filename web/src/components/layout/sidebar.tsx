@@ -4,7 +4,6 @@ import { Pencil, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 
-import { ContextFilter } from '#components/context-filter'
 import {
   isProjectStatus,
   type ProjectStatus,
@@ -60,10 +59,6 @@ const settingsNavItem: NavItem = {
   label: 'Settings',
   keys: navKeybindings.goToSettings.keys,
 }
-
-// Shared with context-filter.stories.tsx's Sidebar-variant demo, which
-// mimics this rail's width without rendering the real Sidebar.
-export const SIDEBAR_WIDTH_CLASS = 'w-50'
 
 function NavLink({ item }: { item: NavItem }) {
   const matchRoute = useMatchRoute()
@@ -300,7 +295,7 @@ function ProjectsSection() {
   )
 }
 
-export function SidebarContent({ footerExtra }: { footerExtra?: ReactNode }) {
+export function SidebarContent() {
   return (
     <>
       <nav className="flex flex-col gap-px py-2">
@@ -316,7 +311,6 @@ export function SidebarContent({ footerExtra }: { footerExtra?: ReactNode }) {
       <ProjectsSection />
 
       <div className="mt-auto border-t border-border">
-        {footerExtra}
         <NavLink item={settingsNavItem} />
       </div>
     </>
@@ -325,9 +319,7 @@ export function SidebarContent({ footerExtra }: { footerExtra?: ReactNode }) {
 
 export function Sidebar() {
   return (
-    <aside
-      className={`hidden h-screen ${SIDEBAR_WIDTH_CLASS} shrink-0 flex-col border-r border-border bg-sidebar md:flex`}
-    >
+    <aside className="hidden h-screen w-50 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3.5">
         <Link to="/" className="flex items-center gap-2">
           <span className="font-mono text-sm font-bold text-primary">&gt;</span>
@@ -340,13 +332,7 @@ export function Sidebar() {
         </span>
       </div>
 
-      <SidebarContent
-        footerExtra={
-          <div className="px-2.5 py-2">
-            <ContextFilter />
-          </div>
-        }
-      />
+      <SidebarContent />
     </aside>
   )
 }

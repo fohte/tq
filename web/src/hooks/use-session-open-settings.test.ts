@@ -11,11 +11,11 @@ beforeEach(() => {
 })
 
 describe('useSessionOpenSettings', () => {
-  it('defaults to no local context and no templates when nothing is stored', () => {
+  it('defaults to personal context and no templates when nothing is stored', () => {
     const { result } = renderHook(() => useSessionOpenSettings())
 
     expect(result.current[0]).toEqual({
-      localContext: null,
+      localContext: 'personal',
       focusUrlTemplate: null,
       resumeUrlTemplate: null,
     })
@@ -46,7 +46,7 @@ describe('useSessionOpenSettings', () => {
     const { result } = renderHook(() => useSessionOpenSettings())
 
     expect(result.current[0]).toEqual({
-      localContext: null,
+      localContext: 'personal',
       focusUrlTemplate: null,
       resumeUrlTemplate: null,
     })
@@ -65,7 +65,7 @@ describe('useSessionOpenSettings', () => {
     const { result } = renderHook(() => useSessionOpenSettings())
 
     expect(result.current[0]).toEqual({
-      localContext: null,
+      localContext: 'personal',
       focusUrlTemplate: null,
       resumeUrlTemplate: null,
     })

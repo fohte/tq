@@ -44,7 +44,7 @@ function SessionIndicatorStory({ sessions }: { sessions: TaskAgentSession[] }) {
   })
 
   resetSessionOpenSettings({
-    localContext: null,
+    localContext: 'work',
     focusUrlTemplate: null,
     resumeUrlTemplate: null,
   })

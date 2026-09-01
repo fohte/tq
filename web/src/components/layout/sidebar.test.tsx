@@ -23,10 +23,10 @@ import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 
 // Only Link/useMatchRoute are stubbed — useSearch/router-building exports
-// stay real so useContextFilter (via useSearch({strict: false})) and the
-// TAGS section's active-tag derivation keep working. The stub exposes `to`
-// as href and `search` as a data attribute so tests can assert on the link
-// target without a real router matching it.
+// stay real so the VIEWS/TAGS sections' active-item derivation (via
+// useSearch({strict: false})) keeps working. The stub exposes `to` as href
+// and `search` as a data attribute so tests can assert on the link target
+// without a real router matching it.
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
   return {

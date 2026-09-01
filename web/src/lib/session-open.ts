@@ -1,8 +1,8 @@
 export interface SessionOpenSettings {
-  // The context this machine is treated as. `null` means unset, in which
-  // case every session is treated as reachable (fail open — most users won't
-  // configure this, and they should still get the copy-command fallback).
-  localContext: 'work' | 'personal' | null
+  // The context this machine is treated as — also the app-wide context used
+  // to filter tasks, schedules, and calendar events (see
+  // `web/src/hooks/use-current-context.ts`).
+  localContext: 'work' | 'personal'
   // URL templates, expanded with `{sessionId}` when set. Left to the user to
   // point at whatever they've registered locally (a custom URL scheme, an
   // automation tool, ...); tq never inspects the resolved URL.
@@ -24,7 +24,7 @@ export function canOpenSessionLocally(
   sessionContext: string,
   localContext: SessionOpenSettings['localContext'],
 ): boolean {
-  return localContext == null || sessionContext === localContext
+  return sessionContext === localContext
 }
 
 // Active sessions focus an already-running process, while ended ones resume
