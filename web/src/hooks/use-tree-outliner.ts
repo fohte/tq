@@ -55,7 +55,7 @@ export function useTreeOutliner(
   tree: TreeNode[],
   options: {
     enabled: boolean
-    onOpenSiblingCreate: (parent: TreeNode | null) => void
+    onOpenSiblingCreate?: (parent: TreeNode | null) => void
     isExpanded?: (id: string) => boolean
     toggleExpand?: (id: string) => void
   },
@@ -92,7 +92,7 @@ export function useTreeOutliner(
       }
 
       if (e.key === 'o') {
-        if (selectedRowId == null) return
+        if (selectedRowId == null || onOpenSiblingCreate == null) return
         e.preventDefault()
         const row = visibleRows.find((r) => r.id === selectedRowId)
         if (row == null) return
