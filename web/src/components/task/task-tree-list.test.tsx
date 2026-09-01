@@ -50,15 +50,10 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
   }
 })
 
-// Every router already registers a document-level scroll listener on
-// construction and never removes it, but onScroll no-ops unless
-// router.isScrollRestoring is true. useElementScrollRestoration is what
-// flips that flag (via a forced setupScrollRestoration(router, true)); with
-// it stubbed out, isScrollRestoring stays false for every fresh router this
-// file builds, so a stray throttled callback firing after jsdom teardown
-// exits before touching `document` instead of throwing
-// "document is not defined". None of these tests assert on restored scroll
-// position.
+// Every router leaves a document scroll listener registered after
+// teardown; it only reaches `document` when router.isScrollRestoring is
+// true, which useElementScrollRestoration flips on — stub it to keep that
+// flag false and avoid "document is not defined" from a stray callback.
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
   return {
