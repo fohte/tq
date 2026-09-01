@@ -14,6 +14,7 @@ import {
   TaskResponse,
   TEST_UUID,
   TimeBlockResponse,
+  toListItemResponse,
   withoutLinkSync,
   withoutRecurrenceRule,
 } from '#routes/tasks/testing'
@@ -1388,60 +1389,15 @@ describe('tasks CRUD API', () => {
       })
     }
 
-    // The `LinkedTaskDetail` shape of a task with no parent, labels,
-    // duplicate-of, or (unless passed explicitly) blockers of its own.
-    // Field-picked rather than spread from a `TaskResponse`/detail response
-    // so it also accepts a `GET /:id` response, which carries extra
-    // detail-only keys (`blockedBy`, `pages`, ...) that must not leak into
-    // the list-item shape being asserted here.
+    // Field-picked rather than spread from a `TaskResponse`/detail response so
+    // it also accepts a `GET /:id` response, which carries extra detail-only
+    // keys (`blockedBy`, `pages`, ...) that must not leak into the list-item
+    // shape being asserted here.
     function toLinkedTaskDetail(
-      task: Pick<
-        TaskResponse,
-        | 'id'
-        | 'number'
-        | 'title'
-        | 'description'
-        | 'status'
-        | 'statusReason'
-        | 'context'
-        | 'commitment'
-        | 'labels'
-        | 'startDate'
-        | 'dueDate'
-        | 'estimatedMinutes'
-        | 'parentId'
-        | 'projectId'
-        | 'recurrenceRuleId'
-        | 'githubLinks'
-        | 'createdAt'
-        | 'updatedAt'
-      >,
+      task: Parameters<typeof toListItemResponse>[0],
       blockedByNumbers: number[] = [],
     ) {
-      return {
-        id: task.id,
-        number: task.number,
-        title: task.title,
-        description: task.description,
-        status: task.status,
-        statusReason: task.statusReason,
-        context: task.context,
-        commitment: task.commitment,
-        labels: task.labels,
-        startDate: task.startDate,
-        dueDate: task.dueDate,
-        estimatedMinutes: task.estimatedMinutes,
-        parentId: task.parentId,
-        projectId: task.projectId,
-        recurrenceRuleId: task.recurrenceRuleId,
-        githubLinks: task.githubLinks,
-        createdAt: task.createdAt,
-        updatedAt: task.updatedAt,
-        parentNumber: null,
-        duplicateOfNumber: null,
-        blockedByNumbers,
-        childCompletionCount: { completed: 0, total: 0 },
-      }
+      return toListItemResponse(task, { blockedByNumbers })
     }
 
     describe('PATCH /api/tasks/:id', () => {

@@ -16,14 +16,9 @@ type LinkedTaskDetail = TaskListItemResponse & {
   childCompletionCount: { completed: number; total: number }
 }
 
-// Batch-fetches each task's `duplicate_of` target number, keyed by source
-// task id, for list endpoints that would otherwise issue one query per task.
-// A source can in principle carry more than one `duplicate_of` row (e.g.
-// closed as a duplicate, reopened, then closed again as a duplicate of a
-// different task -- the earlier row is never deleted, see the "stale
-// duplicateOf display after reopen/reclose" describe block in
-// actions.integration.test.ts), so this keeps only the most recently created
-// relation per source.
+// Batch-fetches each task's latest `duplicate_of` target number, keyed by
+// source id. A source can carry more than one row (old ones aren't deleted
+// on reopen/reclose), so this keeps only the most recent.
 export async function getDuplicateOfNumbersByTaskId(
   taskIds: string[],
 ): Promise<Map<string, number>> {
@@ -75,11 +70,8 @@ export async function getDuplicateOfTask(
   return hydrated ?? null
 }
 
-// Batch-fetches each task's `blocked_by` target numbers, keyed by source task
-// id, for list endpoints that would otherwise issue one query per task.
-// Unlike `duplicate_of`, every row is current -- `syncTaskBlockedBy` deletes
-// the old set on every write instead of layering new rows on top -- so this
-// returns every match rather than collapsing to the most recent one.
+// Batch-fetches each task's `blocked_by` target numbers, keyed by source
+// task id.
 export async function getBlockedByNumbersByTaskId(
   taskIds: string[],
 ): Promise<Map<string, number[]>> {
@@ -157,15 +149,15 @@ export async function getTaskBlockedByRelations(
 // `candidateTargetIds` would create a cycle, i.e. `taskId` is already
 // reachable from one of the candidates by following existing `blocked_by`
 // edges. `UNION` (not `UNION ALL`) bounds the traversal to the graph's
-// distinct nodes even if a cycle already existed, so a data inconsistency
-// can't turn this into an infinite loop.
+// distinct nodes even if a cycle already exists, so this can't loop forever.
 export async function hasBlockedByCycle(
+  tx: DbTransaction,
   taskId: string,
   candidateTargetIds: string[],
 ): Promise<boolean> {
   if (candidateTargetIds.length === 0) return false
 
-  const rows = await db.execute(sql`
+  const rows = await tx.execute(sql`
     WITH RECURSIVE reachable AS (
       SELECT target_task_id AS id FROM ${taskRelations}
       WHERE source_task_id IN (${sql.join(candidateTargetIds, sql`, `)})
@@ -182,33 +174,49 @@ export async function hasBlockedByCycle(
   return z.array(z.object({ id: z.string() })).parse(rows).length > 0
 }
 
-// Full replacement, not add/remove: callers must pass the complete desired
-// set of blocker task ids each time, so an empty array clears every
-// `blocked_by` relation from the task. Callers are responsible for cycle and
-// existence checks before calling this (see `hasBlockedByCycle`) -- this
-// function only writes.
+export type SyncBlockedByResult = 'ok' | 'cycle'
+
+// Full replacement: an empty array clears every `blocked_by` relation. Owns
+// its own transaction (unlike `syncTaskLabels`) so the cycle re-check and the
+// write happen atomically under one advisory lock, closing the race where two
+// concurrent callers each pass a pre-check and jointly create a cycle.
 export async function syncTaskBlockedBy(
-  tx: DbTransaction,
   taskId: string,
   blockedByIds: string[],
-): Promise<void> {
+): Promise<SyncBlockedByResult> {
   const uniqueIds = [...new Set(blockedByIds)]
 
-  await tx
-    .delete(taskRelations)
-    .where(
-      and(
-        eq(taskRelations.sourceTaskId, taskId),
-        eq(taskRelations.type, 'blocked_by'),
-      ),
-    )
-  if (uniqueIds.length === 0) return
+  return db.transaction(async (tx) => {
+    if (uniqueIds.length > 0) {
+      // A cycle can span any two tasks, so a per-task lock key can't rule
+      // out two different tasks' transactions racing each other -- this
+      // lock is global to all blocked_by writes.
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtext('task_relations:blocked_by'))`,
+      )
+      if (await hasBlockedByCycle(tx, taskId, uniqueIds)) {
+        return 'cycle'
+      }
+    }
 
-  await tx.insert(taskRelations).values(
-    uniqueIds.map((targetTaskId) => ({
-      sourceTaskId: taskId,
-      targetTaskId,
-      type: 'blocked_by' as const,
-    })),
-  )
+    await tx
+      .delete(taskRelations)
+      .where(
+        and(
+          eq(taskRelations.sourceTaskId, taskId),
+          eq(taskRelations.type, 'blocked_by'),
+        ),
+      )
+    if (uniqueIds.length > 0) {
+      await tx.insert(taskRelations).values(
+        uniqueIds.map((targetTaskId) => ({
+          sourceTaskId: taskId,
+          targetTaskId,
+          type: 'blocked_by' as const,
+        })),
+      )
+    }
+
+    return 'ok'
+  })
 }

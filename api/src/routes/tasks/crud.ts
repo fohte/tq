@@ -34,18 +34,15 @@ import {
   getDuplicateOfNumbersByTaskId,
   getDuplicateOfTask,
   getTaskBlockedByRelations,
-  hasBlockedByCycle,
   syncTaskBlockedBy,
 } from '#services/task-relations'
 
-// Rejects a `blockedBy` set that self-references, names a non-existent task,
-// or would create a cycle in the blocked_by graph, before the update
-// transaction touches the database. Returns the error response body/status
-// to send, or `null` when every id is valid.
+// Self-reference and existence are cheap, non-racy checks -- the cycle check
+// needs the transactional lock in `syncTaskBlockedBy` instead.
 async function checkBlockedByTargets(
   id: string,
   blockedBy: string[],
-): Promise<{ body: { error: string }; status: 400 | 404 | 409 } | null> {
+): Promise<{ body: { error: string }; status: 400 | 404 } | null> {
   if (blockedBy.includes(id)) {
     return {
       body: { error: 'A task cannot be blocked by itself' },
@@ -62,13 +59,6 @@ async function checkBlockedByTargets(
     .where(inArray(tasks.id, uniqueIds))
   if (existingTargets.length !== uniqueIds.length) {
     return { body: { error: 'Blocking task not found' }, status: 404 }
-  }
-
-  if (await hasBlockedByCycle(id, uniqueIds)) {
-    return {
-      body: { error: 'Circular blocking relationship detected' },
-      status: 409,
-    }
   }
 
   return null
@@ -276,6 +266,14 @@ export const tasksCrudApp = new Hono()
         if (targetError) {
           return c.json(targetError.body, targetError.status)
         }
+
+        const syncResult = await syncTaskBlockedBy(id, blockedByInput)
+        if (syncResult === 'cycle') {
+          return c.json(
+            { error: 'Circular blocking relationship detected' },
+            409,
+          )
+        }
       }
 
       const changedFields = diffFields(existing, taskFields, [
@@ -390,10 +388,6 @@ export const tasksCrudApp = new Hono()
 
         if (labelsInput !== undefined) {
           await syncTaskLabels(tx, id, labelsInput)
-        }
-
-        if (blockedByInput !== undefined) {
-          await syncTaskBlockedBy(tx, id, blockedByInput)
         }
 
         for (const field of changedFields) {

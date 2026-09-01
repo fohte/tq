@@ -146,6 +146,65 @@ export function withoutLinkSync<T extends { linkSync?: unknown }>(
   return rest
 }
 
+// The `TaskListItemResponse` shape of a task with no parent or duplicate-of
+// relation, for building expected `links`/`blockedBy`/`blocking` entries from
+// a `TaskResponse` without repeating its field list at each call site.
+export function toListItemResponse(
+  task: Pick<
+    TaskResponse,
+    | 'id'
+    | 'number'
+    | 'title'
+    | 'description'
+    | 'status'
+    | 'statusReason'
+    | 'context'
+    | 'commitment'
+    | 'labels'
+    | 'startDate'
+    | 'dueDate'
+    | 'estimatedMinutes'
+    | 'parentId'
+    | 'projectId'
+    | 'recurrenceRuleId'
+    | 'githubLinks'
+    | 'createdAt'
+    | 'updatedAt'
+  >,
+  opts: {
+    childCompletionCount?: { completed: number; total: number }
+    blockedByNumbers?: number[]
+  } = {},
+): TaskListItemResponse {
+  return {
+    id: task.id,
+    number: task.number,
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    statusReason: task.statusReason,
+    context: task.context,
+    commitment: task.commitment,
+    labels: task.labels,
+    startDate: task.startDate,
+    dueDate: task.dueDate,
+    estimatedMinutes: task.estimatedMinutes,
+    parentId: task.parentId,
+    projectId: task.projectId,
+    recurrenceRuleId: task.recurrenceRuleId,
+    githubLinks: task.githubLinks,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+    parentNumber: null,
+    duplicateOfNumber: null,
+    blockedByNumbers: opts.blockedByNumbers ?? [],
+    childCompletionCount: opts.childCompletionCount ?? {
+      completed: 0,
+      total: 0,
+    },
+  }
+}
+
 const recurrenceRuleResponseSchema = z.object({
   id: z.string(),
   type: z.enum(['daily', 'weekly', 'monthly', 'custom']),
