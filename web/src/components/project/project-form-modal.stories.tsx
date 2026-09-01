@@ -45,6 +45,7 @@ export const Edit: Story = {
       targetDate: '2024-12-08',
       color: '#FF5C33',
       sortOrder: 0,
+      context: 'personal',
       createdAt: '2024-10-01T00:00:00Z',
       updatedAt: '2024-10-01T00:00:00Z',
       completionRate: 0,

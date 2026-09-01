@@ -37,6 +37,7 @@ const baseProject: Project = {
   targetDate: null,
   color: '#FF8400',
   sortOrder: 0,
+  context: 'personal',
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
   taskCount: { total: 4, completed: 1 },

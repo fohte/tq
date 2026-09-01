@@ -10,6 +10,7 @@ export const sampleProjects: Project[] = [
     targetDate: null,
     color: '#FF8400',
     sortOrder: 0,
+    context: 'personal',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     completionRate: 0,

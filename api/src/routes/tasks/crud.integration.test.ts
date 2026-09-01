@@ -239,6 +239,32 @@ describe('tasks CRUD API', () => {
       expect(sortedLabels).toEqual(['foo', 'new-label'])
     })
 
+    it('sets a newly created label context to the creating task context, but leaves an existing label context unchanged', async () => {
+      await createLabel('existing')
+
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Work task',
+          context: 'work',
+          labels: ['existing', 'new-label'],
+        }),
+      })
+      expect(res.status).toBe(201)
+
+      const labelsRes = await app.request('/api/labels')
+      const body =
+        await jsonBody<{ name: string; context: string }[]>(labelsRes)
+      const contextByName = Object.fromEntries(
+        body.map((label) => [label.name, label.context]),
+      )
+      expect(contextByName).toEqual({
+        existing: 'personal',
+        'new-label': 'work',
+      })
+    })
+
     it('returns an empty labels array when no labels are given', async () => {
       const res = await app.request('/api/tasks', {
         method: 'POST',
