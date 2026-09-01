@@ -16,6 +16,7 @@ import {
   type LinkSyncResponse,
   type TaskListItemResponse,
   type TaskResponse,
+  toListItemResponse,
 } from '#routes/tasks/testing'
 import {
   assertDefined,
@@ -41,55 +42,13 @@ function linkSummary(
 // as every other task list, so it returns the full list-item shape. None of
 // the tasks linked in these tests have a parent or children of their own.
 function linkedTaskDetail(
-  task: Pick<
-    TaskResponse,
-    | 'id'
-    | 'number'
-    | 'title'
-    | 'description'
-    | 'status'
-    | 'statusReason'
-    | 'context'
-    | 'commitment'
-    | 'labels'
-    | 'startDate'
-    | 'dueDate'
-    | 'estimatedMinutes'
-    | 'parentId'
-    | 'projectId'
-    | 'recurrenceRuleId'
-    | 'githubLinks'
-    | 'createdAt'
-    | 'updatedAt'
-  >,
+  task: Parameters<typeof toListItemResponse>[0],
   childCompletionCount: { completed: number; total: number } = {
     completed: 0,
     total: 0,
   },
 ): TaskListItemResponse {
-  return {
-    id: task.id,
-    number: task.number,
-    title: task.title,
-    description: task.description,
-    status: task.status,
-    statusReason: task.statusReason,
-    context: task.context,
-    commitment: task.commitment,
-    labels: task.labels,
-    startDate: task.startDate,
-    dueDate: task.dueDate,
-    estimatedMinutes: task.estimatedMinutes,
-    parentId: task.parentId,
-    projectId: task.projectId,
-    recurrenceRuleId: task.recurrenceRuleId,
-    githubLinks: task.githubLinks,
-    createdAt: task.createdAt,
-    updatedAt: task.updatedAt,
-    parentNumber: null,
-    duplicateOfNumber: null,
-    childCompletionCount,
-  }
+  return toListItemResponse(task, { childCompletionCount })
 }
 
 async function patchTask(id: string, body: Record<string, unknown>) {
