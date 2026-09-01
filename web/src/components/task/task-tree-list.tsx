@@ -17,8 +17,9 @@ import { TreeDragOverlayContent } from '#components/task/tree-drag-overlay-conte
 import { TreeOutlinerInputRow } from '#components/task/tree-outliner-input-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { ListAreaMessage } from '#components/ui/list-area-message'
+import { useLazyTaskTree } from '#hooks/use-lazy-task-tree'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
-import type { Task, TreeNode } from '#hooks/use-tasks'
+import type { Task, TaskListFilter, TreeNode } from '#hooks/use-tasks'
 import { useUpdateTaskParent } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import {
@@ -80,18 +81,30 @@ export interface TaskTreeListProps {
   tree: TreeNode[]
   tasks: Task[]
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
+  /** Forwarded to useLazyTaskTree; see its docstring for behavior. */
+  lazyChildrenFilter?: TaskListFilter | undefined
   /** Only set this when this list's own div is the scrolling element — TaskTreeList is also embedded non-scrolling inside project-detail-main.tsx, which scrolls via an ancestor container instead. */
   scrollRestorationId?: string
 }
 
 export function TaskTreeList({
   isLoading,
-  tree,
+  tree: rootTree,
   tasks,
   sessionsByTaskId,
+  lazyChildrenFilter,
   scrollRestorationId,
 }: TaskTreeListProps) {
-  const treeOutliner = useTreeOutliner(tree, { enabled: true })
+  const { tree, isExpanded, toggleExpand, hasChildren } = useLazyTaskTree(
+    rootTree,
+    lazyChildrenFilter,
+  )
+
+  const treeOutliner = useTreeOutliner(tree, {
+    enabled: true,
+    isExpanded,
+    toggleExpand,
+  })
   const updateTaskParent = useUpdateTaskParent()
 
   const [activeNode, setActiveNode] = useState<TreeNode | null>(null)
@@ -212,6 +225,7 @@ export function TaskTreeList({
                   <TreeTaskGridRow
                     key={row.node.id}
                     node={row.node}
+                    hasChildren={hasChildren(row.node)}
                     depth={row.depth}
                     sessionsByTaskId={sessionsByTaskId}
                     isExpanded={treeOutliner.isExpanded}

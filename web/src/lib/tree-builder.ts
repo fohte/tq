@@ -36,3 +36,26 @@ export function buildTree(tasks: Task[]): TreeNode[] {
 
   return roots
 }
+
+/**
+ * Recursively attaches lazily-fetched children into an existing tree. For
+ * each node whose id is a key in `childrenByParentId`, its `children` are
+ * replaced by the fetched tasks (built into their own subtree, so any of
+ * THEM that are also keys in the map get their own fetched children merged
+ * in too, to arbitrary depth). A node whose id isn't in the map keeps its
+ * existing `children` as-is (recursed into, in case a deeper descendant was
+ * expanded independently).
+ */
+export function mergeLazyChildren(
+  tree: TreeNode[],
+  childrenByParentId: ReadonlyMap<string, Task[]>,
+): TreeNode[] {
+  return tree.map((node) => {
+    const fetchedChildren = childrenByParentId.get(node.id)
+    const children =
+      fetchedChildren != null
+        ? mergeLazyChildren(buildTree(fetchedChildren), childrenByParentId)
+        : mergeLazyChildren(node.children, childrenByParentId)
+    return { ...node, children }
+  })
+}

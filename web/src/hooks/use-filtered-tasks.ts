@@ -1,3 +1,4 @@
+import { parseSearchQuery } from 'api/search-query-parser'
 import { useMemo } from 'react'
 
 import { useContextFilter } from '#hooks/use-context-filter'
@@ -47,15 +48,25 @@ export function useFilteredTaskTree(options: {
 }) {
   const { mode } = useContextFilter()
   const apiContext = filterModeToApiContext(mode)
+  const isSearching = parseSearchQuery(options.q).freeText !== ''
 
-  const { isLoading, categorized } = useTaskList({
+  const baseFilter: TaskListFilter = {
     q: options.q,
     ...(apiContext ? { context: apiContext } : {}),
     ...(options.projectId != null ? { projectId: options.projectId } : {}),
-    includeAncestors: true,
+  }
+
+  const { isLoading, categorized } = useTaskList({
+    ...baseFilter,
+    ...(isSearching ? { includeAncestors: true } : { parentId: 'root' }),
   })
 
   const tree = useMemo(() => buildTree(categorized.all), [categorized.all])
 
-  return { isLoading, tree, tasks: categorized.all }
+  return {
+    isLoading,
+    tree,
+    tasks: categorized.all,
+    lazyChildrenFilter: isSearching ? undefined : baseFilter,
+  }
 }

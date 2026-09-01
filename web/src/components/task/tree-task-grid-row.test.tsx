@@ -117,6 +117,7 @@ function TreeHarness({
   return (
     <TreeTaskGridRow
       node={node}
+      hasChildren={node.children.length > 0}
       sessionsByTaskId={sessionsByTaskId}
       isExpanded={outliner.isExpanded}
       onToggleExpand={outliner.toggleExpand}

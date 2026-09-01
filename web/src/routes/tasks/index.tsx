@@ -87,6 +87,7 @@ function TaskList() {
     isLoading,
     tree: filteredTreeData,
     tasks,
+    lazyChildrenFilter,
   } = useFilteredTaskTree({ q })
   const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
 
@@ -115,6 +116,7 @@ function TaskList() {
         tree={filteredTreeData}
         tasks={tasks}
         sessionsByTaskId={sessionsByTaskId}
+        lazyChildrenFilter={lazyChildrenFilter}
         scrollRestorationId="task-tree-list"
       />
 
