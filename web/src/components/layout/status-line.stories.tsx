@@ -19,6 +19,7 @@ const baseTask: Task = {
   status: 'todo',
   statusReason: null,
   duplicateOfNumber: null,
+  blockedByNumbers: [],
   context: 'personal',
   commitment: 'active',
   labels: [],

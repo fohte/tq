@@ -12,6 +12,7 @@ const candidate: SearchResult = {
   status: 'todo',
   statusReason: null,
   duplicateOfNumber: null,
+  blockedByNumbers: [],
   context: 'work',
   commitment: 'active',
   labels: [],
