@@ -1,7 +1,6 @@
-import { Result } from 'neverthrow'
 import { useState } from 'react'
 
-import { getStorageItem, setStorageItem } from '#lib/local-storage'
+import { getStorageItem, parseJson, setStorageItem } from '#lib/local-storage'
 import type { SessionOpenSettings } from '#lib/session-open'
 
 export const STORAGE_KEY = 'tq:session-open-settings'
@@ -11,10 +10,6 @@ const DEFAULT_SETTINGS: SessionOpenSettings = {
   focusUrlTemplate: null,
   resumeUrlTemplate: null,
 }
-
-const parseJson = Result.fromThrowable(
-  (raw: string) => JSON.parse(raw) as unknown,
-)
 
 function isContext(value: unknown): value is 'work' | 'personal' {
   return value === 'work' || value === 'personal'
