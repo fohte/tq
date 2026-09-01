@@ -61,6 +61,7 @@ vi.mock('#hooks/use-tasks', () => ({
   useTaskList: (...args: unknown[]) => mockUseTaskList(...args),
   useUpdateTaskParent: () => ({ mutate: mockParentMutate }),
   useDeleteTask: () => ({ mutate: vi.fn() }),
+  useCreateTask: () => ({ mutate: vi.fn(), isPending: false }),
 }))
 
 vi.mock('#components/ui/markdown-editor', () => ({

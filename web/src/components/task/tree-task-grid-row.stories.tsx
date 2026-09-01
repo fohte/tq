@@ -50,9 +50,9 @@ function Providers({ children }: { children: ReactNode }) {
   )
 }
 
-// Expand/collapse, selection, and the outliner input are all owned by
-// useTreeOutliner rather than local state, so interactive stories drive the
-// row through the real hook instead of a hand-rolled prop harness.
+// Expand/collapse and selection are owned by useTreeOutliner rather than
+// local state, so interactive stories drive the row through the real hook
+// instead of a hand-rolled prop harness.
 function InteractiveTreeTaskGridRow({
   node,
   sessionsByTaskId = new Map(),
@@ -60,7 +60,10 @@ function InteractiveTreeTaskGridRow({
   node: TreeNode
   sessionsByTaskId?: ReadonlyMap<string, TaskAgentSession[]>
 }) {
-  const outliner = useTreeOutliner([node], { enabled: true })
+  const outliner = useTreeOutliner([node], {
+    enabled: true,
+    onOpenSiblingCreate: () => {},
+  })
 
   return (
     <TreeTaskGridRow
@@ -71,7 +74,7 @@ function InteractiveTreeTaskGridRow({
       onToggleExpand={outliner.toggleExpand}
       selectedRowId={outliner.selectedRowId}
       onSelectRow={outliner.selectRow}
-      onOpenChildInput={outliner.openChildInput}
+      onAddSubtask={() => {}}
     />
   )
 }
@@ -101,7 +104,7 @@ function StaticTreeTaskGridRow(
           onToggleExpand={() => {}}
           selectedRowId={null}
           onSelectRow={() => {}}
-          onOpenChildInput={() => {}}
+          onAddSubtask={() => {}}
           {...props}
         />
       </div>

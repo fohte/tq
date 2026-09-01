@@ -1,8 +1,8 @@
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
-import type { InheritedTaskAttributes } from '#components/task/create-task-inline'
-import { CreateTaskInline } from '#components/task/create-task-inline'
+import { CreateTaskModal } from '#components/task/create-task-modal'
+import type { ContextValue } from '#components/task/create-task-modal-fields'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
@@ -10,15 +10,23 @@ import { SectionLoadingIndicator } from '#components/ui/section-loading-indicato
 import type { Task } from '#hooks/use-tasks'
 import { useTaskList } from '#hooks/use-tasks'
 
+export interface InheritedTaskAttributes {
+  context: ContextValue
+  projectId: string | null
+  labels: string[]
+}
+
 // --- Subtasks Section (in task detail, self-fetching) ---
 
 export function TaskSubtasksSection({
   taskId,
   parentTaskNumber,
+  parentTaskTitle,
   inherited,
 }: {
   taskId: string
   parentTaskNumber: number
+  parentTaskTitle: string
   inherited: InheritedTaskAttributes
 }) {
   const { categorized, isLoading, isError } = useTaskList({ parentId: taskId })
@@ -39,6 +47,7 @@ export function TaskSubtasksSection({
     <TaskSubtasksList
       taskId={taskId}
       parentTaskNumber={parentTaskNumber}
+      parentTaskTitle={parentTaskTitle}
       subtasks={categorized.all}
       inherited={inherited}
     />
@@ -50,11 +59,13 @@ export function TaskSubtasksSection({
 export function TaskSubtasksList({
   taskId,
   parentTaskNumber,
+  parentTaskTitle,
   subtasks,
   inherited,
 }: {
   taskId: string
   parentTaskNumber: number
+  parentTaskTitle: string
   subtasks: Task[]
   inherited: InheritedTaskAttributes
 }) {
@@ -77,6 +88,7 @@ export function TaskSubtasksList({
         <AddSubtaskRow
           taskId={taskId}
           parentTaskNumber={parentTaskNumber}
+          parentTaskTitle={parentTaskTitle}
           inherited={inherited}
         />
       </Panel>
@@ -89,40 +101,40 @@ export function TaskSubtasksList({
 function AddSubtaskRow({
   taskId,
   parentTaskNumber,
+  parentTaskTitle,
   inherited,
 }: {
   taskId: string
   parentTaskNumber: number
+  parentTaskTitle: string
   inherited: InheritedTaskAttributes
 }) {
-  const [isAdding, setIsAdding] = useState(false)
-
-  if (isAdding) {
-    return (
-      <div className="border-t border-border">
-        <CreateTaskInline
-          parentId={taskId}
-          parentTaskNumber={parentTaskNumber}
-          inherited={inherited}
-          closeOnSubmit={false}
-          onClose={() => {
-            setIsAdding(false)
-          }}
-        />
-      </div>
-    )
-  }
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   return (
-    <button
-      type="button"
-      onClick={() => {
-        setIsAdding(true)
-      }}
-      className="flex min-h-11 w-full items-center gap-1.5 border-t border-dashed border-border px-3 font-mono text-xs text-muted-foreground-faint transition-colors hover:text-muted-foreground"
-    >
-      <Plus className="size-3" />
-      add subtask
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setIsModalOpen(true)
+        }}
+        className="flex min-h-11 w-full items-center gap-1.5 border-t border-dashed border-border px-3 font-mono text-xs text-muted-foreground-faint transition-colors hover:text-muted-foreground"
+      >
+        <Plus className="size-3" />
+        add subtask
+      </button>
+      <CreateTaskModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        parentId={taskId}
+        parentTaskNumber={parentTaskNumber}
+        parentTaskTitle={parentTaskTitle}
+        defaultContext={inherited.context}
+        defaultLabels={inherited.labels}
+        {...(inherited.projectId != null
+          ? { projectId: inherited.projectId }
+          : {})}
+      />
+    </>
   )
 }
