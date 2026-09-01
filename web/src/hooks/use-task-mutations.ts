@@ -70,7 +70,6 @@ export function useCreateTask() {
         projectId: input.projectId ?? null,
         recurrenceRuleId: null,
         githubLinks: [],
-        blockedByNumbers: [],
         createdAt: now,
         updatedAt: now,
         childCompletionCount: { completed: 0, total: 0 },
