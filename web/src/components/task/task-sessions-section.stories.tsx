@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 import { TaskSessionsList } from '#components/task/task-sessions-section'
+import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { AgentSession } from '#hooks/use-agent-sessions'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -49,6 +50,12 @@ function Providers({ children }: { children: ReactNode }) {
 }
 
 function SectionStory({ sessions }: { sessions: AgentSession[] }) {
+  // Reset on every render so this story's session-open button visibility
+  // stays deterministic regardless of what else last wrote to this key in
+  // the same browser context (mirrors session-row.stories.tsx's
+  // `SessionRowStory`).
+  resetSessionOpenSettings()
+
   return (
     <Providers>
       <div className="max-w-2xl p-6">
