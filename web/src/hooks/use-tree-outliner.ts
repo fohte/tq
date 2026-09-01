@@ -1,39 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import type { InheritedTaskAttributes } from '#components/task/create-task-inline'
 import { isEditableTarget } from '#hooks/use-global-keybindings'
 import type { TreeNode } from '#hooks/use-tasks'
 import { getStorageItem, parseJson, setStorageItem } from '#lib/local-storage'
-import {
-  type AncestorRef,
-  buildAncestorChain,
-  flattenVisibleRows,
-  type OutlinerInput,
-  resolveOutlinerTarget,
-} from '#lib/tree-outliner'
-
-export type { OutlinerInput }
-
-export interface ResolvedOutlinerInput {
-  anchorRowId: string
-  mode: OutlinerInput['mode']
-  parentId: string | null
-  parentNumber: number | null
-  depth: number
-  inherited: InheritedTaskAttributes | undefined
-}
-
-interface OutlinerState {
-  input: OutlinerInput
-  /**
-   * Ancestor chain of the parent the input resolved to when it was opened,
-   * root-first. Tab/Shift-Tab move `pointer` within this fixed chain instead
-   * of dynamically extending it, so depth changes are bounded by the
-   * anchor's own ancestry rather than newly-created sibling rows.
-   */
-  chain: AncestorRef[]
-  pointer: number
-}
+import { flattenVisibleRows } from '#lib/tree-outliner'
 
 function buildNodesById(tree: TreeNode[]): Map<string, TreeNode> {
   const map = new Map<string, TreeNode>()
@@ -109,17 +79,17 @@ export function useTreeOutliner(
   tree: TreeNode[],
   options: {
     enabled: boolean
+    onOpenSiblingCreate?: (parent: TreeNode | null) => void
     isExpanded?: (id: string) => boolean
     toggleExpand?: (id: string) => void
   },
 ) {
-  const { enabled } = options
+  const { enabled, onOpenSiblingCreate } = options
   const ownExpandState = useExpandedIds(true)
   const isExpanded = options.isExpanded ?? ownExpandState.isExpanded
   const toggleExpand = options.toggleExpand ?? ownExpandState.toggleExpand
 
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
-  const [outlinerState, setOutlinerState] = useState<OutlinerState | null>(null)
 
   const visibleRows = useMemo(
     () => flattenVisibleRows(tree, isExpanded),
@@ -130,77 +100,6 @@ export function useTreeOutliner(
   const selectRow = useCallback((id: string) => {
     setSelectedRowId(id)
   }, [])
-
-  const openOutlinerInput = useCallback(
-    (anchorRowId: string, mode: OutlinerInput['mode']) => {
-      const resolved = resolveOutlinerTarget(visibleRows, {
-        anchorRowId,
-        mode,
-      })
-      if (resolved == null) return
-
-      setOutlinerState({
-        input: { anchorRowId, mode },
-        chain: buildAncestorChain(visibleRows, resolved.parentId),
-        pointer: resolved.depth,
-      })
-      setSelectedRowId(anchorRowId)
-    },
-    [visibleRows],
-  )
-
-  const openChildInput = useCallback(
-    (rowId: string) => {
-      openOutlinerInput(rowId, 'child')
-    },
-    [openOutlinerInput],
-  )
-
-  const closeOutlinerInput = useCallback(() => {
-    setOutlinerState(null)
-  }, [])
-
-  const indentOutlinerInput = useCallback(() => {
-    setOutlinerState((prev) =>
-      prev == null
-        ? null
-        : { ...prev, pointer: Math.min(prev.chain.length, prev.pointer + 1) },
-    )
-  }, [])
-
-  const outdentOutlinerInput = useCallback(() => {
-    setOutlinerState((prev) =>
-      prev == null ? null : { ...prev, pointer: Math.max(0, prev.pointer - 1) },
-    )
-  }, [])
-
-  const outlinerInput = outlinerState?.input ?? null
-
-  const outlinerTarget = useMemo((): ResolvedOutlinerInput | null => {
-    if (outlinerState == null) return null
-
-    const { chain, pointer, input } = outlinerState
-    const parent = pointer === 0 ? null : chain[pointer - 1]
-    const parentId = parent?.id ?? null
-    const parentNode = parentId != null ? nodesById.get(parentId) : undefined
-    const inherited: InheritedTaskAttributes | undefined =
-      parentNode == null
-        ? undefined
-        : {
-            context: parentNode.context,
-            projectId: parentNode.projectId,
-            labels: parentNode.labels,
-          }
-
-    return {
-      anchorRowId: input.anchorRowId,
-      mode: input.mode,
-      parentId,
-      parentNumber: parent?.number ?? null,
-      depth: pointer,
-      inherited,
-    }
-  }, [outlinerState, nodesById])
 
   useEffect(() => {
     if (!enabled) return
@@ -217,9 +116,13 @@ export function useTreeOutliner(
       }
 
       if (e.key === 'o') {
-        if (selectedRowId == null) return
+        if (selectedRowId == null || onOpenSiblingCreate == null) return
         e.preventDefault()
-        openOutlinerInput(selectedRowId, 'sibling')
+        const row = visibleRows.find((r) => r.id === selectedRowId)
+        if (row == null) return
+        const parent =
+          row.parentId != null ? (nodesById.get(row.parentId) ?? null) : null
+        onOpenSiblingCreate(parent)
         return
       }
 
@@ -252,18 +155,12 @@ export function useTreeOutliner(
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [enabled, selectedRowId, visibleRows, openOutlinerInput])
+  }, [enabled, selectedRowId, visibleRows, nodesById, onOpenSiblingCreate])
 
   return {
     isExpanded,
     toggleExpand,
     selectedRowId,
     selectRow,
-    outlinerInput,
-    outlinerTarget,
-    openChildInput,
-    closeOutlinerInput,
-    indentOutlinerInput,
-    outdentOutlinerInput,
   }
 }

@@ -183,6 +183,23 @@ export const WithDefaultStartDate: Story = {
   },
 }
 
+export const AsSubtask: Story = {
+  args: {
+    parentId: 'parent-task-id',
+    parentTaskNumber: 12,
+    parentTaskTitle: 'Fix login bug',
+    defaultContext: 'work',
+    defaultLabels: ['dev:tq'],
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body)
+
+    await expect(
+      (await body.findAllByText(/subtask of #12 Fix login bug/)).length,
+    ).toBeGreaterThan(0)
+  },
+}
+
 const longDescription = [
   '## Why',
   '',

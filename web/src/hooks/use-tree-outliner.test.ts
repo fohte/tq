@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeNode } from '#components/task/task-row-test-fixtures'
 import type { TreeNode } from '#hooks/use-tasks'
@@ -44,23 +44,27 @@ function buildTree(): TreeNode[] {
 }
 
 describe('useTreeOutliner', () => {
-  it('starts with every node expanded and nothing selected or open', () => {
+  it('starts with every node expanded and nothing selected', () => {
     const { result } = renderHook(() =>
-      useTreeOutliner(buildTree(), { enabled: true }),
+      useTreeOutliner(buildTree(), {
+        enabled: true,
+        onOpenSiblingCreate: () => {},
+      }),
     )
 
     const observed: unknown[] = []
     observed.push(result.current.isExpanded('a'))
     observed.push(result.current.selectedRowId)
-    observed.push(result.current.outlinerInput)
-    observed.push(result.current.outlinerTarget)
 
-    expect(observed).toEqual([true, null, null, null])
+    expect(observed).toEqual([true, null])
   })
 
   it('toggles a node between expanded and collapsed', () => {
     const { result } = renderHook(() =>
-      useTreeOutliner(buildTree(), { enabled: true }),
+      useTreeOutliner(buildTree(), {
+        enabled: true,
+        onOpenSiblingCreate: () => {},
+      }),
     )
 
     act(() => {
@@ -76,7 +80,10 @@ describe('useTreeOutliner', () => {
 
   it('selects a row via selectRow', () => {
     const { result } = renderHook(() =>
-      useTreeOutliner(buildTree(), { enabled: true }),
+      useTreeOutliner(buildTree(), {
+        enabled: true,
+        onOpenSiblingCreate: () => {},
+      }),
     )
 
     act(() => {
@@ -86,28 +93,10 @@ describe('useTreeOutliner', () => {
     expect(result.current.selectedRowId).toBe('b')
   })
 
-  it('opens a child input under a row, inheriting its context/project/labels', () => {
+  it('calls onOpenSiblingCreate with null when "o" is pressed on a root row', () => {
+    const onOpenSiblingCreate = vi.fn()
     const { result } = renderHook(() =>
-      useTreeOutliner(buildTree(), { enabled: true }),
-    )
-
-    act(() => {
-      result.current.openChildInput('a')
-    })
-
-    expect(result.current.outlinerTarget).toEqual({
-      anchorRowId: 'a',
-      mode: 'child',
-      parentId: 'a',
-      parentNumber: 1,
-      depth: 1,
-      inherited: { context: 'work', projectId: 'proj-1', labels: ['x'] },
-    })
-  })
-
-  it('opens a sibling input via "o" at the top level with no inherited attributes', () => {
-    const { result } = renderHook(() =>
-      useTreeOutliner(buildTree(), { enabled: true }),
+      useTreeOutliner(buildTree(), { enabled: true, onOpenSiblingCreate }),
     )
 
     act(() => {
@@ -117,31 +106,43 @@ describe('useTreeOutliner', () => {
       fireKey('o')
     })
 
-    expect(result.current.outlinerTarget).toEqual({
-      anchorRowId: 'c',
-      mode: 'sibling',
-      parentId: null,
-      parentNumber: null,
-      depth: 0,
-      inherited: undefined,
-    })
+    expect(onOpenSiblingCreate).toHaveBeenCalledWith(null)
   })
 
-  it('does nothing on "o" when no row is selected', () => {
+  it("calls onOpenSiblingCreate with the selected row's parent when 'o' is pressed on a child row", () => {
+    const onOpenSiblingCreate = vi.fn()
+    const tree = buildTree()
     const { result } = renderHook(() =>
-      useTreeOutliner(buildTree(), { enabled: true }),
+      useTreeOutliner(tree, { enabled: true, onOpenSiblingCreate }),
+    )
+
+    act(() => {
+      result.current.selectRow('b')
+    })
+    act(() => {
+      fireKey('o')
+    })
+
+    expect(onOpenSiblingCreate).toHaveBeenCalledWith(tree[0])
+  })
+
+  it('does not call onOpenSiblingCreate on "o" when no row is selected', () => {
+    const onOpenSiblingCreate = vi.fn()
+    renderHook(() =>
+      useTreeOutliner(buildTree(), { enabled: true, onOpenSiblingCreate }),
     )
 
     act(() => {
       fireKey('o')
     })
 
-    expect(result.current.outlinerTarget).toBeNull()
+    expect(onOpenSiblingCreate).not.toHaveBeenCalled()
   })
 
   it('ignores "o" while a modifier key is held', () => {
+    const onOpenSiblingCreate = vi.fn()
     const { result } = renderHook(() =>
-      useTreeOutliner(buildTree(), { enabled: true }),
+      useTreeOutliner(buildTree(), { enabled: true, onOpenSiblingCreate }),
     )
     act(() => {
       result.current.selectRow('a')
@@ -151,14 +152,15 @@ describe('useTreeOutliner', () => {
       fireKey('o', { metaKey: true })
     })
 
-    expect(result.current.outlinerTarget).toBeNull()
+    expect(onOpenSiblingCreate).not.toHaveBeenCalled()
   })
 
   it('ignores "o" while an editable element is focused', () => {
+    const onOpenSiblingCreate = vi.fn()
     const input = document.createElement('input')
     document.body.appendChild(input)
     const { result } = renderHook(() =>
-      useTreeOutliner(buildTree(), { enabled: true }),
+      useTreeOutliner(buildTree(), { enabled: true, onOpenSiblingCreate }),
     )
     act(() => {
       result.current.selectRow('a')
@@ -168,111 +170,17 @@ describe('useTreeOutliner', () => {
       fireKey('o', {}, input)
     })
 
-    expect(result.current.outlinerTarget).toBeNull()
+    expect(onOpenSiblingCreate).not.toHaveBeenCalled()
     input.remove()
-  })
-
-  it('closes the outliner input', () => {
-    const { result } = renderHook(() =>
-      useTreeOutliner(buildTree(), { enabled: true }),
-    )
-    act(() => {
-      result.current.openChildInput('a')
-    })
-
-    act(() => {
-      result.current.closeOutlinerInput()
-    })
-
-    expect(result.current.outlinerInput).toBeNull()
-  })
-
-  describe('indent/outdent', () => {
-    it('is bounded by the ancestor chain captured when the input opened', () => {
-      const { result } = renderHook(() =>
-        useTreeOutliner(buildTree(), { enabled: true }),
-      )
-      const depthTwo = {
-        anchorRowId: 'b',
-        mode: 'child',
-        parentId: 'b',
-        parentNumber: 2,
-        depth: 2,
-        inherited: { context: 'personal', projectId: null, labels: [] },
-      }
-      const depthOne = {
-        anchorRowId: 'b',
-        mode: 'child',
-        parentId: 'a',
-        parentNumber: 1,
-        depth: 1,
-        inherited: { context: 'work', projectId: 'proj-1', labels: ['x'] },
-      }
-      const depthZero = {
-        anchorRowId: 'b',
-        mode: 'child',
-        parentId: null,
-        parentNumber: null,
-        depth: 0,
-        inherited: undefined,
-      }
-
-      // 'b' sits at depth 1 (child of 'a'); a child input under it resolves
-      // to depth 2, with ancestor chain [a, b]. Outdenting walks back up
-      // that chain to depth 0, then clamps; indenting walks back down to
-      // the original depth 2, then clamps there too.
-      const targets: unknown[] = []
-      act(() => {
-        result.current.openChildInput('b')
-      })
-      targets.push(result.current.outlinerTarget)
-
-      act(() => {
-        result.current.outdentOutlinerInput()
-      })
-      targets.push(result.current.outlinerTarget)
-
-      act(() => {
-        result.current.outdentOutlinerInput()
-      })
-      targets.push(result.current.outlinerTarget)
-
-      act(() => {
-        result.current.outdentOutlinerInput()
-      })
-      targets.push(result.current.outlinerTarget)
-
-      act(() => {
-        result.current.indentOutlinerInput()
-      })
-      targets.push(result.current.outlinerTarget)
-
-      act(() => {
-        result.current.indentOutlinerInput()
-      })
-      targets.push(result.current.outlinerTarget)
-
-      act(() => {
-        result.current.indentOutlinerInput()
-      })
-      targets.push(result.current.outlinerTarget)
-
-      expect(targets).toEqual([
-        depthTwo,
-        depthOne,
-        depthZero,
-        depthZero, // outdenting past the top level stays clamped at 0
-        depthOne,
-        depthTwo,
-        depthTwo, // indenting past the original depth stays clamped there
-      ])
-    })
   })
 
   describe('arrow-key row selection', () => {
     it('moves selection to the next visible row on ArrowDown', () => {
       const { result } = renderHook(() =>
-        useTreeOutliner(buildTree(), { enabled: true }),
+        useTreeOutliner(buildTree(), {
+          enabled: true,
+          onOpenSiblingCreate: () => {},
+        }),
       )
       act(() => {
         result.current.selectRow('a')
@@ -287,7 +195,10 @@ describe('useTreeOutliner', () => {
 
     it('moves selection to the previous visible row on ArrowUp', () => {
       const { result } = renderHook(() =>
-        useTreeOutliner(buildTree(), { enabled: true }),
+        useTreeOutliner(buildTree(), {
+          enabled: true,
+          onOpenSiblingCreate: () => {},
+        }),
       )
       act(() => {
         result.current.selectRow('c')
@@ -302,7 +213,10 @@ describe('useTreeOutliner', () => {
 
     it('skips a collapsed subtree when moving selection', () => {
       const { result } = renderHook(() =>
-        useTreeOutliner(buildTree(), { enabled: true }),
+        useTreeOutliner(buildTree(), {
+          enabled: true,
+          onOpenSiblingCreate: () => {},
+        }),
       )
       act(() => {
         result.current.toggleExpand('a')
@@ -320,7 +234,10 @@ describe('useTreeOutliner', () => {
 
     it('clamps at the last row on ArrowDown', () => {
       const { result } = renderHook(() =>
-        useTreeOutliner(buildTree(), { enabled: true }),
+        useTreeOutliner(buildTree(), {
+          enabled: true,
+          onOpenSiblingCreate: () => {},
+        }),
       )
       act(() => {
         result.current.selectRow('c')
@@ -335,7 +252,10 @@ describe('useTreeOutliner', () => {
 
     it('selects the first row on ArrowDown when nothing is selected yet', () => {
       const { result } = renderHook(() =>
-        useTreeOutliner(buildTree(), { enabled: true }),
+        useTreeOutliner(buildTree(), {
+          enabled: true,
+          onOpenSiblingCreate: () => {},
+        }),
       )
 
       act(() => {
@@ -348,7 +268,10 @@ describe('useTreeOutliner', () => {
 
   it('does not attach a keydown listener when disabled', () => {
     const { result } = renderHook(() =>
-      useTreeOutliner(buildTree(), { enabled: false }),
+      useTreeOutliner(buildTree(), {
+        enabled: false,
+        onOpenSiblingCreate: () => {},
+      }),
     )
 
     act(() => {
