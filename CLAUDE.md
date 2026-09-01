@@ -64,7 +64,7 @@ Every presentational component under `web/src/components/` should have a co-loca
 Stories aren't just documentation — they run as the `storybook` project in `web/vitest.config.ts` (`@storybook/addon-vitest` + `@vitest/browser-playwright`), rendering each story in a real headless Chromium:
 
 ```sh
-pnpm --filter web run test:storybook # vitest run --project=storybook && vitest run --project=storybook-mobile
+pnpm --filter web run test:storybook # vitest run --project=storybook --project=storybook-mobile
 ```
 
 This is separate from `pnpm --filter web run test`, so writing the story is not enforced by the default test run — write it anyway when adding or changing a presentational component.
@@ -79,7 +79,7 @@ Boundary in practice: `web/src/routes/index.tsx` renders nothing itself and dele
 
 ### Prefer Storybook over manual browser checks
 
-When you need to check how a component looks or behaves in a given state, write or update its story and verify it with `pnpm --filter web exec vitest run --changed origin/main` instead of starting a dev server and driving a browser manually — dropping `origin/main` limits `--changed` to staged/unstaged files only, so it silently runs nothing once you've committed. `pnpm --filter web run storybook` is for a human watching the browser — you could screenshot it yourself instead, but that's far more wasteful than the check above.
+When you need to check how a component looks or behaves in a given state, write or update its story and verify it with `pnpm --filter web run test:storybook --changed origin/main` instead of starting a dev server and driving a browser manually — dropping `origin/main` limits `--changed` to staged/unstaged files only, so it silently runs nothing once you've committed. `pnpm --filter web run storybook` is for a human watching the browser — you could screenshot it yourself instead, but that's far more wasteful than the check above.
 
 ## Visual Regression Testing (VRT)
 
