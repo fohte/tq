@@ -32,7 +32,7 @@ export interface LinkedTaskResponse {
   id: string
   number: number
   title: string
-  status: 'todo' | 'in_progress' | 'completed'
+  status: 'todo' | 'completed'
 }
 
 type RefSourceResponse =
@@ -64,7 +64,7 @@ export interface TaskResponse {
   number: number
   title: string
   description: string | null
-  status: 'todo' | 'in_progress' | 'completed'
+  status: 'todo' | 'completed'
   statusReason: TaskStatusReason | null
   context: 'work' | 'personal'
   commitment: 'inbox' | 'active' | 'someday'
@@ -98,7 +98,7 @@ export interface TaskListItemResponse {
   number: number
   title: string
   description: string | null
-  status: 'todo' | 'in_progress' | 'completed'
+  status: 'todo' | 'completed'
   statusReason: TaskStatusReason | null
   context: 'work' | 'personal'
   commitment: 'inbox' | 'active' | 'someday'
@@ -153,7 +153,7 @@ const linkedTaskResponseSchema = z.object({
   id: z.string(),
   number: z.number(),
   title: z.string(),
-  status: z.enum(['todo', 'in_progress', 'completed']),
+  status: z.enum(['todo', 'completed']),
 })
 
 const refSourceResponseSchema = z.union([
@@ -197,7 +197,7 @@ const taskListItemResponseSchema = z.object({
   number: z.number(),
   title: z.string(),
   description: z.string().nullable(),
-  status: z.enum(['todo', 'in_progress', 'completed']),
+  status: z.enum(['todo', 'completed']),
   statusReason: taskStatusReason.nullable(),
   context: z.enum(['work', 'personal']),
   commitment: z.enum(['inbox', 'active', 'someday']),
@@ -223,7 +223,7 @@ const taskResponseSchema = z.object({
   number: z.number(),
   title: z.string(),
   description: z.string().nullable(),
-  status: z.enum(['todo', 'in_progress', 'completed']),
+  status: z.enum(['todo', 'completed']),
   statusReason: taskStatusReason.nullable(),
   context: z.enum(['work', 'personal']),
   commitment: z.enum(['inbox', 'active', 'someday']),

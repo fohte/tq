@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { makeTask } from '#components/task/task-row-test-fixtures'
-import { buildTree } from '#lib/tree-builder'
+import { makeNode, makeTask } from '#components/task/task-row-test-fixtures'
+import { buildTree, mergeLazyChildren } from '#lib/tree-builder'
 
 describe('buildTree', () => {
   it('returns an empty array for an empty list', () => {
@@ -35,5 +35,55 @@ describe('buildTree', () => {
     const orphan = makeTask({ id: 'orphan', parentId: 'missing-parent' })
 
     expect(buildTree([orphan])).toEqual([{ ...orphan, children: [] }])
+  })
+})
+
+describe('mergeLazyChildren', () => {
+  it('leaves a root with no fetched children as children: []', () => {
+    const root = makeNode({ id: 'a', number: 1 })
+
+    expect(mergeLazyChildren([root], new Map())).toEqual([
+      { ...root, children: [] },
+    ])
+  })
+
+  it('attaches fetched children for a root as fresh TreeNodes', () => {
+    const root = makeNode({ id: 'a', number: 1 })
+    const fetchedChild = makeTask({ id: 'b', number: 2, parentId: 'a' })
+
+    expect(mergeLazyChildren([root], new Map([['a', [fetchedChild]]]))).toEqual(
+      [
+        {
+          ...root,
+          children: [{ ...fetchedChild, children: [] }],
+        },
+      ],
+    )
+  })
+
+  it('merges fetched grandchildren into an already-fetched child', () => {
+    const root = makeNode({ id: 'a', number: 1 })
+    const fetchedChild = makeTask({ id: 'b', number: 2, parentId: 'a' })
+    const fetchedGrandchild = makeTask({ id: 'c', number: 3, parentId: 'b' })
+
+    expect(
+      mergeLazyChildren(
+        [root],
+        new Map([
+          ['a', [fetchedChild]],
+          ['b', [fetchedGrandchild]],
+        ]),
+      ),
+    ).toEqual([
+      {
+        ...root,
+        children: [
+          {
+            ...fetchedChild,
+            children: [{ ...fetchedGrandchild, children: [] }],
+          },
+        ],
+      },
+    ])
   })
 })

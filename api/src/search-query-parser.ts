@@ -2,7 +2,7 @@ import { type TaskStatusReason, taskStatusReason } from '#schemas/task'
 
 export interface ParsedQuery {
   freeText: string
-  status?: Array<'todo' | 'in_progress' | 'completed'>
+  status?: Array<'todo' | 'completed'>
   reason?: TaskStatusReason
   label?: string
   context?: 'work' | 'personal'
@@ -15,8 +15,10 @@ export interface ParsedQuery {
   sortBy?: 'due' | 'created' | 'updated' | 'estimate'
 }
 
-const STATUS_VALUES: ReadonlySet<'todo' | 'in_progress' | 'completed'> =
-  new Set(['todo', 'in_progress', 'completed'])
+const STATUS_VALUES: ReadonlySet<'todo' | 'completed'> = new Set([
+  'todo',
+  'completed',
+])
 const REASON_VALUES: ReadonlySet<TaskStatusReason> = new Set(
   taskStatusReason.options,
 )

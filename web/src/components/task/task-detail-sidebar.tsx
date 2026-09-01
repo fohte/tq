@@ -163,9 +163,6 @@ function SidebarStatusField({
     status,
     statusReason,
   )
-  // Legacy in_progress tasks have no matching SelectItem below, so
-  // normalize to 'todo' here — otherwise the trigger falls back to
-  // displaying the raw enum string instead of a label.
   const value = status === 'completed' ? (statusReason ?? 'completed') : 'todo'
 
   return (

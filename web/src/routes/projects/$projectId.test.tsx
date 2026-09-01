@@ -184,6 +184,7 @@ beforeEach(() => {
     isLoading: false,
     tree: [],
     tasks: [],
+    lazyChildrenFilter: {},
   })
 })
 
@@ -430,7 +431,7 @@ describe('ProjectDetailPage task list', () => {
     await renderProjectDetailPage()
 
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { q: 'is:todo is:in_progress sort:updated', projectId: 'p1' },
+      { q: 'is:todo sort:updated', projectId: 'p1' },
     ])
   })
 
@@ -486,7 +487,7 @@ describe('ProjectDetailPage task list', () => {
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
     expect(router.state.location.search).toEqual({
-      q: 'is:todo is:in_progress sort:created',
+      q: 'is:todo sort:created',
     })
   })
 
@@ -501,7 +502,7 @@ describe('ProjectDetailPage task list', () => {
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
-      { q: 'is:todo is:in_progress sort:created', projectId: 'p1' },
+      { q: 'is:todo sort:created', projectId: 'p1' },
     ])
   })
 
@@ -516,6 +517,7 @@ describe('ProjectDetailPage task list', () => {
       isLoading: false,
       tree: [{ ...filteredTask, children: [] }],
       tasks: [filteredTask],
+      lazyChildrenFilter: {},
     })
 
     await renderProjectDetailPage()

@@ -20,7 +20,7 @@ import { useDebouncedSave } from '#hooks/use-debounced-save'
 import type { Project, ProjectDetail, ProjectTask } from '#hooks/use-projects'
 import { useUpdateProject } from '#hooks/use-projects'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
-import type { TreeNode } from '#hooks/use-tasks'
+import type { TaskListFilter, TreeNode } from '#hooks/use-tasks'
 
 // --- Main Content ---
 
@@ -32,6 +32,7 @@ export function ProjectMainContent({
   tree,
   filteredTasks,
   isTasksLoading,
+  lazyChildrenFilter,
   sessionsByTaskId,
 }: {
   project: ProjectDetail
@@ -41,6 +42,7 @@ export function ProjectMainContent({
   tree: TreeNode[]
   filteredTasks: ProjectTask[]
   isTasksLoading: boolean
+  lazyChildrenFilter: TaskListFilter | undefined
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
 }) {
   const statusOrFallback = isProjectStatus(project.status)
@@ -89,6 +91,7 @@ export function ProjectMainContent({
         tree={tree}
         filteredTasks={filteredTasks}
         isLoading={isTasksLoading}
+        lazyChildrenFilter={lazyChildrenFilter}
         sessionsByTaskId={sessionsByTaskId}
       />
     </div>
@@ -236,6 +239,7 @@ function ProjectTaskList({
   tree,
   filteredTasks,
   isLoading,
+  lazyChildrenFilter,
   sessionsByTaskId,
 }: {
   projectId: string
@@ -246,6 +250,7 @@ function ProjectTaskList({
   tree: TreeNode[]
   filteredTasks: ProjectTask[]
   isLoading: boolean
+  lazyChildrenFilter: TaskListFilter | undefined
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -289,6 +294,7 @@ function ProjectTaskList({
           tree={tree}
           tasks={filteredTasks}
           sessionsByTaskId={sessionsByTaskId}
+          lazyChildrenFilter={lazyChildrenFilter}
         />
       </div>
 

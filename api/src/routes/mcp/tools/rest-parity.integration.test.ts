@@ -210,20 +210,26 @@ describe('REST/MCP parity', () => {
     })
   })
 
-  it('setting a task to in_progress via update_task_status is visible through GET /api/tasks/:id', async () => {
-    const task = await createTask('Start via MCP')
+  it('setting a task to completed via update_task_status is visible through GET /api/tasks/:id', async () => {
+    const task = await createTask('Complete via MCP')
 
-    const started = await callTool('update_task_status', {
+    const completed = await callTool('update_task_status', {
       taskId: task.id,
-      status: 'in_progress',
+      status: 'completed',
     })
-    const data = passthroughSchema<TaskResponse>().parse(parseToolJson(started))
+    const data = passthroughSchema<TaskResponse>().parse(
+      parseToolJson(completed),
+    )
 
     const res = await app.request(`/api/tasks/${task.id}`)
     expect(res.status).toBe(200)
 
     expect(await jsonBody(res)).toEqual({
       ...data,
+      // `data` carries `nextTask` from the update_task_status tool's
+      // completion response, but the plain task-detail GET has no such
+      // field.
+      nextTask: undefined,
       titleAuthor: { kind: 'human', agent: null },
       descriptionAuthor: { kind: 'human', agent: null },
       childCompletionCount: { total: 0, completed: 0 },

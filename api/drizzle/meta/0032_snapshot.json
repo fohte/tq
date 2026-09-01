@@ -1,6 +1,6 @@
 {
-  "id": "169e0cab-0f48-4a04-83c8-15d61edc85f1",
-  "prevId": "17182f3d-5693-448f-b1cd-316550eae191",
+  "id": "f95062bb-d7b1-4356-8734-b650fa278fc6",
+  "prevId": "97408503-14c8-4f65-8fa3-1d19d04b5455",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2229,7 +2229,7 @@
         },
         "task_events_payload_check": {
           "name": "task_events_payload_check",
-          "value": "(\"task_events\".\"type\" = 'status_changed'\n          AND \"task_events\".\"from_status\" IS NOT NULL AND \"task_events\".\"to_status\" IS NOT NULL\n          AND \"task_events\".\"github_owner\" IS NULL AND \"task_events\".\"github_repo\" IS NULL\n          AND \"task_events\".\"github_number\" IS NULL AND \"task_events\".\"github_kind\" IS NULL)\n        OR (\"task_events\".\"type\" IN ('github_linked', 'github_unlinked')\n          AND \"task_events\".\"from_status\" IS NULL AND \"task_events\".\"to_status\" IS NULL\n          AND \"task_events\".\"to_status_reason\" IS NULL\n          AND \"task_events\".\"github_owner\" IS NOT NULL AND \"task_events\".\"github_repo\" IS NOT NULL\n          AND \"task_events\".\"github_number\" IS NOT NULL AND \"task_events\".\"github_kind\" IS NOT NULL)"
+          "value": "(\"task_events\".\"type\" = 'status_changed'\n          AND \"task_events\".\"from_status\" IS NOT NULL AND \"task_events\".\"to_status\" IS NOT NULL\n          AND (\"task_events\".\"to_status\" = 'completed' OR \"task_events\".\"to_status_reason\" IS NULL)\n          AND \"task_events\".\"github_owner\" IS NULL AND \"task_events\".\"github_repo\" IS NULL\n          AND \"task_events\".\"github_number\" IS NULL AND \"task_events\".\"github_kind\" IS NULL)\n        OR (\"task_events\".\"type\" IN ('github_linked', 'github_unlinked')\n          AND \"task_events\".\"from_status\" IS NULL AND \"task_events\".\"to_status\" IS NULL\n          AND \"task_events\".\"to_status_reason\" IS NULL\n          AND \"task_events\".\"github_owner\" IS NOT NULL AND \"task_events\".\"github_repo\" IS NOT NULL\n          AND \"task_events\".\"github_number\" IS NOT NULL AND \"task_events\".\"github_kind\" IS NOT NULL)"
         },
         "task_events_author_kind_check": {
           "name": "task_events_author_kind_check",

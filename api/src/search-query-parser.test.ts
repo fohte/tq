@@ -15,18 +15,14 @@ describe('parseSearchQuery', () => {
     expect(result.freeText).toBe('')
   })
 
-  it('parses is:in_progress', () => {
-    expect(parseSearchQuery('is:in_progress').status).toEqual(['in_progress'])
-  })
-
   it('parses is:completed', () => {
     expect(parseSearchQuery('is:completed').status).toEqual(['completed'])
   })
 
   it('parses multiple is: prefixes into a combined status filter', () => {
-    expect(parseSearchQuery('is:todo is:in_progress')).toEqual({
+    expect(parseSearchQuery('is:todo is:completed')).toEqual({
       freeText: '',
-      status: ['todo', 'in_progress'],
+      status: ['todo', 'completed'],
     })
   })
 
@@ -195,10 +191,10 @@ describe('buildSearchQuery', () => {
 
 describe('parseSearchQuery and buildSearchQuery round-trip', () => {
   it('round-trips multiple status values', () => {
-    const q = 'is:todo is:in_progress'
+    const q = 'is:todo is:completed'
     expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
       freeText: '',
-      status: ['todo', 'in_progress'],
+      status: ['todo', 'completed'],
     })
   })
 

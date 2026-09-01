@@ -12,7 +12,6 @@ const queryClient = new QueryClient({
 
 const suggestionFixtures = [
   { value: 'is:todo', display: 'Todo', category: 'is' },
-  { value: 'is:in_progress', display: 'In Progress', category: 'is' },
   { value: 'is:completed', display: 'Completed', category: 'is' },
 ]
 

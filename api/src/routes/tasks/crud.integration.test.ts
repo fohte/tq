@@ -465,22 +465,6 @@ describe('tasks CRUD API', () => {
   })
 
   describe('GET /api/tasks with extended predicates', () => {
-    it('filters by multiple status values', async () => {
-      const todoTask = await createTask('Todo task')
-      const inProgressTask = await createTask('In progress task')
-      const completedTask = await createTask('Completed task')
-      await setStatus(inProgressTask.id, 'in_progress')
-      await setStatus(completedTask.id, 'completed')
-
-      const res = await app.request('/api/tasks?status=todo&status=in_progress')
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body.map((t) => t.id).toSorted()).toEqual(
-        [todoTask.id, inProgressTask.id].toSorted(),
-      )
-    })
-
     it('filters by free text via q', async () => {
       await createTask('Deploy to production')
       await createTask('Buy groceries')
@@ -645,24 +629,6 @@ describe('tasks CRUD API', () => {
       expect(body).toHaveLength(1)
       assertDefined(body[0])
       expect(body[0].id).toBe(completedTask.id)
-    })
-
-    it('filters by multiple is: values via q', async () => {
-      const todoTask = await createTask('Todo task')
-      const inProgressTask = await createTask('In progress task')
-      const completedTask = await createTask('Completed task')
-      await setStatus(inProgressTask.id, 'in_progress')
-      await setStatus(completedTask.id, 'completed')
-
-      const res = await app.request(
-        '/api/tasks?q=' + encodeURIComponent('is:todo is:in_progress'),
-      )
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body.map((t) => t.id).toSorted()).toEqual(
-        [todoTask.id, inProgressTask.id].toSorted(),
-      )
     })
 
     it('filters by label', async () => {

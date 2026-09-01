@@ -14,12 +14,6 @@ import {
 import { createCommentSchema, updateCommentSchema } from '#schemas/task-comment'
 import { createPageSchema, updatePageSchema } from '#schemas/task-page'
 
-// Completing a task carries a side effect (generating the next occurrence of
-// a recurring task) that a direct status write doesn't, so that transition
-// goes through its action endpoint. Moving to `todo` or `in_progress` goes
-// through `PATCH /api/tasks/:id/status` instead: `POST /:id/complete`
-// requires the task not already be completed, which would reject a no-op
-// completed -> completed call.
 function toolResult(data: unknown): CallToolResult {
   return { content: [{ type: 'text', text: JSON.stringify(data) }] }
 }
@@ -128,13 +122,12 @@ export function registerWriteTools(server: McpServer): void {
     'update_task_status',
     {
       description:
-        'Change a task to todo, in_progress, or completed. Completing a ' +
-        'task that has a recurrenceRule creates the next occurrence of ' +
-        'that task. Completing an already-completed task is rejected. ' +
-        'When closing a task (status: completed), optionally pass ' +
-        'statusReason to record why it was closed, and, when ' +
-        "statusReason is 'duplicate', duplicateOfTaskId to record which " +
-        'task it duplicates.',
+        'Change a task to todo or completed. Completing a task that has a ' +
+        'recurrenceRule creates the next occurrence of that task. ' +
+        'Completing an already-completed task is rejected. When closing a ' +
+        'task (status: completed), optionally pass statusReason to record ' +
+        "why it was closed, and, when statusReason is 'duplicate', " +
+        'duplicateOfTaskId to record which task it duplicates.',
       inputSchema: z.object({
         taskId: taskIdOrNumber,
         status: taskStatus,
@@ -143,6 +136,8 @@ export function registerWriteTools(server: McpServer): void {
         agent: agentArgSchema,
       }),
     },
+    // Completing routes through /complete for its recurrence side effect;
+    // todo routes through the plain /status PATCH.
     async ({ taskId, status, statusReason, duplicateOfTaskId, agent }) =>
       status === 'completed'
         ? callRoute(`/api/tasks/${String(taskId)}/complete`, agent, {

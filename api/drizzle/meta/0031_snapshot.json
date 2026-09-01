@@ -1,5 +1,5 @@
 {
-  "id": "17182f3d-5693-448f-b1cd-316550eae191",
+  "id": "97408503-14c8-4f65-8fa3-1d19d04b5455",
   "prevId": "40d24c77-2b30-4edc-9dc8-a29f70a415e0",
   "version": "7",
   "dialect": "postgresql",
@@ -96,9 +96,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {},
@@ -106,8 +106,8 @@
       "uniqueConstraints": {
         "uq_agent_sessions_provider_session_id": {
           "name": "uq_agent_sessions_provider_session_id",
-          "nullsNotDistinct": false,
-          "columns": ["provider", "session_id"]
+          "columns": ["provider", "session_id"],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -143,9 +143,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_task_agent_sessions_agent_session_id": {
           "name": "idx_task_agent_sessions_agent_session_id",
@@ -158,29 +158,29 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "task_agent_sessions_task_id_tasks_id_fk": {
           "name": "task_agent_sessions_task_id_tasks_id_fk",
           "tableFrom": "task_agent_sessions",
-          "tableTo": "tasks",
           "columnsFrom": ["task_id"],
+          "tableTo": "tasks",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "task_agent_sessions_agent_session_id_agent_sessions_id_fk": {
           "name": "task_agent_sessions_agent_session_id_agent_sessions_id_fk",
           "tableFrom": "task_agent_sessions",
-          "tableTo": "agent_sessions",
           "columnsFrom": ["agent_session_id"],
+          "tableTo": "agent_sessions",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -230,8 +230,8 @@
       "uniqueConstraints": {
         "labels_name_unique": {
           "name": "labels_name_unique",
-          "nullsNotDistinct": false,
-          "columns": ["name"]
+          "columns": ["name"],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -319,9 +319,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_projects_sort_order": {
           "name": "idx_projects_sort_order",
@@ -334,9 +334,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {},
@@ -467,9 +467,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_saved_views_position": {
           "name": "idx_saved_views_position",
@@ -482,9 +482,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {},
@@ -568,9 +568,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_schedules_context": {
           "name": "idx_schedules_context",
@@ -583,20 +583,20 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "schedules_recurrence_rule_id_recurrence_rules_id_fk": {
           "name": "schedules_recurrence_rule_id_recurrence_rules_id_fk",
           "tableFrom": "schedules",
-          "tableTo": "recurrence_rules",
           "columnsFrom": ["recurrence_rule_id"],
+          "tableTo": "recurrence_rules",
           "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {},
@@ -634,9 +634,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_task_labels_label_id": {
           "name": "idx_task_labels_label_id",
@@ -649,29 +649,29 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "task_labels_task_id_tasks_id_fk": {
           "name": "task_labels_task_id_tasks_id_fk",
           "tableFrom": "task_labels",
-          "tableTo": "tasks",
           "columnsFrom": ["task_id"],
+          "tableTo": "tasks",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "task_labels_label_id_labels_id_fk": {
           "name": "task_labels_label_id_labels_id_fk",
           "tableFrom": "task_labels",
-          "tableTo": "labels",
           "columnsFrom": ["label_id"],
+          "tableTo": "labels",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -701,15 +701,15 @@
           "primaryKey": false,
           "notNull": true,
           "identity": {
-            "type": "always",
             "name": "tasks_number_seq",
-            "schema": "public",
             "increment": "1",
-            "startWith": "1",
             "minValue": "1",
             "maxValue": "2147483647",
+            "startWith": "1",
             "cache": "1",
-            "cycle": false
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
           }
         },
         "title": {
@@ -730,12 +730,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'todo'"
-        },
-        "status_reason": {
-          "name": "status_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "start_date": {
           "name": "start_date",
@@ -814,9 +808,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_tasks_status": {
           "name": "idx_tasks_status",
@@ -829,9 +823,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_tasks_start_date": {
           "name": "idx_tasks_start_date",
@@ -844,9 +838,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_tasks_due_date": {
           "name": "idx_tasks_due_date",
@@ -859,9 +853,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_tasks_project_id": {
           "name": "idx_tasks_project_id",
@@ -874,9 +868,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_tasks_project_status": {
           "name": "idx_tasks_project_status",
@@ -895,9 +889,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_tasks_commitment": {
           "name": "idx_tasks_commitment",
@@ -910,55 +904,50 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "tasks_parent_id_tasks_id_fk": {
           "name": "tasks_parent_id_tasks_id_fk",
           "tableFrom": "tasks",
-          "tableTo": "tasks",
           "columnsFrom": ["parent_id"],
+          "tableTo": "tasks",
           "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         },
         "tasks_project_id_projects_id_fk": {
           "name": "tasks_project_id_projects_id_fk",
           "tableFrom": "tasks",
-          "tableTo": "projects",
           "columnsFrom": ["project_id"],
+          "tableTo": "projects",
           "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         },
         "tasks_recurrence_rule_id_recurrence_rules_id_fk": {
           "name": "tasks_recurrence_rule_id_recurrence_rules_id_fk",
           "tableFrom": "tasks",
-          "tableTo": "recurrence_rules",
           "columnsFrom": ["recurrence_rule_id"],
+          "tableTo": "recurrence_rules",
           "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "tasks_number_unique": {
           "name": "tasks_number_unique",
-          "nullsNotDistinct": false,
-          "columns": ["number"]
+          "columns": ["number"],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
-      "checkConstraints": {
-        "tasks_status_reason_check": {
-          "name": "tasks_status_reason_check",
-          "value": "\"tasks\".\"status\" = 'completed' OR \"tasks\".\"status_reason\" IS NULL"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.time_blocks": {
@@ -1023,9 +1012,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_time_blocks_date_range": {
           "name": "idx_time_blocks_date_range",
@@ -1044,20 +1033,20 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "time_blocks_task_id_tasks_id_fk": {
           "name": "time_blocks_task_id_tasks_id_fk",
           "tableFrom": "time_blocks",
-          "tableTo": "tasks",
           "columnsFrom": ["task_id"],
+          "tableTo": "tasks",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -1115,11 +1104,11 @@
         "today_tasks_task_id_tasks_id_fk": {
           "name": "today_tasks_task_id_tasks_id_fk",
           "tableFrom": "today_tasks",
-          "tableTo": "tasks",
           "columnsFrom": ["task_id"],
+          "tableTo": "tasks",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -1182,19 +1171,19 @@
         "calendar_subscriptions_oauth_token_id_oauth_tokens_id_fk": {
           "name": "calendar_subscriptions_oauth_token_id_oauth_tokens_id_fk",
           "tableFrom": "calendar_subscriptions",
-          "tableTo": "oauth_tokens",
           "columnsFrom": ["oauth_token_id"],
+          "tableTo": "oauth_tokens",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "uq_calendar_subscriptions_oauth_token_calendar": {
           "name": "uq_calendar_subscriptions_oauth_token_calendar",
-          "nullsNotDistinct": false,
-          "columns": ["oauth_token_id", "calendar_id"]
+          "columns": ["oauth_token_id", "calendar_id"],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -1248,19 +1237,19 @@
         "github_sync_rule_ignored_issues_rule_id_github_sync_rules_id_fk": {
           "name": "github_sync_rule_ignored_issues_rule_id_github_sync_rules_id_fk",
           "tableFrom": "github_sync_rule_ignored_issues",
-          "tableTo": "github_sync_rules",
           "columnsFrom": ["rule_id"],
+          "tableTo": "github_sync_rules",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "uq_github_sync_rule_ignored_issues": {
           "name": "uq_github_sync_rule_ignored_issues",
-          "nullsNotDistinct": false,
-          "columns": ["rule_id", "owner", "repo", "number"]
+          "columns": ["rule_id", "owner", "repo", "number"],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -1328,15 +1317,15 @@
           "primaryKey": false,
           "notNull": true,
           "identity": {
-            "type": "always",
             "name": "github_sync_rules_seq_seq",
-            "schema": "public",
             "increment": "1",
-            "startWith": "1",
             "minValue": "1",
             "maxValue": "9223372036854775807",
+            "startWith": "1",
             "cache": "1",
-            "cycle": false
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
           }
         },
         "created_at": {
@@ -1366,9 +1355,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_github_sync_rules_target_project_id": {
           "name": "idx_github_sync_rules_target_project_id",
@@ -1381,20 +1370,20 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "github_sync_rules_target_project_id_projects_id_fk": {
           "name": "github_sync_rules_target_project_id_projects_id_fk",
           "tableFrom": "github_sync_rules",
-          "tableTo": "projects",
           "columnsFrom": ["target_project_id"],
+          "tableTo": "projects",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -1476,8 +1465,8 @@
       "uniqueConstraints": {
         "uq_oauth_tokens_provider_account_id": {
           "name": "uq_oauth_tokens_provider_account_id",
-          "nullsNotDistinct": false,
-          "columns": ["provider", "account_id"]
+          "columns": ["provider", "account_id"],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -1572,15 +1561,15 @@
           "primaryKey": false,
           "notNull": true,
           "identity": {
-            "type": "always",
             "name": "task_github_links_seq_seq",
-            "schema": "public",
             "increment": "1",
-            "startWith": "1",
             "minValue": "1",
             "maxValue": "9223372036854775807",
+            "startWith": "1",
             "cache": "1",
-            "cycle": false
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
           }
         },
         "created_at": {
@@ -1616,28 +1605,28 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "task_github_links_task_id_tasks_id_fk": {
           "name": "task_github_links_task_id_tasks_id_fk",
           "tableFrom": "task_github_links",
-          "tableTo": "tasks",
           "columnsFrom": ["task_id"],
+          "tableTo": "tasks",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "uq_task_github_links_repo_number": {
           "name": "uq_task_github_links_repo_number",
-          "nullsNotDistinct": false,
-          "columns": ["owner", "repo", "number"]
+          "columns": ["owner", "repo", "number"],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -1749,15 +1738,15 @@
           "primaryKey": true,
           "notNull": true,
           "identity": {
-            "type": "always",
             "name": "edits_id_seq",
-            "schema": "public",
             "increment": "1",
-            "startWith": "1",
             "minValue": "1",
             "maxValue": "9223372036854775807",
+            "startWith": "1",
             "cache": "1",
-            "cycle": false
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
           }
         },
         "task_id": {
@@ -1835,9 +1824,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_edits_page_id": {
           "name": "idx_edits_page_id",
@@ -1850,10 +1839,10 @@
             }
           ],
           "isUnique": false,
-          "where": "\"edits\".\"page_id\" IS NOT NULL",
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "where": "\"edits\".\"page_id\" IS NOT NULL",
+          "concurrently": false
         },
         "idx_edits_comment_id": {
           "name": "idx_edits_comment_id",
@@ -1866,39 +1855,39 @@
             }
           ],
           "isUnique": false,
-          "where": "\"edits\".\"comment_id\" IS NOT NULL",
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "where": "\"edits\".\"comment_id\" IS NOT NULL",
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "edits_task_id_tasks_id_fk": {
           "name": "edits_task_id_tasks_id_fk",
           "tableFrom": "edits",
-          "tableTo": "tasks",
           "columnsFrom": ["task_id"],
+          "tableTo": "tasks",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "edits_page_id_task_pages_id_fk": {
           "name": "edits_page_id_task_pages_id_fk",
           "tableFrom": "edits",
-          "tableTo": "task_pages",
           "columnsFrom": ["page_id"],
+          "tableTo": "task_pages",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "edits_comment_id_task_comments_id_fk": {
           "name": "edits_comment_id_task_comments_id_fk",
           "tableFrom": "edits",
-          "tableTo": "task_comments",
           "columnsFrom": ["comment_id"],
+          "tableTo": "task_comments",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -1980,9 +1969,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {},
@@ -1990,8 +1979,8 @@
       "uniqueConstraints": {
         "images_r2_key_unique": {
           "name": "images_r2_key_unique",
-          "nullsNotDistinct": false,
-          "columns": ["r2_key"]
+          "columns": ["r2_key"],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -2047,9 +2036,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_task_comments_created_at": {
           "name": "idx_task_comments_created_at",
@@ -2068,20 +2057,20 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "task_comments_task_id_tasks_id_fk": {
           "name": "task_comments_task_id_tasks_id_fk",
           "tableFrom": "task_comments",
-          "tableTo": "tasks",
           "columnsFrom": ["task_id"],
+          "tableTo": "tasks",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -2100,15 +2089,15 @@
           "primaryKey": true,
           "notNull": true,
           "identity": {
-            "type": "always",
             "name": "task_events_id_seq",
-            "schema": "public",
             "increment": "1",
-            "startWith": "1",
             "minValue": "1",
             "maxValue": "9223372036854775807",
+            "startWith": "1",
             "cache": "1",
-            "cycle": false
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
           }
         },
         "task_id": {
@@ -2131,12 +2120,6 @@
         },
         "to_status": {
           "name": "to_status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "to_status_reason": {
-          "name": "to_status_reason",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -2203,20 +2186,20 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "task_events_task_id_tasks_id_fk": {
           "name": "task_events_task_id_tasks_id_fk",
           "tableFrom": "task_events",
-          "tableTo": "tasks",
           "columnsFrom": ["task_id"],
+          "tableTo": "tasks",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -2229,7 +2212,7 @@
         },
         "task_events_payload_check": {
           "name": "task_events_payload_check",
-          "value": "(\"task_events\".\"type\" = 'status_changed'\n          AND \"task_events\".\"from_status\" IS NOT NULL AND \"task_events\".\"to_status\" IS NOT NULL\n          AND \"task_events\".\"github_owner\" IS NULL AND \"task_events\".\"github_repo\" IS NULL\n          AND \"task_events\".\"github_number\" IS NULL AND \"task_events\".\"github_kind\" IS NULL)\n        OR (\"task_events\".\"type\" IN ('github_linked', 'github_unlinked')\n          AND \"task_events\".\"from_status\" IS NULL AND \"task_events\".\"to_status\" IS NULL\n          AND \"task_events\".\"to_status_reason\" IS NULL\n          AND \"task_events\".\"github_owner\" IS NOT NULL AND \"task_events\".\"github_repo\" IS NOT NULL\n          AND \"task_events\".\"github_number\" IS NOT NULL AND \"task_events\".\"github_kind\" IS NOT NULL)"
+          "value": "(\"task_events\".\"type\" = 'status_changed'\n          AND \"task_events\".\"from_status\" IS NOT NULL AND \"task_events\".\"to_status\" IS NOT NULL\n          AND \"task_events\".\"github_owner\" IS NULL AND \"task_events\".\"github_repo\" IS NULL\n          AND \"task_events\".\"github_number\" IS NULL AND \"task_events\".\"github_kind\" IS NULL)\n        OR (\"task_events\".\"type\" IN ('github_linked', 'github_unlinked')\n          AND \"task_events\".\"from_status\" IS NULL AND \"task_events\".\"to_status\" IS NULL\n          AND \"task_events\".\"github_owner\" IS NOT NULL AND \"task_events\".\"github_repo\" IS NOT NULL\n          AND \"task_events\".\"github_number\" IS NOT NULL AND \"task_events\".\"github_kind\" IS NOT NULL)"
         },
         "task_events_author_kind_check": {
           "name": "task_events_author_kind_check",
@@ -2278,29 +2261,29 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "task_links_source_task_id_tasks_id_fk": {
           "name": "task_links_source_task_id_tasks_id_fk",
           "tableFrom": "task_links",
-          "tableTo": "tasks",
           "columnsFrom": ["source_task_id"],
+          "tableTo": "tasks",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "task_links_target_task_id_tasks_id_fk": {
           "name": "task_links_target_task_id_tasks_id_fk",
           "tableFrom": "task_links",
-          "tableTo": "tasks",
           "columnsFrom": ["target_task_id"],
+          "tableTo": "tasks",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -2389,20 +2372,20 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "task_pages_task_id_tasks_id_fk": {
           "name": "task_pages_task_id_tasks_id_fk",
           "tableFrom": "task_pages",
-          "tableTo": "tasks",
           "columnsFrom": ["task_id"],
+          "tableTo": "tasks",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -2414,10 +2397,10 @@
   },
   "enums": {},
   "schemas": {},
+  "views": {},
   "sequences": {},
   "roles": {},
   "policies": {},
-  "views": {},
   "_meta": {
     "columns": {},
     "schemas": {},

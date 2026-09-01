@@ -110,7 +110,7 @@ export function useUpdateTaskStatus() {
       duplicateOfTaskId,
     }: {
       id: string
-      status: 'todo' | 'in_progress' | 'completed'
+      status: 'todo' | 'completed'
       statusReason?: 'completed' | 'not_planned' | 'duplicate'
       duplicateOfTaskId?: string
     }) => {

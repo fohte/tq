@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { MAX_MARKDOWN_CONTENT_LENGTH } from '#constants/content-length'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 
-export const taskStatus = z.enum(['todo', 'in_progress', 'completed'])
+export const taskStatus = z.enum(['todo', 'completed'])
 export type TaskStatus = z.infer<typeof taskStatus>
 export const taskStatusReason = z.enum([
   'completed',

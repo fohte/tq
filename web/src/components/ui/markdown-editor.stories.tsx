@@ -316,7 +316,7 @@ function seedLinkedGithubUrlFixture() {
         number: 7,
         title: 'Fix flaky test',
         description: null,
-        status: 'in_progress',
+        status: 'todo',
         context: 'personal',
         startDate: null,
         dueDate: null,

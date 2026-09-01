@@ -35,7 +35,7 @@ describe('GET /api/tasks/:id/activity', () => {
     await app.request(`/api/tasks/${task.id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'in_progress' }),
+      body: JSON.stringify({ status: 'completed' }),
     })
     await upsertGithubToken('valid-token')
     mockGithubIssueResponse()
@@ -67,8 +67,8 @@ describe('GET /api/tasks/:id/activity', () => {
         type: 'status_changed',
         author: { kind: 'human', agent: null },
         fromStatus: 'todo',
-        toStatus: 'in_progress',
-        toStatusReason: null,
+        toStatus: 'completed',
+        toStatusReason: 'completed',
       },
       {
         id: 'ID',

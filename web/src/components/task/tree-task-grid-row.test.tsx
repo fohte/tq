@@ -118,6 +118,7 @@ function TreeHarness({
   return (
     <TreeTaskGridRow
       node={node}
+      hasChildren={node.children.length > 0}
       sessionsByTaskId={sessionsByTaskId}
       isExpanded={outliner.isExpanded}
       onToggleExpand={outliner.toggleExpand}
@@ -355,7 +356,7 @@ describe('TreeTaskGridRow', () => {
 
     expect(router.state.location.pathname).toBe('/tasks')
     expect(router.state.location.search).toEqual({
-      q: 'is:todo is:in_progress label:dev:tq sort:updated',
+      q: 'is:todo label:dev:tq sort:updated',
     })
     expect(mockLinkOnClick).not.toHaveBeenCalled()
   })
@@ -379,7 +380,7 @@ describe('TreeTaskGridRow', () => {
     expect(observed).toEqual([true, 1])
   })
 
-  it('updates the status via useUpdateTaskStatus when todo is selected', async () => {
+  it('updates the status via useUpdateTaskStatus when reopening a completed task', async () => {
     const user = userEvent.setup()
     await renderTree(makeNode({ status: 'completed' }))
 

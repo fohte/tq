@@ -9,13 +9,13 @@ export interface VisibleRow {
 
 /**
  * Flatten a task tree into the order rows are actually rendered on screen,
- * skipping the subtree of any node whose id is in `collapsedIds`. Used to
- * drive Up/Down row selection, which must only step through rows the user
- * can currently see.
+ * skipping the subtree of any node for which `isExpanded` returns false.
+ * Used to drive Up/Down row selection, which must only step through rows the
+ * user can currently see.
  */
 export function flattenVisibleRows(
   tree: TreeNode[],
-  collapsedIds: ReadonlySet<string>,
+  isExpanded: (id: string) => boolean,
 ): VisibleRow[] {
   const rows: VisibleRow[] = []
 
@@ -27,7 +27,7 @@ export function flattenVisibleRows(
         parentId: node.parentId,
         depth,
       })
-      if (!collapsedIds.has(node.id)) {
+      if (isExpanded(node.id)) {
         visit(node.children, depth + 1)
       }
     }
