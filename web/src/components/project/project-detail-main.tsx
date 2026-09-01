@@ -9,8 +9,8 @@ import {
   isProjectStatus,
   ProjectStatusMark,
 } from '#components/project/project-status-mark'
-import { FloatingActionButton } from '#components/task/create-task-inline'
 import { CreateTaskModal } from '#components/task/create-task-modal'
+import { FloatingActionButton } from '#components/task/floating-action-button'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { TaskTreeList } from '#components/task/task-tree-list'
 import { Button } from '#components/ui/button'
@@ -211,8 +211,6 @@ function ProjectDescription({
 
 function ProjectTaskSummary({ project }: { project: ProjectDetail }) {
   const { total, completed } = project.taskCount
-  // Any non-completed status (including legacy in_progress rows) counts as
-  // todo, so this always sums to total.
   const todo = total - completed
   const progress = project.completionRate * 100
 

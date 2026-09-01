@@ -210,7 +210,7 @@ describe('TaskTreeList', () => {
     )
   })
 
-  it("opens a sibling outliner input right after the selected row's entire subtree, not right after the row itself", async () => {
+  it("opens the create-task modal with the selected row's parent when 'o' is pressed on a child row", async () => {
     const child = makeNode({
       id: 'child-1',
       title: 'Child Task',
@@ -223,43 +223,26 @@ describe('TaskTreeList', () => {
       children: [child],
       childCompletionCount: { completed: 0, total: 1 },
     })
-    const nextRoot = makeNode({
-      id: 'root-2',
-      number: 2,
-      title: 'Next Root',
-    })
-    await renderTaskTreeList([root, nextRoot])
+    await renderTaskTreeList([root])
 
-    fireEvent.click(screen.getByText('Root With A Child'))
+    fireEvent.click(screen.getByText('Child Task'))
     fireEvent.keyDown(document.body, { key: 'o' })
 
-    // Document position, not textContent order: the input's own text is a
-    // placeholder attribute, invisible to `.textContent`.
-    const isBefore = (a: Node, b: Node) =>
-      (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
-
-    const childRow = screen.getByText('Child Task')
-    const input = screen.getByPlaceholderText(/New task/i)
-    const nextRootRow = screen.getByText('Next Root')
-
-    expect(isBefore(childRow, input)).toBe(true)
-    expect(isBefore(input, nextRootRow)).toBe(true)
+    await screen.findAllByPlaceholderText(/task title|タスクのタイトル/i)
+    expect(screen.getAllByText(/#1 Root With A Child/).length).toBeGreaterThan(
+      0,
+    )
   })
 
-  it('does not carry typed-but-unsubmitted text over when the outliner input switches to a different anchor row', async () => {
-    const user = userEvent.setup()
-    const a = makeNode({ id: 'a', number: 1, title: 'Task A' })
-    const b = makeNode({ id: 'b', number: 2, title: 'Task B' })
-    await renderTaskTreeList([a, b])
+  it("opens the create-task modal with no parent indicator when 'o' is pressed on a root row", async () => {
+    const root = makeNode({ id: 'root-1', number: 1, title: 'Root Task' })
+    await renderTaskTreeList([root])
 
-    fireEvent.click(screen.getByText('Task A'))
-    fireEvent.keyDown(document.body, { key: 'o' })
-    await user.type(screen.getByPlaceholderText(/New task/i), 'Leftover text')
-
-    fireEvent.click(screen.getByText('Task B'))
+    fireEvent.click(screen.getByText('Root Task'))
     fireEvent.keyDown(document.body, { key: 'o' })
 
-    expect(screen.getByPlaceholderText(/New task/i)).toHaveValue('')
+    await screen.findAllByPlaceholderText(/task title|タスクのタイトル/i)
+    expect(screen.queryByText(/#1 Root Task/)).toBeNull()
   })
 })
 
@@ -281,7 +264,7 @@ describe('TaskTreeList lazyChildrenFilter', () => {
     )
 
     await renderTaskTreeList([root], {
-      lazyChildrenFilter: { q: 'is:todo is:in_progress' },
+      lazyChildrenFilter: { q: 'is:todo' },
     })
 
     expect(screen.getByLabelText('Expand')).toBeInTheDocument()
@@ -292,7 +275,7 @@ describe('TaskTreeList lazyChildrenFilter', () => {
 
     expect(await screen.findByText('Lazily Fetched Child')).toBeInTheDocument()
     expect(mockFetchTaskList).toHaveBeenCalledWith({
-      q: 'is:todo is:in_progress',
+      q: 'is:todo',
       parentId: 'root-1',
     })
   })

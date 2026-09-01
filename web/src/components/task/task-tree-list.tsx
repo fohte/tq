@@ -10,11 +10,11 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { CreateTaskModal } from '#components/task/create-task-modal'
 import type { DropTarget } from '#components/task/tree-drag-overlay-content'
 import { TreeDragOverlayContent } from '#components/task/tree-drag-overlay-content'
-import { TreeOutlinerInputRow } from '#components/task/tree-outliner-input-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { ListAreaMessage } from '#components/ui/list-area-message'
 import { useLazyTaskTree } from '#hooks/use-lazy-task-tree'
@@ -102,6 +102,16 @@ export function TaskTreeList({
   isFetchingNextPage = false,
   fetchNextPage,
 }: TaskTreeListProps) {
+  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [createModalParent, setCreateModalParent] = useState<TreeNode | null>(
+    null,
+  )
+
+  const openCreateModal = useCallback((parent: TreeNode | null) => {
+    setCreateModalParent(parent)
+    setCreateModalOpen(true)
+  }, [])
+
   const { tree, isExpanded, toggleExpand, hasChildren } = useLazyTaskTree(
     rootTree,
     lazyChildrenFilter,
@@ -109,6 +119,7 @@ export function TaskTreeList({
 
   const treeOutliner = useTreeOutliner(tree, {
     enabled: true,
+    onOpenSiblingCreate: openCreateModal,
     isExpanded,
     toggleExpand,
   })
@@ -142,12 +153,8 @@ export function TaskTreeList({
   )
 
   const renderRows = useMemo(
-    () =>
-      buildTreeRenderRows(tree, {
-        isExpanded: treeOutliner.isExpanded,
-        outlinerInput: treeOutliner.outlinerInput,
-      }),
-    [tree, treeOutliner.isExpanded, treeOutliner.outlinerInput],
+    () => buildTreeRenderRows(tree, { isExpanded: treeOutliner.isExpanded }),
+    [tree, treeOutliner.isExpanded],
   )
 
   const resetDragState = () => {
@@ -244,44 +251,21 @@ export function TaskTreeList({
           onDragCancel={handleDragCancel}
         >
           <div className="py-1" data-testid="task-tree">
-            {renderRows.map((row) => {
-              if (row.type === 'task') {
-                return (
-                  <TreeTaskGridRow
-                    key={row.node.id}
-                    node={row.node}
-                    hasChildren={hasChildren(row.node)}
-                    depth={row.depth}
-                    sessionsByTaskId={sessionsByTaskId}
-                    isExpanded={treeOutliner.isExpanded}
-                    onToggleExpand={treeOutliner.toggleExpand}
-                    selectedRowId={treeOutliner.selectedRowId}
-                    onSelectRow={treeOutliner.selectRow}
-                    onOpenChildInput={treeOutliner.openChildInput}
-                    invalidDropIds={invalidDropIds}
-                  />
-                )
-              }
-
-              if (treeOutliner.outlinerTarget == null) return null
-
-              return (
-                <TreeOutlinerInputRow
-                  // Keyed by anchor+mode, not a fixed literal, so switching
-                  // the outliner input to a different anchor row remounts
-                  // CreateTaskInline instead of reusing the old instance
-                  // (which would carry over its unsubmitted typed text).
-                  key={`outliner-input-${treeOutliner.outlinerTarget.anchorRowId}-${treeOutliner.outlinerTarget.mode}`}
-                  depth={treeOutliner.outlinerTarget.depth}
-                  parentId={treeOutliner.outlinerTarget.parentId}
-                  parentNumber={treeOutliner.outlinerTarget.parentNumber}
-                  inherited={treeOutliner.outlinerTarget.inherited}
-                  onClose={treeOutliner.closeOutlinerInput}
-                  onIndent={treeOutliner.indentOutlinerInput}
-                  onOutdent={treeOutliner.outdentOutlinerInput}
-                />
-              )
-            })}
+            {renderRows.map(({ node, depth }) => (
+              <TreeTaskGridRow
+                key={node.id}
+                node={node}
+                hasChildren={hasChildren(node)}
+                depth={depth}
+                sessionsByTaskId={sessionsByTaskId}
+                isExpanded={treeOutliner.isExpanded}
+                onToggleExpand={treeOutliner.toggleExpand}
+                selectedRowId={treeOutliner.selectedRowId}
+                onSelectRow={treeOutliner.selectRow}
+                onAddSubtask={openCreateModal}
+                invalidDropIds={invalidDropIds}
+              />
+            ))}
           </div>
 
           {hasNextPage && <div ref={sentinelRef} aria-hidden />}
@@ -298,6 +282,23 @@ export function TaskTreeList({
           </DragOverlay>
         </DndContext>
       )}
+      <CreateTaskModal
+        key={createModalParent?.id ?? 'new'}
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        {...(createModalParent != null
+          ? {
+              parentId: createModalParent.id,
+              parentTaskNumber: createModalParent.number,
+              parentTaskTitle: createModalParent.title,
+              defaultContext: createModalParent.context,
+              defaultLabels: createModalParent.labels,
+              ...(createModalParent.projectId != null
+                ? { projectId: createModalParent.projectId }
+                : {}),
+            }
+          : {})}
+      />
     </div>
   )
 }
