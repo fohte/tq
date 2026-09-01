@@ -1695,6 +1695,54 @@ describe('tasks CRUD API', () => {
         ])
       })
     })
+
+    describe('search filter: has:blockers / has:no-blockers', () => {
+      it('returns only the task with an unresolved blocker for has:blockers', async () => {
+        const blocker = await createTask('Blocker')
+        const task = await createTask('Blocked')
+        await setBlockedBy(task.id, [blocker.id])
+
+        const res = await app.request(
+          '/api/tasks?q=' + encodeURIComponent('has:blockers'),
+        )
+
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskListItemResponse[]>(res)
+        expect(body.map((t) => t.title)).toEqual(['Blocked'])
+      })
+
+      it('excludes a task with an unresolved blocker from has:no-blockers', async () => {
+        const blocker = await createTask('Blocker')
+        const task = await createTask('Blocked')
+        await setBlockedBy(task.id, [blocker.id])
+
+        const res = await app.request(
+          '/api/tasks?q=' + encodeURIComponent('has:no-blockers'),
+        )
+
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskListItemResponse[]>(res)
+        expect(body.map((t) => t.title)).toEqual(['Blocker'])
+      })
+
+      it('includes a task whose only blocker is completed in has:no-blockers', async () => {
+        const blocker = await createTask('Completed blocker')
+        const task = await createTask('Blocked by completed')
+        await setBlockedBy(task.id, [blocker.id])
+        await setStatus(blocker.id, 'completed')
+
+        const res = await app.request(
+          '/api/tasks?q=' + encodeURIComponent('has:no-blockers'),
+        )
+
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskListItemResponse[]>(res)
+        expect(body.map((t) => t.title)).toEqual([
+          'Completed blocker',
+          'Blocked by completed',
+        ])
+      })
+    })
   })
 
   describe('DELETE /api/tasks/:id', () => {

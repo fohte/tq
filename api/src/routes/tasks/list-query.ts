@@ -19,6 +19,7 @@ import {
   taskComments,
   taskLabels,
   taskPages,
+  taskRelations,
   tasks,
 } from '#db/schema'
 import { parentTasks, resolveTaskListOrderBy } from '#routes/tasks/shared'
@@ -30,6 +31,24 @@ import { parseSearchQuery } from '#search-query-parser'
 const MAX_FREE_TEXT_WORDS = 20
 
 const childTasks = alias(tasks, 'child_task')
+const blockerTasks = alias(tasks, 'blocker_task')
+
+// Subquery matching a `blocked_by` relation from this task to a
+// not-yet-completed blocker task, i.e. the task is still blocked from being
+// started. Wrap with `exists`/`notExists` depending on the direction needed.
+function unresolvedBlockerSubquery() {
+  return db
+    .select({ _: sql`1` })
+    .from(taskRelations)
+    .innerJoin(blockerTasks, eq(blockerTasks.id, taskRelations.targetTaskId))
+    .where(
+      and(
+        eq(taskRelations.sourceTaskId, tasks.id),
+        eq(taskRelations.type, 'blocked_by'),
+        ne(blockerTasks.status, 'completed'),
+      ),
+    )
+}
 
 export function selectTaskListRows() {
   return db
@@ -118,6 +137,14 @@ function buildConditions(query: ListTasksQuery) {
           ),
       ),
     )
+  }
+
+  if (parsed?.hasBlockers === true) {
+    conditions.push(exists(unresolvedBlockerSubquery()))
+  }
+
+  if (parsed?.hasNoBlockers === true) {
+    conditions.push(notExists(unresolvedBlockerSubquery()))
   }
 
   const parentId = parsed?.parentId ?? query.parentId
