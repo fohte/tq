@@ -5,6 +5,7 @@ import {
   getDaysRemaining,
 } from '#components/project/project-detail-utils'
 import { statusLabels } from '#components/project/project-status-badge'
+import { contextLabels } from '#components/task/create-task-modal-fields'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { PROJECT_COLOR_PRESETS, useUpdateProject } from '#hooks/use-projects'
@@ -201,7 +202,7 @@ function ContextSelect({
     >
       {contextValues.map((value) => (
         <option key={value} value={value}>
-          {value}
+          {contextLabels[value]}
         </option>
       ))}
     </select>

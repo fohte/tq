@@ -1,6 +1,10 @@
 import { Calendar, CalendarPlus, ChevronLeft, Palette, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
+import {
+  contextLabels,
+  type ContextValue,
+} from '#components/task/create-task-modal-fields'
 import { Button } from '#components/ui/button'
 import {
   Dialog,
@@ -56,7 +60,6 @@ function isValidStatus(value: string | undefined): value is StatusValue {
   )
 }
 
-type ContextValue = 'work' | 'personal'
 const contextValues = [
   'work',
   'personal',
@@ -216,8 +219,11 @@ export function ProjectFormModal({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="work">Work</SelectItem>
-              <SelectItem value="personal">Personal</SelectItem>
+              {contextValues.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {contextLabels[c]}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </FieldRow>
