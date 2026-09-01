@@ -46,7 +46,7 @@ export const tasksSearchApp = new Hono()
         { value: 'has:comments', display: 'Has comments' },
         { value: 'has:no-children', display: 'Has no children' },
         { value: 'has:blockers', display: 'Has blockers' },
-        { value: 'has:no-blockers', display: 'No blockers' },
+        { value: 'has:no-blockers', display: 'Has no blockers' },
       ],
     }
 

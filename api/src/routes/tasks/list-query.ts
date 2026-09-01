@@ -33,9 +33,8 @@ const MAX_FREE_TEXT_WORDS = 20
 const childTasks = alias(tasks, 'child_task')
 const blockerTasks = alias(tasks, 'blocker_task')
 
-// Subquery matching a `blocked_by` relation from this task to a
-// not-yet-completed blocker task, i.e. the task is still blocked from being
-// started. Wrap with `exists`/`notExists` depending on the direction needed.
+// Extracted so `exists`/`notExists` can both wrap the same predicate for
+// hasBlockers/hasNoBlockers without duplicating the join and where clause.
 function unresolvedBlockerSubquery() {
   return db
     .select({ _: sql`1` })

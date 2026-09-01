@@ -106,8 +106,10 @@ export function parseSearchQuery(q: string): ParsedQuery {
           result.hasNoChildren = true
         } else if (value === 'blockers') {
           result.hasBlockers = true
+          delete result.hasNoBlockers
         } else if (value === 'no-blockers') {
           result.hasNoBlockers = true
+          delete result.hasBlockers
         } else {
           freeTextParts.push(token)
         }

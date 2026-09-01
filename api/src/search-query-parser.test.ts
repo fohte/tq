@@ -104,6 +104,20 @@ describe('parseSearchQuery', () => {
     expect(parseSearchQuery('has:no-blockers').hasNoBlockers).toBe(true)
   })
 
+  it('lets a later has:no-blockers override an earlier has:blockers', () => {
+    expect(parseSearchQuery('has:blockers has:no-blockers')).toEqual({
+      freeText: '',
+      hasNoBlockers: true,
+    })
+  })
+
+  it('lets a later has:blockers override an earlier has:no-blockers', () => {
+    expect(parseSearchQuery('has:no-blockers has:blockers')).toEqual({
+      freeText: '',
+      hasBlockers: true,
+    })
+  })
+
   it('parses parent: prefix', () => {
     expect(parseSearchQuery('parent:abc-123').parentId).toBe('abc-123')
   })
