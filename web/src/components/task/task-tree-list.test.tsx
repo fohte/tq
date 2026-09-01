@@ -50,6 +50,20 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
   }
 })
 
+// useElementScrollRestoration's setupScrollRestoration side effect adds a
+// document-level scroll listener per router and never removes it. Each test
+// here builds a fresh router, so the listeners accumulate across this file's
+// tests; any of their throttled setTimeout callbacks that fires after jsdom
+// teardown throws "document is not defined". None of these tests assert on
+// restored scroll position, so stub the hook out instead of registering it.
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>()
+  return {
+    ...actual,
+    useElementScrollRestoration: () => undefined,
+  }
+})
+
 // The router's first route match resolves asynchronously even with no
 // loaders, so router.load() is awaited before render() to avoid an initial
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
