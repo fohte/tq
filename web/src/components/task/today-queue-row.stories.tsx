@@ -33,6 +33,8 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     title: 'Write the quarterly report',
     description: null,
     status: 'todo',
+    statusReason: null,
+    duplicateOfNumber: null,
     context: 'work',
     commitment: 'active',
     labels: [],

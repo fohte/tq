@@ -547,7 +547,7 @@ describe('task parent', () => {
 })
 
 describe('task complete', () => {
-  it('sends no body and prints the whole response, including nextTask', async () => {
+  it('sends an empty body and prints the whole response, including nextTask', async () => {
     const completed = {
       id: 't1',
       number: 1,
@@ -570,11 +570,126 @@ describe('task complete', () => {
       method: 'POST',
       pathname: '/api/tasks/42/complete',
       query: {},
-      body: undefined,
+      body: {},
     })
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(completed, null, 2)}\n`],
     ])
+  })
+
+  it('sends the parsed --reason as statusReason', async () => {
+    const completed = {
+      id: 't1',
+      number: 1,
+      status: 'completed',
+      nextTask: null,
+    }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(completed), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'complete', '42', '--reason', 'duplicate'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'POST',
+      pathname: '/api/tasks/42/complete',
+      query: {},
+      body: { statusReason: 'duplicate' },
+    })
+  })
+
+  it('sends --duplicate-of as duplicateOfTaskId', async () => {
+    const completed = {
+      id: 't1',
+      number: 1,
+      status: 'completed',
+      nextTask: null,
+    }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(completed), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'complete',
+        '42',
+        '--duplicate-of',
+        '11111111-1111-1111-1111-111111111111',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'POST',
+      pathname: '/api/tasks/42/complete',
+      query: {},
+      body: {
+        duplicateOfTaskId: '11111111-1111-1111-1111-111111111111',
+      },
+    })
+  })
+
+  it('sends --reason duplicate and --duplicate-of together', async () => {
+    const completed = {
+      id: 't1',
+      number: 1,
+      status: 'completed',
+      nextTask: null,
+    }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(completed), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'complete',
+        '42',
+        '--reason',
+        'duplicate',
+        '--duplicate-of',
+        '11111111-1111-1111-1111-111111111111',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'POST',
+      pathname: '/api/tasks/42/complete',
+      query: {},
+      body: {
+        statusReason: 'duplicate',
+        duplicateOfTaskId: '11111111-1111-1111-1111-111111111111',
+      },
+    })
+  })
+
+  it('rejects an invalid --reason', async () => {
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify({}), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'complete', '42', '--reason', 'bogus'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).not.toBe(0)
   })
 
   it('prints the linkSync summary to stderr when nextTask includes one', async () => {

@@ -4,6 +4,15 @@ import { MAX_MARKDOWN_CONTENT_LENGTH } from '#constants/content-length'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 
 export const taskStatus = z.enum(['todo', 'completed'])
+export type TaskStatus = z.infer<typeof taskStatus>
+export const taskStatusReason = z.enum([
+  'completed',
+  'not_planned',
+  'duplicate',
+])
+export type TaskStatusReason = z.infer<typeof taskStatusReason>
+export const taskRelationType = z.enum(['duplicate_of'])
+export type TaskRelationType = z.infer<typeof taskRelationType>
 export const contextEnum = z.enum(['work', 'personal'])
 export const commitmentEnum = z.enum(['inbox', 'active', 'someday'])
 
@@ -49,6 +58,10 @@ export const updateTaskSchema = z.object({
 export const listTasksQuerySchema = z.object({
   status: z
     .union([taskStatus, z.array(taskStatus)])
+    .transform((v) => (Array.isArray(v) ? v : [v]))
+    .optional(),
+  statusReason: z
+    .union([taskStatusReason, z.array(taskStatusReason)])
     .transform((v) => (Array.isArray(v) ? v : [v]))
     .optional(),
   q: z.string().optional(),

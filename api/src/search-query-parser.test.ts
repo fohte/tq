@@ -56,6 +56,34 @@ describe('parseSearchQuery', () => {
     expect(result.freeText).toBe('commitment:invalid')
   })
 
+  it('parses reason:not_planned', () => {
+    expect(parseSearchQuery('reason:not_planned')).toEqual({
+      freeText: '',
+      reason: 'not_planned',
+    })
+  })
+
+  it('parses reason:duplicate', () => {
+    expect(parseSearchQuery('reason:duplicate')).toEqual({
+      freeText: '',
+      reason: 'duplicate',
+    })
+  })
+
+  it('treats invalid reason: value as free text', () => {
+    expect(parseSearchQuery('reason:invalid')).toEqual({
+      freeText: 'reason:invalid',
+    })
+  })
+
+  it('parses reason: independently of is:', () => {
+    expect(parseSearchQuery('is:completed reason:duplicate')).toEqual({
+      freeText: '',
+      status: ['completed'],
+      reason: 'duplicate',
+    })
+  })
+
   it('parses has:pages prefix', () => {
     expect(parseSearchQuery('has:pages').hasPages).toBe(true)
   })
@@ -148,6 +176,12 @@ describe('buildSearchQuery', () => {
     expect(buildSearchQuery({ freeText: '', status: ['todo'] })).toBe('is:todo')
   })
 
+  it('builds a reason: token', () => {
+    expect(buildSearchQuery({ freeText: '', reason: 'not_planned' })).toBe(
+      'reason:not_planned',
+    )
+  })
+
   it('quotes values containing spaces', () => {
     expect(buildSearchQuery({ freeText: '', label: 'my label' })).toBe(
       'label:"my label"',
@@ -178,6 +212,15 @@ describe('parseSearchQuery and buildSearchQuery round-trip', () => {
     expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
       freeText: '',
       commitment: 'someday',
+    })
+  })
+
+  it('round-trips a reason value alongside is:', () => {
+    const q = 'is:completed reason:duplicate'
+    expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
+      freeText: '',
+      status: ['completed'],
+      reason: 'duplicate',
     })
   })
 

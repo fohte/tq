@@ -1,6 +1,10 @@
 import { useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
 
+import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
+import type { StatusPickerValue } from '#components/task/task-status-picker'
 import { useProject } from '#hooks/use-projects'
+import type { SearchResult } from '#hooks/use-search'
 import type { Task } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
@@ -8,18 +12,84 @@ import { formatShortDate, isTaskOverdue } from '#lib/task-due-date'
 import { tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
 
-export function useHandleStatusChange(id: string, status: Task['status']) {
+export function useHandleStatusChange(
+  id: string,
+  status: Task['status'],
+  statusReason: Task['statusReason'],
+) {
   const completeTask = useCompleteTask()
   const updateStatus = useUpdateTaskStatus()
+  const [duplicatePickerOpen, setDuplicatePickerOpen] = useState(false)
+  const currentValue: StatusPickerValue =
+    status === 'completed' ? (statusReason ?? 'completed') : 'todo'
 
-  return (newStatus: Task['status']) => {
-    if (newStatus === status) return
-    if (newStatus === 'completed') {
-      completeTask.mutate(id)
+  const closeWithReason = (
+    reason: 'completed' | 'not_planned' | 'duplicate',
+    duplicateOfTaskId?: string,
+  ) => {
+    // exactOptionalPropertyTypes: mutate()'s duplicateOfTaskId?: string
+    // rejects an explicit `undefined` value, so the key must be omitted
+    // rather than set to undefined when there's no candidate.
+    const duplicateOfTaskIdField =
+      duplicateOfTaskId != null ? { duplicateOfTaskId } : {}
+    if (status === 'completed') {
+      // Already closed — this is relabeling the close reason, not closing
+      // the task, so it must go through /status rather than /complete:
+      // /complete 409s on an already-completed task, and its recurrence
+      // side effect only belongs to the actual close transition.
+      updateStatus.mutate({
+        id,
+        status: 'completed',
+        statusReason: reason,
+        ...duplicateOfTaskIdField,
+      })
     } else {
-      updateStatus.mutate({ id, status: newStatus })
+      completeTask.mutate({
+        id,
+        statusReason: reason,
+        ...duplicateOfTaskIdField,
+      })
     }
   }
+
+  const closeAsDuplicate = (duplicateOfTaskId?: string) => {
+    closeWithReason('duplicate', duplicateOfTaskId)
+  }
+
+  const handleValueChange = (value: StatusPickerValue) => {
+    if (value === currentValue) return
+    if (value === 'todo') {
+      updateStatus.mutate({ id, status: value })
+      return
+    }
+    if (value === 'duplicate') {
+      setDuplicatePickerOpen(true)
+      return
+    }
+    closeWithReason(value)
+  }
+
+  const duplicatePicker = (
+    <TaskSearchCandidateDialog
+      open={duplicatePickerOpen}
+      onOpenChange={setDuplicatePickerOpen}
+      title="Duplicate of"
+      excludedTaskIds={new Set([id])}
+      onSelectCandidate={(candidate: SearchResult) => {
+        closeAsDuplicate(candidate.id)
+        setDuplicatePickerOpen(false)
+      }}
+      skipAction={{
+        label: 'Close without linking',
+        onSkip: () => {
+          closeAsDuplicate(undefined)
+          setDuplicatePickerOpen(false)
+        },
+      }}
+    />
+  )
+
+  return { handleValueChange, duplicatePicker }
 }
 
 export function TagTokens({
@@ -124,6 +194,27 @@ export function TaskNumberLabel({ number }: { number: number }) {
   return (
     <span className="shrink-0 font-mono text-xs text-muted-foreground-faint">
       #{number}
+    </span>
+  )
+}
+
+export function CloseReasonLabel({
+  reason,
+  duplicateOfNumber,
+}: {
+  reason: 'not_planned' | 'duplicate'
+  duplicateOfNumber: number | null
+}) {
+  const text =
+    reason === 'not_planned'
+      ? 'not planned'
+      : duplicateOfNumber != null
+        ? `duplicate of #${String(duplicateOfNumber)}`
+        : 'duplicate'
+
+  return (
+    <span className="shrink-0 font-mono text-xs text-muted-foreground">
+      {text}
     </span>
   )
 }

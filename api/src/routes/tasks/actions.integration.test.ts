@@ -1,11 +1,15 @@
+import { eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { db } from '#db/connection'
+import { taskRelations, tasks } from '#db/schema'
 import {
   createLabel,
   createRecurringTask,
   createTask,
   fetchTaskEvents,
+  TaskListItemResponse,
   TaskResponse,
   TEST_UUID,
 } from '#routes/tasks/testing'
@@ -90,6 +94,43 @@ describe('tasks actions API', () => {
       const body = await jsonBody<TaskResponse>(res)
       expect(body.labels).toEqual(['urgent'])
     })
+
+    it('defaults statusReason to completed when moving to completed with no statusReason in the body', async () => {
+      const created = await createTask('Task')
+
+      const res = await setStatus(created.id, 'completed')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.statusReason).toBe('completed')
+    })
+
+    it('clears statusReason when moving a completed task back to todo', async () => {
+      const created = await createTask('Task')
+      const completeRes = await app.request(`/api/tasks/${created.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'completed',
+          statusReason: 'not_planned',
+        }),
+      })
+      const completedBody = await jsonBody<TaskResponse>(completeRes)
+      expect(completedBody.statusReason).toBe('not_planned')
+
+      const res = await setStatus(created.id, 'todo')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.statusReason).toBeNull()
+
+      const [dbTask] = await db
+        .select({ statusReason: tasks.statusReason })
+        .from(tasks)
+        .where(eq(tasks.id, created.id))
+      assertDefined(dbTask)
+      expect(dbTask.statusReason).toBeNull()
+    })
   })
 
   describe('task_events recording', () => {
@@ -103,6 +144,7 @@ describe('tasks actions API', () => {
           type: 'status_changed',
           fromStatus: 'todo',
           toStatus: 'completed',
+          toStatusReason: 'completed',
           githubOwner: null,
           githubRepo: null,
           githubNumber: null,
@@ -124,6 +166,7 @@ describe('tasks actions API', () => {
           type: 'status_changed',
           fromStatus: 'todo',
           toStatus: 'completed',
+          toStatusReason: 'completed',
           githubOwner: null,
           githubRepo: null,
           githubNumber: null,
@@ -146,6 +189,7 @@ describe('tasks actions API', () => {
           type: 'status_changed',
           fromStatus: 'todo',
           toStatus: 'completed',
+          toStatusReason: 'completed',
           githubOwner: null,
           githubRepo: null,
           githubNumber: null,
@@ -169,6 +213,33 @@ describe('tasks actions API', () => {
           type: 'status_changed',
           fromStatus: 'todo',
           toStatus: 'completed',
+          toStatusReason: 'completed',
+          githubOwner: null,
+          githubRepo: null,
+          githubNumber: null,
+          githubKind: null,
+          authorKind: 'human',
+          authorAgent: null,
+        },
+      ])
+    })
+
+    it('records the given statusReason via POST /:id/complete', async () => {
+      const task = await createTask('Task')
+
+      const res = await app.request(`/api/tasks/${task.id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statusReason: 'duplicate' }),
+      })
+
+      expect(res.status).toBe(200)
+      expect(await fetchTaskEvents(task.id)).toEqual([
+        {
+          type: 'status_changed',
+          fromStatus: 'todo',
+          toStatus: 'completed',
+          toStatusReason: 'duplicate',
           githubOwner: null,
           githubRepo: null,
           githubNumber: null,
@@ -279,6 +350,60 @@ describe('tasks actions API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body.status).toBe('completed')
+    })
+
+    it('defaults statusReason to completed when no body is sent', async () => {
+      const task = await createTask('Complete me')
+
+      const res = await app.request(`/api/tasks/${task.id}/complete`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.statusReason).toBe('completed')
+    })
+
+    it('defaults statusReason to completed when the body is {}', async () => {
+      const task = await createTask('Complete me')
+
+      const res = await app.request(`/api/tasks/${task.id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.statusReason).toBe('completed')
+    })
+
+    it('sets statusReason to not_planned when given in the body', async () => {
+      const task = await createTask('Complete me')
+
+      const res = await app.request(`/api/tasks/${task.id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statusReason: 'not_planned' }),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.statusReason).toBe('not_planned')
+    })
+
+    it('sets statusReason to duplicate when given in the body', async () => {
+      const task = await createTask('Complete me')
+
+      const res = await app.request(`/api/tasks/${task.id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statusReason: 'duplicate' }),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.statusReason).toBe('duplicate')
     })
 
     it('keeps the labels in the response', async () => {
@@ -458,6 +583,355 @@ describe('tasks actions API', () => {
       >(res)
       assertDefined(body.recurrenceRule)
       expect(body.recurrenceRule.type).toBe('daily')
+    })
+  })
+
+  describe('tasks_status_reason_check constraint', () => {
+    it('rejects a non-null statusReason on a non-completed task', async () => {
+      const task = await createTask('Task')
+
+      await expect(
+        db
+          .update(tasks)
+          .set({ status: 'todo', statusReason: 'not_planned' })
+          .where(eq(tasks.id, task.id)),
+      ).rejects.toThrow()
+    })
+  })
+
+  describe('duplicate_of relation', () => {
+    function fetchDuplicateOfRelations(sourceTaskId: string) {
+      return db
+        .select({
+          sourceTaskId: taskRelations.sourceTaskId,
+          targetTaskId: taskRelations.targetTaskId,
+          type: taskRelations.type,
+        })
+        .from(taskRelations)
+        .where(eq(taskRelations.sourceTaskId, sourceTaskId))
+    }
+
+    describe('POST /api/tasks/:id/complete', () => {
+      it('persists a task_relations row when closing with a duplicate target', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            statusReason: 'duplicate',
+            duplicateOfTaskId: target.id,
+          }),
+        })
+        expect(res.status).toBe(200)
+
+        expect(await fetchDuplicateOfRelations(task.id)).toEqual([
+          {
+            sourceTaskId: task.id,
+            targetTaskId: target.id,
+            type: 'duplicate_of',
+          },
+        ])
+      })
+
+      it('surfaces duplicateOfNumber/duplicateOfTask in the detail response', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+
+        await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            statusReason: 'duplicate',
+            duplicateOfTaskId: target.id,
+          }),
+        })
+
+        const detailRes = await app.request(`/api/tasks/${task.id}`)
+        const detailBody = await jsonBody<TaskResponse>(detailRes)
+        expect(detailBody.duplicateOfNumber).toBe(target.number)
+        assertDefined(detailBody.duplicateOfTask)
+        expect(detailBody.duplicateOfTask.id).toBe(target.id)
+      })
+
+      it('surfaces duplicateOfNumber in the list response', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+
+        await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            statusReason: 'duplicate',
+            duplicateOfTaskId: target.id,
+          }),
+        })
+
+        const listRes = await app.request('/api/tasks')
+        const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
+        const listItem = listBody.find((t) => t.id === task.id)
+        assertDefined(listItem)
+        expect(listItem.duplicateOfNumber).toBe(target.number)
+      })
+
+      it('succeeds with no relation row when duplicateOfTaskId is omitted', async () => {
+        const task = await createTask('Duplicate me')
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ statusReason: 'duplicate' }),
+        })
+        expect(res.status).toBe(200)
+
+        expect(await fetchDuplicateOfRelations(task.id)).toEqual([])
+
+        const detailRes = await app.request(`/api/tasks/${task.id}`)
+        const detailBody = await jsonBody<TaskResponse>(detailRes)
+        expect(detailBody.duplicateOfNumber).toBeNull()
+        expect(detailBody.duplicateOfTask).toBeNull()
+      })
+
+      it('returns 400 when duplicateOfTaskId is the task itself', async () => {
+        const task = await createTask('Duplicate me')
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            statusReason: 'duplicate',
+            duplicateOfTaskId: task.id,
+          }),
+        })
+
+        expect(res.status).toBe(400)
+        expect(await fetchDuplicateOfRelations(task.id)).toEqual([])
+      })
+
+      it('returns 404 when duplicateOfTaskId does not reference an existing task', async () => {
+        const task = await createTask('Duplicate me')
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            statusReason: 'duplicate',
+            duplicateOfTaskId: TEST_UUID,
+          }),
+        })
+
+        expect(res.status).toBe(404)
+      })
+
+      it('ignores duplicateOfTaskId when the reason is not duplicate', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Not actually a duplicate')
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            statusReason: 'not_planned',
+            duplicateOfTaskId: target.id,
+          }),
+        })
+
+        expect(res.status).toBe(200)
+        expect(await fetchDuplicateOfRelations(task.id)).toEqual([])
+      })
+    })
+
+    describe('PATCH /api/tasks/:id/status', () => {
+      it('creates a task_relations row when closing with a duplicate target', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+
+        const res = await app.request(`/api/tasks/${task.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'completed',
+            statusReason: 'duplicate',
+            duplicateOfTaskId: target.id,
+          }),
+        })
+        expect(res.status).toBe(200)
+
+        expect(await fetchDuplicateOfRelations(task.id)).toEqual([
+          {
+            sourceTaskId: task.id,
+            targetTaskId: target.id,
+            type: 'duplicate_of',
+          },
+        ])
+      })
+
+      // Re-closing a task as a duplicate of the same target is a realistic
+      // idempotent retry (e.g. a client resending after a dropped response),
+      // not an error: `type` is part of task_relations' primary key, so this
+      // exercises the `onConflictDoNothing` path rather than a real conflict.
+      it('does not error when closing twice as a duplicate of the same target', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+        const body = JSON.stringify({
+          status: 'completed',
+          statusReason: 'duplicate',
+          duplicateOfTaskId: target.id,
+        })
+
+        const first = await app.request(`/api/tasks/${task.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        })
+        expect(first.status).toBe(200)
+
+        const second = await app.request(`/api/tasks/${task.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        })
+        expect(second.status).toBe(200)
+
+        expect(await fetchDuplicateOfRelations(task.id)).toEqual([
+          {
+            sourceTaskId: task.id,
+            targetTaskId: target.id,
+            type: 'duplicate_of',
+          },
+        ])
+      })
+    })
+
+    describe('stale duplicateOf display after reopen/reclose', () => {
+      async function closeAsDuplicate(taskId: string, targetId: string) {
+        return app.request(`/api/tasks/${taskId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'completed',
+            statusReason: 'duplicate',
+            duplicateOfTaskId: targetId,
+          }),
+        })
+      }
+
+      it('clears duplicateOfNumber/duplicateOfTask in the detail response after reopening', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+        await closeAsDuplicate(task.id, target.id)
+
+        const reopenRes = await app.request(`/api/tasks/${task.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'todo' }),
+        })
+        expect(reopenRes.status).toBe(200)
+
+        // The relation row is kept, only the exposed fields are gated.
+        expect(await fetchDuplicateOfRelations(task.id)).toEqual([
+          {
+            sourceTaskId: task.id,
+            targetTaskId: target.id,
+            type: 'duplicate_of',
+          },
+        ])
+
+        const detailRes = await app.request(`/api/tasks/${task.id}`)
+        const detailBody = await jsonBody<TaskResponse>(detailRes)
+        expect(detailBody.duplicateOfNumber).toBeNull()
+        expect(detailBody.duplicateOfTask).toBeNull()
+      })
+
+      it('clears duplicateOfNumber in the list response after reopening', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+        await closeAsDuplicate(task.id, target.id)
+
+        await app.request(`/api/tasks/${task.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'todo' }),
+        })
+
+        const listRes = await app.request('/api/tasks')
+        const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
+        const listItem = listBody.find((t) => t.id === task.id)
+        assertDefined(listItem)
+        expect(listItem.duplicateOfNumber).toBeNull()
+      })
+
+      it('clears duplicateOfNumber/duplicateOfTask in the detail response after reclosing as not_planned', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+        await closeAsDuplicate(task.id, target.id)
+
+        const recloseRes = await app.request(`/api/tasks/${task.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'completed',
+            statusReason: 'not_planned',
+          }),
+        })
+        expect(recloseRes.status).toBe(200)
+
+        // The earlier `duplicate_of` relation row is kept, only the exposed
+        // fields are gated.
+        expect(await fetchDuplicateOfRelations(task.id)).toEqual([
+          {
+            sourceTaskId: task.id,
+            targetTaskId: target.id,
+            type: 'duplicate_of',
+          },
+        ])
+
+        const detailRes = await app.request(`/api/tasks/${task.id}`)
+        const detailBody = await jsonBody<TaskResponse>(detailRes)
+        expect(detailBody.duplicateOfNumber).toBeNull()
+        expect(detailBody.duplicateOfTask).toBeNull()
+      })
+
+      it('clears duplicateOfNumber in the list response after reclosing as not_planned', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+        await closeAsDuplicate(task.id, target.id)
+
+        await app.request(`/api/tasks/${task.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'completed',
+            statusReason: 'not_planned',
+          }),
+        })
+
+        const listRes = await app.request('/api/tasks')
+        const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
+        const listItem = listBody.find((t) => t.id === task.id)
+        assertDefined(listItem)
+        expect(listItem.duplicateOfNumber).toBeNull()
+      })
+    })
+
+    describe('task_relations_no_self_relation constraint', () => {
+      // No route ever writes a same-id row (both handlers reject
+      // `duplicateOfTaskId === id` with a 400 before touching the
+      // database), so this constraint has no public-API path to exercise
+      // it — inserted directly to guard the schema invariant itself, as
+      // with `task_links_no_self_link` (task-content.ts).
+      it('rejects a raw same-id insert', async () => {
+        const task = await createTask('Task')
+
+        await expect(
+          db.insert(taskRelations).values({
+            sourceTaskId: task.id,
+            targetTaskId: task.id,
+            type: 'duplicate_of',
+          }),
+        ).rejects.toThrow()
+      })
     })
   })
 })

@@ -21,6 +21,8 @@ const baseTreeNode: TreeNode = {
   title: 'Implement task list UI',
   description: null,
   status: 'todo',
+  statusReason: null,
+  duplicateOfNumber: null,
   context: 'personal',
   commitment: 'active',
   labels: [],

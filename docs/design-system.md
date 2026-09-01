@@ -120,6 +120,17 @@ introduce a new gray value; use the nearest existing tier.
 | `--sidebar-border`             | `#2a2a2a` | `border-sidebar-border`                       |
 | `--sidebar-ring`               | `#ef4444` | `ring-sidebar-ring`                           |
 
+### Status-completed accent
+
+| Token                | Value     | Tailwind utility                                | Usage                                        |
+| -------------------- | --------- | ----------------------------------------------- | -------------------------------------------- |
+| `--status-completed` | `#a371f7` | `bg-status-completed` / `text-status-completed` | `StatusIcon`'s `completed` close-reason fill |
+
+A second, narrowly-scoped accent — see [Status convention](#status-convention)
+below for why this doesn't violate the "one accent" rule above. Same hex as
+`--github-merged` below, but a separate token: `--github-merged` is reserved
+for GitHub state display only, never substitute it here or vice versa.
+
 ### GitHub status colors
 
 | Token             | Value     | Tailwind utility     | Usage                               |
@@ -494,13 +505,28 @@ after a regen.
 
 Task status is expressed via `StatusIcon`
 (`web/src/components/task/status-icon.tsx`) as a small circular icon — an
-outline circle or a filled circle with a check mark — not literal bracket
-text.
+outline circle or a filled circle with a glyph inside — not literal bracket
+text. For `status === 'completed'`, the icon further branches on
+`statusReason` (`completed` if `null`, i.e. the implicit default):
 
-| Status      | Icon                                           | Color token                                               | Extra styling                                                         |
-| ----------- | ---------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------- |
-| `todo`      | outline circle                                 | `text-muted-foreground`                                   | —                                                                     |
-| `completed` | filled circle + check (lucide-react's `Check`) | `bg-muted-foreground-faint` fill, `text-background` check | Accompanying title text gets `line-through` + `text-muted-foreground` |
+| Status / reason                    | Icon                                   | Color token                                               | Extra styling                                                         |
+| ---------------------------------- | -------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------- |
+| `todo`                             | outline circle                         | `text-muted-foreground`                                   | —                                                                     |
+| `completed` (reason `completed`)   | filled circle + `Check` (lucide-react) | `bg-status-completed` fill, `text-background` glyph       | Accompanying title text gets `line-through` + `text-muted-foreground` |
+| `completed` (reason `not_planned`) | filled circle + `X` (lucide-react)     | `bg-muted-foreground-faint` fill, `text-background` glyph | Same title styling as above                                           |
+| `completed` (reason `duplicate`)   | filled circle + `Equal` (lucide-react) | `bg-muted-foreground-faint` fill, `text-background` glyph | Same title styling as above                                           |
+
+`--status-completed` is a second accent color, spent specifically on "things
+actually done" so it stands out when scanning a list. `not_planned` and
+`duplicate` keep the same neutral `bg-muted-foreground-faint` gray fill that
+`completed` always used, and `--status-completed` is the one new non-neutral
+color this change adds, applied narrowly to the default close reason only.
+
+Row-level metadata for `not_planned`/`duplicate` also gets a plain second-line
+token (`CloseReasonLabel` in `web/src/components/task/task-row-shared.tsx`),
+styled like the row's other metadata tokens (`ParentTaskLabel`,
+`TaskContextLabel`, etc.) rather than as a chip — nothing renders for the
+default `completed` reason.
 
 Completed task/search-result rows (not just the status icon) are further
 dimmed via the `dim-completed` utility (`opacity: 55%`, defined in

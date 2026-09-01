@@ -51,6 +51,7 @@ erDiagram
   timestamp_with_time_zone updated_at
   integer number
   text commitment
+  text status_reason
 }
 "public.labels" {
   text id

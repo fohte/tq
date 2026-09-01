@@ -78,22 +78,23 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 // after the mock call, and vi.mock itself must stay inline per-file.
 vi.mock('#components/task/task-status-picker', () => ({
   TaskStatusPicker: ({
-    onStatusChange,
+    onValueChange,
   }: {
     status: string
-    onStatusChange: (status: string) => void
+    statusReason: string | null
+    onValueChange: (value: string) => void
   }) => (
     <div>
       <button
         onClick={() => {
-          onStatusChange('todo')
+          onValueChange('todo')
         }}
       >
         Set Todo
       </button>
       <button
         onClick={() => {
-          onStatusChange('completed')
+          onValueChange('completed')
         }}
       >
         Set Completed
@@ -401,7 +402,10 @@ describe('TreeTaskGridRow', () => {
 
     await user.click(atIndex(screen.getAllByText('Set Completed'), 0))
 
-    expect(mockMutate).toHaveBeenCalledWith('parent-1')
+    expect(mockMutate).toHaveBeenCalledWith({
+      id: 'parent-1',
+      statusReason: 'completed',
+    })
     expect(mockUpdateStatusMutate).not.toHaveBeenCalled()
   })
 

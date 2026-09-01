@@ -8,3 +8,6 @@ export const setStorageItem = Result.fromThrowable(
     localStorage.setItem(key, value)
   },
 )
+export const parseJson = Result.fromThrowable(
+  (raw: string) => JSON.parse(raw) as unknown,
+)

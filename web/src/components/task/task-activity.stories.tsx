@@ -195,6 +195,7 @@ export const MixedTimeline: Story = {
         author: { kind: 'human', agent: null },
         fromStatus: 'todo',
         toStatus: 'in_progress',
+        toStatusReason: null,
       },
     ],
   },

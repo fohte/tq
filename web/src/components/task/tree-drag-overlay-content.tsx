@@ -36,7 +36,7 @@ export function TreeDragOverlayContent({
         className={`flex items-center gap-2 px-3 py-2 ${ROW_INDENT_CLASS_NAME}`}
         style={rowIndentStyle(targetDepth)}
       >
-        <StatusIcon status={node.status} />
+        <StatusIcon status={node.status} statusReason={node.statusReason} />
         <TaskNumberLabel number={node.number} />
         <span className="truncate text-sm">{node.title}</span>
       </div>
