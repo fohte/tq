@@ -13,6 +13,7 @@ applyStandaloneViewport()
 
 const router = createRouter({
   routeTree,
+  scrollRestoration: true,
   // Remounts a route's component when its path params change, instead of
   // reusing the mounted instance — otherwise state that only initializes at
   // mount (e.g. the Crepe editor's initial content) keeps stale data from

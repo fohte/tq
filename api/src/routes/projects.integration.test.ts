@@ -22,7 +22,10 @@ interface ProjectResponse {
 
 interface ProjectDetailResponse extends ProjectResponse {
   completionRate: number
-  taskCount: { total: number; completed: number }
+  taskCount: {
+    total: number
+    completed: number
+  }
 }
 
 interface TaskResponse {
@@ -153,7 +156,10 @@ describe('projects API', () => {
       const body = await jsonBody<ProjectDetailResponse>(res)
       expect(body.title).toBe('Empty project')
       expect(body.completionRate).toBe(0)
-      expect(body.taskCount).toEqual({ total: 0, completed: 0 })
+      expect(body.taskCount).toEqual({
+        total: 0,
+        completed: 0,
+      })
     })
 
     it('calculates completion rate from associated tasks', async () => {
@@ -175,13 +181,49 @@ describe('projects API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<ProjectDetailResponse>(res)
       expect(body.completionRate).toBeCloseTo(1 / 3)
-      expect(body.taskCount).toEqual({ total: 3, completed: 1 })
+      expect(body.taskCount).toEqual({
+        total: 3,
+        completed: 1,
+      })
     })
 
     it('returns 404 for non-existent project', async () => {
       const res = await app.request(`/api/projects/${TEST_UUID}`)
 
       expect(res.status).toBe(404)
+    })
+  })
+
+  describe('GET /api/projects/:id/task-ids', () => {
+    it('returns an empty array for a project with no tasks', async () => {
+      const project = await createProject('Empty project')
+
+      const res = await app.request(`/api/projects/${project.id}/task-ids`)
+
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual([])
+    })
+
+    it('returns an empty array for a non-existent project', async () => {
+      const res = await app.request(`/api/projects/${TEST_UUID}/task-ids`)
+
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual([])
+    })
+
+    it('returns only the ids of tasks belonging to the project', async () => {
+      const project = await createProject('My project')
+      const other = await createProject('Other project')
+      const task1 = await createTask('Task 1', { projectId: project.id })
+      const task2 = await createTask('Task 2', { projectId: project.id })
+      await createTask('Task in other project', { projectId: other.id })
+      await createTask('Task without project')
+
+      const res = await app.request(`/api/projects/${project.id}/task-ids`)
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<string[]>(res)
+      expect([...body].sort()).toEqual([task1.id, task2.id].sort())
     })
   })
 

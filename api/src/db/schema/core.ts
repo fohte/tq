@@ -73,7 +73,7 @@ export const tasks = pgTable(
     title: text('title').notNull(),
     description: text('description'),
     status: text('status', {
-      enum: ['todo', 'in_progress', 'completed'],
+      enum: ['todo', 'completed'],
     })
       .notNull()
       .default('todo'),

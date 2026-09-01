@@ -30,11 +30,11 @@ describe('tasks actions API', () => {
     it('updates task status', async () => {
       const created = await createTask('Task')
 
-      const res = await setStatus(created.id, 'in_progress')
+      const res = await setStatus(created.id, 'completed')
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
-      expect(body.status).toBe('in_progress')
+      expect(body.status).toBe('completed')
     })
 
     it('returns 404 for non-existent task', async () => {
@@ -51,14 +51,14 @@ describe('tasks actions API', () => {
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'in_progress' }),
+          body: JSON.stringify({ status: 'completed' }),
         },
       )
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body.id).toBe(created.id)
-      expect(body.status).toBe('in_progress')
+      expect(body.status).toBe('completed')
     })
 
     it('returns 400 for invalid status', async () => {
@@ -71,20 +71,20 @@ describe('tasks actions API', () => {
 
     it('succeeds when re-setting the same status (idempotent)', async () => {
       const created = await createTask('Task')
-      await setStatus(created.id, 'in_progress')
+      await setStatus(created.id, 'completed')
 
-      const res = await setStatus(created.id, 'in_progress')
+      const res = await setStatus(created.id, 'completed')
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
-      expect(body.status).toBe('in_progress')
+      expect(body.status).toBe('completed')
     })
 
     it('keeps the labels in the response', async () => {
       await createLabel('urgent')
       const created = await createTask('Task', { labels: ['urgent'] })
 
-      const res = await setStatus(created.id, 'in_progress')
+      const res = await setStatus(created.id, 'completed')
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
@@ -96,13 +96,13 @@ describe('tasks actions API', () => {
     it('records a status_changed event when the status actually changes', async () => {
       const task = await createTask('Task')
 
-      await setStatus(task.id, 'in_progress')
+      await setStatus(task.id, 'completed')
 
       expect(await fetchTaskEvents(task.id)).toEqual([
         {
           type: 'status_changed',
           fromStatus: 'todo',
-          toStatus: 'in_progress',
+          toStatus: 'completed',
           githubOwner: null,
           githubRepo: null,
           githubNumber: null,
@@ -115,15 +115,15 @@ describe('tasks actions API', () => {
 
     it('does not record when re-setting the same status (idempotent)', async () => {
       const task = await createTask('Task')
-      await setStatus(task.id, 'in_progress')
+      await setStatus(task.id, 'completed')
 
-      await setStatus(task.id, 'in_progress')
+      await setStatus(task.id, 'completed')
 
       expect(await fetchTaskEvents(task.id)).toEqual([
         {
           type: 'status_changed',
           fromStatus: 'todo',
-          toStatus: 'in_progress',
+          toStatus: 'completed',
           githubOwner: null,
           githubRepo: null,
           githubNumber: null,
@@ -137,7 +137,7 @@ describe('tasks actions API', () => {
     it('records the author from the X-Author header', async () => {
       const task = await createTask('Task')
 
-      await setStatus(task.id, 'in_progress', {
+      await setStatus(task.id, 'completed', {
         'X-Author': 'llm:claude-opus-5',
       })
 
@@ -145,7 +145,7 @@ describe('tasks actions API', () => {
         {
           type: 'status_changed',
           fromStatus: 'todo',
-          toStatus: 'in_progress',
+          toStatus: 'completed',
           githubOwner: null,
           githubRepo: null,
           githubNumber: null,
@@ -458,24 +458,6 @@ describe('tasks actions API', () => {
       >(res)
       assertDefined(body.recurrenceRule)
       expect(body.recurrenceRule.type).toBe('daily')
-    })
-  })
-
-  describe('parallel task execution', () => {
-    it('allows multiple tasks to be in_progress simultaneously', async () => {
-      const task1 = await createTask('Task 1')
-      const task2 = await createTask('Task 2')
-
-      await setStatus(task1.id, 'in_progress')
-      await setStatus(task2.id, 'in_progress')
-
-      const res1 = await app.request(`/api/tasks/${task1.id}`)
-      const res2 = await app.request(`/api/tasks/${task2.id}`)
-
-      const body1 = await jsonBody<TaskResponse>(res1)
-      const body2 = await jsonBody<TaskResponse>(res2)
-      expect(body1.status).toBe('in_progress')
-      expect(body2.status).toBe('in_progress')
     })
   })
 })

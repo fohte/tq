@@ -80,6 +80,8 @@ export interface TaskTreeListProps {
   tree: TreeNode[]
   tasks: Task[]
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
+  /** Only set this when this list's own div is the scrolling element — TaskTreeList is also embedded non-scrolling inside project-detail-main.tsx, which scrolls via an ancestor container instead. */
+  scrollRestorationId?: string
 }
 
 export function TaskTreeList({
@@ -87,6 +89,7 @@ export function TaskTreeList({
   tree,
   tasks,
   sessionsByTaskId,
+  scrollRestorationId,
 }: TaskTreeListProps) {
   const treeOutliner = useTreeOutliner(tree, { enabled: true })
   const updateTaskParent = useUpdateTaskParent()
@@ -184,7 +187,10 @@ export function TaskTreeList({
   const isEmpty = tree.length === 0
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div
+      className="flex-1 overflow-auto"
+      data-scroll-restoration-id={scrollRestorationId}
+    >
       {isLoading ? (
         <ListAreaMessage>Loading...</ListAreaMessage>
       ) : isEmpty ? (
