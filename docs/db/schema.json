@@ -95,6 +95,12 @@
           "type": "timestamp with time zone",
           "nullable": false,
           "default": "now()"
+        },
+        {
+          "name": "context",
+          "type": "text",
+          "nullable": false,
+          "default": "'personal'::text"
         }
       ],
       "indexes": [
@@ -109,6 +115,12 @@
           "def": "CREATE UNIQUE INDEX labels_name_unique ON public.labels USING btree (name)",
           "table": "public.labels",
           "columns": ["name"]
+        },
+        {
+          "name": "idx_labels_context",
+          "def": "CREATE INDEX idx_labels_context ON public.labels USING btree (context)",
+          "table": "public.labels",
+          "columns": ["context"]
         }
       ],
       "constraints": [
@@ -281,6 +293,12 @@
           "type": "timestamp with time zone",
           "nullable": false,
           "default": "now()"
+        },
+        {
+          "name": "context",
+          "type": "text",
+          "nullable": false,
+          "default": "'personal'::text"
         }
       ],
       "indexes": [
@@ -301,6 +319,12 @@
           "def": "CREATE INDEX idx_projects_sort_order ON public.projects USING btree (sort_order)",
           "table": "public.projects",
           "columns": ["sort_order"]
+        },
+        {
+          "name": "idx_projects_context",
+          "def": "CREATE INDEX idx_projects_context ON public.projects USING btree (context)",
+          "table": "public.projects",
+          "columns": ["context"]
         }
       ],
       "constraints": [
