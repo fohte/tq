@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { expect, userEvent, within } from 'storybook/test'
 
 import {
   TaskSidebar,
@@ -11,6 +12,7 @@ import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
+import { assertDefined } from '#lib/test-utils'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const baseTask: TaskDetail = {
@@ -20,6 +22,9 @@ const baseTask: TaskDetail = {
   description:
     '## Why\n\nThe task detail page is needed.\n\n## What\n\n- Add inline editing\n- Add sidebar fields',
   status: 'todo',
+  statusReason: null,
+  duplicateOfNumber: null,
+  duplicateOfTask: null,
   context: 'personal',
   commitment: 'active',
   labels: [],
@@ -186,6 +191,54 @@ export const SidebarWithTimeBlocks: Story = {
         },
       ],
     },
+  },
+}
+
+// Opens the STATUS select to exercise the "Close as" group (completed /
+// not planned / duplicate), which the closed trigger alone never renders.
+async function openStatusSelect(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement)
+  const statusField = assertDefined(canvas.getByText('STATUS').closest('div'))
+  const body = within(canvasElement.ownerDocument.body)
+
+  await userEvent.click(within(statusField).getByRole('combobox'))
+
+  return body
+}
+
+export const SidebarCompletedOpen: Story = {
+  args: {
+    task: { ...baseTask, status: 'completed', statusReason: 'completed' },
+  },
+  play: async ({ canvasElement }) => {
+    const body = await openStatusSelect(canvasElement)
+    await expect(
+      await body.findByRole('option', { name: 'completed' }),
+    ).toHaveAttribute('aria-selected', 'true')
+  },
+}
+
+export const SidebarNotPlannedOpen: Story = {
+  args: {
+    task: { ...baseTask, status: 'completed', statusReason: 'not_planned' },
+  },
+  play: async ({ canvasElement }) => {
+    const body = await openStatusSelect(canvasElement)
+    await expect(
+      await body.findByRole('option', { name: 'not planned' }),
+    ).toHaveAttribute('aria-selected', 'true')
+  },
+}
+
+export const SidebarDuplicateOpen: Story = {
+  args: {
+    task: { ...baseTask, status: 'completed', statusReason: 'duplicate' },
+  },
+  play: async ({ canvasElement }) => {
+    const body = await openStatusSelect(canvasElement)
+    await expect(
+      await body.findByRole('option', { name: 'duplicate' }),
+    ).toHaveAttribute('aria-selected', 'true')
   },
 }
 

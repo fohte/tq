@@ -19,6 +19,8 @@ const baseTask: Task = {
   title: 'Implement task list UI',
   description: null,
   status: 'todo',
+  statusReason: null,
+  duplicateOfNumber: null,
   context: 'personal',
   commitment: 'active',
   labels: [],
@@ -119,6 +121,16 @@ export const Empty: Story = {
     isLoading: false,
     tasks: [],
     sessionsByTaskId: new Map(),
+  },
+}
+
+export const LoadingMore: Story = {
+  args: {
+    isLoading: false,
+    tasks: sampleTasks,
+    sessionsByTaskId: new Map(),
+    hasNextPage: true,
+    isFetchingNextPage: true,
   },
 }
 

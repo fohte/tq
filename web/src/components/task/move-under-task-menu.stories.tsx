@@ -16,6 +16,8 @@ const orphanCandidate: SearchResult = {
   title: 'Deploy to production',
   description: null,
   status: 'todo',
+  statusReason: null,
+  duplicateOfNumber: null,
   context: 'work',
   commitment: 'active',
   labels: [],

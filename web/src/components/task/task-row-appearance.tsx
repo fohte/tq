@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { SessionIndicator } from '#components/agent-session/session-indicator'
 import { GithubLinksChipGroup } from '#components/task/github-links-chip-group'
 import {
+  CloseReasonLabel,
   DueDateBadge,
   EstimateLabel,
   ParentTaskLabel,
@@ -53,8 +54,18 @@ export function TaskRowAppearance({
   draggable = false,
   secondLineExtras = [],
 }: TaskRowAppearanceProps) {
-  const handleStatusChange = useHandleStatusChange(task.id, task.status)
+  const { handleValueChange, duplicatePicker } = useHandleStatusChange(
+    task.id,
+    task.status,
+    task.statusReason,
+  )
   const isCompleted = task.status === 'completed'
+  const closeReason =
+    isCompleted &&
+    task.statusReason != null &&
+    task.statusReason !== 'completed'
+      ? task.statusReason
+      : null
 
   const secondLineItems: React.ReactNode[] = [
     task.labels.length > 0 ? (
@@ -79,76 +90,91 @@ export function TaskRowAppearance({
     task.githubLinks.length > 0 ? (
       <GithubLinksChipGroup links={task.githubLinks} />
     ) : null,
+    closeReason != null ? (
+      <CloseReasonLabel
+        reason={closeReason}
+        duplicateOfNumber={task.duplicateOfNumber}
+      />
+    ) : null,
     ...secondLineExtras,
   ]
 
   return (
-    <Link
-      to="/tasks/$taskId"
-      params={{ taskId: task.id }}
-      className={cn('block', draggable && 'cursor-grab active:cursor-grabbing')}
-      {...(draggable
-        ? {
-            'data-task-id': task.id,
-            'data-task-title': task.title,
-            ...(task.estimatedMinutes != null
-              ? { 'data-estimated-minutes': String(task.estimatedMinutes) }
-              : {}),
-          }
-        : {})}
-    >
-      <div
+    <>
+      <Link
+        to="/tasks/$taskId"
+        params={{ taskId: task.id }}
         className={cn(
-          'group',
-          rowWrapperClassName(isCompleted),
-          // Must come after rowWrapperClassName: twMerge keeps
-          // both px-* and a later pl-* (CSS cascade lets pl-* win),
-          // but drops pl-* if it precedes the conflicting px-*.
-          ROW_INDENT_CLASS_NAME,
-          selected && 'ring-1 ring-inset ring-border-strong',
+          'block',
+          draggable && 'cursor-grab active:cursor-grabbing',
         )}
-        style={rowIndentStyle(depth)}
+        {...(draggable
+          ? {
+              'data-task-id': task.id,
+              'data-task-title': task.title,
+              ...(task.estimatedMinutes != null
+                ? { 'data-estimated-minutes': String(task.estimatedMinutes) }
+                : {}),
+            }
+          : {})}
       >
-        <div className="flex items-start gap-2" onClick={onClick}>
-          {leading}
-          <TaskStatusPicker
-            status={task.status}
-            onStatusChange={handleStatusChange}
-          />
+        <div
+          className={cn(
+            'group',
+            rowWrapperClassName(isCompleted),
+            // Must come after rowWrapperClassName: twMerge keeps
+            // both px-* and a later pl-* (CSS cascade lets pl-* win),
+            // but drops pl-* if it precedes the conflicting px-*.
+            ROW_INDENT_CLASS_NAME,
+            selected && 'ring-1 ring-inset ring-border-strong',
+          )}
+          style={rowIndentStyle(depth)}
+        >
+          <div className="flex items-start gap-2" onClick={onClick}>
+            {leading}
+            <TaskStatusPicker
+              status={task.status}
+              statusReason={task.statusReason}
+              onValueChange={handleValueChange}
+            />
 
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <div className="flex items-center gap-2 overflow-hidden">
-              <TaskNumberLabel number={task.number} />
-              {/* min-w-30 (120px): without a floor, this flex item's
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <TaskNumberLabel number={task.number} />
+                {/* min-w-30 (120px): without a floor, this flex item's
                 default min-width would shrink to 0 once its siblings
                 need more room than the row has, hiding the title
                 entirely instead of truncating it or letting the row
                 overflow. */}
-              <span className={cn(rowTitleClassName(isCompleted), 'min-w-30')}>
-                {task.title}
-              </span>
-              {task.childCompletionCount.total > 0 && (
                 <span
-                  className="shrink-0 font-mono text-xs text-muted-foreground"
-                  data-testid="child-completion"
+                  className={cn(rowTitleClassName(isCompleted), 'min-w-30')}
                 >
-                  {task.childCompletionCount.completed}/
-                  {task.childCompletionCount.total}
+                  {task.title}
                 </span>
-              )}
-              <SessionIndicator sessions={sessions} />
+                {task.childCompletionCount.total > 0 && (
+                  <span
+                    className="shrink-0 font-mono text-xs text-muted-foreground"
+                    data-testid="child-completion"
+                  >
+                    {task.childCompletionCount.completed}/
+                    {task.childCompletionCount.total}
+                  </span>
+                )}
+                <SessionIndicator sessions={sessions} />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <DotSeparatedList items={secondLineItems} />
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <DotSeparatedList items={secondLineItems} />
-            </div>
+            {trailing != null && (
+              <div className="shrink-0 self-center">{trailing}</div>
+            )}
           </div>
-
-          {trailing != null && (
-            <div className="shrink-0 self-center">{trailing}</div>
-          )}
         </div>
-      </div>
-    </Link>
+      </Link>
+      {duplicatePicker}
+    </>
   )
 }

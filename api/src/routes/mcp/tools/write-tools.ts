@@ -5,7 +5,12 @@ import { app } from '#app'
 import { AUTHOR_HEADER } from '#lib/author'
 import { callInternalRoute } from '#routes/mcp/route-bridge'
 import { taskIdOrNumber } from '#routes/tasks/shared'
-import { createTaskSchema, taskStatus, updateTaskSchema } from '#schemas/task'
+import {
+  createTaskSchema,
+  taskStatus,
+  taskStatusReason,
+  updateTaskSchema,
+} from '#schemas/task'
 import { createCommentSchema, updateCommentSchema } from '#schemas/task-comment'
 import { createPageSchema, updatePageSchema } from '#schemas/task-page'
 
@@ -119,19 +124,26 @@ export function registerWriteTools(server: McpServer): void {
       description:
         'Change a task to todo or completed. Completing a task that has a ' +
         'recurrenceRule creates the next occurrence of that task. ' +
-        'Completing an already-completed task is rejected.',
+        'Completing an already-completed task is rejected. When closing a ' +
+        'task (status: completed), optionally pass statusReason to record ' +
+        "why it was closed, and, when statusReason is 'duplicate', " +
+        'duplicateOfTaskId to record which task it duplicates.',
       inputSchema: z.object({
         taskId: taskIdOrNumber,
         status: taskStatus,
+        statusReason: taskStatusReason.optional(),
+        duplicateOfTaskId: z.uuid().optional(),
         agent: agentArgSchema,
       }),
     },
     // Completing routes through /complete for its recurrence side effect;
     // todo routes through the plain /status PATCH.
-    async ({ taskId, status, agent }) =>
+    async ({ taskId, status, statusReason, duplicateOfTaskId, agent }) =>
       status === 'completed'
         ? callRoute(`/api/tasks/${String(taskId)}/complete`, agent, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ statusReason, duplicateOfTaskId }),
           })
         : callRoute(`/api/tasks/${String(taskId)}/status`, agent, {
             method: 'PATCH',

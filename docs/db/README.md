@@ -13,7 +13,7 @@
 | [public.task_comments](public.task_comments.md)                                     | 5       |         | BASE TABLE |
 | [public.task_labels](public.task_labels.md)                                         | 2       |         | BASE TABLE |
 | [public.task_pages](public.task_pages.md)                                           | 8       |         | BASE TABLE |
-| [public.tasks](public.tasks.md)                                                     | 15      |         | BASE TABLE |
+| [public.tasks](public.tasks.md)                                                     | 16      |         | BASE TABLE |
 | [public.time_blocks](public.time_blocks.md)                                         | 7       |         | BASE TABLE |
 | [public.today_tasks](public.today_tasks.md)                                         | 6       |         | BASE TABLE |
 | [public.edits](public.edits.md)                                                     | 10      |         | BASE TABLE |
@@ -22,11 +22,12 @@
 | [public.github_sync_rule_ignored_issues](public.github_sync_rule_ignored_issues.md) | 6       |         | BASE TABLE |
 | [public.github_sync_rules](public.github_sync_rules.md)                             | 11      |         | BASE TABLE |
 | [public.calendar_subscriptions](public.calendar_subscriptions.md)                   | 7       |         | BASE TABLE |
-| [public.task_events](public.task_events.md)                                         | 12      |         | BASE TABLE |
+| [public.task_events](public.task_events.md)                                         | 13      |         | BASE TABLE |
 | [public.scheduling_settings](public.scheduling_settings.md)                         | 8       |         | BASE TABLE |
 | [public.agent_sessions](public.agent_sessions.md)                                   | 12      |         | BASE TABLE |
 | [public.task_agent_sessions](public.task_agent_sessions.md)                         | 2       |         | BASE TABLE |
 | [public.saved_views](public.saved_views.md)                                         | 7       |         | BASE TABLE |
+| [public.task_relations](public.task_relations.md)                                   | 4       |         | BASE TABLE |
 
 ## Relations
 
@@ -55,6 +56,8 @@ erDiagram
 "public.task_events" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_agent_sessions" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_agent_sessions" }o--|| "public.agent_sessions" : "FOREIGN KEY (agent_session_id) REFERENCES agent_sessions(id) ON DELETE CASCADE"
+"public.task_relations" }o--|| "public.tasks" : "FOREIGN KEY (source_task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+"public.task_relations" }o--|| "public.tasks" : "FOREIGN KEY (target_task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 
 "public.images" {
   text id
@@ -149,6 +152,7 @@ erDiagram
   timestamp_with_time_zone updated_at
   integer number
   text commitment
+  text status_reason
 }
 "public.time_blocks" {
   text id
@@ -244,6 +248,7 @@ erDiagram
   text author_kind
   text author_agent
   timestamp_with_time_zone created_at
+  text to_status_reason
 }
 "public.scheduling_settings" {
   text id
@@ -281,6 +286,12 @@ erDiagram
   text context
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+}
+"public.task_relations" {
+  text source_task_id FK
+  text target_task_id FK
+  text type
+  timestamp_with_time_zone created_at
 }
 ```
 

@@ -62,6 +62,7 @@ describe('POST /api/tasks/from-github', () => {
         title: 'Bug: something broke',
         description: 'Steps to reproduce...',
         status: 'todo',
+        statusReason: null,
         context: 'personal',
         commitment: 'inbox',
         labels: [],

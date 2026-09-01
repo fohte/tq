@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeNode } from '#components/task/task-row-test-fixtures'
 import type { TreeNode } from '#hooks/use-tasks'
@@ -302,6 +302,10 @@ describe('useTreeOutliner', () => {
 })
 
 describe('useExpandedIds', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
   it('with defaultExpanded true, starts with everything expanded and toggling collapses', () => {
     const { result } = renderHook(() => useExpandedIds(true))
 
@@ -331,6 +335,64 @@ describe('useExpandedIds', () => {
     act(() => {
       result.current.toggleExpand('a')
     })
+    expect(result.current.isExpanded('a')).toBe(false)
+  })
+
+  it('without a storageKey, does not persist toggled ids across mounts', () => {
+    const { result, unmount } = renderHook(() => useExpandedIds(false))
+    act(() => {
+      result.current.toggleExpand('a')
+    })
+    unmount()
+
+    const { result: remounted } = renderHook(() => useExpandedIds(false))
+    expect(remounted.current.isExpanded('a')).toBe(false)
+  })
+
+  it('with a storageKey, persists a toggled-on id across a remount', () => {
+    const { result, unmount } = renderHook(() =>
+      useExpandedIds(false, 'test:expanded-ids'),
+    )
+    act(() => {
+      result.current.toggleExpand('a')
+    })
+    unmount()
+
+    const { result: remounted } = renderHook(() =>
+      useExpandedIds(false, 'test:expanded-ids'),
+    )
+    expect(remounted.current.isExpanded('a')).toBe(true)
+  })
+
+  it('with a storageKey, persists a toggled-off id across a remount', () => {
+    localStorage.setItem('test:expanded-ids', JSON.stringify(['a']))
+    const { result, unmount } = renderHook(() =>
+      useExpandedIds(false, 'test:expanded-ids'),
+    )
+    act(() => {
+      result.current.toggleExpand('a')
+    })
+    unmount()
+
+    const { result: remounted } = renderHook(() =>
+      useExpandedIds(false, 'test:expanded-ids'),
+    )
+    expect(remounted.current.isExpanded('a')).toBe(false)
+  })
+
+  it('ignores a malformed stored value and falls back to the default state', () => {
+    localStorage.setItem('test:expanded-ids', 'not-json')
+    const { result } = renderHook(() =>
+      useExpandedIds(false, 'test:expanded-ids'),
+    )
+    expect(result.current.isExpanded('a')).toBe(false)
+  })
+
+  it('ignores a stored value that is not a string array and falls back to the default state', () => {
+    localStorage.setItem('test:expanded-ids', JSON.stringify({ a: true }))
+    const { result } = renderHook(() =>
+      useExpandedIds(false, 'test:expanded-ids'),
+    )
     expect(result.current.isExpanded('a')).toBe(false)
   })
 })

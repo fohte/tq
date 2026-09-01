@@ -85,6 +85,26 @@ function DropdownMenuCheckboxItem({
   )
 }
 
+function DropdownMenuGroup({ ...props }: MenuPrimitive.Group.Props) {
+  return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />
+}
+
+function DropdownMenuLabel({
+  className,
+  ...props
+}: MenuPrimitive.GroupLabel.Props) {
+  return (
+    <MenuPrimitive.GroupLabel
+      data-slot="dropdown-menu-label"
+      className={cn(
+        'border-t border-border px-1.5 pt-2 pb-1 font-mono text-2xs tracking-wide text-muted-foreground-faint uppercase',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
 function DropdownMenuRadioGroup({ ...props }: MenuPrimitive.RadioGroup.Props) {
   return (
     <MenuPrimitive.RadioGroup
@@ -129,7 +149,9 @@ export {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,

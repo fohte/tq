@@ -137,6 +137,7 @@ export const LinkedToTask: Story = {
         title: 'Fix flaky test',
         description: null,
         status: 'todo',
+        statusReason: null,
         context: 'personal',
         commitment: 'active',
         labels: [],

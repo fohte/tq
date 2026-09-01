@@ -13,6 +13,8 @@ const baseTask: Task = {
   title: 'Implement task list UI',
   description: null,
   status: 'todo',
+  statusReason: null,
+  duplicateOfNumber: null,
   context: 'personal',
   commitment: 'active',
   labels: [],
@@ -76,6 +78,40 @@ export const Completed: Story = {
     task: {
       ...baseTask,
       status: 'completed',
+      title: 'Set up CI pipeline',
+    },
+  },
+}
+
+export const NotPlanned: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      status: 'completed',
+      statusReason: 'not_planned',
+      title: 'Redesign the onboarding flow',
+    },
+  },
+}
+
+export const Duplicate: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      status: 'completed',
+      statusReason: 'duplicate',
+      title: 'Set up CI pipeline',
+    },
+  },
+}
+
+export const DuplicateOfNumber: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      status: 'completed',
+      statusReason: 'duplicate',
+      duplicateOfNumber: 42,
       title: 'Set up CI pipeline',
     },
   },

@@ -111,6 +111,7 @@ describe('syncGithubAssignedIssues', () => {
       title: 'Fix bug',
       description: null,
       status: 'todo',
+      statusReason: null,
       startDate: null,
       dueDate: null,
       estimatedMinutes: null,

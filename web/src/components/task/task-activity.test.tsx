@@ -94,6 +94,7 @@ function makeStatusChangedEvent(
     author: { kind: 'human', agent: null },
     fromStatus: 'todo',
     toStatus: 'in_progress',
+    toStatusReason: null,
     ...overrides,
   }
 }

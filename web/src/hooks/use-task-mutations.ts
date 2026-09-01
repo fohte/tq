@@ -53,6 +53,8 @@ export function useCreateTask() {
         title: input.title,
         description: input.description ?? null,
         status: 'todo',
+        statusReason: null,
+        duplicateOfNumber: null,
         context: input.context ?? 'personal',
         commitment: input.commitment ?? 'inbox',
         labels: input.labels ?? [],
@@ -104,17 +106,21 @@ export function useUpdateTaskStatus() {
     mutationFn: async ({
       id,
       status,
+      statusReason,
+      duplicateOfTaskId,
     }: {
       id: string
       status: 'todo' | 'completed'
+      statusReason?: 'completed' | 'not_planned' | 'duplicate'
+      duplicateOfTaskId?: string
     }) => {
       const res = await api.api.tasks[':id'].status.$patch({
         param: { id },
-        json: { status },
+        json: { status, statusReason, duplicateOfTaskId },
       })
       return unwrapOrThrow(assertOk(res)).json()
     },
-    onMutate: async ({ id, status }) => {
+    onMutate: async ({ id, status, statusReason }) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists })
       await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
 
@@ -125,12 +131,19 @@ export function useUpdateTaskStatus() {
         taskKeys.detail(id),
       )
 
+      // Mirrors the server: statusReason is only meaningful for 'completed',
+      // cleared to null for every other status.
+      const nextStatusReason =
+        status === 'completed' ? (statusReason ?? 'completed') : null
+
       queryClient.setQueriesData<Task[]>(
         { queryKey: taskKeys.lists },
         (old) => {
           if (!old) return old
           return old.map((task) =>
-            task.id === id ? { ...task, status } : task,
+            task.id === id
+              ? { ...task, status, statusReason: nextStatusReason }
+              : task,
           )
         },
       )
@@ -139,6 +152,7 @@ export function useUpdateTaskStatus() {
         queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
           ...previousDetail,
           status,
+          statusReason: nextStatusReason,
         })
       }
 
@@ -315,11 +329,22 @@ export function useCompleteTask() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (id: string) => {
-      const res = await api.api.tasks[':id'].complete.$post({ param: { id } })
+    mutationFn: async ({
+      id,
+      statusReason,
+      duplicateOfTaskId,
+    }: {
+      id: string
+      statusReason?: 'completed' | 'not_planned' | 'duplicate'
+      duplicateOfTaskId?: string
+    }) => {
+      const res = await api.api.tasks[':id'].complete.$post({
+        param: { id },
+        json: { statusReason, duplicateOfTaskId },
+      })
       return unwrapOrThrow(assertOk(res)).json()
     },
-    onMutate: async (id) => {
+    onMutate: async ({ id, statusReason }) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists })
       await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
 
@@ -331,6 +356,7 @@ export function useCompleteTask() {
       )
 
       const now = new Date().toISOString()
+      const nextStatusReason = statusReason ?? 'completed'
 
       queryClient.setQueriesData<Task[]>(
         { queryKey: taskKeys.lists },
@@ -338,7 +364,12 @@ export function useCompleteTask() {
           if (!old) return old
           return old.map((task) =>
             task.id === id
-              ? { ...task, status: 'completed', updatedAt: now }
+              ? {
+                  ...task,
+                  status: 'completed',
+                  statusReason: nextStatusReason,
+                  updatedAt: now,
+                }
               : task,
           )
         },
@@ -348,13 +379,14 @@ export function useCompleteTask() {
         queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
           ...previousDetail,
           status: 'completed',
+          statusReason: nextStatusReason,
           updatedAt: now,
         })
       }
 
       return { previousLists, previousDetail }
     },
-    onError: (_err, id, context) => {
+    onError: (_err, { id }, context) => {
       if (context?.previousLists) {
         for (const [key, data] of context.previousLists) {
           queryClient.setQueryData(key, data)

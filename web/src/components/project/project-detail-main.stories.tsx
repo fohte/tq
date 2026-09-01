@@ -32,6 +32,8 @@ const baseProject: ProjectDetail = {
 const baseTask: Omit<ProjectTask, 'id' | 'title' | 'status'> = {
   number: 1,
   description: null,
+  statusReason: null,
+  duplicateOfNumber: null,
   context: 'personal',
   commitment: 'active',
   labels: [],
@@ -145,6 +147,10 @@ function MainContentStory({
           isTasksLoading={false}
           lazyChildrenFilter={undefined}
           sessionsByTaskId={new Map()}
+          hasNextPage={false}
+          isFetchingNextPage={false}
+          isFetchNextPageError={false}
+          fetchNextPage={() => {}}
         />
       </div>
     </Providers>
@@ -227,6 +233,10 @@ export const FullPagePC: StoryObj<{
             isTasksLoading={false}
             lazyChildrenFilter={undefined}
             sessionsByTaskId={new Map()}
+            hasNextPage={false}
+            isFetchingNextPage={false}
+            isFetchNextPageError={false}
+            fetchNextPage={() => {}}
           />
         </div>
         <ProjectSidebar project={project} />
@@ -261,6 +271,10 @@ export const FullPageSP: StoryObj<{
             isTasksLoading={false}
             lazyChildrenFilter={undefined}
             sessionsByTaskId={new Map()}
+            hasNextPage={false}
+            isFetchingNextPage={false}
+            isFetchNextPageError={false}
+            fetchNextPage={() => {}}
           />
         </div>
         <div className="border-t border-border p-4">

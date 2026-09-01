@@ -65,6 +65,7 @@ erDiagram
   timestamp_with_time_zone updated_at
   integer number
   text commitment
+  text status_reason
 }
 "public.github_sync_rules" {
   text id

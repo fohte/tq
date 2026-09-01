@@ -48,6 +48,7 @@ function linkedTaskDetail(
     | 'title'
     | 'description'
     | 'status'
+    | 'statusReason'
     | 'context'
     | 'commitment'
     | 'labels'
@@ -72,6 +73,7 @@ function linkedTaskDetail(
     title: task.title,
     description: task.description,
     status: task.status,
+    statusReason: task.statusReason,
     context: task.context,
     commitment: task.commitment,
     labels: task.labels,
@@ -85,6 +87,7 @@ function linkedTaskDetail(
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
     parentNumber: null,
+    duplicateOfNumber: null,
     childCompletionCount,
   }
 }

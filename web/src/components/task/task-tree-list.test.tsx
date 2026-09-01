@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-router'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ROW_INDENT_CLASS_NAME } from '#components/task/task-row-shared'
 import { makeNode, makeTask } from '#components/task/task-row-test-fixtures'
@@ -278,5 +278,75 @@ describe('TaskTreeList lazyChildrenFilter', () => {
       q: 'is:todo',
       parentId: 'root-1',
     })
+  })
+})
+
+// jsdom has no IntersectionObserver; this stub captures the callback passed
+// by TaskTreeList's sentinel effect so a test can invoke it directly instead
+// of simulating a real scroll/resize.
+class MockIntersectionObserver {
+  static instances: MockIntersectionObserver[] = []
+  callback: (entries: { isIntersecting: boolean }[]) => void
+  observe = vi.fn()
+  disconnect = vi.fn()
+  unobserve = vi.fn()
+
+  constructor(callback: (entries: { isIntersecting: boolean }[]) => void) {
+    this.callback = callback
+    MockIntersectionObserver.instances.push(this)
+  }
+
+  trigger(isIntersecting: boolean) {
+    this.callback([{ isIntersecting }])
+  }
+}
+
+describe('TaskTreeList infinite scroll pagination', () => {
+  beforeEach(() => {
+    MockIntersectionObserver.instances = []
+    vi.stubGlobal('IntersectionObserver', MockIntersectionObserver)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('calls fetchNextPage when the load-more sentinel intersects the viewport', async () => {
+    const fetchNextPage = vi.fn()
+    const root = makeNode({ id: 'root-1', title: 'Root Task' })
+    await renderTaskTreeList([root], {
+      hasNextPage: true,
+      isFetchingNextPage: false,
+      fetchNextPage,
+    })
+
+    const observer = MockIntersectionObserver.instances[0]
+    if (observer == null) throw new Error('expected an IntersectionObserver')
+    observer.trigger(true)
+
+    expect(fetchNextPage).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not call fetchNextPage while a page is already being fetched', async () => {
+    const fetchNextPage = vi.fn()
+    const root = makeNode({ id: 'root-1', title: 'Root Task' })
+    await renderTaskTreeList([root], {
+      hasNextPage: true,
+      isFetchingNextPage: true,
+      fetchNextPage,
+    })
+
+    const observer = MockIntersectionObserver.instances[0]
+    if (observer == null) throw new Error('expected an IntersectionObserver')
+    observer.trigger(true)
+
+    expect(fetchNextPage).not.toHaveBeenCalled()
+  })
+
+  it('shows a loading-more message while fetching the next page', async () => {
+    const root = makeNode({ id: 'root-1', title: 'Root Task' })
+    await renderTaskTreeList([root], { isFetchingNextPage: true })
+
+    expect(screen.getByText('Loading more...')).toBeInTheDocument()
   })
 })

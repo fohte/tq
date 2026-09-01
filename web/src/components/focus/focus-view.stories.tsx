@@ -13,6 +13,8 @@ const baseTask: Task = {
   title: 'Design the onboarding flow',
   description: null,
   status: 'todo',
+  statusReason: null,
+  duplicateOfNumber: null,
   context: 'work',
   commitment: 'active',
   labels: [],

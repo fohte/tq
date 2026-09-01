@@ -39,6 +39,8 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     title: 'Task 1',
     description: null,
     status: 'todo',
+    statusReason: null,
+    duplicateOfNumber: null,
     context: 'work',
     commitment: 'active',
     labels: [],
