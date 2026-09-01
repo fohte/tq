@@ -244,6 +244,20 @@ describe('TaskTreeList', () => {
     await screen.findAllByPlaceholderText(/task title|タスクのタイトル/i)
     expect(screen.queryByText(/#1 Root Task/)).toBeNull()
   })
+
+  it('keeps rows far past the visible range out of the DOM', async () => {
+    const roots = Array.from({ length: 200 }, (_, i) =>
+      makeNode({
+        id: `root-${String(i)}`,
+        number: i + 1,
+        title: `Root Task ${String(i)}`,
+      }),
+    )
+    await renderTaskTreeList(roots)
+
+    expect(screen.getByText('Root Task 0')).toBeInTheDocument()
+    expect(screen.queryByText('Root Task 199')).not.toBeInTheDocument()
+  })
 })
 
 describe('TaskTreeList lazyChildrenFilter', () => {

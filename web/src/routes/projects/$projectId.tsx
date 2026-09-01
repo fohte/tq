@@ -100,6 +100,7 @@ function ProjectDetailPage() {
             isTasksLoading={isFilteredTasksLoading}
             lazyChildrenFilter={lazyChildrenFilter}
             sessionsByTaskId={sessionsByTaskId}
+            ancestorScrollRestorationId="project-detail"
             hasNextPage={hasNextPage}
             isFetchingNextPage={isFetchingNextPage}
             isFetchNextPageError={isFetchNextPageError}
@@ -127,6 +128,7 @@ function ProjectDetailPage() {
             isTasksLoading={isFilteredTasksLoading}
             lazyChildrenFilter={lazyChildrenFilter}
             sessionsByTaskId={sessionsByTaskId}
+            ancestorScrollRestorationId="project-detail-mobile"
             hasNextPage={hasNextPage}
             isFetchingNextPage={isFetchingNextPage}
             isFetchNextPageError={isFetchNextPageError}

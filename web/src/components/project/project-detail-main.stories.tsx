@@ -136,7 +136,10 @@ function MainContentStory({
 }) {
   return (
     <Providers project={project}>
-      <div className="max-w-2xl p-6">
+      <div
+        className="max-w-2xl p-6"
+        data-scroll-restoration-id="project-detail"
+      >
         <ProjectMainContent
           project={project}
           parsedQuery={defaultParsedQuery}
@@ -147,6 +150,7 @@ function MainContentStory({
           isTasksLoading={false}
           lazyChildrenFilter={undefined}
           sessionsByTaskId={new Map()}
+          ancestorScrollRestorationId="project-detail"
           hasNextPage={false}
           isFetchingNextPage={false}
           isFetchNextPageError={false}
@@ -222,7 +226,10 @@ export const FullPagePC: StoryObj<{
   render: ({ project, tasks }) => (
     <Providers project={project}>
       <div className="flex h-screen">
-        <div className="flex-1 overflow-y-auto p-6">
+        <div
+          className="flex-1 overflow-y-auto p-6"
+          data-scroll-restoration-id="project-detail"
+        >
           <ProjectMainContent
             project={project}
             parsedQuery={defaultParsedQuery}
@@ -233,6 +240,7 @@ export const FullPagePC: StoryObj<{
             isTasksLoading={false}
             lazyChildrenFilter={undefined}
             sessionsByTaskId={new Map()}
+            ancestorScrollRestorationId="project-detail"
             hasNextPage={false}
             isFetchingNextPage={false}
             isFetchNextPageError={false}
@@ -259,7 +267,10 @@ export const FullPageSP: StoryObj<{
   },
   render: ({ project, tasks }) => (
     <Providers project={project}>
-      <div className="flex h-screen flex-col overflow-y-auto">
+      <div
+        className="flex h-screen flex-col overflow-y-auto"
+        data-scroll-restoration-id="project-detail-mobile"
+      >
         <div className="p-4">
           <ProjectMainContent
             project={project}
@@ -271,6 +282,7 @@ export const FullPageSP: StoryObj<{
             isTasksLoading={false}
             lazyChildrenFilter={undefined}
             sessionsByTaskId={new Map()}
+            ancestorScrollRestorationId="project-detail-mobile"
             hasNextPage={false}
             isFetchingNextPage={false}
             isFetchNextPageError={false}
