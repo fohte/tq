@@ -772,6 +772,11 @@
           "type": "text",
           "nullable": false,
           "default": "'inbox'::text"
+        },
+        {
+          "name": "status_reason",
+          "type": "text",
+          "nullable": true
         }
       ],
       "indexes": [
@@ -831,6 +836,14 @@
         }
       ],
       "constraints": [
+        {
+          "name": "tasks_status_reason_check",
+          "type": "CHECK",
+          "def": "CHECK (((status = 'completed'::text) OR (status_reason IS NULL)))",
+          "table": "public.tasks",
+          "referenced_table": "",
+          "columns": ["status", "status_reason"]
+        },
         {
           "name": "tasks_project_id_projects_id_fk",
           "type": "FOREIGN KEY",
@@ -1744,6 +1757,11 @@
           "type": "timestamp with time zone",
           "nullable": false,
           "default": "now()"
+        },
+        {
+          "name": "to_status_reason",
+          "type": "text",
+          "nullable": true
         }
       ],
       "indexes": [
@@ -1780,13 +1798,14 @@
         {
           "name": "task_events_payload_check",
           "type": "CHECK",
-          "def": "CHECK ((((type = 'status_changed'::text) AND (from_status IS NOT NULL) AND (to_status IS NOT NULL) AND (github_owner IS NULL) AND (github_repo IS NULL) AND (github_number IS NULL) AND (github_kind IS NULL)) OR ((type = ANY (ARRAY['github_linked'::text, 'github_unlinked'::text])) AND (from_status IS NULL) AND (to_status IS NULL) AND (github_owner IS NOT NULL) AND (github_repo IS NOT NULL) AND (github_number IS NOT NULL) AND (github_kind IS NOT NULL))))",
+          "def": "CHECK ((((type = 'status_changed'::text) AND (from_status IS NOT NULL) AND (to_status IS NOT NULL) AND ((to_status = 'completed'::text) OR (to_status_reason IS NULL)) AND (github_owner IS NULL) AND (github_repo IS NULL) AND (github_number IS NULL) AND (github_kind IS NULL)) OR ((type = ANY (ARRAY['github_linked'::text, 'github_unlinked'::text])) AND (from_status IS NULL) AND (to_status IS NULL) AND (to_status_reason IS NULL) AND (github_owner IS NOT NULL) AND (github_repo IS NOT NULL) AND (github_number IS NOT NULL) AND (github_kind IS NOT NULL))))",
           "table": "public.task_events",
           "referenced_table": "",
           "columns": [
             "type",
             "from_status",
             "to_status",
+            "to_status_reason",
             "github_owner",
             "github_repo",
             "github_number",
@@ -2177,6 +2196,83 @@
           "columns": ["id"]
         }
       ]
+    },
+    {
+      "name": "public.task_relations",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "source_task_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "target_task_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "task_relations_source_task_id_target_task_id_type_pk",
+          "def": "CREATE UNIQUE INDEX task_relations_source_task_id_target_task_id_type_pk ON public.task_relations USING btree (source_task_id, target_task_id, type)",
+          "table": "public.task_relations",
+          "columns": ["source_task_id", "target_task_id", "type"]
+        },
+        {
+          "name": "idx_task_relations_target_task_id_type",
+          "def": "CREATE INDEX idx_task_relations_target_task_id_type ON public.task_relations USING btree (target_task_id, type)",
+          "table": "public.task_relations",
+          "columns": ["target_task_id", "type"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "task_relations_no_self_relation",
+          "type": "CHECK",
+          "def": "CHECK ((source_task_id \u003c\u003e target_task_id))",
+          "table": "public.task_relations",
+          "referenced_table": "",
+          "columns": ["source_task_id", "target_task_id"]
+        },
+        {
+          "name": "task_relations_source_task_id_tasks_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (source_task_id) REFERENCES tasks(id) ON DELETE CASCADE",
+          "table": "public.task_relations",
+          "referenced_table": "public.tasks",
+          "columns": ["source_task_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "task_relations_target_task_id_tasks_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (target_task_id) REFERENCES tasks(id) ON DELETE CASCADE",
+          "table": "public.task_relations",
+          "referenced_table": "public.tasks",
+          "columns": ["target_task_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "task_relations_source_task_id_target_task_id_type_pk",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (source_task_id, target_task_id, type)",
+          "table": "public.task_relations",
+          "referenced_table": "",
+          "columns": ["source_task_id", "target_task_id", "type"]
+        }
+      ]
     }
   ],
   "relations": [
@@ -2377,6 +2473,24 @@
       "parent_columns": ["id"],
       "parent_cardinality": "exactly_one",
       "def": "FOREIGN KEY (agent_session_id) REFERENCES agent_sessions(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.task_relations",
+      "columns": ["source_task_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.tasks",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (source_task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.task_relations",
+      "columns": ["target_task_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.tasks",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (target_task_id) REFERENCES tasks(id) ON DELETE CASCADE"
     }
   ],
   "driver": {
