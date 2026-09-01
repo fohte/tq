@@ -202,8 +202,6 @@ function ProjectDescription({
 
 function ProjectTaskSummary({ project }: { project: ProjectDetail }) {
   const { total, completed } = project.taskCount
-  // Any non-completed status (including legacy in_progress rows) counts as
-  // todo, so this always sums to total.
   const todo = total - completed
   const progress = project.completionRate * 100
 
