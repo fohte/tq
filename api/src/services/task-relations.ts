@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db, type DbTransaction } from '#db/connection'
@@ -96,6 +96,30 @@ export async function getBlockedByNumbersByTaskId(
     map.set(row.sourceTaskId, list)
   }
   return map
+}
+
+type Executor = typeof db | DbTransaction
+
+// `blocked_by` target numbers of tasks that aren't completed yet, i.e. the
+// blockers still preventing `taskId` from being completed.
+export async function getIncompleteBlockerNumbers(
+  taskId: string,
+  executor: Executor,
+): Promise<number[]> {
+  const rows = await executor
+    .select({ number: tasks.number })
+    .from(taskRelations)
+    .innerJoin(tasks, eq(tasks.id, taskRelations.targetTaskId))
+    .where(
+      and(
+        eq(taskRelations.sourceTaskId, taskId),
+        eq(taskRelations.type, 'blocked_by'),
+        ne(tasks.status, 'completed'),
+      ),
+    )
+    .orderBy(tasks.number)
+
+  return rows.map((row) => row.number)
 }
 
 export interface TaskBlockedByRelations {

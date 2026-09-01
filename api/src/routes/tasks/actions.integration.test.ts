@@ -934,4 +934,138 @@ describe('tasks actions API', () => {
       })
     })
   })
+
+  describe('blocked_by completion guard', () => {
+    function setBlockedBy(taskId: string, blockedBy: string[]) {
+      return app.request(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockedBy }),
+      })
+    }
+
+    describe('POST /api/tasks/:id/complete', () => {
+      it('returns 409 with blockedByNumbers when a blocker is incomplete', async () => {
+        const blocker = await createTask('Blocker')
+        const task = await createTask('Blocked')
+        await setBlockedBy(task.id, [blocker.id])
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+        })
+
+        expect(res.status).toBe(409)
+        expect(
+          await jsonBody<{ error: string; blockedByNumbers: number[] }>(res),
+        ).toEqual({
+          error: `Task is blocked by incomplete tasks: #${String(blocker.number)}`,
+          blockedByNumbers: [blocker.number],
+        })
+
+        const [dbTask] = await db
+          .select({ status: tasks.status })
+          .from(tasks)
+          .where(eq(tasks.id, task.id))
+        assertDefined(dbTask)
+        expect(dbTask.status).toBe('todo')
+      })
+
+      it('lists every incomplete blocker, ordered by number', async () => {
+        const blockerA = await createTask('Blocker A')
+        const blockerB = await createTask('Blocker B')
+        const task = await createTask('Blocked')
+        await setBlockedBy(task.id, [blockerB.id, blockerA.id])
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+        })
+
+        expect(res.status).toBe(409)
+        expect(
+          await jsonBody<{ error: string; blockedByNumbers: number[] }>(res),
+        ).toEqual({
+          error: `Task is blocked by incomplete tasks: #${String(blockerA.number)}, #${String(blockerB.number)}`,
+          blockedByNumbers: [blockerA.number, blockerB.number],
+        })
+      })
+
+      it('succeeds once every blocker is completed', async () => {
+        const blocker = await createTask('Blocker')
+        const task = await createTask('Blocked')
+        await setBlockedBy(task.id, [blocker.id])
+        await app.request(`/api/tasks/${blocker.id}/complete`, {
+          method: 'POST',
+        })
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+        })
+
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskResponse>(res)
+        expect(body.status).toBe('completed')
+      })
+
+      it('keeps rejecting with "already completed", not the blocked-by error, once a blocker is added after closing', async () => {
+        const blocker = await createTask('Blocker')
+        const task = await createTask('Blocked')
+        await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+        })
+        await setBlockedBy(task.id, [blocker.id])
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+        })
+
+        expect(res.status).toBe(409)
+        expect(await jsonBody<{ error: string }>(res)).toEqual({
+          error: 'Task is already completed',
+        })
+      })
+    })
+
+    describe('PATCH /api/tasks/:id/status', () => {
+      it('returns 409 with blockedByNumbers when closing while a blocker is incomplete', async () => {
+        const blocker = await createTask('Blocker')
+        const task = await createTask('Blocked')
+        await setBlockedBy(task.id, [blocker.id])
+
+        const res = await setStatus(task.id, 'completed')
+
+        expect(res.status).toBe(409)
+        expect(
+          await jsonBody<{ error: string; blockedByNumbers: number[] }>(res),
+        ).toEqual({
+          error: `Task is blocked by incomplete tasks: #${String(blocker.number)}`,
+          blockedByNumbers: [blocker.number],
+        })
+      })
+
+      it('does not block re-setting an already-completed task to completed', async () => {
+        const blocker = await createTask('Blocker')
+        const task = await createTask('Blocked')
+        await setStatus(task.id, 'completed')
+        await setBlockedBy(task.id, [blocker.id])
+
+        const res = await setStatus(task.id, 'completed')
+
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskResponse>(res)
+        expect(body.status).toBe('completed')
+      })
+
+      it('allows reopening a task regardless of its blockers', async () => {
+        const blocker = await createTask('Blocker')
+        const task = await createTask('Blocked')
+        await setBlockedBy(task.id, [blocker.id])
+
+        const res = await setStatus(task.id, 'todo')
+
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskResponse>(res)
+        expect(body.status).toBe('todo')
+      })
+    })
+  })
 })
