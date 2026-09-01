@@ -25,6 +25,8 @@ const mockProject = {
   sortOrder: 0,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
+  taskCount: { total: 5, completed: 2 },
+  completionRate: 0.4,
 }
 
 const baseTask = {
@@ -44,21 +46,8 @@ const baseTask = {
   childCompletionCount: { completed: 0, total: 0 },
 }
 
-const mockTasks = [
-  { ...baseTask, id: '1', title: 'Todo 1', status: 'todo' as const },
-  { ...baseTask, id: '2', title: 'Todo 2', status: 'todo' as const },
-  {
-    ...baseTask,
-    id: '3',
-    title: 'In progress 1',
-    status: 'in_progress' as const,
-  },
-  { ...baseTask, id: '4', title: 'Completed 1', status: 'completed' as const },
-  { ...baseTask, id: '5', title: 'Completed 2', status: 'completed' as const },
-]
-
 const mockUseProject = vi.fn()
-const mockUseProjectTasks = vi.fn()
+const mockUseProjectTaskIds = vi.fn()
 const mockUseProjects = vi.fn()
 const mockUpdateMutate = vi.fn()
 const mockUseFilteredTaskTree = vi.fn()
@@ -70,7 +59,7 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
     useProject: (...args: unknown[]) => mockUseProject(...args),
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
-    useProjectTasks: (...args: unknown[]) => mockUseProjectTasks(...args),
+    useProjectTaskIds: (...args: unknown[]) => mockUseProjectTaskIds(...args),
     useUpdateProject: () => ({ mutate: mockUpdateMutate }),
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
     useProjects: (...args: unknown[]) => mockUseProjects(...args),
@@ -189,11 +178,7 @@ beforeEach(() => {
     isLoading: false,
     error: null,
   })
-  mockUseProjectTasks.mockReturnValue({
-    data: mockTasks,
-    isLoading: false,
-    error: null,
-  })
+  mockUseProjectTaskIds.mockReturnValue({ data: [] })
   mockUseProjects.mockReturnValue({ data: [] })
   mockUseFilteredTaskTree.mockReturnValue({
     isLoading: false,
@@ -520,7 +505,7 @@ describe('ProjectDetailPage task list', () => {
     ])
   })
 
-  it('renders TaskTreeList from the filtered tree/tasks props, not the full project task list', async () => {
+  it('renders TaskTreeList from the filtered tree/tasks props', async () => {
     const filteredTask = {
       ...baseTask,
       id: 'f1',
@@ -536,7 +521,6 @@ describe('ProjectDetailPage task list', () => {
     await renderProjectDetailPage()
 
     expect(screen.getAllByText('Filtered task').length).toBeGreaterThan(0)
-    expect(screen.queryByText('Completed 2')).not.toBeInTheDocument()
   })
 
   it('opens the create task modal when "Add task" is clicked', async () => {

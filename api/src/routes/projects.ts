@@ -128,6 +128,19 @@ export const projectsApp = new Hono()
       200,
     )
   })
+  .get('/:id/task-ids', async (c) => {
+    const id = c.req.param('id')
+
+    const result = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(eq(tasks.projectId, id))
+
+    return c.json(
+      result.map((task) => task.id),
+      200,
+    )
+  })
   .patch('/:id', zValidator('json', updateProjectSchema), async (c) => {
     const id = c.req.param('id')
 

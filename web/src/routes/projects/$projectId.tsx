@@ -10,7 +10,7 @@ import { BackHeaderBar } from '#components/ui/back-header-bar'
 import { FullPageLoading } from '#components/ui/full-page-loading'
 import { FullPageMessage } from '#components/ui/full-page-message'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
-import { useProject, useProjects, useProjectTasks } from '#hooks/use-projects'
+import { useProject, useProjects } from '#hooks/use-projects'
 import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
 
 const projectTasksSearchDefaults = {
@@ -49,7 +49,6 @@ function ProjectDetailPage() {
     isLoading: isProjectLoading,
     error,
   } = useProject(projectId)
-  const { data: tasks, isLoading: isTasksLoading } = useProjectTasks(projectId)
   const projects = useProjects()
 
   const setQuery = (newQuery: string) => {
@@ -67,7 +66,7 @@ function ProjectDetailPage() {
   } = useFilteredTaskTree({ q, projectId })
   const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
 
-  const isLoading = isProjectLoading || isTasksLoading
+  const isLoading = isProjectLoading
 
   if (isLoading) {
     return <FullPageLoading />
@@ -88,7 +87,6 @@ function ProjectDetailPage() {
           <ProjectMainContent
             key={project.id}
             project={project}
-            tasks={tasks ?? []}
             parsedQuery={parsedQuery}
             onQueryChange={setQuery}
             projects={projects.data ?? []}
@@ -111,7 +109,6 @@ function ProjectDetailPage() {
           <ProjectMainContent
             key={project.id}
             project={project}
-            tasks={tasks ?? []}
             parsedQuery={parsedQuery}
             onQueryChange={setQuery}
             projects={projects.data ?? []}

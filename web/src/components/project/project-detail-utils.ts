@@ -1,5 +1,3 @@
-import type { ProjectTask } from '#hooks/use-projects'
-
 export function formatDate(dateStr: string | null): string | null {
   if (dateStr == null) return null
   const date = new Date(`${dateStr}T00:00:00`)
@@ -23,19 +21,4 @@ export function getDaysRemaining(
   const todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
   const msPerDay = 24 * 60 * 60 * 1000
   return Math.round((targetUTC - todayUTC) / msPerDay)
-}
-
-export function summarizeTaskStatus(tasks: ProjectTask[]): {
-  total: number
-  todo: number
-  completed: number
-} {
-  const completed = tasks.filter((t) => t.status === 'completed').length
-  return {
-    total: tasks.length,
-    // Any non-completed status (including legacy in_progress rows) counts
-    // as todo, so this always sums to total.
-    todo: tasks.length - completed,
-    completed,
-  }
 }
