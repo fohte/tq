@@ -436,6 +436,10 @@ export const ExternalUpdateInViewModeReplacesContent: Story = {
       updatedValue={EXTERNAL_UPDATE_UPDATED}
     />
   ),
+  parameters: {
+    // Tests behavior (the defaultValue-sync effect), not appearance.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, userEvent }) => {
     await expect(
       canvas.findByText(EXTERNAL_UPDATE_ORIGINAL),
@@ -464,6 +468,10 @@ export const ExternalUpdateWhileEditingDoesNotDisruptTyping: Story = {
       updatedValue="Overwritten from outside while editing."
     />
   ),
+  parameters: {
+    // Tests behavior (the defaultValue-sync effect), not appearance.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, canvasElement, userEvent }) => {
     const blockquote = assertDefined(
       canvasElement.querySelector('.milkdown .ProseMirror blockquote'),
@@ -501,6 +509,10 @@ export const ExternalUpdateAppliesAfterReturningToViewMode: Story = {
       updatedValue="Overwritten from outside while editing."
     />
   ),
+  parameters: {
+    // Tests behavior (the defaultValue-sync effect), not appearance.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, canvasElement, userEvent }) => {
     const wrapper = assertDefined(
       canvasElement.querySelector('.milkdown-wrapper'),
