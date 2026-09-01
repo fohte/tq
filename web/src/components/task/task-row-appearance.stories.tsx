@@ -15,6 +15,7 @@ const baseTask: Task = {
   status: 'todo',
   statusReason: null,
   duplicateOfNumber: null,
+  blockedByNumbers: [],
   context: 'personal',
   commitment: 'active',
   labels: [],
@@ -176,6 +177,26 @@ export const WithParentTask: Story = {
       ...baseTask,
       title: 'Task with a parent',
       parentNumber: 12,
+    },
+  },
+}
+
+export const WithBlockedBy: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Task blocked by another task',
+      blockedByNumbers: [312],
+    },
+  },
+}
+
+export const WithMultipleBlockedBy: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Task blocked by multiple tasks',
+      blockedByNumbers: [312, 315],
     },
   },
 }
