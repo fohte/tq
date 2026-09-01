@@ -88,6 +88,8 @@ export const COVERED_ROUTES = [
 
   // label
   'GET /api/labels',
+  'PATCH /api/labels/:id',
+  'DELETE /api/labels/:id',
 
   // saved view
   'POST /api/saved-views',
