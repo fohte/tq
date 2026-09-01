@@ -1,8 +1,6 @@
 import { FilterOptionButton } from '#components/ui/filter-option-button'
 import { useLabels } from '#hooks/use-labels'
 
-// Self-fetches the label list so the caller (the applied `label` chip's own
-// menu) doesn't have to thread label data through props.
 export function TaskLabelFilterFields({
   selectedLabel,
   onLabelChange,

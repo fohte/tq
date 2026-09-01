@@ -100,4 +100,17 @@ describe('useSessionOpenSettings', () => {
       resumeUrlTemplate: null,
     })
   })
+
+  it('reflects an update from one already-mounted instance in another', () => {
+    function useCombined() {
+      return { a: useSessionOpenSettings(), b: useSessionOpenSettings() }
+    }
+    const { result } = renderHook(() => useCombined())
+
+    act(() => {
+      result.current.a[1]({ localContext: 'work' })
+    })
+
+    expect(result.current.b[0].localContext).toBe('work')
+  })
 })

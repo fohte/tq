@@ -364,9 +364,9 @@ than a project's.
 The global nav rail (`layout/sidebar.tsx`, `w-50`/200px) and the mobile
 `BottomTabBar` height (`h-13`/52px) are both plain literals on their
 components — neither has a second consumer to justify extracting a shared
-constant. Each one's test pins the same value independently rather than
-importing it, since a test importing the exact value it's meant to verify
-can never catch that value regressing.
+constant. The sidebar rail's test pins its literal independently (asserting
+the full class string) rather than importing it, since a test importing the
+exact value it's meant to verify can never catch that value regressing.
 
 The same defect showed up once more in the page/task editors: `MarkdownEditor`,
 `HtmlPageEditor`, and `HtmlPageViewer` (`web/src/components/ui/`) had no
