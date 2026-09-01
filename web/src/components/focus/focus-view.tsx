@@ -118,7 +118,7 @@ function FocusCard({
         <Button
           className="flex-1 md:flex-none"
           onClick={() => {
-            completeTask.mutate(task.id)
+            completeTask.mutate({ id: task.id, statusReason: 'completed' })
           }}
         >
           complete

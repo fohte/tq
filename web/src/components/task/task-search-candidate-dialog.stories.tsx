@@ -13,6 +13,8 @@ const orphanCandidate: SearchResult = {
   title: 'Deploy to production',
   description: null,
   status: 'todo',
+  statusReason: null,
+  duplicateOfNumber: null,
   context: 'work',
   commitment: 'active',
   labels: [],
@@ -128,6 +130,37 @@ export const ExcludesGivenTaskIds: Story = {
     await expect(
       body.queryByText('Deploy staging environment'),
     ).not.toBeInTheDocument()
+  },
+}
+
+export const WithSkipAction: Story = {
+  decorators: [
+    (Story) => (
+      <QueryClientProvider
+        client={createSeededQueryClient([orphanCandidate, candidateWithParent])}
+      >
+        <Story />
+      </QueryClientProvider>
+    ),
+  ],
+  args: {
+    title: 'Duplicate of',
+    skipAction: { label: 'Close without linking', onSkip: fn() },
+  },
+  play: async ({ canvasElement, userEvent, args }) => {
+    const body = within(canvasElement.ownerDocument.body)
+
+    const input = await body.findByPlaceholderText(/Search tasks/i)
+    await userEvent.type(input, searchText)
+
+    await expect(
+      await body.findByText('Deploy to production'),
+    ).toBeInTheDocument()
+
+    const skipButton = body.getByText('Close without linking')
+    await userEvent.click(skipButton)
+
+    await expect(args.skipAction?.onSkip).toHaveBeenCalled()
   },
 }
 

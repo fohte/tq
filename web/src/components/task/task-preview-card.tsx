@@ -33,7 +33,7 @@ export function TaskPreviewCard({
       className="flex flex-col gap-1.5 border border-border bg-card p-3"
     >
       <div className="flex items-center gap-2">
-        <StatusIcon status={task.status} />
+        <StatusIcon status={task.status} statusReason={null} />
         <span className="shrink-0 font-mono text-muted-foreground">
           #{task.number}
         </span>

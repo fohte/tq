@@ -1,6 +1,9 @@
+import { type TaskStatusReason, taskStatusReason } from '#schemas/task'
+
 export interface ParsedQuery {
   freeText: string
   status?: Array<'todo' | 'completed'>
+  reason?: TaskStatusReason
   label?: string
   context?: 'work' | 'personal'
   commitment?: 'inbox' | 'active' | 'someday'
@@ -16,6 +19,9 @@ const STATUS_VALUES: ReadonlySet<'todo' | 'completed'> = new Set([
   'todo',
   'completed',
 ])
+const REASON_VALUES: ReadonlySet<TaskStatusReason> = new Set(
+  taskStatusReason.options,
+)
 const CONTEXT_VALUES: ReadonlySet<'work' | 'personal'> = new Set([
   'work',
   'personal',
@@ -82,6 +88,13 @@ export function parseSearchQuery(q: string): ParsedQuery {
           freeTextParts.push(token)
         }
         break
+      case 'reason':
+        if (isOneOf(value, REASON_VALUES)) {
+          result.reason = value
+        } else {
+          freeTextParts.push(token)
+        }
+        break
       case 'has':
         if (value === 'pages') {
           result.hasPages = true
@@ -132,6 +145,9 @@ export function buildSearchQuery(query: ParsedQuery): string {
   }
   if (query.commitment !== undefined) {
     parts.push(`commitment:${query.commitment}`)
+  }
+  if (query.reason !== undefined) {
+    parts.push(`reason:${query.reason}`)
   }
   if (query.hasPages === true) {
     parts.push('has:pages')

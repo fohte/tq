@@ -78,6 +78,7 @@ async function completeRecurringTask(): Promise<{
     completedTask: {
       ...withoutLinkSync(createdData),
       status: 'completed',
+      statusReason: 'completed',
       updatedAt: completedResult.updatedAt,
     },
     nextTask: withoutLinkSync(completedResult.nextTask),
@@ -104,6 +105,8 @@ describe('REST/MCP parity', () => {
       timeBlocks: [],
       links: { outgoing: [], incoming: [] },
       labels: [],
+      duplicateOfNumber: null,
+      duplicateOfTask: null,
     })
   })
 
@@ -126,6 +129,8 @@ describe('REST/MCP parity', () => {
       timeBlocks: [],
       links: { outgoing: [], incoming: [] },
       labels: [],
+      duplicateOfNumber: null,
+      duplicateOfTask: null,
     })
   })
 
@@ -143,6 +148,7 @@ describe('REST/MCP parity', () => {
       {
         ...withoutRecurrenceRule(withoutLinkSync(data)),
         parentNumber: null,
+        duplicateOfNumber: null,
         labels: [],
         childCompletionCount: { total: 0, completed: 0 },
       },
@@ -170,6 +176,8 @@ describe('REST/MCP parity', () => {
       timeBlocks: [],
       links: { outgoing: [], incoming: [] },
       labels: [],
+      duplicateOfNumber: null,
+      duplicateOfTask: null,
     })
   })
 
@@ -197,6 +205,8 @@ describe('REST/MCP parity', () => {
       timeBlocks: [],
       links: { outgoing: [], incoming: [] },
       labels: data.labels.toSorted(),
+      duplicateOfNumber: null,
+      duplicateOfTask: null,
     })
   })
 
@@ -227,6 +237,8 @@ describe('REST/MCP parity', () => {
       timeBlocks: [],
       links: { outgoing: [], incoming: [] },
       labels: [],
+      duplicateOfNumber: null,
+      duplicateOfTask: null,
     })
   })
 
@@ -242,12 +254,14 @@ describe('REST/MCP parity', () => {
       {
         ...withoutRecurrenceRule(completedTask),
         parentNumber: null,
+        duplicateOfNumber: null,
         labels: [],
         childCompletionCount: { total: 0, completed: 0 },
       },
       {
         ...withoutRecurrenceRule(nextTask),
         parentNumber: null,
+        duplicateOfNumber: null,
         labels: [],
         childCompletionCount: { total: 0, completed: 0 },
       },
@@ -277,6 +291,8 @@ describe('REST/MCP parity', () => {
       timeBlocks: [],
       links: { outgoing: [], incoming: [] },
       labels: [],
+      duplicateOfNumber: null,
+      duplicateOfTask: null,
     })
   })
 

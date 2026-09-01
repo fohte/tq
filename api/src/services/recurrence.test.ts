@@ -162,6 +162,7 @@ describe('buildNextTaskData', () => {
     title: 'Daily standup',
     description: 'Morning standup meeting',
     status: 'completed' as const,
+    statusReason: 'completed' as const,
     context: 'work' as const,
     commitment: 'active' as const,
     startDate: null,

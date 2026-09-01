@@ -14,6 +14,8 @@ const currentTask: SearchResult = {
   title: 'Current task',
   description: null,
   status: 'todo',
+  statusReason: null,
+  duplicateOfNumber: null,
   context: 'work',
   commitment: 'active',
   labels: [],

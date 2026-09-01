@@ -19,6 +19,8 @@ const baseSubtask: Task = {
   title: 'Sketch wireframes',
   description: null,
   status: 'todo',
+  statusReason: null,
+  duplicateOfNumber: null,
   context: 'work',
   commitment: 'active',
   labels: [],

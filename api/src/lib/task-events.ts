@@ -1,6 +1,7 @@
 import { db, type DbTransaction } from '#db/connection'
 import { taskEvents } from '#db/schema'
 import type { EditAuthor } from '#lib/edits'
+import type { TaskStatusReason } from '#schemas/task'
 
 export type TaskStatus = 'todo' | 'in_progress' | 'completed'
 type GithubLinkKind = 'issue' | 'pull_request'
@@ -24,6 +25,7 @@ export async function recordStatusChanged(
   taskId: string,
   fromStatus: TaskStatus,
   toStatus: TaskStatus,
+  toStatusReason: TaskStatusReason | null,
   author: EditAuthor,
 ): Promise<void> {
   await executor.insert(taskEvents).values({
@@ -31,6 +33,7 @@ export async function recordStatusChanged(
     type: 'status_changed',
     fromStatus,
     toStatus,
+    toStatusReason,
     authorKind: author.kind,
     authorAgent: author.agent,
   })

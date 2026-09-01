@@ -4,8 +4,8 @@ import { eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
-import { db } from '#db/connection'
-import { recurrenceRules, tasks } from '#db/schema'
+import { db, type DbTransaction } from '#db/connection'
+import { recurrenceRules, taskRelations, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
 import { recordStatusChanged } from '#lib/task-events'
@@ -14,17 +14,58 @@ import {
   requireTask,
   taskToResponse,
 } from '#routes/tasks/shared'
-import { taskStatus } from '#schemas/task'
+import { taskStatus, taskStatusReason } from '#schemas/task'
 import { buildNextTaskData } from '#services/recurrence'
 import { syncTaskLinks, type TaskLinkSyncResult } from '#services/task-links'
 
 const updateStatusSchema = z.object({
   status: taskStatus,
+  statusReason: taskStatusReason.optional(),
+  duplicateOfTaskId: z.uuid().optional(),
 })
 
 const updateParentSchema = z.object({
   parentId: z.uuid().nullable(),
 })
+
+// Rejects a `duplicateOfTaskId` that self-references or names a
+// non-existent task, before either close-as-duplicate handler touches the
+// database. Returns the error response body/status to send, or `null` when
+// the target is valid.
+async function checkDuplicateTarget(
+  id: string,
+  duplicateOfTaskId: string,
+): Promise<{ body: { error: string }; status: 400 | 404 } | null> {
+  if (duplicateOfTaskId === id) {
+    return {
+      body: { error: 'A task cannot be a duplicate of itself' },
+      status: 400,
+    }
+  }
+
+  const duplicateTarget = await db.query.tasks.findFirst({
+    where: eq(tasks.id, duplicateOfTaskId),
+  })
+  if (!duplicateTarget) {
+    return { body: { error: 'Duplicate target task not found' }, status: 404 }
+  }
+
+  return null
+}
+
+// Records the `duplicate_of` relation for a close-as-duplicate transition.
+// `onConflictDoNothing` makes re-closing a task as a duplicate of the same
+// target (its primary key) idempotent instead of erroring.
+async function insertDuplicateOfRelation(
+  tx: DbTransaction,
+  sourceTaskId: string,
+  targetTaskId: string,
+) {
+  await tx
+    .insert(taskRelations)
+    .values({ sourceTaskId, targetTaskId, type: 'duplicate_of' })
+    .onConflictDoNothing()
+}
 
 export const tasksActionsApp = new Hono()
   .patch(
@@ -34,8 +75,17 @@ export const tasksActionsApp = new Hono()
     async (c) => {
       const existing = c.get('task')
       const id = existing.id
-      const { status } = c.req.valid('json')
+      const { status, statusReason, duplicateOfTaskId } = c.req.valid('json')
       const author = c.get('author')
+      const nextStatusReason =
+        status === 'completed' ? (statusReason ?? 'completed') : null
+
+      if (nextStatusReason === 'duplicate' && duplicateOfTaskId != null) {
+        const targetError = await checkDuplicateTarget(id, duplicateOfTaskId)
+        if (targetError) {
+          return c.json(targetError.body, targetError.status)
+        }
+      }
 
       // `existing.status` was read by requireTask outside this transaction,
       // so it can be stale under concurrent requests for the same task.
@@ -53,13 +103,28 @@ export const tasksActionsApp = new Hono()
         const updated = firstOrThrow(
           await tx
             .update(tasks)
-            .set({ status, updatedAt: new Date() })
+            .set({
+              status,
+              statusReason: nextStatusReason,
+              updatedAt: new Date(),
+            })
             .where(eq(tasks.id, id))
             .returning(),
         )
 
         if (current.status !== status) {
-          await recordStatusChanged(tx, id, current.status, status, author)
+          await recordStatusChanged(
+            tx,
+            id,
+            current.status,
+            status,
+            nextStatusReason,
+            author,
+          )
+        }
+
+        if (nextStatusReason === 'duplicate' && duplicateOfTaskId != null) {
+          await insertDuplicateOfRelation(tx, id, duplicateOfTaskId)
         }
 
         return updated
@@ -139,105 +204,143 @@ export const tasksActionsApp = new Hono()
       )
     },
   )
-  .post('/:id/complete', requireTask, async (c) => {
-    const existing = c.get('task')
-    const id = existing.id
-    const author = c.get('author')
+  .post(
+    '/:id/complete',
+    requireTask,
+    zValidator(
+      'json',
+      z.object({
+        statusReason: taskStatusReason.optional(),
+        duplicateOfTaskId: z.uuid().optional(),
+      }),
+    ),
+    async (c) => {
+      const existing = c.get('task')
+      const id = existing.id
+      const author = c.get('author')
+      const { statusReason, duplicateOfTaskId } = c.req.valid('json')
+      const reason = statusReason ?? 'completed'
 
-    // `existing.status` was read by requireTask outside this transaction,
-    // so the already-completed check must be re-evaluated against a locked,
-    // freshly-read row: two concurrent completions of the same task would
-    // otherwise both see the stale pre-completion status and both record a
-    // status_changed event.
-    const updatedTask = await db.transaction(async (tx) => {
-      const current = firstOrThrow(
-        await tx
-          .select({ status: tasks.status })
-          .from(tasks)
-          .where(eq(tasks.id, id))
-          .for('update'),
-      )
-
-      if (current.status === 'completed') return null
-
-      const updatedTask = firstOrThrow(
-        await tx
-          .update(tasks)
-          .set({ status: 'completed', updatedAt: new Date() })
-          .where(eq(tasks.id, id))
-          .returning(),
-      )
-
-      await recordStatusChanged(tx, id, current.status, 'completed', author)
-
-      return updatedTask
-    })
-
-    if (updatedTask == null) {
-      return c.json({ error: 'Task is already completed' }, 409)
-    }
-
-    let createdTask: typeof tasks.$inferSelect | null = null
-    let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
-    let linkSync: TaskLinkSyncResult | undefined
-    if (updatedTask.recurrenceRuleId != null) {
-      completedTaskRule =
-        (await db.query.recurrenceRules.findFirst({
-          where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
-        })) ?? null
-
-      if (completedTaskRule) {
-        const nextDataResult = buildNextTaskData(updatedTask, completedTaskRule)
-        if (nextDataResult.isErr()) {
-          captureWithFingerprint(
-            nextDataResult.error,
-            'api.tasks.build-next-task-data-failed',
-          )
-          return c.json({ error: 'Internal server error' }, 500)
+      if (reason === 'duplicate' && duplicateOfTaskId != null) {
+        const targetError = await checkDuplicateTarget(id, duplicateOfTaskId)
+        if (targetError) {
+          return c.json(targetError.body, targetError.status)
         }
-        const created = await db.transaction(async (tx) => {
-          const created = firstOrThrow(
-            await tx.insert(tasks).values(nextDataResult.value).returning(),
-          )
-          await recordEdit(
-            tx,
-            { taskId: created.id },
-            { action: 'create' },
-            SYSTEM_AUTHOR,
-          )
-          return created
-        })
-        linkSync = await syncTaskLinks(created.id)
-        createdTask = created
       }
-    }
 
-    const labelsByTaskId = await getLabelNamesByTaskId(
-      createdTask != null ? [id, createdTask.id] : [id],
-    )
-    const nextTask =
-      createdTask != null
-        ? {
-            ...taskToResponse(
-              createdTask,
-              completedTaskRule,
-              undefined,
-              labelsByTaskId.get(createdTask.id) ?? [],
-            ),
-            linkSync,
+      // `existing.status` was read by requireTask outside this transaction,
+      // so the already-completed check must be re-evaluated against a locked,
+      // freshly-read row: two concurrent completions of the same task would
+      // otherwise both see the stale pre-completion status and both record a
+      // status_changed event.
+      const updatedTask = await db.transaction(async (tx) => {
+        const current = firstOrThrow(
+          await tx
+            .select({ status: tasks.status })
+            .from(tasks)
+            .where(eq(tasks.id, id))
+            .for('update'),
+        )
+
+        if (current.status === 'completed') return null
+
+        const updatedTask = firstOrThrow(
+          await tx
+            .update(tasks)
+            .set({
+              status: 'completed',
+              statusReason: reason,
+              updatedAt: new Date(),
+            })
+            .where(eq(tasks.id, id))
+            .returning(),
+        )
+
+        await recordStatusChanged(
+          tx,
+          id,
+          current.status,
+          'completed',
+          reason,
+          author,
+        )
+
+        if (reason === 'duplicate' && duplicateOfTaskId != null) {
+          await insertDuplicateOfRelation(tx, id, duplicateOfTaskId)
+        }
+
+        return updatedTask
+      })
+
+      if (updatedTask == null) {
+        return c.json({ error: 'Task is already completed' }, 409)
+      }
+
+      let createdTask: typeof tasks.$inferSelect | null = null
+      let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
+      let linkSync: TaskLinkSyncResult | undefined
+      if (updatedTask.recurrenceRuleId != null) {
+        completedTaskRule =
+          (await db.query.recurrenceRules.findFirst({
+            where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
+          })) ?? null
+
+        if (completedTaskRule) {
+          const nextDataResult = buildNextTaskData(
+            updatedTask,
+            completedTaskRule,
+          )
+          if (nextDataResult.isErr()) {
+            captureWithFingerprint(
+              nextDataResult.error,
+              'api.tasks.build-next-task-data-failed',
+            )
+            return c.json({ error: 'Internal server error' }, 500)
           }
-        : null
+          const created = await db.transaction(async (tx) => {
+            const created = firstOrThrow(
+              await tx.insert(tasks).values(nextDataResult.value).returning(),
+            )
+            await recordEdit(
+              tx,
+              { taskId: created.id },
+              { action: 'create' },
+              SYSTEM_AUTHOR,
+            )
+            return created
+          })
+          linkSync = await syncTaskLinks(created.id)
+          createdTask = created
+        }
+      }
 
-    return c.json(
-      {
-        ...taskToResponse(
-          updatedTask,
-          completedTaskRule,
-          undefined,
-          labelsByTaskId.get(id) ?? [],
-        ),
-        nextTask,
-      },
-      200,
-    )
-  })
+      const labelsByTaskId = await getLabelNamesByTaskId(
+        createdTask != null ? [id, createdTask.id] : [id],
+      )
+      const nextTask =
+        createdTask != null
+          ? {
+              ...taskToResponse(
+                createdTask,
+                completedTaskRule,
+                undefined,
+                labelsByTaskId.get(createdTask.id) ?? [],
+              ),
+              linkSync,
+            }
+          : null
+
+      return c.json(
+        {
+          ...taskToResponse(
+            updatedTask,
+            completedTaskRule,
+            undefined,
+            labelsByTaskId.get(id) ?? [],
+          ),
+          nextTask,
+        },
+        200,
+      )
+    },
+  )
