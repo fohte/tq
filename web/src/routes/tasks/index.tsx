@@ -90,6 +90,7 @@ function TaskList() {
     lazyChildrenFilter,
     hasNextPage,
     isFetchingNextPage,
+    isFetchNextPageError,
     fetchNextPage,
   } = useFilteredTaskTree({ q })
   const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
@@ -123,6 +124,7 @@ function TaskList() {
         scrollRestorationId="task-tree-list"
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
+        isFetchNextPageError={isFetchNextPageError}
         fetchNextPage={fetchNextPage}
       />
 

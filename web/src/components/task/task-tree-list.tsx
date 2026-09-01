@@ -88,6 +88,7 @@ export interface TaskTreeListProps {
   /** Root-level pagination (see useFilteredTaskTree). Omit for a list that always fetches everything up front. */
   hasNextPage?: boolean
   isFetchingNextPage?: boolean
+  isFetchNextPageError?: boolean
   fetchNextPage?: () => void
 }
 
@@ -100,6 +101,7 @@ export function TaskTreeList({
   scrollRestorationId,
   hasNextPage = false,
   isFetchingNextPage = false,
+  isFetchNextPageError = false,
   fetchNextPage,
 }: TaskTreeListProps) {
   const [createModalOpen, setCreateModalOpen] = useState(false)
@@ -221,7 +223,11 @@ export function TaskTreeList({
     if (sentinel == null) return
 
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting === true && !isFetchingNextPage) {
+      if (
+        entries[0]?.isIntersecting === true &&
+        !isFetchingNextPage &&
+        !isFetchNextPageError
+      ) {
         fetchNextPage?.()
       }
     })
@@ -229,7 +235,7 @@ export function TaskTreeList({
     return () => {
       observer.disconnect()
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage])
 
   return (
     <div

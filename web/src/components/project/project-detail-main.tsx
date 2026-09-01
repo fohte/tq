@@ -36,6 +36,7 @@ export function ProjectMainContent({
   sessionsByTaskId,
   hasNextPage,
   isFetchingNextPage,
+  isFetchNextPageError,
   fetchNextPage,
 }: {
   project: ProjectDetail
@@ -49,6 +50,7 @@ export function ProjectMainContent({
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
   hasNextPage: boolean
   isFetchingNextPage: boolean
+  isFetchNextPageError: boolean
   fetchNextPage: () => void
 }) {
   const statusOrFallback = isProjectStatus(project.status)
@@ -101,6 +103,7 @@ export function ProjectMainContent({
         sessionsByTaskId={sessionsByTaskId}
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
+        isFetchNextPageError={isFetchNextPageError}
         fetchNextPage={fetchNextPage}
       />
     </div>
@@ -250,6 +253,7 @@ function ProjectTaskList({
   sessionsByTaskId,
   hasNextPage,
   isFetchingNextPage,
+  isFetchNextPageError,
   fetchNextPage,
 }: {
   projectId: string
@@ -264,6 +268,7 @@ function ProjectTaskList({
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
   hasNextPage: boolean
   isFetchingNextPage: boolean
+  isFetchNextPageError: boolean
   fetchNextPage: () => void
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -310,6 +315,7 @@ function ProjectTaskList({
           lazyChildrenFilter={lazyChildrenFilter}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
+          isFetchNextPageError={isFetchNextPageError}
           fetchNextPage={fetchNextPage}
         />
       </div>

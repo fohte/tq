@@ -66,6 +66,7 @@ function ProjectDetailPage() {
     lazyChildrenFilter,
     hasNextPage,
     isFetchingNextPage,
+    isFetchNextPageError,
     fetchNextPage,
   } = useFilteredTaskTree({ q, projectId })
   const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
@@ -101,6 +102,7 @@ function ProjectDetailPage() {
             sessionsByTaskId={sessionsByTaskId}
             hasNextPage={hasNextPage}
             isFetchingNextPage={isFetchingNextPage}
+            isFetchNextPageError={isFetchNextPageError}
             fetchNextPage={fetchNextPage}
           />
         </div>
@@ -127,6 +129,7 @@ function ProjectDetailPage() {
             sessionsByTaskId={sessionsByTaskId}
             hasNextPage={hasNextPage}
             isFetchingNextPage={isFetchingNextPage}
+            isFetchNextPageError={isFetchNextPageError}
             fetchNextPage={fetchNextPage}
           />
         </div>

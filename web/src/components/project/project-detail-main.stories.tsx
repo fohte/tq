@@ -147,6 +147,7 @@ function MainContentStory({
           sessionsByTaskId={new Map()}
           hasNextPage={false}
           isFetchingNextPage={false}
+          isFetchNextPageError={false}
           fetchNextPage={() => {}}
         />
       </div>
@@ -232,6 +233,7 @@ export const FullPagePC: StoryObj<{
             sessionsByTaskId={new Map()}
             hasNextPage={false}
             isFetchingNextPage={false}
+            isFetchNextPageError={false}
             fetchNextPage={() => {}}
           />
         </div>
@@ -269,6 +271,7 @@ export const FullPageSP: StoryObj<{
             sessionsByTaskId={new Map()}
             hasNextPage={false}
             isFetchingNextPage={false}
+            isFetchNextPageError={false}
             fetchNextPage={() => {}}
           />
         </div>

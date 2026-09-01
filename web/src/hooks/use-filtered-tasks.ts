@@ -1,5 +1,5 @@
 import { parseSearchQuery } from 'api/search-query-parser'
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { useContextFilter } from '#hooks/use-context-filter'
 import type { TaskListFilter, TaskSortBy } from '#hooks/use-tasks'
@@ -56,11 +56,8 @@ export function useFilteredTaskTree(options: {
     ...(options.projectId != null ? { projectId: options.projectId } : {}),
   }
 
-  // Rules of Hooks bar switching between useQuery and useInfiniteQuery based
-  // on isSearching, so both are always mounted and only the active one is
-  // enabled. A search narrows results enough to fetch them all at once (and
-  // needs includeAncestors to backfill the tree); browsing root tasks with
-  // no filter can grow unbounded, so it's paginated instead.
+  // Mounted unconditionally per Rules of Hooks; `enabled` toggles between
+  // non-paginated search and paginated root tasks.
   const searchResult = useTaskList(
     { ...baseFilter, includeAncestors: true },
     { enabled: isSearching },
@@ -73,9 +70,9 @@ export function useFilteredTaskTree(options: {
   const tasks = isSearching ? searchResult.categorized.all : rootResult.tasks
   const tree = useMemo(() => buildTree(tasks), [tasks])
 
-  const fetchNextPage = () => {
+  const fetchNextPage = useCallback(() => {
     void rootResult.fetchNextPage()
-  }
+  }, [rootResult.fetchNextPage])
 
   return {
     isLoading: isSearching ? searchResult.isLoading : rootResult.isLoading,
@@ -84,6 +81,7 @@ export function useFilteredTaskTree(options: {
     lazyChildrenFilter: isSearching ? undefined : baseFilter,
     hasNextPage: isSearching ? false : rootResult.hasNextPage,
     isFetchingNextPage: isSearching ? false : rootResult.isFetchingNextPage,
+    isFetchNextPageError: isSearching ? false : rootResult.isFetchNextPageError,
     fetchNextPage,
   }
 }
