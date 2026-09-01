@@ -46,6 +46,29 @@ function jsonResponse(tasks: unknown[]) {
 }
 
 describe('useInfiniteTaskList', () => {
+  it('queries the first page with limit/offset', async () => {
+    const mockGet = await getMockGet()
+    mockGet.mockResolvedValue(jsonResponse([makeTask({ id: 'a' })]))
+
+    const { result } = renderHook(
+      () => useInfiniteTaskList({ parentId: 'root' }),
+      {
+        wrapper,
+      },
+    )
+
+    await waitFor(() => {
+      expect(result.current.tasks).toEqual([makeTask({ id: 'a' })])
+    })
+    expect(mockGet).toHaveBeenCalledWith({
+      query: {
+        parentId: 'root',
+        limit: String(TASK_LIST_PAGE_SIZE),
+        offset: '0',
+      },
+    })
+  })
+
   it('marks hasNextPage false once a page returns fewer than a full page', async () => {
     const mockGet = await getMockGet()
     mockGet.mockResolvedValue(jsonResponse([makeTask({ id: 'a' })]))
@@ -61,24 +84,50 @@ describe('useInfiniteTaskList', () => {
       expect(result.current.tasks).toEqual([makeTask({ id: 'a' })])
     })
     expect(result.current.hasNextPage).toBe(false)
-    expect(mockGet).toHaveBeenCalledWith({
-      query: {
-        parentId: 'root',
-        limit: String(TASK_LIST_PAGE_SIZE),
-        offset: '0',
+  })
+
+  it('advances the offset on fetchNextPage', async () => {
+    const mockGet = await getMockGet()
+    const firstPage = Array.from({ length: TASK_LIST_PAGE_SIZE }, (_, i) =>
+      makeTask({ id: `task-${String(i)}` }),
+    )
+    mockGet.mockResolvedValue(jsonResponse(firstPage))
+
+    const { result } = renderHook(
+      () => useInfiniteTaskList({ parentId: 'root' }),
+      {
+        wrapper,
       },
+    )
+
+    await waitFor(() => {
+      expect(result.current.hasNextPage).toBe(true)
+    })
+
+    await result.current.fetchNextPage()
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenLastCalledWith({
+        query: {
+          parentId: 'root',
+          limit: String(TASK_LIST_PAGE_SIZE),
+          offset: String(TASK_LIST_PAGE_SIZE),
+        },
+      })
     })
   })
 
-  it('fetches the next page at an advanced offset and de-dupes tasks that appear on both pages', async () => {
+  it('de-dupes tasks that appear on both pages', async () => {
     const mockGet = await getMockGet()
     const firstPage = Array.from({ length: TASK_LIST_PAGE_SIZE }, (_, i) =>
       makeTask({ id: `task-${String(i)}` }),
     )
     // Simulates a task shifting from page 2 into page 1 between fetches
     // (offset pagination isn't stable under concurrent inserts/deletes).
+    // task-0's title differs from firstPage's so the assertion below can
+    // tell which page's copy won the de-dupe.
     const secondPage = [
-      makeTask({ id: 'task-0' }),
+      makeTask({ id: 'task-0', title: 'task-0 refetched' }),
       makeTask({ id: 'task-new' }),
     ]
     mockGet.mockImplementation(({ query }: { query: { offset: string } }) =>
@@ -102,16 +151,13 @@ describe('useInfiniteTaskList', () => {
 
     // task-0 keeps its position from firstPage (Map preserves first-seen
     // order) but its value comes from secondPage's later fetch.
-    const expectedTasks = [...firstPage, makeTask({ id: 'task-new' })]
+    const expectedTasks = [
+      makeTask({ id: 'task-0', title: 'task-0 refetched' }),
+      ...firstPage.slice(1),
+      makeTask({ id: 'task-new' }),
+    ]
     await waitFor(() => {
       expect(result.current.tasks).toEqual(expectedTasks)
-    })
-    expect(mockGet).toHaveBeenLastCalledWith({
-      query: {
-        parentId: 'root',
-        limit: String(TASK_LIST_PAGE_SIZE),
-        offset: String(TASK_LIST_PAGE_SIZE),
-      },
     })
   })
 
