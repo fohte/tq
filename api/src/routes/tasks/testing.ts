@@ -88,6 +88,10 @@ export interface TaskResponse {
   duplicateOfNumber?: number | null
   // Same shape as one entry of `links.outgoing`.
   duplicateOfTask?: TaskListItemResponse | null
+  // Tasks that block this task / that this task blocks. Same shape as
+  // `links.outgoing`/`links.incoming`; only present on the detail response.
+  blockedBy?: TaskListItemResponse[]
+  blocking?: TaskListItemResponse[]
 }
 
 // Shape returned by the list-returning endpoint (`/api/tasks`) and by a task
@@ -114,6 +118,7 @@ export interface TaskListItemResponse {
   updatedAt: string
   parentNumber: number | null
   duplicateOfNumber: number | null
+  blockedByNumbers: number[]
   childCompletionCount?: { completed: number; total: number }
   children?: TaskListItemResponse[]
 }
@@ -213,6 +218,7 @@ const taskListItemResponseSchema = z.object({
   updatedAt: z.string(),
   parentNumber: z.number().nullable(),
   duplicateOfNumber: z.number().nullable(),
+  blockedByNumbers: z.array(z.number()),
   childCompletionCount: z
     .object({ completed: z.number(), total: z.number() })
     .optional(),
@@ -251,6 +257,8 @@ const taskResponseSchema = z.object({
   linkSync: linkSyncResponseSchema.optional(),
   duplicateOfNumber: z.number().nullable().optional(),
   duplicateOfTask: taskListItemResponseSchema.nullable().optional(),
+  blockedBy: z.array(taskListItemResponseSchema).optional(),
+  blocking: z.array(taskListItemResponseSchema).optional(),
 })
 
 const idResponseSchema = z.object({ id: z.string() })

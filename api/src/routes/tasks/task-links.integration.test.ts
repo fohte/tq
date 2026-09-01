@@ -88,6 +88,7 @@ function linkedTaskDetail(
     updatedAt: task.updatedAt,
     parentNumber: null,
     duplicateOfNumber: null,
+    blockedByNumbers: [],
     childCompletionCount,
   }
 }

@@ -11,8 +11,6 @@ export const taskStatusReason = z.enum([
   'duplicate',
 ])
 export type TaskStatusReason = z.infer<typeof taskStatusReason>
-export const taskRelationType = z.enum(['duplicate_of'])
-export type TaskRelationType = z.infer<typeof taskRelationType>
 export const contextEnum = z.enum(['work', 'personal'])
 export const commitmentEnum = z.enum(['inbox', 'active', 'someday'])
 
@@ -53,6 +51,9 @@ export const updateTaskSchema = z.object({
   commitment: commitmentEnum.optional(),
   labels: z.array(z.string().trim().min(1)).optional(),
   recurrenceRule: recurrenceRuleSchema.nullable().optional(),
+  // Full replacement, not add/remove: the complete desired set of blocker
+  // task ids each time. An empty array clears every `blocked_by` relation.
+  blockedBy: z.array(z.uuid()).optional(),
 })
 
 export const listTasksQuerySchema = z.object({

@@ -1,6 +1,6 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
-import { and, count, eq, sql } from 'drizzle-orm'
+import { and, count, eq, inArray, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
@@ -33,7 +33,46 @@ import { getTaskLinks, syncTaskLinks } from '#services/task-links'
 import {
   getDuplicateOfNumbersByTaskId,
   getDuplicateOfTask,
+  getTaskBlockedByRelations,
+  hasBlockedByCycle,
+  syncTaskBlockedBy,
 } from '#services/task-relations'
+
+// Rejects a `blockedBy` set that self-references, names a non-existent task,
+// or would create a cycle in the blocked_by graph, before the update
+// transaction touches the database. Returns the error response body/status
+// to send, or `null` when every id is valid.
+async function checkBlockedByTargets(
+  id: string,
+  blockedBy: string[],
+): Promise<{ body: { error: string }; status: 400 | 404 | 409 } | null> {
+  if (blockedBy.includes(id)) {
+    return {
+      body: { error: 'A task cannot be blocked by itself' },
+      status: 400,
+    }
+  }
+
+  const uniqueIds = [...new Set(blockedBy)]
+  if (uniqueIds.length === 0) return null
+
+  const existingTargets = await db
+    .select({ id: tasks.id })
+    .from(tasks)
+    .where(inArray(tasks.id, uniqueIds))
+  if (existingTargets.length !== uniqueIds.length) {
+    return { body: { error: 'Blocking task not found' }, status: 404 }
+  }
+
+  if (await hasBlockedByCycle(id, uniqueIds)) {
+    return {
+      body: { error: 'Circular blocking relationship detected' },
+      status: 409,
+    }
+  }
+
+  return null
+}
 
 export const tasksCrudApp = new Hono()
   .post('/', zValidator('json', createTaskSchema), async (c) => {
@@ -148,6 +187,7 @@ export const tasksCrudApp = new Hono()
       labelsByTaskId,
       duplicateOfNumbersByTaskId,
       duplicateOfTask,
+      blockedByRelations,
     ] = await Promise.all([
       db
         .select({
@@ -179,6 +219,7 @@ export const tasksCrudApp = new Hono()
       getLabelNamesByTaskId([id]),
       getDuplicateOfNumbersByTaskId([id]),
       getDuplicateOfTask(id),
+      getTaskBlockedByRelations(id),
     ])
 
     const pageAuthors = await getPageAuthors(pages.map((page) => page.id))
@@ -209,6 +250,8 @@ export const tasksCrudApp = new Hono()
             : null,
         duplicateOfTask:
           task.statusReason === 'duplicate' ? duplicateOfTask : null,
+        blockedBy: blockedByRelations.blockedBy,
+        blocking: blockedByRelations.blocking,
       },
       200,
     )
@@ -224,8 +267,16 @@ export const tasksCrudApp = new Hono()
       const {
         recurrenceRule: recurrenceRuleInput,
         labels: labelsInput,
+        blockedBy: blockedByInput,
         ...taskFields
       } = c.req.valid('json')
+
+      if (blockedByInput != null) {
+        const targetError = await checkBlockedByTargets(id, blockedByInput)
+        if (targetError) {
+          return c.json(targetError.body, targetError.status)
+        }
+      }
 
       const changedFields = diffFields(existing, taskFields, [
         'title',
@@ -339,6 +390,10 @@ export const tasksCrudApp = new Hono()
 
         if (labelsInput !== undefined) {
           await syncTaskLabels(tx, id, labelsInput)
+        }
+
+        if (blockedByInput !== undefined) {
+          await syncTaskBlockedBy(tx, id, blockedByInput)
         }
 
         for (const field of changedFields) {
