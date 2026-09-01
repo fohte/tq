@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { LinkExistingProjectTaskDialog } from '#components/project/link-existing-project-task-dialog'
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
-import { useProjects } from '#hooks/use-projects'
+import { useProjects, useProjectTaskIds } from '#hooks/use-projects'
 import { type SearchResult } from '#hooks/use-search'
 import { useUpdateTask } from '#hooks/use-tasks'
 
@@ -11,13 +11,11 @@ export function LinkExistingProjectTaskMenu({
   onOpenChange,
   projectId,
   projectTitle,
-  excludedTaskIds,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   projectId: string
   projectTitle: string
-  excludedTaskIds: Set<string>
 }) {
   const [linkDialogCandidate, setLinkDialogCandidate] =
     useState<SearchResult | null>(null)
@@ -29,6 +27,13 @@ export function LinkExistingProjectTaskMenu({
   }, [open])
 
   const { data: projects } = useProjects(undefined, { enabled: open })
+  const { data: projectTaskIds } = useProjectTaskIds(projectId, {
+    enabled: open,
+  })
+  const excludedTaskIds = useMemo(
+    () => new Set(projectTaskIds ?? []),
+    [projectTaskIds],
+  )
   const updateTask = useUpdateTask()
 
   const projectTitleById = useMemo(

@@ -1,56 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  getDaysRemaining,
-  summarizeTaskStatus,
-} from '#components/project/project-detail-utils'
-import type { ProjectTask } from '#hooks/use-projects'
-
-const baseTask: ProjectTask = {
-  id: '1',
-  number: 1,
-  title: 'Task',
-  description: null,
-  status: 'todo',
-  context: 'personal',
-  commitment: 'active',
-  labels: [],
-  startDate: null,
-  dueDate: null,
-  estimatedMinutes: null,
-  parentId: null,
-  parentNumber: null,
-  projectId: 'p1',
-  recurrenceRuleId: null,
-  githubLinks: [],
-  createdAt: '2026-01-01T00:00:00.000Z',
-  updatedAt: '2026-01-01T00:00:00.000Z',
-  childCompletionCount: { completed: 0, total: 0 },
-}
-
-describe('summarizeTaskStatus', () => {
-  it('counts tasks by status', () => {
-    const tasks: ProjectTask[] = [
-      { ...baseTask, id: '1', number: 1, status: 'todo' },
-      { ...baseTask, id: '2', number: 2, status: 'todo' },
-      { ...baseTask, id: '3', number: 3, status: 'todo' },
-      { ...baseTask, id: '4', number: 4, status: 'completed' },
-    ]
-    expect(summarizeTaskStatus(tasks)).toEqual({
-      total: 4,
-      todo: 3,
-      completed: 1,
-    })
-  })
-
-  it('returns all zeroes for an empty task list', () => {
-    expect(summarizeTaskStatus([])).toEqual({
-      total: 0,
-      todo: 0,
-      completed: 0,
-    })
-  })
-})
+import { getDaysRemaining } from '#components/project/project-detail-utils'
 
 describe('getDaysRemaining', () => {
   it('returns positive days for a future target date', () => {

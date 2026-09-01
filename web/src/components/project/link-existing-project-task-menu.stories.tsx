@@ -63,6 +63,7 @@ function createSeededQueryClient(candidates: SearchResult[]) {
   })
   client.setQueryData(searchKeys.results(searchText), candidates)
   client.setQueryData(projectKeys.list(undefined), [otherProject])
+  client.setQueryData(projectKeys.taskIds(projectId), [])
   return client
 }
 
@@ -77,7 +78,6 @@ const meta = {
     onOpenChange: fn(),
     projectId,
     projectTitle,
-    excludedTaskIds: new Set<string>(),
   },
 } satisfies Meta<typeof LinkExistingProjectTaskMenu>
 

@@ -137,7 +137,6 @@ function MainContentStory({
       <div className="max-w-2xl p-6">
         <ProjectMainContent
           project={project}
-          tasks={tasks}
           parsedQuery={defaultParsedQuery}
           onQueryChange={() => {}}
           projects={sampleProjects}
@@ -219,7 +218,6 @@ export const FullPagePC: StoryObj<{
         <div className="flex-1 overflow-y-auto p-6">
           <ProjectMainContent
             project={project}
-            tasks={tasks}
             parsedQuery={defaultParsedQuery}
             onQueryChange={() => {}}
             projects={sampleProjects}
@@ -253,7 +251,6 @@ export const FullPageSP: StoryObj<{
         <div className="p-4">
           <ProjectMainContent
             project={project}
-            tasks={tasks}
             parsedQuery={defaultParsedQuery}
             onQueryChange={() => {}}
             projects={sampleProjects}
