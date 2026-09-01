@@ -35,7 +35,6 @@ const baseTask: Omit<ProjectTask, 'id' | 'title' | 'status'> = {
   description: null,
   statusReason: null,
   duplicateOfNumber: null,
-  blockedByNumbers: [],
   context: 'personal',
   commitment: 'active',
   labels: [],

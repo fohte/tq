@@ -34,7 +34,6 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     status: 'todo',
     statusReason: null,
     duplicateOfNumber: null,
-    blockedByNumbers: [],
     context: 'personal',
     commitment: 'active',
     startDate: null,

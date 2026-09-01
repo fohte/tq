@@ -12,7 +12,6 @@ const makeTasks = (overrides: Array<Partial<Task>>): Task[] =>
     status: 'todo' as const,
     statusReason: null,
     duplicateOfNumber: null,
-    blockedByNumbers: [],
     context: 'personal' as const,
     commitment: 'active' as const,
     labels: [],

@@ -55,7 +55,6 @@ export function useCreateTask() {
         status: 'todo',
         statusReason: null,
         duplicateOfNumber: null,
-        blockedByNumbers: [],
         context: input.context ?? 'personal',
         commitment: input.commitment ?? 'inbox',
         labels: input.labels ?? [],

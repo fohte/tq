@@ -23,7 +23,6 @@ const baseTreeNode: TreeNode = {
   status: 'todo',
   statusReason: null,
   duplicateOfNumber: null,
-  blockedByNumbers: [],
   context: 'personal',
   commitment: 'active',
   labels: [],
