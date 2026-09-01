@@ -393,10 +393,8 @@ export const ClickingCardStaysInViewMode: Story = {
   },
 }
 
-// Renders MarkdownEditor as a controlled `defaultValue`, with a button that
-// changes it — standing in for the prop changing out from under the editor
-// the way `task.description`/`page.content` do after a refetch, without
-// pulling in React Query and a real task/page fixture.
+// Test harness to simulate an external `defaultValue` update via a button,
+// without pulling in React Query and a real task/page fixture.
 function ExternalUpdateHarness({
   initialValue,
   updatedValue,
@@ -409,10 +407,8 @@ function ExternalUpdateHarness({
     <>
       <button
         type="button"
-        // Prevents the click from moving focus to this button, which would
-        // blur the editor and exit edit mode — a real external update (e.g.
-        // a React Query background refetch) never touches focus, so a
-        // faithful simulation of it can't either.
+        // Prevents moving focus to this button so the editor doesn't
+        // blur/exit edit mode.
         onMouseDown={(e) => {
           e.preventDefault()
         }}
@@ -491,6 +487,47 @@ export const ExternalUpdateWhileEditingDoesNotDisruptTyping: Story = {
     ).resolves.toBeVisible()
     await expect(
       canvas.queryByText('Overwritten from outside while editing.'),
+    ).not.toBeInTheDocument()
+  },
+}
+
+// Regression check: an external update that arrives mid-edit isn't dropped —
+// it stays pending and applies once the editor returns to view mode, even
+// overriding an unsaved edit typed after the update arrived.
+export const ExternalUpdateAppliesAfterReturningToViewMode: Story = {
+  render: () => (
+    <ExternalUpdateHarness
+      initialValue={TRAILING_BLOCKQUOTE_CONTENT}
+      updatedValue="Overwritten from outside while editing."
+    />
+  ),
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const wrapper = assertDefined(
+      canvasElement.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
+    )
+    const blockquote = assertDefined(
+      canvasElement.querySelector('.milkdown .ProseMirror blockquote'),
+      'editor always renders the blockquote',
+    )
+
+    await userEvent.click(blockquote)
+    await userEvent.click(blockquote)
+    await userEvent.keyboard('!')
+
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'simulate external update' }),
+    )
+    await userEvent.keyboard('?')
+
+    await userEvent.keyboard('{Escape}')
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'view')
+
+    await expect(
+      canvas.findByText('Overwritten from outside while editing.'),
+    ).resolves.toBeVisible()
+    await expect(
+      canvas.queryByText('A blockquote at the very end.!?'),
     ).not.toBeInTheDocument()
   },
 }

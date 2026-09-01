@@ -173,25 +173,10 @@ function CrepeEditor({
     crepeRef.current?.setReadonly(mode === 'view')
   }, [mode])
 
-  // Reflects a `defaultValue` that changed out from under the editor (e.g.
-  // another tab, the `tq` CLI, or an LLM rewrote the description while this
-  // page stayed open) by replacing the document. Gated to view mode: in edit
-  // mode the user has a live cursor in the document, so a mid-edit replace
-  // would clobber their typing — the check is skipped while editing, and
-  // `lastSyncedValueRef` staying behind means it still applies once the user
-  // returns to view mode. Comparing against the editor's own markdown (not
-  // just the previous prop) makes this a no-op for the editor's own
-  // save-and-refetch round trip, where `defaultValue` changes but already
-  // matches what's in the document.
-  //
-  // `replaceAll(markdown, true)` — the `flush: true` form — rebuilds the
-  // editor state via `EditorState.create` and `view.updateState()` instead
-  // of dispatching a transaction, for the same reason `setReadonly` above
-  // avoids dispatching one: no `appendTransaction` hook runs, so
-  // `@milkdown/plugin-trailing` can't insert a stray empty paragraph. The
-  // same skip applies to `@milkdown/plugin-listener`'s `markdownUpdated`
-  // listener, which only fires from `state.apply(tr)` — so this sync never
-  // loops back through `onChange` into another save.
+  // Syncs a `defaultValue` that changed externally while in view mode;
+  // skipped during editing so a live cursor isn't overwritten, and diffed
+  // against the editor's own markdown so its own save-then-refetch is a
+  // no-op.
   useEffect(() => {
     if (mode !== 'view') return
     const incoming = defaultValue ?? ''
@@ -199,6 +184,8 @@ function CrepeEditor({
     lastSyncedValueRef.current = incoming
     const crepe = crepeRef.current
     if (!crepe || crepe.getMarkdown() === incoming) return
+    // flush: true avoids dispatching a transaction, for the same reason
+    // setReadonly above does.
     crepe.editor.action(replaceAll(incoming, true))
   }, [defaultValue, mode])
 
