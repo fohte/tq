@@ -1,7 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { projectKeys } from '#hooks/use-projects'
-import type { Task, TaskDetail } from '#hooks/use-task-queries'
+import type {
+  LinkedTaskSummary,
+  Task,
+  TaskDetail,
+} from '#hooks/use-task-queries'
 import { taskKeys } from '#hooks/use-task-queries'
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
@@ -69,6 +73,7 @@ export function useCreateTask() {
         createdAt: now,
         updatedAt: now,
         childCompletionCount: { completed: 0, total: 0 },
+        blockedByNumbers: [],
       }
 
       // Only insert into lists filtered by the same parentId — otherwise a
@@ -321,6 +326,55 @@ export function useUpdateTaskParent() {
       void queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
       void queryClient.invalidateQueries({ queryKey: projectKeys.all })
+    },
+  })
+}
+
+// Full replacement, mirroring the API's PATCH semantics: `blockedBy` is
+// always the complete desired set of blocker tasks, not a diff. Callers pass
+// full LinkedTaskSummary objects (not just ids) so the optimistic update can
+// render the new set immediately — the PATCH response doesn't echo
+// blockedBy/blocking back.
+export function useUpdateTaskBlockedBy() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      blockedBy,
+    }: {
+      id: string
+      blockedBy: LinkedTaskSummary[]
+    }) => {
+      const res = await api.api.tasks[':id'].$patch({
+        param: { id },
+        json: { blockedBy: blockedBy.map((task) => task.id) },
+      })
+      return unwrapOrThrow(assertOk(res)).json()
+    },
+    onMutate: async ({ id, blockedBy }) => {
+      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
+
+      const previousDetail = queryClient.getQueryData<TaskDetail>(
+        taskKeys.detail(id),
+      )
+
+      if (previousDetail) {
+        queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
+          ...previousDetail,
+          blockedBy,
+        })
+      }
+
+      return { previousDetail }
+    },
+    onError: (_err, { id }, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
+      }
+    },
+    onSettled: (_data, _err, { id }) => {
+      void queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
     },
   })
 }

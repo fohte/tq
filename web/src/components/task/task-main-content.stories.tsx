@@ -74,6 +74,8 @@ const baseTask: TaskDetail = {
   pages: [],
   timeBlocks: [],
   links: { outgoing: [], incoming: [] },
+  blockedBy: [],
+  blocking: [],
 }
 
 const sampleSubtasks: Task[] = [
