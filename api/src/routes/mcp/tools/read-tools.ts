@@ -286,25 +286,34 @@ export function registerReadTools(server: McpServer): void {
     'list_projects',
     {
       description:
-        "List projects, optionally filtered by status. Use this to resolve a project's id before passing projectId to list_tasks or create_task.",
+        "List projects, optionally filtered by status and context. Use this to resolve a project's id before passing projectId to list_tasks or create_task.",
       inputSchema: z.object({
         status: projectStatus
           .optional()
           .describe('Only return projects in this status.'),
+        context: contextEnum
+          .optional()
+          .describe('Only return projects in this context.'),
       }),
       annotations: { readOnlyHint: true },
     },
-    async ({ status }) =>
-      callAsResult(`/api/projects${buildQuery({ status })}`),
+    async ({ status, context }) =>
+      callAsResult(`/api/projects${buildQuery({ status, context })}`),
   )
 
   server.registerTool(
     'list_labels',
     {
       description:
-        'List all labels available for tagging tasks, with their id, name, and color. Use this to resolve label names before filtering search_tasks by label or attaching labels to a task.',
+        'List all labels available for tagging tasks, with their id, name, color, and context. Use this to resolve label names before filtering search_tasks by label or attaching labels to a task.',
+      inputSchema: z.object({
+        context: contextEnum
+          .optional()
+          .describe('Only return labels in this context.'),
+      }),
       annotations: { readOnlyHint: true },
     },
-    async () => callAsResult('/api/labels'),
+    async ({ context }) =>
+      callAsResult(`/api/labels${buildQuery({ context })}`),
   )
 }

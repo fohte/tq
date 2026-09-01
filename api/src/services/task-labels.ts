@@ -18,8 +18,8 @@ export async function syncTaskLabels(
   await tx.delete(taskLabels).where(eq(taskLabels.taskId, taskId))
   if (uniqueNames.length === 0) return []
 
-  // Only applies to a label created here; an existing label keeps its
-  // context (see onConflictDoNothing below).
+  // onConflictDoNothing means `context` here only takes effect for a label
+  // that doesn't exist yet; an existing label keeps its original context.
   await tx
     .insert(labels)
     .values(uniqueNames.map((name) => ({ name, context })))

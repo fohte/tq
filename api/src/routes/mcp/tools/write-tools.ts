@@ -72,7 +72,9 @@ export function registerWriteTools(server: McpServer): void {
       description:
         'Create a new task. `labels` is an array of label names to attach; ' +
         'names that do not match an existing label are created ' +
-        'automatically. `recurrenceRule`, when set, makes the task recur: ' +
+        "automatically, inheriting this task's context — an existing " +
+        "label's context is left unchanged. `recurrenceRule`, when set, " +
+        'makes the task recur: ' +
         '`type` is one of daily/weekly/monthly/custom, `interval` is the ' +
         'repeat count (e.g. 2 with type weekly means every 2 weeks), ' +
         '`daysOfWeek` (0=Sunday..6=Saturday) restricts a weekly rule to ' +
@@ -101,9 +103,10 @@ export function registerWriteTools(server: McpServer): void {
         'recurrenceRule) are cleared by passing null. `labels`, when ' +
         'provided, replaces the full set of labels on the task — pass an ' +
         'empty array to remove all labels; names that do not match an ' +
-        'existing label are created automatically. `recurrenceRule` takes ' +
-        'the same shape as in create_task, or null to remove recurrence ' +
-        'from the task.',
+        "existing label are created automatically, inheriting the task's " +
+        "(possibly just-updated) context — an existing label's context is " +
+        'left unchanged. `recurrenceRule` takes the same shape as in ' +
+        'create_task, or null to remove recurrence from the task.',
       inputSchema: z.object({
         taskId: taskIdOrNumber,
         ...updateTaskSchema.shape,
