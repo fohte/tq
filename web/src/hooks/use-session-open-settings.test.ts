@@ -11,11 +11,11 @@ beforeEach(() => {
 })
 
 describe('useSessionOpenSettings', () => {
-  it('defaults to no local context and no templates when nothing is stored', () => {
+  it('defaults to personal context and no templates when nothing is stored', () => {
     const { result } = renderHook(() => useSessionOpenSettings())
 
     expect(result.current[0]).toEqual({
-      localContext: null,
+      localContext: 'personal',
       focusUrlTemplate: null,
       resumeUrlTemplate: null,
     })
@@ -46,7 +46,7 @@ describe('useSessionOpenSettings', () => {
     const { result } = renderHook(() => useSessionOpenSettings())
 
     expect(result.current[0]).toEqual({
-      localContext: null,
+      localContext: 'personal',
       focusUrlTemplate: null,
       resumeUrlTemplate: null,
     })
@@ -65,7 +65,7 @@ describe('useSessionOpenSettings', () => {
     const { result } = renderHook(() => useSessionOpenSettings())
 
     expect(result.current[0]).toEqual({
-      localContext: null,
+      localContext: 'personal',
       focusUrlTemplate: null,
       resumeUrlTemplate: null,
     })
@@ -99,5 +99,18 @@ describe('useSessionOpenSettings', () => {
       focusUrlTemplate: null,
       resumeUrlTemplate: null,
     })
+  })
+
+  it('reflects an update from one already-mounted instance in another', () => {
+    function useCombined() {
+      return { a: useSessionOpenSettings(), b: useSessionOpenSettings() }
+    }
+    const { result } = renderHook(() => useCombined())
+
+    act(() => {
+      result.current.a[1]({ localContext: 'work' })
+    })
+
+    expect(result.current.b[0].localContext).toBe('work')
   })
 })
