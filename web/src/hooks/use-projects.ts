@@ -86,6 +86,7 @@ export interface CreateProjectInput {
   startDate?: string
   targetDate?: string
   color?: string
+  context?: 'work' | 'personal'
 }
 
 export function useCreateProject() {
@@ -115,7 +116,7 @@ export function useCreateProject() {
         targetDate: input.targetDate ?? null,
         color: input.color ?? null,
         sortOrder: 0,
-        context: 'personal',
+        context: input.context ?? 'personal',
         createdAt: now,
         updatedAt: now,
         completionRate: 0,
@@ -152,6 +153,7 @@ export interface UpdateProjectInput {
   startDate?: string | null
   targetDate?: string | null
   color?: string | null
+  context?: 'work' | 'personal'
 }
 
 export function useUpdateProject() {

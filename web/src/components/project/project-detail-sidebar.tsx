@@ -22,6 +22,9 @@ export function ProjectSidebar({ project }: { project: ProjectDetail }) {
       <ProjectSidebarField label="STATUS">
         <StatusSelect projectId={project.id} status={project.status} />
       </ProjectSidebarField>
+      <ProjectSidebarField label="CONTEXT">
+        <ContextSelect projectId={project.id} context={project.context} />
+      </ProjectSidebarField>
       <ProjectSidebarField label="START DATE">
         <DateInput
           projectId={project.id}
@@ -60,6 +63,9 @@ export function ProjectSidebarMobile({ project }: { project: ProjectDetail }) {
       <div className="flex flex-col gap-2">
         <ProjectFieldRow label="STATUS">
           <StatusSelect projectId={project.id} status={project.status} />
+        </ProjectFieldRow>
+        <ProjectFieldRow label="CONTEXT">
+          <ContextSelect projectId={project.id} context={project.context} />
         </ProjectFieldRow>
         <ProjectFieldRow label="START DATE">
           <DateInput
@@ -169,6 +175,33 @@ function StatusSelect({
       {statusValues.map((value) => (
         <option key={value} value={value}>
           {statusLabels[value]}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+function ContextSelect({
+  projectId,
+  context,
+}: {
+  projectId: string
+  context: ProjectDetail['context']
+}) {
+  const updateProject = useUpdateProject()
+  const contextValues = ['work', 'personal'] as const
+
+  return (
+    <select
+      value={context}
+      onChange={selectHandler((value: ProjectDetail['context']) => {
+        updateProject.mutate({ id: projectId, input: { context: value } })
+      }, contextValues)}
+      className="border-none bg-transparent px-0 py-0 font-mono text-xs text-foreground outline-none"
+    >
+      {contextValues.map((value) => (
+        <option key={value} value={value}>
+          {value}
         </option>
       ))}
     </select>

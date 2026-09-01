@@ -64,3 +64,9 @@ export const NoTargetDate: Story = {
     project: { ...baseProject, targetDate: null },
   },
 }
+
+export const WorkContext: Story = {
+  args: {
+    project: { ...baseProject, context: 'work' },
+  },
+}

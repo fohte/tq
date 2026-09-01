@@ -53,3 +53,23 @@ export const Edit: Story = {
     },
   },
 }
+
+export const EditWorkContext: Story = {
+  args: {
+    project: {
+      id: '1',
+      title: 'Internal Platform Migration',
+      description: 'Migrate internal services to the new platform',
+      status: 'active',
+      startDate: '2024-11-01',
+      targetDate: '2024-12-08',
+      color: '#4A90D9',
+      sortOrder: 0,
+      context: 'work',
+      createdAt: '2024-10-01T00:00:00Z',
+      updatedAt: '2024-10-01T00:00:00Z',
+      completionRate: 0,
+      taskCount: { total: 0, completed: 0 },
+    },
+  },
+}
