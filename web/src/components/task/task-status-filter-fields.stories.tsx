@@ -49,9 +49,6 @@ export const CheckCompleted: Story = {
   },
 }
 
-// Unchecking one of two checked boxes leaves the other checked — the
-// single-checked case (where the last box is disabled instead) is covered
-// by SingleSelected/CannotUncheckLastStatus below.
 export const UncheckTodo: Story = {
   args: {
     status: ['todo', 'completed'],

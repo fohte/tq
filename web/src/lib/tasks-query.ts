@@ -19,8 +19,7 @@ export const sortLabels: Partial<
   created: 'Created',
 }
 
-// Compact terms for the `is` chip's value (e.g. "is todo, doing"), distinct
-// from the full "In Progress"-style wording used in status pickers.
+// Compact terms for the `is` chip's value (e.g. "is todo, done").
 export const statusChipLabels: Record<
   NonNullable<ParsedQuery['status']>[number],
   string

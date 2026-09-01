@@ -201,13 +201,15 @@ describe('REST/MCP parity', () => {
   })
 
   it('setting a task to completed via update_task_status is visible through GET /api/tasks/:id', async () => {
-    const task = await createTask('Start via MCP')
+    const task = await createTask('Complete via MCP')
 
-    const started = await callTool('update_task_status', {
+    const completed = await callTool('update_task_status', {
       taskId: task.id,
       status: 'completed',
     })
-    const data = passthroughSchema<TaskResponse>().parse(parseToolJson(started))
+    const data = passthroughSchema<TaskResponse>().parse(
+      parseToolJson(completed),
+    )
 
     const res = await app.request(`/api/tasks/${task.id}`)
     expect(res.status).toBe(200)
