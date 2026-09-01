@@ -43,10 +43,8 @@ export function TaskDependenciesSection({
   )
 }
 
-// The only group with an add action: "blocked by" describes what's stopping
-// this task, which is a fact about this task. "blocking" is the same
-// relation seen from the other side, so adding to it means editing the
-// other task's blockers — that belongs on the other task's page.
+// Adding a blocker only makes sense from the blocked-by side — the
+// other direction means editing the other task's blockers.
 function BlockedByGroup({
   taskId,
   blockedBy,
@@ -77,12 +75,15 @@ function BlockedByGroup({
                 type="button"
                 variant="ghost"
                 size="icon-xs"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
                   updateBlockedBy.mutate({
                     id: taskId,
                     blockedBy: blockedBy.filter((t) => t.id !== task.id),
                   })
                 }}
+                disabled={updateBlockedBy.isPending}
                 aria-label={`Remove #${String(task.number)} as blocker`}
                 className="shrink-0 text-muted-foreground-faint hover:text-destructive"
               >

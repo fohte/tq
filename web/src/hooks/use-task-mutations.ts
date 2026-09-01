@@ -330,11 +330,8 @@ export function useUpdateTaskParent() {
   })
 }
 
-// Full replacement, mirroring the API's PATCH semantics: `blockedBy` is
-// always the complete desired set of blocker tasks, not a diff. Callers pass
-// full LinkedTaskSummary objects (not just ids) so the optimistic update can
-// render the new set immediately — the PATCH response doesn't echo
-// blockedBy/blocking back.
+// Callers pass full LinkedTaskSummary objects (not just ids) since the PATCH
+// response never echoes blockedBy/blocking back for the optimistic update.
 export function useUpdateTaskBlockedBy() {
   const queryClient = useQueryClient()
 
