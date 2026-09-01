@@ -90,23 +90,25 @@ jobs:
           echo "packages=$packages" >> "$GITHUB_OUTPUT"
           echo "Selected packages: $packages"
 
-          # Package directory names match their package.json `name` (api,
-          # cli, web), so workspace:-protocol dependency names below double
-          # as directory keys.
-          graph=$(for dir in "${pkgs[@]}"; do
-            jq -c --arg name "$dir" '{($name): [((.dependencies // {}) + (.devDependencies // {})) | to_entries[] | select(.value | startswith("workspace:")) | .key]}' "$dir/package.json"
-          done | jq -sc 'add')
+          # Directory name and package.json `name` diverging is not
+          # guaranteed, so resolve workspace:-protocol dependency names
+          # through each package's own `name` field instead of assuming it
+          # equals the directory.
+          pkg_info=$(for dir in "${pkgs[@]}"; do
+            jq -c --arg dir "$dir" '{dir: $dir, name, deps: [((.dependencies // {}) + (.devDependencies // {})) | to_entries[] | select(.value | startswith("workspace:")) | .key]}' "$dir/package.json"
+          done | jq -sc .)
 
-          # unit-test-run also needs to test any package that imports another
-          # package's code (e.g. cli and web both import api's zod schemas
-          # directly), so a breaking change to a dependency fails the PR that
-          # introduced it instead of shipping with a green CI.
-          test_packages=$(jq -nc --argjson graph "$graph" --argjson selected "$packages" '
-            def closure(sel):
-              ($graph | to_entries | map(select(.value | any(. as $d | sel | index($d) != null)) | .key)) as $newly
-              | (sel + $newly | unique) as $next
-              | if ($next | length) == (sel | length) then $next else closure($next) end;
-            closure($selected)
+          # Also test packages that import a changed package's code (e.g.
+          # cli/web import api directly), so a breaking change there fails
+          # its own PR.
+          test_packages=$(jq -nc --argjson pkg_info "$pkg_info" --argjson selected "$packages" '
+            ($pkg_info | map({(.name): .dir}) | add) as $dir_of_name
+            | ($pkg_info | map({(.dir): (.deps | map($dir_of_name[.]))}) | add) as $graph
+            | def closure(sel):
+                ($graph | to_entries | map(select(.value | any(. as $d | sel | index($d) != null)) | .key)) as $newly
+                | (sel + $newly | unique) as $next
+                | if ($next | length) == (sel | length) then $next else closure($next) end;
+              closure($selected)
           ')
           echo "test_packages=$test_packages" >> "$GITHUB_OUTPUT"
           echo "Selected test packages: $test_packages"
