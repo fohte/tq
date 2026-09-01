@@ -94,8 +94,7 @@ export const taskLinks = pgTable(
 // left-to-right as "source <type> target" (e.g. (A, B, 'duplicate_of') means
 // A is a duplicate of B). Reverse-direction values (e.g. a hypothetical
 // 'duplicated_by') are not allowed -- represent the reverse case as a row in
-// the other direction instead. This convention is shared with tq #257
-// (blocking relations), which will add a 'blocks' value later.
+// the other direction instead.
 export const taskRelations = pgTable(
   'task_relations',
   {
