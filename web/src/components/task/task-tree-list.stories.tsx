@@ -134,6 +134,23 @@ export const LoadingMore: Story = {
   },
 }
 
+// Exceeds the h-96 wrapper's viewport, so the virtualizer windows rows out
+// of the DOM — the only way this rendering path is exercised under VRT.
+const manyTasks: Task[] = Array.from({ length: 60 }, (_, i) => ({
+  ...baseTask,
+  id: `many-${String(i)}`,
+  number: i + 1,
+  title: `Task ${String(i)}`,
+}))
+
+export const LongList: Story = {
+  args: {
+    isLoading: false,
+    tasks: manyTasks,
+    sessionsByTaskId: new Map(),
+  },
+}
+
 export const WithSecondLine: Story = {
   args: {
     isLoading: false,

@@ -325,6 +325,7 @@ export function TaskTreeList({
                   <div
                     key={virtualRow.key}
                     data-index={virtualRow.index}
+                    data-testid="task-tree-row"
                     ref={rowVirtualizer.measureElement}
                     style={{
                       position: 'absolute',

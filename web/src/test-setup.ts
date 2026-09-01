@@ -34,10 +34,8 @@ if (typeof Range.prototype.getBoundingClientRect === 'undefined') {
   })
 }
 
-// jsdom doesn't implement Element.scrollTo, and setting scrollTop directly
-// doesn't dispatch a scroll event either — @tanstack/react-virtual relies on
-// both (scrollToIndex() calls scrollTo(), then reads the resulting position
-// off a scroll listener) to know a programmatic scroll completed.
+// jsdom lacks Element.scrollTo, and scrollTop assignment doesn't dispatch
+// a scroll event — @tanstack/react-virtual's scrollToIndex() needs both.
 if (typeof Element.prototype.scrollTo !== 'function') {
   Element.prototype.scrollTo = function (
     this: Element,
@@ -55,20 +53,11 @@ if (typeof Element.prototype.scrollTo !== 'function') {
   }
 }
 
-// jsdom never lays out content, so offsetHeight is always 0. Without a
-// nonzero size, @tanstack/react-virtual's scroll container sees a 0px
-// viewport on the very first measurement and virtualizes away everything
-// past the first row before it ever gets a chance to render (and thus
-// measure) the rest — breaking tests that expect the full row list. Leaving
-// row wrappers ([data-index], set by TaskTreeList) at the default 0 doesn't
-// work either: the virtualizer measures each mounted row via offsetHeight
-// on commit, and 0 collapses every row's cached size, which cascades into
-// the range recalculating around a single arbitrary row across renders.
-// Reporting a small fixed height for rows keeps that measurement a no-op
-// (same value every time), so only the scroll container needs a size
-// (`data-scroll-restoration-id` for a self-scrolling list, or
-// `data-testid="task-tree-scroll"` for one embedded in a scrolling
-// ancestor) large enough to fit more than one row.
+// jsdom always reports offsetHeight=0, which @tanstack/react-virtual reads
+// for both the scroll container's viewport size and each row's height on
+// mount — left at 0, it renders almost nothing and the row-size cache
+// collapses onto a single arbitrary row. Fake both to nonzero values,
+// scoped to this feature's own markers so unrelated tests are unaffected.
 Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
   configurable: true,
   get(this: HTMLElement) {
@@ -79,7 +68,7 @@ Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
     ) {
       return 2000
     }
-    if (this.matches('[data-index]')) return 40
+    if (this.matches('[data-testid="task-tree-row"]')) return 40
     return 0
   },
 })
