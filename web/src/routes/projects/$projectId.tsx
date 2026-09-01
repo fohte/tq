@@ -64,6 +64,9 @@ function ProjectDetailPage() {
     tree,
     tasks: filteredTasks,
     lazyChildrenFilter,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
   } = useFilteredTaskTree({ q, projectId })
   const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
 
@@ -96,6 +99,9 @@ function ProjectDetailPage() {
             isTasksLoading={isFilteredTasksLoading}
             lazyChildrenFilter={lazyChildrenFilter}
             sessionsByTaskId={sessionsByTaskId}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            fetchNextPage={fetchNextPage}
           />
         </div>
         <ProjectSidebar key={project.id} project={project} />
@@ -119,6 +125,9 @@ function ProjectDetailPage() {
             isTasksLoading={isFilteredTasksLoading}
             lazyChildrenFilter={lazyChildrenFilter}
             sessionsByTaskId={sessionsByTaskId}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            fetchNextPage={fetchNextPage}
           />
         </div>
         <div className="border-t border-border p-4">

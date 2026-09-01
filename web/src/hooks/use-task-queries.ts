@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 import { useMemo } from 'react'
 
@@ -26,12 +26,18 @@ export interface TaskListFilter {
   projectId?: string
   sortBy?: TaskSortBy
   includeAncestors?: boolean
+  limit?: number
+  offset?: number
 }
+
+export const TASK_LIST_PAGE_SIZE = 50
 
 export const taskKeys = {
   all: ['tasks'] as const,
   lists: ['tasks', 'list'] as const,
   list: (filter?: TaskListFilter) => [...taskKeys.lists, filter] as const,
+  infiniteList: (filter?: TaskListFilter) =>
+    [...taskKeys.lists, 'infinite', filter] as const,
   detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
 }
 
@@ -43,10 +49,13 @@ export interface CategorizedTasks {
 }
 
 export async function fetchTaskList(filter?: TaskListFilter): Promise<Task[]> {
+  const { limit, offset, ...rest } = filter ?? {}
   const res = await api.api.tasks.$get({
     query: {
-      ...filter,
-      includeAncestors: filter?.includeAncestors === true ? 'true' : undefined,
+      ...rest,
+      includeAncestors: rest.includeAncestors === true ? 'true' : undefined,
+      ...(limit != null ? { limit: String(limit) } : {}),
+      ...(offset != null ? { offset: String(offset) } : {}),
     },
   })
   return unwrapOrThrow(assertOk(res)).json()
@@ -68,6 +77,43 @@ export function useTaskList(
   }, [query.data])
 
   return { ...query, categorized }
+}
+
+/**
+ * Paginates a task list `limit`/`offset` at a time, loading further pages
+ * via `fetchNextPage`. Pages are flattened and de-duped by id before being
+ * returned as `tasks`: offset pagination can return the same task twice
+ * across pages if a task is inserted or removed between page fetches, and
+ * tree-builder.ts would otherwise render it as two rows.
+ */
+export function useInfiniteTaskList(
+  filter?: TaskListFilter,
+  options?: { enabled?: boolean },
+) {
+  const query = useInfiniteQuery({
+    queryKey: taskKeys.infiniteList(filter),
+    queryFn: ({ pageParam }) =>
+      fetchTaskList({
+        ...filter,
+        limit: TASK_LIST_PAGE_SIZE,
+        offset: pageParam,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, _allPages, lastPageParam) =>
+      lastPage.length < TASK_LIST_PAGE_SIZE
+        ? undefined
+        : lastPageParam + TASK_LIST_PAGE_SIZE,
+    enabled: options?.enabled ?? true,
+  })
+
+  const tasks = useMemo(() => {
+    const byId = new Map(
+      query.data?.pages.flat().map((task) => [task.id, task]),
+    )
+    return [...byId.values()]
+  }, [query.data])
+
+  return { ...query, tasks }
 }
 
 export function useTaskMap(tasks: Task[]): Map<string, Task> {
