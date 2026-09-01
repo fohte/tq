@@ -103,6 +103,8 @@ function seedLiveReferenceFixtures() {
     pages: [],
     timeBlocks: [],
     links: { outgoing: [], incoming: [] },
+    blockedBy: [],
+    blocking: [],
   }
   queryClient.setQueryData(
     taskMentionKeys.preview(MENTION_FIXTURE_NUMBER),
