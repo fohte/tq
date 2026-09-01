@@ -34,6 +34,7 @@ beforeEach(() => {
   })
   vi.clearAllMocks()
   mockFetchTaskList.mockResolvedValue([])
+  localStorage.clear()
 })
 
 describe('useLazyTaskTree', () => {
@@ -108,5 +109,48 @@ describe('useLazyTaskTree', () => {
       parentId: 'root-1',
     })
     expect(result.current.isExpanded('root-1')).toBe(true)
+  })
+
+  it('persists expand state across remounts when lazyChildrenFilter is set', () => {
+    const root = makeNode({
+      id: 'root-1',
+      childCompletionCount: { completed: 0, total: 1 },
+    })
+
+    const { result, unmount } = renderHook(
+      () => useLazyTaskTree([root], { q: 'is:todo' }),
+      { wrapper },
+    )
+    act(() => {
+      result.current.toggleExpand('root-1')
+    })
+    expect(result.current.isExpanded('root-1')).toBe(true)
+    unmount()
+
+    const { result: remounted } = renderHook(
+      () => useLazyTaskTree([root], { q: 'is:todo' }),
+      { wrapper },
+    )
+    expect(remounted.current.isExpanded('root-1')).toBe(true)
+  })
+
+  it('does not persist expand state across remounts when lazyChildrenFilter is undefined', () => {
+    const root = makeNode({ id: 'a' })
+
+    const { result, unmount } = renderHook(
+      () => useLazyTaskTree([root], undefined),
+      { wrapper },
+    )
+    act(() => {
+      result.current.toggleExpand('a')
+    })
+    expect(result.current.isExpanded('a')).toBe(false)
+    unmount()
+
+    const { result: remounted } = renderHook(
+      () => useLazyTaskTree([root], undefined),
+      { wrapper },
+    )
+    expect(remounted.current.isExpanded('a')).toBe(true)
   })
 })

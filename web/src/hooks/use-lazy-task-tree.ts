@@ -6,6 +6,15 @@ import { fetchTaskList, taskKeys } from '#hooks/use-tasks'
 import { useExpandedIds } from '#hooks/use-tree-outliner'
 import { mergeLazyChildren } from '#lib/tree-builder'
 
+// Task ids are UUIDs, so this key can be shared by every lazy tree instance.
+// Not used in eager mode, where toggledIds means "collapsed ids" instead —
+// sharing it there would invert the meaning.
+//
+// ponytail: ids are never pruned, so the stored set only grows and a
+// persisted id also triggers a fetch even for a tree it isn't part of.
+// Filter against ids present in the currently fetched tree if this matters.
+const EXPANDED_TASK_IDS_STORAGE_KEY = 'tq:expanded-task-ids'
+
 /**
  * Builds the tree to render and its expand-state accessors. When
  * `lazyChildrenFilter` is set, the tree starts fully collapsed and a node's
@@ -20,7 +29,10 @@ export function useLazyTaskTree(
   lazyChildrenFilter: TaskListFilter | undefined,
 ) {
   const lazy = lazyChildrenFilter != null
-  const { isExpanded, toggleExpand, toggledIds } = useExpandedIds(!lazy)
+  const { isExpanded, toggleExpand, toggledIds } = useExpandedIds(
+    !lazy,
+    lazy ? EXPANDED_TASK_IDS_STORAGE_KEY : undefined,
+  )
   const expandedIdList = useMemo(() => [...toggledIds], [toggledIds])
 
   const childQueries = useQueries({
