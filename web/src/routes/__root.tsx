@@ -12,14 +12,14 @@ interface RootSearch {
   context?: ContextFilterMode
 }
 
-// Omits `context` entirely (rather than defaulting it to 'all') when the URL
-// doesn't have it. retainSearchParams below only fills in a key that's
-// absent from the destination search, so an explicit value (including
-// 'all', set by resetting the filter) always wins over a stale retained one.
-export function validateSearch(search: Record<string, unknown>): RootSearch {
-  return search['context'] === 'work' || search['context'] === 'personal'
-    ? { context: search['context'] }
-    : {}
+// Omits `context` only when it's genuinely unset, so retainSearchParams
+// below can still carry a non-default value across navigations that don't
+// pass `search` explicitly.
+function validateSearch(search: Record<string, unknown>): RootSearch {
+  if (search['context'] === 'work' || search['context'] === 'personal') {
+    return { context: search['context'] }
+  }
+  return 'context' in search ? { context: 'all' } : {}
 }
 
 export const Route = createRootRoute({

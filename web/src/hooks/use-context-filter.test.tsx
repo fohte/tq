@@ -81,6 +81,13 @@ describe('useContextFilter', () => {
     expect(result.current.mode).toBe('work')
   })
 
+  it('falls back to "all" when the stored value is not a recognized mode', async () => {
+    localStorage.setItem(STORAGE_KEY, 'not-a-mode')
+    const wrapper = await buildWrapper()
+    const { result } = renderHook(() => useContextFilter(), { wrapper })
+    expect(result.current.mode).toBe('all')
+  })
+
   it('persists the mode so a newly mounted instance reads it back', async () => {
     const wrapper = await buildWrapper()
     const { result } = renderHook(() => useContextFilter(), { wrapper })
@@ -90,6 +97,12 @@ describe('useContextFilter', () => {
     await waitFor(() => {
       expect(localStorage.getItem(STORAGE_KEY)).toBe('personal')
     })
+
+    const freshWrapper = await buildWrapper()
+    const { result: reloaded } = renderHook(() => useContextFilter(), {
+      wrapper: freshWrapper,
+    })
+    expect(reloaded.current.mode).toBe('personal')
   })
 })
 

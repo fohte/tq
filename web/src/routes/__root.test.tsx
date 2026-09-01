@@ -3,18 +3,18 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-  retainSearchParams,
 } from '@tanstack/react-router'
 import { describe, expect, it } from 'vitest'
 
-import { validateSearch } from '#routes/__root'
+import { Route as RealRootRoute } from '#routes/__root'
 
+// Reuses the real Route's validateSearch/search.middlewares (rather than
+// retyping them) so this test can't silently drift from __root.tsx, the
+// same way tasks/index.test.tsx reuses the real TasksRoute's config.
 async function buildRouter(initialEntry: string) {
   const rootRoute = createRootRoute({
-    validateSearch,
-    search: {
-      middlewares: [retainSearchParams(['context'])],
-    },
+    validateSearch: RealRootRoute.options.validateSearch,
+    search: RealRootRoute.options.search ?? { middlewares: [] },
   })
   const routeA = createRoute({ getParentRoute: () => rootRoute, path: '/a' })
   const routeB = createRoute({ getParentRoute: () => rootRoute, path: '/b' })

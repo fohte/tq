@@ -1,4 +1,5 @@
 import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useState } from 'react'
 
 import type { ContextFilterMode } from '#lib/context-filter'
 import { getStorageItem, setStorageItem } from '#lib/local-storage'
@@ -24,14 +25,13 @@ function readStoredMode(): ContextFilterMode | null {
 export function useContextFilter(): ContextFilterState {
   const { context } = useSearch({ strict: false })
   const navigate = useNavigate()
+  const [storedMode, setStoredMode] = useState(readStoredMode)
 
   return {
-    // Falls back to localStorage (not just 'all') so a reload on a URL
-    // without `context` (e.g. a bookmarked link) still shows the mode the
-    // user last picked.
-    mode: context ?? readStoredMode() ?? 'all',
+    mode: context ?? storedMode ?? 'all',
     setMode: (mode) => {
       setStorageItem(STORAGE_KEY, mode).unwrapOr(undefined)
+      setStoredMode(mode)
       void navigate({
         to: '.',
         search: (prev) => ({ ...prev, context: mode }),
