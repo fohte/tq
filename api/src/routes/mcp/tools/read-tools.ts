@@ -2,11 +2,11 @@ import type { CallToolResult, McpServer } from '@modelcontextprotocol/server'
 import type { Hono } from 'hono'
 import { z } from 'zod'
 
+import { taskIdOrNumber } from '#lib/numeric-id'
 import { callInternalRoute } from '#routes/mcp/route-bridge'
 import { pageToResponse } from '#routes/task-pages'
 import {
   nestTaskListRows,
-  taskIdOrNumber,
   type TaskListItemResponse,
 } from '#routes/tasks/shared'
 import { projectStatus } from '#schemas/project'

@@ -169,10 +169,9 @@ export function registerTaskCommands(
         'Comma-separated ids/numbers of tasks blocking this task (replaces the full set; pass an empty string to clear)',
       ),
     updateTaskSchema,
-    // labels/recurrenceRule aren't scalar fields (see the `create` command's
-    // note); blockedBy is a scalar (array of id-or-number) but is
-    // comma-separated in a single flag rather than a repeatable flag, so it's
-    // hand-parsed below instead of going through addSchemaOptions.
+    // labels/recurrenceRule/blockedBy aren't scalar fields, so
+    // addSchemaOptions can't turn them into flags; blockedBy is hand-parsed
+    // below instead.
     ['labels', 'recurrenceRule', 'blockedBy'],
     // No TQ_CONTEXT default here (unlike list/create/search): update sends
     // only the flags the caller explicitly set, so defaulting --context would

@@ -11,7 +11,7 @@ import {
   tasks,
   timeBlocks,
 } from '#db/schema'
-import { classifyNumericOrId, taskIdOrNumber } from '#lib/numeric-id'
+import { classifyNumericOrId } from '#lib/numeric-id'
 import type { TaskSortBy } from '#schemas/task'
 import {
   getBlockedByNumbersByTaskId,
@@ -300,8 +300,6 @@ export type TaskEnv = {
   }
 }
 
-export { taskIdOrNumber }
-
 // Task detail URLs (and their subresources) accept either the UUID primary
 // key or the human-facing sequential number (e.g. `/tasks/123`), so
 // bookmarked UUID links keep working alongside the short numeric form.
@@ -316,10 +314,8 @@ export function findTaskByIdOrNumber(param: string) {
   })
 }
 
-// Batch counterpart of `findTaskByIdOrNumber`: resolves each id-or-number
-// string to its task row, keyed by the original input string. An input with
-// no matching task is simply absent from the returned map, so callers can
-// diff their input list against the map's keys to find unresolved ids.
+// Batch counterpart of `findTaskByIdOrNumber`; unmatched inputs are simply
+// absent from the returned map.
 export async function findTasksByIdsOrNumbers(
   params: string[],
 ): Promise<Map<string, typeof tasks.$inferSelect>> {

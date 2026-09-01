@@ -38,11 +38,13 @@ import {
   syncTaskBlockedBy,
 } from '#services/task-relations'
 
-// Resolves `blockedBy` id-or-number strings to task UUIDs and runs the
-// cheap, non-racy checks (existence, self-reference) -- the cycle check
-// needs the transactional lock in `syncTaskBlockedBy` instead.
+// Self-reference and existence are cheap, non-racy checks -- the cycle check
+// needs the transactional lock in `syncTaskBlockedBy` instead. Self-reference
+// is checked first, against the raw input, so it never costs a DB round trip
+// and always wins over an existence error when a request combines its own
+// id/number with an unrelated missing blocker.
 async function resolveBlockedByTargets(
-  id: string,
+  task: { id: string; number: number },
   blockedBy: string[],
 ): Promise<
   | { targetIds: string[] }
@@ -50,6 +52,15 @@ async function resolveBlockedByTargets(
 > {
   const uniqueRaw = [...new Set(blockedBy)]
   if (uniqueRaw.length === 0) return { targetIds: [] }
+
+  if (uniqueRaw.includes(task.id) || uniqueRaw.includes(String(task.number))) {
+    return {
+      error: {
+        body: { error: 'A task cannot be blocked by itself' },
+        status: 400,
+      },
+    }
+  }
 
   const resolved = await findTasksByIdsOrNumbers(uniqueRaw)
   const missing = uniqueRaw.filter((raw) => !resolved.has(raw))
@@ -60,15 +71,6 @@ async function resolveBlockedByTargets(
   }
 
   const targetIds = [...new Set([...resolved.values()].map((t) => t.id))]
-  if (targetIds.includes(id)) {
-    return {
-      error: {
-        body: { error: 'A task cannot be blocked by itself' },
-        status: 400,
-      },
-    }
-  }
-
   return { targetIds }
 }
 
@@ -271,7 +273,7 @@ export const tasksCrudApp = new Hono()
 
       if (blockedByInput != null) {
         const resolveResult = await resolveBlockedByTargets(
-          id,
+          existing,
           blockedByInput.map(String),
         )
         if ('error' in resolveResult) {
