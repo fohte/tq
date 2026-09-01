@@ -165,6 +165,10 @@ export const EXCLUDED_ROUTES = {
     'backs the web search bar autocomplete, not a CLI concern',
   'GET /api/tasks/mentions':
     "backs the editor's # mention autocomplete, not a CLI concern",
+
+  // Backs the "link existing task" picker's already-linked exclusion list;
+  // the CLI already lists project tasks via `GET /api/tasks?projectId=`.
+  'GET /api/projects/:id/task-ids': 'backs a web UI picker, not a CLI concern',
 } as const satisfies Partial<Record<AllRoutes, string>>
 
 type ExcludedRoutes = keyof typeof EXCLUDED_ROUTES

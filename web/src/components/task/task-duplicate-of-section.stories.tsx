@@ -52,7 +52,7 @@ function SectionStory({
 }) {
   return (
     <Providers>
-      <div className="max-w-2xl p-6">
+      <div className="max-w-2xl border border-border bg-background p-6">
         <TaskDuplicateOfSection duplicateOfTask={duplicateOfTask} />
       </div>
     </Providers>
