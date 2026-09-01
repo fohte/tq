@@ -14,7 +14,10 @@ import {
 } from '#db/schema'
 import { classifyNumericOrId, numericIdPattern } from '#lib/numeric-id'
 import type { TaskSortBy } from '#schemas/task'
-import { getDuplicateOfNumbersByTaskId } from '#services/task-relations'
+import {
+  getBlockedByNumbersByTaskId,
+  getDuplicateOfNumbersByTaskId,
+} from '#services/task-relations'
 
 function resolvePrimaryTaskListOrderBy(sortBy?: TaskSortBy) {
   switch (sortBy) {
@@ -192,11 +195,13 @@ function taskListItemToResponse(
   githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
   labelNames: string[] = [],
   duplicateOfNumber: number | null = null,
+  blockedByNumbers: number[] = [],
 ) {
   return {
     ...taskCoreToResponse(task, githubLinks, labelNames),
     parentNumber,
     duplicateOfNumber,
+    blockedByNumbers,
   }
 }
 
@@ -214,11 +219,8 @@ export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
 
 export type TaskListItemResponse = ReturnType<typeof taskListItemToResponse>
 
-// Batch-hydrates a set of list-query rows (as returned by `selectTaskListRows`)
-// with labels, child-completion counts, GitHub links, and the duplicate-of
-// target number in 4 queries total regardless of row count, for any endpoint
-// that renders task rows via `TaskListItemResponse` (the `/api/tasks` list
-// endpoint, and the task-detail page's linked tasks).
+// Batch-hydrates list-query rows into `TaskListItemResponse`s in a fixed
+// number of queries regardless of row count.
 export async function hydrateTaskListRows(
   rows: {
     task: typeof tasks.$inferSelect
@@ -235,11 +237,13 @@ export async function hydrateTaskListRows(
     childCompletionCountsByTaskId,
     githubLinksByTaskId,
     duplicateOfNumbersByTaskId,
+    blockedByNumbersByTaskId,
   ] = await Promise.all([
     getLabelNamesByTaskId(ids),
     getChildCompletionCountsByTaskId(ids),
     getGithubLinksByTaskId(ids),
     getDuplicateOfNumbersByTaskId(ids),
+    getBlockedByNumbersByTaskId(ids),
   ])
 
   return rows.map((r) => ({
@@ -251,6 +255,7 @@ export async function hydrateTaskListRows(
       r.task.statusReason === 'duplicate'
         ? (duplicateOfNumbersByTaskId.get(r.task.id) ?? null)
         : null,
+      blockedByNumbersByTaskId.get(r.task.id) ?? [],
     ),
     childCompletionCount: childCompletionCountsByTaskId.get(r.task.id) ?? {
       completed: 0,

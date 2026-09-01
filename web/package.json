@@ -29,7 +29,7 @@
     "test:unit": "vitest run --project=unit",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
-    "test:storybook": "vitest run --project=storybook && vitest run --project=storybook-mobile",
+    "test:storybook": "vitest run --project=storybook --project=storybook-mobile",
     "test:storybook:capture": "vitest run"
   },
   "dependencies": {
@@ -52,6 +52,7 @@
     "@tailwindcss/vite": "4.2.2",
     "@tanstack/react-query": "5.91.2",
     "@tanstack/react-router": "1.167.5",
+    "@tanstack/react-virtual": "3.14.10",
     "api": "workspace:*",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",

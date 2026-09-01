@@ -6,11 +6,6 @@ import {
 } from '#lib/session-open'
 
 describe('canOpenSessionLocally', () => {
-  it('allows every session when the local context is unset', () => {
-    expect(canOpenSessionLocally('work', null)).toBe(true)
-    expect(canOpenSessionLocally('personal', null)).toBe(true)
-  })
-
   it('allows a session whose context matches the local context', () => {
     expect(canOpenSessionLocally('work', 'work')).toBe(true)
   })

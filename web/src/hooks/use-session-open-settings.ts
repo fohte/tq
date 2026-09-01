@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useSyncExternalStore } from 'react'
 
 import { getStorageItem, parseJson, setStorageItem } from '#lib/local-storage'
 import type { SessionOpenSettings } from '#lib/session-open'
@@ -6,7 +6,7 @@ import type { SessionOpenSettings } from '#lib/session-open'
 export const STORAGE_KEY = 'tq:session-open-settings'
 
 const DEFAULT_SETTINGS: SessionOpenSettings = {
-  localContext: null,
+  localContext: 'personal',
   focusUrlTemplate: null,
   resumeUrlTemplate: null,
 }
@@ -30,21 +30,32 @@ function toSettings(value: unknown): SessionOpenSettings {
   return {
     localContext: isContext(record['localContext'])
       ? record['localContext']
-      : null,
+      : DEFAULT_SETTINGS.localContext,
     focusUrlTemplate: toTemplate(record['focusUrlTemplate']),
     resumeUrlTemplate: toTemplate(record['resumeUrlTemplate']),
   }
 }
 
-function readSettings(): SessionOpenSettings {
-  const raw = getStorageItem(STORAGE_KEY).unwrapOr(null)
+function parseSettings(raw: string | null): SessionOpenSettings {
   if (raw == null) return DEFAULT_SETTINGS
   return parseJson(raw).map(toSettings).unwrapOr(DEFAULT_SETTINGS)
 }
 
-function writeSettings(settings: SessionOpenSettings): void {
-  // best-effort persistence; keep the in-memory value even if storage write fails
-  setStorageItem(STORAGE_KEY, JSON.stringify(settings)).unwrapOr(undefined)
+// A module-level store (rather than per-instance useState) so every mounted
+// consumer — e.g. SessionOpenSettingsPanel and the app-wide useCurrentContext
+// callers that stay mounted across navigation — re-renders when one instance
+// writes a new value, instead of only the instance that called updateSettings.
+const listeners = new Set<() => void>()
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
+function getSnapshot(): string | null {
+  return getStorageItem(STORAGE_KEY).unwrapOr(null)
 }
 
 /**
@@ -53,14 +64,14 @@ function writeSettings(settings: SessionOpenSettings): void {
  * than through the API, which has no notion of "this machine" to key on.
  */
 export function useSessionOpenSettings() {
-  const [settings, setSettingsState] = useState(readSettings)
+  const raw = useSyncExternalStore(subscribe, getSnapshot)
+  const settings = parseSettings(raw)
 
   const updateSettings = (patch: Partial<SessionOpenSettings>) => {
-    setSettingsState((prev) => {
-      const next = { ...prev, ...patch }
-      writeSettings(next)
-      return next
-    })
+    const next = { ...settings, ...patch }
+    // best-effort persistence; keep the in-memory value even if storage write fails
+    setStorageItem(STORAGE_KEY, JSON.stringify(next)).unwrapOr(undefined)
+    for (const listener of listeners) listener()
   }
 
   return [settings, updateSettings] as const

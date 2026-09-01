@@ -133,6 +133,7 @@ describe('read tools', () => {
           ...withoutLinkSync(withoutRecurrenceRule(task)),
           parentNumber: null,
           duplicateOfNumber: null,
+          blockedByNumbers: [],
           labels: [],
           childCompletionCount: { total: 0, completed: 0 },
         },
@@ -150,6 +151,7 @@ describe('read tools', () => {
           ...withoutLinkSync(withoutRecurrenceRule(parent)),
           parentNumber: null,
           duplicateOfNumber: null,
+          blockedByNumbers: [],
           labels: [],
           childCompletionCount: { total: 1, completed: 0 },
         },
@@ -181,11 +183,14 @@ describe('read tools', () => {
         labels: [],
         duplicateOfNumber: null,
         duplicateOfTask: null,
+        blockedBy: [],
+        blocking: [],
         subtasks: [
           {
             ...withoutLinkSync(withoutRecurrenceRule(child)),
             parentNumber: parent.number,
             duplicateOfNumber: null,
+            blockedByNumbers: [],
             children: [],
             childCompletionCount: { total: 0, completed: 0 },
           },
@@ -247,6 +252,8 @@ describe('read tools', () => {
         labels: [],
         duplicateOfNumber: null,
         duplicateOfTask: null,
+        blockedBy: [],
+        blocking: [],
         subtasks: [],
       })
     })
@@ -321,6 +328,7 @@ describe('read tools', () => {
           ...withoutLinkSync(withoutRecurrenceRule(match)),
           parentNumber: null,
           duplicateOfNumber: null,
+          blockedByNumbers: [],
           childCompletionCount: { total: 0, completed: 0 },
         },
       ])
@@ -337,6 +345,7 @@ describe('read tools', () => {
           ...withoutLinkSync(withoutRecurrenceRule(withoutEstimate)),
           parentNumber: null,
           duplicateOfNumber: null,
+          blockedByNumbers: [],
           childCompletionCount: { total: 0, completed: 0 },
         },
       ])
@@ -355,6 +364,7 @@ describe('read tools', () => {
           ...withoutLinkSync(withoutRecurrenceRule(withDue)),
           parentNumber: null,
           duplicateOfNumber: null,
+          blockedByNumbers: [],
           childCompletionCount: { total: 0, completed: 0 },
         },
       ])

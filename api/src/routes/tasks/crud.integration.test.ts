@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { tasks } from '#db/schema'
+import { taskRelations, tasks } from '#db/schema'
 import {
   createComment,
   createLabel,
@@ -14,6 +14,7 @@ import {
   TaskResponse,
   TEST_UUID,
   TimeBlockResponse,
+  toListItemResponse,
   withoutLinkSync,
   withoutRecurrenceRule,
 } from '#routes/tasks/testing'
@@ -403,12 +404,14 @@ describe('tasks CRUD API', () => {
           ...normalizeTask(withoutLinkSync(withoutRecurrenceRule(taskA))),
           parentNumber: null,
           duplicateOfNumber: null,
+          blockedByNumbers: [],
           childCompletionCount: { completed: 0, total: 0 },
         },
         {
           ...normalizeTask(withoutLinkSync(withoutRecurrenceRule(taskB))),
           parentNumber: null,
           duplicateOfNumber: null,
+          blockedByNumbers: [],
           childCompletionCount: { completed: 0, total: 0 },
         },
       ])
@@ -488,18 +491,21 @@ describe('tasks CRUD API', () => {
           ...normalizeTask(withoutRecurrenceRule(patchedTaskB)),
           parentNumber: null,
           duplicateOfNumber: null,
+          blockedByNumbers: [],
           childCompletionCount: { completed: 0, total: 0 },
         },
         {
           ...normalizeTask(withoutRecurrenceRule(patchedTaskC)),
           parentNumber: null,
           duplicateOfNumber: null,
+          blockedByNumbers: [],
           childCompletionCount: { completed: 0, total: 0 },
         },
         {
           ...normalizeTask(withoutRecurrenceRule(patchedTaskA)),
           parentNumber: null,
           duplicateOfNumber: null,
+          blockedByNumbers: [],
           childCompletionCount: { completed: 0, total: 0 },
         },
       ])
@@ -1112,6 +1118,8 @@ describe('tasks CRUD API', () => {
         labels: [],
         duplicateOfNumber: null,
         duplicateOfTask: null,
+        blockedBy: [],
+        blocking: [],
       })
     })
 
@@ -1138,6 +1146,8 @@ describe('tasks CRUD API', () => {
         labels: ['bug', 'urgent'],
         duplicateOfNumber: null,
         duplicateOfTask: null,
+        blockedBy: [],
+        blocking: [],
       })
     })
 
@@ -1419,6 +1429,274 @@ describe('tasks CRUD API', () => {
     })
   })
 
+  describe('blocked_by relation', () => {
+    function fetchBlockedByRelations(sourceTaskId: string) {
+      return db
+        .select({
+          sourceTaskId: taskRelations.sourceTaskId,
+          targetTaskId: taskRelations.targetTaskId,
+          type: taskRelations.type,
+        })
+        .from(taskRelations)
+        .where(eq(taskRelations.sourceTaskId, sourceTaskId))
+    }
+
+    function setBlockedBy(taskId: string, blockedBy: string[]) {
+      return app.request(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockedBy }),
+      })
+    }
+
+    // Field-picked rather than spread from a `TaskResponse`/detail response so
+    // it also accepts a `GET /:id` response, which carries extra detail-only
+    // keys (`blockedBy`, `pages`, ...) that must not leak into the list-item
+    // shape being asserted here.
+    function toLinkedTaskDetail(
+      task: Parameters<typeof toListItemResponse>[0],
+      blockedByNumbers: number[] = [],
+    ) {
+      return toListItemResponse(task, { blockedByNumbers })
+    }
+
+    describe('PATCH /api/tasks/:id', () => {
+      it('persists a task_relations row for a single blocker', async () => {
+        const blocker = await createTask('Blocker')
+        const task = await createTask('Blocked')
+
+        const res = await setBlockedBy(task.id, [blocker.id])
+
+        expect(res.status).toBe(200)
+        expect(await fetchBlockedByRelations(task.id)).toEqual([
+          {
+            sourceTaskId: task.id,
+            targetTaskId: blocker.id,
+            type: 'blocked_by',
+          },
+        ])
+      })
+
+      it('does not surface blockedBy/blocking on the update response', async () => {
+        const blocker = await createTask('Blocker')
+        const task = await createTask('Blocked')
+
+        const res = await setBlockedBy(task.id, [blocker.id])
+
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskResponse>(res)
+        expect(body).toEqual({
+          ...withoutLinkSync(task),
+          updatedAt: body.updatedAt,
+        })
+      })
+
+      it('clears blocked_by relations when given an empty array', async () => {
+        const blocker = await createTask('Blocker')
+        const task = await createTask('Blocked')
+        await setBlockedBy(task.id, [blocker.id])
+
+        const res = await setBlockedBy(task.id, [])
+
+        expect(res.status).toBe(200)
+        expect(await fetchBlockedByRelations(task.id)).toEqual([])
+      })
+
+      it('leaves blocked_by relations unchanged when the field is omitted', async () => {
+        const blocker = await createTask('Blocker')
+        const task = await createTask('Blocked')
+        await setBlockedBy(task.id, [blocker.id])
+
+        const res = await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'Renamed' }),
+        })
+
+        expect(res.status).toBe(200)
+        expect(await fetchBlockedByRelations(task.id)).toEqual([
+          {
+            sourceTaskId: task.id,
+            targetTaskId: blocker.id,
+            type: 'blocked_by',
+          },
+        ])
+      })
+
+      it('replaces the full set on a subsequent call', async () => {
+        const blockerA = await createTask('Blocker A')
+        const blockerB = await createTask('Blocker B')
+        const task = await createTask('Blocked')
+        await setBlockedBy(task.id, [blockerA.id])
+
+        const res = await setBlockedBy(task.id, [blockerB.id])
+
+        expect(res.status).toBe(200)
+        expect(await fetchBlockedByRelations(task.id)).toEqual([
+          {
+            sourceTaskId: task.id,
+            targetTaskId: blockerB.id,
+            type: 'blocked_by',
+          },
+        ])
+      })
+
+      it('dedupes repeated ids in the request', async () => {
+        const blocker = await createTask('Blocker')
+        const task = await createTask('Blocked')
+
+        const res = await setBlockedBy(task.id, [blocker.id, blocker.id])
+
+        expect(res.status).toBe(200)
+        expect(await fetchBlockedByRelations(task.id)).toEqual([
+          {
+            sourceTaskId: task.id,
+            targetTaskId: blocker.id,
+            type: 'blocked_by',
+          },
+        ])
+      })
+
+      it('returns 400 when blockedBy includes the task itself', async () => {
+        const task = await createTask('Blocked')
+
+        const res = await setBlockedBy(task.id, [task.id])
+
+        expect(res.status).toBe(400)
+        expect(await jsonBody<{ error: string }>(res)).toEqual({
+          error: 'A task cannot be blocked by itself',
+        })
+        expect(await fetchBlockedByRelations(task.id)).toEqual([])
+      })
+
+      it('returns 404 when a blocker id does not reference an existing task', async () => {
+        const task = await createTask('Blocked')
+
+        const res = await setBlockedBy(task.id, [TEST_UUID])
+
+        expect(res.status).toBe(404)
+        expect(await jsonBody<{ error: string }>(res)).toEqual({
+          error: 'Blocking task not found',
+        })
+        expect(await fetchBlockedByRelations(task.id)).toEqual([])
+      })
+
+      it('returns 409 for a direct cycle', async () => {
+        const taskA = await createTask('A')
+        const taskB = await createTask('B')
+        await setBlockedBy(taskA.id, [taskB.id])
+
+        const res = await setBlockedBy(taskB.id, [taskA.id])
+
+        expect(res.status).toBe(409)
+        expect(await jsonBody<{ error: string }>(res)).toEqual({
+          error: 'Circular blocking relationship detected',
+        })
+        expect(await fetchBlockedByRelations(taskB.id)).toEqual([])
+      })
+
+      it('returns 409 for a transitive cycle', async () => {
+        const taskA = await createTask('A')
+        const taskB = await createTask('B')
+        const taskC = await createTask('C')
+        await setBlockedBy(taskA.id, [taskB.id])
+        await setBlockedBy(taskB.id, [taskC.id])
+
+        const res = await setBlockedBy(taskC.id, [taskA.id])
+
+        expect(res.status).toBe(409)
+        expect(await jsonBody<{ error: string }>(res)).toEqual({
+          error: 'Circular blocking relationship detected',
+        })
+        expect(await fetchBlockedByRelations(taskC.id)).toEqual([])
+      })
+    })
+
+    describe('GET /api/tasks/:id', () => {
+      it('returns tasks that block this task, ordered by number', async () => {
+        const blockerA = await createTask('Blocker A')
+        const blockerB = await createTask('Blocker B')
+        const task = await createTask('Blocked')
+        await setBlockedBy(task.id, [blockerB.id, blockerA.id])
+
+        const res = await app.request(`/api/tasks/${task.id}`)
+
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskResponse>(res)
+        expect(body).toEqual({
+          ...withoutLinkSync(task),
+          updatedAt: body.updatedAt,
+          titleAuthor: { kind: 'human', agent: null },
+          descriptionAuthor: { kind: 'human', agent: null },
+          childCompletionCount: { total: 0, completed: 0 },
+          pages: [],
+          timeBlocks: [],
+          links: { outgoing: [], incoming: [] },
+          labels: [],
+          duplicateOfNumber: null,
+          duplicateOfTask: null,
+          blockedBy: [blockerA, blockerB].map((t) => toLinkedTaskDetail(t)),
+          blocking: [],
+        })
+      })
+
+      it('returns tasks that this task blocks, ordered by number', async () => {
+        const blockedX = await createTask('Blocked X')
+        const blockedY = await createTask('Blocked Y')
+        const blocker = await createTask('Blocker')
+        // Each blocked task's PATCH response reflects its post-write state
+        // (bumped `updatedAt`), unlike the pre-write `createTask` snapshot.
+        const blockedYAfterPatch = await jsonBody<TaskResponse>(
+          await setBlockedBy(blockedY.id, [blocker.id]),
+        )
+        const blockedXAfterPatch = await jsonBody<TaskResponse>(
+          await setBlockedBy(blockedX.id, [blocker.id]),
+        )
+
+        const res = await app.request(`/api/tasks/${blocker.id}`)
+
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskResponse>(res)
+        expect(body).toEqual({
+          ...withoutLinkSync(blocker),
+          titleAuthor: { kind: 'human', agent: null },
+          descriptionAuthor: { kind: 'human', agent: null },
+          childCompletionCount: { total: 0, completed: 0 },
+          pages: [],
+          timeBlocks: [],
+          links: { outgoing: [], incoming: [] },
+          labels: [],
+          duplicateOfNumber: null,
+          duplicateOfTask: null,
+          blockedBy: [],
+          blocking: [blockedXAfterPatch, blockedYAfterPatch].map((t) =>
+            toLinkedTaskDetail(t, [blocker.number]),
+          ),
+        })
+      })
+    })
+
+    describe('GET /api/tasks', () => {
+      it('includes blockedByNumbers for a task with blockers, ordered by number', async () => {
+        const blockerA = await createTask('Blocker A')
+        const blockerB = await createTask('Blocker B')
+        const task = await createTask('Blocked')
+        await setBlockedBy(task.id, [blockerB.id, blockerA.id])
+
+        const res = await app.request('/api/tasks')
+
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskListItemResponse[]>(res)
+        const item = body.find((t) => t.id === task.id)
+        assertDefined(item)
+        expect(item.blockedByNumbers).toEqual([
+          blockerA.number,
+          blockerB.number,
+        ])
+      })
+    })
+  })
+
   describe('DELETE /api/tasks/:id', () => {
     it('deletes a task', async () => {
       const created = await createTask('Task')
@@ -1477,6 +1755,8 @@ describe('tasks CRUD API', () => {
         links: { outgoing: [], incoming: [] },
         duplicateOfNumber: null,
         duplicateOfTask: null,
+        blockedBy: [],
+        blocking: [],
       })
     })
 
@@ -1504,6 +1784,8 @@ describe('tasks CRUD API', () => {
         links: { outgoing: [], incoming: [] },
         duplicateOfNumber: null,
         duplicateOfTask: null,
+        blockedBy: [],
+        blocking: [],
       })
     })
 

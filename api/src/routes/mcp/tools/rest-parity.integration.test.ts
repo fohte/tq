@@ -107,6 +107,8 @@ describe('REST/MCP parity', () => {
       labels: [],
       duplicateOfNumber: null,
       duplicateOfTask: null,
+      blockedBy: [],
+      blocking: [],
     })
   })
 
@@ -131,6 +133,8 @@ describe('REST/MCP parity', () => {
       labels: [],
       duplicateOfNumber: null,
       duplicateOfTask: null,
+      blockedBy: [],
+      blocking: [],
     })
   })
 
@@ -149,6 +153,7 @@ describe('REST/MCP parity', () => {
         ...withoutRecurrenceRule(withoutLinkSync(data)),
         parentNumber: null,
         duplicateOfNumber: null,
+        blockedByNumbers: [],
         labels: [],
         childCompletionCount: { total: 0, completed: 0 },
       },
@@ -178,6 +183,8 @@ describe('REST/MCP parity', () => {
       labels: [],
       duplicateOfNumber: null,
       duplicateOfTask: null,
+      blockedBy: [],
+      blocking: [],
     })
   })
 
@@ -207,6 +214,8 @@ describe('REST/MCP parity', () => {
       labels: data.labels.toSorted(),
       duplicateOfNumber: null,
       duplicateOfTask: null,
+      blockedBy: [],
+      blocking: [],
     })
   })
 
@@ -239,6 +248,8 @@ describe('REST/MCP parity', () => {
       labels: [],
       duplicateOfNumber: null,
       duplicateOfTask: null,
+      blockedBy: [],
+      blocking: [],
     })
   })
 
@@ -255,6 +266,7 @@ describe('REST/MCP parity', () => {
         ...withoutRecurrenceRule(completedTask),
         parentNumber: null,
         duplicateOfNumber: null,
+        blockedByNumbers: [],
         labels: [],
         childCompletionCount: { total: 0, completed: 0 },
       },
@@ -262,6 +274,7 @@ describe('REST/MCP parity', () => {
         ...withoutRecurrenceRule(nextTask),
         parentNumber: null,
         duplicateOfNumber: null,
+        blockedByNumbers: [],
         labels: [],
         childCompletionCount: { total: 0, completed: 0 },
       },
@@ -293,6 +306,8 @@ describe('REST/MCP parity', () => {
       labels: [],
       duplicateOfNumber: null,
       duplicateOfTask: null,
+      blockedBy: [],
+      blocking: [],
     })
   })
 

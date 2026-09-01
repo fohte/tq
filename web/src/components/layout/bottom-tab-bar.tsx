@@ -8,7 +8,6 @@ import {
   Sun,
 } from 'lucide-react'
 
-import { ContextFilterInline } from '#components/context-filter'
 import { cn } from '#lib/utils'
 
 interface TabItem {
@@ -47,16 +46,9 @@ function Tab({ tab }: { tab: TabItem }) {
   )
 }
 
-// Context is global state, so it lives in app chrome rather than the tasks
-// page's own filter row. Desktop has room
-// for it in the sidebar footer; below md, this bar is the only chrome that's
-// always on screen, so it goes here instead.
 export function BottomTabBar() {
   return (
     <nav className="flex shrink-0 flex-col border-t border-border bg-background md:hidden">
-      <div className="flex items-center justify-center gap-1.5 border-b border-border px-2.5 py-1.5">
-        <ContextFilterInline />
-      </div>
       <div className="flex h-13 items-stretch">
         {tabs.map((tab) => (
           <Tab key={tab.to} tab={tab} />

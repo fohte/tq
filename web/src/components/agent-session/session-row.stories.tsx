@@ -42,7 +42,7 @@ function SessionRowStory({
   })
 
   resetSessionOpenSettings({
-    localContext: localContext ?? null,
+    localContext: localContext ?? 'work',
     focusUrlTemplate: focusUrlTemplate ?? null,
     resumeUrlTemplate: resumeUrlTemplate ?? null,
   })
@@ -78,6 +78,7 @@ export const ActiveDimmed: Story = {
   args: {
     session: { ...baseSession, id: '2', context: 'personal' },
     isDimmed: true,
+    localContext: 'personal',
   },
 }
 
@@ -105,6 +106,7 @@ export const EndedDimmed: Story = {
       endedAt: '2026-08-20T10:15:00Z',
     },
     isDimmed: true,
+    localContext: 'personal',
   },
 }
 

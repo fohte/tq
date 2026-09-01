@@ -88,6 +88,10 @@ export interface TaskResponse {
   duplicateOfNumber?: number | null
   // Same shape as one entry of `links.outgoing`.
   duplicateOfTask?: TaskListItemResponse | null
+  // Tasks that block this task / that this task blocks. Same shape as
+  // `links.outgoing`/`links.incoming`; only present on the detail response.
+  blockedBy?: TaskListItemResponse[]
+  blocking?: TaskListItemResponse[]
 }
 
 // Shape returned by the list-returning endpoint (`/api/tasks`) and by a task
@@ -114,6 +118,7 @@ export interface TaskListItemResponse {
   updatedAt: string
   parentNumber: number | null
   duplicateOfNumber: number | null
+  blockedByNumbers: number[]
   childCompletionCount?: { completed: number; total: number }
   children?: TaskListItemResponse[]
 }
@@ -139,6 +144,65 @@ export function withoutLinkSync<T extends { linkSync?: unknown }>(
   const { linkSync, ...rest } = task
   void linkSync
   return rest
+}
+
+// The `TaskListItemResponse` shape of a task with no parent or duplicate-of
+// relation, for building expected `links`/`blockedBy`/`blocking` entries from
+// a `TaskResponse` without repeating its field list at each call site.
+export function toListItemResponse(
+  task: Pick<
+    TaskResponse,
+    | 'id'
+    | 'number'
+    | 'title'
+    | 'description'
+    | 'status'
+    | 'statusReason'
+    | 'context'
+    | 'commitment'
+    | 'labels'
+    | 'startDate'
+    | 'dueDate'
+    | 'estimatedMinutes'
+    | 'parentId'
+    | 'projectId'
+    | 'recurrenceRuleId'
+    | 'githubLinks'
+    | 'createdAt'
+    | 'updatedAt'
+  >,
+  opts: {
+    childCompletionCount?: { completed: number; total: number }
+    blockedByNumbers?: number[]
+  } = {},
+): TaskListItemResponse {
+  return {
+    id: task.id,
+    number: task.number,
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    statusReason: task.statusReason,
+    context: task.context,
+    commitment: task.commitment,
+    labels: task.labels,
+    startDate: task.startDate,
+    dueDate: task.dueDate,
+    estimatedMinutes: task.estimatedMinutes,
+    parentId: task.parentId,
+    projectId: task.projectId,
+    recurrenceRuleId: task.recurrenceRuleId,
+    githubLinks: task.githubLinks,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+    parentNumber: null,
+    duplicateOfNumber: null,
+    blockedByNumbers: opts.blockedByNumbers ?? [],
+    childCompletionCount: opts.childCompletionCount ?? {
+      completed: 0,
+      total: 0,
+    },
+  }
 }
 
 const recurrenceRuleResponseSchema = z.object({
@@ -213,6 +277,7 @@ const taskListItemResponseSchema = z.object({
   updatedAt: z.string(),
   parentNumber: z.number().nullable(),
   duplicateOfNumber: z.number().nullable(),
+  blockedByNumbers: z.array(z.number()),
   childCompletionCount: z
     .object({ completed: z.number(), total: z.number() })
     .optional(),
@@ -251,6 +316,8 @@ const taskResponseSchema = z.object({
   linkSync: linkSyncResponseSchema.optional(),
   duplicateOfNumber: z.number().nullable().optional(),
   duplicateOfTask: taskListItemResponseSchema.nullable().optional(),
+  blockedBy: z.array(taskListItemResponseSchema).optional(),
+  blocking: z.array(taskListItemResponseSchema).optional(),
 })
 
 const idResponseSchema = z.object({ id: z.string() })

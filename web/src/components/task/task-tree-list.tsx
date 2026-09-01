@@ -10,6 +10,8 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
+import { useElementScrollRestoration } from '@tanstack/react-router'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { CreateTaskModal } from '#components/task/create-task-modal'
@@ -76,6 +78,10 @@ class TreeRowTouchSensor extends TouchSensor {
   ]
 }
 
+// Actual rendered row height varies with title wrapping and second-line
+// content; refined per-row by the virtualizer's own measurement once mounted.
+const ESTIMATED_ROW_HEIGHT = 56
+
 export interface TaskTreeListProps {
   isLoading: boolean
   tree: TreeNode[]
@@ -83,8 +89,10 @@ export interface TaskTreeListProps {
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
   /** Forwarded to useLazyTaskTree; see its docstring for behavior. */
   lazyChildrenFilter?: TaskListFilter | undefined
-  /** Only set this when this list's own div is the scrolling element — TaskTreeList is also embedded non-scrolling inside project-detail-main.tsx, which scrolls via an ancestor container instead. */
+  /** Only set this when this list's own div is the scrolling element. Mutually exclusive with ancestorScrollRestorationId — see its docstring for the other case. */
   scrollRestorationId?: string
+  /** Set when this list is embedded non-scrolling inside a container that scrolls instead (e.g. project-detail-main.tsx's outer container) and that ancestor already carries a `data-scroll-restoration-id` matching this value. TaskTreeList locates it via the DOM (closest()) to drive both virtualization and scroll restoration. Mutually exclusive with scrollRestorationId. */
+  ancestorScrollRestorationId?: string
   /** Root-level pagination (see useFilteredTaskTree). Omit for a list that always fetches everything up front. */
   hasNextPage?: boolean
   isFetchingNextPage?: boolean
@@ -99,6 +107,7 @@ export function TaskTreeList({
   sessionsByTaskId,
   lazyChildrenFilter,
   scrollRestorationId,
+  ancestorScrollRestorationId,
   hasNextPage = false,
   isFetchingNextPage = false,
   isFetchNextPageError = false,
@@ -158,6 +167,50 @@ export function TaskTreeList({
     () => buildTreeRenderRows(tree, { isExpanded: treeOutliner.isExpanded }),
     [tree, treeOutliner.isExpanded],
   )
+
+  const ownScrollRef = useRef<HTMLDivElement | null>(null)
+
+  // getScrollElement is called by the virtualizer post-mount (not during
+  // render), so it's safe to resolve the ancestor lazily here even though
+  // it isn't attached to this component's own ref.
+  const getScrollElement = useCallback((): HTMLElement | null => {
+    if (ancestorScrollRestorationId != null) {
+      return (
+        ownScrollRef.current?.closest<HTMLElement>(
+          `[data-scroll-restoration-id="${ancestorScrollRestorationId}"]`,
+        ) ?? null
+      )
+    }
+    return ownScrollRef.current
+  }, [ancestorScrollRestorationId])
+
+  // Read before mount: this seeds the virtualizer's initialOffset, which is
+  // only honored on the very first render.
+  const restorationId = scrollRestorationId ?? ancestorScrollRestorationId
+  const scrollEntry = useElementScrollRestoration(
+    restorationId != null ? { id: restorationId } : { getElement: () => null },
+  )
+
+  const rowVirtualizer = useVirtualizer({
+    count: renderRows.length,
+    getScrollElement,
+    estimateSize: () => ESTIMATED_ROW_HEIGHT,
+    overscan: 8,
+    getItemKey: (index) => renderRows[index]?.node.id ?? index,
+    initialOffset: () => scrollEntry?.scrollY ?? 0,
+  })
+
+  // Keyboard row selection (useTreeOutliner) can move to a row that isn't
+  // currently rendered, since virtualization removes off-screen rows from
+  // the DOM entirely rather than just hiding them.
+  useEffect(() => {
+    if (treeOutliner.selectedRowId == null) return
+    const index = renderRows.findIndex(
+      (row) => row.node.id === treeOutliner.selectedRowId,
+    )
+    if (index === -1) return
+    rowVirtualizer.scrollToIndex(index, { align: 'auto' })
+  }, [treeOutliner.selectedRowId, renderRows, rowVirtualizer])
 
   const resetDragState = () => {
     setActiveNode(null)
@@ -239,8 +292,10 @@ export function TaskTreeList({
 
   return (
     <div
+      ref={ownScrollRef}
       className="flex-1 overflow-auto"
       data-scroll-restoration-id={scrollRestorationId}
+      data-testid="task-tree-scroll"
     >
       {isLoading ? (
         <ListAreaMessage>Loading...</ListAreaMessage>
@@ -257,21 +312,45 @@ export function TaskTreeList({
           onDragCancel={handleDragCancel}
         >
           <div className="py-1" data-testid="task-tree">
-            {renderRows.map(({ node, depth }) => (
-              <TreeTaskGridRow
-                key={node.id}
-                node={node}
-                hasChildren={hasChildren(node)}
-                depth={depth}
-                sessionsByTaskId={sessionsByTaskId}
-                isExpanded={treeOutliner.isExpanded}
-                onToggleExpand={treeOutliner.toggleExpand}
-                selectedRowId={treeOutliner.selectedRowId}
-                onSelectRow={treeOutliner.selectRow}
-                onAddSubtask={openCreateModal}
-                invalidDropIds={invalidDropIds}
-              />
-            ))}
+            <div
+              style={{
+                position: 'relative',
+                height: rowVirtualizer.getTotalSize(),
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const row = renderRows[virtualRow.index]
+                if (row == null) return null
+                return (
+                  <div
+                    key={virtualRow.key}
+                    data-index={virtualRow.index}
+                    data-testid="task-tree-row"
+                    ref={rowVirtualizer.measureElement}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      transform: `translateY(${String(virtualRow.start)}px)`,
+                    }}
+                  >
+                    <TreeTaskGridRow
+                      node={row.node}
+                      hasChildren={hasChildren(row.node)}
+                      depth={row.depth}
+                      sessionsByTaskId={sessionsByTaskId}
+                      isExpanded={treeOutliner.isExpanded}
+                      onToggleExpand={treeOutliner.toggleExpand}
+                      selectedRowId={treeOutliner.selectedRowId}
+                      onSelectRow={treeOutliner.selectRow}
+                      onAddSubtask={openCreateModal}
+                      invalidDropIds={invalidDropIds}
+                    />
+                  </div>
+                )
+              })}
+            </div>
           </div>
 
           {hasNextPage && <div ref={sentinelRef} aria-hidden />}

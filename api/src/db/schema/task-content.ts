@@ -104,7 +104,7 @@ export const taskRelations = pgTable(
     targetTaskId: text('target_task_id')
       .notNull()
       .references(() => tasks.id, { onDelete: 'cascade' }),
-    type: text('type', { enum: ['duplicate_of'] }).notNull(),
+    type: text('type', { enum: ['duplicate_of', 'blocked_by'] }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

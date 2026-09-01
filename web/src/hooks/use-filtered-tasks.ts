@@ -1,10 +1,9 @@
 import { parseSearchQuery } from 'api/search-query-parser'
 import { useCallback, useMemo } from 'react'
 
-import { useContextFilter } from '#hooks/use-context-filter'
+import { useCurrentContext } from '#hooks/use-current-context'
 import type { TaskListFilter, TaskSortBy } from '#hooks/use-tasks'
 import { useInfiniteTaskList, useTaskList } from '#hooks/use-tasks'
-import { filterModeToApiContext } from '#lib/context-filter'
 import { buildTree } from '#lib/tree-builder'
 
 export function useBaseFilter(
@@ -12,11 +11,10 @@ export function useBaseFilter(
   projectId?: string,
   tag?: string,
 ): TaskListFilter {
-  const { mode } = useContextFilter()
-  const apiContext = filterModeToApiContext(mode)
+  const context = useCurrentContext()
 
   return {
-    ...(apiContext ? { context: apiContext } : {}),
+    context,
     ...(tag != null ? { label: tag } : {}),
     ...(projectId != null ? { projectId } : {}),
     ...(showCompleted ? {} : { status: 'todo' }),
@@ -46,13 +44,12 @@ export function useFilteredTaskTree(options: {
   q: string
   projectId?: string
 }) {
-  const { mode } = useContextFilter()
-  const apiContext = filterModeToApiContext(mode)
+  const context = useCurrentContext()
   const isSearching = parseSearchQuery(options.q).freeText !== ''
 
   const baseFilter: TaskListFilter = {
     q: options.q,
-    ...(apiContext ? { context: apiContext } : {}),
+    context,
     ...(options.projectId != null ? { projectId: options.projectId } : {}),
   }
 

@@ -9,8 +9,6 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { BottomTabBar } from '#components/layout/bottom-tab-bar'
 
-// Only Link/useMatchRoute are stubbed — useSearch/useNavigate stay real so
-// the embedded ContextFilterInline (via useContextFilter) keeps working.
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
   return {
@@ -47,21 +45,5 @@ describe('BottomTabBar', () => {
     expect(screen.getByRole('navigation').className).toBe(
       'flex shrink-0 flex-col border-t border-border bg-background md:hidden',
     )
-  })
-
-  it('renders the context filter switch, defaulting to "all" pressed', async () => {
-    await renderBottomTabBar()
-    expect(
-      screen
-        .getAllByRole('button', { name: /^(all|work|personal)$/ })
-        .map((button) => ({
-          name: button.textContent,
-          pressed: button.getAttribute('aria-pressed'),
-        })),
-    ).toEqual([
-      { name: 'all', pressed: 'true' },
-      { name: 'work', pressed: 'false' },
-      { name: 'personal', pressed: 'false' },
-    ])
   })
 })
