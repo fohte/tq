@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { expect, within } from 'storybook/test'
 
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import { TaskTreeList } from '#components/task/task-tree-list'
 import type { Task, TreeNode } from '#hooks/use-tasks'
 import { emptyLabelsHandler } from '#lib/msw-test-handlers'
@@ -13,30 +14,10 @@ import { StoryRouter } from '#storybook-config/story-router'
 
 const TASK_LIST_ROUTES = ['/tasks', '/tasks/$taskId']
 
-const baseTask: Task = {
+const baseTask: Task = makeTask({
   id: '00000000-0000-0000-0000-000000000001',
-  number: 1,
   title: 'Implement task list UI',
-  description: null,
-  status: 'todo',
-  statusReason: null,
-  duplicateOfNumber: null,
-  context: 'personal',
-  commitment: 'active',
-  labels: [],
-  startDate: null,
-  dueDate: null,
-  estimatedMinutes: null,
-  parentId: null,
-  parentNumber: null,
-  projectId: null,
-  recurrenceRuleId: null,
-  githubLinks: [],
-  blockedByNumbers: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  childCompletionCount: { completed: 0, total: 0 },
-}
+})
 
 const sampleTasks: Task[] = [
   { ...baseTask, id: '1', number: 1, title: 'Design system setup' },

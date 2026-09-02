@@ -2,51 +2,34 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { expect, fn, within } from 'storybook/test'
 
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
 import { searchKeys, type SearchResult } from '#hooks/use-search'
 
 const searchText = 'Deploy'
 
-const orphanCandidate: SearchResult = {
+const orphanCandidate: SearchResult = makeTask({
   id: '00000000-0000-0000-0000-000000000011',
   number: 12,
   title: 'Deploy to production',
-  description: null,
-  status: 'todo',
-  statusReason: null,
-  duplicateOfNumber: null,
   context: 'work',
-  commitment: 'active',
-  labels: [],
-  startDate: null,
-  dueDate: null,
-  estimatedMinutes: null,
-  parentId: null,
-  parentNumber: null,
-  projectId: null,
-  recurrenceRuleId: null,
-  githubLinks: [],
-  blockedByNumbers: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  childCompletionCount: { completed: 0, total: 0 },
-}
+})
 
-const candidateWithParent: SearchResult = {
-  ...orphanCandidate,
+const candidateWithParent: SearchResult = makeTask({
   id: '00000000-0000-0000-0000-000000000012',
   number: 34,
   title: 'Deploy docs site',
+  context: 'work',
   parentId: '00000000-0000-0000-0000-000000000099',
   parentNumber: 3,
-}
+})
 
-const excludedCandidate: SearchResult = {
-  ...orphanCandidate,
+const excludedCandidate: SearchResult = makeTask({
   id: '00000000-0000-0000-0000-000000000013',
   number: 56,
   title: 'Deploy staging environment',
-}
+  context: 'work',
+})
 
 // A fresh QueryClient per story (rather than a shared module-level one) so
 // seeded search data doesn't leak across stories in the same run.

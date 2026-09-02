@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { StatusLine } from '#components/layout/status-line'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
@@ -11,30 +12,11 @@ import { StoryRouter } from '#storybook-config/story-router'
 
 const todayStr = formatLocalDate(new Date())
 
-const baseTask: Task = {
+const baseTask: Task = makeTask({
   id: '00000000-0000-0000-0000-000000000001',
-  number: 1,
   title: 'Implement task list UI',
-  description: null,
-  status: 'todo',
-  statusReason: null,
-  duplicateOfNumber: null,
-  context: 'personal',
-  commitment: 'active',
-  labels: [],
-  startDate: null,
-  dueDate: null,
   estimatedMinutes: 30,
-  parentId: null,
-  parentNumber: null,
-  projectId: null,
-  recurrenceRuleId: null,
-  githubLinks: [],
-  blockedByNumbers: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  childCompletionCount: { completed: 0, total: 0 },
-}
+})
 
 const tasks: Task[] = [
   { ...baseTask, id: '1', title: 'Task A', estimatedMinutes: 30 },

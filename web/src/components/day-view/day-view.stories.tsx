@@ -6,6 +6,7 @@ import { expect, fn, within } from 'storybook/test'
 
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { Schedule } from '#hooks/use-schedules'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
@@ -18,30 +19,12 @@ const overdueDate = new Date(today)
 overdueDate.setDate(overdueDate.getDate() - 3)
 const overdueDateStr = `${String(overdueDate.getFullYear())}-${String(overdueDate.getMonth() + 1).padStart(2, '0')}-${String(overdueDate.getDate()).padStart(2, '0')}`
 
-const baseTask: Task = {
+const baseTask: Task = makeTask({
   id: '00000000-0000-0000-0000-000000000001',
-  number: 1,
   title: '#506 fohte.net を astro で作る',
-  description: null,
-  status: 'todo',
-  statusReason: null,
-  duplicateOfNumber: null,
-  context: 'personal',
-  commitment: 'active',
-  labels: [],
   startDate: dateStr,
-  dueDate: null,
   estimatedMinutes: 180,
-  parentId: null,
-  parentNumber: null,
-  projectId: null,
-  recurrenceRuleId: null,
-  githubLinks: [],
-  blockedByNumbers: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  childCompletionCount: { completed: 0, total: 0 },
-}
+})
 
 const sampleTasks: Task[] = [
   { ...baseTask },

@@ -4,10 +4,10 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { expect, fireEvent, fn } from 'storybook/test'
 
+import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
 import { taskMentionKeys } from '#hooks/use-task-mentions'
-import type { TaskDetail } from '#hooks/use-tasks'
 import { queryClient } from '#lib/query-client'
 import { assertDefined } from '#lib/test-utils'
 import { StoryRouter } from '#storybook-config/story-router'
@@ -76,37 +76,15 @@ const GITHUB_URL_FIXTURE_TITLE =
 // through (see plugin.tsx's `createChipWidgetComponent`), so both providers
 // resolve their chip synchronously instead of via a real network round-trip.
 function seedLiveReferenceFixtures() {
-  const task: TaskDetail = {
+  const task = makeTaskDetail({
     id: '00000000-0000-0000-0000-000000000099',
     number: MENTION_FIXTURE_NUMBER,
     title: MENTION_FIXTURE_TITLE,
     description: null,
-    status: 'todo',
-    statusReason: null,
-    duplicateOfNumber: null,
-    duplicateOfTask: null,
-    context: 'personal',
-    commitment: 'active',
-    labels: [],
     startDate: null,
     dueDate: null,
     estimatedMinutes: null,
-    parentId: null,
-    projectId: null,
-    recurrenceRuleId: null,
-    recurrenceRule: null,
-    githubLinks: [],
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-    titleAuthor: null,
-    descriptionAuthor: null,
-    childCompletionCount: { completed: 0, total: 0 },
-    pages: [],
-    timeBlocks: [],
-    links: { outgoing: [], incoming: [] },
-    blockedBy: [],
-    blocking: [],
-  }
+  })
   queryClient.setQueryData(
     taskMentionKeys.preview(MENTION_FIXTURE_NUMBER),
     task,

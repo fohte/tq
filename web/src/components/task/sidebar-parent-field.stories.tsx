@@ -4,57 +4,40 @@ import { http, HttpResponse } from 'msw'
 import { expect, waitFor, within } from 'storybook/test'
 
 import { SidebarParentField } from '#components/task/sidebar-parent-field'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
 import { searchKeys, type SearchResult } from '#hooks/use-search'
 import { taskKeys } from '#hooks/use-tasks'
 
-const currentTask: SearchResult = {
+const currentTask: SearchResult = makeTask({
   id: '00000000-0000-0000-0000-000000000001',
   number: 10,
   title: 'Current task',
-  description: null,
-  status: 'todo',
-  statusReason: null,
-  duplicateOfNumber: null,
   context: 'work',
-  commitment: 'active',
-  labels: [],
-  startDate: null,
-  dueDate: null,
-  estimatedMinutes: null,
-  parentId: null,
-  parentNumber: null,
-  projectId: null,
-  recurrenceRuleId: null,
-  githubLinks: [],
-  blockedByNumbers: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  childCompletionCount: { completed: 0, total: 0 },
-}
+})
 
-const existingParentTask: SearchResult = {
-  ...currentTask,
+const existingParentTask: SearchResult = makeTask({
   id: '00000000-0000-0000-0000-000000000002',
   number: 5,
   title: 'Existing parent',
-}
+  context: 'work',
+})
 
-const childTask: SearchResult = {
-  ...currentTask,
+const childTask: SearchResult = makeTask({
   id: '00000000-0000-0000-0000-000000000003',
   number: 11,
   title: 'Child of current task',
+  context: 'work',
   parentId: currentTask.id,
   parentNumber: currentTask.number,
-}
+})
 
-const searchCandidate: SearchResult = {
-  ...currentTask,
+const searchCandidate: SearchResult = makeTask({
   id: '00000000-0000-0000-0000-000000000004',
   number: 20,
   title: 'Deploy to production',
-}
+  context: 'work',
+})
 
 const allTasks = [currentTask, existingParentTask, childTask]
 

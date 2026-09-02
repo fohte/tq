@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { expect, fn, within } from 'storybook/test'
 
 import { LinkExistingProjectTaskMenu } from '#components/project/link-existing-project-task-menu'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import { type Project, projectKeys } from '#hooks/use-projects'
 import { searchKeys, type SearchResult } from '#hooks/use-search'
 
@@ -26,38 +27,20 @@ const otherProject: Project = {
   taskCount: { total: 0, completed: 0 },
 }
 
-const orphanCandidate: SearchResult = {
+const orphanCandidate: SearchResult = makeTask({
   id: '00000000-0000-0000-0000-000000000011',
   number: 12,
   title: 'Deploy to production',
-  description: null,
-  status: 'todo',
-  statusReason: null,
-  duplicateOfNumber: null,
   context: 'work',
-  commitment: 'active',
-  labels: [],
-  startDate: null,
-  dueDate: null,
-  estimatedMinutes: null,
-  parentId: null,
-  parentNumber: null,
-  projectId: null,
-  recurrenceRuleId: null,
-  githubLinks: [],
-  blockedByNumbers: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  childCompletionCount: { completed: 0, total: 0 },
-}
+})
 
-const candidateWithProject: SearchResult = {
-  ...orphanCandidate,
+const candidateWithProject: SearchResult = makeTask({
   id: '00000000-0000-0000-0000-000000000012',
   number: 34,
   title: 'Deploy docs site',
+  context: 'work',
   projectId: otherProject.id,
-}
+})
 
 // A fresh QueryClient per story (rather than a shared module-level one) so
 // seeded search/project data doesn't leak across stories in the same run.

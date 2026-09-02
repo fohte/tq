@@ -1,35 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { TaskListHeader } from '#components/task/task-list-header'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 
 const makeTasks = (overrides: Array<Partial<Task>>): Task[] =>
-  overrides.map((o, i) => ({
-    id: `00000000-0000-0000-0000-00000000000${String(i)}`,
-    number: i + 1,
-    title: `Task ${String(i + 1)}`,
-    description: null,
-    status: 'todo' as const,
-    statusReason: null,
-    duplicateOfNumber: null,
-    context: 'personal' as const,
-    commitment: 'active' as const,
-    labels: [],
-    startDate: null,
-    dueDate: null,
-    estimatedMinutes: null,
-    parentId: null,
-    parentNumber: null,
-    projectId: null,
-    recurrenceRuleId: null,
-    recurrenceRule: null,
-    githubLinks: [],
-    blockedByNumbers: [],
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-    childCompletionCount: { completed: 0, total: 0 },
-    ...o,
-  }))
+  overrides.map((o, i) =>
+    makeTask({
+      id: `00000000-0000-0000-0000-00000000000${String(i)}`,
+      number: i + 1,
+      ...o,
+    }),
+  )
 
 const meta = {
   title: 'Task/TaskListHeader',

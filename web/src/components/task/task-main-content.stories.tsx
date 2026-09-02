@@ -7,6 +7,10 @@ import {
   TaskSidebar,
   TaskSidebarMobile,
 } from '#components/task/task-detail'
+import {
+  makeTask,
+  makeTaskDetail,
+} from '#components/task/task-row-test-fixtures'
 import type { AgentSession } from '#hooks/use-agent-sessions'
 import { labelKeys } from '#hooks/use-labels'
 import type { ProjectDetail } from '#hooks/use-projects'
@@ -45,88 +49,27 @@ const samplePages: TaskPage[] = [
   },
 ]
 
-const baseTask: TaskDetail = {
-  id: '550e8400-e29b-41d4-a716-446655440000',
-  number: 1,
-  title: 'Implement task detail page',
-  description:
-    '## Why\n\nThe task detail page is needed.\n\n## What\n\n- Add inline editing\n- Add sidebar fields',
-  status: 'todo',
-  statusReason: null,
-  duplicateOfNumber: null,
-  duplicateOfTask: null,
-  context: 'personal',
-  commitment: 'active',
-  labels: [],
-  startDate: '2026-03-20',
-  dueDate: '2026-03-25',
-  estimatedMinutes: 90,
-  parentId: null,
-  projectId: null,
-  recurrenceRuleId: null,
-  recurrenceRule: null,
-  githubLinks: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  titleAuthor: null,
-  descriptionAuthor: null,
-  childCompletionCount: { completed: 0, total: 0 },
-  pages: [],
-  timeBlocks: [],
-  links: { outgoing: [], incoming: [] },
-  blockedBy: [],
-  blocking: [],
-}
+const baseTask = makeTaskDetail()
 
 const sampleSubtasks: Task[] = [
-  {
+  makeTask({
     id: 'aaaa1111-0000-0000-0000-000000000001',
     number: 2,
     title: 'Add inline editing',
-    description: null,
     status: 'completed',
-    statusReason: null,
-    duplicateOfNumber: null,
     context: 'work',
-    commitment: 'active',
-    labels: [],
-    startDate: null,
-    dueDate: null,
     estimatedMinutes: 30,
     parentId: baseTask.id,
     parentNumber: baseTask.number,
-    projectId: null,
-    recurrenceRuleId: null,
-    githubLinks: [],
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-    childCompletionCount: { completed: 0, total: 0 },
-    blockedByNumbers: [],
-  },
-  {
+  }),
+  makeTask({
     id: 'aaaa1111-0000-0000-0000-000000000002',
     number: 3,
     title: 'Add sidebar fields',
-    description: null,
-    status: 'todo',
-    statusReason: null,
-    duplicateOfNumber: null,
     context: 'work',
-    commitment: 'active',
-    labels: [],
-    startDate: null,
-    dueDate: null,
-    estimatedMinutes: null,
     parentId: baseTask.id,
     parentNumber: baseTask.number,
-    projectId: null,
-    recurrenceRuleId: null,
-    githubLinks: [],
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-    childCompletionCount: { completed: 0, total: 0 },
-    blockedByNumbers: [],
-  },
+  }),
 ]
 
 const sampleSessions: AgentSession[] = [

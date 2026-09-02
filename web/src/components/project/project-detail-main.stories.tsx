@@ -8,6 +8,7 @@ import {
   ProjectSidebar,
   ProjectSidebarMobile,
 } from '#components/project/project-detail-sidebar'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { Project, ProjectDetail, ProjectTask } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import { buildTree } from '#lib/tree-builder'
@@ -30,64 +31,43 @@ const baseProject: ProjectDetail = {
   taskCount: { total: 5, completed: 2 },
 }
 
-const baseTask: Omit<ProjectTask, 'id' | 'title' | 'status'> = {
-  number: 1,
-  description: null,
-  statusReason: null,
-  duplicateOfNumber: null,
-  context: 'personal',
-  commitment: 'active',
-  labels: [],
-  startDate: null,
-  dueDate: null,
-  estimatedMinutes: null,
-  parentId: null,
-  parentNumber: null,
-  projectId: 'proj-001',
-  recurrenceRuleId: null,
-  githubLinks: [],
-  blockedByNumbers: [],
-  createdAt: '2026-06-01T00:00:00.000Z',
-  updatedAt: '2026-06-01T00:00:00.000Z',
-  childCompletionCount: { completed: 0, total: 0 },
+function makeProjectTask(overrides: Partial<ProjectTask> = {}): ProjectTask {
+  return makeTask({
+    projectId: 'proj-001',
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
+    ...overrides,
+  })
 }
 
 const sampleTasks: ProjectTask[] = [
-  {
-    ...baseTask,
+  makeProjectTask({
     id: '1',
     number: 1,
     title: 'Provision benchmark servers',
     status: 'completed',
-  },
-  {
-    ...baseTask,
+  }),
+  makeProjectTask({
     id: '2',
     number: 2,
     title: 'Tune MySQL config',
     status: 'completed',
-  },
-  {
-    ...baseTask,
+  }),
+  makeProjectTask({
     id: '3',
     number: 3,
     title: 'Profile slow queries',
-    status: 'todo',
-  },
-  {
-    ...baseTask,
+  }),
+  makeProjectTask({
     id: '4',
     number: 4,
     title: 'Add caching layer',
-    status: 'todo',
-  },
-  {
-    ...baseTask,
+  }),
+  makeProjectTask({
     id: '5',
     number: 5,
     title: 'Write final report',
-    status: 'todo',
-  },
+  }),
 ]
 
 const sampleProjects: Project[] = [baseProject]

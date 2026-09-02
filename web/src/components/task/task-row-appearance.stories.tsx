@@ -4,33 +4,14 @@ import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
 
-const baseTask: Task = {
+const baseTask: Task = makeTask({
   id: '00000000-0000-0000-0000-000000000001',
-  number: 1,
   title: 'Implement task list UI',
-  description: null,
-  status: 'todo',
-  statusReason: null,
-  duplicateOfNumber: null,
-  blockedByNumbers: [],
-  context: 'personal',
-  commitment: 'active',
-  labels: [],
-  startDate: null,
-  dueDate: null,
-  estimatedMinutes: null,
-  parentId: null,
-  parentNumber: null,
-  projectId: null,
-  recurrenceRuleId: null,
-  githubLinks: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  childCompletionCount: { completed: 0, total: 0 },
-}
+})
 
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
