@@ -2,15 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, waitFor, within } from 'storybook/test'
 
 import { SessionOpenSettingsPanel } from '#components/settings/session-open-settings-panel'
-import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 
-// Reset on every render so this story's initial state and its own
-// `TypingAFocusTemplateUpdatesTheInput` assertion stay deterministic
-// regardless of what else last wrote to this key in the same browser
-// context (mirrors session-row.stories.tsx's `SessionRowStory`).
 function WrappedSessionOpenSettingsPanel() {
-  resetSessionOpenSettings()
-
   return (
     <div className="w-full max-w-3xl">
       <SessionOpenSettingsPanel />

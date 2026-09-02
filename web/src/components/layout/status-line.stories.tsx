@@ -58,6 +58,9 @@ const queueTasks: TodayTask[] = tasks.map((task, index) => ({
 }))
 
 function StatusLineStory() {
+  // Pins the context this story's contract depends on, rather than relying
+  // on DEFAULT_SETTINGS, so an unrelated change to the hook's default can't
+  // silently change which tasks useFilteredTaskList() below matches.
   resetSessionOpenSettings({ localContext: 'personal' })
 
   const queryClient = new QueryClient({

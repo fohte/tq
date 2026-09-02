@@ -50,10 +50,12 @@ function Providers({ children }: { children: ReactNode }) {
 }
 
 function SectionStory({ sessions }: { sessions: AgentSession[] }) {
-  // Resets the shared localStorage key so a prior story's write doesn't
-  // leak in; the default (personal) intentionally mismatches this story's
-  // `work` sessions, keeping the resume button hidden.
-  resetSessionOpenSettings()
+  // Pins the context this story's contract depends on: 'personal'
+  // intentionally mismatches the `work` sessions below, keeping the resume
+  // button hidden. Seeded explicitly (rather than relying on
+  // DEFAULT_SETTINGS) so an unrelated change to the hook's default can't
+  // silently flip which case this story exercises.
+  resetSessionOpenSettings({ localContext: 'personal' })
 
   return (
     <Providers>
