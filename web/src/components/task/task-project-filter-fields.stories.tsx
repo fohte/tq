@@ -1,30 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent } from 'storybook/test'
 
+import { makeProject } from '#components/project/project-test-fixtures'
 import { TaskProjectFilterFields } from '#components/task/task-project-filter-fields'
 import type { Project } from '#hooks/use-projects'
 
-const projectA: Project = {
+const projectA: Project = makeProject({
   id: 'proj-1',
   title: 'Website Redesign',
-  description: null,
-  status: 'active',
-  startDate: null,
-  targetDate: null,
-  color: null,
-  sortOrder: 0,
-  context: 'personal',
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  taskCount: { total: 0, completed: 0 },
-  completionRate: 0,
-}
+})
 
-const projectB: Project = {
-  ...projectA,
-  id: 'proj-2',
-  title: 'Mobile App',
-}
+const projectB: Project = makeProject({ id: 'proj-2', title: 'Mobile App' })
 
 const meta = {
   title: 'Task/TaskProjectFilterFields',

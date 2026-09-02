@@ -5,6 +5,8 @@ import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { expect, waitFor, within } from 'storybook/test'
 
+import { makeProject } from '#components/project/project-test-fixtures'
+import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { makeNode } from '#components/task/task-row-test-fixtures'
 import type { TreeTaskGridRowProps } from '#components/task/tree-task-grid-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
@@ -128,17 +130,12 @@ export const WithGithubLink: Story = {
       ...baseTreeNode,
       title: 'Fix flaky test',
       githubLinks: [
-        {
-          id: 'link-1',
-          owner: 'fohte',
-          repo: 'tq',
-          number: 42,
+        makeGithubLink({
           kind: 'pull_request',
           url: 'https://github.com/fohte/tq/pull/42',
           state: 'merged',
           title: 'Fix flaky test',
-          lastSyncedAt: '2026-03-20T00:00:00.000Z',
-        },
+        }),
       ],
     },
   },
@@ -191,20 +188,13 @@ export const WithProject: Story = {
     msw: {
       handlers: [
         http.get('/api/projects/:id', () =>
-          HttpResponse.json({
-            id: 'project-1',
-            title: 'tq',
-            description: null,
-            status: 'active',
-            startDate: null,
-            targetDate: null,
-            color: null,
-            sortOrder: 0,
-            createdAt: '2026-03-20T00:00:00.000Z',
-            updatedAt: '2026-03-20T00:00:00.000Z',
-            completionRate: 0.4,
-            taskCount: { total: 10, completed: 4 },
-          }),
+          HttpResponse.json(
+            makeProject({
+              id: 'project-1',
+              completionRate: 0.4,
+              taskCount: { total: 10, completed: 4 },
+            }),
+          ),
         ),
       ],
     },

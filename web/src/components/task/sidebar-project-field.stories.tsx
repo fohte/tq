@@ -3,33 +3,25 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { expect, userEvent, waitFor, within } from 'storybook/test'
 
+import { makeProject } from '#components/project/project-test-fixtures'
 import { SidebarProjectField } from '#components/task/sidebar-project-field'
 import { type Project, projectKeys } from '#hooks/use-projects'
 import { clickSelectOption } from '#lib/test-utils'
 
 const taskId = '00000000-0000-0000-0000-000000000001'
 
-const projectA: Project = {
+const projectA: Project = makeProject({
   id: 'aaaa0000-0000-0000-0000-000000000000',
-  title: 'tq',
-  description: null,
-  status: 'active',
-  startDate: null,
-  targetDate: null,
-  color: null,
-  sortOrder: 0,
-  context: 'personal',
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
   completionRate: 0.4,
   taskCount: { total: 10, completed: 4 },
-}
+})
 
-const projectB: Project = {
-  ...projectA,
+const projectB: Project = makeProject({
   id: 'bbbb0000-0000-0000-0000-000000000000',
   title: 'Website redesign',
-}
+  completionRate: 0.4,
+  taskCount: { total: 10, completed: 4 },
+})
 
 function createSeededQueryClient(projects: Project[]) {
   const client = new QueryClient({

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
-import type { Schedule } from '#hooks/use-schedules'
+import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
 import {
   useCreateSchedule,
   useDeleteSchedule,
@@ -58,21 +58,7 @@ function setupMocks() {
   return { createMutate, updateMutate, deleteMutate }
 }
 
-const sampleSchedule: Schedule = {
-  scheduleId: 'schedule-1',
-  title: 'Gym',
-  start: '2026-01-01T07:00:00',
-  end: '2026-01-01T08:00:00',
-  context: 'personal',
-  color: '#6C63FF',
-  recurrence: {
-    id: 'rule-1',
-    type: 'weekly',
-    interval: 1,
-    daysOfWeek: [1, 3, 5],
-    dayOfMonth: null,
-  },
-}
+const sampleSchedule = makeSchedule()
 
 describe('CreateScheduleModal', () => {
   it('removes the modal from the DOM when the close (X) button is clicked', async () => {

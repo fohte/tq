@@ -3,23 +3,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fn } from 'storybook/test'
 
 import { ProjectFormModal } from '#components/project/project-form-modal'
+import { makeProject } from '#components/project/project-test-fixtures'
 import type { Project } from '#hooks/use-projects'
 
-const baseProject: Project = {
+const baseProject: Project = makeProject({
   id: '1',
   title: 'ISUCON14',
   description: 'Preparation for ISUCON14 competition',
-  status: 'active',
   startDate: '2024-11-01',
   targetDate: '2024-12-08',
   color: '#FF5C33',
-  sortOrder: 0,
-  context: 'personal',
   createdAt: '2024-10-01T00:00:00Z',
   updatedAt: '2024-10-01T00:00:00Z',
-  completionRate: 0,
-  taskCount: { total: 0, completed: 0 },
-}
+})
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -53,7 +49,7 @@ export const Create: Story = {}
 
 export const Edit: Story = {
   args: {
-    project: { ...baseProject },
+    project: baseProject,
   },
 }
 

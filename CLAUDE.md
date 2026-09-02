@@ -69,11 +69,22 @@ pnpm --filter web run test:storybook # vitest run --project=storybook --project=
 
 This is separate from `pnpm --filter web run test`, so writing the story is not enforced by the default test run — write it anyway when adding or changing a presentational component.
 
-### Build Task/TaskDetail/TreeNode story fixtures from the shared factory
+### Build a shared factory for fixtures duplicated across files
 
-`Task`, `TaskDetail`, `TreeNode`, and their structurally-identical aliases (`SearchResult`, `LinkedTaskSummary`, `ProjectTask`, `TaskUrlPreview`, ...) gain a field on every API change. A story that hand-writes one of these as an object literal needs a manual edit on every such change; a story built from `makeTask`/`makeNode`/`makeTaskDetail` (`web/src/components/task/task-row-test-fixtures.ts`) does not, since the factory absorbs the new field once.
+A type needs a shared factory once its fixture is hand-written as a full object literal in 2 or more `.stories.tsx`/`.test.tsx`/`.test.ts` files: every field the type gains (e.g. on an API response change) then needs a manual edit in each of those files. A single file that defines one local object and spreads it internally doesn't qualify — that edit already stays in one place.
 
-Call the shared factory and pass only the fields that matter for that story (id, title, status, dates, ...) as overrides — never write the full object literal by hand. Add a thin local wrapper (e.g. a `makeProjectTask` that layers a fixed `projectId` on top of `makeTask`) when a group of stories in one file shares a non-default override.
+Existing factories, one file per type-family, each exporting a `make<Type>(overrides: Partial<T> = {}): T` function:
+
+- `web/src/components/task/task-row-test-fixtures.ts`: `makeTask`/`makeTaskDetail`/`makeNode`, covering `Task`/`TaskDetail`/`TreeNode` and their structurally-identical aliases (`SearchResult`, `LinkedTaskSummary`, `ProjectTask`, `TaskUrlPreview`, ...)
+- `web/src/components/task/github-link-test-fixtures.ts`: `makeGithubLink`
+- `web/src/components/task/task-page-test-fixtures.ts`: `makeTaskPage`
+- `web/src/components/project/project-test-fixtures.ts`: `makeProject`/`makeProjectDetail`
+- `web/src/components/schedule/schedule-test-fixtures.ts`: `makeSchedule`
+- `web/src/components/layout/sidebar-test-fixtures.ts`: `makeLabel`/`makeSavedView`, plus re-exports of `makeTask`/`makeProject` for sidebar stories/tests that need them alongside the sidebar-only fixtures
+
+Before writing a fixture object literal, check whether a factory for that type already exists. Call it and pass only the fields that matter for that story/test (id, title, status, dates, ...) as overrides — never write the full object literal by hand. Add a thin local wrapper (e.g. a `makeProjectTask` that layers a fixed `projectId` on top of `makeTask`) when a group of stories/tests in one file shares a non-default override.
+
+When a type crosses the 2-file threshold for the first time, add its factory to the closest existing file if the type belongs to that domain, otherwise create a new `<domain>-test-fixtures.ts` colocated with the component directory most associated with the type.
 
 ### Extract route-inline UI that has its own appearance or state
 

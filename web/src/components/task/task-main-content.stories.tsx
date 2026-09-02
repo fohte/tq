@@ -2,11 +2,14 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
+import { makeProjectDetail } from '#components/project/project-test-fixtures'
+import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import {
   TaskMainContent,
   TaskSidebar,
   TaskSidebarMobile,
 } from '#components/task/task-detail'
+import { makeTaskPage } from '#components/task/task-page-test-fixtures'
 import {
   makeTask,
   makeTaskDetail,
@@ -23,30 +26,17 @@ import { taskKeys } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const samplePages: TaskPage[] = [
-  {
-    id: 'page-001',
-    taskId: '550e8400-e29b-41d4-a716-446655440000',
-    title: 'Meeting Notes',
-    content:
-      '## Discussion Points\n\n- Architecture review\n- Sprint planning\n- Performance improvements\n\nWe decided to go with option B.',
-    format: 'markdown',
-    sortOrder: 0,
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-    author: null,
-  },
-  {
+  makeTaskPage({ taskId: '550e8400-e29b-41d4-a716-446655440000' }),
+  makeTaskPage({
     id: 'page-002',
     taskId: '550e8400-e29b-41d4-a716-446655440000',
     title: 'Technical Spec',
     content:
       '# API Design\n\nREST endpoints for the task management system.\n\n## Endpoints\n\n- GET /tasks\n- POST /tasks\n- PATCH /tasks/:id',
-    format: 'markdown',
     sortOrder: 1,
     createdAt: '2026-03-21T00:00:00.000Z',
     updatedAt: '2026-03-21T00:00:00.000Z',
-    author: null,
-  },
+  }),
 ]
 
 const baseTask = makeTaskDetail()
@@ -214,28 +204,19 @@ export const WithMultipleGithubLinks: Story = {
       ...baseTask,
       title: 'Add multi-link support',
       githubLinks: [
-        {
-          id: 'link-1',
-          owner: 'fohte',
-          repo: 'tq',
+        makeGithubLink({
           number: 412,
-          kind: 'issue',
           url: 'https://github.com/fohte/tq/issues/412',
-          state: 'open',
           title: 'Support multiple GitHub links per task',
-          lastSyncedAt: '2026-03-20T00:00:00.000Z',
-        },
-        {
+        }),
+        makeGithubLink({
           id: 'link-2',
-          owner: 'fohte',
-          repo: 'tq',
           number: 436,
           kind: 'pull_request',
           url: 'https://github.com/fohte/tq/pull/436',
           state: 'merged',
           title: 'api: allow associating multiple GitHub links with a task',
-          lastSyncedAt: '2026-03-20T00:00:00.000Z',
-        },
+        }),
       ],
     },
     pages: [],
@@ -297,21 +278,11 @@ export const LlmAuthored: Story = {
   },
 }
 
-const sampleProject: ProjectDetail = {
+const sampleProject: ProjectDetail = makeProjectDetail({
   id: 'aaaa0000-0000-0000-0000-000000000000',
-  title: 'tq',
-  description: null,
-  status: 'active',
-  startDate: null,
-  targetDate: null,
-  color: null,
-  sortOrder: 0,
-  context: 'personal',
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
   completionRate: 0.4,
   taskCount: { total: 10, completed: 4 },
-}
+})
 
 export const WithProject: Story = {
   args: {
