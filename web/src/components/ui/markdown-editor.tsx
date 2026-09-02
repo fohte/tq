@@ -17,15 +17,11 @@ interface MarkdownEditorProps {
   onChange?: (markdown: string) => void
   placeholder?: string
   /**
-   * Enables the view/edit toggle: the editor starts read-only and shows
-   * inline reference chips; clicking switches to an editable view with the
-   * raw Markdown source and the cursor at the click position, except for a
-   * rendered link or an inline-reference chip/card, which navigates or
-   * interacts with it instead of switching modes; losing focus or pressing
-   * Escape returns to the read-only view. Omit for an
-   * always-editable editor that always shows the raw Markdown source and
-   * never renders chips (e.g. new-entry composers like CommentInput or
-   * create-task-modal).
+   * Enables the view/edit toggle: read-only by default with inline
+   * reference chips; a click enters edit mode at the click position, except
+   * on a link or chip/card, which navigates/interacts with it instead.
+   * Blur or Escape returns to read-only. Omit for an always-editable editor
+   * with no chips (e.g. CommentInput, create-task-modal).
    */
   viewEditToggle?: ViewEditToggleOptions
   /**
@@ -100,16 +96,9 @@ export function MarkdownEditor({
               // Left click only: a right/middle click opening a context
               // menu or auto-scroll shouldn't also switch to edit mode.
               if (event.button !== 0) return
-              // A rendered Markdown link should navigate, not switch to
-              // edit mode: readonly must stay true past this handler so the
-              // click event that follows still hits a non-editable <a> (a
-              // contenteditable one loses the browser's default
-              // click-through). See plugin.tsx's createCardWidgetComponent
-              // for the same guard on inline-reference cards. Restricted to
-              // navigable schemes: Milkdown's link mark puts the raw
-              // Markdown href on the <a> unfiltered, so a `javascript:` link
-              // must still fall through to edit mode (never execute) rather
-              // than becoming clickable.
+              // readonly must stay true past this handler, or the click
+              // that follows hits a contenteditable <a> and loses the
+              // browser's default navigation.
               const link =
                 event.target instanceof Element
                   ? event.target.closest('a')
