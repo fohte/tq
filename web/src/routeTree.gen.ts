@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TodayRouteImport } from './routes/today'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
@@ -27,6 +28,11 @@ const TodayRoute = TodayRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BrowseRoute = BrowseRouteImport.update({
@@ -68,6 +74,7 @@ const TasksTaskIdPagesPageIdRoute = TasksTaskIdPagesPageIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/browse': typeof BrowseRoute
+  '/inbox': typeof InboxRoute
   '/settings': typeof SettingsRoute
   '/today': typeof TodayRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -79,6 +86,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/browse': typeof BrowseRoute
+  '/inbox': typeof InboxRoute
   '/settings': typeof SettingsRoute
   '/today': typeof TodayRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -91,6 +99,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/browse': typeof BrowseRoute
+  '/inbox': typeof InboxRoute
   '/settings': typeof SettingsRoute
   '/today': typeof TodayRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/browse'
+    | '/inbox'
     | '/settings'
     | '/today'
     | '/projects/$projectId'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/browse'
+    | '/inbox'
     | '/settings'
     | '/today'
     | '/projects/$projectId'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/browse'
+    | '/inbox'
     | '/settings'
     | '/today'
     | '/projects/$projectId'
@@ -138,6 +150,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BrowseRoute: typeof BrowseRoute
+  InboxRoute: typeof InboxRoute
   SettingsRoute: typeof SettingsRoute
   TodayRoute: typeof TodayRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
@@ -161,6 +174,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/browse': {
@@ -218,6 +238,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BrowseRoute: BrowseRoute,
+  InboxRoute: InboxRoute,
   SettingsRoute: SettingsRoute,
   TodayRoute: TodayRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,

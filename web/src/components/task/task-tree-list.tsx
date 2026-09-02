@@ -4,9 +4,7 @@ import {
   type DragMoveEvent,
   DragOverlay,
   type DragStartEvent,
-  MouseSensor,
   pointerWithin,
-  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -24,6 +22,7 @@ import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { Task, TaskListFilter, TreeNode } from '#hooks/use-tasks'
 import { useUpdateTaskParent } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
+import { NoDndMouseSensor, NoDndTouchSensor } from '#lib/dnd-sensors'
 import {
   computeDropMode,
   getDescendantIds,
@@ -40,42 +39,6 @@ function isTreeRowDragData(
   data: Record<string, unknown> | undefined,
 ): data is TreeRowDragData {
   return data != null && typeof data['depth'] === 'number'
-}
-
-// Nested interactive controls (status picker, actions menu, expand toggle)
-// only stopPropagation() on click, not pointerdown/touchstart, so the
-// distance/delay activation constraint below can still misfire a drag from
-// pointer jitter while a user is trying to click one of them. These sensor
-// subclasses skip activation when the pointer/touch originates inside an
-// element marked data-no-dnd, following dnd-kit's documented pattern for
-// excluding nested interactive elements from drag activation.
-function shouldHandleDrag(target: EventTarget | null): boolean {
-  let el = target instanceof HTMLElement ? target : null
-  while (el != null) {
-    if (el.dataset['noDnd'] != null) return false
-    el = el.parentElement
-  }
-  return true
-}
-
-class TreeRowMouseSensor extends MouseSensor {
-  static override activators = [
-    {
-      eventName: 'onMouseDown' as const,
-      handler: ({ nativeEvent }: React.MouseEvent) =>
-        shouldHandleDrag(nativeEvent.target),
-    },
-  ]
-}
-
-class TreeRowTouchSensor extends TouchSensor {
-  static override activators = [
-    {
-      eventName: 'onTouchStart' as const,
-      handler: ({ nativeEvent }: React.TouchEvent) =>
-        shouldHandleDrag(nativeEvent.target),
-    },
-  ]
 }
 
 // Actual rendered row height varies with title wrapping and second-line
@@ -146,8 +109,8 @@ export function TaskTreeList({
   // ~250ms hold before a drag starts, while desktop just needs to rule out
   // an accidental click-and-jitter.
   const dndSensors = useSensors(
-    useSensor(TreeRowMouseSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(TreeRowTouchSensor, {
+    useSensor(NoDndMouseSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(NoDndTouchSensor, {
       activationConstraint: { delay: 250, tolerance: 5 },
     }),
   )

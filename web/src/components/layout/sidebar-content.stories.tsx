@@ -53,6 +53,12 @@ function SidebarContentStory() {
   })
   queryClient.setQueryData(taskKeys.list(undefined), tasksWithTags)
   queryClient.setQueryData(
+    taskKeys.list({ context: 'personal', commitment: 'inbox', status: 'todo' }),
+    tasksWithTags.filter(
+      (task) => task.commitment === 'inbox' && task.status === 'todo',
+    ),
+  )
+  queryClient.setQueryData(
     projectKeys.list({ context: 'personal' }),
     projectsAcrossStatuses,
   )

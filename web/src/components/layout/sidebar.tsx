@@ -12,6 +12,7 @@ import {
 } from '#components/project/project-status-mark'
 import { RenameSavedViewDialog } from '#components/saved-view/rename-saved-view-dialog'
 import { ActionsMenu } from '#components/ui/actions-menu'
+import { Chip } from '#components/ui/chip'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useCurrentContext } from '#hooks/use-current-context'
@@ -21,6 +22,7 @@ import { useProjects } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
 import { useDeleteSavedView, useSavedViews } from '#hooks/use-saved-views'
 import { useTagCounts } from '#hooks/use-tag-counts'
+import { useTaskList } from '#hooks/use-tasks'
 import { navKeybindings } from '#lib/keybindings'
 import { tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
@@ -34,7 +36,7 @@ interface NavItem {
   exact?: boolean
 }
 
-const navItems: NavItem[] = [
+const navItemsBeforeInbox: NavItem[] = [
   {
     to: navKeybindings.goToToday.to,
     label: 'Today',
@@ -46,6 +48,15 @@ const navItems: NavItem[] = [
     keys: navKeybindings.goToCalendar.keys,
     exact: true,
   },
+]
+
+const inboxNavItem: NavItem = {
+  to: navKeybindings.goToInbox.to,
+  label: 'Inbox',
+  keys: navKeybindings.goToInbox.keys,
+}
+
+const navItemsAfterInbox: NavItem[] = [
   {
     to: navKeybindings.goToTasks.to,
     label: 'Tasks',
@@ -64,7 +75,7 @@ const settingsNavItem: NavItem = {
   keys: navKeybindings.goToSettings.keys,
 }
 
-function NavLink({ item }: { item: NavItem }) {
+function NavLink({ item, badge }: { item: NavItem; badge?: ReactNode }) {
   const matchRoute = useMatchRoute()
   const isActive =
     matchRoute({ to: item.to, fuzzy: item.exact !== true }) !== false
@@ -86,8 +97,28 @@ function NavLink({ item }: { item: NavItem }) {
         )}
       />
       <span className="flex-1 truncate text-left">{item.label}</span>
+      {badge}
       <KeybindHint>{item.keys}</KeybindHint>
     </Link>
+  )
+}
+
+// A dedicated component (rather than a generic `count` prop on NavLink)
+// since Inbox is the only nav item whose badge needs its own data fetch.
+function InboxNavLink() {
+  const context = useCurrentContext()
+  const { categorized } = useTaskList({
+    context,
+    commitment: 'inbox',
+    status: 'todo',
+  })
+  const count = categorized.all.length
+
+  return (
+    <NavLink
+      item={inboxNavItem}
+      badge={count > 0 ? <Chip>{count}</Chip> : undefined}
+    />
   )
 }
 
@@ -379,7 +410,11 @@ export function SidebarContent() {
   return (
     <>
       <nav className="flex flex-col gap-px py-2">
-        {navItems.map((item) => (
+        {navItemsBeforeInbox.map((item) => (
+          <NavLink key={item.to} item={item} />
+        ))}
+        <InboxNavLink />
+        {navItemsAfterInbox.map((item) => (
           <NavLink key={item.to} item={item} />
         ))}
       </nav>
