@@ -118,6 +118,64 @@ function SidebarRowLink({
   )
 }
 
+function SidebarActionableRow({
+  search,
+  isActive,
+  children,
+  actionsAriaLabel,
+  editItemLabel,
+  onEdit,
+  deleteTitle,
+  deleteDescription,
+  onDelete,
+}: {
+  search: { q: string }
+  isActive: boolean
+  children: ReactNode
+  actionsAriaLabel: string
+  editItemLabel: string
+  onEdit: () => void
+  deleteTitle: string
+  deleteDescription: string
+  onDelete: () => void
+}) {
+  const [deleteOpen, setDeleteOpen] = useState(false)
+
+  return (
+    <>
+      <SidebarRowLink search={search} isActive={isActive}>
+        {children}
+        <ActionsMenu
+          aria-label={actionsAriaLabel}
+          desktopTriggerClassName="h-3.5 w-3.5"
+          items={[
+            {
+              icon: <Pencil className="h-4 w-4" />,
+              label: editItemLabel,
+              onClick: onEdit,
+            },
+            {
+              icon: <Trash2 className="h-4 w-4" />,
+              label: 'delete…',
+              onClick: () => {
+                setDeleteOpen(true)
+              },
+              destructive: true,
+            },
+          ]}
+        />
+      </SidebarRowLink>
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={deleteTitle}
+        description={deleteDescription}
+        onDelete={onDelete}
+      />
+    </>
+  )
+}
+
 function TagLink({
   label,
   count,
@@ -128,12 +186,24 @@ function TagLink({
   isActive: boolean
 }) {
   const [editOpen, setEditOpen] = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
   const deleteLabel = useDeleteLabel()
 
   return (
     <>
-      <SidebarRowLink search={tagFilterSearch(label.name)} isActive={isActive}>
+      <SidebarActionableRow
+        search={tagFilterSearch(label.name)}
+        isActive={isActive}
+        actionsAriaLabel="Tag actions"
+        editItemLabel="edit…"
+        onEdit={() => {
+          setEditOpen(true)
+        }}
+        deleteTitle="Delete tag"
+        deleteDescription={`Are you sure you want to delete "#${label.name}"? This action cannot be undone.`}
+        onDelete={() => {
+          deleteLabel.mutate(label.id)
+        }}
+      >
         <span
           className={cn(
             'font-bold',
@@ -144,41 +214,11 @@ function TagLink({
         </span>
         <span className="flex-1 truncate text-left">{label.name}</span>
         <span className="shrink-0 text-muted-foreground-faint">{count}</span>
-        <ActionsMenu
-          aria-label="Tag actions"
-          desktopTriggerClassName="h-3.5 w-3.5"
-          items={[
-            {
-              icon: <Pencil className="h-4 w-4" />,
-              label: 'edit…',
-              onClick: () => {
-                setEditOpen(true)
-              },
-            },
-            {
-              icon: <Trash2 className="h-4 w-4" />,
-              label: 'delete…',
-              onClick: () => {
-                setDeleteOpen(true)
-              },
-              destructive: true,
-            },
-          ]}
-        />
-      </SidebarRowLink>
+      </SidebarActionableRow>
       <EditLabelDialog
         label={label}
         open={editOpen}
         onOpenChange={setEditOpen}
-      />
-      <DeleteConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete tag"
-        description={`Are you sure you want to delete "#${label.name}"? This action cannot be undone.`}
-        onDelete={() => {
-          deleteLabel.mutate(label.id)
-        }}
       />
     </>
   )
@@ -186,48 +226,30 @@ function TagLink({
 
 function ViewLink({ view, isActive }: { view: SavedView; isActive: boolean }) {
   const [renameOpen, setRenameOpen] = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
   const deleteSavedView = useDeleteSavedView()
 
   return (
     <>
-      <SidebarRowLink search={{ q: view.query }} isActive={isActive}>
+      <SidebarActionableRow
+        search={{ q: view.query }}
+        isActive={isActive}
+        actionsAriaLabel="View actions"
+        editItemLabel="rename…"
+        onEdit={() => {
+          setRenameOpen(true)
+        }}
+        deleteTitle="Delete view"
+        deleteDescription={`Are you sure you want to delete "${view.name}"? This action cannot be undone.`}
+        onDelete={() => {
+          deleteSavedView.mutate(view.id)
+        }}
+      >
         <span className="flex-1 truncate text-left">{view.name}</span>
-        <ActionsMenu
-          aria-label="View actions"
-          desktopTriggerClassName="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
-          items={[
-            {
-              icon: <Pencil className="h-4 w-4" />,
-              label: 'rename…',
-              onClick: () => {
-                setRenameOpen(true)
-              },
-            },
-            {
-              icon: <Trash2 className="h-4 w-4" />,
-              label: 'delete…',
-              onClick: () => {
-                setDeleteOpen(true)
-              },
-              destructive: true,
-            },
-          ]}
-        />
-      </SidebarRowLink>
+      </SidebarActionableRow>
       <RenameSavedViewDialog
         view={view}
         open={renameOpen}
         onOpenChange={setRenameOpen}
-      />
-      <DeleteConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete view"
-        description={`Are you sure you want to delete "${view.name}"? This action cannot be undone.`}
-        onDelete={() => {
-          deleteSavedView.mutate(view.id)
-        }}
       />
     </>
   )
