@@ -148,6 +148,7 @@ function SidebarActionableRow({
         <ActionsMenu
           aria-label={actionsAriaLabel}
           desktopTriggerClassName="h-3.5 w-3.5"
+          mobileTriggerClassName="h-4 w-4"
           items={[
             {
               icon: <Pencil className="h-4 w-4" />,
