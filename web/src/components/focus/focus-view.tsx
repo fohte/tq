@@ -210,9 +210,6 @@ export function FocusViewPresentation({
 }: FocusViewPresentationProps) {
   if (isLoading) {
     return (
-      // h-full (unlike the other two branches below) is intentional here —
-      // the spinner needs full-viewport height to center into, and this
-      // branch's content never grows past that, so it can't cause overflow.
       <div className="flex h-full flex-col">
         <FocusHeader />
         <div className="flex flex-1 items-center justify-center">
