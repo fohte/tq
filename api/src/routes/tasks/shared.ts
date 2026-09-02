@@ -1,7 +1,6 @@
-import { count, desc, eq, inArray, sql } from 'drizzle-orm'
+import { count, desc, eq, inArray, or, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { createFactory } from 'hono/factory'
-import { z } from 'zod'
 
 import { db } from '#db/connection'
 import {
@@ -12,7 +11,7 @@ import {
   tasks,
   timeBlocks,
 } from '#db/schema'
-import { classifyNumericOrId, numericIdPattern } from '#lib/numeric-id'
+import { classifyNumericOrId } from '#lib/numeric-id'
 import type { TaskSortBy } from '#schemas/task'
 import {
   getBlockedByNumbersByTaskId,
@@ -301,12 +300,6 @@ export type TaskEnv = {
   }
 }
 
-export const taskIdOrNumber = z.union([
-  z.uuid(),
-  z.string().regex(numericIdPattern),
-  z.number().int().positive(),
-])
-
 // Task detail URLs (and their subresources) accept either the UUID primary
 // key or the human-facing sequential number (e.g. `/tasks/123`), so
 // bookmarked UUID links keep working alongside the short numeric form.
@@ -319,6 +312,47 @@ export function findTaskByIdOrNumber(param: string) {
         ? eq(tasks.number, classified.value)
         : eq(tasks.id, classified.value),
   })
+}
+
+// Batch counterpart of `findTaskByIdOrNumber`; unmatched inputs are simply
+// absent from the returned map.
+export async function findTasksByIdsOrNumbers(
+  params: string[],
+): Promise<Map<string, typeof tasks.$inferSelect>> {
+  if (params.length === 0) return new Map()
+
+  const classifiedByParam = new Map(
+    params.map((param) => [param, classifyNumericOrId(param)] as const),
+  )
+  const numberValues: number[] = []
+  const idValues: string[] = []
+  for (const classified of classifiedByParam.values()) {
+    if (classified.kind === 'number') numberValues.push(classified.value)
+    else idValues.push(classified.value)
+  }
+
+  const conditions = [
+    numberValues.length > 0 ? inArray(tasks.number, numberValues) : undefined,
+    idValues.length > 0 ? inArray(tasks.id, idValues) : undefined,
+  ].filter((c) => c != null)
+  if (conditions.length === 0) return new Map()
+
+  const rows = await db
+    .select()
+    .from(tasks)
+    .where(or(...conditions))
+  const byNumber = new Map(rows.map((row) => [row.number, row]))
+  const byId = new Map(rows.map((row) => [row.id, row]))
+
+  const result = new Map<string, typeof tasks.$inferSelect>()
+  for (const [param, classified] of classifiedByParam) {
+    const row =
+      classified.kind === 'number'
+        ? byNumber.get(classified.value)
+        : byId.get(classified.value)
+    if (row) result.set(param, row)
+  }
+  return result
 }
 
 const factory = createFactory<TaskEnv, '/:id'>()

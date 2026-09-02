@@ -161,9 +161,17 @@ export function registerTaskCommands(
     )
 
   addSchemaOptions(
-    task.command('update <id>').description('Update a task'),
+    task
+      .command('update <id>')
+      .description('Update a task')
+      .option(
+        '--blocked-by <ids>',
+        'Comma-separated ids/numbers of tasks blocking this task (replaces the full set; pass an empty string to clear)',
+      ),
     updateTaskSchema,
-    // labels and blockedBy (arrays) and recurrenceRule (object) aren't scalar fields, so addSchemaOptions can't turn them into flags.
+    // labels/recurrenceRule/blockedBy aren't scalar fields, so
+    // addSchemaOptions can't turn them into flags; blockedBy is hand-parsed
+    // below instead.
     ['labels', 'recurrenceRule', 'blockedBy'],
     // No TQ_CONTEXT default here (unlike list/create/search): update sends
     // only the flags the caller explicitly set, so defaulting --context would
@@ -177,17 +185,27 @@ export function registerTaskCommands(
     .action(
       async (
         id: string,
-        options: Record<string, unknown>,
+        options: Record<string, unknown> & { blockedBy?: string },
         command: Command,
       ) => {
-        const json: UpdateTaskJson = pickSchemaFields(
-          updateTaskSchema,
-          options,
-          ['labels', 'recurrenceRule', 'blockedBy'],
-        ).match(
-          (value) => value,
-          (error) => fail(command, error),
-        )
+        const json: UpdateTaskJson = {
+          ...pickSchemaFields(updateTaskSchema, options, [
+            'labels',
+            'recurrenceRule',
+            'blockedBy',
+          ]).match(
+            (value) => value,
+            (error) => fail(command, error),
+          ),
+          ...(options.blockedBy !== undefined
+            ? {
+                blockedBy: options.blockedBy
+                  .split(',')
+                  .map((v) => v.trim())
+                  .filter((v) => v.length > 0),
+              }
+            : {}),
+        }
         if (Object.keys(json).length === 0) {
           return fail(command, new Error('Pass at least one flag to update'))
         }

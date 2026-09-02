@@ -1,6 +1,6 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
-import { and, count, eq, inArray, sql } from 'drizzle-orm'
+import { and, count, eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
@@ -15,6 +15,7 @@ import {
 import { pageToResponse } from '#routes/task-pages'
 import { queryTaskList } from '#routes/tasks/list-query'
 import {
+  findTasksByIdsOrNumbers,
   getGithubLinksByTaskId,
   getLabelNamesByTaskId,
   hydrateTaskListRows,
@@ -38,30 +39,39 @@ import {
 } from '#services/task-relations'
 
 // Self-reference and existence are cheap, non-racy checks -- the cycle check
-// needs the transactional lock in `syncTaskBlockedBy` instead.
-async function checkBlockedByTargets(
-  id: string,
+// needs the transactional lock in `syncTaskBlockedBy` instead. Self-reference
+// is checked first, against the raw input, so it never costs a DB round trip
+// and always wins over an existence error when a request combines its own
+// id/number with an unrelated missing blocker.
+async function resolveBlockedByTargets(
+  task: { id: string; number: number },
   blockedBy: string[],
-): Promise<{ body: { error: string }; status: 400 | 404 } | null> {
-  if (blockedBy.includes(id)) {
+): Promise<
+  | { targetIds: string[] }
+  | { error: { body: { error: string }; status: 400 | 404 } }
+> {
+  const uniqueRaw = [...new Set(blockedBy)]
+  if (uniqueRaw.length === 0) return { targetIds: [] }
+
+  if (uniqueRaw.includes(task.id) || uniqueRaw.includes(String(task.number))) {
     return {
-      body: { error: 'A task cannot be blocked by itself' },
-      status: 400,
+      error: {
+        body: { error: 'A task cannot be blocked by itself' },
+        status: 400,
+      },
     }
   }
 
-  const uniqueIds = [...new Set(blockedBy)]
-  if (uniqueIds.length === 0) return null
-
-  const existingTargets = await db
-    .select({ id: tasks.id })
-    .from(tasks)
-    .where(inArray(tasks.id, uniqueIds))
-  if (existingTargets.length !== uniqueIds.length) {
-    return { body: { error: 'Blocking task not found' }, status: 404 }
+  const resolved = await findTasksByIdsOrNumbers(uniqueRaw)
+  const missing = uniqueRaw.filter((raw) => !resolved.has(raw))
+  if (missing.length > 0) {
+    return {
+      error: { body: { error: 'Blocking task not found' }, status: 404 },
+    }
   }
 
-  return null
+  const targetIds = [...new Set([...resolved.values()].map((t) => t.id))]
+  return { targetIds }
 }
 
 export const tasksCrudApp = new Hono()
@@ -262,12 +272,15 @@ export const tasksCrudApp = new Hono()
       } = c.req.valid('json')
 
       if (blockedByInput != null) {
-        const targetError = await checkBlockedByTargets(id, blockedByInput)
-        if (targetError) {
-          return c.json(targetError.body, targetError.status)
+        const resolveResult = await resolveBlockedByTargets(
+          existing,
+          blockedByInput.map(String),
+        )
+        if ('error' in resolveResult) {
+          return c.json(resolveResult.error.body, resolveResult.error.status)
         }
 
-        const syncResult = await syncTaskBlockedBy(id, blockedByInput)
+        const syncResult = await syncTaskBlockedBy(id, resolveResult.targetIds)
         if (syncResult === 'cycle') {
           return c.json(
             { error: 'Circular blocking relationship detected' },

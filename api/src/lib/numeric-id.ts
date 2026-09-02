@@ -1,4 +1,6 @@
-export const numericIdPattern = /^\d+$/
+import { z } from 'zod'
+
+const numericIdPattern = /^\d+$/
 
 // `tasks.number` is a Postgres `integer`; comparing/inserting a digit string
 // past this range would make an `eq`/`inArray` query throw instead of simply
@@ -17,3 +19,12 @@ export function classifyNumericOrId(value: string): NumericOrId {
     ? { kind: 'number', value: Number(value) }
     : { kind: 'id', value }
 }
+
+// Accepts either the UUID primary key or the human-facing sequential number
+// of a task, for any request field that identifies a task (path params,
+// body fields like `blockedBy`, MCP tool args).
+export const taskIdOrNumber = z.union([
+  z.uuid(),
+  z.string().regex(numericIdPattern),
+  z.number().int().positive(),
+])
