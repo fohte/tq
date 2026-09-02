@@ -31,48 +31,42 @@ const baseProject: ProjectDetail = {
   taskCount: { total: 5, completed: 2 },
 }
 
+function makeProjectTask(overrides: Partial<ProjectTask> = {}): ProjectTask {
+  return makeTask({
+    projectId: 'proj-001',
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
+    ...overrides,
+  })
+}
+
 const sampleTasks: ProjectTask[] = [
-  makeTask({
+  makeProjectTask({
     id: '1',
     number: 1,
     title: 'Provision benchmark servers',
     status: 'completed',
-    projectId: 'proj-001',
-    createdAt: '2026-06-01T00:00:00.000Z',
-    updatedAt: '2026-06-01T00:00:00.000Z',
   }),
-  makeTask({
+  makeProjectTask({
     id: '2',
     number: 2,
     title: 'Tune MySQL config',
     status: 'completed',
-    projectId: 'proj-001',
-    createdAt: '2026-06-01T00:00:00.000Z',
-    updatedAt: '2026-06-01T00:00:00.000Z',
   }),
-  makeTask({
+  makeProjectTask({
     id: '3',
     number: 3,
     title: 'Profile slow queries',
-    projectId: 'proj-001',
-    createdAt: '2026-06-01T00:00:00.000Z',
-    updatedAt: '2026-06-01T00:00:00.000Z',
   }),
-  makeTask({
+  makeProjectTask({
     id: '4',
     number: 4,
     title: 'Add caching layer',
-    projectId: 'proj-001',
-    createdAt: '2026-06-01T00:00:00.000Z',
-    updatedAt: '2026-06-01T00:00:00.000Z',
   }),
-  makeTask({
+  makeProjectTask({
     id: '5',
     number: 5,
     title: 'Write final report',
-    projectId: 'proj-001',
-    createdAt: '2026-06-01T00:00:00.000Z',
-    updatedAt: '2026-06-01T00:00:00.000Z',
   }),
 ]
 
