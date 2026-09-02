@@ -31,8 +31,9 @@ function SessionRowStory({
   resumeUrlTemplate,
   ...props
 }: React.ComponentProps<typeof SessionRow> & {
-  // Seeds the same localStorage key `useSessionOpenSettings` reads, reset on
-  // every render so stories stay deterministic regardless of run order.
+  // Seeds the same localStorage key `useSessionOpenSettings` reads, since
+  // most sessions in this file use context 'work' and need it matched to
+  // show the Focus/Resume button.
   localContext?: 'work' | 'personal' | undefined
   focusUrlTemplate?: string | undefined
   resumeUrlTemplate?: string | undefined

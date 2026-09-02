@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 import { TaskSessionsList } from '#components/task/task-sessions-section'
-import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { AgentSession } from '#hooks/use-agent-sessions'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -50,11 +49,9 @@ function Providers({ children }: { children: ReactNode }) {
 }
 
 function SectionStory({ sessions }: { sessions: AgentSession[] }) {
-  // Resets the shared localStorage key so a prior story's write doesn't
-  // leak in; the default (personal) intentionally mismatches this story's
-  // `work` sessions, keeping the resume button hidden.
-  resetSessionOpenSettings()
-
+  // Default session-open-settings context is 'personal', intentionally
+  // mismatching this story's `work` sessions, keeping the resume button
+  // hidden.
   return (
     <Providers>
       <div className="max-w-2xl p-6">
