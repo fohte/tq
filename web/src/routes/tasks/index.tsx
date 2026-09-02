@@ -97,7 +97,7 @@ function TaskList() {
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 bg-background">
+      <div className="sticky top-0 z-10">
         <ScreenHeaderBar>
           <SectionHeading level={2}>tasks</SectionHeading>
           <TaskListToolbar
