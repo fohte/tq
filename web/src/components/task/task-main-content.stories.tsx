@@ -98,10 +98,10 @@ const sampleSubtasks: Task[] = [
     projectId: null,
     recurrenceRuleId: null,
     githubLinks: [],
-    blockedByNumbers: [],
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
     childCompletionCount: { completed: 0, total: 0 },
+    blockedByNumbers: [],
   },
   {
     id: 'aaaa1111-0000-0000-0000-000000000002',
@@ -122,10 +122,10 @@ const sampleSubtasks: Task[] = [
     projectId: null,
     recurrenceRuleId: null,
     githubLinks: [],
-    blockedByNumbers: [],
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
     childCompletionCount: { completed: 0, total: 0 },
+    blockedByNumbers: [],
   },
 ]
 
