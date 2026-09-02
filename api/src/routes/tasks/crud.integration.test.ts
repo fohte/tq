@@ -1006,6 +1006,45 @@ describe('tasks CRUD API', () => {
       expect(body[0].id).toBe(task.id)
     })
 
+    it('treats a task as a root when its parent is outside the project', async () => {
+      const project = await createProject('My project')
+      const outsideParent = await createTask('Parent outside project')
+      const childInProject = await createTask('Child in project', {
+        parentId: outsideParent.id,
+      })
+      await setProjectId(childInProject.id, project.id)
+      const realRoot = await createTask('Real root in project')
+      await setProjectId(realRoot.id, project.id)
+
+      const res = await app.request(
+        `/api/tasks?projectId=${project.id}&parentId=root`,
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id).toSorted()).toEqual(
+        [childInProject.id, realRoot.id].toSorted(),
+      )
+    })
+
+    it('excludes a task from root when its parent is in the same project', async () => {
+      const project = await createProject('My project')
+      const parent = await createTask('Parent in project')
+      await setProjectId(parent.id, project.id)
+      const child = await createTask('Child in project', {
+        parentId: parent.id,
+      })
+      await setProjectId(child.id, project.id)
+
+      const res = await app.request(
+        `/api/tasks?projectId=${project.id}&parentId=root`,
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id)).toEqual([parent.id])
+    })
+
     it('includes each task labels in the response', async () => {
       await createLabel('urgent')
       const project = await createProject('My project')

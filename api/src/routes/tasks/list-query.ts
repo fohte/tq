@@ -7,9 +7,10 @@ import {
   isNull,
   ne,
   notExists,
+  or,
   sql,
 } from 'drizzle-orm'
-import { alias } from 'drizzle-orm/pg-core'
+import { alias, type AnyPgColumn } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
@@ -47,6 +48,26 @@ function unresolvedBlockerSubquery() {
         ne(blockerTasks.status, 'completed'),
       ),
     )
+}
+
+// NULL-safe "doesn't belong to this project", for a `projectId` column on
+// `tasks` or its `parentTasks` self-join alias. A plain
+// `not(eq(projectIdColumn, id))` would evaluate to NULL (not TRUE) when
+// `projectIdColumn` is NULL, which would wrongly exclude project-less rows.
+function projectMismatch(projectIdColumn: AnyPgColumn, identifier: string) {
+  return z.uuid().safeParse(identifier).success
+    ? or(isNull(projectIdColumn), ne(projectIdColumn, identifier))
+    : notExists(
+        db
+          .select({ _: sql`1` })
+          .from(projects)
+          .where(
+            and(
+              eq(projects.id, projectIdColumn),
+              eq(projects.title, identifier),
+            ),
+          ),
+      )
 }
 
 export function selectTaskListRows() {
@@ -146,18 +167,30 @@ function buildConditions(query: ListTasksQuery) {
     conditions.push(notExists(unresolvedBlockerSubquery()))
   }
 
-  const parentId = parsed?.parentId ?? query.parentId
-  if (parentId === 'root') {
-    conditions.push(isNull(tasks.parentId))
-  } else if (parentId != null) {
-    conditions.push(eq(tasks.parentId, parentId))
-  }
-
   // Unlike the other filters above, an explicit `projectId` param wins over
   // one embedded in `q` — a route that pins its own scope (e.g.
   // /projects/$projectId) can't have that scope silently overridden by a
   // stray `project:` token typed into `q`.
   const projectIdentifier = query.projectId ?? parsed?.projectId
+
+  const parentId = parsed?.parentId ?? query.parentId
+  if (parentId === 'root') {
+    // A task in this project whose actual parent belongs to a different
+    // project (or none) has no visible parent within this project's task
+    // list, so it needs to count as a root here too — otherwise it would
+    // never appear anywhere in the project's tree.
+    conditions.push(
+      projectIdentifier != null
+        ? or(
+            isNull(tasks.parentId),
+            projectMismatch(parentTasks.projectId, projectIdentifier),
+          )
+        : isNull(tasks.parentId),
+    )
+  } else if (parentId != null) {
+    conditions.push(eq(tasks.parentId, parentId))
+  }
+
   if (projectIdentifier != null) {
     // UUID-shaped values are treated as an id match, not a title match, even
     // though `projects.title` has no format constraint and could coincide.
