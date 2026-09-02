@@ -46,6 +46,52 @@ export const WithContent: Story = {
   },
 }
 
+// h1, h3, inline code, and a plain link never appear in any other story in
+// this file, so a CSS change to any of them has no VRT baseline to diff
+// against. Both modes are covered separately (rather than relying on a play
+// function to switch mode) since several CSS rules key off the wrapper's
+// `data-view-mode` attribute (e.g. block-handle visibility).
+const ALL_MARKDOWN_ELEMENTS_CONTENT = `# Heading 1
+
+## Heading 2
+
+### Heading 3
+
+First paragraph to check body text styling and line height.
+
+Second paragraph immediately following the first to check spacing between paragraphs.
+
+- Bullet one
+- Bullet two
+- Bullet three
+
+1. Step one
+2. Step two
+3. Step three
+
+Inline \`code span\` inside a sentence, and a [link to an external site](https://example.com).
+
+> A blockquote to check the left border and text color.
+
+\`\`\`ts
+const answer = 42
+\`\`\`
+`
+
+export const AllMarkdownElementsViewMode: Story = {
+  args: {
+    defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
+    viewEditToggle: {},
+  },
+}
+
+export const AllMarkdownElementsEditMode: Story = {
+  args: {
+    defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
+    viewEditToggle: { defaultMode: 'edit' },
+  },
+}
+
 // Regression check: 'compact' (a few-lines inline editor, e.g. a task/project
 // description) must render its own min-height (120px) rather than the
 // 'default' size's 400px or collapsing to the content's own height.
