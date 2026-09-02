@@ -20,7 +20,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
   })
 
   return (
-    <div className="flex min-h-dvh">
+    // `sticky`, not `fixed`: prosemirror-view's cursor scroll-into-view walk
+    // (scrollRectIntoView in prosemirror-view/src/domcoords.ts) stops at the
+    // first ancestor whose computed position is fixed OR sticky, so this
+    // still keeps it from reaching document.body and calling window.scrollBy
+    // on every keystroke — but unlike `fixed`, it stays in normal document
+    // flow, which document scrolling depends on.
+    <div className="sticky top-0 flex min-h-dvh">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <main className="flex-1">{children}</main>

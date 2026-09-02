@@ -33,3 +33,16 @@ export const DesktopPopover: Story = {
     ).toBeInTheDocument()
   },
 }
+
+export const MobileSheet: Story = {
+  tags: ['mobile-only'],
+  play: async ({ canvas, canvasElement }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Open filter' }))
+
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(body.getByRole('dialog')).toBeInTheDocument()
+    await expect(
+      await body.findByText('Filter options go here.'),
+    ).toBeInTheDocument()
+  },
+}

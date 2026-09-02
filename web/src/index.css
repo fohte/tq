@@ -125,7 +125,7 @@
   --text-2xs--line-height: 0.875rem;
 
   /* Overlay viewport-relative sizing — see docs/design-system.md */
-  --max-height-sheet: 85vh;
+  --max-height-sheet: calc(var(--visual-viewport-height, 100vh) * 0.85);
   --max-height-modal-composer: 40vh;
   --max-height-sheet-composer: 30vh;
 

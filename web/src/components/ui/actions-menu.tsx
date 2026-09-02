@@ -32,10 +32,12 @@ function stopRowNavigation(e: React.MouseEvent) {
 export function ActionsMenu({
   items,
   desktopTriggerClassName,
+  mobileTriggerClassName,
   'aria-label': ariaLabel = 'Actions',
 }: {
   items: ActionsMenuItem[]
   desktopTriggerClassName?: string
+  mobileTriggerClassName?: string
   'aria-label'?: string
 }) {
   return (
@@ -79,7 +81,10 @@ export function ActionsMenu({
           aria-label={ariaLabel}
           onClick={stopRowNavigation}
           data-no-dnd=""
-          className="flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground outline-none hover:text-foreground md:hidden"
+          className={cn(
+            'flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground outline-none hover:text-foreground md:hidden',
+            mobileTriggerClassName,
+          )}
         >
           <MoreHorizontal className="h-4 w-4" />
         </ActionSheetTrigger>

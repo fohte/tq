@@ -10,6 +10,7 @@ import {
 } from '#components/schedule/create-schedule-modal'
 import {
   BottomSheetHeader,
+  BottomSheetOverlay,
   BottomSheetPanel,
 } from '#components/ui/bottom-sheet'
 import { Button } from '#components/ui/button'
@@ -49,7 +50,7 @@ export function ScheduleModalMobilePanel({
   handleSubmit,
 }: SchedulePanelProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:hidden">
+    <BottomSheetOverlay className="md:hidden">
       <BottomSheetPanel>
         {/* Header */}
         <BottomSheetHeader>
@@ -235,6 +236,6 @@ export function ScheduleModalMobilePanel({
           </div>
         </div>
       </BottomSheetPanel>
-    </div>
+    </BottomSheetOverlay>
   )
 }
