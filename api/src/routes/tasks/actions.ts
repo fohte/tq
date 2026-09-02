@@ -17,6 +17,7 @@ import {
 import { taskStatus, taskStatusReason } from '#schemas/task'
 import { buildNextTaskData } from '#services/recurrence'
 import { syncTaskLinks, type TaskLinkSyncResult } from '#services/task-links'
+import { getIncompleteBlockerNumbers } from '#services/task-relations'
 
 const updateStatusSchema = z.object({
   status: taskStatus,
@@ -51,6 +52,26 @@ async function checkDuplicateTarget(
   }
 
   return null
+}
+
+// Must run against the same `tx` as the status update it gates.
+async function checkNotBlocked(
+  tx: DbTransaction,
+  id: string,
+): Promise<{
+  body: { error: string; blockedByNumbers: number[] }
+  status: 409
+} | null> {
+  const blockedByNumbers = await getIncompleteBlockerNumbers(id, tx)
+  if (blockedByNumbers.length === 0) return null
+
+  return {
+    body: {
+      error: `Task is blocked by incomplete tasks: ${blockedByNumbers.map((n) => `#${String(n)}`).join(', ')}`,
+      blockedByNumbers,
+    },
+    status: 409,
+  }
 }
 
 // Records the `duplicate_of` relation for a close-as-duplicate transition.
@@ -91,7 +112,7 @@ export const tasksActionsApp = new Hono()
       // so it can be stale under concurrent requests for the same task.
       // Locking and re-reading here keeps fromStatus accurate for whichever
       // request commits second.
-      const updated = await db.transaction(async (tx) => {
+      const result = await db.transaction(async (tx) => {
         const current = firstOrThrow(
           await tx
             .select({ status: tasks.status })
@@ -99,6 +120,11 @@ export const tasksActionsApp = new Hono()
             .where(eq(tasks.id, id))
             .for('update'),
         )
+
+        if (status === 'completed' && current.status !== 'completed') {
+          const blockedError = await checkNotBlocked(tx, id)
+          if (blockedError) return { kind: 'error' as const, ...blockedError }
+        }
 
         const updated = firstOrThrow(
           await tx
@@ -127,8 +153,13 @@ export const tasksActionsApp = new Hono()
           await insertDuplicateOfRelation(tx, id, duplicateOfTaskId)
         }
 
-        return updated
+        return { kind: 'ok' as const, task: updated }
       })
+
+      if (result.kind === 'error') {
+        return c.json(result.body, result.status)
+      }
+      const updated = result.task
 
       const labelsByTaskId = await getLabelNamesByTaskId([id])
 
@@ -233,7 +264,7 @@ export const tasksActionsApp = new Hono()
       // freshly-read row: two concurrent completions of the same task would
       // otherwise both see the stale pre-completion status and both record a
       // status_changed event.
-      const updatedTask = await db.transaction(async (tx) => {
+      const result = await db.transaction(async (tx) => {
         const current = firstOrThrow(
           await tx
             .select({ status: tasks.status })
@@ -242,7 +273,16 @@ export const tasksActionsApp = new Hono()
             .for('update'),
         )
 
-        if (current.status === 'completed') return null
+        if (current.status === 'completed') {
+          return {
+            kind: 'error' as const,
+            body: { error: 'Task is already completed' },
+            status: 409 as const,
+          }
+        }
+
+        const blockedError = await checkNotBlocked(tx, id)
+        if (blockedError) return { kind: 'error' as const, ...blockedError }
 
         const updatedTask = firstOrThrow(
           await tx
@@ -269,12 +309,13 @@ export const tasksActionsApp = new Hono()
           await insertDuplicateOfRelation(tx, id, duplicateOfTaskId)
         }
 
-        return updatedTask
+        return { kind: 'ok' as const, task: updatedTask }
       })
 
-      if (updatedTask == null) {
-        return c.json({ error: 'Task is already completed' }, 409)
+      if (result.kind === 'error') {
+        return c.json(result.body, result.status)
       }
+      const updatedTask = result.task
 
       let createdTask: typeof tasks.$inferSelect | null = null
       let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null

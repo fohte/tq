@@ -91,9 +91,24 @@ vi.mock('#components/ui/markdown-editor', () => ({
   ),
 }))
 
+// Every router leaves a document scroll listener registered after
+// teardown; it only reaches `document` when router.isScrollRestoring is
+// true, which useElementScrollRestoration flips on — stub it to keep that
+// flag false and avoid "document is not defined" from a stray callback.
+// Everything else from the module stays real — see the comment below on
+// why useSearch()/useNavigate() can't be stubbed.
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>()
+  return {
+    ...actual,
+    useElementScrollRestoration: () => undefined,
+  }
+})
+
 // Route params come from matching the real ProjectDetailRoute for real
-// (rather than stubbing @tanstack/react-router), because the task-list
-// filter chips rely on useSearch()/useNavigate() from the real router.
+// (rather than replacing @tanstack/react-router's routing pieces wholesale),
+// because the task-list filter chips rely on useSearch()/useNavigate() from
+// the real router.
 // A fresh router (re-loaded) is built for both the initial render and every
 // rerender — TanStack Router memoizes matched-route rendering on unchanged
 // router state, so reusing one router across rerenders would keep stale

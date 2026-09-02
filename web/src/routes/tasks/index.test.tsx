@@ -61,6 +61,18 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
   }
 })
 
+// Every router leaves a document scroll listener registered after
+// teardown; it only reaches `document` when router.isScrollRestoring is
+// true, which useElementScrollRestoration flips on — stub it to keep that
+// flag false and avoid "document is not defined" from a stray callback.
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>()
+  return {
+    ...actual,
+    useElementScrollRestoration: () => undefined,
+  }
+})
+
 // GithubIssueLinkModal (always mounted, just closed) calls useNavigate
 // unconditionally, so a real router is required rather than a mocked one.
 // TaskList itself is bound to the real TasksRoute (Route.useSearch() /
