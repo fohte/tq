@@ -4,16 +4,10 @@ import { http, HttpResponse } from 'msw'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 
 import { EditLabelDialog } from '#components/label/edit-label-dialog'
-import type { Label } from '#hooks/use-labels'
+import { makeLabel } from '#components/label/label-test-fixtures'
 import { clickSelectOption } from '#lib/test-utils'
 
-const label: Label = {
-  id: '00000000-0000-0000-0000-000000000301',
-  name: 'oncall',
-  color: null,
-  context: 'work',
-  createdAt: '2026-03-20T00:00:00.000Z',
-}
+const label = makeLabel({ name: 'oncall', context: 'work' })
 
 const meta = {
   title: 'Label/EditLabelDialog',
