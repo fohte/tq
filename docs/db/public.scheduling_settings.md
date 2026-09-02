@@ -9,20 +9,18 @@
 | working_hours_end              | text                     | '19:00'::text     | false    |          |         |         |
 | minimum_block_minutes          | integer                  | 30                | false    |          |         |         |
 | auto_reschedule_on_gcal_change | boolean                  | true              | false    |          |         |         |
-| default_context                | text                     | 'personal'::text  | false    |          |         |         |
 | created_at                     | timestamp with time zone | now()             | false    |          |         |         |
 | updated_at                     | timestamp with time zone | now()             | false    |          |         |         |
 
 ## Constraints
 
-| Name                                                     | Type        | Definition                                                              |
-| -------------------------------------------------------- | ----------- | ----------------------------------------------------------------------- |
-| scheduling_settings_default_context_check                | CHECK       | CHECK ((default_context = ANY (ARRAY['work'::text, 'personal'::text]))) |
-| scheduling_settings_minimum_block_minutes_positive_check | CHECK       | CHECK ((minimum_block_minutes > 0))                                     |
-| scheduling_settings_singleton_check                      | CHECK       | CHECK ((id = 'singleton'::text))                                        |
-| scheduling_settings_working_hours_format_check           | CHECK       | CHECK (((working_hours_start ~ '^([01][0-9]                             | 2[0-3]):[0-5][0-9]$'::text) AND (working_hours_end ~ '^([01][0-9] | 2[0-3]):[0-5][0-9]$'::text))) |
-| scheduling_settings_working_hours_order_check            | CHECK       | CHECK ((working_hours_start < working_hours_end))                       |
-| scheduling_settings_pkey                                 | PRIMARY KEY | PRIMARY KEY (id)                                                        |
+| Name                                                     | Type        | Definition                                        |
+| -------------------------------------------------------- | ----------- | ------------------------------------------------- |
+| scheduling_settings_minimum_block_minutes_positive_check | CHECK       | CHECK ((minimum_block_minutes > 0))               |
+| scheduling_settings_singleton_check                      | CHECK       | CHECK ((id = 'singleton'::text))                  |
+| scheduling_settings_working_hours_format_check           | CHECK       | CHECK (((working_hours_start ~ '^([01][0-9]       | 2[0-3]):[0-5][0-9]$'::text) AND (working_hours_end ~ '^([01][0-9] | 2[0-3]):[0-5][0-9]$'::text))) |
+| scheduling_settings_working_hours_order_check            | CHECK       | CHECK ((working_hours_start < working_hours_end)) |
+| scheduling_settings_pkey                                 | PRIMARY KEY | PRIMARY KEY (id)                                  |
 
 ## Indexes
 
@@ -42,7 +40,6 @@ erDiagram
   text working_hours_end
   integer minimum_block_minutes
   boolean auto_reschedule_on_gcal_change
-  text default_context
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
 }

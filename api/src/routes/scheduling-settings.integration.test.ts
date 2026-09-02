@@ -10,7 +10,6 @@ interface SchedulingSettingsResponse {
   workingHoursEnd: string
   minimumBlockMinutes: number
   autoRescheduleOnGcalChange: boolean
-  defaultContext: 'work' | 'personal'
   updatedAt: string
 }
 
@@ -29,7 +28,6 @@ describe('GET /api/scheduling-settings', () => {
       workingHoursEnd: '19:00',
       minimumBlockMinutes: 30,
       autoRescheduleOnGcalChange: true,
-      defaultContext: 'personal',
       updatedAt: 'DATE',
     })
   })
@@ -46,7 +44,6 @@ describe('PATCH /api/scheduling-settings', () => {
       workingHoursEnd: '19:00',
       minimumBlockMinutes: 45,
       autoRescheduleOnGcalChange: true,
-      defaultContext: 'personal',
       updatedAt: 'DATE',
     })
   })
@@ -64,7 +61,6 @@ describe('PATCH /api/scheduling-settings', () => {
       workingHoursEnd: '17:00',
       minimumBlockMinutes: 30,
       autoRescheduleOnGcalChange: true,
-      defaultContext: 'personal',
       updatedAt: 'DATE',
     })
   })

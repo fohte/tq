@@ -11,7 +11,6 @@ const sampleSettings: SchedulingSettings = {
   workingHoursEnd: '19:00',
   minimumBlockMinutes: 30,
   autoRescheduleOnGcalChange: true,
-  defaultContext: 'personal',
   updatedAt: '2026-01-01T00:00:00.000Z',
 }
 
@@ -82,19 +81,6 @@ export const Default: Story = {
   parameters: {
     msw: {
       handlers: [settingsHandler(sampleSettings)],
-    },
-  },
-}
-
-export const WorkContext: Story = {
-  args: {
-    settings: { ...sampleSettings, defaultContext: 'work' },
-  },
-  parameters: {
-    msw: {
-      handlers: [
-        settingsHandler({ ...sampleSettings, defaultContext: 'work' }),
-      ],
     },
   },
 }

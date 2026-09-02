@@ -18,12 +18,7 @@ import {
   withoutLinkSync,
   withoutRecurrenceRule,
 } from '#routes/tasks/testing'
-import {
-  assertDefined,
-  jsonBody,
-  patchSchedulingSettings,
-  setupTestDb,
-} from '#testing'
+import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
@@ -112,41 +107,6 @@ describe('tasks CRUD API', () => {
       expect(body.status).toBe('todo')
       expect(body.context).toBe('personal')
       expect(body.id).toBeDefined()
-    })
-
-    it('falls back to the configured default context when unspecified', async () => {
-      await patchSchedulingSettings({ defaultContext: 'work' })
-
-      const res = await app.request('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'Buy groceries' }),
-      })
-
-      expect(res.status).toBe(201)
-      const body = await jsonBody<TaskResponse>(res)
-      expect(normalizeTask(body)).toEqual({
-        id: 'ID',
-        number: -1,
-        title: 'Buy groceries',
-        description: null,
-        status: 'todo',
-        statusReason: null,
-        context: 'work',
-        commitment: 'inbox',
-        labels: [],
-        startDate: null,
-        dueDate: null,
-        estimatedMinutes: null,
-        parentId: null,
-        projectId: null,
-        recurrenceRuleId: null,
-        recurrenceRule: null,
-        githubLinks: [],
-        createdAt: 'TIMESTAMP',
-        updatedAt: 'TIMESTAMP',
-        linkSync: { outgoing: [], unresolvedRefs: [] },
-      })
     })
 
     it('creates a task with all optional fields', async () => {

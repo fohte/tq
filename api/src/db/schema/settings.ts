@@ -24,9 +24,6 @@ export const schedulingSettings = pgTable(
     autoRescheduleOnGcalChange: boolean('auto_reschedule_on_gcal_change')
       .notNull()
       .default(true),
-    defaultContext: text('default_context', { enum: ['work', 'personal'] })
-      .notNull()
-      .default('personal'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -50,10 +47,6 @@ export const schedulingSettings = pgTable(
     check(
       'scheduling_settings_working_hours_format_check',
       sql`${table.workingHoursStart} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' AND ${table.workingHoursEnd} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`,
-    ),
-    check(
-      'scheduling_settings_default_context_check',
-      sql`${table.defaultContext} IN ('work', 'personal')`,
     ),
   ],
 )

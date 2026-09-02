@@ -26,7 +26,6 @@ export interface UpdateSchedulingSettingsInput {
   workingHoursEnd?: string | undefined
   minimumBlockMinutes?: number | undefined
   autoRescheduleOnGcalChange?: boolean | undefined
-  defaultContext?: 'work' | 'personal' | undefined
 }
 
 export function updateSchedulingSettings(

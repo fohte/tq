@@ -18,7 +18,6 @@ const updateSchedulingSettingsSchema = z
     workingHoursEnd: z.string().regex(timePattern).optional(),
     minimumBlockMinutes: z.number().int().positive().optional(),
     autoRescheduleOnGcalChange: z.boolean().optional(),
-    defaultContext: z.enum(['work', 'personal']).optional(),
   })
   .refine(
     (input) =>
@@ -40,7 +39,6 @@ function toResponse(row: SchedulingSettings) {
     workingHoursEnd: row.workingHoursEnd,
     minimumBlockMinutes: row.minimumBlockMinutes,
     autoRescheduleOnGcalChange: row.autoRescheduleOnGcalChange,
-    defaultContext: row.defaultContext,
     updatedAt: row.updatedAt.toISOString(),
   }
 }

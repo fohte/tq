@@ -23,7 +23,7 @@
 | [public.github_sync_rules](public.github_sync_rules.md)                             | 11      |         | BASE TABLE |
 | [public.calendar_subscriptions](public.calendar_subscriptions.md)                   | 7       |         | BASE TABLE |
 | [public.task_events](public.task_events.md)                                         | 13      |         | BASE TABLE |
-| [public.scheduling_settings](public.scheduling_settings.md)                         | 8       |         | BASE TABLE |
+| [public.scheduling_settings](public.scheduling_settings.md)                         | 7       |         | BASE TABLE |
 | [public.agent_sessions](public.agent_sessions.md)                                   | 12      |         | BASE TABLE |
 | [public.task_agent_sessions](public.task_agent_sessions.md)                         | 2       |         | BASE TABLE |
 | [public.saved_views](public.saved_views.md)                                         | 7       |         | BASE TABLE |
@@ -258,7 +258,6 @@ erDiagram
   text working_hours_end
   integer minimum_block_minutes
   boolean auto_reschedule_on_gcal_change
-  text default_context
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
 }
