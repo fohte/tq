@@ -96,6 +96,28 @@ describe('parseSearchQuery', () => {
     expect(parseSearchQuery('has:no-children').hasNoChildren).toBe(true)
   })
 
+  it('parses has:blockers prefix', () => {
+    expect(parseSearchQuery('has:blockers').hasBlockers).toBe(true)
+  })
+
+  it('parses has:no-blockers prefix', () => {
+    expect(parseSearchQuery('has:no-blockers').hasNoBlockers).toBe(true)
+  })
+
+  it('lets a later has:no-blockers override an earlier has:blockers', () => {
+    expect(parseSearchQuery('has:blockers has:no-blockers')).toEqual({
+      freeText: '',
+      hasNoBlockers: true,
+    })
+  })
+
+  it('lets a later has:blockers override an earlier has:no-blockers', () => {
+    expect(parseSearchQuery('has:no-blockers has:blockers')).toEqual({
+      freeText: '',
+      hasBlockers: true,
+    })
+  })
+
   it('parses parent: prefix', () => {
     expect(parseSearchQuery('parent:abc-123').parentId).toBe('abc-123')
   })
@@ -163,12 +185,14 @@ describe('buildSearchQuery', () => {
         hasPages: true,
         hasComments: true,
         hasNoChildren: true,
+        hasBlockers: true,
+        hasNoBlockers: true,
         parentId: 'parent-1',
         projectId: 'proj-1',
         sortBy: 'due',
       }),
     ).toBe(
-      'deploy is:todo label:dev context:work commitment:active has:pages has:comments has:no-children parent:parent-1 project:proj-1 sort:due',
+      'deploy is:todo label:dev context:work commitment:active has:pages has:comments has:no-children has:blockers has:no-blockers parent:parent-1 project:proj-1 sort:due',
     )
   })
 
@@ -229,6 +253,22 @@ describe('parseSearchQuery and buildSearchQuery round-trip', () => {
     expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
       freeText: '',
       hasNoChildren: true,
+    })
+  })
+
+  it('round-trips has:blockers', () => {
+    const q = 'has:blockers'
+    expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
+      freeText: '',
+      hasBlockers: true,
+    })
+  })
+
+  it('round-trips has:no-blockers', () => {
+    const q = 'has:no-blockers'
+    expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
+      freeText: '',
+      hasNoBlockers: true,
     })
   })
 

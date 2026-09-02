@@ -219,6 +219,23 @@ export function CloseReasonLabel({
   )
 }
 
+export function BlockedByLabel({
+  blockedByNumbers,
+}: {
+  blockedByNumbers: number[]
+}) {
+  const text =
+    blockedByNumbers.length === 1
+      ? `blocked by #${String(blockedByNumbers[0])}`
+      : `blocked by ${String(blockedByNumbers.length)}`
+
+  return (
+    <span className="shrink-0 font-mono text-xs text-muted-foreground">
+      {text}
+    </span>
+  )
+}
+
 // Row indent is a per-instance value (depth is unbounded), so it can't be a
 // static Tailwind class. Set as a custom property via `style` and consumed
 // through `ROW_INDENT_CLASS_NAME`'s `pl-(--row-indent)` utility.

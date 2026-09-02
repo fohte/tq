@@ -8,6 +8,7 @@ import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { ProjectChip } from '#components/task/project-chip'
 import { StatusIcon } from '#components/task/status-icon'
 import { TaskActivity } from '#components/task/task-activity'
+import { TaskDependenciesSection } from '#components/task/task-dependencies-section'
 import { TaskDuplicateOfSection } from '#components/task/task-duplicate-of-section'
 import { TaskGithubLinksSection } from '#components/task/task-github-links-section'
 import { TaskLinkedTasksSection } from '#components/task/task-linked-tasks-section'
@@ -119,6 +120,13 @@ export function TaskMainContent({
 
       {/* Duplicate of */}
       <TaskDuplicateOfSection duplicateOfTask={task.duplicateOfTask} />
+
+      {/* Dependencies */}
+      <TaskDependenciesSection
+        taskId={task.id}
+        blockedBy={task.blockedBy}
+        blocking={task.blocking}
+      />
 
       {/* Linked Tasks */}
       <TaskLinkedTasksSection

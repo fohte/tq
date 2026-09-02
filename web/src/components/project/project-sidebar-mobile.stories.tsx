@@ -60,3 +60,9 @@ export const Default: Story = {
     project: { ...baseProject },
   },
 }
+
+export const WorkContext: Story = {
+  args: {
+    project: { ...baseProject, context: 'work' },
+  },
+}

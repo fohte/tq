@@ -1,4 +1,5 @@
 import { FilterOptionButton } from '#components/ui/filter-option-button'
+import { useCurrentContext } from '#hooks/use-current-context'
 import { useLabels } from '#hooks/use-labels'
 
 export function TaskLabelFilterFields({
@@ -8,7 +9,8 @@ export function TaskLabelFilterFields({
   selectedLabel: string | undefined
   onLabelChange: (label: string | undefined) => void
 }) {
-  const { data: labelsData } = useLabels()
+  const context = useCurrentContext()
+  const { data: labelsData } = useLabels({ context })
   const labels = labelsData ?? []
 
   return (

@@ -15,6 +15,7 @@ const baseTask: Task = {
   status: 'todo',
   statusReason: null,
   duplicateOfNumber: null,
+  blockedByNumbers: [],
   context: 'personal',
   commitment: 'active',
   labels: [],
@@ -26,7 +27,6 @@ const baseTask: Task = {
   projectId: null,
   recurrenceRuleId: null,
   githubLinks: [],
-  blockedByNumbers: [],
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
   childCompletionCount: { completed: 0, total: 0 },
@@ -177,6 +177,26 @@ export const WithParentTask: Story = {
       ...baseTask,
       title: 'Task with a parent',
       parentNumber: 12,
+    },
+  },
+}
+
+export const WithBlockedBy: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Task blocked by another task',
+      blockedByNumbers: [312],
+    },
+  },
+}
+
+export const WithMultipleBlockedBy: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Task blocked by multiple tasks',
+      blockedByNumbers: [312, 315],
     },
   },
 }

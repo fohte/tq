@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { SessionIndicator } from '#components/agent-session/session-indicator'
 import { GithubLinksChipGroup } from '#components/task/github-links-chip-group'
 import {
+  BlockedByLabel,
   CloseReasonLabel,
   DueDateBadge,
   EstimateLabel,
@@ -34,8 +35,8 @@ export interface TaskRowAppearanceProps {
   onClick?: (e: React.MouseEvent) => void
   draggable?: boolean
   // Appended after the row's canonical second-line items (labels, project,
-  // context, parent, startDate, dueDate, estimate, githubLink) — keep their
-  // order intact.
+  // context, parent, startDate, dueDate, estimate, githubLink, closeReason,
+  // blockedBy) — keep their order intact.
   secondLineExtras?: React.ReactNode[]
 }
 
@@ -95,6 +96,9 @@ export function TaskRowAppearance({
         reason={closeReason}
         duplicateOfNumber={task.duplicateOfNumber}
       />
+    ) : null,
+    task.blockedByNumbers.length > 0 ? (
+      <BlockedByLabel blockedByNumbers={task.blockedByNumbers} />
     ) : null,
     ...secondLineExtras,
   ]

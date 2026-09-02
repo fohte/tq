@@ -9,7 +9,7 @@ import { labelKeys } from '#hooks/use-labels'
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, staleTime: Infinity } },
 })
-queryClient.setQueryData(labelKeys.all, [
+queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [
   {
     id: '1',
     name: 'dev:tq',
