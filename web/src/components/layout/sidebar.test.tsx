@@ -11,10 +11,14 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { Sidebar } from '#components/layout/sidebar'
 import {
+  makeLabel,
   makeProject,
   makeSavedView,
   makeTask,
 } from '#components/layout/sidebar-test-fixtures'
+import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
+import type { Label } from '#hooks/use-labels'
+import { labelKeys } from '#hooks/use-labels'
 import type { Project } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
@@ -57,6 +61,11 @@ const tasksWithTags: Task[] = [
   makeTask({ id: '2', title: 'Task B', labels: ['dev:tq'] }),
 ]
 
+const labelsForTasksWithTags: Label[] = [
+  makeLabel({ id: '1', name: 'dev:tq' }),
+  makeLabel({ id: '2', name: 'urgent' }),
+]
+
 // The router's first route match resolves asynchronously even with no
 // loaders, so router.load() is awaited before render() to avoid an initial
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
@@ -65,18 +74,26 @@ async function renderSidebar({
   projects = [],
   initialEntry = '/',
   savedViews = [],
+  labels = [],
 }: {
   tasks?: Task[]
   projects?: Project[]
   initialEntry?: string
   savedViews?: SavedView[]
+  labels?: Label[]
 } = {}) {
+  resetSessionOpenSettings({ localContext: 'personal' })
+
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   queryClient.setQueryData(taskKeys.list(undefined), tasks)
-  queryClient.setQueryData(projectKeys.list(undefined), projects)
-  queryClient.setQueryData(savedViewKeys.list(), savedViews)
+  queryClient.setQueryData(projectKeys.list({ context: 'personal' }), projects)
+  queryClient.setQueryData(
+    savedViewKeys.list({ context: 'personal' }),
+    savedViews,
+  )
+  queryClient.setQueryData(labelKeys.list({ context: 'personal' }), labels)
 
   const rootRoute = createRootRoute({
     validateSearch: (search: Record<string, unknown>) => search,
@@ -189,7 +206,10 @@ describe('Sidebar', () => {
 
   describe('TagsSection', () => {
     it('shows each tag with its name and count', async () => {
-      await renderSidebar({ tasks: tasksWithTags })
+      await renderSidebar({
+        tasks: tasksWithTags,
+        labels: labelsForTasksWithTags,
+      })
 
       const devTqLink = screen.getByRole('link', { name: /dev:tq/ })
       const urgentLink = screen.getByRole('link', { name: /urgent/ })
@@ -197,8 +217,25 @@ describe('Sidebar', () => {
       expect(urgentLink).toHaveTextContent('#urgent1')
     })
 
+    it('excludes a tag whose label does not belong to the current context', async () => {
+      await renderSidebar({
+        tasks: [
+          ...tasksWithTags,
+          makeTask({ id: '3', title: 'Task C', labels: ['other-context'] }),
+        ],
+        labels: labelsForTasksWithTags,
+      })
+
+      expect(
+        screen.queryByRole('link', { name: /other-context/ }),
+      ).not.toBeInTheDocument()
+    })
+
     it('links each tag to /tasks scoped to that tag, replacing the query', async () => {
-      await renderSidebar({ tasks: tasksWithTags })
+      await renderSidebar({
+        tasks: tasksWithTags,
+        labels: labelsForTasksWithTags,
+      })
 
       const devTqLink = screen.getByRole('link', { name: /dev:tq/ })
       expect(devTqLink).toHaveAttribute('href', '/tasks')
@@ -210,7 +247,10 @@ describe('Sidebar', () => {
     })
 
     it('does not highlight any tag when the current query has none', async () => {
-      await renderSidebar({ tasks: tasksWithTags })
+      await renderSidebar({
+        tasks: tasksWithTags,
+        labels: labelsForTasksWithTags,
+      })
       expect(screen.getByRole('link', { name: /dev:tq/ })).toHaveClass(
         'text-muted-foreground-strong',
       )
@@ -219,6 +259,7 @@ describe('Sidebar', () => {
     it('highlights the tag matching the current query, derived from it', async () => {
       await renderSidebar({
         tasks: tasksWithTags,
+        labels: labelsForTasksWithTags,
         initialEntry: '/?q=label:dev:tq',
       })
 

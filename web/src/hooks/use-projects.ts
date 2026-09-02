@@ -18,6 +18,11 @@ export type { Project, ProjectDetail, ProjectTask }
 
 type ProjectStatus = 'active' | 'paused' | 'completed' | 'archived'
 
+export interface ProjectFilter {
+  status?: ProjectStatus
+  context?: 'work' | 'personal'
+}
+
 export const PROJECT_COLOR_PRESETS = [
   { name: 'Orange', hex: '#FF8400' },
   { name: 'Red', hex: '#FF5C33' },
@@ -32,14 +37,13 @@ export const PROJECT_COLOR_PRESETS = [
 export const projectKeys = {
   all: ['projects'] as const,
   lists: ['projects', 'list'] as const,
-  list: (filter?: { status?: string }) =>
-    [...projectKeys.lists, filter] as const,
+  list: (filter?: ProjectFilter) => [...projectKeys.lists, filter] as const,
   detail: (id: string) => [...projectKeys.all, 'detail', id] as const,
   taskIds: (id: string) => [...projectKeys.detail(id), 'task-ids'] as const,
 }
 
 export function useProjects(
-  filter?: { status?: ProjectStatus },
+  filter?: ProjectFilter,
   options?: { enabled?: boolean },
 ) {
   return useQuery({
@@ -86,6 +90,7 @@ export interface CreateProjectInput {
   startDate?: string
   targetDate?: string
   color?: string
+  context?: 'work' | 'personal'
 }
 
 export function useCreateProject() {
@@ -115,7 +120,7 @@ export function useCreateProject() {
         targetDate: input.targetDate ?? null,
         color: input.color ?? null,
         sortOrder: 0,
-        context: 'personal',
+        context: input.context ?? 'personal',
         createdAt: now,
         updatedAt: now,
         completionRate: 0,
@@ -152,6 +157,7 @@ export interface UpdateProjectInput {
   startDate?: string | null
   targetDate?: string | null
   color?: string | null
+  context?: 'work' | 'personal'
 }
 
 export function useUpdateProject() {

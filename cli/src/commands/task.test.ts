@@ -424,6 +424,71 @@ describe('task update', () => {
       body: { title: 'Updated title' },
     })
   })
+
+  it('splits --blocked-by into an id/number array', async () => {
+    const updated = { id: 't1', number: 1 }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'update', '42', '--blocked-by', '312, 315'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'PATCH',
+      pathname: '/api/tasks/42',
+      query: {},
+      body: { blockedBy: ['312', '315'] },
+    })
+  })
+
+  it('sends an empty blockedBy array to clear all blockers', async () => {
+    const updated = { id: 't1', number: 1 }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'update', '42', '--blocked-by', ''],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'PATCH',
+      pathname: '/api/tasks/42',
+      query: {},
+      body: { blockedBy: [] },
+    })
+  })
+
+  it('reports the API error when --blocked-by would create a cycle', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () =>
+        new Response(
+          JSON.stringify({ error: 'Circular blocking relationship detected' }),
+          { status: 409 },
+        ),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'update', '42', '--blocked-by', '7'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(1)
+    expect(calls).toHaveLength(1)
+    expect(stderr.mock.calls).toEqual([
+      ['Error: Circular blocking relationship detected (HTTP 409)\n'],
+    ])
+  })
 })
 
 describe('task delete', () => {

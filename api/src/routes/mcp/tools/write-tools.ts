@@ -3,8 +3,8 @@ import { z } from 'zod'
 
 import { app } from '#app'
 import { AUTHOR_HEADER } from '#lib/author'
+import { taskIdOrNumber } from '#lib/numeric-id'
 import { callInternalRoute } from '#routes/mcp/route-bridge'
-import { taskIdOrNumber } from '#routes/tasks/shared'
 import {
   createTaskSchema,
   taskStatus,

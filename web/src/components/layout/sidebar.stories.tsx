@@ -4,10 +4,13 @@ import { expect, userEvent, within } from 'storybook/test'
 
 import { Sidebar } from '#components/layout/sidebar'
 import {
+  makeLabel,
   makeProject,
   makeSavedView,
   makeTask,
 } from '#components/layout/sidebar-test-fixtures'
+import type { Label } from '#hooks/use-labels'
+import { labelKeys } from '#hooks/use-labels'
 import type { Project } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
@@ -21,6 +24,12 @@ const tasksWithTags: Task[] = [
   makeTask({ id: '1', title: 'Task A', labels: ['dev:tq', 'urgent'] }),
   makeTask({ id: '2', title: 'Task B', labels: ['dev:tq'] }),
   makeTask({ id: '3', title: 'Task C', labels: ['review'] }),
+]
+
+const labelsForTasksWithTags = [
+  makeLabel({ id: '1', name: 'dev:tq' }),
+  makeLabel({ id: '2', name: 'urgent' }),
+  makeLabel({ id: '3', name: 'review' }),
 ]
 
 const projectsAcrossStatuses: Project[] = [
@@ -48,17 +57,29 @@ function SidebarStory({
   tasks,
   projects,
   savedViews,
+  labels,
 }: {
   tasks?: Task[] | undefined
   projects?: Project[] | undefined
   savedViews?: SavedView[] | undefined
+  labels?: Label[] | undefined
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
   queryClient.setQueryData(taskKeys.list(undefined), tasks ?? [])
-  queryClient.setQueryData(projectKeys.list(undefined), projects ?? [])
-  queryClient.setQueryData(savedViewKeys.list(), savedViews ?? [])
+  queryClient.setQueryData(
+    projectKeys.list({ context: 'personal' }),
+    projects ?? [],
+  )
+  queryClient.setQueryData(
+    savedViewKeys.list({ context: 'personal' }),
+    savedViews ?? [],
+  )
+  queryClient.setQueryData(
+    labelKeys.list({ context: 'personal' }),
+    labels ?? [],
+  )
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -74,11 +95,13 @@ function SidebarWithRouter({
   tasks,
   projects,
   savedViews,
+  labels,
 }: {
   currentPath: string
   tasks?: Task[] | undefined
   projects?: Project[] | undefined
   savedViews?: SavedView[] | undefined
+  labels?: Label[] | undefined
 }) {
   return (
     <StoryRouter
@@ -87,6 +110,7 @@ function SidebarWithRouter({
           tasks={tasks}
           projects={projects}
           savedViews={savedViews}
+          labels={labels}
         />
       )}
       initialPath={currentPath}
@@ -140,6 +164,7 @@ export const WithTags: Story = {
   args: {
     currentPath: '/',
     tasks: tasksWithTags,
+    labels: labelsForTasksWithTags,
   },
 }
 

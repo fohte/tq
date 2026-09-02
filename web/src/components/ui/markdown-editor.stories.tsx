@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { useState } from 'react'
 import { expect, fireEvent, fn } from 'storybook/test'
 
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
@@ -372,5 +373,156 @@ export const ClickingCardStaysInViewMode: Story = {
     // selector that can never observe it).
     await userEvent.click(canvas.getByText(OUTSIDE_CARD_TEXT))
     await expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
+  },
+}
+
+// Test harness to simulate an external `defaultValue` update via a button,
+// without pulling in React Query and a real task/page fixture.
+function ExternalUpdateHarness({
+  initialValue,
+  updatedValue,
+}: {
+  initialValue: string
+  updatedValue: string
+}) {
+  const [value, setValue] = useState(initialValue)
+  return (
+    <>
+      <button
+        type="button"
+        // Prevents moving focus to this button so the editor doesn't
+        // blur/exit edit mode.
+        onMouseDown={(e) => {
+          e.preventDefault()
+        }}
+        onClick={() => {
+          setValue(updatedValue)
+        }}
+      >
+        simulate external update
+      </button>
+      <MarkdownEditor defaultValue={value} viewEditToggle={{}} />
+    </>
+  )
+}
+
+const EXTERNAL_UPDATE_ORIGINAL = 'Original content.'
+const EXTERNAL_UPDATE_UPDATED = 'Updated from another tab.'
+
+// Regression check for markdown-editor-crepe.tsx's defaultValue-sync effect:
+// a prop change that arrives while the editor is in view mode (nobody is
+// mid-edit) must replace the displayed document.
+export const ExternalUpdateInViewModeReplacesContent: Story = {
+  render: () => (
+    <ExternalUpdateHarness
+      initialValue={EXTERNAL_UPDATE_ORIGINAL}
+      updatedValue={EXTERNAL_UPDATE_UPDATED}
+    />
+  ),
+  parameters: {
+    // Tests behavior (the defaultValue-sync effect), not appearance.
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, userEvent }) => {
+    await expect(
+      canvas.findByText(EXTERNAL_UPDATE_ORIGINAL),
+    ).resolves.toBeVisible()
+
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'simulate external update' }),
+    )
+
+    await expect(
+      canvas.findByText(EXTERNAL_UPDATE_UPDATED),
+    ).resolves.toBeVisible()
+    await expect(
+      canvas.queryByText(EXTERNAL_UPDATE_ORIGINAL),
+    ).not.toBeInTheDocument()
+  },
+}
+
+// Regression check for the other half of that same effect: a prop change
+// that arrives while the user is mid-edit must not clobber their typing —
+// the effect is gated to view mode for exactly this reason.
+export const ExternalUpdateWhileEditingDoesNotDisruptTyping: Story = {
+  render: () => (
+    <ExternalUpdateHarness
+      initialValue={TRAILING_BLOCKQUOTE_CONTENT}
+      updatedValue="Overwritten from outside while editing."
+    />
+  ),
+  parameters: {
+    // Tests behavior (the defaultValue-sync effect), not appearance.
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const blockquote = assertDefined(
+      canvasElement.querySelector('.milkdown .ProseMirror blockquote'),
+      'editor always renders the blockquote',
+    )
+
+    await userEvent.click(blockquote)
+    await userEvent.click(blockquote)
+    await userEvent.keyboard('!')
+
+    await expect(
+      canvas.findByText('A blockquote at the very end.!'),
+    ).resolves.toBeVisible()
+
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'simulate external update' }),
+    )
+
+    await expect(
+      canvas.findByText('A blockquote at the very end.!'),
+    ).resolves.toBeVisible()
+    await expect(
+      canvas.queryByText('Overwritten from outside while editing.'),
+    ).not.toBeInTheDocument()
+  },
+}
+
+// Regression check: an external update that arrives mid-edit isn't dropped —
+// it stays pending and applies once the editor returns to view mode, even
+// overriding an unsaved edit typed after the update arrived.
+export const ExternalUpdateAppliesAfterReturningToViewMode: Story = {
+  render: () => (
+    <ExternalUpdateHarness
+      initialValue={TRAILING_BLOCKQUOTE_CONTENT}
+      updatedValue="Overwritten from outside while editing."
+    />
+  ),
+  parameters: {
+    // Tests behavior (the defaultValue-sync effect), not appearance.
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const wrapper = assertDefined(
+      canvasElement.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
+    )
+    const blockquote = assertDefined(
+      canvasElement.querySelector('.milkdown .ProseMirror blockquote'),
+      'editor always renders the blockquote',
+    )
+
+    await userEvent.click(blockquote)
+    await userEvent.click(blockquote)
+    await userEvent.keyboard('!')
+
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'simulate external update' }),
+    )
+    await userEvent.keyboard('?')
+
+    await userEvent.keyboard('{Escape}')
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'view')
+
+    await expect(
+      canvas.findByText('Overwritten from outside while editing.'),
+    ).resolves.toBeVisible()
+    await expect(
+      canvas.queryByText('A blockquote at the very end.!?'),
+    ).not.toBeInTheDocument()
   },
 }

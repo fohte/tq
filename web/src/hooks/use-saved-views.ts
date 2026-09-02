@@ -14,17 +14,23 @@ export type SavedView = InferResponseType<
   200
 >[number]
 
+export interface SavedViewFilter {
+  context?: 'work' | 'personal'
+}
+
 export const savedViewKeys = {
   all: ['saved-views'] as const,
   lists: ['saved-views', 'list'] as const,
-  list: () => [...savedViewKeys.lists] as const,
+  list: (filter?: SavedViewFilter) => [...savedViewKeys.lists, filter] as const,
 }
 
-export function useSavedViews() {
+export function useSavedViews(filter?: SavedViewFilter) {
   return useQuery({
-    queryKey: savedViewKeys.list(),
+    queryKey: savedViewKeys.list(filter),
     queryFn: async () => {
-      const res = await api.api['saved-views'].$get({ query: {} })
+      const res = await api.api['saved-views'].$get({
+        query: filter?.context ? { context: filter.context } : {},
+      })
       return unwrapOrThrow(assertOk(res)).json()
     },
   })

@@ -13,6 +13,7 @@ import { RenameSavedViewDialog } from '#components/saved-view/rename-saved-view-
 import { ActionsMenu } from '#components/ui/actions-menu'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import { KeybindHint } from '#components/ui/keybind-hint'
+import { useCurrentContext } from '#hooks/use-current-context'
 import { useProjects } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
 import { useDeleteSavedView, useSavedViews } from '#hooks/use-saved-views'
@@ -189,7 +190,8 @@ function ViewLink({ view, isActive }: { view: SavedView; isActive: boolean }) {
 }
 
 function ViewsSection() {
-  const { data: views } = useSavedViews()
+  const context = useCurrentContext()
+  const { data: views } = useSavedViews({ context })
   // `q` only exists on the /tasks route's search schema, so this reads
   // undefined (no active view) everywhere else.
   const { q } = useSearch({ strict: false })
@@ -230,7 +232,8 @@ function ViewsSection() {
 }
 
 function TagsSection() {
-  const { tagCounts } = useTagCounts()
+  const context = useCurrentContext()
+  const { tagCounts } = useTagCounts(context)
   // `q` only exists on the /tasks route's search schema, so this reads
   // undefined (no active tag) everywhere else.
   const { q } = useSearch({ strict: false })
@@ -258,7 +261,8 @@ function TagsSection() {
 }
 
 function ProjectsSection() {
-  const { data: projects } = useProjects()
+  const context = useCurrentContext()
+  const { data: projects } = useProjects({ context })
 
   return (
     <div className="flex shrink-0 flex-col">

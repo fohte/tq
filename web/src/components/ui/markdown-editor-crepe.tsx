@@ -3,6 +3,7 @@ import '@milkdown/crepe/theme/frame-dark.css'
 import '#components/ui/markdown-editor.css'
 
 import { Crepe } from '@milkdown/crepe'
+import { replaceAll } from '@milkdown/kit/utils'
 import { upload, uploadConfig } from '@milkdown/plugin-upload'
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
 import {
@@ -48,6 +49,10 @@ function CrepeEditor({
     typeof createInlineReferenceViewModeStore
   > | null>(null)
   const widgetViewFactory = useWidgetViewFactory()
+  // Matches what the Crepe instance was last given, so a `defaultValue`
+  // change that arrives while the user is mid-edit stays pending (not
+  // dropped) until mode returns to 'view' — see the sync effect below.
+  const lastSyncedValueRef = useRef(defaultValue ?? '')
 
   useEditor((root) => {
     const crepe = new Crepe({
@@ -167,6 +172,22 @@ function CrepeEditor({
     viewModeStoreRef.current?.setMode(mode)
     crepeRef.current?.setReadonly(mode === 'view')
   }, [mode])
+
+  // Syncs a `defaultValue` that changed externally while in view mode;
+  // skipped during editing so a live cursor isn't overwritten, and diffed
+  // against the editor's own markdown so its own save-then-refetch is a
+  // no-op.
+  useEffect(() => {
+    if (mode !== 'view') return
+    const incoming = defaultValue ?? ''
+    if (incoming === lastSyncedValueRef.current) return
+    lastSyncedValueRef.current = incoming
+    const crepe = crepeRef.current
+    if (!crepe || crepe.getMarkdown() === incoming) return
+    // flush: true avoids dispatching a transaction, for the same reason
+    // setReadonly above does.
+    crepe.editor.action(replaceAll(incoming, true))
+  }, [defaultValue, mode])
 
   return <Milkdown />
 }

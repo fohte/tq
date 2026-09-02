@@ -162,6 +162,26 @@ export const WithParentTask: Story = {
   },
 }
 
+export const WithBlockedBy: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Task blocked by another task',
+      blockedByNumbers: [312],
+    },
+  },
+}
+
+export const WithMultipleBlockedBy: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Task blocked by multiple tasks',
+      blockedByNumbers: [312, 315],
+    },
+  },
+}
+
 export const WithEstimate: Story = {
   args: {
     task: {
