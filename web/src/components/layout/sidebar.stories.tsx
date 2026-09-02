@@ -229,3 +229,25 @@ export const ViewActionsMenuOpen: Story = {
     await expect(body.getByText('delete…')).toBeInTheDocument()
   },
 }
+
+export const TagActionsMenuOpen: Story = {
+  args: {
+    currentPath: '/',
+    tasks: tasksWithTags,
+    labels: labelsForTasksWithTags,
+  },
+  tags: ['desktop-only'],
+  play: async ({ canvasElement }) => {
+    const trigger = assertDefined(
+      canvasElement.querySelector<HTMLElement>(
+        '[data-slot="dropdown-menu-trigger"]',
+      ),
+      'desktop trigger not found',
+    )
+    await userEvent.click(trigger)
+
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(await body.findByText('edit…')).toBeInTheDocument()
+    await expect(body.getByText('delete…')).toBeInTheDocument()
+  },
+}
