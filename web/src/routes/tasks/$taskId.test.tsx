@@ -261,6 +261,7 @@ describe('TaskPage', () => {
       status: 'todo' as const,
       statusReason: null,
       duplicateOfNumber: null,
+      blockedByNumbers: [],
       context: 'personal' as const,
       labels: [],
       startDate: null,

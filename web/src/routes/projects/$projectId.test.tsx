@@ -31,6 +31,7 @@ const mockProject = {
 
 const baseTask = {
   description: null,
+  blockedByNumbers: [],
   context: 'personal' as const,
   labels: [],
   startDate: null,
