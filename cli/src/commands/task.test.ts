@@ -249,27 +249,25 @@ describe('task create', () => {
     expect(stderr.mock.calls).toEqual([['Linked tasks:\n  #76 Fix bug\n']])
   })
 
-  it('rejects a non-UUID --parent-id before making any fetch call', async () => {
+  it('sends --parent-id as-is, accepting either a task id or number', async () => {
+    const created = { id: 't2', number: 2, title: 'New task' }
     const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify({}), { status: 201 }),
+      () => new Response(JSON.stringify(created), { status: 201 }),
     )
 
     const exitCode = await runCli(
-      [
-        '--api-url',
-        apiUrl,
-        'task',
-        'create',
-        'New task',
-        '--parent-id',
-        'not-a-uuid',
-      ],
+      ['--api-url', apiUrl, 'task', 'create', 'New task', '--parent-id', '42'],
       fetchStub,
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(1)
-    expect(calls.length).toBe(0)
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'POST',
+      pathname: '/api/tasks',
+      query: {},
+      body: { title: 'New task', parentId: '42' },
+    })
   })
 
   it('uses TQ_CONTEXT as the default context when --context is omitted', async () => {

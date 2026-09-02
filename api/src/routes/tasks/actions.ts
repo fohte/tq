@@ -8,8 +8,10 @@ import { db, type DbTransaction } from '#db/connection'
 import { recurrenceRules, taskRelations, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
+import { taskIdOrNumber } from '#lib/numeric-id'
 import { recordStatusChanged } from '#lib/task-events'
 import {
+  findTaskByIdOrNumber,
   getLabelNamesByTaskId,
   requireTask,
   taskToResponse,
@@ -26,7 +28,7 @@ const updateStatusSchema = z.object({
 })
 
 const updateParentSchema = z.object({
-  parentId: z.uuid().nullable(),
+  parentId: taskIdOrNumber.nullable(),
 })
 
 // Rejects a `duplicateOfTaskId` that self-references or names a
@@ -180,15 +182,16 @@ export const tasksActionsApp = new Hono()
     zValidator('json', updateParentSchema),
     async (c) => {
       const id = c.get('task').id
-      const { parentId } = c.req.valid('json')
+      const { parentId: parentIdInput } = c.req.valid('json')
 
-      if (parentId != null) {
-        const parent = await db.query.tasks.findFirst({
-          where: eq(tasks.id, parentId),
-        })
+      let parentId: string | null = null
+      if (parentIdInput != null) {
+        const parent = await findTaskByIdOrNumber(String(parentIdInput))
         if (!parent) {
           return c.json({ error: 'Parent task not found' }, 404)
         }
+
+        parentId = parent.id
 
         if (parentId === id) {
           return c.json({ error: 'A task cannot be its own parent' }, 409)

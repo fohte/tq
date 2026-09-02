@@ -123,10 +123,16 @@ export function registerTaskCommands(
     })
 
   addSchemaOptions(
-    task.command('create <title>').description('Create a task'),
+    task
+      .command('create <title>')
+      .description('Create a task')
+      .option('--parent-id <id>', 'Id or number of the parent task'),
     createTaskSchema,
-    // labels (array) and recurrenceRule (object) aren't scalar fields, so addSchemaOptions can't turn them into flags.
-    ['title', 'labels', 'recurrenceRule'],
+    // labels (array) and recurrenceRule (object) aren't scalar fields, so
+    // addSchemaOptions can't turn them into flags; parentId accepts either a
+    // UUID or a task number (like blockedBy), which addSchemaOptions can't
+    // validate as a single flag type, so it's hand-parsed below instead.
+    ['title', 'labels', 'recurrenceRule', 'parentId'],
     { context: 'TQ_CONTEXT' },
   )
     .match(
@@ -136,7 +142,7 @@ export function registerTaskCommands(
     .action(
       async (
         title: string,
-        options: Record<string, unknown>,
+        options: Record<string, unknown> & { parentId?: string },
         command: Command,
       ) => {
         const client = buildClient(command, fetchImpl).match(
@@ -148,11 +154,15 @@ export function registerTaskCommands(
             'title',
             'labels',
             'recurrenceRule',
+            'parentId',
           ]).match(
             (value) => value,
             (error) => fail(command, error),
           ),
           title,
+          ...(options.parentId !== undefined
+            ? { parentId: options.parentId }
+            : {}),
         }
         const res = await client.api.tasks.$post({ json })
         if (!res.ok) return fail(command, await toApiError(res))

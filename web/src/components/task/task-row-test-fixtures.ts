@@ -48,6 +48,7 @@ export function makeTaskDetail(
     dueDate: '2026-03-25',
     estimatedMinutes: 90,
     parentId: null,
+    parentNumber: null,
     projectId: null,
     recurrenceRuleId: null,
     recurrenceRule: null,

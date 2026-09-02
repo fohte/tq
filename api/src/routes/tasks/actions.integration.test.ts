@@ -267,6 +267,21 @@ describe('tasks actions API', () => {
       expect(body.parentId).toBe(parent.id)
     })
 
+    it('sets parent task given as a task number', async () => {
+      const parent = await createTask('Parent')
+      const child = await createTask('Child')
+
+      const res = await app.request(`/api/tasks/${child.id}/parent`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: String(parent.number) }),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.parentId).toBe(parent.id)
+    })
+
     it('removes parent by setting null', async () => {
       const parent = await createTask('Parent')
       const child = await createTask('Child', { parentId: parent.id })
