@@ -4,6 +4,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 
+import { EditLabelDialog } from '#components/label/edit-label-dialog'
 import {
   isProjectStatus,
   type ProjectStatus,
@@ -14,6 +15,8 @@ import { ActionsMenu } from '#components/ui/actions-menu'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useCurrentContext } from '#hooks/use-current-context'
+import type { Label } from '#hooks/use-labels'
+import { useDeleteLabel, useLabels } from '#hooks/use-labels'
 import { useProjects } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
 import { useDeleteSavedView, useSavedViews } from '#hooks/use-saved-views'
@@ -116,27 +119,68 @@ function SidebarRowLink({
 }
 
 function TagLink({
-  name,
+  label,
   count,
   isActive,
 }: {
-  name: string
+  label: Label
   count: number
   isActive: boolean
 }) {
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const deleteLabel = useDeleteLabel()
+
   return (
-    <SidebarRowLink search={tagFilterSearch(name)} isActive={isActive}>
-      <span
-        className={cn(
-          'font-bold',
-          isActive ? 'text-primary' : 'text-muted-foreground-faint',
-        )}
-      >
-        #
-      </span>
-      <span className="flex-1 truncate text-left">{name}</span>
-      <span className="shrink-0 text-muted-foreground-faint">{count}</span>
-    </SidebarRowLink>
+    <>
+      <SidebarRowLink search={tagFilterSearch(label.name)} isActive={isActive}>
+        <span
+          className={cn(
+            'font-bold',
+            isActive ? 'text-primary' : 'text-muted-foreground-faint',
+          )}
+        >
+          #
+        </span>
+        <span className="flex-1 truncate text-left">{label.name}</span>
+        <span className="shrink-0 text-muted-foreground-faint">{count}</span>
+        <ActionsMenu
+          aria-label="Tag actions"
+          desktopTriggerClassName="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
+          items={[
+            {
+              icon: <Pencil className="h-4 w-4" />,
+              label: 'edit…',
+              onClick: () => {
+                setEditOpen(true)
+              },
+            },
+            {
+              icon: <Trash2 className="h-4 w-4" />,
+              label: 'delete…',
+              onClick: () => {
+                setDeleteOpen(true)
+              },
+              destructive: true,
+            },
+          ]}
+        />
+      </SidebarRowLink>
+      <EditLabelDialog
+        label={label}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete tag"
+        description={`Are you sure you want to delete "#${label.name}"? This action cannot be undone.`}
+        onDelete={() => {
+          deleteLabel.mutate(label.id)
+        }}
+      />
+    </>
   )
 }
 
@@ -234,10 +278,15 @@ function ViewsSection() {
 function TagsSection() {
   const context = useCurrentContext()
   const { tagCounts } = useTagCounts(context)
+  // Same queryKey as the one useTagCounts fetches internally, so this reads
+  // from cache rather than issuing a second request.
+  const { data: labels } = useLabels({ context })
   // `q` only exists on the /tasks route's search schema, so this reads
   // undefined (no active tag) everywhere else.
   const { q } = useSearch({ strict: false })
   const activeTag = q != null ? parseSearchQuery(q).label : undefined
+
+  const labelsByName = new Map(labels?.map((label) => [label.name, label]))
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -247,14 +296,18 @@ function TagsSection() {
         </span>
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        {tagCounts.map((tagCount) => (
-          <TagLink
-            key={tagCount.name}
-            name={tagCount.name}
-            count={tagCount.count}
-            isActive={activeTag === tagCount.name}
-          />
-        ))}
+        {tagCounts.map((tagCount) => {
+          const label = labelsByName.get(tagCount.name)
+          if (label == null) return null
+          return (
+            <TagLink
+              key={label.id}
+              label={label}
+              count={tagCount.count}
+              isActive={activeTag === tagCount.name}
+            />
+          )
+        })}
       </div>
     </div>
   )
