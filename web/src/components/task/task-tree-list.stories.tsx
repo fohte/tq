@@ -116,10 +116,9 @@ export const LoadingMore: Story = {
   },
 }
 
-// Exceeds the rendered window's viewport (the list virtualizes against
-// window scroll, not the h-96 wrapper below), so the virtualizer windows
-// rows out of the DOM — the only way this rendering path is exercised
-// under VRT.
+// Exceeds the rendered window's viewport, so the virtualizer (which
+// windows against window scroll, not the h-96 wrapper below) drops
+// off-screen rows from the DOM — the only way that's exercised under VRT.
 const manyTasks: Task[] = Array.from({ length: 60 }, (_, i) => ({
   ...baseTask,
   id: `many-${String(i)}`,

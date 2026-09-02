@@ -20,10 +20,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   })
 
   return (
-    <div className="flex">
+    <div className="flex min-h-dvh">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <main>{children}</main>
+        <main className="flex-1">{children}</main>
         <StatusLine />
         <BottomTabBar />
       </div>

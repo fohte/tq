@@ -239,6 +239,9 @@ function DayView() {
   )
 
   return (
+    // Unlike every other route, day view keeps its own internal scroll pane
+    // (see day-view.tsx) rather than scrolling the document — its time-grid
+    // layout is meant to stay pinned to one viewport, like a native calendar.
     <div className="h-dvh overflow-hidden">
       <DayViewPresentation
         isLoading={isLoading}

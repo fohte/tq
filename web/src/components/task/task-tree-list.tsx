@@ -11,7 +11,14 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { useWindowVirtualizer } from '@tanstack/react-virtual'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import type { DropTarget } from '#components/task/tree-drag-overlay-content'
@@ -162,17 +169,20 @@ export function TaskTreeList({
   )
 
   const containerRef = useRef<HTMLDivElement | null>(null)
+  // Offsets the window virtualizer (see app-layout.tsx) by how far this
+  // list sits below the page top.
+  const [scrollMargin, setScrollMargin] = useState(0)
+  useLayoutEffect(() => {
+    // containerRef isn't attached until after the first render commits.
+    setScrollMargin(containerRef.current?.offsetTop ?? 0)
+  }, [])
 
-  // Scrolling happens on the document itself (see app-layout.tsx), so the
-  // virtualizer measures against the window. scrollMargin tells it how far
-  // this list's container sits from the top of the document, since
-  // window.scrollY alone doesn't account for content rendered above it.
   const rowVirtualizer = useWindowVirtualizer({
     count: renderRows.length,
     estimateSize: () => ESTIMATED_ROW_HEIGHT,
     overscan: 8,
     getItemKey: (index) => renderRows[index]?.node.id ?? index,
-    scrollMargin: containerRef.current?.offsetTop ?? 0,
+    scrollMargin,
   })
 
   // Keyboard row selection (useTreeOutliner) can move to a row that isn't

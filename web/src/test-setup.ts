@@ -53,11 +53,9 @@ if (typeof Element.prototype.scrollTo !== 'function') {
   }
 }
 
-// jsdom's window.scrollTo() is a no-op stub (logs "not implemented",
-// never updates scrollX/scrollY or dispatches a scroll event) —
-// useWindowVirtualizer's scrollToIndex() calls it, and its own
-// scroll-position tracking (observeWindowOffset) needs the resulting
-// scroll event to react.
+// jsdom's window.scrollTo() is a no-op stub — @tanstack/react-virtual's
+// scrollToIndex() needs it to actually move scrollX/scrollY and fire a
+// scroll event.
 window.scrollTo = function (optionsOrX?: ScrollToOptions | number, y?: number) {
   if (typeof optionsOrX === 'number') {
     Object.defineProperty(window, 'scrollX', {
@@ -84,16 +82,24 @@ window.scrollTo = function (optionsOrX?: ScrollToOptions | number, y?: number) {
   window.dispatchEvent(new Event('scroll'))
 }
 
-// jsdom always reports offsetHeight=0, which @tanstack/react-virtual reads
-// for each row's height on mount via measureElement's fallback — left at 0,
-// the row-size cache collapses onto a single arbitrary row. Fake it to a
-// nonzero value, scoped to this feature's own row marker so unrelated tests
-// are unaffected. (The viewport size itself comes from window.innerHeight
-// for useWindowVirtualizer, which jsdom already defaults to nonzero.)
+// jsdom always reports offsetHeight=0, which @tanstack/react-virtual needs
+// nonzero to measure each row on mount. Faked only for the task tree's row
+// marker so unrelated tests are unaffected.
 Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
   configurable: true,
   get(this: HTMLElement) {
     if (this.matches('[data-testid="task-tree-row"]')) return 40
+    return 0
+  },
+})
+
+// jsdom always reports offsetTop=0 (no layout), which TaskTreeList reads to
+// offset the window virtualizer by how far the list sits below the page
+// top. Faked only for its container marker so unrelated tests are unaffected.
+Object.defineProperty(HTMLElement.prototype, 'offsetTop', {
+  configurable: true,
+  get(this: HTMLElement) {
+    if (this.matches('[data-testid="task-tree-scroll"]')) return 100
     return 0
   },
 })
