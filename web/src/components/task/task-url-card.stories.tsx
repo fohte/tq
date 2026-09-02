@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { expect } from 'storybook/test'
 
+import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { TaskUrlCard } from '#components/task/task-url-card'
 import type { TaskUrlPreview } from '#hooks/use-task-url-preview'
 import { taskUrlPreviewKeys } from '#hooks/use-task-url-preview'
@@ -13,38 +14,16 @@ const TASK_URL = 'https://tq.fohte.net/tasks/42'
 const UNRESOLVED_ID = '999'
 const UNRESOLVED_URL = 'https://tq.fohte.net/tasks/999'
 
-const baseTask: TaskUrlPreview = {
+const baseTask: TaskUrlPreview = makeTaskDetail({
   id: '00000000-0000-0000-0000-000000000001',
   number: 42,
   title: 'Implement task URL live preview',
   description:
     'Adds live preview cards for pasted tq task URLs when they are the entire content of a paragraph.',
-  status: 'todo',
-  statusReason: null,
-  duplicateOfNumber: null,
-  duplicateOfTask: null,
-  context: 'personal',
-  commitment: 'active',
-  labels: [],
   startDate: null,
   dueDate: null,
   estimatedMinutes: null,
-  parentId: null,
-  projectId: null,
-  recurrenceRuleId: null,
-  recurrenceRule: null,
-  githubLinks: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  titleAuthor: null,
-  descriptionAuthor: null,
-  childCompletionCount: { completed: 0, total: 0 },
-  pages: [],
-  timeBlocks: [],
-  links: { outgoing: [], incoming: [] },
-  blockedBy: [],
-  blocking: [],
-}
+})
 
 function Providers({
   id,

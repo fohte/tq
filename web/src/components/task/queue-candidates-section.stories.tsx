@@ -5,6 +5,7 @@ import { type ReactNode, useState } from 'react'
 import { fn } from 'storybook/test'
 
 import { QueueCandidatesSection } from '#components/task/queue-candidates-section'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 import type { QueueCandidate } from '#lib/queue-candidates'
 import { MemoizedStoryRouter } from '#storybook-config/story-router'
@@ -24,34 +25,6 @@ function Providers({ children }: { children: ReactNode }) {
       </MemoizedStoryRouter>
     </QueryClientProvider>
   )
-}
-
-function makeTask(overrides: Partial<Task> = {}): Task {
-  return {
-    id: '00000000-0000-0000-0000-000000000001',
-    number: 1,
-    title: 'Untitled task',
-    description: null,
-    status: 'todo',
-    statusReason: null,
-    duplicateOfNumber: null,
-    context: 'personal',
-    commitment: 'active',
-    startDate: null,
-    dueDate: null,
-    estimatedMinutes: null,
-    labels: [],
-    parentId: null,
-    parentNumber: null,
-    projectId: null,
-    recurrenceRuleId: null,
-    githubLinks: [],
-    blockedByNumbers: [],
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-    childCompletionCount: { completed: 0, total: 0 },
-    ...overrides,
-  }
 }
 
 const meta = {

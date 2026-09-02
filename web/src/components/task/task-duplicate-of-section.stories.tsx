@@ -3,33 +3,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 import { TaskDuplicateOfSection } from '#components/task/task-duplicate-of-section'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { LinkedTaskSummary } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
 
-const duplicateOfTask: LinkedTaskSummary = {
+const duplicateOfTask: LinkedTaskSummary = makeTask({
   id: 'task-001',
   number: 12,
   title: 'Design the schema',
-  description: null,
-  status: 'todo',
-  statusReason: null,
-  duplicateOfNumber: null,
   context: 'work',
-  commitment: 'active',
-  labels: [],
-  startDate: null,
-  dueDate: null,
-  estimatedMinutes: null,
-  parentId: null,
-  parentNumber: null,
-  projectId: null,
-  recurrenceRuleId: null,
-  githubLinks: [],
-  blockedByNumbers: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  childCompletionCount: { completed: 0, total: 0 },
-}
+})
 
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({

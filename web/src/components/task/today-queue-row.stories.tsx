@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { type ReactNode, useState } from 'react'
 import { fn } from 'storybook/test'
 
+import { makeTask as makeBaseTask } from '#components/task/task-row-test-fixtures'
 import { TodayQueueRow } from '#components/task/today-queue-row'
 import type { Task } from '#hooks/use-tasks'
 import { MemoizedStoryRouter } from '#storybook-config/story-router'
@@ -27,31 +28,13 @@ function Providers({ children }: { children: ReactNode }) {
 }
 
 function makeTask(overrides: Partial<Task> = {}): Task {
-  return {
+  return makeBaseTask({
     id: '00000000-0000-0000-0000-000000000001',
-    number: 1,
     title: 'Write the quarterly report',
-    description: null,
-    status: 'todo',
-    statusReason: null,
-    duplicateOfNumber: null,
     context: 'work',
-    commitment: 'active',
-    labels: [],
-    startDate: null,
-    dueDate: null,
     estimatedMinutes: 30,
-    parentId: null,
-    parentNumber: null,
-    projectId: null,
-    recurrenceRuleId: null,
-    githubLinks: [],
-    blockedByNumbers: [],
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-    childCompletionCount: { completed: 0, total: 0 },
     ...overrides,
-  }
+  })
 }
 
 const meta = {

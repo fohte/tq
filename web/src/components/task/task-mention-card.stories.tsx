@@ -4,42 +4,21 @@ import type { ReactNode } from 'react'
 import { expect } from 'storybook/test'
 
 import { TaskMentionCard } from '#components/task/task-mention-card'
+import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { taskMentionKeys } from '#hooks/use-task-mentions'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
 
-const baseTask: TaskDetail = {
+const baseTask = makeTaskDetail({
   id: '00000000-0000-0000-0000-000000000001',
   number: 42,
   title: 'Implement task mention live preview',
   description:
     'Adds live preview cards for #123-style task mentions when they are the entire content of a paragraph.',
-  status: 'todo',
-  statusReason: null,
-  duplicateOfNumber: null,
-  duplicateOfTask: null,
-  context: 'personal',
-  commitment: 'active',
-  labels: [],
   startDate: null,
   dueDate: null,
   estimatedMinutes: null,
-  parentId: null,
-  projectId: null,
-  recurrenceRuleId: null,
-  recurrenceRule: null,
-  githubLinks: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  titleAuthor: null,
-  descriptionAuthor: null,
-  childCompletionCount: { completed: 0, total: 0 },
-  pages: [],
-  timeBlocks: [],
-  links: { outgoing: [], incoming: [] },
-  blockedBy: [],
-  blocking: [],
-}
+})
 
 function Providers({
   number,

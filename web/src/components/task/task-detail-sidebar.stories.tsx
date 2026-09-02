@@ -7,6 +7,7 @@ import {
   TaskSidebar,
   TaskSidebarMobile,
 } from '#components/task/task-detail-sidebar'
+import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { labelKeys } from '#hooks/use-labels'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
@@ -15,38 +16,9 @@ import { taskKeys } from '#hooks/use-tasks'
 import { assertDefined } from '#lib/test-utils'
 import { StoryRouter } from '#storybook-config/story-router'
 
-const baseTask: TaskDetail = {
-  id: '550e8400-e29b-41d4-a716-446655440000',
-  number: 1,
-  title: 'Implement task detail page',
-  description:
-    '## Why\n\nThe task detail page is needed.\n\n## What\n\n- Add inline editing\n- Add sidebar fields',
-  status: 'todo',
-  statusReason: null,
-  duplicateOfNumber: null,
-  duplicateOfTask: null,
-  context: 'personal',
-  commitment: 'active',
-  labels: [],
-  startDate: '2026-03-20',
-  dueDate: '2026-03-25',
-  estimatedMinutes: 90,
-  parentId: null,
-  projectId: null,
-  recurrenceRuleId: null,
-  recurrenceRule: null,
-  githubLinks: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  titleAuthor: null,
-  descriptionAuthor: null,
+const baseTask = makeTaskDetail({
   childCompletionCount: { completed: 1, total: 3 },
-  pages: [],
-  timeBlocks: [],
-  links: { outgoing: [], incoming: [] },
-  blockedBy: [],
-  blocking: [],
-}
+})
 
 function Providers({
   children,

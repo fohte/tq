@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { expect, waitFor, within } from 'storybook/test'
 
+import { makeNode } from '#components/task/task-row-test-fixtures'
 import type { TreeTaskGridRowProps } from '#components/task/tree-task-grid-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
@@ -15,31 +16,10 @@ import { createStoryRouter, StoryRouter } from '#storybook-config/story-router'
 
 const TASK_LIST_ROUTES = ['/tasks', '/tasks/$taskId']
 
-const baseTreeNode: TreeNode = {
+const baseTreeNode: TreeNode = makeNode({
   id: '00000000-0000-0000-0000-000000000001',
-  number: 1,
   title: 'Implement task list UI',
-  description: null,
-  status: 'todo',
-  statusReason: null,
-  duplicateOfNumber: null,
-  context: 'personal',
-  commitment: 'active',
-  labels: [],
-  startDate: null,
-  dueDate: null,
-  estimatedMinutes: null,
-  parentId: null,
-  parentNumber: null,
-  projectId: null,
-  recurrenceRuleId: null,
-  githubLinks: [],
-  blockedByNumbers: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  children: [],
-  childCompletionCount: { completed: 0, total: 0 },
-}
+})
 
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({

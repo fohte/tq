@@ -1,4 +1,4 @@
-import type { Task, TreeNode } from '#hooks/use-tasks'
+import type { Task, TaskDetail, TreeNode } from '#hooks/use-tasks'
 
 export function makeTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -24,6 +24,44 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
     childCompletionCount: { completed: 0, total: 0 },
+    ...overrides,
+  }
+}
+
+export function makeTaskDetail(
+  overrides: Partial<TaskDetail> = {},
+): TaskDetail {
+  return {
+    id: '550e8400-e29b-41d4-a716-446655440000',
+    number: 1,
+    title: 'Implement task detail page',
+    description:
+      '## Why\n\nThe task detail page is needed.\n\n## What\n\n- Add inline editing\n- Add sidebar fields',
+    status: 'todo',
+    statusReason: null,
+    duplicateOfNumber: null,
+    duplicateOfTask: null,
+    context: 'personal',
+    commitment: 'active',
+    labels: [],
+    startDate: '2026-03-20',
+    dueDate: '2026-03-25',
+    estimatedMinutes: 90,
+    parentId: null,
+    projectId: null,
+    recurrenceRuleId: null,
+    recurrenceRule: null,
+    githubLinks: [],
+    createdAt: '2026-03-20T00:00:00.000Z',
+    updatedAt: '2026-03-20T00:00:00.000Z',
+    titleAuthor: null,
+    descriptionAuthor: null,
+    childCompletionCount: { completed: 0, total: 0 },
+    pages: [],
+    timeBlocks: [],
+    links: { outgoing: [], incoming: [] },
+    blockedBy: [],
+    blocking: [],
     ...overrides,
   }
 }

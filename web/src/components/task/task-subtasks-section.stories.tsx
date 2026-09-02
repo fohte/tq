@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { expect, within } from 'storybook/test'
 
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { InheritedTaskAttributes } from '#components/task/task-subtasks-section'
 import { TaskSubtasksList } from '#components/task/task-subtasks-section'
 import type { Task } from '#hooks/use-tasks'
@@ -13,30 +14,15 @@ import { StoryRouter } from '#storybook-config/story-router'
 const parentTaskId = '00000000-0000-0000-0000-000000000001'
 const parentTaskTitle = 'Design the new dashboard'
 
-const baseSubtask: Task = {
+const baseSubtask: Task = makeTask({
   id: '00000000-0000-0000-0000-000000000011',
   number: 11,
   title: 'Sketch wireframes',
-  description: null,
-  status: 'todo',
-  statusReason: null,
-  duplicateOfNumber: null,
   context: 'work',
-  commitment: 'active',
-  labels: [],
-  startDate: null,
-  dueDate: null,
   estimatedMinutes: 30,
   parentId: parentTaskId,
   parentNumber: 1,
-  projectId: null,
-  recurrenceRuleId: null,
-  githubLinks: [],
-  blockedByNumbers: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  childCompletionCount: { completed: 0, total: 0 },
-}
+})
 
 const mixedSubtasks: Task[] = [
   {
