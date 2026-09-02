@@ -92,6 +92,17 @@ export function MarkdownEditor({
               // Left click only: a right/middle click opening a context
               // menu or auto-scroll shouldn't also switch to edit mode.
               if (event.button !== 0) return
+              // A rendered Markdown link should navigate, not switch to
+              // edit mode: readonly must stay true past this handler so the
+              // click event that follows still hits a non-editable <a> (a
+              // contenteditable one loses the browser's default
+              // click-through). See plugin.tsx's createCardWidgetComponent
+              // for the same guard on inline-reference cards.
+              if (
+                event.target instanceof Element &&
+                event.target.closest('a') != null
+              )
+                return
               setMode('edit')
             }
           : undefined

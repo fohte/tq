@@ -376,6 +376,50 @@ export const ClickingCardStaysInViewMode: Story = {
   },
 }
 
+const MARKDOWN_LINK_TEXT = 'a plain markdown link'
+const MARKDOWN_LINK_HASH = '#markdown-link-target'
+
+// A bare Markdown link (as opposed to an inline-reference chip/card) must
+// stay clickable in view mode too: clicking it should navigate, not flip the
+// editor into edit mode. See markdown-editor.tsx's onMouseUp guard.
+export const ClickingLinkStaysInViewMode: Story = {
+  args: {
+    defaultValue: `[${MARKDOWN_LINK_TEXT}](${MARKDOWN_LINK_HASH})\n\n${OUTSIDE_CARD_TEXT}`,
+    viewEditToggle: {},
+  },
+  play: async ({ canvas, canvasElement }) => {
+    const wrapper = assertDefined(
+      canvasElement.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
+    )
+
+    // fireEvent dispatches straight at the element instead of hit-testing
+    // screen coordinates like userEvent.click does — Milkdown's hidden
+    // link-tooltip preview UI overlaps the link's coordinates even while
+    // closed, which made userEvent.click land on the tooltip instead of the
+    // link itself.
+    const link = canvas.getByRole('link', { name: MARKDOWN_LINK_TEXT })
+    // A real click through to the href would navigate this test's own page
+    // away, so the link's default action is prevented here — the point of
+    // this test is only that the click reaches the still-non-editable <a>
+    // (readonly must stay true past onMouseUp for that), not that the
+    // browser's own navigation behavior on a non-editable <a> works.
+    link.addEventListener('click', (event) => {
+      event.preventDefault()
+    })
+
+    await fireEvent.mouseUp(link, { button: 0 })
+
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'view')
+
+    // Control: clicking plain text outside the link must still flip the
+    // editor into edit mode, proving the assertion above is actually
+    // capable of detecting a mode switch.
+    await fireEvent.mouseUp(canvas.getByText(OUTSIDE_CARD_TEXT), { button: 0 })
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
+  },
+}
+
 // Test harness to simulate an external `defaultValue` update via a button,
 // without pulling in React Query and a real task/page fixture.
 function ExternalUpdateHarness({
