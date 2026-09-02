@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { StatusLine } from '#components/layout/status-line'
+import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import type { TodayTask } from '#hooks/use-today-tasks'
@@ -57,12 +58,16 @@ const queueTasks: TodayTask[] = tasks.map((task, index) => ({
 }))
 
 function StatusLineStory() {
+  // Pins the context this story's contract depends on, rather than relying
+  // on DEFAULT_SETTINGS, so an unrelated change to the hook's default can't
+  // silently change which tasks useFilteredTaskList() below matches.
+  resetSessionOpenSettings({ localContext: 'personal' })
+
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
   // StatusLine's useFilteredTaskList() always includes the machine's
-  // configured context (defaults to 'personal'), with no tag/project filter
-  // active.
+  // configured context (set above), with no tag/project filter active.
   queryClient.setQueryData(taskKeys.list({ context: 'personal' }), tasks)
   queryClient.setQueryData(['today-tasks', 'list', todayStr], queueTasks)
 
