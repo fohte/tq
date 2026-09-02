@@ -6,7 +6,8 @@ import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 type TodayTask = InferResponseType<
-  (typeof api.api.schedule)['today-tasks']['$get']
+  (typeof api.api.schedule)['today-tasks']['$get'],
+  200
 >[number]
 
 export type { TodayTask }

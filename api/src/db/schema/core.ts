@@ -10,6 +10,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
 } from 'drizzle-orm/pg-core'
 
 export const projects = pgTable(
@@ -229,22 +230,71 @@ export const schedules = pgTable(
   ],
 )
 
-export const todayTasks = pgTable('today_tasks', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  taskId: text('task_id')
-    .notNull()
-    .references(() => tasks.id, { onDelete: 'cascade' }),
-  date: date('date').notNull(),
-  sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-})
+export const taskQueues = pgTable(
+  'task_queues',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    // Stable identifier for API paths and code constants (e.g. 'day'); kept
+    // separate from `name` so renaming the display name never breaks a reference.
+    key: text('key').notNull().unique(),
+    name: text('name').notNull(),
+    // Null for a static queue whose contents don't roll over with a period.
+    periodUnit: text('period_unit', {
+      enum: ['day', 'week', 'month'],
+    }),
+    position: integer('position').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      'task_queues_period_unit_check',
+      sql`${table.periodUnit} IS NULL OR ${table.periodUnit} IN ('day', 'week', 'month')`,
+    ),
+  ],
+)
+
+export const taskQueueItems = pgTable(
+  'task_queue_items',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    queueId: text('queue_id')
+      .notNull()
+      .references(() => taskQueues.id, { onDelete: 'cascade' }),
+    // Start of the period this item belongs to (the day itself for a day
+    // queue, the Monday for a week queue); null for a queue with no periodUnit.
+    periodStart: date('period_start'),
+    taskId: text('task_id')
+      .notNull()
+      .references(() => tasks.id, { onDelete: 'cascade' }),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique('task_queue_items_queue_period_task_unique')
+      .on(table.queueId, table.periodStart, table.taskId)
+      .nullsNotDistinct(),
+    index('idx_task_queue_items_queue_period_sort').on(
+      table.queueId,
+      table.periodStart,
+      table.sortOrder,
+    ),
+    index('idx_task_queue_items_task_id').on(table.taskId),
+  ],
+)
 
 export const savedViews = pgTable(
   'saved_views',

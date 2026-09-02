@@ -1,6 +1,6 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
-import { and, eq, gte, inArray, lte, notInArray } from 'drizzle-orm'
+import { and, eq, gte, inArray, lte } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { createFactory } from 'hono/factory'
 import { z } from 'zod'
@@ -9,9 +9,9 @@ import { db } from '#db/connection'
 import {
   recurrenceRules,
   schedules,
+  taskQueueItems,
   tasks,
   timeBlocks,
-  todayTasks,
 } from '#db/schema'
 import {
   getEvents,
@@ -31,6 +31,7 @@ import {
   manualBlocksToBusyRanges,
 } from '#services/auto-scheduler'
 import { getSchedulingSettings } from '#services/scheduling-settings'
+import { DAY_QUEUE_KEY, getQueueByKey } from '#services/task-queues'
 
 const timePattern = /^\d{2}:\d{2}$/
 
@@ -92,11 +93,11 @@ const scheduleDateQuerySchema = z.object({
   date: z.string(),
 })
 
-function todayTaskToResponse(row: typeof todayTasks.$inferSelect) {
+function todayTaskToResponse(row: typeof taskQueueItems.$inferSelect) {
   return {
     id: row.id,
     taskId: row.taskId,
-    date: row.date,
+    date: row.periodStart,
     sortOrder: row.sortOrder,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -305,11 +306,26 @@ export const schedulesApp = new Hono()
     async (c) => {
       const { date } = c.req.valid('query')
 
+      const dayQueueResult = await getQueueByKey(DAY_QUEUE_KEY)
+      if (dayQueueResult.isErr()) {
+        captureWithFingerprint(
+          dayQueueResult.error,
+          'api.schedules.today-tasks-get-queue-failed',
+        )
+        return c.json({ error: 'Internal server error' }, 500)
+      }
+      const dayQueue = dayQueueResult.value
+
       const rows = await db
         .select()
-        .from(todayTasks)
-        .where(eq(todayTasks.date, date))
-        .orderBy(todayTasks.sortOrder)
+        .from(taskQueueItems)
+        .where(
+          and(
+            eq(taskQueueItems.queueId, dayQueue.id),
+            eq(taskQueueItems.periodStart, date),
+          ),
+        )
+        .orderBy(taskQueueItems.sortOrder)
 
       return c.json(rows.map(todayTaskToResponse), 200)
     },
@@ -330,33 +346,42 @@ export const schedulesApp = new Hono()
       }
     }
 
-    // Insert the new rows before deleting the old ones: if the insert fails,
-    // the previous selection is left intact instead of ending up empty.
-    const inserted =
-      uniqueTaskIds.length > 0
-        ? await db
-            .insert(todayTasks)
-            .values(
-              uniqueTaskIds.map((taskId, index) => ({
-                taskId,
-                date,
-                sortOrder: index,
-              })),
-            )
-            .returning()
-        : []
+    const dayQueueResult = await getQueueByKey(DAY_QUEUE_KEY)
+    if (dayQueueResult.isErr()) {
+      captureWithFingerprint(
+        dayQueueResult.error,
+        'api.schedules.today-tasks-put-queue-failed',
+      )
+      return c.json({ error: 'Internal server error' }, 500)
+    }
+    const dayQueue = dayQueueResult.value
 
-    await db.delete(todayTasks).where(
-      inserted.length > 0
-        ? and(
-            eq(todayTasks.date, date),
-            notInArray(
-              todayTasks.id,
-              inserted.map((row) => row.id),
-            ),
-          )
-        : eq(todayTasks.date, date),
-    )
+    const inserted = await db.transaction(async (tx) => {
+      await tx
+        .delete(taskQueueItems)
+        .where(
+          and(
+            eq(taskQueueItems.queueId, dayQueue.id),
+            eq(taskQueueItems.periodStart, date),
+          ),
+        )
+
+      if (uniqueTaskIds.length === 0) {
+        return []
+      }
+
+      return tx
+        .insert(taskQueueItems)
+        .values(
+          uniqueTaskIds.map((taskId, index) => ({
+            queueId: dayQueue.id,
+            periodStart: date,
+            taskId,
+            sortOrder: index,
+          })),
+        )
+        .returning()
+    })
 
     return c.json(
       inserted
@@ -388,12 +413,27 @@ export const schedulesApp = new Hono()
       offset,
     )
 
+    const dayQueueResult = await getQueueByKey(DAY_QUEUE_KEY)
+    if (dayQueueResult.isErr()) {
+      captureWithFingerprint(
+        dayQueueResult.error,
+        'api.schedules.auto-assign-queue-failed',
+      )
+      return c.json({ error: 'Internal server error' }, 500)
+    }
+    const dayQueue = dayQueueResult.value
+
     const queueRows = await db
       .select({ task: tasks })
-      .from(todayTasks)
-      .innerJoin(tasks, eq(todayTasks.taskId, tasks.id))
-      .where(eq(todayTasks.date, date))
-      .orderBy(todayTasks.sortOrder)
+      .from(taskQueueItems)
+      .innerJoin(tasks, eq(taskQueueItems.taskId, tasks.id))
+      .where(
+        and(
+          eq(taskQueueItems.queueId, dayQueue.id),
+          eq(taskQueueItems.periodStart, date),
+        ),
+      )
+      .orderBy(taskQueueItems.sortOrder)
 
     const schedulableTasks = queueRows
       .filter(
