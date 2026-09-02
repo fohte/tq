@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
 import { ProjectFormModal } from '#components/project/project-form-modal'
+import { makeProject } from '#components/project/project-test-fixtures'
 import { renderControlledModal } from '#lib/render-controlled-modal'
 import { atIndex } from '#lib/test-utils'
 
@@ -25,21 +26,14 @@ describe('ProjectFormModal', () => {
 
   it('renders edit mode title when project is provided', () => {
     renderModal({
-      project: {
+      project: makeProject({
         id: '1',
         title: 'Test Project',
         description: 'desc',
-        status: 'active',
-        startDate: null,
-        targetDate: null,
-        completionRate: 0,
-        taskCount: { total: 0, completed: 0 },
         color: '#FF8400',
-        sortOrder: 0,
-        context: 'personal',
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
-      },
+      }),
     })
     expect(screen.getAllByText('Edit Project').length).toBeGreaterThan(0)
   })
@@ -72,7 +66,7 @@ describe('ProjectFormModal', () => {
 
   it('pre-fills form fields in edit mode', () => {
     renderModal({
-      project: {
+      project: makeProject({
         id: '1',
         title: 'Existing Project',
         description: 'Some description',
@@ -80,13 +74,11 @@ describe('ProjectFormModal', () => {
         startDate: '2024-06-01',
         targetDate: '2024-12-31',
         color: '#4CAF50',
-        sortOrder: 0,
-        context: 'personal',
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
         completionRate: 0.25,
         taskCount: { total: 4, completed: 1 },
-      },
+      }),
     })
 
     const titleInputs =

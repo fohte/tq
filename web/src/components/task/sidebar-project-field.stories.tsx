@@ -16,12 +16,11 @@ const projectA: Project = makeProject({
   taskCount: { total: 10, completed: 4 },
 })
 
-const projectB: Project = makeProject({
+const projectB: Project = {
+  ...projectA,
   id: 'bbbb0000-0000-0000-0000-000000000000',
   title: 'Website redesign',
-  completionRate: 0.4,
-  taskCount: { total: 10, completed: 4 },
-})
+}
 
 function createSeededQueryClient(projects: Project[]) {
   const client = new QueryClient({

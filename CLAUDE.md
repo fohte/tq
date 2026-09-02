@@ -78,7 +78,7 @@ Existing factories, one file per type-family, each exporting a `make<Type>(overr
 - `web/src/components/task/task-row-test-fixtures.ts`: `makeTask`/`makeTaskDetail`/`makeNode`, covering `Task`/`TaskDetail`/`TreeNode` and their structurally-identical aliases (`SearchResult`, `LinkedTaskSummary`, `ProjectTask`, `TaskUrlPreview`, ...)
 - `web/src/components/task/github-link-test-fixtures.ts`: `makeGithubLink`
 - `web/src/components/task/task-page-test-fixtures.ts`: `makeTaskPage`
-- `web/src/components/project/project-test-fixtures.ts`: `makeProject`/`makeProjectDetail`
+- `web/src/components/project/project-test-fixtures.ts`: `makeProject`/`makeProjectDetail`, covering `Project`/`ProjectDetail` and their structurally-identical alias `ProjectUrlPreview`
 - `web/src/components/schedule/schedule-test-fixtures.ts`: `makeSchedule`
 - `web/src/components/layout/sidebar-test-fixtures.ts`: `makeLabel`/`makeSavedView`, plus re-exports of `makeTask`/`makeProject` for sidebar stories/tests that need them alongside the sidebar-only fixtures
 
