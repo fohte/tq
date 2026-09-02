@@ -19,8 +19,10 @@ interface MarkdownEditorProps {
   /**
    * Enables the view/edit toggle: the editor starts read-only and shows
    * inline reference chips; clicking switches to an editable view with the
-   * raw Markdown source and the cursor at the click position; losing focus
-   * or pressing Escape returns to the read-only view. Omit for an
+   * raw Markdown source and the cursor at the click position, except for a
+   * rendered link or an inline-reference chip/card, which navigates or
+   * interacts with it instead of switching modes; losing focus or pressing
+   * Escape returns to the read-only view. Omit for an
    * always-editable editor that always shows the raw Markdown source and
    * never renders chips (e.g. new-entry composers like CommentInput or
    * create-task-modal).
@@ -32,6 +34,12 @@ interface MarkdownEditorProps {
    */
   size?: 'default' | 'compact'
 }
+
+// Schemes a rendered Markdown link may click through to in view mode without
+// first entering edit mode. Excludes `javascript:` and other executable
+// schemes, since Milkdown's link mark copies the raw Markdown href onto the
+// <a> with no filtering.
+const NAVIGABLE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
 
 // Loaded on demand: pulls in milkdown/ProseMirror/micromark, which are only
 // needed on routes that actually render an editor.
@@ -97,11 +105,16 @@ export function MarkdownEditor({
               // click event that follows still hits a non-editable <a> (a
               // contenteditable one loses the browser's default
               // click-through). See plugin.tsx's createCardWidgetComponent
-              // for the same guard on inline-reference cards.
-              if (
-                event.target instanceof Element &&
-                event.target.closest('a') != null
-              )
+              // for the same guard on inline-reference cards. Restricted to
+              // navigable schemes: Milkdown's link mark puts the raw
+              // Markdown href on the <a> unfiltered, so a `javascript:` link
+              // must still fall through to edit mode (never execute) rather
+              // than becoming clickable.
+              const link =
+                event.target instanceof Element
+                  ? event.target.closest('a')
+                  : null
+              if (link != null && NAVIGABLE_LINK_PROTOCOLS.has(link.protocol))
                 return
               setMode('edit')
             }

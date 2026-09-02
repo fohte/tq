@@ -399,23 +399,44 @@ export const ClickingLinkStaysInViewMode: Story = {
     // closed, which made userEvent.click land on the tooltip instead of the
     // link itself.
     const link = canvas.getByRole('link', { name: MARKDOWN_LINK_TEXT })
-    // A real click through to the href would navigate this test's own page
-    // away, so the link's default action is prevented here — the point of
-    // this test is only that the click reaches the still-non-editable <a>
-    // (readonly must stay true past onMouseUp for that), not that the
-    // browser's own navigation behavior on a non-editable <a> works.
-    link.addEventListener('click', (event) => {
-      event.preventDefault()
-    })
 
     await fireEvent.mouseUp(link, { button: 0 })
 
     await expect(wrapper).toHaveAttribute('data-view-mode', 'view')
+    // The point of this test: readonly must stay true past onMouseUp so a
+    // real click that follows still hits a non-editable <a> and navigates
+    // (a contenteditable one loses the browser's default click-through).
+    await expect(link.isContentEditable).toBe(false)
 
     // Control: clicking plain text outside the link must still flip the
     // editor into edit mode, proving the assertion above is actually
     // capable of detecting a mode switch.
     await fireEvent.mouseUp(canvas.getByText(OUTSIDE_CARD_TEXT), { button: 0 })
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
+  },
+}
+
+const UNSAFE_SCHEME_LINK_TEXT = 'a javascript: link'
+
+// Regression check: a Markdown link's href is unfiltered user content, so an
+// executable scheme like `javascript:` must NOT get the click-through
+// treatment above — it has to keep flipping the editor into edit mode
+// (never becoming clickable) or clicking it would run arbitrary script. See
+// markdown-editor.tsx's NAVIGABLE_LINK_PROTOCOLS.
+export const ClickingUnsafeSchemeLinkEntersEditMode: Story = {
+  args: {
+    defaultValue: `[${UNSAFE_SCHEME_LINK_TEXT}](javascript:alert(1))`,
+    viewEditToggle: {},
+  },
+  play: async ({ canvas, canvasElement }) => {
+    const wrapper = assertDefined(
+      canvasElement.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
+    )
+
+    const link = canvas.getByRole('link', { name: UNSAFE_SCHEME_LINK_TEXT })
+    await fireEvent.mouseUp(link, { button: 0 })
+
     await expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
   },
 }
