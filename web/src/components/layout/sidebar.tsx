@@ -146,7 +146,7 @@ function TagLink({
         <span className="shrink-0 text-muted-foreground-faint">{count}</span>
         <ActionsMenu
           aria-label="Tag actions"
-          desktopTriggerClassName="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
+          desktopTriggerClassName="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
           items={[
             {
               icon: <Pencil className="h-4 w-4" />,
