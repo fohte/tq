@@ -11,9 +11,9 @@ import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { recordStatusChanged } from '#lib/task-events'
 import {
-  findTaskByIdOrNumber,
   getLabelNamesByTaskId,
   requireTask,
+  resolveParentId,
   taskToResponse,
 } from '#routes/tasks/shared'
 import { taskStatus, taskStatusReason } from '#schemas/task'
@@ -186,12 +186,12 @@ export const tasksActionsApp = new Hono()
 
       let parentId: string | null = null
       if (parentIdInput != null) {
-        const parent = await findTaskByIdOrNumber(String(parentIdInput))
-        if (!parent) {
-          return c.json({ error: 'Parent task not found' }, 404)
+        const resolved = await resolveParentId(parentIdInput)
+        if ('error' in resolved) {
+          return c.json(resolved.error.body, resolved.error.status)
         }
 
-        parentId = parent.id
+        parentId = resolved.id
 
         if (parentId === id) {
           return c.json({ error: 'A task cannot be its own parent' }, 409)

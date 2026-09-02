@@ -267,7 +267,7 @@ describe('tasks actions API', () => {
       expect(body.parentId).toBe(parent.id)
     })
 
-    it('sets parent task given as a task number', async () => {
+    it('accepts a task number for parentId', async () => {
       const parent = await createTask('Parent')
       const child = await createTask('Child')
 
@@ -325,6 +325,18 @@ describe('tasks actions API', () => {
       expect(res.status).toBe(409)
     })
 
+    it('returns 409 for a self-referencing parent given as a task number', async () => {
+      const task = await createTask('Task')
+
+      const res = await app.request(`/api/tasks/${task.id}/parent`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: String(task.number) }),
+      })
+
+      expect(res.status).toBe(409)
+    })
+
     it('returns 409 for circular reference', async () => {
       const grandparent = await createTask('Grandparent')
       const parent = await createTask('Parent', {
@@ -336,6 +348,22 @@ describe('tasks actions API', () => {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parentId: child.id }),
+      })
+
+      expect(res.status).toBe(409)
+    })
+
+    it('returns 409 for a circular reference given as a task number', async () => {
+      const grandparent = await createTask('Grandparent')
+      const parent = await createTask('Parent', {
+        parentId: grandparent.id,
+      })
+      const child = await createTask('Child', { parentId: parent.id })
+
+      const res = await app.request(`/api/tasks/${grandparent.id}/parent`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: String(child.number) }),
       })
 
       expect(res.status).toBe(409)

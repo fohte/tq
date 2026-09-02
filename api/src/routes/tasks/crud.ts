@@ -15,12 +15,12 @@ import {
 import { pageToResponse } from '#routes/task-pages'
 import { queryTaskList } from '#routes/tasks/list-query'
 import {
-  findTaskByIdOrNumber,
   findTasksByIdsOrNumbers,
   getGithubLinksByTaskId,
   getLabelNamesByTaskId,
   hydrateTaskListRows,
   requireTask,
+  resolveParentId,
   taskToResponse,
   timeBlockToResponse,
 } from '#routes/tasks/shared'
@@ -82,11 +82,11 @@ export const tasksCrudApp = new Hono()
 
     let parentId: string | null = null
     if (input.parentId != null) {
-      const parent = await findTaskByIdOrNumber(String(input.parentId))
-      if (!parent) {
-        return c.json({ error: 'Parent task not found' }, 404)
+      const resolved = await resolveParentId(input.parentId)
+      if ('error' in resolved) {
+        return c.json(resolved.error.body, resolved.error.status)
       }
-      parentId = parent.id
+      parentId = resolved.id
     }
 
     const schedulingSettingsResult = await getSchedulingSettings()
