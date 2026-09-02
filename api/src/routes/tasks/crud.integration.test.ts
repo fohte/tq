@@ -47,6 +47,14 @@ function setProjectId(taskId: string, projectId: string) {
   })
 }
 
+function setBlockedBy(taskId: string, blockedBy: string[]) {
+  return app.request(`/api/tasks/${taskId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ blockedBy }),
+  })
+}
+
 async function createProject(title: string) {
   const res = await app.request('/api/projects', {
     method: 'POST',
@@ -863,6 +871,72 @@ describe('tasks CRUD API', () => {
       ])
     })
 
+    it('returns only the task with an unresolved blocker for has:blockers', async () => {
+      const blocker = await createTask('Blocker')
+      const task = await createTask('Blocked')
+      await setBlockedBy(task.id, [blocker.id])
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('has:blockers'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.title)).toEqual(['Blocked'])
+    })
+
+    it('excludes a task with an unresolved blocker from has:no-blockers', async () => {
+      const blocker = await createTask('Blocker')
+      const task = await createTask('Blocked')
+      await setBlockedBy(task.id, [blocker.id])
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('has:no-blockers'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.title)).toEqual(['Blocker'])
+    })
+
+    it('includes a task whose only blocker is completed in has:no-blockers', async () => {
+      const blocker = await createTask('Completed blocker')
+      const task = await createTask('Blocked by completed')
+      await setBlockedBy(task.id, [blocker.id])
+      await setStatus(blocker.id, 'completed')
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('has:no-blockers'),
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.title)).toEqual([
+        'Completed blocker',
+        'Blocked by completed',
+      ])
+    })
+
+    it('does not treat a duplicate_of relation as a blocker for has:blockers', async () => {
+      const original = await createTask('Original')
+      const dup = await createTask('Duplicate')
+      await app.request(`/api/tasks/${dup.id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          statusReason: 'duplicate',
+          duplicateOfTaskId: original.id,
+        }),
+      })
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('has:blockers'),
+      )
+
+      expect(res.status).toBe(200)
+      expect(await jsonBody<TaskListItemResponse[]>(res)).toEqual([])
+    })
+
     it('filters by parent: prefix in q parameter', async () => {
       const parent = await createTask('Parent')
       await createTask('Child', { parentId: parent.id })
@@ -1439,14 +1513,6 @@ describe('tasks CRUD API', () => {
         })
         .from(taskRelations)
         .where(eq(taskRelations.sourceTaskId, sourceTaskId))
-    }
-
-    function setBlockedBy(taskId: string, blockedBy: string[]) {
-      return app.request(`/api/tasks/${taskId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blockedBy }),
-      })
     }
 
     // Field-picked rather than spread from a `TaskResponse`/detail response so

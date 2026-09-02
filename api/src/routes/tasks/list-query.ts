@@ -19,6 +19,7 @@ import {
   taskComments,
   taskLabels,
   taskPages,
+  taskRelations,
   tasks,
 } from '#db/schema'
 import { parentTasks, resolveTaskListOrderBy } from '#routes/tasks/shared'
@@ -30,6 +31,23 @@ import { parseSearchQuery } from '#search-query-parser'
 const MAX_FREE_TEXT_WORDS = 20
 
 const childTasks = alias(tasks, 'child_task')
+const blockerTasks = alias(tasks, 'blocker_task')
+
+// Extracted so `exists`/`notExists` can both wrap the same predicate for
+// hasBlockers/hasNoBlockers without duplicating the join and where clause.
+function unresolvedBlockerSubquery() {
+  return db
+    .select({ _: sql`1` })
+    .from(taskRelations)
+    .innerJoin(blockerTasks, eq(blockerTasks.id, taskRelations.targetTaskId))
+    .where(
+      and(
+        eq(taskRelations.sourceTaskId, tasks.id),
+        eq(taskRelations.type, 'blocked_by'),
+        ne(blockerTasks.status, 'completed'),
+      ),
+    )
+}
 
 export function selectTaskListRows() {
   return db
@@ -118,6 +136,14 @@ function buildConditions(query: ListTasksQuery) {
           ),
       ),
     )
+  }
+
+  if (parsed?.hasBlockers === true) {
+    conditions.push(exists(unresolvedBlockerSubquery()))
+  }
+
+  if (parsed?.hasNoBlockers === true) {
+    conditions.push(notExists(unresolvedBlockerSubquery()))
   }
 
   const parentId = parsed?.parentId ?? query.parentId

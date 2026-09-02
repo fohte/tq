@@ -92,6 +92,14 @@ export function TaskFilterChipRow({
     if (typed.hasPages === true) next = withHasPages(next, true)
     if (typed.hasComments === true) next.hasComments = true
     if (typed.hasNoChildren === true) next.hasNoChildren = true
+    if (typed.hasBlockers === true) {
+      next.hasBlockers = true
+      delete next.hasNoBlockers
+    }
+    if (typed.hasNoBlockers === true) {
+      next.hasNoBlockers = true
+      delete next.hasBlockers
+    }
     if (typed.parentId != null) next = withParentId(next, typed.parentId)
     if (!disableProjectFilter && typed.projectId != null) {
       next = withProjectId(next, typed.projectId)

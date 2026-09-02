@@ -10,6 +10,8 @@ export interface ParsedQuery {
   hasPages?: boolean
   hasComments?: boolean
   hasNoChildren?: boolean
+  hasBlockers?: boolean
+  hasNoBlockers?: boolean
   parentId?: string
   projectId?: string
   sortBy?: 'due' | 'created' | 'updated' | 'estimate'
@@ -102,6 +104,12 @@ export function parseSearchQuery(q: string): ParsedQuery {
           result.hasComments = true
         } else if (value === 'no-children') {
           result.hasNoChildren = true
+        } else if (value === 'blockers') {
+          result.hasBlockers = true
+          delete result.hasNoBlockers
+        } else if (value === 'no-blockers') {
+          result.hasNoBlockers = true
+          delete result.hasBlockers
         } else {
           freeTextParts.push(token)
         }
@@ -157,6 +165,12 @@ export function buildSearchQuery(query: ParsedQuery): string {
   }
   if (query.hasNoChildren === true) {
     parts.push('has:no-children')
+  }
+  if (query.hasBlockers === true) {
+    parts.push('has:blockers')
+  }
+  if (query.hasNoBlockers === true) {
+    parts.push('has:no-blockers')
   }
   if (query.parentId !== undefined) {
     parts.push(`parent:${quoteIfNeeded(query.parentId)}`)
