@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
 import {
   BottomSheetHeader,
+  BottomSheetOverlay,
   BottomSheetPanel,
 } from '#components/ui/bottom-sheet'
 import { Button } from '#components/ui/button'
@@ -72,7 +73,7 @@ export function FilterMenu({
       <DialogPortal>
         <DialogOverlay />
         <DialogPopup>
-          <div className="fixed inset-0 z-50 flex items-end">
+          <BottomSheetOverlay>
             <BottomSheetPanel>
               <BottomSheetHeader>
                 <span className="text-base font-semibold text-foreground">
@@ -85,7 +86,7 @@ export function FilterMenu({
               </BottomSheetHeader>
               <div className="flex flex-col gap-5 px-4 pt-4">{children}</div>
             </BottomSheetPanel>
-          </div>
+          </BottomSheetOverlay>
         </DialogPopup>
       </DialogPortal>
     </Dialog>
