@@ -104,6 +104,18 @@ Object.defineProperty(HTMLElement.prototype, 'offsetTop', {
   },
 })
 
+// jsdom does not implement ResizeObserver, which TaskTreeList uses to
+// re-measure its container's offsetTop. jsdom never reflows layout, so the
+// callback is never invoked in tests — this stub only prevents a
+// ReferenceError.
+if (typeof window.ResizeObserver === 'undefined') {
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+}
+
 // jsdom does not implement matchMedia. Default to desktop (matches: true) so
 // components using useIsDesktop render their default layout; tests exercising
 // the narrow-viewport branch override this per-suite (see calendar-view.test.tsx).

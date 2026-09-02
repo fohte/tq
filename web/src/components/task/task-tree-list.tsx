@@ -170,11 +170,22 @@ export function TaskTreeList({
 
   const containerRef = useRef<HTMLDivElement | null>(null)
   // Offsets the window virtualizer (see app-layout.tsx) by how far this
-  // list sits below the page top.
+  // list sits below the page top. Re-measured via ResizeObserver, since
+  // content above the list (e.g. a wrapping filter chip row) can change
+  // that offset after mount.
   const [scrollMargin, setScrollMargin] = useState(0)
   useLayoutEffect(() => {
-    // containerRef isn't attached until after the first render commits.
-    setScrollMargin(containerRef.current?.offsetTop ?? 0)
+    const container = containerRef.current
+    if (container == null) return
+    const updateScrollMargin = () => {
+      setScrollMargin(container.offsetTop)
+    }
+    updateScrollMargin()
+    const observer = new ResizeObserver(updateScrollMargin)
+    observer.observe(document.body)
+    return () => {
+      observer.disconnect()
+    }
   }, [])
 
   const rowVirtualizer = useWindowVirtualizer({

@@ -259,11 +259,8 @@ describe('TaskTreeList', () => {
     expect(screen.queryByText('Root Task 199')).not.toBeInTheDocument()
   })
 
-  // The container's offsetTop (faked to a nonzero value in test-setup.ts,
-  // simulating content like a sticky header rendered above this list in real
-  // usage) is fed into scrollMargin and subtracted back out of each row's
-  // translateY, so a row's own position stays independent of where the list
-  // sits in the document.
+  // The container's offsetTop (faked to 100 in test-setup.ts) is subtracted
+  // back out of each row's translateY, keeping row position list-relative.
   it('cancels the scroll margin back out of each row position', async () => {
     const root = makeNode({ id: 'root-1', title: 'Root Task' })
     await renderTaskTreeList([root])
