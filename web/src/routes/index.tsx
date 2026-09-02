@@ -242,7 +242,10 @@ function DayView() {
     // Unlike every other route, day view keeps its own internal scroll pane
     // (see day-view.tsx) rather than scrolling the document — its time-grid
     // layout is meant to stay pinned to one viewport, like a native calendar.
-    <div className="h-dvh overflow-hidden">
+    // h-full (not h-dvh): AppLayout gives <main> min-h-0 on this route so it
+    // shrinks to its flex-allotted share of the viewport instead of the full
+    // viewport — h-dvh here would ignore that and force <main> past it again.
+    <div className="h-full overflow-hidden">
       <DayViewPresentation
         isLoading={isLoading}
         calendarEvents={calendarEvents}
