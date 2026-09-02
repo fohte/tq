@@ -7,6 +7,7 @@ import {
   TaskKanban,
   type TaskKanbanColumn,
 } from '#components/kanban/task-kanban'
+import { TaskKanbanSeeAllLink } from '#components/kanban/task-kanban-see-all-link'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -19,7 +20,7 @@ function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <StoryRouter
         component={() => <>{children}</>}
-        paths={['/tasks/$taskId']}
+        paths={['/tasks/$taskId', '/tasks']}
       />
     </QueryClientProvider>
   )
@@ -119,21 +120,15 @@ export const WithFooter: Story = {
         id: 'active',
         title: 'Active',
         tasks: activeTasks,
-        footer: (
-          <span className="font-mono text-2xs text-muted-foreground">
-            see all in tasks list →
-          </span>
-        ),
+        showCount: false,
+        footer: <TaskKanbanSeeAllLink commitment="active" />,
       },
       {
         id: 'someday',
         title: 'Someday',
         tasks: someTasks,
-        footer: (
-          <span className="font-mono text-2xs text-muted-foreground">
-            see all in tasks list →
-          </span>
-        ),
+        showCount: false,
+        footer: <TaskKanbanSeeAllLink commitment="someday" />,
       },
     ],
   },

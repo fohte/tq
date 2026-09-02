@@ -1,4 +1,6 @@
+import type { DragStartEvent } from '@dnd-kit/core'
 import { MouseSensor, TouchSensor } from '@dnd-kit/core'
+import { useState } from 'react'
 
 // Nested interactive controls (status picker, actions menu, expand toggle)
 // only stopPropagation() on click, not pointerdown/touchstart, so a plain
@@ -34,4 +36,22 @@ export class NoDndTouchSensor extends TouchSensor {
         shouldHandleDrag(nativeEvent.target),
     },
   ]
+}
+
+/**
+ * DragOverlay doesn't auto-size to the source row/card, so its width is
+ * captured once on drag start and held for the duration of the drag.
+ */
+export function useDragOverlayWidth() {
+  const [width, setWidth] = useState<number | null>(null)
+
+  const captureWidth = (event: DragStartEvent) => {
+    setWidth(event.active.rect.current.initial?.width ?? null)
+  }
+
+  const resetWidth = () => {
+    setWidth(null)
+  }
+
+  return { width, captureWidth, resetWidth }
 }

@@ -27,6 +27,10 @@ const labelsForTasksWithTags = [
   makeLabel({ id: '2', name: 'urgent' }),
 ]
 
+const tasksWithInboxItems: Task[] = [
+  makeTask({ id: '3', title: 'Untriaged task', commitment: 'inbox' }),
+]
+
 const projectsAcrossStatuses: Project[] = [
   makeProject({
     id: '1',
@@ -47,14 +51,14 @@ const savedViews: SavedView[] = [
   makeSavedView({ id: '2', name: 'Someday', query: 'commitment:someday' }),
 ]
 
-function SidebarContentStory() {
+function SidebarContentStory({ tasks = tasksWithTags }: { tasks?: Task[] }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
-  queryClient.setQueryData(taskKeys.list(undefined), tasksWithTags)
+  queryClient.setQueryData(taskKeys.list(undefined), tasks)
   queryClient.setQueryData(
     taskKeys.list({ context: 'personal', commitment: 'inbox', status: 'todo' }),
-    tasksWithTags.filter(
+    tasks.filter(
       (task) => task.commitment === 'inbox' && task.status === 'todo',
     ),
   )
@@ -80,8 +84,14 @@ function SidebarContentStory() {
   )
 }
 
-function SidebarContentWithRouter() {
-  return <StoryRouter component={SidebarContentStory} />
+function SidebarContentWithRouter({ tasks }: { tasks?: Task[] }) {
+  return (
+    <StoryRouter
+      component={() => (
+        <SidebarContentStory {...(tasks != null ? { tasks } : {})} />
+      )}
+    />
+  )
 }
 
 const meta = {
@@ -97,3 +107,9 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+export const WithInboxTasks: Story = {
+  args: {
+    tasks: tasksWithInboxItems,
+  },
+}

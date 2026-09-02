@@ -32,6 +32,10 @@ const labelsForTasksWithTags = [
   makeLabel({ id: '3', name: 'review' }),
 ]
 
+const tasksWithInboxItems: Task[] = [
+  makeTask({ id: '4', title: 'Untriaged task', commitment: 'inbox' }),
+]
+
 const projectsAcrossStatuses: Project[] = [
   makeProject({
     id: '1',
@@ -171,6 +175,13 @@ export const WithTags: Story = {
     currentPath: '/',
     tasks: tasksWithTags,
     labels: labelsForTasksWithTags,
+  },
+}
+
+export const WithInboxTasks: Story = {
+  args: {
+    currentPath: '/',
+    tasks: tasksWithInboxItems,
   },
 }
 

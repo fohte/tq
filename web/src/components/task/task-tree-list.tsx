@@ -22,7 +22,11 @@ import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { Task, TaskListFilter, TreeNode } from '#hooks/use-tasks'
 import { useUpdateTaskParent } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
-import { NoDndMouseSensor, NoDndTouchSensor } from '#lib/dnd-sensors'
+import {
+  NoDndMouseSensor,
+  NoDndTouchSensor,
+  useDragOverlayWidth,
+} from '#lib/dnd-sensors'
 import {
   computeDropMode,
   getDescendantIds,
@@ -100,7 +104,7 @@ export function TaskTreeList({
   const updateTaskParent = useUpdateTaskParent()
 
   const [activeNode, setActiveNode] = useState<TreeNode | null>(null)
-  const [activeWidth, setActiveWidth] = useState<number | null>(null)
+  const { width: activeWidth, captureWidth, resetWidth } = useDragOverlayWidth()
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
 
   // Desktop uses MouseSensor and mobile uses TouchSensor (rather than the
@@ -177,16 +181,14 @@ export function TaskTreeList({
 
   const resetDragState = () => {
     setActiveNode(null)
-    setActiveWidth(null)
+    resetWidth()
     setDropTarget(null)
   }
 
   const handleDragStart = (event: DragStartEvent) => {
     const data = event.active.data.current
     setActiveNode(isTreeRowDragData(data) ? data.node : null)
-    // DragOverlay doesn't auto-size to the source row, so its width is
-    // captured once here and held for the duration of the drag.
-    setActiveWidth(event.active.rect.current.initial?.width ?? null)
+    captureWidth(event)
   }
 
   // Wired to both onDragOver and onDragMove: dnd-kit only fires onDragOver

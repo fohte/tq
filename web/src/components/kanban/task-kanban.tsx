@@ -16,7 +16,11 @@ import { useState } from 'react'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { ListAreaMessage } from '#components/ui/list-area-message'
 import type { Task } from '#hooks/use-tasks'
-import { NoDndMouseSensor, NoDndTouchSensor } from '#lib/dnd-sensors'
+import {
+  NoDndMouseSensor,
+  NoDndTouchSensor,
+  useDragOverlayWidth,
+} from '#lib/dnd-sensors'
 import { resolveKanbanDrop } from '#lib/task-kanban'
 import { cn } from '#lib/utils'
 
@@ -25,6 +29,8 @@ export interface TaskKanbanColumn {
   title: string
   tasks: Task[]
   isLoading?: boolean
+  /** Set false when `tasks` is a truncated subset, so the header doesn't show a count that reads as the true total. */
+  showCount?: boolean
   /** Rendered below the task list, e.g. a link to the full filtered list. */
   footer?: ReactNode
 }
@@ -75,7 +81,14 @@ function TaskKanbanCard({
 }
 
 function TaskKanbanColumnView({ column }: { column: TaskKanbanColumn }) {
-  const { id, title, tasks, isLoading = false, footer } = column
+  const {
+    id,
+    title,
+    tasks,
+    isLoading = false,
+    showCount = true,
+    footer,
+  } = column
   const { setNodeRef, isOver } = useDroppable({ id })
 
   return (
@@ -84,9 +97,11 @@ function TaskKanbanColumnView({ column }: { column: TaskKanbanColumn }) {
         <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
           {title.toUpperCase()}
         </span>
-        <span className="font-mono text-2xs text-muted-foreground-faint">
-          {tasks.length}
-        </span>
+        {showCount && (
+          <span className="font-mono text-2xs text-muted-foreground-faint">
+            {tasks.length}
+          </span>
+        )}
       </div>
 
       <div
@@ -118,7 +133,7 @@ function TaskKanbanColumnView({ column }: { column: TaskKanbanColumn }) {
 
 export function TaskKanban({ columns, onDrop }: TaskKanbanProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
-  const [activeWidth, setActiveWidth] = useState<number | null>(null)
+  const { width: activeWidth, captureWidth, resetWidth } = useDragOverlayWidth()
 
   const dndSensors = useSensors(
     useSensor(NoDndMouseSensor, { activationConstraint: { distance: 4 } }),
@@ -130,12 +145,12 @@ export function TaskKanban({ columns, onDrop }: TaskKanbanProps) {
   const handleDragStart = (event: DragStartEvent) => {
     const data = event.active.data.current
     setActiveTask(isCardDragData(data) ? data.task : null)
-    setActiveWidth(event.active.rect.current.initial?.width ?? null)
+    captureWidth(event)
   }
 
   const resetDragState = () => {
     setActiveTask(null)
-    setActiveWidth(null)
+    resetWidth()
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
