@@ -271,6 +271,26 @@ describe('TaskTreeList', () => {
     }
     expect(row.style.transform).toBe('translateY(0px)')
   })
+
+  // Guards against reverting to a mount-only effect: without an observer
+  // re-watching the document, content resizing above the list after mount
+  // (e.g. a wrapping filter chip row) would never update scrollMargin again.
+  it('re-measures scrollMargin via a ResizeObserver on document.body', async () => {
+    const observe = vi.fn()
+    class MockResizeObserver {
+      observe = observe
+      disconnect = vi.fn()
+      unobserve = vi.fn()
+    }
+    vi.stubGlobal('ResizeObserver', MockResizeObserver)
+
+    const root = makeNode({ id: 'root-1', title: 'Root Task' })
+    await renderTaskTreeList([root])
+
+    expect(observe).toHaveBeenCalledWith(document.body)
+
+    vi.unstubAllGlobals()
+  })
 })
 
 describe('TaskTreeList lazyChildrenFilter', () => {
