@@ -47,8 +47,6 @@ export function CreateTaskModal({
   parentTaskNumber,
   parentTaskTitle,
 }: CreateTaskModalProps) {
-  // Falls back to this machine's context (settings > session open) when the
-  // caller has no more specific default (e.g. an inherited parent context).
   const currentContext = useCurrentContext()
   const effectiveDefaultContext = defaultContext ?? currentContext
 
