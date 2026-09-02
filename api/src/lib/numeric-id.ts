@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const numericIdPattern = /^\d+$/
+const numericIdPattern = /^\d+$/
 
 // `tasks.number` is a Postgres `integer`; comparing/inserting a digit string
 // past this range would make an `eq`/`inArray` query throw instead of simply
