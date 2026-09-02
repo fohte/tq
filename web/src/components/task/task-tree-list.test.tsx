@@ -50,6 +50,18 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
   }
 })
 
+// Every router leaves a document scroll listener registered after
+// teardown; it only reaches `document` when router.isScrollRestoring is
+// true, which useElementScrollRestoration flips on — stub it to keep that
+// flag false and avoid "document is not defined" from a stray callback.
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>()
+  return {
+    ...actual,
+    useElementScrollRestoration: () => undefined,
+  }
+})
+
 // The router's first route match resolves asynchronously even with no
 // loaders, so router.load() is awaited before render() to avoid an initial
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
