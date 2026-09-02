@@ -2,25 +2,15 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 
+import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { ProjectChip } from '#components/task/project-chip'
-import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 
-const sampleProject: ProjectDetail = {
+const sampleProject = makeProjectDetail({
   id: 'aaaa0000-0000-0000-0000-000000000000',
-  title: 'tq',
-  description: null,
-  status: 'active',
-  startDate: null,
-  targetDate: null,
-  color: null,
-  sortOrder: 0,
-  context: 'personal',
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
   completionRate: 0.4,
   taskCount: { total: 10, completed: 4 },
-}
+})
 
 function ProjectChipStory({ projectId }: { projectId: string }) {
   const queryClient = new QueryClient({

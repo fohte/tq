@@ -4,6 +4,7 @@ import type { ParsedQuery } from 'api/search-query-parser'
 import { http, HttpResponse } from 'msw'
 import { expect, fn, userEvent, within } from 'storybook/test'
 
+import { makeProject } from '#components/project/project-test-fixtures'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import type { Project } from '#hooks/use-projects'
 import { taskKeys } from '#hooks/use-task-queries'
@@ -22,27 +23,12 @@ const emptySuggestHandler = http.get('/api/tasks/search/suggest', () =>
 )
 const emptyLabelsHandler = http.get('/api/labels', () => HttpResponse.json([]))
 
-const projectA: Project = {
+const projectA: Project = makeProject({
   id: 'proj-1',
   title: 'Website Redesign',
-  description: null,
-  status: 'active',
-  startDate: null,
-  targetDate: null,
-  color: null,
-  sortOrder: 0,
-  context: 'personal',
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  taskCount: { total: 0, completed: 0 },
-  completionRate: 0,
-}
+})
 
-const projectB: Project = {
-  ...projectA,
-  id: 'proj-2',
-  title: 'Mobile App',
-}
+const projectB: Project = makeProject({ id: 'proj-2', title: 'Mobile App' })
 
 const projects = [projectA, projectB]
 

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { expect, fn, within } from 'storybook/test'
 
 import { LinkExistingProjectTaskMenu } from '#components/project/link-existing-project-task-menu'
+import { makeProject } from '#components/project/project-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { type Project, projectKeys } from '#hooks/use-projects'
 import { searchKeys, type SearchResult } from '#hooks/use-search'
@@ -11,21 +12,10 @@ const projectId = '00000000-0000-0000-0000-000000000001'
 const projectTitle = 'ISUCON14'
 const searchText = 'Deploy'
 
-const otherProject: Project = {
+const otherProject: Project = makeProject({
   id: '00000000-0000-0000-0000-000000000099',
   title: 'Website Redesign',
-  description: null,
-  status: 'active',
-  startDate: null,
-  targetDate: null,
-  color: null,
-  sortOrder: 0,
-  context: 'personal',
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  completionRate: 0,
-  taskCount: { total: 0, completed: 0 },
-}
+})
 
 const orphanCandidate: SearchResult = makeTask({
   id: '00000000-0000-0000-0000-000000000011',

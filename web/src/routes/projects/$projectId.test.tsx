@@ -10,24 +10,23 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { makeProject } from '#components/project/project-test-fixtures'
 import { assertDefined, atIndex } from '#lib/test-utils'
 // Import after mocks
 import { Route as ProjectDetailRoute } from '#routes/projects/$projectId'
 
-const mockProject = {
+const mockProject = makeProject({
   id: 'p1',
   title: 'ISUCON14',
   description: 'Some **markdown** description',
-  status: 'active' as const,
   startDate: '2024-11-04',
   targetDate: '2024-12-08',
   color: '#FF8400',
-  sortOrder: 0,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
   taskCount: { total: 5, completed: 2 },
   completionRate: 0.4,
-}
+})
 
 const baseTask = {
   description: null,
@@ -465,20 +464,12 @@ describe('ProjectDetailPage task list', () => {
     // suppresses it.
     mockUseProjects.mockReturnValue({
       data: [
-        {
+        makeProject({
           id: 'other-project',
           title: 'Other Project',
-          description: null,
-          status: 'active' as const,
-          startDate: null,
-          targetDate: null,
-          color: null,
-          sortOrder: 0,
           createdAt: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-01-01T00:00:00.000Z',
-          taskCount: { total: 0, completed: 0 },
-          completionRate: 0,
-        },
+        }),
       ],
     })
 

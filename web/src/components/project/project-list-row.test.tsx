@@ -9,6 +9,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { ProjectListRow } from '#components/project/project-list-row'
+import { makeProject } from '#components/project/project-test-fixtures'
 import type { Project } from '#hooks/use-projects'
 
 function renderRow(project: Project) {
@@ -28,21 +29,16 @@ function renderRow(project: Project) {
   return render(<RouterProvider router={router} />)
 }
 
-const baseProject: Project = {
+const baseProject: Project = makeProject({
   id: '1',
   title: 'Test Project',
   description: 'A description',
-  status: 'active',
-  startDate: null,
-  targetDate: null,
   color: '#FF8400',
-  sortOrder: 0,
-  context: 'personal',
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
   taskCount: { total: 4, completed: 1 },
   completionRate: 0.25,
-}
+})
 
 describe('ProjectListRow', () => {
   it('renders project title once per layout (desktop + mobile)', async () => {

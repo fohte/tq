@@ -1,25 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, waitFor, within } from 'storybook/test'
 
+import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { GithubLinksChipGroup } from '#components/task/github-links-chip-group'
-import type { GithubLink } from '#hooks/use-github-link'
 
-function makeLink(overrides: Partial<GithubLink> = {}): GithubLink {
-  return {
-    id: 'link-1',
-    owner: 'fohte',
-    repo: 'tq',
-    number: 42,
-    kind: 'issue',
-    url: 'https://github.com/fohte/tq/issues/42',
-    state: 'open',
-    title: 'Sample issue',
-    lastSyncedAt: '2026-03-20T00:00:00.000Z',
-    ...overrides,
-  }
-}
-
-const issueLink = makeLink({
+const issueLink = makeGithubLink({
   id: 'link-issue',
   number: 412,
   kind: 'issue',
@@ -28,7 +13,7 @@ const issueLink = makeLink({
   url: 'https://github.com/fohte/tq/issues/412',
 })
 
-const mergedPrLink = makeLink({
+const mergedPrLink = makeGithubLink({
   id: 'link-pr-436',
   number: 436,
   kind: 'pull_request',
@@ -37,7 +22,7 @@ const mergedPrLink = makeLink({
   url: 'https://github.com/fohte/tq/pull/436',
 })
 
-const openPrLink = makeLink({
+const openPrLink = makeGithubLink({
   id: 'link-pr-441',
   number: 441,
   kind: 'pull_request',
@@ -93,7 +78,7 @@ export const RepresentativeIsLatestPullRequest: Story = {
 
 export const RepresentativeFallsBackToLatestIssue: Story = {
   args: {
-    links: [issueLink, makeLink({ id: 'link-issue-2', number: 413 })],
+    links: [issueLink, makeGithubLink({ id: 'link-issue-2', number: 413 })],
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByText('tq#413')).toBeVisible()
