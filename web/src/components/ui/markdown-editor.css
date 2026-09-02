@@ -102,6 +102,18 @@
   line-height: 2;
 }
 
+/* A list_item's content always starts with a mandatory paragraph
+   (@milkdown/preset-commonmark's list_item schema: `content: 'paragraph
+   block*'`), rendered inside the list-item-block NodeView's flex-item
+   `.children` div — margin-top can't collapse out of a flex item, so
+   without this it'd push the text below the marker instead of aligning
+   with it. Likewise blockquote's first paragraph would stack on top of
+   its own `padding: 1rem` below. */
+.milkdown-wrapper .milkdown .ProseMirror .children > p:first-child,
+.milkdown-wrapper .milkdown .ProseMirror blockquote > p:first-child {
+  margin-top: 0;
+}
+
 /* List bullet/number color */
 .milkdown-wrapper .milkdown .ProseMirror ul li::marker,
 .milkdown-wrapper .milkdown .ProseMirror ol li::marker {
@@ -195,15 +207,6 @@
 .inline-reference-card {
   display: block;
   margin: 0.25rem 0;
-}
-
-/* The card widget renders nested inside its hosting <p> (its raw source
-   text is hidden, not removed — see .inline-reference-source above), which
-   still carries crepe's reset padding (`padding: 4px 0` in
-   @milkdown/crepe/lib/theme/common/reset.css) and would otherwise double up
-   with the card's own margin above. */
-.milkdown-wrapper .milkdown .ProseMirror p:has(> .inline-reference-card) {
-  padding: 0;
 }
 
 /* `#` mention autocomplete popup, positioned by SlashProvider via floating-ui.
