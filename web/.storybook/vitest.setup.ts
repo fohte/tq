@@ -1,11 +1,22 @@
 import { screenshot } from '@storycap-testrun/browser'
-import { afterEach, vi } from 'vitest'
+import { afterEach, beforeEach, vi } from 'vitest'
 import { page } from 'vitest/browser'
+
+import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 
 // Pin the clock so stories that read the current time (calendar "now"
 // indicators, relative timestamps, "today" fixtures built at module scope)
 // render identically regardless of when the VRT suite runs.
 vi.setSystemTime(new Date('2026-03-10T10:15:00+09:00'))
+
+// Real browser localStorage persists across stories in the same run, so a
+// story reads whatever a previously-run story last wrote there (e.g.
+// SessionRow's `localContext: 'work'`). Reset before every story so
+// useCurrentContext() resolves to the 'personal' default deterministically;
+// stories that need 'work' call resetSessionOpenSettings() themselves.
+beforeEach(() => {
+  resetSessionOpenSettings()
+})
 
 // Milkdown throws contextNotFound during async cleanup when unmounting.
 // This is a library limitation, not an application bug.

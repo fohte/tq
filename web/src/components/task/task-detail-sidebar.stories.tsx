@@ -62,7 +62,7 @@ function Providers({
   // SidebarProjectField, and SidebarTagsField, which read these regardless
   // of the story's task.
   queryClient.setQueryData(taskKeys.list(undefined), [])
-  queryClient.setQueryData(labelKeys.all, [])
+  queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [])
   queryClient.setQueryData(
     projectKeys.list(undefined),
     project ? [project] : [],

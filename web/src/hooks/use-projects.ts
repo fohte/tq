@@ -18,6 +18,11 @@ export type { Project, ProjectDetail, ProjectTask }
 
 type ProjectStatus = 'active' | 'paused' | 'completed' | 'archived'
 
+export interface ProjectFilter {
+  status?: ProjectStatus
+  context?: 'work' | 'personal'
+}
+
 export const PROJECT_COLOR_PRESETS = [
   { name: 'Orange', hex: '#FF8400' },
   { name: 'Red', hex: '#FF5C33' },
@@ -32,14 +37,13 @@ export const PROJECT_COLOR_PRESETS = [
 export const projectKeys = {
   all: ['projects'] as const,
   lists: ['projects', 'list'] as const,
-  list: (filter?: { status?: string }) =>
-    [...projectKeys.lists, filter] as const,
+  list: (filter?: ProjectFilter) => [...projectKeys.lists, filter] as const,
   detail: (id: string) => [...projectKeys.all, 'detail', id] as const,
   taskIds: (id: string) => [...projectKeys.detail(id), 'task-ids'] as const,
 }
 
 export function useProjects(
-  filter?: { status?: ProjectStatus },
+  filter?: ProjectFilter,
   options?: { enabled?: boolean },
 ) {
   return useQuery({
