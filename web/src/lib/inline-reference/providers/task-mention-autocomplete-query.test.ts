@@ -73,11 +73,9 @@ describe('findActiveMentionQuery', () => {
     ).toBeUndefined()
   })
 
-  it('ignores a URL fragment', () => {
+  it('ignores a hash directly preceded by a slash (URL fragment)', () => {
     expect(
-      findActiveMentionQuery(
-        stateWithCursorAtEnd('https://example.com/path/#search/foo/BAR'),
-      ),
+      findActiveMentionQuery(stateWithCursorAtEnd('a/#foo')),
     ).toBeUndefined()
   })
 
