@@ -12,7 +12,10 @@ export interface ActiveMentionQuery {
 // link pattern, the query may contain letters too (title search), since the
 // inserted mention always becomes plain `#<number>` regardless of what was
 // typed to find it.
-const TRIGGER_PATTERN = /(?<![\w#])#([^\s#]*)$/
+//
+// Also excludes a `#` preceded by `/`, since that's a URL fragment
+// (e.g. `https://example.com/path/#anchor`), not a mention.
+const TRIGGER_PATTERN = /(?<![\w#/])#([^\s#]*)$/
 
 // Finds an in-progress `#<query>` mention right before a collapsed cursor,
 // within the current textblock only (a mention can't span block boundaries).

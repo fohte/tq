@@ -73,6 +73,14 @@ describe('findActiveMentionQuery', () => {
     ).toBeUndefined()
   })
 
+  it('ignores a URL fragment', () => {
+    expect(
+      findActiveMentionQuery(
+        stateWithCursorAtEnd('https://example.com/path/#search/foo/BAR'),
+      ),
+    ).toBeUndefined()
+  })
+
   it('returns undefined when the selection is not collapsed', () => {
     const doc = schema.node('doc', null, [
       schema.node('paragraph', null, [schema.text('hello #12')]),
