@@ -6,10 +6,7 @@ export interface ActiveMentionQuery {
   query: string
 }
 
-// `#` not preceded by \w, `#`, or `/` (skips URL fragments like
-// `.../#anchor`), followed by non-whitespace, non-`#` text up to the
-// cursor. The query may contain letters (title search) since the inserted
-// mention is always plain `#<number>`.
+// Skips URL fragments (`.../#...`) and allows non-digit queries for title search.
 const TRIGGER_PATTERN = /(?<![\w#/])#([^\s#]*)$/
 
 // Finds an in-progress `#<query>` mention right before a collapsed cursor,
