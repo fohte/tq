@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClientProvider } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import { useState } from 'react'
 import { expect, fireEvent, fn } from 'storybook/test'
 
@@ -43,52 +43,6 @@ export const WithContent: Story = {
   args: {
     defaultValue:
       '## Discussion Points\n\n- Architecture review\n- Sprint planning\n- Performance improvements\n\nWe decided to go with option B for the following reasons:\n\n1. Better performance\n2. Simpler architecture\n3. Easier to maintain',
-  },
-}
-
-// h1, h3, inline code, and a plain link never appear in any other story in
-// this file, so a CSS change to any of them has no VRT baseline to diff
-// against. Both modes are covered separately (rather than relying on a play
-// function to switch mode) since several CSS rules key off the wrapper's
-// `data-view-mode` attribute (e.g. block-handle visibility).
-const ALL_MARKDOWN_ELEMENTS_CONTENT = `# Heading 1
-
-## Heading 2
-
-### Heading 3
-
-First paragraph to check body text styling and line height.
-
-Second paragraph immediately following the first to check spacing between paragraphs.
-
-- Bullet one
-- Bullet two
-- Bullet three
-
-1. Step one
-2. Step two
-3. Step three
-
-Inline \`code span\` inside a sentence, and a [link to an external site](https://example.com).
-
-> A blockquote to check the left border and text color.
-
-\`\`\`ts
-const answer = 42
-\`\`\`
-`
-
-export const AllMarkdownElementsViewMode: Story = {
-  args: {
-    defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
-    viewEditToggle: {},
-  },
-}
-
-export const AllMarkdownElementsEditMode: Story = {
-  args: {
-    defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
-    viewEditToggle: { defaultMode: 'edit' },
   },
 }
 
@@ -165,6 +119,15 @@ function LiveReferencesProviders({ children }: { children: ReactNode }) {
   )
 }
 
+function renderWithLiveReferences(args: ComponentProps<typeof MarkdownEditor>) {
+  seedLiveReferenceFixtures()
+  return (
+    <LiveReferencesProviders>
+      <MarkdownEditor {...args} />
+    </LiveReferencesProviders>
+  )
+}
+
 // Exercises the real Crepe editor end to end (not just the plugin mechanism
 // or an isolated Chip component): markdown parsing, both InlineReference
 // providers scanning the same textblock, and their chips coexisting without
@@ -173,14 +136,7 @@ function LiveReferencesProviders({ children }: { children: ReactNode }) {
 // CommentInput) stays in 'edit' mode and only ever shows raw Markdown
 // source (see markdown-editor-crepe.tsx's CrepeEditorProps.mode comment).
 export const WithLiveReferences: Story = {
-  render: (args) => {
-    seedLiveReferenceFixtures()
-    return (
-      <LiveReferencesProviders>
-        <MarkdownEditor {...args} />
-      </LiveReferencesProviders>
-    )
-  },
+  render: renderWithLiveReferences,
   args: {
     defaultValue: `See #${String(MENTION_FIXTURE_NUMBER)} and ${GITHUB_URL_FIXTURE} for details.`,
     viewEditToggle: {},
@@ -201,14 +157,7 @@ export const WithLiveReferences: Story = {
 // hovering the chip opens its own preview popup that would otherwise
 // intercept the click.
 export const ClickToEditRevealsSource: Story = {
-  render: (args) => {
-    seedLiveReferenceFixtures()
-    return (
-      <LiveReferencesProviders>
-        <MarkdownEditor {...args} />
-      </LiveReferencesProviders>
-    )
-  },
+  render: renderWithLiveReferences,
   args: {
     defaultValue: `See #${String(MENTION_FIXTURE_NUMBER)} for details.`,
     viewEditToggle: {},
@@ -419,6 +368,58 @@ export const ClickingCardStaysInViewMode: Story = {
     // selector that can never observe it).
     await userEvent.click(canvas.getByText(OUTSIDE_CARD_TEXT))
     await expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
+  },
+}
+
+// h1, h3, inline code, and a plain link never appear in any other story in
+// this file. The task mention renders as a chip in view mode but as its raw
+// `#9101` source in edit mode, so it's included to make the two stories
+// below visually distinct.
+const ALL_MARKDOWN_ELEMENTS_CONTENT = `# Heading 1
+
+## Heading 2
+
+### Heading 3
+
+First paragraph to check body text styling and line height.
+
+Second paragraph immediately following the first to check spacing between paragraphs.
+
+- Bullet one
+- Bullet two
+- Bullet three
+
+1. Step one
+2. Step two
+3. Step three
+
+Inline \`code span\` inside a sentence, a [link to an external site](https://example.com), and a reference to #${String(MENTION_FIXTURE_NUMBER)}.
+
+> A blockquote to check the left border and text color.
+
+\`\`\`ts
+const answer = 42
+\`\`\`
+`
+
+export const AllMarkdownElementsViewMode: Story = {
+  render: renderWithLiveReferences,
+  args: {
+    defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
+    viewEditToggle: {},
+  },
+  play: async ({ canvas }) => {
+    await expect(
+      canvas.findByText(MENTION_FIXTURE_TITLE),
+    ).resolves.toBeVisible()
+  },
+}
+
+export const AllMarkdownElementsEditMode: Story = {
+  render: renderWithLiveReferences,
+  args: {
+    defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
+    viewEditToggle: { defaultMode: 'edit' },
   },
 }
 
