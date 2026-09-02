@@ -1898,12 +1898,6 @@
           "default": "true"
         },
         {
-          "name": "default_context",
-          "type": "text",
-          "nullable": false,
-          "default": "'personal'::text"
-        },
-        {
           "name": "created_at",
           "type": "timestamp with time zone",
           "nullable": false,
@@ -1925,14 +1919,6 @@
         }
       ],
       "constraints": [
-        {
-          "name": "scheduling_settings_default_context_check",
-          "type": "CHECK",
-          "def": "CHECK ((default_context = ANY (ARRAY['work'::text, 'personal'::text])))",
-          "table": "public.scheduling_settings",
-          "referenced_table": "",
-          "columns": ["default_context"]
-        },
         {
           "name": "scheduling_settings_minimum_block_minutes_positive_check",
           "type": "CHECK",

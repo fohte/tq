@@ -13,6 +13,7 @@ import {
   DialogPortal,
 } from '#components/ui/dialog'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
+import { useCurrentContext } from '#hooks/use-current-context'
 import type { CreateTaskInput } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
@@ -46,6 +47,9 @@ export function CreateTaskModal({
   parentTaskNumber,
   parentTaskTitle,
 }: CreateTaskModalProps) {
+  const currentContext = useCurrentContext()
+  const effectiveDefaultContext = defaultContext ?? currentContext
+
   const [title, setTitle] = useState('')
   const descriptionRef = useRef('')
   const [editorKey, setEditorKey] = useState(0)
@@ -53,7 +57,7 @@ export function CreateTaskModal({
   const [dueDate, setDueDate] = useState('')
   const [estimateInput, setEstimateInput] = useState('')
   const [context, setContext] = useState<ContextValue | ''>(
-    defaultContext ?? '',
+    effectiveDefaultContext,
   )
   const [commitment, setCommitment] = useState<CommitmentValue | ''>('')
   const [labels, setLabels] = useState<string[]>(defaultLabels ?? [])
@@ -64,10 +68,10 @@ export function CreateTaskModal({
   useEffect(() => {
     if (!open) {
       setStartDate(defaultStartDate ?? '')
-      setContext(defaultContext ?? '')
+      setContext(effectiveDefaultContext)
       setLabels(defaultLabels ?? [])
     }
-  }, [defaultStartDate, defaultContext, defaultLabels, open])
+  }, [defaultStartDate, effectiveDefaultContext, defaultLabels, open])
 
   const parsedMinutes = parseDurationToMinutes(estimateInput)
 
@@ -78,10 +82,10 @@ export function CreateTaskModal({
     setStartDate(defaultStartDate ?? '')
     setDueDate('')
     setEstimateInput('')
-    setContext(defaultContext ?? '')
+    setContext(effectiveDefaultContext)
     setCommitment('')
     setLabels(defaultLabels ?? [])
-  }, [defaultStartDate, defaultContext, defaultLabels])
+  }, [defaultStartDate, effectiveDefaultContext, defaultLabels])
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {

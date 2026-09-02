@@ -7,26 +7,11 @@ import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import { SegmentedControl } from '#components/ui/segmented-control'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '#components/ui/select'
-import type { SchedulingSettings } from '#hooks/use-scheduling-settings'
-import {
   useSchedulingSettings,
   useUpdateSchedulingSettings,
 } from '#hooks/use-scheduling-settings'
-import { selectValueHandler } from '#lib/form-utils'
 import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
-
-type ContextValue = SchedulingSettings['defaultContext']
-const CONTEXT_VALUES = [
-  'work',
-  'personal',
-] as const satisfies readonly ContextValue[]
 
 const AUTO_RESCHEDULE_OPTIONS = [
   { value: 'on', label: '有効' },
@@ -140,26 +125,6 @@ export function SchedulingSettingsPanel() {
                 activeClassName="bg-background text-foreground shadow-sm"
                 inactiveClassName="text-muted-foreground hover:text-foreground"
               />
-            </SettingsRow>
-
-            <SettingsRow
-              label="Default context"
-              description="新規タスク・予定に既定で設定するコンテキスト"
-            >
-              <Select
-                value={settings.data.defaultContext}
-                onValueChange={selectValueHandler((value) => {
-                  updateSettings.mutate({ defaultContext: value })
-                }, CONTEXT_VALUES)}
-              >
-                <SelectTrigger size="sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="work">Work</SelectItem>
-                  <SelectItem value="personal">Personal</SelectItem>
-                </SelectContent>
-              </Select>
             </SettingsRow>
           </div>
         </Panel>
