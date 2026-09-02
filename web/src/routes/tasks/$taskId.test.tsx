@@ -36,6 +36,8 @@ const mockTask = {
   childCompletionCount: { completed: 0, total: 0 },
   timeBlocks: [],
   links: { outgoing: [], incoming: [] },
+  blockedBy: [],
+  blocking: [],
 }
 
 const otherMockTask = {
@@ -53,6 +55,7 @@ const mockStatusMutate = vi.fn()
 const mockCompleteMutate = vi.fn()
 
 const mockParentMutate = vi.fn()
+const mockUpdateBlockedByMutate = vi.fn()
 
 vi.mock('#hooks/use-tasks', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
@@ -63,6 +66,10 @@ vi.mock('#hooks/use-tasks', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useTaskList: (...args: unknown[]) => mockUseTaskList(...args),
   useUpdateTaskParent: () => ({ mutate: mockParentMutate }),
+  useUpdateTaskBlockedBy: () => ({
+    mutate: mockUpdateBlockedByMutate,
+    isPending: false,
+  }),
   useDeleteTask: () => ({ mutate: vi.fn() }),
   useCreateTask: () => ({ mutate: vi.fn(), isPending: false }),
 }))
