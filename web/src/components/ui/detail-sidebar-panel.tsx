@@ -8,7 +8,7 @@ function DetailSidebarPanel({
     <div
       data-slot="detail-sidebar-panel"
       className={cn(
-        'flex w-60 shrink-0 flex-col gap-4 overflow-y-auto border-l border-border p-4',
+        'sticky top-0 flex h-screen w-60 shrink-0 flex-col gap-4 overflow-y-auto border-l border-border p-4',
         className,
       )}
       {...props}

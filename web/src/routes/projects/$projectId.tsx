@@ -84,11 +84,8 @@ function ProjectDetailPage() {
   return (
     <>
       {/* PC layout */}
-      <div className="hidden h-full md:flex">
-        <div
-          className="flex-1 overflow-y-auto p-6"
-          data-scroll-restoration-id="project-detail"
-        >
+      <div className="hidden md:flex">
+        <div className="flex-1 p-6">
           <ProjectMainContent
             key={project.id}
             project={project}
@@ -100,7 +97,6 @@ function ProjectDetailPage() {
             isTasksLoading={isFilteredTasksLoading}
             lazyChildrenFilter={lazyChildrenFilter}
             sessionsByTaskId={sessionsByTaskId}
-            ancestorScrollRestorationId="project-detail"
             hasNextPage={hasNextPage}
             isFetchingNextPage={isFetchingNextPage}
             isFetchNextPageError={isFetchNextPageError}
@@ -111,11 +107,10 @@ function ProjectDetailPage() {
       </div>
 
       {/* SP layout */}
-      <div
-        className="flex h-full flex-col overflow-y-auto md:hidden"
-        data-scroll-restoration-id="project-detail-mobile"
-      >
-        <BackHeaderBar to="/projects">Projects</BackHeaderBar>
+      <div className="flex flex-col md:hidden">
+        <div className="sticky top-0 z-10">
+          <BackHeaderBar to="/projects">Projects</BackHeaderBar>
+        </div>
         <div className="p-4">
           <ProjectMainContent
             key={project.id}
@@ -128,7 +123,6 @@ function ProjectDetailPage() {
             isTasksLoading={isFilteredTasksLoading}
             lazyChildrenFilter={lazyChildrenFilter}
             sessionsByTaskId={sessionsByTaskId}
-            ancestorScrollRestorationId="project-detail-mobile"
             hasNextPage={hasNextPage}
             isFetchingNextPage={isFetchingNextPage}
             isFetchNextPageError={isFetchNextPageError}

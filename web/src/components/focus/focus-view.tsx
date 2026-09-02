@@ -221,7 +221,7 @@ export function FocusViewPresentation({
 
   if (!focusTask) {
     return (
-      <div className="flex h-full flex-col">
+      <div className="flex flex-col">
         <FocusHeader />
         <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
           <p className="text-lg font-medium">
@@ -240,12 +240,11 @@ export function FocusViewPresentation({
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <FocusHeader />
-      <div
-        className="flex flex-1 justify-center overflow-y-auto px-3.5 py-4 md:px-6 md:py-10"
-        data-scroll-restoration-id="focus-view"
-      >
+    <div className="flex flex-col">
+      <div className="sticky top-0 z-10">
+        <FocusHeader />
+      </div>
+      <div className="flex justify-center px-3.5 py-4 md:px-6 md:py-10">
         <div className="flex w-full max-w-3xl flex-col gap-5 md:gap-7">
           <FocusProgress tasks={queueTasks} />
           <FocusCard task={focusTask} onDefer={onDefer} />

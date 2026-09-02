@@ -17,18 +17,20 @@ function TaskPageView() {
   const { data: page, isLoading } = useTaskPage(taskId, pageId)
 
   return (
-    <div className="flex h-full flex-col">
-      <ScreenHeaderBar>
-        <BackLink to="/tasks/$taskId" params={{ taskId }} aria-label="Back" />
-        <PageBreadcrumb
-          isLoading={isLoading}
-          taskNumber={task?.number}
-          page={page}
-        />
-      </ScreenHeaderBar>
+    <div className="flex flex-col">
+      <div className="sticky top-0 z-10">
+        <ScreenHeaderBar>
+          <BackLink to="/tasks/$taskId" params={{ taskId }} aria-label="Back" />
+          <PageBreadcrumb
+            isLoading={isLoading}
+            taskNumber={task?.number}
+            page={page}
+          />
+        </ScreenHeaderBar>
+      </div>
 
       {/* Editor */}
-      <div className="flex-1 overflow-y-auto">
+      <div>
         <TaskPageEditor taskId={taskId} pageId={pageId} />
       </div>
     </div>

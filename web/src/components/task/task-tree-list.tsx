@@ -10,8 +10,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { useElementScrollRestoration } from '@tanstack/react-router'
-import { useVirtualizer } from '@tanstack/react-virtual'
+import { useWindowVirtualizer } from '@tanstack/react-virtual'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { CreateTaskModal } from '#components/task/create-task-modal'
@@ -89,10 +88,6 @@ export interface TaskTreeListProps {
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
   /** Forwarded to useLazyTaskTree; see its docstring for behavior. */
   lazyChildrenFilter?: TaskListFilter | undefined
-  /** Only set this when this list's own div is the scrolling element. Mutually exclusive with ancestorScrollRestorationId — see its docstring for the other case. */
-  scrollRestorationId?: string
-  /** Set when this list is embedded non-scrolling inside a container that scrolls instead (e.g. project-detail-main.tsx's outer container) and that ancestor already carries a `data-scroll-restoration-id` matching this value. TaskTreeList locates it via the DOM (closest()) to drive both virtualization and scroll restoration. Mutually exclusive with scrollRestorationId. */
-  ancestorScrollRestorationId?: string
   /** Root-level pagination (see useFilteredTaskTree). Omit for a list that always fetches everything up front. */
   hasNextPage?: boolean
   isFetchingNextPage?: boolean
@@ -106,8 +101,6 @@ export function TaskTreeList({
   tasks,
   sessionsByTaskId,
   lazyChildrenFilter,
-  scrollRestorationId,
-  ancestorScrollRestorationId,
   hasNextPage = false,
   isFetchingNextPage = false,
   isFetchNextPageError = false,
@@ -168,36 +161,18 @@ export function TaskTreeList({
     [tree, treeOutliner.isExpanded],
   )
 
-  const ownScrollRef = useRef<HTMLDivElement | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
 
-  // getScrollElement is called by the virtualizer post-mount (not during
-  // render), so it's safe to resolve the ancestor lazily here even though
-  // it isn't attached to this component's own ref.
-  const getScrollElement = useCallback((): HTMLElement | null => {
-    if (ancestorScrollRestorationId != null) {
-      return (
-        ownScrollRef.current?.closest<HTMLElement>(
-          `[data-scroll-restoration-id="${ancestorScrollRestorationId}"]`,
-        ) ?? null
-      )
-    }
-    return ownScrollRef.current
-  }, [ancestorScrollRestorationId])
-
-  // Read before mount: this seeds the virtualizer's initialOffset, which is
-  // only honored on the very first render.
-  const restorationId = scrollRestorationId ?? ancestorScrollRestorationId
-  const scrollEntry = useElementScrollRestoration(
-    restorationId != null ? { id: restorationId } : { getElement: () => null },
-  )
-
-  const rowVirtualizer = useVirtualizer({
+  // Scrolling happens on the document itself (see app-layout.tsx), so the
+  // virtualizer measures against the window. scrollMargin tells it how far
+  // this list's container sits from the top of the document, since
+  // window.scrollY alone doesn't account for content rendered above it.
+  const rowVirtualizer = useWindowVirtualizer({
     count: renderRows.length,
-    getScrollElement,
     estimateSize: () => ESTIMATED_ROW_HEIGHT,
     overscan: 8,
     getItemKey: (index) => renderRows[index]?.node.id ?? index,
-    initialOffset: () => scrollEntry?.scrollY ?? 0,
+    scrollMargin: containerRef.current?.offsetTop ?? 0,
   })
 
   // Keyboard row selection (useTreeOutliner) can move to a row that isn't
@@ -291,12 +266,7 @@ export function TaskTreeList({
   }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage])
 
   return (
-    <div
-      ref={ownScrollRef}
-      className="flex-1 overflow-auto"
-      data-scroll-restoration-id={scrollRestorationId}
-      data-testid="task-tree-scroll"
-    >
+    <div ref={containerRef} data-testid="task-tree-scroll">
       {isLoading ? (
         <ListAreaMessage>Loading...</ListAreaMessage>
       ) : isEmpty ? (
@@ -332,7 +302,7 @@ export function TaskTreeList({
                       top: 0,
                       left: 0,
                       width: '100%',
-                      transform: `translateY(${String(virtualRow.start)}px)`,
+                      transform: `translateY(${String(virtualRow.start - rowVirtualizer.options.scrollMargin)}px)`,
                     }}
                   >
                     <TreeTaskGridRow

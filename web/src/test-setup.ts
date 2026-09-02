@@ -53,21 +53,46 @@ if (typeof Element.prototype.scrollTo !== 'function') {
   }
 }
 
+// jsdom's window.scrollTo() is a no-op stub (logs "not implemented",
+// never updates scrollX/scrollY or dispatches a scroll event) —
+// useWindowVirtualizer's scrollToIndex() calls it, and its own
+// scroll-position tracking (observeWindowOffset) needs the resulting
+// scroll event to react.
+window.scrollTo = function (optionsOrX?: ScrollToOptions | number, y?: number) {
+  if (typeof optionsOrX === 'number') {
+    Object.defineProperty(window, 'scrollX', {
+      configurable: true,
+      value: optionsOrX,
+    })
+    if (y != null) {
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: y })
+    }
+  } else {
+    if (optionsOrX?.left != null) {
+      Object.defineProperty(window, 'scrollX', {
+        configurable: true,
+        value: optionsOrX.left,
+      })
+    }
+    if (optionsOrX?.top != null) {
+      Object.defineProperty(window, 'scrollY', {
+        configurable: true,
+        value: optionsOrX.top,
+      })
+    }
+  }
+  window.dispatchEvent(new Event('scroll'))
+}
+
 // jsdom always reports offsetHeight=0, which @tanstack/react-virtual reads
-// for both the scroll container's viewport size and each row's height on
-// mount — left at 0, it renders almost nothing and the row-size cache
-// collapses onto a single arbitrary row. Fake both to nonzero values,
-// scoped to this feature's own markers so unrelated tests are unaffected.
+// for each row's height on mount via measureElement's fallback — left at 0,
+// the row-size cache collapses onto a single arbitrary row. Fake it to a
+// nonzero value, scoped to this feature's own row marker so unrelated tests
+// are unaffected. (The viewport size itself comes from window.innerHeight
+// for useWindowVirtualizer, which jsdom already defaults to nonzero.)
 Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
   configurable: true,
   get(this: HTMLElement) {
-    if (
-      this.matches(
-        '[data-scroll-restoration-id], [data-testid="task-tree-scroll"]',
-      )
-    ) {
-      return 2000
-    }
     if (this.matches('[data-testid="task-tree-row"]')) return 40
     return 0
   },

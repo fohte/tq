@@ -36,12 +36,14 @@ function Settings() {
   const integrationsList = useIntegrationsList()
 
   return (
-    <div className="flex h-full flex-col">
-      <ScreenHeaderBar>
-        <SectionHeading level={2}>settings</SectionHeading>
-      </ScreenHeaderBar>
+    <div className="flex flex-col">
+      <div className="sticky top-0 z-10">
+        <ScreenHeaderBar>
+          <SectionHeading level={2}>settings</SectionHeading>
+        </ScreenHeaderBar>
+      </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:px-7 md:py-6">
+      <div className="p-4 md:px-7 md:py-6">
         <div className="flex max-w-3xl flex-col gap-2.5">
           <SectionHeading level={3}>integrations</SectionHeading>
 

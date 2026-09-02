@@ -34,7 +34,6 @@ export function ProjectMainContent({
   isTasksLoading,
   lazyChildrenFilter,
   sessionsByTaskId,
-  ancestorScrollRestorationId,
   hasNextPage,
   isFetchingNextPage,
   isFetchNextPageError,
@@ -49,8 +48,6 @@ export function ProjectMainContent({
   isTasksLoading: boolean
   lazyChildrenFilter: TaskListFilter | undefined
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
-  /** Forwarded to TaskTreeList; see its docstring for behavior. */
-  ancestorScrollRestorationId: string
   hasNextPage: boolean
   isFetchingNextPage: boolean
   isFetchNextPageError: boolean
@@ -104,7 +101,6 @@ export function ProjectMainContent({
         isLoading={isTasksLoading}
         lazyChildrenFilter={lazyChildrenFilter}
         sessionsByTaskId={sessionsByTaskId}
-        ancestorScrollRestorationId={ancestorScrollRestorationId}
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
         isFetchNextPageError={isFetchNextPageError}
@@ -255,7 +251,6 @@ function ProjectTaskList({
   isLoading,
   lazyChildrenFilter,
   sessionsByTaskId,
-  ancestorScrollRestorationId,
   hasNextPage,
   isFetchingNextPage,
   isFetchNextPageError,
@@ -271,7 +266,6 @@ function ProjectTaskList({
   isLoading: boolean
   lazyChildrenFilter: TaskListFilter | undefined
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
-  ancestorScrollRestorationId: string
   hasNextPage: boolean
   isFetchingNextPage: boolean
   isFetchNextPageError: boolean
@@ -319,7 +313,6 @@ function ProjectTaskList({
           tasks={filteredTasks}
           sessionsByTaskId={sessionsByTaskId}
           lazyChildrenFilter={lazyChildrenFilter}
-          ancestorScrollRestorationId={ancestorScrollRestorationId}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
           isFetchNextPageError={isFetchNextPageError}

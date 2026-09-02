@@ -239,24 +239,26 @@ function DayView() {
   )
 
   return (
-    <DayViewPresentation
-      isLoading={isLoading}
-      calendarEvents={calendarEvents}
-      schedules={schedulesData ?? []}
-      dndCallbacks={dndCallbacks}
-      {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
-        ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
-        : {})}
-      queueTasks={queueTasks}
-      queueCandidates={queueCandidates}
-      onReorderQueue={handleReorderQueue}
-      onInsertCandidate={handleInsertCandidate}
-      onToggleQueueTask={handleToggleQueueTask}
-      onRemoveFromQueue={handleToggleQueueTask}
-      onAutoAssign={handleAutoAssign}
-      isAutoAssigning={autoAssign.isPending}
-      selectedDate={selectedDate}
-      onDateChange={setSelectedDate}
-    />
+    <div className="h-dvh overflow-hidden">
+      <DayViewPresentation
+        isLoading={isLoading}
+        calendarEvents={calendarEvents}
+        schedules={schedulesData ?? []}
+        dndCallbacks={dndCallbacks}
+        {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
+          ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
+          : {})}
+        queueTasks={queueTasks}
+        queueCandidates={queueCandidates}
+        onReorderQueue={handleReorderQueue}
+        onInsertCandidate={handleInsertCandidate}
+        onToggleQueueTask={handleToggleQueueTask}
+        onRemoveFromQueue={handleToggleQueueTask}
+        onAutoAssign={handleAutoAssign}
+        isAutoAssigning={autoAssign.isPending}
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+      />
+    </div>
   )
 }

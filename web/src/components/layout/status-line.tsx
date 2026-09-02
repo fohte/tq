@@ -45,7 +45,7 @@ export function StatusLine() {
   )
 
   return (
-    <div className="hidden h-6 shrink-0 items-center gap-3 border-t border-border bg-card px-3 font-mono text-2xs text-muted-foreground-faint md:flex">
+    <div className="sticky bottom-0 hidden h-6 shrink-0 items-center gap-3 border-t border-border bg-card px-3 font-mono text-2xs text-muted-foreground-faint md:flex">
       <span>
         <span className="text-primary">&gt;</span>{' '}
         <span className="text-muted-foreground-strong">{pathname}</span>
