@@ -69,6 +69,12 @@ pnpm --filter web run test:storybook # vitest run --project=storybook --project=
 
 This is separate from `pnpm --filter web run test`, so writing the story is not enforced by the default test run — write it anyway when adding or changing a presentational component.
 
+### Build Task/TaskDetail/TreeNode story fixtures from the shared factory
+
+`Task`, `TaskDetail`, `TreeNode`, and their structurally-identical aliases (`SearchResult`, `LinkedTaskSummary`, `ProjectTask`, `TaskUrlPreview`, ...) gain a field on every API change. A story that hand-writes one of these as an object literal needs a manual edit on every such change; a story built from `makeTask`/`makeNode`/`makeTaskDetail` (`web/src/components/task/task-row-test-fixtures.ts`) does not, since the factory absorbs the new field once.
+
+Call the shared factory and pass only the fields that matter for that story (id, title, status, dates, ...) as overrides — never write the full object literal by hand. Add a thin local wrapper (e.g. a `makeProjectTask` that layers a fixed `projectId` on top of `makeTask`) when a group of stories in one file shares a non-default override.
+
 ### Extract route-inline UI that has its own appearance or state
 
 Stories are the only thing the VRT job (`vrt / shard (storybook, N)` / `vrt / shard (storybook-mobile, N)`) renders and screenshots. Route files under `web/src/routes/` are never rendered by a story, so UI written inline in a route — a `<select>`, a checkbox, a column header, an empty state, a full-screen loading/not-found view — has no visual-regression coverage even when the rule above (every presentational component under `web/src/components/` has a story) is fully satisfied.
