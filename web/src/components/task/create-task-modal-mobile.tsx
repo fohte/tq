@@ -12,6 +12,7 @@ import {
 import { TagsInput } from '#components/task/tags-input'
 import {
   BottomSheetHeader,
+  BottomSheetOverlay,
   BottomSheetPanel,
 } from '#components/ui/bottom-sheet'
 import { Button } from '#components/ui/button'
@@ -72,7 +73,7 @@ export function CreateTaskModalMobile({
   submitDisabled: boolean
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:hidden">
+    <BottomSheetOverlay className="md:hidden">
       <BottomSheetPanel>
         {/* Header */}
         <BottomSheetHeader>
@@ -237,6 +238,6 @@ export function CreateTaskModalMobile({
           </Button>
         </div>
       </BottomSheetPanel>
-    </div>
+    </BottomSheetOverlay>
   )
 }
