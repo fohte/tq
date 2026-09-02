@@ -6,13 +6,10 @@ export interface ActiveMentionQuery {
   query: string
 }
 
-// A `#` not preceded by a word character, another `#`, or `/` (the last one
-// on top of api/src/services/task-links.ts's MENTION_PATTERN, to keep a URL
-// fragment like `https://example.com/path/#anchor` from being read as a
-// mention), followed by a run of non-whitespace, non-`#` characters up to
-// the cursor. Unlike the link pattern, the query may contain letters too
-// (title search), since the inserted mention always becomes plain
-// `#<number>` regardless of what was typed to find it.
+// `#` not preceded by \w, `#`, or `/` (skips URL fragments like
+// `.../#anchor`), followed by non-whitespace, non-`#` text up to the
+// cursor. The query may contain letters (title search) since the inserted
+// mention is always plain `#<number>`.
 const TRIGGER_PATTERN = /(?<![\w#/])#([^\s#]*)$/
 
 // Finds an in-progress `#<query>` mention right before a collapsed cursor,
