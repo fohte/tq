@@ -372,16 +372,9 @@ export const FullPageSP: StoryObj<{
   ),
 }
 
-// Regression check: on mobile, typing in the description must not scroll the
-// window. This renders through the real AppLayout (not FullPageSP's
-// standalone mimic), since the bug lives in AppLayout's own root element:
-// ProseMirror's cursor-into-view walk (run on every keystroke) stops at the
-// first `fixed`/`sticky` ancestor, but AppLayout's root used to be a
-// statically-positioned `h-screen` div, so the walk fell through every
-// intermediate `overflow-auto` container (whose height doesn't shrink for an
-// open on-screen keyboard) all the way to `document.body`. There, it *does*
-// see the keyboard-shrunk `visualViewport` and calls `window.scrollBy` —
-// jerking the whole page on every character.
+// Regression check: on mobile, typing in the description must not scroll
+// the window. Renders through the real AppLayout (not FullPageSP's
+// standalone mimic), since the fix lives in AppLayout's own root element.
 export const TypingWithKeyboardOpenDoesNotScrollWindow: StoryObj<{
   task: TaskDetail
   pages: TaskPage[]
@@ -439,10 +432,8 @@ export const TypingWithKeyboardOpenDoesNotScrollWindow: StoryObj<{
       'the description editor always renders a ProseMirror root',
     )
 
-    // First click flips the (view-mode) editor to edit mode; Crepe only
-    // applies contenteditable in an effect that runs after that click, so a
-    // second click is needed to actually focus it (see the same pattern in
-    // markdown-editor.stories.tsx).
+    // Crepe applies contenteditable in an effect that runs after the first
+    // click, so a second click is needed to actually focus it.
     await userEvent.click(proseMirrorRoot)
     await userEvent.click(proseMirrorRoot)
 
@@ -455,9 +446,7 @@ export const TypingWithKeyboardOpenDoesNotScrollWindow: StoryObj<{
       'browsers used for storybook tests always provide visualViewport',
     )
 
-    // Simulate the on-screen keyboard covering the bottom of the screen: the
-    // visual viewport shrinks while the layout viewport (and this
-    // h-screen-based layout) does not.
+    // Simulate the on-screen keyboard covering the bottom of the screen.
     spyOn(visualViewport, 'height', 'get').mockReturnValue(200)
     visualViewport.dispatchEvent(new Event('resize'))
 

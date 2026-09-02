@@ -20,12 +20,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   })
 
   return (
-    // `fixed inset-0` (not `h-screen`/100vh, which mobile browsers don't
-    // shrink for an open on-screen keyboard): prosemirror-view's cursor
-    // scroll-into-view walk stops at the first `fixed`/`sticky` ancestor
-    // (prosemirror-view's scrollRectIntoView), so pinning the root here
-    // keeps it from ever reaching document.body and calling
-    // window.scrollBy on every keystroke.
+    // `fixed`: prosemirror-view's cursor scroll-into-view walk stops at the
+    // first fixed/sticky ancestor, so this keeps it from reaching
+    // document.body and calling window.scrollBy on every keystroke.
     <div className="fixed inset-0 flex">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
