@@ -82,7 +82,7 @@ export function ActionsMenu({
           onClick={stopRowNavigation}
           data-no-dnd=""
           className={cn(
-            'relative flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground outline-none hover:text-foreground md:hidden',
+            'flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground outline-none hover:text-foreground md:hidden',
             mobileTriggerClassName,
           )}
         >
