@@ -5,6 +5,7 @@ import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 
 import { EditLabelDialog } from '#components/label/edit-label-dialog'
 import type { Label } from '#hooks/use-labels'
+import { clickSelectOption } from '#lib/test-utils'
 
 const label: Label = {
   id: '00000000-0000-0000-0000-000000000301',
@@ -69,10 +70,6 @@ export const RenameAndSubmit: Story = {
         ),
       ],
     },
-    // The dialog itself stays mounted throughout (`open` is a static arg
-    // here, so `onOpenChange` never actually closes it) — Default already
-    // covers the open dialog's appearance, so skipping this capture doesn't
-    // drop coverage.
     screenshot: { skip: true },
   },
   play: async ({ canvasElement, args }) => {
@@ -88,6 +85,40 @@ export const RenameAndSubmit: Story = {
   },
 }
 
+// Captured by the msw handler below, reset at the start of each play function
+// that submits — proves the request body, not just the resulting UI state.
+let patchedBody: unknown = null
+
+export const ChangeContextAndSubmit: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.patch('/api/labels/:id', async ({ request }) => {
+          patchedBody = await request.json()
+          return HttpResponse.json({ ...label, context: 'personal' })
+        }),
+      ],
+    },
+    screenshot: { skip: true },
+  },
+  play: async ({ canvasElement, args }) => {
+    patchedBody = null
+    const body = within(canvasElement.ownerDocument.body)
+
+    await userEvent.click(body.getByRole('combobox'))
+    await clickSelectOption(
+      userEvent,
+      await body.findByRole('option', { name: 'Personal' }),
+    )
+    await userEvent.click(await body.findByRole('button', { name: 'Save' }))
+
+    await waitFor(async () => {
+      await expect(args.onOpenChange).toHaveBeenCalledWith(false)
+    })
+    await expect(patchedBody).toEqual({ name: 'oncall', context: 'personal' })
+  },
+}
+
 export const NameConflictShowsError: Story = {
   parameters: {
     msw: {
@@ -100,7 +131,6 @@ export const NameConflictShowsError: Story = {
         ),
       ],
     },
-    screenshot: { skip: true },
   },
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body)

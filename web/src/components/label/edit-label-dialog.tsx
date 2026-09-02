@@ -43,7 +43,6 @@ export function EditLabelDialog({
   const [context, setContext] = useState<ContextValue>(label.context)
   const updateLabel = useUpdateLabel()
 
-  // Otherwise the fields keep whatever was typed/selected last time it was open.
   useEffect(() => {
     if (open) {
       setName(label.name)
