@@ -1,6 +1,10 @@
 import { Calendar, CalendarPlus, ChevronLeft, Palette, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
+import {
+  contextLabels,
+  type ContextValue,
+} from '#components/task/create-task-modal-fields'
 import { Button } from '#components/ui/button'
 import {
   Dialog,
@@ -19,6 +23,7 @@ import {
   SelectValue,
 } from '#components/ui/select'
 import { Textarea } from '#components/ui/textarea'
+import { useCurrentContext } from '#hooks/use-current-context'
 import type { Project } from '#hooks/use-projects'
 import {
   PROJECT_COLOR_PRESETS,
@@ -55,12 +60,18 @@ function isValidStatus(value: string | undefined): value is StatusValue {
   )
 }
 
+const contextValues = [
+  'work',
+  'personal',
+] as const satisfies readonly ContextValue[]
+
 export function ProjectFormModal({
   open,
   onOpenChange,
   project,
 }: ProjectFormModalProps) {
   const isEditing = !!project
+  const currentContext = useCurrentContext()
 
   const [title, setTitle] = useState(project?.title ?? '')
   const [description, setDescription] = useState(project?.description ?? '')
@@ -71,6 +82,9 @@ export function ProjectFormModal({
   const [targetDate, setTargetDate] = useState(project?.targetDate ?? '')
   const [color, setColor] = useState(
     project?.color ?? PROJECT_COLOR_PRESETS[0].hex,
+  )
+  const [context, setContext] = useState<ContextValue>(
+    project?.context ?? currentContext,
   )
 
   const createProject = useCreateProject()
@@ -85,7 +99,8 @@ export function ProjectFormModal({
     setStartDate(project?.startDate ?? '')
     setTargetDate(project?.targetDate ?? '')
     setColor(project?.color ?? PROJECT_COLOR_PRESETS[0].hex)
-  }, [project])
+    setContext(project?.context ?? currentContext)
+  }, [project, currentContext])
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -109,6 +124,7 @@ export function ProjectFormModal({
             startDate: startDate || null,
             targetDate: targetDate || null,
             color,
+            context,
           },
         },
         {
@@ -126,6 +142,7 @@ export function ProjectFormModal({
           ...(startDate ? { startDate } : {}),
           ...(targetDate ? { targetDate } : {}),
           color,
+          context,
         },
         {
           onSuccess: () => {
@@ -184,6 +201,27 @@ export function ProjectFormModal({
               {statusValues.map((s) => (
                 <SelectItem key={s} value={s}>
                   {statusLabels[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FieldRow>
+
+        <FieldRow label="Context">
+          <Select
+            value={context}
+            onValueChange={selectValueHandler(setContext, contextValues)}
+          >
+            <SelectTrigger
+              size="sm"
+              className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {contextValues.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {contextLabels[c]}
                 </SelectItem>
               ))}
             </SelectContent>
