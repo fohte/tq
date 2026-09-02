@@ -239,32 +239,24 @@ function DayView() {
   )
 
   return (
-    // Unlike every other route, day view keeps its own internal scroll pane
-    // (see day-view.tsx) rather than scrolling the document — its time-grid
-    // layout is meant to stay pinned to one viewport, like a native calendar.
-    // h-full (not h-dvh): AppLayout gives <main> min-h-0 on this route so it
-    // shrinks to its flex-allotted share of the viewport instead of the full
-    // viewport — h-dvh here would ignore that and force <main> past it again.
-    <div className="h-full overflow-hidden">
-      <DayViewPresentation
-        isLoading={isLoading}
-        calendarEvents={calendarEvents}
-        schedules={schedulesData ?? []}
-        dndCallbacks={dndCallbacks}
-        {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
-          ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
-          : {})}
-        queueTasks={queueTasks}
-        queueCandidates={queueCandidates}
-        onReorderQueue={handleReorderQueue}
-        onInsertCandidate={handleInsertCandidate}
-        onToggleQueueTask={handleToggleQueueTask}
-        onRemoveFromQueue={handleToggleQueueTask}
-        onAutoAssign={handleAutoAssign}
-        isAutoAssigning={autoAssign.isPending}
-        selectedDate={selectedDate}
-        onDateChange={setSelectedDate}
-      />
-    </div>
+    <DayViewPresentation
+      isLoading={isLoading}
+      calendarEvents={calendarEvents}
+      schedules={schedulesData ?? []}
+      dndCallbacks={dndCallbacks}
+      {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
+        ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
+        : {})}
+      queueTasks={queueTasks}
+      queueCandidates={queueCandidates}
+      onReorderQueue={handleReorderQueue}
+      onInsertCandidate={handleInsertCandidate}
+      onToggleQueueTask={handleToggleQueueTask}
+      onRemoveFromQueue={handleToggleQueueTask}
+      onAutoAssign={handleAutoAssign}
+      isAutoAssigning={autoAssign.isPending}
+      selectedDate={selectedDate}
+      onDateChange={setSelectedDate}
+    />
   )
 }
