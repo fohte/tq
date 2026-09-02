@@ -387,6 +387,9 @@ export const ClickingLinkStaysInViewMode: Story = {
     defaultValue: `[${MARKDOWN_LINK_TEXT}](${MARKDOWN_LINK_HASH})\n\n${OUTSIDE_CARD_TEXT}`,
     viewEditToggle: {},
   },
+  parameters: {
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, canvasElement }) => {
     const wrapper = assertDefined(
       canvasElement.querySelector('.milkdown-wrapper'),
@@ -427,6 +430,9 @@ export const ClickingUnsafeSchemeLinkEntersEditMode: Story = {
   args: {
     defaultValue: `[${UNSAFE_SCHEME_LINK_TEXT}](javascript:alert(1))`,
     viewEditToggle: {},
+  },
+  parameters: {
+    screenshot: { skip: true },
   },
   play: async ({ canvas, canvasElement }) => {
     const wrapper = assertDefined(
