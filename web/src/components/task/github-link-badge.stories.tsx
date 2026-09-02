@@ -1,22 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { GithubLinkBadge } from '#components/task/github-link-badge'
-import type { GithubLink } from '#hooks/use-github-link'
-
-function makeLink(overrides: Partial<GithubLink> = {}): GithubLink {
-  return {
-    id: 'link-1',
-    owner: 'fohte',
-    repo: 'tq',
-    number: 42,
-    kind: 'issue',
-    url: 'https://github.com/fohte/tq/issues/42',
-    state: 'open',
-    title: 'Sample issue',
-    lastSyncedAt: '2026-03-20T00:00:00.000Z',
-    ...overrides,
-  }
-}
+import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 
 const meta = {
   title: 'Task/GithubLinkBadge',
@@ -37,16 +22,16 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const OpenIssue: Story = {
-  args: { link: makeLink({ state: 'open', kind: 'issue' }) },
+  args: { link: makeGithubLink({ state: 'open', kind: 'issue' }) },
 }
 
 export const ClosedIssue: Story = {
-  args: { link: makeLink({ state: 'closed', kind: 'issue' }) },
+  args: { link: makeGithubLink({ state: 'closed', kind: 'issue' }) },
 }
 
 export const OpenPullRequest: Story = {
   args: {
-    link: makeLink({
+    link: makeGithubLink({
       state: 'open',
       kind: 'pull_request',
       number: 7,
@@ -57,7 +42,7 @@ export const OpenPullRequest: Story = {
 
 export const MergedPullRequest: Story = {
   args: {
-    link: makeLink({
+    link: makeGithubLink({
       state: 'merged',
       kind: 'pull_request',
       number: 7,
@@ -68,7 +53,7 @@ export const MergedPullRequest: Story = {
 
 export const ClosedPullRequest: Story = {
   args: {
-    link: makeLink({
+    link: makeGithubLink({
       state: 'closed',
       kind: 'pull_request',
       number: 7,
@@ -79,7 +64,7 @@ export const ClosedPullRequest: Story = {
 
 export const WithExtraCount: Story = {
   args: {
-    link: makeLink({
+    link: makeGithubLink({
       state: 'merged',
       kind: 'pull_request',
       number: 436,

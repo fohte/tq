@@ -20,6 +20,7 @@ import {
   getLabelNamesByTaskId,
   hydrateTaskListRows,
   requireTask,
+  resolveParentId,
   taskToResponse,
   timeBlockToResponse,
 } from '#routes/tasks/shared'
@@ -79,13 +80,13 @@ export const tasksCrudApp = new Hono()
     const input = c.req.valid('json')
     const author = c.get('author')
 
+    let parentId: string | null = null
     if (input.parentId != null) {
-      const parent = await db.query.tasks.findFirst({
-        where: eq(tasks.id, input.parentId),
-      })
-      if (!parent) {
-        return c.json({ error: 'Parent task not found' }, 404)
+      const resolved = await resolveParentId(input.parentId)
+      if ('error' in resolved) {
+        return c.json(resolved.error.body, resolved.error.status)
       }
+      parentId = resolved.id
     }
 
     const schedulingSettingsResult = await getSchedulingSettings()
@@ -128,7 +129,7 @@ export const tasksCrudApp = new Hono()
               startDate: input.startDate ?? null,
               dueDate: input.dueDate ?? null,
               estimatedMinutes: input.estimatedMinutes ?? null,
-              parentId: input.parentId ?? null,
+              parentId,
               projectId: input.projectId ?? null,
               context: input.context ?? schedulingSettings.defaultContext,
               commitment: input.commitment,
@@ -178,6 +179,7 @@ export const tasksCrudApp = new Hono()
 
     const [
       childStats,
+      parentTask,
       pages,
       taskTimeBlocks,
       rule,
@@ -198,6 +200,12 @@ export const tasksCrudApp = new Hono()
         })
         .from(tasks)
         .where(eq(tasks.parentId, id)),
+      task.parentId != null
+        ? db.query.tasks.findFirst({
+            where: eq(tasks.id, task.parentId),
+            columns: { number: true },
+          })
+        : Promise.resolve(null),
       db
         .select()
         .from(taskPages)
@@ -234,6 +242,7 @@ export const tasksCrudApp = new Hono()
         ),
         titleAuthor: taskFieldAuthors.title,
         descriptionAuthor: taskFieldAuthors.description,
+        parentNumber: parentTask?.number ?? null,
         childCompletionCount: {
           total: childStats[0]?.total ?? 0,
           completed: childStats[0]?.completed ?? 0,

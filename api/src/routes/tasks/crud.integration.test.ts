@@ -231,6 +231,23 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(404)
     })
 
+    it('creates a task with parentId given as a task number', async () => {
+      const parent = await createTask('Parent')
+
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Child task',
+          parentId: String(parent.number),
+        }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.parentId).toBe(parent.id)
+    })
+
     it('creates any label names that do not exist yet and attaches all of them', async () => {
       await createLabel('foo')
 
@@ -1190,6 +1207,7 @@ describe('tasks CRUD API', () => {
         timeBlocks: [],
         links: { outgoing: [], incoming: [] },
         labels: [],
+        parentNumber: null,
         duplicateOfNumber: null,
         duplicateOfTask: null,
         blockedBy: [],
@@ -1218,6 +1236,7 @@ describe('tasks CRUD API', () => {
         timeBlocks: [],
         links: { outgoing: [], incoming: [] },
         labels: ['bug', 'urgent'],
+        parentNumber: null,
         duplicateOfNumber: null,
         duplicateOfTask: null,
         blockedBy: [],
@@ -1756,6 +1775,7 @@ describe('tasks CRUD API', () => {
           timeBlocks: [],
           links: { outgoing: [], incoming: [] },
           labels: [],
+          parentNumber: null,
           duplicateOfNumber: null,
           duplicateOfTask: null,
           blockedBy: [blockerA, blockerB].map((t) => toLinkedTaskDetail(t)),
@@ -1789,6 +1809,7 @@ describe('tasks CRUD API', () => {
           timeBlocks: [],
           links: { outgoing: [], incoming: [] },
           labels: [],
+          parentNumber: null,
           duplicateOfNumber: null,
           duplicateOfTask: null,
           blockedBy: [],
@@ -1869,6 +1890,7 @@ describe('tasks CRUD API', () => {
       expect(body).toEqual({
         ...withoutLinkSync(child),
         parentId: null,
+        parentNumber: null,
         updatedAt: body.updatedAt,
         titleAuthor: { kind: 'human', agent: null },
         descriptionAuthor: { kind: 'human', agent: null },
@@ -1898,6 +1920,7 @@ describe('tasks CRUD API', () => {
       expect(body).toEqual({
         ...withoutLinkSync(child),
         parentId: grandparent.id,
+        parentNumber: grandparent.number,
         updatedAt: body.updatedAt,
         titleAuthor: { kind: 'human', agent: null },
         descriptionAuthor: { kind: 'human', agent: null },

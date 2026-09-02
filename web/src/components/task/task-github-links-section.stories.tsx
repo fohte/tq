@@ -2,42 +2,37 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
+import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { TaskGithubLinksSection } from '#components/task/task-github-links-section'
 import type { GithubLink } from '#hooks/use-github-link'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const taskId = '00000000-0000-0000-0000-000000000001'
 
-const baseLink: GithubLink = {
-  id: 'link-1',
-  owner: 'fohte',
-  repo: 'tq',
+const baseLink: GithubLink = makeGithubLink({
   number: 412,
-  kind: 'issue',
   url: 'https://github.com/fohte/tq/issues/412',
-  state: 'open',
   title: 'Support associating multiple GitHub links with a task',
-  lastSyncedAt: '2026-03-20T00:00:00.000Z',
-}
+})
 
 const mixedLinks: GithubLink[] = [
   baseLink,
-  {
-    ...baseLink,
+  makeGithubLink({
     id: 'link-2',
     number: 436,
     kind: 'pull_request',
+    url: 'https://github.com/fohte/tq/issues/412',
     state: 'merged',
     title: 'api: allow associating multiple GitHub links with a single task',
-  },
-  {
-    ...baseLink,
+  }),
+  makeGithubLink({
     id: 'link-3',
     number: 441,
     kind: 'pull_request',
+    url: 'https://github.com/fohte/tq/issues/412',
     state: 'open',
     title: 'web: show every linked GitHub issue and PR in a section',
-  },
+  }),
 ]
 
 function Providers({ children }: { children: ReactNode }) {

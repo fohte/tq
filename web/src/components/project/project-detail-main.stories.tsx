@@ -8,28 +8,26 @@ import {
   ProjectSidebar,
   ProjectSidebarMobile,
 } from '#components/project/project-detail-sidebar'
+import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { Project, ProjectDetail, ProjectTask } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import { buildTree } from '#lib/tree-builder'
 import { StoryRouter } from '#storybook-config/story-router'
 
-const baseProject: ProjectDetail = {
+const baseProject = makeProjectDetail({
   id: 'proj-001',
   title: 'ISUCON14',
   description:
     '## Goal\n\nOptimize the ISUCON14 practice benchmark.\n\n- Provision servers\n- Tune database config',
-  status: 'active',
   startDate: '2026-06-01',
   targetDate: '2026-08-15',
   color: '#FF8400',
-  sortOrder: 0,
-  context: 'personal',
   createdAt: '2026-06-01T00:00:00.000Z',
   updatedAt: '2026-06-01T00:00:00.000Z',
   completionRate: 0.4,
   taskCount: { total: 5, completed: 2 },
-}
+})
 
 function makeProjectTask(overrides: Partial<ProjectTask> = {}): ProjectTask {
   return makeTask({

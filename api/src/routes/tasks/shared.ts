@@ -314,6 +314,21 @@ export function findTaskByIdOrNumber(param: string) {
   })
 }
 
+// Resolves a create/set-parent request's raw `parentId` (id or number) to
+// the parent's UUID, shared by the create and set-parent routes so the
+// lookup and 404 body/status can't drift between them.
+export async function resolveParentId(
+  raw: string | number,
+): Promise<
+  { id: string } | { error: { body: { error: string }; status: 404 } }
+> {
+  const parent = await findTaskByIdOrNumber(String(raw))
+  if (!parent) {
+    return { error: { body: { error: 'Parent task not found' }, status: 404 } }
+  }
+  return { id: parent.id }
+}
+
 // Batch counterpart of `findTaskByIdOrNumber`; unmatched inputs are simply
 // absent from the returned map.
 export async function findTasksByIdsOrNumbers(

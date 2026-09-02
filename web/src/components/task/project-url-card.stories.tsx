@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { expect } from 'storybook/test'
 
+import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { ProjectUrlCard } from '#components/task/project-url-card'
 import type { ProjectUrlPreview } from '#hooks/use-project-url-preview'
 import { projectUrlPreviewKeys } from '#hooks/use-project-url-preview'
@@ -14,21 +15,13 @@ const PROJECT_URL =
 const UNRESOLVED_ID = 'unknown'
 const UNRESOLVED_URL = 'https://tq.fohte.net/projects/unknown'
 
-const baseProject: ProjectUrlPreview = {
+const baseProject: ProjectUrlPreview = makeProjectDetail({
   id: 'aaaa0000-0000-0000-0000-000000000000',
-  title: 'tq',
   description: 'Personal task manager built with React and Hono.',
-  status: 'active',
-  startDate: null,
   targetDate: '2026-06-01',
-  color: null,
-  sortOrder: 0,
-  context: 'personal',
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
   completionRate: 0.4,
   taskCount: { total: 10, completed: 4 },
-}
+})
 
 function Providers({
   id,

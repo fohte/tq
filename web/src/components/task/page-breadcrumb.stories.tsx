@@ -1,19 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { PageBreadcrumb } from '#components/task/page-breadcrumb'
-import type { TaskPage } from '#hooks/use-task-pages'
+import { makeTaskPage } from '#components/task/task-page-test-fixtures'
 
-const samplePage: TaskPage = {
-  id: 'page-001',
-  taskId: 'task-001',
-  title: 'Meeting Notes',
+const samplePage = makeTaskPage({
   content: '## Discussion Points\n\n- Architecture review\n- Sprint planning',
-  format: 'markdown',
-  sortOrder: 0,
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  author: null,
-}
+})
 
 const meta = {
   title: 'Task/PageBreadcrumb',

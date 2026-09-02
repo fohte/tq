@@ -1,19 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
+import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { SidebarGithubLinkField } from '#components/task/task-github-link-field'
 import type { GithubLink } from '#hooks/use-github-link'
 
-const sampleLink: GithubLink = {
-  id: 'link-1',
-  owner: 'fohte',
-  repo: 'tq',
-  number: 42,
-  kind: 'issue',
-  url: 'https://github.com/fohte/tq/issues/42',
-  state: 'open',
-  title: 'Sample issue',
-  lastSyncedAt: '2026-03-20T00:00:00.000Z',
-}
+const sampleLink: GithubLink = makeGithubLink()
 
 const meta = {
   title: 'Task/SidebarGithubLinkField',

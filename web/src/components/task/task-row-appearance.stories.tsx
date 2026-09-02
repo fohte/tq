@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 
+import { makeProject } from '#components/project/project-test-fixtures'
+import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
@@ -197,19 +199,7 @@ export const WithGithubLink: Story = {
     task: {
       ...baseTask,
       title: 'Fix flaky test',
-      githubLinks: [
-        {
-          id: 'link-1',
-          owner: 'fohte',
-          repo: 'tq',
-          number: 42,
-          kind: 'issue',
-          url: 'https://github.com/fohte/tq/issues/42',
-          state: 'open',
-          title: 'Fix flaky test',
-          lastSyncedAt: '2026-03-20T00:00:00.000Z',
-        },
-      ],
+      githubLinks: [makeGithubLink({ title: 'Fix flaky test' })],
     },
   },
 }
@@ -220,28 +210,19 @@ export const WithMultipleGithubLinks: Story = {
       ...baseTask,
       title: 'Add multi-link support',
       githubLinks: [
-        {
-          id: 'link-1',
-          owner: 'fohte',
-          repo: 'tq',
+        makeGithubLink({
           number: 412,
-          kind: 'issue',
           url: 'https://github.com/fohte/tq/issues/412',
-          state: 'open',
           title: 'Support multiple GitHub links per task',
-          lastSyncedAt: '2026-03-20T00:00:00.000Z',
-        },
-        {
+        }),
+        makeGithubLink({
           id: 'link-2',
-          owner: 'fohte',
-          repo: 'tq',
           number: 436,
           kind: 'pull_request',
           url: 'https://github.com/fohte/tq/pull/436',
           state: 'merged',
           title: 'api: allow associating multiple GitHub links with a task',
-          lastSyncedAt: '2026-03-20T00:00:00.000Z',
-        },
+        }),
       ],
     },
   },
@@ -273,20 +254,13 @@ export const WithProject: Story = {
     msw: {
       handlers: [
         http.get('/api/projects/:id', () =>
-          HttpResponse.json({
-            id: 'project-1',
-            title: 'tq',
-            description: null,
-            status: 'active',
-            startDate: null,
-            targetDate: null,
-            color: null,
-            sortOrder: 0,
-            createdAt: '2026-03-20T00:00:00.000Z',
-            updatedAt: '2026-03-20T00:00:00.000Z',
-            completionRate: 0.4,
-            taskCount: { total: 10, completed: 4 },
-          }),
+          HttpResponse.json(
+            makeProject({
+              id: 'project-1',
+              completionRate: 0.4,
+              taskCount: { total: 10, completed: 4 },
+            }),
+          ),
         ),
       ],
     },

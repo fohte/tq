@@ -73,6 +73,12 @@ describe('findActiveMentionQuery', () => {
     ).toBeUndefined()
   })
 
+  it('ignores a hash directly preceded by a slash (URL fragment)', () => {
+    expect(
+      findActiveMentionQuery(stateWithCursorAtEnd('a/#foo')),
+    ).toBeUndefined()
+  })
+
   it('returns undefined when the selection is not collapsed', () => {
     const doc = schema.node('doc', null, [
       schema.node('paragraph', null, [schema.text('hello #12')]),

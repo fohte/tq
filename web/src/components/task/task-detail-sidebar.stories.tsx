@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
 
+import { makeProjectDetail } from '#components/project/project-test-fixtures'
+import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import {
   TaskSidebar,
   TaskSidebarMobile,
@@ -101,38 +103,16 @@ export const SidebarWithGithubLink: Story = {
   args: {
     task: {
       ...baseTask,
-      githubLinks: [
-        {
-          id: 'link-1',
-          owner: 'fohte',
-          repo: 'tq',
-          number: 42,
-          kind: 'issue',
-          url: 'https://github.com/fohte/tq/issues/42',
-          state: 'open',
-          title: 'Implement task detail page',
-          lastSyncedAt: '2026-03-20T00:00:00.000Z',
-        },
-      ],
+      githubLinks: [makeGithubLink({ title: 'Implement task detail page' })],
     },
   },
 }
 
-const sampleProject: ProjectDetail = {
+const sampleProject: ProjectDetail = makeProjectDetail({
   id: 'aaaa0000-0000-0000-0000-000000000000',
-  title: 'tq',
-  description: null,
-  status: 'active',
-  startDate: null,
-  targetDate: null,
-  color: null,
-  sortOrder: 0,
-  context: 'personal',
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
   completionRate: 0.4,
   taskCount: { total: 10, completed: 4 },
-}
+})
 
 export const SidebarWithProject: Story = {
   args: {

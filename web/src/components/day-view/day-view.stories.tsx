@@ -6,6 +6,7 @@ import { expect, fn, within } from 'storybook/test'
 
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
+import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { Schedule } from '#hooks/use-schedules'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
@@ -178,13 +179,11 @@ const sampleEvents: TimeBlockEvent[] = [
 ]
 
 const sampleSchedules: Schedule[] = [
-  {
+  makeSchedule({
     scheduleId: 'sched-sleep',
     title: 'Sleep',
     start: `${dateStr}T00:00:00`,
     end: `${dateStr}T07:00:00`,
-    context: 'personal',
-    color: '#6C63FF',
     recurrence: {
       id: 'rule-sleep',
       type: 'daily',
@@ -192,16 +191,14 @@ const sampleSchedules: Schedule[] = [
       daysOfWeek: null,
       dayOfMonth: null,
     },
-  },
-  {
+  }),
+  makeSchedule({
     scheduleId: 'sched-gym',
-    title: 'Gym',
     start: `${dateStr}T18:00:00`,
     end: `${dateStr}T19:00:00`,
-    context: 'personal',
     color: '#52B788',
     recurrence: null,
-  },
+  }),
 ]
 
 function Providers({ children }: { children: ReactNode }) {

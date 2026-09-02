@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fn } from 'storybook/test'
 
 import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
+import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -36,20 +37,6 @@ export const Default: Story = {}
 
 export const Edit: Story = {
   args: {
-    schedule: {
-      scheduleId: 'schedule-1',
-      title: 'Gym',
-      start: '2026-01-01T07:00:00',
-      end: '2026-01-01T08:00:00',
-      context: 'personal',
-      color: '#6C63FF',
-      recurrence: {
-        id: 'rule-1',
-        type: 'weekly',
-        interval: 1,
-        daysOfWeek: [1, 3, 5],
-        dayOfMonth: null,
-      },
-    },
+    schedule: makeSchedule(),
   },
 }

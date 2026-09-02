@@ -10,6 +10,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { makeNode } from '#components/task/task-row-test-fixtures'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
@@ -279,19 +280,7 @@ describe('TreeTaskGridRow', () => {
 
   it('shows a GitHub badge when linked', async () => {
     const node = makeNode({
-      githubLinks: [
-        {
-          id: 'link-1',
-          owner: 'fohte',
-          repo: 'tq',
-          number: 42,
-          kind: 'issue',
-          url: 'https://github.com/fohte/tq/issues/42',
-          state: 'open',
-          title: 'Linked issue',
-          lastSyncedAt: '2026-03-20T00:00:00.000Z',
-        },
-      ],
+      githubLinks: [makeGithubLink({ title: 'Linked issue' })],
     })
     await renderTree(node)
     // The badge only renders in the row's second line when present.
