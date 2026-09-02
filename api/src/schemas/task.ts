@@ -29,7 +29,7 @@ export const createTaskSchema = z.object({
   startDate: z.string().optional(),
   dueDate: z.string().optional(),
   estimatedMinutes: z.number().int().positive().optional(),
-  parentId: z.uuid().optional(),
+  parentId: taskIdOrNumber.optional(),
   projectId: z.uuid().optional(),
   context: contextEnum.optional(),
   commitment: commitmentEnum.optional(),
