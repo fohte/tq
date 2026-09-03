@@ -5,8 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { type ReactNode, useState } from 'react'
 import { fn } from 'storybook/test'
 
+import { QueueItemRow } from '#components/task/queue-item-row'
 import { makeTask as makeBaseTask } from '#components/task/task-row-test-fixtures'
-import { TodayQueueRow } from '#components/task/today-queue-row'
 import type { Task } from '#hooks/use-tasks'
 import { MemoizedStoryRouter } from '#storybook-config/story-router'
 
@@ -38,8 +38,8 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 }
 
 const meta = {
-  title: 'Task/TodayQueueRow',
-  component: TodayQueueRow,
+  title: 'Task/QueueItemRow',
+  component: QueueItemRow,
   parameters: {
     layout: 'centered',
   },
@@ -60,9 +60,10 @@ const meta = {
     ),
   ],
   args: {
+    queueKey: 'day',
     onRemove: fn(),
   },
-} satisfies Meta<typeof TodayQueueRow>
+} satisfies Meta<typeof QueueItemRow>
 
 export default meta
 type Story = StoryObj<typeof meta>
@@ -79,9 +80,17 @@ export const MissingEstimate: Story = {
   },
 }
 
-export const Overdue: Story = {
+export const EditingEstimate: Story = {
   args: {
-    // Fixed past date so this story always renders as overdue.
-    task: makeTask({ title: 'Renew SSL certificate', dueDate: '2020-01-01' }),
+    task: makeTask({ estimatedMinutes: null, title: 'Plan the launch' }),
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByText('No estimate'))
+  },
+}
+
+export const Completed: Story = {
+  args: {
+    task: makeTask({ status: 'completed', title: 'Ship the release notes' }),
   },
 }

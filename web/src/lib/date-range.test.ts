@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getDayIsoRange } from '#lib/date-range'
+import { formatWeekRangeLabel, getDayIsoRange } from '#lib/date-range'
 
 // vitest.config.ts pins TZ to Asia/Tokyo (JST, UTC+9) for the unit project.
 describe('getDayIsoRange', () => {
@@ -16,5 +16,15 @@ describe('getDayIsoRange', () => {
       timeMin: '2026-07-30T15:00:00.000Z',
       timeMax: '2026-07-31T15:00:00.000Z',
     })
+  })
+})
+
+describe('formatWeekRangeLabel', () => {
+  it('returns the Monday-to-Sunday range for a mid-week date', () => {
+    expect(formatWeekRangeLabel(new Date(2026, 2, 18))).toBe('03-16 – 03-22')
+  })
+
+  it('returns the same week for a Sunday, the last day of the week', () => {
+    expect(formatWeekRangeLabel(new Date(2026, 2, 22))).toBe('03-16 – 03-22')
   })
 })

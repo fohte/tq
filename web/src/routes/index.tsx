@@ -1,9 +1,11 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useMemo } from 'react'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
+import type { QueueSectionData } from '#components/day-view/queue-pane'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
 import {
@@ -12,6 +14,14 @@ import {
   useGcalEvents,
 } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
+import {
+  type Queue,
+  type QueueItem,
+  queueKeys,
+  useQueueItemsForQueues,
+  useQueues,
+  useSetQueueItems,
+} from '#hooks/use-queues'
 import { useScheduleList } from '#hooks/use-schedules'
 import { useSchedulingSettings } from '#hooks/use-scheduling-settings'
 import { useSelectedDate } from '#hooks/use-selected-date'
@@ -22,19 +32,38 @@ import {
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '#hooks/use-time-blocks'
-import {
-  useAutoAssign,
-  useSetTodayTasks,
-  useTodayTasks,
-} from '#hooks/use-today-tasks'
+import { useAutoAssign } from '#hooks/use-today-tasks'
 import { matchesContextFilter } from '#lib/context-filter'
-import { formatLocalDate } from '#lib/date-range'
+import {
+  formatLocalDate,
+  formatShortDate,
+  formatWeekRangeLabel,
+} from '#lib/date-range'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { scheduleColorToEventColor } from '#lib/schedule-color'
+
+// Auto-assign and the focus view (/today) depend on this key by name — see
+// api/src/services/task-queues.ts's DAY_QUEUE_KEY for the backend side of
+// the same special-casing.
+const DAY_QUEUE_KEY = 'day'
 
 export const Route = createFileRoute('/')({
   component: DayView,
 })
+
+function dateRangeLabelFor(
+  periodUnit: Queue['periodUnit'],
+  date: Date,
+): string | undefined {
+  switch (periodUnit) {
+    case 'day':
+      return formatShortDate(date)
+    case 'week':
+      return formatWeekRangeLabel(date)
+    default:
+      return undefined
+  }
+}
 
 function DayView() {
   const baseFilter = useBaseFilter(true)
@@ -47,10 +76,12 @@ function DayView() {
   )
   const { data: timeBlocksData } = useTimeBlocks(selectedDateStr)
   const { data: schedulesData } = useScheduleList(selectedDateStr)
-  const { data: todayTasksData } = useTodayTasks(selectedDateStr)
+  const { data: queuesData } = useQueues()
+  const queueItemsResults = useQueueItemsForQueues(queuesData, selectedDateStr)
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
   const context = useCurrentContext()
+  const queryClient = useQueryClient()
 
   const gcalEventsQuery = useGcalEvents(selectedDateStr)
   const schedulingSettings = useSchedulingSettings()
@@ -70,26 +101,64 @@ function DayView() {
     }
   }, [gcalEventsQuery.error, gcalAuthRequired])
 
-  const setTodayTasks = useSetTodayTasks()
+  const setQueueItems = useSetQueueItems()
   const autoAssign = useAutoAssign()
 
   const taskMap = useTaskMap(categorized.all)
 
-  const queueTaskIds = useMemo(
-    () => (todayTasksData ?? []).map((t) => t.taskId),
-    [todayTasksData],
-  )
-  const queueTasks = useMemo(
+  // Raw items per queue key, straight from the API — used as the
+  // authoritative "what's actually stored" source (unaffected by the
+  // completed-task display filtering below).
+  const rawItemsByKey = useMemo(() => {
+    const map = new Map<string, QueueItem[]>()
+    ;(queuesData ?? []).forEach((queue, i) => {
+      map.set(queue.key, queueItemsResults[i]?.data ?? [])
+    })
+    return map
+  }, [queuesData, queueItemsResults])
+
+  // A completed task stays visible (with the progress bar) only in the day
+  // queue; every other queue hides it and excludes it from its count, but it
+  // stays in that queue's stored selection (see the PUT handlers below).
+  const queueSections: QueueSectionData[] = useMemo(
     () =>
-      queueTaskIds
-        .map((id) => taskMap.get(id))
-        .filter((t): t is Task => t != null),
-    [queueTaskIds, taskMap],
+      (queuesData ?? []).map((queue) => {
+        const rawTasks = (rawItemsByKey.get(queue.key) ?? [])
+          .map((item) => taskMap.get(item.taskId))
+          .filter((t): t is Task => t != null)
+        const visibleTasks =
+          queue.key === DAY_QUEUE_KEY
+            ? rawTasks
+            : rawTasks.filter((t) => t.status !== 'completed')
+        const dateRangeLabel = dateRangeLabelFor(queue.periodUnit, selectedDate)
+
+        return {
+          key: queue.key,
+          title: queue.name,
+          items: visibleTasks,
+          ...(dateRangeLabel != null ? { dateRangeLabel } : {}),
+          emptyMessage: `No tasks in ${queue.name}'s queue`,
+        }
+      }),
+    [queuesData, rawItemsByKey, taskMap, selectedDate],
   )
-  const queueTaskIdSet = useMemo(() => new Set(queueTaskIds), [queueTaskIds])
+
+  const dayQueueTasks =
+    queueSections.find((q) => q.key === DAY_QUEUE_KEY)?.items ?? []
+
+  const allQueuedTaskIds = useMemo(() => {
+    const ids = new Set<string>()
+    rawItemsByKey.forEach((items) => {
+      items.forEach((item) => {
+        ids.add(item.taskId)
+      })
+    })
+    return ids
+  }, [rawItemsByKey])
+
   const queueCandidates = useMemo(
-    () => getQueueCandidates(categorized.all, queueTaskIdSet),
-    [categorized.all, queueTaskIdSet],
+    () => getQueueCandidates(categorized.all, allQueuedTaskIds),
+    [categorized.all, allQueuedTaskIds],
   )
 
   const taskEvents: TimeBlockEvent[] = useMemo(() => {
@@ -197,24 +266,101 @@ function DayView() {
     [updateTimeBlock, createTimeBlock],
   )
 
-  const handleReorderQueue = (taskIds: string[]) => {
-    if (setTodayTasks.isPending) return
-    setTodayTasks.mutate({ date: selectedDateStr, taskIds })
+  // The full stored id list for a queue: the given `visibleIds` (already
+  // reordered/inserted/removed by the caller) followed by any completed
+  // tasks currently hidden from that queue's section — a PUT fully replaces
+  // the queue's selection, so leaving a hidden task out here would silently
+  // drop it from storage instead of just hiding it from view.
+  function fullTaskIdsFor(queueKey: string, visibleIds: string[]): string[] {
+    const rawIds = (rawItemsByKey.get(queueKey) ?? []).map((i) => i.taskId)
+    const visibleIdSet = new Set(visibleIds)
+    const hiddenIds = rawIds.filter((id) => !visibleIdSet.has(id))
+    return [...visibleIds, ...hiddenIds]
   }
 
-  const handleInsertCandidate = (taskId: string, index: number) => {
-    if (setTodayTasks.isPending) return
-    const nextTaskIds = [...queueTaskIds]
-    nextTaskIds.splice(index, 0, taskId)
-    setTodayTasks.mutate({ date: selectedDateStr, taskIds: nextTaskIds })
+  function visibleIdsFor(queueKey: string): string[] {
+    return (
+      queueSections.find((q) => q.key === queueKey)?.items.map((t) => t.id) ??
+      []
+    )
   }
 
-  const handleToggleQueueTask = (taskId: string) => {
-    if (setTodayTasks.isPending) return
-    const taskIds = queueTaskIdSet.has(taskId)
-      ? queueTaskIds.filter((id) => id !== taskId)
-      : [...queueTaskIds, taskId]
-    setTodayTasks.mutate({ date: selectedDateStr, taskIds })
+  const handleReorderQueue = (
+    queueKey: string,
+    newVisibleTaskIds: string[],
+  ) => {
+    if (setQueueItems.isPending && setQueueItems.variables.key === queueKey)
+      return
+    setQueueItems.mutate({
+      key: queueKey,
+      date: selectedDateStr,
+      taskIds: fullTaskIdsFor(queueKey, newVisibleTaskIds),
+    })
+  }
+
+  const handleInsertCandidate = (
+    queueKey: string,
+    taskId: string,
+    index: number,
+  ) => {
+    if (setQueueItems.isPending && setQueueItems.variables.key === queueKey)
+      return
+    const nextVisible = [...visibleIdsFor(queueKey)]
+    nextVisible.splice(index, 0, taskId)
+    setQueueItems.mutate({
+      key: queueKey,
+      date: selectedDateStr,
+      taskIds: fullTaskIdsFor(queueKey, nextVisible),
+    })
+  }
+
+  const handleAddCandidate = (taskId: string) => {
+    handleInsertCandidate(
+      DAY_QUEUE_KEY,
+      taskId,
+      visibleIdsFor(DAY_QUEUE_KEY).length,
+    )
+  }
+
+  const handleRemoveFromQueue = (queueKey: string, taskId: string) => {
+    if (setQueueItems.isPending && setQueueItems.variables.key === queueKey)
+      return
+    const nextVisible = visibleIdsFor(queueKey).filter((id) => id !== taskId)
+    setQueueItems.mutate({
+      key: queueKey,
+      date: selectedDateStr,
+      taskIds: fullTaskIdsFor(queueKey, nextVisible),
+    })
+  }
+
+  const handleMoveTask = (
+    taskId: string,
+    fromQueueKey: string,
+    toQueueKey: string,
+  ) => {
+    if (setQueueItems.isPending && setQueueItems.variables.key === toQueueKey)
+      return
+    const nextVisible = [...visibleIdsFor(toQueueKey), taskId]
+    setQueueItems.mutate(
+      {
+        key: toQueueKey,
+        date: selectedDateStr,
+        taskIds: fullTaskIdsFor(toQueueKey, nextVisible),
+      },
+      {
+        onSuccess: () => {
+          // The server enforces "at most one queue per task" itself and
+          // already dropped this task from fromQueueKey's stored selection
+          // — patch its cached items locally instead of refetching so the
+          // UI doesn't show the task in both sections until the next fetch.
+          queryClient.setQueryData(
+            queueKeys.items(fromQueueKey, selectedDateStr),
+            (old: QueueItem[] | undefined) =>
+              old?.filter((item) => item.taskId !== taskId) ?? old,
+          )
+        },
+      },
+    )
   }
 
   const handleAutoAssign = () => {
@@ -247,12 +393,14 @@ function DayView() {
       {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
         ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
         : {})}
-      queueTasks={queueTasks}
+      queueSections={queueSections}
+      dayQueueTasks={dayQueueTasks}
       queueCandidates={queueCandidates}
       onReorderQueue={handleReorderQueue}
+      onMoveTask={handleMoveTask}
       onInsertCandidate={handleInsertCandidate}
-      onToggleQueueTask={handleToggleQueueTask}
-      onRemoveFromQueue={handleToggleQueueTask}
+      onAddCandidate={handleAddCandidate}
+      onRemoveFromQueue={handleRemoveFromQueue}
       onAutoAssign={handleAutoAssign}
       isAutoAssigning={autoAssign.isPending}
       selectedDate={selectedDate}

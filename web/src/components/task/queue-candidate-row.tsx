@@ -52,7 +52,7 @@ export function QueueCandidateRow({
       <DragHandle
         attributes={attributes}
         listeners={listeners}
-        aria-label="Drag to today's queue"
+        aria-label="Drag to a queue"
       />
 
       <div className="min-w-0 flex-1">

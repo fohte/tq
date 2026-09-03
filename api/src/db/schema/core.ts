@@ -272,9 +272,10 @@ export const taskQueueItems = pgTable(
     // Start of the period this item belongs to (the day itself for a day
     // queue, the Monday for a week queue); null for a queue with no periodUnit.
     // ponytail: nullability isn't enforced against the referenced queue's
-    // periodUnit at the DB level (only schedules.ts's single write path
-    // keeps them in sync); add a trigger once a queue-CRUD/multi-queue PR
-    // adds more write paths into this table.
+    // periodUnit at the DB level; schedule-today-tasks.ts and queues.ts
+    // each derive it via resolvePeriodStart and keep it in sync in
+    // application code. Add a trigger if a third write path makes that
+    // harder to audit.
     periodStart: date('period_start'),
     taskId: text('task_id')
       .notNull()

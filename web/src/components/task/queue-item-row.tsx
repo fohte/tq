@@ -13,11 +13,21 @@ import { useUpdateTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
 
-export function TodayQueueRow({
+export interface QueueTaskDragData extends Record<string, unknown> {
+  type: 'queue-task'
+  queueKey: string
+}
+
+export function QueueItemRow({
   task,
+  queueKey,
   onRemove,
 }: {
   task: Task
+  /** The queue this row belongs to, carried in drag data so a shared
+   * DndContext across multiple sections can tell which queue a drag started
+   * in (needed to detect a cross-section move vs. a same-section reorder). */
+  queueKey: string
   onRemove: () => void
 }) {
   const {
@@ -27,7 +37,10 @@ export function TodayQueueRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id, data: { type: 'queue-task' } })
+  } = useSortable({
+    id: task.id,
+    data: { type: 'queue-task', queueKey } satisfies QueueTaskDragData,
+  })
   const updateTask = useUpdateTask()
   const [isEditingEstimate, setIsEditingEstimate] = useState(false)
   const [estimateInput, setEstimateInput] = useState('')
@@ -117,7 +130,7 @@ export function TodayQueueRow({
         variant="ghost"
         size="icon-xs"
         onClick={onRemove}
-        aria-label="Remove from today's queue"
+        aria-label="Remove from queue"
         className="shrink-0 text-muted-foreground hover:text-destructive"
       >
         <X className="h-4 w-4" />

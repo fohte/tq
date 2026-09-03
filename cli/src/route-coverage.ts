@@ -172,6 +172,16 @@ export const EXCLUDED_ROUTES = {
   // `GET /api/projects/:id` already covers a CLI's project-summary use case.
   'GET /api/projects/:id/task-ids':
     'backs the web project detail page, not a CLI concern',
+
+  // Generic multi-queue API backing the day view's queue sections. `tq
+  // today` already covers the day queue via /api/schedule/today-tasks;
+  // selecting from other queues is a web UI action for now.
+  'GET /api/queues':
+    'day queue is covered by tq today; other queues are web UI only for now',
+  'GET /api/queues/:key/items':
+    'day queue is covered by tq today; other queues are web UI only for now',
+  'PUT /api/queues/:key/items':
+    'day queue is covered by tq today; other queues are web UI only for now',
 } as const satisfies Partial<Record<AllRoutes, string>>
 
 type ExcludedRoutes = keyof typeof EXCLUDED_ROUTES
