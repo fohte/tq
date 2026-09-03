@@ -3,7 +3,7 @@ CREATE TABLE "task_queues" (
 	"key" text NOT NULL,
 	"name" text NOT NULL,
 	"period_unit" text,
-	"position" integer NOT NULL,
+	"position" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "task_queues_key_unique" UNIQUE("key"),

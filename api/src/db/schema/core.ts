@@ -244,7 +244,7 @@ export const taskQueues = pgTable(
     periodUnit: text('period_unit', {
       enum: ['day', 'week', 'month'],
     }),
-    position: integer('position').notNull(),
+    position: integer('position').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -271,6 +271,10 @@ export const taskQueueItems = pgTable(
       .references(() => taskQueues.id, { onDelete: 'cascade' }),
     // Start of the period this item belongs to (the day itself for a day
     // queue, the Monday for a week queue); null for a queue with no periodUnit.
+    // ponytail: nullability isn't enforced against the referenced queue's
+    // periodUnit at the DB level (only schedules.ts's single write path
+    // keeps them in sync); add a trigger once a queue-CRUD/multi-queue PR
+    // adds more write paths into this table.
     periodStart: date('period_start'),
     taskId: text('task_id')
       .notNull()
