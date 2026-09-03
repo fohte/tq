@@ -5,14 +5,20 @@ export interface VisualViewportInsets {
   height: number
 }
 
+// Browser zoom leaves sub-pixel gaps between the (rounded) integer
+// `window.innerHeight` and the float `visualViewport.height` even when
+// nothing is actually shrinking the visual viewport; keyboard/pinch-zoom
+// deltas this hook cares about are far larger than that.
+const VIEWPORT_HEIGHT_EPSILON = 1
+
 function getVisualViewportInsets(): VisualViewportInsets | null {
   const viewport = window.visualViewport
   if (!viewport) return null
-  // Layout viewport === visual viewport (no software keyboard, no pinch
-  // zoom pan): nothing to compensate for, so report null and let callers
-  // fall back to their static/sticky layout instead of pinning to one
-  // viewport's worth of height.
-  if (viewport.offsetTop === 0 && viewport.height === window.innerHeight) {
+  // Visual viewport matches layout viewport: nothing to compensate for.
+  if (
+    viewport.offsetTop === 0 &&
+    Math.abs(viewport.height - window.innerHeight) < VIEWPORT_HEIGHT_EPSILON
+  ) {
     return null
   }
   return { top: viewport.offsetTop, height: viewport.height }
