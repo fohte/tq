@@ -8,6 +8,13 @@ export interface VisualViewportInsets {
 function getVisualViewportInsets(): VisualViewportInsets | null {
   const viewport = window.visualViewport
   if (!viewport) return null
+  // Layout viewport === visual viewport (no software keyboard, no pinch
+  // zoom pan): nothing to compensate for, so report null and let callers
+  // fall back to their static/sticky layout instead of pinning to one
+  // viewport's worth of height.
+  if (viewport.offsetTop === 0 && viewport.height === window.innerHeight) {
+    return null
+  }
   return { top: viewport.offsetTop, height: viewport.height }
 }
 

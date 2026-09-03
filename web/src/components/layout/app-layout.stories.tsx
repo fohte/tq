@@ -113,5 +113,12 @@ export const TallPageStillScrollsDocument: Story = {
     await expect(view.document.documentElement.scrollHeight).toBeGreaterThan(
       view.innerHeight,
     )
+
+    const sidebar = assertDefined(
+      canvasElement.querySelector('aside'),
+      'the sidebar should render at desktop viewport widths',
+    )
+    view.scrollTo(0, view.innerHeight * 2)
+    await expect(sidebar.getBoundingClientRect().top).toBe(0)
   },
 }
