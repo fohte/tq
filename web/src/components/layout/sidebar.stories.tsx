@@ -32,6 +32,10 @@ const labelsForTasksWithTags = [
   makeLabel({ id: '3', name: 'review' }),
 ]
 
+const tasksWithInboxItems: Task[] = [
+  makeTask({ id: '4', title: 'Untriaged task', commitment: 'inbox' }),
+]
+
 const projectsAcrossStatuses: Project[] = [
   makeProject({
     id: '1',
@@ -68,6 +72,12 @@ function SidebarStory({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
   queryClient.setQueryData(taskKeys.list(undefined), tasks ?? [])
+  queryClient.setQueryData(
+    taskKeys.list({ context: 'personal', commitment: 'inbox', status: 'todo' }),
+    (tasks ?? []).filter(
+      (task) => task.commitment === 'inbox' && task.status === 'todo',
+    ),
+  )
   queryClient.setQueryData(
     projectKeys.list({ context: 'personal' }),
     projects ?? [],
@@ -165,6 +175,13 @@ export const WithTags: Story = {
     currentPath: '/',
     tasks: tasksWithTags,
     labels: labelsForTasksWithTags,
+  },
+}
+
+export const WithInboxTasks: Story = {
+  args: {
+    currentPath: '/',
+    tasks: tasksWithInboxItems,
   },
 }
 

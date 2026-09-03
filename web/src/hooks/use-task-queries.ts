@@ -17,10 +17,13 @@ type TaskContext = 'work' | 'personal'
 
 export type TaskSortBy = 'created' | 'updated' | 'due' | 'estimate'
 
+export type TaskCommitment = 'inbox' | 'active' | 'someday'
+
 export interface TaskListFilter {
   q?: string
   status?: TaskStatus | TaskStatus[]
   context?: TaskContext
+  commitment?: TaskCommitment
   parentId?: string
   label?: string
   projectId?: string
