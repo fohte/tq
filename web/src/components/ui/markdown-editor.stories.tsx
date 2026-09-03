@@ -371,6 +371,77 @@ export const ClickingCardStaysInViewMode: Story = {
   },
 }
 
+const MARKDOWN_LINK_TEXT = 'a plain markdown link'
+const MARKDOWN_LINK_HASH = '#markdown-link-target'
+
+// A bare Markdown link (as opposed to an inline-reference chip/card) must
+// stay clickable in view mode too: clicking it should navigate, not flip the
+// editor into edit mode. See markdown-editor.tsx's onMouseUp guard.
+export const ClickingLinkStaysInViewMode: Story = {
+  args: {
+    defaultValue: `[${MARKDOWN_LINK_TEXT}](${MARKDOWN_LINK_HASH})\n\n${OUTSIDE_CARD_TEXT}`,
+    viewEditToggle: {},
+  },
+  parameters: {
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, canvasElement }) => {
+    const wrapper = assertDefined(
+      canvasElement.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
+    )
+
+    // fireEvent dispatches straight at the element instead of hit-testing
+    // screen coordinates like userEvent.click does — Milkdown's hidden
+    // link-tooltip preview UI overlaps the link's coordinates even while
+    // closed, which made userEvent.click land on the tooltip instead of the
+    // link itself.
+    const link = canvas.getByRole('link', { name: MARKDOWN_LINK_TEXT })
+
+    await fireEvent.mouseUp(link, { button: 0 })
+
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'view')
+    // The point of this test: readonly must stay true past onMouseUp so a
+    // real click that follows still hits a non-editable <a> and navigates
+    // (a contenteditable one loses the browser's default click-through).
+    await expect(link.isContentEditable).toBe(false)
+
+    // Control: clicking plain text outside the link must still flip the
+    // editor into edit mode, proving the assertion above is actually
+    // capable of detecting a mode switch.
+    await fireEvent.mouseUp(canvas.getByText(OUTSIDE_CARD_TEXT), { button: 0 })
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
+  },
+}
+
+const UNSAFE_SCHEME_LINK_TEXT = 'a javascript: link'
+
+// Regression check: a Markdown link's href is unfiltered user content, so an
+// executable scheme like `javascript:` must NOT get the click-through
+// treatment above — it has to keep flipping the editor into edit mode
+// (never becoming clickable) or clicking it would run arbitrary script. See
+// markdown-editor.tsx's NAVIGABLE_LINK_PROTOCOLS.
+export const ClickingUnsafeSchemeLinkEntersEditMode: Story = {
+  args: {
+    defaultValue: `[${UNSAFE_SCHEME_LINK_TEXT}](javascript:alert(1))`,
+    viewEditToggle: {},
+  },
+  parameters: {
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, canvasElement }) => {
+    const wrapper = assertDefined(
+      canvasElement.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
+    )
+
+    const link = canvas.getByRole('link', { name: UNSAFE_SCHEME_LINK_TEXT })
+    await fireEvent.mouseUp(link, { button: 0 })
+
+    await expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
+  },
+}
+
 // h1, h3, inline code, and a plain link never appear in any other story in
 // this file. The task mention renders as a chip in view mode but as its raw
 // `#9101` source in edit mode, so it's included to make the two stories

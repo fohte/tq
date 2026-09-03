@@ -17,13 +17,11 @@ interface MarkdownEditorProps {
   onChange?: (markdown: string) => void
   placeholder?: string
   /**
-   * Enables the view/edit toggle: the editor starts read-only and shows
-   * inline reference chips; clicking switches to an editable view with the
-   * raw Markdown source and the cursor at the click position; losing focus
-   * or pressing Escape returns to the read-only view. Omit for an
-   * always-editable editor that always shows the raw Markdown source and
-   * never renders chips (e.g. new-entry composers like CommentInput or
-   * create-task-modal).
+   * Enables the view/edit toggle: read-only by default with inline
+   * reference chips; a click enters edit mode at the click position, except
+   * on a link or chip/card, which navigates/interacts with it instead.
+   * Blur or Escape returns to read-only. Omit for an always-editable editor
+   * with no chips (e.g. CommentInput, create-task-modal).
    */
   viewEditToggle?: ViewEditToggleOptions
   /**
@@ -32,6 +30,12 @@ interface MarkdownEditorProps {
    */
   size?: 'default' | 'compact'
 }
+
+// Schemes a rendered Markdown link may click through to in view mode without
+// first entering edit mode. Excludes `javascript:` and other executable
+// schemes, since Milkdown's link mark copies the raw Markdown href onto the
+// <a> with no filtering.
+const NAVIGABLE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
 
 // Loaded on demand: pulls in milkdown/ProseMirror/micromark, which are only
 // needed on routes that actually render an editor.
@@ -92,6 +96,15 @@ export function MarkdownEditor({
               // Left click only: a right/middle click opening a context
               // menu or auto-scroll shouldn't also switch to edit mode.
               if (event.button !== 0) return
+              // readonly must stay true past this handler, or the click
+              // that follows hits a contenteditable <a> and loses the
+              // browser's default navigation.
+              const link =
+                event.target instanceof Element
+                  ? event.target.closest('a')
+                  : null
+              if (link != null && NAVIGABLE_LINK_PROTOCOLS.has(link.protocol))
+                return
               setMode('edit')
             }
           : undefined
