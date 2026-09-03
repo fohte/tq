@@ -21,6 +21,19 @@ export function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
 }
 
+// A pooled connection can be closed by the server right before use,
+// surfacing as a fetch() rejection with nothing sent yet. Retrying is
+// safe only for GET/HEAD, which can't duplicate a side effect.
+const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD'])
+
+function fetchWithRetry(input: string, init: RequestInit): Promise<Response> {
+  const method = (init.method ?? 'GET').toUpperCase()
+  if (!IDEMPOTENT_METHODS.has(method)) {
+    return fetch(input, init)
+  }
+  return fetch(input, init).catch(() => fetch(input, init))
+}
+
 // Shared by fetchJson/fetchJsonConditional once each has a non-304 response
 // in hand: rejects a non-2xx status, otherwise parses the body as JSON and
 // validates it against `schema`.
@@ -58,7 +71,7 @@ export function fetchJson<T, E extends Error>(
   schema: z.ZodType<T>,
   wrapError: (message: string, cause?: unknown, rejected?: boolean) => E,
 ): ResultAsync<T, E> {
-  return ResultAsync.fromPromise(fetch(input, init), (cause) =>
+  return ResultAsync.fromPromise(fetchWithRetry(input, init), (cause) =>
     wrapError(errorMessage(cause), cause),
   ).andThen((res) => parseJsonResponse(res, schema, wrapError))
 }
@@ -77,7 +90,7 @@ export function fetchJsonConditional<T, E extends Error>(
   schema: z.ZodType<T>,
   wrapError: (message: string, cause?: unknown, rejected?: boolean) => E,
 ): ResultAsync<ConditionalFetchResult<T>, E> {
-  return ResultAsync.fromPromise(fetch(input, init), (cause) =>
+  return ResultAsync.fromPromise(fetchWithRetry(input, init), (cause) =>
     wrapError(errorMessage(cause), cause),
   ).andThen((res) => {
     if (res.status === 304) {
