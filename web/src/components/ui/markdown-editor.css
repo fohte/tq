@@ -105,11 +105,16 @@
 /* A list_item's content always starts with a mandatory paragraph
    (@milkdown/preset-commonmark's list_item schema: `content: 'paragraph
    block*'`), rendered inside the list-item-block NodeView's flex-item
-   `.children` div — margin-top can't collapse out of a flex item, so
-   without this it'd push the text below the marker instead of aligning
-   with it. Likewise blockquote's first paragraph would stack on top of
-   its own `padding: 1rem` below. */
-.milkdown-wrapper .milkdown .ProseMirror .children > p:first-child,
+   `.children > .content-dom` div — margin-top can't collapse out of a flex
+   item, so without this it'd push the text below the marker instead of
+   aligning with it. Likewise blockquote's first paragraph would stack on
+   top of its own `padding: 1rem` below. */
+.milkdown-wrapper
+  .milkdown
+  .ProseMirror
+  .children
+  > .content-dom
+  > p:first-child,
 .milkdown-wrapper .milkdown .ProseMirror blockquote > p:first-child {
   margin-top: 0;
 }
