@@ -22,14 +22,8 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Active: Story = {
+export const Default: Story = {
   args: {
     commitment: 'active',
-  },
-}
-
-export const Someday: Story = {
-  args: {
-    commitment: 'someday',
   },
 }
