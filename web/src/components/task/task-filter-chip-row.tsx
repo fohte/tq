@@ -126,7 +126,7 @@ export function TaskFilterChipRow({
   }
 
   return (
-    <div className="flex items-start gap-1.5 border-b border-border px-3 py-2">
+    <div className="flex items-start gap-1.5 border-b border-border bg-background px-3 py-2">
       {/* Always-visible left column marking the row as a token input.
           Kept as its own flex item (not inside the wrapping chip area
           below) so a wrapped second line hangs indented under it instead

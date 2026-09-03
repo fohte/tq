@@ -53,25 +53,68 @@ if (typeof Element.prototype.scrollTo !== 'function') {
   }
 }
 
-// jsdom always reports offsetHeight=0, which @tanstack/react-virtual reads
-// for both the scroll container's viewport size and each row's height on
-// mount — left at 0, it renders almost nothing and the row-size cache
-// collapses onto a single arbitrary row. Fake both to nonzero values,
-// scoped to this feature's own markers so unrelated tests are unaffected.
+// jsdom's window.scrollTo() is a no-op stub — @tanstack/react-virtual's
+// scrollToIndex() needs it to actually move scrollX/scrollY and fire a
+// scroll event.
+window.scrollTo = function (optionsOrX?: ScrollToOptions | number, y?: number) {
+  if (typeof optionsOrX === 'number') {
+    Object.defineProperty(window, 'scrollX', {
+      configurable: true,
+      value: optionsOrX,
+    })
+    if (y != null) {
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: y })
+    }
+  } else {
+    if (optionsOrX?.left != null) {
+      Object.defineProperty(window, 'scrollX', {
+        configurable: true,
+        value: optionsOrX.left,
+      })
+    }
+    if (optionsOrX?.top != null) {
+      Object.defineProperty(window, 'scrollY', {
+        configurable: true,
+        value: optionsOrX.top,
+      })
+    }
+  }
+  window.dispatchEvent(new Event('scroll'))
+}
+
+// jsdom always reports offsetHeight=0, which @tanstack/react-virtual needs
+// nonzero to measure each row on mount. Faked only for the task tree's row
+// marker so unrelated tests are unaffected.
 Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
   configurable: true,
   get(this: HTMLElement) {
-    if (
-      this.matches(
-        '[data-scroll-restoration-id], [data-testid="task-tree-scroll"]',
-      )
-    ) {
-      return 2000
-    }
     if (this.matches('[data-testid="task-tree-row"]')) return 40
     return 0
   },
 })
+
+// jsdom always reports offsetTop=0 (no layout), which TaskTreeList reads to
+// offset the window virtualizer by how far the list sits below the page
+// top. Faked only for its container marker so unrelated tests are unaffected.
+Object.defineProperty(HTMLElement.prototype, 'offsetTop', {
+  configurable: true,
+  get(this: HTMLElement) {
+    if (this.matches('[data-testid="task-tree-scroll"]')) return 100
+    return 0
+  },
+})
+
+// jsdom does not implement ResizeObserver, which TaskTreeList uses to
+// re-measure its container's offsetTop. jsdom never reflows layout, so the
+// callback is never invoked in tests — this stub only prevents a
+// ReferenceError.
+if (typeof window.ResizeObserver === 'undefined') {
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+}
 
 // jsdom does not implement matchMedia. Default to desktop (matches: true) so
 // components using useIsDesktop render their default layout; tests exercising

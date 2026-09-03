@@ -154,7 +154,12 @@ export function DayViewPresentation({
   }
 
   return (
-    <div className="flex h-full flex-col">
+    // Day view keeps its own internal scroll pane rather than scrolling the
+    // document — its time-grid layout stays pinned to one viewport, like a
+    // native calendar. AppLayout gives <main> min-h-0 specifically for this
+    // route (see app-layout.tsx) so h-full here resolves to main's actual
+    // flex-allotted share of the viewport instead of overflowing it.
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Mobile pane switcher */}
       <div className="border-b border-border px-3 py-2 md:hidden">
         <TabStrip

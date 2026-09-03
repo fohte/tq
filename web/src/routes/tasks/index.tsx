@@ -96,24 +96,26 @@ function TaskList() {
   const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
 
   return (
-    <div className="flex h-full flex-col">
-      <ScreenHeaderBar>
-        <SectionHeading level={2}>tasks</SectionHeading>
-        <TaskListToolbar
-          onCreateFromGithub={() => {
-            setIsGithubModalOpen(true)
-          }}
-          onCreateNew={() => {
-            setIsModalOpen(true)
-          }}
-        />
-      </ScreenHeaderBar>
+    <div className="flex flex-col">
+      <div className="sticky top-0 z-10">
+        <ScreenHeaderBar>
+          <SectionHeading level={2}>tasks</SectionHeading>
+          <TaskListToolbar
+            onCreateFromGithub={() => {
+              setIsGithubModalOpen(true)
+            }}
+            onCreateNew={() => {
+              setIsModalOpen(true)
+            }}
+          />
+        </ScreenHeaderBar>
 
-      <TaskFilterChipRow
-        onQueryChange={setQuery}
-        parsed={parsed}
-        projects={projects.data ?? []}
-      />
+        <TaskFilterChipRow
+          onQueryChange={setQuery}
+          parsed={parsed}
+          projects={projects.data ?? []}
+        />
+      </div>
 
       <TaskTreeList
         isLoading={isLoading}
@@ -121,7 +123,6 @@ function TaskList() {
         tasks={tasks}
         sessionsByTaskId={sessionsByTaskId}
         lazyChildrenFilter={lazyChildrenFilter}
-        scrollRestorationId="task-tree-list"
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
         isFetchNextPageError={isFetchNextPageError}

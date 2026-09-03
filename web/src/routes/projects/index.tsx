@@ -28,18 +28,20 @@ function ProjectList() {
   })
 
   return (
-    <div className="flex h-full flex-col">
-      <ProjectListToolbar
-        filter={filter}
-        onFilterChange={setFilter}
-        onCreate={() => {
-          setShowCreate(true)
-        }}
-      />
+    <div className="flex flex-col">
+      <div className="sticky top-0 z-10">
+        <ProjectListToolbar
+          filter={filter}
+          onFilterChange={setFilter}
+          onCreate={() => {
+            setShowCreate(true)
+          }}
+        />
 
-      <ProjectListHeader />
+        <ProjectListHeader />
+      </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div>
         {isLoading ? (
           <ListAreaMessage>Loading...</ListAreaMessage>
         ) : projects && projects.length > 0 ? (

@@ -30,15 +30,15 @@ function TaskPage() {
   return (
     <>
       {/* PC layout */}
-      <div className="hidden h-full md:flex">
-        <div className="flex-1 overflow-y-auto px-7 py-6">
+      <div className="hidden md:flex">
+        <div className="flex-1 px-7 py-6">
           <TaskMainContent task={task} />
         </div>
         <TaskSidebar task={task} />
       </div>
 
       {/* SP layout */}
-      <div className="flex h-full flex-col overflow-y-auto p-4 md:hidden">
+      <div className="flex flex-col p-4 md:hidden">
         <TaskSidebarMobile task={task} />
         <div className="mt-4 border-t border-border pt-4">
           <TaskMainContent task={task} />

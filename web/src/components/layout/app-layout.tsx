@@ -1,3 +1,4 @@
+import { useRouterState } from '@tanstack/react-router'
 import { type ReactNode, useCallback, useState } from 'react'
 
 import { BottomTabBar } from '#components/layout/bottom-tab-bar'
@@ -22,24 +23,46 @@ export function AppLayout({ children }: { children: ReactNode }) {
     }, []),
   })
 
+  // Day view (route "/") pins its content to one viewport instead of
+  // scrolling the document, and sizes itself with h-full off of <main>'s
+  // flex-allotted height. Every other route relies on <main>'s content
+  // being free to grow past that allotment (flexbox's automatic minimum
+  // size), which is what makes the *document* scroll — so min-h-0 can't
+  // apply unconditionally without breaking that for every other route.
+  const isDayView = useRouterState({
+    select: (state) => state.location.pathname === '/',
+  })
+
   return (
-    // `fixed`: prosemirror-view's cursor scroll-into-view walk stops at the
-    // first fixed/sticky ancestor, so this keeps it from reaching
-    // document.body and calling window.scrollBy on every keystroke.
-    // top/height track the visual viewport instead of a plain `inset-0`:
-    // iOS Safari's software keyboard shrinks the visual viewport but not the
-    // layout viewport, so `inset-0` would leave this box (and the descendant
-    // scroll containers that stop the cursor scroll-into-view walk) extending
-    // behind the keyboard, making that walk think the cursor is still visible.
+    // `sticky`, not `fixed`: prosemirror-view's cursor scroll-into-view walk
+    // stops at the first fixed/sticky ancestor, so this keeps it from
+    // reaching document.body and calling window.scrollBy on every keystroke
+    // — but unlike `fixed`, it stays in normal document flow, which document
+    // scrolling depends on.
+    // top/height, not a static `top-0`: iOS Safari's software keyboard
+    // shrinks the visual viewport but not the layout viewport, so a static
+    // `top-0` would leave this box (and the descendant scroll containers
+    // that stop the cursor scroll-into-view walk) extending behind the
+    // keyboard, making that walk think the cursor is still visible —
+    // tracking insets keeps its bounds aligned with the visible area, which
+    // is what lets that walk keep the caret above the keyboard.
+    // An exact `height` (not `min-height`) doesn't cap document scrolling
+    // for content taller than one viewport: this box stays `overflow-visible`
+    // (the default) and in normal flow (`sticky`, not `fixed`), so overflowing
+    // content still contributes to <html>'s scrollable area regardless of
+    // this box's own height.
     <div
-      className={cn('fixed inset-x-0 flex', insets === null && 'inset-y-0')}
+      className={cn(
+        'sticky flex',
+        insets === null ? 'top-0 min-h-dvh' : 'inset-x-0',
+      )}
       style={
         insets === null ? undefined : { top: insets.top, height: insets.height }
       }
     >
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className={cn('flex-1', isDayView && 'min-h-0')}>{children}</main>
         <StatusLine />
         <BottomTabBar />
       </div>

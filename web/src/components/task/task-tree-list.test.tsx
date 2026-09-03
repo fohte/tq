@@ -7,7 +7,6 @@ import {
 } from '@tanstack/react-router'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ROW_INDENT_CLASS_NAME } from '#components/task/task-row-shared'
@@ -50,41 +49,27 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
   }
 })
 
-// Every router leaves a document scroll listener registered after
-// teardown; it only reaches `document` when router.isScrollRestoring is
-// true, which useElementScrollRestoration flips on — stub it to keep that
-// flag false and avoid "document is not defined" from a stray callback.
-vi.mock('@tanstack/react-router', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@tanstack/react-router')>()
-  return {
-    ...actual,
-    useElementScrollRestoration: () => undefined,
-  }
-})
-
 // The router's first route match resolves asynchronously even with no
 // loaders, so router.load() is awaited before render() to avoid an initial
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
 async function renderTaskTreeList(
   tree: TreeNode[],
   extraProps: Partial<TaskTreeListProps> = {},
-  wrap: (children: ReactNode) => ReactNode = (children) => children,
 ) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   const rootRoute = createRootRoute({
     validateSearch: (search: Record<string, unknown>) => search,
-    component: () =>
-      wrap(
-        <TaskTreeList
-          isLoading={false}
-          tree={tree}
-          tasks={[]}
-          sessionsByTaskId={new Map()}
-          {...extraProps}
-        />,
-      ),
+    component: () => (
+      <TaskTreeList
+        isLoading={false}
+        tree={tree}
+        tasks={[]}
+        sessionsByTaskId={new Map()}
+        {...extraProps}
+      />
+    ),
   })
   const router = createRouter({
     routeTree: rootRoute,
@@ -274,22 +259,37 @@ describe('TaskTreeList', () => {
     expect(screen.queryByText('Root Task 199')).not.toBeInTheDocument()
   })
 
-  it('virtualizes against an ancestor scroll container when ancestorScrollRestorationId is set', async () => {
-    const roots = Array.from({ length: 200 }, (_, i) =>
-      makeNode({
-        id: `root-${String(i)}`,
-        number: i + 1,
-        title: `Root Task ${String(i)}`,
-      }),
-    )
-    await renderTaskTreeList(
-      roots,
-      { ancestorScrollRestorationId: 'outer' },
-      (children) => <div data-scroll-restoration-id="outer">{children}</div>,
-    )
+  // The container's offsetTop (faked to 100 in test-setup.ts) is subtracted
+  // back out of each row's translateY, keeping row position list-relative.
+  it('cancels the scroll margin back out of each row position', async () => {
+    const root = makeNode({ id: 'root-1', title: 'Root Task' })
+    await renderTaskTreeList([root])
 
-    expect(screen.getByText('Root Task 0')).toBeInTheDocument()
-    expect(screen.queryByText('Root Task 199')).not.toBeInTheDocument()
+    const row = screen.getByText('Root Task').closest('[data-index]')
+    if (!(row instanceof HTMLElement)) {
+      throw new Error('Expected the row to have a data-index ancestor')
+    }
+    expect(row.style.transform).toBe('translateY(0px)')
+  })
+
+  // Guards against reverting to a mount-only effect: without an observer
+  // re-watching the document, content resizing above the list after mount
+  // (e.g. a wrapping filter chip row) would never update scrollMargin again.
+  it('re-measures scrollMargin via a ResizeObserver on document.body', async () => {
+    const observe = vi.fn()
+    class MockResizeObserver {
+      observe = observe
+      disconnect = vi.fn()
+      unobserve = vi.fn()
+    }
+    vi.stubGlobal('ResizeObserver', MockResizeObserver)
+
+    const root = makeNode({ id: 'root-1', title: 'Root Task' })
+    await renderTaskTreeList([root])
+
+    expect(observe).toHaveBeenCalledWith(document.body)
+
+    vi.unstubAllGlobals()
   })
 })
 

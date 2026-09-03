@@ -116,8 +116,8 @@ export const LoadingMore: Story = {
   },
 }
 
-// Exceeds the h-96 wrapper's viewport, so the virtualizer windows rows out
-// of the DOM — the only way this rendering path is exercised under VRT.
+// Exceeds the window viewport so the window virtualizer drops off-screen
+// rows under VRT.
 const manyTasks: Task[] = Array.from({ length: 60 }, (_, i) => ({
   ...baseTask,
   id: `many-${String(i)}`,

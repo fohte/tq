@@ -399,7 +399,7 @@ export function SidebarContent() {
 
 export function Sidebar() {
   return (
-    <aside className="hidden h-screen w-50 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
+    <aside className="sticky top-0 hidden h-screen w-50 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3.5">
         <Link to="/" className="flex items-center gap-2">
           <span className="font-mono text-sm font-bold text-primary">&gt;</span>
