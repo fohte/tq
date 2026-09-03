@@ -997,7 +997,7 @@
       ]
     },
     {
-      "name": "public.today_tasks",
+      "name": "public.task_queue_items",
       "type": "BASE TABLE",
       "columns": [
         {
@@ -1011,9 +1011,9 @@
           "nullable": false
         },
         {
-          "name": "date",
+          "name": "period_start",
           "type": "date",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "sort_order",
@@ -1032,33 +1032,73 @@
           "type": "timestamp with time zone",
           "nullable": false,
           "default": "now()"
+        },
+        {
+          "name": "queue_id",
+          "type": "text",
+          "nullable": false
         }
       ],
       "indexes": [
         {
-          "name": "today_tasks_pkey",
-          "def": "CREATE UNIQUE INDEX today_tasks_pkey ON public.today_tasks USING btree (id)",
-          "table": "public.today_tasks",
+          "name": "task_queue_items_pkey",
+          "def": "CREATE UNIQUE INDEX task_queue_items_pkey ON public.task_queue_items USING btree (id)",
+          "table": "public.task_queue_items",
           "columns": ["id"]
+        },
+        {
+          "name": "task_queue_items_queue_period_task_unique",
+          "def": "CREATE UNIQUE INDEX task_queue_items_queue_period_task_unique ON public.task_queue_items USING btree (queue_id, period_start, task_id) NULLS NOT DISTINCT",
+          "table": "public.task_queue_items",
+          "columns": ["queue_id", "period_start", "task_id"]
+        },
+        {
+          "name": "idx_task_queue_items_queue_period_sort",
+          "def": "CREATE INDEX idx_task_queue_items_queue_period_sort ON public.task_queue_items USING btree (queue_id, period_start, sort_order)",
+          "table": "public.task_queue_items",
+          "columns": ["queue_id", "period_start", "sort_order"]
+        },
+        {
+          "name": "idx_task_queue_items_task_id",
+          "def": "CREATE INDEX idx_task_queue_items_task_id ON public.task_queue_items USING btree (task_id)",
+          "table": "public.task_queue_items",
+          "columns": ["task_id"]
         }
       ],
       "constraints": [
         {
-          "name": "today_tasks_task_id_tasks_id_fk",
+          "name": "task_queue_items_task_id_tasks_id_fk",
           "type": "FOREIGN KEY",
           "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE",
-          "table": "public.today_tasks",
+          "table": "public.task_queue_items",
           "referenced_table": "public.tasks",
           "columns": ["task_id"],
           "referenced_columns": ["id"]
         },
         {
-          "name": "today_tasks_pkey",
+          "name": "task_queue_items_pkey",
           "type": "PRIMARY KEY",
           "def": "PRIMARY KEY (id)",
-          "table": "public.today_tasks",
+          "table": "public.task_queue_items",
           "referenced_table": "",
           "columns": ["id"]
+        },
+        {
+          "name": "task_queue_items_queue_id_task_queues_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (queue_id) REFERENCES task_queues(id) ON DELETE CASCADE",
+          "table": "public.task_queue_items",
+          "referenced_table": "public.task_queues",
+          "columns": ["queue_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "task_queue_items_queue_period_task_unique",
+          "type": "UNIQUE",
+          "def": "UNIQUE NULLS NOT DISTINCT (queue_id, period_start, task_id)",
+          "table": "public.task_queue_items",
+          "referenced_table": "",
+          "columns": ["queue_id", "period_start", "task_id"]
         }
       ]
     },
@@ -2283,6 +2323,90 @@
           "columns": ["source_task_id", "target_task_id", "type"]
         }
       ]
+    },
+    {
+      "name": "public.task_queues",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "key",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "period_unit",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "position",
+          "type": "integer",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "task_queues_pkey",
+          "def": "CREATE UNIQUE INDEX task_queues_pkey ON public.task_queues USING btree (id)",
+          "table": "public.task_queues",
+          "columns": ["id"]
+        },
+        {
+          "name": "task_queues_key_unique",
+          "def": "CREATE UNIQUE INDEX task_queues_key_unique ON public.task_queues USING btree (key)",
+          "table": "public.task_queues",
+          "columns": ["key"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "task_queues_period_unit_check",
+          "type": "CHECK",
+          "def": "CHECK (((period_unit IS NULL) OR (period_unit = ANY (ARRAY['day'::text, 'week'::text, 'month'::text]))))",
+          "table": "public.task_queues",
+          "referenced_table": "",
+          "columns": ["period_unit"]
+        },
+        {
+          "name": "task_queues_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.task_queues",
+          "referenced_table": "",
+          "columns": ["id"]
+        },
+        {
+          "name": "task_queues_key_unique",
+          "type": "UNIQUE",
+          "def": "UNIQUE (key)",
+          "table": "public.task_queues",
+          "referenced_table": "",
+          "columns": ["key"]
+        }
+      ]
     }
   ],
   "relations": [
@@ -2368,13 +2492,22 @@
       "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
     },
     {
-      "table": "public.today_tasks",
+      "table": "public.task_queue_items",
       "columns": ["task_id"],
       "cardinality": "zero_or_more",
       "parent_table": "public.tasks",
       "parent_columns": ["id"],
       "parent_cardinality": "exactly_one",
       "def": "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.task_queue_items",
+      "columns": ["queue_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.task_queues",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (queue_id) REFERENCES task_queues(id) ON DELETE CASCADE"
     },
     {
       "table": "public.edits",

@@ -15,7 +15,7 @@
 | [public.task_pages](public.task_pages.md)                                           | 8       |         | BASE TABLE |
 | [public.tasks](public.tasks.md)                                                     | 16      |         | BASE TABLE |
 | [public.time_blocks](public.time_blocks.md)                                         | 7       |         | BASE TABLE |
-| [public.today_tasks](public.today_tasks.md)                                         | 6       |         | BASE TABLE |
+| [public.task_queue_items](public.task_queue_items.md)                               | 7       |         | BASE TABLE |
 | [public.edits](public.edits.md)                                                     | 10      |         | BASE TABLE |
 | [public.task_github_links](public.task_github_links.md)                             | 15      |         | BASE TABLE |
 | [public.task_links](public.task_links.md)                                           | 3       |         | BASE TABLE |
@@ -28,6 +28,7 @@
 | [public.task_agent_sessions](public.task_agent_sessions.md)                         | 2       |         | BASE TABLE |
 | [public.saved_views](public.saved_views.md)                                         | 7       |         | BASE TABLE |
 | [public.task_relations](public.task_relations.md)                                   | 4       |         | BASE TABLE |
+| [public.task_queues](public.task_queues.md)                                         | 7       |         | BASE TABLE |
 
 ## Relations
 
@@ -43,7 +44,8 @@ erDiagram
 "public.tasks" }o--o| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL"
 "public.tasks" }o--o| "public.tasks" : "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL"
 "public.time_blocks" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
-"public.today_tasks" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+"public.task_queue_items" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+"public.task_queue_items" }o--|| "public.task_queues" : "FOREIGN KEY (queue_id) REFERENCES task_queues(id) ON DELETE CASCADE"
 "public.edits" }o--o| "public.task_comments" : "FOREIGN KEY (comment_id) REFERENCES task_comments(id) ON DELETE CASCADE"
 "public.edits" }o--o| "public.task_pages" : "FOREIGN KEY (page_id) REFERENCES task_pages(id) ON DELETE CASCADE"
 "public.edits" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
@@ -165,13 +167,14 @@ erDiagram
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
 }
-"public.today_tasks" {
+"public.task_queue_items" {
   text id
   text task_id FK
-  date date
+  date period_start
   integer sort_order
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+  text queue_id FK
 }
 "public.edits" {
   bigint id
@@ -293,6 +296,15 @@ erDiagram
   text target_task_id FK
   text type
   timestamp_with_time_zone created_at
+}
+"public.task_queues" {
+  text id
+  text key
+  text name
+  text period_unit
+  integer position
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
 }
 ```
 
