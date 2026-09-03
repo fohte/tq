@@ -21,12 +21,9 @@ export function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
 }
 
-// undici's pooled keep-alive connections can be closed by the server's idle
-// timeout in the moment between being handed out and used, surfacing as a
-// fetch() rejection (`TypeError: fetch failed` / `SocketError: other side
-// closed`) before any request bytes went out. Retrying is only safe for a
-// method that can't duplicate a side effect if the first attempt actually
-// reached the server.
+// A pooled connection can be closed by the server right before use,
+// surfacing as a fetch() rejection with nothing sent yet. Retrying is
+// safe only for GET/HEAD, which can't duplicate a side effect.
 const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD'])
 
 function fetchWithRetry(input: string, init: RequestInit): Promise<Response> {
