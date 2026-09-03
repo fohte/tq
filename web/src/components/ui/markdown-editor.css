@@ -22,7 +22,7 @@
   --crepe-color-inline-area: var(--secondary);
 
   --crepe-font-title: var(--font-sans);
-  --crepe-font-default: var(--font-editor);
+  --crepe-font-default: var(--font-sans);
   --crepe-font-code: var(--font-editor);
 
   --crepe-shadow-1: none;
@@ -36,6 +36,10 @@
   padding: 0.5rem;
   min-height: inherit;
   caret-color: var(--foreground);
+  /* Base for the document body; also the em basis for heading font-size
+     below, so heading sizes stay proportional if this ever changes. */
+  font-size: 0.875rem;
+  line-height: 2;
 }
 
 /* Headings */
@@ -43,7 +47,6 @@
 .milkdown-wrapper .milkdown .ProseMirror h2,
 .milkdown-wrapper .milkdown .ProseMirror h3 {
   font-family: var(--font-sans);
-  margin: 0.5rem 0 0.25rem;
   line-height: 1.4;
 }
 
@@ -52,29 +55,128 @@
 }
 
 .milkdown-wrapper .milkdown .ProseMirror h1 {
-  font-size: 1.25rem;
-  font-weight: 600;
+  margin: 2rem 0 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 1.5em;
+  font-weight: 400;
 }
 
 .milkdown-wrapper .milkdown .ProseMirror h2 {
-  font-size: 1rem;
-  font-weight: 600;
+  margin: 1.5em 0 1em;
+  font-size: 1.25em;
+  font-weight: 700;
 }
 
 .milkdown-wrapper .milkdown .ProseMirror h3 {
-  font-size: 0.875rem;
-  font-weight: 600;
+  margin: 1.5em 0 0.5rem;
+  font-size: 1.125em;
+  font-weight: 700;
+}
+
+/* Markdown-style `##`/`###` prefix, drawn as a pseudo-element since it's a
+   visual affordance only — it must not become part of the copyable text or
+   the raw source shown in edit mode. */
+.milkdown-wrapper .milkdown .ProseMirror h2::before,
+.milkdown-wrapper .milkdown .ProseMirror h3::before {
+  margin-right: 0.5rem;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.milkdown-wrapper .milkdown .ProseMirror h2::before {
+  content: '##';
+}
+
+.milkdown-wrapper .milkdown .ProseMirror h3::before {
+  content: '###';
 }
 
 .milkdown-wrapper .milkdown .ProseMirror p {
+  /* Crepe's reset.css sets `padding: 4px 0` on p; zero it so it doesn't
+     double up with margin-top below. */
+  padding: 0;
+  margin-top: 1rem;
   font-size: 0.875rem;
-  line-height: 1.75;
+  line-height: 2;
+}
+
+/* A list_item's content always starts with a mandatory paragraph
+   (@milkdown/preset-commonmark's list_item schema: `content: 'paragraph
+   block*'`), rendered inside the list-item-block NodeView's flex-item
+   `.children > .content-dom` div — margin-top can't collapse out of a flex
+   item, so without this it'd push the text below the marker instead of
+   aligning with it. Likewise blockquote's first paragraph would stack on
+   top of its own `padding: 1rem` below. */
+.milkdown-wrapper
+  .milkdown
+  .ProseMirror
+  .children
+  > .content-dom
+  > p:first-child,
+.milkdown-wrapper .milkdown .ProseMirror blockquote > p:first-child {
+  margin-top: 0;
 }
 
 /* List bullet/number color */
 .milkdown-wrapper .milkdown .ProseMirror ul li::marker,
 .milkdown-wrapper .milkdown .ProseMirror ol li::marker {
   color: var(--muted-foreground);
+}
+
+.milkdown-wrapper .milkdown .ProseMirror ul,
+.milkdown-wrapper .milkdown .ProseMirror ol {
+  margin-top: 1rem;
+  margin-left: 0.5rem;
+  padding-left: 1rem;
+}
+
+.milkdown-wrapper .milkdown .ProseMirror li {
+  padding-bottom: 0.25rem;
+}
+
+/* Crepe draws list markers via a NodeView (@milkdown/components
+   list-item-block), not native ::marker, fixed at a 32px row height
+   unrelated to the body text's line-height. Let it size to its content
+   instead. */
+.milkdown-wrapper .milkdown .milkdown-list-item-block li .label-wrapper {
+  height: auto;
+}
+
+.milkdown-wrapper .milkdown .milkdown-list-item-block li .label-wrapper .label {
+  height: auto;
+  padding: 0;
+}
+
+.milkdown-wrapper .milkdown .ProseMirror code:not(pre code) {
+  background: var(--surface-strong);
+  color: inherit;
+  font-size: 0.85em;
+  padding: 0.1em 0.4em;
+}
+
+.milkdown-wrapper .milkdown .ProseMirror a {
+  text-decoration: none;
+}
+
+.milkdown-wrapper .milkdown .ProseMirror a:hover {
+  text-decoration: underline;
+}
+
+.milkdown-wrapper .milkdown .ProseMirror blockquote {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--card);
+  font-style: italic;
+}
+
+/* --crepe-color-selected is shared with the text-selection highlight (see
+   reset.css's `*::selection`), so override the bar color here instead of
+   reassigning that token. */
+.milkdown-wrapper .milkdown .ProseMirror blockquote::before {
+  width: 3px;
+  background: var(--primary);
 }
 
 /* Crepe's bundled floating UI (slash menu, block handle, link tooltip, table
@@ -110,15 +212,6 @@
 .inline-reference-card {
   display: block;
   margin: 0.25rem 0;
-}
-
-/* The card widget renders nested inside its hosting <p> (its raw source
-   text is hidden, not removed — see .inline-reference-source above), which
-   still carries crepe's reset padding (`padding: 4px 0` in
-   @milkdown/crepe/lib/theme/common/reset.css) and would otherwise double up
-   with the card's own margin above. */
-.milkdown-wrapper .milkdown .ProseMirror p:has(> .inline-reference-card) {
-  padding: 0;
 }
 
 /* `#` mention autocomplete popup, positioned by SlashProvider via floating-ui.
