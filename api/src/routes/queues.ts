@@ -105,8 +105,8 @@ export const queuesApp = new Hono()
     // this endpoint enforces it on write: drop the task from any other
     // queue's row whose period also contains this date. Writes through
     // /api/schedule/today-tasks still bypass this check.
-    // ponytail: not race-safe against a concurrent PUT for the same task on
-    // another queue (no row lock); acceptable for a single-user tool, add a
+    // Not race-safe against a concurrent PUT for the same task on another
+    // queue (no row lock); acceptable for a single-user tool, add a
     // `SELECT ... FOR UPDATE` on uniqueTaskIds if that stops being true.
     const otherQueues = (await db.select().from(taskQueues)).filter(
       (q) => q.id !== queue.id,
