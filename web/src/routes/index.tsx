@@ -6,6 +6,7 @@ import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
 import type { QueueSectionData } from '#components/day-view/queue-pane'
+import type { DayViewMode } from '#components/layout/view-mode-toggle'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
 import {
@@ -47,7 +48,16 @@ import { scheduleColorToEventColor } from '#lib/schedule-color'
 // the same special-casing.
 const DAY_QUEUE_KEY = 'day'
 
+interface DayViewSearch {
+  view?: DayViewMode
+}
+
+function validateSearch(search: Record<string, unknown>): DayViewSearch {
+  return search['view'] === 'kanban' ? { view: 'kanban' } : {}
+}
+
 export const Route = createFileRoute('/')({
+  validateSearch,
   component: DayView,
 })
 
@@ -68,6 +78,16 @@ function dateRangeLabelFor(
 function DayView() {
   const baseFilter = useBaseFilter(true)
   const { isLoading, categorized } = useTaskList(baseFilter)
+
+  const { view } = Route.useSearch()
+  const viewMode: DayViewMode = view ?? 'queue'
+  const navigate = Route.useNavigate()
+  const handleViewModeChange = (mode: DayViewMode) => {
+    void navigate({
+      search: mode === 'kanban' ? { view: 'kanban' } : {},
+      replace: true,
+    })
+  }
 
   const { selectedDate, setSelectedDate } = useSelectedDate()
   const selectedDateStr = useMemo(
@@ -405,6 +425,8 @@ function DayView() {
       isAutoAssigning={autoAssign.isPending}
       selectedDate={selectedDate}
       onDateChange={setSelectedDate}
+      viewMode={viewMode}
+      onViewModeChange={handleViewModeChange}
     />
   )
 }

@@ -224,7 +224,11 @@ const meta = {
     // by a fixed ~80px whenever its vertical scrollbar is forced on — a
     // library-internal scrollbar-gutter sizing artifact, not app layout (same
     // cause as CalendarGrid/CalendarView's disable).
-    overflowCheck: { ignoreSelectors: ['.fc-scroller'] },
+    // `.overflow-x-auto` is TaskKanban's intentional horizontal scroll/snap
+    // area on mobile in kanban mode (see task-kanban.stories.tsx).
+    overflowCheck: {
+      ignoreSelectors: ['.fc-scroller', '.overflow-x-auto'],
+    },
     // CreateTaskModal's TagsInput fetches label suggestions.
     msw: {
       handlers: [http.get('/api/labels', () => HttpResponse.json([]))],
@@ -242,6 +246,8 @@ const meta = {
   args: {
     selectedDate: today,
     onDateChange: fn(),
+    viewMode: 'queue',
+    onViewModeChange: fn(),
   },
 } satisfies Meta<typeof DayViewPresentation>
 
@@ -296,6 +302,13 @@ export const Default: Story = {
     onRemoveFromQueue: fn(),
     onAutoAssign: fn(),
     isAutoAssigning: false,
+  },
+}
+
+export const Kanban: Story = {
+  args: {
+    ...Default.args,
+    viewMode: 'kanban',
   },
 }
 
@@ -437,6 +450,14 @@ export const EmptyQueueWithCandidates: Story = {
     onRemoveFromQueue: fn(),
     onAutoAssign: fn(),
     isAutoAssigning: false,
+  },
+  play: openMobileQueueTab,
+}
+
+export const KanbanMobile: Story = {
+  args: {
+    ...Default.args,
+    viewMode: 'kanban',
   },
   play: openMobileQueueTab,
 }
