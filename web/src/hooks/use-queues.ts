@@ -9,6 +9,11 @@ import type { InferResponseType } from 'hono/client'
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
+// Auto-assign and the focus view (/today) depend on this key by name — see
+// api/src/services/task-queues.ts's DAY_QUEUE_KEY for the backend side of
+// the same special-casing.
+export const DAY_QUEUE_KEY = 'day'
+
 export type Queue = InferResponseType<
   (typeof api.api.queues)['$get'],
   200

@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useFilteredTaskList } from '#hooks/use-filtered-tasks'
-import { useQueueItems } from '#hooks/use-queues'
+import { DAY_QUEUE_KEY, useQueueItems } from '#hooks/use-queues'
 import { useTaskMap } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
 import { formatMinutes } from '#lib/format'
@@ -12,11 +12,6 @@ import {
   newTaskKeybinding,
   searchKeybinding,
 } from '#lib/keybindings'
-
-// Auto-assign and the focus view (/today) depend on this key by name — see
-// api/src/services/task-queues.ts's DAY_QUEUE_KEY for the backend side of
-// the same special-casing.
-const DAY_QUEUE_KEY = 'day'
 
 const shortcuts = [
   { key: searchKeybinding.keys, label: 'search' },

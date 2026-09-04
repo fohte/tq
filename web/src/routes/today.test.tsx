@@ -26,6 +26,7 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
 })
 
 vi.mock('#hooks/use-queues', () => ({
+  DAY_QUEUE_KEY: 'day',
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useQueueItems: (...args: unknown[]) => mockUseQueueItems(...args),
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation

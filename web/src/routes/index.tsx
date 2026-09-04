@@ -16,6 +16,7 @@ import {
 } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
 import {
+  DAY_QUEUE_KEY,
   type Queue,
   type QueueItem,
   queueKeys,
@@ -41,11 +42,6 @@ import {
 } from '#lib/date-range'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { scheduleColorToEventColor } from '#lib/schedule-color'
-
-// Auto-assign and the focus view (/today) depend on this key by name — see
-// api/src/services/task-queues.ts's DAY_QUEUE_KEY for the backend side of
-// the same special-casing.
-const DAY_QUEUE_KEY = 'day'
 
 export const Route = createFileRoute('/')({
   component: DayView,
