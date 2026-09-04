@@ -115,3 +115,57 @@ export const TallPageStillScrollsDocument: Story = {
     )
   },
 }
+
+// Regression check: the sidebar must stay pinned to the top of the
+// viewport while the document scrolls, not just off-window (that's the
+// story above).
+export const SidebarStaysPinnedWhileScrollingDocument: Story = {
+  args: {
+    currentPath: '/tasks',
+  },
+  parameters: {
+    screenshot: { skip: true },
+    msw: {
+      handlers: [
+        http.get('/api/tasks', () => HttpResponse.json([])),
+        http.get('/api/projects', () => HttpResponse.json([])),
+        http.get('/api/schedule/today-tasks', () => HttpResponse.json([])),
+        http.get('/api/saved-views', () => HttpResponse.json([])),
+        http.get('/api/labels', () => HttpResponse.json([])),
+      ],
+    },
+  },
+  render: () => (
+    <StoryRouter
+      component={() => (
+        <QueryClientProvider
+          client={
+            new QueryClient({
+              defaultOptions: {
+                queries: { retry: false, staleTime: Infinity },
+              },
+            })
+          }
+        >
+          <AppLayout>
+            <div style={{ height: 3000 }} />
+          </AppLayout>
+        </QueryClientProvider>
+      )}
+      initialPath="/tasks"
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const view = assertDefined(
+      canvasElement.ownerDocument.defaultView,
+      'a mounted story always has an owner window',
+    )
+    const sidebar = assertDefined(
+      canvasElement.querySelector('aside'),
+      'the sidebar should render at desktop viewport widths',
+    )
+
+    view.scrollTo(0, view.innerHeight * 2)
+    await expect(sidebar.getBoundingClientRect().top).toBe(0)
+  },
+}
