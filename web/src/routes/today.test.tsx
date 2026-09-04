@@ -13,8 +13,8 @@ import type { Task } from '#hooks/use-tasks'
 import { TodayFocus } from '#routes/today'
 
 const mockUseTaskList = vi.fn()
-const mockUseTodayTasks = vi.fn()
-const mockUseSetTodayTasks = vi.fn()
+const mockUseQueueItems = vi.fn()
+const mockUseSetQueueItems = vi.fn()
 
 vi.mock('#hooks/use-tasks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-tasks')>()
@@ -25,11 +25,11 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
   }
 })
 
-vi.mock('#hooks/use-today-tasks', () => ({
+vi.mock('#hooks/use-queues', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
-  useTodayTasks: (...args: unknown[]) => mockUseTodayTasks(...args),
+  useQueueItems: (...args: unknown[]) => mockUseQueueItems(...args),
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
-  useSetTodayTasks: (...args: unknown[]) => mockUseSetTodayTasks(...args),
+  useSetQueueItems: (...args: unknown[]) => mockUseSetQueueItems(...args),
 }))
 
 function makeTask(overrides: Partial<Task> = {}): Task {
@@ -72,12 +72,12 @@ function setup({
   isTodayTasksLoading?: boolean
 }) {
   mockUseTaskList.mockReturnValue({ isLoading, categorized: { all } })
-  mockUseTodayTasks.mockReturnValue({
+  mockUseQueueItems.mockReturnValue({
     data: queue.map((t) => ({ taskId: t.id })),
     isLoading: isTodayTasksLoading,
   })
   const mutate = vi.fn()
-  mockUseSetTodayTasks.mockReturnValue({ mutate, isPending: false })
+  mockUseSetQueueItems.mockReturnValue({ mutate, isPending: false })
   return { mutate }
 }
 
@@ -239,6 +239,7 @@ describe('TodayFocus', () => {
     await user.click(screen.getByText('defer'))
 
     expect(mutate).toHaveBeenCalledWith({
+      key: 'day',
       date: '2026-03-20',
       taskIds: ['b'],
     })

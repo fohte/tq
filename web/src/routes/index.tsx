@@ -6,6 +6,7 @@ import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
 import type { QueueSectionData } from '#components/day-view/queue-pane'
+import { useAutoAssign } from '#hooks/use-auto-assign'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
 import {
@@ -32,7 +33,6 @@ import {
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '#hooks/use-time-blocks'
-import { useAutoAssign } from '#hooks/use-today-tasks'
 import { matchesContextFilter } from '#lib/context-filter'
 import {
   formatLocalDate,

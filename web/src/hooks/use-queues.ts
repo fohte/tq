@@ -6,12 +6,8 @@ import {
 } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
-import { todayTaskKeys } from '#hooks/use-today-tasks'
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
-
-/** The day queue's key, also used by /api/schedule/today-tasks (see below). */
-const DAY_QUEUE_KEY = 'day'
 
 export type Queue = InferResponseType<
   (typeof api.api.queues)['$get'],
@@ -34,6 +30,19 @@ export function useQueues() {
     queryKey: queueKeys.all,
     queryFn: async () => {
       const res = await api.api.queues.$get()
+      return unwrapOrThrow(assertOk(res)).json()
+    },
+  })
+}
+
+export function useQueueItems(key: string, date: string) {
+  return useQuery({
+    queryKey: queueKeys.items(key, date),
+    queryFn: async () => {
+      const res = await api.api.queues[':key'].items.$get({
+        param: { key },
+        query: { date },
+      })
       return unwrapOrThrow(assertOk(res)).json()
     },
   })
@@ -85,14 +94,6 @@ export function useSetQueueItems() {
     },
     onSuccess: (data, { key, date }) => {
       queryClient.setQueryData(queueKeys.items(key, date), data)
-      // /today and the status line still read the day queue through the
-      // older /api/schedule/today-tasks cache key — invalidate it too so a
-      // day-queue edit from here doesn't leave them stale.
-      if (key === DAY_QUEUE_KEY) {
-        void queryClient.invalidateQueries({
-          queryKey: todayTaskKeys.list(date),
-        })
-      }
     },
   })
 }

@@ -50,10 +50,10 @@ interface ExpandedBlock {
   recurrence: ScheduleResponse['recurrence']
 }
 
-interface TodayTaskResponse {
+interface QueueItemResponse {
   id: string
   taskId: string
-  date: string
+  periodStart: string | null
   sortOrder: number
   createdAt: string
   updatedAt: string
@@ -76,13 +76,13 @@ async function completeTask(taskId: string) {
   })
 }
 
-async function putTodayTasks(taskIds: string[], date: string) {
-  const res = await app.request('/api/schedule/today-tasks', {
+async function putDayQueueItems(taskIds: string[], date: string) {
+  const res = await app.request('/api/queues/day/items', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ taskIds, date }),
   })
-  return { res, body: await jsonBody<TodayTaskResponse[]>(res) }
+  return { res, body: await jsonBody<QueueItemResponse[]>(res) }
 }
 
 async function requestAutoAssign(date: string, tzOffset = 0) {
@@ -92,10 +92,6 @@ async function requestAutoAssign(date: string, tzOffset = 0) {
     body: JSON.stringify({ date, tzOffset }),
   })
   return { res, body: await jsonBody<TimeBlockResponse[]>(res) }
-}
-
-function normalizeTodayTask(task: TodayTaskResponse) {
-  return { ...task, id: 'ID', createdAt: 'TIMESTAMP', updatedAt: 'TIMESTAMP' }
 }
 
 function normalizeTimeBlock(block: TimeBlockResponse) {
@@ -578,153 +574,6 @@ describe('schedules API', () => {
   })
 })
 
-describe('schedule/today-tasks API', () => {
-  describe('PUT /api/schedule/today-tasks', () => {
-    it('returns the persisted selection in the given order', async () => {
-      const taskA = await createTask('Task A')
-      const taskB = await createTask('Task B')
-
-      const { res, body } = await putTodayTasks(
-        [taskB.id, taskA.id],
-        '2026-03-22',
-      )
-
-      expect(res.status).toBe(200)
-      expect(body.map(normalizeTodayTask)).toEqual([
-        {
-          id: 'ID',
-          taskId: taskB.id,
-          date: '2026-03-22',
-          sortOrder: 0,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-        {
-          id: 'ID',
-          taskId: taskA.id,
-          date: '2026-03-22',
-          sortOrder: 1,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-      ])
-    })
-
-    it('fully replaces the previous selection (reorder, add, remove)', async () => {
-      const taskA = await createTask('Task A')
-      const taskB = await createTask('Task B')
-      const taskC = await createTask('Task C')
-
-      await putTodayTasks([taskA.id, taskB.id], '2026-03-22')
-      const { res, body } = await putTodayTasks(
-        [taskC.id, taskA.id],
-        '2026-03-22',
-      )
-
-      expect(res.status).toBe(200)
-      expect(body.map(normalizeTodayTask)).toEqual([
-        {
-          id: 'ID',
-          taskId: taskC.id,
-          date: '2026-03-22',
-          sortOrder: 0,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-        {
-          id: 'ID',
-          taskId: taskA.id,
-          date: '2026-03-22',
-          sortOrder: 1,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-      ])
-    })
-
-    it('clears the queue when given an empty list', async () => {
-      const taskA = await createTask('Task A')
-      await putTodayTasks([taskA.id], '2026-03-22')
-
-      const { res, body } = await putTodayTasks([], '2026-03-22')
-
-      expect(res.status).toBe(200)
-      expect(body).toEqual([])
-    })
-
-    it('returns 404 for a non-existent task id', async () => {
-      const { res } = await putTodayTasks([TEST_UUID], '2026-03-22')
-      expect(res.status).toBe(404)
-    })
-
-    it('returns 400 for a malformed date', async () => {
-      const taskA = await createTask('Task A')
-      const { res } = await putTodayTasks([taskA.id], '2026/03/22')
-      expect(res.status).toBe(400)
-    })
-
-    it('deduplicates repeated task ids in the selection', async () => {
-      const taskA = await createTask('Task A')
-
-      const { res, body } = await putTodayTasks(
-        [taskA.id, taskA.id],
-        '2026-03-22',
-      )
-
-      expect(res.status).toBe(200)
-      expect(body.map(normalizeTodayTask)).toEqual([
-        {
-          id: 'ID',
-          taskId: taskA.id,
-          date: '2026-03-22',
-          sortOrder: 0,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-      ])
-    })
-  })
-
-  describe('GET /api/schedule/today-tasks', () => {
-    it('returns the selection persisted by a previous PUT', async () => {
-      const taskA = await createTask('Task A')
-      const taskB = await createTask('Task B')
-      await putTodayTasks([taskB.id, taskA.id], '2026-03-22')
-
-      const res = await app.request('/api/schedule/today-tasks?date=2026-03-22')
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<TodayTaskResponse[]>(res)
-      expect(body.map(normalizeTodayTask)).toEqual([
-        {
-          id: 'ID',
-          taskId: taskB.id,
-          date: '2026-03-22',
-          sortOrder: 0,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-        {
-          id: 'ID',
-          taskId: taskA.id,
-          date: '2026-03-22',
-          sortOrder: 1,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-      ])
-    })
-
-    it('returns an empty array when nothing is persisted for the date', async () => {
-      const res = await app.request('/api/schedule/today-tasks?date=2026-03-22')
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<TodayTaskResponse[]>(res)
-      expect(body).toEqual([])
-    })
-  })
-})
-
 // These tests rely on no oauth_tokens row existing in the test DB, so
 // getEvents() always resolves to no connected accounts and auto-assign
 // proceeds as if no Google Calendar events exist.
@@ -733,7 +582,7 @@ describe('schedule/auto-assign API', () => {
     it('assigns queued tasks back-to-back starting at the start of working hours', async () => {
       const taskA = await createTask('Task A', { estimatedMinutes: 30 })
       const taskB = await createTask('Task B', { estimatedMinutes: 60 })
-      await putTodayTasks([taskA.id, taskB.id], '2026-03-22')
+      await putDayQueueItems([taskA.id, taskB.id], '2026-03-22')
 
       const { res, body } = await requestAutoAssign('2026-03-22')
 
@@ -771,7 +620,7 @@ describe('schedule/auto-assign API', () => {
       const queuedTask = await createTask('Queued task', {
         estimatedMinutes: 30,
       })
-      await putTodayTasks([queuedTask.id], '2026-03-22')
+      await putDayQueueItems([queuedTask.id], '2026-03-22')
 
       const { res, body } = await requestAutoAssign('2026-03-22')
 
@@ -794,7 +643,7 @@ describe('schedule/auto-assign API', () => {
       const withEstimateTask = await createTask('With estimate', {
         estimatedMinutes: 30,
       })
-      await putTodayTasks(
+      await putDayQueueItems(
         [noEstimateTask.id, withEstimateTask.id],
         '2026-03-22',
       )
@@ -821,7 +670,7 @@ describe('schedule/auto-assign API', () => {
       })
       await completeTask(completedTask.id)
       const pendingTask = await createTask('Pending', { estimatedMinutes: 30 })
-      await putTodayTasks([completedTask.id, pendingTask.id], '2026-03-22')
+      await putDayQueueItems([completedTask.id, pendingTask.id], '2026-03-22')
 
       const { res, body } = await requestAutoAssign('2026-03-22')
 
@@ -841,11 +690,11 @@ describe('schedule/auto-assign API', () => {
 
     it('replaces the previous auto-assigned blocks on re-run (idempotent)', async () => {
       const taskA = await createTask('Task A', { estimatedMinutes: 30 })
-      await putTodayTasks([taskA.id], '2026-03-22')
+      await putDayQueueItems([taskA.id], '2026-03-22')
       await requestAutoAssign('2026-03-22')
 
       const taskB = await createTask('Task B', { estimatedMinutes: 30 })
-      await putTodayTasks([taskB.id, taskA.id], '2026-03-22')
+      await putDayQueueItems([taskB.id, taskA.id], '2026-03-22')
       await requestAutoAssign('2026-03-22')
 
       const listRes = await app.request(
@@ -885,7 +734,7 @@ describe('schedule/auto-assign API', () => {
 
     it('keeps a block promoted to manual instead of overwriting it on re-run', async () => {
       const taskA = await createTask('Task A', { estimatedMinutes: 30 })
-      await putTodayTasks([taskA.id], '2026-03-22')
+      await putDayQueueItems([taskA.id], '2026-03-22')
       const { body: firstRun } = await requestAutoAssign('2026-03-22')
       const dragged = firstRun[0]
       assertDefined(dragged)
@@ -903,7 +752,7 @@ describe('schedule/auto-assign API', () => {
       })
 
       const taskB = await createTask('Task B', { estimatedMinutes: 30 })
-      await putTodayTasks([taskB.id], '2026-03-22')
+      await putDayQueueItems([taskB.id], '2026-03-22')
       await requestAutoAssign('2026-03-22')
 
       const listRes = await app.request(
@@ -943,7 +792,7 @@ describe('schedule/auto-assign API', () => {
         workingHoursEnd: '12:00',
       })
       const task = await createTask('Task', { estimatedMinutes: 30 })
-      await putTodayTasks([task.id], '2026-03-22')
+      await putDayQueueItems([task.id], '2026-03-22')
 
       const { res, body } = await requestAutoAssign('2026-03-22')
 
@@ -972,7 +821,7 @@ describe('schedule/auto-assign API', () => {
         '2026-03-22T09:30:00.000Z',
       )
       const task = await createTask('Short task', { estimatedMinutes: 5 })
-      await putTodayTasks([task.id], '2026-03-22')
+      await putDayQueueItems([task.id], '2026-03-22')
 
       const { res, body } = await requestAutoAssign('2026-03-22')
 

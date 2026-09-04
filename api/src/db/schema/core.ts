@@ -271,7 +271,7 @@ export const taskQueueItems = pgTable(
       .references(() => taskQueues.id, { onDelete: 'cascade' }),
     // Start of the period this item belongs to (day for a day queue, Monday
     // for a week queue, null with no periodUnit). Not DB-enforced — kept in
-    // sync via resolvePeriodStart in both write paths.
+    // sync via resolvePeriodStart in the queues PUT handler.
     periodStart: date('period_start'),
     taskId: text('task_id')
       .notNull()

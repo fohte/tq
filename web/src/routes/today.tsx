@@ -3,10 +3,15 @@ import { useMemo } from 'react'
 
 import { FocusViewPresentation } from '#components/focus/focus-view'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
+import { useQueueItems, useSetQueueItems } from '#hooks/use-queues'
 import type { Task } from '#hooks/use-tasks'
 import { useTaskList, useTaskMap } from '#hooks/use-tasks'
-import { useSetTodayTasks, useTodayTasks } from '#hooks/use-today-tasks'
 import { formatLocalDate } from '#lib/date-range'
+
+// Auto-assign and the focus view (/today) depend on this key by name — see
+// api/src/services/task-queues.ts's DAY_QUEUE_KEY for the backend side of
+// the same special-casing.
+const DAY_QUEUE_KEY = 'day'
 
 export const Route = createFileRoute('/today')({
   component: TodayFocus,
@@ -19,10 +24,10 @@ export function TodayFocus() {
   const todayStr = useMemo(() => formatLocalDate(new Date()), [])
 
   const { data: todayTasksData, isLoading: isTodayTasksLoading } =
-    useTodayTasks(todayStr)
+    useQueueItems(DAY_QUEUE_KEY, todayStr)
   const isLoading = isTaskListLoading || isTodayTasksLoading
 
-  const setTodayTasks = useSetTodayTasks()
+  const setQueueItems = useSetQueueItems()
 
   const taskMap = useTaskMap(categorized.all)
 
@@ -54,8 +59,9 @@ export function TodayFocus() {
   }, [categorized.all, focusTask])
 
   const handleDefer = (taskId: string) => {
-    if (setTodayTasks.isPending) return
-    setTodayTasks.mutate({
+    if (setQueueItems.isPending) return
+    setQueueItems.mutate({
+      key: DAY_QUEUE_KEY,
       date: todayStr,
       taskIds: (todayTasksData ?? [])
         .map((t) => t.taskId)
