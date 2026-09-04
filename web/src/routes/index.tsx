@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
 import { useEffect, useMemo } from 'react'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
@@ -48,16 +48,21 @@ import { scheduleColorToEventColor } from '#lib/schedule-color'
 // the same special-casing.
 const DAY_QUEUE_KEY = 'day'
 
+const dayViewSearchDefaults = { view: 'queue' } as const
+
 interface DayViewSearch {
   view?: DayViewMode
 }
 
 function validateSearch(search: Record<string, unknown>): DayViewSearch {
-  return search['view'] === 'kanban' ? { view: 'kanban' } : {}
+  return search['view'] === 'kanban' ? { view: 'kanban' } : { view: 'queue' }
 }
 
 export const Route = createFileRoute('/')({
   validateSearch,
+  search: {
+    middlewares: [stripSearchParams(dayViewSearchDefaults)],
+  },
   component: DayView,
 })
 
@@ -79,12 +84,11 @@ function DayView() {
   const baseFilter = useBaseFilter(true)
   const { isLoading, categorized } = useTaskList(baseFilter)
 
-  const { view } = Route.useSearch()
-  const viewMode: DayViewMode = view ?? 'queue'
+  const { view: viewMode = 'queue' } = Route.useSearch()
   const navigate = Route.useNavigate()
   const handleViewModeChange = (mode: DayViewMode) => {
     void navigate({
-      search: mode === 'kanban' ? { view: 'kanban' } : {},
+      search: (prev) => ({ ...prev, view: mode }),
       replace: true,
     })
   }

@@ -101,11 +101,12 @@ export function DayViewPresentation({
         id: section.key,
         title: section.title,
         tasks: section.items,
+        isLoading,
         ...(section.dateRangeLabel != null
           ? { dateRangeLabel: section.dateRangeLabel }
           : {}),
       })),
-    [queueSections],
+    [queueSections, isLoading],
   )
 
   const handleKanbanDrop = (taskId: string, targetQueueKey: string) => {
@@ -220,13 +221,7 @@ export function DayViewPresentation({
 
           {viewMode === 'kanban' ? (
             <div className="min-h-0 flex-1">
-              {isLoading ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  Loading...
-                </div>
-              ) : (
-                <TaskKanban columns={kanbanColumns} onDrop={handleKanbanDrop} />
-              )}
+              <TaskKanban columns={kanbanColumns} onDrop={handleKanbanDrop} />
             </div>
           ) : (
             <QueuePane
