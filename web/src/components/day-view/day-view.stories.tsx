@@ -306,6 +306,10 @@ export const Default: Story = {
 }
 
 export const Kanban: Story = {
+  // On mobile the initial tab is calendar, so the queue pane's kanban
+  // layout isn't visible and this would be pixel-identical to Default
+  // there — see KanbanMobile for the mobile-specific coverage.
+  tags: ['desktop-only'],
   args: {
     ...Default.args,
     viewMode: 'kanban',
