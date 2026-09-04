@@ -8,9 +8,9 @@ import { db } from '#db/connection'
 import { recurrenceRules, schedules, tasks, timeBlocks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { localDateBoundsToUtc } from '#lib/timezone'
+import { autoAssignApp } from '#routes/schedule-auto-assign'
 import { expandScheduleForDate } from '#routes/schedule-expansion'
 import { loadSchedulesWithRules } from '#routes/schedule-shared'
-import { todayTasksApp } from '#routes/schedule-today-tasks'
 import { timeBlockToResponse } from '#routes/tasks/shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 
@@ -375,4 +375,4 @@ export const schedulesApp = new Hono()
 
     return c.body(null, 204)
   })
-  .route('/', todayTasksApp)
+  .route('/', autoAssignApp)

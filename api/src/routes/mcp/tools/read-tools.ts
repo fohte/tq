@@ -276,7 +276,7 @@ export function registerReadTools(server: McpServer): void {
     },
     async ({ date }) =>
       callAsResult(
-        `/api/schedule/today-tasks${buildQuery({
+        `/api/queues/day/items${buildQuery({
           date: date ?? new Date().toISOString().slice(0, 10),
         })}`,
       ),

@@ -29,117 +29,15 @@ const dateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
 
-const todayTasksDateQuerySchema = z.object({
-  date: dateSchema,
-})
-
-const todayTasksSchema = z.object({
-  taskIds: z.array(z.uuid()),
-  date: dateSchema,
-})
-
 const autoAssignSchema = z.object({
   date: dateSchema,
   tzOffset: z.coerce.number().int().optional(),
 })
 
-function todayTaskToResponse(row: typeof taskQueueItems.$inferSelect) {
-  return {
-    id: row.id,
-    taskId: row.taskId,
-    date: row.periodStart,
-    sortOrder: row.sortOrder,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  }
-}
-
-export const todayTasksApp = new Hono()
-  .get(
-    '/today-tasks',
-    zValidator('query', todayTasksDateQuerySchema),
-    async (c) => {
-      const { date } = c.req.valid('query')
-
-      const dayQueueResult = await getDayQueueOrRespond(
-        c,
-        'api.schedules.today-tasks-get-queue-failed',
-      )
-      if (dayQueueResult.isErr()) return dayQueueResult.error
-      const dayQueue = dayQueueResult.value
-
-      const rows = await db
-        .select()
-        .from(taskQueueItems)
-        .where(
-          and(
-            eq(taskQueueItems.queueId, dayQueue.id),
-            eq(taskQueueItems.periodStart, date),
-          ),
-        )
-        .orderBy(taskQueueItems.sortOrder)
-
-      return c.json(rows.map(todayTaskToResponse), 200)
-    },
-  )
-  .put('/today-tasks', zValidator('json', todayTasksSchema), async (c) => {
-    const { taskIds, date } = c.req.valid('json')
-    const uniqueTaskIds = [...new Set(taskIds)]
-
-    if (uniqueTaskIds.length > 0) {
-      const existingTasks = await db
-        .select({ id: tasks.id })
-        .from(tasks)
-        .where(inArray(tasks.id, uniqueTaskIds))
-      const existingIds = new Set(existingTasks.map((t) => t.id))
-      const missing = uniqueTaskIds.filter((id) => !existingIds.has(id))
-      if (missing.length > 0) {
-        return c.json({ error: 'Task not found' }, 404)
-      }
-    }
-
-    const dayQueueResult = await getDayQueueOrRespond(
-      c,
-      'api.schedules.today-tasks-put-queue-failed',
-    )
-    if (dayQueueResult.isErr()) return dayQueueResult.error
-    const dayQueue = dayQueueResult.value
-
-    const inserted = await db.transaction(async (tx) => {
-      await tx
-        .delete(taskQueueItems)
-        .where(
-          and(
-            eq(taskQueueItems.queueId, dayQueue.id),
-            eq(taskQueueItems.periodStart, date),
-          ),
-        )
-
-      if (uniqueTaskIds.length === 0) {
-        return []
-      }
-
-      return tx
-        .insert(taskQueueItems)
-        .values(
-          uniqueTaskIds.map((taskId, index) => ({
-            queueId: dayQueue.id,
-            periodStart: date,
-            taskId,
-            sortOrder: index,
-          })),
-        )
-        .returning()
-    })
-
-    return c.json(
-      inserted
-        .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map(todayTaskToResponse),
-      200,
-    )
-  })
-  .post('/auto-assign', zValidator('json', autoAssignSchema), async (c) => {
+export const autoAssignApp = new Hono().post(
+  '/auto-assign',
+  zValidator('json', autoAssignSchema),
+  async (c) => {
     const { date, tzOffset } = c.req.valid('json')
     const offset = tzOffset ?? 0
     const { dayStart, dayEnd } = localDateBoundsToUtc(date, offset)
@@ -293,4 +191,5 @@ export const todayTasksApp = new Hono()
     }
 
     return c.json(inserted.map(timeBlockToResponse), 200)
-  })
+  },
+)

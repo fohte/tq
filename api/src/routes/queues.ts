@@ -103,8 +103,7 @@ export const queuesApp = new Hono()
     // A task belongs to at most one queue at a time. That's not a DB
     // constraint (see task_queue_items.periodStart comment in core.ts), so
     // this endpoint enforces it on write: drop the task from any other
-    // queue's row whose period also contains this date. Writes through
-    // /api/schedule/today-tasks still bypass this check.
+    // queue's row whose period also contains this date.
     // Not race-safe against a concurrent PUT for the same task on another
     // queue (no row lock); acceptable for a single-user tool, add a
     // `SELECT ... FOR UPDATE` on uniqueTaskIds if that stops being true.
