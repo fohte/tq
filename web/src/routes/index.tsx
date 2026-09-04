@@ -7,6 +7,7 @@ import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
 import type { QueueSectionData } from '#components/day-view/queue-pane'
 import type { DayViewMode } from '#components/layout/view-mode-toggle'
+import { useAutoAssign } from '#hooks/use-auto-assign'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
 import {
@@ -16,6 +17,7 @@ import {
 } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
 import {
+  DAY_QUEUE_KEY,
   type Queue,
   type QueueItem,
   queueKeys,
@@ -33,7 +35,6 @@ import {
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '#hooks/use-time-blocks'
-import { useAutoAssign } from '#hooks/use-today-tasks'
 import { matchesContextFilter } from '#lib/context-filter'
 import {
   formatLocalDate,
@@ -42,11 +43,6 @@ import {
 } from '#lib/date-range'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { scheduleColorToEventColor } from '#lib/schedule-color'
-
-// Auto-assign and the focus view (/today) depend on this key by name — see
-// api/src/services/task-queues.ts's DAY_QUEUE_KEY for the backend side of
-// the same special-casing.
-const DAY_QUEUE_KEY = 'day'
 
 const dayViewSearchDefaults = { view: 'queue' } as const
 

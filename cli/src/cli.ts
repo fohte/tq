@@ -10,11 +10,11 @@ import { registerLabelCommands } from '#commands/label'
 import { registerLinkCommands } from '#commands/link'
 import { registerPageCommands } from '#commands/page'
 import { registerProjectCommands } from '#commands/project'
+import { registerQueueCommands } from '#commands/queue'
 import { registerSavedViewCommands } from '#commands/saved-view'
 import { registerSessionCommands } from '#commands/session'
 import { registerSlackCommands } from '#commands/slack'
 import { registerTaskCommands } from '#commands/task'
-import { registerTodayCommands } from '#commands/today'
 import { formatError } from '#errors'
 import { collectHeader } from '#headers'
 import type { ReadableStdin } from '#input'
@@ -59,7 +59,7 @@ function buildProgram(
   registerLabelCommands(program, fetchImpl)
   registerImageCommands(program, fetchImpl)
   registerGithubCommands(program, fetchImpl)
-  registerTodayCommands(program, fetchImpl)
+  registerQueueCommands(program, fetchImpl)
   registerCalendarCommands(program, fetchImpl)
   registerSlackCommands(program, fetchImpl)
   registerHealthCommand(program, fetchImpl)

@@ -20,8 +20,8 @@ function getQueueByKey(key: string): ResultAsync<TaskQueue, RowNotFoundError> {
 }
 
 // Shared route-level wiring (RowNotFoundError -> 500 response, Sentry
-// capture) for the 3 today-tasks/auto-assign handlers that all look up the
-// day queue before doing anything else.
+// capture) for the auto-assign handler, which looks up the day queue before
+// doing anything else.
 //
 // No explicit return type: Hono's RPC client derives each route's response
 // union from the literal `TypedResponse` returned by `c.json(...)`, so

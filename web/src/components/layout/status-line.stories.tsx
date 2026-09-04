@@ -4,9 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StatusLine } from '#components/layout/status-line'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
+import type { QueueItem } from '#hooks/use-queues'
+import { queueKeys } from '#hooks/use-queues'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
-import type { TodayTask } from '#hooks/use-today-tasks'
 import { formatLocalDate } from '#lib/date-range'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -30,10 +31,10 @@ const tasks: Task[] = [
   },
 ]
 
-const queueTasks: TodayTask[] = tasks.map((task, index) => ({
+const queueTasks: QueueItem[] = tasks.map((task, index) => ({
   id: `queue-${task.id}`,
   taskId: task.id,
-  date: todayStr,
+  periodStart: todayStr,
   sortOrder: index,
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
@@ -51,7 +52,7 @@ function StatusLineStory() {
   // StatusLine's useFilteredTaskList() always includes the machine's
   // configured context (set above), with no tag/project filter active.
   queryClient.setQueryData(taskKeys.list({ context: 'personal' }), tasks)
-  queryClient.setQueryData(['today-tasks', 'list', todayStr], queueTasks)
+  queryClient.setQueryData(queueKeys.items('day', todayStr), queueTasks)
 
   return (
     <QueryClientProvider client={queryClient}>

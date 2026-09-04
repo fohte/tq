@@ -382,7 +382,7 @@ describe('read tools', () => {
 
     it('returns the queue for an explicit date', async () => {
       const task = await createTask('Queued task')
-      const putRes = await app.request('/api/schedule/today-tasks', {
+      const putRes = await app.request('/api/queues/day/items', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskIds: [task.id], date: '2026-01-15' }),
@@ -402,7 +402,7 @@ describe('read tools', () => {
     it('defaults to the current UTC date when date is omitted', async () => {
       const today = new Date().toISOString().slice(0, 10)
       const task = await createTask('Queued task')
-      const putRes = await app.request('/api/schedule/today-tasks', {
+      const putRes = await app.request('/api/queues/day/items', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskIds: [task.id], date: today }),
