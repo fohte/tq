@@ -31,6 +31,8 @@ export interface TaskKanbanColumn {
   isLoading?: boolean
   /** Set false when `tasks` is a truncated subset, so the header doesn't show a count that reads as the true total. */
   showCount?: boolean
+  /** e.g. "09-01" for a day queue or "08-31 – 09-06" for a week queue; shown right-aligned in the column header. */
+  dateRangeLabel?: string
   /** Rendered below the task list, e.g. a link to the full filtered list. */
   footer?: ReactNode
 }
@@ -87,19 +89,30 @@ function TaskKanbanColumnView({ column }: { column: TaskKanbanColumn }) {
     tasks,
     isLoading = false,
     showCount = true,
+    dateRangeLabel,
     footer,
   } = column
   const { setNodeRef, isOver } = useDroppable({ id })
 
   return (
     <div className="flex w-5/6 shrink-0 snap-start flex-col border-r border-border last:border-r-0 md:w-0 md:flex-1 md:snap-align-none">
-      <div className="flex h-9 shrink-0 items-center justify-between border-b border-border px-3">
+      <div
+        className={cn(
+          'flex h-9 shrink-0 items-center border-b border-border px-3',
+          dateRangeLabel != null ? 'gap-2' : 'justify-between',
+        )}
+      >
         <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
           {title.toUpperCase()}
         </span>
         {showCount && (
           <span className="font-mono text-2xs text-muted-foreground-faint">
             {tasks.length}
+          </span>
+        )}
+        {dateRangeLabel != null && (
+          <span className="ml-auto font-mono text-2xs text-muted-foreground-faint">
+            {dateRangeLabel}
           </span>
         )}
       </div>

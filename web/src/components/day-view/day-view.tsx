@@ -1,5 +1,5 @@
 import { CalendarPlus, Plus } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import {
@@ -10,6 +10,12 @@ import {
   QueuePane,
   type QueueSectionData,
 } from '#components/day-view/queue-pane'
+import {
+  TaskKanban,
+  type TaskKanbanColumn,
+} from '#components/kanban/task-kanban'
+import type { DayViewMode } from '#components/layout/view-mode-toggle'
+import { ViewModeToggle } from '#components/layout/view-mode-toggle'
 import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { TaskListHeader } from '#components/task/task-list-header'
@@ -54,6 +60,8 @@ export interface DayViewPresentationProps {
   isAutoAssigning: boolean
   selectedDate: Date
   onDateChange: (date: Date) => void
+  viewMode: DayViewMode
+  onViewModeChange: (mode: DayViewMode) => void
 }
 
 export function DayViewPresentation({
@@ -74,6 +82,8 @@ export function DayViewPresentation({
   isAutoAssigning,
   selectedDate,
   onDateChange,
+  viewMode,
+  onViewModeChange,
 }: DayViewPresentationProps) {
   const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -84,6 +94,28 @@ export function DayViewPresentation({
   const taskListRef = useRef<HTMLDivElement>(null)
 
   const canAutoAssign = dayQueueTasks.some((t) => t.estimatedMinutes != null)
+
+  const kanbanColumns: TaskKanbanColumn[] = useMemo(
+    () =>
+      queueSections.map((section) => ({
+        id: section.key,
+        title: section.title,
+        tasks: section.items,
+        isLoading,
+        ...(section.dateRangeLabel != null
+          ? { dateRangeLabel: section.dateRangeLabel }
+          : {}),
+      })),
+    [queueSections, isLoading],
+  )
+
+  const handleKanbanDrop = (taskId: string, targetQueueKey: string) => {
+    const sourceQueueKey = queueSections.find((section) =>
+      section.items.some((t) => t.id === taskId),
+    )?.key
+    if (sourceQueueKey == null) return
+    onMoveTask(taskId, sourceQueueKey, targetQueueKey)
+  }
 
   const handleScheduleClick = (scheduleId: string, start: string) => {
     // Cross-midnight schedules expand into two blocks sharing a scheduleId
@@ -118,12 +150,17 @@ export function DayViewPresentation({
         <div
           ref={taskListRef}
           className={cn(
-            'flex w-full flex-col border-r border-border md:w-80 lg:w-96',
+            'flex w-full flex-col',
+            viewMode === 'kanban'
+              ? 'md:w-full'
+              : 'border-r border-border md:w-80 lg:w-96',
             mobileTab === 'calendar' ? 'hidden md:flex' : 'flex md:flex',
           )}
         >
           <ScreenHeaderBar>
             <SectionHeading level={2}>queue</SectionHeading>
+
+            <ViewModeToggle value={viewMode} onChange={onViewModeChange} />
 
             <Button
               variant="outline"
@@ -182,23 +219,30 @@ export function DayViewPresentation({
             <TaskListHeader tasks={dayQueueTasks} />
           </div>
 
-          <QueuePane
-            isLoading={isLoading}
-            queueSections={queueSections}
-            queueCandidates={queueCandidates}
-            onReorderQueue={onReorderQueue}
-            onMoveTask={onMoveTask}
-            onInsertCandidate={onInsertCandidate}
-            onAddCandidate={onAddCandidate}
-            onRemoveFromQueue={onRemoveFromQueue}
-          />
+          {viewMode === 'kanban' ? (
+            <div className="min-h-0 flex-1">
+              <TaskKanban columns={kanbanColumns} onDrop={handleKanbanDrop} />
+            </div>
+          ) : (
+            <QueuePane
+              isLoading={isLoading}
+              queueSections={queueSections}
+              queueCandidates={queueCandidates}
+              onReorderQueue={onReorderQueue}
+              onMoveTask={onMoveTask}
+              onInsertCandidate={onInsertCandidate}
+              onAddCandidate={onAddCandidate}
+              onRemoveFromQueue={onRemoveFromQueue}
+            />
+          )}
         </div>
 
         {/* Right panel: Calendar */}
         <div
           className={cn(
             'flex-1',
-            mobileTab === 'tasks' ? 'hidden md:flex' : 'flex md:flex',
+            mobileTab === 'tasks' ? 'hidden' : 'flex',
+            viewMode === 'kanban' ? 'md:hidden' : 'md:flex',
           )}
         >
           <div className="flex h-full w-full flex-col">
