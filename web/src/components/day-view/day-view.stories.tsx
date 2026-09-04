@@ -249,12 +249,32 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 const queuedTasks = sampleTasks.slice(0, 4)
-const queuedTaskIds = new Set(queuedTasks.map((t) => t.id))
+const weekQueuedTasks = sampleTasks.slice(4, 6)
+const queuedTaskIds = new Set(
+  [...queuedTasks, ...weekQueuedTasks].map((t) => t.id),
+)
 const queueCandidates = getQueueCandidates(
   sampleCategorized.all,
   queuedTaskIds,
   today,
 )
+
+const sampleQueueSections = [
+  {
+    key: 'day',
+    title: 'today',
+    items: queuedTasks,
+    dateRangeLabel: '09-01',
+    emptyMessage: "No tasks in today's queue",
+  },
+  {
+    key: 'week',
+    title: 'this week',
+    items: weekQueuedTasks,
+    dateRangeLabel: '08-31 – 09-06',
+    emptyMessage: "No tasks in this week's queue",
+  },
+]
 
 export const Default: Story = {
   args: {
@@ -266,11 +286,13 @@ export const Default: Story = {
       onEventResize: fn(),
       onExternalDrop: fn(),
     },
-    queueTasks: queuedTasks,
+    queueSections: sampleQueueSections,
+    dayQueueTasks: queuedTasks,
     queueCandidates,
     onReorderQueue: fn(),
+    onMoveTask: fn(),
     onInsertCandidate: fn(),
-    onToggleQueueTask: fn(),
+    onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
     onAutoAssign: fn(),
     isAutoAssigning: false,
@@ -341,16 +363,35 @@ const openMobileQueueTab: NonNullable<Story['play']> = async ({
   }
 }
 
+const emptyQueueSections = [
+  {
+    key: 'day',
+    title: 'today',
+    items: [],
+    dateRangeLabel: '09-01',
+    emptyMessage: "No tasks in today's queue",
+  },
+  {
+    key: 'week',
+    title: 'this week',
+    items: [],
+    dateRangeLabel: '08-31 – 09-06',
+    emptyMessage: "No tasks in this week's queue",
+  },
+]
+
 export const Loading: Story = {
   args: {
     isLoading: true,
     calendarEvents: [],
     schedules: [],
-    queueTasks: [],
+    queueSections: [],
+    dayQueueTasks: [],
     queueCandidates: [],
     onReorderQueue: fn(),
+    onMoveTask: fn(),
     onInsertCandidate: fn(),
-    onToggleQueueTask: fn(),
+    onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
     onAutoAssign: fn(),
     isAutoAssigning: false,
@@ -363,11 +404,13 @@ export const Empty: Story = {
     isLoading: false,
     calendarEvents: [],
     schedules: [],
-    queueTasks: [],
+    queueSections: emptyQueueSections,
+    dayQueueTasks: [],
     queueCandidates: [],
     onReorderQueue: fn(),
+    onMoveTask: fn(),
     onInsertCandidate: fn(),
-    onToggleQueueTask: fn(),
+    onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
     onAutoAssign: fn(),
     isAutoAssigning: false,
@@ -380,15 +423,17 @@ export const EmptyQueueWithCandidates: Story = {
     isLoading: false,
     calendarEvents: [],
     schedules: [],
-    queueTasks: [],
+    queueSections: emptyQueueSections,
+    dayQueueTasks: [],
     queueCandidates: getQueueCandidates(
       sampleCategorized.all,
       new Set(),
       today,
     ),
     onReorderQueue: fn(),
+    onMoveTask: fn(),
     onInsertCandidate: fn(),
-    onToggleQueueTask: fn(),
+    onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
     onAutoAssign: fn(),
     isAutoAssigning: false,

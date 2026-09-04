@@ -12,7 +12,7 @@ type TodayTask = InferResponseType<
 
 export type { TodayTask }
 
-const todayTaskKeys = {
+export const todayTaskKeys = {
   all: ['today-tasks'] as const,
   list: (date: string) => [...todayTaskKeys.all, 'list', date] as const,
 }

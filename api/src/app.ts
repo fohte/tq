@@ -14,6 +14,7 @@ import { integrationsApp } from '#routes/integrations'
 import { labelsApp } from '#routes/labels'
 import { mcpApp } from '#routes/mcp/index'
 import { projectsApp } from '#routes/projects'
+import { queuesApp } from '#routes/queues'
 import { savedViewsApp } from '#routes/saved-views'
 import { schedulesApp } from '#routes/schedules'
 import { schedulingSettingsApp } from '#routes/scheduling-settings'
@@ -59,6 +60,7 @@ const app = new Hono()
   .route('/api/tasks/:taskId/github-link', taskGithubLinkApp)
   .route('/api/tasks/:taskId/agent-sessions', taskAgentSessionsApp)
   .route('/api/projects', projectsApp)
+  .route('/api/queues', queuesApp)
   .route('/api/saved-views', savedViewsApp)
   .route('/api/schedule', schedulesApp)
   .route('/api/calendar', calendarApp)

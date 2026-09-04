@@ -1,17 +1,3 @@
-import {
-  closestCenter,
-  DndContext,
-  type DragEndEvent,
-  PointerSensor,
-  useDroppable,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
 import { CalendarPlus, Plus } from 'lucide-react'
 import { useRef, useState } from 'react'
 
@@ -20,11 +6,13 @@ import {
   CalendarView,
   type TimeBlockEvent,
 } from '#components/calendar/calendar-view'
+import {
+  QueuePane,
+  type QueueSectionData,
+} from '#components/day-view/queue-pane'
 import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
 import { CreateTaskModal } from '#components/task/create-task-modal'
-import { QueueCandidatesSection } from '#components/task/queue-candidates-section'
 import { TaskListHeader } from '#components/task/task-list-header'
-import { TodayQueueRow } from '#components/task/today-queue-row'
 import { Button } from '#components/ui/button'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
@@ -41,33 +29,6 @@ const MOBILE_TAB_OPTIONS = [
   { value: 'tasks', label: 'queue' },
 ] as const
 
-interface CandidateDragData extends Record<string, unknown> {
-  type: 'candidate'
-  taskId: string
-}
-
-function isCandidateDragData(
-  data: Record<string, unknown> | undefined,
-): data is CandidateDragData {
-  return data?.['type'] === 'candidate'
-}
-
-function EmptyQueueDropZone() {
-  const { setNodeRef, isOver } = useDroppable({ id: 'empty-queue' })
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={cn(
-        'p-4 text-center text-sm text-muted-foreground',
-        isOver && 'bg-muted',
-      )}
-    >
-      No tasks in today's queue
-    </div>
-  )
-}
-
 export interface DayViewPresentationProps {
   isLoading: boolean
   calendarEvents: TimeBlockEvent[]
@@ -75,12 +36,20 @@ export interface DayViewPresentationProps {
   dndCallbacks?: CalendarDndCallbacks
   /** Google OAuth consent URL, present when Google Calendar is not connected */
   gcalAuthUrl?: string
-  queueTasks: Task[]
+  queueSections: QueueSectionData[]
+  /** The day queue's own (unfiltered — completed tasks included) items, for
+   * the progress bar and auto-assign eligibility, which only ever apply to
+   * "today" regardless of how many other queues exist. */
+  dayQueueTasks: Task[]
   queueCandidates: QueueCandidate<Task>[]
-  onReorderQueue: (taskIds: string[]) => void
-  onInsertCandidate: (taskId: string, index: number) => void
-  onToggleQueueTask: (taskId: string) => void
-  onRemoveFromQueue: (taskId: string) => void
+  onReorderQueue: (queueKey: string, taskIds: string[]) => void
+  onMoveTask: (taskId: string, fromQueueKey: string, toQueueKey: string) => void
+  onInsertCandidate: (queueKey: string, taskId: string, index: number) => void
+  /** The candidates section's "+" button always adds to the day queue —
+   * dragging a candidate onto a different section goes through
+   * onInsertCandidate instead. */
+  onAddCandidate: (taskId: string) => void
+  onRemoveFromQueue: (queueKey: string, taskId: string) => void
   onAutoAssign: () => void
   isAutoAssigning: boolean
   selectedDate: Date
@@ -93,11 +62,13 @@ export function DayViewPresentation({
   schedules,
   dndCallbacks,
   gcalAuthUrl,
-  queueTasks,
+  queueSections,
+  dayQueueTasks,
   queueCandidates,
   onReorderQueue,
+  onMoveTask,
   onInsertCandidate,
-  onToggleQueueTask,
+  onAddCandidate,
   onRemoveFromQueue,
   onAutoAssign,
   isAutoAssigning,
@@ -111,35 +82,8 @@ export function DayViewPresentation({
     undefined,
   )
   const taskListRef = useRef<HTMLDivElement>(null)
-  const dndSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-  )
 
-  const canAutoAssign = queueTasks.some((t) => t.estimatedMinutes != null)
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (over == null) return
-
-    const activeData = active.data.current
-    if (isCandidateDragData(activeData)) {
-      const overIndex = queueTasks.findIndex((t) => t.id === over.id)
-      if (overIndex === -1) {
-        onInsertCandidate(activeData.taskId, queueTasks.length)
-        return
-      }
-      const activeTop = active.rect.current.translated?.top ?? over.rect.top
-      const isAfter = activeTop > over.rect.top + over.rect.height / 2
-      onInsertCandidate(activeData.taskId, overIndex + (isAfter ? 1 : 0))
-      return
-    }
-
-    if (active.id === over.id) return
-    const oldIndex = queueTasks.findIndex((t) => t.id === active.id)
-    const newIndex = queueTasks.findIndex((t) => t.id === over.id)
-    if (oldIndex === -1 || newIndex === -1) return
-    onReorderQueue(arrayMove(queueTasks, oldIndex, newIndex).map((t) => t.id))
-  }
+  const canAutoAssign = dayQueueTasks.some((t) => t.estimatedMinutes != null)
 
   const handleScheduleClick = (scheduleId: string, start: string) => {
     // Cross-midnight schedules expand into two blocks sharing a scheduleId
@@ -170,7 +114,7 @@ export function DayViewPresentation({
       </div>
 
       <div className="flex min-h-0 flex-1">
-        {/* Left panel: Today's Queue */}
+        {/* Left panel: queue */}
         <div
           ref={taskListRef}
           className={cn(
@@ -233,54 +177,21 @@ export function DayViewPresentation({
             defaultStartDate={new Date().toISOString().slice(0, 10)}
           />
 
-          {/* Summary header */}
+          {/* Summary header (today's queue only) */}
           <div className="border-b border-border py-2.5">
-            <TaskListHeader tasks={queueTasks} />
+            <TaskListHeader tasks={dayQueueTasks} />
           </div>
 
-          {/* Task list */}
-          <div
-            className="flex-1 overflow-auto"
-            data-scroll-restoration-id="day-view"
-          >
-            {isLoading ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                Loading...
-              </div>
-            ) : (
-              <DndContext
-                sensors={dndSensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={queueTasks.map((t) => t.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="py-1">
-                    {queueTasks.length === 0 ? (
-                      <EmptyQueueDropZone />
-                    ) : (
-                      queueTasks.map((task) => (
-                        <TodayQueueRow
-                          key={task.id}
-                          task={task}
-                          onRemove={() => {
-                            onRemoveFromQueue(task.id)
-                          }}
-                        />
-                      ))
-                    )}
-                  </div>
-                </SortableContext>
-
-                <QueueCandidatesSection
-                  candidates={queueCandidates}
-                  onAdd={onToggleQueueTask}
-                />
-              </DndContext>
-            )}
-          </div>
+          <QueuePane
+            isLoading={isLoading}
+            queueSections={queueSections}
+            queueCandidates={queueCandidates}
+            onReorderQueue={onReorderQueue}
+            onMoveTask={onMoveTask}
+            onInsertCandidate={onInsertCandidate}
+            onAddCandidate={onAddCandidate}
+            onRemoveFromQueue={onRemoveFromQueue}
+          />
         </div>
 
         {/* Right panel: Calendar */}
