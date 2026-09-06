@@ -95,7 +95,7 @@ function TaskKanbanColumnView({ column }: { column: TaskKanbanColumn }) {
   const { setNodeRef, isOver } = useDroppable({ id })
 
   return (
-    <div className="flex w-5/6 shrink-0 snap-start flex-col border-r border-border last:border-r-0 md:w-0 md:flex-1 md:snap-align-none">
+    <div className="flex w-1/2 shrink-0 snap-start flex-col border-r border-border last:border-r-0 md:w-0 md:flex-1 md:snap-align-none">
       <div
         className={cn(
           'flex h-9 shrink-0 items-center border-b border-border px-3',
