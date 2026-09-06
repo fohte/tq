@@ -459,6 +459,11 @@ export const EmptyQueueWithCandidates: Story = {
 }
 
 export const KanbanMobile: Story = {
+  // On desktop the mobile pane-switcher button is display:none, so
+  // openMobileQueueTab is a no-op there and this would be pixel-identical to
+  // Kanban (desktop-only) — restrict to mobile like that story's comment
+  // already assumes.
+  tags: ['mobile-only'],
   args: {
     ...Default.args,
     viewMode: 'kanban',
