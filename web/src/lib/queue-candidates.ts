@@ -93,3 +93,15 @@ export function formatCandidateReason(reason: CandidateReason): string {
         : `started ${String(reason.days)}d ago`
   }
 }
+
+/** dnd-kit drag data carried by a candidate card, shared by every place a candidate is draggable onto a queue. */
+export interface CandidateDragData extends Record<string, unknown> {
+  type: 'candidate'
+  taskId: string
+}
+
+export function isCandidateDragData(
+  data: Record<string, unknown> | undefined,
+): data is CandidateDragData {
+  return data?.['type'] === 'candidate'
+}

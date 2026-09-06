@@ -19,6 +19,7 @@ import { Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 
+import { CandidateReasonBadge } from '#components/task/queue-candidate-row'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Button } from '#components/ui/button'
 import { ListAreaMessage } from '#components/ui/list-area-message'
@@ -29,7 +30,8 @@ import {
   useDragOverlayWidth,
 } from '#lib/dnd-sensors'
 import {
-  formatCandidateReason,
+  type CandidateDragData,
+  isCandidateDragData,
   type QueueCandidate,
 } from '#lib/queue-candidates'
 import {
@@ -54,9 +56,9 @@ export interface TaskKanbanColumn {
 export interface TaskKanbanProps {
   columns: TaskKanbanColumn[]
   onDrop: (taskId: string, columnId: string) => void
-  /** Enables drag-to-reorder within a column; omit for a board with no user-defined order (e.g. inbox). */
+  /** Enables drag-to-reorder within a column. */
   onReorder?: (columnId: string, taskIds: string[]) => void
-  /** Rendered as a trailing column that cards can be dragged from into any other column; omit for a board with no candidates concept (e.g. inbox). */
+  /** Rendered as a trailing column when `onAddCandidate` is set; cards can be dragged from it into any other column when `onInsertCandidate` is also set. */
   candidates?: QueueCandidate<Task>[]
   onAddCandidate?: (taskId: string) => void
   onInsertCandidate?: (columnId: string, taskId: string, index: number) => void
@@ -67,32 +69,21 @@ interface CardDragData extends Record<string, unknown> {
   sourceColumnId: string
 }
 
-interface CandidateDragData extends Record<string, unknown> {
-  type: 'candidate'
-  taskId: string
-}
-
 function isCardDragData(
   data: Record<string, unknown> | undefined,
 ): data is CardDragData {
   return data?.['task'] != null
 }
 
-function isCandidateDragData(
-  data: Record<string, unknown> | undefined,
-): data is CandidateDragData {
-  return data?.['type'] === 'candidate'
-}
-
 function TaskKanbanCard({
   task,
   sourceColumnId,
-  sortable,
+  droppable,
 }: {
   task: Task
   sourceColumnId: string
-  /** False disables this card as a reorder target (its position among siblings can't be dropped on) while still allowing it to be dragged out — used when the board has no `onReorder` (e.g. inbox). */
-  sortable: boolean
+  /** Cards always stay draggable (to move to another column); this only controls whether other cards can be dropped onto this one to reorder within the column. */
+  droppable: boolean
 }) {
   const {
     attributes,
@@ -104,7 +95,7 @@ function TaskKanbanCard({
   } = useSortable({
     id: task.id,
     data: { task, sourceColumnId } satisfies CardDragData,
-    disabled: { droppable: !sortable },
+    disabled: { droppable: !droppable },
   })
 
   return (
@@ -138,17 +129,6 @@ function TaskKanbanCandidateCard({
       data: { type: 'candidate', taskId: task.id } satisfies CandidateDragData,
     })
 
-  const reasonItem = (
-    <span
-      className={cn(
-        'shrink-0 font-mono text-xs',
-        reason.kind === 'overdue' ? 'text-primary' : 'text-muted-foreground',
-      )}
-    >
-      {formatCandidateReason(reason)}
-    </span>
-  )
-
   return (
     <div
       ref={setNodeRef}
@@ -161,7 +141,10 @@ function TaskKanbanCandidateCard({
       className="flex items-center gap-1 rounded-md border border-border bg-card"
     >
       <div className="min-w-0 flex-1">
-        <TaskRowAppearance task={task} secondLineExtras={[reasonItem]} />
+        <TaskRowAppearance
+          task={task}
+          secondLineExtras={[<CandidateReasonBadge reason={reason} />]}
+        />
       </div>
 
       <Button
@@ -242,7 +225,7 @@ function TaskKanbanColumnView({
                 key={task.id}
                 task={task}
                 sourceColumnId={id}
-                sortable={reorderEnabled}
+                droppable={reorderEnabled}
               />
             ))}
           </SortableContext>

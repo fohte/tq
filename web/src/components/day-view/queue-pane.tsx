@@ -12,7 +12,7 @@ import { QueueCandidatesSection } from '#components/task/queue-candidates-sectio
 import type { QueueTaskDragData } from '#components/task/queue-item-row'
 import { QueueSection } from '#components/task/queue-section'
 import type { Task } from '#hooks/use-tasks'
-import type { QueueCandidate } from '#lib/queue-candidates'
+import { isCandidateDragData, type QueueCandidate } from '#lib/queue-candidates'
 
 export interface QueueSectionData {
   key: string
@@ -21,17 +21,6 @@ export interface QueueSectionData {
   /** e.g. "09-01" for a day queue or "08-31 – 09-06" for a week queue; omit for a queue with no periodUnit. */
   dateRangeLabel?: string
   emptyMessage: string
-}
-
-interface CandidateDragData extends Record<string, unknown> {
-  type: 'candidate'
-  taskId: string
-}
-
-function isCandidateDragData(
-  data: Record<string, unknown> | undefined,
-): data is CandidateDragData {
-  return data?.['type'] === 'candidate'
 }
 
 function isQueueTaskDragData(

@@ -8,7 +8,11 @@ import {
   type TaskKanbanColumn,
 } from '#components/kanban/task-kanban'
 import { TaskKanbanSeeAllLink } from '#components/kanban/task-kanban-see-all-link'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import {
+  makeQueueCandidate,
+  makeTask,
+} from '#components/task/task-row-test-fixtures'
+import type { Task } from '#hooks/use-tasks'
 import type { QueueCandidate } from '#lib/queue-candidates'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -164,8 +168,8 @@ const dayWeekColumns: TaskKanbanColumn[] = [
   },
 ]
 
-const candidates: QueueCandidate<ReturnType<typeof makeTask>>[] = [
-  {
+const candidates: QueueCandidate<Task>[] = [
+  makeQueueCandidate({
     task: makeTask({
       id: '10',
       number: 200,
@@ -173,8 +177,8 @@ const candidates: QueueCandidate<ReturnType<typeof makeTask>>[] = [
       dueDate: '2026-03-17',
     }),
     reason: { kind: 'overdue', days: 3 },
-  },
-  {
+  }),
+  makeQueueCandidate({
     task: makeTask({
       id: '11',
       number: 201,
@@ -182,7 +186,7 @@ const candidates: QueueCandidate<ReturnType<typeof makeTask>>[] = [
       dueDate: '2026-03-20',
     }),
     reason: { kind: 'due-today' },
-  },
+  }),
 ]
 
 export const WithCandidates: Story = {

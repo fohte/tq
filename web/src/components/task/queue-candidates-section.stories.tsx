@@ -5,7 +5,10 @@ import { type ReactNode, useState } from 'react'
 import { fn } from 'storybook/test'
 
 import { QueueCandidatesSection } from '#components/task/queue-candidates-section'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import {
+  makeQueueCandidate,
+  makeTask,
+} from '#components/task/task-row-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 import type { QueueCandidate } from '#lib/queue-candidates'
 import { MemoizedStoryRouter } from '#storybook-config/story-router'
@@ -61,22 +64,22 @@ export const Empty: Story = {
 export const OverdueOnly: Story = {
   args: {
     candidates: [
-      {
+      makeQueueCandidate({
         task: makeTask({
           id: '1',
           title: 'Renew SSL certificate',
           dueDate: '2026-03-10',
         }),
         reason: { kind: 'overdue', days: 10 },
-      },
-      {
+      }),
+      makeQueueCandidate({
         task: makeTask({
           id: '2',
           title: 'Follow up on invoice',
           dueDate: '2026-03-17',
         }),
         reason: { kind: 'overdue', days: 3 },
-      },
+      }),
     ] satisfies QueueCandidate<Task>[],
   },
 }
@@ -84,38 +87,38 @@ export const OverdueOnly: Story = {
 export const MixedReasons: Story = {
   args: {
     candidates: [
-      {
+      makeQueueCandidate({
         task: makeTask({
           id: '1',
           title: 'Renew SSL certificate',
           dueDate: '2026-03-17',
         }),
         reason: { kind: 'overdue', days: 3 },
-      },
-      {
+      }),
+      makeQueueCandidate({
         task: makeTask({
           id: '2',
           title: 'Follow up on invoice',
           dueDate: '2026-03-19',
         }),
         reason: { kind: 'overdue', days: 1 },
-      },
-      {
+      }),
+      makeQueueCandidate({
         task: makeTask({
           id: '3',
           title: 'Submit expense report',
           dueDate: '2026-03-20',
         }),
         reason: { kind: 'due-today' },
-      },
-      {
+      }),
+      makeQueueCandidate({
         task: makeTask({
           id: '4',
           title: 'Plan the launch',
           startDate: '2026-03-20',
         }),
         reason: { kind: 'starts', days: 0 },
-      },
+      }),
     ] satisfies QueueCandidate<Task>[],
   },
 }

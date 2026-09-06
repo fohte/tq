@@ -7,10 +7,24 @@ import { Button } from '#components/ui/button'
 import { DragHandle } from '#components/ui/drag-handle'
 import type { Task } from '#hooks/use-tasks'
 import {
+  type CandidateDragData,
   type CandidateReason,
   formatCandidateReason,
 } from '#lib/queue-candidates'
 import { cn } from '#lib/utils'
+
+export function CandidateReasonBadge({ reason }: { reason: CandidateReason }) {
+  return (
+    <span
+      className={cn(
+        'shrink-0 font-mono text-xs',
+        reason.kind === 'overdue' ? 'text-primary' : 'text-muted-foreground',
+      )}
+    >
+      {formatCandidateReason(reason)}
+    </span>
+  )
+}
 
 export function QueueCandidateRow({
   task,
@@ -24,24 +38,13 @@ export function QueueCandidateRow({
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: `candidate-${task.id}`,
-      data: { type: 'candidate', taskId: task.id },
+      data: { type: 'candidate', taskId: task.id } satisfies CandidateDragData,
     })
 
   const style = {
     transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.5 : 1,
   }
-
-  const reasonItem = (
-    <span
-      className={cn(
-        'shrink-0 font-mono text-xs',
-        reason.kind === 'overdue' ? 'text-primary' : 'text-muted-foreground',
-      )}
-    >
-      {formatCandidateReason(reason)}
-    </span>
-  )
 
   return (
     <div
@@ -56,7 +59,10 @@ export function QueueCandidateRow({
       />
 
       <div className="min-w-0 flex-1">
-        <TaskRowAppearance task={task} secondLineExtras={[reasonItem]} />
+        <TaskRowAppearance
+          task={task}
+          secondLineExtras={[<CandidateReasonBadge reason={reason} />]}
+        />
       </div>
 
       <Button

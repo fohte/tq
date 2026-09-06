@@ -1,4 +1,5 @@
 import type { Task, TaskDetail, TreeNode } from '#hooks/use-tasks'
+import type { QueueCandidate } from '#lib/queue-candidates'
 
 export function makeTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -63,6 +64,16 @@ export function makeTaskDetail(
     links: { outgoing: [], incoming: [] },
     blockedBy: [],
     blocking: [],
+    ...overrides,
+  }
+}
+
+export function makeQueueCandidate(
+  overrides: Partial<QueueCandidate<Task>> = {},
+): QueueCandidate<Task> {
+  return {
+    task: makeTask(),
+    reason: { kind: 'due-today' },
     ...overrides,
   }
 }
