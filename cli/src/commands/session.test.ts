@@ -51,6 +51,7 @@ describe('session list', () => {
         taskNumber: 1,
         taskTitle: 'First task',
         taskParentId: null,
+        taskStatus: 'todo',
         ...session1,
       },
       {
@@ -58,6 +59,7 @@ describe('session list', () => {
         taskNumber: 2,
         taskTitle: 'Second task',
         taskParentId: 'task-1',
+        taskStatus: 'completed',
         ...session1,
       },
     ]
@@ -110,12 +112,14 @@ describe('session list', () => {
                   number: 1,
                   title: 'First task',
                   parentId: null,
+                  status: 'todo',
                 },
                 {
                   id: 'task-2',
                   number: 2,
                   title: 'Second task',
                   parentId: 'task-1',
+                  status: 'completed',
                 },
               ],
             },

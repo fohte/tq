@@ -313,6 +313,7 @@ const activeSession: TaskAgentSession = {
   taskNumber: 1,
   taskTitle: baseTreeNode.title,
   taskParentId: null,
+  taskStatus: 'todo',
   provider: 'claude_code',
   sessionId: 'session-active',
   parentSessionId: null,

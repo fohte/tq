@@ -27,6 +27,7 @@ interface TaskAgentSessionResponse extends AgentSessionResponse {
   taskNumber: number
   taskTitle: string
   taskParentId: string | null
+  taskStatus: 'todo' | 'completed'
 }
 
 function normalizeSession(session: AgentSessionResponse) {
@@ -589,6 +590,7 @@ describe('agent sessions API', () => {
           taskNumber: task.number,
           taskTitle: task.title,
           taskParentId: null,
+          taskStatus: 'todo',
           ...newer,
         },
         {
@@ -596,6 +598,7 @@ describe('agent sessions API', () => {
           taskNumber: task.number,
           taskTitle: task.title,
           taskParentId: null,
+          taskStatus: 'todo',
           ...older,
         },
       ])
@@ -638,6 +641,7 @@ describe('agent sessions API', () => {
           taskNumber: task2.number,
           taskTitle: task2.title,
           taskParentId: null,
+          taskStatus: 'todo',
           ...newerSession,
         },
         {
@@ -645,6 +649,7 @@ describe('agent sessions API', () => {
           taskNumber: task1.number,
           taskTitle: task1.title,
           taskParentId: null,
+          taskStatus: 'todo',
           ...olderSession,
         },
       ])
@@ -675,6 +680,7 @@ describe('agent sessions API', () => {
           taskNumber: child.number,
           taskTitle: child.title,
           taskParentId: parent.id,
+          taskStatus: 'todo',
           ...session,
         },
       ])
