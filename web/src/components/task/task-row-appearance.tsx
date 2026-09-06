@@ -145,13 +145,13 @@ export function TaskRowAppearance({
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div className="flex items-center gap-2 overflow-hidden">
                 <TaskNumberLabel number={task.number} />
-                {/* min-w-30 (120px): without a floor, this flex item's
+                {/* min-w-16 (64px): without a floor, this flex item's
                 default min-width would shrink to 0 once its siblings
                 need more room than the row has, hiding the title
                 entirely instead of truncating it or letting the row
                 overflow. */}
                 <span
-                  className={cn(rowTitleClassName(isCompleted), 'min-w-30')}
+                  className={cn(rowTitleClassName(isCompleted), 'min-w-16')}
                 >
                   {task.title}
                 </span>
