@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { expect, waitFor, within } from 'storybook/test'
 
+import { makeTaskAgentSession } from '#components/agent-session/task-agent-session-test-fixtures'
 import { makeProject } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { makeNode } from '#components/task/task-row-test-fixtures'
@@ -307,25 +308,16 @@ export const WithChildren: Story = {
 // Kept relative to `Date.now()` (not a fixed ISO literal) so this session
 // keeps rendering as active (isAgentSessionActive) no matter when this story
 // runs.
-const activeSession: TaskAgentSession = {
+const activeSession: TaskAgentSession = makeTaskAgentSession({
   id: '00000000-0000-0000-0000-0000000000a1',
   taskId: baseTreeNode.id,
-  taskNumber: 1,
   taskTitle: baseTreeNode.title,
-  taskParentId: null,
-  taskStatus: 'todo',
-  provider: 'claude_code',
   sessionId: 'session-active',
-  parentSessionId: null,
-  context: 'work',
-  cwd: '/Users/fohte/ghq/github.com/fohte/tq',
   label: 'Implement tree session rows',
   lastMessage: 'Wiring up the sessions endpoint',
-  customLabel: null,
   startedAt: new Date(Date.now() - 34 * 60_000).toISOString(),
   lastActiveAt: new Date(Date.now() - 2 * 60_000).toISOString(),
-  endedAt: null,
-}
+})
 
 const endedSession: TaskAgentSession = {
   ...activeSession,
