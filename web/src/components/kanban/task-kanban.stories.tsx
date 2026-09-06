@@ -189,7 +189,11 @@ const candidates: QueueCandidate<Task>[] = [
   }),
 ]
 
+// The candidates column sits past the horizontally-scrolled fold on mobile
+// (see the overflowCheck comment on `meta` above), so this would be
+// pixel-identical to WithDateRangeLabel there.
 export const WithCandidates: Story = {
+  tags: ['desktop-only'],
   args: {
     columns: dayWeekColumns,
     onReorder: fn(),
