@@ -1,4 +1,4 @@
-import { CalendarPlus, Plus } from 'lucide-react'
+import { CalendarPlus, Kanban, List, Plus } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
@@ -14,11 +14,10 @@ import {
   TaskKanban,
   type TaskKanbanColumn,
 } from '#components/kanban/task-kanban'
-import type { DayViewMode } from '#components/layout/view-mode-toggle'
-import { ViewModeToggle } from '#components/layout/view-mode-toggle'
 import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { TaskListHeader } from '#components/task/task-list-header'
+import { ActionsMenu, type ActionsMenuItem } from '#components/ui/actions-menu'
 import { Button } from '#components/ui/button'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
@@ -28,11 +27,13 @@ import type { Task } from '#hooks/use-tasks'
 import type { QueueCandidate } from '#lib/queue-candidates'
 import { cn } from '#lib/utils'
 
+export type DayViewMode = 'queue' | 'kanban'
+
 type MobileTab = 'calendar' | 'tasks'
 
 const MOBILE_TAB_OPTIONS = [
   { value: 'calendar', label: 'calendar' },
-  { value: 'tasks', label: 'queue' },
+  { value: 'tasks', label: 'tasks' },
 ] as const
 
 export interface DayViewPresentationProps {
@@ -95,6 +96,29 @@ export function DayViewPresentation({
 
   const canAutoAssign = dayQueueTasks.some((t) => t.estimatedMinutes != null)
 
+  const layoutItems: ActionsMenuItem[] = [
+    {
+      icon: <List className="h-4 w-4" />,
+      label: 'List',
+      onClick: () => {
+        onViewModeChange('queue')
+      },
+      selected: viewMode === 'queue',
+    },
+    {
+      icon: <Kanban className="h-4 w-4" />,
+      label: 'Board',
+      onClick: () => {
+        onViewModeChange('kanban')
+      },
+      selected: viewMode === 'kanban',
+    },
+  ]
+  // On mobile the calendar pane has no layout to switch (list/board only
+  // affect the queue pane), so the item would be a no-op there — desktop
+  // always shows both panes, so it always keeps the entry.
+  const mobileLayoutItems = mobileTab === 'calendar' ? [] : layoutItems
+
   const kanbanColumns: TaskKanbanColumn[] = useMemo(
     () =>
       queueSections.map((section) => ({
@@ -136,14 +160,73 @@ export function DayViewPresentation({
     // route (see app-layout.tsx) so h-full here resolves to main's actual
     // flex-allotted share of the viewport instead of overflowing it.
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Mobile pane switcher */}
-      <div className="border-b border-border px-3 py-2 md:hidden">
+      <ScreenHeaderBar>
+        <SectionHeading level={2}>queue</SectionHeading>
+
         <TabStrip
           value={mobileTab}
           options={MOBILE_TAB_OPTIONS}
           onChange={setMobileTab}
+          className="md:hidden [&>button]:px-1.5"
         />
-      </div>
+
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={onAutoAssign}
+          disabled={isAutoAssigning || !canAutoAssign}
+          title={
+            canAutoAssign
+              ? undefined
+              : 'Set an estimate on at least one queued task to auto-schedule'
+          }
+          className="ml-auto"
+        >
+          {isAutoAssigning ? 'scheduling…' : 'auto'}
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={() => {
+            setIsCreateModalOpen(true)
+          }}
+          aria-label="New task"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={() => {
+            setEditingSchedule(undefined)
+            setIsScheduleModalOpen(true)
+          }}
+          aria-label="New schedule"
+        >
+          <CalendarPlus className="h-3.5 w-3.5" />
+        </Button>
+
+        <ActionsMenu
+          aria-label="Layout"
+          items={layoutItems}
+          mobileItems={mobileLayoutItems}
+        />
+      </ScreenHeaderBar>
+
+      <CreateScheduleModal
+        key={editingSchedule?.scheduleId ?? 'new'}
+        open={isScheduleModalOpen}
+        onOpenChange={setIsScheduleModalOpen}
+        schedule={editingSchedule}
+      />
+
+      <CreateTaskModal
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+        defaultStartDate={new Date().toISOString().slice(0, 10)}
+      />
 
       <div className="flex min-h-0 flex-1">
         {/* Left panel: queue */}
@@ -157,63 +240,6 @@ export function DayViewPresentation({
             mobileTab === 'calendar' ? 'hidden md:flex' : 'flex md:flex',
           )}
         >
-          <ScreenHeaderBar>
-            <SectionHeading level={2}>queue</SectionHeading>
-
-            <ViewModeToggle value={viewMode} onChange={onViewModeChange} />
-
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={onAutoAssign}
-              disabled={isAutoAssigning || !canAutoAssign}
-              title={
-                canAutoAssign
-                  ? undefined
-                  : 'Set an estimate on at least one queued task to auto-schedule'
-              }
-              className="ml-auto"
-            >
-              {isAutoAssigning ? 'scheduling…' : 'auto'}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => {
-                setIsCreateModalOpen(true)
-              }}
-              aria-label="New task"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => {
-                setEditingSchedule(undefined)
-                setIsScheduleModalOpen(true)
-              }}
-              aria-label="New schedule"
-            >
-              <CalendarPlus className="h-3.5 w-3.5" />
-            </Button>
-          </ScreenHeaderBar>
-
-          <CreateScheduleModal
-            key={editingSchedule?.scheduleId ?? 'new'}
-            open={isScheduleModalOpen}
-            onOpenChange={setIsScheduleModalOpen}
-            schedule={editingSchedule}
-          />
-
-          <CreateTaskModal
-            open={isCreateModalOpen}
-            onOpenChange={setIsCreateModalOpen}
-            defaultStartDate={new Date().toISOString().slice(0, 10)}
-          />
-
           {/* Summary header (today's queue only) */}
           <div className="border-b border-border py-2.5">
             <TaskListHeader tasks={dayQueueTasks} />
