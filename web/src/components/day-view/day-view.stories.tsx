@@ -487,13 +487,11 @@ export const LayoutMenuMobile: Story = {
     )
     await userEvent.click(trigger)
 
+    // The checkmark-on-selected-item contract itself is ActionsMenu's own —
+    // see SelectedItem in actions-menu.stories.tsx — so this only checks that
+    // the layout picker's items actually render here.
     const body = within(canvasElement.ownerDocument.body)
-    const listItem = assertDefined(
-      (await body.findByText('List')).closest(
-        '[data-slot="action-sheet-item"]',
-      ),
-      'List item not found',
-    )
-    await expect(listItem.querySelectorAll('svg')).toHaveLength(2)
+    await expect(await body.findByText('List')).toBeInTheDocument()
+    await expect(body.getByText('Board')).toBeInTheDocument()
   },
 }
