@@ -112,6 +112,25 @@ export const Empty: Story = {
   },
 }
 
+export const WithDateRangeLabel: Story = {
+  args: {
+    columns: [
+      {
+        id: 'day',
+        title: 'today',
+        tasks: activeTasks,
+        dateRangeLabel: '09-01',
+      },
+      {
+        id: 'week',
+        title: 'this week',
+        tasks: someTasks,
+        dateRangeLabel: '08-31 – 09-06',
+      },
+    ],
+  },
+}
+
 export const WithFooter: Story = {
   args: {
     columns: [

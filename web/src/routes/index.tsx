@@ -1,11 +1,12 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
 import { useEffect, useMemo } from 'react'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
 import type { QueueSectionData } from '#components/day-view/queue-pane'
+import type { DayViewMode } from '#components/layout/view-mode-toggle'
 import { useAutoAssign } from '#hooks/use-auto-assign'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
@@ -43,7 +44,21 @@ import {
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { scheduleColorToEventColor } from '#lib/schedule-color'
 
+const dayViewSearchDefaults = { view: 'queue' } as const
+
+interface DayViewSearch {
+  view?: DayViewMode
+}
+
+function validateSearch(search: Record<string, unknown>): DayViewSearch {
+  return search['view'] === 'kanban' ? { view: 'kanban' } : { view: 'queue' }
+}
+
 export const Route = createFileRoute('/')({
+  validateSearch,
+  search: {
+    middlewares: [stripSearchParams(dayViewSearchDefaults)],
+  },
   component: DayView,
 })
 
@@ -64,6 +79,15 @@ function dateRangeLabelFor(
 function DayView() {
   const baseFilter = useBaseFilter(true)
   const { isLoading, categorized } = useTaskList(baseFilter)
+
+  const { view: viewMode = 'queue' } = Route.useSearch()
+  const navigate = Route.useNavigate()
+  const handleViewModeChange = (mode: DayViewMode) => {
+    void navigate({
+      search: (prev) => ({ ...prev, view: mode }),
+      replace: true,
+    })
+  }
 
   const { selectedDate, setSelectedDate } = useSelectedDate()
   const selectedDateStr = useMemo(
@@ -401,6 +425,8 @@ function DayView() {
       isAutoAssigning={autoAssign.isPending}
       selectedDate={selectedDate}
       onDateChange={setSelectedDate}
+      viewMode={viewMode}
+      onViewModeChange={handleViewModeChange}
     />
   )
 }
