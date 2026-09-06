@@ -10,6 +10,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { makeTaskAgentSession } from '#components/agent-session/task-agent-session-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { makeNode } from '#components/task/task-row-test-fixtures'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
@@ -219,24 +220,15 @@ describe('TreeTaskGridRow', () => {
 
   it('does not show an expand toggle for a childless task with sessions', async () => {
     const node = makeNode({ id: 'parent-1', children: [] })
-    const session: TaskAgentSession = {
+    const session: TaskAgentSession = makeTaskAgentSession({
       id: 'session-1',
       taskId: 'parent-1',
-      taskNumber: 1,
       taskTitle: 'Parent task',
-      taskParentId: null,
-      provider: 'claude_code',
       sessionId: 'sess-1',
-      parentSessionId: null,
-      context: 'work',
       cwd: '/home/fohte/project',
       label: 'Fix bug',
-      lastMessage: null,
-      customLabel: null,
-      startedAt: '2026-03-20T00:00:00.000Z',
       lastActiveAt: new Date().toISOString(),
-      endedAt: null,
-    }
+    })
     await renderTree(node, new Map([['parent-1', [session]]]))
 
     expect(screen.queryByLabelText('Collapse')).not.toBeInTheDocument()
@@ -245,24 +237,15 @@ describe('TreeTaskGridRow', () => {
 
   it('shows a session indicator for a task with sessions', async () => {
     const node = makeNode({ id: 'parent-1', children: [] })
-    const session: TaskAgentSession = {
+    const session: TaskAgentSession = makeTaskAgentSession({
       id: 'session-1',
       taskId: 'parent-1',
-      taskNumber: 1,
       taskTitle: 'Parent task',
-      taskParentId: null,
-      provider: 'claude_code',
       sessionId: 'sess-1',
-      parentSessionId: null,
-      context: 'work',
       cwd: '/home/fohte/project',
       label: 'Fix bug',
-      lastMessage: null,
-      customLabel: null,
-      startedAt: '2026-03-20T00:00:00.000Z',
       lastActiveAt: new Date().toISOString(),
-      endedAt: null,
-    }
+    })
     await renderTree(node, new Map([['parent-1', [session]]]))
 
     expect(screen.getByTestId('session-indicator')).toBeInTheDocument()

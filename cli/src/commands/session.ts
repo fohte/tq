@@ -26,6 +26,7 @@ interface LinkedTask {
   number: number
   title: string
   parentId: string | null
+  status: 'todo' | 'completed'
 }
 
 function collectSessionId(value: string, previous: string[]): string[] {
@@ -43,6 +44,7 @@ function groupTasksBySessionId(
       number: row.taskNumber,
       title: row.taskTitle,
       parentId: row.taskParentId,
+      status: row.taskStatus,
     })
     map.set(row.id, list)
   }

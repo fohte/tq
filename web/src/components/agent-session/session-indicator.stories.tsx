@@ -3,30 +3,21 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { expect, waitFor, within } from 'storybook/test'
 
 import { SessionIndicator } from '#components/agent-session/session-indicator'
+import { makeTaskAgentSession } from '#components/agent-session/task-agent-session-test-fixtures'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 
 // Kept relative to `Date.now()` (not a fixed ISO literal) so this session
 // keeps rendering as active (isAgentSessionActive) no matter when this story
 // runs.
-const activeSession: TaskAgentSession = {
+const activeSession: TaskAgentSession = makeTaskAgentSession({
   id: '1',
-  taskId: 'task-1',
-  taskNumber: 1,
   taskTitle: 'Sample task',
-  taskParentId: null,
-  provider: 'claude_code',
-  sessionId: 'session-1',
-  parentSessionId: null,
-  context: 'work',
-  cwd: '/Users/fohte/ghq/github.com/fohte/tq',
   label: 'Implement session indicator',
   lastMessage: 'Wiring up the hover card',
-  customLabel: null,
   startedAt: new Date(Date.now() - 34 * 60_000).toISOString(),
   lastActiveAt: new Date(Date.now() - 2 * 60_000).toISOString(),
-  endedAt: null,
-}
+})
 
 const endedSession: TaskAgentSession = {
   ...activeSession,
