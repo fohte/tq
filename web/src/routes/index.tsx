@@ -4,9 +4,11 @@ import { useEffect, useMemo } from 'react'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
-import { DayViewPresentation } from '#components/day-view/day-view'
+import {
+  type DayViewMode,
+  DayViewPresentation,
+} from '#components/day-view/day-view'
 import type { QueueSectionData } from '#components/day-view/queue-pane'
-import type { DayViewMode } from '#components/layout/view-mode-toggle'
 import { useAutoAssign } from '#hooks/use-auto-assign'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'

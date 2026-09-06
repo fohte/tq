@@ -366,7 +366,7 @@ export const OpensEditScheduleModal: Story = {
 
 // The queue panel — where isLoading/queueTasks/queueCandidates differences
 // actually render — is hidden behind the mobile pane switcher's 'calendar'
-// default, so the mobile screenshot needs the 'queue' tab opened to show it.
+// default, so the mobile screenshot needs the 'tasks' tab opened to show it.
 // The switcher itself is `md:hidden`, so on desktop it's absent from the
 // accessibility tree and there's nothing to click (the panel is already
 // visible there regardless of the switcher).
@@ -374,7 +374,7 @@ const openMobileQueueTab: NonNullable<Story['play']> = async ({
   canvas,
   userEvent,
 }) => {
-  const queueTab = canvas.queryByRole('button', { name: 'queue' })
+  const queueTab = canvas.queryByRole('button', { name: 'tasks' })
   if (queueTab) {
     await userEvent.click(queueTab)
   }
@@ -459,9 +459,40 @@ export const EmptyQueueWithCandidates: Story = {
 }
 
 export const KanbanMobile: Story = {
+  tags: ['mobile-only'],
   args: {
     ...Default.args,
     viewMode: 'kanban',
   },
   play: openMobileQueueTab,
+}
+
+// The layout picker only makes sense for the queue pane, so on mobile it's
+// absent from the "⋯" menu while the calendar tab (the default) is active,
+// and appears once the tasks tab is opened.
+export const LayoutMenuMobile: Story = {
+  tags: ['mobile-only'],
+  args: Default.args,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await expect(
+      canvasElement.querySelector('[data-slot="action-sheet-trigger"]'),
+    ).not.toBeInTheDocument()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'tasks' }))
+
+    const trigger = assertDefined(
+      canvasElement.querySelector<HTMLElement>(
+        '[data-slot="action-sheet-trigger"]',
+      ),
+      'mobile layout trigger not found',
+    )
+    await userEvent.click(trigger)
+
+    // The checkmark-on-selected-item contract itself is ActionsMenu's own —
+    // see SelectedItem in actions-menu.stories.tsx — so this only checks that
+    // the layout picker's items actually render here.
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(await body.findByText('List')).toBeInTheDocument()
+    await expect(body.getByText('Board')).toBeInTheDocument()
+  },
 }
