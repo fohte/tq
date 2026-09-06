@@ -125,6 +125,7 @@ export const SelectedItem: Story = {
 // mobile calendar pane is active) removes the mobile trigger entirely instead
 // of opening onto an empty sheet.
 export const MobileItemsHidden: Story = {
+  tags: ['mobile-only'],
   args: {
     mobileItems: [],
   },
