@@ -8,7 +8,12 @@ import {
   type TaskKanbanColumn,
 } from '#components/kanban/task-kanban'
 import { TaskKanbanSeeAllLink } from '#components/kanban/task-kanban-see-all-link'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import {
+  makeQueueCandidate,
+  makeTask,
+} from '#components/task/task-row-test-fixtures'
+import type { Task } from '#hooks/use-tasks'
+import type { QueueCandidate } from '#lib/queue-candidates'
 import { StoryRouter } from '#storybook-config/story-router'
 
 function Providers({ children }: { children: ReactNode }) {
@@ -150,5 +155,50 @@ export const WithFooter: Story = {
         footer: <TaskKanbanSeeAllLink commitment="someday" />,
       },
     ],
+  },
+}
+
+const dayWeekColumns: TaskKanbanColumn[] = [
+  { id: 'day', title: 'today', tasks: activeTasks, dateRangeLabel: '09-01' },
+  {
+    id: 'week',
+    title: 'this week',
+    tasks: someTasks,
+    dateRangeLabel: '08-31 – 09-06',
+  },
+]
+
+const candidates: QueueCandidate<Task>[] = [
+  makeQueueCandidate({
+    task: makeTask({
+      id: '10',
+      number: 200,
+      title: 'Renew SSL certificate',
+      dueDate: '2026-03-17',
+    }),
+    reason: { kind: 'overdue', days: 3 },
+  }),
+  makeQueueCandidate({
+    task: makeTask({
+      id: '11',
+      number: 201,
+      title: 'Submit expense report',
+      dueDate: '2026-03-20',
+    }),
+    reason: { kind: 'due-today' },
+  }),
+]
+
+// The candidates column sits past the horizontally-scrolled fold on mobile
+// (see the overflowCheck comment on `meta` above), so this would be
+// pixel-identical to WithDateRangeLabel there.
+export const WithCandidates: Story = {
+  tags: ['desktop-only'],
+  args: {
+    columns: dayWeekColumns,
+    onReorder: fn(),
+    candidates,
+    onAddCandidate: fn(),
+    onInsertCandidate: fn(),
   },
 }

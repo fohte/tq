@@ -9,11 +9,19 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 
+import { CandidateReasonBadge } from '#components/task/queue-candidate-row'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
+import { Button } from '#components/ui/button'
 import { ListAreaMessage } from '#components/ui/list-area-message'
 import type { Task } from '#hooks/use-tasks'
 import {
@@ -21,7 +29,15 @@ import {
   NoDndTouchSensor,
   useDragOverlayWidth,
 } from '#lib/dnd-sensors'
-import { resolveKanbanDrop } from '#lib/task-kanban'
+import {
+  type CandidateDragData,
+  isCandidateDragData,
+  type QueueCandidate,
+} from '#lib/queue-candidates'
+import {
+  resolveKanbanCandidateDrop,
+  resolveKanbanCardDrop,
+} from '#lib/task-kanban'
 import { cn } from '#lib/utils'
 
 export interface TaskKanbanColumn {
@@ -40,6 +56,12 @@ export interface TaskKanbanColumn {
 export interface TaskKanbanProps {
   columns: TaskKanbanColumn[]
   onDrop: (taskId: string, columnId: string) => void
+  /** Enables drag-to-reorder within a column. */
+  onReorder?: (columnId: string, taskIds: string[]) => void
+  /** Rendered as a trailing column when `onAddCandidate` is set; cards can be dragged from it into any other column when `onInsertCandidate` is also set. */
+  candidates?: QueueCandidate<Task>[]
+  onAddCandidate?: (taskId: string) => void
+  onInsertCandidate?: (columnId: string, taskId: string, index: number) => void
 }
 
 interface CardDragData extends Record<string, unknown> {
@@ -56,21 +78,32 @@ function isCardDragData(
 function TaskKanbanCard({
   task,
   sourceColumnId,
+  droppable,
 }: {
   task: Task
   sourceColumnId: string
+  /** Cards always stay draggable (to move to another column); this only controls whether other cards can be dropped onto this one to reorder within the column. */
+  droppable: boolean
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: task.id,
-      data: { task, sourceColumnId } satisfies CardDragData,
-    })
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: task.id,
+    data: { task, sourceColumnId } satisfies CardDragData,
+    disabled: { droppable: !droppable },
+  })
 
   return (
     <div
       ref={setNodeRef}
       style={{
-        transform: CSS.Translate.toString(transform),
+        transform: CSS.Transform.toString(transform),
+        transition,
         opacity: isDragging ? 0.5 : 1,
       }}
       {...attributes}
@@ -82,7 +115,61 @@ function TaskKanbanCard({
   )
 }
 
-function TaskKanbanColumnView({ column }: { column: TaskKanbanColumn }) {
+function TaskKanbanCandidateCard({
+  candidate,
+  onAdd,
+}: {
+  candidate: QueueCandidate<Task>
+  onAdd: (taskId: string) => void
+}) {
+  const { task, reason } = candidate
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: `candidate-${task.id}`,
+      data: { type: 'candidate', taskId: task.id } satisfies CandidateDragData,
+    })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Translate.toString(transform),
+        opacity: isDragging ? 0.5 : 1,
+      }}
+      {...attributes}
+      {...listeners}
+      className="flex items-center gap-1 rounded-md border border-border bg-card"
+    >
+      <div className="min-w-0 flex-1">
+        <TaskRowAppearance
+          task={task}
+          secondLineExtras={[<CandidateReasonBadge reason={reason} />]}
+        />
+      </div>
+
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        data-no-dnd=""
+        onClick={() => {
+          onAdd(task.id)
+        }}
+        aria-label="Add to today's queue"
+        className="mr-1 shrink-0 text-muted-foreground hover:text-foreground"
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  )
+}
+
+function TaskKanbanColumnView({
+  column,
+  reorderEnabled,
+}: {
+  column: TaskKanbanColumn
+  reorderEnabled: boolean
+}) {
   const {
     id,
     title,
@@ -129,9 +216,19 @@ function TaskKanbanColumnView({ column }: { column: TaskKanbanColumn }) {
         ) : tasks.length === 0 ? (
           <ListAreaMessage>No tasks</ListAreaMessage>
         ) : (
-          tasks.map((task) => (
-            <TaskKanbanCard key={task.id} task={task} sourceColumnId={id} />
-          ))
+          <SortableContext
+            items={tasks.map((t) => t.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {tasks.map((task) => (
+              <TaskKanbanCard
+                key={task.id}
+                task={task}
+                sourceColumnId={id}
+                droppable={reorderEnabled}
+              />
+            ))}
+          </SortableContext>
         )}
       </div>
 
@@ -144,9 +241,48 @@ function TaskKanbanColumnView({ column }: { column: TaskKanbanColumn }) {
   )
 }
 
-export function TaskKanban({ columns, onDrop }: TaskKanbanProps) {
+function TaskKanbanCandidatesColumn({
+  candidates,
+  onAdd,
+}: {
+  candidates: QueueCandidate<Task>[]
+  onAdd: (taskId: string) => void
+}) {
+  return (
+    <div className="flex w-5/6 shrink-0 snap-start flex-col border-r border-border last:border-r-0 md:w-0 md:flex-1 md:snap-align-none">
+      <div className="flex h-9 shrink-0 items-center justify-between border-b border-border px-3">
+        <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
+          CANDIDATES
+        </span>
+        <span className="font-mono text-2xs text-muted-foreground-faint">
+          {candidates.length}
+        </span>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
+        {candidates.map((candidate) => (
+          <TaskKanbanCandidateCard
+            key={candidate.task.id}
+            candidate={candidate}
+            onAdd={onAdd}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export function TaskKanban({
+  columns,
+  onDrop,
+  onReorder,
+  candidates,
+  onAddCandidate,
+  onInsertCandidate,
+}: TaskKanbanProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const { width: activeWidth, captureWidth, resetWidth } = useDragOverlayWidth()
+  const reorderEnabled = onReorder != null
 
   const dndSensors = useSensors(
     useSensor(NoDndMouseSensor, { activationConstraint: { distance: 4 } }),
@@ -157,7 +293,15 @@ export function TaskKanban({ columns, onDrop }: TaskKanbanProps) {
 
   const handleDragStart = (event: DragStartEvent) => {
     const data = event.active.data.current
-    setActiveTask(isCardDragData(data) ? data.task : null)
+    if (isCardDragData(data)) {
+      setActiveTask(data.task)
+    } else if (isCandidateDragData(data)) {
+      setActiveTask(
+        candidates?.find((c) => c.task.id === data.taskId)?.task ?? null,
+      )
+    } else {
+      setActiveTask(null)
+    }
     captureWidth(event)
   }
 
@@ -167,14 +311,44 @@ export function TaskKanban({ columns, onDrop }: TaskKanbanProps) {
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const data = event.active.data.current
-    if (isCardDragData(data)) {
-      const targetColumnId = resolveKanbanDrop(
-        data.sourceColumnId,
-        event.over != null ? String(event.over.id) : null,
-      )
-      if (targetColumnId != null) onDrop(data.task.id, targetColumnId)
+    const { active, over } = event
+    const data = active.data.current
+
+    if (over != null) {
+      const overId = String(over.id)
+      const columnTaskIds = columns.map((c) => ({
+        id: c.id,
+        taskIds: c.tasks.map((t) => t.id),
+      }))
+
+      if (isCandidateDragData(data)) {
+        if (onInsertCandidate != null) {
+          const activeTop = active.rect.current.translated?.top ?? over.rect.top
+          const isAfter = activeTop > over.rect.top + over.rect.height / 2
+          const result = resolveKanbanCandidateDrop(
+            columnTaskIds,
+            overId,
+            isAfter,
+          )
+          if (result != null) {
+            onInsertCandidate(result.columnId, data.taskId, result.index)
+          }
+        }
+      } else if (isCardDragData(data)) {
+        const result = resolveKanbanCardDrop(
+          columnTaskIds,
+          data.sourceColumnId,
+          data.task.id,
+          overId,
+        )
+        if (result?.type === 'move') {
+          onDrop(data.task.id, result.columnId)
+        } else if (result?.type === 'reorder' && onReorder != null) {
+          onReorder(result.columnId, result.taskIds)
+        }
+      }
     }
+
     resetDragState()
   }
 
@@ -188,8 +362,21 @@ export function TaskKanban({ columns, onDrop }: TaskKanbanProps) {
     >
       <div className="flex h-full snap-x snap-mandatory overflow-x-auto md:snap-none">
         {columns.map((column) => (
-          <TaskKanbanColumnView key={column.id} column={column} />
+          <TaskKanbanColumnView
+            key={column.id}
+            column={column}
+            reorderEnabled={reorderEnabled}
+          />
         ))}
+
+        {candidates != null &&
+          candidates.length > 0 &&
+          onAddCandidate != null && (
+            <TaskKanbanCandidatesColumn
+              candidates={candidates}
+              onAdd={onAddCandidate}
+            />
+          )}
       </div>
 
       <DragOverlay>

@@ -247,7 +247,14 @@ export function DayViewPresentation({
 
           {viewMode === 'kanban' ? (
             <div className="min-h-0 flex-1">
-              <TaskKanban columns={kanbanColumns} onDrop={handleKanbanDrop} />
+              <TaskKanban
+                columns={kanbanColumns}
+                onDrop={handleKanbanDrop}
+                onReorder={onReorderQueue}
+                candidates={queueCandidates}
+                onAddCandidate={onAddCandidate}
+                onInsertCandidate={onInsertCandidate}
+              />
             </div>
           ) : (
             <QueuePane
