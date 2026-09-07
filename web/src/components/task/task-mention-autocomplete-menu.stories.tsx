@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { expect, fn, waitFor } from 'storybook/test'
 
 import { TaskMentionAutocompleteMenu } from '#components/task/task-mention-autocomplete-menu'
+import { makeMentionSuggestion } from '#components/task/task-mention-test-fixtures'
 import {
   type MentionSuggestion,
   taskMentionKeys,
@@ -11,9 +12,14 @@ import {
 import { createMentionAutocompleteStore } from '#lib/inline-reference/providers/task-mention-autocomplete-store'
 
 const sampleItems: MentionSuggestion[] = [
-  { id: '1', number: 12, title: 'Deploy to production', status: 'todo' },
-  { id: '2', number: 120, title: 'Deploy docs site', status: 'todo' },
-  { id: '3', number: 123, title: 'Deprecate old API', status: 'completed' },
+  makeMentionSuggestion(),
+  makeMentionSuggestion({ id: '2', number: 120, title: 'Deploy docs site' }),
+  makeMentionSuggestion({
+    id: '3',
+    number: 123,
+    title: 'Deprecate old API',
+    status: 'completed',
+  }),
 ]
 
 function TaskMentionAutocompleteMenuDemo({

@@ -12,6 +12,7 @@ export interface ShorthandExtraction {
   estimateInput?: string
   context?: ContextValue
   labels: string[]
+  parentNumber?: number
 }
 
 function isContextValue(value: string): value is ContextValue {
@@ -40,6 +41,7 @@ function resolveDateKeyword(keyword: string): string | null {
  * - `>today` / `>tomorrow` / `>YYYY-MM-DD` → startDate
  * - `#label` → labels
  * - `%work` / `%personal` → context
+ * - `^N` → parentNumber
  *
  * A token counts as "completed" only once it's followed by whitespace, so
  * the word currently being typed is never touched. Unrecognized tokens are
@@ -86,6 +88,10 @@ export function extractShorthandTokens(input: string): ShorthandExtraction {
         result.context = value
         consumed = true
         continue
+      } else if (word.startsWith('^') && /^\d+$/.test(value)) {
+        result.parentNumber = Number(value)
+        consumed = true
+        continue
       }
     }
 
@@ -101,7 +107,7 @@ export function extractShorthandTokens(input: string): ShorthandExtraction {
   return result
 }
 
-export type TriggerChar = '@' | '>' | '#' | '%'
+export type TriggerChar = '@' | '>' | '#' | '%' | '^'
 
 export interface SuggestionItem {
   value: string
@@ -148,7 +154,8 @@ export function detectTrigger(
     firstChar === '@' ||
     firstChar === '>' ||
     firstChar === '#' ||
-    firstChar === '%'
+    firstChar === '%' ||
+    firstChar === '^'
   ) {
     return { trigger: firstChar, partial: token.slice(1), tokenStart: start }
   }
@@ -179,6 +186,10 @@ export function getSuggestions(
       break
     case '%':
       items = CONTEXT_SUGGESTIONS
+      break
+    case '^':
+      // Parent suggestions require an async lookup this function can't do.
+      items = []
       break
   }
 

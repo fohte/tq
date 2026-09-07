@@ -57,7 +57,10 @@ const mockCompleteMutate = vi.fn()
 const mockParentMutate = vi.fn()
 const mockUpdateBlockedByMutate = vi.fn()
 
-vi.mock('#hooks/use-tasks', () => ({
+vi.mock('#hooks/use-tasks', async (importOriginal) => ({
+  // `taskKeys` must stay real — `use-task-mentions.ts` (pulled in by
+  // TaskTitleInput) reads it at module load time.
+  ...(await importOriginal<typeof import('#hooks/use-tasks')>()),
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useTask: (...args: unknown[]) => mockUseTask(...args),
   useUpdateTask: () => ({ mutate: mockUpdateMutate }),

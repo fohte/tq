@@ -36,9 +36,10 @@ function taskMentionPreviewQueryOptions(number: number) {
   }
 }
 
-export function useTaskMentionPreview(number: number) {
+export function useTaskMentionPreview(number: number, enabled = true) {
   return useQuery({
     ...taskMentionPreviewQueryOptions(number),
+    enabled,
     // A 404 above already resolves to `null` without throwing; reaching
     // here means `queryFn` itself threw (network error, bad JSON, ...),
     // which is unexpected and worth surfacing for debugging. The chip still

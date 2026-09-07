@@ -130,10 +130,25 @@ describe('extractShorthandTokens', () => {
     })
   })
 
+  it('parses a parent task number with ^', () => {
+    expect(extractShorthandTokens('Fix bug ^42 ')).toEqual({
+      title: 'Fix bug ',
+      parentNumber: 42,
+      labels: [],
+    })
+  })
+
+  it('leaves non-numeric ^ tokens as title text', () => {
+    expect(extractShorthandTokens('Task ^abc ')).toEqual({
+      title: 'Task ^abc ',
+      labels: [],
+    })
+  })
+
   it('parses a complex input with all fields at once', () => {
     expect(
       extractShorthandTokens(
-        'Buy groceries @30m @tomorrow #food %personal >today ',
+        'Buy groceries @30m @tomorrow #food %personal >today ^42 ',
       ),
     ).toEqual({
       title: 'Buy groceries ',
@@ -142,6 +157,7 @@ describe('extractShorthandTokens', () => {
       startDate: '2026-01-01',
       context: 'personal',
       labels: ['food'],
+      parentNumber: 42,
     })
   })
 
@@ -179,6 +195,14 @@ describe('detectTrigger', () => {
 
   it('returns null when the trigger char is not at the start of the token', () => {
     expect(detectTrigger('a@b', 3)).toBeNull()
+  })
+
+  it('detects the ^ parent trigger', () => {
+    expect(detectTrigger('Task ^4', 7)).toEqual({
+      trigger: '^',
+      partial: '4',
+      tokenStart: 5,
+    })
   })
 
   it('returns null when no trigger token is present', () => {
@@ -219,5 +243,9 @@ describe('getSuggestions', () => {
     expect(getSuggestions('#', '', ['urgent', 'urgent task'])).toEqual([
       { value: 'urgent', display: 'urgent' },
     ])
+  })
+
+  it('returns no items for ^ since its suggestions are fetched asynchronously', () => {
+    expect(getSuggestions('^', '')).toEqual([])
   })
 })
