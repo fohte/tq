@@ -48,17 +48,13 @@ export const WithContent: Story = {
 
 const HOVER_TARGET_TEXT = 'Hover this paragraph to reveal its block handle.'
 
-// BlockProvider mounts its handle element and binds its notify callback
-// together in a requestAnimationFrame after the editor mounts, racing this
-// play function; a pointermove dispatched before that lands on an unbound
-// notify and is dropped. The plugin also throttles pointermove (lodash) and
-// this suite pins the system clock, so only one dispatch ever gets through
-// — wait for the element first, then hover exactly once.
+// BlockProvider binds its hover listener asynchronously and throttles
+// pointermove; wait for the handle before hovering.
 async function hoverToRevealBlockHandle(
   canvasElement: HTMLElement,
 ): Promise<Element> {
   const canvas = within(canvasElement)
-  const paragraph = canvas.getByText(HOVER_TARGET_TEXT)
+  const paragraph = await canvas.findByText(HOVER_TARGET_TEXT)
 
   const handle = await waitFor(() =>
     assertDefined(
