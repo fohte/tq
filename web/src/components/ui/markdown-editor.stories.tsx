@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClientProvider } from '@tanstack/react-query'
 import type { ComponentProps, ReactNode } from 'react'
 import { useState } from 'react'
-import { expect, fireEvent, fn } from 'storybook/test'
+import { expect, fireEvent, fn, waitFor } from 'storybook/test'
 
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
@@ -578,11 +578,15 @@ export const SpaceAtListItemStartIndents: Story = {
     await userEvent.keyboard('{ArrowLeft} ')
 
     // Trim whitespace-only text nodes added by Crepe's list-item DOM wrappers.
-    const nestedItem = assertDefined(
-      canvasElement.querySelector('.milkdown .ProseMirror li li'),
-      'Space at a list item start sinks it into a nested list',
-    )
-    await expect(nestedItem.textContent.trim()).toBe('Second item')
+    // Retries: the sink applies after the selection change from ArrowLeft has
+    // reached ProseMirror, which can trail the synthetic event on a loaded CI runner.
+    await waitFor(async () => {
+      const nestedItem = assertDefined(
+        canvasElement.querySelector('.milkdown .ProseMirror li li'),
+        'Space at a list item start sinks it into a nested list',
+      )
+      await expect(nestedItem.textContent.trim()).toBe('Second item')
+    })
   },
 }
 
