@@ -21,6 +21,14 @@ suggestionsQueryClient.setQueryData(labelKeys.list({ context: 'personal' }), [
   makeLabel({ id: '3', name: 'dev/infra' }),
 ])
 
+const attachedAncestorQueryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+})
+attachedAncestorQueryClient.setQueryData(
+  labelKeys.list({ context: 'personal' }),
+  [makeLabel({ id: '1', name: 'dev' }), makeLabel({ id: '2', name: 'dev/tq' })],
+)
+
 function TagsInputHarness({ initialLabels }: { initialLabels: string[] }) {
   const [labels, setLabels] = useState(initialLabels)
   return <TagsInput labels={labels} onLabelsChange={setLabels} />
@@ -133,6 +141,28 @@ export const GroupsSuggestionsHierarchically: Story = {
     await userEvent.click(body.getByText('#tq'))
 
     await expect(canvas.getByText('dev/tq')).toBeInTheDocument()
+  },
+}
+
+export const HidesSuggestionAlreadyAttachedAsAncestor: Story = {
+  args: {
+    initialLabels: ['dev'],
+  },
+  decorators: [
+    (Story) => (
+      <QueryClientProvider client={attachedAncestorQueryClient}>
+        <Story />
+      </QueryClientProvider>
+    ),
+  ],
+  play: async ({ canvasElement, canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: '+ add tag' }))
+
+    // AnchoredPopup renders the suggestion list through a portal into
+    // document.body, so it isn't inside canvasElement.
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(await body.findByText('#tq')).toBeVisible()
+    await expect(body.queryByText('#dev')).not.toBeInTheDocument()
   },
 }
 

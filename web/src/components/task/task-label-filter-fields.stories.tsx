@@ -63,8 +63,6 @@ export const SelectNestedLabel: Story = {
   },
 }
 
-// "dev" has no Label of its own — it's synthesized purely to group "dev/tq"
-// and "dev/infra" — but still filters to its descendants when selected.
 export const SelectSynthesizedParentLabel: Story = {
   play: async ({ canvas, args }) => {
     await userEvent.click(canvas.getByRole('button', { name: '#dev' }))

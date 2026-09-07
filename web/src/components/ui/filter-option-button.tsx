@@ -4,7 +4,6 @@ import { cn } from '#lib/utils'
 
 // A single row in a single-select list inside a filter menu (e.g. "pick a
 // project" or "pick a label"): full-width, shows a checkmark when selected.
-// `depth` indents the row for a hierarchical list (e.g. label paths).
 export function FilterOptionButton({
   active,
   depth = 0,

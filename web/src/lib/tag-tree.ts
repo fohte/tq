@@ -14,25 +14,20 @@ interface TaskLike {
   labels: string[]
 }
 
-/**
- * Nests tasks' labels into a tree by splitting each label on '/'. A path
- * prefix with no label of its own (e.g. "dev" when only "dev/tq" and
- * "dev/infra" are ever attached directly) still appears as a synthesized
- * node. A label attached only to completed tasks still appears, with count
- * 0. Each node's count is the number of distinct non-completed tasks
- * carrying that name or any of its descendants — a task tagged with both a
- * name and one of its descendants counts once, not twice. Sorted by count
- * descending, then name ascending, at every level.
- */
-export function buildTagTree(tasks: TaskLike[]): TagTreeNode[] {
-  const nodeByName = new Map<string, TagTreeNode>()
-  const roots: TagTreeNode[] = []
+// Splits each name on '/' and inserts it into a tree, synthesizing any
+// missing ancestor (e.g. "dev" when only "dev/tq" is given) via makeNode.
+function insertPaths<T extends { name: string; children: T[] }>(
+  names: string[],
+  makeNode: (name: string) => T,
+): { nodeByName: Map<string, T>; roots: T[] } {
+  const nodeByName = new Map<string, T>()
+  const roots: T[] = []
 
-  function getOrCreate(name: string): TagTreeNode {
+  function getOrCreate(name: string): T {
     const existing = nodeByName.get(name)
     if (existing != null) return existing
 
-    const node: TagTreeNode = { name, count: 0, children: [] }
+    const node = makeNode(name)
     nodeByName.set(name, node)
 
     const lastSlash = name.lastIndexOf('/')
@@ -44,11 +39,26 @@ export function buildTagTree(tasks: TaskLike[]): TagTreeNode[] {
     return node
   }
 
-  for (const task of tasks) {
-    for (const label of task.labels) {
-      getOrCreate(label)
-    }
-  }
+  for (const name of names) getOrCreate(name)
+
+  return { nodeByName, roots }
+}
+
+/**
+ * Nests tasks' labels into a tree by splitting each label on '/'. A path
+ * prefix with no label of its own (e.g. "dev" when only "dev/tq" and
+ * "dev/infra" are ever attached directly) still appears as a synthesized
+ * node. A label attached only to completed tasks still appears, with count
+ * 0. Each node's count is the number of distinct non-completed tasks
+ * carrying that name or any of its descendants — a task tagged with both a
+ * name and one of its descendants counts once, not twice. Sorted by count
+ * descending, then name ascending, at every level.
+ */
+export function buildTagTree(tasks: TaskLike[]): TagTreeNode[] {
+  const { nodeByName, roots } = insertPaths(
+    tasks.flatMap((task) => task.labels),
+    (name) => ({ name, count: 0, children: [] }),
+  )
 
   for (const task of tasks) {
     if (task.status === 'completed') continue
@@ -87,31 +97,10 @@ export function buildTagTree(tasks: TaskLike[]): TagTreeNode[] {
  * Nests label names into a tree by splitting each name on '/'. A path
  * prefix with no label of its own (e.g. "dev" when only "dev/tq" exists)
  * still appears as a synthesized node. Sorted by name ascending at every
- * level. Unlike buildTagTree, this only needs the label names themselves —
- * not which tasks carry them — so it also surfaces labels no task is
- * tagged with.
+ * level.
  */
 export function buildLabelTree(names: string[]): LabelTreeNode[] {
-  const nodeByName = new Map<string, LabelTreeNode>()
-  const roots: LabelTreeNode[] = []
-
-  function getOrCreate(name: string): LabelTreeNode {
-    const existing = nodeByName.get(name)
-    if (existing != null) return existing
-
-    const node: LabelTreeNode = { name, children: [] }
-    nodeByName.set(name, node)
-
-    const lastSlash = name.lastIndexOf('/')
-    if (lastSlash === -1) {
-      roots.push(node)
-    } else {
-      getOrCreate(name.slice(0, lastSlash)).children.push(node)
-    }
-    return node
-  }
-
-  for (const name of names) getOrCreate(name)
+  const { roots } = insertPaths(names, (name) => ({ name, children: [] }))
 
   function sortChildren(node: LabelTreeNode) {
     node.children.sort((a, b) => a.name.localeCompare(b.name))

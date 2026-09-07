@@ -151,6 +151,15 @@ describe('buildLabelTree', () => {
     ])
   })
 
+  it('merges a name that is also an ancestor of another name into one node', () => {
+    expect(buildLabelTree(['dev', 'dev/tq'])).toEqual([
+      {
+        name: 'dev',
+        children: [{ name: 'dev/tq', children: [] }],
+      },
+    ])
+  })
+
   it('sorts roots by name ascending', () => {
     expect(buildLabelTree(['b', 'a', 'c'])).toEqual([
       { name: 'a', children: [] },
@@ -181,7 +190,16 @@ describe('buildLabelTree', () => {
 describe('flattenLabelTree', () => {
   it('flattens nested nodes in pre-order', () => {
     expect(
-      flattenLabelTree(buildLabelTree(['dev/tq', 'dev/infra', 'chore'])),
+      flattenLabelTree([
+        { name: 'chore', children: [] },
+        {
+          name: 'dev',
+          children: [
+            { name: 'dev/infra', children: [] },
+            { name: 'dev/tq', children: [] },
+          ],
+        },
+      ]),
     ).toEqual(['chore', 'dev', 'dev/infra', 'dev/tq'])
   })
 
