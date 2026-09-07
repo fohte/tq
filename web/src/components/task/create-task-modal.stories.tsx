@@ -130,6 +130,25 @@ export const EscapeInTagInputDoesNotCloseModal: Story = {
   },
 }
 
+export const EscapeInShorthandMenuDoesNotCloseModal: Story = {
+  play: async ({ canvasElement, userEvent, args }) => {
+    const body = within(canvasElement.ownerDocument.body)
+    const titleInputs =
+      body.getAllByPlaceholderText(/task title|タスクのタイトル/i)
+    const titleInput = atIndex(titleInputs, 0)
+
+    await userEvent.type(titleInput, 'Buy milk @')
+    await expect(await body.findAllByText('@today')).not.toHaveLength(0)
+
+    await userEvent.keyboard('{Escape}')
+
+    // The suggestion menu closes on Escape, but the event must not bubble up
+    // to the Dialog and close the whole modal (and discard the in-progress task).
+    await expect(body.queryByText('@today')).not.toBeInTheDocument()
+    await expect(args.onOpenChange).not.toHaveBeenCalled()
+  },
+}
+
 export const ShorthandSyntaxAppliesFields: Story = {
   parameters: {
     // The assertions below already prove the parsed values land in the

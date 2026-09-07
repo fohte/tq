@@ -10,6 +10,7 @@ import {
   contextValues,
 } from '#components/task/create-task-modal-fields'
 import { TagsInput } from '#components/task/tags-input'
+import { TaskTitleInput } from '#components/task/task-title-input'
 import {
   BottomSheetHeader,
   BottomSheetOverlay,
@@ -100,12 +101,9 @@ export function CreateTaskModalMobile({
         {/* Content */}
         <div className="flex flex-col gap-4 px-5 pt-4">
           {/* Title */}
-          <Input
-            type="text"
+          <TaskTitleInput
             value={title}
-            onChange={(e) => {
-              setTitle(e.target.value)
-            }}
+            onChange={setTitle}
             placeholder="タスクのタイトル"
             autoFocus
             className="h-auto border-0 bg-transparent p-0 text-lg font-medium text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
