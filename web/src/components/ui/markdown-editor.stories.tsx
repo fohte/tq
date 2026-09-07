@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClientProvider } from '@tanstack/react-query'
 import type { ComponentProps, ReactNode } from 'react'
 import { useState } from 'react'
-import { expect, fireEvent, fn } from 'storybook/test'
+import { expect, fireEvent, fn, waitFor } from 'storybook/test'
 
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
@@ -43,6 +43,52 @@ export const WithContent: Story = {
   args: {
     defaultValue:
       '## Discussion Points\n\n- Architecture review\n- Sprint planning\n- Performance improvements\n\nWe decided to go with option B for the following reasons:\n\n1. Better performance\n2. Simpler architecture\n3. Easier to maintain',
+  },
+}
+
+// Regression check: the block handle (BlockProvider, see
+// markdown-editor-crepe.tsx) renders as a sibling of `.ProseMirror`, so a
+// misconfigured offset/size could clip it against `.ProseMirror`'s
+// `overflow: hidden` again without any other story catching it — no other
+// story hovers a block to reveal it.
+export const BlockHandleOnHover: Story = {
+  args: {
+    defaultValue: 'Hover this paragraph to reveal its block handle.',
+  },
+  parameters: {
+    // The handle is sized to sit inside the real card's 16px padding
+    // (task-main-content.tsx's `p-4`), but this file's shared decorator only
+    // gives every story 10px (`p-2.5`) — 6px short of that here. Not a bug:
+    // the handle still fits the padding it was actually designed for.
+    overflowCheck: { ignoreSelectors: ['.max-w-3xl', '.max-w-3xl *'] },
+  },
+  play: async ({ canvas, canvasElement }) => {
+    const paragraph = canvas.getByText(
+      'Hover this paragraph to reveal its block handle.',
+    )
+    // BlockProvider's hover detection (@milkdown/plugin-block's
+    // block-plugin.ts) binds to ProseMirror's `pointermove` DOM event, which
+    // neither `userEvent.hover` nor a plain `mouseMove` satisfies — dispatch
+    // the coordinated pointermove it expects instead.
+    const rect = paragraph.getBoundingClientRect()
+    await fireEvent.pointerMove(paragraph, {
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2,
+    })
+
+    const handle = assertDefined(
+      canvasElement.querySelector('.milkdown-block-handle'),
+      'BlockEdit always renders one handle element',
+    )
+    await waitFor(() => expect(handle).toHaveAttribute('data-show', 'true'))
+
+    // Only the drag dot should render; the leading `+` button is hidden (see
+    // markdown-editor.css) since it's redundant with typing `/` on a new
+    // empty line.
+    const visibleOperationItems = [
+      ...handle.querySelectorAll('.operation-item'),
+    ].filter((el) => getComputedStyle(el).display !== 'none')
+    await expect(visibleOperationItems).toHaveLength(1)
   },
 }
 
