@@ -564,19 +564,15 @@ const NESTED_LIST = '- First item\n  - Nested item'
 
 type PlayContext = Parameters<NonNullable<Story['play']>>[0]
 
-// Puts the caret at the start of `element`'s text through the Selection API.
-// Click-count based selection (`tripleClick`) can't place it reliably: the
-// browser groups clicks into a triple click only when they arrive close
-// enough together, and otherwise degrades to a double click — a word
-// selection somewhere in the middle of the paragraph.
-//
-// prosemirror-view force-flushes its DOMObserver at the top of its keydown
-// handler, so a selection written straight into the DOM is in ProseMirror's
-// own state by the time the next keystroke is handled.
+// Puts the caret at the start of `element`'s text. Click-count based
+// selection (`tripleClick`) can't: the browser only groups clicks into a
+// triple click when they arrive close enough together, and otherwise
+// degrades to a double click — a word selection mid-paragraph.
 async function placeCaretAtStart(
   element: HTMLElement,
   userEvent: PlayContext['userEvent'],
 ): Promise<void> {
+  const doc = element.ownerDocument
   const editor = assertDefined(
     element.closest<HTMLElement>('.ProseMirror'),
     'editor content always lives inside .ProseMirror',
@@ -586,21 +582,41 @@ async function placeCaretAtStart(
   // the editor out of its initial read-only mode.
   await fireEvent.mouseUp(element, { button: 0 })
   await waitFor(() => expect(editor.isContentEditable).toBe(true))
-  // Only here to focus ProseMirror — the caret this leaves behind is
-  // immediately replaced below.
+  // Only here to focus ProseMirror.
   await userEvent.click(element)
   await waitForFocus(editor)
 
   const textNode = assertDefined(
-    element.ownerDocument
-      .createTreeWalker(element, NodeFilter.SHOW_TEXT)
-      .nextNode(),
+    doc.createTreeWalker(element, NodeFilter.SHOW_TEXT).nextNode(),
     'a list item paragraph always renders its text',
   )
-  assertDefined(
-    element.ownerDocument.getSelection(),
+  const selection = assertDefined(
+    doc.getSelection(),
     'a rendered document always has a selection',
-  ).collapse(textNode, 0)
+  )
+  if (
+    selection.isCollapsed &&
+    selection.anchorNode === textNode &&
+    selection.anchorOffset === 0
+  )
+    return
+
+  // A caret written straight into the DOM reaches ProseMirror's own state
+  // only through the document-level `selectionchange` listener its
+  // DOMObserver registers when the view is created. The listener below is
+  // registered later, so the DOM's registration-order dispatch runs it once
+  // ProseMirror has already taken the caret in.
+  const caretTaken = new Promise<void>((resolve) => {
+    doc.addEventListener(
+      'selectionchange',
+      () => {
+        resolve()
+      },
+      { once: true },
+    )
+  })
+  selection.collapse(textNode, 0)
+  await caretTaken
 }
 
 // Sinking the second item nests it into a new list inside the first item.
