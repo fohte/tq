@@ -250,14 +250,10 @@ export function DayViewPresentation({
       />
 
       <CreateTaskModal
-        key={pendingRange ? pendingRange.start.toISOString() : 'new'}
+        key={`task-modal-${pendingRange ? pendingRange.start.toISOString() : 'new'}`}
         open={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}
-        defaultStartDate={
-          pendingRange
-            ? formatLocalDate(pendingRange.start)
-            : new Date().toISOString().slice(0, 10)
-        }
+        defaultStartDate={formatLocalDate(pendingRange?.start ?? new Date())}
         {...(pendingRange
           ? { defaultEstimateMinutes: estimateMinutesForRange(pendingRange) }
           : {})}

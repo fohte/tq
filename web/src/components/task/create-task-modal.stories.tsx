@@ -149,6 +149,36 @@ export const SubmitsOnCmdEnterFromTitle: Story = {
   },
 }
 
+export const CallsOnCreatedAfterSubmit: Story = {
+  parameters: {
+    // Same reasoning as SubmitsOnCmdEnterFromTitle above.
+    screenshot: { skip: true },
+  },
+  args: {
+    onCreated: fn(),
+  },
+  play: async ({ canvasElement, userEvent, args }) => {
+    const body = within(canvasElement.ownerDocument.body)
+    const titleInputs =
+      body.getAllByPlaceholderText(/task title|タスクのタイトル/i)
+    const titleInput = atIndex(titleInputs, 0)
+    await userEvent.type(titleInput, 'Notify on created')
+    await userEvent.keyboard('{Meta>}{Enter}{/Meta}')
+
+    await waitFor(async () => {
+      await expect(args.onCreated).toHaveBeenCalledWith({
+        id: 'temp-id',
+        number: 1,
+        title: 'temp',
+        description: null,
+        status: 'todo',
+        context: 'personal',
+        labels: [],
+      })
+    })
+  },
+}
+
 export const SubmitsOnCmdEnterFromDescription: Story = {
   parameters: {
     // Same reasoning as SubmitsOnCmdEnterFromTitle above.
@@ -180,6 +210,12 @@ export const SubmitsOnCmdEnterFromDescription: Story = {
 export const WithDefaultStartDate: Story = {
   args: {
     defaultStartDate: new Date().toISOString().slice(0, 10),
+  },
+}
+
+export const WithDefaultEstimate: Story = {
+  args: {
+    defaultEstimateMinutes: 90,
   },
 }
 
