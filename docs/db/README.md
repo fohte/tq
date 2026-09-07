@@ -21,7 +21,7 @@
 | [public.task_links](public.task_links.md)                                           | 3       |         | BASE TABLE |
 | [public.github_sync_rule_ignored_issues](public.github_sync_rule_ignored_issues.md) | 6       |         | BASE TABLE |
 | [public.github_sync_rules](public.github_sync_rules.md)                             | 11      |         | BASE TABLE |
-| [public.calendar_subscriptions](public.calendar_subscriptions.md)                   | 7       |         | BASE TABLE |
+| [public.calendar_subscriptions](public.calendar_subscriptions.md)                   | 8       |         | BASE TABLE |
 | [public.task_events](public.task_events.md)                                         | 13      |         | BASE TABLE |
 | [public.scheduling_settings](public.scheduling_settings.md)                         | 7       |         | BASE TABLE |
 | [public.agent_sessions](public.agent_sessions.md)                                   | 12      |         | BASE TABLE |
@@ -239,6 +239,7 @@ erDiagram
   text color
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+  text context
 }
 "public.task_events" {
   bigint id

@@ -53,3 +53,30 @@ export function useUpdateCalendarSubscription(accountId: string) {
     },
   })
 }
+
+export function useUpdateCalendarContext(accountId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      calendarId,
+      context,
+    }: {
+      calendarId: string
+      context: 'work' | 'personal' | null
+    }) => {
+      const res = await api.api.calendar.accounts[':accountId'].calendars[
+        ':calendarId'
+      ].context.$put({
+        param: { accountId, calendarId },
+        json: { context },
+      })
+      return unwrapOrThrow(assertStatus(res, 200)).json()
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: gcalCalendarsKeys.list(accountId),
+      })
+    },
+  })
+}

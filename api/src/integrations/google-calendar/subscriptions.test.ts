@@ -6,6 +6,7 @@ import { calendarSubscriptions, oauthTokens } from '#db/schema'
 import {
   ensureDefaultCalendarSubscription,
   listCalendarsWithSubscriptionState,
+  setCalendarContext,
   setCalendarSubscription,
 } from '#integrations/google-calendar/subscriptions'
 import { assertDefined, setupTestDb } from '#testing'
@@ -71,6 +72,7 @@ describe('ensureDefaultCalendarSubscription', () => {
         calendarId: 'user@example.com',
         displayName: null,
         color: null,
+        context: null,
         createdAt: 'DATE',
         updatedAt: 'DATE',
       },
@@ -91,6 +93,7 @@ describe('ensureDefaultCalendarSubscription', () => {
         calendarId: 'primary',
         displayName: null,
         color: null,
+        context: null,
         createdAt: 'DATE',
         updatedAt: 'DATE',
       },
@@ -117,6 +120,7 @@ describe('ensureDefaultCalendarSubscription', () => {
         calendarId: 'user@example.com',
         displayName: 'user@example.com',
         color: '#123456',
+        context: null,
         createdAt: 'DATE',
         updatedAt: 'DATE',
       },
@@ -132,6 +136,7 @@ describe('listCalendarsWithSubscriptionState', () => {
       calendarId: 'primary',
       displayName: 'user@example.com',
       color: '#111111',
+      context: 'work',
     })
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
@@ -166,6 +171,7 @@ describe('listCalendarsWithSubscriptionState', () => {
         color: '#111111',
         primary: true,
         subscribed: true,
+        context: 'work',
       },
       {
         id: 'work@example.com',
@@ -173,6 +179,7 @@ describe('listCalendarsWithSubscriptionState', () => {
         color: '#ff0000',
         primary: false,
         subscribed: false,
+        context: null,
       },
     ])
   })
@@ -216,6 +223,7 @@ describe('setCalendarSubscription', () => {
         calendarId: 'work@example.com',
         displayName: 'Work',
         color: '#ff0000',
+        context: null,
         createdAt: 'DATE',
         updatedAt: 'DATE',
       },
@@ -274,5 +282,71 @@ describe('setCalendarSubscription', () => {
     )._unsafeUnwrap()
 
     expect(update).toEqual({ calendarId: 'primary', subscribed: false })
+  })
+})
+
+describe('setCalendarContext', () => {
+  it('sets the context of an existing subscription row', async () => {
+    const oauthTokenId = await insertBareToken('google-sub-1')
+    await db
+      .insert(calendarSubscriptions)
+      .values({ oauthTokenId, calendarId: 'primary' })
+
+    const update = (
+      await setCalendarContext(oauthTokenId, 'primary', 'work')
+    )._unsafeUnwrap()
+
+    expect(update).toEqual({ calendarId: 'primary', context: 'work' })
+    expect(
+      normalizeSubscriptions(await selectSubscriptions(oauthTokenId)),
+    ).toEqual([
+      {
+        id: 'ID',
+        oauthTokenId: 'TOKEN_ID',
+        calendarId: 'primary',
+        displayName: null,
+        color: null,
+        context: 'work',
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+      },
+    ])
+  })
+
+  it('clears the context back to null', async () => {
+    const oauthTokenId = await insertBareToken('google-sub-1')
+    await db
+      .insert(calendarSubscriptions)
+      .values({ oauthTokenId, calendarId: 'primary', context: 'work' })
+
+    const update = (
+      await setCalendarContext(oauthTokenId, 'primary', null)
+    )._unsafeUnwrap()
+
+    expect(update).toEqual({ calendarId: 'primary', context: null })
+    expect(
+      normalizeSubscriptions(await selectSubscriptions(oauthTokenId)),
+    ).toEqual([
+      {
+        id: 'ID',
+        oauthTokenId: 'TOKEN_ID',
+        calendarId: 'primary',
+        displayName: null,
+        color: null,
+        context: null,
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+      },
+    ])
+  })
+
+  it('resolves to null when the calendar is not subscribed', async () => {
+    const oauthTokenId = await insertBareToken('google-sub-1')
+
+    const update = (
+      await setCalendarContext(oauthTokenId, 'primary', 'work')
+    )._unsafeUnwrap()
+
+    expect(update).toBeNull()
   })
 })

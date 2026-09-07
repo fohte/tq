@@ -11,6 +11,7 @@ const sampleCalendars: GcalCalendar[] = [
     color: '#D50000',
     primary: true,
     subscribed: true,
+    context: 'personal',
   },
   {
     id: 'work-calendar-id',
@@ -18,6 +19,7 @@ const sampleCalendars: GcalCalendar[] = [
     color: '#039BE5',
     primary: false,
     subscribed: true,
+    context: 'work',
   },
   {
     id: 'holidays-id',
@@ -25,6 +27,7 @@ const sampleCalendars: GcalCalendar[] = [
     color: '#33B679',
     primary: false,
     subscribed: false,
+    context: null,
   },
 ]
 
@@ -48,6 +51,7 @@ export const Default: Story = {
   args: {
     calendars: sampleCalendars,
     onToggle: () => {},
+    onContextChange: () => {},
   },
 }
 
@@ -55,7 +59,17 @@ export const Updating: Story = {
   args: {
     calendars: sampleCalendars,
     onToggle: () => {},
+    onContextChange: () => {},
     updatingCalendarId: 'work-calendar-id',
+  },
+}
+
+export const UpdatingContext: Story = {
+  args: {
+    calendars: sampleCalendars,
+    onToggle: () => {},
+    onContextChange: () => {},
+    updatingContextCalendarId: 'work-calendar-id',
   },
 }
 
@@ -63,5 +77,6 @@ export const Empty: Story = {
   args: {
     calendars: [],
     onToggle: () => {},
+    onContextChange: () => {},
   },
 }

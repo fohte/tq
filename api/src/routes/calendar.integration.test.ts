@@ -68,6 +68,21 @@ function putSubscription(
   )
 }
 
+function putContext(
+  accountId: string,
+  calendarId: string,
+  context: 'work' | 'personal' | null,
+) {
+  return app.request(
+    `/api/calendar/accounts/${accountId}/calendars/${encodeURIComponent(calendarId)}/context`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ context }),
+    },
+  )
+}
+
 // disconnectAccount/getAccountToken take oauthTokens.id (a surrogate key),
 // which upsertGoogleCalendarToken doesn't return, so tests that need it
 // re-select the row by the provider-specific accountId instead.
@@ -393,6 +408,7 @@ describe('GET /api/calendar/accounts/:accountId/calendars', () => {
         color: '#111111',
         primary: true,
         subscribed: true,
+        context: null,
       },
       {
         id: 'work@example.com',
@@ -400,6 +416,7 @@ describe('GET /api/calendar/accounts/:accountId/calendars', () => {
         color: '#ff0000',
         primary: false,
         subscribed: false,
+        context: null,
       },
     ])
   })
@@ -521,6 +538,70 @@ describe('PUT /api/calendar/accounts/:accountId/calendars/:calendarId/subscripti
 
   it('returns 404 for a nonexistent account id', async () => {
     const res = await putSubscription('nonexistent-id', 'primary', true)
+
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ error: 'Not found' })
+  })
+})
+
+describe('PUT /api/calendar/accounts/:accountId/calendars/:calendarId/context', () => {
+  it('sets the context of a subscribed calendar', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const token = await selectTokenByAccountId('google-sub-1')
+
+    const res = await putContext(token.id, 'user@example.com', 'work')
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      calendarId: 'user@example.com',
+      context: 'work',
+    })
+  })
+
+  it('clears the context back to null', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const token = await selectTokenByAccountId('google-sub-1')
+    await putContext(token.id, 'user@example.com', 'work')
+
+    const res = await putContext(token.id, 'user@example.com', null)
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      calendarId: 'user@example.com',
+      context: null,
+    })
+  })
+
+  it('returns 404 when the calendar is not subscribed', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const token = await selectTokenByAccountId('google-sub-1')
+
+    const res = await putContext(token.id, 'other@example.com', 'work')
+
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ error: 'Not found' })
+  })
+
+  it('returns 404 for a nonexistent account id', async () => {
+    const res = await putContext('nonexistent-id', 'primary', 'work')
 
     expect(res.status).toBe(404)
     expect(await res.json()).toEqual({ error: 'Not found' })

@@ -228,6 +228,8 @@ export const calendarSubscriptions = pgTable(
     // calendarList.list on its 60s poll path.
     displayName: text('display_name'),
     color: text('color'),
+    // Null means "show in every context".
+    context: text('context', { enum: ['work', 'personal'] }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

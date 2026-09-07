@@ -116,6 +116,7 @@ gcalQueryClient.setQueryData(gcalCalendarsKeys.list('token-1'), [
     color: '#D50000',
     primary: true,
     subscribed: true,
+    context: null,
   },
   {
     id: 'work-calendar-id',
@@ -123,6 +124,7 @@ gcalQueryClient.setQueryData(gcalCalendarsKeys.list('token-1'), [
     color: '#039BE5',
     primary: false,
     subscribed: false,
+    context: null,
   },
 ] satisfies GcalCalendar[])
 
