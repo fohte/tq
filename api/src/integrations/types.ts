@@ -103,6 +103,15 @@ interface CalendarEventsCapability {
   >
 }
 
+/**
+ * The signed-in user's RSVP for the event, taken from the attendee entry
+ * with `self: true`. Defaults to `accepted` when the event has no
+ * attendees or none of them is the signed-in user (e.g. a self-only event,
+ * or another account's calendar the user isn't invited to).
+ */
+type CalendarResponseStatus =
+  'needsAction' | 'declined' | 'tentative' | 'accepted'
+
 export interface ExternalEvent {
   id: string
   summary: string
@@ -115,6 +124,7 @@ export interface ExternalEvent {
   calendarId: string
   calendarDisplayName: string | null
   calendarColor: string | null
+  responseStatus: CalendarResponseStatus
 }
 
 /** One calendar from a provider's `calendarList`-equivalent API. */

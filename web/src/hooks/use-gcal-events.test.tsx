@@ -65,6 +65,7 @@ const sampleEvent = {
   calendarId: 'primary',
   calendarDisplayName: null,
   calendarColor: null,
+  responseStatus: 'accepted' as const,
 }
 
 describe('useGcalEvents', () => {

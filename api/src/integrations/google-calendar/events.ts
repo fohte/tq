@@ -48,11 +48,13 @@ function getSubscribedCalendarEvents(
               timeMax,
             })
             .map((events) =>
-              events.map((event) => ({
-                ...event,
-                calendarDisplayName: subscription.displayName,
-                calendarColor: subscription.color,
-              })),
+              events
+                .filter((event) => event.responseStatus !== 'declined')
+                .map((event) => ({
+                  ...event,
+                  calendarDisplayName: subscription.displayName,
+                  calendarColor: subscription.color,
+                })),
             ),
         ),
       ),

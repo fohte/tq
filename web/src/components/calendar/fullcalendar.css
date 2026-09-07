@@ -209,6 +209,10 @@
   opacity: 0.5;
 }
 
+.tq-month-event[data-pending-response='true'] {
+  opacity: 0.5;
+}
+
 .tq-month-event-title {
   font-family: var(--font-mono);
   font-size: 10px;

@@ -10,6 +10,7 @@ export interface CalendarEventProps {
   scheduleStart?: string
   redacted?: boolean
   calendarColor?: string | null
+  responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted'
 }
 
 /**
@@ -20,4 +21,13 @@ export function getEventProps(event: EventApi): CalendarEventProps {
   // FullCalendar types extendedProps as Record<string, any>
 
   return event.extendedProps
+}
+
+/** Shared by EventBlock (day/week) and the month-view pill, so they can't drift on which statuses render dimmed. */
+export function isPendingGcalResponse(props: CalendarEventProps): boolean {
+  return (
+    props.type === 'gcal' &&
+    (props.responseStatus === 'needsAction' ||
+      props.responseStatus === 'tentative')
+  )
 }

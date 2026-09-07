@@ -29,6 +29,8 @@ export interface TimeBlockEvent {
   scheduleId?: string
   /** Google Calendar's color for the event's calendar, used as an accent on gcal events */
   calendarColor?: string | null
+  /** Self attendee's RSVP for a gcal event; needsAction/tentative render dimmed */
+  responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted'
   /** When true, content is hidden and rendered as a generic "busy" block */
   redacted?: boolean
   /** When true, rendered in FullCalendar's all-day row instead of a time slot */
