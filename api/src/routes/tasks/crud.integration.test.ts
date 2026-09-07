@@ -225,6 +225,31 @@ describe('tasks CRUD API', () => {
       expect(sortedLabels).toEqual(['foo', 'new-label'])
     })
 
+    it.each(['dev/', '/tq', 'dev//tq'])(
+      'returns 400 for a label name with an empty path segment (%s)',
+      async (name) => {
+        const res = await app.request('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'Task', labels: [name] }),
+        })
+
+        expect(res.status).toBe(400)
+      },
+    )
+
+    it('creates a label with a hierarchical path name', async () => {
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Task', labels: ['dev/tq'] }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body.labels).toEqual(['dev/tq'])
+    })
+
     it('creates a new label with the creating task context', async () => {
       const res = await app.request('/api/tasks', {
         method: 'POST',
@@ -1482,6 +1507,18 @@ describe('tasks CRUD API', () => {
         labels: ['new-label'],
         updatedAt: body.updatedAt,
       })
+    })
+
+    it('returns 400 when updating with a label name with an empty path segment', async () => {
+      const created = await createTask('Task')
+
+      const res = await app.request(`/api/tasks/${created.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ labels: ['dev//tq'] }),
+      })
+
+      expect(res.status).toBe(400)
     })
 
     it('creates a new label with the updated task context', async () => {

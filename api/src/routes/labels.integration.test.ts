@@ -122,6 +122,41 @@ describe('labels API', () => {
       expect(res.status).toBe(200)
     })
 
+    it.each(['dev/', '/tq', 'dev//tq'])(
+      'returns 400 when renaming to a name with an empty path segment (%s)',
+      async (name) => {
+        const label = await createLabel('bug')
+
+        const res = await app.request(`/api/labels/${label.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        })
+
+        expect(res.status).toBe(400)
+      },
+    )
+
+    it('allows renaming to a hierarchical path name', async () => {
+      const label = await createLabel('bug')
+
+      const res = await app.request(`/api/labels/${label.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'dev/tq' }),
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<LabelResponse>(res)
+      expect(body).toEqual({
+        id: label.id,
+        name: 'dev/tq',
+        color: label.color,
+        context: label.context,
+        createdAt: label.createdAt.toISOString(),
+      })
+    })
+
     it('returns 400 when no fields are given', async () => {
       const label = await createLabel('bug')
 
