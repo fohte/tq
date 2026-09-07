@@ -108,6 +108,11 @@ function buildConditions(query: ListTasksQuery) {
 
   const labelName = parsed?.label ?? query.label
   if (labelName != null) {
+    // `labels.name` doubles as a `/`-separated path (e.g. `dev/tq`), so
+    // `label:dev` also matches descendants like `dev/tq` via a literal
+    // prefix check. `starts_with` does plain prefix comparison (unlike
+    // LIKE), so a label name containing `%`/`_` can't be misread as a
+    // wildcard.
     conditions.push(
       exists(
         db
@@ -115,7 +120,13 @@ function buildConditions(query: ListTasksQuery) {
           .from(taskLabels)
           .innerJoin(labels, eq(taskLabels.labelId, labels.id))
           .where(
-            and(eq(taskLabels.taskId, tasks.id), eq(labels.name, labelName)),
+            and(
+              eq(taskLabels.taskId, tasks.id),
+              or(
+                eq(labels.name, labelName),
+                sql`starts_with(${labels.name}, ${`${labelName}/`})`,
+              ),
+            ),
           ),
       ),
     )

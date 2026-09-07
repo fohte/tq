@@ -678,6 +678,23 @@ describe('tasks CRUD API', () => {
       expect(body[0].id).toBe(labeledTask.id)
     })
 
+    it('filters by label including descendant labels but not similarly named ones', async () => {
+      const exactMatch = await createTask('Exact match', { labels: ['dev'] })
+      const descendantMatch = await createTask('Descendant match', {
+        labels: ['dev/tq'],
+      })
+      await createTask('Unrelated prefix', { labels: ['development'] })
+      await createTask('Unlabeled')
+
+      const res = await app.request('/api/tasks?label=dev')
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id).toSorted()).toEqual(
+        [exactMatch.id, descendantMatch.id].toSorted(),
+      )
+    })
+
     it('filters by hasEstimate', async () => {
       const withEstimate = await createTask('With estimate', {
         estimatedMinutes: 30,
