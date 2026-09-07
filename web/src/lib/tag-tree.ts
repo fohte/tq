@@ -4,6 +4,11 @@ export interface TagTreeNode {
   children: TagTreeNode[]
 }
 
+export interface LabelTreeNode {
+  name: string
+  children: LabelTreeNode[]
+}
+
 interface TaskLike {
   status: string
   labels: string[]
@@ -76,4 +81,52 @@ export function buildTagTree(tasks: TaskLike[]): TagTreeNode[] {
   roots.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
 
   return roots
+}
+
+/**
+ * Nests label names into a tree by splitting each name on '/'. A path
+ * prefix with no label of its own (e.g. "dev" when only "dev/tq" exists)
+ * still appears as a synthesized node. Sorted by name ascending at every
+ * level. Unlike buildTagTree, this only needs the label names themselves —
+ * not which tasks carry them — so it also surfaces labels no task is
+ * tagged with.
+ */
+export function buildLabelTree(names: string[]): LabelTreeNode[] {
+  const nodeByName = new Map<string, LabelTreeNode>()
+  const roots: LabelTreeNode[] = []
+
+  function getOrCreate(name: string): LabelTreeNode {
+    const existing = nodeByName.get(name)
+    if (existing != null) return existing
+
+    const node: LabelTreeNode = { name, children: [] }
+    nodeByName.set(name, node)
+
+    const lastSlash = name.lastIndexOf('/')
+    if (lastSlash === -1) {
+      roots.push(node)
+    } else {
+      getOrCreate(name.slice(0, lastSlash)).children.push(node)
+    }
+    return node
+  }
+
+  for (const name of names) getOrCreate(name)
+
+  function sortChildren(node: LabelTreeNode) {
+    node.children.sort((a, b) => a.name.localeCompare(b.name))
+    node.children.forEach(sortChildren)
+  }
+  roots.forEach(sortChildren)
+  roots.sort((a, b) => a.name.localeCompare(b.name))
+
+  return roots
+}
+
+/** Pre-order flattening of a label tree, matching its rendered top-to-bottom order. */
+export function flattenLabelTree(nodes: LabelTreeNode[]): string[] {
+  return nodes.flatMap((node) => [
+    node.name,
+    ...flattenLabelTree(node.children),
+  ])
 }

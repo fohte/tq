@@ -24,6 +24,13 @@ export const Active: Story = {
   },
 }
 
+export const Indented: Story = {
+  args: {
+    depth: 1,
+    children: 'tq',
+  },
+}
+
 export const Click: Story = {
   play: async ({ canvas, args }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'All projects' }))
