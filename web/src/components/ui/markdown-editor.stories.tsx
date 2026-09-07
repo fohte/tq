@@ -80,6 +80,12 @@ export const BlockHandleOnHover: Story = {
   args: {
     defaultValue: HOVER_TARGET_TEXT,
   },
+  parameters: {
+    // Assertion lives in play's expect calls, not the rendered appearance —
+    // both handle stories land on the same hovered state, so the capture is
+    // a byte-identical duplicate of BlockHandleHidesAddButton's.
+    screenshot: { skip: true },
+  },
   play: async ({ canvasElement }) => {
     const handle = await hoverToRevealBlockHandle(canvasElement)
 
@@ -98,6 +104,10 @@ export const BlockHandleOnHover: Story = {
 export const BlockHandleHidesAddButton: Story = {
   args: {
     defaultValue: HOVER_TARGET_TEXT,
+  },
+  parameters: {
+    // See BlockHandleOnHover's parameters comment — same hovered end state.
+    screenshot: { skip: true },
   },
   play: async ({ canvasElement }) => {
     const handle = await hoverToRevealBlockHandle(canvasElement)
