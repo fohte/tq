@@ -24,16 +24,17 @@ export class GcalAuthRequiredError extends Error {
 
 const gcalEventsKeys = {
   all: ['gcal-events'] as const,
-  list: (date: string) => [...gcalEventsKeys.all, 'list', date] as const,
+  list: (date: string, context: 'work' | 'personal') =>
+    [...gcalEventsKeys.all, 'list', date, context] as const,
 }
 
-export function useGcalEvents(date: string) {
+export function useGcalEvents(date: string, context: 'work' | 'personal') {
   return useQuery({
-    queryKey: gcalEventsKeys.list(date),
+    queryKey: gcalEventsKeys.list(date, context),
     queryFn: async () => {
       const { timeMin, timeMax } = getDayIsoRange(date)
       const res = await api.api.calendar.events.$get({
-        query: { timeMin, timeMax },
+        query: { timeMin, timeMax, context },
       })
       if (res.status === 401) {
         // eslint-disable-next-line no-restricted-syntax -- React Query queryFn boundary: must throw a typed error so callers can check `error instanceof GcalAuthRequiredError`
