@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { expect, fn, waitFor, within } from 'storybook/test'
 
 import { CreateTaskModal } from '#components/task/create-task-modal'
+import { formatLocalDate } from '#lib/date-range'
 import { atIndex } from '#lib/test-utils'
 
 const queryClient = new QueryClient({
@@ -126,6 +127,40 @@ export const EscapeInTagInputDoesNotCloseModal: Story = {
       body.queryByPlaceholderText('tag name'),
     ).not.toBeInTheDocument()
     await expect(args.onOpenChange).not.toHaveBeenCalled()
+  },
+}
+
+export const ShorthandSyntaxAppliesFields: Story = {
+  play: async ({ canvasElement, userEvent }) => {
+    const body = within(canvasElement.ownerDocument.body)
+    const titleInputs =
+      body.getAllByPlaceholderText(/task title|タスクのタイトル/i)
+    const titleInput = atIndex(titleInputs, 0)
+
+    const today = formatLocalDate(new Date())
+    const tomorrowDate = new Date()
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1)
+    const tomorrow = formatLocalDate(tomorrowDate)
+
+    await userEvent.type(
+      titleInput,
+      'Buy milk @30m >today @tomorrow #groceries %work ',
+    )
+
+    await waitFor(async () => {
+      await expect(
+        atIndex(
+          body.getAllByPlaceholderText(/task title|タスクのタイトル/i),
+          0,
+        ),
+      ).toHaveValue('Buy milk ')
+    })
+
+    await expect(body.getAllByDisplayValue('30m').length).toBeGreaterThan(0)
+    await expect(body.getAllByDisplayValue(today).length).toBeGreaterThan(0)
+    await expect(body.getAllByDisplayValue(tomorrow).length).toBeGreaterThan(0)
+    await expect(body.getAllByText('groceries').length).toBeGreaterThan(0)
+    await expect(body.getAllByText('Work').length).toBeGreaterThan(0)
   },
 }
 

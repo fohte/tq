@@ -18,6 +18,7 @@ import type { CreateTaskInput } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
+import { extractShorthandTokens } from '#lib/task-shorthand'
 
 interface CreateTaskModalProps {
   open: boolean
@@ -97,6 +98,18 @@ export function CreateTaskModal({
     [onOpenChange, resetForm],
   )
 
+  const handleTitleChange = (value: string) => {
+    const parsed = extractShorthandTokens(value)
+    setTitle(parsed.title)
+    if (parsed.startDate != null) setStartDate(parsed.startDate)
+    if (parsed.dueDate != null) setDueDate(parsed.dueDate)
+    if (parsed.estimateInput != null) setEstimateInput(parsed.estimateInput)
+    if (parsed.context != null) setContext(parsed.context)
+    if (parsed.labels.length > 0) {
+      setLabels((prev) => [...new Set([...prev, ...parsed.labels])])
+    }
+  }
+
   const handleSubmit = () => {
     if (!title.trim() || createTask.isPending) return
 
@@ -163,7 +176,7 @@ export function CreateTaskModal({
             parentIndicator={parentIndicator}
             descriptionEditor={descriptionEditor}
             title={title}
-            setTitle={setTitle}
+            setTitle={handleTitleChange}
             startDate={startDate}
             setStartDate={setStartDate}
             dueDate={dueDate}
@@ -184,7 +197,7 @@ export function CreateTaskModal({
             parentIndicator={parentIndicator}
             descriptionEditor={descriptionEditor}
             title={title}
-            setTitle={setTitle}
+            setTitle={handleTitleChange}
             startDate={startDate}
             setStartDate={setStartDate}
             dueDate={dueDate}
