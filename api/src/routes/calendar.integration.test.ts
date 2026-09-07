@@ -297,6 +297,70 @@ describe('GET /api/calendar/events', () => {
     ])
   })
 
+  it('excludes events from calendars whose context does not match the context query param', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const token = await selectTokenByAccountId('google-sub-1')
+    await db.insert(calendarSubscriptions).values({
+      oauthTokenId: token.id,
+      calendarId: 'personal@example.com',
+      displayName: 'Personal',
+      context: 'personal',
+    })
+
+    // Fetching personal@example.com would throw, implicitly asserting it's
+    // excluded by the context filter rather than merely absent from the
+    // response body.
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = requestUrl(input)
+      if (url.includes('/calendars/user%40example.com/events')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 'event-1',
+                  summary: 'Standup',
+                  start: { dateTime: '2026-03-22T09:00:00Z' },
+                  end: { dateTime: '2026-03-22T09:30:00Z' },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        )
+      }
+      throw new Error(`unexpected fetch in test: url=${url}`)
+    })
+
+    const res = await app.request(
+      '/api/calendar/events?timeMin=2026-03-22T00:00:00.000Z&timeMax=2026-03-23T00:00:00.000Z&context=work',
+    )
+
+    expect(res.status).toBe(200)
+    expect(await jsonBody<ExternalEvent[]>(res)).toEqual([
+      {
+        id: 'event-1',
+        summary: 'Standup',
+        startTime: '2026-03-22T09:00:00Z',
+        endTime: '2026-03-22T09:30:00Z',
+        isAllDay: false,
+        source: 'google_calendar',
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        calendarId: 'user@example.com',
+        calendarDisplayName: null,
+        calendarColor: null,
+        responseStatus: 'accepted',
+      },
+    ])
+  })
+
   it('returns 401 when every connected account has a revoked refresh token', async () => {
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',

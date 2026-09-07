@@ -33,12 +33,25 @@ function getSubscribedCalendarEvents(
   oauthTokenId: string,
   timeMin: string,
   timeMax: string,
+  // undefined means "no context filtering" (used by auto-assign, which
+  // must see every subscribed calendar's busy time regardless of context).
+  // A subscription with a null context matches every context — see the
+  // calendar_subscriptions comment in db/schema/integrations.ts.
+  context: 'work' | 'personal' | undefined,
 ): ResultAsync<
   Omit<ExternalEvent, 'accountId' | 'accountLabel'>[],
   AccountEventsError
 > {
-  return listSubscribedCalendars(oauthTokenId).andThen((subscriptions) =>
-    ResultAsync.fromSafePromise(
+  return listSubscribedCalendars(oauthTokenId).andThen((allSubscriptions) => {
+    const subscriptions =
+      context == null
+        ? allSubscriptions
+        : allSubscriptions.filter(
+            (subscription) =>
+              subscription.context == null || subscription.context === context,
+          )
+
+    return ResultAsync.fromSafePromise(
       Promise.all(
         subscriptions.map((subscription) =>
           googleCalendarProvider.capabilities.calendarEvents
@@ -88,8 +101,8 @@ function getSubscribedCalendarEvents(
         return errAsync(firstError)
       }
       return okAsync(events)
-    }),
-  )
+    })
+  })
 }
 
 // Resolves to a best-effort per-account result rather than a single Result,
@@ -101,6 +114,7 @@ function getSubscribedCalendarEvents(
 export async function getEvents(
   timeMin: string,
   timeMax: string,
+  context?: 'work' | 'personal',
 ): Promise<AccountEventsResult[]> {
   const tokens = await listAccountTokens(googleCalendarProvider).match(
     (rows) => rows,
@@ -113,7 +127,13 @@ export async function getEvents(
       accountLabel: token.accountLabel,
       result: await ensureValidAccessToken(googleCalendarProvider, token)
         .andThen((accessToken) =>
-          getSubscribedCalendarEvents(accessToken, token.id, timeMin, timeMax),
+          getSubscribedCalendarEvents(
+            accessToken,
+            token.id,
+            timeMin,
+            timeMax,
+            context,
+          ),
         )
         .map((events) =>
           events.map((event) => ({
