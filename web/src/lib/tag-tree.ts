@@ -1,22 +1,25 @@
-import type { TagCount } from '#lib/tag-counts'
-
 export interface TagTreeNode {
   name: string
   count: number
   children: TagTreeNode[]
 }
 
+interface TaskLike {
+  status: string
+  labels: string[]
+}
+
 /**
- * Nests flat tag counts into a tree by splitting each name on '/'. A prefix
- * with no tag count of its own (e.g. "dev" when only "dev/tq" exists) still
- * appears as a synthesized node, with its own count treated as 0. Each
- * node's count is rolled up to include all of its descendants. Sorted by
- * count descending, then name ascending, at every level.
+ * Nests tasks' labels into a tree by splitting each label on '/'. A path
+ * prefix with no label of its own (e.g. "dev" when only "dev/tq" and
+ * "dev/infra" are ever attached directly) still appears as a synthesized
+ * node. A label attached only to completed tasks still appears, with count
+ * 0. Each node's count is the number of distinct non-completed tasks
+ * carrying that name or any of its descendants — a task tagged with both a
+ * name and one of its descendants counts once, not twice. Sorted by count
+ * descending, then name ascending, at every level.
  */
-export function buildTagTree(tagCounts: TagCount[]): TagTreeNode[] {
-  const ownCountByName = new Map(
-    tagCounts.map((tagCount) => [tagCount.name, tagCount.count]),
-  )
+export function buildTagTree(tasks: TaskLike[]): TagTreeNode[] {
   const nodeByName = new Map<string, TagTreeNode>()
   const roots: TagTreeNode[] = []
 
@@ -24,11 +27,7 @@ export function buildTagTree(tagCounts: TagCount[]): TagTreeNode[] {
     const existing = nodeByName.get(name)
     if (existing != null) return existing
 
-    const node: TagTreeNode = {
-      name,
-      count: ownCountByName.get(name) ?? 0,
-      children: [],
-    }
+    const node: TagTreeNode = { name, count: 0, children: [] }
     nodeByName.set(name, node)
 
     const lastSlash = name.lastIndexOf('/')
@@ -40,18 +39,40 @@ export function buildTagTree(tagCounts: TagCount[]): TagTreeNode[] {
     return node
   }
 
-  for (const tagCount of tagCounts) {
-    getOrCreate(tagCount.name)
+  for (const task of tasks) {
+    for (const label of task.labels) {
+      getOrCreate(label)
+    }
   }
 
-  function rollUp(node: TagTreeNode): number {
-    node.count += node.children.reduce((sum, child) => sum + rollUp(child), 0)
+  for (const task of tasks) {
+    if (task.status === 'completed') continue
+
+    const inducedNames = new Set<string>()
+    for (const label of task.labels) {
+      let name = label
+      // Walk up to the root, crediting each ancestor once per task even if
+      // more than one of the task's labels shares that ancestor.
+      for (;;) {
+        inducedNames.add(name)
+        const lastSlash = name.lastIndexOf('/')
+        if (lastSlash === -1) break
+        name = name.slice(0, lastSlash)
+      }
+    }
+    for (const name of inducedNames) {
+      const node = nodeByName.get(name)
+      if (node != null) node.count += 1
+    }
+  }
+
+  function sortChildren(node: TagTreeNode) {
     node.children.sort(
       (a, b) => b.count - a.count || a.name.localeCompare(b.name),
     )
-    return node.count
+    node.children.forEach(sortChildren)
   }
-  roots.forEach(rollUp)
+  roots.forEach(sortChildren)
   roots.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
 
   return roots

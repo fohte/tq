@@ -281,7 +281,7 @@ describe('Sidebar', () => {
         makeLabel({ id: '11', name: 'dev/infra' }),
       ]
 
-      it('synthesizes a parent absent from the labels list, its count rolled up from its children, above its children by count desc then name asc', async () => {
+      it('renders the tree returned by useTagCounts as nested rows, parent above children', async () => {
         await renderSidebar({ tasks: nestedTasks, labels: nestedLabels })
 
         const links = screen.getAllByRole('link', { name: /^#/ })
@@ -290,6 +290,12 @@ describe('Sidebar', () => {
           '#infra1',
           '#tq1',
         ])
+      })
+
+      it('shows a nested tag by its last path segment only, not its full name', async () => {
+        await renderSidebar({ tasks: nestedTasks, labels: nestedLabels })
+
+        expect(screen.getByRole('link', { name: /^#tq1$/ })).toBeInTheDocument()
       })
 
       it('links a synthesized parent to /tasks scoped to its own name', async () => {

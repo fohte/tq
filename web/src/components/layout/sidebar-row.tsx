@@ -7,11 +7,8 @@ import { ActionsMenu } from '#components/ui/actions-menu'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import { cn } from '#lib/utils'
 
-// Row indent is a per-instance value (tag depth is unbounded), so it can't
-// be a static Tailwind class — same technique as task-row-shared's
-// rowIndentStyle, but based on the sidebar row's own px-3.5 base offset.
-// Applied unconditionally (including depth 0) so it never diverges from the
-// plain px-3.5 padding-left it replaces.
+// Row indent cannot be a static Tailwind class because tag depth is
+// unbounded; set via the CSS custom property instead.
 const SIDEBAR_ROW_INDENT_CLASS_NAME = 'pl-(--sidebar-row-indent)'
 
 interface SidebarRowIndentStyle extends React.CSSProperties {
@@ -24,8 +21,6 @@ function sidebarRowIndentStyle(depth: number): SidebarRowIndentStyle {
   }
 }
 
-// Shared row shape for TagLink/ViewLink — both are a full-width link into
-// /tasks scoped by a search query, differing only in their prefix/suffix.
 export function SidebarRowLink({
   search,
   isActive,

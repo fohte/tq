@@ -15,12 +15,8 @@ import type { TagTreeNode } from '#lib/tag-tree'
 import { tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
 
-// Recurses into node.children, rendering each descendant as its own sibling
-// row indented one level deeper — the tree has no collapse state, so every
-// node is always visible. `node.name` may not have a matching Label (an
-// intermediate name synthesized by buildTagTree, e.g. "dev" when only
-// "dev/tq" exists), in which case the row links/filters like any tag but
-// skips the edit/delete actions since there is no label to act on.
+// Synthesized ancestor nodes have no matching Label entity and cannot be
+// edited or deleted.
 function TagLink({
   node,
   depth,
@@ -105,8 +101,6 @@ function TagLink({
 export function TagsSection() {
   const context = useCurrentContext()
   const { tagTree } = useTagCounts(context)
-  // Same queryKey as the one useTagCounts fetches internally, so this reads
-  // from cache rather than issuing a second request.
   const { data: labels } = useLabels({ context })
   // `q` only exists on the /tasks route's search schema, so this reads
   // undefined (no active tag) everywhere else.
