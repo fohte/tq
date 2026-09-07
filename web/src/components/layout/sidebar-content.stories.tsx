@@ -8,6 +8,7 @@ import {
   makeSavedView,
   makeTask,
 } from '#components/layout/sidebar-test-fixtures'
+import type { Label } from '#hooks/use-labels'
 import { labelKeys } from '#hooks/use-labels'
 import type { Project } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
@@ -25,6 +26,16 @@ const tasksWithTags: Task[] = [
 const labelsForTasksWithTags = [
   makeLabel({ id: '1', name: 'dev:tq' }),
   makeLabel({ id: '2', name: 'urgent' }),
+]
+
+const tasksWithNestedTags: Task[] = [
+  makeTask({ id: '4', title: 'Task X', labels: ['dev/tq'] }),
+  makeTask({ id: '5', title: 'Task Y', labels: ['dev/infra'] }),
+]
+
+const labelsForNestedTags = [
+  makeLabel({ id: '4', name: 'dev/tq' }),
+  makeLabel({ id: '5', name: 'dev/infra' }),
 ]
 
 const tasksWithInboxItems: Task[] = [
@@ -51,7 +62,13 @@ const savedViews: SavedView[] = [
   makeSavedView({ id: '2', name: 'Someday', query: 'commitment:someday' }),
 ]
 
-function SidebarContentStory({ tasks = tasksWithTags }: { tasks?: Task[] }) {
+function SidebarContentStory({
+  tasks = tasksWithTags,
+  labels = labelsForTasksWithTags,
+}: {
+  tasks?: Task[]
+  labels?: Label[]
+}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
@@ -70,10 +87,7 @@ function SidebarContentStory({ tasks = tasksWithTags }: { tasks?: Task[] }) {
     savedViewKeys.list({ context: 'personal' }),
     savedViews,
   )
-  queryClient.setQueryData(
-    labelKeys.list({ context: 'personal' }),
-    labelsForTasksWithTags,
-  )
+  queryClient.setQueryData(labelKeys.list({ context: 'personal' }), labels)
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -84,11 +98,20 @@ function SidebarContentStory({ tasks = tasksWithTags }: { tasks?: Task[] }) {
   )
 }
 
-function SidebarContentWithRouter({ tasks }: { tasks?: Task[] }) {
+function SidebarContentWithRouter({
+  tasks,
+  labels,
+}: {
+  tasks?: Task[]
+  labels?: Label[]
+}) {
   return (
     <StoryRouter
       component={() => (
-        <SidebarContentStory {...(tasks != null ? { tasks } : {})} />
+        <SidebarContentStory
+          {...(tasks != null ? { tasks } : {})}
+          {...(labels != null ? { labels } : {})}
+        />
       )}
     />
   )
@@ -107,6 +130,13 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+export const WithNestedTags: Story = {
+  args: {
+    tasks: tasksWithNestedTags,
+    labels: labelsForNestedTags,
+  },
+}
 
 export const WithInboxTasks: Story = {
   args: {
