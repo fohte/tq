@@ -109,7 +109,7 @@ interface CalendarEventsCapability {
  * attendees or none of them is the signed-in user (e.g. a self-only event,
  * or another account's calendar the user isn't invited to).
  */
-export type CalendarResponseStatus =
+type CalendarResponseStatus =
   'needsAction' | 'declined' | 'tentative' | 'accepted'
 
 export interface ExternalEvent {
