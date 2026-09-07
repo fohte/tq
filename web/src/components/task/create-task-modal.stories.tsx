@@ -133,8 +133,10 @@ export const EscapeInTagInputDoesNotCloseModal: Story = {
 export const ShorthandSyntaxAppliesFields: Story = {
   parameters: {
     // The assertions below already prove the parsed values land in the
-    // right fields; the filled-in look itself isn't new (WithDefaultStartDate
-    // and AsSubtask already cover filled date/label chips).
+    // right fields. The filled-in look isn't new coverage: Start and Due
+    // share the same date Input styling (WithDefaultStartDate already
+    // renders one filled), Estimate reuses the same Input primitive with a
+    // real value, and Context/Labels are already filled in AsSubtask.
     screenshot: { skip: true },
   },
   play: async ({ canvasElement, userEvent }) => {
