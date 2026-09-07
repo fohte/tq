@@ -678,7 +678,7 @@ describe('tasks CRUD API', () => {
       expect(body[0].id).toBe(labeledTask.id)
     })
 
-    it('filters by label including descendant labels but not similarly named ones', async () => {
+    it('label filter matches descendant labels but not siblings with a shared string prefix', async () => {
       const exactMatch = await createTask('Exact match', { labels: ['dev'] })
       const descendantMatch = await createTask('Descendant match', {
         labels: ['dev/tq'],
