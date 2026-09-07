@@ -1,9 +1,14 @@
 import { useMemo, useRef, useState } from 'react'
 
+import { TaskMentionSummary } from '#components/task/task-mention-summary'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
 import { Input } from '#components/ui/input'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useLabels } from '#hooks/use-labels'
+import {
+  type MentionSuggestion,
+  useTaskMentionSuggestions,
+} from '#hooks/use-task-mentions'
 import {
   detectTrigger,
   getSuggestions,
@@ -40,14 +45,27 @@ export function TaskTitleInput({
     [labelsData],
   )
 
+  // `^` candidates come from an async server search rather than
+  // getSuggestions, so they're kept in a separate list.
+  const isParentTrigger = cursorTrigger?.trigger === '^'
+  const { data: parentSuggestionsData } = useTaskMentionSuggestions(
+    isParentTrigger ? cursorTrigger.partial : '',
+    isParentTrigger,
+  )
+  const parentSuggestions = isParentTrigger ? (parentSuggestionsData ?? []) : []
+
   const suggestions = useMemo(() => {
-    if (!cursorTrigger) return []
+    if (!cursorTrigger || isParentTrigger) return []
     return getSuggestions(
       cursorTrigger.trigger,
       cursorTrigger.partial,
       availableLabels,
     )
-  }, [cursorTrigger, availableLabels])
+  }, [cursorTrigger, isParentTrigger, availableLabels])
+
+  const suggestionCount = isParentTrigger
+    ? parentSuggestions.length
+    : suggestions.length
 
   const updateTrigger = (nextValue: string, cursorPos: number) => {
     setCursorTrigger(detectTrigger(nextValue, cursorPos))
@@ -55,37 +73,50 @@ export function TaskTitleInput({
   }
 
   // Completed shorthand tokens require trailing whitespace to be recognized.
-  const applySuggestion = (item: SuggestionItem) => {
+  const applyToken = (tokenValue: string) => {
     if (!cursorTrigger) return
     const before = value.slice(0, cursorTrigger.tokenStart)
     const tokenEnd = value.indexOf(' ', cursorTrigger.tokenStart)
     const after = value.slice(tokenEnd === -1 ? value.length : tokenEnd)
     onChange(
-      `${before}${cursorTrigger.trigger}${item.value}${after ? '' : ' '}${after}`,
+      `${before}${cursorTrigger.trigger}${tokenValue}${after ? '' : ' '}${after}`,
     )
     setCursorTrigger(null)
   }
 
+  const applySuggestion = (item: SuggestionItem) => {
+    applyToken(item.value)
+  }
+
+  const applyParentSuggestion = (item: MentionSuggestion) => {
+    applyToken(String(item.number))
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.nativeEvent.isComposing) return
-    if (!cursorTrigger || suggestions.length === 0) return
+    if (!cursorTrigger || suggestionCount === 0) return
 
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
-        setSelectedIndex((prev) => (prev + 1) % suggestions.length)
+        setSelectedIndex((prev) => (prev + 1) % suggestionCount)
         break
       case 'ArrowUp':
         e.preventDefault()
         setSelectedIndex(
-          (prev) => (prev - 1 + suggestions.length) % suggestions.length,
+          (prev) => (prev - 1 + suggestionCount) % suggestionCount,
         )
         break
       case 'Enter':
       case 'Tab': {
         e.preventDefault()
-        const suggestion = suggestions[selectedIndex]
-        if (suggestion != null) applySuggestion(suggestion)
+        if (isParentTrigger) {
+          const candidate = parentSuggestions[selectedIndex]
+          if (candidate != null) applyParentSuggestion(candidate)
+        } else {
+          const suggestion = suggestions[selectedIndex]
+          if (suggestion != null) applySuggestion(suggestion)
+        }
         break
       }
       case 'Escape':
@@ -121,33 +152,56 @@ export function TaskTitleInput({
         className={className}
       />
       <AnchoredPopup
-        open={suggestions.length > 0}
+        open={suggestionCount > 0}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) setCursorTrigger(null)
         }}
         anchor={inputRef}
         initialFocus={false}
-        className="w-40 font-mono"
+        className={isParentTrigger ? 'w-64' : 'w-40 font-mono'}
       >
-        {suggestions.map((item, index) => (
-          <button
-            key={item.value}
-            type="button"
-            className={cn(
-              'w-full px-3 py-1.5 text-left text-xs',
-              index === selectedIndex
-                ? 'bg-accent text-accent-foreground'
-                : 'text-popover-foreground hover:bg-accent/50',
-            )}
-            onMouseDown={(e) => {
-              e.preventDefault()
-              applySuggestion(item)
-            }}
-          >
-            {cursorTrigger?.trigger}
-            {item.display}
-          </button>
-        ))}
+        {isParentTrigger
+          ? parentSuggestions.map((item, index) => (
+              <button
+                key={item.id}
+                type="button"
+                className={cn(
+                  'flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs',
+                  index === selectedIndex
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-popover-foreground hover:bg-accent/50',
+                )}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  applyParentSuggestion(item)
+                }}
+              >
+                <TaskMentionSummary
+                  status={item.status}
+                  number={item.number}
+                  title={item.title}
+                />
+              </button>
+            ))
+          : suggestions.map((item, index) => (
+              <button
+                key={item.value}
+                type="button"
+                className={cn(
+                  'w-full px-3 py-1.5 text-left text-xs',
+                  index === selectedIndex
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-popover-foreground hover:bg-accent/50',
+                )}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  applySuggestion(item)
+                }}
+              >
+                {cursorTrigger?.trigger}
+                {item.display}
+              </button>
+            ))}
       </AnchoredPopup>
     </>
   )

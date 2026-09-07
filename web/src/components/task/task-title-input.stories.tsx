@@ -7,6 +7,7 @@ import { expect, within } from 'storybook/test'
 import { makeLabel } from '#components/label/label-test-fixtures'
 import { TaskTitleInput } from '#components/task/task-title-input'
 import { labelKeys } from '#hooks/use-labels'
+import type { MentionSuggestion } from '#hooks/use-task-mentions'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -20,6 +21,11 @@ labelsQueryClient.setQueryData(labelKeys.list({ context: 'personal' }), [
   makeLabel({ id: '2', name: 'urgent-work' }),
 ])
 
+const parentSuggestions: MentionSuggestion[] = [
+  { id: '1', number: 12, title: 'Deploy to production', status: 'todo' },
+  { id: '2', number: 34, title: 'Fix login bug', status: 'todo' },
+]
+
 function TaskTitleInputHarness({ initialValue }: { initialValue: string }) {
   const [value, setValue] = useState(initialValue)
   return <TaskTitleInput value={value} onChange={setValue} />
@@ -31,7 +37,12 @@ const meta = {
   parameters: {
     layout: 'centered',
     msw: {
-      handlers: [http.get('/api/labels', () => HttpResponse.json([]))],
+      handlers: [
+        http.get('/api/labels', () => HttpResponse.json([])),
+        http.get('/api/tasks/mentions', () =>
+          HttpResponse.json(parentSuggestions),
+        ),
+      ],
     },
   },
   decorators: [
@@ -128,6 +139,41 @@ export const ShowsLabelSuggestionsOnHash: Story = {
     const body = within(canvasElement.ownerDocument.body)
     await expect(await body.findByText('#urgent')).toBeVisible()
     await expect(body.getByText('#urgent-work')).toBeVisible()
+  },
+}
+
+export const ShowsParentSuggestionsOnCaret: Story = {
+  args: {
+    initialValue: '',
+  },
+  play: async ({ canvasElement, canvas, userEvent }) => {
+    await userEvent.type(canvas.getByRole('textbox'), 'Buy milk ^')
+
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(await body.findByText('#12')).toBeVisible()
+    await expect(body.getByText('Deploy to production')).toBeVisible()
+    await expect(body.getByText('#34')).toBeVisible()
+    await expect(body.getByText('Fix login bug')).toBeVisible()
+  },
+}
+
+export const SelectsParentSuggestionOnEnter: Story = {
+  args: {
+    initialValue: '',
+  },
+  play: async ({ canvasElement, canvas, userEvent }) => {
+    const input = canvas.getByRole('textbox')
+    await userEvent.type(input, 'Buy milk ^12')
+
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(await body.findByText('Deploy to production')).toBeVisible()
+
+    await userEvent.keyboard('{Enter}')
+
+    await expect(input).toHaveValue('Buy milk ^12 ')
+    await expect(
+      body.queryByText('Deploy to production'),
+    ).not.toBeInTheDocument()
   },
 }
 

@@ -14,11 +14,13 @@ import {
 } from '#components/ui/dialog'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { useCurrentContext } from '#hooks/use-current-context'
+import { useTaskMentionPreview } from '#hooks/use-task-mentions'
 import type { CreateTaskInput } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
 import { extractShorthandTokens } from '#lib/task-shorthand'
+import { cn } from '#lib/utils'
 
 function estimateInputFor(minutes: number | undefined): string {
   return minutes != null ? formatMinutes(minutes) : ''
@@ -72,7 +74,26 @@ export function CreateTaskModal({
   )
   const [commitment, setCommitment] = useState<CommitmentValue | ''>('')
   const [labels, setLabels] = useState<string[]>(defaultLabels ?? [])
+  // Set when the user types a `^N` shorthand token, overriding the
+  // parent passed in via props (e.g. from "Add subtask").
+  const [parentOverrideNumber, setParentOverrideNumber] = useState<
+    number | undefined
+  >(undefined)
   const createTask = useCreateTask()
+
+  const parentOverridePreview = useTaskMentionPreview(
+    parentOverrideNumber ?? 0,
+    parentOverrideNumber != null,
+  )
+  const effectiveParentNumber = parentOverrideNumber ?? parentTaskNumber
+  const effectiveParentTitle =
+    parentOverrideNumber != null
+      ? parentOverridePreview.data?.title
+      : parentTaskTitle
+  const parentNotFound =
+    parentOverrideNumber != null && parentOverridePreview.data === null
+  const effectiveParentId =
+    parentOverrideNumber != null ? String(parentOverrideNumber) : parentId
 
   // Sync defaults when they change (e.g. a different row's "Add subtask" is
   // clicked) while the modal is closed, mirroring defaultStartDate below.
@@ -103,6 +124,7 @@ export function CreateTaskModal({
     setContext(effectiveDefaultContext)
     setCommitment('')
     setLabels(defaultLabels ?? [])
+    setParentOverrideNumber(undefined)
   }, [
     defaultStartDate,
     effectiveDefaultContext,
@@ -134,10 +156,12 @@ export function CreateTaskModal({
     if (parsed.labels.length > 0) {
       setLabels((prev) => [...new Set([...prev, ...parsed.labels])])
     }
+    if (parsed.parentNumber != null)
+      setParentOverrideNumber(parsed.parentNumber)
   }
 
   const handleSubmit = () => {
-    if (!title.trim() || createTask.isPending) return
+    if (!title.trim() || createTask.isPending || parentNotFound) return
 
     const desc = descriptionRef.current.trim()
     const input: CreateTaskInput = {
@@ -150,7 +174,7 @@ export function CreateTaskModal({
       ...(commitment ? { commitment } : {}),
       ...(labels.length > 0 ? { labels } : {}),
       ...(projectId != null ? { projectId } : {}),
-      ...(parentId != null ? { parentId } : {}),
+      ...(effectiveParentId != null ? { parentId: effectiveParentId } : {}),
     }
 
     createTask.mutate(input, {
@@ -174,9 +198,20 @@ export function CreateTaskModal({
       ? formatMinutes(parsedMinutes)
       : estimateInput || 'Estimate'
 
-  const parentIndicator = parentTaskNumber != null && (
-    <span className="font-mono text-2xs text-muted-foreground-faint">
-      subtask of #{parentTaskNumber} {parentTaskTitle}
+  const parentIndicator = effectiveParentNumber != null && (
+    <span
+      className={cn(
+        'font-mono text-2xs',
+        parentNotFound ? 'text-destructive' : 'text-muted-foreground-faint',
+      )}
+    >
+      {parentNotFound ? (
+        <>parent #{effectiveParentNumber} not found</>
+      ) : (
+        <>
+          subtask of #{effectiveParentNumber} {effectiveParentTitle}
+        </>
+      )}
     </span>
   )
 
@@ -192,7 +227,7 @@ export function CreateTaskModal({
     />
   )
 
-  const submitDisabled = !title.trim() || createTask.isPending
+  const submitDisabled = !title.trim() || createTask.isPending || parentNotFound
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
