@@ -136,10 +136,21 @@ jobs:
         working-directory: ${{ matrix.package }}
         run: pnpm run test
 
-  # Storybook's screenshot capture and reg-suit's comparison/publish live in
-  # their own reusable workflow so they can shard across runners instead of
-  # sharing the `web` leg above with the (browser-free) type-check and unit
-  # test run.
+<<<<<<< before updating
+        # Storybook's screenshot capture and reg-suit's comparison/publish live in
+        # their own reusable workflow so they can shard across runners instead of
+        # sharing the `web` leg above with the (browser-free) type-check and unit
+        # test run.
+||||||| last update
+        # Aggregation gate for the unit-test matrix. Matrix leg names are dynamic and
+        # cannot be pinned as a required status check, so this single fixed-name job is
+        # the branch protection gate instead. It fails only when a needed job failed;
+        # when every leg succeeds (or the matrix is skipped because nothing changed) it
+        # is skipped, and a skipped required check counts as success.
+=======
+        # Fixed name for branch protection: matrix leg names are dynamic, and knip
+        # has no `needs`, so this gate (skip == success) stands in for both.
+>>>>>>> after updating
   vrt:
     # Doesn't need unit-test-run: a red web `tsc --noEmit`/unit-test leg
     # doesn't affect whether stories render correctly, and an incomplete
@@ -168,7 +179,12 @@ jobs:
     needs:
       - setup
       - unit-test-run
+<<<<<<< before updating
       - vrt
+||||||| last update
+=======
+      - knip
+>>>>>>> after updating
     if: failure()
     steps:
       - run: exit 1
