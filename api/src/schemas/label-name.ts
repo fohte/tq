@@ -1,8 +1,7 @@
 import { z } from 'zod'
 
-// A label name doubles as a `/`-separated hierarchy path (e.g. `dev/tq`), so
-// an empty segment (`dev/`, `/tq`, `dev//tq`) would produce a tree node with
-// no displayable name.
+// A label name doubles as a `/`-separated hierarchy path (e.g. `dev/tq`); an
+// empty segment has no valid position in that hierarchy.
 export const labelNameSchema = z
   .string()
   .trim()
