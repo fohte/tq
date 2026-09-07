@@ -43,6 +43,7 @@ interface CalendarViewProps {
   selectedDate: Date
   onDateChange: (date: Date) => void
   onScheduleClick?: ((scheduleId: string, start: string) => void) | undefined
+  onSelectRange?: (info: { start: Date; end: Date }) => void
 }
 
 export function CalendarView({
@@ -53,6 +54,7 @@ export function CalendarView({
   selectedDate,
   onDateChange,
   onScheduleClick,
+  onSelectRange,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendarType>(null)
   const isDesktop = useIsDesktop()
@@ -156,6 +158,7 @@ export function CalendarView({
           externalDragContainerRef={externalDragContainerRef}
           onDateClick={handleDateClick}
           onScheduleClick={onScheduleClick}
+          onSelectRange={onSelectRange}
           initialDate={selectedDate}
         />
       </div>

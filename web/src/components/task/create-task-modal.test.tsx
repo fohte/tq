@@ -33,4 +33,13 @@ describe('CreateTaskModal', () => {
       ).not.toBeInTheDocument()
     })
   })
+
+  it('prefills the estimate field from defaultEstimateMinutes', () => {
+    renderControlledModal(CreateTaskModal, { defaultEstimateMinutes: 90 })
+
+    const estimateInputs = screen.getAllByPlaceholderText('1h30m')
+    for (const input of estimateInputs) {
+      expect(input).toHaveValue('1h30m')
+    }
+  })
 })

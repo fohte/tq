@@ -1,4 +1,4 @@
-import type { EventDropArg } from '@fullcalendar/core'
+import type { DateSelectArg, EventDropArg } from '@fullcalendar/core'
 import { render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -39,6 +39,16 @@ function renderAndGetEventDrop(
   )
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- captured prop is the real FullCalendar eventDrop handler
   return capturedProps['eventDrop'] as (info: EventDropArg) => void
+}
+
+function renderAndGetSelect(
+  onSelectRange: (info: { start: Date; end: Date }) => void,
+) {
+  render(
+    <CalendarGrid events={[]} activeView="day" onSelectRange={onSelectRange} />,
+  )
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- captured prop is the real FullCalendar select handler
+  return capturedProps['select'] as (info: DateSelectArg) => void
 }
 
 describe('CalendarGrid', () => {
@@ -91,5 +101,29 @@ describe('CalendarGrid', () => {
       newEnd,
       revert,
     })
+  })
+
+  it('reports the selected range when a time-grid selection is made', () => {
+    const onSelectRange = vi.fn()
+    const select = renderAndGetSelect(onSelectRange)
+    const start = new Date('2026-07-20T09:00:00')
+    const end = new Date('2026-07-20T09:30:00')
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleSelect reads
+    select({ start, end, allDay: false } as unknown as DateSelectArg)
+
+    expect(onSelectRange).toHaveBeenCalledExactlyOnceWith({ start, end })
+  })
+
+  it('ignores an all-day row selection', () => {
+    const onSelectRange = vi.fn()
+    const select = renderAndGetSelect(onSelectRange)
+    const start = new Date('2026-07-20T00:00:00')
+    const end = new Date('2026-07-21T00:00:00')
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleSelect reads
+    select({ start, end, allDay: true } as unknown as DateSelectArg)
+
+    expect(onSelectRange).not.toHaveBeenCalled()
   })
 })
