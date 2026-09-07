@@ -155,9 +155,6 @@ interface CalendarContextUpdate {
   context: 'work' | 'personal' | null
 }
 
-// Unlike setCalendarSubscription, this never calls the live calendarList: a
-// context only makes sense for an already-subscribed calendar, so it's a
-// plain update against the existing row rather than a Google API round trip.
 export function setCalendarContext(
   oauthTokenId: string,
   calendarId: string,

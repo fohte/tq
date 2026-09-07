@@ -298,8 +298,19 @@ describe('setCalendarContext', () => {
 
     expect(update).toEqual({ calendarId: 'primary', context: 'work' })
     expect(
-      (await selectSubscriptions(oauthTokenId)).map((row) => row.context),
-    ).toEqual(['work'])
+      normalizeSubscriptions(await selectSubscriptions(oauthTokenId)),
+    ).toEqual([
+      {
+        id: 'ID',
+        oauthTokenId: 'TOKEN_ID',
+        calendarId: 'primary',
+        displayName: null,
+        color: null,
+        context: 'work',
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+      },
+    ])
   })
 
   it('clears the context back to null', async () => {
@@ -314,8 +325,19 @@ describe('setCalendarContext', () => {
 
     expect(update).toEqual({ calendarId: 'primary', context: null })
     expect(
-      (await selectSubscriptions(oauthTokenId)).map((row) => row.context),
-    ).toEqual([null])
+      normalizeSubscriptions(await selectSubscriptions(oauthTokenId)),
+    ).toEqual([
+      {
+        id: 'ID',
+        oauthTokenId: 'TOKEN_ID',
+        calendarId: 'primary',
+        displayName: null,
+        color: null,
+        context: null,
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+      },
+    ])
   })
 
   it('resolves to null when the calendar is not subscribed', async () => {

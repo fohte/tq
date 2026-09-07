@@ -77,7 +77,10 @@ export function GcalCalendarChecklist({
                 },
                 contextValues,
               )}
-              disabled={updatingContextCalendarId === calendar.id}
+              disabled={
+                updatingCalendarId === calendar.id ||
+                updatingContextCalendarId === calendar.id
+              }
             >
               <SelectTrigger size="sm" className="h-6 shrink-0 px-1.5 text-xs">
                 <SelectValue placeholder="—" />

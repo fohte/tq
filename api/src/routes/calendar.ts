@@ -34,7 +34,7 @@ const calendarContextBodySchema = z.object({
   context: contextEnum.nullable(),
 })
 
-// Shared by the two /accounts/:accountId/calendars* routes below: resolves
+// Shared by the /accounts/:accountId/calendars* routes below: resolves
 // null both when the id doesn't exist and when it belongs to a different
 // provider, so callers 404 either way instead of leaking whether the id is
 // valid for some other provider.
@@ -63,9 +63,9 @@ function calendarsErrorResponse(
 }
 
 // Connection status/auth-url/disconnect are handled generically by
-// routes/integrations.ts. This file only keeps /events and the OAuth
-// callback (its URL path is an external contract registered with the
-// Google Cloud OAuth client).
+// routes/integrations.ts. This file keeps /events, the OAuth callback (its
+// URL path is an external contract registered with the Google Cloud OAuth
+// client), and the /accounts/:accountId/calendars* endpoints.
 export const calendarApp = new Hono()
   .get('/events', zValidator('query', eventsQuerySchema), async (c) => {
     const { timeMin, timeMax } = c.req.valid('query')

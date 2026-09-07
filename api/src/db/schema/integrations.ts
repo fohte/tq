@@ -228,9 +228,7 @@ export const calendarSubscriptions = pgTable(
     // calendarList.list on its 60s poll path.
     displayName: text('display_name'),
     color: text('color'),
-    // Null means "show in every context" — existing rows are left null on
-    // migration rather than backfilled, so an unmigrated calendar keeps
-    // appearing exactly as it did before this column existed.
+    // Null means "show in every context".
     context: text('context', { enum: ['work', 'personal'] }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
