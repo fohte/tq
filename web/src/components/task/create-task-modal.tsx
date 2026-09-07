@@ -18,6 +18,7 @@ import type { CreateTaskInput } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
+import { extractShorthandTokens } from '#lib/task-shorthand'
 
 function estimateInputFor(minutes: number | undefined): string {
   return minutes != null ? formatMinutes(minutes) : ''
@@ -119,6 +120,22 @@ export function CreateTaskModal({
     [onOpenChange, resetForm],
   )
 
+  // Stripping a consumed token resets the input's caret to the end of the
+  // (now shorter) title, since the value change isn't a plain append. Fine
+  // for the common case of appending a shorthand token while typing; jarring
+  // if a token is completed with the caret positioned mid-title.
+  const handleTitleChange = (value: string) => {
+    const parsed = extractShorthandTokens(value)
+    setTitle(parsed.title)
+    if (parsed.startDate != null) setStartDate(parsed.startDate)
+    if (parsed.dueDate != null) setDueDate(parsed.dueDate)
+    if (parsed.estimateInput != null) setEstimateInput(parsed.estimateInput)
+    if (parsed.context != null) setContext(parsed.context)
+    if (parsed.labels.length > 0) {
+      setLabels((prev) => [...new Set([...prev, ...parsed.labels])])
+    }
+  }
+
   const handleSubmit = () => {
     if (!title.trim() || createTask.isPending) return
 
@@ -186,7 +203,7 @@ export function CreateTaskModal({
             parentIndicator={parentIndicator}
             descriptionEditor={descriptionEditor}
             title={title}
-            setTitle={setTitle}
+            setTitle={handleTitleChange}
             startDate={startDate}
             setStartDate={setStartDate}
             dueDate={dueDate}
@@ -207,7 +224,7 @@ export function CreateTaskModal({
             parentIndicator={parentIndicator}
             descriptionEditor={descriptionEditor}
             title={title}
-            setTitle={setTitle}
+            setTitle={handleTitleChange}
             startDate={startDate}
             setStartDate={setStartDate}
             dueDate={dueDate}
