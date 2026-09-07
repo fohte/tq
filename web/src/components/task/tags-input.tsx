@@ -7,7 +7,63 @@ import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useLabels } from '#hooks/use-labels'
+import type { LabelTreeNode } from '#lib/tag-tree'
+import { buildLabelTree, flattenLabelTree } from '#lib/tag-tree'
 import { cn } from '#lib/utils'
+
+// Synthesized ancestor nodes (e.g. "dev" when only "dev/tq" exists) are
+// selectable as tags.
+function LabelSuggestion({
+  node,
+  depth,
+  indexByName,
+  selectedIndex,
+  onSelect,
+}: {
+  node: LabelTreeNode
+  depth: number
+  indexByName: Map<string, number>
+  selectedIndex: number
+  onSelect: (name: string) => void
+}) {
+  const index = indexByName.get(node.name)
+  const displayName = node.name.slice(node.name.lastIndexOf('/') + 1)
+
+  return (
+    <>
+      {/* Already-attached labels are excluded from indexByName; selecting
+          one would otherwise no-op against addTag's duplicate guard. */}
+      {index != null && (
+        <button
+          type="button"
+          style={{ paddingLeft: `${String(12 + depth * 12)}px` }}
+          className={cn(
+            'w-full py-1.5 pr-3 text-left font-mono text-xs',
+            index === selectedIndex
+              ? 'bg-accent text-accent-foreground'
+              : 'text-popover-foreground hover:bg-accent/50',
+          )}
+          onMouseDown={(e) => {
+            e.preventDefault()
+            onSelect(node.name)
+          }}
+        >
+          #{displayName}
+        </button>
+      )}
+      {node.children.map((child) => (
+        <LabelSuggestion
+          key={child.name}
+          node={child}
+          depth={index != null ? depth + 1 : depth}
+          indexByName={indexByName}
+          selectedIndex={selectedIndex}
+          onSelect={onSelect}
+        />
+      ))}
+    </>
+  )
+}
 
 export function TagsInput({
   labels,
@@ -23,15 +79,34 @@ export function TagsInput({
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const suggestions = useMemo(() => {
-    const existing = new Set(labels)
+  const existingLabels = useMemo(() => new Set(labels), [labels])
+
+  const suggestionTree = useMemo(() => {
     const candidates = (labelsData ?? [])
       .map((l) => l.name)
-      .filter((name) => !existing.has(name))
-    if (!input) return candidates
-    const lower = input.toLowerCase()
-    return candidates.filter((name) => name.toLowerCase().includes(lower))
-  }, [labelsData, labels, input])
+      .filter((name) => !existingLabels.has(name))
+    const filtered = input
+      ? candidates.filter((name) =>
+          name.toLowerCase().includes(input.toLowerCase()),
+        )
+      : candidates
+    return buildLabelTree(filtered)
+  }, [labelsData, existingLabels, input])
+
+  // buildLabelTree may synthesize an ancestor (e.g. "dev") that's already
+  // attached even though it was excluded from `candidates` above, so filter
+  // it out again here rather than in the tree itself.
+  const suggestions = useMemo(
+    () =>
+      flattenLabelTree(suggestionTree).filter(
+        (name) => !existingLabels.has(name),
+      ),
+    [suggestionTree, existingLabels],
+  )
+  const suggestionIndexByName = useMemo(
+    () => new Map(suggestions.map((name, index) => [name, index])),
+    [suggestions],
+  )
 
   const addTag = (name: string) => {
     const trimmed = name.trim()
@@ -126,23 +201,15 @@ export function TagsInput({
             initialFocus={false}
             className="w-40"
           >
-            {suggestions.map((name, index) => (
-              <button
-                key={name}
-                type="button"
-                className={cn(
-                  'w-full px-3 py-1.5 text-left font-mono text-xs',
-                  index === selectedIndex
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-popover-foreground hover:bg-accent/50',
-                )}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  addTag(name)
-                }}
-              >
-                #{name}
-              </button>
+            {suggestionTree.map((node) => (
+              <LabelSuggestion
+                key={node.name}
+                node={node}
+                depth={0}
+                indexByName={suggestionIndexByName}
+                selectedIndex={selectedIndex}
+                onSelect={addTag}
+              />
             ))}
           </AnchoredPopup>
         </>

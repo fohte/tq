@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildTagTree } from '#lib/tag-tree'
+import { buildLabelTree, buildTagTree, flattenLabelTree } from '#lib/tag-tree'
 
 interface TaskLike {
   status: string
@@ -120,5 +120,90 @@ describe('buildTagTree', () => {
 
   it('returns an empty array for no tasks', () => {
     expect(buildTagTree([])).toEqual([])
+  })
+})
+
+describe('buildLabelTree', () => {
+  it('keeps a flat name as a childless root', () => {
+    expect(buildLabelTree(['urgent'])).toEqual([
+      { name: 'urgent', children: [] },
+    ])
+  })
+
+  it('synthesizes an intermediate parent absent from the name list', () => {
+    expect(buildLabelTree(['dev/tq'])).toEqual([
+      {
+        name: 'dev',
+        children: [{ name: 'dev/tq', children: [] }],
+      },
+    ])
+  })
+
+  it('groups multiple children under the same synthesized parent, sorted by name', () => {
+    expect(buildLabelTree(['dev/tq', 'dev/infra'])).toEqual([
+      {
+        name: 'dev',
+        children: [
+          { name: 'dev/infra', children: [] },
+          { name: 'dev/tq', children: [] },
+        ],
+      },
+    ])
+  })
+
+  it('merges a name that is also an ancestor of another name into one node', () => {
+    expect(buildLabelTree(['dev', 'dev/tq'])).toEqual([
+      {
+        name: 'dev',
+        children: [{ name: 'dev/tq', children: [] }],
+      },
+    ])
+  })
+
+  it('sorts roots by name ascending', () => {
+    expect(buildLabelTree(['b', 'a', 'c'])).toEqual([
+      { name: 'a', children: [] },
+      { name: 'b', children: [] },
+      { name: 'c', children: [] },
+    ])
+  })
+
+  it('nests beyond one level', () => {
+    expect(buildLabelTree(['a/b/c'])).toEqual([
+      {
+        name: 'a',
+        children: [
+          {
+            name: 'a/b',
+            children: [{ name: 'a/b/c', children: [] }],
+          },
+        ],
+      },
+    ])
+  })
+
+  it('returns an empty array for no names', () => {
+    expect(buildLabelTree([])).toEqual([])
+  })
+})
+
+describe('flattenLabelTree', () => {
+  it('flattens nested nodes in pre-order', () => {
+    expect(
+      flattenLabelTree([
+        { name: 'chore', children: [] },
+        {
+          name: 'dev',
+          children: [
+            { name: 'dev/infra', children: [] },
+            { name: 'dev/tq', children: [] },
+          ],
+        },
+      ]),
+    ).toEqual(['chore', 'dev', 'dev/infra', 'dev/tq'])
+  })
+
+  it('returns an empty array for no nodes', () => {
+    expect(flattenLabelTree([])).toEqual([])
   })
 })
