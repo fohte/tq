@@ -16,6 +16,7 @@ import {
   contextValues,
 } from '#components/task/create-task-modal-fields'
 import { TagsInput } from '#components/task/tags-input'
+import { TaskTitleInput } from '#components/task/task-title-input'
 import { Button } from '#components/ui/button'
 import { DialogHeaderBar } from '#components/ui/dialog'
 import { Input } from '#components/ui/input'
@@ -99,12 +100,9 @@ export function CreateTaskModalDesktop({
         {/* Body (scrollable) */}
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
           {/* Title */}
-          <Input
-            type="text"
+          <TaskTitleInput
             value={title}
-            onChange={(e) => {
-              setTitle(e.target.value)
-            }}
+            onChange={setTitle}
             placeholder="Task title"
             autoFocus
             className="h-auto border-0 bg-transparent p-0 text-xl font-medium text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0 md:text-xl"

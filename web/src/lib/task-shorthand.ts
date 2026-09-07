@@ -100,3 +100,86 @@ export function extractShorthandTokens(input: string): ShorthandExtraction {
     remaining.join(' ') + (endsWithSpace && remaining.length > 0 ? ' ' : '')
   return result
 }
+
+export type TriggerChar = '@' | '>' | '#' | '%'
+
+export interface SuggestionItem {
+  value: string
+  display: string
+}
+
+const AT_SUGGESTIONS: SuggestionItem[] = [
+  { value: 'today', display: 'today' },
+  { value: 'tomorrow', display: 'tomorrow' },
+  { value: '15m', display: '15m' },
+  { value: '30m', display: '30m' },
+  { value: '1h', display: '1h' },
+  { value: '2h', display: '2h' },
+]
+
+const START_DATE_SUGGESTIONS: SuggestionItem[] = [
+  { value: 'today', display: 'today' },
+  { value: 'tomorrow', display: 'tomorrow' },
+]
+
+const CONTEXT_SUGGESTIONS: SuggestionItem[] = [
+  { value: 'work', display: 'work' },
+  { value: 'personal', display: 'personal' },
+]
+
+/**
+ * Find the shorthand trigger token (if any) touching the cursor, by walking
+ * back from the cursor to the nearest preceding whitespace.
+ */
+export function detectTrigger(
+  input: string,
+  cursorPos: number,
+): { trigger: TriggerChar; partial: string; tokenStart: number } | null {
+  let start = cursorPos
+  while (start > 0 && input[start - 1] !== ' ') {
+    start--
+  }
+
+  const token = input.slice(start, cursorPos)
+  if (!token) return null
+
+  const firstChar = token[0]
+  if (
+    firstChar === '@' ||
+    firstChar === '>' ||
+    firstChar === '#' ||
+    firstChar === '%'
+  ) {
+    return { trigger: firstChar, partial: token.slice(1), tokenStart: start }
+  }
+
+  return null
+}
+
+/** Get suggestion items for a given trigger, filtered by the partial text typed so far. */
+export function getSuggestions(
+  trigger: TriggerChar,
+  partial: string,
+  availableLabels: string[] = [],
+): SuggestionItem[] {
+  let items: SuggestionItem[]
+
+  switch (trigger) {
+    case '@':
+      items = AT_SUGGESTIONS
+      break
+    case '>':
+      items = START_DATE_SUGGESTIONS
+      break
+    case '#':
+      items = availableLabels.map((l) => ({ value: l, display: l }))
+      break
+    case '%':
+      items = CONTEXT_SUGGESTIONS
+      break
+  }
+
+  if (!partial) return items
+  const lower = partial.toLowerCase()
+  return items.filter((item) => item.value.toLowerCase().startsWith(lower))
+}
