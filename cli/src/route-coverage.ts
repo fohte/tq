@@ -128,6 +128,8 @@ export const EXCLUDED_ROUTES = {
     'calendar subscription setup requires browser authorization; one-time setup',
   'PUT /api/calendar/accounts/:accountId/calendars/:calendarId/subscription':
     'calendar subscription setup requires browser authorization; one-time setup',
+  'PUT /api/calendar/accounts/:accountId/calendars/:calendarId/context':
+    'calendar subscription setup requires browser authorization; one-time setup',
 
   // Settings screens the web UI already covers.
   'GET /api/scheduling-settings': 'settings covered by the web UI',
