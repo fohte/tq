@@ -19,11 +19,19 @@ const queryClient = new QueryClient({
 const parentOverrideQueryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 })
-parentOverrideQueryClient.setQueryData(
-  taskMentionKeys.preview(34),
-  makeTaskDetail({ number: 34, title: 'Refactor auth module' }),
-)
-parentOverrideQueryClient.setQueryData(taskMentionKeys.preview(999), null)
+
+// useTaskMentionPreview hardcodes a 60s staleTime, so seeding this
+// module-level client just once at import time lets the data go stale by
+// the time a later story in this file mounts — triggering a real
+// (unhandled) background refetch. Reseeding from each story's decorator
+// keeps dataUpdatedAt fresh right before that story's component mounts.
+function seedParentOverridePreview() {
+  parentOverrideQueryClient.setQueryData(
+    taskMentionKeys.preview(34),
+    makeTaskDetail({ number: 34, title: 'Refactor auth module' }),
+  )
+  parentOverrideQueryClient.setQueryData(taskMentionKeys.preview(999), null)
+}
 
 const meta = {
   title: 'Task/CreateTaskModal',
@@ -329,13 +337,16 @@ export const CaretShorthandOverridesParent: Story = {
     screenshot: { skip: true },
   },
   decorators: [
-    (Story) => (
-      <QueryClientProvider client={parentOverrideQueryClient}>
-        <div className="dark h-screen bg-background">
-          <Story />
-        </div>
-      </QueryClientProvider>
-    ),
+    (Story) => {
+      seedParentOverridePreview()
+      return (
+        <QueryClientProvider client={parentOverrideQueryClient}>
+          <div className="dark h-screen bg-background">
+            <Story />
+          </div>
+        </QueryClientProvider>
+      )
+    },
   ],
   play: async ({ canvasElement, userEvent }) => {
     const body = within(canvasElement.ownerDocument.body)
@@ -361,15 +372,103 @@ export const CaretShorthandOverridesParent: Story = {
   },
 }
 
+// `parentId` is intentionally sent as the raw shorthand number ('34'), not
+// the resolved task's UUID — see the comment on `effectiveParentId` in
+// create-task-modal.tsx. This asserts the actual POST body so a future
+// change to send the resolved UUID instead is caught.
+let submittedTaskBody: unknown = null
+
+export const CaretShorthandSubmitsRawParentNumber: Story = {
+  args: {
+    defaultContext: 'work',
+  },
+  parameters: {
+    // Same look as CaretShorthandOverridesParent — the POST body is what
+    // this story actually verifies.
+    screenshot: { skip: true },
+    msw: {
+      // Story-level handlers replace meta's entirely (not merge), so the
+      // labels/mentions handlers meta.parameters.msw.handlers provides above
+      // must be repeated here alongside the POST override this story needs.
+      // A GET /api/tasks/:id handler is also required: useCreateTask's
+      // onSettled invalidates every taskKeys.all-prefixed query (including
+      // the still-mounted parent-preview query) on success, triggering a
+      // real refetch.
+      handlers: [
+        http.get('/api/labels', () => HttpResponse.json([])),
+        http.get('/api/tasks/mentions', () => HttpResponse.json([])),
+        http.get('/api/tasks/:id', () =>
+          HttpResponse.json(
+            makeTaskDetail({ number: 34, title: 'Refactor auth module' }),
+          ),
+        ),
+        http.post('/api/tasks', async ({ request }) => {
+          submittedTaskBody = await request.json()
+          return HttpResponse.json({
+            id: 'temp-id',
+            number: 1,
+            title: 'temp',
+            description: null,
+            status: 'todo',
+            context: 'personal',
+            labels: [],
+          })
+        }),
+      ],
+    },
+  },
+  decorators: [
+    (Story) => {
+      seedParentOverridePreview()
+      return (
+        <QueryClientProvider client={parentOverrideQueryClient}>
+          <div className="dark h-screen bg-background">
+            <Story />
+          </div>
+        </QueryClientProvider>
+      )
+    },
+  ],
+  play: async ({ canvasElement, userEvent }) => {
+    submittedTaskBody = null
+    const body = within(canvasElement.ownerDocument.body)
+    const titleInputs =
+      body.getAllByPlaceholderText(/task title|タスクのタイトル/i)
+    const titleInput = atIndex(titleInputs, 0)
+
+    await userEvent.type(titleInput, 'Fix bug ^34 ')
+
+    await waitFor(async () => {
+      await expect(
+        (await body.findAllByText(/subtask of #34 Refactor auth module/))
+          .length,
+      ).toBeGreaterThan(0)
+    })
+
+    await userEvent.keyboard('{Meta>}{Enter}{/Meta}')
+
+    await waitFor(async () => {
+      await expect(submittedTaskBody).toEqual({
+        title: 'Fix bug',
+        context: 'work',
+        parentId: '34',
+      })
+    })
+  },
+}
+
 export const CaretShorthandParentNotFoundDisablesSubmit: Story = {
   decorators: [
-    (Story) => (
-      <QueryClientProvider client={parentOverrideQueryClient}>
-        <div className="dark h-screen bg-background">
-          <Story />
-        </div>
-      </QueryClientProvider>
-    ),
+    (Story) => {
+      seedParentOverridePreview()
+      return (
+        <QueryClientProvider client={parentOverrideQueryClient}>
+          <div className="dark h-screen bg-background">
+            <Story />
+          </div>
+        </QueryClientProvider>
+      )
+    },
   ],
   play: async ({ canvasElement, userEvent }) => {
     const body = within(canvasElement.ownerDocument.body)
@@ -388,6 +487,22 @@ export const CaretShorthandParentNotFoundDisablesSubmit: Story = {
     const createButtons = body.getAllByRole('button', { name: /create/i })
     for (const btn of createButtons) {
       await expect(btn).toBeDisabled()
+    }
+
+    // Dismissing the override falls back to no parent at all (this story
+    // passes no parentId/parentTaskNumber props), re-enabling Create.
+    const dismissButtons = body.getAllByRole('button', {
+      name: 'Remove parent override',
+    })
+    await userEvent.click(atIndex(dismissButtons, 0))
+
+    await waitFor(async () => {
+      await expect(
+        body.queryByText('parent #999 not found'),
+      ).not.toBeInTheDocument()
+    })
+    for (const btn of body.getAllByRole('button', { name: /create/i })) {
+      await expect(btn).not.toBeDisabled()
     }
   },
 }

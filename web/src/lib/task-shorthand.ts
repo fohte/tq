@@ -188,8 +188,7 @@ export function getSuggestions(
       items = CONTEXT_SUGGESTIONS
       break
     case '^':
-      // Real `^` suggestions come from an async server search
-      // (`useTaskMentionSuggestions` in `TaskTitleInput`), not this function.
+      // Parent suggestions require an async lookup this function can't do.
       items = []
       break
   }

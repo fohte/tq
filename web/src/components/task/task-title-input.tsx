@@ -45,8 +45,6 @@ export function TaskTitleInput({
     [labelsData],
   )
 
-  // `^` candidates come from an async server search rather than
-  // getSuggestions, so they're kept in a separate list.
   const isParentTrigger = cursorTrigger?.trigger === '^'
   const { data: parentSuggestionsData } = useTaskMentionSuggestions(
     isParentTrigger ? cursorTrigger.partial : '',

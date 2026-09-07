@@ -1,3 +1,4 @@
+import { X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { CreateTaskModalDesktop } from '#components/task/create-task-modal-desktop'
@@ -92,6 +93,10 @@ export function CreateTaskModal({
       : parentTaskTitle
   const parentNotFound =
     parentOverrideNumber != null && parentOverridePreview.data === null
+  const parentPending =
+    parentOverrideNumber != null && parentOverridePreview.data === undefined
+  // Sent as the raw number string, not `parentOverridePreview.data?.id`: the
+  // API's taskIdOrNumber schema resolves a numeric string server-side.
   const effectiveParentId =
     parentOverrideNumber != null ? String(parentOverrideNumber) : parentId
 
@@ -161,7 +166,13 @@ export function CreateTaskModal({
   }
 
   const handleSubmit = () => {
-    if (!title.trim() || createTask.isPending || parentNotFound) return
+    if (
+      !title.trim() ||
+      createTask.isPending ||
+      parentNotFound ||
+      parentPending
+    )
+      return
 
     const desc = descriptionRef.current.trim()
     const input: CreateTaskInput = {
@@ -201,7 +212,7 @@ export function CreateTaskModal({
   const parentIndicator = effectiveParentNumber != null && (
     <span
       className={cn(
-        'font-mono text-2xs',
+        'inline-flex items-center gap-1 font-mono text-2xs',
         parentNotFound ? 'text-destructive' : 'text-muted-foreground-faint',
       )}
     >
@@ -211,6 +222,18 @@ export function CreateTaskModal({
         <>
           subtask of #{effectiveParentNumber} {effectiveParentTitle}
         </>
+      )}
+      {parentOverrideNumber != null && (
+        <button
+          type="button"
+          onClick={() => {
+            setParentOverrideNumber(undefined)
+          }}
+          aria-label="Remove parent override"
+          className="text-muted-foreground-faint hover:text-destructive"
+        >
+          <X className="h-2.5 w-2.5" />
+        </button>
       )}
     </span>
   )
@@ -227,7 +250,8 @@ export function CreateTaskModal({
     />
   )
 
-  const submitDisabled = !title.trim() || createTask.isPending || parentNotFound
+  const submitDisabled =
+    !title.trim() || createTask.isPending || parentNotFound || parentPending
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

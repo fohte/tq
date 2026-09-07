@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { expect, within } from 'storybook/test'
 
 import { makeLabel } from '#components/label/label-test-fixtures'
+import { makeMentionSuggestion } from '#components/task/task-mention-test-fixtures'
 import { TaskTitleInput } from '#components/task/task-title-input'
 import { labelKeys } from '#hooks/use-labels'
 import type { MentionSuggestion } from '#hooks/use-task-mentions'
@@ -22,8 +23,8 @@ labelsQueryClient.setQueryData(labelKeys.list({ context: 'personal' }), [
 ])
 
 const parentSuggestions: MentionSuggestion[] = [
-  { id: '1', number: 12, title: 'Deploy to production', status: 'todo' },
-  { id: '2', number: 34, title: 'Fix login bug', status: 'todo' },
+  makeMentionSuggestion(),
+  makeMentionSuggestion({ id: '2', number: 34, title: 'Fix login bug' }),
 ]
 
 function TaskTitleInputHarness({ initialValue }: { initialValue: string }) {
