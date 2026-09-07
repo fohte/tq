@@ -573,7 +573,6 @@ export const SpaceAtListItemStartIndents: Story = {
   },
   play: async ({ canvas, canvasElement, userEvent }) => {
     const secondItem = await canvas.findByText('Second item')
-    await userEvent.click(secondItem)
     await userEvent.tripleClick(secondItem)
     await userEvent.keyboard('{ArrowLeft} ')
 
@@ -601,7 +600,6 @@ export const SpaceAtFirstListItemStartTypesSpace: Story = {
   },
   play: async ({ canvas, canvasElement, userEvent }) => {
     const firstItem = await canvas.findByText('First item')
-    await userEvent.click(firstItem)
     await userEvent.tripleClick(firstItem)
     await userEvent.keyboard('{ArrowLeft} ')
 
@@ -630,7 +628,6 @@ export const BackspaceAtNestedListItemStartOutdents: Story = {
   },
   play: async ({ canvas, canvasElement, userEvent }) => {
     const nestedItem = await canvas.findByText('Nested item')
-    await userEvent.click(nestedItem)
     await userEvent.tripleClick(nestedItem)
     await userEvent.keyboard('{ArrowLeft}{Backspace}')
 
@@ -655,7 +652,6 @@ export const BackspaceAtTopLevelListItemStartJoinsWithPreviousItem: Story = {
   },
   play: async ({ canvas, canvasElement, userEvent }) => {
     const secondItem = await canvas.findByText('Second item')
-    await userEvent.click(secondItem)
     await userEvent.tripleClick(secondItem)
     await userEvent.keyboard('{ArrowLeft}{Backspace}')
 
