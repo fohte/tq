@@ -48,29 +48,28 @@ export const WithContent: Story = {
 
 const HOVER_TARGET_TEXT = 'Hover this paragraph to reveal its block handle.'
 
-// BlockProvider's hover detection (@milkdown/plugin-block's block-plugin.ts)
-// binds to ProseMirror's `pointermove` DOM event, which neither
-// `userEvent.hover` nor a plain `mouseMove` satisfies — dispatch the
-// coordinated pointermove it expects. BlockEdit mounts its handle element
-// asynchronously, racing this play function, so a single dispatch fired
-// before it mounts is silently missed (no listener yet to catch it) —
-// retry the dispatch until the element shows up, then wait for it to show.
+// BlockProvider mounts its handle element and binds its notify callback
+// together in a requestAnimationFrame after the editor mounts, racing this
+// play function; a pointermove dispatched before that lands on an unbound
+// notify and is dropped. The plugin also throttles pointermove (lodash) and
+// this suite pins the system clock, so only one dispatch ever gets through
+// — wait for the element first, then hover exactly once.
 async function hoverToRevealBlockHandle(
   canvasElement: HTMLElement,
 ): Promise<Element> {
   const canvas = within(canvasElement)
   const paragraph = canvas.getByText(HOVER_TARGET_TEXT)
-  const rect = paragraph.getBoundingClientRect()
 
-  const handle = await waitFor(async () => {
-    await fireEvent.pointerMove(paragraph, {
-      clientX: rect.left + rect.width / 2,
-      clientY: rect.top + rect.height / 2,
-    })
-    return assertDefined(
+  const handle = await waitFor(() =>
+    assertDefined(
       canvasElement.querySelector('.milkdown-block-handle'),
-      'BlockEdit always renders one handle element',
-    )
+      'BlockEdit mounts its handle element in a requestAnimationFrame',
+    ),
+  )
+  const rect = paragraph.getBoundingClientRect()
+  await fireEvent.pointerMove(paragraph, {
+    clientX: rect.left + rect.width / 2,
+    clientY: rect.top + rect.height / 2,
   })
   await waitFor(() => expect(handle).toHaveAttribute('data-show', 'true'))
   return handle
