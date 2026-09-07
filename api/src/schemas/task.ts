@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { MAX_MARKDOWN_CONTENT_LENGTH } from '#constants/content-length'
 import { taskIdOrNumber } from '#lib/numeric-id'
+import { labelNameSchema } from '#schemas/label-name'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 
 export const taskStatus = z.enum(['todo', 'completed'])
@@ -33,7 +34,7 @@ export const createTaskSchema = z.object({
   projectId: z.uuid().optional(),
   context: contextEnum.optional(),
   commitment: commitmentEnum.optional(),
-  labels: z.array(z.string().trim().min(1)).optional(),
+  labels: z.array(labelNameSchema).optional(),
   recurrenceRule: recurrenceRuleSchema.optional(),
 })
 
@@ -50,7 +51,7 @@ export const updateTaskSchema = z.object({
   projectId: z.uuid().nullable().optional(),
   context: contextEnum.optional(),
   commitment: commitmentEnum.optional(),
-  labels: z.array(z.string().trim().min(1)).optional(),
+  labels: z.array(labelNameSchema).optional(),
   recurrenceRule: recurrenceRuleSchema.nullable().optional(),
   // Full replacement, not add/remove: the complete desired set of blocker
   // tasks (id or number) each time. An empty array clears every

@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { labelNameSchema } from '#schemas/label-name'
 import { contextEnum } from '#schemas/task'
 
 export const listLabelsQuerySchema = z.object({
@@ -7,6 +8,6 @@ export const listLabelsQuerySchema = z.object({
 })
 
 export const updateLabelSchema = z.object({
-  name: z.string().min(1).optional(),
+  name: labelNameSchema.optional(),
   context: contextEnum.optional(),
 })
