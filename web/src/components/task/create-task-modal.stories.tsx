@@ -131,6 +131,12 @@ export const EscapeInTagInputDoesNotCloseModal: Story = {
 }
 
 export const ShorthandSyntaxAppliesFields: Story = {
+  parameters: {
+    // The assertions below already prove the parsed values land in the
+    // right fields; the filled-in look itself isn't new (WithDefaultStartDate
+    // and AsSubtask already cover filled date/label chips).
+    screenshot: { skip: true },
+  },
   play: async ({ canvasElement, userEvent }) => {
     const body = within(canvasElement.ownerDocument.body)
     const titleInputs =
