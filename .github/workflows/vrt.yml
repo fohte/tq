@@ -42,12 +42,12 @@ jobs:
           package-dir: web
           capture-script: test:storybook:capture
 
-  # reg-suit treats anything present in `expected` but missing from `actual`
-  # as deleted, so this job — and everything it does to the baseline — must
-  # only run once every shard above has succeeded. `needs: shard` without an
-  # explicit `if:` already skips this job when any shard fails; a partial
-  # screenshot set must never reach `reg-suit compare`, let alone get
-  # written into the shared baseline.
+        # reg-suit treats anything present in `expected` but missing from `actual`
+        # as deleted, so this job — and everything it does to the baseline — must
+        # only run once every shard above has succeeded. `needs: shard` without an
+        # explicit `if:` already skips this job when any shard fails; a partial
+        # screenshot set must never reach `reg-suit compare`, let alone get
+        # written into the shared baseline.
   report:
     needs: shard
     runs-on: ubuntu-latest
