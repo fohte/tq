@@ -195,6 +195,7 @@ export const googleCalendarProvider = {
               | 'accountLabel'
               | 'calendarDisplayName'
               | 'calendarColor'
+              | 'redacted'
             > => ({
               id: event.id,
               summary: event.summary ?? '(No title)',

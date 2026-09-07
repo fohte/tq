@@ -33,7 +33,7 @@ function getSubscribedCalendarEvents(
   oauthTokenId: string,
   timeMin: string,
   timeMax: string,
-  // undefined disables filtering; a subscription's own null context (see
+  // undefined disables masking; a subscription's own null context (see
   // calendar_subscriptions in db/schema/integrations.ts) already matches
   // any given context.
   context: 'work' | 'personal' | undefined,
@@ -41,19 +41,19 @@ function getSubscribedCalendarEvents(
   Omit<ExternalEvent, 'accountId' | 'accountLabel'>[],
   AccountEventsError
 > {
-  return listSubscribedCalendars(oauthTokenId).andThen((allSubscriptions) => {
-    const subscriptions =
-      context == null
-        ? allSubscriptions
-        : allSubscriptions.filter(
-            (subscription) =>
-              subscription.context == null || subscription.context === context,
-          )
-
+  return listSubscribedCalendars(oauthTokenId).andThen((subscriptions) => {
     return ResultAsync.fromSafePromise(
       Promise.all(
-        subscriptions.map((subscription) =>
-          googleCalendarProvider.capabilities.calendarEvents
+        subscriptions.map((subscription) => {
+          // A calendar whose context doesn't match the requested one is
+          // still fetched: its busy time is real regardless of context. Its
+          // content is masked below instead of being excluded outright.
+          const matchesContext =
+            context == null ||
+            subscription.context == null ||
+            subscription.context === context
+
+          return googleCalendarProvider.capabilities.calendarEvents
             .getEvents(accessToken, {
               calendarId: subscription.calendarId,
               timeMin,
@@ -62,13 +62,30 @@ function getSubscribedCalendarEvents(
             .map((events) =>
               events
                 .filter((event) => event.responseStatus !== 'declined')
-                .map((event) => ({
-                  ...event,
-                  calendarDisplayName: subscription.displayName,
-                  calendarColor: subscription.color,
-                })),
-            ),
-        ),
+                .map((event) =>
+                  matchesContext
+                    ? {
+                        ...event,
+                        calendarDisplayName: subscription.displayName,
+                        calendarColor: subscription.color,
+                        redacted: false,
+                      }
+                    : {
+                        id: event.id,
+                        startTime: event.startTime,
+                        endTime: event.endTime,
+                        isAllDay: event.isAllDay,
+                        source: event.source,
+                        calendarId: event.calendarId,
+                        responseStatus: event.responseStatus,
+                        summary: '',
+                        calendarDisplayName: null,
+                        calendarColor: null,
+                        redacted: true,
+                      },
+                ),
+            )
+        }),
       ),
     ).andThen((results) => {
       const events: Omit<ExternalEvent, 'accountId' | 'accountLabel'>[] = []

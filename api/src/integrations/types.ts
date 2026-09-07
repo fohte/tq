@@ -97,7 +97,11 @@ interface CalendarEventsCapability {
   ) => ResultAsync<
     Omit<
       ExternalEvent,
-      'accountId' | 'accountLabel' | 'calendarDisplayName' | 'calendarColor'
+      | 'accountId'
+      | 'accountLabel'
+      | 'calendarDisplayName'
+      | 'calendarColor'
+      | 'redacted'
     >[],
     Error
   >
@@ -125,6 +129,14 @@ export interface ExternalEvent {
   calendarDisplayName: string | null
   calendarColor: string | null
   responseStatus: CalendarResponseStatus
+  /**
+   * True when this event's calendar context doesn't match the requested
+   * context. `summary`/`calendarDisplayName`/`calendarColor` are blanked out
+   * server-side in that case rather than filtering the event out entirely,
+   * since its busy time is still real regardless of context — see
+   * getSubscribedCalendarEvents in integrations/google-calendar/events.ts.
+   */
+  redacted: boolean
 }
 
 /** One calendar from a provider's `calendarList`-equivalent API. */
