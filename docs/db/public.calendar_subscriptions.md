@@ -11,6 +11,7 @@
 | color          | text                     |         | true     |          |                                               |         |
 | created_at     | timestamp with time zone | now()   | false    |          |                                               |         |
 | updated_at     | timestamp with time zone | now()   | false    |          |                                               |         |
+| context        | text                     |         | true     |          |                                               |         |
 
 ## Constraints
 
@@ -42,6 +43,7 @@ erDiagram
   text color
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+  text context
 }
 "public.oauth_tokens" {
   text id

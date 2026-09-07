@@ -1713,6 +1713,11 @@
           "type": "timestamp with time zone",
           "nullable": false,
           "default": "now()"
+        },
+        {
+          "name": "context",
+          "type": "text",
+          "nullable": true
         }
       ],
       "indexes": [
