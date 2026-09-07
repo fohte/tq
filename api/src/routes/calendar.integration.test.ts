@@ -313,9 +313,6 @@ describe('GET /api/calendar/events', () => {
       context: 'personal',
     })
 
-    // Fetching personal@example.com would throw, implicitly asserting it's
-    // excluded by the context filter rather than merely absent from the
-    // response body.
     vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
       const url = requestUrl(input)
       if (url.includes('/calendars/user%40example.com/events')) {

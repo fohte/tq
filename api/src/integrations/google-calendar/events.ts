@@ -33,10 +33,9 @@ function getSubscribedCalendarEvents(
   oauthTokenId: string,
   timeMin: string,
   timeMax: string,
-  // undefined means "no context filtering" (used by auto-assign, which
-  // must see every subscribed calendar's busy time regardless of context).
-  // A subscription with a null context matches every context — see the
-  // calendar_subscriptions comment in db/schema/integrations.ts.
+  // undefined disables filtering; a subscription's own null context (see
+  // calendar_subscriptions in db/schema/integrations.ts) already matches
+  // any given context.
   context: 'work' | 'personal' | undefined,
 ): ResultAsync<
   Omit<ExternalEvent, 'accountId' | 'accountLabel'>[],
