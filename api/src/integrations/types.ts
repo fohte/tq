@@ -97,7 +97,11 @@ interface CalendarEventsCapability {
   ) => ResultAsync<
     Omit<
       ExternalEvent,
-      'accountId' | 'accountLabel' | 'calendarDisplayName' | 'calendarColor'
+      | 'accountId'
+      | 'accountLabel'
+      | 'calendarDisplayName'
+      | 'calendarColor'
+      | 'redacted'
     >[],
     Error
   >
@@ -125,6 +129,11 @@ export interface ExternalEvent {
   calendarDisplayName: string | null
   calendarColor: string | null
   responseStatus: CalendarResponseStatus
+  /**
+   * True when `summary`/`calendarDisplayName`/`calendarColor` are masked
+   * because this event's calendar context doesn't match the requested one.
+   */
+  redacted: boolean
 }
 
 /** One calendar from a provider's `calendarList`-equivalent API. */

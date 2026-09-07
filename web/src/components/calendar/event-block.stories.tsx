@@ -13,6 +13,7 @@ function EventBlockPreview({
   color,
   calendarColor,
   responseStatus,
+  redacted = false,
   allDay = false,
   widthPx = 288,
   short = false,
@@ -24,6 +25,7 @@ function EventBlockPreview({
   color?: { accent: string }
   calendarColor?: string | null
   responseStatus?: TimeBlockEvent['responseStatus']
+  redacted?: boolean
   allDay?: boolean
   widthPx?: number
   short?: boolean
@@ -34,7 +36,14 @@ function EventBlockPreview({
       allDay,
       start: short ? new Date(2025, 2, 7, 11, 0) : undefined,
       end: short ? new Date(2025, 2, 7, 11, 30) : undefined,
-      extendedProps: { type, parentRef, color, calendarColor, responseStatus },
+      extendedProps: {
+        type,
+        parentRef,
+        color,
+        calendarColor,
+        responseStatus,
+        redacted,
+      },
     },
     timeText,
     isStart: true,
@@ -148,6 +157,15 @@ export const GoogleCalendarTentative: Story = {
     title: 'Design review',
     timeText: '15:00–15:30',
     responseStatus: 'tentative',
+  },
+}
+
+export const GoogleCalendarRedacted: Story = {
+  args: {
+    type: 'gcal',
+    title: '',
+    timeText: '11:00–11:30',
+    redacted: true,
   },
 }
 

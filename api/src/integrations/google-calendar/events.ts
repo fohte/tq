@@ -20,6 +20,46 @@ export interface AccountEventsResult {
   result: Result<ExternalEvent[], AccountEventsError>
 }
 
+type CalendarEvent = Omit<ExternalEvent, 'accountId' | 'accountLabel'>
+type ProviderEvent = Omit<
+  CalendarEvent,
+  'calendarDisplayName' | 'calendarColor' | 'redacted'
+>
+
+// A subscription's own null context (see calendar_subscriptions in
+// db/schema/integrations.ts) matches any requested context; undefined
+// disables masking entirely.
+function matchesRequestedContext(
+  subscriptionContext: 'work' | 'personal' | null,
+  requestedContext: 'work' | 'personal' | undefined,
+): boolean {
+  return (
+    requestedContext == null ||
+    subscriptionContext == null ||
+    subscriptionContext === requestedContext
+  )
+}
+
+// Strips a mismatched-context event down to only its busy time. An all-day
+// event carries no busy time to begin with (externalEventsToBusyRanges in
+// services/auto-scheduler.ts excludes them), so callers filter those out
+// before this ever masks one.
+function maskEvent(event: ProviderEvent): CalendarEvent {
+  return {
+    id: event.id,
+    startTime: event.startTime,
+    endTime: event.endTime,
+    isAllDay: event.isAllDay,
+    source: event.source,
+    calendarId: event.calendarId,
+    responseStatus: event.responseStatus,
+    summary: '',
+    calendarDisplayName: null,
+    calendarColor: null,
+    redacted: true,
+  }
+}
+
 // Fetches every subscribed calendar's events best-effort, mirroring
 // partitionAccountEvents one level down: one subscribed calendar failing
 // (e.g. access to a shared calendar was revoked) must not hide the other
@@ -33,27 +73,27 @@ function getSubscribedCalendarEvents(
   oauthTokenId: string,
   timeMin: string,
   timeMax: string,
-  // undefined disables filtering; a subscription's own null context (see
-  // calendar_subscriptions in db/schema/integrations.ts) already matches
-  // any given context.
   context: 'work' | 'personal' | undefined,
 ): ResultAsync<
   Omit<ExternalEvent, 'accountId' | 'accountLabel'>[],
   AccountEventsError
 > {
-  return listSubscribedCalendars(oauthTokenId).andThen((allSubscriptions) => {
-    const subscriptions =
-      context == null
-        ? allSubscriptions
-        : allSubscriptions.filter(
-            (subscription) =>
-              subscription.context == null || subscription.context === context,
-          )
-
+  return listSubscribedCalendars(oauthTokenId).andThen((subscriptions) => {
     return ResultAsync.fromSafePromise(
       Promise.all(
-        subscriptions.map((subscription) =>
-          googleCalendarProvider.capabilities.calendarEvents
+        subscriptions.map((subscription) => {
+          // A timed event on a calendar whose context doesn't match the
+          // requested one is still fetched, since its busy time is real
+          // regardless of context, and its content is masked below instead
+          // of being excluded outright. An all-day event has no busy time to
+          // preserve this way, so it's excluded like before this masking
+          // behavior existed.
+          const matchesContext = matchesRequestedContext(
+            subscription.context,
+            context,
+          )
+
+          return googleCalendarProvider.capabilities.calendarEvents
             .getEvents(accessToken, {
               calendarId: subscription.calendarId,
               timeMin,
@@ -62,13 +102,19 @@ function getSubscribedCalendarEvents(
             .map((events) =>
               events
                 .filter((event) => event.responseStatus !== 'declined')
-                .map((event) => ({
-                  ...event,
-                  calendarDisplayName: subscription.displayName,
-                  calendarColor: subscription.color,
-                })),
-            ),
-        ),
+                .filter((event) => matchesContext || !event.isAllDay)
+                .map((event) =>
+                  matchesContext
+                    ? {
+                        ...event,
+                        calendarDisplayName: subscription.displayName,
+                        calendarColor: subscription.color,
+                        redacted: false,
+                      }
+                    : maskEvent(event),
+                ),
+            )
+        }),
       ),
     ).andThen((results) => {
       const events: Omit<ExternalEvent, 'accountId' | 'accountLabel'>[] = []

@@ -228,7 +228,10 @@ export const calendarSubscriptions = pgTable(
     // calendarList.list on its 60s poll path.
     displayName: text('display_name'),
     color: text('color'),
-    // Null means "show in every context".
+    // Null shows this calendar's events with full detail in every context.
+    // A non-null context still shows this calendar's events in the other
+    // context, masked down to busy time only — see getSubscribedCalendarEvents
+    // in integrations/google-calendar/events.ts.
     context: text('context', { enum: ['work', 'personal'] }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

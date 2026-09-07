@@ -211,6 +211,7 @@ describe('GET /api/calendar/events', () => {
         calendarDisplayName: null,
         calendarColor: null,
         responseStatus: 'accepted',
+        redacted: false,
       },
       {
         id: 'event-2',
@@ -225,6 +226,7 @@ describe('GET /api/calendar/events', () => {
         calendarDisplayName: null,
         calendarColor: null,
         responseStatus: 'accepted',
+        redacted: false,
       },
     ])
   })
@@ -293,11 +295,12 @@ describe('GET /api/calendar/events', () => {
         calendarDisplayName: null,
         calendarColor: null,
         responseStatus: 'accepted',
+        redacted: false,
       },
     ])
   })
 
-  it('excludes events from calendars whose context does not match the context query param', async () => {
+  it('masks summary/calendarDisplayName/calendarColor for events from a calendar whose context does not match the context query param', async () => {
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user@example.com',
@@ -310,6 +313,7 @@ describe('GET /api/calendar/events', () => {
       oauthTokenId: token.id,
       calendarId: 'personal@example.com',
       displayName: 'Personal',
+      color: '#00ff00',
       context: 'personal',
     })
 
@@ -332,6 +336,23 @@ describe('GET /api/calendar/events', () => {
           ),
         )
       }
+      if (url.includes('/calendars/personal%40example.com/events')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 'event-2',
+                  summary: 'Doctor appointment',
+                  start: { dateTime: '2026-03-22T14:00:00Z' },
+                  end: { dateTime: '2026-03-22T14:30:00Z' },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        )
+      }
       throw new Error(`unexpected fetch in test: url=${url}`)
     })
 
@@ -340,7 +361,8 @@ describe('GET /api/calendar/events', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(await jsonBody<ExternalEvent[]>(res)).toEqual([
+    const body = await jsonBody<ExternalEvent[]>(res)
+    expect([...body].sort((a, b) => a.id.localeCompare(b.id))).toEqual([
       {
         id: 'event-1',
         summary: 'Standup',
@@ -354,6 +376,22 @@ describe('GET /api/calendar/events', () => {
         calendarDisplayName: null,
         calendarColor: null,
         responseStatus: 'accepted',
+        redacted: false,
+      },
+      {
+        id: 'event-2',
+        summary: '',
+        startTime: '2026-03-22T14:00:00Z',
+        endTime: '2026-03-22T14:30:00Z',
+        isAllDay: false,
+        source: 'google_calendar',
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        calendarId: 'personal@example.com',
+        calendarDisplayName: null,
+        calendarColor: null,
+        responseStatus: 'accepted',
+        redacted: true,
       },
     ])
   })

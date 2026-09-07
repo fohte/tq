@@ -724,6 +724,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            redacted: false,
           },
           {
             id: 'event-2',
@@ -738,6 +739,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            redacted: false,
           },
         ],
       },
@@ -792,6 +794,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            redacted: false,
           },
         ],
       },
@@ -868,6 +871,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            redacted: false,
           },
         ],
       },
@@ -962,6 +966,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            redacted: false,
           },
           {
             id: 'event-2',
@@ -976,6 +981,7 @@ describe('getEvents', () => {
             calendarDisplayName: 'Work',
             calendarColor: '#ff0000',
             responseStatus: 'accepted',
+            redacted: false,
           },
         ],
       },
@@ -1047,6 +1053,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            redacted: false,
           },
         ],
       },
@@ -1123,7 +1130,7 @@ describe('getEvents', () => {
     ])
   })
 
-  it('excludes events from calendars whose context does not match the given context, but keeps a calendar with no context set', async () => {
+  it('masks a timed event, drops an all-day event, and keeps a calendar with no context set unmasked, all for a calendar whose context does not match the given context', async () => {
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user@example.com',
@@ -1143,6 +1150,7 @@ describe('getEvents', () => {
         oauthTokenId: token.id,
         calendarId: 'personal@example.com',
         displayName: 'Personal',
+        color: '#00ff00',
         context: 'personal',
       },
     ])
@@ -1183,6 +1191,29 @@ describe('getEvents', () => {
           ),
         )
       }
+      if (url.includes('/calendars/personal%40example.com/events')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 'event-personal',
+                  summary: 'Personal event',
+                  start: { dateTime: '2026-03-22T11:00:00Z' },
+                  end: { dateTime: '2026-03-22T11:30:00Z' },
+                },
+                {
+                  id: 'event-personal-all-day',
+                  summary: 'Birthday',
+                  start: { date: '2026-03-22' },
+                  end: { date: '2026-03-23' },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        )
+      }
       throw new Error(`unexpected fetch in test: url=${url}`)
     })
 
@@ -1211,6 +1242,22 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            redacted: false,
+          },
+          {
+            id: 'event-personal',
+            summary: '',
+            startTime: '2026-03-22T11:00:00Z',
+            endTime: '2026-03-22T11:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'personal@example.com',
+            calendarDisplayName: null,
+            calendarColor: null,
+            responseStatus: 'accepted',
+            redacted: true,
           },
           {
             id: 'event-work',
@@ -1225,6 +1272,7 @@ describe('getEvents', () => {
             calendarDisplayName: 'Work',
             calendarColor: null,
             responseStatus: 'accepted',
+            redacted: false,
           },
         ],
       },
@@ -1335,6 +1383,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            redacted: false,
           },
           {
             id: 'event-personal',
@@ -1349,6 +1398,7 @@ describe('getEvents', () => {
             calendarDisplayName: 'Personal',
             calendarColor: null,
             responseStatus: 'accepted',
+            redacted: false,
           },
           {
             id: 'event-work',
@@ -1363,6 +1413,7 @@ describe('getEvents', () => {
             calendarDisplayName: 'Work',
             calendarColor: null,
             responseStatus: 'accepted',
+            redacted: false,
           },
         ],
       },
@@ -1429,6 +1480,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'needsAction',
+            redacted: false,
           },
           {
             id: 'event-tentative',
@@ -1443,6 +1495,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'tentative',
+            redacted: false,
           },
         ],
       },
@@ -1507,6 +1560,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            redacted: false,
           },
           {
             id: 'event-no-self',
@@ -1521,6 +1575,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            redacted: false,
           },
         ],
       },
@@ -1584,6 +1639,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            redacted: false,
           },
         ],
       },

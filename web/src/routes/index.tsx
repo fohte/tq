@@ -227,8 +227,6 @@ function DayView() {
 
   const gcalEvents: TimeBlockEvent[] = useMemo(() => {
     if (!gcalEventsQuery.data) return []
-    // Already filtered to the current context server-side (the `context`
-    // query param on GET /calendar/events), so never redacted client-side.
     return gcalEventsQuery.data.map((event) => ({
       id: `gcal-${event.id}`,
       title: event.summary,
@@ -238,6 +236,7 @@ function DayView() {
       allDay: event.isAllDay,
       calendarColor: event.calendarColor,
       responseStatus: event.responseStatus,
+      redacted: event.redacted,
     }))
   }, [gcalEventsQuery.data])
 
