@@ -51,22 +51,27 @@ const HOVER_TARGET_TEXT = 'Hover this paragraph to reveal its block handle.'
 // BlockProvider's hover detection (@milkdown/plugin-block's block-plugin.ts)
 // binds to ProseMirror's `pointermove` DOM event, which neither
 // `userEvent.hover` nor a plain `mouseMove` satisfies — dispatch the
-// coordinated pointermove it expects, then wait for the handle to show.
+// coordinated pointermove it expects. BlockEdit mounts its handle element
+// asynchronously, racing this play function, so a single dispatch fired
+// before it mounts is silently missed (no listener yet to catch it) —
+// retry the dispatch until the element shows up, then wait for it to show.
 async function hoverToRevealBlockHandle(
   canvasElement: HTMLElement,
 ): Promise<Element> {
   const canvas = within(canvasElement)
   const paragraph = canvas.getByText(HOVER_TARGET_TEXT)
   const rect = paragraph.getBoundingClientRect()
-  await fireEvent.pointerMove(paragraph, {
-    clientX: rect.left + rect.width / 2,
-    clientY: rect.top + rect.height / 2,
-  })
 
-  const handle = assertDefined(
-    canvasElement.querySelector('.milkdown-block-handle'),
-    'BlockEdit always renders one handle element',
-  )
+  const handle = await waitFor(async () => {
+    await fireEvent.pointerMove(paragraph, {
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2,
+    })
+    return assertDefined(
+      canvasElement.querySelector('.milkdown-block-handle'),
+      'BlockEdit always renders one handle element',
+    )
+  })
   await waitFor(() => expect(handle).toHaveAttribute('data-show', 'true'))
   return handle
 }
