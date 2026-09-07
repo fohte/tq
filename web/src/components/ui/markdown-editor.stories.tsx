@@ -559,6 +559,122 @@ export const ExternalUpdateInViewModeReplacesContent: Story = {
   },
 }
 
+const TWO_ITEM_LIST = '- First item\n- Second item'
+const NESTED_LIST = '- First item\n  - Nested item'
+
+// iOS has no Tab key, so Space at a list item's start is the only way to
+// indent a list from there (see list-indent-keymap.ts). Sinking the second
+// item nests it into a new list inside the first item.
+export const SpaceAtListItemStartIndents: Story = {
+  args: {
+    defaultValue: TWO_ITEM_LIST,
+    viewEditToggle: {},
+  },
+  parameters: {
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const secondItem = await canvas.findByText('Second item')
+    await userEvent.click(secondItem)
+    await userEvent.tripleClick(secondItem)
+    await userEvent.keyboard('{ArrowLeft} ')
+
+    // Crepe's list-item node view wraps a paragraph's own text in several
+    // layers (bullet icon, label/children wrappers), so .textContent picks
+    // up their whitespace-only text nodes too — trimmed, only the real text
+    // remains.
+    const nestedItem = assertDefined(
+      canvasElement.querySelector('.milkdown .ProseMirror li li'),
+      'Space at a list item start sinks it into a nested list',
+    )
+    await expect(nestedItem.textContent.trim()).toBe('Second item')
+  },
+}
+
+// The first item in a list has no previous sibling to nest under, so
+// sinkListItem can't indent it — Space must fall through to a normal space
+// character instead of being swallowed.
+export const SpaceAtFirstListItemStartTypesSpace: Story = {
+  args: {
+    defaultValue: TWO_ITEM_LIST,
+    viewEditToggle: {},
+  },
+  parameters: {
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const firstItem = await canvas.findByText('First item')
+    await userEvent.click(firstItem)
+    await userEvent.tripleClick(firstItem)
+    await userEvent.keyboard('{ArrowLeft} ')
+
+    // The accessible-text query (canvas.findByText) normalizes away the
+    // leading space this asserts on, so this reads the paragraph's raw text
+    // directly instead.
+    const firstParagraph = assertDefined(
+      canvasElement.querySelector('.milkdown .ProseMirror p'),
+      'the list always renders its first item as a paragraph',
+    )
+    await expect(firstParagraph.textContent).toBe(' First item')
+    await expect(
+      canvasElement.querySelector('.milkdown .ProseMirror li li'),
+    ).toBeNull()
+  },
+}
+
+// Counterpart to indenting: Backspace at a nested list item's start outdents
+// it back into the outer list, since iOS has no Shift-Tab either.
+export const BackspaceAtNestedListItemStartOutdents: Story = {
+  args: {
+    defaultValue: NESTED_LIST,
+    viewEditToggle: {},
+  },
+  parameters: {
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const nestedItem = await canvas.findByText('Nested item')
+    await userEvent.click(nestedItem)
+    await userEvent.tripleClick(nestedItem)
+    await userEvent.keyboard('{ArrowLeft}{Backspace}')
+
+    await expect(
+      canvasElement.querySelector('.milkdown .ProseMirror li li'),
+    ).toBeNull()
+    await expect(canvas.findByText('Nested item')).resolves.toBeVisible()
+  },
+}
+
+// A top-level list item has no outer list to outdent into (liftListItem
+// would instead unwrap it out of the list entirely), so Backspace at its
+// start must keep the existing behavior of joining with the previous item.
+export const BackspaceAtTopLevelListItemStartJoinsWithPreviousItem: Story = {
+  args: {
+    defaultValue: TWO_ITEM_LIST,
+    viewEditToggle: {},
+  },
+  parameters: {
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const secondItem = await canvas.findByText('Second item')
+    await userEvent.click(secondItem)
+    await userEvent.tripleClick(secondItem)
+    await userEvent.keyboard('{ArrowLeft}{Backspace}')
+
+    // joinBackward merges the second item into the first as an additional
+    // paragraph within the same list item, rather than concatenating their
+    // text into one paragraph — so this checks for a single remaining
+    // top-level item that still contains both texts.
+    const topLevelItems = canvasElement.querySelectorAll(
+      '.milkdown .ProseMirror > ul > .milkdown-list-item-block',
+    )
+    await expect(topLevelItems).toHaveLength(1)
+    await expect(canvas.findByText('First item')).resolves.toBeVisible()
+    await expect(canvas.findByText('Second item')).resolves.toBeVisible()
+  },
+}
+
 // Regression check for the other half of that same effect: a prop change
 // that arrives while the user is mid-edit must not clobber their typing —
 // the effect is gated to view mode for exactly this reason.
