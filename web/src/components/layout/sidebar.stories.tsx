@@ -32,6 +32,16 @@ const labelsForTasksWithTags = [
   makeLabel({ id: '3', name: 'review' }),
 ]
 
+const tasksWithNestedTags: Task[] = [
+  makeTask({ id: '5', title: 'Task X', labels: ['dev/tq'] }),
+  makeTask({ id: '6', title: 'Task Y', labels: ['dev/infra'] }),
+]
+
+const labelsForNestedTags = [
+  makeLabel({ id: '4', name: 'dev/tq' }),
+  makeLabel({ id: '5', name: 'dev/infra' }),
+]
+
 const tasksWithInboxItems: Task[] = [
   makeTask({ id: '4', title: 'Untriaged task', commitment: 'inbox' }),
 ]
@@ -175,6 +185,14 @@ export const WithTags: Story = {
     currentPath: '/',
     tasks: tasksWithTags,
     labels: labelsForTasksWithTags,
+  },
+}
+
+export const WithNestedTags: Story = {
+  args: {
+    currentPath: '/',
+    tasks: tasksWithNestedTags,
+    labels: labelsForNestedTags,
   },
 }
 

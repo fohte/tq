@@ -5,7 +5,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -269,6 +269,51 @@ describe('Sidebar', () => {
       expect(screen.getByRole('link', { name: /urgent/ })).toHaveClass(
         'text-muted-foreground-strong',
       )
+    })
+
+    describe('with a "/"-separated tag hierarchy', () => {
+      const nestedTasks: Task[] = [
+        makeTask({ id: '10', title: 'Task X', labels: ['dev/tq'] }),
+        makeTask({ id: '11', title: 'Task Y', labels: ['dev/infra'] }),
+      ]
+      const nestedLabels: Label[] = [
+        makeLabel({ id: '10', name: 'dev/tq' }),
+        makeLabel({ id: '11', name: 'dev/infra' }),
+      ]
+
+      it('renders the tree returned by useTagCounts as nested rows, parent above children', async () => {
+        await renderSidebar({ tasks: nestedTasks, labels: nestedLabels })
+
+        const links = screen.getAllByRole('link', { name: /^#/ })
+        expect(links.map((link) => link.textContent)).toEqual([
+          '#dev2',
+          '#infra1',
+          '#tq1',
+        ])
+      })
+
+      it('shows a nested tag by its last path segment only, not its full name', async () => {
+        await renderSidebar({ tasks: nestedTasks, labels: nestedLabels })
+
+        expect(screen.getByRole('link', { name: /^#tq1$/ })).toBeInTheDocument()
+      })
+
+      it('links a synthesized parent to /tasks scoped to its own name', async () => {
+        await renderSidebar({ tasks: nestedTasks, labels: nestedLabels })
+
+        const devLink = screen.getByRole('link', { name: /dev/ })
+        expect(devLink).toHaveAttribute('href', '/tasks')
+        expect(devLink.dataset['search']).toBe(
+          JSON.stringify({ q: 'is:todo label:dev sort:updated' }),
+        )
+      })
+
+      it('does not offer edit/delete actions for a synthesized parent', async () => {
+        await renderSidebar({ tasks: nestedTasks, labels: nestedLabels })
+
+        const devLink = screen.getByRole('link', { name: /dev/ })
+        expect(within(devLink).queryAllByRole('button')).toHaveLength(0)
+      })
     })
   })
 
