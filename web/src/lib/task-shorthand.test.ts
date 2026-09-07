@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { extractShorthandTokens } from '#lib/task-shorthand'
+import {
+  detectTrigger,
+  extractShorthandTokens,
+  getSuggestions,
+} from '#lib/task-shorthand'
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -153,5 +157,67 @@ describe('extractShorthandTokens', () => {
       title: '',
       labels: [],
     })
+  })
+})
+
+describe('detectTrigger', () => {
+  it('detects a trigger at the end of the input', () => {
+    expect(detectTrigger('Task @30', 8)).toEqual({
+      trigger: '@',
+      partial: '30',
+      tokenStart: 5,
+    })
+  })
+
+  it('detects a trigger with the cursor mid-token', () => {
+    expect(detectTrigger('Task @30m more', 7)).toEqual({
+      trigger: '@',
+      partial: '3',
+      tokenStart: 5,
+    })
+  })
+
+  it('returns null when the trigger char is not at the start of the token', () => {
+    expect(detectTrigger('a@b', 3)).toBeNull()
+  })
+
+  it('returns null when no trigger token is present', () => {
+    expect(detectTrigger('Task title', 10)).toBeNull()
+  })
+
+  it('returns null right after a completed token followed by a space', () => {
+    expect(detectTrigger('Task @30m ', 10)).toBeNull()
+  })
+})
+
+describe('getSuggestions', () => {
+  it('returns all items for an empty partial', () => {
+    expect(getSuggestions('%', '')).toEqual([
+      { value: 'work', display: 'work' },
+      { value: 'personal', display: 'personal' },
+    ])
+  })
+
+  it('filters items by a case-insensitive prefix match', () => {
+    expect(getSuggestions('@', 'TOM')).toEqual([
+      { value: 'tomorrow', display: 'tomorrow' },
+    ])
+  })
+
+  it('returns no labels for # when none are available', () => {
+    expect(getSuggestions('#', '')).toEqual([])
+  })
+
+  it('maps available labels to suggestions for #', () => {
+    expect(getSuggestions('#', '', ['urgent', 'chore'])).toEqual([
+      { value: 'urgent', display: 'urgent' },
+      { value: 'chore', display: 'chore' },
+    ])
+  })
+
+  it('excludes multi-word labels for # since the syntax has no quoting', () => {
+    expect(getSuggestions('#', '', ['urgent', 'urgent task'])).toEqual([
+      { value: 'urgent', display: 'urgent' },
+    ])
   })
 })

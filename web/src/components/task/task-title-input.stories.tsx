@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { useState } from 'react'
 import { expect, within } from 'storybook/test'
 
+import { makeLabel } from '#components/label/label-test-fixtures'
 import { TaskTitleInput } from '#components/task/task-title-input'
 import { labelKeys } from '#hooks/use-labels'
 
@@ -15,18 +16,8 @@ const labelsQueryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, staleTime: Infinity } },
 })
 labelsQueryClient.setQueryData(labelKeys.list({ context: 'personal' }), [
-  {
-    id: '1',
-    name: 'urgent',
-    color: null,
-    createdAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: '2',
-    name: 'urgent-work',
-    color: null,
-    createdAt: '2026-01-01T00:00:00.000Z',
-  },
+  makeLabel({ id: '1', name: 'urgent' }),
+  makeLabel({ id: '2', name: 'urgent-work' }),
 ])
 
 function TaskTitleInputHarness({ initialValue }: { initialValue: string }) {

@@ -156,7 +156,6 @@ export function detectTrigger(
   return null
 }
 
-/** Get suggestion items for a given trigger, filtered by the partial text typed so far. */
 export function getSuggestions(
   trigger: TriggerChar,
   partial: string,
@@ -172,7 +171,11 @@ export function getSuggestions(
       items = START_DATE_SUGGESTIONS
       break
     case '#':
-      items = availableLabels.map((l) => ({ value: l, display: l }))
+      // The shorthand syntax has no quoting mechanism, so a multi-word label
+      // can't round-trip through extractShorthandTokens's whitespace split.
+      items = availableLabels
+        .filter((l) => !/\s/.test(l))
+        .map((l) => ({ value: l, display: l }))
       break
     case '%':
       items = CONTEXT_SUGGESTIONS

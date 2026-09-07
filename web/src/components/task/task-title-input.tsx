@@ -54,9 +54,7 @@ export function TaskTitleInput({
     setSelectedIndex(0)
   }
 
-  // Replaces the trigger token (up to the next space) with the selected
-  // suggestion. The token change reaching `onChange` with a trailing space
-  // is what makes the existing shorthand-extraction path pick it up.
+  // Completed shorthand tokens require trailing whitespace to be recognized.
   const applySuggestion = (item: SuggestionItem) => {
     if (!cursorTrigger) return
     const before = value.slice(0, cursorTrigger.tokenStart)
@@ -91,8 +89,6 @@ export function TaskTitleInput({
         break
       }
       case 'Escape':
-        // Stop propagation so the enclosing modal doesn't close along with
-        // the suggestion menu.
         e.preventDefault()
         e.stopPropagation()
         setCursorTrigger(null)
