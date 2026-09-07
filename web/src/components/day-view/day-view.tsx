@@ -1,5 +1,5 @@
 import { CalendarPlus, Kanban, List, Plus } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import {
@@ -24,6 +24,7 @@ import { SectionHeading } from '#components/ui/section-heading'
 import { TabStrip } from '#components/ui/tab-strip'
 import type { Schedule } from '#hooks/use-schedules'
 import type { Task } from '#hooks/use-tasks'
+import { formatLocalDate } from '#lib/date-range'
 import type { QueueCandidate } from '#lib/queue-candidates'
 import { cn } from '#lib/utils'
 
@@ -36,11 +37,30 @@ const MOBILE_TAB_OPTIONS = [
   { value: 'tasks', label: 'tasks' },
 ] as const
 
+interface SelectedRange {
+  start: Date
+  end: Date
+}
+
+// A plain click (no drag) reports a range as short as one snap increment —
+// treat anything under 30 minutes as "just a click" and default to 30.
+export function estimateMinutesForRange(range: SelectedRange): number {
+  const rawMinutes = Math.round(
+    (range.end.getTime() - range.start.getTime()) / 60_000,
+  )
+  return Math.max(30, rawMinutes)
+}
+
 export interface DayViewPresentationProps {
   isLoading: boolean
   calendarEvents: TimeBlockEvent[]
   schedules: Schedule[]
   dndCallbacks?: CalendarDndCallbacks
+  onCreateTimeBlock: (input: {
+    taskId: string
+    startTime: string
+    endTime: string
+  }) => void
   /** Google OAuth consent URL, present when Google Calendar is not connected */
   gcalAuthUrl?: string
   queueSections: QueueSectionData[]
@@ -70,6 +90,7 @@ export function DayViewPresentation({
   calendarEvents,
   schedules,
   dndCallbacks,
+  onCreateTimeBlock,
   gcalAuthUrl,
   queueSections,
   dayQueueTasks,
@@ -88,10 +109,16 @@ export function DayViewPresentation({
 }: DayViewPresentationProps) {
   const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [pendingRange, setPendingRange] = useState<SelectedRange | null>(null)
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState<Schedule | undefined>(
     undefined,
   )
+
+  const openCreateModal = useCallback((range: SelectedRange | null) => {
+    setPendingRange(range)
+    setIsCreateModalOpen(true)
+  }, [])
   const taskListRef = useRef<HTMLDivElement>(null)
 
   const canAutoAssign = dayQueueTasks.some((t) => t.estimatedMinutes != null)
@@ -189,7 +216,7 @@ export function DayViewPresentation({
           variant="ghost"
           size="icon-xs"
           onClick={() => {
-            setIsCreateModalOpen(true)
+            openCreateModal(null)
           }}
           aria-label="New task"
         >
@@ -223,9 +250,21 @@ export function DayViewPresentation({
       />
 
       <CreateTaskModal
+        key={`task-modal-${pendingRange ? pendingRange.start.toISOString() : 'new'}`}
         open={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}
-        defaultStartDate={new Date().toISOString().slice(0, 10)}
+        defaultStartDate={formatLocalDate(pendingRange?.start ?? new Date())}
+        {...(pendingRange
+          ? { defaultEstimateMinutes: estimateMinutesForRange(pendingRange) }
+          : {})}
+        onCreated={(task) => {
+          if (!pendingRange) return
+          onCreateTimeBlock({
+            taskId: task.id,
+            startTime: pendingRange.start.toISOString(),
+            endTime: pendingRange.end.toISOString(),
+          })
+        }}
       />
 
       <div className="flex min-h-0 flex-1">
@@ -301,6 +340,7 @@ export function DayViewPresentation({
               selectedDate={selectedDate}
               onDateChange={onDateChange}
               onScheduleClick={handleScheduleClick}
+              onSelectRange={openCreateModal}
             />
           </div>
         </div>

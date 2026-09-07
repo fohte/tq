@@ -413,6 +413,7 @@ function DayView() {
       calendarEvents={calendarEvents}
       schedules={schedulesData ?? []}
       dndCallbacks={dndCallbacks}
+      onCreateTimeBlock={createTimeBlock.mutate}
       {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
         ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
         : {})}

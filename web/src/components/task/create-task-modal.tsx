@@ -19,6 +19,10 @@ import { useCreateTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
 
+function estimateInputFor(minutes: number | undefined): string {
+  return minutes != null ? formatMinutes(minutes) : ''
+}
+
 interface CreateTaskModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -26,6 +30,7 @@ interface CreateTaskModalProps {
   defaultDescription?: string
   defaultContext?: ContextValue
   defaultLabels?: string[]
+  defaultEstimateMinutes?: number
   projectId?: string
   /** When set, the created task becomes a child of this task. */
   parentId?: string
@@ -33,6 +38,7 @@ interface CreateTaskModalProps {
    * together with `parentTaskTitle` whenever `parentId` is set. */
   parentTaskNumber?: number
   parentTaskTitle?: string
+  onCreated?: (task: { id: string }) => void
 }
 
 export function CreateTaskModal({
@@ -42,10 +48,12 @@ export function CreateTaskModal({
   defaultDescription,
   defaultContext,
   defaultLabels,
+  defaultEstimateMinutes,
   projectId,
   parentId,
   parentTaskNumber,
   parentTaskTitle,
+  onCreated,
 }: CreateTaskModalProps) {
   const currentContext = useCurrentContext()
   const effectiveDefaultContext = defaultContext ?? currentContext
@@ -55,7 +63,9 @@ export function CreateTaskModal({
   const [editorKey, setEditorKey] = useState(0)
   const [startDate, setStartDate] = useState(defaultStartDate ?? '')
   const [dueDate, setDueDate] = useState('')
-  const [estimateInput, setEstimateInput] = useState('')
+  const [estimateInput, setEstimateInput] = useState(
+    estimateInputFor(defaultEstimateMinutes),
+  )
   const [context, setContext] = useState<ContextValue | ''>(
     effectiveDefaultContext,
   )
@@ -70,8 +80,15 @@ export function CreateTaskModal({
       setStartDate(defaultStartDate ?? '')
       setContext(effectiveDefaultContext)
       setLabels(defaultLabels ?? [])
+      setEstimateInput(estimateInputFor(defaultEstimateMinutes))
     }
-  }, [defaultStartDate, effectiveDefaultContext, defaultLabels, open])
+  }, [
+    defaultStartDate,
+    effectiveDefaultContext,
+    defaultLabels,
+    defaultEstimateMinutes,
+    open,
+  ])
 
   const parsedMinutes = parseDurationToMinutes(estimateInput)
 
@@ -81,11 +98,16 @@ export function CreateTaskModal({
     setEditorKey((k) => k + 1)
     setStartDate(defaultStartDate ?? '')
     setDueDate('')
-    setEstimateInput('')
+    setEstimateInput(estimateInputFor(defaultEstimateMinutes))
     setContext(effectiveDefaultContext)
     setCommitment('')
     setLabels(defaultLabels ?? [])
-  }, [defaultStartDate, effectiveDefaultContext, defaultLabels])
+  }, [
+    defaultStartDate,
+    effectiveDefaultContext,
+    defaultLabels,
+    defaultEstimateMinutes,
+  ])
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -115,9 +137,10 @@ export function CreateTaskModal({
     }
 
     createTask.mutate(input, {
-      onSuccess: () => {
+      onSuccess: (task) => {
         resetForm()
         onOpenChange(false)
+        onCreated?.(task)
       },
     })
   }
