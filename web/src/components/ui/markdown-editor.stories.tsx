@@ -578,8 +578,6 @@ export const SpaceAtListItemStartIndents: Story = {
     await userEvent.keyboard('{ArrowLeft} ')
 
     // Trim whitespace-only text nodes added by Crepe's list-item DOM wrappers.
-    // Retries: the sink applies after the selection change from ArrowLeft has
-    // reached ProseMirror, which can trail the synthetic event on a loaded CI runner.
     await waitFor(async () => {
       const nestedItem = assertDefined(
         canvasElement.querySelector('.milkdown .ProseMirror li li'),
@@ -636,9 +634,11 @@ export const BackspaceAtNestedListItemStartOutdents: Story = {
     await userEvent.tripleClick(nestedItem)
     await userEvent.keyboard('{ArrowLeft}{Backspace}')
 
-    await expect(
-      canvasElement.querySelector('.milkdown .ProseMirror li li'),
-    ).toBeNull()
+    await waitFor(async () => {
+      await expect(
+        canvasElement.querySelector('.milkdown .ProseMirror li li'),
+      ).toBeNull()
+    })
     await expect(canvas.findByText('Nested item')).resolves.toBeVisible()
   },
 }
@@ -660,10 +660,12 @@ export const BackspaceAtTopLevelListItemStartJoinsWithPreviousItem: Story = {
     await userEvent.keyboard('{ArrowLeft}{Backspace}')
 
     // joinBackward keeps both texts as separate paragraphs within one list item.
-    const topLevelItems = canvasElement.querySelectorAll(
-      '.milkdown .ProseMirror > ul > .milkdown-list-item-block',
-    )
-    await expect(topLevelItems).toHaveLength(1)
+    await waitFor(async () => {
+      const topLevelItems = canvasElement.querySelectorAll(
+        '.milkdown .ProseMirror > ul > .milkdown-list-item-block',
+      )
+      await expect(topLevelItems).toHaveLength(1)
+    })
     await expect(canvas.findByText('First item')).resolves.toBeVisible()
     await expect(canvas.findByText('Second item')).resolves.toBeVisible()
   },
