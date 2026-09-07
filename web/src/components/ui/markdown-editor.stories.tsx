@@ -562,9 +562,7 @@ export const ExternalUpdateInViewModeReplacesContent: Story = {
 const TWO_ITEM_LIST = '- First item\n- Second item'
 const NESTED_LIST = '- First item\n  - Nested item'
 
-// iOS has no Tab key, so Space at a list item's start is the only way to
-// indent a list from there (see list-indent-keymap.ts). Sinking the second
-// item nests it into a new list inside the first item.
+// Sinking the second item nests it into a new list inside the first item.
 export const SpaceAtListItemStartIndents: Story = {
   args: {
     defaultValue: TWO_ITEM_LIST,
@@ -579,10 +577,7 @@ export const SpaceAtListItemStartIndents: Story = {
     await userEvent.tripleClick(secondItem)
     await userEvent.keyboard('{ArrowLeft} ')
 
-    // Crepe's list-item node view wraps a paragraph's own text in several
-    // layers (bullet icon, label/children wrappers), so .textContent picks
-    // up their whitespace-only text nodes too — trimmed, only the real text
-    // remains.
+    // Trim whitespace-only text nodes added by Crepe's list-item DOM wrappers.
     const nestedItem = assertDefined(
       canvasElement.querySelector('.milkdown .ProseMirror li li'),
       'Space at a list item start sinks it into a nested list',
@@ -622,8 +617,7 @@ export const SpaceAtFirstListItemStartTypesSpace: Story = {
   },
 }
 
-// Counterpart to indenting: Backspace at a nested list item's start outdents
-// it back into the outer list, since iOS has no Shift-Tab either.
+// Backspace at a nested list item's start outdents it into the outer list.
 export const BackspaceAtNestedListItemStartOutdents: Story = {
   args: {
     defaultValue: NESTED_LIST,
@@ -645,9 +639,8 @@ export const BackspaceAtNestedListItemStartOutdents: Story = {
   },
 }
 
-// A top-level list item has no outer list to outdent into (liftListItem
-// would instead unwrap it out of the list entirely), so Backspace at its
-// start must keep the existing behavior of joining with the previous item.
+// A top-level item has no outer list to outdent into, so Backspace keeps
+// joining with the previous item instead.
 export const BackspaceAtTopLevelListItemStartJoinsWithPreviousItem: Story = {
   args: {
     defaultValue: TWO_ITEM_LIST,
@@ -662,10 +655,7 @@ export const BackspaceAtTopLevelListItemStartJoinsWithPreviousItem: Story = {
     await userEvent.tripleClick(secondItem)
     await userEvent.keyboard('{ArrowLeft}{Backspace}')
 
-    // joinBackward merges the second item into the first as an additional
-    // paragraph within the same list item, rather than concatenating their
-    // text into one paragraph — so this checks for a single remaining
-    // top-level item that still contains both texts.
+    // joinBackward keeps both texts as separate paragraphs within one list item.
     const topLevelItems = canvasElement.querySelectorAll(
       '.milkdown .ProseMirror > ul > .milkdown-list-item-block',
     )

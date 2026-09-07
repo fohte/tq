@@ -21,14 +21,6 @@ const schema = new Schema({
 })
 const listItemType = schema.nodes['list_item']
 
-// doc
-//   paragraph "solo"
-//   bullet_list
-//     list_item
-//       paragraph "top"
-//       bullet_list
-//         list_item
-//           paragraph "nested"
 const doc = schema.node('doc', null, [
   schema.node('paragraph', null, [schema.text('solo')]),
   schema.node('bullet_list', null, [

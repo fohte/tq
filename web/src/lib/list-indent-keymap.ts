@@ -9,9 +9,6 @@ import type { NodeType } from '@milkdown/kit/prose/model'
 import type { Command, EditorState } from '@milkdown/kit/prose/state'
 import { $useKeymap } from '@milkdown/kit/utils'
 
-// True when the cursor sits collapsed at the very start of a list item's
-// content, e.g. `state.selection.$from.node(-1)` is that item's node — the
-// only position "行頭で Space/Backspace" makes sense from.
 export function isAtListItemStart(
   state: EditorState,
   listItemType: NodeType,
@@ -26,13 +23,8 @@ export function isAtListItemStart(
   )
 }
 
-// True when the list item is nested inside another list item, i.e. its own
-// list (bullet/ordered) sits 2 levels above the item inside a parent list
-// item's content. `liftListItem` (used by both LiftListItem/Shift-Tab and
-// the outdent-on-Backspace binding below) only outdents in this case; on a
-// top-level item it instead unwraps the item out of its list entirely,
-// which Backspace must not trigger (it keeps joining with the previous
-// item, see liftFirstListItemCommand in @milkdown/preset-commonmark).
+// In ProseMirror list structures, a nested item's enclosing list sits inside
+// an ancestor list item at depth -3.
 export function isNestedListItem(
   state: EditorState,
   listItemType: NodeType,
@@ -60,12 +52,8 @@ function outdentNestedListItem(ctx: Ctx): Command {
   }
 }
 
-// iOS's software keyboard has no Tab key, so Tab/Mod-]'s sink and
-// Shift-Tab/Mod-['s lift (see listItemKeymap in @milkdown/preset-commonmark)
-// are unreachable there. This adds a Space/Backspace-based alternative that
-// only fires at a list item's start, leaving Space's normal character entry
-// (and the Markdown input rules that key off it, e.g. "- ") untouched
-// everywhere else.
+// Binds Space to indent and Backspace to outdent at list item starts
+// for environments without a Tab key.
 export const listIndentKeymap = $useKeymap('listIndent', {
   IndentListItem: {
     shortcuts: 'Space',
@@ -73,10 +61,7 @@ export const listIndentKeymap = $useKeymap('listIndent', {
   },
   OutdentNestedListItem: {
     shortcuts: 'Backspace',
-    // Above the default 50 so this is tried before listItemKeymap's
-    // Backspace -> liftFirstListItem (joins with the previous item): a
-    // nested item should outdent instead, falling through to the default
-    // join when the item isn't nested.
+    // Runs before Milkdown's default Backspace keymap (priority 50).
     priority: 60,
     command: outdentNestedListItem,
   },
