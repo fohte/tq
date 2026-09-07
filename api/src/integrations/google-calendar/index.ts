@@ -10,5 +10,6 @@ export {
 export {
   ensureDefaultCalendarSubscription,
   listCalendarsWithSubscriptionState,
+  setCalendarContext,
   setCalendarSubscription,
 } from '#integrations/google-calendar/subscriptions'

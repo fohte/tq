@@ -21,6 +21,7 @@ const sampleCalendars: GcalCalendar[] = [
     color: '#D50000',
     primary: true,
     subscribed: true,
+    context: null,
   },
   {
     id: 'work-calendar-id',
@@ -28,6 +29,7 @@ const sampleCalendars: GcalCalendar[] = [
     color: '#039BE5',
     primary: false,
     subscribed: false,
+    context: null,
   },
 ]
 

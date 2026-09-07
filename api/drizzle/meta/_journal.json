@@ -253,6 +253,13 @@
       "when": 1788370176188,
       "tag": "0035_generalize_task_queues",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1788785040774,
+      "tag": "0036_add_calendar_subscriptions_context",
+      "breakpoints": true
     }
   ]
 }

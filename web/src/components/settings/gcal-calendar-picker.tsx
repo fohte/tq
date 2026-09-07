@@ -6,6 +6,7 @@ import type { IntegrationAccountView } from '#components/settings/integration-ca
 import { QueryStateMessage } from '#components/settings/query-state-message'
 import {
   useGcalCalendarsList,
+  useUpdateCalendarContext,
   useUpdateCalendarSubscription,
 } from '#hooks/use-gcal-calendars'
 import { cn } from '#lib/utils'
@@ -19,6 +20,7 @@ export function GcalCalendarPicker({ account }: GcalCalendarPickerProps) {
 
   const calendarsQuery = useGcalCalendarsList(account.id, open)
   const updateSubscription = useUpdateCalendarSubscription(account.id)
+  const updateContext = useUpdateCalendarContext(account.id)
 
   return (
     <div className="pb-2">
@@ -45,9 +47,17 @@ export function GcalCalendarPicker({ account }: GcalCalendarPickerProps) {
             onToggle={(calendarId, subscribed) => {
               updateSubscription.mutate({ calendarId, subscribed })
             }}
+            onContextChange={(calendarId, context) => {
+              updateContext.mutate({ calendarId, context })
+            }}
             updatingCalendarId={
               updateSubscription.isPending
                 ? updateSubscription.variables.calendarId
+                : null
+            }
+            updatingContextCalendarId={
+              updateContext.isPending
+                ? updateContext.variables.calendarId
                 : null
             }
           />
@@ -59,9 +69,9 @@ export function GcalCalendarPicker({ account }: GcalCalendarPickerProps) {
           />
         ))}
 
-      {updateSubscription.isError && (
+      {(updateSubscription.isError || updateContext.isError) && (
         <p className="py-1.5 text-xs text-destructive">
-          {updateSubscription.error.message}
+          {(updateSubscription.error ?? updateContext.error)?.message}
         </p>
       )}
     </div>

@@ -11,6 +11,7 @@ import {
   googleCalendarProvider,
   listCalendarsWithSubscriptionState,
   partitionAccountEvents,
+  setCalendarContext,
   setCalendarSubscription,
 } from '#integrations/google-calendar/index'
 import { ensureValidAccessToken, getAccountToken } from '#integrations/oauth'
@@ -18,6 +19,7 @@ import {
   callbackQuerySchema,
   handleOAuthCallbackRoute,
 } from '#routes/integration-handlers'
+import { contextEnum } from '#schemas/task'
 
 const eventsQuerySchema = z.object({
   timeMin: z.iso.datetime(),
@@ -26,6 +28,10 @@ const eventsQuerySchema = z.object({
 
 const calendarSubscriptionBodySchema = z.object({
   subscribed: z.boolean(),
+})
+
+const calendarContextBodySchema = z.object({
+  context: contextEnum.nullable(),
 })
 
 // Shared by the two /accounts/:accountId/calendars* routes below: resolves
@@ -173,5 +179,32 @@ export const calendarApp = new Hono()
             { accountId, calendarId },
           ),
       )
+    },
+  )
+  .put(
+    '/accounts/:accountId/calendars/:calendarId/context',
+    zValidator('json', calendarContextBodySchema),
+    async (c) => {
+      const accountId = c.req.param('accountId')
+      const calendarId = c.req.param('calendarId')
+      const { context } = c.req.valid('json')
+
+      const token = await resolveGoogleAccountToken(accountId)
+      if (token == null) {
+        return c.json({ error: 'Not found' }, 404)
+      }
+
+      const update = await setCalendarContext(
+        token.id,
+        calendarId,
+        context,
+      ).match(
+        (result) => result,
+        () => null,
+      )
+
+      return update == null
+        ? c.json({ error: 'Not found' }, 404)
+        : c.json(update, 200)
     },
   )

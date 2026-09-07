@@ -60,6 +60,7 @@ export function ensureDefaultCalendarSubscription(
 
 interface CalendarWithSubscriptionState extends CalendarListEntry {
   subscribed: boolean
+  context: 'work' | 'personal' | null
 }
 
 export function listCalendarsWithSubscriptionState(
@@ -70,13 +71,20 @@ export function listCalendarsWithSubscriptionState(
     .list(accessToken)
     .andThen((calendars) =>
       listSubscribedCalendars(oauthTokenId).map((subscriptions) => {
-        const subscribedIds = new Set(
-          subscriptions.map((subscription) => subscription.calendarId),
+        const subscriptionByCalendarId = new Map(
+          subscriptions.map((subscription) => [
+            subscription.calendarId,
+            subscription,
+          ]),
         )
-        return calendars.map((calendar) => ({
-          ...calendar,
-          subscribed: subscribedIds.has(calendar.id),
-        }))
+        return calendars.map((calendar) => {
+          const subscription = subscriptionByCalendarId.get(calendar.id)
+          return {
+            ...calendar,
+            subscribed: subscription != null,
+            context: subscription?.context ?? null,
+          }
+        })
       }),
     )
 }
@@ -140,4 +148,31 @@ export function setCalendarSubscription(
           }),
       ).map(() => ({ calendarId: entry.id, subscribed: true }))
     })
+}
+
+interface CalendarContextUpdate {
+  calendarId: string
+  context: 'work' | 'personal' | null
+}
+
+// Unlike setCalendarSubscription, this never calls the live calendarList: a
+// context only makes sense for an already-subscribed calendar, so it's a
+// plain update against the existing row rather than a Google API round trip.
+export function setCalendarContext(
+  oauthTokenId: string,
+  calendarId: string,
+  context: 'work' | 'personal' | null,
+): ResultAsync<CalendarContextUpdate | null, never> {
+  return ResultAsync.fromSafePromise(
+    db
+      .update(calendarSubscriptions)
+      .set({ context, updatedAt: new Date() })
+      .where(
+        and(
+          eq(calendarSubscriptions.oauthTokenId, oauthTokenId),
+          eq(calendarSubscriptions.calendarId, calendarId),
+        ),
+      )
+      .returning({ calendarId: calendarSubscriptions.calendarId }),
+  ).map((rows) => (rows.length === 0 ? null : { calendarId, context }))
 }
