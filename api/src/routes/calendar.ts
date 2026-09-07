@@ -24,6 +24,7 @@ import { contextEnum } from '#schemas/task'
 const eventsQuerySchema = z.object({
   timeMin: z.iso.datetime(),
   timeMax: z.iso.datetime(),
+  context: contextEnum.optional(),
 })
 
 const calendarSubscriptionBodySchema = z.object({
@@ -68,9 +69,9 @@ function calendarsErrorResponse(
 // client), and the /accounts/:accountId/calendars* endpoints.
 export const calendarApp = new Hono()
   .get('/events', zValidator('query', eventsQuerySchema), async (c) => {
-    const { timeMin, timeMax } = c.req.valid('query')
+    const { timeMin, timeMax, context } = c.req.valid('query')
 
-    const accounts = await getEvents(timeMin, timeMax)
+    const accounts = await getEvents(timeMin, timeMax, context)
 
     if (accounts.length === 0) {
       return c.json({ error: new OAuthTokenMissingError().message }, 401)

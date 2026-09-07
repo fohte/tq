@@ -27,6 +27,7 @@ import { taskMentionProvider } from '#lib/inline-reference/providers/task-mentio
 import { taskMentionAutocompletePlugin } from '#lib/inline-reference/providers/task-mention-autocomplete-plugin'
 import { taskUrlProvider } from '#lib/inline-reference/providers/task-url'
 import { createInlineReferenceViewModeStore } from '#lib/inline-reference/view-mode'
+import { listIndentKeymap } from '#lib/list-indent-keymap'
 
 export interface CrepeEditorProps {
   defaultValue?: string
@@ -144,6 +145,7 @@ function CrepeEditor({
         ),
       )
       .use(createImageSourceRevealPlugin(widgetViewFactory, viewModeStore))
+      .use(listIndentKeymap)
 
     if (onChange) {
       crepe.on((listener) => {

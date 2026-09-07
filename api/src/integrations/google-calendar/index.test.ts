@@ -1123,6 +1123,252 @@ describe('getEvents', () => {
     ])
   })
 
+  it('excludes events from calendars whose context does not match the given context, but keeps a calendar with no context set', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const token = await selectTokenByAccountId('google-sub-1')
+    await db.insert(calendarSubscriptions).values([
+      {
+        oauthTokenId: token.id,
+        calendarId: 'work@example.com',
+        displayName: 'Work',
+        context: 'work',
+      },
+      {
+        oauthTokenId: token.id,
+        calendarId: 'personal@example.com',
+        displayName: 'Personal',
+        context: 'personal',
+      },
+    ])
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = requestUrl(input)
+      if (url.includes('/calendars/user%40example.com/events')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 'event-default',
+                  summary: 'Default calendar event',
+                  start: { dateTime: '2026-03-22T09:00:00Z' },
+                  end: { dateTime: '2026-03-22T09:30:00Z' },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        )
+      }
+      if (url.includes('/calendars/work%40example.com/events')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 'event-work',
+                  summary: 'Work event',
+                  start: { dateTime: '2026-03-22T10:00:00Z' },
+                  end: { dateTime: '2026-03-22T10:30:00Z' },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        )
+      }
+      throw new Error(`unexpected fetch in test: url=${url}`)
+    })
+
+    const results = await getEvents(
+      '2026-03-22T00:00:00Z',
+      '2026-03-23T00:00:00Z',
+      'work',
+    )
+
+    expect(normalizeAccountResults(results)).toEqual([
+      {
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        ok: true,
+        value: [
+          {
+            id: 'event-default',
+            summary: 'Default calendar event',
+            startTime: '2026-03-22T09:00:00Z',
+            endTime: '2026-03-22T09:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'user@example.com',
+            calendarDisplayName: null,
+            calendarColor: null,
+            responseStatus: 'accepted',
+          },
+          {
+            id: 'event-work',
+            summary: 'Work event',
+            startTime: '2026-03-22T10:00:00Z',
+            endTime: '2026-03-22T10:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'work@example.com',
+            calendarDisplayName: 'Work',
+            calendarColor: null,
+            responseStatus: 'accepted',
+          },
+        ],
+      },
+    ])
+  })
+
+  it("returns events from every subscribed calendar when no context is given, regardless of each one's context tag", async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    const token = await selectTokenByAccountId('google-sub-1')
+    await db.insert(calendarSubscriptions).values([
+      {
+        oauthTokenId: token.id,
+        calendarId: 'work@example.com',
+        displayName: 'Work',
+        context: 'work',
+      },
+      {
+        oauthTokenId: token.id,
+        calendarId: 'personal@example.com',
+        displayName: 'Personal',
+        context: 'personal',
+      },
+    ])
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = requestUrl(input)
+      if (url.includes('/calendars/user%40example.com/events')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 'event-default',
+                  summary: 'Default calendar event',
+                  start: { dateTime: '2026-03-22T09:00:00Z' },
+                  end: { dateTime: '2026-03-22T09:30:00Z' },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        )
+      }
+      if (url.includes('/calendars/work%40example.com/events')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 'event-work',
+                  summary: 'Work event',
+                  start: { dateTime: '2026-03-22T10:00:00Z' },
+                  end: { dateTime: '2026-03-22T10:30:00Z' },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        )
+      }
+      if (url.includes('/calendars/personal%40example.com/events')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 'event-personal',
+                  summary: 'Personal event',
+                  start: { dateTime: '2026-03-22T11:00:00Z' },
+                  end: { dateTime: '2026-03-22T11:30:00Z' },
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        )
+      }
+      throw new Error(`unexpected fetch in test: url=${url}`)
+    })
+
+    const results = await getEvents(
+      '2026-03-22T00:00:00Z',
+      '2026-03-23T00:00:00Z',
+    )
+
+    expect(normalizeAccountResults(results)).toEqual([
+      {
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        ok: true,
+        value: [
+          {
+            id: 'event-default',
+            summary: 'Default calendar event',
+            startTime: '2026-03-22T09:00:00Z',
+            endTime: '2026-03-22T09:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'user@example.com',
+            calendarDisplayName: null,
+            calendarColor: null,
+            responseStatus: 'accepted',
+          },
+          {
+            id: 'event-personal',
+            summary: 'Personal event',
+            startTime: '2026-03-22T11:00:00Z',
+            endTime: '2026-03-22T11:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'personal@example.com',
+            calendarDisplayName: 'Personal',
+            calendarColor: null,
+            responseStatus: 'accepted',
+          },
+          {
+            id: 'event-work',
+            summary: 'Work event',
+            startTime: '2026-03-22T10:00:00Z',
+            endTime: '2026-03-22T10:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'work@example.com',
+            calendarDisplayName: 'Work',
+            calendarColor: null,
+            responseStatus: 'accepted',
+          },
+        ],
+      },
+    ])
+  })
+
   it("uses the self attendee's responseStatus for the event", async () => {
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',

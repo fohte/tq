@@ -630,6 +630,114 @@ export const ExternalUpdateInViewModeReplacesContent: Story = {
   },
 }
 
+const TWO_ITEM_LIST = '- First item\n- Second item'
+const NESTED_LIST = '- First item\n  - Nested item'
+
+// Sinking the second item nests it into a new list inside the first item.
+export const SpaceAtListItemStartIndents: Story = {
+  args: {
+    defaultValue: TWO_ITEM_LIST,
+    viewEditToggle: {},
+  },
+  parameters: {
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const secondItem = await canvas.findByText('Second item')
+    await userEvent.tripleClick(secondItem)
+    await userEvent.keyboard('{ArrowLeft} ')
+
+    // Trim whitespace-only text nodes added by Crepe's list-item DOM wrappers.
+    await waitFor(async () => {
+      const nestedItem = assertDefined(
+        canvasElement.querySelector('.milkdown .ProseMirror li li'),
+        'Space at a list item start sinks it into a nested list',
+      )
+      await expect(nestedItem.textContent.trim()).toBe('Second item')
+    })
+  },
+}
+
+// The first item in a list has no previous sibling to nest under, so
+// sinkListItem can't indent it — Space must fall through to a normal space
+// character instead of being swallowed.
+export const SpaceAtFirstListItemStartTypesSpace: Story = {
+  args: {
+    defaultValue: TWO_ITEM_LIST,
+    viewEditToggle: {},
+  },
+  parameters: {
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const firstItem = await canvas.findByText('First item')
+    await userEvent.tripleClick(firstItem)
+    await userEvent.keyboard('{ArrowLeft} ')
+
+    // The accessible-text query (canvas.findByText) normalizes away the
+    // leading space this asserts on, so this reads the paragraph's raw text
+    // directly instead.
+    const firstParagraph = assertDefined(
+      canvasElement.querySelector('.milkdown .ProseMirror p'),
+      'the list always renders its first item as a paragraph',
+    )
+    await expect(firstParagraph.textContent).toBe(' First item')
+    await expect(
+      canvasElement.querySelector('.milkdown .ProseMirror li li'),
+    ).toBeNull()
+  },
+}
+
+// Backspace at a nested list item's start outdents it into the outer list.
+export const BackspaceAtNestedListItemStartOutdents: Story = {
+  args: {
+    defaultValue: NESTED_LIST,
+    viewEditToggle: {},
+  },
+  parameters: {
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const nestedItem = await canvas.findByText('Nested item')
+    await userEvent.tripleClick(nestedItem)
+    await userEvent.keyboard('{ArrowLeft}{Backspace}')
+
+    await waitFor(async () => {
+      await expect(
+        canvasElement.querySelector('.milkdown .ProseMirror li li'),
+      ).toBeNull()
+    })
+    await expect(canvas.findByText('Nested item')).resolves.toBeVisible()
+  },
+}
+
+// A top-level item has no outer list to outdent into, so Backspace keeps
+// joining with the previous item instead.
+export const BackspaceAtTopLevelListItemStartJoinsWithPreviousItem: Story = {
+  args: {
+    defaultValue: TWO_ITEM_LIST,
+    viewEditToggle: {},
+  },
+  parameters: {
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const secondItem = await canvas.findByText('Second item')
+    await userEvent.tripleClick(secondItem)
+    await userEvent.keyboard('{ArrowLeft}{Backspace}')
+
+    // joinBackward keeps both texts as separate paragraphs within one list item.
+    await waitFor(async () => {
+      const topLevelItems = canvasElement.querySelectorAll(
+        '.milkdown .ProseMirror > ul > .milkdown-list-item-block',
+      )
+      await expect(topLevelItems).toHaveLength(1)
+    })
+    await expect(canvas.findByText('First item')).resolves.toBeVisible()
+    await expect(canvas.findByText('Second item')).resolves.toBeVisible()
+  },
+}
+
 // Regression check for the other half of that same effect: a prop change
 // that arrives while the user is mid-edit must not clobber their typing —
 // the effect is gated to view mode for exactly this reason.

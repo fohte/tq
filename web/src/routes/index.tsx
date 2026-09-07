@@ -105,7 +105,7 @@ function DayView() {
   const context = useCurrentContext()
   const queryClient = useQueryClient()
 
-  const gcalEventsQuery = useGcalEvents(selectedDateStr)
+  const gcalEventsQuery = useGcalEvents(selectedDateStr, context)
   const schedulingSettings = useSchedulingSettings()
   const gcalAuthRequired =
     gcalEventsQuery.error instanceof GcalAuthRequiredError
@@ -227,8 +227,8 @@ function DayView() {
 
   const gcalEvents: TimeBlockEvent[] = useMemo(() => {
     if (!gcalEventsQuery.data) return []
-    // Google Calendar has no work/personal context, so these are never
-    // redacted by the context filter.
+    // Already filtered to the current context server-side (the `context`
+    // query param on GET /calendar/events), so never redacted client-side.
     return gcalEventsQuery.data.map((event) => ({
       id: `gcal-${event.id}`,
       title: event.summary,

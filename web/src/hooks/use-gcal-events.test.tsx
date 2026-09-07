@@ -77,7 +77,7 @@ describe('useGcalEvents', () => {
       json: () => Promise.resolve([sampleEvent]),
     })
 
-    const { result } = renderHook(() => useGcalEvents('2026-07-07'), {
+    const { result } = renderHook(() => useGcalEvents('2026-07-07', 'work'), {
       wrapper,
     })
 
@@ -95,7 +95,7 @@ describe('useGcalEvents', () => {
       json: () => Promise.resolve([sampleEvent]),
     })
 
-    const { result } = renderHook(() => useGcalEvents('2026-07-07'), {
+    const { result } = renderHook(() => useGcalEvents('2026-07-07', 'work'), {
       wrapper,
     })
 
@@ -103,7 +103,36 @@ describe('useGcalEvents', () => {
       expect(result.current.isSuccess).toBe(true)
     })
     expect(assertDefined(mocks['mockEventsGet']).mock.calls).toEqual([
-      [{ query: { ...getDayIsoRange('2026-07-07') } }],
+      [{ query: { ...getDayIsoRange('2026-07-07'), context: 'work' } }],
+    ])
+  })
+
+  it('refetches with the new context when the context changes', async () => {
+    const mocks = await getMocks()
+    assertDefined(mocks['mockEventsGet']).mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: () => Promise.resolve([sampleEvent]),
+    })
+
+    const { rerender } = renderHook(
+      ({ context }: { context: 'work' | 'personal' }) =>
+        useGcalEvents('2026-07-07', context),
+      { wrapper, initialProps: { context: 'work' } },
+    )
+
+    await waitFor(() => {
+      expect(assertDefined(mocks['mockEventsGet']).mock.calls.length).toBe(1)
+    })
+
+    rerender({ context: 'personal' })
+
+    await waitFor(() => {
+      expect(assertDefined(mocks['mockEventsGet']).mock.calls.length).toBe(2)
+    })
+    expect(assertDefined(mocks['mockEventsGet']).mock.calls).toEqual([
+      [{ query: { ...getDayIsoRange('2026-07-07'), context: 'work' } }],
+      [{ query: { ...getDayIsoRange('2026-07-07'), context: 'personal' } }],
     ])
   })
 
@@ -115,7 +144,7 @@ describe('useGcalEvents', () => {
       json: () => Promise.resolve({ error: 'No OAuth token found' }),
     })
 
-    const { result } = renderHook(() => useGcalEvents('2026-07-07'), {
+    const { result } = renderHook(() => useGcalEvents('2026-07-07', 'work'), {
       wrapper,
     })
 
@@ -135,7 +164,7 @@ describe('useGcalEvents', () => {
         json: () => Promise.resolve([sampleEvent]),
       })
 
-      renderHook(() => useGcalEvents('2026-07-07'), { wrapper })
+      renderHook(() => useGcalEvents('2026-07-07', 'work'), { wrapper })
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0)
