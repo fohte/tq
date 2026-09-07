@@ -1,13 +1,15 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { formatLocalDate } from '#lib/date-range'
 import { extractShorthandTokens } from '#lib/task-shorthand'
 
-function tomorrow(): string {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  return formatLocalDate(d)
-}
+beforeEach(() => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date(2026, 0, 1, 12, 0, 0))
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 describe('extractShorthandTokens', () => {
   it('leaves plain text untouched', () => {
@@ -49,10 +51,9 @@ describe('extractShorthandTokens', () => {
   })
 
   it('parses dueDate with @today', () => {
-    const today = formatLocalDate(new Date())
     expect(extractShorthandTokens('Task @today ')).toEqual({
       title: 'Task ',
-      dueDate: today,
+      dueDate: '2026-01-01',
       labels: [],
     })
   })
@@ -60,7 +61,7 @@ describe('extractShorthandTokens', () => {
   it('parses dueDate with @tomorrow', () => {
     expect(extractShorthandTokens('Task @tomorrow ')).toEqual({
       title: 'Task ',
-      dueDate: tomorrow(),
+      dueDate: '2026-01-02',
       labels: [],
     })
   })
@@ -74,10 +75,9 @@ describe('extractShorthandTokens', () => {
   })
 
   it('parses startDate with >today', () => {
-    const today = formatLocalDate(new Date())
     expect(extractShorthandTokens('Task >today ')).toEqual({
       title: 'Task ',
-      startDate: today,
+      startDate: '2026-01-01',
       labels: [],
     })
   })
@@ -127,7 +127,6 @@ describe('extractShorthandTokens', () => {
   })
 
   it('parses a complex input with all fields at once', () => {
-    const today = formatLocalDate(new Date())
     expect(
       extractShorthandTokens(
         'Buy groceries @30m @tomorrow #food %personal >today ',
@@ -135,8 +134,8 @@ describe('extractShorthandTokens', () => {
     ).toEqual({
       title: 'Buy groceries ',
       estimateInput: '30m',
-      dueDate: tomorrow(),
-      startDate: today,
+      dueDate: '2026-01-02',
+      startDate: '2026-01-01',
       context: 'personal',
       labels: ['food'],
     })

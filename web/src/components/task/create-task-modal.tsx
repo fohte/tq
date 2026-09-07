@@ -98,6 +98,10 @@ export function CreateTaskModal({
     [onOpenChange, resetForm],
   )
 
+  // Stripping a consumed token resets the input's caret to the end of the
+  // (now shorter) title, since the value change isn't a plain append. Fine
+  // for the common case of appending a shorthand token while typing; jarring
+  // if a token is completed with the caret positioned mid-title.
   const handleTitleChange = (value: string) => {
     const parsed = extractShorthandTokens(value)
     setTitle(parsed.title)

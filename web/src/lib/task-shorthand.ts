@@ -1,21 +1,21 @@
+import {
+  type ContextValue,
+  contextValues,
+} from '#components/task/create-task-modal-fields'
 import { formatLocalDate } from '#lib/date-range'
 import { parseDurationToMinutes } from '#lib/parse-duration'
-
-export type ShorthandContext = 'work' | 'personal'
 
 export interface ShorthandExtraction {
   title: string
   startDate?: string
   dueDate?: string
   estimateInput?: string
-  context?: ShorthandContext
+  context?: ContextValue
   labels: string[]
 }
 
-const CONTEXT_VALUES: readonly ShorthandContext[] = ['work', 'personal']
-
-function isContextValue(value: string): value is ShorthandContext {
-  return (CONTEXT_VALUES as readonly string[]).includes(value)
+function isContextValue(value: string): value is ContextValue {
+  return (contextValues as readonly string[]).includes(value) && value !== ''
 }
 
 function resolveDateKeyword(keyword: string): string | null {
@@ -43,9 +43,7 @@ function resolveDateKeyword(keyword: string): string | null {
  *
  * A token counts as "completed" only once it's followed by whitespace, so
  * the word currently being typed is never touched. Unrecognized tokens are
- * left in the title untouched. Returns the input unchanged (aside from the
- * `labels` default) when no token was completed, so callers can skip a
- * state update.
+ * left in the title untouched.
  */
 export function extractShorthandTokens(input: string): ShorthandExtraction {
   const endsWithSpace = /\s$/.test(input)
