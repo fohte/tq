@@ -61,9 +61,8 @@ function CrepeEditor({
       ...(placeholder != null ? { placeholder } : {}),
       featureConfigs: {
         [Crepe.Feature.BlockEdit]: {
-          // Default offset (16) plus the handle's own width pushes it past
-          // `.ProseMirror`'s left padding and off the card; 0 keeps it
-          // flush against the block within the existing padding.
+          // Keeps the handle flush against the block, within the left
+          // padding markdown-editor.css reserves for it.
           blockHandle: { getOffset: () => 0 },
         },
         [Crepe.Feature.ImageBlock]: {

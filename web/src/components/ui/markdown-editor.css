@@ -29,10 +29,9 @@
 }
 
 .milkdown-wrapper .milkdown .ProseMirror {
-  /* Clips wide tables/code blocks to the editor width. The block handle
-     (BlockProvider, see markdown-editor-crepe.tsx) renders as a sibling of
-     `.ProseMirror`, not a descendant, so scoping this here (rather than on
-     `.milkdown-wrapper`) exempts the handle from being clipped. */
+  /* Clips wide content (tables, code blocks) without clipping the block
+     handle, which renders as a `.ProseMirror` sibling — see the handle rules
+     below. */
   overflow: hidden;
   padding: 0.5rem;
   min-height: inherit;
@@ -41,6 +40,17 @@
      below, so heading sizes stay proportional if this ever changes. */
   font-size: 0.875rem;
   line-height: 2;
+}
+
+/* Reserves room for the block handle (see the handle rules below) on the
+   left, sized so the handle sits fully inside `.milkdown`'s own box
+   regardless of how much padding each `MarkdownEditor` caller's own wrapper
+   happens to add — task-pages-section.tsx wraps it in a bare, unpadded
+   `<div>`. Scoped to non-view mode: the handle only ever shows there (see
+   its own view-mode rule below), so view mode keeps the original narrower
+   padding and its text width is unaffected by this change. */
+.milkdown-wrapper:not([data-view-mode='view']) .milkdown .ProseMirror {
+  padding-left: 1.5rem;
 }
 
 /* Headings */
@@ -215,10 +225,7 @@
   margin: 0.25rem 0;
 }
 
-/* `#` mention autocomplete popup, positioned by SlashProvider via floating-ui.
-   Rendered at document.body with `position: fixed` (see the `root` /
-   `floatingUIOptions.strategy` passed to SlashProvider) so it isn't clipped
-   by `.ProseMirror`'s `overflow: hidden`. */
+/* Positioned by SlashProvider (floating-ui) via transform. */
 .task-mention-autocomplete {
   position: fixed;
   top: 0;
@@ -237,19 +244,15 @@
   display: none;
 }
 
-/* Shrink the handle so it fits the 24px of padding already left of the
-   block (card's `p-4` + `.ProseMirror`'s own padding, see
-   task-main-content.tsx) without narrowing the body text. */
+/* Shrinks the handle to match the left padding reserved for it above. */
 .milkdown-wrapper .milkdown .milkdown-block-handle .operation-item {
   width: 24px;
   height: 24px;
   padding: 0;
 }
 
-/* Hides the leading `+` button: it only inserts a paragraph below and opens
-   the slash menu, equivalent to typing `/` on a new empty line. Keeping it
-   would need extra width the block has no padding left to spend, since the
-   remaining drag handle already fills the available space above. */
+/* Hides the leading `+` button (redundant with typing `/` on a new empty
+   line), keeping only the drag handle. */
 .milkdown-wrapper .milkdown .milkdown-block-handle .operation-item:first-child {
   display: none;
 }
