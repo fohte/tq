@@ -209,8 +209,7 @@
   opacity: 0.5;
 }
 
-.tq-month-event[data-response-status='needsAction'],
-.tq-month-event[data-response-status='tentative'] {
+.tq-month-event[data-pending-response='true'] {
   opacity: 0.5;
 }
 

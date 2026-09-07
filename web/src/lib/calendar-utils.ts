@@ -22,3 +22,12 @@ export function getEventProps(event: EventApi): CalendarEventProps {
 
   return event.extendedProps
 }
+
+/** Shared by EventBlock (day/week) and the month-view pill, so they can't drift on which statuses render dimmed. */
+export function isPendingGcalResponse(props: CalendarEventProps): boolean {
+  return (
+    props.type === 'gcal' &&
+    (props.responseStatus === 'needsAction' ||
+      props.responseStatus === 'tentative')
+  )
+}

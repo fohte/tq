@@ -17,7 +17,7 @@ import {
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { EventBlock } from '#components/calendar/event-block'
 import { useIsDesktop } from '#hooks/use-is-desktop'
-import { getEventProps } from '#lib/calendar-utils'
+import { getEventProps, isPendingGcalResponse } from '#lib/calendar-utils'
 
 export interface CalendarDndCallbacks {
   onEventDrop?: (info: {
@@ -233,17 +233,17 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           eventContent={(arg) => {
             // In month view, render compact event pill with title
             if (arg.view.type === 'dayGridMonth') {
-              const { type, redacted, responseStatus } = getEventProps(
-                arg.event,
-              )
+              const eventProps = getEventProps(arg.event)
               return (
                 <div
                   className="tq-month-event"
-                  data-event-type={type}
-                  data-response-status={responseStatus}
+                  data-event-type={eventProps.type}
+                  data-pending-response={isPendingGcalResponse(eventProps)}
                 >
                   <span className="tq-month-event-title">
-                    {redacted === true ? '予定あり' : arg.event.title}
+                    {eventProps.redacted === true
+                      ? '予定あり'
+                      : arg.event.title}
                   </span>
                 </div>
               )

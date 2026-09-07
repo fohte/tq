@@ -1,7 +1,7 @@
 import type { EventContentArg } from '@fullcalendar/core'
 
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
-import { getEventProps } from '#lib/calendar-utils'
+import { getEventProps, isPendingGcalResponse } from '#lib/calendar-utils'
 import { cn } from '#lib/utils'
 
 type EventKind = 'manual' | 'auto' | 'gcal' | 'completed' | 'schedule'
@@ -33,10 +33,7 @@ export function EventBlock(arg: EventContentArg) {
 
   const isShort = arg.isStart && (event.allDay || isShortEvent(event))
   const isCompleted = type === 'completed'
-  const isPendingResponse =
-    type === 'gcal' &&
-    (props.responseStatus === 'needsAction' ||
-      props.responseStatus === 'tentative')
+  const isPendingResponse = isPendingGcalResponse(props)
 
   const timeDetails = (
     <span className="inline-flex items-center gap-x-1">
