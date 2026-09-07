@@ -130,11 +130,8 @@ export interface ExternalEvent {
   calendarColor: string | null
   responseStatus: CalendarResponseStatus
   /**
-   * True when this event's calendar context doesn't match the requested
-   * context. `summary`/`calendarDisplayName`/`calendarColor` are blanked out
-   * server-side in that case rather than filtering the event out entirely,
-   * since its busy time is still real regardless of context — see
-   * getSubscribedCalendarEvents in integrations/google-calendar/events.ts.
+   * True when `summary`/`calendarDisplayName`/`calendarColor` are masked
+   * because this event's calendar context doesn't match the requested one.
    */
   redacted: boolean
 }

@@ -160,9 +160,6 @@ export const GoogleCalendarTentative: Story = {
   },
 }
 
-// A Google Calendar event masked because its calendar's context doesn't
-// match the current context. Server sends no title, so it renders the same
-// generic "予定あり" block as a redacted task/schedule.
 export const GoogleCalendarRedacted: Story = {
   args: {
     type: 'gcal',

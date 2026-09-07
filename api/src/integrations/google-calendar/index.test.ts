@@ -1130,7 +1130,7 @@ describe('getEvents', () => {
     ])
   })
 
-  it('masks summary/calendarDisplayName/calendarColor for calendars whose context does not match the given context, but keeps a calendar with no context set unmasked', async () => {
+  it('masks a timed event, drops an all-day event, and keeps a calendar with no context set unmasked, all for a calendar whose context does not match the given context', async () => {
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user@example.com',
@@ -1201,6 +1201,12 @@ describe('getEvents', () => {
                   summary: 'Personal event',
                   start: { dateTime: '2026-03-22T11:00:00Z' },
                   end: { dateTime: '2026-03-22T11:30:00Z' },
+                },
+                {
+                  id: 'event-personal-all-day',
+                  summary: 'Birthday',
+                  start: { date: '2026-03-22' },
+                  end: { date: '2026-03-23' },
                 },
               ],
             }),
