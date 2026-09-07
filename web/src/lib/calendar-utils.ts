@@ -10,6 +10,7 @@ export interface CalendarEventProps {
   scheduleStart?: string
   redacted?: boolean
   calendarColor?: string | null
+  responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted'
 }
 
 /**

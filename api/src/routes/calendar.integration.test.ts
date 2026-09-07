@@ -195,6 +195,7 @@ describe('GET /api/calendar/events', () => {
         calendarId: 'user1@example.com',
         calendarDisplayName: null,
         calendarColor: null,
+        responseStatus: 'accepted',
       },
       {
         id: 'event-2',
@@ -208,6 +209,7 @@ describe('GET /api/calendar/events', () => {
         calendarId: 'user2@example.com',
         calendarDisplayName: null,
         calendarColor: null,
+        responseStatus: 'accepted',
       },
     ])
   })
@@ -275,6 +277,7 @@ describe('GET /api/calendar/events', () => {
         calendarId: 'user1@example.com',
         calendarDisplayName: null,
         calendarColor: null,
+        responseStatus: 'accepted',
       },
     ])
   })

@@ -147,6 +147,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         scheduleStart: event.start,
         redacted: event.redacted,
         calendarColor: event.calendarColor,
+        responseStatus: event.responseStatus,
       },
     }))
 
@@ -232,9 +233,15 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           eventContent={(arg) => {
             // In month view, render compact event pill with title
             if (arg.view.type === 'dayGridMonth') {
-              const { type, redacted } = getEventProps(arg.event)
+              const { type, redacted, responseStatus } = getEventProps(
+                arg.event,
+              )
               return (
-                <div className="tq-month-event" data-event-type={type}>
+                <div
+                  className="tq-month-event"
+                  data-event-type={type}
+                  data-response-status={responseStatus}
+                >
                   <span className="tq-month-event-title">
                     {redacted === true ? '予定あり' : arg.event.title}
                   </span>

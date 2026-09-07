@@ -33,6 +33,10 @@ export function EventBlock(arg: EventContentArg) {
 
   const isShort = arg.isStart && (event.allDay || isShortEvent(event))
   const isCompleted = type === 'completed'
+  const isPendingResponse =
+    type === 'gcal' &&
+    (props.responseStatus === 'needsAction' ||
+      props.responseStatus === 'tentative')
 
   const timeDetails = (
     <span className="inline-flex items-center gap-x-1">
@@ -73,7 +77,7 @@ export function EventBlock(arg: EventContentArg) {
         RULE_CLASS[type],
         BG_CLASS[type],
         type === 'auto' && 'border-dashed',
-        isCompleted && 'opacity-50',
+        (isCompleted || isPendingResponse) && 'opacity-50',
       )}
       style={
         // The left rule stays solid regardless of type; only the rest of the

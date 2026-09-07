@@ -12,6 +12,7 @@ function EventBlockPreview({
   parentRef,
   color,
   calendarColor,
+  responseStatus,
   allDay = false,
   widthPx = 288,
   short = false,
@@ -22,6 +23,7 @@ function EventBlockPreview({
   parentRef?: string
   color?: { accent: string }
   calendarColor?: string | null
+  responseStatus?: TimeBlockEvent['responseStatus']
   allDay?: boolean
   widthPx?: number
   short?: boolean
@@ -32,7 +34,7 @@ function EventBlockPreview({
       allDay,
       start: short ? new Date(2025, 2, 7, 11, 0) : undefined,
       end: short ? new Date(2025, 2, 7, 11, 30) : undefined,
-      extendedProps: { type, parentRef, color, calendarColor },
+      extendedProps: { type, parentRef, color, calendarColor, responseStatus },
     },
     timeText,
     isStart: true,
@@ -128,6 +130,24 @@ export const GoogleCalendarSecondCalendar: Story = {
     title: 'Dentist appointment',
     timeText: '16:30–17:00',
     calendarColor: '#F6BF26',
+  },
+}
+
+export const GoogleCalendarNeedsAction: Story = {
+  args: {
+    type: 'gcal',
+    title: 'Q3 planning',
+    timeText: '13:00–14:00',
+    responseStatus: 'needsAction',
+  },
+}
+
+export const GoogleCalendarTentative: Story = {
+  args: {
+    type: 'gcal',
+    title: 'Design review',
+    timeText: '15:00–15:30',
+    responseStatus: 'tentative',
   },
 }
 

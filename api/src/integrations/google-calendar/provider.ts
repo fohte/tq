@@ -58,6 +58,13 @@ function isInvalidGrantResponse(responseText: string): boolean {
   return parsed?.success === true && parsed.data.error === 'invalid_grant'
 }
 
+const googleCalendarAttendeeSchema = z.object({
+  self: z.boolean().optional(),
+  responseStatus: z
+    .enum(['needsAction', 'declined', 'tentative', 'accepted'])
+    .optional(),
+})
+
 const googleCalendarEventSchema = z.object({
   id: z.string(),
   summary: z.string().optional(),
@@ -69,6 +76,7 @@ const googleCalendarEventSchema = z.object({
     dateTime: z.string().optional(),
     date: z.string().optional(),
   }),
+  attendees: z.array(googleCalendarAttendeeSchema).optional(),
 })
 
 const googleCalendarEventsResponseSchema = z.object({
@@ -195,6 +203,9 @@ export const googleCalendarProvider = {
               isAllDay: event.start.dateTime == null,
               source: PROVIDER_ID,
               calendarId,
+              responseStatus:
+                event.attendees?.find((attendee) => attendee.self === true)
+                  ?.responseStatus ?? 'accepted',
             }),
           ),
         )

@@ -54,6 +54,14 @@ const sampleEvents: TimeBlockEvent[] = [
     type: 'gcal',
     allDay: true,
   },
+  {
+    id: '6',
+    title: 'Design review',
+    start: `${dateStr}T13:00:00`,
+    end: `${dateStr}T13:30:00`,
+    type: 'gcal',
+    responseStatus: 'tentative',
+  },
 ]
 
 const dndCallbacks: CalendarDndCallbacks = {

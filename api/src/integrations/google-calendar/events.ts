@@ -48,11 +48,17 @@ function getSubscribedCalendarEvents(
               timeMax,
             })
             .map((events) =>
-              events.map((event) => ({
-                ...event,
-                calendarDisplayName: subscription.displayName,
-                calendarColor: subscription.color,
-              })),
+              events
+                // Declined events occupy no time for the signed-in user, so
+                // they're dropped here rather than in each caller — both
+                // routes/calendar.ts and schedule-auto-assign.ts consume
+                // getEvents and would otherwise need the same filter twice.
+                .filter((event) => event.responseStatus !== 'declined')
+                .map((event) => ({
+                  ...event,
+                  calendarDisplayName: subscription.displayName,
+                  calendarColor: subscription.color,
+                })),
             ),
         ),
       ),

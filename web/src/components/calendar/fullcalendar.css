@@ -209,6 +209,11 @@
   opacity: 0.5;
 }
 
+.tq-month-event[data-response-status='needsAction'],
+.tq-month-event[data-response-status='tentative'] {
+  opacity: 0.5;
+}
+
 .tq-month-event-title {
   font-family: var(--font-mono);
   font-size: 10px;

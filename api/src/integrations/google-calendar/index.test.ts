@@ -723,6 +723,7 @@ describe('getEvents', () => {
             calendarId: 'user@example.com',
             calendarDisplayName: null,
             calendarColor: null,
+            responseStatus: 'accepted',
           },
           {
             id: 'event-2',
@@ -736,6 +737,7 @@ describe('getEvents', () => {
             calendarId: 'user@example.com',
             calendarDisplayName: null,
             calendarColor: null,
+            responseStatus: 'accepted',
           },
         ],
       },
@@ -789,6 +791,7 @@ describe('getEvents', () => {
             calendarId: 'user@example.com',
             calendarDisplayName: null,
             calendarColor: null,
+            responseStatus: 'accepted',
           },
         ],
       },
@@ -864,6 +867,7 @@ describe('getEvents', () => {
             calendarId: 'user1@example.com',
             calendarDisplayName: null,
             calendarColor: null,
+            responseStatus: 'accepted',
           },
         ],
       },
@@ -957,6 +961,7 @@ describe('getEvents', () => {
             calendarId: 'user@example.com',
             calendarDisplayName: null,
             calendarColor: null,
+            responseStatus: 'accepted',
           },
           {
             id: 'event-2',
@@ -970,6 +975,7 @@ describe('getEvents', () => {
             calendarId: 'work@example.com',
             calendarDisplayName: 'Work',
             calendarColor: '#ff0000',
+            responseStatus: 'accepted',
           },
         ],
       },
@@ -1040,6 +1046,7 @@ describe('getEvents', () => {
             calendarId: 'user@example.com',
             calendarDisplayName: null,
             calendarColor: null,
+            responseStatus: 'accepted',
           },
         ],
       },
@@ -1112,6 +1119,213 @@ describe('getEvents', () => {
         accountLabel: 'user@example.com',
         ok: false,
         value: new CalendarApiError('server error'),
+      },
+    ])
+  })
+
+  it("derives responseStatus from the self attendee, defaulting to 'accepted' when there is no self attendee", async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: 'event-accepted',
+              summary: 'Accepted',
+              start: { dateTime: '2026-03-22T09:00:00Z' },
+              end: { dateTime: '2026-03-22T09:30:00Z' },
+              attendees: [
+                { email: 'other@example.com', responseStatus: 'accepted' },
+                { self: true, responseStatus: 'accepted' },
+              ],
+            },
+            {
+              id: 'event-tentative',
+              summary: 'Tentative',
+              start: { dateTime: '2026-03-22T10:00:00Z' },
+              end: { dateTime: '2026-03-22T10:30:00Z' },
+              attendees: [{ self: true, responseStatus: 'tentative' }],
+            },
+            {
+              id: 'event-needs-action',
+              summary: 'Needs action',
+              start: { dateTime: '2026-03-22T11:00:00Z' },
+              end: { dateTime: '2026-03-22T11:30:00Z' },
+              attendees: [{ self: true, responseStatus: 'needsAction' }],
+            },
+            {
+              id: 'event-no-attendees',
+              summary: 'Solo event',
+              start: { dateTime: '2026-03-22T12:00:00Z' },
+              end: { dateTime: '2026-03-22T12:30:00Z' },
+            },
+            {
+              id: 'event-no-self',
+              summary: 'Not invited',
+              start: { dateTime: '2026-03-22T13:00:00Z' },
+              end: { dateTime: '2026-03-22T13:30:00Z' },
+              attendees: [
+                { email: 'other@example.com', responseStatus: 'accepted' },
+              ],
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    )
+
+    const results = await getEvents(
+      '2026-03-22T00:00:00Z',
+      '2026-03-23T00:00:00Z',
+    )
+
+    expect(normalizeAccountResults(results)).toEqual([
+      {
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        ok: true,
+        value: [
+          {
+            id: 'event-accepted',
+            summary: 'Accepted',
+            startTime: '2026-03-22T09:00:00Z',
+            endTime: '2026-03-22T09:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'user@example.com',
+            calendarDisplayName: null,
+            calendarColor: null,
+            responseStatus: 'accepted',
+          },
+          {
+            id: 'event-needs-action',
+            summary: 'Needs action',
+            startTime: '2026-03-22T11:00:00Z',
+            endTime: '2026-03-22T11:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'user@example.com',
+            calendarDisplayName: null,
+            calendarColor: null,
+            responseStatus: 'needsAction',
+          },
+          {
+            id: 'event-no-attendees',
+            summary: 'Solo event',
+            startTime: '2026-03-22T12:00:00Z',
+            endTime: '2026-03-22T12:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'user@example.com',
+            calendarDisplayName: null,
+            calendarColor: null,
+            responseStatus: 'accepted',
+          },
+          {
+            id: 'event-no-self',
+            summary: 'Not invited',
+            startTime: '2026-03-22T13:00:00Z',
+            endTime: '2026-03-22T13:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'user@example.com',
+            calendarDisplayName: null,
+            calendarColor: null,
+            responseStatus: 'accepted',
+          },
+          {
+            id: 'event-tentative',
+            summary: 'Tentative',
+            startTime: '2026-03-22T10:00:00Z',
+            endTime: '2026-03-22T10:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'user@example.com',
+            calendarDisplayName: null,
+            calendarColor: null,
+            responseStatus: 'tentative',
+          },
+        ],
+      },
+    ])
+  })
+
+  it('drops events the self attendee declined', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: 'event-declined',
+              summary: 'Declined',
+              start: { dateTime: '2026-03-22T09:00:00Z' },
+              end: { dateTime: '2026-03-22T09:30:00Z' },
+              attendees: [{ self: true, responseStatus: 'declined' }],
+            },
+            {
+              id: 'event-accepted',
+              summary: 'Accepted',
+              start: { dateTime: '2026-03-22T10:00:00Z' },
+              end: { dateTime: '2026-03-22T10:30:00Z' },
+              attendees: [{ self: true, responseStatus: 'accepted' }],
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    )
+
+    const results = await getEvents(
+      '2026-03-22T00:00:00Z',
+      '2026-03-23T00:00:00Z',
+    )
+
+    expect(normalizeAccountResults(results)).toEqual([
+      {
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        ok: true,
+        value: [
+          {
+            id: 'event-accepted',
+            summary: 'Accepted',
+            startTime: '2026-03-22T10:00:00Z',
+            endTime: '2026-03-22T10:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'user@example.com',
+            calendarDisplayName: null,
+            calendarColor: null,
+            responseStatus: 'accepted',
+          },
+        ],
       },
     ])
   })
