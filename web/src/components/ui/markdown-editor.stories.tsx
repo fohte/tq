@@ -9,7 +9,7 @@ import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
 import { taskMentionKeys } from '#hooks/use-task-mentions'
 import { queryClient } from '#lib/query-client'
-import { assertDefined } from '#lib/test-utils'
+import { assertDefined, waitForFocus } from '#lib/test-utils'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const meta = {
@@ -562,6 +562,47 @@ export const ExternalUpdateInViewModeReplacesContent: Story = {
 const TWO_ITEM_LIST = '- First item\n- Second item'
 const NESTED_LIST = '- First item\n  - Nested item'
 
+type PlayContext = Parameters<NonNullable<Story['play']>>[0]
+
+// Puts the caret at the start of `element`'s text through the Selection API.
+// Click-count based selection (`tripleClick`) can't place it reliably: the
+// browser groups clicks into a triple click only when they arrive close
+// enough together, and otherwise degrades to a double click — a word
+// selection somewhere in the middle of the paragraph.
+//
+// prosemirror-view force-flushes its DOMObserver at the top of its keydown
+// handler, so a selection written straight into the DOM is in ProseMirror's
+// own state by the time the next keystroke is handled.
+async function placeCaretAtStart(
+  element: HTMLElement,
+  userEvent: PlayContext['userEvent'],
+): Promise<void> {
+  const editor = assertDefined(
+    element.closest<HTMLElement>('.ProseMirror'),
+    'editor content always lives inside .ProseMirror',
+  )
+
+  // Keystrokes only reach ProseMirror once the wrapper's mouseup has taken
+  // the editor out of its initial read-only mode.
+  await fireEvent.mouseUp(element, { button: 0 })
+  await waitFor(() => expect(editor.isContentEditable).toBe(true))
+  // Only here to focus ProseMirror — the caret this leaves behind is
+  // immediately replaced below.
+  await userEvent.click(element)
+  await waitForFocus(editor)
+
+  const textNode = assertDefined(
+    element.ownerDocument
+      .createTreeWalker(element, NodeFilter.SHOW_TEXT)
+      .nextNode(),
+    'a list item paragraph always renders its text',
+  )
+  assertDefined(
+    element.ownerDocument.getSelection(),
+    'a rendered document always has a selection',
+  ).collapse(textNode, 0)
+}
+
 // Sinking the second item nests it into a new list inside the first item.
 export const SpaceAtListItemStartIndents: Story = {
   args: {
@@ -573,8 +614,8 @@ export const SpaceAtListItemStartIndents: Story = {
   },
   play: async ({ canvas, canvasElement, userEvent }) => {
     const secondItem = await canvas.findByText('Second item')
-    await userEvent.tripleClick(secondItem)
-    await userEvent.keyboard('{ArrowLeft} ')
+    await placeCaretAtStart(secondItem, userEvent)
+    await userEvent.keyboard(' ')
 
     // Trim whitespace-only text nodes added by Crepe's list-item DOM wrappers.
     await waitFor(async () => {
@@ -600,8 +641,8 @@ export const SpaceAtFirstListItemStartTypesSpace: Story = {
   },
   play: async ({ canvas, canvasElement, userEvent }) => {
     const firstItem = await canvas.findByText('First item')
-    await userEvent.tripleClick(firstItem)
-    await userEvent.keyboard('{ArrowLeft} ')
+    await placeCaretAtStart(firstItem, userEvent)
+    await userEvent.keyboard(' ')
 
     // The accessible-text query (canvas.findByText) normalizes away the
     // leading space this asserts on, so this reads the paragraph's raw text
@@ -628,8 +669,8 @@ export const BackspaceAtNestedListItemStartOutdents: Story = {
   },
   play: async ({ canvas, canvasElement, userEvent }) => {
     const nestedItem = await canvas.findByText('Nested item')
-    await userEvent.tripleClick(nestedItem)
-    await userEvent.keyboard('{ArrowLeft}{Backspace}')
+    await placeCaretAtStart(nestedItem, userEvent)
+    await userEvent.keyboard('{Backspace}')
 
     await waitFor(async () => {
       await expect(
@@ -652,8 +693,8 @@ export const BackspaceAtTopLevelListItemStartJoinsWithPreviousItem: Story = {
   },
   play: async ({ canvas, canvasElement, userEvent }) => {
     const secondItem = await canvas.findByText('Second item')
-    await userEvent.tripleClick(secondItem)
-    await userEvent.keyboard('{ArrowLeft}{Backspace}')
+    await placeCaretAtStart(secondItem, userEvent)
+    await userEvent.keyboard('{Backspace}')
 
     // joinBackward keeps both texts as separate paragraphs within one list item.
     await waitFor(async () => {
