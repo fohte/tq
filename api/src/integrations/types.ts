@@ -130,6 +130,13 @@ export interface ExternalEvent {
   calendarColor: string | null
   responseStatus: CalendarResponseStatus
   /**
+   * Whether the event occupies its time slot. False only when the calendar
+   * explicitly marks it as free (Google Calendar's "Free" availability,
+   * `transparency: 'transparent'`); an event that says nothing about its
+   * availability is busy, matching Google's `opaque` default.
+   */
+  busy: boolean
+  /**
    * True when `summary`/`calendarDisplayName`/`calendarColor` are masked
    * because this event's calendar context doesn't match the requested one.
    */

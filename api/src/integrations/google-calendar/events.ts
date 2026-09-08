@@ -53,6 +53,7 @@ function maskEvent(event: ProviderEvent): CalendarEvent {
     source: event.source,
     calendarId: event.calendarId,
     responseStatus: event.responseStatus,
+    busy: event.busy,
     summary: '',
     calendarDisplayName: null,
     calendarColor: null,

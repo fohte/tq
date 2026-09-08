@@ -724,6 +724,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            busy: true,
             redacted: false,
           },
           {
@@ -739,6 +740,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            busy: true,
             redacted: false,
           },
         ],
@@ -794,6 +796,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            busy: true,
             redacted: false,
           },
         ],
@@ -871,6 +874,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            busy: true,
             redacted: false,
           },
         ],
@@ -966,6 +970,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            busy: true,
             redacted: false,
           },
           {
@@ -981,6 +986,7 @@ describe('getEvents', () => {
             calendarDisplayName: 'Work',
             calendarColor: '#ff0000',
             responseStatus: 'accepted',
+            busy: true,
             redacted: false,
           },
         ],
@@ -1053,6 +1059,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            busy: true,
             redacted: false,
           },
         ],
@@ -1242,6 +1249,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            busy: true,
             redacted: false,
           },
           {
@@ -1257,6 +1265,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            busy: true,
             redacted: true,
           },
           {
@@ -1272,6 +1281,7 @@ describe('getEvents', () => {
             calendarDisplayName: 'Work',
             calendarColor: null,
             responseStatus: 'accepted',
+            busy: true,
             redacted: false,
           },
         ],
@@ -1383,6 +1393,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            busy: true,
             redacted: false,
           },
           {
@@ -1398,6 +1409,7 @@ describe('getEvents', () => {
             calendarDisplayName: 'Personal',
             calendarColor: null,
             responseStatus: 'accepted',
+            busy: true,
             redacted: false,
           },
           {
@@ -1413,6 +1425,7 @@ describe('getEvents', () => {
             calendarDisplayName: 'Work',
             calendarColor: null,
             responseStatus: 'accepted',
+            busy: true,
             redacted: false,
           },
         ],
@@ -1480,6 +1493,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'needsAction',
+            busy: true,
             redacted: false,
           },
           {
@@ -1495,6 +1509,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'tentative',
+            busy: true,
             redacted: false,
           },
         ],
@@ -1560,6 +1575,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            busy: true,
             redacted: false,
           },
           {
@@ -1575,6 +1591,7 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            busy: true,
             redacted: false,
           },
         ],
@@ -1639,6 +1656,88 @@ describe('getEvents', () => {
             calendarDisplayName: null,
             calendarColor: null,
             responseStatus: 'accepted',
+            busy: true,
+            redacted: false,
+          },
+        ],
+      },
+    ])
+  })
+
+  it('marks an event as not busy only when its transparency is transparent', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: 'event-free',
+              summary: 'Free',
+              start: { dateTime: '2026-03-22T09:00:00Z' },
+              end: { dateTime: '2026-03-22T09:30:00Z' },
+              transparency: 'transparent',
+            },
+            {
+              id: 'event-opaque',
+              summary: 'Opaque',
+              start: { dateTime: '2026-03-22T10:00:00Z' },
+              end: { dateTime: '2026-03-22T10:30:00Z' },
+              transparency: 'opaque',
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    )
+
+    const results = await getEvents(
+      '2026-03-22T00:00:00Z',
+      '2026-03-23T00:00:00Z',
+    )
+
+    expect(normalizeAccountResults(results)).toEqual([
+      {
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        ok: true,
+        value: [
+          {
+            id: 'event-free',
+            summary: 'Free',
+            startTime: '2026-03-22T09:00:00Z',
+            endTime: '2026-03-22T09:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'user@example.com',
+            calendarDisplayName: null,
+            calendarColor: null,
+            responseStatus: 'accepted',
+            busy: false,
+            redacted: false,
+          },
+          {
+            id: 'event-opaque',
+            summary: 'Opaque',
+            startTime: '2026-03-22T10:00:00Z',
+            endTime: '2026-03-22T10:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'user@example.com',
+            calendarDisplayName: null,
+            calendarColor: null,
+            responseStatus: 'accepted',
+            busy: true,
             redacted: false,
           },
         ],

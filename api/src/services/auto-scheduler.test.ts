@@ -205,6 +205,7 @@ describe('externalEventsToBusyRanges', () => {
         startTime: '2026-03-22T09:00:00.000Z',
         endTime: '2026-03-22T10:00:00.000Z',
         isAllDay: false,
+        busy: true,
       },
     ])
 
@@ -213,11 +214,36 @@ describe('externalEventsToBusyRanges', () => {
 
   it('excludes all-day events', () => {
     const ranges = externalEventsToBusyRanges([
-      { startTime: '2026-03-22', endTime: '2026-03-23', isAllDay: true },
+      {
+        startTime: '2026-03-22',
+        endTime: '2026-03-23',
+        isAllDay: true,
+        busy: true,
+      },
       {
         startTime: '2026-03-22T09:00:00.000Z',
         endTime: '2026-03-22T10:00:00.000Z',
         isAllDay: false,
+        busy: true,
+      },
+    ])
+
+    expect(ranges).toEqual([{ start: d('09:00'), end: d('10:00') }])
+  })
+
+  it('excludes events marked as free', () => {
+    const ranges = externalEventsToBusyRanges([
+      {
+        startTime: '2026-03-22T08:00:00.000Z',
+        endTime: '2026-03-22T08:30:00.000Z',
+        isAllDay: false,
+        busy: false,
+      },
+      {
+        startTime: '2026-03-22T09:00:00.000Z',
+        endTime: '2026-03-22T10:00:00.000Z',
+        isAllDay: false,
+        busy: true,
       },
     ])
 
