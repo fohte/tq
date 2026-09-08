@@ -6,10 +6,17 @@ import { pushSubscriptions } from '#db/schema'
 import { sendPush } from '#services/push'
 import { setupTestDb } from '#testing'
 
-vi.mock('web-push', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('web-push')>()),
-  sendNotification: vi.fn(),
-}))
+// Stub both named and default exports so callers using either import style
+// also receive the mocked function.
+vi.mock('web-push', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('web-push')>()
+  const mockedSendNotification = vi.fn()
+  return {
+    ...actual,
+    sendNotification: mockedSendNotification,
+    default: { ...actual, sendNotification: mockedSendNotification },
+  }
+})
 
 setupTestDb()
 
