@@ -20,6 +20,7 @@
 | number             | integer                  |                  | false    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |                                                       |         |
 | commitment         | text                     | 'inbox'::text    | false    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |                                                       |         |
 | status_reason      | text                     |                  | true     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |                                                       |         |
+| remind_at          | timestamp with time zone |                  | true     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |                                                       |         |
 
 ## Constraints
 
@@ -34,17 +35,18 @@
 
 ## Indexes
 
-| Name                     | Definition                                                                             |
-| ------------------------ | -------------------------------------------------------------------------------------- |
-| tasks_pkey               | CREATE UNIQUE INDEX tasks_pkey ON public.tasks USING btree (id)                        |
-| idx_tasks_parent_id      | CREATE INDEX idx_tasks_parent_id ON public.tasks USING btree (parent_id)               |
-| idx_tasks_status         | CREATE INDEX idx_tasks_status ON public.tasks USING btree (status)                     |
-| idx_tasks_start_date     | CREATE INDEX idx_tasks_start_date ON public.tasks USING btree (start_date)             |
-| idx_tasks_due_date       | CREATE INDEX idx_tasks_due_date ON public.tasks USING btree (due_date)                 |
-| idx_tasks_project_id     | CREATE INDEX idx_tasks_project_id ON public.tasks USING btree (project_id)             |
-| idx_tasks_project_status | CREATE INDEX idx_tasks_project_status ON public.tasks USING btree (project_id, status) |
-| tasks_number_unique      | CREATE UNIQUE INDEX tasks_number_unique ON public.tasks USING btree (number)           |
-| idx_tasks_commitment     | CREATE INDEX idx_tasks_commitment ON public.tasks USING btree (commitment)             |
+| Name                     | Definition                                                                                             |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ |
+| tasks_pkey               | CREATE UNIQUE INDEX tasks_pkey ON public.tasks USING btree (id)                                        |
+| idx_tasks_parent_id      | CREATE INDEX idx_tasks_parent_id ON public.tasks USING btree (parent_id)                               |
+| idx_tasks_status         | CREATE INDEX idx_tasks_status ON public.tasks USING btree (status)                                     |
+| idx_tasks_start_date     | CREATE INDEX idx_tasks_start_date ON public.tasks USING btree (start_date)                             |
+| idx_tasks_due_date       | CREATE INDEX idx_tasks_due_date ON public.tasks USING btree (due_date)                                 |
+| idx_tasks_project_id     | CREATE INDEX idx_tasks_project_id ON public.tasks USING btree (project_id)                             |
+| idx_tasks_project_status | CREATE INDEX idx_tasks_project_status ON public.tasks USING btree (project_id, status)                 |
+| tasks_number_unique      | CREATE UNIQUE INDEX tasks_number_unique ON public.tasks USING btree (number)                           |
+| idx_tasks_commitment     | CREATE INDEX idx_tasks_commitment ON public.tasks USING btree (commitment)                             |
+| idx_tasks_remind_at      | CREATE INDEX idx_tasks_remind_at ON public.tasks USING btree (remind_at) WHERE (remind_at IS NOT NULL) |
 
 ## Relations
 
@@ -85,6 +87,7 @@ erDiagram
   integer number
   text commitment
   text status_reason
+  timestamp_with_time_zone remind_at
 }
 "public.task_comments" {
   text id

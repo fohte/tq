@@ -801,6 +801,11 @@
           "name": "status_reason",
           "type": "text",
           "nullable": true
+        },
+        {
+          "name": "remind_at",
+          "type": "timestamp with time zone",
+          "nullable": true
         }
       ],
       "indexes": [
@@ -857,6 +862,12 @@
           "def": "CREATE INDEX idx_tasks_commitment ON public.tasks USING btree (commitment)",
           "table": "public.tasks",
           "columns": ["commitment"]
+        },
+        {
+          "name": "idx_tasks_remind_at",
+          "def": "CREATE INDEX idx_tasks_remind_at ON public.tasks USING btree (remind_at) WHERE (remind_at IS NOT NULL)",
+          "table": "public.tasks",
+          "columns": ["remind_at"]
         }
       ],
       "constraints": [

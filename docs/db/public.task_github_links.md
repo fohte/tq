@@ -78,6 +78,7 @@ erDiagram
   integer number
   text commitment
   text status_reason
+  timestamp_with_time_zone remind_at
 }
 ```
 
