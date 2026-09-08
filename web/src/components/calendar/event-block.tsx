@@ -138,6 +138,24 @@ export function EventBlock(arg: EventContentArg) {
   )
 }
 
+/**
+ * Rendered inside a status event's background band (`display: 'background'`
+ * in calendar-grid.tsx) instead of the card-shaped EventBlock, so it reads
+ * as a state of the day rather than a competing appointment. Centered by
+ * the `.fc-bg-event` flex override in fullcalendar.css.
+ */
+export function GcalStatusBand({ event }: EventContentArg) {
+  const props = getEventProps(event)
+  const Icon = GCAL_EVENT_TYPE_ICON[props.gcalEventType ?? '']
+
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1 text-2xs text-muted-foreground-strong">
+      {Icon != null && <Icon className="h-3 w-3 shrink-0" />}
+      <span className="truncate">{event.title}</span>
+    </span>
+  )
+}
+
 function EventBlockShell({
   isShort,
   className,

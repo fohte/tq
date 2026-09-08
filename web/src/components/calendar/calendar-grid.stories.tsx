@@ -62,6 +62,14 @@ const sampleEvents: TimeBlockEvent[] = [
     type: 'gcal-meeting',
     responseStatus: 'tentative',
   },
+  {
+    id: '7',
+    title: '集中作業',
+    start: `${dateStr}T12:00:00`,
+    end: `${dateStr}T14:00:00`,
+    type: 'gcal-status',
+    gcalEventType: 'focusTime',
+  },
 ]
 
 const dndCallbacks: CalendarDndCallbacks = {

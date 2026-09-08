@@ -272,3 +272,21 @@
   box-shadow: none;
   cursor: pointer;
 }
+
+/* Status event background band (out of office / focus time). Overrides
+   FullCalendar's default green highlight; label is centered since it's the
+   only spot in the band not covered by an overlapping event card (see
+   .fc-timegrid-col-events margin, which leaves no side gutter to use instead). */
+.tq-calendar .fc-bg-event {
+  background: var(--surface-strong);
+  opacity: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+
+.tq-calendar .fc-bg-event .fc-event-title {
+  font-style: normal;
+  margin: 0;
+}

@@ -19,7 +19,7 @@ import {
   resolveFullCalendarView,
 } from '#components/calendar/calendar-header'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
-import { EventBlock } from '#components/calendar/event-block'
+import { EventBlock, GcalStatusBand } from '#components/calendar/event-block'
 import { useIsDesktop } from '#hooks/use-is-desktop'
 import {
   getEventProps,
@@ -149,6 +149,14 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         event.type !== 'schedule' &&
         !isGcalEventType(event.type) &&
         event.redacted !== true,
+      // Status events (out of office / focus time) render as a background
+      // band instead of a lane card, so they don't crowd out meetings and
+      // task blocks. Month view has no time slots to render a band into
+      // (FullCalendar only draws timed background events in TimeGrid views),
+      // so it keeps rendering them as the regular month pill.
+      ...(event.type === 'gcal-status' && activeView !== 'month'
+        ? { display: 'background' as const }
+        : {}),
       extendedProps: {
         type: event.type,
         parentRef: event.parentRef,
@@ -263,6 +271,9 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
                   </span>
                 </div>
               )
+            }
+            if (arg.event.display === 'background') {
+              return <GcalStatusBand {...arg} />
             }
             // Override timeText for overnight events to show actual end time
             // FullCalendar clips end to midnight for display, so we use the
