@@ -18,6 +18,7 @@ export function makeExternalEvent(
     responseStatus: 'accepted',
     eventType: 'default',
     hasOtherAttendees: false,
+    busy: true,
     redacted: false,
     ...overrides,
   }

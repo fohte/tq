@@ -142,6 +142,12 @@ export interface ExternalEvent {
    */
   hasOtherAttendees: boolean
   /**
+   * Whether the event occupies its time slot. False only when the calendar
+   * explicitly marks it as free; an event that says nothing about its
+   * availability is busy.
+   */
+  busy: boolean
+  /**
    * True when `summary`/`calendarDisplayName`/`calendarColor`/`eventType`/
    * `hasOtherAttendees` are masked because this event's calendar context
    * doesn't match the requested one.

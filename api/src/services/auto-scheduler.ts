@@ -6,10 +6,15 @@ export interface BusyRange {
 }
 
 export function externalEventsToBusyRanges(
-  events: { startTime: string; endTime: string; isAllDay: boolean }[],
+  events: {
+    startTime: string
+    endTime: string
+    isAllDay: boolean
+    busy: boolean
+  }[],
 ): BusyRange[] {
   return events
-    .filter((event) => !event.isAllDay)
+    .filter((event) => !event.isAllDay && event.busy)
     .map((event) => ({
       start: new Date(event.startTime),
       end: new Date(event.endTime),

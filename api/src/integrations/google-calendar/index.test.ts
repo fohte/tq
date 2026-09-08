@@ -712,7 +712,12 @@ describe('getEvents', () => {
         accountLabel: 'user@example.com',
         ok: true,
         value: [
-          makeExternalEvent(),
+          makeExternalEvent({
+            id: 'event-1',
+            summary: 'Team standup',
+            startTime: '2026-03-22T09:00:00Z',
+            endTime: '2026-03-22T09:30:00Z',
+          }),
           makeExternalEvent({
             id: 'event-2',
             summary: 'All-day event',
@@ -829,6 +834,10 @@ describe('getEvents', () => {
         ok: true,
         value: [
           makeExternalEvent({
+            id: 'event-1',
+            summary: 'Team standup',
+            startTime: '2026-03-22T09:00:00Z',
+            endTime: '2026-03-22T09:30:00Z',
             accountLabel: 'user1@example.com',
             calendarId: 'user1@example.com',
           }),
@@ -913,7 +922,10 @@ describe('getEvents', () => {
         ok: true,
         value: [
           makeExternalEvent({
+            id: 'event-1',
             summary: 'Standup',
+            startTime: '2026-03-22T09:00:00Z',
+            endTime: '2026-03-22T09:30:00Z',
           }),
           makeExternalEvent({
             id: 'event-2',
@@ -982,7 +994,10 @@ describe('getEvents', () => {
         ok: true,
         value: [
           makeExternalEvent({
+            id: 'event-1',
             summary: 'Standup',
+            startTime: '2026-03-22T09:00:00Z',
+            endTime: '2026-03-22T09:30:00Z',
           }),
         ],
       },
@@ -1059,7 +1074,7 @@ describe('getEvents', () => {
     ])
   })
 
-  it('masks a timed event, drops an all-day event, and keeps a calendar with no context set unmasked, all for a calendar whose context does not match the given context', async () => {
+  it('masks a timed event, drops an all-day event and a free-marked event, and keeps a calendar with no context set unmasked, all for a calendar whose context does not match the given context', async () => {
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user@example.com',
@@ -1141,6 +1156,13 @@ describe('getEvents', () => {
                   start: { date: '2026-03-22' },
                   end: { date: '2026-03-23' },
                 },
+                {
+                  id: 'event-personal-free',
+                  summary: 'Gym',
+                  start: { dateTime: '2026-03-22T12:00:00Z' },
+                  end: { dateTime: '2026-03-22T12:30:00Z' },
+                  transparency: 'transparent',
+                },
               ],
             }),
             { status: 200 },
@@ -1165,6 +1187,8 @@ describe('getEvents', () => {
           makeExternalEvent({
             id: 'event-default',
             summary: 'Default calendar event',
+            startTime: '2026-03-22T09:00:00Z',
+            endTime: '2026-03-22T09:30:00Z',
           }),
           makeExternalEvent({
             id: 'event-personal',
@@ -1281,6 +1305,8 @@ describe('getEvents', () => {
           makeExternalEvent({
             id: 'event-default',
             summary: 'Default calendar event',
+            startTime: '2026-03-22T09:00:00Z',
+            endTime: '2026-03-22T09:30:00Z',
           }),
           makeExternalEvent({
             id: 'event-personal',
@@ -1482,6 +1508,81 @@ describe('getEvents', () => {
             summary: 'Accepted',
             startTime: '2026-03-22T10:00:00Z',
             endTime: '2026-03-22T10:30:00Z',
+          }),
+        ],
+      },
+    ])
+  })
+
+  it('marks an event as not busy only when its transparency is transparent', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: 'event-free',
+              summary: 'Free',
+              start: { dateTime: '2026-03-22T09:00:00Z' },
+              end: { dateTime: '2026-03-22T09:30:00Z' },
+              transparency: 'transparent',
+            },
+            {
+              id: 'event-opaque',
+              summary: 'Opaque',
+              start: { dateTime: '2026-03-22T10:00:00Z' },
+              end: { dateTime: '2026-03-22T10:30:00Z' },
+              transparency: 'opaque',
+            },
+            {
+              id: 'event-unknown',
+              summary: 'Unknown transparency',
+              start: { dateTime: '2026-03-22T11:00:00Z' },
+              end: { dateTime: '2026-03-22T11:30:00Z' },
+              transparency: 'not-a-documented-value',
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    )
+
+    const results = await getEvents(
+      '2026-03-22T00:00:00Z',
+      '2026-03-23T00:00:00Z',
+    )
+
+    expect(normalizeAccountResults(results)).toEqual([
+      {
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        ok: true,
+        value: [
+          makeExternalEvent({
+            id: 'event-free',
+            summary: 'Free',
+            startTime: '2026-03-22T09:00:00Z',
+            endTime: '2026-03-22T09:30:00Z',
+            busy: false,
+          }),
+          makeExternalEvent({
+            id: 'event-opaque',
+            summary: 'Opaque',
+            startTime: '2026-03-22T10:00:00Z',
+            endTime: '2026-03-22T10:30:00Z',
+          }),
+          makeExternalEvent({
+            id: 'event-unknown',
+            summary: 'Unknown transparency',
+            startTime: '2026-03-22T11:00:00Z',
+            endTime: '2026-03-22T11:30:00Z',
           }),
         ],
       },

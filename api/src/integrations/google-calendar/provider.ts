@@ -82,6 +82,7 @@ const googleCalendarEventSchema = z.object({
   // make every event of the response disappear from the calendar.
   eventType: z.string().optional(),
   attendees: z.array(googleCalendarAttendeeSchema).optional(),
+  transparency: z.string().optional(),
 })
 
 const googleCalendarEventsResponseSchema = z.object({
@@ -218,6 +219,7 @@ export const googleCalendarProvider = {
                   (attendee) =>
                     attendee.self !== true && attendee.resource !== true,
                 ) ?? false,
+              busy: event.transparency !== 'transparent',
             }),
           ),
         )
