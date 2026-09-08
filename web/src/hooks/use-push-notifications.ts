@@ -19,12 +19,12 @@ export type PushAction = 'enable' | 'disable' | 'test'
 // an opt-out) nor the subscription (dropped silently by iOS) can stand in for.
 const ENABLED_KEY = 'tq:push-enabled'
 
-export const pushKeys = {
+const pushKeys = {
   state: ['push-subscription-state'] as const,
 }
 
 // On iOS, PushManager exists only in a web app added to the home screen.
-export function isPushSupported(): boolean {
+function isPushSupported(): boolean {
   return (
     'serviceWorker' in navigator &&
     'PushManager' in window &&
