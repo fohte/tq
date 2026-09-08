@@ -136,11 +136,8 @@ jobs:
         working-directory: ${{ matrix.package }}
         run: pnpm run test
 
-      # dev/test tooling transpiles CJS/ESM interop more permissively than
-      # Node itself, so an import that only resolves under a bundler (not
-      # under `node dist/index.js`) can pass every step above and still
-      # crash the production container on boot. Actually starting the built
-      # entrypoint is the only way to catch that.
+      # Test tooling transpiles CJS/ESM more permissively than Node; booting
+      # the built entrypoint verifies native ESM import compatibility.
       - name: Smoke test production build boots
         if: matrix.package == 'api'
         working-directory: api
@@ -149,7 +146,8 @@ jobs:
 
           APP_ENV=production APP_DOMAIN=localhost \
           VAPID_PUBLIC_KEY=smoke-test VAPID_PRIVATE_KEY=smoke-test \
-            node dist/index.js > /tmp/api-smoke.log 2>&1 &
+            node --import @fohte/service-kit/otel-register dist/index.js \
+            > /tmp/api-smoke.log 2>&1 &
           pid=$!
 
           ready=false

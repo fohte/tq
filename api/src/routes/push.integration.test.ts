@@ -8,9 +8,8 @@ import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 // Only the network call is stubbed; WebPushError stays the real class so the
 // service's status-code handling runs against the errors web-push throws.
-// push.ts consumes web-push through the default import (see push.ts for
-// why), so the override has to live under `default` too — that's what a
-// real default import resolves to.
+// Stub both named and default exports so callers using either import style
+// also receive the mocked function.
 vi.mock('web-push', async (importOriginal) => {
   const actual = await importOriginal<typeof import('web-push')>()
   const mockedSendNotification = vi.fn()
