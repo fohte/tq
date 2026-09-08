@@ -22,7 +22,7 @@ export type GithubUrlPreview = Extract<
   { linked: false }
 >['preview']
 
-export function makeGithubUrlPreview(
+function makeGithubUrlPreview(
   overrides: Partial<GithubUrlPreview> = {},
 ): GithubUrlPreview {
   return {
