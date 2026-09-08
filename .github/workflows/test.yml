@@ -136,6 +136,42 @@ jobs:
         working-directory: ${{ matrix.package }}
         run: pnpm run test
 
+      # dev/test tooling transpiles CJS/ESM interop more permissively than
+      # Node itself, so an import that only resolves under a bundler (not
+      # under `node dist/index.js`) can pass every step above and still
+      # crash the production container on boot. Actually starting the built
+      # entrypoint is the only way to catch that.
+      - name: Smoke test production build boots
+        if: matrix.package == 'api'
+        working-directory: api
+        run: |
+          pnpm run build
+
+          APP_ENV=production APP_DOMAIN=localhost \
+          VAPID_PUBLIC_KEY=smoke-test VAPID_PRIVATE_KEY=smoke-test \
+            node dist/index.js > /tmp/api-smoke.log 2>&1 &
+          pid=$!
+
+          ready=false
+          for _ in $(seq 1 20); do
+            if ! kill -0 "$pid" 2>/dev/null; then
+              break
+            fi
+            if curl -sf http://localhost:3001/health >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 0.5
+          done
+
+          kill "$pid" 2>/dev/null || true
+
+          if [ "$ready" != true ]; then
+            echo "api dist/index.js failed to start:" >&2
+            cat /tmp/api-smoke.log >&2
+            exit 1
+          fi
+
   # Storybook's screenshot capture and reg-suit's comparison/publish live in
   # their own reusable workflow so they can shard across runners instead of
   # sharing the `web` leg above with the (browser-free) type-check and unit
