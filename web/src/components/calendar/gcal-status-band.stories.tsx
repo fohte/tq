@@ -19,17 +19,10 @@ function GcalStatusBandPreview({
   const props = arg as unknown as Parameters<typeof GcalStatusBand>[0]
 
   return (
-    // Mirrors fullcalendar.css's `.fc-bg-event` override (diagonal stripe
-    // fill, top/bottom border, flex-centered content) over the event's
-    // full time range, so the band's layout previews outside of
-    // FullCalendar. bg-card matches the day column's own background
-    // (.fc-timegrid-body .fc-daygrid-day-frame) that the stripe sits over.
+    // Mirrors fullcalendar.css's `.fc-bg-event` to preview the band outside of FullCalendar.
     <div
       className="flex h-24 w-72 items-center justify-center border-y border-muted-foreground-ghost bg-card"
-      style={{
-        backgroundImage:
-          'repeating-linear-gradient(135deg, transparent 0 6px, rgba(255, 255, 255, 0.035) 6px 12px)',
-      }}
+      style={{ backgroundImage: 'var(--calendar-status-band-fill)' }}
     >
       <GcalStatusBand {...props} />
     </div>
