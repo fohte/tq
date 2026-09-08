@@ -219,8 +219,7 @@ export function createTaskFromIssueData(
   return ResultAsync.fromPromise<{ task: TaskRow; link: LinkRow }, unknown>(
     db.transaction(async (tx) => {
       // The task's description is intentionally left empty: it's the
-      // owner's own notes, not a mirror of the issue body (see
-      // syncLinkFromGithub for the same rule on the sync side).
+      // owner's own notes, not a mirror of the issue body.
       const taskResult = firstOrErr(
         await tx
           .insert(tasks)

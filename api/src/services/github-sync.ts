@@ -23,10 +23,7 @@ type SyncLinkError =
   | IntegrationConfigError
   | TokenRefreshError
 
-// The link row is a reference to GitHub's current title/state, not a mirror
-// of the task's content — GitHub changes are written only to the link row,
-// never to `tasks` (see createTaskFromIssueData for the task-creation side
-// of the same rule).
+// Writes only to this row — GitHub content never reaches `tasks`.
 export function syncLinkFromGithub(
   link: LinkRow,
 ): ResultAsync<void, SyncLinkError> {

@@ -27,12 +27,11 @@ export const taskGithubLinks = pgTable(
     number: integer('number').notNull(),
     kind: text('kind', { enum: ['issue', 'pull_request'] }).notNull(),
     url: text('url').notNull(),
-    // `state`/`title` mirror the linked GitHub issue/PR's current values,
-    // refreshed on every sync (see githubLinkToResponse) — `tasks` itself is
-    // never written by sync.
+    // Caches the linked GitHub issue/PR's current state and title.
     state: text('state', { enum: ['open', 'closed', 'merged'] }).notNull(),
     title: text('title').notNull(),
-    // Not read by any code path.
+    // Set at link creation from the issue body, then left untouched — no
+    // sync path reads or refreshes it, so treat it as permanently stale.
     body: text('body'),
     // GitHub's ETag for the last fetch of this issue/PR, sent back as
     // `If-None-Match` on the next sync so an unchanged resource costs a bare
