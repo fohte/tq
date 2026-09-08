@@ -601,22 +601,23 @@ async function placeCaretAtStart(
   if (isAtStart()) return
 
   // A caret written straight into the DOM reaches ProseMirror's own state
-  // only through the document-level `selectionchange` listener its
-  // DOMObserver registers when the view is created. That listener is
-  // registered earlier than the one below, and the DOM dispatches listeners
-  // in registration order, so ProseMirror has read whatever `isAtStart` sees
-  // here. The click above can leave its own `selectionchange` still queued,
-  // hence the check rather than resolving on the first event.
-  const caretTaken = new Promise<void>((resolve) => {
-    const onSelectionChange = () => {
-      if (!isAtStart()) return
-      doc.removeEventListener('selectionchange', onSelectionChange)
-      resolve()
-    }
-    doc.addEventListener('selectionchange', onSelectionChange)
-  })
+  // only through its DOMObserver's document-level `selectionchange` listener,
+  // whose position in the list moves on every selection sync. Resolving from
+  // a task therefore waits out the whole dispatch, in whichever order the two
+  // listeners ran; the check skips the focusing click's own queued event.
+  let caretTaken = false
+  const onSelectionChange = () => {
+    if (!isAtStart()) return
+    doc.removeEventListener('selectionchange', onSelectionChange)
+    setTimeout(() => {
+      caretTaken = true
+    })
+  }
+  doc.addEventListener('selectionchange', onSelectionChange)
   selection.collapse(textNode, 0)
-  await caretTaken
+  await waitFor(() =>
+    expect(caretTaken, 'ProseMirror never took the caret').toBe(true),
+  )
 }
 
 // Sinking the second item nests it into a new list inside the first item.
