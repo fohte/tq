@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { expect } from 'storybook/test'
 
+import { makeResolveGithubUrlResult } from '#components/task/github-link-test-fixtures'
 import { GithubUrlCard } from '#components/task/github-url-card'
 import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
 import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
@@ -72,19 +73,14 @@ export const OpenIssue: Story = {
   args: {
     url: OPEN_ISSUE_URL,
     raw: OPEN_ISSUE_URL,
-    result: {
-      linked: false,
-      preview: {
-        owner: 'fohte',
-        repo: 'tq',
-        number: 158,
-        kind: 'issue',
-        url: OPEN_ISSUE_URL,
-        title: 'Support live-preview chips and autocomplete for task mentions',
-        body: 'Adds an InlineReferenceProvider abstraction so task mentions render as chips.',
-        state: 'open',
-      },
-    },
+    result: makeResolveGithubUrlResult({
+      number: 158,
+      kind: 'issue',
+      url: OPEN_ISSUE_URL,
+      title: 'Support live-preview chips and autocomplete for task mentions',
+      body: 'Adds an InlineReferenceProvider abstraction so task mentions render as chips.',
+      state: 'open',
+    }),
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByText('fohte/tq#158')).toBeVisible()
@@ -100,19 +96,14 @@ export const MergedPullRequest: Story = {
   args: {
     url: MERGED_PR_URL,
     raw: MERGED_PR_URL,
-    result: {
-      linked: false,
-      preview: {
-        owner: 'fohte',
-        repo: 'tq',
-        number: 159,
-        kind: 'pull_request',
-        url: MERGED_PR_URL,
-        title: 'Auto-sync linked tasks with GitHub updates',
-        body: null,
-        state: 'merged',
-      },
-    },
+    result: makeResolveGithubUrlResult({
+      number: 159,
+      kind: 'pull_request',
+      url: MERGED_PR_URL,
+      title: 'Auto-sync linked tasks with GitHub updates',
+      body: null,
+      state: 'merged',
+    }),
   },
 }
 
@@ -120,19 +111,14 @@ export const ClosedIssue: Story = {
   args: {
     url: CLOSED_ISSUE_URL,
     raw: CLOSED_ISSUE_URL,
-    result: {
-      linked: false,
-      preview: {
-        owner: 'fohte',
-        repo: 'tq',
-        number: 160,
-        kind: 'issue',
-        url: CLOSED_ISSUE_URL,
-        title: 'Investigate flaky github-sync integration test',
-        body: 'Turned out to be a shared fixture race under parallel execution.',
-        state: 'closed',
-      },
-    },
+    result: makeResolveGithubUrlResult({
+      number: 160,
+      kind: 'issue',
+      url: CLOSED_ISSUE_URL,
+      title: 'Investigate flaky github-sync integration test',
+      body: 'Turned out to be a shared fixture race under parallel execution.',
+      state: 'closed',
+    }),
   },
 }
 
@@ -188,20 +174,15 @@ export const LongTitle: Story = {
   args: {
     url: LONG_TITLE_URL,
     raw: LONG_TITLE_URL,
-    result: {
-      linked: false,
-      preview: {
-        owner: 'fohte',
-        repo: 'tq',
-        number: 161,
-        kind: 'issue',
-        url: LONG_TITLE_URL,
-        title:
-          'This is a very long GitHub issue title that should be clamped to two lines instead of overflowing the card layout indefinitely',
-        body: 'This is a fairly long body excerpt that should be clamped to three lines instead of overflowing the card indefinitely, so the card keeps a predictable height regardless of how verbose the underlying issue body is.',
-        state: 'open',
-      },
-    },
+    result: makeResolveGithubUrlResult({
+      number: 161,
+      kind: 'issue',
+      url: LONG_TITLE_URL,
+      title:
+        'This is a very long GitHub issue title that should be clamped to two lines instead of overflowing the card layout indefinitely',
+      body: 'This is a fairly long body excerpt that should be clamped to three lines instead of overflowing the card indefinitely, so the card keeps a predictable height regardless of how verbose the underlying issue body is.',
+      state: 'open',
+    }),
   },
 }
 

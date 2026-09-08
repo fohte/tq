@@ -4,8 +4,11 @@ import { http, HttpResponse } from 'msw'
 import { expect, fn, waitFor, within } from 'storybook/test'
 
 import { CreateTaskModal } from '#components/task/create-task-modal'
+import {
+  makeGithubLink,
+  makeResolveGithubUrlResult,
+} from '#components/task/github-link-test-fixtures'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
-import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
 import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
 import { taskMentionKeys } from '#hooks/use-task-mentions'
 import { formatLocalDate } from '#lib/date-range'
@@ -37,27 +40,6 @@ function seedParentOverridePreview() {
 
 const githubIssueUrl = 'https://github.com/fohte/tq/issues/123'
 
-function makeGithubPreview(
-  overrides: Partial<
-    Extract<ResolveGithubUrlResult, { linked: false }>['preview']
-  > = {},
-): ResolveGithubUrlResult {
-  return {
-    linked: false,
-    preview: {
-      owner: 'fohte',
-      repo: 'tq',
-      number: 123,
-      kind: 'issue',
-      url: githubIssueUrl,
-      title: 'Fix login bug',
-      body: null,
-      state: 'open',
-      ...overrides,
-    },
-  }
-}
-
 // Same reseed-per-decorator reasoning as seedParentOverridePreview above:
 // useGithubUrlPreview also hardcodes a 60s staleTime.
 const githubPreviewQueryClient = new QueryClient({
@@ -67,7 +49,7 @@ const githubPreviewQueryClient = new QueryClient({
 function seedGithubPreview() {
   githubPreviewQueryClient.setQueryData(
     githubUrlPreviewKeys.preview(githubIssueUrl),
-    makeGithubPreview(),
+    makeResolveGithubUrlResult({ url: githubIssueUrl, title: 'Fix login bug' }),
   )
 }
 
@@ -582,7 +564,12 @@ export const GithubUrlShorthandLinksIssueAndSeedsTitle: Story = {
         // nested under (see use-github-url-preview.ts), triggering a
         // background refetch of this same URL.
         http.post('/api/github/resolve', () =>
-          HttpResponse.json(makeGithubPreview()),
+          HttpResponse.json(
+            makeResolveGithubUrlResult({
+              url: githubIssueUrl,
+              title: 'Fix login bug',
+            }),
+          ),
         ),
       ],
     },
@@ -629,6 +616,94 @@ export const GithubUrlShorthandLinksIssueAndSeedsTitle: Story = {
         url: githubIssueUrl,
       })
     })
+  },
+}
+
+export const GithubUrlShorthandUnresolvableDisablesSubmit: Story = {
+  parameters: {
+    screenshot: { skip: true },
+  },
+  decorators: [
+    (Story) => {
+      githubPreviewQueryClient.setQueryData(
+        githubUrlPreviewKeys.preview(githubIssueUrl),
+        null,
+      )
+      return (
+        <QueryClientProvider client={githubPreviewQueryClient}>
+          <div className="dark h-screen bg-background">
+            <Story />
+          </div>
+        </QueryClientProvider>
+      )
+    },
+  ],
+  play: async ({ canvasElement, userEvent }) => {
+    const body = within(canvasElement.ownerDocument.body)
+    const titleInputs =
+      body.getAllByPlaceholderText(/task title|タスクのタイトル/i)
+    const titleInput = atIndex(titleInputs, 0)
+
+    await userEvent.type(titleInput, `Fix bug ${githubIssueUrl} `)
+
+    await waitFor(async () => {
+      await expect(
+        (await body.findAllByText('could not resolve GitHub link')).length,
+      ).toBeGreaterThan(0)
+    })
+
+    const createButtons = body.getAllByRole('button', { name: /create/i })
+    for (const btn of createButtons) {
+      await expect(btn).toBeDisabled()
+    }
+  },
+}
+
+export const GithubUrlShorthandAlreadyLinkedDisablesSubmit: Story = {
+  parameters: {
+    screenshot: { skip: true },
+  },
+  decorators: [
+    (Story) => {
+      githubPreviewQueryClient.setQueryData(
+        githubUrlPreviewKeys.preview(githubIssueUrl),
+        {
+          linked: true,
+          task: makeTaskDetail({
+            id: 'other-task-id',
+            number: 99,
+            title: 'Existing task',
+            githubLinks: [makeGithubLink({ url: githubIssueUrl, number: 123 })],
+          }),
+        },
+      )
+      return (
+        <QueryClientProvider client={githubPreviewQueryClient}>
+          <div className="dark h-screen bg-background">
+            <Story />
+          </div>
+        </QueryClientProvider>
+      )
+    },
+  ],
+  play: async ({ canvasElement, userEvent }) => {
+    const body = within(canvasElement.ownerDocument.body)
+    const titleInputs =
+      body.getAllByPlaceholderText(/task title|タスクのタイトル/i)
+    const titleInput = atIndex(titleInputs, 0)
+
+    await userEvent.type(titleInput, `Fix bug ${githubIssueUrl} `)
+
+    await waitFor(async () => {
+      await expect(
+        (await body.findAllByText('already linked to another task')).length,
+      ).toBeGreaterThan(0)
+    })
+
+    const createButtons = body.getAllByRole('button', { name: /create/i })
+    for (const btn of createButtons) {
+      await expect(btn).toBeDisabled()
+    }
   },
 }
 
