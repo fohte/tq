@@ -159,8 +159,7 @@ export const WithRemindAt: Story = {
     task: {
       ...baseTask,
       title: 'Task with a reminder',
-      // Far future so this story never renders a year suffix that isn't
-      // covered by RemindBadge's own story.
+      // Far future so this story never renders a year suffix.
       remindAt: '2099-06-15T09:00:00.000Z',
     },
   },

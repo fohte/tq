@@ -7,6 +7,10 @@ export function formatMinutes(minutes: number): string {
   return `${String(minutes)}m`
 }
 
+function yearIfDifferent(date: Date, now: Date): 'numeric' | undefined {
+  return date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+}
+
 /** Format an instant as "Mon D, H:MM AM/PM", or with a year when it falls outside the current year. */
 export function formatShortDateTime(
   isoString: string,
@@ -16,7 +20,7 @@ export function formatShortDateTime(
   return date.toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+    year: yearIfDifferent(date, now),
     hour: 'numeric',
     minute: '2-digit',
   })
@@ -40,6 +44,6 @@ export function formatRelativeTime(
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+    year: yearIfDifferent(date, now),
   })
 }
