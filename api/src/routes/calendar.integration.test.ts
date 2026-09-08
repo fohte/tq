@@ -211,6 +211,8 @@ describe('GET /api/calendar/events', () => {
         calendarDisplayName: null,
         calendarColor: null,
         responseStatus: 'accepted',
+        eventType: 'default',
+        hasOtherAttendees: false,
         redacted: false,
       },
       {
@@ -226,6 +228,8 @@ describe('GET /api/calendar/events', () => {
         calendarDisplayName: null,
         calendarColor: null,
         responseStatus: 'accepted',
+        eventType: 'default',
+        hasOtherAttendees: false,
         redacted: false,
       },
     ])
@@ -295,6 +299,8 @@ describe('GET /api/calendar/events', () => {
         calendarDisplayName: null,
         calendarColor: null,
         responseStatus: 'accepted',
+        eventType: 'default',
+        hasOtherAttendees: false,
         redacted: false,
       },
     ])
@@ -376,6 +382,8 @@ describe('GET /api/calendar/events', () => {
         calendarDisplayName: null,
         calendarColor: null,
         responseStatus: 'accepted',
+        eventType: 'default',
+        hasOtherAttendees: false,
         redacted: false,
       },
       {
@@ -391,6 +399,8 @@ describe('GET /api/calendar/events', () => {
         calendarDisplayName: null,
         calendarColor: null,
         responseStatus: 'accepted',
+        eventType: 'default',
+        hasOtherAttendees: false,
         redacted: true,
       },
     ])

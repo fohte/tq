@@ -76,6 +76,9 @@ const googleCalendarEventSchema = z.object({
     dateTime: z.string().optional(),
     date: z.string().optional(),
   }),
+  // Not an enum: a value Google adds later would fail the array's parse and
+  // make every event of the response disappear from the calendar.
+  eventType: z.string().optional(),
   attendees: z.array(googleCalendarAttendeeSchema).optional(),
 })
 
@@ -207,6 +210,10 @@ export const googleCalendarProvider = {
               responseStatus:
                 event.attendees?.find((attendee) => attendee.self === true)
                   ?.responseStatus ?? 'accepted',
+              eventType: event.eventType ?? 'default',
+              hasOtherAttendees:
+                event.attendees?.some((attendee) => attendee.self !== true) ??
+                false,
             }),
           ),
         )

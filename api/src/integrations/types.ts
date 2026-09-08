@@ -130,6 +130,16 @@ export interface ExternalEvent {
   calendarColor: string | null
   responseStatus: CalendarResponseStatus
   /**
+   * Google's event type: `default` for a normal event, `outOfOffice` /
+   * `focusTime` / `workingLocation` for the status events that describe
+   * where the user is rather than what they agreed to attend. Deliberately
+   * not a closed union — Google can add a type at any time, and an unknown
+   * value is passed through as-is instead of failing the whole response.
+   */
+  eventType: string
+  /** Whether the event has an attendee other than the signed-in user. */
+  hasOtherAttendees: boolean
+  /**
    * True when `summary`/`calendarDisplayName`/`calendarColor` are masked
    * because this event's calendar context doesn't match the requested one.
    */

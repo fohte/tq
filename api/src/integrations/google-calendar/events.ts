@@ -53,6 +53,10 @@ function maskEvent(event: ProviderEvent): CalendarEvent {
     source: event.source,
     calendarId: event.calendarId,
     responseStatus: event.responseStatus,
+    // Both describe what the event is, not when it is busy, so they are
+    // dropped to their neutral values like the summary.
+    eventType: 'default',
+    hasOtherAttendees: false,
     summary: '',
     calendarDisplayName: null,
     calendarColor: null,
