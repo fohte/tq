@@ -1,5 +1,15 @@
 /* FullCalendar theme overrides for tq design system */
 
+:root {
+  /* Shared by the .fc-bg-event override below and its Storybook preview
+     (gcal-status-band.stories.tsx), so the two can't drift apart. */
+  --calendar-status-band-fill: repeating-linear-gradient(
+    135deg,
+    transparent 0 6px,
+    rgba(255, 255, 255, 0.035) 6px 12px
+  );
+}
+
 .tq-calendar {
   --fc-border-color: var(--border);
   --fc-page-bg-color: var(--background);
@@ -271,4 +281,26 @@
   border: none;
   box-shadow: none;
   cursor: pointer;
+}
+
+/* Status event background band (out of office / focus time). Overrides
+   FullCalendar's default green highlight with the diagonal-stripe fill
+   used for non-office-hour blocks in Google Calendar and Outlook's Out of
+   office; label is centered since it's the only spot in the band not
+   covered by an overlapping event card (see .fc-timegrid-col-events
+   margin, which leaves no side gutter to use instead).
+   Known limitation: FullCalendar stacks background segments without the
+   side-by-side placement it gives foreground events, so two gcal-status
+   events overlapping in time (e.g. from two subscribed calendars) render
+   as identical full-width bands and only the later one's label is visible. */
+.tq-calendar .fc-bg-event {
+  background-color: transparent;
+  background-image: var(--calendar-status-band-fill);
+  opacity: 1;
+  border-top: 1px solid var(--muted-foreground-ghost);
+  border-bottom: 1px solid var(--muted-foreground-ghost);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
 }

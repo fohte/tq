@@ -47,6 +47,23 @@ const GCAL_EVENT_TYPE_ICON: Partial<
   [GCAL_WORKING_LOCATION_EVENT_TYPE]: MapPin,
 }
 
+/** Shared by EventBlock's title and GcalStatusBand, so the two can't drift on icon sizing/spacing. */
+function GcalEventIconTitle({
+  gcalEventType,
+  title,
+}: {
+  gcalEventType: string | undefined
+  title: string
+}) {
+  const Icon = GCAL_EVENT_TYPE_ICON[gcalEventType ?? '']
+  return (
+    <>
+      {Icon != null && <Icon className="h-3 w-3 shrink-0" />}
+      <span className="truncate">{title}</span>
+    </>
+  )
+}
+
 export function EventBlock(arg: EventContentArg) {
   const { event, timeText } = arg
   const props = getEventProps(event)
@@ -84,7 +101,6 @@ export function EventBlock(arg: EventContentArg) {
   }
 
   const badge = type === 'auto' ? 'auto' : undefined
-  const Icon = GCAL_EVENT_TYPE_ICON[props.gcalEventType ?? '']
 
   // gcal-solo drops the calendar accent along with the fill, so it reads as
   // one step weaker than a meeting rather than just another colored card.
@@ -128,13 +144,34 @@ export function EventBlock(arg: EventContentArg) {
             isCompleted && 'line-through',
           )}
         >
-          {Icon != null && <Icon className="h-3 w-3 shrink-0" />}
-          <span className="truncate">{event.title}</span>
+          <GcalEventIconTitle
+            gcalEventType={props.gcalEventType}
+            title={event.title}
+          />
         </span>
       }
       badge={badge}
       meta={isShort ? timeText : timeDetails}
     />
+  )
+}
+
+/**
+ * Rendered inside a status event's background band (`display: 'background'`
+ * in calendar-grid.tsx) instead of the card-shaped EventBlock, so it reads
+ * as a state of the day rather than a competing appointment. Centered by
+ * the `.fc-bg-event` flex override in fullcalendar.css.
+ */
+export function GcalStatusBand({ event }: EventContentArg) {
+  const props = getEventProps(event)
+
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1 text-2xs text-muted-foreground-strong">
+      <GcalEventIconTitle
+        gcalEventType={props.gcalEventType}
+        title={event.title}
+      />
+    </span>
   )
 }
 
