@@ -17,7 +17,6 @@ export interface PushNotificationsPanelProps {
   onEnable: () => void
   onDisable: () => void
   onTest: () => void
-  onReinstall: () => void
 }
 
 function describeStatus(
@@ -43,7 +42,6 @@ export function PushNotificationsPanel({
   onEnable,
   onDisable,
   onTest,
-  onReinstall,
 }: PushNotificationsPanelProps) {
   const renderControl = () => {
     switch (status) {
@@ -106,17 +104,6 @@ export function PushNotificationsPanel({
                 disabled={pending === 'test'}
               >
                 {pending === 'test' ? '送信中…' : '送信'}
-              </Button>
-            </SettingsRow>
-          )}
-
-          {status === 'enabled' && (
-            <SettingsRow
-              label="Service worker"
-              description="通知が届かないときに、Service Worker を登録し直す"
-            >
-              <Button variant="outline" size="sm" onClick={onReinstall}>
-                再インストール
               </Button>
             </SettingsRow>
           )}

@@ -14,7 +14,6 @@ const meta = {
     onEnable: () => {},
     onDisable: () => {},
     onTest: () => {},
-    onReinstall: () => {},
   },
   render: (args) => (
     <div className="w-full max-w-3xl">

@@ -113,14 +113,6 @@ async function sendTestPush() {
   return unwrapOrThrow(await assertOkWithMessage(res)).json()
 }
 
-// Forces a fresh service worker on iOS, where home screen web apps lack
-// DevTools to unregister.
-async function reinstallServiceWorker(): Promise<void> {
-  const registration = await navigator.serviceWorker.getRegistration()
-  await registration?.unregister()
-  window.location.reload()
-}
-
 async function runPushAction(action: PushAction, context: 'work' | 'personal') {
   switch (action) {
     case 'enable':
@@ -234,11 +226,6 @@ export function usePushNotifications() {
     },
     onTest: () => {
       action.mutate('test')
-    },
-    onReinstall: () => {
-      void reinstallServiceWorker().catch((error: unknown) => {
-        console.error('failed to reinstall the service worker', error)
-      })
     },
   }
 }
