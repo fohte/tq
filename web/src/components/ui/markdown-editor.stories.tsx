@@ -724,14 +724,15 @@ async function placeCaretAtStart(
     selection.anchorOffset === 0
   if (isAtStart()) return
 
-  // A caret written straight into the DOM reaches ProseMirror's own state
-  // only through its DOMObserver's document-level `selectionchange` listener,
-  // whose position in the list moves on every selection sync. Resolving from
-  // a task therefore waits out the whole dispatch, in whichever order the two
-  // listeners ran; the check skips the focusing click's own queued event.
+  // ProseMirror re-syncs the DOM selection from its own state on every
+  // `selectionchange`, which can overwrite the caret we just set — keep
+  // re-asserting it here until a round leaves it at the start.
   let caretTaken = false
   const onSelectionChange = () => {
-    if (!isAtStart()) return
+    if (!isAtStart()) {
+      selection.collapse(textNode, 0)
+      return
+    }
     doc.removeEventListener('selectionchange', onSelectionChange)
     setTimeout(() => {
       caretTaken = true
@@ -741,7 +742,9 @@ async function placeCaretAtStart(
   selection.collapse(textNode, 0)
   await waitFor(() =>
     expect(caretTaken, 'ProseMirror never took the caret').toBe(true),
-  )
+  ).finally(() => {
+    doc.removeEventListener('selectionchange', onSelectionChange)
+  })
 }
 
 // Sinking the second item nests it into a new list inside the first item.
