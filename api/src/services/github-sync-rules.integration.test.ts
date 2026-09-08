@@ -115,6 +115,7 @@ describe('syncGithubAssignedIssues', () => {
       startDate: null,
       dueDate: null,
       estimatedMinutes: null,
+      remindAt: null,
       parentId: null,
       projectId: project.id,
       recurrenceRuleId: null,

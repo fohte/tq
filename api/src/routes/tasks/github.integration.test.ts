@@ -69,6 +69,7 @@ describe('POST /api/tasks/from-github', () => {
         startDate: null,
         dueDate: null,
         estimatedMinutes: null,
+        remindAt: null,
         parentId: null,
         projectId: null,
         recurrenceRuleId: null,

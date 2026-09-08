@@ -85,6 +85,7 @@ function taskCoreToResponse(
     startDate: task.startDate,
     dueDate: task.dueDate,
     estimatedMinutes: task.estimatedMinutes,
+    remindAt: task.remindAt?.toISOString() ?? null,
     parentId: task.parentId,
     projectId: task.projectId,
     recurrenceRuleId: task.recurrenceRuleId,

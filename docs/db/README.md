@@ -13,7 +13,7 @@
 | [public.task_comments](public.task_comments.md)                                     | 5       |         | BASE TABLE |
 | [public.task_labels](public.task_labels.md)                                         | 2       |         | BASE TABLE |
 | [public.task_pages](public.task_pages.md)                                           | 8       |         | BASE TABLE |
-| [public.tasks](public.tasks.md)                                                     | 16      |         | BASE TABLE |
+| [public.tasks](public.tasks.md)                                                     | 17      |         | BASE TABLE |
 | [public.time_blocks](public.time_blocks.md)                                         | 7       |         | BASE TABLE |
 | [public.task_queue_items](public.task_queue_items.md)                               | 7       |         | BASE TABLE |
 | [public.edits](public.edits.md)                                                     | 10      |         | BASE TABLE |
@@ -158,6 +158,7 @@ erDiagram
   integer number
   text commitment
   text status_reason
+  timestamp_with_time_zone remind_at
 }
 "public.time_blocks" {
   text id

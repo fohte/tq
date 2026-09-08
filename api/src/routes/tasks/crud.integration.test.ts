@@ -157,6 +157,7 @@ describe('tasks CRUD API', () => {
         startDate: null,
         dueDate: null,
         estimatedMinutes: null,
+        remindAt: null,
         parentId: null,
         projectId: null,
         recurrenceRuleId: null,
@@ -1473,6 +1474,27 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body.description).toBeNull()
+    })
+
+    it('round-trips remindAt, clears it on null, and leaves it alone when omitted', async () => {
+      const created = await createTask('Task')
+
+      const patch = async (body: Record<string, unknown>) => {
+        const res = await app.request(`/api/tasks/${created.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        return jsonBody<TaskResponse>(res)
+      }
+
+      const scheduled = await patch({ remindAt: '2026-03-25T09:00:00.000Z' })
+      const afterUnrelatedEdit = await patch({ title: 'Renamed' })
+      const cleared = await patch({ remindAt: null })
+
+      expect(scheduled.remindAt).toBe('2026-03-25T09:00:00.000Z')
+      expect(afterUnrelatedEdit.remindAt).toBe('2026-03-25T09:00:00.000Z')
+      expect(cleared.remindAt).toBeNull()
     })
 
     it('keeps the existing labels unchanged', async () => {

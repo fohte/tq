@@ -72,6 +72,7 @@ export interface TaskResponse {
   startDate: string | null
   dueDate: string | null
   estimatedMinutes: number | null
+  remindAt: string | null
   parentId: string | null
   projectId: string | null
   recurrenceRuleId: string | null
@@ -111,6 +112,7 @@ export interface TaskListItemResponse {
   startDate: string | null
   dueDate: string | null
   estimatedMinutes: number | null
+  remindAt: string | null
   parentId: string | null
   projectId: string | null
   recurrenceRuleId: string | null
@@ -165,6 +167,7 @@ export function toListItemResponse(
     | 'startDate'
     | 'dueDate'
     | 'estimatedMinutes'
+    | 'remindAt'
     | 'parentId'
     | 'projectId'
     | 'recurrenceRuleId'
@@ -190,6 +193,7 @@ export function toListItemResponse(
     startDate: task.startDate,
     dueDate: task.dueDate,
     estimatedMinutes: task.estimatedMinutes,
+    remindAt: task.remindAt,
     parentId: task.parentId,
     projectId: task.projectId,
     recurrenceRuleId: task.recurrenceRuleId,
@@ -270,6 +274,7 @@ const taskListItemResponseSchema = z.object({
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
   estimatedMinutes: z.number().nullable(),
+  remindAt: z.string().nullable(),
   parentId: z.string().nullable(),
   projectId: z.string().nullable(),
   recurrenceRuleId: z.string().nullable(),
@@ -297,6 +302,7 @@ const taskResponseSchema = z.object({
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
   estimatedMinutes: z.number().nullable(),
+  remindAt: z.string().nullable(),
   parentId: z.string().nullable(),
   projectId: z.string().nullable(),
   recurrenceRuleId: z.string().nullable(),

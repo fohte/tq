@@ -121,7 +121,11 @@ export const SidebarWithProject: Story = {
   },
 }
 
+// Desktop only: at the mobile viewport the sidebar's fields already fill the
+// frame, pushing TIME BLOCKS — the one thing this story adds — out of the
+// screenshot and leaving it identical to Sidebar.
 export const SidebarWithTimeBlocks: Story = {
+  tags: ['desktop-only'],
   args: {
     task: {
       ...baseTask,

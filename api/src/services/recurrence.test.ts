@@ -168,6 +168,7 @@ describe('buildNextTaskData', () => {
     startDate: null,
     dueDate: '2026-03-22',
     estimatedMinutes: 15,
+    remindAt: null,
     parentId: null,
     projectId: 'proj-1',
     recurrenceRuleId: 'rule-1',
