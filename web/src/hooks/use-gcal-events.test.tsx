@@ -66,6 +66,7 @@ const sampleEvent = {
   calendarDisplayName: null,
   calendarColor: null,
   responseStatus: 'accepted' as const,
+  busy: true,
   redacted: false,
 }
 
