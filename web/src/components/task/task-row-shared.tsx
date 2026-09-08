@@ -7,7 +7,7 @@ import { useProject } from '#hooks/use-projects'
 import type { SearchResult } from '#hooks/use-search'
 import type { Task } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
-import { formatMinutes } from '#lib/format'
+import { formatMinutes, formatShortDateTime } from '#lib/format'
 import { formatShortDate, isTaskOverdue } from '#lib/task-due-date'
 import { tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
@@ -151,6 +151,14 @@ export function StartDateBadge({ startDate }: { startDate: string }) {
   return (
     <span className="shrink-0 font-mono text-xs text-muted-foreground">
       {formatShortDate(startDate)}
+    </span>
+  )
+}
+
+export function RemindBadge({ remindAt }: { remindAt: string }) {
+  return (
+    <span className="shrink-0 font-mono text-xs text-muted-foreground">
+      {formatShortDateTime(remindAt)}
     </span>
   )
 }

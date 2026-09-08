@@ -7,6 +7,21 @@ export function formatMinutes(minutes: number): string {
   return `${String(minutes)}m`
 }
 
+/** Format an instant as "Mon D, H:MM AM/PM", or with a year when it falls outside the current year. */
+export function formatShortDateTime(
+  isoString: string,
+  now: Date = new Date(),
+): string {
+  const date = new Date(isoString)
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
 export function formatRelativeTime(
   isoString: string,
   now: Date = new Date(),

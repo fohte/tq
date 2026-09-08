@@ -8,6 +8,7 @@ import {
   DueDateBadge,
   EstimateLabel,
   ParentTaskLabel,
+  RemindBadge,
   ROW_INDENT_CLASS_NAME,
   rowIndentStyle,
   rowTitleClassName,
@@ -35,8 +36,8 @@ export interface TaskRowAppearanceProps {
   onClick?: (e: React.MouseEvent) => void
   draggable?: boolean
   // Appended after the row's canonical second-line items (labels, project,
-  // context, parent, startDate, dueDate, estimate, githubLink, closeReason,
-  // blockedBy) — keep their order intact.
+  // context, parent, startDate, dueDate, remindAt, estimate, githubLink,
+  // closeReason, blockedBy) — keep their order intact.
   secondLineExtras?: React.ReactNode[]
 }
 
@@ -85,6 +86,7 @@ export function TaskRowAppearance({
     task.dueDate != null ? (
       <DueDateBadge dueDate={task.dueDate} status={task.status} />
     ) : null,
+    task.remindAt != null ? <RemindBadge remindAt={task.remindAt} /> : null,
     task.estimatedMinutes != null ? (
       <EstimateLabel minutes={task.estimatedMinutes} />
     ) : null,

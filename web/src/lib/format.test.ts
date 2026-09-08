@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatMinutes, formatRelativeTime } from '#lib/format'
+import {
+  formatMinutes,
+  formatRelativeTime,
+  formatShortDateTime,
+} from '#lib/format'
 
 describe('formatMinutes', () => {
   it('formats minutes under an hour', () => {
@@ -50,6 +54,22 @@ describe('formatRelativeTime', () => {
   it('falls back to a short date with a year for a different year', () => {
     expect(formatRelativeTime('2025-01-01T12:00:00.000Z', now)).toBe(
       'Jan 1, 2025',
+    )
+  })
+})
+
+describe('formatShortDateTime', () => {
+  const now = new Date('2026-03-20T12:00:00.000Z')
+
+  it('omits the year when the instant is in the current year', () => {
+    expect(formatShortDateTime('2026-03-25T09:00:00.000Z', now)).toBe(
+      'Mar 25, 6:00 PM',
+    )
+  })
+
+  it('includes the year when the instant is in a different year', () => {
+    expect(formatShortDateTime('2027-01-05T00:30:00.000Z', now)).toBe(
+      'Jan 5, 2027, 9:30 AM',
     )
   })
 })

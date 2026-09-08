@@ -154,6 +154,18 @@ export const WithStartDate: Story = {
   },
 }
 
+export const WithRemindAt: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Task with a reminder',
+      // Far future so this story never renders a year suffix that isn't
+      // covered by RemindBadge's own story.
+      remindAt: '2099-06-15T09:00:00.000Z',
+    },
+  },
+}
+
 export const WithParentTask: Story = {
   args: {
     task: {
