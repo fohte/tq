@@ -46,10 +46,12 @@
     "hono": "4.12.34",
     "neverthrow": "8.2.0",
     "postgres": "3.4.9",
+    "web-push": "3.6.7",
     "zod": "4.3.6"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
+    "@types/web-push": "3.6.4",
     "aws-sdk-client-mock": "4.1.0",
     "drizzle-kit": "0.31.10",
     "tsup": "8.5.1",

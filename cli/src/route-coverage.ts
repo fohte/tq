@@ -160,6 +160,13 @@ export const EXCLUDED_ROUTES = {
   'POST /api/schedule/auto-assign':
     'calendar UI is faster for direct manipulation',
 
+  // Web Push subscriptions belong to a browser: only a browser can produce
+  // one, and only a browser can display what gets delivered to it.
+  'GET /api/push/vapid-public-key': 'web push is a browser-only capability',
+  'POST /api/push/subscriptions': 'web push is a browser-only capability',
+  'DELETE /api/push/subscriptions': 'web push is a browser-only capability',
+  'POST /api/push/test': 'web push is a browser-only capability',
+
   // Not a REST resource: a JSON-RPC/MCP transport endpoint, not a CLI concern.
   'ALL /api/mcp': 'MCP transport endpoint, not a REST resource',
 
