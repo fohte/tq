@@ -67,7 +67,7 @@ export const taskMentionAutocompletePlugin = $prose(() => {
         debounce: 50,
         shouldShow: (view) => findActiveMentionQuery(view.state) != null,
         // Render at document.body with fixed positioning so the popup
-        // isn't clipped by the editor wrapper's `overflow: hidden`.
+        // isn't clipped by `.ProseMirror`'s `overflow: hidden`.
         root: document.body,
         floatingUIOptions: { strategy: 'fixed' },
       })
