@@ -60,6 +60,8 @@ function isInvalidGrantResponse(responseText: string): boolean {
 
 const googleCalendarAttendeeSchema = z.object({
   self: z.boolean().optional(),
+  // Google lists booked rooms and equipment among the attendees too.
+  resource: z.boolean().optional(),
   responseStatus: z
     .enum(['needsAction', 'declined', 'tentative', 'accepted'])
     .optional(),
@@ -212,8 +214,10 @@ export const googleCalendarProvider = {
                   ?.responseStatus ?? 'accepted',
               eventType: event.eventType ?? 'default',
               hasOtherAttendees:
-                event.attendees?.some((attendee) => attendee.self !== true) ??
-                false,
+                event.attendees?.some(
+                  (attendee) =>
+                    attendee.self !== true && attendee.resource !== true,
+                ) ?? false,
             }),
           ),
         )

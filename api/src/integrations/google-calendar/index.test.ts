@@ -1215,6 +1215,10 @@ describe('getEvents', () => {
                   summary: 'Personal event',
                   start: { dateTime: '2026-03-22T11:00:00Z' },
                   end: { dateTime: '2026-03-22T11:30:00Z' },
+                  eventType: 'outOfOffice',
+                  attendees: [
+                    { email: 'other@example.com', responseStatus: 'accepted' },
+                  ],
                 },
                 {
                   id: 'event-personal-all-day',
@@ -1682,7 +1686,73 @@ describe('getEvents', () => {
     ])
   })
 
-  it('keeps the other events when one has an eventType Google added later', async () => {
+  it('does not count a booked room as another attendee', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: 'event-room-only',
+              summary: 'Solo work in a room',
+              start: { dateTime: '2026-03-22T09:00:00Z' },
+              end: { dateTime: '2026-03-22T10:00:00Z' },
+              attendees: [
+                { self: true, responseStatus: 'accepted' },
+                {
+                  email: 'room-a@resource.calendar.example.com',
+                  resource: true,
+                  responseStatus: 'accepted',
+                },
+              ],
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    )
+
+    const results = await getEvents(
+      '2026-03-22T00:00:00Z',
+      '2026-03-23T00:00:00Z',
+    )
+
+    expect(normalizeAccountResults(results)).toEqual([
+      {
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        ok: true,
+        value: [
+          {
+            id: 'event-room-only',
+            summary: 'Solo work in a room',
+            startTime: '2026-03-22T09:00:00Z',
+            endTime: '2026-03-22T10:00:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'user@example.com',
+            calendarDisplayName: null,
+            calendarColor: null,
+            responseStatus: 'accepted',
+            eventType: 'default',
+            hasOtherAttendees: false,
+            redacted: false,
+          },
+        ],
+      },
+    ])
+  })
+
+  it("reports Google's eventType, defaulting to default, and keeps the other events when one has a type Google added later", async () => {
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user@example.com',

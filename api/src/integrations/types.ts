@@ -132,16 +132,19 @@ export interface ExternalEvent {
   /**
    * Google's event type: `default` for a normal event, `outOfOffice` /
    * `focusTime` / `workingLocation` for the status events that describe
-   * where the user is rather than what they agreed to attend. Deliberately
-   * not a closed union — Google can add a type at any time, and an unknown
-   * value is passed through as-is instead of failing the whole response.
+   * where the user is rather than what they agreed to attend. A type Google
+   * adds later is passed through as-is.
    */
   eventType: string
-  /** Whether the event has an attendee other than the signed-in user. */
+  /**
+   * Whether the event has an attendee other than the signed-in user. Booked
+   * rooms and equipment don't count.
+   */
   hasOtherAttendees: boolean
   /**
-   * True when `summary`/`calendarDisplayName`/`calendarColor` are masked
-   * because this event's calendar context doesn't match the requested one.
+   * True when `summary`/`calendarDisplayName`/`calendarColor`/`eventType`/
+   * `hasOtherAttendees` are masked because this event's calendar context
+   * doesn't match the requested one.
    */
   redacted: boolean
 }
