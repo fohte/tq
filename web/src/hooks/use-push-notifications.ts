@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
 
 import { useCurrentContext } from '#hooks/use-current-context'
+import { useOnAppForeground } from '#hooks/use-on-app-foreground'
 import { api } from '#lib/api'
 import {
   assertOkOrThrow,
@@ -112,6 +112,16 @@ async function sendTestPush() {
   return unwrapOrThrow(await assertOkWithMessage(res)).json()
 }
 
+// The manual escape hatch for when the automatic update check (see
+// use-service-worker-update.ts) hasn't kicked in yet. iOS has no DevTools to
+// unregister from, so this is the only way to force a fresh service worker
+// without deleting and re-adding the home screen icon.
+async function reinstallServiceWorker(): Promise<void> {
+  const registration = await navigator.serviceWorker.getRegistration()
+  await registration?.unregister()
+  window.location.reload()
+}
+
 async function runPushAction(action: PushAction, context: 'work' | 'personal') {
   switch (action) {
     case 'enable':
@@ -126,14 +136,16 @@ async function runPushAction(action: PushAction, context: 'work' | 'personal') {
 }
 
 /**
- * Re-register the subscription on every app start. iOS invalidates a
- * subscription silently, and the machine's context has to reach the server for
- * the sender to filter on it.
+ * Re-register the subscription on app start and whenever the app returns to
+ * the foreground. iOS invalidates a subscription silently, and the machine's
+ * context has to reach the server for the sender to filter on it; a PWA
+ * launched from the home screen rarely reloads, so foreground return is often
+ * the only chance to catch that.
  */
 export function usePushResubscribe(): void {
   const context = useCurrentContext()
 
-  useEffect(() => {
+  useOnAppForeground(() => {
     if (!isPushSupported()) return
     if (!isEnabledLocally()) return
     // Re-subscribing without the permission would prompt outside a user
@@ -143,7 +155,7 @@ export function usePushResubscribe(): void {
     void subscribeToPush(context).catch((error: unknown) => {
       console.error('failed to refresh the push subscription', error)
     })
-  }, [context])
+  })
 }
 
 function deriveStatus(
@@ -217,6 +229,11 @@ export function usePushNotifications() {
     },
     onTest: () => {
       action.mutate('test')
+    },
+    onReinstall: () => {
+      void reinstallServiceWorker().catch((error: unknown) => {
+        console.error('failed to reinstall the service worker', error)
+      })
     },
   }
 }
