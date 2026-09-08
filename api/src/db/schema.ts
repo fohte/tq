@@ -4,5 +4,6 @@
 export * from '#db/schema/agent-sessions'
 export * from '#db/schema/core'
 export * from '#db/schema/integrations'
+export * from '#db/schema/push'
 export * from '#db/schema/settings'
 export * from '#db/schema/task-content'

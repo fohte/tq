@@ -6,6 +6,11 @@ import { resolveTestDatabaseUrl } from '#resolve-test-database-url'
 // vitest's test.env only applies to test file contexts, not globalSetup.
 process.env['APP_ENV'] = 'test'
 
+// Push routes refuse to run without a VAPID keypair (see #services/push).
+// `web-push` itself is mocked in tests, so these need not be real keys.
+process.env['VAPID_PUBLIC_KEY'] = 'test-vapid-public-key'
+process.env['VAPID_PRIVATE_KEY'] = 'test-vapid-private-key'
+
 // mise's [env] loads DATABASE_URL from .env.runtime pointed at tq_dev; tests
 // must use tq_test instead, so prefer TEST_DATABASE_URL when it is set.
 const resolvedDatabaseUrl = resolveTestDatabaseUrl(

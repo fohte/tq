@@ -29,6 +29,7 @@
 | [public.saved_views](public.saved_views.md)                                         | 7       |         | BASE TABLE |
 | [public.task_relations](public.task_relations.md)                                   | 4       |         | BASE TABLE |
 | [public.task_queues](public.task_queues.md)                                         | 7       |         | BASE TABLE |
+| [public.push_subscriptions](public.push_subscriptions.md)                           | 8       |         | BASE TABLE |
 
 ## Relations
 
@@ -306,6 +307,16 @@ erDiagram
   integer position
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+}
+"public.push_subscriptions" {
+  text id
+  text endpoint
+  text p256dh
+  text auth
+  text label
+  text context
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone last_success_at
 }
 ```
 
