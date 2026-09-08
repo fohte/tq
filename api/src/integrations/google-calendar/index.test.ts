@@ -9,6 +9,7 @@ import {
   OAuthTokenMissingError,
   TokenRefreshError,
 } from '#integrations/errors'
+import { makeExternalEvent } from '#integrations/external-event-test-fixtures'
 import {
   type AccountEventsResult,
   CalendarApiError,
@@ -711,36 +712,14 @@ describe('getEvents', () => {
         accountLabel: 'user@example.com',
         ok: true,
         value: [
-          {
-            id: 'event-1',
-            summary: 'Team standup',
-            startTime: '2026-03-22T09:00:00Z',
-            endTime: '2026-03-22T09:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
-            calendarId: 'user@example.com',
-            calendarDisplayName: null,
-            calendarColor: null,
-            responseStatus: 'accepted',
-            redacted: false,
-          },
-          {
+          makeExternalEvent(),
+          makeExternalEvent({
             id: 'event-2',
             summary: 'All-day event',
             startTime: '2026-03-22',
             endTime: '2026-03-23',
             isAllDay: true,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
-            calendarId: 'user@example.com',
-            calendarDisplayName: null,
-            calendarColor: null,
-            responseStatus: 'accepted',
-            redacted: false,
-          },
+          }),
         ],
       },
     ])
@@ -781,21 +760,12 @@ describe('getEvents', () => {
         accountLabel: 'user@example.com',
         ok: true,
         value: [
-          {
+          makeExternalEvent({
             id: 'event-no-title',
             summary: '(No title)',
             startTime: '2026-03-22T10:00:00Z',
             endTime: '2026-03-22T11:00:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
-            calendarId: 'user@example.com',
-            calendarDisplayName: null,
-            calendarColor: null,
-            responseStatus: 'accepted',
-            redacted: false,
-          },
+          }),
         ],
       },
     ])
@@ -858,21 +828,10 @@ describe('getEvents', () => {
         accountLabel: 'user1@example.com',
         ok: true,
         value: [
-          {
-            id: 'event-1',
-            summary: 'Team standup',
-            startTime: '2026-03-22T09:00:00Z',
-            endTime: '2026-03-22T09:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
+          makeExternalEvent({
             accountLabel: 'user1@example.com',
             calendarId: 'user1@example.com',
-            calendarDisplayName: null,
-            calendarColor: null,
-            responseStatus: 'accepted',
-            redacted: false,
-          },
+          }),
         ],
       },
       {
@@ -953,36 +912,18 @@ describe('getEvents', () => {
         accountLabel: 'user@example.com',
         ok: true,
         value: [
-          {
-            id: 'event-1',
+          makeExternalEvent({
             summary: 'Standup',
-            startTime: '2026-03-22T09:00:00Z',
-            endTime: '2026-03-22T09:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
-            calendarId: 'user@example.com',
-            calendarDisplayName: null,
-            calendarColor: null,
-            responseStatus: 'accepted',
-            redacted: false,
-          },
-          {
+          }),
+          makeExternalEvent({
             id: 'event-2',
             summary: 'Planning',
             startTime: '2026-03-22T14:00:00Z',
             endTime: '2026-03-22T14:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
             calendarId: 'work@example.com',
             calendarDisplayName: 'Work',
             calendarColor: '#ff0000',
-            responseStatus: 'accepted',
-            redacted: false,
-          },
+          }),
         ],
       },
     ])
@@ -1040,21 +981,9 @@ describe('getEvents', () => {
         accountLabel: 'user@example.com',
         ok: true,
         value: [
-          {
-            id: 'event-1',
+          makeExternalEvent({
             summary: 'Standup',
-            startTime: '2026-03-22T09:00:00Z',
-            endTime: '2026-03-22T09:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
-            calendarId: 'user@example.com',
-            calendarDisplayName: null,
-            calendarColor: null,
-            responseStatus: 'accepted',
-            redacted: false,
-          },
+          }),
         ],
       },
     ])
@@ -1201,6 +1130,10 @@ describe('getEvents', () => {
                   summary: 'Personal event',
                   start: { dateTime: '2026-03-22T11:00:00Z' },
                   end: { dateTime: '2026-03-22T11:30:00Z' },
+                  eventType: 'outOfOffice',
+                  attendees: [
+                    { email: 'other@example.com', responseStatus: 'accepted' },
+                  ],
                 },
                 {
                   id: 'event-personal-all-day',
@@ -1229,51 +1162,26 @@ describe('getEvents', () => {
         accountLabel: 'user@example.com',
         ok: true,
         value: [
-          {
+          makeExternalEvent({
             id: 'event-default',
             summary: 'Default calendar event',
-            startTime: '2026-03-22T09:00:00Z',
-            endTime: '2026-03-22T09:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
-            calendarId: 'user@example.com',
-            calendarDisplayName: null,
-            calendarColor: null,
-            responseStatus: 'accepted',
-            redacted: false,
-          },
-          {
+          }),
+          makeExternalEvent({
             id: 'event-personal',
             summary: '',
             startTime: '2026-03-22T11:00:00Z',
             endTime: '2026-03-22T11:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
             calendarId: 'personal@example.com',
-            calendarDisplayName: null,
-            calendarColor: null,
-            responseStatus: 'accepted',
             redacted: true,
-          },
-          {
+          }),
+          makeExternalEvent({
             id: 'event-work',
             summary: 'Work event',
             startTime: '2026-03-22T10:00:00Z',
             endTime: '2026-03-22T10:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
             calendarId: 'work@example.com',
             calendarDisplayName: 'Work',
-            calendarColor: null,
-            responseStatus: 'accepted',
-            redacted: false,
-          },
+          }),
         ],
       },
     ])
@@ -1370,51 +1278,26 @@ describe('getEvents', () => {
         accountLabel: 'user@example.com',
         ok: true,
         value: [
-          {
+          makeExternalEvent({
             id: 'event-default',
             summary: 'Default calendar event',
-            startTime: '2026-03-22T09:00:00Z',
-            endTime: '2026-03-22T09:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
-            calendarId: 'user@example.com',
-            calendarDisplayName: null,
-            calendarColor: null,
-            responseStatus: 'accepted',
-            redacted: false,
-          },
-          {
+          }),
+          makeExternalEvent({
             id: 'event-personal',
             summary: 'Personal event',
             startTime: '2026-03-22T11:00:00Z',
             endTime: '2026-03-22T11:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
             calendarId: 'personal@example.com',
             calendarDisplayName: 'Personal',
-            calendarColor: null,
-            responseStatus: 'accepted',
-            redacted: false,
-          },
-          {
+          }),
+          makeExternalEvent({
             id: 'event-work',
             summary: 'Work event',
             startTime: '2026-03-22T10:00:00Z',
             endTime: '2026-03-22T10:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
             calendarId: 'work@example.com',
             calendarDisplayName: 'Work',
-            calendarColor: null,
-            responseStatus: 'accepted',
-            redacted: false,
-          },
+          }),
         ],
       },
     ])
@@ -1467,36 +1350,21 @@ describe('getEvents', () => {
         accountLabel: 'user@example.com',
         ok: true,
         value: [
-          {
+          makeExternalEvent({
             id: 'event-needs-action',
             summary: 'Needs action',
             startTime: '2026-03-22T11:00:00Z',
             endTime: '2026-03-22T11:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
-            calendarId: 'user@example.com',
-            calendarDisplayName: null,
-            calendarColor: null,
             responseStatus: 'needsAction',
-            redacted: false,
-          },
-          {
+          }),
+          makeExternalEvent({
             id: 'event-tentative',
             summary: 'Tentative',
             startTime: '2026-03-22T10:00:00Z',
             endTime: '2026-03-22T10:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
-            calendarId: 'user@example.com',
-            calendarDisplayName: null,
-            calendarColor: null,
             responseStatus: 'tentative',
-            redacted: false,
-          },
+            hasOtherAttendees: true,
+          }),
         ],
       },
     ])
@@ -1547,36 +1415,19 @@ describe('getEvents', () => {
         accountLabel: 'user@example.com',
         ok: true,
         value: [
-          {
+          makeExternalEvent({
             id: 'event-no-attendees',
             summary: 'Solo event',
             startTime: '2026-03-22T12:00:00Z',
             endTime: '2026-03-22T12:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
-            calendarId: 'user@example.com',
-            calendarDisplayName: null,
-            calendarColor: null,
-            responseStatus: 'accepted',
-            redacted: false,
-          },
-          {
+          }),
+          makeExternalEvent({
             id: 'event-no-self',
             summary: 'Not invited',
             startTime: '2026-03-22T13:00:00Z',
             endTime: '2026-03-22T13:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
-            calendarId: 'user@example.com',
-            calendarDisplayName: null,
-            calendarColor: null,
-            responseStatus: 'accepted',
-            redacted: false,
-          },
+            hasOtherAttendees: true,
+          }),
         ],
       },
     ])
@@ -1626,21 +1477,140 @@ describe('getEvents', () => {
         accountLabel: 'user@example.com',
         ok: true,
         value: [
-          {
+          makeExternalEvent({
             id: 'event-accepted',
             summary: 'Accepted',
             startTime: '2026-03-22T10:00:00Z',
             endTime: '2026-03-22T10:30:00Z',
-            isAllDay: false,
-            source: 'google_calendar',
-            accountId: 'google-sub-1',
-            accountLabel: 'user@example.com',
-            calendarId: 'user@example.com',
-            calendarDisplayName: null,
-            calendarColor: null,
-            responseStatus: 'accepted',
-            redacted: false,
-          },
+          }),
+        ],
+      },
+    ])
+  })
+
+  it('does not count a booked room as another attendee', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: 'event-room-only',
+              summary: 'Solo work in a room',
+              start: { dateTime: '2026-03-22T09:00:00Z' },
+              end: { dateTime: '2026-03-22T10:00:00Z' },
+              attendees: [
+                { self: true, responseStatus: 'accepted' },
+                {
+                  email: 'room-a@resource.calendar.example.com',
+                  resource: true,
+                  responseStatus: 'accepted',
+                },
+              ],
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    )
+
+    const results = await getEvents(
+      '2026-03-22T00:00:00Z',
+      '2026-03-23T00:00:00Z',
+    )
+
+    expect(normalizeAccountResults(results)).toEqual([
+      {
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        ok: true,
+        value: [
+          makeExternalEvent({
+            id: 'event-room-only',
+            summary: 'Solo work in a room',
+            endTime: '2026-03-22T10:00:00Z',
+          }),
+        ],
+      },
+    ])
+  })
+
+  it("reports Google's eventType, defaulting to default, and keeps the other events when one has a type Google added later", async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: 'event-focus',
+              summary: 'Focus time',
+              start: { dateTime: '2026-03-22T09:00:00Z' },
+              end: { dateTime: '2026-03-22T10:00:00Z' },
+              eventType: 'focusTime',
+            },
+            {
+              id: 'event-plain',
+              summary: 'Plain event',
+              start: { dateTime: '2026-03-22T10:00:00Z' },
+              end: { dateTime: '2026-03-22T10:30:00Z' },
+            },
+            {
+              id: 'event-unknown',
+              summary: 'Unknown type',
+              start: { dateTime: '2026-03-22T11:00:00Z' },
+              end: { dateTime: '2026-03-22T11:30:00Z' },
+              eventType: 'someFutureType',
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    )
+
+    const results = await getEvents(
+      '2026-03-22T00:00:00Z',
+      '2026-03-23T00:00:00Z',
+    )
+
+    expect(normalizeAccountResults(results)).toEqual([
+      {
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        ok: true,
+        value: [
+          makeExternalEvent({
+            id: 'event-focus',
+            summary: 'Focus time',
+            endTime: '2026-03-22T10:00:00Z',
+            eventType: 'focusTime',
+          }),
+          makeExternalEvent({
+            id: 'event-plain',
+            summary: 'Plain event',
+            startTime: '2026-03-22T10:00:00Z',
+            endTime: '2026-03-22T10:30:00Z',
+          }),
+          makeExternalEvent({
+            id: 'event-unknown',
+            summary: 'Unknown type',
+            startTime: '2026-03-22T11:00:00Z',
+            endTime: '2026-03-22T11:30:00Z',
+            eventType: 'someFutureType',
+          }),
         ],
       },
     ])
