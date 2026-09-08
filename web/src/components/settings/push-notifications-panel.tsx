@@ -116,7 +116,7 @@ export function PushNotificationsPanel({
               description="通知が届かないときに、Service Worker を登録し直す"
             >
               <Button variant="outline" size="sm" onClick={onReinstall}>
-                入れ直す
+                再インストール
               </Button>
             </SettingsRow>
           )}
