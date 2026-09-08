@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClientProvider } from '@tanstack/react-query'
 import type { ComponentProps, ReactNode } from 'react'
 import { useState } from 'react'
-import { expect, fireEvent, fn, waitFor } from 'storybook/test'
+import { expect, fireEvent, fn, waitFor, within } from 'storybook/test'
 
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
@@ -43,6 +43,130 @@ export const WithContent: Story = {
   args: {
     defaultValue:
       '## Discussion Points\n\n- Architecture review\n- Sprint planning\n- Performance improvements\n\nWe decided to go with option B for the following reasons:\n\n1. Better performance\n2. Simpler architecture\n3. Easier to maintain',
+  },
+}
+
+const HOVER_TARGET_TEXT = 'Hover this paragraph to reveal its block handle.'
+
+// The block handle intentionally overhangs into surrounding padding, which
+// would otherwise trigger Storybook's overflow check.
+const HANDLE_OVERFLOW_IGNORE_SELECTORS = [
+  '.milkdown-wrapper',
+  '[data-milkdown-root]',
+  '.milkdown',
+]
+
+// BlockProvider binds its hover listener asynchronously and throttles
+// pointermove; wait for the handle before hovering.
+async function hoverToRevealBlockHandle(
+  canvasElement: HTMLElement,
+): Promise<Element> {
+  const canvas = within(canvasElement)
+  const paragraph = await canvas.findByText(HOVER_TARGET_TEXT)
+
+  const handle = await waitFor(() =>
+    assertDefined(
+      canvasElement.querySelector('.milkdown-block-handle'),
+      'BlockEdit mounts its handle element in a requestAnimationFrame',
+    ),
+  )
+  const rect = paragraph.getBoundingClientRect()
+  await fireEvent.pointerMove(paragraph, {
+    clientX: rect.left + rect.width / 2,
+    clientY: rect.top + rect.height / 2,
+  })
+  await waitFor(() => expect(handle).toHaveAttribute('data-show', 'true'))
+  return handle
+}
+
+// Regression check: the handle spends its parent card's own padding (see
+// markdown-editor-crepe.tsx) before overlapping the block's text, so it
+// must never render further left than that card's edge.
+export const BlockHandleStaysInsideParentCard: Story = {
+  args: {
+    defaultValue: HOVER_TARGET_TEXT,
+  },
+  parameters: {
+    // Tests behavior in play, not appearance.
+    screenshot: { skip: true },
+    overflowCheck: { ignoreSelectors: HANDLE_OVERFLOW_IGNORE_SELECTORS },
+  },
+  play: async ({ canvasElement }) => {
+    const handle = await hoverToRevealBlockHandle(canvasElement)
+
+    const wrapper = assertDefined(
+      canvasElement.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
+    )
+    const parentCard = assertDefined(
+      wrapper.parentElement,
+      'the story decorator always wraps the editor in a card',
+    )
+    const boundaryRect = parentCard.getBoundingClientRect()
+    const handleRect = handle.getBoundingClientRect()
+    await expect(handleRect.left).toBeGreaterThanOrEqual(boundaryRect.left)
+  },
+}
+
+// Regression check: some call sites (e.g. task-pages-section.tsx,
+// task-activity.tsx) wrap MarkdownEditor in an extra unpadded div before
+// their own padded card, so the handle must walk past that div rather than
+// clamping to its edge.
+export const BlockHandleStaysInsidePaddedAncestorPastExtraWrapper: Story = {
+  args: {
+    defaultValue: HOVER_TARGET_TEXT,
+  },
+  parameters: {
+    // Tests behavior in play, not appearance.
+    screenshot: { skip: true },
+    overflowCheck: {
+      ignoreSelectors: [...HANDLE_OVERFLOW_IGNORE_SELECTORS, '.extra-wrapper'],
+    },
+  },
+  render: (args) => (
+    <div className="extra-wrapper text-sm">
+      <MarkdownEditor {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const handle = await hoverToRevealBlockHandle(canvasElement)
+
+    const wrapper = assertDefined(
+      canvasElement.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
+    )
+    const extraWrapper = assertDefined(
+      wrapper.parentElement,
+      'this story wraps the editor in an extra unpadded div',
+    )
+    const paddedCard = assertDefined(
+      extraWrapper.parentElement,
+      'the story decorator always wraps the editor in a card',
+    )
+    const boundaryRect = paddedCard.getBoundingClientRect()
+    const handleRect = handle.getBoundingClientRect()
+    await expect(handleRect.left).toBeGreaterThanOrEqual(boundaryRect.left)
+  },
+}
+
+// Regression check for the leading `+` button hide (see markdown-editor.css)
+// — a separate contract from the handle's own visibility above.
+export const BlockHandleHidesAddButton: Story = {
+  args: {
+    defaultValue: HOVER_TARGET_TEXT,
+  },
+  parameters: {
+    // Tests behavior in play, not appearance.
+    screenshot: { skip: true },
+    overflowCheck: { ignoreSelectors: HANDLE_OVERFLOW_IGNORE_SELECTORS },
+  },
+  play: async ({ canvasElement }) => {
+    const handle = await hoverToRevealBlockHandle(canvasElement)
+
+    const visibleOperationItems = [
+      ...handle.querySelectorAll('.operation-item'),
+    ].filter((el) => getComputedStyle(el).display !== 'none')
+    await expect(visibleOperationItems).toHaveLength(1)
   },
 }
 

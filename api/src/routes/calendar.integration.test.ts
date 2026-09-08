@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { app } from '#app'
 import { db } from '#db/connection'
 import { calendarSubscriptions, oauthTokens } from '#db/schema'
+import { makeExternalEvent } from '#integrations/external-event-test-fixtures'
 import { upsertGoogleCalendarToken } from '#integrations/google-calendar/testing'
 import type { ExternalEvent } from '#integrations/types'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
@@ -198,36 +199,20 @@ describe('GET /api/calendar/events', () => {
     expect(res.status).toBe(200)
     const body = await jsonBody<ExternalEvent[]>(res)
     expect([...body].sort((a, b) => a.id.localeCompare(b.id))).toEqual([
-      {
-        id: 'event-1',
+      makeExternalEvent({
         summary: 'Standup',
-        startTime: '2026-03-22T09:00:00Z',
-        endTime: '2026-03-22T09:30:00Z',
-        isAllDay: false,
-        source: 'google_calendar',
-        accountId: 'google-sub-1',
         accountLabel: 'user1@example.com',
         calendarId: 'user1@example.com',
-        calendarDisplayName: null,
-        calendarColor: null,
-        responseStatus: 'accepted',
-        redacted: false,
-      },
-      {
+      }),
+      makeExternalEvent({
         id: 'event-2',
         summary: 'Review',
         startTime: '2026-03-22T14:00:00Z',
         endTime: '2026-03-22T14:30:00Z',
-        isAllDay: false,
-        source: 'google_calendar',
         accountId: 'google-sub-2',
         accountLabel: 'user2@example.com',
         calendarId: 'user2@example.com',
-        calendarDisplayName: null,
-        calendarColor: null,
-        responseStatus: 'accepted',
-        redacted: false,
-      },
+      }),
     ])
   })
 
@@ -282,21 +267,11 @@ describe('GET /api/calendar/events', () => {
 
     expect(res.status).toBe(200)
     expect(await jsonBody<ExternalEvent[]>(res)).toEqual([
-      {
-        id: 'event-1',
+      makeExternalEvent({
         summary: 'Standup',
-        startTime: '2026-03-22T09:00:00Z',
-        endTime: '2026-03-22T09:30:00Z',
-        isAllDay: false,
-        source: 'google_calendar',
-        accountId: 'google-sub-1',
         accountLabel: 'user1@example.com',
         calendarId: 'user1@example.com',
-        calendarDisplayName: null,
-        calendarColor: null,
-        responseStatus: 'accepted',
-        redacted: false,
-      },
+      }),
     ])
   })
 
@@ -363,36 +338,17 @@ describe('GET /api/calendar/events', () => {
     expect(res.status).toBe(200)
     const body = await jsonBody<ExternalEvent[]>(res)
     expect([...body].sort((a, b) => a.id.localeCompare(b.id))).toEqual([
-      {
-        id: 'event-1',
+      makeExternalEvent({
         summary: 'Standup',
-        startTime: '2026-03-22T09:00:00Z',
-        endTime: '2026-03-22T09:30:00Z',
-        isAllDay: false,
-        source: 'google_calendar',
-        accountId: 'google-sub-1',
-        accountLabel: 'user@example.com',
-        calendarId: 'user@example.com',
-        calendarDisplayName: null,
-        calendarColor: null,
-        responseStatus: 'accepted',
-        redacted: false,
-      },
-      {
+      }),
+      makeExternalEvent({
         id: 'event-2',
         summary: '',
         startTime: '2026-03-22T14:00:00Z',
         endTime: '2026-03-22T14:30:00Z',
-        isAllDay: false,
-        source: 'google_calendar',
-        accountId: 'google-sub-1',
-        accountLabel: 'user@example.com',
         calendarId: 'personal@example.com',
-        calendarDisplayName: null,
-        calendarColor: null,
-        responseStatus: 'accepted',
         redacted: true,
-      },
+      }),
     ])
   })
 

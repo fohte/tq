@@ -2,6 +2,7 @@ import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/frame-dark.css'
 import '#components/ui/markdown-editor.css'
 
+import { shift } from '@floating-ui/dom'
 import { Crepe } from '@milkdown/crepe'
 import { replaceAll } from '@milkdown/kit/utils'
 import { upload, uploadConfig } from '@milkdown/plugin-upload'
@@ -39,6 +40,20 @@ export interface CrepeEditorProps {
   mode: 'view' | 'edit'
 }
 
+// Walks up from `el` to the nearest ancestor with its own left padding —
+// the visual card each call site wraps `MarkdownEditor` in, however many
+// unpadded divs sit between them.
+function findPaddedAncestor(el: HTMLElement): HTMLElement | null {
+  let current = el.parentElement
+  while (current) {
+    if (parseFloat(getComputedStyle(current).paddingLeft) > 0) {
+      return current
+    }
+    current = current.parentElement
+  }
+  return null
+}
+
 function CrepeEditor({
   defaultValue,
   onChange,
@@ -56,11 +71,27 @@ function CrepeEditor({
   const lastSyncedValueRef = useRef(defaultValue ?? '')
 
   useEditor((root) => {
+    // Clamp the handle to the nearest padded ancestor so it uses that
+    // padding before overlapping the block's text. Some call sites nest
+    // `root` inside one or more unpadded wrapper divs before their card,
+    // so a fixed number of parentElement hops can't find it reliably.
+    const boundary = findPaddedAncestor(root) ?? root
     const crepe = new Crepe({
       root,
       defaultValue: defaultValue ?? '',
       ...(placeholder != null ? { placeholder } : {}),
       featureConfigs: {
+        [Crepe.Feature.BlockEdit]: {
+          blockHandle: {
+            // Keeps the handle flush against the block; at this offset it
+            // sits partly left of the editor's own content box.
+            getOffset: () => 0,
+            // crossAxis: shift()'s cross axis is the placement's side axis
+            // (x, for this handle's 'left' placement) — the axis that
+            // actually needs clamping when `boundary` cuts it off.
+            middleware: [shift({ crossAxis: true, boundary })],
+          },
+        },
         [Crepe.Feature.ImageBlock]: {
           onUpload: (file) =>
             uploadImageFile(file).match(

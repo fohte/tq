@@ -6,6 +6,7 @@ import { GcalCalendarPicker } from '#components/settings/gcal-calendar-picker'
 import { GithubSyncRuleList } from '#components/settings/github-sync-rule-list'
 import { IntegrationCard } from '#components/settings/integration-card'
 import { KeybindingsList } from '#components/settings/keybindings-list'
+import { PushNotificationsPanel } from '#components/settings/push-notifications-panel'
 import { QueryStateMessage } from '#components/settings/query-state-message'
 import { SchedulingSettingsPanel } from '#components/settings/scheduling-settings-panel'
 import { SessionOpenSettingsPanel } from '#components/settings/session-open-settings-panel'
@@ -21,6 +22,7 @@ import {
   useIntegrationAuthUrl,
   useIntegrationsList,
 } from '#hooks/use-integrations'
+import { usePushNotifications } from '#hooks/use-push-notifications'
 
 export const Route = createFileRoute('/settings')({
   component: Settings,
@@ -34,6 +36,7 @@ const INTEGRATION_ICONS: Record<string, ReactNode> = {
 
 function Settings() {
   const integrationsList = useIntegrationsList()
+  const pushNotifications = usePushNotifications()
 
   return (
     <div className="flex flex-col">
@@ -63,6 +66,10 @@ function Settings() {
               message="連携状態の取得に失敗しました"
             />
           )}
+
+          <div className="mt-8">
+            <PushNotificationsPanel {...pushNotifications} />
+          </div>
 
           <div className="mt-8">
             <SchedulingSettingsPanel />
