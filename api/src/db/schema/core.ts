@@ -133,7 +133,11 @@ export const tasks = pgTable(
     index('idx_tasks_project_id').on(table.projectId),
     index('idx_tasks_project_status').on(table.projectId, table.status),
     index('idx_tasks_commitment').on(table.commitment),
-    index('idx_tasks_remind_at').on(table.remindAt),
+    // Partial: `remind_at` is NULL on all but the handful of tasks with a
+    // pending reminder, and the poll's predicate never matches NULL anyway.
+    index('idx_tasks_remind_at')
+      .on(table.remindAt)
+      .where(sql`${table.remindAt} IS NOT NULL`),
     check(
       'tasks_status_reason_check',
       sql`${table.status} = 'completed' OR ${table.statusReason} IS NULL`,

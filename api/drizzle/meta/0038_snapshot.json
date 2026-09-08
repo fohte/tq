@@ -1,5 +1,5 @@
 {
-  "id": "7ebb46c1-3b1f-40aa-9c64-d46489ca3da1",
+  "id": "97077a8f-c933-4a47-94bc-54a4b9760781",
   "prevId": "872be9cf-13e8-48a7-a54d-7629d3c62b15",
   "version": "7",
   "dialect": "postgresql",
@@ -1171,6 +1171,7 @@
             }
           ],
           "isUnique": false,
+          "where": "\"tasks\".\"remind_at\" IS NOT NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
