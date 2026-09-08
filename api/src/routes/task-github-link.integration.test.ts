@@ -264,20 +264,16 @@ describe('DELETE /api/tasks/:taskId/github-link/:linkId', () => {
 })
 
 describe('POST /api/tasks/:taskId/github-link/sync', () => {
-  it('refreshes the linked task from GitHub', async () => {
+  it('refreshes the link from GitHub, leaving the task untouched', async () => {
     const task = await createTask('My task')
     await upsertGithubToken('valid-token')
     mockGithubIssueResponse()
-    await app.request(`/api/tasks/${task.id}/github-link`, {
+    const linkRes = await app.request(`/api/tasks/${task.id}/github-link`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/42' }),
     })
-    // Consume the link's first sync (seed-only, see syncLinkFromGithub).
-    mockGithubIssueResponse()
-    await app.request(`/api/tasks/${task.id}/github-link/sync`, {
-      method: 'POST',
-    })
+    const link = await jsonBody<GithubLinkResponse>(linkRes)
 
     mockGithubIssueResponse({ title: 'Renamed on GitHub' })
     const res = await app.request(`/api/tasks/${task.id}/github-link/sync`, {
@@ -287,7 +283,10 @@ describe('POST /api/tasks/:taskId/github-link/sync', () => {
     expect(res.status).toBe(204)
     const detailRes = await app.request(`/api/tasks/${task.id}`)
     const detailBody = await jsonBody<TaskResponse>(detailRes)
-    expect(detailBody.title).toBe('Renamed on GitHub')
+    expect(detailBody.title).toBe(task.title)
+    expect(detailBody.githubLinks.map(normalizeLink)).toEqual([
+      { ...normalizeLink(link), title: 'Renamed on GitHub' },
+    ])
   })
 
   it('syncs every linked issue, not just the first', async () => {
@@ -316,13 +315,6 @@ describe('POST /api/tasks/:taskId/github-link/sync', () => {
       },
     )
     const secondLink = await jsonBody<GithubLinkResponse>(secondLinkRes)
-
-    // Consume both links' first sync (seed-only, see syncLinkFromGithub).
-    mockGithubIssueResponse()
-    mockGithubIssueResponse()
-    await app.request(`/api/tasks/${task.id}/github-link/sync`, {
-      method: 'POST',
-    })
 
     mockGithubIssueResponse({ title: 'Synced' })
     mockGithubIssueResponse({ title: 'Synced' })
@@ -367,13 +359,6 @@ describe('POST /api/tasks/:taskId/github-link/sync', () => {
       },
     )
     const secondLink = await jsonBody<GithubLinkResponse>(secondLinkRes)
-
-    // Consume both links' first sync (seed-only, see syncLinkFromGithub).
-    mockGithubIssueResponse()
-    mockGithubIssueResponse()
-    await app.request(`/api/tasks/${task.id}/github-link/sync`, {
-      method: 'POST',
-    })
 
     // firstLink's fetch fails; secondLink's still succeeds.
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(

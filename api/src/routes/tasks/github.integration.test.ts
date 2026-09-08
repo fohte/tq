@@ -44,7 +44,7 @@ function normalizeCreateResponse(body: {
 }
 
 describe('POST /api/tasks/from-github', () => {
-  it('creates a task from the issue title/body', async () => {
+  it('creates a task from the issue title, leaving the description empty', async () => {
     await upsertGithubToken('valid-token')
     mockGithubIssueResponse()
 
@@ -60,7 +60,7 @@ describe('POST /api/tasks/from-github', () => {
         id: 'ID',
         number: 'NUMBER',
         title: 'Bug: something broke',
-        description: 'Steps to reproduce...',
+        description: null,
         status: 'todo',
         statusReason: null,
         context: 'personal',

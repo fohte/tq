@@ -86,17 +86,14 @@ describe('POST /api/github/sync', () => {
     })
     const { task } = await jsonBody<{ task: TaskResponse }>(created)
 
-    // Consume the link's first sync (seed-only, see syncLinkFromGithub).
-    mockGithubIssueResponse()
-    await app.request('/api/github/sync', { method: 'POST' })
-
     mockGithubIssueResponse({ title: 'Renamed on GitHub' })
     const res = await app.request('/api/github/sync', { method: 'POST' })
 
     expect(res.status).toBe(204)
     const detailRes = await app.request(`/api/tasks/${task.id}`)
     const detailBody = await jsonBody<TaskResponse>(detailRes)
-    expect(detailBody.title).toBe('Renamed on GitHub')
+    expect(detailBody.title).toBe(task.title)
+    expect(detailBody.githubLinks[0]?.title).toBe('Renamed on GitHub')
   })
 
   it('returns 204 without error when GitHub is not connected', async () => {
