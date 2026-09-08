@@ -53,6 +53,10 @@ describe('parseReminderInput', () => {
     )
   })
 
+  it('returns null for a relative duration large enough to overflow Date', async () => {
+    expect(await parseReminderInput('99999999999時間後', now)).toBeNull()
+  })
+
   it('parses "N時間後" as a relative duration', async () => {
     expect(await parseReminderInput('1時間後', now)).toEqual(
       new Date(2026, 8, 8, 11, 0),

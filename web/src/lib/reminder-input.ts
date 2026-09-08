@@ -50,7 +50,11 @@ function parseRelativeDuration(text: string, now: Date): Date | null {
 
   const amount = Number(match[1])
   const unitMs = match[2] === '分' ? 60_000 : 3_600_000
-  return new Date(now.getTime() + amount * unitMs)
+  const date = new Date(now.getTime() + amount * unitMs)
+  // A large enough amount (e.g. "99999999999時間後") overflows Date's range
+  // into an Invalid Date — treat that the same as unparseable input rather
+  // than handing callers a Date whose toISOString() throws.
+  return Number.isNaN(date.getTime()) ? null : date
 }
 
 /**
@@ -72,6 +76,11 @@ export async function parseReminderInput(
   // needed once the reminder popup is opened. The `/ja` locale subpath would
   // trim this further, but Vite 7.3's resolver can't resolve chrono-node's
   // wildcard `exports` entry for it.
-  const { ja } = await import('chrono-node')
-  return ja.parseDate(trimmed, now, { forwardDate: true })
+  const chronoModule = await import('chrono-node').catch((error: unknown) => {
+    console.error('Failed to load chrono-node', error)
+    return null
+  })
+  if (chronoModule == null) return null
+
+  return chronoModule.ja.parseDate(trimmed, now, { forwardDate: true })
 }

@@ -41,12 +41,17 @@ export function SidebarRemindField({
     setParsedDate(null)
   }
 
+  // A committing action (confirming a value or clearing) always wins over
+  // any still-in-flight parse from an earlier action — bumping the token
+  // here makes that earlier parse's eventual `.then` a no-op.
   const commit = (date: Date) => {
+    requestIdRef.current++
     updateTask.mutate({ id: taskId, input: { remindAt: date.toISOString() } })
     stopEditing()
   }
 
   const clear = () => {
+    requestIdRef.current++
     updateTask.mutate({ id: taskId, input: { remindAt: null } })
     stopEditing()
   }
@@ -66,7 +71,9 @@ export function SidebarRemindField({
   }
 
   const selectPreset = (preset: string) => {
+    const requestId = ++requestIdRef.current
     void parseReminderInput(preset).then((date) => {
+      if (requestIdRef.current !== requestId) return
       if (date != null) commit(date)
     })
   }
