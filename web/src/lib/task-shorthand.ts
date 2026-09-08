@@ -13,11 +13,19 @@ export interface ShorthandExtraction {
   context?: ContextValue
   labels: string[]
   parentNumber?: number
+  githubUrl?: string
 }
 
 function isContextValue(value: string): value is ContextValue {
   return (contextValues as readonly string[]).includes(value) && value !== ''
 }
+
+// Matches only the path shape (owner/repo/issues|pull/number); unlike
+// GITHUB_ISSUE_OR_PR_URL_PATTERN in inline-reference/providers/github-url.ts,
+// this is anchored to the whole token since a shorthand URL always arrives as
+// its own whitespace-delimited word.
+const GITHUB_URL_RE =
+  /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/(?:issues|pull)\/\d+\/?$/
 
 function resolveDateKeyword(keyword: string): string | null {
   if (keyword === 'today') {
@@ -42,6 +50,7 @@ function resolveDateKeyword(keyword: string): string | null {
  * - `#label` → labels
  * - `%work` / `%personal` → context
  * - `^N` → parentNumber
+ * - a GitHub issue/PR URL → githubUrl
  *
  * A token counts as "completed" only once it's followed by whitespace, so
  * the word currently being typed is never touched. Unrecognized tokens are
@@ -90,6 +99,10 @@ export function extractShorthandTokens(input: string): ShorthandExtraction {
         continue
       } else if (word.startsWith('^') && /^\d+$/.test(value)) {
         result.parentNumber = Number(value)
+        consumed = true
+        continue
+      } else if (GITHUB_URL_RE.test(word)) {
+        result.githubUrl = word
         consumed = true
         continue
       }

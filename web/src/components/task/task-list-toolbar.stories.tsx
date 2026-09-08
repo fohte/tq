@@ -10,7 +10,6 @@ const meta = {
     layout: 'centered',
   },
   args: {
-    onCreateFromGithub: fn(),
     onCreateNew: fn(),
   },
 } satisfies Meta<typeof TaskListToolbar>

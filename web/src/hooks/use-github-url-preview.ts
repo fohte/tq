@@ -35,9 +35,10 @@ function githubUrlPreviewQueryOptions(url: string) {
   }
 }
 
-export function useGithubUrlPreview(url: string) {
+export function useGithubUrlPreview(url: string, enabled = true) {
   return useQuery({
     ...githubUrlPreviewQueryOptions(url),
+    enabled,
     // A non-2xx response above already resolves to `null` without throwing;
     // reaching here means `queryFn` itself threw (network error, bad JSON,
     // ...), which is unexpected and worth surfacing for debugging. The chip

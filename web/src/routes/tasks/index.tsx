@@ -4,7 +4,6 @@ import { useState } from 'react'
 
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { FloatingActionButton } from '#components/task/floating-action-button'
-import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { TaskListToolbar } from '#components/task/task-list-toolbar'
 import { TaskTreeList } from '#components/task/task-tree-list'
@@ -72,7 +71,6 @@ function TaskList() {
   const parsed = parseSearchQuery(q)
   const navigate = Route.useNavigate()
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isGithubModalOpen, setIsGithubModalOpen] = useState(false)
 
   const setQuery = (newQuery: string) => {
     void navigate({
@@ -101,9 +99,6 @@ function TaskList() {
         <ScreenHeaderBar>
           <SectionHeading level={2}>tasks</SectionHeading>
           <TaskListToolbar
-            onCreateFromGithub={() => {
-              setIsGithubModalOpen(true)
-            }}
             onCreateNew={() => {
               setIsModalOpen(true)
             }}
@@ -138,13 +133,6 @@ function TaskList() {
 
       {/* Task create modal */}
       <CreateTaskModal open={isModalOpen} onOpenChange={setIsModalOpen} />
-
-      {/* Create task from GitHub issue/PR modal */}
-      <GithubIssueLinkModal
-        open={isGithubModalOpen}
-        onOpenChange={setIsGithubModalOpen}
-        mode="create"
-      />
     </div>
   )
 }

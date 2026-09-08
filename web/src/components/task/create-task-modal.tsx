@@ -1,5 +1,5 @@
 import { X } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { CreateTaskModalDesktop } from '#components/task/create-task-modal-desktop'
 import type {
@@ -7,6 +7,8 @@ import type {
   ContextValue,
 } from '#components/task/create-task-modal-fields'
 import { CreateTaskModalMobile } from '#components/task/create-task-modal-mobile'
+import { GithubRefSummary } from '#components/task/github-ref-summary'
+import { toGithubUrlSummary } from '#components/task/github-url-summary'
 import {
   Dialog,
   DialogOverlay,
@@ -15,6 +17,8 @@ import {
 } from '#components/ui/dialog'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { useCurrentContext } from '#hooks/use-current-context'
+import { useLinkTaskToGithub } from '#hooks/use-github-link'
+import { useGithubUrlPreview } from '#hooks/use-github-url-preview'
 import { useTaskMentionPreview } from '#hooks/use-task-mentions'
 import type { CreateTaskInput } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
@@ -80,12 +84,37 @@ export function CreateTaskModal({
   const [parentOverrideNumber, setParentOverrideNumber] = useState<
     number | undefined
   >(undefined)
+  // Set when the user types (or pastes) a GitHub issue/PR URL shorthand
+  // token in the title.
+  const [githubUrl, setGithubUrl] = useState<string | undefined>(undefined)
   const createTask = useCreateTask()
+  const linkGithub = useLinkTaskToGithub()
 
   const parentOverridePreview = useTaskMentionPreview(
     parentOverrideNumber ?? 0,
     parentOverrideNumber != null,
   )
+  const githubPreview = useGithubUrlPreview(githubUrl ?? '', githubUrl != null)
+  const githubSummary = useMemo(
+    () =>
+      githubPreview.data != null
+        ? toGithubUrlSummary(githubPreview.data)
+        : null,
+    [githubPreview.data],
+  )
+  const githubPending = githubUrl != null && githubPreview.data === undefined
+  const githubUnresolvable = githubUrl != null && githubPreview.data === null
+  const githubAlreadyLinked = githubSummary?.linkedTaskId != null
+
+  // Seeds the title from the resolved issue/PR once, as an editable initial
+  // value (not a re-applied transcription) — only while the title is still
+  // empty, so it never clobbers text the user already typed.
+  useEffect(() => {
+    if (githubSummary == null) return
+    setTitle((current) =>
+      current.trim() === '' ? githubSummary.title : current,
+    )
+  }, [githubSummary])
   const effectiveParentNumber = parentOverrideNumber ?? parentTaskNumber
   const effectiveParentTitle =
     parentOverrideNumber != null
@@ -130,6 +159,7 @@ export function CreateTaskModal({
     setCommitment('')
     setLabels(defaultLabels ?? [])
     setParentOverrideNumber(undefined)
+    setGithubUrl(undefined)
   }, [
     defaultStartDate,
     effectiveDefaultContext,
@@ -163,6 +193,7 @@ export function CreateTaskModal({
     }
     if (parsed.parentNumber != null)
       setParentOverrideNumber(parsed.parentNumber)
+    if (parsed.githubUrl != null) setGithubUrl(parsed.githubUrl)
   }
 
   const handleSubmit = () => {
@@ -170,7 +201,10 @@ export function CreateTaskModal({
       !title.trim() ||
       createTask.isPending ||
       parentNotFound ||
-      parentPending
+      parentPending ||
+      githubPending ||
+      githubUnresolvable ||
+      githubAlreadyLinked
     )
       return
 
@@ -190,6 +224,9 @@ export function CreateTaskModal({
 
     createTask.mutate(input, {
       onSuccess: (task) => {
+        if (githubUrl != null) {
+          linkGithub.mutate({ taskId: task.id, url: githubUrl })
+        }
         resetForm()
         onOpenChange(false)
         onCreated?.(task)
@@ -238,6 +275,37 @@ export function CreateTaskModal({
     </span>
   )
 
+  const githubIndicator = githubUrl != null && (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 text-2xs',
+        githubUnresolvable || githubAlreadyLinked
+          ? 'text-destructive'
+          : 'text-muted-foreground-faint',
+      )}
+    >
+      {githubPending ? (
+        <>resolving {githubUrl}...</>
+      ) : githubUnresolvable ? (
+        <>could not resolve GitHub link</>
+      ) : githubAlreadyLinked ? (
+        <>already linked to another task</>
+      ) : (
+        githubSummary && <GithubRefSummary {...githubSummary} />
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          setGithubUrl(undefined)
+        }}
+        aria-label="Remove GitHub link"
+        className="text-muted-foreground-faint hover:text-destructive"
+      >
+        <X className="h-2.5 w-2.5" />
+      </button>
+    </span>
+  )
+
   const descriptionEditor = (
     <MarkdownEditor
       key={editorKey}
@@ -251,7 +319,13 @@ export function CreateTaskModal({
   )
 
   const submitDisabled =
-    !title.trim() || createTask.isPending || parentNotFound || parentPending
+    !title.trim() ||
+    createTask.isPending ||
+    parentNotFound ||
+    parentPending ||
+    githubPending ||
+    githubUnresolvable ||
+    githubAlreadyLinked
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -260,6 +334,7 @@ export function CreateTaskModal({
         <DialogPopup onKeyDown={handleKeyDown}>
           <CreateTaskModalDesktop
             parentIndicator={parentIndicator}
+            githubIndicator={githubIndicator}
             descriptionEditor={descriptionEditor}
             title={title}
             setTitle={handleTitleChange}
@@ -281,6 +356,7 @@ export function CreateTaskModal({
           />
           <CreateTaskModalMobile
             parentIndicator={parentIndicator}
+            githubIndicator={githubIndicator}
             descriptionEditor={descriptionEditor}
             title={title}
             setTitle={handleTitleChange}

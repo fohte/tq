@@ -145,6 +145,42 @@ describe('extractShorthandTokens', () => {
     })
   })
 
+  it('parses a GitHub issue URL once followed by a space', () => {
+    expect(
+      extractShorthandTokens('Fix bug https://github.com/fohte/tq/issues/123 '),
+    ).toEqual({
+      title: 'Fix bug ',
+      githubUrl: 'https://github.com/fohte/tq/issues/123',
+      labels: [],
+    })
+  })
+
+  it('parses a GitHub pull request URL', () => {
+    expect(
+      extractShorthandTokens('https://github.com/fohte/tq/pull/45 '),
+    ).toEqual({
+      title: '',
+      githubUrl: 'https://github.com/fohte/tq/pull/45',
+      labels: [],
+    })
+  })
+
+  it('leaves the in-progress GitHub URL token untouched', () => {
+    expect(
+      extractShorthandTokens('https://github.com/fohte/tq/issues/123'),
+    ).toEqual({
+      title: 'https://github.com/fohte/tq/issues/123',
+      labels: [],
+    })
+  })
+
+  it('leaves a non-GitHub URL as title text', () => {
+    expect(extractShorthandTokens('https://example.com/issues/1 ')).toEqual({
+      title: 'https://example.com/issues/1 ',
+      labels: [],
+    })
+  })
+
   it('parses a complex input with all fields at once', () => {
     expect(
       extractShorthandTokens(

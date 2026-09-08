@@ -5,6 +5,8 @@ import { expect, fn, waitFor, within } from 'storybook/test'
 
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
+import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
+import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
 import { taskMentionKeys } from '#hooks/use-task-mentions'
 import { formatLocalDate } from '#lib/date-range'
 import { atIndex } from '#lib/test-utils'
@@ -31,6 +33,42 @@ function seedParentOverridePreview() {
     makeTaskDetail({ number: 34, title: 'Refactor auth module' }),
   )
   parentOverrideQueryClient.setQueryData(taskMentionKeys.preview(999), null)
+}
+
+const githubIssueUrl = 'https://github.com/fohte/tq/issues/123'
+
+function makeGithubPreview(
+  overrides: Partial<
+    Extract<ResolveGithubUrlResult, { linked: false }>['preview']
+  > = {},
+): ResolveGithubUrlResult {
+  return {
+    linked: false,
+    preview: {
+      owner: 'fohte',
+      repo: 'tq',
+      number: 123,
+      kind: 'issue',
+      url: githubIssueUrl,
+      title: 'Fix login bug',
+      body: null,
+      state: 'open',
+      ...overrides,
+    },
+  }
+}
+
+// Same reseed-per-decorator reasoning as seedParentOverridePreview above:
+// useGithubUrlPreview also hardcodes a 60s staleTime.
+const githubPreviewQueryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+})
+
+function seedGithubPreview() {
+  githubPreviewQueryClient.setQueryData(
+    githubUrlPreviewKeys.preview(githubIssueUrl),
+    makeGithubPreview(),
+  )
 }
 
 const meta = {
@@ -504,6 +542,93 @@ export const CaretShorthandParentNotFoundDisablesSubmit: Story = {
     for (const btn of body.getAllByRole('button', { name: /create/i })) {
       await expect(btn).not.toBeDisabled()
     }
+  },
+}
+
+let linkedGithubRequest: { taskId: string; url: string } | null = null
+
+export const GithubUrlShorthandLinksIssueAndSeedsTitle: Story = {
+  parameters: {
+    // The chip/title-seed behavior is what this story verifies; no new look
+    // beyond the parent indicator's already-covered chip styling.
+    screenshot: { skip: true },
+    msw: {
+      // Story-level handlers replace meta's entirely (not merge) — see the
+      // comment on CaretShorthandSubmitsRawParentNumber above.
+      handlers: [
+        http.get('/api/labels', () => HttpResponse.json([])),
+        http.get('/api/tasks/mentions', () => HttpResponse.json([])),
+        http.post('/api/tasks', () =>
+          HttpResponse.json({
+            id: 'temp-id',
+            number: 1,
+            title: 'temp',
+            description: null,
+            status: 'todo',
+            context: 'personal',
+            labels: [],
+          }),
+        ),
+        http.post(
+          '/api/tasks/:taskId/github-link',
+          async ({ request, params }) => {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- this story controls the request body it sends (githubIssueUrl) in the play function below
+            const { url } = (await request.json()) as { url: string }
+            linkedGithubRequest = { taskId: String(params['taskId']), url }
+            return HttpResponse.json({ id: 'link-1' })
+          },
+        ),
+        // Task creation invalidates taskKeys.all, which the preview query is
+        // nested under (see use-github-url-preview.ts), triggering a
+        // background refetch of this same URL.
+        http.post('/api/github/resolve', () =>
+          HttpResponse.json(makeGithubPreview()),
+        ),
+      ],
+    },
+  },
+  decorators: [
+    (Story) => {
+      seedGithubPreview()
+      return (
+        <QueryClientProvider client={githubPreviewQueryClient}>
+          <div className="dark h-screen bg-background">
+            <Story />
+          </div>
+        </QueryClientProvider>
+      )
+    },
+  ],
+  play: async ({ canvasElement, userEvent }) => {
+    linkedGithubRequest = null
+    const body = within(canvasElement.ownerDocument.body)
+    const titleInputs =
+      body.getAllByPlaceholderText(/task title|タスクのタイトル/i)
+    const titleInput = atIndex(titleInputs, 0)
+
+    await userEvent.type(titleInput, `${githubIssueUrl} `)
+
+    // The URL is stripped from the (now empty) title, which is seeded from
+    // the resolved issue's title as an editable initial value, and a chip
+    // for the issue appears.
+    await waitFor(async () => {
+      await expect(
+        atIndex(
+          body.getAllByPlaceholderText(/task title|タスクのタイトル/i),
+          0,
+        ),
+      ).toHaveValue('Fix login bug')
+    })
+    await expect(body.getAllByText('fohte/tq#123').length).toBeGreaterThan(0)
+
+    await userEvent.keyboard('{Meta>}{Enter}{/Meta}')
+
+    await waitFor(async () => {
+      await expect(linkedGithubRequest).toEqual({
+        taskId: 'temp-id',
+        url: githubIssueUrl,
+      })
+    })
   },
 }
 

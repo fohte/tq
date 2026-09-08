@@ -30,34 +30,24 @@ export function useResolveGithubUrl() {
   })
 }
 
-export function useCreateTaskFromGithubUrl() {
+// `taskId` is a mutate-time variable rather than a hook argument: the
+// create-task-modal flow only learns the task's id after `useCreateTask`
+// resolves, so a hook-level closure over `taskId` doesn't fit that call site.
+export function useLinkTaskToGithub() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (url: string) => {
-      const res = await api.api.tasks['from-github'].$post({ json: { url } })
-      return unwrapOrThrow(await assertOkWithMessage(res)).json()
-    },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
-      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
-    },
-  })
-}
-
-export function useLinkTaskToGithub(taskId: string) {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (url: string) => {
+    mutationFn: async ({ taskId, url }: { taskId: string; url: string }) => {
       const res = await api.api.tasks[':taskId']['github-link'].$post({
         param: { taskId },
         json: { url },
       })
       return unwrapOrThrow(await assertOkWithMessage(res)).json()
     },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) })
+    onSettled: (_data, _error, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: taskKeys.detail(variables.taskId),
+      })
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
       void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },

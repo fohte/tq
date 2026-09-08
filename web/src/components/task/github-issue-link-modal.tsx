@@ -14,7 +14,6 @@ import {
 import { Input } from '#components/ui/input'
 import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
 import {
-  useCreateTaskFromGithubUrl,
   useLinkTaskToGithub,
   useResolveGithubUrl,
 } from '#hooks/use-github-link'
@@ -22,30 +21,24 @@ import {
 interface GithubIssueLinkModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** 'create' pastes a URL to create a new task; 'link' attaches it to `taskId`. */
-  mode: 'create' | 'link'
-  taskId?: string
+  taskId: string
 }
 
 export function GithubIssueLinkModal({
   open,
   onOpenChange,
-  mode,
   taskId,
 }: GithubIssueLinkModalProps) {
   const [url, setUrl] = useState('')
   const [resolved, setResolved] = useState<ResolveGithubUrlResult | null>(null)
   const navigate = useNavigate()
   const resolveUrl = useResolveGithubUrl()
-  const createTask = useCreateTaskFromGithubUrl()
-  const linkTask = useLinkTaskToGithub(taskId ?? '')
-  const confirmMutation = mode === 'create' ? createTask : linkTask
+  const linkTask = useLinkTaskToGithub()
 
   const resetForm = () => {
     setUrl('')
     setResolved(null)
     resolveUrl.reset()
-    createTask.reset()
     linkTask.reset()
   }
 
@@ -73,19 +66,14 @@ export function GithubIssueLinkModal({
     const trimmed = url.trim()
     if (!trimmed) return
 
-    if (mode === 'create') {
-      createTask.mutate(trimmed, {
-        onSuccess: (data) => {
-          goToTask(data.task.id)
-        },
-      })
-    } else {
-      linkTask.mutate(trimmed, {
+    linkTask.mutate(
+      { taskId, url: trimmed },
+      {
         onSuccess: () => {
           handleOpenChange(false)
         },
-      })
-    }
+      },
+    )
   }
 
   const preview = resolved?.linked === false ? resolved.preview : null
@@ -95,11 +83,7 @@ export function GithubIssueLinkModal({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {mode === 'create'
-              ? 'Create task from GitHub'
-              : 'Link GitHub issue'}
-          </DialogTitle>
+          <DialogTitle>Link GitHub issue</DialogTitle>
           <DialogDescription>
             Paste a GitHub issue or pull request URL.
           </DialogDescription>
@@ -137,10 +121,8 @@ export function GithubIssueLinkModal({
             </p>
           )}
 
-          {confirmMutation.isError && (
-            <p className="text-sm text-destructive">
-              {confirmMutation.error.message}
-            </p>
+          {linkTask.isError && (
+            <p className="text-sm text-destructive">{linkTask.error.message}</p>
           )}
 
           {linkedTask && (
@@ -186,9 +168,9 @@ export function GithubIssueLinkModal({
           ) : (
             <Button
               onClick={handleConfirm}
-              disabled={!preview || confirmMutation.isPending}
+              disabled={!preview || linkTask.isPending}
             >
-              {mode === 'create' ? 'Create Task' : 'Link'}
+              Link
             </Button>
           )}
         </DialogFooter>

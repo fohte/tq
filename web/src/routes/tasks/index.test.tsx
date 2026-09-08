@@ -61,9 +61,7 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
   }
 })
 
-// GithubIssueLinkModal (always mounted, just closed) calls useNavigate
-// unconditionally, so a real router is required rather than a mocked one.
-// TaskList itself is bound to the real TasksRoute (Route.useSearch() /
+// TaskList is bound to the real TasksRoute (Route.useSearch() /
 // Route.useNavigate()), so that route must be matched for real rather than
 // rendered directly as a child element.
 function renderTaskList(initialEntry = '/tasks') {
