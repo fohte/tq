@@ -54,6 +54,8 @@ interface CalendarViewProps {
   initialView?: CalendarViewType
   selectedDate: Date
   onDateChange: (date: Date) => void
+  onVisibleRangeChange?:
+    ((range: { start: Date; end: Date }) => void) | undefined
   onScheduleClick?: ((scheduleId: string, start: string) => void) | undefined
   onSelectRange?: ((info: { start: Date; end: Date }) => void) | undefined
 }
@@ -65,6 +67,7 @@ export function CalendarView({
   initialView = 'day',
   selectedDate,
   onDateChange,
+  onVisibleRangeChange,
   onScheduleClick,
   onSelectRange,
 }: CalendarViewProps) {
@@ -131,8 +134,9 @@ export function CalendarView({
     (info: { start: Date; end: Date; view: { currentStart: Date } }) => {
       if (isProgrammaticGotoRef.current) return
       onDateChange(info.view.currentStart)
+      onVisibleRangeChange?.({ start: info.start, end: info.end })
     },
-    [onDateChange],
+    [onDateChange, onVisibleRangeChange],
   )
 
   // Sync FullCalendar's internal date when selectedDate changes from an

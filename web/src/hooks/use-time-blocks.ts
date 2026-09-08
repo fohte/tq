@@ -12,16 +12,18 @@ export type { TimeBlock }
 
 export const timeBlockKeys = {
   all: ['time-blocks'] as const,
-  list: (date: string) => [...timeBlockKeys.all, 'list', date] as const,
+  list: (startDate: string, endDate: string) =>
+    [...timeBlockKeys.all, 'list', { startDate, endDate }] as const,
 }
 
-export function useTimeBlocks(date: string) {
+export function useTimeBlocks(startDate: string, endDate: string) {
   return useQuery({
-    queryKey: timeBlockKeys.list(date),
+    queryKey: timeBlockKeys.list(startDate, endDate),
     queryFn: async () => {
       const res = await api.api.schedule['time-blocks'].$get({
         query: {
-          date,
+          startDate,
+          endDate,
           tzOffset: String(new Date().getTimezoneOffset()),
         },
       })
@@ -51,13 +53,24 @@ export function useCreateTimeBlock() {
       return unwrapOrThrow(assertOk(res)).json()
     },
     onMutate: async (input) => {
-      const d = new Date(input.startTime)
-      const date = `${String(d.getFullYear())}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      const queryKey = timeBlockKeys.list(date)
+      await queryClient.cancelQueries({ queryKey: timeBlockKeys.all })
 
-      await queryClient.cancelQueries({ queryKey })
+      // A time block is only ever created by interacting with the
+      // currently-rendered calendar range, so the mounted (active)
+      // time-blocks query is the one to update optimistically — any other
+      // cached range gets corrected by the invalidation in onSettled the
+      // next time it mounts.
+      const activeQueries = queryClient
+        .getQueryCache()
+        .findAll({ queryKey: timeBlockKeys.all, type: 'active' })
 
-      const previousData = queryClient.getQueryData<TimeBlock[]>(queryKey)
+      const previousData = activeQueries.map(
+        (query) =>
+          [
+            query.queryKey,
+            queryClient.getQueryData<TimeBlock[]>(query.queryKey),
+          ] as const,
+      )
 
       const now = new Date().toISOString()
       const optimisticBlock: TimeBlock = {
@@ -70,19 +83,23 @@ export function useCreateTimeBlock() {
         updatedAt: now,
       }
 
-      queryClient.setQueryData<TimeBlock[]>(queryKey, (old = []) =>
-        [...old, optimisticBlock].sort(
-          (a, b) =>
-            new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
-        ),
-      )
+      for (const query of activeQueries) {
+        queryClient.setQueryData<TimeBlock[]>(query.queryKey, (old = []) =>
+          [...old, optimisticBlock].sort(
+            (a, b) =>
+              new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+          ),
+        )
+      }
 
-      return { previousData, queryKey }
+      return { previousData }
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousData !== undefined) {
-        queryClient.setQueryData(context.queryKey, context.previousData)
-      }
+      context?.previousData.forEach(([key, data]) => {
+        if (data !== undefined) {
+          queryClient.setQueryData(key, data)
+        }
+      })
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: timeBlockKeys.all })

@@ -12,17 +12,18 @@ type Schedule = InferResponseType<
 const scheduleKeys = {
   all: ['schedules'] as const,
   lists: ['schedules', 'list'] as const,
-  list: (date: string) => [...scheduleKeys.lists, date] as const,
+  list: (startDate: string, endDate: string) =>
+    [...scheduleKeys.lists, { startDate, endDate }] as const,
 }
 
 export type { Schedule }
 
-export function useScheduleList(date: string) {
+export function useScheduleList(startDate: string, endDate: string) {
   return useQuery({
-    queryKey: scheduleKeys.list(date),
+    queryKey: scheduleKeys.list(startDate, endDate),
     queryFn: async () => {
       const res = await api.api.schedule.recurring.$get({
-        query: { date },
+        query: { startDate, endDate },
       })
       return unwrapOrThrow(assertOk(res)).json()
     },

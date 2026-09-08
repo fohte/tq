@@ -9,7 +9,10 @@ import { recurrenceRules, schedules, tasks, timeBlocks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { localDateBoundsToUtc } from '#lib/timezone'
 import { autoAssignApp } from '#routes/schedule-auto-assign'
-import { expandScheduleForDate } from '#routes/schedule-expansion'
+import {
+  expandScheduleForDate,
+  formatDateStr,
+} from '#routes/schedule-expansion'
 import { loadSchedulesWithRules } from '#routes/schedule-shared'
 import { timeBlockToResponse } from '#routes/tasks/shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
@@ -30,7 +33,8 @@ const updateTimeBlockSchema = z.object({
 })
 
 const timeBlockDateQuerySchema = z.object({
-  date: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
   tzOffset: z.coerce.number().int().optional(),
 })
 
@@ -53,7 +57,8 @@ const updateScheduleSchema = z.object({
 })
 
 const scheduleDateQuerySchema = z.object({
-  date: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
 })
 
 function recurrenceRuleToResponse(
@@ -152,8 +157,9 @@ export const schedulesApp = new Hono()
     '/time-blocks',
     zValidator('query', timeBlockDateQuerySchema),
     async (c) => {
-      const { date, tzOffset } = c.req.valid('query')
-      const { dayStart, dayEnd } = localDateBoundsToUtc(date, tzOffset ?? 0)
+      const { startDate, endDate, tzOffset } = c.req.valid('query')
+      const { dayStart } = localDateBoundsToUtc(startDate, tzOffset ?? 0)
+      const { dayEnd } = localDateBoundsToUtc(endDate, tzOffset ?? 0)
 
       const blocks = await db
         .select()
@@ -264,15 +270,25 @@ export const schedulesApp = new Hono()
     '/recurring',
     zValidator('query', scheduleDateQuerySchema),
     async (c) => {
-      const { date } = c.req.valid('query')
+      const { startDate, endDate } = c.req.valid('query')
 
       const scheduleRules = await loadSchedulesWithRules()
 
-      const expanded = scheduleRules.flatMap(({ schedule, rule }) =>
-        expandScheduleForDate(schedule, rule, date).map((block) => ({
-          ...block,
-          recurrence: recurrenceRuleToResponse(rule),
-        })),
+      const dates: string[] = []
+      const cursor = new Date(startDate + 'T00:00:00')
+      const endBound = new Date(endDate + 'T00:00:00')
+      while (cursor <= endBound) {
+        dates.push(formatDateStr(cursor))
+        cursor.setDate(cursor.getDate() + 1)
+      }
+
+      const expanded = dates.flatMap((dateStr) =>
+        scheduleRules.flatMap(({ schedule, rule }) =>
+          expandScheduleForDate(schedule, rule, dateStr).map((block) => ({
+            ...block,
+            recurrence: recurrenceRuleToResponse(rule),
+          })),
+        ),
       )
 
       return c.json(expanded, 200)

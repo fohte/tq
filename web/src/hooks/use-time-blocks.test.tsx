@@ -90,9 +90,12 @@ describe('useTimeBlocks', () => {
       json: () => Promise.resolve([sampleBlock]),
     })
 
-    const { result } = renderHook(() => useTimeBlocks('2026-03-22'), {
-      wrapper,
-    })
+    const { result } = renderHook(
+      () => useTimeBlocks('2026-03-22', '2026-03-22'),
+      {
+        wrapper,
+      },
+    )
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
@@ -115,7 +118,7 @@ describe('useCreateTimeBlock', () => {
 
     // First, populate the cache
     const { result: queryResult } = renderHook(
-      () => useTimeBlocks('2026-03-22'),
+      () => useTimeBlocks('2026-03-22', '2026-03-22'),
       { wrapper },
     )
     await waitFor(() => {
@@ -134,6 +137,54 @@ describe('useCreateTimeBlock', () => {
     })
 
     // Check optimistic update was applied (cache should now have the block)
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
+  })
+
+  it('applies the optimistic insert to the mounted range query, even when the range spans more than one day', async () => {
+    const mocks = await getMocks()
+    assertDefined(mocks['mockGet']).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([]),
+    })
+
+    // Hold the POST response so the in-flight optimistic state is
+    // observable before the request settles.
+    let resolvePost: (value: unknown) => void = () => {
+      throw new Error('resolvePost called before being assigned')
+    }
+    const postResponsePromise = new Promise((resolve) => {
+      resolvePost = resolve
+    })
+    assertDefined(mocks['mockPost']).mockReturnValue(postResponsePromise)
+
+    // Mount a week-wide range query — the block's date (2026-03-22) is one
+    // day within it, not the whole range.
+    const { result: queryResult } = renderHook(
+      () => useTimeBlocks('2026-03-20', '2026-03-26'),
+      { wrapper },
+    )
+    await waitFor(() => {
+      expect(queryResult.current.isSuccess).toBe(true)
+    })
+
+    const { result } = renderHook(() => useCreateTimeBlock(), { wrapper })
+
+    act(() => {
+      result.current.mutate({
+        taskId: 'task-1',
+        startTime: '2026-03-22T09:00:00.000Z',
+        endTime: '2026-03-22T10:00:00.000Z',
+      })
+    })
+
+    await waitFor(() => {
+      expect(queryResult.current.data?.length).toBe(1)
+    })
+    expect(queryResult.current.data?.[0]?.taskId).toBe('task-1')
+
+    resolvePost({ ok: true, json: () => Promise.resolve(sampleBlock) })
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
     })
@@ -160,7 +211,7 @@ describe('useUpdateTimeBlock', () => {
 
     // Populate cache
     const { result: queryResult } = renderHook(
-      () => useTimeBlocks('2026-03-22'),
+      () => useTimeBlocks('2026-03-22', '2026-03-22'),
       { wrapper },
     )
     await waitFor(() => {
@@ -204,7 +255,7 @@ describe('useUpdateTimeBlock', () => {
 
     // Populate cache
     const { result: queryResult } = renderHook(
-      () => useTimeBlocks('2026-03-22'),
+      () => useTimeBlocks('2026-03-22', '2026-03-22'),
       { wrapper },
     )
     await waitFor(() => {
@@ -262,7 +313,7 @@ describe('useUpdateTimeBlock', () => {
 
     // Populate cache
     const { result: queryResult } = renderHook(
-      () => useTimeBlocks('2026-03-22'),
+      () => useTimeBlocks('2026-03-22', '2026-03-22'),
       { wrapper },
     )
     await waitFor(() => {
@@ -317,7 +368,7 @@ describe('useUpdateTimeBlock', () => {
 
     // Populate cache
     const { result: queryResult } = renderHook(
-      () => useTimeBlocks('2026-03-22'),
+      () => useTimeBlocks('2026-03-22', '2026-03-22'),
       { wrapper },
     )
     await waitFor(() => {
@@ -350,7 +401,7 @@ describe('useUpdateTimeBlock', () => {
       const cached = queryClient.getQueryData<(typeof sampleBlock)[]>([
         'time-blocks',
         'list',
-        '2026-03-22',
+        { startDate: '2026-03-22', endDate: '2026-03-22' },
       ])
       expect(cached?.[0]?.startTime).toBe('2026-03-22T09:00:00.000Z')
     })
@@ -368,7 +419,7 @@ describe('useDeleteTimeBlock', () => {
 
     // Populate cache
     const { result: queryResult } = renderHook(
-      () => useTimeBlocks('2026-03-22'),
+      () => useTimeBlocks('2026-03-22', '2026-03-22'),
       { wrapper },
     )
     await waitFor(() => {

@@ -18,7 +18,8 @@ const mockToday = vi.fn()
 const mockGetDate = vi.fn(() => new Date(2025, 2, 7))
 
 let latestDatesSet:
-  ((info: { view: { currentStart: Date } }) => void) | undefined
+  | ((info: { start: Date; end: Date; view: { currentStart: Date } }) => void)
+  | undefined
 
 vi.mock('@fullcalendar/react', async () => {
   const React = await import('react')
@@ -31,6 +32,8 @@ vi.mock('@fullcalendar/react', async () => {
         typeof props['datesSet'] === 'function'
           ? // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- captured prop is the real FullCalendar datesSet handler
             (props['datesSet'] as (info: {
+              start: Date
+              end: Date
               view: { currentStart: Date }
             }) => void)
           : undefined
@@ -79,8 +82,18 @@ vi.mock('@fullcalendar/timegrid', () => ({ default: {} }))
 vi.mock('@fullcalendar/daygrid', () => ({ default: {} }))
 vi.mock('@fullcalendar/interaction', () => ({ default: {} }))
 
-function fireDatesSet(currentStart: Date) {
-  latestDatesSet?.({ view: { currentStart } })
+function fireDatesSet(
+  currentStart: Date,
+  range: { start: Date; end: Date } = {
+    start: currentStart,
+    end: currentStart,
+  },
+) {
+  latestDatesSet?.({
+    start: range.start,
+    end: range.end,
+    view: { currentStart },
+  })
 }
 
 const initialSelectedDate = new Date(2025, 2, 7)
@@ -249,7 +262,11 @@ describe('CalendarView', () => {
 
   it('ignores the datesSet triggered by its own gotoDate sync, so onDateChange is not corrupted with the wrong date', () => {
     const onDateChange = vi.fn()
-    const { rerender } = renderCalendarView({ onDateChange })
+    const onVisibleRangeChange = vi.fn()
+    const { rerender } = renderCalendarView({
+      onDateChange,
+      onVisibleRangeChange,
+    })
     onDateChange.mockClear()
 
     const wrongCurrentStart = new Date(2025, 2, 1)
@@ -264,6 +281,21 @@ describe('CalendarView', () => {
 
     expect(mockGotoDate).toHaveBeenCalledWith(externalDate)
     expect(onDateChange).not.toHaveBeenCalledWith(wrongCurrentStart)
+    expect(onVisibleRangeChange).not.toHaveBeenCalled()
+  })
+
+  it('calls onVisibleRangeChange with the visible start/end FullCalendar reports via datesSet', () => {
+    const onVisibleRangeChange = vi.fn()
+    renderCalendarView({ onVisibleRangeChange })
+
+    const start = new Date(2025, 2, 2)
+    const end = new Date(2025, 2, 9)
+    fireDatesSet(new Date(2025, 2, 2), { start, end })
+
+    expect(onVisibleRangeChange).toHaveBeenCalledExactlyOnceWith({
+      start,
+      end,
+    })
   })
 
   it('does not call gotoDate when selectedDate changes to the same day FullCalendar already shows', () => {

@@ -24,15 +24,20 @@ export class GcalAuthRequiredError extends Error {
 
 const gcalEventsKeys = {
   all: ['gcal-events'] as const,
-  list: (date: string, context: 'work' | 'personal') =>
-    [...gcalEventsKeys.all, 'list', date, context] as const,
+  list: (startDate: string, endDate: string, context: 'work' | 'personal') =>
+    [...gcalEventsKeys.all, 'list', { startDate, endDate }, context] as const,
 }
 
-export function useGcalEvents(date: string, context: 'work' | 'personal') {
+export function useGcalEvents(
+  startDate: string,
+  endDate: string,
+  context: 'work' | 'personal',
+) {
   return useQuery({
-    queryKey: gcalEventsKeys.list(date, context),
+    queryKey: gcalEventsKeys.list(startDate, endDate, context),
     queryFn: async () => {
-      const { timeMin, timeMax } = getDayIsoRange(date)
+      const { timeMin } = getDayIsoRange(startDate)
+      const { timeMax } = getDayIsoRange(endDate)
       const res = await api.api.calendar.events.$get({
         query: { timeMin, timeMax, context },
       })
