@@ -6,10 +6,18 @@ import { pushSubscriptions } from '#db/schema'
 import { sendPush } from '#services/push'
 import { setupTestDb } from '#testing'
 
-vi.mock('web-push', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('web-push')>()),
-  sendNotification: vi.fn(),
-}))
+// push.ts consumes web-push through the default import (see push.ts for
+// why), so the mock's override has to live under `default` too — that's
+// what a real default import resolves to.
+vi.mock('web-push', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('web-push')>()
+  const mockedSendNotification = vi.fn()
+  return {
+    ...actual,
+    sendNotification: mockedSendNotification,
+    default: { ...actual, sendNotification: mockedSendNotification },
+  }
+})
 
 setupTestDb()
 

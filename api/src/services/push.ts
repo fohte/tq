@@ -1,11 +1,17 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { eq, inArray } from 'drizzle-orm'
 import { ResultAsync } from 'neverthrow'
-import { sendNotification, WebPushError } from 'web-push'
+import webPush from 'web-push'
 
 import { db } from '#db/connection'
 import { pushSubscriptions } from '#db/schema'
 import { APP_DOMAIN, VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY } from '#env'
+
+// web-push is CommonJS with a single `module.exports = { ... }` object, so
+// Node's static export scanner can't see the named exports when this file
+// runs as real ESM (only under bundler-based dev/test transforms, which
+// don't have that limitation) — import the namespace and destructure.
+const { sendNotification, WebPushError } = webPush
 
 // RFC 8292 wants the VAPID JWT's `sub` to be a mailto: or https: URI a push
 // service can use to reach whoever is sending, which tq's own origin is.
