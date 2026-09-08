@@ -1137,7 +1137,7 @@ describe('getEvents', () => {
     ])
   })
 
-  it('masks a timed event, drops an all-day event, and keeps a calendar with no context set unmasked, all for a calendar whose context does not match the given context', async () => {
+  it('masks a timed event, drops an all-day event and a free-marked event, and keeps a calendar with no context set unmasked, all for a calendar whose context does not match the given context', async () => {
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user@example.com',
@@ -1214,6 +1214,13 @@ describe('getEvents', () => {
                   summary: 'Birthday',
                   start: { date: '2026-03-22' },
                   end: { date: '2026-03-23' },
+                },
+                {
+                  id: 'event-personal-free',
+                  summary: 'Gym',
+                  start: { dateTime: '2026-03-22T12:00:00Z' },
+                  end: { dateTime: '2026-03-22T12:30:00Z' },
+                  transparency: 'transparent',
                 },
               ],
             }),
@@ -1691,6 +1698,13 @@ describe('getEvents', () => {
               end: { dateTime: '2026-03-22T10:30:00Z' },
               transparency: 'opaque',
             },
+            {
+              id: 'event-unknown',
+              summary: 'Unknown transparency',
+              start: { dateTime: '2026-03-22T11:00:00Z' },
+              end: { dateTime: '2026-03-22T11:30:00Z' },
+              transparency: 'not-a-documented-value',
+            },
           ],
         }),
         { status: 200 },
@@ -1729,6 +1743,22 @@ describe('getEvents', () => {
             summary: 'Opaque',
             startTime: '2026-03-22T10:00:00Z',
             endTime: '2026-03-22T10:30:00Z',
+            isAllDay: false,
+            source: 'google_calendar',
+            accountId: 'google-sub-1',
+            accountLabel: 'user@example.com',
+            calendarId: 'user@example.com',
+            calendarDisplayName: null,
+            calendarColor: null,
+            responseStatus: 'accepted',
+            busy: true,
+            redacted: false,
+          },
+          {
+            id: 'event-unknown',
+            summary: 'Unknown transparency',
+            startTime: '2026-03-22T11:00:00Z',
+            endTime: '2026-03-22T11:30:00Z',
             isAllDay: false,
             source: 'google_calendar',
             accountId: 'google-sub-1',

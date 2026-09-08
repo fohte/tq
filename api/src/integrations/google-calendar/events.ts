@@ -40,10 +40,10 @@ function matchesRequestedContext(
   )
 }
 
-// Strips a mismatched-context event down to only its busy time. An all-day
-// event carries no busy time to begin with (externalEventsToBusyRanges in
-// services/auto-scheduler.ts excludes them), so callers filter those out
-// before this ever masks one.
+// Strips a mismatched-context event down to only its busy time. An event
+// that carries no busy time to begin with — all-day, or marked free — is
+// filtered out by callers before this ever masks one (externalEventsToBusyRanges
+// in services/auto-scheduler.ts excludes both).
 function maskEvent(event: ProviderEvent): CalendarEvent {
   return {
     id: event.id,
@@ -86,9 +86,9 @@ function getSubscribedCalendarEvents(
           // A timed event on a calendar whose context doesn't match the
           // requested one is still fetched, since its busy time is real
           // regardless of context, and its content is masked below instead
-          // of being excluded outright. An all-day event has no busy time to
-          // preserve this way, so it's excluded like before this masking
-          // behavior existed.
+          // of being excluded outright. An all-day or free-marked event has
+          // no busy time to preserve this way, so it's excluded instead of
+          // surfacing an anonymous block nothing treats as occupied.
           const matchesContext = matchesRequestedContext(
             subscription.context,
             context,
@@ -103,7 +103,9 @@ function getSubscribedCalendarEvents(
             .map((events) =>
               events
                 .filter((event) => event.responseStatus !== 'declined')
-                .filter((event) => matchesContext || !event.isAllDay)
+                .filter(
+                  (event) => matchesContext || (!event.isAllDay && event.busy),
+                )
                 .map((event) =>
                   matchesContext
                     ? {

@@ -77,8 +77,6 @@ const googleCalendarEventSchema = z.object({
     date: z.string().optional(),
   }),
   attendees: z.array(googleCalendarAttendeeSchema).optional(),
-  // Not an enum: an undocumented value must not fail the whole events
-  // request, it just falls back to busy below.
   transparency: z.string().optional(),
 })
 
