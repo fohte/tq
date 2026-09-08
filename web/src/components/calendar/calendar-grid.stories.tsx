@@ -36,7 +36,7 @@ const sampleEvents: TimeBlockEvent[] = [
     title: 'Team standup',
     start: `${dateStr}T11:00:00`,
     end: `${dateStr}T11:30:00`,
-    type: 'gcal',
+    type: 'gcal-meeting',
   },
   {
     id: '4',
@@ -51,7 +51,7 @@ const sampleEvents: TimeBlockEvent[] = [
     title: 'Company holiday',
     start: dateStr,
     end: tomorrowStr,
-    type: 'gcal',
+    type: 'gcal-info',
     allDay: true,
   },
   {
@@ -59,7 +59,7 @@ const sampleEvents: TimeBlockEvent[] = [
     title: 'Design review',
     start: `${dateStr}T13:00:00`,
     end: `${dateStr}T13:30:00`,
-    type: 'gcal',
+    type: 'gcal-meeting',
     responseStatus: 'tentative',
   },
 ]

@@ -13,6 +13,7 @@ function EventBlockPreview({
   color,
   calendarColor,
   responseStatus,
+  gcalEventType,
   redacted = false,
   allDay = false,
   widthPx = 288,
@@ -25,6 +26,7 @@ function EventBlockPreview({
   color?: { accent: string }
   calendarColor?: string | null
   responseStatus?: TimeBlockEvent['responseStatus']
+  gcalEventType?: string
   redacted?: boolean
   allDay?: boolean
   widthPx?: number
@@ -42,6 +44,7 @@ function EventBlockPreview({
         color,
         calendarColor,
         responseStatus,
+        gcalEventType,
         redacted,
       },
     },
@@ -71,7 +74,10 @@ const meta = {
       options: [
         'manual',
         'auto',
-        'gcal',
+        'gcal-meeting',
+        'gcal-solo',
+        'gcal-status',
+        'gcal-info',
         'completed',
         'schedule',
       ] satisfies EventType[],
@@ -107,62 +113,108 @@ export const AutoScheduled: Story = {
   },
 }
 
-export const GoogleCalendar: Story = {
+// 約束 (default eventType, other attendees present): today's card, unmarked.
+export const GoogleCalendarMeeting: Story = {
   args: {
-    type: 'gcal',
+    type: 'gcal-meeting',
     title: 'Team standup',
     timeText: '11:00–11:30',
   },
 }
 
-export const GoogleCalendarAllDay: Story = {
+export const GoogleCalendarMeetingWithColor: Story = {
   args: {
-    type: 'gcal',
-    title: 'Company holiday',
-    timeText: '',
-    allDay: true,
-  },
-}
-
-export const GoogleCalendarWithColor: Story = {
-  args: {
-    type: 'gcal',
+    type: 'gcal-meeting',
     title: 'Product sync',
     timeText: '18:00–18:45',
     calendarColor: '#8E24AA',
   },
 }
 
-export const GoogleCalendarSecondCalendar: Story = {
+export const GoogleCalendarMeetingSecondCalendar: Story = {
   args: {
-    type: 'gcal',
+    type: 'gcal-meeting',
     title: 'Dentist appointment',
     timeText: '16:30–17:00',
     calendarColor: '#F6BF26',
   },
 }
 
-export const GoogleCalendarNeedsAction: Story = {
+export const GoogleCalendarMeetingNeedsAction: Story = {
   args: {
-    type: 'gcal',
+    type: 'gcal-meeting',
     title: 'Q3 planning',
     timeText: '13:00–14:00',
     responseStatus: 'needsAction',
   },
 }
 
-export const GoogleCalendarTentative: Story = {
+export const GoogleCalendarMeetingTentative: Story = {
   args: {
-    type: 'gcal',
+    type: 'gcal-meeting',
     title: 'Design review',
     timeText: '15:00–15:30',
     responseStatus: 'tentative',
   },
 }
 
+// 自分だけの予定 (default eventType, no other attendees): fill dropped, still unmarked.
+export const GoogleCalendarSolo: Story = {
+  args: {
+    type: 'gcal-solo',
+    title: '歯医者',
+    timeText: '17:00–18:00',
+  },
+}
+
+// 状態 (outOfOffice / focusTime): still a full card in this PR (the
+// background-band treatment is a follow-up), marked with Google's own icon.
+export const GoogleCalendarStatusOutOfOffice: Story = {
+  args: {
+    type: 'gcal-status',
+    title: '退勤',
+    timeText: '19:00–23:00',
+    gcalEventType: 'outOfOffice',
+  },
+}
+
+export const GoogleCalendarStatusFocusTime: Story = {
+  args: {
+    type: 'gcal-status',
+    title: '集中作業',
+    timeText: '13:00–15:00',
+    gcalEventType: 'focusTime',
+  },
+}
+
+// 情報 (isAllDay, or workingLocation): all-day row, unchanged from before.
+export const GoogleCalendarInfoAllDay: Story = {
+  args: {
+    type: 'gcal-info',
+    title: 'Company holiday',
+    timeText: '',
+    allDay: true,
+  },
+}
+
+export const GoogleCalendarInfoWorkingLocation: Story = {
+  args: {
+    type: 'gcal-info',
+    title: '在宅勤務',
+    timeText: '',
+    allDay: true,
+    gcalEventType: 'workingLocation',
+  },
+}
+
+// A masked event from a mismatched-context calendar always renders as the
+// generic "予定あり" box, regardless of what it would otherwise classify as
+// (see maskEvent in api/src/integrations/google-calendar/events.ts, which
+// reports it as eventType: 'default' / hasOtherAttendees: false — i.e.
+// gcal-solo — once redacted).
 export const GoogleCalendarRedacted: Story = {
   args: {
-    type: 'gcal',
+    type: 'gcal-solo',
     title: '',
     timeText: '11:00–11:30',
     redacted: true,
@@ -200,7 +252,7 @@ export const ScheduleGreen: Story = {
 // being squeezed to 0px.
 export const NarrowOverlappingColumn: Story = {
   args: {
-    type: 'gcal',
+    type: 'gcal-meeting',
     title: 'Team standup',
     timeText: '11:00–11:30',
     widthPx: 84,

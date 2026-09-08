@@ -37,6 +37,7 @@ import {
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '#hooks/use-time-blocks'
+import { classifyGcalEvent } from '#lib/calendar-utils'
 import { matchesContextFilter } from '#lib/context-filter'
 import {
   formatLocalDate,
@@ -232,7 +233,8 @@ function DayView() {
       title: event.summary,
       start: event.startTime,
       end: event.endTime,
-      type: 'gcal' as const,
+      type: classifyGcalEvent(event),
+      gcalEventType: event.eventType,
       allDay: event.isAllDay,
       calendarColor: event.calendarColor,
       responseStatus: event.responseStatus,

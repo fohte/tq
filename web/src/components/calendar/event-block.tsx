@@ -1,25 +1,48 @@
 import type { EventContentArg } from '@fullcalendar/core'
+import { Headphones, LogOut, MapPin } from 'lucide-react'
 
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
-import { getEventProps, isPendingGcalResponse } from '#lib/calendar-utils'
+import {
+  type CalendarEventProps,
+  getEventProps,
+  isGcalEventType,
+  isPendingGcalResponse,
+} from '#lib/calendar-utils'
 import { cn } from '#lib/utils'
 
-type EventKind = 'manual' | 'auto' | 'gcal' | 'completed' | 'schedule'
+type EventKind = NonNullable<CalendarEventProps['type']>
 
 const RULE_CLASS: Record<EventKind, string> = {
   schedule: 'border-l-primary',
   manual: 'border-l-foreground',
   completed: 'border-l-foreground',
   auto: 'border-l-muted-foreground',
-  gcal: 'border-l-border',
+  'gcal-meeting': 'border-l-border',
+  'gcal-status': 'border-l-border',
+  'gcal-info': 'border-l-border',
+  'gcal-solo': 'border-l-muted-foreground-ghost',
 }
 
 const BG_CLASS: Record<EventKind, string> = {
   schedule: 'bg-card',
-  gcal: 'bg-card',
+  'gcal-meeting': 'bg-card',
+  'gcal-status': 'bg-card',
+  'gcal-info': 'bg-card',
+  'gcal-solo': 'bg-transparent',
   auto: 'bg-transparent',
   manual: 'bg-surface-strong',
   completed: 'bg-surface-strong',
+}
+
+// Google's own status-event icons (headphones for focus time), applied to
+// the minority "state" and "info" categories only — see the "多数派に印を
+// 付けない" principle in tq task 06107b44-c50d-49e8-9b48-b665d36d7735.
+const GCAL_EVENT_TYPE_ICON: Partial<
+  Record<string, React.ComponentType<{ className?: string }>>
+> = {
+  outOfOffice: LogOut,
+  focusTime: Headphones,
+  workingLocation: MapPin,
 }
 
 export function EventBlock(arg: EventContentArg) {
@@ -58,12 +81,17 @@ export function EventBlock(arg: EventContentArg) {
     )
   }
 
-  const badge = type === 'auto' ? 'auto' : type === 'gcal' ? 'gcal' : undefined
+  const badge = type === 'auto' ? 'auto' : undefined
+  const Icon = GCAL_EVENT_TYPE_ICON[props.gcalEventType ?? '']
 
+  // gcal-solo drops the calendar accent along with the fill, so it reads as
+  // one step weaker than a meeting rather than just another colored card.
   const accentColor =
     type === 'schedule'
       ? scheduleAccent
-      : type === 'gcal'
+      : type === 'gcal-meeting' ||
+          type === 'gcal-status' ||
+          type === 'gcal-info'
         ? calendarColor
         : undefined
 
@@ -88,15 +116,18 @@ export function EventBlock(arg: EventContentArg) {
       title={
         <span
           className={cn(
-            'min-w-0 truncate text-2xs',
-            type === 'gcal'
-              ? 'text-muted-foreground-strong'
-              : 'font-mono text-foreground',
+            'inline-flex min-w-0 items-center gap-1 text-2xs',
+            type === 'gcal-solo'
+              ? 'text-muted-foreground'
+              : isGcalEventType(type)
+                ? 'text-muted-foreground-strong'
+                : 'font-mono text-foreground',
             type === 'manual' && 'font-medium',
             isCompleted && 'line-through',
           )}
         >
-          {event.title}
+          {Icon != null && <Icon className="h-3 w-3 shrink-0" />}
+          <span className="truncate">{event.title}</span>
         </span>
       }
       badge={badge}

@@ -18,7 +18,15 @@ export interface TimeBlockEvent {
   title: string
   start: string
   end: string
-  type: 'manual' | 'auto' | 'gcal' | 'completed' | 'schedule'
+  type:
+    | 'manual'
+    | 'auto'
+    | 'gcal-meeting'
+    | 'gcal-solo'
+    | 'gcal-status'
+    | 'gcal-info'
+    | 'completed'
+    | 'schedule'
   /** Parent task reference (e.g. "#488 tq 作成") */
   parentRef?: string
   /** Custom accent color for schedule events */
@@ -31,6 +39,8 @@ export interface TimeBlockEvent {
   calendarColor?: string | null
   /** Self attendee's RSVP for a gcal event; needsAction/tentative render dimmed */
   responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted'
+  /** Google's raw eventType (e.g. `outOfOffice`), used to pick the status/info icon */
+  gcalEventType?: string
   /** When true, content is hidden and rendered as a generic "busy" block */
   redacted?: boolean
   /** When true, rendered in FullCalendar's all-day row instead of a time slot */

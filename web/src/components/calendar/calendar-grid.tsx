@@ -21,7 +21,11 @@ import {
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { EventBlock } from '#components/calendar/event-block'
 import { useIsDesktop } from '#hooks/use-is-desktop'
-import { getEventProps, isPendingGcalResponse } from '#lib/calendar-utils'
+import {
+  getEventProps,
+  isGcalEventType,
+  isPendingGcalResponse,
+} from '#lib/calendar-utils'
 
 export interface CalendarDndCallbacks {
   onEventDrop?: (info: {
@@ -143,7 +147,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       allDay: event.allDay === true,
       editable:
         event.type !== 'schedule' &&
-        event.type !== 'gcal' &&
+        !isGcalEventType(event.type) &&
         event.redacted !== true,
       extendedProps: {
         type: event.type,
@@ -154,6 +158,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         redacted: event.redacted,
         calendarColor: event.calendarColor,
         responseStatus: event.responseStatus,
+        gcalEventType: event.gcalEventType,
       },
     }))
 
