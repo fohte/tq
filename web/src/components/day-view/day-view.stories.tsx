@@ -128,7 +128,7 @@ const sampleEvents: TimeBlockEvent[] = [
     title: 'Team Standup',
     start: `${dateStr}T10:00:00`,
     end: `${dateStr}T10:30:00`,
-    type: 'gcal',
+    type: 'gcal-meeting',
   },
   {
     id: 'tb-4',
@@ -143,7 +143,7 @@ const sampleEvents: TimeBlockEvent[] = [
     title: 'Lunch',
     start: `${dateStr}T12:00:00`,
     end: `${dateStr}T13:00:00`,
-    type: 'gcal',
+    type: 'gcal-meeting',
   },
   {
     id: 'tb-6',

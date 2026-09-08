@@ -1,25 +1,50 @@
 import type { EventContentArg } from '@fullcalendar/core'
+import { Headphones, LogOut, MapPin } from 'lucide-react'
 
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
-import { getEventProps, isPendingGcalResponse } from '#lib/calendar-utils'
+import {
+  type CalendarEventProps,
+  GCAL_FOCUS_TIME_EVENT_TYPE,
+  GCAL_OUT_OF_OFFICE_EVENT_TYPE,
+  GCAL_WORKING_LOCATION_EVENT_TYPE,
+  getEventProps,
+  isGcalEventType,
+  isPendingGcalResponse,
+} from '#lib/calendar-utils'
 import { cn } from '#lib/utils'
 
-type EventKind = 'manual' | 'auto' | 'gcal' | 'completed' | 'schedule'
+type EventKind = NonNullable<CalendarEventProps['type']>
 
 const RULE_CLASS: Record<EventKind, string> = {
   schedule: 'border-l-primary',
   manual: 'border-l-foreground',
   completed: 'border-l-foreground',
   auto: 'border-l-muted-foreground',
-  gcal: 'border-l-border',
+  'gcal-meeting': 'border-l-border',
+  'gcal-status': 'border-l-border',
+  'gcal-info': 'border-l-border',
+  'gcal-solo': 'border-l-muted-foreground-ghost',
 }
 
 const BG_CLASS: Record<EventKind, string> = {
   schedule: 'bg-card',
-  gcal: 'bg-card',
+  'gcal-meeting': 'bg-card',
+  'gcal-status': 'bg-card',
+  'gcal-info': 'bg-card',
+  'gcal-solo': 'bg-transparent',
   auto: 'bg-transparent',
   manual: 'bg-surface-strong',
   completed: 'bg-surface-strong',
+}
+
+// Marks only the minority status/info categories, mirroring Google
+// Calendar's own focus-time icon; meetings and solo events stay unmarked.
+const GCAL_EVENT_TYPE_ICON: Partial<
+  Record<string, React.ComponentType<{ className?: string }>>
+> = {
+  [GCAL_OUT_OF_OFFICE_EVENT_TYPE]: LogOut,
+  [GCAL_FOCUS_TIME_EVENT_TYPE]: Headphones,
+  [GCAL_WORKING_LOCATION_EVENT_TYPE]: MapPin,
 }
 
 export function EventBlock(arg: EventContentArg) {
@@ -58,12 +83,17 @@ export function EventBlock(arg: EventContentArg) {
     )
   }
 
-  const badge = type === 'auto' ? 'auto' : type === 'gcal' ? 'gcal' : undefined
+  const badge = type === 'auto' ? 'auto' : undefined
+  const Icon = GCAL_EVENT_TYPE_ICON[props.gcalEventType ?? '']
 
+  // gcal-solo drops the calendar accent along with the fill, so it reads as
+  // one step weaker than a meeting rather than just another colored card.
   const accentColor =
     type === 'schedule'
       ? scheduleAccent
-      : type === 'gcal'
+      : type === 'gcal-meeting' ||
+          type === 'gcal-status' ||
+          type === 'gcal-info'
         ? calendarColor
         : undefined
 
@@ -88,15 +118,18 @@ export function EventBlock(arg: EventContentArg) {
       title={
         <span
           className={cn(
-            'min-w-0 truncate text-2xs',
-            type === 'gcal'
-              ? 'text-muted-foreground-strong'
-              : 'font-mono text-foreground',
+            'inline-flex min-w-0 items-center gap-1 text-2xs',
+            type === 'gcal-solo'
+              ? 'text-muted-foreground'
+              : isGcalEventType(type)
+                ? 'text-muted-foreground-strong'
+                : 'font-mono text-foreground',
             type === 'manual' && 'font-medium',
             isCompleted && 'line-through',
           )}
         >
-          {event.title}
+          {Icon != null && <Icon className="h-3 w-3 shrink-0" />}
+          <span className="truncate">{event.title}</span>
         </span>
       }
       badge={badge}

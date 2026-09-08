@@ -189,7 +189,7 @@
   overflow: hidden;
 }
 
-.tq-month-event[data-event-type='gcal'] {
+.tq-month-event[data-event-type^='gcal-'] {
   background-color: var(--card);
   border-left-color: var(--border);
 }

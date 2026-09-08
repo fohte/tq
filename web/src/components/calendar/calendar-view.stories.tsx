@@ -46,7 +46,7 @@ function generateWeekEvents(): TimeBlockEvent[] {
         title: 'Standup',
         start: `${ds}T09:00:00`,
         end: `${ds}T09:30:00`,
-        type: 'gcal',
+        type: 'gcal-meeting',
       },
       {
         id: `w-${String(dayOffset)}-2`,
@@ -102,7 +102,7 @@ function generateMonthEvents(): TimeBlockEvent[] {
         title: 'Meeting',
         start: `${ds}T14:00:00`,
         end: `${ds}T15:00:00`,
-        type: 'gcal',
+        type: 'gcal-meeting',
       })
     }
     if (day % 3 === 0) {
@@ -143,7 +143,7 @@ const sampleEvents: TimeBlockEvent[] = [
     title: 'Team standup',
     start: `${dateStr}T11:00:00`,
     end: `${dateStr}T11:30:00`,
-    type: 'gcal',
+    type: 'gcal-meeting',
   },
   {
     id: '4',
@@ -165,14 +165,14 @@ const sampleEvents: TimeBlockEvent[] = [
     title: 'Lunch',
     start: `${dateStr}T12:00:00`,
     end: `${dateStr}T13:00:00`,
-    type: 'gcal',
+    type: 'gcal-meeting',
   },
   {
     id: '9',
     title: 'Quick sync',
     start: `${dateStr}T15:00:00`,
     end: `${dateStr}T15:15:00`,
-    type: 'gcal',
+    type: 'gcal-meeting',
   },
   {
     id: '10',
@@ -186,7 +186,7 @@ const sampleEvents: TimeBlockEvent[] = [
     title: 'Company holiday',
     start: dateStr,
     end: tomorrowStr,
-    type: 'gcal',
+    type: 'gcal-info',
     allDay: true,
   },
 ]
