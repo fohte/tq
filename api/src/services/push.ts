@@ -15,6 +15,10 @@ const VAPID_SUBJECT = `https://${APP_DOMAIN}`
 export interface PushPayload {
   title: string
   body: string
+  /** Collapses repeated notifications about one task into a single one. */
+  taskId?: string
+  /** Where a click on the notification lands; the worker defaults to `/`. */
+  url?: string
 }
 
 export interface PushDeliveryReport {

@@ -114,6 +114,10 @@ export const tasks = pgTable(
     })
       .notNull()
       .default('inbox'),
+    // When to push a reminder for this task. Cleared back to NULL once the
+    // reminder has been claimed for delivery, so the column doubles as the
+    // "not sent yet" marker.
+    remindAt: timestamp('remind_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -129,6 +133,7 @@ export const tasks = pgTable(
     index('idx_tasks_project_id').on(table.projectId),
     index('idx_tasks_project_status').on(table.projectId, table.status),
     index('idx_tasks_commitment').on(table.commitment),
+    index('idx_tasks_remind_at').on(table.remindAt),
     check(
       'tasks_status_reason_check',
       sql`${table.status} = 'completed' OR ${table.statusReason} IS NULL`,

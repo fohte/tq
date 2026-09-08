@@ -53,6 +53,15 @@ export const updateTaskSchema = z.object({
   commitment: commitmentEnum.optional(),
   labels: z.array(labelNameSchema).optional(),
   recurrenceRule: recurrenceRuleSchema.nullable().optional(),
+  remindAt: z.iso
+    .datetime({ offset: true })
+    .nullable()
+    .optional()
+    .describe(
+      'When to send a push notification about this task (ISO 8601), or ' +
+        'null to cancel a pending one. Reads back as null once the ' +
+        'notification has been sent.',
+    ),
   // Full replacement, not add/remove: the complete desired set of blocker
   // tasks (id or number) each time. An empty array clears every
   // `blocked_by` relation.

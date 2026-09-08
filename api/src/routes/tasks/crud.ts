@@ -265,8 +265,15 @@ export const tasksCrudApp = new Hono()
         recurrenceRule: recurrenceRuleInput,
         labels: labelsInput,
         blockedBy: blockedByInput,
+        remindAt: remindAtInput,
         ...taskFields
       } = c.req.valid('json')
+
+      // `remind_at` is a timestamptz while the request carries an ISO string.
+      const remindAtUpdate =
+        remindAtInput === undefined
+          ? {}
+          : { remindAt: remindAtInput == null ? null : new Date(remindAtInput) }
 
       if (blockedByInput != null) {
         const resolveResult = await resolveBlockedByTargets(
@@ -383,6 +390,7 @@ export const tasksCrudApp = new Hono()
             .update(tasks)
             .set({
               ...taskFields,
+              ...remindAtUpdate,
               ...(recurrenceRuleId !== undefined ? { recurrenceRuleId } : {}),
               updatedAt: new Date(),
             })
