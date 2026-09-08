@@ -594,26 +594,26 @@ async function placeCaretAtStart(
     doc.getSelection(),
     'a rendered document always has a selection',
   )
-  if (
+  const isAtStart = () =>
     selection.isCollapsed &&
     selection.anchorNode === textNode &&
     selection.anchorOffset === 0
-  )
-    return
+  if (isAtStart()) return
 
   // A caret written straight into the DOM reaches ProseMirror's own state
   // only through the document-level `selectionchange` listener its
-  // DOMObserver registers when the view is created. The listener below is
-  // registered later, so the DOM's registration-order dispatch runs it once
-  // ProseMirror has already taken the caret in.
+  // DOMObserver registers when the view is created. That listener is
+  // registered earlier than the one below, and the DOM dispatches listeners
+  // in registration order, so ProseMirror has read whatever `isAtStart` sees
+  // here. The click above can leave its own `selectionchange` still queued,
+  // hence the check rather than resolving on the first event.
   const caretTaken = new Promise<void>((resolve) => {
-    doc.addEventListener(
-      'selectionchange',
-      () => {
-        resolve()
-      },
-      { once: true },
-    )
+    const onSelectionChange = () => {
+      if (!isAtStart()) return
+      doc.removeEventListener('selectionchange', onSelectionChange)
+      resolve()
+    }
+    doc.addEventListener('selectionchange', onSelectionChange)
   })
   selection.collapse(textNode, 0)
   await caretTaken
