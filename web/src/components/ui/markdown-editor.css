@@ -42,17 +42,6 @@
   line-height: 2;
 }
 
-/* Reserves room for the block handle (see the handle rules below) on the
-   left, sized so the handle sits fully inside `.milkdown`'s own box
-   regardless of how much padding each `MarkdownEditor` caller's own wrapper
-   happens to add — task-pages-section.tsx wraps it in a bare, unpadded
-   `<div>`. Scoped to non-view mode: the handle only ever shows there (see
-   its own view-mode rule below), so view mode keeps the original narrower
-   padding and its text width is unaffected by this change. */
-.milkdown-wrapper:not([data-view-mode='view']) .milkdown .ProseMirror {
-  padding-left: 1.5rem;
-}
-
 /* Headings */
 .milkdown-wrapper .milkdown .ProseMirror h1,
 .milkdown-wrapper .milkdown .ProseMirror h2,
@@ -244,7 +233,8 @@
   display: none;
 }
 
-/* Shrinks the handle to match the left padding reserved for it above. */
+/* Shrinks the handle from Crepe's default 32px so it overhangs the editor's
+   left edge less by default. */
 .milkdown-wrapper .milkdown .milkdown-block-handle .operation-item {
   width: 24px;
   height: 24px;
