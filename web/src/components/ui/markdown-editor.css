@@ -1,7 +1,3 @@
-.milkdown-wrapper {
-  overflow: hidden;
-}
-
 .milkdown-wrapper .milkdown {
   --crepe-color-background: transparent;
   --crepe-color-on-background: var(--foreground);
@@ -33,6 +29,10 @@
 }
 
 .milkdown-wrapper .milkdown .ProseMirror {
+  /* Clips wide content (tables, code blocks) without clipping the block
+     handle, which renders as a `.ProseMirror` sibling — see the handle rules
+     below. */
+  overflow: hidden;
   padding: 0.5rem;
   min-height: inherit;
   caret-color: var(--foreground);
@@ -214,10 +214,7 @@
   margin: 0.25rem 0;
 }
 
-/* `#` mention autocomplete popup, positioned by SlashProvider via floating-ui.
-   Rendered at document.body with `position: fixed` (see the `root` /
-   `floatingUIOptions.strategy` passed to SlashProvider) so it isn't clipped
-   by `.milkdown-wrapper`'s `overflow: hidden`. */
+/* Positioned by SlashProvider (floating-ui) via transform. */
 .task-mention-autocomplete {
   position: fixed;
   top: 0;
@@ -233,6 +230,20 @@
    own (@milkdown/crepe/src/feature/block-edit/), so it would otherwise still
    appear on hover in view mode. Force-hide it there. */
 .milkdown-wrapper[data-view-mode='view'] .milkdown-block-handle {
+  display: none;
+}
+
+/* Shrinks the handle from Crepe's default 32px so it overhangs the editor's
+   left edge less by default. */
+.milkdown-wrapper .milkdown .milkdown-block-handle .operation-item {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+}
+
+/* Hides the leading `+` button (redundant with typing `/` on a new empty
+   line), keeping only the drag handle. */
+.milkdown-wrapper .milkdown .milkdown-block-handle .operation-item:first-child {
   display: none;
 }
 
