@@ -47,23 +47,30 @@ export function isPendingGcalResponse(props: CalendarEventProps): boolean {
   )
 }
 
+// Google's raw eventType values for the 2 status categories, shared with
+// event-block.tsx's icon lookup so the two can't drift apart.
+export const GCAL_OUT_OF_OFFICE_EVENT_TYPE = 'outOfOffice'
+export const GCAL_FOCUS_TIME_EVENT_TYPE = 'focusTime'
+export const GCAL_WORKING_LOCATION_EVENT_TYPE = 'workingLocation'
+
 /**
- * Splits Google Calendar's single `gcal` type into the 4 categories from
- * the "イベント種別の区別表示" design (tq task
- * 06107b44-c50d-49e8-9b48-b665d36d7735): a status event
- * (outOfOffice/focusTime) always wins over the default/solo split, and
- * isAllDay/workingLocation always wins over status, since neither occupies
- * a lane on the time grid.
+ * Splits Google Calendar's single `gcal` type into 4 categories: a status
+ * event (outOfOffice/focusTime) always wins over the default/solo split,
+ * and isAllDay/workingLocation always wins over status, since neither
+ * occupies a lane on the time grid.
  */
 export function classifyGcalEvent(event: {
   eventType: string
   hasOtherAttendees: boolean
   isAllDay: boolean
 }): 'gcal-meeting' | 'gcal-solo' | 'gcal-status' | 'gcal-info' {
-  if (event.isAllDay || event.eventType === 'workingLocation') {
+  if (event.isAllDay || event.eventType === GCAL_WORKING_LOCATION_EVENT_TYPE) {
     return 'gcal-info'
   }
-  if (event.eventType === 'outOfOffice' || event.eventType === 'focusTime') {
+  if (
+    event.eventType === GCAL_OUT_OF_OFFICE_EVENT_TYPE ||
+    event.eventType === GCAL_FOCUS_TIME_EVENT_TYPE
+  ) {
     return 'gcal-status'
   }
   return event.hasOtherAttendees ? 'gcal-meeting' : 'gcal-solo'

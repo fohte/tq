@@ -167,8 +167,7 @@ export const GoogleCalendarSolo: Story = {
   },
 }
 
-// 状態 (outOfOffice / focusTime): still a full card in this PR (the
-// background-band treatment is a follow-up), marked with Google's own icon.
+// 状態 (outOfOffice / focusTime): a card marked with Google's own icon.
 export const GoogleCalendarStatusOutOfOffice: Story = {
   args: {
     type: 'gcal-status',
@@ -187,7 +186,7 @@ export const GoogleCalendarStatusFocusTime: Story = {
   },
 }
 
-// 情報 (isAllDay, or workingLocation): all-day row, unchanged from before.
+// 情報 (isAllDay, or workingLocation): rendered in the all-day row.
 export const GoogleCalendarInfoAllDay: Story = {
   args: {
     type: 'gcal-info',
@@ -207,11 +206,7 @@ export const GoogleCalendarInfoWorkingLocation: Story = {
   },
 }
 
-// A masked event from a mismatched-context calendar always renders as the
-// generic "予定あり" box, regardless of what it would otherwise classify as
-// (see maskEvent in api/src/integrations/google-calendar/events.ts, which
-// reports it as eventType: 'default' / hasOtherAttendees: false — i.e.
-// gcal-solo — once redacted).
+// Masked events render as the generic "予定あり" block regardless of type.
 export const GoogleCalendarRedacted: Story = {
   args: {
     type: 'gcal-solo',

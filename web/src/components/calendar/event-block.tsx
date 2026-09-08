@@ -4,6 +4,9 @@ import { Headphones, LogOut, MapPin } from 'lucide-react'
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import {
   type CalendarEventProps,
+  GCAL_FOCUS_TIME_EVENT_TYPE,
+  GCAL_OUT_OF_OFFICE_EVENT_TYPE,
+  GCAL_WORKING_LOCATION_EVENT_TYPE,
   getEventProps,
   isGcalEventType,
   isPendingGcalResponse,
@@ -34,15 +37,14 @@ const BG_CLASS: Record<EventKind, string> = {
   completed: 'bg-surface-strong',
 }
 
-// Google's own status-event icons (headphones for focus time), applied to
-// the minority "state" and "info" categories only — see the "多数派に印を
-// 付けない" principle in tq task 06107b44-c50d-49e8-9b48-b665d36d7735.
+// Marks only the minority status/info categories, mirroring Google
+// Calendar's own focus-time icon; meetings and solo events stay unmarked.
 const GCAL_EVENT_TYPE_ICON: Partial<
   Record<string, React.ComponentType<{ className?: string }>>
 > = {
-  outOfOffice: LogOut,
-  focusTime: Headphones,
-  workingLocation: MapPin,
+  [GCAL_OUT_OF_OFFICE_EVENT_TYPE]: LogOut,
+  [GCAL_FOCUS_TIME_EVENT_TYPE]: Headphones,
+  [GCAL_WORKING_LOCATION_EVENT_TYPE]: MapPin,
 }
 
 export function EventBlock(arg: EventContentArg) {

@@ -97,13 +97,16 @@ describe('isGcalEventType', () => {
 })
 
 describe('isPendingGcalResponse', () => {
-  it('dims a gcal-meeting event with a needsAction/tentative response', () => {
+  it('dims a gcal event with a needsAction response', () => {
     expect(
       isPendingGcalResponse({
         type: 'gcal-meeting',
         responseStatus: 'needsAction',
       }),
     ).toBe(true)
+  })
+
+  it('dims a gcal event with a tentative response', () => {
     expect(
       isPendingGcalResponse({
         type: 'gcal-solo',
@@ -112,13 +115,16 @@ describe('isPendingGcalResponse', () => {
     ).toBe(true)
   })
 
-  it('does not dim an accepted gcal event or a non-gcal event', () => {
+  it('does not dim a gcal event with an accepted response', () => {
     expect(
       isPendingGcalResponse({
         type: 'gcal-status',
         responseStatus: 'accepted',
       }),
     ).toBe(false)
+  })
+
+  it('does not dim a non-gcal event even with a needsAction response', () => {
     expect(
       isPendingGcalResponse({
         type: 'manual',
