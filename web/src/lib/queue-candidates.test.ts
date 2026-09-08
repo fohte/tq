@@ -13,12 +13,14 @@ function makeCandidateTask(overrides: {
   status?: string
   dueDate?: string | null
   startDate?: string | null
+  commitment?: string
 }) {
   return {
     id: '1',
     status: 'todo',
     dueDate: null,
     startDate: null,
+    commitment: 'someday',
     ...overrides,
   }
 }
@@ -87,6 +89,30 @@ describe('getCandidateReason', () => {
   it('returns null when there is no due date or start date', () => {
     expect(getCandidateReason(makeCandidateTask({}), now)).toBeNull()
   })
+
+  it('returns active for a dateless task with commitment active', () => {
+    expect(
+      getCandidateReason(makeCandidateTask({ commitment: 'active' }), now),
+    ).toEqual({ kind: 'active' })
+  })
+
+  it('prefers overdue over commitment active', () => {
+    expect(
+      getCandidateReason(
+        makeCandidateTask({ dueDate: '2026-03-17', commitment: 'active' }),
+        now,
+      ),
+    ).toEqual({ kind: 'overdue', days: 3 })
+  })
+
+  it('returns active when the due date is in the future', () => {
+    expect(
+      getCandidateReason(
+        makeCandidateTask({ dueDate: '2026-03-25', commitment: 'active' }),
+        now,
+      ),
+    ).toEqual({ kind: 'active' })
+  })
 })
 
 describe('getQueueCandidates', () => {
@@ -114,13 +140,21 @@ describe('getQueueCandidates', () => {
       id: '4',
       startDate: '2026-03-20',
     })
-    const tasks = [dueTodayTask, overdueTask, startsTodayTask, moreOverdueTask]
+    const activeTask = makeCandidateTask({ id: '5', commitment: 'active' })
+    const tasks = [
+      activeTask,
+      dueTodayTask,
+      overdueTask,
+      startsTodayTask,
+      moreOverdueTask,
+    ]
 
     expect(getQueueCandidates(tasks, new Set(), now)).toEqual([
       { task: moreOverdueTask, reason: { kind: 'overdue', days: 10 } },
       { task: overdueTask, reason: { kind: 'overdue', days: 3 } },
       { task: dueTodayTask, reason: { kind: 'due-today' } },
       { task: startsTodayTask, reason: { kind: 'starts', days: 0 } },
+      { task: activeTask, reason: { kind: 'active' } },
     ])
   })
 })
@@ -146,5 +180,9 @@ describe('formatCandidateReason', () => {
     expect(formatCandidateReason({ kind: 'starts', days: 3 })).toBe(
       'started 3d ago',
     )
+  })
+
+  it('formats active', () => {
+    expect(formatCandidateReason({ kind: 'active' })).toBe('active')
   })
 })

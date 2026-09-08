@@ -89,3 +89,10 @@ export const StartedDaysAgo: Story = {
     reason: { kind: 'starts', days: 3 },
   },
 }
+
+export const Active: Story = {
+  args: {
+    task: makeTask({ title: 'Refactor the auth module' }),
+    reason: { kind: 'active' },
+  },
+}

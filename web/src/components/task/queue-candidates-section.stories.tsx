@@ -84,6 +84,21 @@ export const OverdueOnly: Story = {
   },
 }
 
+export const ActiveOnly: Story = {
+  args: {
+    candidates: [
+      makeQueueCandidate({
+        task: makeTask({ id: '1', title: 'Refactor the auth module' }),
+        reason: { kind: 'active' },
+      }),
+      makeQueueCandidate({
+        task: makeTask({ id: '2', title: 'Write API documentation' }),
+        reason: { kind: 'active' },
+      }),
+    ] satisfies QueueCandidate<Task>[],
+  },
+}
+
 export const MixedReasons: Story = {
   args: {
     candidates: [
@@ -118,6 +133,10 @@ export const MixedReasons: Story = {
           startDate: '2026-03-20',
         }),
         reason: { kind: 'starts', days: 0 },
+      }),
+      makeQueueCandidate({
+        task: makeTask({ id: '5', title: 'Refactor the auth module' }),
+        reason: { kind: 'active' },
       }),
     ] satisfies QueueCandidate<Task>[],
   },
