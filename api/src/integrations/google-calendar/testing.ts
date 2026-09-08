@@ -4,9 +4,6 @@ import { ensureDefaultCalendarSubscription } from '#integrations/google-calendar
 import type { ExternalEvent } from '#integrations/types'
 import { firstOrThrow } from '#lib/drizzle-utils'
 
-// The defaults describe an event on the account seeded by
-// upsertGoogleCalendarToken below, fetched with no context filter: one
-// connected account, its default subscription, and nothing masked.
 export function makeExternalEvent(
   overrides: Partial<ExternalEvent> = {},
 ): ExternalEvent {
