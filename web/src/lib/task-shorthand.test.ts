@@ -165,6 +165,18 @@ describe('extractShorthandTokens', () => {
     })
   })
 
+  it('drops a trailing comment fragment from a GitHub issue URL', () => {
+    expect(
+      extractShorthandTokens(
+        'Fix bug https://github.com/fohte/tq/issues/123#issuecomment-1 ',
+      ),
+    ).toEqual({
+      title: 'Fix bug ',
+      githubUrl: 'https://github.com/fohte/tq/issues/123',
+      labels: [],
+    })
+  })
+
   it('leaves the in-progress GitHub URL token untouched', () => {
     expect(
       extractShorthandTokens('https://github.com/fohte/tq/issues/123'),
