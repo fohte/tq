@@ -4,10 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { app } from '#app'
 import { db } from '#db/connection'
 import { calendarSubscriptions, oauthTokens } from '#db/schema'
-import {
-  makeExternalEvent,
-  upsertGoogleCalendarToken,
-} from '#integrations/google-calendar/testing'
+import { makeExternalEvent } from '#integrations/external-event-test-fixtures'
+import { upsertGoogleCalendarToken } from '#integrations/google-calendar/testing'
 import type { ExternalEvent } from '#integrations/types'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
@@ -202,10 +200,7 @@ describe('GET /api/calendar/events', () => {
     const body = await jsonBody<ExternalEvent[]>(res)
     expect([...body].sort((a, b) => a.id.localeCompare(b.id))).toEqual([
       makeExternalEvent({
-        id: 'event-1',
         summary: 'Standup',
-        startTime: '2026-03-22T09:00:00Z',
-        endTime: '2026-03-22T09:30:00Z',
         accountLabel: 'user1@example.com',
         calendarId: 'user1@example.com',
       }),
@@ -273,10 +268,7 @@ describe('GET /api/calendar/events', () => {
     expect(res.status).toBe(200)
     expect(await jsonBody<ExternalEvent[]>(res)).toEqual([
       makeExternalEvent({
-        id: 'event-1',
         summary: 'Standup',
-        startTime: '2026-03-22T09:00:00Z',
-        endTime: '2026-03-22T09:30:00Z',
         accountLabel: 'user1@example.com',
         calendarId: 'user1@example.com',
       }),
@@ -347,10 +339,7 @@ describe('GET /api/calendar/events', () => {
     const body = await jsonBody<ExternalEvent[]>(res)
     expect([...body].sort((a, b) => a.id.localeCompare(b.id))).toEqual([
       makeExternalEvent({
-        id: 'event-1',
         summary: 'Standup',
-        startTime: '2026-03-22T09:00:00Z',
-        endTime: '2026-03-22T09:30:00Z',
       }),
       makeExternalEvent({
         id: 'event-2',

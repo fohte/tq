@@ -9,16 +9,14 @@ import {
   OAuthTokenMissingError,
   TokenRefreshError,
 } from '#integrations/errors'
+import { makeExternalEvent } from '#integrations/external-event-test-fixtures'
 import {
   type AccountEventsResult,
   CalendarApiError,
   getEvents,
   googleCalendarProvider,
 } from '#integrations/google-calendar/index'
-import {
-  makeExternalEvent,
-  upsertGoogleCalendarToken,
-} from '#integrations/google-calendar/testing'
+import { upsertGoogleCalendarToken } from '#integrations/google-calendar/testing'
 import {
   disconnectAccount,
   getAuthUrl,
@@ -1147,6 +1145,10 @@ describe('getEvents', () => {
                   summary: 'Personal event',
                   start: { dateTime: '2026-03-22T11:00:00Z' },
                   end: { dateTime: '2026-03-22T11:30:00Z' },
+                  eventType: 'outOfOffice',
+                  attendees: [
+                    { email: 'other@example.com', responseStatus: 'accepted' },
+                  ],
                 },
                 {
                   id: 'event-personal-all-day',
@@ -1387,6 +1389,7 @@ describe('getEvents', () => {
             startTime: '2026-03-22T10:00:00Z',
             endTime: '2026-03-22T10:30:00Z',
             responseStatus: 'tentative',
+            hasOtherAttendees: true,
           }),
         ],
       },
@@ -1449,6 +1452,7 @@ describe('getEvents', () => {
             summary: 'Not invited',
             startTime: '2026-03-22T13:00:00Z',
             endTime: '2026-03-22T13:30:00Z',
+            hasOtherAttendees: true,
           }),
         ],
       },
@@ -1579,6 +1583,134 @@ describe('getEvents', () => {
             summary: 'Unknown transparency',
             startTime: '2026-03-22T11:00:00Z',
             endTime: '2026-03-22T11:30:00Z',
+          }),
+        ],
+      },
+    ])
+  })
+
+  it('does not count a booked room as another attendee', async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: 'event-room-only',
+              summary: 'Solo work in a room',
+              start: { dateTime: '2026-03-22T09:00:00Z' },
+              end: { dateTime: '2026-03-22T10:00:00Z' },
+              attendees: [
+                { self: true, responseStatus: 'accepted' },
+                {
+                  email: 'room-a@resource.calendar.example.com',
+                  resource: true,
+                  responseStatus: 'accepted',
+                },
+              ],
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    )
+
+    const results = await getEvents(
+      '2026-03-22T00:00:00Z',
+      '2026-03-23T00:00:00Z',
+    )
+
+    expect(normalizeAccountResults(results)).toEqual([
+      {
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        ok: true,
+        value: [
+          makeExternalEvent({
+            id: 'event-room-only',
+            summary: 'Solo work in a room',
+            endTime: '2026-03-22T10:00:00Z',
+          }),
+        ],
+      },
+    ])
+  })
+
+  it("reports Google's eventType, defaulting to default, and keeps the other events when one has a type Google added later", async () => {
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-1',
+      accountLabel: 'user@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: 'event-focus',
+              summary: 'Focus time',
+              start: { dateTime: '2026-03-22T09:00:00Z' },
+              end: { dateTime: '2026-03-22T10:00:00Z' },
+              eventType: 'focusTime',
+            },
+            {
+              id: 'event-plain',
+              summary: 'Plain event',
+              start: { dateTime: '2026-03-22T10:00:00Z' },
+              end: { dateTime: '2026-03-22T10:30:00Z' },
+            },
+            {
+              id: 'event-unknown',
+              summary: 'Unknown type',
+              start: { dateTime: '2026-03-22T11:00:00Z' },
+              end: { dateTime: '2026-03-22T11:30:00Z' },
+              eventType: 'someFutureType',
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    )
+
+    const results = await getEvents(
+      '2026-03-22T00:00:00Z',
+      '2026-03-23T00:00:00Z',
+    )
+
+    expect(normalizeAccountResults(results)).toEqual([
+      {
+        accountId: 'google-sub-1',
+        accountLabel: 'user@example.com',
+        ok: true,
+        value: [
+          makeExternalEvent({
+            id: 'event-focus',
+            summary: 'Focus time',
+            endTime: '2026-03-22T10:00:00Z',
+            eventType: 'focusTime',
+          }),
+          makeExternalEvent({
+            id: 'event-plain',
+            summary: 'Plain event',
+            startTime: '2026-03-22T10:00:00Z',
+            endTime: '2026-03-22T10:30:00Z',
+          }),
+          makeExternalEvent({
+            id: 'event-unknown',
+            summary: 'Unknown type',
+            startTime: '2026-03-22T11:00:00Z',
+            endTime: '2026-03-22T11:30:00Z',
+            eventType: 'someFutureType',
           }),
         ],
       },

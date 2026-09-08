@@ -2412,6 +2412,85 @@
           "columns": ["key"]
         }
       ]
+    },
+    {
+      "name": "public.push_subscriptions",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "endpoint",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "p256dh",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "auth",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "label",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "context",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "last_success_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "push_subscriptions_pkey",
+          "def": "CREATE UNIQUE INDEX push_subscriptions_pkey ON public.push_subscriptions USING btree (id)",
+          "table": "public.push_subscriptions",
+          "columns": ["id"]
+        },
+        {
+          "name": "push_subscriptions_endpoint_unique",
+          "def": "CREATE UNIQUE INDEX push_subscriptions_endpoint_unique ON public.push_subscriptions USING btree (endpoint)",
+          "table": "public.push_subscriptions",
+          "columns": ["endpoint"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "push_subscriptions_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.push_subscriptions",
+          "referenced_table": "",
+          "columns": ["id"]
+        },
+        {
+          "name": "push_subscriptions_endpoint_unique",
+          "type": "UNIQUE",
+          "def": "UNIQUE (endpoint)",
+          "table": "public.push_subscriptions",
+          "referenced_table": "",
+          "columns": ["endpoint"]
+        }
+      ]
     }
   ],
   "relations": [

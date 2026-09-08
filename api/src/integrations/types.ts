@@ -130,14 +130,27 @@ export interface ExternalEvent {
   calendarColor: string | null
   responseStatus: CalendarResponseStatus
   /**
+   * Google's event type: `default` for a normal event, `outOfOffice` /
+   * `focusTime` / `workingLocation` for the status events that describe
+   * where the user is rather than what they agreed to attend. A type Google
+   * adds later is passed through as-is.
+   */
+  eventType: string
+  /**
+   * Whether the event has an attendee other than the signed-in user. Booked
+   * rooms and equipment don't count.
+   */
+  hasOtherAttendees: boolean
+  /**
    * Whether the event occupies its time slot. False only when the calendar
    * explicitly marks it as free; an event that says nothing about its
    * availability is busy.
    */
   busy: boolean
   /**
-   * True when `summary`/`calendarDisplayName`/`calendarColor` are masked
-   * because this event's calendar context doesn't match the requested one.
+   * True when `summary`/`calendarDisplayName`/`calendarColor`/`eventType`/
+   * `hasOtherAttendees` are masked because this event's calendar context
+   * doesn't match the requested one.
    */
   redacted: boolean
 }
