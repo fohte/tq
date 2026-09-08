@@ -6,7 +6,7 @@
     "api",
     "cli"
   ],
-  "packageManager": "pnpm@11.16.0",
+  "packageManager": "pnpm@11.25.0",
   "type": "module",
   "scripts": {
     "lint": "eslint .",
