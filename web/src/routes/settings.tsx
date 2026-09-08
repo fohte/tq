@@ -24,7 +24,7 @@ import {
   useIntegrationsList,
 } from '#hooks/use-integrations'
 import { usePushNotifications } from '#hooks/use-push-notifications'
-import { useServiceWorkerReinstall } from '#hooks/use-service-worker-update'
+import { reinstallServiceWorker } from '#hooks/use-service-worker-update'
 
 export const Route = createFileRoute('/settings')({
   component: Settings,
@@ -39,7 +39,6 @@ const INTEGRATION_ICONS: Record<string, ReactNode> = {
 function Settings() {
   const integrationsList = useIntegrationsList()
   const pushNotifications = usePushNotifications()
-  const reinstallServiceWorker = useServiceWorkerReinstall()
 
   return (
     <div className="flex flex-col">

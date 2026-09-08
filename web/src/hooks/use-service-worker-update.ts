@@ -20,18 +20,16 @@ export function useServiceWorkerUpdate(): void {
   useOnAppForeground(checkForServiceWorkerUpdate)
 }
 
-// Forces a fresh service worker on iOS, where home screen web apps lack
-// DevTools to unregister.
-async function reinstallServiceWorker(): Promise<void> {
+async function unregisterAndReload(): Promise<void> {
+  if (!('serviceWorker' in navigator)) return
+
   const registration = await navigator.serviceWorker.getRegistration()
   await registration?.unregister()
   window.location.reload()
 }
 
-export function useServiceWorkerReinstall(): () => void {
-  return () => {
-    void reinstallServiceWorker().catch((error: unknown) => {
-      console.error('failed to reinstall the service worker', error)
-    })
-  }
+export function reinstallServiceWorker(): void {
+  void unregisterAndReload().catch((error: unknown) => {
+    console.error('failed to reinstall the service worker', error)
+  })
 }
