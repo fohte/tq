@@ -5,7 +5,11 @@ import { sendNotification, WebPushError } from 'web-push'
 
 import { db } from '#db/connection'
 import { pushSubscriptions } from '#db/schema'
-import { VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY, VAPID_SUBJECT } from '#env'
+import { APP_DOMAIN, VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY } from '#env'
+
+// RFC 8292 wants the VAPID JWT's `sub` to be a mailto: or https: URI a push
+// service can use to reach whoever is sending, which tq's own origin is.
+const VAPID_SUBJECT = `https://${APP_DOMAIN}`
 
 // Shape the service worker's `push` handler reads out of `event.data.json()`.
 export interface PushPayload {
@@ -39,9 +43,7 @@ type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect
  * `web-push` with an opaque error.
  */
 export function isPushConfigured(): boolean {
-  return (
-    VAPID_PUBLIC_KEY !== '' && VAPID_PRIVATE_KEY !== '' && VAPID_SUBJECT !== ''
-  )
+  return VAPID_PUBLIC_KEY !== '' && VAPID_PRIVATE_KEY !== ''
 }
 
 function isGone(error: Error): boolean {

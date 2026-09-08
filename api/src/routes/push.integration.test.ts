@@ -42,7 +42,8 @@ const TEST_PAYLOAD = JSON.stringify({
 
 const VAPID_DETAILS = {
   vapidDetails: {
-    subject: 'mailto:test@example.com',
+    // Derived from APP_DOMAIN, which falls back to the Vite dev origin in test.
+    subject: 'https://localhost:5173',
     publicKey: 'test-vapid-public-key',
     privateKey: 'test-vapid-private-key',
   },

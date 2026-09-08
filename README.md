@@ -94,7 +94,6 @@ The API server and web frontend are configured via environment variables.
 | `SLACK_REDIRECT_URI`   | No       | —                       | OAuth callback URL registered on the Slack app (`<API base URL>/api/slack/oauth-callback`)                                                                                                                                                                                         |
 | `VAPID_PUBLIC_KEY`     | Yes\*    | —                       | VAPID public key served to browsers as the Web Push application server key. \*Required in production only — `GET /api/push/vapid-public-key` and `POST /api/push/test` answer 503 without it elsewhere. Generate a pair with `pnpm --filter api exec web-push generate-vapid-keys` |
 | `VAPID_PRIVATE_KEY`    | Yes\*    | —                       | VAPID private key signing Web Push requests. \*Same as above                                                                                                                                                                                                                       |
-| `VAPID_SUBJECT`        | Yes\*    | —                       | Contact for the push service to reach, as a `mailto:` or `https:` URL. \*Same as above                                                                                                                                                                                             |
 
 ### Web (nginx runtime)
 

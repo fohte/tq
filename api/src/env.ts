@@ -54,9 +54,9 @@ function resolveAppDomain(appEnv: AppEnv): Result<string, string> {
   )
 }
 
-// VAPID keypair and contact subject identifying this server to the browsers'
-// push services. Empty outside production, where the push routes report 503
-// rather than making a keypair a prerequisite for running the app at all.
+// VAPID keypair authenticating this server to the browsers' push services.
+// Empty outside production, where the push routes report 503 rather than
+// making a keypair a prerequisite for running the app at all.
 function resolveVapid(varName: string, appEnv: AppEnv): Result<string, string> {
   return resolveRequiredInProduction(varName, appEnv, () => ok(''))
 }
@@ -69,7 +69,6 @@ const parsed = parseEnv({
   APP_DOMAIN: resolveAppDomain(appEnv),
   VAPID_PUBLIC_KEY: resolveVapid('VAPID_PUBLIC_KEY', appEnv),
   VAPID_PRIVATE_KEY: resolveVapid('VAPID_PRIVATE_KEY', appEnv),
-  VAPID_SUBJECT: resolveVapid('VAPID_SUBJECT', appEnv),
 })
 
 if (parsed.isErr()) {
@@ -81,4 +80,3 @@ export const DATABASE_URL: string = parsed.value.DATABASE_URL
 export const APP_DOMAIN: string = parsed.value.APP_DOMAIN
 export const VAPID_PUBLIC_KEY: string = parsed.value.VAPID_PUBLIC_KEY
 export const VAPID_PRIVATE_KEY: string = parsed.value.VAPID_PRIVATE_KEY
-export const VAPID_SUBJECT: string = parsed.value.VAPID_SUBJECT
