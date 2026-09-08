@@ -100,7 +100,7 @@ export function registerWriteTools(server: McpServer): void {
         'Partially update an existing task by id. Only the fields provided ' +
         'are changed; omit a field to leave it as-is. Nullable fields ' +
         '(description, startDate, dueDate, estimatedMinutes, projectId, ' +
-        'recurrenceRule) are cleared by passing null. `labels`, when ' +
+        'recurrenceRule, remindAt) are cleared by passing null. `labels`, when ' +
         'provided, replaces the full set of labels on the task — pass an ' +
         'empty array to remove all labels; names that do not match an ' +
         "existing label are created automatically, inheriting the task's " +

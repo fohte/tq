@@ -75,28 +75,14 @@ async function remindAtByTitle() {
 }
 
 describe('deliverDueReminders', () => {
-  it('notifies the task context only, and clears every reminder it will not deliver', async () => {
+  it('reaches the devices of the task own context and no other', async () => {
     await register(WORK_ENDPOINT, 'work')
     await register(PERSONAL_ENDPOINT, 'personal')
-
-    const now = Date.now()
-    const future = new Date(now + HOUR_MS)
     const task = await createTask({
       title: 'Prepare the standup notes',
       context: 'work',
-      remindAt: new Date(now - MINUTE_MS),
+      remindAt: new Date(Date.now() - MINUTE_MS),
     })
-    await createTask({
-      title: 'Missed while the API was down',
-      remindAt: new Date(now - 2 * HOUR_MS),
-    })
-    await createTask({
-      title: 'Already finished',
-      status: 'completed',
-      remindAt: new Date(now - MINUTE_MS),
-    })
-    await createTask({ title: 'Still upcoming', remindAt: future })
-    await createTask({ title: 'Never reminded' })
 
     await deliverDueReminders()
 
@@ -112,13 +98,51 @@ describe('deliverDueReminders', () => {
           },
         },
       ],
-      remindAt: {
-        'Already finished': null,
-        'Missed while the API was down': null,
-        'Never reminded': null,
-        'Prepare the standup notes': null,
-        'Still upcoming': future.toISOString(),
-      },
+      remindAt: { 'Prepare the standup notes': null },
+    })
+  })
+
+  it('retires a reminder that came due over an hour ago without sending it', async () => {
+    await register(PERSONAL_ENDPOINT, 'personal')
+    await createTask({
+      title: 'Missed while the API was down',
+      remindAt: new Date(Date.now() - 2 * HOUR_MS),
+    })
+
+    await deliverDueReminders()
+
+    expect(await deliveryOutcome()).toEqual({
+      notifications: [],
+      remindAt: { 'Missed while the API was down': null },
+    })
+  })
+
+  it('retires the reminder of an already completed task without sending it', async () => {
+    await register(PERSONAL_ENDPOINT, 'personal')
+    await createTask({
+      title: 'Already finished',
+      status: 'completed',
+      remindAt: new Date(Date.now() - MINUTE_MS),
+    })
+
+    await deliverDueReminders()
+
+    expect(await deliveryOutcome()).toEqual({
+      notifications: [],
+      remindAt: { 'Already finished': null },
+    })
+  })
+
+  it('leaves a reminder that is not due yet untouched', async () => {
+    await register(PERSONAL_ENDPOINT, 'personal')
+    const future = new Date(Date.now() + HOUR_MS)
+    await createTask({ title: 'Still upcoming', remindAt: future })
+
+    await deliverDueReminders()
+
+    expect(await deliveryOutcome()).toEqual({
+      notifications: [],
+      remindAt: { 'Still upcoming': future.toISOString() },
     })
   })
 

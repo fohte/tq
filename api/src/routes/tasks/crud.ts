@@ -269,7 +269,6 @@ export const tasksCrudApp = new Hono()
         ...taskFields
       } = c.req.valid('json')
 
-      // `remind_at` is a timestamptz while the request carries an ISO string.
       const remindAtUpdate =
         remindAtInput === undefined
           ? {}

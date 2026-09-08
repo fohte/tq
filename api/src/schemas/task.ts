@@ -60,7 +60,8 @@ export const updateTaskSchema = z.object({
     .describe(
       'When to send a push notification about this task (ISO 8601), or ' +
         'null to cancel a pending one. Reads back as null once the ' +
-        'notification has been sent.',
+        'reminder has been delivered, or dropped undelivered because the ' +
+        'task was no longer todo or was more than an hour overdue.',
     ),
   // Full replacement, not add/remove: the complete desired set of blocker
   // tasks (id or number) each time. An empty array clears every
