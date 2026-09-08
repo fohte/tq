@@ -6,6 +6,7 @@ import { TaskListToolbar } from '#components/task/task-list-toolbar'
 const meta = {
   title: 'Task/TaskListToolbar',
   component: TaskListToolbar,
+  tags: ['desktop-only'],
   parameters: {
     layout: 'centered',
   },
