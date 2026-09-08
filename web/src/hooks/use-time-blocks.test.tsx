@@ -180,14 +180,65 @@ describe('useCreateTimeBlock', () => {
     })
 
     await waitFor(() => {
-      expect(queryResult.current.data?.length).toBe(1)
+      expect(
+        queryResult.current.data?.map((b) => ({
+          ...b,
+          id: 'ID',
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        })),
+      ).toEqual([
+        {
+          id: 'ID',
+          taskId: 'task-1',
+          startTime: '2026-03-22T09:00:00.000Z',
+          endTime: '2026-03-22T10:00:00.000Z',
+          isAutoScheduled: false,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ])
     })
-    expect(queryResult.current.data?.[0]?.taskId).toBe('task-1')
 
     resolvePost({ ok: true, json: () => Promise.resolve(sampleBlock) })
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)
     })
+  })
+
+  it('rolls back the optimistic insert on error', async () => {
+    const mocks = await getMocks()
+    assertDefined(mocks['mockGet']).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([]),
+    })
+    assertDefined(mocks['mockPost']).mockResolvedValue({
+      ok: false,
+      json: () => Promise.resolve({ error: 'Server error' }),
+    })
+
+    const { result: queryResult } = renderHook(
+      () => useTimeBlocks('2026-03-22', '2026-03-22'),
+      { wrapper },
+    )
+    await waitFor(() => {
+      expect(queryResult.current.isSuccess).toBe(true)
+    })
+
+    const { result } = renderHook(() => useCreateTimeBlock(), { wrapper })
+
+    act(() => {
+      result.current.mutate({
+        taskId: 'task-1',
+        startTime: '2026-03-22T09:00:00.000Z',
+        endTime: '2026-03-22T10:00:00.000Z',
+      })
+    })
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true)
+    })
+    expect(queryResult.current.data).toEqual([])
   })
 })
 

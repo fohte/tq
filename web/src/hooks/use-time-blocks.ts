@@ -55,11 +55,8 @@ export function useCreateTimeBlock() {
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: timeBlockKeys.all })
 
-      // A time block is only ever created by interacting with the
-      // currently-rendered calendar range, so the mounted (active)
-      // time-blocks query is the one to update optimistically — any other
-      // cached range gets corrected by the invalidation in onSettled the
-      // next time it mounts.
+      // Only the mounted (active) query is updated; other cached ranges
+      // are refreshed by onSettled's invalidation.
       const activeQueries = queryClient
         .getQueryCache()
         .findAll({ queryKey: timeBlockKeys.all, type: 'active' })

@@ -98,9 +98,6 @@ function DayView() {
     () => formatLocalDate(selectedDate),
     [selectedDate],
   )
-  // The calendar's displayed range, which spans more than one day in week
-  // and month view — defaults to just the selected day until the calendar
-  // reports its actual rendered range via onVisibleRangeChange.
   const [visibleRange, setVisibleRange] = useState(() => ({
     startDate: selectedDateStr,
     endDate: selectedDateStr,
@@ -111,12 +108,8 @@ function DayView() {
     },
     [],
   )
-  // Falls back to a single-day range whenever selectedDate moves outside
-  // the calendar's last-reported visible range — e.g. the live-today
-  // midnight rollover moves the anchor via CalendarView's internal
-  // gotoDate sync, which suppresses that datesSet's onVisibleRangeChange
-  // (see calendar-view.tsx's isProgrammaticGotoRef) — so this date's data
-  // still loads until the next real datesSet reports the wider range.
+  // Falls back to a single-day range when selectedDate moves outside the
+  // last-reported visible range, until the calendar reports its new one.
   useEffect(() => {
     setVisibleRange((prev) =>
       selectedDateStr >= prev.startDate && selectedDateStr <= prev.endDate
