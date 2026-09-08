@@ -16,7 +16,6 @@
 | last_synced_at | timestamp with time zone | now()   | false    |          |                                 |         |
 | created_at     | timestamp with time zone | now()   | false    |          |                                 |         |
 | updated_at     | timestamp with time zone | now()   | false    |          |                                 |         |
-| body           | text                     |         | true     |          |                                 |         |
 | etag           | text                     |         | true     |          |                                 |         |
 | seq            | bigint                   |         | false    |          |                                 |         |
 
@@ -57,7 +56,6 @@ erDiagram
   timestamp_with_time_zone last_synced_at
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
-  text body
   text etag
   bigint seq
 }

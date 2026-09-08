@@ -153,7 +153,6 @@ erDiagram
   timestamp_with_time_zone last_synced_at
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
-  text body
   text etag
   bigint seq
 }

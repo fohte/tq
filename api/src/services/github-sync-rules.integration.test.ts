@@ -99,7 +99,6 @@ describe('syncGithubAssignedIssues', () => {
       url: 'https://github.com/fohte/tq/issues/42',
       state: 'open',
       title: 'Fix bug',
-      body: null,
       etag: null,
       lastSyncedAt: 'DATE',
       createdAt: 'DATE',
@@ -143,7 +142,6 @@ describe('syncGithubAssignedIssues', () => {
       url: 'https://github.com/fohte/tq/issues/42',
       state: 'open',
       title: 'Already tracked',
-      body: null,
     })
 
     mockAssignedIssuesResponse([{ owner: 'fohte', repo: 'tq', number: 42 }])

@@ -165,7 +165,6 @@ async function insertLink(
         url: issue.url,
         state: issue.state,
         title: issue.title,
-        body: issue.body,
       })
       .returning()
     return firstOrErr(rows)
@@ -248,7 +247,6 @@ export function createTaskFromIssueData(
             url: issue.url,
             state: issue.state,
             title: issue.title,
-            body: issue.body,
           })
           .returning(),
       )

@@ -17,7 +17,7 @@
 | [public.time_blocks](public.time_blocks.md)                                         | 7       |         | BASE TABLE |
 | [public.task_queue_items](public.task_queue_items.md)                               | 7       |         | BASE TABLE |
 | [public.edits](public.edits.md)                                                     | 10      |         | BASE TABLE |
-| [public.task_github_links](public.task_github_links.md)                             | 15      |         | BASE TABLE |
+| [public.task_github_links](public.task_github_links.md)                             | 14      |         | BASE TABLE |
 | [public.task_links](public.task_links.md)                                           | 3       |         | BASE TABLE |
 | [public.github_sync_rule_ignored_issues](public.github_sync_rule_ignored_issues.md) | 6       |         | BASE TABLE |
 | [public.github_sync_rules](public.github_sync_rules.md)                             | 11      |         | BASE TABLE |
@@ -203,7 +203,6 @@ erDiagram
   timestamp_with_time_zone last_synced_at
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
-  text body
   text etag
   bigint seq
 }

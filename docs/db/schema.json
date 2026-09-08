@@ -1350,11 +1350,6 @@
           "default": "now()"
         },
         {
-          "name": "body",
-          "type": "text",
-          "nullable": true
-        },
-        {
           "name": "etag",
           "type": "text",
           "nullable": true
