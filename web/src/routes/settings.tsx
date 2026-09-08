@@ -9,6 +9,7 @@ import { KeybindingsList } from '#components/settings/keybindings-list'
 import { PushNotificationsPanel } from '#components/settings/push-notifications-panel'
 import { QueryStateMessage } from '#components/settings/query-state-message'
 import { SchedulingSettingsPanel } from '#components/settings/scheduling-settings-panel'
+import { ServiceWorkerPanel } from '#components/settings/service-worker-panel'
 import { SessionOpenSettingsPanel } from '#components/settings/session-open-settings-panel'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
 import { Panel } from '#components/ui/panel'
@@ -23,6 +24,7 @@ import {
   useIntegrationsList,
 } from '#hooks/use-integrations'
 import { usePushNotifications } from '#hooks/use-push-notifications'
+import { reinstallServiceWorker } from '#hooks/use-service-worker-update'
 
 export const Route = createFileRoute('/settings')({
   component: Settings,
@@ -85,6 +87,10 @@ function Settings() {
 
           <div className="mt-8">
             <KeybindingsList />
+          </div>
+
+          <div className="mt-8">
+            <ServiceWorkerPanel onReinstall={reinstallServiceWorker} />
           </div>
         </div>
       </div>

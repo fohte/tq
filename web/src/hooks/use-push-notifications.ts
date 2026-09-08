@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
 import { useCurrentContext } from '#hooks/use-current-context'
+import { useOnAppForeground } from '#hooks/use-on-app-foreground'
 import { api } from '#lib/api'
 import {
   assertOkOrThrow,
@@ -125,25 +126,33 @@ async function runPushAction(action: PushAction, context: 'work' | 'personal') {
   }
 }
 
+function resubscribeIfEnabled(context: 'work' | 'personal'): void {
+  if (!isPushSupported()) return
+  if (!isEnabledLocally()) return
+  // Re-subscribing without the permission would prompt outside a user
+  // gesture, which browsers reject.
+  if (Notification.permission !== 'granted') return
+
+  void subscribeToPush(context).catch((error: unknown) => {
+    console.error('failed to refresh the push subscription', error)
+  })
+}
+
 /**
- * Re-register the subscription on every app start. iOS invalidates a
- * subscription silently, and the machine's context has to reach the server for
- * the sender to filter on it.
+ * Re-register the subscription on app start and whenever the app returns to
+ * the foreground. iOS invalidates a subscription silently, and the machine's
+ * context has to reach the server for the sender to filter on it.
  */
 export function usePushResubscribe(): void {
   const context = useCurrentContext()
 
   useEffect(() => {
-    if (!isPushSupported()) return
-    if (!isEnabledLocally()) return
-    // Re-subscribing without the permission would prompt outside a user
-    // gesture, which browsers reject.
-    if (Notification.permission !== 'granted') return
-
-    void subscribeToPush(context).catch((error: unknown) => {
-      console.error('failed to refresh the push subscription', error)
-    })
+    resubscribeIfEnabled(context)
   }, [context])
+
+  useOnAppForeground(() => {
+    resubscribeIfEnabled(context)
+  })
 }
 
 function deriveStatus(
