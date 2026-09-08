@@ -65,6 +65,7 @@ export function useCreateTask() {
         startDate: input.startDate ?? null,
         dueDate: input.dueDate ?? null,
         estimatedMinutes: input.estimatedMinutes ?? null,
+        remindAt: null,
         parentId: input.parentId ?? null,
         parentNumber: null,
         projectId: input.projectId ?? null,
@@ -186,6 +187,7 @@ export interface UpdateTaskInput {
   startDate?: string | null
   dueDate?: string | null
   estimatedMinutes?: number | null
+  remindAt?: string | null
   projectId?: string | null
   context?: 'work' | 'personal'
   commitment?: 'inbox' | 'active' | 'someday'

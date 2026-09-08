@@ -22,6 +22,7 @@ const baseTask: LinkedTaskSummary = {
   startDate: null,
   dueDate: null,
   estimatedMinutes: null,
+  remindAt: null,
   parentId: null,
   parentNumber: null,
   projectId: null,

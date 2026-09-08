@@ -6,6 +6,7 @@ import {
 } from '#components/task/sidebar-field'
 import { SidebarParentField } from '#components/task/sidebar-parent-field'
 import { SidebarProjectField } from '#components/task/sidebar-project-field'
+import { SidebarRemindField } from '#components/task/sidebar-remind-field'
 import { SidebarTagsField } from '#components/task/sidebar-tags-field'
 import { StatusIcon } from '#components/task/status-icon'
 import { SidebarGithubLinkField } from '#components/task/task-github-link-field'
@@ -57,6 +58,7 @@ export function TaskSidebar({ task }: { task: TaskDetail }) {
         label="DUE"
         value={task.dueDate}
       />
+      <SidebarRemindField taskId={task.id} remindAt={task.remindAt} />
       <SidebarParentField taskId={task.id} parentId={task.parentId} />
       <SidebarContextField taskId={task.id} context={task.context} />
       <SidebarCommitmentField taskId={task.id} commitment={task.commitment} />
@@ -119,6 +121,9 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
             label="DUE"
             value={task.dueDate}
           />
+        </MobileFieldCell>
+        <MobileFieldCell className="col-span-2">
+          <SidebarRemindField taskId={task.id} remindAt={task.remindAt} />
         </MobileFieldCell>
         <MobileFieldCell>
           <SidebarParentField taskId={task.id} parentId={task.parentId} />
