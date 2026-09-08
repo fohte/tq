@@ -712,7 +712,7 @@ describe('getEvents', () => {
         accountLabel: 'user@example.com',
         ok: true,
         value: [
-          makeExternalEvent({}),
+          makeExternalEvent(),
           makeExternalEvent({
             id: 'event-2',
             summary: 'All-day event',
