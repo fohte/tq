@@ -30,9 +30,6 @@ export function useResolveGithubUrl() {
   })
 }
 
-// `taskId` is a mutate-time variable rather than a hook argument: the
-// create-task-modal flow only learns the task's id after `useCreateTask`
-// resolves, so a hook-level closure over `taskId` doesn't fit that call site.
 export function useLinkTaskToGithub() {
   const queryClient = useQueryClient()
 

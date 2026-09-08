@@ -196,17 +196,17 @@ export function CreateTaskModal({
     if (parsed.githubUrl != null) setGithubUrl(parsed.githubUrl)
   }
 
+  const canSubmit =
+    title.trim() !== '' &&
+    !createTask.isPending &&
+    !parentNotFound &&
+    !parentPending &&
+    !githubPending &&
+    !githubUnresolvable &&
+    !githubAlreadyLinked
+
   const handleSubmit = () => {
-    if (
-      !title.trim() ||
-      createTask.isPending ||
-      parentNotFound ||
-      parentPending ||
-      githubPending ||
-      githubUnresolvable ||
-      githubAlreadyLinked
-    )
-      return
+    if (!canSubmit) return
 
     const desc = descriptionRef.current.trim()
     const input: CreateTaskInput = {
@@ -225,7 +225,14 @@ export function CreateTaskModal({
     createTask.mutate(input, {
       onSuccess: (task) => {
         if (githubUrl != null) {
-          linkGithub.mutate({ taskId: task.id, url: githubUrl })
+          linkGithub.mutate(
+            { taskId: task.id, url: githubUrl },
+            {
+              onError: (error) => {
+                console.error('Failed to link task to GitHub', error)
+              },
+            },
+          )
         }
         resetForm()
         onOpenChange(false)
@@ -318,14 +325,7 @@ export function CreateTaskModal({
     />
   )
 
-  const submitDisabled =
-    !title.trim() ||
-    createTask.isPending ||
-    parentNotFound ||
-    parentPending ||
-    githubPending ||
-    githubUnresolvable ||
-    githubAlreadyLinked
+  const submitDisabled = !canSubmit
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
