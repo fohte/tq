@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatWeekRangeLabel, getDayIsoRange } from '#lib/date-range'
+import {
+  formatWeekRangeLabel,
+  getDayIsoRange,
+  toLocalDateRange,
+} from '#lib/date-range'
 
 // vitest.config.ts pins TZ to Asia/Tokyo (JST, UTC+9) for the unit project.
 describe('getDayIsoRange', () => {
@@ -26,5 +30,19 @@ describe('formatWeekRangeLabel', () => {
 
   it('returns the same week for a Sunday, the last day of the week', () => {
     expect(formatWeekRangeLabel(new Date(2026, 2, 22))).toBe('03-16 – 03-22')
+  })
+})
+
+describe('toLocalDateRange', () => {
+  it('converts an exclusive end (local midnight of the day after) to the inclusive last visible day', () => {
+    expect(
+      toLocalDateRange(new Date(2026, 2, 16), new Date(2026, 2, 23)),
+    ).toEqual({ startDate: '2026-03-16', endDate: '2026-03-22' })
+  })
+
+  it('collapses to a single day when start and the exclusive end are one day apart', () => {
+    expect(
+      toLocalDateRange(new Date(2026, 2, 16), new Date(2026, 2, 17)),
+    ).toEqual({ startDate: '2026-03-16', endDate: '2026-03-16' })
   })
 })

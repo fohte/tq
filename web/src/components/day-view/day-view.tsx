@@ -81,6 +81,7 @@ export interface DayViewPresentationProps {
   isAutoAssigning: boolean
   selectedDate: Date
   onDateChange: (date: Date) => void
+  onVisibleRangeChange?: (range: { start: Date; end: Date }) => void
   viewMode: DayViewMode
   onViewModeChange: (mode: DayViewMode) => void
 }
@@ -104,6 +105,7 @@ export function DayViewPresentation({
   isAutoAssigning,
   selectedDate,
   onDateChange,
+  onVisibleRangeChange,
   viewMode,
   onViewModeChange,
 }: DayViewPresentationProps) {
@@ -339,6 +341,7 @@ export function DayViewPresentation({
               externalDragContainerRef={taskListRef}
               selectedDate={selectedDate}
               onDateChange={onDateChange}
+              onVisibleRangeChange={onVisibleRangeChange}
               onScheduleClick={handleScheduleClick}
               onSelectRange={openCreateModal}
             />

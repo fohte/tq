@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
@@ -43,6 +43,7 @@ import {
   formatLocalDate,
   formatShortDate,
   formatWeekRangeLabel,
+  toLocalDateRange,
 } from '#lib/date-range'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { scheduleColorToEventColor } from '#lib/schedule-color'
@@ -97,8 +98,33 @@ function DayView() {
     () => formatLocalDate(selectedDate),
     [selectedDate],
   )
-  const { data: timeBlocksData } = useTimeBlocks(selectedDateStr)
-  const { data: schedulesData } = useScheduleList(selectedDateStr)
+  const [visibleRange, setVisibleRange] = useState(() => ({
+    startDate: selectedDateStr,
+    endDate: selectedDateStr,
+  }))
+  const handleVisibleRangeChange = useCallback(
+    (range: { start: Date; end: Date }) => {
+      setVisibleRange(toLocalDateRange(range.start, range.end))
+    },
+    [],
+  )
+  // Falls back to a single-day range when selectedDate moves outside the
+  // last-reported visible range, until the calendar reports its new one.
+  useEffect(() => {
+    setVisibleRange((prev) =>
+      selectedDateStr >= prev.startDate && selectedDateStr <= prev.endDate
+        ? prev
+        : { startDate: selectedDateStr, endDate: selectedDateStr },
+    )
+  }, [selectedDateStr])
+  const { data: timeBlocksData } = useTimeBlocks(
+    visibleRange.startDate,
+    visibleRange.endDate,
+  )
+  const { data: schedulesData } = useScheduleList(
+    visibleRange.startDate,
+    visibleRange.endDate,
+  )
   const { data: queuesData } = useQueues()
   const queueItemsResults = useQueueItemsForQueues(queuesData, selectedDateStr)
   const updateTimeBlock = useUpdateTimeBlock()
@@ -106,7 +132,11 @@ function DayView() {
   const context = useCurrentContext()
   const queryClient = useQueryClient()
 
-  const gcalEventsQuery = useGcalEvents(selectedDateStr, context)
+  const gcalEventsQuery = useGcalEvents(
+    visibleRange.startDate,
+    visibleRange.endDate,
+    context,
+  )
   const schedulingSettings = useSchedulingSettings()
   const gcalAuthRequired =
     gcalEventsQuery.error instanceof GcalAuthRequiredError
@@ -430,6 +460,7 @@ function DayView() {
       isAutoAssigning={autoAssign.isPending}
       selectedDate={selectedDate}
       onDateChange={setSelectedDate}
+      onVisibleRangeChange={handleVisibleRangeChange}
       viewMode={viewMode}
       onViewModeChange={handleViewModeChange}
     />

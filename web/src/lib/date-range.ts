@@ -41,3 +41,17 @@ export function getDayIsoRange(date: string): {
 
   return { timeMin: start.toISOString(), timeMax: end.toISOString() }
 }
+
+/**
+ * Convert a FullCalendar `datesSet` visible range (exclusive `end`) into
+ * inclusive local "YYYY-MM-DD" start/end date strings.
+ */
+export function toLocalDateRange(
+  start: Date,
+  end: Date,
+): { startDate: string; endDate: string } {
+  return {
+    startDate: formatLocalDate(start),
+    endDate: formatLocalDate(new Date(end.getTime() - 1)),
+  }
+}

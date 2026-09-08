@@ -181,7 +181,9 @@ describe('schedule/time-blocks API', () => {
         '2026-03-22T15:00:00.000Z',
       )
 
-      const res = await app.request('/api/schedule/time-blocks?date=2026-03-22')
+      const res = await app.request(
+        '/api/schedule/time-blocks?startDate=2026-03-22&endDate=2026-03-22',
+      )
       expect(res.status).toBe(200)
 
       const blocks = await jsonBody<TimeBlockResponse[]>(res)
@@ -191,11 +193,44 @@ describe('schedule/time-blocks API', () => {
     })
 
     it('returns empty array when no blocks exist', async () => {
-      const res = await app.request('/api/schedule/time-blocks?date=2026-03-22')
+      const res = await app.request(
+        '/api/schedule/time-blocks?startDate=2026-03-22&endDate=2026-03-22',
+      )
       expect(res.status).toBe(200)
 
       const blocks = await jsonBody<TimeBlockResponse[]>(res)
       expect(blocks.length).toBe(0)
+    })
+
+    it('returns time blocks spanning multiple days within the range', async () => {
+      const task = await createTask('Test task')
+      await createTimeBlock(
+        task.id,
+        '2026-03-22T09:00:00.000Z',
+        '2026-03-22T10:00:00.000Z',
+      )
+      await createTimeBlock(
+        task.id,
+        '2026-03-24T09:00:00.000Z',
+        '2026-03-24T10:00:00.000Z',
+      )
+      // Outside the requested range — must not be returned.
+      await createTimeBlock(
+        task.id,
+        '2026-03-26T09:00:00.000Z',
+        '2026-03-26T10:00:00.000Z',
+      )
+
+      const res = await app.request(
+        '/api/schedule/time-blocks?startDate=2026-03-22&endDate=2026-03-24',
+      )
+      expect(res.status).toBe(200)
+
+      const blocks = await jsonBody<TimeBlockResponse[]>(res)
+      expect(blocks.map((b) => b.startTime)).toEqual([
+        '2026-03-22T09:00:00.000Z',
+        '2026-03-24T09:00:00.000Z',
+      ])
     })
   })
 
@@ -307,7 +342,7 @@ describe('schedule/time-blocks API', () => {
 
       // Verify it's gone
       const listRes = await app.request(
-        '/api/schedule/time-blocks?date=2026-03-22',
+        '/api/schedule/time-blocks?startDate=2026-03-22&endDate=2026-03-22',
       )
       const blocks = await jsonBody<TimeBlockResponse[]>(listRes)
       expect(blocks.length).toBe(0)
@@ -396,7 +431,9 @@ describe('schedules API', () => {
         endTime: '07:00',
       })
 
-      const res = await app.request('/api/schedule/recurring?date=2026-03-22')
+      const res = await app.request(
+        '/api/schedule/recurring?startDate=2026-03-22&endDate=2026-03-22',
+      )
       expect(res.status).toBe(200)
 
       const blocks = await jsonBody<ExpandedBlock[]>(res)
@@ -414,7 +451,9 @@ describe('schedules API', () => {
         endTime: '07:00',
       })
 
-      const res = await app.request('/api/schedule/recurring?date=2026-03-22')
+      const res = await app.request(
+        '/api/schedule/recurring?startDate=2026-03-22&endDate=2026-03-22',
+      )
       expect(res.status).toBe(200)
 
       const blocks = await jsonBody<ExpandedBlock[]>(res)
@@ -443,17 +482,42 @@ describe('schedules API', () => {
 
       // 2026-03-23 is Monday
       const mondayRes = await app.request(
-        '/api/schedule/recurring?date=2026-03-23',
+        '/api/schedule/recurring?startDate=2026-03-23&endDate=2026-03-23',
       )
       const mondayBlocks = await jsonBody<ExpandedBlock[]>(mondayRes)
       expect(mondayBlocks).toHaveLength(1)
 
       // 2026-03-24 is Tuesday
       const tuesdayRes = await app.request(
-        '/api/schedule/recurring?date=2026-03-24',
+        '/api/schedule/recurring?startDate=2026-03-24&endDate=2026-03-24',
       )
       const tuesdayBlocks = await jsonBody<ExpandedBlock[]>(tuesdayRes)
       expect(tuesdayBlocks).toHaveLength(0)
+    })
+
+    it('expands a recurring schedule across every matching day within the range', async () => {
+      await createSchedule({
+        title: 'Gym',
+        startTime: '18:00',
+        endTime: '19:00',
+        recurrence: {
+          type: 'weekly',
+          interval: 1,
+          daysOfWeek: [1, 3, 5],
+        },
+      })
+
+      // 2026-03-23 (Mon) through 2026-03-25 (Wed) — matches Mon and Wed only.
+      const res = await app.request(
+        '/api/schedule/recurring?startDate=2026-03-23&endDate=2026-03-25',
+      )
+      expect(res.status).toBe(200)
+
+      const blocks = await jsonBody<ExpandedBlock[]>(res)
+      expect(blocks.map((b) => b.start)).toEqual([
+        '2026-03-23T18:00:00',
+        '2026-03-25T18:00:00',
+      ])
     })
   })
 
@@ -545,7 +609,7 @@ describe('schedules API', () => {
 
       // Verify it's gone
       const getRes = await app.request(
-        '/api/schedule/recurring?date=2026-03-22',
+        '/api/schedule/recurring?startDate=2026-03-22&endDate=2026-03-22',
       )
       const blocks = await jsonBody<ExpandedBlock[]>(getRes)
       expect(blocks).toHaveLength(0)
@@ -698,7 +762,7 @@ describe('schedule/auto-assign API', () => {
       await requestAutoAssign('2026-03-22')
 
       const listRes = await app.request(
-        '/api/schedule/time-blocks?date=2026-03-22',
+        '/api/schedule/time-blocks?startDate=2026-03-22&endDate=2026-03-22',
       )
 
       expect(listRes.status).toBe(200)
@@ -756,7 +820,7 @@ describe('schedule/auto-assign API', () => {
       await requestAutoAssign('2026-03-22')
 
       const listRes = await app.request(
-        '/api/schedule/time-blocks?date=2026-03-22',
+        '/api/schedule/time-blocks?startDate=2026-03-22&endDate=2026-03-22',
       )
       const blocks = await jsonBody<TimeBlockResponse[]>(listRes)
       expect(blocks.map(normalizeTimeBlock)).toEqual([
