@@ -16,20 +16,12 @@ export default defineConfig({
     tailwindcss(),
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: pwaManifest,
-      workbox: {
-        // Navigation requests must reach the network uncontrolled. This
-        // origin sits behind Cloudflare Access, which answers an expired
-        // session with a cross-origin redirect to its login page; any
-        // service-worker response for a navigation (precached shell,
-        // NetworkFirst fallback, etc.) swallows that redirect and leaves the
-        // session unrecoverable short of unregistering the worker.
-        // vite-plugin-pwa defaults navigateFallback to 'index.html', so it
-        // must be explicitly unset here.
-        navigateFallback: null,
-      },
     }),
   ],
   server: {
