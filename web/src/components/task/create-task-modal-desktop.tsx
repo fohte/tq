@@ -33,6 +33,7 @@ import { selectValueHandler } from '#lib/form-utils'
 
 export function CreateTaskModalDesktop({
   parentIndicator,
+  githubIndicator,
   descriptionEditor,
   title,
   setTitle,
@@ -53,6 +54,7 @@ export function CreateTaskModalDesktop({
   submitDisabled,
 }: {
   parentIndicator: ReactNode
+  githubIndicator: ReactNode
   descriptionEditor: ReactNode
   title: string
   setTitle: (value: string) => void
@@ -82,6 +84,7 @@ export function CreateTaskModalDesktop({
               New Task
             </span>
             {parentIndicator}
+            {githubIndicator}
           </div>
           <Button
             type="button"

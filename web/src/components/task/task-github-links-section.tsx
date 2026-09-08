@@ -74,7 +74,6 @@ export function TaskGithubLinksSection({
       <GithubIssueLinkModal
         open={modalOpen}
         onOpenChange={setModalOpen}
-        mode="link"
         taskId={taskId}
       />
     </div>

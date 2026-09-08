@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { expect, waitFor, within } from 'storybook/test'
 
+import { makeResolveGithubUrlResult } from '#components/task/github-link-test-fixtures'
 import { GithubUrlChip } from '#components/task/github-url-chip'
 import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
 import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
@@ -70,19 +71,14 @@ export const OpenIssue: Story = {
   args: {
     url: OPEN_ISSUE_URL,
     raw: OPEN_ISSUE_URL,
-    result: {
-      linked: false,
-      preview: {
-        owner: 'fohte',
-        repo: 'tq',
-        number: 158,
-        kind: 'issue',
-        url: OPEN_ISSUE_URL,
-        title: 'Support live-preview chips and autocomplete for task mentions',
-        body: 'Adds an InlineReferenceProvider abstraction so task mentions render as chips.',
-        state: 'open',
-      },
-    },
+    result: makeResolveGithubUrlResult({
+      number: 158,
+      kind: 'issue',
+      url: OPEN_ISSUE_URL,
+      title: 'Support live-preview chips and autocomplete for task mentions',
+      body: 'Adds an InlineReferenceProvider abstraction so task mentions render as chips.',
+      state: 'open',
+    }),
   },
   play: async ({ canvas, canvasElement, userEvent }) => {
     // The chip renders as a portal into the app's own React tree in
@@ -109,19 +105,14 @@ export const MergedPullRequest: Story = {
   args: {
     url: MERGED_PR_URL,
     raw: MERGED_PR_URL,
-    result: {
-      linked: false,
-      preview: {
-        owner: 'fohte',
-        repo: 'tq',
-        number: 159,
-        kind: 'pull_request',
-        url: MERGED_PR_URL,
-        title: 'Auto-sync linked tasks with GitHub updates',
-        body: null,
-        state: 'merged',
-      },
-    },
+    result: makeResolveGithubUrlResult({
+      number: 159,
+      kind: 'pull_request',
+      url: MERGED_PR_URL,
+      title: 'Auto-sync linked tasks with GitHub updates',
+      body: null,
+      state: 'merged',
+    }),
   },
 }
 

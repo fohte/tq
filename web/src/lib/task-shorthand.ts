@@ -13,11 +13,15 @@ export interface ShorthandExtraction {
   context?: ContextValue
   labels: string[]
   parentNumber?: number
+  githubUrl?: string
 }
 
 function isContextValue(value: string): value is ContextValue {
   return (contextValues as readonly string[]).includes(value) && value !== ''
 }
+
+const GITHUB_URL_RE =
+  /^(https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/(?:issues|pull)\/\d+\/?)(?:[?#]\S*)?$/
 
 function resolveDateKeyword(keyword: string): string | null {
   if (keyword === 'today') {
@@ -42,6 +46,7 @@ function resolveDateKeyword(keyword: string): string | null {
  * - `#label` → labels
  * - `%work` / `%personal` → context
  * - `^N` → parentNumber
+ * - a GitHub issue/PR URL → githubUrl
  *
  * A token counts as "completed" only once it's followed by whitespace, so
  * the word currently being typed is never touched. Unrecognized tokens are
@@ -92,6 +97,13 @@ export function extractShorthandTokens(input: string): ShorthandExtraction {
         result.parentNumber = Number(value)
         consumed = true
         continue
+      } else {
+        const githubMatch = GITHUB_URL_RE.exec(word)
+        if (githubMatch != null) {
+          result.githubUrl = githubMatch[1] ?? word
+          consumed = true
+          continue
+        }
       }
     }
 
