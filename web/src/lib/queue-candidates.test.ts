@@ -105,6 +105,24 @@ describe('getCandidateReason', () => {
     ).toEqual({ kind: 'overdue', days: 3 })
   })
 
+  it('prefers due-today over commitment active', () => {
+    expect(
+      getCandidateReason(
+        makeCandidateTask({ dueDate: '2026-03-20', commitment: 'active' }),
+        now,
+      ),
+    ).toEqual({ kind: 'due-today' })
+  })
+
+  it('prefers a past start date over commitment active', () => {
+    expect(
+      getCandidateReason(
+        makeCandidateTask({ startDate: '2026-03-17', commitment: 'active' }),
+        now,
+      ),
+    ).toEqual({ kind: 'starts', days: 3 })
+  })
+
   it('returns active when the due date is in the future', () => {
     expect(
       getCandidateReason(

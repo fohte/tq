@@ -38,9 +38,10 @@ function reasonDays(reason: CandidateReason): number {
 /**
  * A task is a queue candidate when it's not completed and it's overdue, due
  * today, startable (start date today or earlier), or has commitment
- * "active" (a dateless task the user has committed to working on now).
- * Overdue takes precedence over the other reasons since it's the most
- * urgent one; a dateless active task is the lowest-priority reason.
+ * "active" (the user has committed to working on it now, regardless of
+ * whether it has a date, or its date is still in the future). Overdue takes
+ * precedence over the other reasons since it's the most urgent one; a
+ * commitment-active task is the lowest-priority reason.
  */
 export function getCandidateReason(
   task: CandidateCheckable,
