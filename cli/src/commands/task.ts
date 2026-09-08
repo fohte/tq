@@ -48,6 +48,9 @@ function toQuery(fields: Record<string, unknown>): Record<string, string> {
   )
 }
 
+// A comma-containing id/number or label name can't be represented this way
+// and will be split into multiple entries; accepted since ids/numbers never
+// contain commas and existing label names (e.g. `dev/tq`) don't either.
 function splitCommaList(raw: string): string[] {
   return raw
     .split(',')
@@ -199,8 +202,8 @@ export function registerTaskCommands(
       ),
     updateTaskSchema,
     // labels/recurrenceRule/blockedBy aren't scalar fields, so
-    // addSchemaOptions can't turn them into flags; blockedBy is hand-parsed
-    // below instead.
+    // addSchemaOptions can't turn them into flags; blockedBy and labels are
+    // hand-parsed below instead.
     ['labels', 'recurrenceRule', 'blockedBy'],
     // No TQ_CONTEXT default here (unlike list/create/search): update sends
     // only the flags the caller explicitly set, so defaulting --context would
