@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useCalendarKeybindings } from '#hooks/use-calendar-keybindings'
 
@@ -105,5 +105,66 @@ describe('useCalendarKeybindings', () => {
     fireKey('ArrowRight', { repeat: true })
 
     expect(onNext).not.toHaveBeenCalled()
+  })
+
+  it('treats Caps Lock-cased letters the same as lowercase', () => {
+    const { onToday } = setup()
+
+    fireKey('T')
+
+    expect(onToday).toHaveBeenCalledTimes(1)
+  })
+
+  describe('chord suppression', () => {
+    // useGlobalKeybindings resolves 'g d' / 'g t' as nav chords; this hook's
+    // bare 'd'/'t' shortcuts must not also fire for that same second
+    // keystroke (see use-global-keybindings.ts's navByChord).
+    it('does not fire onViewChange for the "d" following a "g"', () => {
+      const { onViewChange } = setup()
+
+      fireKey('g')
+      fireKey('d')
+
+      expect(onViewChange).not.toHaveBeenCalled()
+    })
+
+    it('does not fire onToday for the "t" following a "g"', () => {
+      const { onToday } = setup()
+
+      fireKey('g')
+      fireKey('t')
+
+      expect(onToday).not.toHaveBeenCalled()
+    })
+
+    it('resumes normal shortcut handling on the key after the suppressed one', () => {
+      const { onViewChange } = setup()
+
+      fireKey('g')
+      fireKey('d')
+      fireKey('d')
+
+      expect(onViewChange).toHaveBeenCalledExactlyOnceWith('day')
+    })
+
+    describe('chord timeout', () => {
+      beforeEach(() => {
+        vi.useFakeTimers()
+      })
+
+      afterEach(() => {
+        vi.useRealTimers()
+      })
+
+      it('stops suppressing once the chord timeout elapses', () => {
+        const { onViewChange } = setup()
+
+        fireKey('g')
+        vi.advanceTimersByTime(1001)
+        fireKey('d')
+
+        expect(onViewChange).toHaveBeenCalledExactlyOnceWith('day')
+      })
+    })
   })
 })

@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 
 import { type NavKeybinding, navKeybindings } from '#lib/keybindings'
 
-const CHORD_TIMEOUT_MS = 1000
+export const CHORD_TIMEOUT_MS = 1000
 
 const navByChord: Map<string, NavKeybinding> = new Map(
   Object.values(navKeybindings).map((keybinding) => [
@@ -27,6 +27,18 @@ export function isEditableTarget(target: EventTarget | null): boolean {
 // in separately.
 export function isBaseUiDialogOpen(): boolean {
   return document.documentElement.hasAttribute('data-base-ui-scroll-locked')
+}
+
+// Shared by every keybinding hook (see use-calendar-keybindings.ts) that
+// listens on `document` alongside this one.
+export function shouldIgnoreShortcut(e: KeyboardEvent): boolean {
+  return (
+    e.metaKey ||
+    e.ctrlKey ||
+    e.altKey ||
+    isEditableTarget(e.target) ||
+    isBaseUiDialogOpen()
+  )
 }
 
 export function useGlobalKeybindings({
@@ -61,14 +73,7 @@ export function useGlobalKeybindings({
 
       if (e.repeat) return
 
-      if (
-        e.metaKey ||
-        e.ctrlKey ||
-        e.altKey ||
-        searchOpen ||
-        isEditableTarget(e.target) ||
-        isBaseUiDialogOpen()
-      ) {
+      if (shouldIgnoreShortcut(e) || searchOpen) {
         resetChord()
         return
       }
