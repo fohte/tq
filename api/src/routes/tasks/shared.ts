@@ -130,7 +130,7 @@ export async function getLabelNamesByTaskId(
 
 // Batch-fetches recurrence rules keyed by rule id, for list endpoints that
 // would otherwise issue one query per task to resolve `recurrenceRuleId`.
-export async function getRecurrenceRulesByIds(
+async function getRecurrenceRulesByIds(
   ruleIds: string[],
 ): Promise<Map<string, typeof recurrenceRules.$inferSelect>> {
   if (ruleIds.length === 0) return new Map()
