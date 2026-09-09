@@ -83,11 +83,14 @@ function AutoTimeBlockPreview({
     formatLocalDate(new Date(block.startTime)),
     { enabled: open },
   )
-  const { data: task } = useTask(taskId, { enabled: open })
+  const { data: task, isError: isTaskError } = useTask(taskId, {
+    enabled: open,
+  })
 
   return (
     <TimeBlockPreviewPopup
       task={task ?? null}
+      isTaskError={isTaskError}
       block={block}
       onDelete={onDelete}
       isDeleting={isDeleting}
@@ -111,11 +114,14 @@ function ManualTimeBlockPreview({
 }) {
   const [open, setOpen] = useState(false)
   const { onDelete, isDeleting } = useDeleteManualTimeBlock(taskId, blockId)
-  const { data: task } = useTask(taskId, { enabled: open })
+  const { data: task, isError: isTaskError } = useTask(taskId, {
+    enabled: open,
+  })
 
   return (
     <TimeBlockPreviewPopup
       task={task ?? null}
+      isTaskError={isTaskError}
       block={block}
       onDelete={onDelete}
       isDeleting={isDeleting}
@@ -130,6 +136,7 @@ function ManualTimeBlockPreview({
 // drag that starts from the same chip.
 function TimeBlockPreviewPopup({
   task,
+  isTaskError,
   block,
   onDelete,
   isDeleting,
@@ -137,6 +144,7 @@ function TimeBlockPreviewPopup({
   children,
 }: {
   task: TaskPreviewChipTask | null
+  isTaskError: boolean
   block: PreviewBlock
   onDelete: () => void
   isDeleting: boolean
@@ -158,6 +166,7 @@ function TimeBlockPreviewPopup({
           <PreviewCardPopup className="w-auto p-0">
             <TimeBlockPreviewCard
               task={task}
+              isTaskError={isTaskError}
               block={block}
               onDelete={onDelete}
               isDeleting={isDeleting}

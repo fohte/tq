@@ -10,9 +10,10 @@ function statusLabel(status: TaskPreviewChipTask['status']): string {
   return status === 'completed' ? 'Completed' : 'Todo'
 }
 
-// Shared by TaskMentionCard (`#123`) and TaskUrlCard (a pasted task URL):
-// both resolve to the same task shape through different hooks, so only the
-// resolution differs, not the rendering.
+// Shared by TaskMentionCard (`#123`), TaskUrlCard (a pasted task URL), and
+// TimeBlockPreviewCard (a calendar time block's hover card): all resolve to
+// the same task shape through different hooks, so only the resolution
+// differs, not the rendering.
 export function TaskPreviewCard({
   task,
   raw,

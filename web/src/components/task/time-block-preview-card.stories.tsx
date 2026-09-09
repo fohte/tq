@@ -10,11 +10,13 @@ import { StoryRouter } from '#storybook-config/story-router'
 
 function TimeBlockPreviewCardWithProviders({
   task,
+  isTaskError,
   block,
   onDelete,
   isDeleting,
 }: {
   task: TaskPreviewChipTask | null
+  isTaskError?: boolean | undefined
   block: Pick<TimeBlock, 'startTime' | 'endTime' | 'isAutoScheduled'>
   onDelete: () => void
   isDeleting?: boolean | undefined
@@ -24,6 +26,7 @@ function TimeBlockPreviewCardWithProviders({
       component={() => (
         <TimeBlockPreviewCard
           task={task}
+          isTaskError={isTaskError}
           block={block}
           onDelete={onDelete}
           isDeleting={isDeleting}
@@ -67,13 +70,23 @@ export const Auto: Story = {
   },
 }
 
-// The task fetch hasn't resolved yet: the calendar gates it behind the
-// hover-card's open state, so there's a brief window with no task info.
 export const Loading: Story = {
   args: {
     task: null,
     block: makeTimeBlock(),
     onDelete: () => {},
+  },
+}
+
+export const Error: Story = {
+  args: {
+    task: null,
+    isTaskError: true,
+    block: makeTimeBlock(),
+    onDelete: () => {},
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('Failed to load task')).toBeVisible()
   },
 }
 
