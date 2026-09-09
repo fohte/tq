@@ -27,6 +27,7 @@ import {
   type RecurrenceRule,
 } from '#lib/recurrence'
 import { formatShortDate } from '#lib/task-due-date'
+import { parseRecurrenceShorthand } from '#lib/task-shorthand'
 
 type RecurrenceTypeOption = '' | 'daily' | 'weekly' | 'monthly'
 const recurrenceTypeOptions: readonly RecurrenceTypeOption[] = [
@@ -103,6 +104,10 @@ export function SidebarRecurrenceField({
   const [dayOfMonth, setDayOfMonth] = useState(
     recurrenceRule?.dayOfMonth != null ? String(recurrenceRule.dayOfMonth) : '',
   )
+  // Scratch input for the `*` shorthand grammar. One-directional: typing
+  // here updates the controls below, but the controls never write back —
+  // the controls are the only value that gets saved.
+  const [shorthandInput, setShorthandInput] = useState('')
 
   const resetDraft = () => {
     setType(initialType)
@@ -113,6 +118,16 @@ export function SidebarRecurrenceField({
         ? String(recurrenceRule.dayOfMonth)
         : '',
     )
+    setShorthandInput('')
+  }
+
+  const handleShorthandInputChange = (value: string) => {
+    setShorthandInput(value)
+    const rule = parseRecurrenceShorthand(value)
+    if (rule == null) return
+    setType(rule.type)
+    setIntervalInput(String(rule.interval))
+    setDaysOfWeek(rule.daysOfWeek ?? [])
   }
 
   const openEditing = () => {
@@ -181,6 +196,16 @@ export function SidebarRecurrenceField({
         className="w-72 p-3"
       >
         <div className="flex flex-col gap-3">
+          <Input
+            type="text"
+            value={shorthandInput}
+            onChange={(e) => {
+              handleShorthandInputChange(e.target.value)
+            }}
+            placeholder="*weekly, *sun, *毎週 ..."
+            className="h-auto w-full border-0 border-b border-border bg-transparent p-0 pb-1 text-xs shadow-none focus-visible:ring-0"
+          />
+
           <Select
             value={type}
             onValueChange={selectValueHandler(setType, recurrenceTypeOptions)}

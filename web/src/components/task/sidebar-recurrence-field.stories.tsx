@@ -211,6 +211,43 @@ export const PickMonthlyAndSave: Story = {
   },
 }
 
+export const TypeShorthandAndSave: Story = {
+  args: {
+    taskId,
+    dueDate,
+    recurrenceRule: null,
+  },
+  parameters: {
+    screenshot: { skip: true },
+    msw: {
+      handlers: [
+        http.patch('/api/tasks/:id', async ({ request }) => {
+          patchedBody = await request.json()
+          return HttpResponse.json({})
+        }),
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    patchedBody = null
+    const canvas = within(canvasElement)
+    const body = within(canvasElement.ownerDocument.body)
+
+    await userEvent.click(canvas.getByText('—'))
+    const shorthandInput = await body.findByPlaceholderText(
+      '*weekly, *sun, *毎週 ...',
+    )
+    await userEvent.type(shorthandInput, '*sun')
+    await userEvent.click(await body.findByRole('button', { name: 'Save' }))
+
+    await waitFor(async () => {
+      await expect(patchedBody).toEqual({
+        recurrenceRule: { type: 'weekly', interval: 1, daysOfWeek: [0] },
+      })
+    })
+  },
+}
+
 export const ClearRecurrence: Story = {
   args: {
     taskId,

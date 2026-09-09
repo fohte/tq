@@ -24,7 +24,10 @@ import type { CreateTaskInput } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
-import { extractShorthandTokens } from '#lib/task-shorthand'
+import {
+  extractShorthandTokens,
+  type ShorthandRecurrenceRule,
+} from '#lib/task-shorthand'
 import { cn } from '#lib/utils'
 
 function estimateInputFor(minutes: number | undefined): string {
@@ -87,6 +90,10 @@ export function CreateTaskModal({
   // Set when the user types (or pastes) a GitHub issue/PR URL shorthand
   // token in the title.
   const [githubUrl, setGithubUrl] = useState<string | undefined>(undefined)
+  // Set when the user types a `*daily`/`*weekly`/`*sun`... shorthand token.
+  const [recurrenceRule, setRecurrenceRule] = useState<
+    ShorthandRecurrenceRule | undefined
+  >(undefined)
   const createTask = useCreateTask()
   const linkGithub = useLinkTaskToGithub()
 
@@ -160,6 +167,7 @@ export function CreateTaskModal({
     setLabels(defaultLabels ?? [])
     setParentOverrideNumber(undefined)
     setGithubUrl(undefined)
+    setRecurrenceRule(undefined)
   }, [
     defaultStartDate,
     effectiveDefaultContext,
@@ -194,6 +202,7 @@ export function CreateTaskModal({
     if (parsed.parentNumber != null)
       setParentOverrideNumber(parsed.parentNumber)
     if (parsed.githubUrl != null) setGithubUrl(parsed.githubUrl)
+    if (parsed.recurrenceRule != null) setRecurrenceRule(parsed.recurrenceRule)
   }
 
   const canSubmit =
@@ -220,6 +229,7 @@ export function CreateTaskModal({
       ...(labels.length > 0 ? { labels } : {}),
       ...(projectId != null ? { projectId } : {}),
       ...(effectiveParentId != null ? { parentId: effectiveParentId } : {}),
+      ...(recurrenceRule != null ? { recurrenceRule } : {}),
     }
 
     createTask.mutate(input, {
