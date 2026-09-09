@@ -1,3 +1,4 @@
+import { recurrenceRuleSchema } from 'api/schemas/recurrence-rule'
 import {
   createTaskSchema,
   listTasksQuerySchema,
@@ -56,6 +57,43 @@ function splitCommaList(raw: string): string[] {
     .split(',')
     .map((v) => v.trim())
     .filter((v) => v.length > 0)
+}
+
+interface RecurrenceFlagOptions {
+  recurrenceType?: string
+  recurrenceInterval?: string
+  recurrenceDaysOfWeek?: string
+  recurrenceDayOfMonth?: string
+}
+
+// recurrenceRule is a nested object, so unlike the schema's scalar fields it
+// can't become a single flag; --recurrence-type is the signal that the
+// caller wants to set it at all, with the rest assembled from the other
+// --recurrence-* flags and validated against the same schema the API uses.
+function parseRecurrenceRule(
+  command: Command,
+  options: RecurrenceFlagOptions,
+): NonNullable<CreateTaskJson['recurrenceRule']> | undefined {
+  if (options.recurrenceType === undefined) return undefined
+  const parsed = recurrenceRuleSchema.safeParse({
+    type: options.recurrenceType,
+    interval: Number(options.recurrenceInterval),
+    ...(options.recurrenceDaysOfWeek !== undefined
+      ? {
+          daysOfWeek: splitCommaList(options.recurrenceDaysOfWeek).map(Number),
+        }
+      : {}),
+    ...(options.recurrenceDayOfMonth !== undefined
+      ? { dayOfMonth: Number(options.recurrenceDayOfMonth) }
+      : {}),
+  })
+  if (!parsed.success) {
+    return fail(
+      command,
+      new Error(parsed.error.issues[0]?.message ?? 'Invalid value'),
+    )
+  }
+  return parsed.data
 }
 
 export function registerTaskCommands(
@@ -140,6 +178,22 @@ export function registerTaskCommands(
       .option(
         '--labels <names>',
         'Comma-separated label names to attach (unknown names are created)',
+      )
+      .option(
+        '--recurrence-type <type>',
+        'Recurrence rule type (daily/weekly/monthly/custom); requires --recurrence-interval',
+      )
+      .option(
+        '--recurrence-interval <n>',
+        'Recurrence interval (e.g. 2 with type weekly means every 2 weeks)',
+      )
+      .option(
+        '--recurrence-days-of-week <days>',
+        'Comma-separated days of week for a weekly rule (0=Sunday..6=Saturday)',
+      )
+      .option(
+        '--recurrence-day-of-month <day>',
+        'Day of month (1-31) for a monthly rule',
       ),
     createTaskSchema,
     // labels/recurrenceRule (non-scalar) and parentId (union) cannot be
@@ -157,13 +211,14 @@ export function registerTaskCommands(
         options: Record<string, unknown> & {
           parentId?: string
           labels?: string
-        },
+        } & RecurrenceFlagOptions,
         command: Command,
       ) => {
         const client = buildClient(command, fetchImpl).match(
           (value) => value,
           (error) => fail(command, error),
         )
+        const recurrenceRule = parseRecurrenceRule(command, options)
         const json: CreateTaskJson = {
           ...pickSchemaFields(createTaskSchema, options, [
             'title',
@@ -181,6 +236,7 @@ export function registerTaskCommands(
           ...(options.labels !== undefined
             ? { labels: splitCommaList(options.labels) }
             : {}),
+          ...(recurrenceRule !== undefined ? { recurrenceRule } : {}),
         }
         const res = await client.api.tasks.$post({ json })
         if (!res.ok) return fail(command, await toApiError(res))
@@ -199,11 +255,28 @@ export function registerTaskCommands(
       .option(
         '--labels <names>',
         'Comma-separated label names to set (replaces the full set; unknown names are created; pass an empty string to clear)',
-      ),
+      )
+      .option(
+        '--recurrence-type <type>',
+        'Recurrence rule type (daily/weekly/monthly/custom); requires --recurrence-interval',
+      )
+      .option(
+        '--recurrence-interval <n>',
+        'Recurrence interval (e.g. 2 with type weekly means every 2 weeks)',
+      )
+      .option(
+        '--recurrence-days-of-week <days>',
+        'Comma-separated days of week for a weekly rule (0=Sunday..6=Saturday)',
+      )
+      .option(
+        '--recurrence-day-of-month <day>',
+        'Day of month (1-31) for a monthly rule',
+      )
+      .option('--no-recurrence', "Clear the task's recurrence rule"),
     updateTaskSchema,
     // labels/recurrenceRule/blockedBy aren't scalar fields, so
-    // addSchemaOptions can't turn them into flags; blockedBy and labels are
-    // hand-parsed below instead.
+    // addSchemaOptions can't turn them into flags; blockedBy, labels, and
+    // recurrenceRule are hand-parsed below instead.
     ['labels', 'recurrenceRule', 'blockedBy'],
     // No TQ_CONTEXT default here (unlike list/create/search): update sends
     // only the flags the caller explicitly set, so defaulting --context would
@@ -220,9 +293,11 @@ export function registerTaskCommands(
         options: Record<string, unknown> & {
           blockedBy?: string
           labels?: string
-        },
+          recurrence?: boolean
+        } & RecurrenceFlagOptions,
         command: Command,
       ) => {
+        const recurrenceRule = parseRecurrenceRule(command, options)
         const json: UpdateTaskJson = {
           ...pickSchemaFields(updateTaskSchema, options, [
             'labels',
@@ -238,6 +313,11 @@ export function registerTaskCommands(
           ...(options.labels !== undefined
             ? { labels: splitCommaList(options.labels) }
             : {}),
+          ...(recurrenceRule !== undefined
+            ? { recurrenceRule }
+            : options.recurrence === false
+              ? { recurrenceRule: null }
+              : {}),
         }
         if (Object.keys(json).length === 0) {
           return fail(command, new Error('Pass at least one flag to update'))
