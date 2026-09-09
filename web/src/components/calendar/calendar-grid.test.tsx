@@ -27,6 +27,9 @@ function renderAndGetEventDrop(
     eventId: string
     newStart: Date
     newEnd: Date
+    oldStart: Date
+    oldEnd: Date
+    el: HTMLElement
     revert: () => void
   }) => void,
 ) {
@@ -82,6 +85,9 @@ describe('CalendarGrid', () => {
     const eventDrop = renderAndGetEventDrop(onEventDrop)
     const newStart = new Date('2026-07-20T09:00:00')
     const newEnd = new Date('2026-07-20T10:00:00')
+    const oldStart = new Date('2026-07-20T08:00:00')
+    const oldEnd = new Date('2026-07-20T09:00:00')
+    const el = document.createElement('div')
     const dropInfo = {
       event: {
         id: 'task-1',
@@ -89,6 +95,11 @@ describe('CalendarGrid', () => {
         end: newEnd,
         allDay: false,
       },
+      oldEvent: {
+        start: oldStart,
+        end: oldEnd,
+      },
+      el,
       revert,
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventDrop reads
@@ -99,6 +110,9 @@ describe('CalendarGrid', () => {
       eventId: 'task-1',
       newStart,
       newEnd,
+      oldStart,
+      oldEnd,
+      el,
       revert,
     })
   })

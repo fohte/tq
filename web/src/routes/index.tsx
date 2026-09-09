@@ -1,7 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import {
+  type CalendarChangeFeedback,
+  CalendarChangeFeedbackPopup,
+} from '#components/calendar/calendar-change-feedback-popup'
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import {
@@ -49,6 +53,10 @@ import { getQueueCandidates } from '#lib/queue-candidates'
 import { scheduleColorToEventColor } from '#lib/schedule-color'
 
 const dayViewSearchDefaults = { view: 'queue' } as const
+
+// How long the post-drag/resize "Undo" or error popup stays open before
+// auto-dismissing.
+const CHANGE_FEEDBACK_DURATION_MS = 5000
 
 interface DayViewSearch {
   view?: DayViewMode
@@ -131,6 +139,33 @@ function DayView() {
   const createTimeBlock = useCreateTimeBlock()
   const context = useCurrentContext()
   const queryClient = useQueryClient()
+
+  const [changeFeedback, setChangeFeedback] =
+    useState<CalendarChangeFeedback | null>(null)
+  const changeFeedbackAnchorRef = useRef<HTMLElement | null>(null)
+  const changeFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  )
+  useEffect(() => {
+    return () => {
+      if (changeFeedbackTimerRef.current) {
+        clearTimeout(changeFeedbackTimerRef.current)
+      }
+    }
+  }, [])
+  const showChangeFeedback = useCallback(
+    (el: HTMLElement, feedback: CalendarChangeFeedback) => {
+      changeFeedbackAnchorRef.current = el
+      setChangeFeedback(feedback)
+      if (changeFeedbackTimerRef.current) {
+        clearTimeout(changeFeedbackTimerRef.current)
+      }
+      changeFeedbackTimerRef.current = setTimeout(() => {
+        setChangeFeedback(null)
+      }, CHANGE_FEEDBACK_DURATION_MS)
+    },
+    [],
+  )
 
   const gcalEventsQuery = useGcalEvents(
     visibleRange.startDate,
@@ -277,9 +312,39 @@ function DayView() {
     [taskEvents, scheduleEvents, gcalEvents],
   )
 
+  // Restores the block to its pre-drag/resize time (and auto-scheduled
+  // flag) by issuing a normal update — not FullCalendar's `revert`, which
+  // only undoes its own pre-commit visual state and can't touch a change
+  // that has already been saved.
+  const undoTimeBlockChange = useCallback(
+    (eventId: string, oldStart: Date, oldEnd: Date) => {
+      const oldIsAutoScheduled = timeBlocksData?.find(
+        (b) => b.id === eventId,
+      )?.isAutoScheduled
+      setChangeFeedback(null)
+      updateTimeBlock.mutate({
+        id: eventId,
+        startTime: oldStart.toISOString(),
+        endTime: oldEnd.toISOString(),
+        ...(oldIsAutoScheduled !== undefined
+          ? { isAutoScheduled: oldIsAutoScheduled }
+          : {}),
+      })
+    },
+    [updateTimeBlock, timeBlocksData],
+  )
+
   const dndCallbacks: CalendarDndCallbacks = useMemo(
     () => ({
-      onEventDrop: ({ eventId, newStart, newEnd, revert }) => {
+      onEventDrop: ({
+        eventId,
+        newStart,
+        newEnd,
+        oldStart,
+        oldEnd,
+        el,
+        revert,
+      }) => {
         updateTimeBlock.mutate(
           {
             id: eventId,
@@ -290,11 +355,28 @@ function DayView() {
           {
             onError: () => {
               revert()
+              showChangeFeedback(el, { kind: 'error' })
+            },
+            onSuccess: () => {
+              showChangeFeedback(el, {
+                kind: 'undo',
+                onUndo: () => {
+                  undoTimeBlockChange(eventId, oldStart, oldEnd)
+                },
+              })
             },
           },
         )
       },
-      onEventResize: ({ eventId, newStart, newEnd, revert }) => {
+      onEventResize: ({
+        eventId,
+        newStart,
+        newEnd,
+        oldStart,
+        oldEnd,
+        el,
+        revert,
+      }) => {
         updateTimeBlock.mutate(
           {
             id: eventId,
@@ -305,6 +387,15 @@ function DayView() {
           {
             onError: () => {
               revert()
+              showChangeFeedback(el, { kind: 'error' })
+            },
+            onSuccess: () => {
+              showChangeFeedback(el, {
+                kind: 'undo',
+                onUndo: () => {
+                  undoTimeBlockChange(eventId, oldStart, oldEnd)
+                },
+              })
             },
           },
         )
@@ -317,7 +408,7 @@ function DayView() {
         })
       },
     }),
-    [updateTimeBlock, createTimeBlock],
+    [updateTimeBlock, createTimeBlock, showChangeFeedback, undoTimeBlockChange],
   )
 
   // The full stored id list for a queue: the given `visibleIds` (already
@@ -439,30 +530,39 @@ function DayView() {
   )
 
   return (
-    <DayViewPresentation
-      isLoading={isLoading}
-      calendarEvents={calendarEvents}
-      schedules={schedulesData ?? []}
-      dndCallbacks={dndCallbacks}
-      onCreateTimeBlock={createTimeBlock.mutate}
-      {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
-        ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
-        : {})}
-      queueSections={queueSections}
-      dayQueueTasks={dayQueueTasks}
-      queueCandidates={queueCandidates}
-      onReorderQueue={handleReorderQueue}
-      onMoveTask={handleMoveTask}
-      onInsertCandidate={handleInsertCandidate}
-      onAddCandidate={handleAddCandidate}
-      onRemoveFromQueue={handleRemoveFromQueue}
-      onAutoAssign={handleAutoAssign}
-      isAutoAssigning={autoAssign.isPending}
-      selectedDate={selectedDate}
-      onDateChange={setSelectedDate}
-      onVisibleRangeChange={handleVisibleRangeChange}
-      viewMode={viewMode}
-      onViewModeChange={handleViewModeChange}
-    />
+    <>
+      <DayViewPresentation
+        isLoading={isLoading}
+        calendarEvents={calendarEvents}
+        schedules={schedulesData ?? []}
+        dndCallbacks={dndCallbacks}
+        onCreateTimeBlock={createTimeBlock.mutate}
+        {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
+          ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
+          : {})}
+        queueSections={queueSections}
+        dayQueueTasks={dayQueueTasks}
+        queueCandidates={queueCandidates}
+        onReorderQueue={handleReorderQueue}
+        onMoveTask={handleMoveTask}
+        onInsertCandidate={handleInsertCandidate}
+        onAddCandidate={handleAddCandidate}
+        onRemoveFromQueue={handleRemoveFromQueue}
+        onAutoAssign={handleAutoAssign}
+        isAutoAssigning={autoAssign.isPending}
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+        onVisibleRangeChange={handleVisibleRangeChange}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
+      />
+      <CalendarChangeFeedbackPopup
+        anchor={changeFeedbackAnchorRef}
+        feedback={changeFeedback}
+        onOpenChange={(open) => {
+          if (!open) setChangeFeedback(null)
+        }}
+      />
+    </>
   )
 }
