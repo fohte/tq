@@ -337,6 +337,35 @@ describe('task create', () => {
     expect(exitCode).toBe(1)
     expect(calls.length).toBe(0)
   })
+
+  it('splits --labels into a label name array', async () => {
+    const created = { id: 't1', number: 1, title: 'New task' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'New task',
+        '--labels',
+        'dev/tq, dev/meshi',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'POST',
+      pathname: '/api/tasks',
+      query: {},
+      body: { title: 'New task', labels: ['dev/tq', 'dev/meshi'] },
+    })
+  })
 })
 
 describe('task update', () => {
@@ -462,6 +491,56 @@ describe('task update', () => {
       pathname: '/api/tasks/42',
       query: {},
       body: { blockedBy: [] },
+    })
+  })
+
+  it('splits --labels into a label name array', async () => {
+    const updated = { id: 't1', number: 1 }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'update',
+        '42',
+        '--labels',
+        'dev/tq, dev/meshi',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'PATCH',
+      pathname: '/api/tasks/42',
+      query: {},
+      body: { labels: ['dev/tq', 'dev/meshi'] },
+    })
+  })
+
+  it('sends an empty labels array to clear all labels', async () => {
+    const updated = { id: 't1', number: 1 }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'update', '42', '--labels', ''],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'PATCH',
+      pathname: '/api/tasks/42',
+      query: {},
+      body: { labels: [] },
     })
   })
 
