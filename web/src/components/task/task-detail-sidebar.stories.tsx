@@ -121,7 +121,11 @@ export const SidebarMinimal: Story = {
   },
 }
 
+// Desktop only: at the mobile viewport the sidebar's fields already fill the
+// frame, pushing the GitHub link section below the fold and leaving this
+// screenshot identical to Sidebar.
 export const SidebarWithGithubLink: Story = {
+  tags: ['desktop-only'],
   args: {
     task: {
       ...baseTask,

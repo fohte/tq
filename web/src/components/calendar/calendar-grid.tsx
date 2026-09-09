@@ -66,6 +66,16 @@ function formatHm(date: Date): string {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
+// 24h / 30min slots (matches slotMinTime/slotMaxTime/slotDuration below).
+const SLOTS_PER_DAY = 48
+
+interface SlotGhostRect {
+  top: number
+  left: number
+  width: number
+  height: number
+}
+
 const DEFAULT_SCROLL_TIME = '08:00:00'
 
 function getScrollTime(rangeStart: Date, rangeEnd: Date): string {
@@ -121,6 +131,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
   ) {
     const isDesktop = useIsDesktop()
     const fullCalendarRef = useRef<FullCalendar>(null)
+    const [slotGhost, setSlotGhost] = useState<SlotGhostRect | null>(null)
     useImperativeHandle<FullCalendar | null, FullCalendar | null>(
       ref,
       () => fullCalendarRef.current,
@@ -271,6 +282,55 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       }
     }
 
+    const handleGridMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+      const target = e.target instanceof HTMLElement ? e.target : null
+      const colEl = target?.closest('.fc-timegrid-col')
+      if (
+        !colEl ||
+        colEl.classList.contains('fc-timegrid-axis') ||
+        target?.closest('.fc-event')
+      ) {
+        setSlotGhost(null)
+        return
+      }
+      // Day columns have no per-slot subdivision, so the slot height is read
+      // off a real slot row instead of duplicating it as a constant.
+      const slotHeight = e.currentTarget
+        .querySelector('.fc-timegrid-slot')
+        ?.getBoundingClientRect().height
+      if (slotHeight == null) {
+        setSlotGhost(null)
+        return
+      }
+      const containerRect = e.currentTarget.getBoundingClientRect()
+      const colRect = colEl.getBoundingClientRect()
+      const slotIndex = Math.min(
+        Math.max(Math.floor((e.clientY - colRect.top) / slotHeight), 0),
+        SLOTS_PER_DAY - 1,
+      )
+      const next: SlotGhostRect = {
+        top: colRect.top - containerRect.top + slotIndex * slotHeight,
+        left: colRect.left - containerRect.left,
+        width: colRect.width,
+        height: slotHeight,
+      }
+      // Skip the update when nothing moved, so FullCalendar doesn't rebuild
+      // its event store on every mousemove within the same slot.
+      setSlotGhost((prev) =>
+        prev &&
+        prev.top === next.top &&
+        prev.left === next.left &&
+        prev.width === next.width &&
+        prev.height === next.height
+          ? prev
+          : next,
+      )
+    }
+
+    const handleGridMouseLeave = () => {
+      setSlotGhost(null)
+    }
+
     const handleSelect = (info: DateSelectArg) => {
       if (!onSelectRange || info.allDay) return
       onSelectRange({ start: info.start, end: info.end })
@@ -303,7 +363,14 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     }
 
     return (
-      <div className="tq-calendar h-full">
+      <div
+        className="tq-calendar relative h-full"
+        onMouseMove={handleGridMouseMove}
+        onMouseLeave={handleGridMouseLeave}
+        // Scrolling `.fc-scroller` without moving the pointer would
+        // otherwise leave the ghost stale; capture since scroll doesn't bubble.
+        onScrollCapture={handleGridMouseLeave}
+      >
         <FullCalendar
           ref={fullCalendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
@@ -395,7 +462,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           dayMaxEvents={activeView === 'month' ? true : false}
           editable={activeView !== 'month'}
           selectable={activeView !== 'month'}
-          droppable={activeView === 'day'}
+          droppable={activeView !== 'month'}
           dayHeaders={activeView !== 'day'}
           {...(activeView === 'week'
             ? {
@@ -420,6 +487,17 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
             : {})}
           datesSet={handleDatesSet}
         />
+        {slotGhost && (
+          <div
+            className="fc-highlight tq-slot-hover-ghost"
+            style={{
+              top: slotGhost.top,
+              left: slotGhost.left,
+              width: slotGhost.width,
+              height: slotGhost.height,
+            }}
+          />
+        )}
       </div>
     )
   },
