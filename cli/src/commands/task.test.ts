@@ -429,6 +429,35 @@ describe('task create', () => {
       ['Error: Invalid input: expected number, received NaN\n'],
     ])
   })
+
+  it('rejects --recurrence-interval without --recurrence-type before making any fetch call', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify({}), { status: 201 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'New task',
+        '--recurrence-interval',
+        '2',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(1)
+    expect(calls.length).toBe(0)
+    expect(stderr.mock.calls).toEqual([
+      [
+        'Error: Invalid option: expected one of "daily"|"weekly"|"monthly"|"custom"\n',
+      ],
+    ])
+  })
 })
 
 describe('task update', () => {
