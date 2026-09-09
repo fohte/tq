@@ -8,6 +8,7 @@ import { SidebarParentField } from '#components/task/sidebar-parent-field'
 import { SidebarProjectField } from '#components/task/sidebar-project-field'
 import { SidebarRemindField } from '#components/task/sidebar-remind-field'
 import { SidebarTagsField } from '#components/task/sidebar-tags-field'
+import { SidebarTimeBlocks } from '#components/task/sidebar-time-blocks'
 import { StatusIcon } from '#components/task/status-icon'
 import { SidebarGithubLinkField } from '#components/task/task-github-link-field'
 import { useHandleStatusChange } from '#components/task/task-row-shared'
@@ -65,7 +66,7 @@ export function TaskSidebar({ task }: { task: TaskDetail }) {
       <SidebarProjectField taskId={task.id} projectId={task.projectId} />
       <SidebarTagsField taskId={task.id} labels={task.labels} />
       <SidebarGithubLinkField githubLinks={task.githubLinks} />
-      <SidebarTimeBlocks timeBlocks={task.timeBlocks} />
+      <SidebarTimeBlocks taskId={task.id} timeBlocks={task.timeBlocks} />
     </DetailSidebarPanel>
   )
 }
@@ -147,7 +148,7 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
           <SidebarGithubLinkField githubLinks={task.githubLinks} />
         </MobileFieldCell>
       </div>
-      <SidebarTimeBlocks timeBlocks={task.timeBlocks} />
+      <SidebarTimeBlocks taskId={task.id} timeBlocks={task.timeBlocks} />
     </div>
   )
 }
@@ -380,51 +381,5 @@ function SidebarCommitmentField({
         </SelectContent>
       </Select>
     </SidebarField>
-  )
-}
-
-// --- Time Blocks ---
-
-function pad2(n: number): string {
-  return String(n).padStart(2, '0')
-}
-
-function formatBlockDate(iso: string): string {
-  const d = new Date(iso)
-  return `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
-}
-
-function formatBlockRange(startIso: string, endIso: string): string {
-  const start = new Date(startIso)
-  const end = new Date(endIso)
-  return `${pad2(start.getHours())}:${pad2(start.getMinutes())}–${pad2(end.getHours())}:${pad2(end.getMinutes())}`
-}
-
-// No empty state: unlike Pages/Linked Tasks (user-authored content worth
-// prompting for), time blocks are schedule-derived, so an empty list just
-// means nothing has been scheduled yet.
-function SidebarTimeBlocks({
-  timeBlocks,
-}: {
-  timeBlocks: TaskDetail['timeBlocks']
-}) {
-  if (timeBlocks.length === 0) return null
-
-  return (
-    <div className="flex flex-col gap-2 border-t border-border pt-3.5">
-      <span className="font-mono text-2xs text-muted-foreground-faint">
-        TIME BLOCKS
-      </span>
-      <div className="flex flex-col gap-1.5 font-mono text-2xs text-muted-foreground-strong">
-        {timeBlocks.map((block) => (
-          <span key={block.id}>
-            <span className="text-muted-foreground-faint">
-              {formatBlockDate(block.startTime)}
-            </span>{' '}
-            {formatBlockRange(block.startTime, block.endTime)}
-          </span>
-        ))}
-      </div>
-    </div>
   )
 }
