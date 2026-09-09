@@ -366,6 +366,98 @@ describe('task create', () => {
       body: { title: 'New task', labels: ['dev/tq', 'dev/meshi'] },
     })
   })
+
+  it('assembles the --recurrence-* flags into a recurrenceRule object', async () => {
+    const created = { id: 't1', number: 1, title: 'New task' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'New task',
+        '--recurrence-type',
+        'weekly',
+        '--recurrence-interval',
+        '2',
+        '--recurrence-days-of-week',
+        '1, 3',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'POST',
+      pathname: '/api/tasks',
+      query: {},
+      body: {
+        title: 'New task',
+        recurrenceRule: { type: 'weekly', interval: 2, daysOfWeek: [1, 3] },
+      },
+    })
+  })
+
+  it('rejects --recurrence-type without --recurrence-interval before making any fetch call', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify({}), { status: 201 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'New task',
+        '--recurrence-type',
+        'weekly',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(1)
+    expect(calls.length).toBe(0)
+    expect(stderr.mock.calls).toEqual([
+      ['Error: Invalid input: expected number, received NaN\n'],
+    ])
+  })
+
+  it('rejects --recurrence-interval without --recurrence-type before making any fetch call', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify({}), { status: 201 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'New task',
+        '--recurrence-interval',
+        '2',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(1)
+    expect(calls.length).toBe(0)
+    expect(stderr.mock.calls).toEqual([
+      [
+        'Error: Invalid option: expected one of "daily"|"weekly"|"monthly"|"custom"\n',
+      ],
+    ])
+  })
 })
 
 describe('task update', () => {
@@ -541,6 +633,62 @@ describe('task update', () => {
       pathname: '/api/tasks/42',
       query: {},
       body: { labels: [] },
+    })
+  })
+
+  it('assembles the --recurrence-* flags into a recurrenceRule object', async () => {
+    const updated = { id: 't1', number: 1 }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'update',
+        '42',
+        '--recurrence-type',
+        'monthly',
+        '--recurrence-interval',
+        '1',
+        '--recurrence-day-of-month',
+        '15',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'PATCH',
+      pathname: '/api/tasks/42',
+      query: {},
+      body: {
+        recurrenceRule: { type: 'monthly', interval: 1, dayOfMonth: 15 },
+      },
+    })
+  })
+
+  it('sends a null recurrenceRule to clear it when --no-recurrence is given', async () => {
+    const updated = { id: 't1', number: 1 }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'update', '42', '--no-recurrence'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'PATCH',
+      pathname: '/api/tasks/42',
+      query: {},
+      body: { recurrenceRule: null },
     })
   })
 

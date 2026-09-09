@@ -13,6 +13,7 @@
     "./schemas/agent-session": "./src/schemas/agent-session.ts",
     "./schemas/label": "./src/schemas/label.ts",
     "./schemas/project": "./src/schemas/project.ts",
+    "./schemas/recurrence-rule": "./src/schemas/recurrence-rule.ts",
     "./schemas/saved-view": "./src/schemas/saved-view.ts",
     "./schemas/task": "./src/schemas/task.ts",
     "./schemas/task-comment": "./src/schemas/task-comment.ts",
