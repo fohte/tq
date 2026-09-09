@@ -353,7 +353,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           dayMaxEvents={activeView === 'month' ? true : false}
           editable={activeView !== 'month'}
           selectable={activeView !== 'month'}
-          droppable={activeView === 'day'}
+          droppable={activeView !== 'month'}
           dayHeaders={activeView !== 'day'}
           {...(activeView === 'week'
             ? {
