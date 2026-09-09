@@ -1,4 +1,5 @@
 import type { DateSelectArg, EventDropArg } from '@fullcalendar/core'
+import type { EventResizeDoneArg } from '@fullcalendar/interaction'
 import { render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -44,6 +45,28 @@ function renderAndGetEventDrop(
   return capturedProps['eventDrop'] as (info: EventDropArg) => void
 }
 
+function renderAndGetEventResize(
+  onEventResize: (info: {
+    eventId: string
+    newStart: Date
+    newEnd: Date
+    oldStart: Date
+    oldEnd: Date
+    el: HTMLElement
+    revert: () => void
+  }) => void,
+) {
+  render(
+    <CalendarGrid
+      events={[]}
+      activeView="day"
+      dndCallbacks={{ onEventResize }}
+    />,
+  )
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- captured prop is the real FullCalendar eventResize handler
+  return capturedProps['eventResize'] as (info: EventResizeDoneArg) => void
+}
+
 function renderAndGetSelect(
   onSelectRange: (info: { start: Date; end: Date }) => void,
 ) {
@@ -79,7 +102,31 @@ describe('CalendarGrid', () => {
     expect(revert).toHaveBeenCalledTimes(1)
   })
 
-  it('updates the time block with the new start/end when a timed event is dropped', () => {
+  it('reverts the drag when the pre-drag event has no start/end', () => {
+    const onEventDrop = vi.fn()
+    const revert = vi.fn()
+    const eventDrop = renderAndGetEventDrop(onEventDrop)
+    const dropInfo = {
+      event: {
+        id: 'task-1',
+        start: new Date('2026-07-20T09:00:00'),
+        end: new Date('2026-07-20T10:00:00'),
+        allDay: false,
+      },
+      oldEvent: {
+        start: null,
+        end: null,
+      },
+      revert,
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventDrop reads
+    eventDrop(dropInfo as unknown as EventDropArg)
+
+    expect(onEventDrop).not.toHaveBeenCalled()
+    expect(revert).toHaveBeenCalledTimes(1)
+  })
+
+  it('forwards new/old start-end, the element, and revert to onEventDrop when a timed event is dropped', () => {
     const onEventDrop = vi.fn()
     const revert = vi.fn()
     const eventDrop = renderAndGetEventDrop(onEventDrop)
@@ -107,6 +154,66 @@ describe('CalendarGrid', () => {
 
     expect(revert).not.toHaveBeenCalled()
     expect(onEventDrop).toHaveBeenCalledWith({
+      eventId: 'task-1',
+      newStart,
+      newEnd,
+      oldStart,
+      oldEnd,
+      el,
+      revert,
+    })
+  })
+
+  it('reverts the resize when the pre-resize event has no start/end', () => {
+    const onEventResize = vi.fn()
+    const revert = vi.fn()
+    const eventResize = renderAndGetEventResize(onEventResize)
+    const resizeInfo = {
+      event: {
+        id: 'task-1',
+        start: new Date('2026-07-20T09:00:00'),
+        end: new Date('2026-07-20T11:00:00'),
+      },
+      oldEvent: {
+        start: null,
+        end: null,
+      },
+      revert,
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventResize reads
+    eventResize(resizeInfo as unknown as EventResizeDoneArg)
+
+    expect(onEventResize).not.toHaveBeenCalled()
+    expect(revert).toHaveBeenCalledTimes(1)
+  })
+
+  it('forwards new/old start-end, the element, and revert to onEventResize when an event is resized', () => {
+    const onEventResize = vi.fn()
+    const revert = vi.fn()
+    const eventResize = renderAndGetEventResize(onEventResize)
+    const newStart = new Date('2026-07-20T09:00:00')
+    const newEnd = new Date('2026-07-20T11:00:00')
+    const oldStart = new Date('2026-07-20T09:00:00')
+    const oldEnd = new Date('2026-07-20T10:00:00')
+    const el = document.createElement('div')
+    const resizeInfo = {
+      event: {
+        id: 'task-1',
+        start: newStart,
+        end: newEnd,
+      },
+      oldEvent: {
+        start: oldStart,
+        end: oldEnd,
+      },
+      el,
+      revert,
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventResize reads
+    eventResize(resizeInfo as unknown as EventResizeDoneArg)
+
+    expect(revert).not.toHaveBeenCalled()
+    expect(onEventResize).toHaveBeenCalledWith({
       eventId: 'task-1',
       newStart,
       newEnd,
