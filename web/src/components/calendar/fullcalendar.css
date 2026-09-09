@@ -55,6 +55,18 @@
   border-color: var(--surface-strong);
 }
 
+/* --surface-strong keeps this visible on today's --card tinted column in
+   week view. */
+.tq-calendar .fc-highlight {
+  background-color: var(--surface-strong);
+}
+
+.tq-calendar .tq-slot-hover-ghost {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+}
+
 /* Now indicator — thin red line + square marker */
 .tq-calendar .fc-timegrid-now-indicator-line {
   border-color: var(--primary);
