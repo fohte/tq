@@ -123,6 +123,37 @@ export const DayView: Story = {
   },
 }
 
+export const ScrollsToCurrentTime: Story = {
+  args: {
+    activeView: 'day',
+  },
+  parameters: {
+    // Verifies scroll position only; visually identical to DayView.
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, canvasElement }) => {
+    await canvas.findByText('API ドキュメント作成')
+    // FullCalendar renders more than one `.fc-scroller` (header/body/etc.);
+    // only the vertically-scrollable one is the time grid body.
+    const scroller = assertDefined(
+      Array.from(
+        canvasElement.querySelectorAll<HTMLElement>('.fc-scroller'),
+      ).find((el) => el.scrollHeight > el.clientHeight),
+      'no vertically scrollable .fc-scroller found',
+    )
+    const now = new Date()
+    const expectedMinutes = Math.max(
+      0,
+      now.getHours() * 60 + now.getMinutes() - 60,
+    )
+    // fullcalendar.css sets each 30-minute slot to 26px.
+    const expectedPx = expectedMinutes * (26 / 30)
+
+    await expect(scroller.scrollTop).toBeGreaterThan(expectedPx - 15)
+    await expect(scroller.scrollTop).toBeLessThan(expectedPx + 15)
+  },
+}
+
 export const WeekView: Story = {
   args: {
     activeView: 'week',

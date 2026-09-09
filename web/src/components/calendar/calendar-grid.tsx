@@ -1,5 +1,6 @@
 import type {
   DateSelectArg,
+  DatesSetArg,
   EventClickArg,
   EventDropArg,
 } from '@fullcalendar/core'
@@ -75,6 +76,26 @@ interface SlotGhostRect {
   height: number
 }
 
+const DEFAULT_SCROLL_TIME = '08:00:00'
+
+function getScrollTime(rangeStart: Date, rangeEnd: Date): string {
+  const now = new Date()
+  if (now < rangeStart || now >= rangeEnd) return DEFAULT_SCROLL_TIME
+  // Without the floor, a time shortly after midnight would produce a
+  // negative-minutes string that FullCalendar's scrollToTime silently drops.
+  const minutes = Math.max(0, now.getHours() * 60 + now.getMinutes() - 60)
+  const shifted = new Date(now)
+  shifted.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0)
+  return `${formatHm(shifted)}:00`
+}
+
+function getDayRange(date: Date): [Date, Date] {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const end = new Date(start)
+  end.setDate(end.getDate() + 1)
+  return [start, end]
+}
+
 interface CalendarGridProps {
   events: TimeBlockEvent[]
   activeView: CalendarViewType
@@ -115,6 +136,13 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       ref,
       () => fullCalendarRef.current,
       [],
+    )
+
+    // `scrollTime` is a real FullCalendar option, but — like `initialView`
+    // below — it only takes effect on first mount. handleDatesSet's
+    // imperative scrollToTime call covers every later navigation instead.
+    const [initialScrollTime] = useState(() =>
+      getScrollTime(...getDayRange(initialDate ?? new Date())),
     )
 
     // `initialView` only applies on FullCalendar's first mount, so if
@@ -308,6 +336,14 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       onSelectRange({ start: info.start, end: info.end })
     }
 
+    const handleDatesSet = (info: DatesSetArg) => {
+      onDatesSet?.(info)
+      // Covers navigation; initialScrollTime above covers first mount.
+      fullCalendarRef.current
+        ?.getApi()
+        .scrollToTime(getScrollTime(info.start, info.end))
+    }
+
     const handleReceive = (info: EventReceiveArg) => {
       if (!dndCallbacks?.onExternalDrop) return
       const { event } = info
@@ -408,7 +444,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           allDaySlot={true}
           slotMinTime="00:00:00"
           slotMaxTime="24:00:00"
-          scrollTime="08:00:00"
+          scrollTime={initialScrollTime}
           slotDuration="00:30:00"
           slotLabelInterval="01:00:00"
           slotLabelFormat={{
@@ -449,7 +485,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
                 },
               }
             : {})}
-          {...(onDatesSet ? { datesSet: onDatesSet } : {})}
+          datesSet={handleDatesSet}
         />
         {slotGhost && (
           <div

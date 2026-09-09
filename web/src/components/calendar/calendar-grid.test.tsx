@@ -1,24 +1,42 @@
 import type {
   DateSelectArg,
+  DatesSetArg,
   EventClickArg,
   EventContentArg,
   EventDropArg,
 } from '@fullcalendar/core'
 import type { EventResizeDoneArg } from '@fullcalendar/interaction'
 import { render } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { CalendarGrid } from '#components/calendar/calendar-grid'
 
 let capturedProps: Record<string, unknown> = {}
+const scrollToTimeSpy = vi.fn()
 
 vi.mock('@fullcalendar/react', async () => {
   const React = await import('react')
   return {
     default: React.forwardRef(function MockFullCalendar(
       props: Record<string, unknown>,
+      ref: React.Ref<{
+        getApi: () => {
+          view: { type: string }
+          changeView: () => void
+          scrollToTime: (time: string) => void
+        }
+      }>,
     ) {
       capturedProps = props
+      React.useImperativeHandle(ref, () => ({
+        getApi: () => ({
+          // Matches whatever activeView resolves to, so the view-sync effect
+          // in CalendarGrid sees no change and skips calling changeView.
+          view: { type: String(props['initialView']) },
+          changeView: () => {},
+          scrollToTime: scrollToTimeSpy,
+        }),
+      }))
       return null
     }),
   }
@@ -107,9 +125,28 @@ function renderAndGetEventClassNames() {
   return capturedProps['eventClassNames'] as (arg: EventContentArg) => string[]
 }
 
+function renderAndGetDatesSet(
+  onDatesSet?: (info: {
+    start: Date
+    end: Date
+    view: { currentStart: Date }
+  }) => void,
+) {
+  render(
+    <CalendarGrid
+      events={[]}
+      activeView="day"
+      {...(onDatesSet ? { onDatesSet } : {})}
+    />,
+  )
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- captured prop is the real FullCalendar datesSet handler
+  return capturedProps['datesSet'] as (info: DatesSetArg) => void
+}
+
 describe('CalendarGrid', () => {
   beforeEach(() => {
     capturedProps = {}
+    scrollToTimeSpy.mockClear()
   })
 
   it('reverts the drag instead of updating the time block when dropped on the all-day row', () => {
@@ -367,5 +404,71 @@ describe('CalendarGrid', () => {
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields eventClassNames reads
     expect(eventClassNames(arg as unknown as EventContentArg)).toEqual([])
+  })
+
+  describe('datesSet', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('forwards the dates-set info to onDatesSet', () => {
+      const onDatesSet = vi.fn()
+      const datesSet = renderAndGetDatesSet(onDatesSet)
+      const info = {
+        start: new Date('2026-07-20T00:00:00'),
+        end: new Date('2026-07-21T00:00:00'),
+        view: { currentStart: new Date('2026-07-20T00:00:00') },
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleDatesSet reads
+      datesSet(info as unknown as DatesSetArg)
+
+      expect(onDatesSet).toHaveBeenCalledExactlyOnceWith(info)
+    })
+
+    it('scrolls to an hour before now when the displayed range includes the current moment', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date(2026, 6, 20, 14, 45, 0))
+      const datesSet = renderAndGetDatesSet()
+      const info = {
+        start: new Date(2026, 6, 20, 0, 0, 0),
+        end: new Date(2026, 6, 21, 0, 0, 0),
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleDatesSet reads
+      datesSet(info as unknown as DatesSetArg)
+
+      expect(scrollToTimeSpy).toHaveBeenCalledExactlyOnceWith('13:45:00')
+    })
+
+    it('keeps the default scroll time when the displayed range does not include the current moment', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date(2026, 6, 20, 14, 45, 0))
+      const datesSet = renderAndGetDatesSet()
+      const info = {
+        start: new Date(2026, 6, 21, 0, 0, 0),
+        end: new Date(2026, 6, 22, 0, 0, 0),
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleDatesSet reads
+      datesSet(info as unknown as DatesSetArg)
+
+      expect(scrollToTimeSpy).toHaveBeenCalledExactlyOnceWith('08:00:00')
+    })
+
+    it('clamps the scroll time to 00:00 within the first hour after midnight', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date(2026, 6, 20, 0, 30, 0))
+      const datesSet = renderAndGetDatesSet()
+      const info = {
+        start: new Date(2026, 6, 20, 0, 0, 0),
+        end: new Date(2026, 6, 21, 0, 0, 0),
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleDatesSet reads
+      datesSet(info as unknown as DatesSetArg)
+
+      expect(scrollToTimeSpy).toHaveBeenCalledExactlyOnceWith('00:00:00')
+    })
   })
 })
