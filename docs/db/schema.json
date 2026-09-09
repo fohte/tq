@@ -2673,13 +2673,21 @@
           "columns": ["enabled"]
         },
         {
-          "name": "idx_recurring_task_templates_recurrence_rule_id",
-          "def": "CREATE INDEX idx_recurring_task_templates_recurrence_rule_id ON public.recurring_task_templates USING btree (recurrence_rule_id)",
+          "name": "recurring_task_templates_recurrence_rule_id_unique",
+          "def": "CREATE UNIQUE INDEX recurring_task_templates_recurrence_rule_id_unique ON public.recurring_task_templates USING btree (recurrence_rule_id)",
           "table": "public.recurring_task_templates",
           "columns": ["recurrence_rule_id"]
         }
       ],
       "constraints": [
+        {
+          "name": "recurring_task_templates_start_offset_days_check",
+          "type": "CHECK",
+          "def": "CHECK ((start_offset_days \u003e= 0))",
+          "table": "public.recurring_task_templates",
+          "referenced_table": "",
+          "columns": ["start_offset_days"]
+        },
         {
           "name": "recurring_task_templates_project_id_projects_id_fk",
           "type": "FOREIGN KEY",
@@ -2714,6 +2722,14 @@
           "table": "public.recurring_task_templates",
           "referenced_table": "",
           "columns": ["id"]
+        },
+        {
+          "name": "recurring_task_templates_recurrence_rule_id_unique",
+          "type": "UNIQUE",
+          "def": "UNIQUE (recurrence_rule_id)",
+          "table": "public.recurring_task_templates",
+          "referenced_table": "",
+          "columns": ["recurrence_rule_id"]
         }
       ]
     }
@@ -2974,7 +2990,7 @@
     {
       "table": "public.recurring_task_templates",
       "columns": ["recurrence_rule_id"],
-      "cardinality": "zero_or_more",
+      "cardinality": "zero_or_one",
       "parent_table": "public.recurrence_rules",
       "parent_columns": ["id"],
       "parent_cardinality": "exactly_one",

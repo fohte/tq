@@ -23,21 +23,23 @@
 
 | Name                                                            | Type        | Definition                                                          |
 | --------------------------------------------------------------- | ----------- | ------------------------------------------------------------------- |
+| recurring_task_templates_start_offset_days_check                | CHECK       | CHECK ((start_offset_days >= 0))                                    |
 | recurring_task_templates_project_id_projects_id_fk              | FOREIGN KEY | FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL |
 | recurring_task_templates_recurrence_rule_id_recurrence_rules_id | FOREIGN KEY | FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id)    |
 | recurring_task_templates_parent_id_tasks_id_fk                  | FOREIGN KEY | FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL     |
 | recurring_task_templates_pkey                                   | PRIMARY KEY | PRIMARY KEY (id)                                                    |
+| recurring_task_templates_recurrence_rule_id_unique              | UNIQUE      | UNIQUE (recurrence_rule_id)                                         |
 
 ## Indexes
 
-| Name                                            | Definition                                                                                                                       |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| recurring_task_templates_pkey                   | CREATE UNIQUE INDEX recurring_task_templates_pkey ON public.recurring_task_templates USING btree (id)                            |
-| idx_recurring_task_templates_project_id         | CREATE INDEX idx_recurring_task_templates_project_id ON public.recurring_task_templates USING btree (project_id)                 |
-| idx_recurring_task_templates_parent_id          | CREATE INDEX idx_recurring_task_templates_parent_id ON public.recurring_task_templates USING btree (parent_id)                   |
-| idx_recurring_task_templates_context            | CREATE INDEX idx_recurring_task_templates_context ON public.recurring_task_templates USING btree (context)                       |
-| idx_recurring_task_templates_enabled            | CREATE INDEX idx_recurring_task_templates_enabled ON public.recurring_task_templates USING btree (enabled)                       |
-| idx_recurring_task_templates_recurrence_rule_id | CREATE INDEX idx_recurring_task_templates_recurrence_rule_id ON public.recurring_task_templates USING btree (recurrence_rule_id) |
+| Name                                               | Definition                                                                                                                                 |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| recurring_task_templates_pkey                      | CREATE UNIQUE INDEX recurring_task_templates_pkey ON public.recurring_task_templates USING btree (id)                                      |
+| idx_recurring_task_templates_project_id            | CREATE INDEX idx_recurring_task_templates_project_id ON public.recurring_task_templates USING btree (project_id)                           |
+| idx_recurring_task_templates_parent_id             | CREATE INDEX idx_recurring_task_templates_parent_id ON public.recurring_task_templates USING btree (parent_id)                             |
+| idx_recurring_task_templates_context               | CREATE INDEX idx_recurring_task_templates_context ON public.recurring_task_templates USING btree (context)                                 |
+| idx_recurring_task_templates_enabled               | CREATE INDEX idx_recurring_task_templates_enabled ON public.recurring_task_templates USING btree (enabled)                                 |
+| recurring_task_templates_recurrence_rule_id_unique | CREATE UNIQUE INDEX recurring_task_templates_recurrence_rule_id_unique ON public.recurring_task_templates USING btree (recurrence_rule_id) |
 
 ## Relations
 
@@ -47,7 +49,7 @@ erDiagram
 "public.recurring_task_template_labels" }o--|| "public.recurring_task_templates" : "FOREIGN KEY (template_id) REFERENCES recurring_task_templates(id) ON DELETE CASCADE"
 "public.recurring_task_templates" }o--o| "public.projects" : "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL"
 "public.recurring_task_templates" }o--o| "public.tasks" : "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL"
-"public.recurring_task_templates" }o--|| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id)"
+"public.recurring_task_templates" |o--|| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id)"
 
 "public.recurring_task_templates" {
   text id

@@ -288,6 +288,13 @@
       "when": 1788972569305,
       "tag": "0040_add_recurring_task_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1788974318410,
+      "tag": "0041_add_recurring_task_template_constraints",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,7 @@
+import { sql } from 'drizzle-orm'
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -33,19 +35,16 @@ export const recurringTaskTemplates = pgTable(
     })
       .notNull()
       .default('personal'),
-    // Owned exclusively by this template (never shared with a task or
-    // another template), so it can be updated/deleted in place without the
-    // shared-reference checks `tasks`' recurrence rule handling needs.
+    // Never shared with a task or another template.
     recurrenceRuleId: text('recurrence_rule_id')
       .notNull()
+      .unique()
       .references(() => recurrenceRules.id),
     // Days before the due date to place the generated instance's start
     // date; null means the generated instance gets no start date.
     startOffsetDays: integer('start_offset_days'),
     // Base date `computeNextDate` seeds the first occurrence from.
     anchorDate: date('anchor_date').notNull(),
-    // Date of the most recently generated occurrence, or null if none has
-    // been generated yet.
     lastGeneratedDate: date('last_generated_date'),
     enabled: boolean('enabled').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -60,8 +59,9 @@ export const recurringTaskTemplates = pgTable(
     index('idx_recurring_task_templates_parent_id').on(table.parentId),
     index('idx_recurring_task_templates_context').on(table.context),
     index('idx_recurring_task_templates_enabled').on(table.enabled),
-    index('idx_recurring_task_templates_recurrence_rule_id').on(
-      table.recurrenceRuleId,
+    check(
+      'recurring_task_templates_start_offset_days_check',
+      sql`${table.startOffsetDays} >= 0`,
     ),
   ],
 )

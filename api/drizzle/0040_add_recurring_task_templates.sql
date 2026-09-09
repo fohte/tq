@@ -33,17 +33,8 @@ CREATE INDEX "idx_recurring_task_templates_parent_id" ON "recurring_task_templat
 CREATE INDEX "idx_recurring_task_templates_context" ON "recurring_task_templates" USING btree ("context");--> statement-breakpoint
 CREATE INDEX "idx_recurring_task_templates_enabled" ON "recurring_task_templates" USING btree ("enabled");--> statement-breakpoint
 CREATE INDEX "idx_recurring_task_templates_recurrence_rule_id" ON "recurring_task_templates" USING btree ("recurrence_rule_id");--> statement-breakpoint
--- Backfills a template for every task that already has a recurrence rule,
--- so each becomes the first instance of its own template. Each template
--- gets its own copy of the rule row rather than sharing the task's, since
--- `recurring_task_templates.recurrence_rule_id` is owned exclusively by the
--- template (see the column comment in the schema) -- sharing it would make
--- the task-side rule-cleanup checks in tasks/crud.ts and tasks/actions.ts
--- blind to the template's reference.
--- The three inserts are chained through explicit joins (rather than acting
--- as independent CTEs) because sibling data-modifying CTEs in Postgres have
--- no guaranteed execution order otherwise, and the FK chain here requires
--- the rule to exist before the template, and the template before its labels.
+-- Chained via explicit joins to enforce execution order across
+-- data-modifying CTEs, which Postgres does not otherwise guarantee.
 WITH source AS (
   SELECT
     t."id" AS task_id,
@@ -87,7 +78,7 @@ ins_templates AS (
     ins_rules."id",
     CASE
       WHEN source."start_date" IS NOT NULL AND source."due_date" IS NOT NULL
-        THEN source."due_date" - source."start_date"
+        THEN GREATEST(0, source."due_date" - source."start_date")
     END,
     COALESCE(source."due_date", CURRENT_DATE),
     source."due_date",
