@@ -12,7 +12,13 @@ import type {
 import interactionPlugin, { Draggable } from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react'
 
 import {
   type CalendarViewType,
@@ -62,16 +68,22 @@ function formatHm(date: Date): string {
 
 const DEFAULT_SCROLL_TIME = '08:00:00'
 
-// Scrolls to an hour before now when the displayed range includes the
-// current moment, otherwise falls back to the default. Minutes are clamped
-// to 0 so a time shortly after midnight doesn't wrap to the previous day.
 function getScrollTime(rangeStart: Date, rangeEnd: Date): string {
   const now = new Date()
   if (now < rangeStart || now >= rangeEnd) return DEFAULT_SCROLL_TIME
+  // Without the floor, a time shortly after midnight would produce a
+  // negative-minutes string that FullCalendar's scrollToTime silently drops.
   const minutes = Math.max(0, now.getHours() * 60 + now.getMinutes() - 60)
-  const hh = String(Math.floor(minutes / 60)).padStart(2, '0')
-  const mm = String(minutes % 60).padStart(2, '0')
-  return `${hh}:${mm}:00`
+  const shifted = new Date(now)
+  shifted.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0)
+  return `${formatHm(shifted)}:00`
+}
+
+function getDayRange(date: Date): [Date, Date] {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const end = new Date(start)
+  end.setDate(end.getDate() + 1)
+  return [start, end]
 }
 
 interface CalendarGridProps {
@@ -113,6 +125,13 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       ref,
       () => fullCalendarRef.current,
       [],
+    )
+
+    // `scrollTime` is a real FullCalendar option, but — like `initialView`
+    // below — it only takes effect on first mount. handleDatesSet's
+    // imperative scrollToTime call covers every later navigation instead.
+    const [initialScrollTime] = useState(() =>
+      getScrollTime(...getDayRange(initialDate ?? new Date())),
     )
 
     // `initialView` only applies on FullCalendar's first mount, so if
@@ -259,10 +278,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
 
     const handleDatesSet = (info: DatesSetArg) => {
       onDatesSet?.(info)
-      // `scrollTime` is only read once, when the time grid view first
-      // mounts (FullCalendar's ScrollResponder captures it and ignores
-      // later option changes), so reacting to prev/next/today navigation
-      // requires calling the imperative API instead of updating the prop.
+      // Covers navigation; initialScrollTime above covers first mount.
       fullCalendarRef.current
         ?.getApi()
         .scrollToTime(getScrollTime(info.start, info.end))
@@ -361,7 +377,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           allDaySlot={true}
           slotMinTime="00:00:00"
           slotMaxTime="24:00:00"
-          scrollTime={DEFAULT_SCROLL_TIME}
+          scrollTime={initialScrollTime}
           slotDuration="00:30:00"
           slotLabelInterval="01:00:00"
           slotLabelFormat={{
