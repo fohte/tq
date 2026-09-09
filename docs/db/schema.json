@@ -2497,6 +2497,225 @@
           "columns": ["endpoint"]
         }
       ]
+    },
+    {
+      "name": "public.recurring_task_template_labels",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "template_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "label_id",
+          "type": "text",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "recurring_task_template_labels_template_id_label_id_pk",
+          "def": "CREATE UNIQUE INDEX recurring_task_template_labels_template_id_label_id_pk ON public.recurring_task_template_labels USING btree (template_id, label_id)",
+          "table": "public.recurring_task_template_labels",
+          "columns": ["template_id", "label_id"]
+        },
+        {
+          "name": "idx_recurring_task_template_labels_template_id",
+          "def": "CREATE INDEX idx_recurring_task_template_labels_template_id ON public.recurring_task_template_labels USING btree (template_id)",
+          "table": "public.recurring_task_template_labels",
+          "columns": ["template_id"]
+        },
+        {
+          "name": "idx_recurring_task_template_labels_label_id",
+          "def": "CREATE INDEX idx_recurring_task_template_labels_label_id ON public.recurring_task_template_labels USING btree (label_id)",
+          "table": "public.recurring_task_template_labels",
+          "columns": ["label_id"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "recurring_task_template_labels_label_id_labels_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE",
+          "table": "public.recurring_task_template_labels",
+          "referenced_table": "public.labels",
+          "columns": ["label_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "recurring_task_template_labels_template_id_label_id_pk",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (template_id, label_id)",
+          "table": "public.recurring_task_template_labels",
+          "referenced_table": "",
+          "columns": ["template_id", "label_id"]
+        },
+        {
+          "name": "recurring_task_template_labels_template_id_recurring_task_templ",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (template_id) REFERENCES recurring_task_templates(id) ON DELETE CASCADE",
+          "table": "public.recurring_task_template_labels",
+          "referenced_table": "public.recurring_task_templates",
+          "columns": ["template_id"],
+          "referenced_columns": ["id"]
+        }
+      ]
+    },
+    {
+      "name": "public.recurring_task_templates",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "estimated_minutes",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "project_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "parent_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "context",
+          "type": "text",
+          "nullable": false,
+          "default": "'personal'::text"
+        },
+        {
+          "name": "recurrence_rule_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "start_offset_days",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "anchor_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "last_generated_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "enabled",
+          "type": "boolean",
+          "nullable": false,
+          "default": "true"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "recurring_task_templates_pkey",
+          "def": "CREATE UNIQUE INDEX recurring_task_templates_pkey ON public.recurring_task_templates USING btree (id)",
+          "table": "public.recurring_task_templates",
+          "columns": ["id"]
+        },
+        {
+          "name": "idx_recurring_task_templates_project_id",
+          "def": "CREATE INDEX idx_recurring_task_templates_project_id ON public.recurring_task_templates USING btree (project_id)",
+          "table": "public.recurring_task_templates",
+          "columns": ["project_id"]
+        },
+        {
+          "name": "idx_recurring_task_templates_parent_id",
+          "def": "CREATE INDEX idx_recurring_task_templates_parent_id ON public.recurring_task_templates USING btree (parent_id)",
+          "table": "public.recurring_task_templates",
+          "columns": ["parent_id"]
+        },
+        {
+          "name": "idx_recurring_task_templates_context",
+          "def": "CREATE INDEX idx_recurring_task_templates_context ON public.recurring_task_templates USING btree (context)",
+          "table": "public.recurring_task_templates",
+          "columns": ["context"]
+        },
+        {
+          "name": "idx_recurring_task_templates_enabled",
+          "def": "CREATE INDEX idx_recurring_task_templates_enabled ON public.recurring_task_templates USING btree (enabled)",
+          "table": "public.recurring_task_templates",
+          "columns": ["enabled"]
+        },
+        {
+          "name": "idx_recurring_task_templates_recurrence_rule_id",
+          "def": "CREATE INDEX idx_recurring_task_templates_recurrence_rule_id ON public.recurring_task_templates USING btree (recurrence_rule_id)",
+          "table": "public.recurring_task_templates",
+          "columns": ["recurrence_rule_id"]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "recurring_task_templates_project_id_projects_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL",
+          "table": "public.recurring_task_templates",
+          "referenced_table": "public.projects",
+          "columns": ["project_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "recurring_task_templates_recurrence_rule_id_recurrence_rules_id",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id)",
+          "table": "public.recurring_task_templates",
+          "referenced_table": "public.recurrence_rules",
+          "columns": ["recurrence_rule_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "recurring_task_templates_parent_id_tasks_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL",
+          "table": "public.recurring_task_templates",
+          "referenced_table": "public.tasks",
+          "columns": ["parent_id"],
+          "referenced_columns": ["id"]
+        },
+        {
+          "name": "recurring_task_templates_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.recurring_task_templates",
+          "referenced_table": "",
+          "columns": ["id"]
+        }
+      ]
     }
   ],
   "relations": [
@@ -2724,11 +2943,56 @@
       "parent_columns": ["id"],
       "parent_cardinality": "exactly_one",
       "def": "FOREIGN KEY (target_task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.recurring_task_template_labels",
+      "columns": ["label_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.labels",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.recurring_task_template_labels",
+      "columns": ["template_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.recurring_task_templates",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (template_id) REFERENCES recurring_task_templates(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.recurring_task_templates",
+      "columns": ["project_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.projects",
+      "parent_columns": ["id"],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "public.recurring_task_templates",
+      "columns": ["recurrence_rule_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.recurrence_rules",
+      "parent_columns": ["id"],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id)"
+    },
+    {
+      "table": "public.recurring_task_templates",
+      "columns": ["parent_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.tasks",
+      "parent_columns": ["id"],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL"
     }
   ],
   "driver": {
     "name": "postgres",
-    "database_version": "PostgreSQL 17.11 (Debian 17.11-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+    "database_version": "PostgreSQL 17.11 (Debian 17.11-1.pgdg13+2) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
     "meta": {
       "current_schema": "public",
       "search_paths": ["tq", "public"],

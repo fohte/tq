@@ -281,6 +281,13 @@
       "when": 1788842200735,
       "tag": "0039_whole_exodus",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1788972569305,
+      "tag": "0040_add_recurring_task_templates",
+      "breakpoints": true
     }
   ]
 }
