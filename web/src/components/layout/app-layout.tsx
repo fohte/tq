@@ -36,25 +36,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div
       className={cn(
-        // `sticky`, not `fixed`: stays in normal document flow (document
-        // scrolling still works) while still stopping prosemirror-view's
-        // cursor scroll-into-view walk from reaching document.body and
-        // scrolling it directly.
+        // Stops prosemirror-view's cursor scroll-into-view walk from
+        // reaching document.body, while keeping normal document flow.
         'sticky flex',
         insets === null
-          ? cn(
-              'top-0',
-              // Exact height only caps this box, not document scroll (it
-              // stays `overflow-visible`) — except on day view, which needs
-              // the opposite: an exact `h-dvh` so its `h-full`/`min-h-0`
-              // chain (below) stays bounded instead of a `min-h-dvh` floor.
-              isDayView ? 'h-dvh' : 'min-h-dvh',
-            )
+          ? cn('top-0', isDayView ? 'h-dvh' : 'min-h-dvh')
           : 'inset-x-0',
       )}
-      // top/height from insets, not the static `top-0` above: iOS Safari's
-      // software keyboard shrinks the visual viewport but not the layout
-      // viewport, so a static `top-0` would sit behind the keyboard.
       style={
         insets === null ? undefined : { top: insets.top, height: insets.height }
       }
