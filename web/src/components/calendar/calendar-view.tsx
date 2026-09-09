@@ -10,6 +10,7 @@ import {
   type CalendarViewType,
   resolveFullCalendarView,
 } from '#components/calendar/calendar-header'
+import { useCalendarKeybindings } from '#hooks/use-calendar-keybindings'
 import { useIsDesktop } from '#hooks/use-is-desktop'
 import { formatLocalDate } from '#lib/date-range'
 
@@ -142,6 +143,13 @@ export function CalendarView({
     },
     [onDateChange, onVisibleRangeChange],
   )
+
+  useCalendarKeybindings({
+    onToday: handleToday,
+    onPrev: handlePrev,
+    onNext: handleNext,
+    onViewChange: handleViewChange,
+  })
 
   // Sync FullCalendar's internal date when selectedDate changes from an
   // external source (e.g. the live-today rollover), so a subsequent

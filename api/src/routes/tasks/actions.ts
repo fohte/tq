@@ -18,6 +18,7 @@ import {
 } from '#routes/tasks/shared'
 import { taskStatus, taskStatusReason } from '#schemas/task'
 import { buildNextTaskData } from '#services/recurrence'
+import { getTaskLabelNames, syncTaskLabels } from '#services/task-labels'
 import { syncTaskLinks, type TaskLinkSyncResult } from '#services/task-links'
 import { getIncompleteBlockerNumbers } from '#services/task-relations'
 
@@ -350,6 +351,16 @@ export const tasksActionsApp = new Hono()
               { taskId: created.id },
               { action: 'create' },
               SYSTEM_AUTHOR,
+            )
+            const completedTaskLabelNames = await getTaskLabelNames(
+              tx,
+              updatedTask.id,
+            )
+            await syncTaskLabels(
+              tx,
+              created.id,
+              completedTaskLabelNames,
+              created.context,
             )
             return created
           })

@@ -33,12 +33,18 @@ export interface CalendarDndCallbacks {
     eventId: string
     newStart: Date
     newEnd: Date
+    oldStart: Date
+    oldEnd: Date
+    el: HTMLElement
     revert: () => void
   }) => void
   onEventResize?: (info: {
     eventId: string
     newStart: Date
     newEnd: Date
+    oldStart: Date
+    oldEnd: Date
+    el: HTMLElement
     revert: () => void
   }) => void
   onExternalDrop?: (info: {
@@ -176,8 +182,14 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
 
     const handleEventDrop = (info: EventDropArg) => {
       if (!dndCallbacks?.onEventDrop) return
-      const { event, revert } = info
-      if (!event.start || !event.end || event.allDay) {
+      const { event, oldEvent, revert, el } = info
+      if (
+        !event.start ||
+        !event.end ||
+        event.allDay ||
+        !oldEvent.start ||
+        !oldEvent.end
+      ) {
         revert()
         return
       }
@@ -185,14 +197,17 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         eventId: event.id,
         newStart: event.start,
         newEnd: event.end,
+        oldStart: oldEvent.start,
+        oldEnd: oldEvent.end,
+        el,
         revert,
       })
     }
 
     const handleEventResize = (info: EventResizeDoneArg) => {
       if (!dndCallbacks?.onEventResize) return
-      const { event, revert } = info
-      if (!event.start || !event.end) {
+      const { event, oldEvent, revert, el } = info
+      if (!event.start || !event.end || !oldEvent.start || !oldEvent.end) {
         revert()
         return
       }
@@ -200,6 +215,9 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         eventId: event.id,
         newStart: event.start,
         newEnd: event.end,
+        oldStart: oldEvent.start,
+        oldEnd: oldEvent.end,
+        el,
         revert,
       })
     }

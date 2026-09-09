@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { CalendarChangeFeedbackPopup } from '#components/calendar/calendar-change-feedback-popup'
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import {
@@ -10,6 +11,7 @@ import {
 } from '#components/day-view/day-view'
 import type { QueueSectionData } from '#components/day-view/queue-pane'
 import { useAutoAssign } from '#hooks/use-auto-assign'
+import { useCalendarChangeFeedback } from '#hooks/use-calendar-change-feedback'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
 import {
@@ -131,6 +133,13 @@ function DayView() {
   const createTimeBlock = useCreateTimeBlock()
   const context = useCurrentContext()
   const queryClient = useQueryClient()
+
+  const {
+    changeFeedback,
+    changeFeedbackAnchorRef,
+    handleTimeBlockChange,
+    dismissChangeFeedback,
+  } = useCalendarChangeFeedback(timeBlocksData, updateTimeBlock)
 
   const gcalEventsQuery = useGcalEvents(
     visibleRange.startDate,
@@ -280,36 +289,8 @@ function DayView() {
 
   const dndCallbacks: CalendarDndCallbacks = useMemo(
     () => ({
-      onEventDrop: ({ eventId, newStart, newEnd, revert }) => {
-        updateTimeBlock.mutate(
-          {
-            id: eventId,
-            startTime: newStart.toISOString(),
-            endTime: newEnd.toISOString(),
-            isAutoScheduled: false,
-          },
-          {
-            onError: () => {
-              revert()
-            },
-          },
-        )
-      },
-      onEventResize: ({ eventId, newStart, newEnd, revert }) => {
-        updateTimeBlock.mutate(
-          {
-            id: eventId,
-            startTime: newStart.toISOString(),
-            endTime: newEnd.toISOString(),
-            isAutoScheduled: false,
-          },
-          {
-            onError: () => {
-              revert()
-            },
-          },
-        )
-      },
+      onEventDrop: handleTimeBlockChange,
+      onEventResize: handleTimeBlockChange,
       onExternalDrop: ({ taskId, start, end }) => {
         createTimeBlock.mutate({
           taskId,
@@ -318,7 +299,7 @@ function DayView() {
         })
       },
     }),
-    [updateTimeBlock, createTimeBlock],
+    [handleTimeBlockChange, createTimeBlock],
   )
 
   // The full stored id list for a queue: the given `visibleIds` (already
@@ -440,30 +421,39 @@ function DayView() {
   )
 
   return (
-    <DayViewPresentation
-      isLoading={isLoading}
-      calendarEvents={calendarEvents}
-      schedules={schedulesData ?? []}
-      dndCallbacks={dndCallbacks}
-      onCreateTimeBlock={createTimeBlock.mutate}
-      {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
-        ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
-        : {})}
-      queueSections={queueSections}
-      dayQueueTasks={dayQueueTasks}
-      queueCandidates={queueCandidates}
-      onReorderQueue={handleReorderQueue}
-      onMoveTask={handleMoveTask}
-      onInsertCandidate={handleInsertCandidate}
-      onAddCandidate={handleAddCandidate}
-      onRemoveFromQueue={handleRemoveFromQueue}
-      onAutoAssign={handleAutoAssign}
-      isAutoAssigning={autoAssign.isPending}
-      selectedDate={selectedDate}
-      onDateChange={setSelectedDate}
-      onVisibleRangeChange={handleVisibleRangeChange}
-      viewMode={viewMode}
-      onViewModeChange={handleViewModeChange}
-    />
+    <>
+      <DayViewPresentation
+        isLoading={isLoading}
+        calendarEvents={calendarEvents}
+        schedules={schedulesData ?? []}
+        dndCallbacks={dndCallbacks}
+        onCreateTimeBlock={createTimeBlock.mutate}
+        {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
+          ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
+          : {})}
+        queueSections={queueSections}
+        dayQueueTasks={dayQueueTasks}
+        queueCandidates={queueCandidates}
+        onReorderQueue={handleReorderQueue}
+        onMoveTask={handleMoveTask}
+        onInsertCandidate={handleInsertCandidate}
+        onAddCandidate={handleAddCandidate}
+        onRemoveFromQueue={handleRemoveFromQueue}
+        onAutoAssign={handleAutoAssign}
+        isAutoAssigning={autoAssign.isPending}
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+        onVisibleRangeChange={handleVisibleRangeChange}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
+      />
+      <CalendarChangeFeedbackPopup
+        anchor={changeFeedbackAnchorRef}
+        feedback={changeFeedback}
+        onOpenChange={(open) => {
+          if (!open) dismissChangeFeedback()
+        }}
+      />
+    </>
   )
 }

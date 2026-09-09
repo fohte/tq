@@ -7,6 +7,52 @@ export function formatMinutes(minutes: number): string {
   return `${String(minutes)}m`
 }
 
+function yearIfDifferent(date: Date, now: Date): 'numeric' | undefined {
+  return date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+}
+
+function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
+function formatTime24(date: Date): string {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+function formatMonthDay(date: Date, now: Date): string {
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: yearIfDifferent(date, now),
+  })
+}
+
+/**
+ * Format a future instant by calendar-day closeness: bare "HH:mm" time
+ * today, "tomorrow HH:mm" tomorrow, "<weekday> HH:mm" within the next 7
+ * days, else "<month> <day>[, <year>] HH:mm" (year included only when it
+ * differs from `now`'s).
+ */
+export function formatReminderTime(
+  isoString: string,
+  now: Date = new Date(),
+): string {
+  const date = new Date(isoString)
+  const time = formatTime24(date)
+  const dayDiff = Math.round(
+    (startOfDay(date).getTime() - startOfDay(now).getTime()) / 86_400_000,
+  )
+
+  if (dayDiff === 0) return time
+  if (dayDiff === 1) return `tomorrow ${time}`
+  if (dayDiff >= 2 && dayDiff < 7) {
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'short' })
+    return `${weekday} ${time}`
+  }
+
+  return `${formatMonthDay(date, now)} ${time}`
+}
+
 export function formatRelativeTime(
   isoString: string,
   now: Date = new Date(),
@@ -22,9 +68,5 @@ export function formatRelativeTime(
   if (diffHours < 24) return `${String(diffHours)}h ago`
   if (diffDays < 7) return `${String(diffDays)}d ago`
 
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-  })
+  return formatMonthDay(date, now)
 }
