@@ -13,8 +13,7 @@ import { StoryRouter } from '#storybook-config/story-router'
 
 const today = new Date()
 
-// Enough candidates to make the queue pane taller than one viewport, the
-// scenario that originally exposed AppLayout's unbounded root height.
+// Enough candidates to make the queue pane taller than one viewport.
 const manyCandidateTasks: Task[] = Array.from({ length: 40 }, (_, i) =>
   makeTask({
     id: `candidate-${String(i)}`,
@@ -190,34 +189,12 @@ export const SidebarStaysPinnedWhileScrollingDocument: Story = {
   },
 }
 
-// Regression check: day view (route "/") is the one route that must NOT let
-// the document grow past one viewport — its calendar and queue pane are
-// meant to scroll internally instead (see app-layout.tsx). This composes the
-// real DayViewPresentation, which day-view.stories.tsx's own stories don't
-// exercise this way (they fix the shell height via a decorator), so it's the
-// only place that catches AppLayout failing to cap the shell to one
-// viewport. day/week's 24-hour timeGrid (48 half-hour slots at a fixed
-// height) is already taller than a typical viewport on its own; month view
-// only overflows once the queue pane has enough candidates to push it,
-// which is why this story stocks the queue heavily.
-export const DayViewStaysWithinViewportAcrossCalendarViews: Story = {
-  tags: ['desktop-only'],
-  args: {
-    currentPath: '/',
-  },
-  parameters: {
-    screenshot: { skip: true },
-    msw: {
-      handlers: [
-        http.get('/api/tasks', () => HttpResponse.json([])),
-        http.get('/api/projects', () => HttpResponse.json([])),
-        http.get('/api/queues/:key/items', () => HttpResponse.json([])),
-        http.get('/api/saved-views', () => HttpResponse.json([])),
-        http.get('/api/labels', () => HttpResponse.json([])),
-      ],
-    },
-  },
-  render: () => (
+// Composes the real DayViewPresentation (unlike day-view.stories.tsx, which
+// fixes the shell height via a decorator) so AppLayout's own height capping
+// is what's under test, with enough queue candidates to make the pane
+// taller than one viewport.
+function renderDayViewWithManyCandidates() {
+  return (
     <StoryRouter
       component={() => (
         <QueryClientProvider
@@ -256,25 +233,65 @@ export const DayViewStaysWithinViewportAcrossCalendarViews: Story = {
       paths={['/tasks', '/tasks/$taskId']}
       initialPath="/"
     />
-  ),
+  )
+}
+
+async function expectDocumentFitsViewport(canvasElement: HTMLElement) {
+  const view = assertDefined(
+    canvasElement.ownerDocument.defaultView,
+    'a mounted story always has an owner window',
+  )
+  await expect(view.document.documentElement.scrollHeight).toBeLessThanOrEqual(
+    view.innerHeight + 1,
+  )
+}
+
+// Regression check: day view's calendar and queue pane must scroll
+// internally instead of the document (see app-layout.tsx).
+export const DayViewStaysWithinViewport: Story = {
+  tags: ['desktop-only'],
+  args: {
+    currentPath: '/',
+  },
+  parameters: {
+    screenshot: { skip: true },
+  },
+  render: renderDayViewWithManyCandidates,
+  play: async ({ canvasElement }) => {
+    await expectDocumentFitsViewport(canvasElement)
+  },
+}
+
+// Regression check: week's 24-hour timeGrid (48 fixed-height half-hour
+// slots) is already taller than a typical viewport on its own.
+export const WeekViewStaysWithinViewport: Story = {
+  tags: ['desktop-only'],
+  args: {
+    currentPath: '/',
+  },
+  parameters: {
+    screenshot: { skip: true },
+  },
+  render: renderDayViewWithManyCandidates,
   play: async ({ canvas, canvasElement, userEvent }) => {
-    const view = assertDefined(
-      canvasElement.ownerDocument.defaultView,
-      'a mounted story always has an owner window',
-    )
-
-    const expectDocumentFitsViewport = async () => {
-      await expect(
-        view.document.documentElement.scrollHeight,
-      ).toBeLessThanOrEqual(view.innerHeight + 1)
-    }
-
-    await expectDocumentFitsViewport()
-
     await userEvent.click(canvas.getByRole('button', { name: 'week' }))
-    await expectDocumentFitsViewport()
+    await expectDocumentFitsViewport(canvasElement)
+  },
+}
 
+// Regression check: month view only overflows once the queue pane has
+// enough candidates to push the shared shell past one viewport.
+export const MonthViewStaysWithinViewport: Story = {
+  tags: ['desktop-only'],
+  args: {
+    currentPath: '/',
+  },
+  parameters: {
+    screenshot: { skip: true },
+  },
+  render: renderDayViewWithManyCandidates,
+  play: async ({ canvas, canvasElement, userEvent }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'month' }))
-    await expectDocumentFitsViewport()
+    await expectDocumentFitsViewport(canvasElement)
   },
 }
