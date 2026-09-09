@@ -111,6 +111,9 @@ export const DeleteManualBlock: Story = {
         }),
       ],
     },
+    // The delete mutation doesn't change the popup's rendered content, so
+    // this ends up visually identical to Manual.
+    screenshot: { skip: true },
   },
   play: async ({ canvas, canvasElement }) => {
     deletedTimeBlockId = null
@@ -168,6 +171,9 @@ export const RemoveAutoBlockFromQueue: Story = {
         }),
       ],
     },
+    // The queue-removal mutation doesn't change the popup's rendered
+    // content, so this ends up visually identical to Auto.
+    screenshot: { skip: true },
   },
   play: async ({ canvas, canvasElement }) => {
     putQueueItemsBody = null
