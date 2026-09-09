@@ -10,11 +10,14 @@ import {
   TaskSidebarMobile,
 } from '#components/task/task-detail-sidebar'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
+import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 import { labelKeys } from '#hooks/use-labels'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
+import { DAY_QUEUE_KEY, queueKeys } from '#hooks/use-queues'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
+import { formatLocalDate } from '#lib/date-range'
 import { assertDefined } from '#lib/test-utils'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -24,9 +27,11 @@ const baseTask = makeTaskDetail({
 
 function Providers({
   children,
+  task,
   project,
 }: {
   children: ReactNode
+  task: TaskDetail
   project?: ProjectDetail | undefined
 }) {
   const queryClient = new QueryClient({
@@ -43,6 +48,23 @@ function Providers({
   )
   if (project) {
     queryClient.setQueryData(projectKeys.detail(project.id), project)
+  }
+  // An auto-scheduled time block's row fetches that day's queue (to know
+  // which task to drop on delete) — seed it so the story never hits the
+  // network.
+  for (const block of task.timeBlocks) {
+    if (!block.isAutoScheduled) continue
+    const date = formatLocalDate(new Date(block.startTime))
+    queryClient.setQueryData(queueKeys.items(DAY_QUEUE_KEY, date), [
+      {
+        id: `queue-item-${block.id}`,
+        taskId: task.id,
+        periodStart: date,
+        sortOrder: 0,
+        createdAt: block.createdAt,
+        updatedAt: block.updatedAt,
+      },
+    ])
   }
 
   return (
@@ -63,7 +85,7 @@ function SidebarStory({
   project?: ProjectDetail | undefined
 }) {
   return (
-    <Providers project={project}>
+    <Providers task={task} project={project}>
       <TaskSidebar task={task} />
     </Providers>
   )
@@ -130,24 +152,20 @@ export const SidebarWithTimeBlocks: Story = {
     task: {
       ...baseTask,
       timeBlocks: [
-        {
+        makeTimeBlock({
           id: 'block-1',
           taskId: baseTask.id,
           startTime: '2026-07-30T10:00:00.000Z',
           endTime: '2026-07-30T11:30:00.000Z',
           isAutoScheduled: true,
-          createdAt: '2026-07-30T09:00:00.000Z',
-          updatedAt: '2026-07-30T09:00:00.000Z',
-        },
-        {
+        }),
+        makeTimeBlock({
           id: 'block-2',
           taskId: baseTask.id,
           startTime: '2026-07-29T16:00:00.000Z',
           endTime: '2026-07-29T16:45:00.000Z',
           isAutoScheduled: false,
-          createdAt: '2026-07-29T15:00:00.000Z',
-          updatedAt: '2026-07-29T15:00:00.000Z',
-        },
+        }),
       ],
     },
   },
@@ -209,7 +227,7 @@ export const MobileSidebar: StoryObj<{
     task: { ...baseTask },
   },
   render: ({ task, project }) => (
-    <Providers project={project}>
+    <Providers task={task} project={project}>
       <div className="max-w-sm border-t border-border p-4">
         <TaskSidebarMobile task={task} />
       </div>
