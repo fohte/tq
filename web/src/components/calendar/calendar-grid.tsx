@@ -1,5 +1,6 @@
 import type {
   DateSelectArg,
+  DatesSetArg,
   EventClickArg,
   EventDropArg,
 } from '@fullcalendar/core'
@@ -57,6 +58,20 @@ export interface CalendarDndCallbacks {
 
 function formatHm(date: Date): string {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+const DEFAULT_SCROLL_TIME = '08:00:00'
+
+// Scrolls to an hour before now when the displayed range includes the
+// current moment, otherwise falls back to the default. Minutes are clamped
+// to 0 so a time shortly after midnight doesn't wrap to the previous day.
+function getScrollTime(rangeStart: Date, rangeEnd: Date): string {
+  const now = new Date()
+  if (now < rangeStart || now >= rangeEnd) return DEFAULT_SCROLL_TIME
+  const minutes = Math.max(0, now.getHours() * 60 + now.getMinutes() - 60)
+  const hh = String(Math.floor(minutes / 60)).padStart(2, '0')
+  const mm = String(minutes % 60).padStart(2, '0')
+  return `${hh}:${mm}:00`
 }
 
 interface CalendarGridProps {
@@ -242,6 +257,17 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       onSelectRange({ start: info.start, end: info.end })
     }
 
+    const handleDatesSet = (info: DatesSetArg) => {
+      onDatesSet?.(info)
+      // `scrollTime` is only read once, when the time grid view first
+      // mounts (FullCalendar's ScrollResponder captures it and ignores
+      // later option changes), so reacting to prev/next/today navigation
+      // requires calling the imperative API instead of updating the prop.
+      fullCalendarRef.current
+        ?.getApi()
+        .scrollToTime(getScrollTime(info.start, info.end))
+    }
+
     const handleReceive = (info: EventReceiveArg) => {
       if (!dndCallbacks?.onExternalDrop) return
       const { event } = info
@@ -335,7 +361,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           allDaySlot={true}
           slotMinTime="00:00:00"
           slotMaxTime="24:00:00"
-          scrollTime="08:00:00"
+          scrollTime={DEFAULT_SCROLL_TIME}
           slotDuration="00:30:00"
           slotLabelInterval="01:00:00"
           slotLabelFormat={{
@@ -376,7 +402,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
                 },
               }
             : {})}
-          {...(onDatesSet ? { datesSet: onDatesSet } : {})}
+          datesSet={handleDatesSet}
         />
       </div>
     )

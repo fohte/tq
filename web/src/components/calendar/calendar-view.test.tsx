@@ -16,6 +16,7 @@ const mockPrev = vi.fn()
 const mockNext = vi.fn()
 const mockToday = vi.fn()
 const mockGetDate = vi.fn(() => new Date(2025, 2, 7))
+const mockScrollToTime = vi.fn()
 
 let latestDatesSet:
   | ((info: { start: Date; end: Date; view: { currentStart: Date } }) => void)
@@ -45,6 +46,7 @@ vi.mock('@fullcalendar/react', async () => {
           next: mockNext,
           today: mockToday,
           getDate: mockGetDate,
+          scrollToTime: mockScrollToTime,
           view: {
             get type() {
               return mockViewType
