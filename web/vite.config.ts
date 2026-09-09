@@ -22,8 +22,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       // Cloudflare Access sits in front of the app, so the manifest fetch
-      // must include the CF_Authorization cookie or it gets redirected to
-      // the Access login page, which fails CORS.
+      // must include the CF_Authorization cookie or Access redirects it to
+      // the login page.
       useCredentials: true,
       manifest: pwaManifest,
     }),
