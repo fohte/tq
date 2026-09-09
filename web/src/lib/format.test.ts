@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatMinutes, formatRelativeTime } from '#lib/format'
+import {
+  formatMinutes,
+  formatRelativeTime,
+  formatReminderTime,
+} from '#lib/format'
 
 describe('formatMinutes', () => {
   it('formats minutes under an hour', () => {
@@ -50,6 +54,51 @@ describe('formatRelativeTime', () => {
   it('falls back to a short date with a year for a different year', () => {
     expect(formatRelativeTime('2025-01-01T12:00:00.000Z', now)).toBe(
       'Jan 1, 2025',
+    )
+  })
+})
+
+describe('formatReminderTime', () => {
+  // Friday 2026-03-20 21:00 JST.
+  const now = new Date('2026-03-20T12:00:00.000Z')
+
+  it('formats a bare time for later the same calendar day', () => {
+    expect(formatReminderTime('2026-03-20T14:00:00.000Z', now)).toBe('23:00')
+  })
+
+  it('formats "tomorrow H:MM" for the next calendar day', () => {
+    expect(formatReminderTime('2026-03-21T00:30:00.000Z', now)).toBe(
+      'tomorrow 09:30',
+    )
+  })
+
+  it('formats a short weekday within the next 7 days', () => {
+    expect(formatReminderTime('2026-03-24T00:00:00.000Z', now)).toBe(
+      'Tue 09:00',
+    )
+  })
+
+  it('formats a short weekday for the last day before the 7-day boundary', () => {
+    expect(formatReminderTime('2026-03-26T00:00:00.000Z', now)).toBe(
+      'Thu 09:00',
+    )
+  })
+
+  it('formats a short date for the first day at the 7-day boundary', () => {
+    expect(formatReminderTime('2026-03-27T00:00:00.000Z', now)).toBe(
+      'Mar 27 09:00',
+    )
+  })
+
+  it('formats a short date without a year for the same year, 7 days or more out', () => {
+    expect(formatReminderTime('2026-03-30T00:00:00.000Z', now)).toBe(
+      'Mar 30 09:00',
+    )
+  })
+
+  it('formats a short date with a year for a different year', () => {
+    expect(formatReminderTime('2027-01-05T00:30:00.000Z', now)).toBe(
+      'Jan 5, 2027 09:30',
     )
   })
 })
