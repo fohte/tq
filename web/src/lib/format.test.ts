@@ -78,6 +78,18 @@ describe('formatReminderTime', () => {
     )
   })
 
+  it('formats a short weekday for the last day before the 7-day boundary', () => {
+    expect(formatReminderTime('2026-03-26T00:00:00.000Z', now)).toBe(
+      'Thu 09:00',
+    )
+  })
+
+  it('formats a short date for the first day at the 7-day boundary', () => {
+    expect(formatReminderTime('2026-03-27T00:00:00.000Z', now)).toBe(
+      'Mar 27 09:00',
+    )
+  })
+
   it('formats a short date without a year for the same year, 7 days or more out', () => {
     expect(formatReminderTime('2026-03-30T00:00:00.000Z', now)).toBe(
       'Mar 30 09:00',

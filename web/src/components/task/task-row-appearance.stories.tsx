@@ -171,7 +171,7 @@ export const WithRemindAt: Story = {
     task: {
       ...baseTask,
       title: 'Task with a reminder',
-      // Far future so this story never renders a year suffix.
+      // Far future so this story always renders the same absolute date/time.
       remindAt: '2099-06-15T09:00:00.000Z',
     },
   },

@@ -13,8 +13,8 @@ type Story = StoryObj<typeof meta>
 
 export const BothDates: Story = {
   args: {
-    // Far future so this story never flips to overdue.
     startDate: '2099-06-15',
+    // Far future so this story never flips to overdue.
     dueDate: '2099-06-18',
     status: 'todo',
   },

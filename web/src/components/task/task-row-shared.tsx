@@ -127,9 +127,6 @@ export function TagTokens({
   )
 }
 
-// Start date and due date share one CalendarRange icon rather than one
-// icon each: at 12px, a second calendar-family glyph reads as the same
-// blob as the first, so the pair can't be told apart by shape.
 export function DateRangeBadge({
   startDate,
   dueDate,
