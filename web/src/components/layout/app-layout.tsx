@@ -34,27 +34,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
   })
 
   return (
-    // `sticky`, not `fixed`: prosemirror-view's cursor scroll-into-view walk
-    // stops at the first fixed/sticky ancestor, so this keeps it from
-    // reaching document.body and calling window.scrollBy on every keystroke
-    // — but unlike `fixed`, it stays in normal document flow, which document
-    // scrolling depends on.
-    // top/height, not a static `top-0`: iOS Safari's software keyboard
-    // shrinks the visual viewport but not the layout viewport, so a static
-    // `top-0` would leave this box (and the descendant scroll containers
-    // that stop the cursor scroll-into-view walk) extending behind the
-    // keyboard, making that walk think the cursor is still visible —
-    // tracking insets keeps its bounds aligned with the visible area, which
-    // is what lets that walk keep the caret above the keyboard.
-    // An exact `height` (not `min-height`) doesn't cap document scrolling
-    // for content taller than one viewport: this box stays `overflow-visible`
-    // (the default) and in normal flow (`sticky`, not `fixed`), so overflowing
-    // content still contributes to <html>'s scrollable area regardless of
-    // this box's own height.
     <div
       className={cn(
+        // Stops prosemirror-view's cursor scroll-into-view walk from
+        // reaching document.body, while keeping normal document flow.
         'sticky flex',
-        insets === null ? 'top-0 min-h-dvh' : 'inset-x-0',
+        insets === null
+          ? cn('top-0', isDayView ? 'h-dvh' : 'min-h-dvh')
+          : 'inset-x-0',
       )}
       style={
         insets === null ? undefined : { top: insets.top, height: insets.height }
