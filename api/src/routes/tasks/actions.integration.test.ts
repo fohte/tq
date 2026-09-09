@@ -609,6 +609,26 @@ describe('tasks actions API', () => {
       expect(body.nextTask.context).toBe('work')
     })
 
+    it('copies labels to next instance', async () => {
+      await createLabel('blog')
+      const task = await createRecurringTask(
+        'Recurring with labels',
+        { type: 'daily', interval: 1 },
+        { dueDate: '2026-03-22', labels: ['blog'] },
+      )
+
+      const res = await app.request(`/api/tasks/${task.id}/complete`, {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<
+        TaskResponse & { nextTask: TaskResponse | null }
+      >(res)
+      assertDefined(body.nextTask)
+      expect(body.nextTask.labels).toEqual(['blog'])
+    })
+
     it('includes recurrenceRule in completed task response', async () => {
       const task = await createRecurringTask(
         'Daily task',
