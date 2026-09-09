@@ -90,7 +90,6 @@ export function CreateTaskModal({
   // Set when the user types (or pastes) a GitHub issue/PR URL shorthand
   // token in the title.
   const [githubUrl, setGithubUrl] = useState<string | undefined>(undefined)
-  // Set when the user types a `*daily`/`*weekly`/`*sun`... shorthand token.
   const [recurrenceRule, setRecurrenceRule] = useState<
     ShorthandRecurrenceRule | undefined
   >(undefined)
@@ -202,7 +201,26 @@ export function CreateTaskModal({
     if (parsed.parentNumber != null)
       setParentOverrideNumber(parsed.parentNumber)
     if (parsed.githubUrl != null) setGithubUrl(parsed.githubUrl)
-    if (parsed.recurrenceRule != null) setRecurrenceRule(parsed.recurrenceRule)
+    if (parsed.recurrenceRule != null) {
+      // Each completed `*` token is stripped from the title before the next
+      // one is typed (see the comment above), so a second `*weekday` token
+      // is parsed from a string that no longer contains the first — merge
+      // with the previous rule instead of replacing it, mirroring labels.
+      const parsedRule = parsed.recurrenceRule
+      setRecurrenceRule((prev) =>
+        prev?.type === 'weekly' && parsedRule.type === 'weekly'
+          ? {
+              ...parsedRule,
+              daysOfWeek: [
+                ...new Set([
+                  ...(prev.daysOfWeek ?? []),
+                  ...(parsedRule.daysOfWeek ?? []),
+                ]),
+              ].sort((a, b) => a - b),
+            }
+          : parsedRule,
+      )
+    }
   }
 
   const canSubmit =

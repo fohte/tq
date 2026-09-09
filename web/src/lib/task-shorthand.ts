@@ -30,10 +30,8 @@ function isContextValue(value: string): value is ContextValue {
 const GITHUB_URL_RE =
   /^(https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/(?:issues|pull)\/\d+\/?)(?:[?#]\S*)?$/
 
-// The closed vocabulary behind `*` tokens: 3 recurrence types + 7 weekdays,
-// each with an English and Japanese spelling. `*月` is deliberately absent
-// from both tables since it reads as either "月曜" (Monday) or "毎月"
-// (monthly) with no way to disambiguate.
+// `*月` is deliberately absent: it ambiguously refers to either Monday
+// (月曜) or monthly (毎月).
 const RECURRENCE_TYPE_ALIASES: Record<string, 'daily' | 'weekly' | 'monthly'> =
   {
     daily: 'daily',
@@ -303,15 +301,9 @@ export function getSuggestions(
 }
 
 /**
- * Parse a recurrence-only input (the sidebar's recurrence text field) with
- * the same `*` grammar as extractShorthandTokens, except the leading `*` is
- * optional since there's no surrounding title text to disambiguate from.
- *
- * Every word is padded with a trailing space before being handed to
- * extractShorthandTokens, so a token here counts as "completed" as soon as
- * it's typed rather than only once followed by whitespace — appropriate
- * for a field with no trailing title text a word-in-progress could still
- * become part of.
+ * Parse recurrence shorthand tokens (recurrence types or weekdays, English
+ * or Japanese) into a recurrence rule. The leading `*` is optional. Multiple
+ * weekday tokens accumulate into a single weekly rule's daysOfWeek.
  */
 export function parseRecurrenceShorthand(
   input: string,
