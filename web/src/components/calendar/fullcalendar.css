@@ -283,9 +283,6 @@
   cursor: default;
 }
 
-/* Only events with a click destination (see isClickableEvent in
-   calendar-utils.ts) get the pointer cursor, so it never promises a click
-   the event can't deliver. */
 .tq-calendar .fc-event.tq-event-clickable {
   cursor: pointer;
 }

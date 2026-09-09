@@ -13,7 +13,7 @@ import type { Schedule } from '#hooks/use-schedules'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { assertDefined, atIndex, findVisible } from '#lib/test-utils'
-import { createStoryRouter } from '#storybook-config/story-router'
+import { createStoryRouter, StoryRouter } from '#storybook-config/story-router'
 
 const today = new Date()
 const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -204,24 +204,16 @@ const sampleSchedules: Schedule[] = [
   }),
 ]
 
-// Exposes the router the Default-args stories run under, so a play function
-// (e.g. NavigatesToTaskDetail) can assert on its location after a navigation
-// that the mounted tree itself doesn't visibly react to (DayViewPresentation
-// is the router's root route component, not routed content behind an
-// Outlet).
-let dayViewRouter: ReturnType<typeof createStoryRouter> | undefined
-
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  dayViewRouter = createStoryRouter({
-    component: () => <>{children}</>,
-    paths: ['/tasks', '/tasks/$taskId'],
-  })
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={dayViewRouter} />
+      <StoryRouter
+        component={() => <>{children}</>}
+        paths={['/tasks', '/tasks/$taskId']}
+      />
     </QueryClientProvider>
   )
 }
@@ -376,19 +368,31 @@ export const OpensEditScheduleModal: Story = {
   },
 }
 
-export const NavigatesToTaskDetail: Story = {
-  args: Default.args,
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(await canvas.findByText('#507 ビルド改善'))
+export const NavigatesToTaskDetail: Story = (() => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  let router: ReturnType<typeof createStoryRouter>
 
-    // DayViewPresentation is the router's root route component rather than
-    // content behind an Outlet, so it stays mounted across the navigation —
-    // asserting on the router's own location is the only real signal here.
-    await expect(dayViewRouter?.state.location.pathname).toBe(
-      '/tasks/task-tb-4',
-    )
-  },
-}
+  return {
+    args: Default.args,
+    render: (args) => {
+      router = createStoryRouter({
+        component: () => <DayViewPresentation {...args} />,
+        paths: ['/tasks', '/tasks/$taskId'],
+      })
+      return (
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      )
+    },
+    play: async ({ canvas, userEvent }) => {
+      await userEvent.click(await canvas.findByText('#507 ビルド改善'))
+      await expect(router.history.location.pathname).toBe('/tasks/task-tb-4')
+    },
+  }
+})()
 
 // The queue panel — where isLoading/queueTasks/queueCandidates differences
 // actually render — is hidden behind the mobile pane switcher's 'calendar'

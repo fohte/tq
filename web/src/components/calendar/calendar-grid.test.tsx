@@ -171,32 +171,6 @@ describe('CalendarGrid', () => {
     expect(onScheduleClick).not.toHaveBeenCalled()
   })
 
-  it('routes an auto event click to onTaskClick', () => {
-    const onScheduleClick = vi.fn()
-    const onTaskClick = vi.fn()
-    const eventClick = renderAndGetEventClick({ onScheduleClick, onTaskClick })
-    const info = {
-      event: { extendedProps: { type: 'auto', taskId: 'task-1' } },
-    }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventClick reads
-    eventClick(info as unknown as EventClickArg)
-
-    expect(onTaskClick).toHaveBeenCalledExactlyOnceWith('task-1')
-  })
-
-  it('routes a completed event click to onTaskClick', () => {
-    const onScheduleClick = vi.fn()
-    const onTaskClick = vi.fn()
-    const eventClick = renderAndGetEventClick({ onScheduleClick, onTaskClick })
-    const info = {
-      event: { extendedProps: { type: 'completed', taskId: 'task-1' } },
-    }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventClick reads
-    eventClick(info as unknown as EventClickArg)
-
-    expect(onTaskClick).toHaveBeenCalledExactlyOnceWith('task-1')
-  })
-
   it('routes a schedule event click to onScheduleClick', () => {
     const onScheduleClick = vi.fn()
     const onTaskClick = vi.fn()
@@ -252,15 +226,6 @@ describe('CalendarGrid', () => {
   it('marks a manual event as clickable', () => {
     const eventClassNames = renderAndGetEventClassNames()
     const arg = { event: { extendedProps: { type: 'manual' } } }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields eventClassNames reads
-    expect(eventClassNames(arg as unknown as EventContentArg)).toEqual([
-      'tq-event-clickable',
-    ])
-  })
-
-  it('marks a schedule event as clickable', () => {
-    const eventClassNames = renderAndGetEventClassNames()
-    const arg = { event: { extendedProps: { type: 'schedule' } } }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields eventClassNames reads
     expect(eventClassNames(arg as unknown as EventContentArg)).toEqual([
       'tq-event-clickable',

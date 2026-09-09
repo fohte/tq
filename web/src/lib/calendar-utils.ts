@@ -46,12 +46,10 @@ const CLICKABLE_EVENT_TYPES = new Set<CalendarEventProps['type']>([
 ])
 
 /**
- * True when a click on this event has a destination (task detail for
- * manual/auto/completed, the edit modal for schedule). Drives both
- * handleEventClick's routing and the `cursor: pointer` affordance in
- * fullcalendar.css, so the two can't drift apart. gcal events have no
- * destination yet, and a redacted event hides the content a click would
- * otherwise reveal.
+ * True when a click on this event has a destination: task detail for
+ * manual/auto/completed, the edit modal for schedule. Shared by
+ * handleEventClick and the `cursor: pointer` affordance in
+ * fullcalendar.css so the two can't drift apart.
  */
 export function isClickableEvent(props: CalendarEventProps): boolean {
   return props.redacted !== true && CLICKABLE_EVENT_TYPES.has(props.type)
