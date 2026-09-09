@@ -50,11 +50,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
     // for content taller than one viewport: this box stays `overflow-visible`
     // (the default) and in normal flow (`sticky`, not `fixed`), so overflowing
     // content still contributes to <html>'s scrollable area regardless of
-    // this box's own height.
+    // this box's own height. Day view relies on that same exactness the
+    // other way around — its `h-full`/`min-h-0` chain (see below) only stays
+    // within one viewport if this box's height is exact rather than a
+    // `min-h-dvh` floor, so it gets `h-dvh` here too instead of waiting for
+    // the visual-viewport insets branch (which only activates once a
+    // keyboard or pinch-zoom is actually open).
     <div
       className={cn(
         'sticky flex',
-        insets === null ? 'top-0 min-h-dvh' : 'inset-x-0',
+        insets === null
+          ? cn('top-0', isDayView ? 'h-dvh' : 'min-h-dvh')
+          : 'inset-x-0',
       )}
       style={
         insets === null ? undefined : { top: insets.top, height: insets.height }
