@@ -37,12 +37,12 @@ export const Deleting: Story = {
   },
 }
 
-export const ManualDeleteConfirm: Story = {
+export const ManualDialogCopy: Story = {
   args: {
     block: makeTimeBlock(),
-    onDelete: fn(),
+    onDelete: () => {},
   },
-  play: async ({ canvasElement, args }) => {
+  play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body)
     await userEvent.click(
       body.getByRole('button', { name: 'Delete time block' }),
@@ -54,19 +54,31 @@ export const ManualDeleteConfirm: Story = {
         'Are you sure you want to delete this time block? This action cannot be undone.',
       ),
     ).toBeInTheDocument()
+  },
+}
 
+export const ManualDeleteConfirmed: Story = {
+  args: {
+    block: makeTimeBlock(),
+    onDelete: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(
+      body.getByRole('button', { name: 'Delete time block' }),
+    )
     await userEvent.click(await body.findByRole('button', { name: 'Delete' }))
 
     await expect(args.onDelete).toHaveBeenCalled()
   },
 }
 
-export const AutoDeleteConfirm: Story = {
+export const AutoDialogCopy: Story = {
   args: {
     block: makeTimeBlock({ isAutoScheduled: true }),
-    onDelete: fn(),
+    onDelete: () => {},
   },
-  play: async ({ canvasElement, args }) => {
+  play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body)
     await userEvent.click(
       body.getByRole('button', { name: 'Remove from queue' }),
@@ -78,7 +90,19 @@ export const AutoDeleteConfirm: Story = {
         "This task will be removed from that day's queue and won't be auto-scheduled again unless you re-add it.",
       ),
     ).toBeInTheDocument()
+  },
+}
 
+export const AutoDeleteConfirmed: Story = {
+  args: {
+    block: makeTimeBlock({ isAutoScheduled: true }),
+    onDelete: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(
+      body.getByRole('button', { name: 'Remove from queue' }),
+    )
     await userEvent.click(await body.findByRole('button', { name: 'Delete' }))
 
     await expect(args.onDelete).toHaveBeenCalled()

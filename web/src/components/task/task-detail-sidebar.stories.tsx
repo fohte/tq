@@ -5,6 +5,7 @@ import { expect, userEvent, within } from 'storybook/test'
 
 import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
+import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import {
   TaskSidebar,
   TaskSidebarMobile,
@@ -56,14 +57,13 @@ function Providers({
     if (!block.isAutoScheduled) continue
     const date = formatLocalDate(new Date(block.startTime))
     queryClient.setQueryData(queueKeys.items(DAY_QUEUE_KEY, date), [
-      {
+      makeQueueItem({
         id: `queue-item-${block.id}`,
         taskId: task.id,
         periodStart: date,
-        sortOrder: 0,
         createdAt: block.createdAt,
         updatedAt: block.updatedAt,
-      },
+      }),
     ])
   }
 

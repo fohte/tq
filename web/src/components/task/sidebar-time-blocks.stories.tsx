@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { expect, userEvent, waitFor, within } from 'storybook/test'
 
+import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { SidebarTimeBlocks } from '#components/task/sidebar-time-blocks'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 import { DAY_QUEUE_KEY } from '#hooks/use-queues'
@@ -30,14 +31,12 @@ const autoBlockLocalDate = formatLocalDate(new Date(autoBlock.startTime))
 
 function autoBlockQueueItems() {
   return [
-    {
-      id: 'queue-item-1',
+    makeQueueItem({
       taskId,
       periodStart: autoBlockLocalDate,
-      sortOrder: 0,
       createdAt: autoBlock.createdAt,
       updatedAt: autoBlock.updatedAt,
-    },
+    }),
   ]
 }
 
