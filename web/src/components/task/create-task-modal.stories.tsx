@@ -527,6 +527,62 @@ export const CaretShorthandParentNotFoundDisablesSubmit: Story = {
   },
 }
 
+// Regression test: each `*` token is stripped from the title once
+// completed, so a second `*weekday` typed afterward is parsed from a string
+// that no longer contains the first one. create-task-modal.tsx must merge
+// the parsed rule into the previous recurrenceRule state instead of
+// replacing it, or the first weekday silently gets lost.
+export const RecurrenceShorthandAccumulatesSequentiallyTypedWeekdays: Story = {
+  args: {
+    defaultContext: 'work',
+  },
+  parameters: {
+    // Same look as CaretShorthandSubmitsRawParentNumber — the POST body is
+    // what this story verifies.
+    screenshot: { skip: true },
+    msw: {
+      handlers: [
+        http.get('/api/labels', () => HttpResponse.json([])),
+        http.get('/api/tasks/mentions', () => HttpResponse.json([])),
+        http.post('/api/tasks', async ({ request }) => {
+          submittedTaskBody = await request.json()
+          return HttpResponse.json({
+            id: 'temp-id',
+            number: 1,
+            title: 'temp',
+            description: null,
+            status: 'todo',
+            context: 'work',
+            labels: [],
+          })
+        }),
+      ],
+    },
+  },
+  play: async ({ canvasElement, userEvent }) => {
+    submittedTaskBody = null
+    const body = within(canvasElement.ownerDocument.body)
+    const titleInputs =
+      body.getAllByPlaceholderText(/task title|タスクのタイトル/i)
+    const titleInput = atIndex(titleInputs, 0)
+
+    // Two separate userEvent.type calls, not one — each triggers its own
+    // handleTitleChange call, matching how a real keystroke-by-keystroke
+    // typing session (rather than a paste) reaches the component.
+    await userEvent.type(titleInput, 'Write blog post *mon ')
+    await userEvent.type(titleInput, '*thu ')
+    await userEvent.keyboard('{Meta>}{Enter}{/Meta}')
+
+    await waitFor(async () => {
+      await expect(submittedTaskBody).toEqual({
+        title: 'Write blog post',
+        context: 'work',
+        recurrenceRule: { type: 'weekly', interval: 1, daysOfWeek: [1, 4] },
+      })
+    })
+  },
+}
+
 let linkedGithubRequest: { taskId: string; url: string } | null = null
 
 export const GithubUrlShorthandLinksIssueAndSeedsTitle: Story = {

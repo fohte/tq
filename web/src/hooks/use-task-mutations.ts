@@ -22,6 +22,11 @@ export interface CreateTaskInput {
   labels?: string[]
   projectId?: string
   parentId?: string
+  recurrenceRule?: {
+    type: 'daily' | 'weekly' | 'monthly'
+    interval: number
+    daysOfWeek?: number[]
+  }
 }
 
 // taskKeys.list() keys are ['tasks', 'list', filter], where filter carries
