@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react'
 
-import { WeekdayToggleRow } from '#components/schedule/create-schedule-modal'
+import {
+  toggleWeekday,
+  WeekdayToggleRow,
+} from '#components/schedule/create-schedule-modal'
 import {
   fieldValueClassName,
   SidebarField,
@@ -32,6 +35,25 @@ const recurrenceTypeOptions: readonly RecurrenceTypeOption[] = [
   'weekly',
   'monthly',
 ]
+
+function buildRule(
+  type: RecurrenceTypeOption,
+  interval: number | null,
+  daysOfWeek: number[],
+  dayOfMonth: string,
+) {
+  if (type === '' || interval == null) return null
+  return {
+    type,
+    interval,
+    ...(type === 'weekly' && daysOfWeek.length > 0
+      ? { daysOfWeek: [...daysOfWeek].sort((a, b) => a - b) }
+      : {}),
+    ...(type === 'monthly' && dayOfMonth
+      ? { dayOfMonth: Number.parseInt(dayOfMonth, 10) }
+      : {}),
+  }
+}
 
 function intervalUnitLabel(
   type: 'daily' | 'weekly' | 'monthly',
@@ -103,9 +125,7 @@ export function SidebarRecurrenceField({
   }
 
   const toggleDay = (day: number) => {
-    setDaysOfWeek((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
-    )
+    setDaysOfWeek((prev) => toggleWeekday(prev, day))
   }
 
   const parsedInterval = Number.parseInt(intervalInput, 10)
@@ -114,22 +134,22 @@ export function SidebarRecurrenceField({
       ? parsedInterval
       : null
 
-  // Left unannotated: the object literal's inferred type (no 'custom', no
-  // null fields) matches the PATCH payload UpdateTaskInput expects, and is
-  // still a valid (narrower) RecurrenceRule for the preview calls below.
-  const draftRule =
-    type === '' || intervalValue == null
-      ? null
-      : {
-          type,
-          interval: intervalValue,
-          ...(type === 'weekly' && daysOfWeek.length > 0 ? { daysOfWeek } : {}),
-          ...(type === 'monthly' && dayOfMonth
-            ? { dayOfMonth: Number.parseInt(dayOfMonth, 10) }
-            : {}),
-        }
+  const draftRule = buildRule(type, intervalValue, daysOfWeek, dayOfMonth)
 
-  const canSave = type === '' || intervalValue != null
+  // A rule of type 'custom' (only reachable via the API/MCP) has no
+  // matching Select option, so initialType is '' even though a rule
+  // exists — comparing against the *original* values (not just "is a rule
+  // selected") keeps Save disabled until something actually changes,
+  // rather than defaulting to an enabled Save that would silently clear
+  // that custom rule on the first click.
+  const originalRule = buildRule(
+    initialType,
+    recurrenceRule?.interval ?? 1,
+    recurrenceRule?.daysOfWeek ?? [],
+    recurrenceRule?.dayOfMonth != null ? String(recurrenceRule.dayOfMonth) : '',
+  )
+  const hasChanges = JSON.stringify(draftRule) !== JSON.stringify(originalRule)
+  const canSave = hasChanges && (type === '' || intervalValue != null)
 
   const nextOccurrence =
     draftRule != null

@@ -24,6 +24,11 @@ const monthlyRule: RecurrenceRule = {
   dayOfMonth: 15,
 }
 
+const customRule: RecurrenceRule = {
+  type: 'custom',
+  interval: 3,
+}
+
 const meta = {
   title: 'Task/TaskDetail/SidebarRecurrenceField',
   component: SidebarRecurrenceField,
@@ -101,6 +106,28 @@ export const OpenEditor: Story = {
   },
 }
 
+export const SaveDisabledWithoutChanges: Story = {
+  args: {
+    taskId,
+    dueDate,
+    recurrenceRule: customRule,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const body = within(canvasElement.ownerDocument.body)
+
+    // A 'custom' rule (only reachable via the API/MCP, never created by
+    // this UI) has no matching Select option, so opening the editor starts
+    // the draft at 'None' with nothing else changed. Regression test for a
+    // bug where Save was enabled immediately in this state, silently
+    // clearing the custom rule on a single click.
+    await userEvent.click(canvas.getByText('Custom · every 3 days'))
+    await expect(
+      await body.findByRole('button', { name: 'Save' }),
+    ).toBeDisabled()
+  },
+}
+
 let patchedBody: unknown = null
 
 export const PickWeeklyAndSave: Story = {
@@ -133,8 +160,6 @@ export const PickWeeklyAndSave: Story = {
       userEvent,
       await body.findByRole('option', { name: 'Weekly' }),
     )
-    // 'W' is the only weekday-toggle letter that isn't shared by two days
-    // (Sun/Sat both show 'S', Tue/Thu both show 'T').
     await userEvent.click(await body.findByText('W'))
     await userEvent.click(await body.findByRole('button', { name: 'Save' }))
 

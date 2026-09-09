@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
+import type { RecurrenceType } from '#components/schedule/create-schedule-modal'
 import { projectKeys } from '#hooks/use-projects'
 import type {
   LinkedTaskSummary,
@@ -341,8 +342,12 @@ export function useUpdateTaskRecurrenceRule() {
       recurrenceRule,
     }: {
       id: string
+      // Not #lib/recurrence's RecurrenceRule: the PATCH schema only accepts
+      // daysOfWeek/dayOfMonth as absent-or-present, never explicit null,
+      // while RecurrenceRule allows null to also represent the read side
+      // (TaskDetail.recurrenceRule, where the DB column can be null).
       recurrenceRule: {
-        type: 'daily' | 'weekly' | 'monthly' | 'custom'
+        type: RecurrenceType
         interval: number
         daysOfWeek?: number[]
         dayOfMonth?: number

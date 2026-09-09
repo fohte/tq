@@ -60,6 +60,10 @@ export const presetColors = [
   '#A8D8EA',
 ]
 
+export function toggleWeekday(days: number[], day: number): number[] {
+  return days.includes(day) ? days.filter((d) => d !== day) : [...days, day]
+}
+
 /** Weekday toggle buttons shown when a weekly recurrence is selected. */
 export function WeekdayToggleRow({
   daysOfWeek,
@@ -262,9 +266,7 @@ export function CreateScheduleModal({
   }
 
   const toggleDay = (day: number) => {
-    setDaysOfWeek((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
-    )
+    setDaysOfWeek((prev) => toggleWeekday(prev, day))
   }
 
   const canSubmit = Boolean(title.trim() && startTime && endTime)

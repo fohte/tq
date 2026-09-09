@@ -1,9 +1,12 @@
 import { computeNextDate } from 'api/services/recurrence'
 
-import { dayLabels } from '#components/schedule/create-schedule-modal'
+import {
+  dayLabels,
+  type RecurrenceType,
+} from '#components/schedule/create-schedule-modal'
 
 export interface RecurrenceRule {
-  type: 'daily' | 'weekly' | 'monthly' | 'custom'
+  type: RecurrenceType
   interval: number
   daysOfWeek?: number[] | null
   dayOfMonth?: number | null

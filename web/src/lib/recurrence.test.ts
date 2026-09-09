@@ -128,136 +128,26 @@ describe('formatRecurrenceSummary', () => {
   })
 })
 
+// computeNextOccurrence is a thin `computeNextDate(...).unwrapOr(null)`
+// wrapper (web/src/lib/recurrence.ts) — the date-math branch matrix itself
+// (weekly wrap/skip, monthly end-of-month clamping, ...) is already covered
+// by api/src/services/recurrence.test.ts, so these only pin the wrapper's
+// own contract: it delegates and unwraps rather than re-verifying every
+// branch a second time.
 describe('computeNextOccurrence', () => {
-  describe('daily', () => {
-    it('advances by interval 1', () => {
-      expect(
-        computeNextOccurrence('2026-03-20', { type: 'daily', interval: 1 }),
-      ).toBe('2026-03-21')
-    })
-
-    it('advances by interval greater than 1', () => {
-      expect(
-        computeNextOccurrence('2026-03-20', { type: 'daily', interval: 5 }),
-      ).toBe('2026-03-25')
-    })
+  it('delegates to computeNextDate and unwraps the result', () => {
+    expect(
+      computeNextOccurrence('2026-03-20', { type: 'daily', interval: 1 }),
+    ).toBe('2026-03-21')
   })
 
-  describe('weekly', () => {
-    it('advances by interval weeks when no days are set', () => {
-      // 2026-03-16 is a Monday.
-      expect(
-        computeNextOccurrence('2026-03-16', {
-          type: 'weekly',
-          interval: 1,
-          daysOfWeek: null,
-        }),
-      ).toBe('2026-03-23')
-    })
-
-    it('finds the next matching day within the current week', () => {
-      // 2026-03-16 (Mon) -> next Wed is later the same week.
-      expect(
-        computeNextOccurrence('2026-03-16', {
-          type: 'weekly',
-          interval: 1,
-          daysOfWeek: [3],
-        }),
-      ).toBe('2026-03-18')
-    })
-
-    it('wraps to the following week when no matching day remains', () => {
-      // 2026-03-18 (Wed) with Sun/Wed selected has no later match this
-      // week, so it wraps to the following Sunday.
-      expect(
-        computeNextOccurrence('2026-03-18', {
-          type: 'weekly',
-          interval: 1,
-          daysOfWeek: [3, 0],
-        }),
-      ).toBe('2026-03-22')
-    })
-
-    it('skips to the interval-th week when no matching day remains this week', () => {
-      // 2026-03-18 (Wed) with only Monday selected and interval 2 has no
-      // later match this week, so it skips one whole extra week.
-      expect(
-        computeNextOccurrence('2026-03-18', {
-          type: 'weekly',
-          interval: 2,
-          daysOfWeek: [1],
-        }),
-      ).toBe('2026-03-30')
-    })
-  })
-
-  describe('monthly', () => {
-    it('uses the base date day when no day is set', () => {
-      expect(
-        computeNextOccurrence('2026-03-16', {
-          type: 'monthly',
-          interval: 1,
-          dayOfMonth: null,
-        }),
-      ).toBe('2026-04-16')
-    })
-
-    it('uses the given day of month', () => {
-      expect(
-        computeNextOccurrence('2026-03-16', {
-          type: 'monthly',
-          interval: 1,
-          dayOfMonth: 15,
-        }),
-      ).toBe('2026-04-15')
-    })
-
-    it('advances by interval months', () => {
-      expect(
-        computeNextOccurrence('2026-01-05', {
-          type: 'monthly',
-          interval: 2,
-          dayOfMonth: 10,
-        }),
-      ).toBe('2026-03-10')
-    })
-
-    it('clamps to the last day of a 28-day February', () => {
-      expect(
-        computeNextOccurrence('2026-01-31', {
-          type: 'monthly',
-          interval: 1,
-          dayOfMonth: 31,
-        }),
-      ).toBe('2026-02-28')
-    })
-
-    it('clamps to the last day of a 29-day leap-year February', () => {
-      expect(
-        computeNextOccurrence('2024-01-31', {
-          type: 'monthly',
-          interval: 1,
-          dayOfMonth: 31,
-        }),
-      ).toBe('2024-02-29')
-    })
-
-    it('clamps to the last day of a 30-day month', () => {
-      expect(
-        computeNextOccurrence('2026-03-31', {
-          type: 'monthly',
-          interval: 1,
-          dayOfMonth: 31,
-        }),
-      ).toBe('2026-04-30')
-    })
-  })
-
-  describe('custom', () => {
-    it('advances by interval days, same as daily', () => {
-      expect(
-        computeNextOccurrence('2026-03-20', { type: 'custom', interval: 3 }),
-      ).toBe('2026-03-23')
-    })
+  it('passes the monthly end-of-month clamp through unchanged', () => {
+    expect(
+      computeNextOccurrence('2026-01-31', {
+        type: 'monthly',
+        interval: 1,
+        dayOfMonth: 31,
+      }),
+    ).toBe('2026-02-28')
   })
 })
