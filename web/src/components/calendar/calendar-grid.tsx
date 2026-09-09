@@ -30,10 +30,12 @@ import { EventBlock, GcalStatusBand } from '#components/calendar/event-block'
 import { TimeBlockPreviewTrigger } from '#components/calendar/time-block-preview-trigger'
 import { useIsDesktop } from '#hooks/use-is-desktop'
 import {
+  findHoveredSlot,
   getEventProps,
   isClickableEvent,
   isGcalEventType,
   isPendingGcalResponse,
+  type SlotGhostRect,
 } from '#lib/calendar-utils'
 
 export interface CalendarDndCallbacks {
@@ -65,16 +67,6 @@ export interface CalendarDndCallbacks {
 
 function formatHm(date: Date): string {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
-// 24h / 30min slots (matches slotMinTime/slotMaxTime/slotDuration below).
-const SLOTS_PER_DAY = 48
-
-interface SlotGhostRect {
-  top: number
-  left: number
-  width: number
-  height: number
 }
 
 const DEFAULT_SCROLL_TIME = '08:00:00'
@@ -290,71 +282,12 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         setSlotGhost(null)
         return
       }
-      // FullCalendar renders the horizontal slot-line table
-      // (`.fc-timegrid-slots`) as a sibling of the day-column table
-      // (`.fc-timegrid-cols`), stacked above it (explicit z-index vs. auto).
-      // Over an empty slot, that line table is what's actually under the
-      // pointer, so `e.target.closest('.fc-timegrid-col')` always misses —
-      // the column has to be found by coordinates instead, the same way
-      // FullCalendar's own hit-testing does internally (TimeCols.queryHit in
-      // @fullcalendar/timegrid).
-      const colEl = Array.from(
-        e.currentTarget.querySelectorAll<HTMLElement>(
-          '.fc-timegrid-col:not(.fc-timegrid-axis)',
-        ),
-      ).find((col) => {
-        const rect = col.getBoundingClientRect()
-        return (
-          e.clientX >= rect.left &&
-          e.clientX < rect.right &&
-          e.clientY >= rect.top &&
-          e.clientY < rect.bottom
-        )
-      })
-      if (!colEl) {
-        setSlotGhost(null)
-        return
-      }
-      // A column's own box spans the full day (00:00-24:00) even when most
-      // of it is scrolled out of view, so it can numerically contain a
-      // point that's actually covered by the header or all-day row above —
-      // reject those by checking against the scroller that actually clips
-      // it on screen.
-      const scrollerRect = colEl
-        .closest<HTMLElement>('.fc-scroller')
-        ?.getBoundingClientRect()
-      if (
-        scrollerRect &&
-        (e.clientY < scrollerRect.top || e.clientY >= scrollerRect.bottom)
-      ) {
-        setSlotGhost(null)
-        return
-      }
-      // Day columns have no per-slot subdivision, so the slot height is read
-      // off a real slot row instead of duplicating it as a constant.
-      const slotHeight = e.currentTarget
-        .querySelector('.fc-timegrid-slot')
-        ?.getBoundingClientRect().height
-      if (slotHeight == null) {
-        setSlotGhost(null)
-        return
-      }
-      const containerRect = e.currentTarget.getBoundingClientRect()
-      const colRect = colEl.getBoundingClientRect()
-      const slotIndex = Math.min(
-        Math.max(Math.floor((e.clientY - colRect.top) / slotHeight), 0),
-        SLOTS_PER_DAY - 1,
-      )
-      const next: SlotGhostRect = {
-        top: colRect.top - containerRect.top + slotIndex * slotHeight,
-        left: colRect.left - containerRect.left,
-        width: colRect.width,
-        height: slotHeight,
-      }
+      const next = findHoveredSlot(e.currentTarget, e.clientX, e.clientY)
       // Skip the update when nothing moved, so FullCalendar doesn't rebuild
       // its event store on every mousemove within the same slot.
       setSlotGhost((prev) =>
         prev &&
+        next &&
         prev.top === next.top &&
         prev.left === next.left &&
         prev.width === next.width &&

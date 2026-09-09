@@ -84,11 +84,7 @@ const dndCallbacks: CalendarDndCallbacks = {
   onExternalDrop: fn(),
 }
 
-// `fireEvent.mouseMove(el, { clientX, clientY })` dispatches directly on
-// `el` regardless of what's visually on top at those coordinates.
-// `document.elementFromPoint` runs the browser's actual hit-test, so
-// dispatching on its result reproduces what a real pointer move would
-// target.
+// Resolves the topmost element via hit-testing before dispatching mouseMove.
 function hoverPoint(x: number, y: number) {
   const target = assertDefined(
     document.elementFromPoint(x, y),
@@ -106,6 +102,11 @@ function findVerticalScroller(canvasElement: HTMLElement): HTMLElement {
     ).find((el) => el.scrollHeight > el.clientHeight),
     'no vertically scrollable .fc-scroller found',
   )
+}
+
+// Reset auto-scroll so Gym stays in view.
+function resetVerticalScroll(canvasElement: HTMLElement) {
+  findVerticalScroller(canvasElement).scrollTop = 0
 }
 
 const meta = {
@@ -221,17 +222,14 @@ export const HoverEmptySlot: Story = {
     activeView: 'day',
   },
   play: async ({ canvas, canvasElement }) => {
-    // Gym ends at 08:00, and the next event starts at 09:00, so hovering
-    // just below Gym lands in the empty 08:00-08:30 slot. Reset the scroll
-    // position first — the default auto-scroll targets the current wall
-    // clock time, which could otherwise carry Gym off-screen.
-    findVerticalScroller(canvasElement).scrollTop = 0
+    resetVerticalScroll(canvasElement)
     const gymEvent = assertDefined(
       (await canvas.findByText('Gym')).closest<HTMLElement>('.fc-event'),
       'Gym event .fc-event ancestor not found',
     )
     const gymRect = gymEvent.getBoundingClientRect()
     const hoverX = gymRect.left + gymRect.width / 2
+    // Gym ends at 08:00, and the next event starts at 09:00.
     const hoverY = gymRect.bottom + 10
 
     await hoverPoint(hoverX, hoverY)
@@ -264,10 +262,7 @@ export const HoverExistingEvent: Story = {
     screenshot: { skip: true },
   },
   play: async ({ canvas, canvasElement }) => {
-    // Reset the scroll position first — the default auto-scroll targets
-    // the current wall clock time, which could otherwise carry Gym
-    // off-screen.
-    findVerticalScroller(canvasElement).scrollTop = 0
+    resetVerticalScroll(canvasElement)
     const gymEvent = assertDefined(
       (await canvas.findByText('Gym')).closest<HTMLElement>('.fc-event'),
       'Gym event .fc-event ancestor not found',
@@ -339,11 +334,6 @@ export const HoverAllDayRow: Story = {
 export const HoverEmptySlotWeekView: Story = {
   args: {
     activeView: 'week',
-  },
-  parameters: {
-    // Verifies the ghost tracks the hovered day column rather than a fixed
-    // one; visually identical to WeekView.
-    screenshot: { skip: true },
   },
   play: async ({ canvasElement }) => {
     // All sample events fall on today (see `dateStr` above), so every other
