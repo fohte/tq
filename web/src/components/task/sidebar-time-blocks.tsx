@@ -13,9 +13,6 @@ import { formatLocalDate } from '#lib/date-range'
 
 type TimeBlockItem = TaskDetail['timeBlocks'][number]
 
-// No empty state: unlike Pages/Linked Tasks (user-authored content worth
-// prompting for), time blocks are schedule-derived, so an empty list just
-// means nothing has been scheduled yet.
 export function SidebarTimeBlocks({
   taskId,
   timeBlocks,
@@ -70,10 +67,9 @@ function ManualTimeBlockRow({
   )
 }
 
-// Deleting the block record alone doesn't stick: the next auto-assign run
-// reads the day queue, sees this task still schedulable, and recreates it
-// (see api/src/routes/schedule-auto-assign.ts). Dropping the task from that
-// day's queue instead is what actually keeps it from coming back.
+// A deleted-but-still-queued task gets a fresh auto block on the next
+// auto-assign run (api/src/routes/schedule-auto-assign.ts), so this drops
+// it from the queue instead of deleting the block record.
 function AutoTimeBlockRow({
   taskId,
   block,
@@ -88,7 +84,12 @@ function AutoTimeBlockRow({
   return (
     <TimeBlockCard
       block={block}
-      isDeleting={setQueueItems.isPending || dayQueueItems.isLoading}
+      isDeleting={
+        setQueueItems.isPending ||
+        dayQueueItems.isLoading ||
+        dayQueueItems.isError ||
+        dayQueueItems.data === undefined
+      }
       onDelete={() => {
         setQueueItems.mutate({
           key: DAY_QUEUE_KEY,

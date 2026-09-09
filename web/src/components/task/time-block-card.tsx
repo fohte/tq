@@ -24,11 +24,6 @@ function durationMinutes(startIso: string, endIso: string): number {
   )
 }
 
-// Reused by the task detail sidebar's TIME BLOCKS list and (planned) the
-// calendar chip's hover preview card, so this stays presentational: the
-// caller decides what deleting actually does (a manual block is deleted
-// outright, an auto block is instead dropped from that day's queue so it
-// doesn't get re-scheduled — see sidebar-time-blocks.tsx).
 export function TimeBlockCard({
   block,
   onDelete,
