@@ -146,6 +146,11 @@ export const ClickTaskEvent: Story = {
   args: {
     activeView: 'day',
   },
+  parameters: {
+    // onTaskClick is a bare mock, so clicking the event never changes the
+    // rendered DOM — the screenshot is identical to DayView.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, userEvent, args }) => {
     await userEvent.click(await canvas.findByText('API ドキュメント作成'))
     await expect(args.onTaskClick).toHaveBeenCalledWith('task-1')
@@ -155,6 +160,12 @@ export const ClickTaskEvent: Story = {
 export const ClickGcalEvent: Story = {
   args: {
     activeView: 'day',
+  },
+  parameters: {
+    // Asserts a gcal event's click is a no-op (no callback, default cursor),
+    // so nothing in the rendered DOM changes — the screenshot is identical
+    // to DayView.
+    screenshot: { skip: true },
   },
   play: async ({ canvas, userEvent, args }) => {
     const manualEvent = assertDefined(

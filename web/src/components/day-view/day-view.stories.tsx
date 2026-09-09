@@ -376,6 +376,12 @@ export const NavigatesToTaskDetail: Story = (() => {
 
   return {
     args: Default.args,
+    parameters: {
+      // DayViewPresentation is the router's root route component, not
+      // content behind an <Outlet>, so navigating away renders nothing new —
+      // the screenshot is identical to Default.
+      screenshot: { skip: true },
+    },
     render: (args) => {
       router = createStoryRouter({
         component: () => <DayViewPresentation {...args} />,
