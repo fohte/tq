@@ -372,6 +372,7 @@ export async function createRecurringTask(
     description?: string
     estimatedMinutes?: number
     context?: string
+    labels?: string[]
   } = {},
 ) {
   const res = await app.request('/api/tasks', {
