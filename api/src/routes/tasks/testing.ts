@@ -97,7 +97,7 @@ export interface TaskResponse {
 }
 
 // Shape returned by the list-returning endpoint (`/api/tasks`) and by a task
-// detail's `links` field: same as `TaskResponse` plus `parentNumber`.
+// detail's `links` field.
 export interface TaskListItemResponse {
   id: string
   number: number

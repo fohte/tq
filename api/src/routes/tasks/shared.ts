@@ -69,6 +69,7 @@ export function githubLinkToResponse(
 
 function taskCoreToResponse(
   task: typeof tasks.$inferSelect,
+  rule: typeof recurrenceRules.$inferSelect | null = null,
   githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
   labelNames: string[] = [],
 ) {
@@ -89,6 +90,7 @@ function taskCoreToResponse(
     parentId: task.parentId,
     projectId: task.projectId,
     recurrenceRuleId: task.recurrenceRuleId,
+    recurrenceRule: rule ? recurrenceRuleToResponse(rule) : null,
     githubLinks: githubLinks.map(githubLinkToResponse),
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
@@ -101,10 +103,7 @@ export function taskToResponse(
   githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
   labelNames: string[] = [],
 ) {
-  return {
-    ...taskCoreToResponse(task, githubLinks, labelNames),
-    recurrenceRule: rule ? recurrenceRuleToResponse(rule) : null,
-  }
+  return taskCoreToResponse(task, rule ?? null, githubLinks, labelNames)
 }
 
 // Batch-fetches label names for a set of task ids, keyed by task id, for
@@ -212,8 +211,7 @@ function taskListItemToResponse(
   blockedByNumbers: number[] = [],
 ) {
   return {
-    ...taskCoreToResponse(task, githubLinks, labelNames),
-    recurrenceRule: rule ? recurrenceRuleToResponse(rule) : null,
+    ...taskCoreToResponse(task, rule, githubLinks, labelNames),
     parentNumber,
     duplicateOfNumber,
     blockedByNumbers,

@@ -284,10 +284,10 @@ describe('REST/MCP parity', () => {
       },
     ]
 
-    // GET /api/tasks (list) has no recurrenceRule key at all, unlike the
-    // detail endpoint and this write tool's own response. Sorting both sides
-    // by id avoids depending on the unspecified tie-break order Postgres
-    // uses when createdAt is identical for both tasks.
+    // completedTask and nextTask share one recurrenceRuleId, exercising the
+    // list endpoint's dedup-then-batch-fetch of recurrence rules. Sorting
+    // both sides by id avoids depending on the unspecified tie-break order
+    // Postgres uses when createdAt is identical for both tasks.
     expect((await jsonBody<{ id: string }[]>(res)).sort(byId)).toEqual(
       expected.sort(byId),
     )
