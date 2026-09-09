@@ -97,8 +97,7 @@ export interface TaskResponse {
 }
 
 // Shape returned by the list-returning endpoint (`/api/tasks`) and by a task
-// detail's `links` field: no `recurrenceRule` key (unlike `TaskResponse`),
-// plus `parentNumber`.
+// detail's `links` field: same as `TaskResponse` plus `parentNumber`.
 export interface TaskListItemResponse {
   id: string
   number: number
@@ -116,6 +115,7 @@ export interface TaskListItemResponse {
   parentId: string | null
   projectId: string | null
   recurrenceRuleId: string | null
+  recurrenceRule: RecurrenceRuleResponse | null
   githubLinks: GithubLinkResponse[]
   createdAt: string
   updatedAt: string
@@ -124,18 +124,6 @@ export interface TaskListItemResponse {
   blockedByNumbers: number[]
   childCompletionCount?: { completed: number; total: number }
   children?: TaskListItemResponse[]
-}
-
-// List-endpoint responses have no `recurrenceRule` key at all, unlike
-// `TaskResponse`, so building a list-item expectation out of a
-// create/update response needs the key dropped rather than left behind as
-// a stray `recurrenceRule: null`.
-export function withoutRecurrenceRule<T extends { recurrenceRule: unknown }>(
-  task: T,
-): Omit<T, 'recurrenceRule'> {
-  const { recurrenceRule, ...rest } = task
-  void recurrenceRule
-  return rest
 }
 
 // create/update responses carry a `linkSync` key (see
@@ -171,6 +159,7 @@ export function toListItemResponse(
     | 'parentId'
     | 'projectId'
     | 'recurrenceRuleId'
+    | 'recurrenceRule'
     | 'githubLinks'
     | 'createdAt'
     | 'updatedAt'
@@ -197,6 +186,7 @@ export function toListItemResponse(
     parentId: task.parentId,
     projectId: task.projectId,
     recurrenceRuleId: task.recurrenceRuleId,
+    recurrenceRule: task.recurrenceRule,
     githubLinks: task.githubLinks,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
@@ -278,6 +268,7 @@ const taskListItemResponseSchema = z.object({
   parentId: z.string().nullable(),
   projectId: z.string().nullable(),
   recurrenceRuleId: z.string().nullable(),
+  recurrenceRule: recurrenceRuleResponseSchema.nullable(),
   githubLinks: z.array(githubLinkResponseSchema),
   createdAt: z.string(),
   updatedAt: z.string(),

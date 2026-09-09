@@ -71,6 +71,7 @@ export function useCreateTask() {
         parentNumber: null,
         projectId: input.projectId ?? null,
         recurrenceRuleId: null,
+        recurrenceRule: null,
         githubLinks: [],
         createdAt: now,
         updatedAt: now,

@@ -12,7 +12,6 @@ import {
   createTask,
   type TaskResponse,
   withoutLinkSync,
-  withoutRecurrenceRule,
 } from '#routes/tasks/testing'
 import {
   assertDefined,
@@ -152,7 +151,7 @@ describe('REST/MCP parity', () => {
 
     expect(await jsonBody<unknown[]>(res)).toEqual([
       {
-        ...withoutRecurrenceRule(withoutLinkSync(data)),
+        ...withoutLinkSync(data),
         parentNumber: null,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -268,7 +267,7 @@ describe('REST/MCP parity', () => {
       a.id.localeCompare(b.id)
     const expected = [
       {
-        ...withoutRecurrenceRule(completedTask),
+        ...completedTask,
         parentNumber: null,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -276,7 +275,7 @@ describe('REST/MCP parity', () => {
         childCompletionCount: { total: 0, completed: 0 },
       },
       {
-        ...withoutRecurrenceRule(nextTask),
+        ...nextTask,
         parentNumber: null,
         duplicateOfNumber: null,
         blockedByNumbers: [],

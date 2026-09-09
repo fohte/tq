@@ -3,36 +3,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 import { TaskDependenciesSection } from '#components/task/task-dependencies-section'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { LinkedTaskSummary } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const taskId = '00000000-0000-0000-0000-000000000001'
 
-const baseTask: LinkedTaskSummary = {
+const baseTask: LinkedTaskSummary = makeTask({
   id: 'task-001',
   number: 12,
   title: 'Design the schema',
-  description: null,
-  status: 'todo',
-  statusReason: null,
-  duplicateOfNumber: null,
   context: 'work',
-  commitment: 'active',
-  labels: [],
-  startDate: null,
-  dueDate: null,
-  estimatedMinutes: null,
-  remindAt: null,
-  parentId: null,
-  parentNumber: null,
-  projectId: null,
-  recurrenceRuleId: null,
-  githubLinks: [],
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-  childCompletionCount: { completed: 0, total: 0 },
-  blockedByNumbers: [],
-}
+})
 
 const blockedByTasks: LinkedTaskSummary[] = [
   { ...baseTask, id: 'task-002', number: 312, title: 'Decide the DB schema' },
