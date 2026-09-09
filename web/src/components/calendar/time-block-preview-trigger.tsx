@@ -1,7 +1,8 @@
 import { PreviewCard as PreviewCardPrimitive } from '@base-ui/react/preview-card'
 import { useRef, useState } from 'react'
 
-import { TimeBlockCard } from '#components/task/time-block-card'
+import type { TaskPreviewChipTask } from '#components/task/task-preview-chip'
+import { TimeBlockPreviewCard } from '#components/task/time-block-preview-card'
 import {
   PreviewCard,
   PreviewCardPopup,
@@ -10,6 +11,7 @@ import {
   PreviewCardTrigger,
 } from '#components/ui/preview-card'
 import { useRemoveFromDayQueue } from '#hooks/use-queues'
+import { useTask } from '#hooks/use-tasks'
 import type { TimeBlock } from '#hooks/use-time-blocks'
 import { useDeleteManualTimeBlock } from '#hooks/use-time-blocks'
 import type { CalendarEventProps } from '#lib/calendar-utils'
@@ -81,9 +83,11 @@ function AutoTimeBlockPreview({
     formatLocalDate(new Date(block.startTime)),
     { enabled: open },
   )
+  const { data: task } = useTask(taskId, { enabled: open })
 
   return (
     <TimeBlockPreviewPopup
+      task={task ?? null}
       block={block}
       onDelete={onDelete}
       isDeleting={isDeleting}
@@ -105,13 +109,17 @@ function ManualTimeBlockPreview({
   block: PreviewBlock
   children: React.ReactNode
 }) {
+  const [open, setOpen] = useState(false)
   const { onDelete, isDeleting } = useDeleteManualTimeBlock(taskId, blockId)
+  const { data: task } = useTask(taskId, { enabled: open })
 
   return (
     <TimeBlockPreviewPopup
+      task={task ?? null}
       block={block}
       onDelete={onDelete}
       isDeleting={isDeleting}
+      onOpenChange={setOpen}
     >
       {children}
     </TimeBlockPreviewPopup>
@@ -121,16 +129,18 @@ function ManualTimeBlockPreview({
 // Closes the card on the trigger's own pointerdown so it doesn't obstruct a
 // drag that starts from the same chip.
 function TimeBlockPreviewPopup({
+  task,
   block,
   onDelete,
   isDeleting,
   onOpenChange,
   children,
 }: {
+  task: TaskPreviewChipTask | null
   block: PreviewBlock
   onDelete: () => void
   isDeleting: boolean
-  onOpenChange?: (open: boolean) => void
+  onOpenChange: (open: boolean) => void
   children: React.ReactNode
 }) {
   const actionsRef = useRef<PreviewCardPrimitive.Root.Actions>(null)
@@ -146,7 +156,8 @@ function TimeBlockPreviewPopup({
       <PreviewCardPortal>
         <PreviewCardPositioner>
           <PreviewCardPopup className="w-auto p-0">
-            <TimeBlockCard
+            <TimeBlockPreviewCard
+              task={task}
               block={block}
               onDelete={onDelete}
               isDeleting={isDeleting}

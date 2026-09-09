@@ -31,7 +31,7 @@ export function TimeBlockCard({
 }: {
   block: Pick<TimeBlock, 'startTime' | 'endTime' | 'isAutoScheduled'>
   onDelete: () => void
-  isDeleting?: boolean
+  isDeleting?: boolean | undefined
 }) {
   return (
     <div className="flex items-center justify-between gap-1 border border-border bg-card p-2 font-mono text-2xs text-muted-foreground-strong">
