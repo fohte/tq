@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { RouterProvider } from '@tanstack/react-router'
 import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { expect, fn, within } from 'storybook/test'
@@ -12,7 +13,7 @@ import type { Schedule } from '#hooks/use-schedules'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { assertDefined, atIndex, findVisible } from '#lib/test-utils'
-import { StoryRouter } from '#storybook-config/story-router'
+import { createStoryRouter, StoryRouter } from '#storybook-config/story-router'
 
 const today = new Date()
 const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -137,6 +138,7 @@ const sampleEvents: TimeBlockEvent[] = [
     end: `${dateStr}T11:30:00`,
     type: 'manual',
     parentRef: '#488 tq 作成',
+    taskId: 'task-tb-4',
   },
   {
     id: 'tb-5',
@@ -151,6 +153,7 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T13:00:00`,
     end: `${dateStr}T13:45:00`,
     type: 'auto',
+    taskId: 'task-tb-6',
   },
   {
     id: 'tb-7',
@@ -364,6 +367,38 @@ export const OpensEditScheduleModal: Story = {
     ).toHaveValue('Sleep')
   },
 }
+
+export const NavigatesToTaskDetail: Story = (() => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  let router: ReturnType<typeof createStoryRouter>
+
+  return {
+    args: Default.args,
+    parameters: {
+      // DayViewPresentation is the router's root route component, not
+      // content behind an <Outlet>, so navigating away renders nothing new —
+      // the screenshot is identical to Default.
+      screenshot: { skip: true },
+    },
+    render: (args) => {
+      router = createStoryRouter({
+        component: () => <DayViewPresentation {...args} />,
+        paths: ['/tasks', '/tasks/$taskId'],
+      })
+      return (
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      )
+    },
+    play: async ({ canvas, userEvent }) => {
+      await userEvent.click(await canvas.findByText('#507 ビルド改善'))
+      await expect(router.history.location.pathname).toBe('/tasks/task-tb-4')
+    },
+  }
+})()
 
 // The queue panel — where isLoading/queueTasks/queueCandidates differences
 // actually render — is hidden behind the mobile pane switcher's 'calendar'

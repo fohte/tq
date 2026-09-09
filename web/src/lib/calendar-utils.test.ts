@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   classifyGcalEvent,
+  isClickableEvent,
   isGcalEventType,
   isPendingGcalResponse,
 } from '#lib/calendar-utils'
@@ -93,6 +94,34 @@ describe('isGcalEventType', () => {
         isGcalEventType,
       ),
     ).toEqual([false, false, false, false, false])
+  })
+})
+
+describe('isClickableEvent', () => {
+  it('is true for every type with a click destination', () => {
+    expect(
+      (['manual', 'auto', 'completed', 'schedule'] as const).map((type) =>
+        isClickableEvent({ type }),
+      ),
+    ).toEqual([true, true, true, true])
+  })
+
+  it('is false for gcal types and undefined', () => {
+    expect(
+      (
+        [
+          'gcal-meeting',
+          'gcal-solo',
+          'gcal-status',
+          'gcal-info',
+          undefined,
+        ] as const
+      ).map((type) => isClickableEvent(type === undefined ? {} : { type })),
+    ).toEqual([false, false, false, false, false])
+  })
+
+  it('is false for a redacted event even with an otherwise-clickable type', () => {
+    expect(isClickableEvent({ type: 'manual', redacted: true })).toBe(false)
   })
 })
 

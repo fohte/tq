@@ -34,6 +34,8 @@ export interface TimeBlockEvent {
   color?: {
     accent: string
   }
+  /** Underlying task id, present when type is 'manual' | 'auto' | 'completed' */
+  taskId?: string
   /** Underlying schedule id, present when type is 'schedule' */
   scheduleId?: string
   /** Google Calendar's color for the event's calendar; used as an accent on gcal events except gcal-solo, which renders without a calendar accent */
@@ -58,6 +60,7 @@ interface CalendarViewProps {
   onVisibleRangeChange?:
     ((range: { start: Date; end: Date }) => void) | undefined
   onScheduleClick?: ((scheduleId: string, start: string) => void) | undefined
+  onTaskClick?: ((taskId: string) => void) | undefined
   onSelectRange?: ((info: { start: Date; end: Date }) => void) | undefined
 }
 
@@ -70,6 +73,7 @@ export function CalendarView({
   onDateChange,
   onVisibleRangeChange,
   onScheduleClick,
+  onTaskClick,
   onSelectRange,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendarType>(null)
@@ -182,6 +186,7 @@ export function CalendarView({
           externalDragContainerRef={externalDragContainerRef}
           onDateClick={handleDateClick}
           onScheduleClick={onScheduleClick}
+          onTaskClick={onTaskClick}
           onSelectRange={onSelectRange}
           initialDate={selectedDate}
         />
