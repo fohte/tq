@@ -11,6 +11,7 @@ import {
   resolveFullCalendarView,
 } from '#components/calendar/calendar-header'
 import { useCalendarKeybindings } from '#hooks/use-calendar-keybindings'
+import { useCalendarSwipeNavigation } from '#hooks/use-calendar-swipe-navigation'
 import { useIsDesktop } from '#hooks/use-is-desktop'
 import { formatLocalDate } from '#lib/date-range'
 
@@ -73,6 +74,7 @@ export function CalendarView({
   onSelectRange,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendarType>(null)
+  const swipeContainerRef = useRef<HTMLDivElement>(null)
   const isDesktop = useIsDesktop()
   const [activeView, setActiveView] = useState<CalendarViewType>(initialView)
   // Set while the sync effect below drives FullCalendar via gotoDate, so
@@ -147,6 +149,11 @@ export function CalendarView({
     onViewChange: handleViewChange,
   })
 
+  useCalendarSwipeNavigation(swipeContainerRef, {
+    onPrev: handlePrev,
+    onNext: handleNext,
+  })
+
   // Sync FullCalendar's internal date when selectedDate changes from an
   // external source (e.g. the live-today rollover), so a subsequent
   // prev/next computes from the reported selectedDate, not a stale anchor.
@@ -172,7 +179,14 @@ export function CalendarView({
         onToday={handleToday}
         onViewChange={handleViewChange}
       />
-      <div className="flex-1 overflow-auto">
+      {/* overscroll-x-contain stops a horizontal trackpad scroll here from
+          chaining into the browser's own back/forward gesture
+          (https://developer.mozilla.org/en-US/docs/Web/CSS/overscroll-behavior) —
+          required regardless of the useCalendarSwipeNavigation hook. */}
+      <div
+        ref={swipeContainerRef}
+        className="flex-1 overflow-auto overscroll-x-contain"
+      >
         <CalendarGrid
           ref={calendarRef}
           events={events}
