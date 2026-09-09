@@ -34,32 +34,27 @@ export function AppLayout({ children }: { children: ReactNode }) {
   })
 
   return (
-    // `sticky`, not `fixed`: prosemirror-view's cursor scroll-into-view walk
-    // stops at the first fixed/sticky ancestor, so this keeps it from
-    // reaching document.body and calling window.scrollBy on every keystroke
-    // — but unlike `fixed`, it stays in normal document flow, which document
-    // scrolling depends on.
-    // top/height, not a static `top-0`: iOS Safari's software keyboard
-    // shrinks the visual viewport but not the layout viewport, so a static
-    // `top-0` would leave this box (and the descendant scroll containers
-    // that stop the cursor scroll-into-view walk) extending behind the
-    // keyboard, making that walk think the cursor is still visible —
-    // tracking insets keeps its bounds aligned with the visible area, which
-    // is what lets that walk keep the caret above the keyboard.
-    // An exact `height` (not `min-height`) doesn't cap document scrolling
-    // for content taller than one viewport: this box stays `overflow-visible`
-    // (the default) and in normal flow (`sticky`, not `fixed`), so overflowing
-    // content still contributes to <html>'s scrollable area regardless of
-    // this box's own height. Day view's internal scrolling (`h-full` /
-    // `min-h-0`, see below) needs the opposite: an exact height (`h-dvh`)
-    // rather than a `min-h-dvh` floor.
     <div
       className={cn(
+        // `sticky`, not `fixed`: stays in normal document flow (document
+        // scrolling still works) while still stopping prosemirror-view's
+        // cursor scroll-into-view walk from reaching document.body and
+        // scrolling it directly.
         'sticky flex',
         insets === null
-          ? cn('top-0', isDayView ? 'h-dvh' : 'min-h-dvh')
+          ? cn(
+              'top-0',
+              // Exact height only caps this box, not document scroll (it
+              // stays `overflow-visible`) — except on day view, which needs
+              // the opposite: an exact `h-dvh` so its `h-full`/`min-h-0`
+              // chain (below) stays bounded instead of a `min-h-dvh` floor.
+              isDayView ? 'h-dvh' : 'min-h-dvh',
+            )
           : 'inset-x-0',
       )}
+      // top/height from insets, not the static `top-0` above: iOS Safari's
+      // software keyboard shrinks the visual viewport but not the layout
+      // viewport, so a static `top-0` would sit behind the keyboard.
       style={
         insets === null ? undefined : { top: insets.top, height: insets.height }
       }
