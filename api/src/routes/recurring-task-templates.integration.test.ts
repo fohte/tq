@@ -91,10 +91,7 @@ async function createTemplate(
   return jsonBody<TemplateResponse>(res)
 }
 
-// `recurrenceRuleId`/`recurrenceRule.id` and `createdAt`/`updatedAt` are
-// freshly generated on every create/update, so a literal comparison needs
-// them replaced with fixed placeholders. `labels` has no defined order (see
-// `getTemplateLabelNames`), so it's sorted too.
+// `labels` order isn't guaranteed, so it's sorted before comparing.
 function normalizeTemplate(template: TemplateResponse) {
   return {
     ...template,
@@ -442,28 +439,51 @@ describe('recurring task templates CRUD API', () => {
       expect(res.status).toBe(404)
     })
 
-    it('toggles enabled false then true, independent of delete', async () => {
+    it('disables the template', async () => {
       const created = await createTemplate(
         'Toggle template',
         { type: 'daily', interval: 1 },
         '2026-04-01',
       )
-      expect(created.enabled).toBe(true)
 
-      const disabledRes = await patchTemplate(created.id, { enabled: false })
-      expect(disabledRes.status).toBe(200)
-      expect((await jsonBody<TemplateResponse>(disabledRes)).enabled).toBe(
-        false,
+      const res = await patchTemplate(created.id, { enabled: false })
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TemplateResponse>(res)
+      expect(normalizeTemplate(body)).toEqual({
+        ...normalizeTemplate(created),
+        enabled: false,
+      })
+    })
+
+    it('re-enables a disabled template', async () => {
+      const created = await createTemplate(
+        'Toggle template',
+        { type: 'daily', interval: 1 },
+        '2026-04-01',
+        { enabled: false },
       )
 
-      const enabledRes = await patchTemplate(created.id, { enabled: true })
-      expect(enabledRes.status).toBe(200)
-      expect((await jsonBody<TemplateResponse>(enabledRes)).enabled).toBe(true)
+      const res = await patchTemplate(created.id, { enabled: true })
 
-      const getRes = await app.request(
-        `/api/recurring-task-templates/${created.id}`,
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TemplateResponse>(res)
+      expect(normalizeTemplate(body)).toEqual({
+        ...normalizeTemplate(created),
+        enabled: true,
+      })
+    })
+
+    it('returns 404 for a non-existent parentId', async () => {
+      const created = await createTemplate(
+        'Template to reparent',
+        { type: 'daily', interval: 1 },
+        '2026-04-01',
       )
-      expect(getRes.status).toBe(200)
+
+      const res = await patchTemplate(created.id, { parentId: TEST_UUID })
+
+      expect(res.status).toBe(404)
     })
   })
 

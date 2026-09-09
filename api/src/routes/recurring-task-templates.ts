@@ -42,8 +42,7 @@ function templateToResponse(
   }
 }
 
-// `parentId` here names a task (the parent generated instances nest under),
-// not another template, so it reuses the tasks id-or-number resolver.
+// `parentId` refers to a task, resolved via the same resolver tasks use.
 async function resolveTemplateParentId(
   parentId: string | number | null,
 ): Promise<
@@ -273,8 +272,7 @@ export const recurringTaskTemplatesApp = new Hono()
       await tx
         .delete(recurringTaskTemplates)
         .where(eq(recurringTaskTemplates.id, id))
-      // Exclusively owned by this template (see schema comment), so no
-      // other-reference check is needed before deleting the rule.
+      // This template's recurrence rule isn't shared, so it can be deleted directly.
       await tx
         .delete(recurrenceRules)
         .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
