@@ -286,11 +286,46 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
 
     const handleGridMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
       const target = e.target instanceof HTMLElement ? e.target : null
-      const colEl = target?.closest('.fc-timegrid-col')
+      if (target?.closest('.fc-event')) {
+        setSlotGhost(null)
+        return
+      }
+      // FullCalendar renders the horizontal slot-line table
+      // (`.fc-timegrid-slots`) as a sibling of the day-column table
+      // (`.fc-timegrid-cols`), stacked above it (explicit z-index vs. auto).
+      // Over an empty slot, that line table is what's actually under the
+      // pointer, so `e.target.closest('.fc-timegrid-col')` always misses —
+      // the column has to be found by coordinates instead, the same way
+      // FullCalendar's own hit-testing does internally (TimeCols.queryHit in
+      // @fullcalendar/timegrid).
+      const colEl = Array.from(
+        e.currentTarget.querySelectorAll<HTMLElement>(
+          '.fc-timegrid-col:not(.fc-timegrid-axis)',
+        ),
+      ).find((col) => {
+        const rect = col.getBoundingClientRect()
+        return (
+          e.clientX >= rect.left &&
+          e.clientX < rect.right &&
+          e.clientY >= rect.top &&
+          e.clientY < rect.bottom
+        )
+      })
+      if (!colEl) {
+        setSlotGhost(null)
+        return
+      }
+      // A column's own box spans the full day (00:00-24:00) even when most
+      // of it is scrolled out of view, so it can numerically contain a
+      // point that's actually covered by the header or all-day row above —
+      // reject those by checking against the scroller that actually clips
+      // it on screen.
+      const scrollerRect = colEl
+        .closest<HTMLElement>('.fc-scroller')
+        ?.getBoundingClientRect()
       if (
-        !colEl ||
-        colEl.classList.contains('fc-timegrid-axis') ||
-        target?.closest('.fc-event')
+        scrollerRect &&
+        (e.clientY < scrollerRect.top || e.clientY >= scrollerRect.bottom)
       ) {
         setSlotGhost(null)
         return

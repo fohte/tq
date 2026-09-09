@@ -84,6 +84,30 @@ const dndCallbacks: CalendarDndCallbacks = {
   onExternalDrop: fn(),
 }
 
+// `fireEvent.mouseMove(el, { clientX, clientY })` dispatches directly on
+// `el` regardless of what's visually on top at those coordinates.
+// `document.elementFromPoint` runs the browser's actual hit-test, so
+// dispatching on its result reproduces what a real pointer move would
+// target.
+function hoverPoint(x: number, y: number) {
+  const target = assertDefined(
+    document.elementFromPoint(x, y),
+    `no element found at (${String(x)}, ${String(y)})`,
+  )
+  return fireEvent.mouseMove(target, { clientX: x, clientY: y })
+}
+
+// FullCalendar renders more than one `.fc-scroller` (header/body/etc.);
+// only the vertically-scrollable one is the time grid body.
+function findVerticalScroller(canvasElement: HTMLElement): HTMLElement {
+  return assertDefined(
+    Array.from(
+      canvasElement.querySelectorAll<HTMLElement>('.fc-scroller'),
+    ).find((el) => el.scrollHeight > el.clientHeight),
+    'no vertically scrollable .fc-scroller found',
+  )
+}
+
 const meta = {
   title: 'Calendar/CalendarGrid',
   component: CalendarGrid,
@@ -144,14 +168,7 @@ export const ScrollsToCurrentTime: Story = {
   },
   play: async ({ canvas, canvasElement }) => {
     await canvas.findByText('API ドキュメント作成')
-    // FullCalendar renders more than one `.fc-scroller` (header/body/etc.);
-    // only the vertically-scrollable one is the time grid body.
-    const scroller = assertDefined(
-      Array.from(
-        canvasElement.querySelectorAll<HTMLElement>('.fc-scroller'),
-      ).find((el) => el.scrollHeight > el.clientHeight),
-      'no vertically scrollable .fc-scroller found',
-    )
+    const scroller = findVerticalScroller(canvasElement)
     const now = new Date()
     const expectedMinutes = Math.max(
       0,
@@ -205,22 +222,19 @@ export const HoverEmptySlot: Story = {
   },
   play: async ({ canvas, canvasElement }) => {
     // Gym ends at 08:00, and the next event starts at 09:00, so hovering
-    // just below Gym lands in the empty 08:00-08:30 slot.
+    // just below Gym lands in the empty 08:00-08:30 slot. Reset the scroll
+    // position first — the default auto-scroll targets the current wall
+    // clock time, which could otherwise carry Gym off-screen.
+    findVerticalScroller(canvasElement).scrollTop = 0
     const gymEvent = assertDefined(
       (await canvas.findByText('Gym')).closest<HTMLElement>('.fc-event'),
       'Gym event .fc-event ancestor not found',
     )
     const gymRect = gymEvent.getBoundingClientRect()
+    const hoverX = gymRect.left + gymRect.width / 2
     const hoverY = gymRect.bottom + 10
-    const colEl = assertDefined(
-      gymEvent.closest<HTMLElement>('.fc-timegrid-col'),
-      'Gym event .fc-timegrid-col ancestor not found',
-    )
 
-    await fireEvent.mouseMove(colEl, {
-      clientX: gymRect.left + gymRect.width / 2,
-      clientY: hoverY,
-    })
+    await hoverPoint(hoverX, hoverY)
 
     const ghost = await waitFor(() =>
       assertDefined(
@@ -250,16 +264,20 @@ export const HoverExistingEvent: Story = {
     screenshot: { skip: true },
   },
   play: async ({ canvas, canvasElement }) => {
+    // Reset the scroll position first — the default auto-scroll targets
+    // the current wall clock time, which could otherwise carry Gym
+    // off-screen.
+    findVerticalScroller(canvasElement).scrollTop = 0
     const gymEvent = assertDefined(
       (await canvas.findByText('Gym')).closest<HTMLElement>('.fc-event'),
       'Gym event .fc-event ancestor not found',
     )
     const gymRect = gymEvent.getBoundingClientRect()
 
-    await fireEvent.mouseMove(gymEvent, {
-      clientX: gymRect.left + gymRect.width / 2,
-      clientY: gymRect.top + gymRect.height / 2,
-    })
+    await hoverPoint(
+      gymRect.left + gymRect.width / 2,
+      gymRect.top + gymRect.height / 2,
+    )
 
     await waitFor(() =>
       expect(canvasElement.querySelector('.tq-slot-hover-ghost')).toBeNull(),
@@ -283,10 +301,34 @@ export const HoverAxisColumn: Story = {
     )
     const rect = axisCol.getBoundingClientRect()
 
-    await fireEvent.mouseMove(axisCol, {
-      clientX: rect.left + rect.width / 2,
-      clientY: rect.top + rect.height / 2,
-    })
+    await hoverPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+
+    await waitFor(() =>
+      expect(canvasElement.querySelector('.tq-slot-hover-ghost')).toBeNull(),
+    )
+  },
+}
+
+export const HoverAllDayRow: Story = {
+  args: {
+    activeView: 'day',
+  },
+  parameters: {
+    // No ghost renders over the all-day row, so the DOM never changes —
+    // the screenshot would be identical to DayView.
+    screenshot: { skip: true },
+  },
+  play: async ({ canvasElement }) => {
+    // The all-day row has no time-slot concept to preview, unlike the
+    // timed grid below it — FullCalendar renders it as a dayGrid cell
+    // (`.fc-daygrid-day-frame`), not a `.fc-timegrid-col`.
+    const allDayCell = assertDefined(
+      canvasElement.querySelector<HTMLElement>('.fc-daygrid-day-frame'),
+      'all-day row cell not found',
+    )
+    const rect = allDayCell.getBoundingClientRect()
+
+    await hoverPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
 
     await waitFor(() =>
       expect(canvasElement.querySelector('.tq-slot-hover-ghost')).toBeNull(),
@@ -300,8 +342,7 @@ export const HoverEmptySlotWeekView: Story = {
   },
   parameters: {
     // Verifies the ghost tracks the hovered day column rather than a fixed
-    // one; the hovered point is scrolled out of the initial viewport, so
-    // this wouldn't add a meaningful new screenshot.
+    // one; visually identical to WeekView.
     screenshot: { skip: true },
   },
   play: async ({ canvasElement }) => {
@@ -317,11 +358,12 @@ export const HoverEmptySlotWeekView: Story = {
       'a non-today day column not found',
     )
     const colRect = otherDayCol.getBoundingClientRect()
+    // The column's own box spans the full day, most of which is scrolled
+    // out of view — hover a point actually inside the visible scroller.
+    const hoverY =
+      findVerticalScroller(canvasElement).getBoundingClientRect().top + 50
 
-    await fireEvent.mouseMove(otherDayCol, {
-      clientX: colRect.left + colRect.width / 2,
-      clientY: colRect.top + 100,
-    })
+    await hoverPoint(colRect.left + colRect.width / 2, hoverY)
 
     const ghost = await waitFor(() =>
       assertDefined(
