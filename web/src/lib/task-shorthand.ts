@@ -5,6 +5,12 @@ import {
 import { formatLocalDate } from '#lib/date-range'
 import { parseDurationToMinutes } from '#lib/parse-duration'
 
+export interface ShorthandRecurrenceRule {
+  type: 'daily' | 'weekly' | 'monthly'
+  interval: number
+  daysOfWeek?: number[]
+}
+
 export interface ShorthandExtraction {
   title: string
   startDate?: string
@@ -14,6 +20,7 @@ export interface ShorthandExtraction {
   labels: string[]
   parentNumber?: number
   githubUrl?: string
+  recurrenceRule?: ShorthandRecurrenceRule
 }
 
 function isContextValue(value: string): value is ContextValue {
@@ -22,6 +29,45 @@ function isContextValue(value: string): value is ContextValue {
 
 const GITHUB_URL_RE =
   /^(https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/(?:issues|pull)\/\d+\/?)(?:[?#]\S*)?$/
+
+// `*月` is deliberately absent: it ambiguously refers to either Monday
+// (月曜) or monthly (毎月).
+const RECURRENCE_TYPE_ALIASES: Record<string, 'daily' | 'weekly' | 'monthly'> =
+  {
+    daily: 'daily',
+    weekly: 'weekly',
+    monthly: 'monthly',
+    毎日: 'daily',
+    毎週: 'weekly',
+    毎月: 'monthly',
+  }
+
+const WEEKDAY_ALIASES: Record<string, number> = {
+  sun: 0,
+  mon: 1,
+  tue: 2,
+  wed: 3,
+  thu: 4,
+  fri: 5,
+  sat: 6,
+  日曜: 0,
+  月曜: 1,
+  火曜: 2,
+  水曜: 3,
+  木曜: 4,
+  金曜: 5,
+  土曜: 6,
+}
+
+function resolveRecurrenceKeyword(
+  keyword: string,
+): { type: 'daily' | 'weekly' | 'monthly' } | { day: number } | null {
+  const type = RECURRENCE_TYPE_ALIASES[keyword]
+  if (type != null) return { type }
+  const day = WEEKDAY_ALIASES[keyword]
+  if (day != null) return { day }
+  return null
+}
 
 function resolveDateKeyword(keyword: string): string | null {
   if (keyword === 'today') {
@@ -47,6 +93,9 @@ function resolveDateKeyword(keyword: string): string | null {
  * - `%work` / `%personal` → context
  * - `^N` → parentNumber
  * - a GitHub issue/PR URL → githubUrl
+ * - `*daily` / `*weekly` / `*monthly` / `*sun`…`*sat` (English or Japanese
+ *   alias) → recurrenceRule; multiple weekday tokens accumulate into one
+ *   weekly rule's daysOfWeek
  *
  * A token counts as "completed" only once it's followed by whitespace, so
  * the word currently being typed is never touched. Unrecognized tokens are
@@ -59,6 +108,8 @@ export function extractShorthandTokens(input: string): ShorthandExtraction {
   const remaining: string[] = []
   const result: ShorthandExtraction = { title: '', labels: [] }
   let consumed = false
+  let recurrenceType: 'daily' | 'weekly' | 'monthly' | undefined
+  const recurrenceDays = new Set<number>()
 
   for (const [i, word] of words.entries()) {
     const isLast = i === words.length - 1
@@ -97,6 +148,18 @@ export function extractShorthandTokens(input: string): ShorthandExtraction {
         result.parentNumber = Number(value)
         consumed = true
         continue
+      } else if (word.startsWith('*')) {
+        const resolved = resolveRecurrenceKeyword(value)
+        if (resolved != null) {
+          if ('day' in resolved) {
+            recurrenceType = 'weekly'
+            recurrenceDays.add(resolved.day)
+          } else {
+            recurrenceType = resolved.type
+          }
+          consumed = true
+          continue
+        }
       } else {
         const githubMatch = GITHUB_URL_RE.exec(word)
         if (githubMatch != null) {
@@ -114,12 +177,22 @@ export function extractShorthandTokens(input: string): ShorthandExtraction {
     return { title: input, labels: [] }
   }
 
+  if (recurrenceType != null) {
+    result.recurrenceRule = {
+      type: recurrenceType,
+      interval: 1,
+      ...(recurrenceDays.size > 0
+        ? { daysOfWeek: [...recurrenceDays].sort((a, b) => a - b) }
+        : {}),
+    }
+  }
+
   result.title =
     remaining.join(' ') + (endsWithSpace && remaining.length > 0 ? ' ' : '')
   return result
 }
 
-export type TriggerChar = '@' | '>' | '#' | '%' | '^'
+export type TriggerChar = '@' | '>' | '#' | '%' | '^' | '*'
 
 export interface SuggestionItem {
   value: string
@@ -145,6 +218,19 @@ const CONTEXT_SUGGESTIONS: SuggestionItem[] = [
   { value: 'personal', display: 'personal' },
 ]
 
+const RECURRENCE_SUGGESTIONS: SuggestionItem[] = [
+  { value: 'daily', display: 'daily' },
+  { value: 'weekly', display: 'weekly' },
+  { value: 'monthly', display: 'monthly' },
+  { value: 'sun', display: 'sun' },
+  { value: 'mon', display: 'mon' },
+  { value: 'tue', display: 'tue' },
+  { value: 'wed', display: 'wed' },
+  { value: 'thu', display: 'thu' },
+  { value: 'fri', display: 'fri' },
+  { value: 'sat', display: 'sat' },
+]
+
 /**
  * Find the shorthand trigger token (if any) touching the cursor, by walking
  * back from the cursor to the nearest preceding whitespace.
@@ -167,7 +253,8 @@ export function detectTrigger(
     firstChar === '>' ||
     firstChar === '#' ||
     firstChar === '%' ||
-    firstChar === '^'
+    firstChar === '^' ||
+    firstChar === '*'
   ) {
     return { trigger: firstChar, partial: token.slice(1), tokenStart: start }
   }
@@ -203,9 +290,29 @@ export function getSuggestions(
       // Parent suggestions require an async lookup this function can't do.
       items = []
       break
+    case '*':
+      items = RECURRENCE_SUGGESTIONS
+      break
   }
 
   if (!partial) return items
   const lower = partial.toLowerCase()
   return items.filter((item) => item.value.toLowerCase().startsWith(lower))
+}
+
+/**
+ * Parse recurrence shorthand tokens (recurrence types or weekdays, English
+ * or Japanese) into a recurrence rule. The leading `*` is optional. Multiple
+ * weekday tokens accumulate into a single weekly rule's daysOfWeek.
+ */
+export function parseRecurrenceShorthand(
+  input: string,
+): ShorthandRecurrenceRule | undefined {
+  const words = input
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => (word.startsWith('*') ? word : `*${word}`))
+  if (words.length === 0) return undefined
+  return extractShorthandTokens(`${words.join(' ')} `).recurrenceRule
 }

@@ -69,6 +69,7 @@ export function githubLinkToResponse(
 
 function taskCoreToResponse(
   task: typeof tasks.$inferSelect,
+  rule: typeof recurrenceRules.$inferSelect | null = null,
   githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
   labelNames: string[] = [],
 ) {
@@ -89,6 +90,7 @@ function taskCoreToResponse(
     parentId: task.parentId,
     projectId: task.projectId,
     recurrenceRuleId: task.recurrenceRuleId,
+    recurrenceRule: rule ? recurrenceRuleToResponse(rule) : null,
     githubLinks: githubLinks.map(githubLinkToResponse),
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
@@ -101,10 +103,7 @@ export function taskToResponse(
   githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
   labelNames: string[] = [],
 ) {
-  return {
-    ...taskCoreToResponse(task, githubLinks, labelNames),
-    recurrenceRule: rule ? recurrenceRuleToResponse(rule) : null,
-  }
+  return taskCoreToResponse(task, rule ?? null, githubLinks, labelNames)
 }
 
 // Batch-fetches label names for a set of task ids, keyed by task id, for
@@ -127,6 +126,21 @@ export async function getLabelNamesByTaskId(
     map.set(row.taskId, list)
   }
   return map
+}
+
+// Batch-fetches recurrence rules keyed by rule id, for list endpoints that
+// would otherwise issue one query per task to resolve `recurrenceRuleId`.
+async function getRecurrenceRulesByIds(
+  ruleIds: string[],
+): Promise<Map<string, typeof recurrenceRules.$inferSelect>> {
+  if (ruleIds.length === 0) return new Map()
+
+  const rows = await db
+    .select()
+    .from(recurrenceRules)
+    .where(inArray(recurrenceRules.id, ruleIds))
+
+  return new Map(rows.map((row) => [row.id, row]))
 }
 
 // Batch-fetches GitHub links grouped by task ID, ordered by createdAt
@@ -186,19 +200,18 @@ async function getChildCompletionCountsByTaskId(
 // `taskListItemToResponse`.
 export const parentTasks = alias(tasks, 'parent_task')
 
-// Shared response shape for the list-returning endpoint (`/api/tasks`). Omits
-// `recurrenceRule`: no list consumer reads it, and hydrating it would cost an
-// extra query per endpoint for a field nothing uses.
+// Shared response shape for the list-returning endpoint (`/api/tasks`).
 function taskListItemToResponse(
   task: typeof tasks.$inferSelect,
   parentNumber: number | null,
+  rule: typeof recurrenceRules.$inferSelect | null = null,
   githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
   labelNames: string[] = [],
   duplicateOfNumber: number | null = null,
   blockedByNumbers: number[] = [],
 ) {
   return {
-    ...taskCoreToResponse(task, githubLinks, labelNames),
+    ...taskCoreToResponse(task, rule, githubLinks, labelNames),
     parentNumber,
     duplicateOfNumber,
     blockedByNumbers,
@@ -232,24 +245,34 @@ export async function hydrateTaskListRows(
   })[]
 > {
   const ids = rows.map((r) => r.task.id)
+  const ruleIds = [
+    ...new Set(
+      rows.map((r) => r.task.recurrenceRuleId).filter((id) => id != null),
+    ),
+  ]
   const [
     labelsByTaskId,
     childCompletionCountsByTaskId,
     githubLinksByTaskId,
     duplicateOfNumbersByTaskId,
     blockedByNumbersByTaskId,
+    recurrenceRulesById,
   ] = await Promise.all([
     getLabelNamesByTaskId(ids),
     getChildCompletionCountsByTaskId(ids),
     getGithubLinksByTaskId(ids),
     getDuplicateOfNumbersByTaskId(ids),
     getBlockedByNumbersByTaskId(ids),
+    getRecurrenceRulesByIds(ruleIds),
   ])
 
   return rows.map((r) => ({
     ...taskListItemToResponse(
       r.task,
       r.parentNumber,
+      r.task.recurrenceRuleId != null
+        ? (recurrenceRulesById.get(r.task.recurrenceRuleId) ?? null)
+        : null,
       githubLinksByTaskId.get(r.task.id) ?? [],
       labelsByTaskId.get(r.task.id) ?? [],
       r.task.statusReason === 'duplicate'

@@ -16,7 +16,6 @@ import {
   TimeBlockResponse,
   toListItemResponse,
   withoutLinkSync,
-  withoutRecurrenceRule,
 } from '#routes/tasks/testing'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
@@ -412,14 +411,14 @@ describe('tasks CRUD API', () => {
       const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body.map(normalizeTask)).toEqual([
         {
-          ...normalizeTask(withoutLinkSync(withoutRecurrenceRule(taskA))),
+          ...normalizeTask(withoutLinkSync(taskA)),
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
           childCompletionCount: { completed: 0, total: 0 },
         },
         {
-          ...normalizeTask(withoutLinkSync(withoutRecurrenceRule(taskB))),
+          ...normalizeTask(withoutLinkSync(taskB)),
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
@@ -499,21 +498,21 @@ describe('tasks CRUD API', () => {
       const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body.map(normalizeTask)).toEqual([
         {
-          ...normalizeTask(withoutRecurrenceRule(patchedTaskB)),
+          ...normalizeTask(patchedTaskB),
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
           childCompletionCount: { completed: 0, total: 0 },
         },
         {
-          ...normalizeTask(withoutRecurrenceRule(patchedTaskC)),
+          ...normalizeTask(patchedTaskC),
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
           childCompletionCount: { completed: 0, total: 0 },
         },
         {
-          ...normalizeTask(withoutRecurrenceRule(patchedTaskA)),
+          ...normalizeTask(patchedTaskA),
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],

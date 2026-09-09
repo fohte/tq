@@ -6,6 +6,7 @@ import {
 } from '#components/task/sidebar-field'
 import { SidebarParentField } from '#components/task/sidebar-parent-field'
 import { SidebarProjectField } from '#components/task/sidebar-project-field'
+import { SidebarRecurrenceField } from '#components/task/sidebar-recurrence-field'
 import { SidebarRemindField } from '#components/task/sidebar-remind-field'
 import { SidebarTagsField } from '#components/task/sidebar-tags-field'
 import { SidebarTimeBlocks } from '#components/task/sidebar-time-blocks'
@@ -58,6 +59,11 @@ export function TaskSidebar({ task }: { task: TaskDetail }) {
         field="dueDate"
         label="DUE"
         value={task.dueDate}
+      />
+      <SidebarRecurrenceField
+        taskId={task.id}
+        dueDate={task.dueDate}
+        recurrenceRule={task.recurrenceRule}
       />
       <SidebarRemindField taskId={task.id} remindAt={task.remindAt} />
       <SidebarParentField taskId={task.id} parentId={task.parentId} />
@@ -121,6 +127,13 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
             field="dueDate"
             label="DUE"
             value={task.dueDate}
+          />
+        </MobileFieldCell>
+        <MobileFieldCell className="col-span-2">
+          <SidebarRecurrenceField
+            taskId={task.id}
+            dueDate={task.dueDate}
+            recurrenceRule={task.recurrenceRule}
           />
         </MobileFieldCell>
         <MobileFieldCell className="col-span-2">

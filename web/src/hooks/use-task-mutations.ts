@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
+import type { RecurrenceType } from '#components/schedule/create-schedule-modal'
 import { projectKeys } from '#hooks/use-projects'
 import type {
   LinkedTaskSummary,
@@ -21,6 +22,11 @@ export interface CreateTaskInput {
   labels?: string[]
   projectId?: string
   parentId?: string
+  recurrenceRule?: {
+    type: 'daily' | 'weekly' | 'monthly'
+    interval: number
+    daysOfWeek?: number[]
+  }
 }
 
 // taskKeys.list() keys are ['tasks', 'list', filter], where filter carries
@@ -70,6 +76,7 @@ export function useCreateTask() {
         parentNumber: null,
         projectId: input.projectId ?? null,
         recurrenceRuleId: null,
+        recurrenceRule: null,
         githubLinks: [],
         createdAt: now,
         updatedAt: now,
@@ -328,6 +335,72 @@ export function useUpdateTaskParent() {
       void queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
       void queryClient.invalidateQueries({ queryKey: projectKeys.all })
+    },
+  })
+}
+
+export function useUpdateTaskRecurrenceRule() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      recurrenceRule,
+    }: {
+      id: string
+      // Not #lib/recurrence's RecurrenceRule: the PATCH schema only accepts
+      // daysOfWeek/dayOfMonth as absent-or-present, never explicit null,
+      // while RecurrenceRule allows null to also represent the read side
+      // (TaskDetail.recurrenceRule, where the DB column can be null).
+      recurrenceRule: {
+        type: RecurrenceType
+        interval: number
+        daysOfWeek?: number[]
+        dayOfMonth?: number
+      } | null
+    }) => {
+      const res = await api.api.tasks[':id'].$patch({
+        param: { id },
+        json: { recurrenceRule },
+      })
+      return unwrapOrThrow(assertOk(res)).json()
+    },
+    onMutate: async ({ id, recurrenceRule }) => {
+      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
+
+      const previousDetail = queryClient.getQueryData<TaskDetail>(
+        taskKeys.detail(id),
+      )
+
+      // The server assigns the real rule id; a placeholder stands in until
+      // onSettled's invalidation refetches the real one.
+      if (previousDetail) {
+        queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
+          ...previousDetail,
+          recurrenceRule:
+            recurrenceRule == null
+              ? null
+              : {
+                  id: previousDetail.recurrenceRule?.id ?? 'optimistic',
+                  type: recurrenceRule.type,
+                  interval: recurrenceRule.interval,
+                  daysOfWeek: recurrenceRule.daysOfWeek ?? null,
+                  dayOfMonth: recurrenceRule.dayOfMonth ?? null,
+                },
+          updatedAt: new Date().toISOString(),
+        })
+      }
+
+      return { previousDetail }
+    },
+    onError: (_err, { id }, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
+      }
+    },
+    onSettled: (_data, _err, { id }) => {
+      void queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
+      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
     },
   })
 }

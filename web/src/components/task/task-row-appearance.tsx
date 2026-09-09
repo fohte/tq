@@ -8,6 +8,7 @@ import {
   DateRangeBadge,
   EstimateLabel,
   ParentTaskLabel,
+  RecurrenceLabel,
   RemindBadge,
   ROW_INDENT_CLASS_NAME,
   rowIndentStyle,
@@ -35,7 +36,7 @@ export interface TaskRowAppearanceProps {
   onClick?: (e: React.MouseEvent) => void
   draggable?: boolean
   // Appended after the row's canonical second-line items (labels, project,
-  // context, parent, dateRange, remindAt, estimate, githubLink,
+  // context, parent, dateRange, remindAt, estimate, recurrence, githubLink,
   // closeReason, blockedBy) — keep their order intact.
   secondLineExtras?: React.ReactNode[]
 }
@@ -89,6 +90,9 @@ export function TaskRowAppearance({
     task.remindAt != null ? <RemindBadge remindAt={task.remindAt} /> : null,
     task.estimatedMinutes != null ? (
       <EstimateLabel minutes={task.estimatedMinutes} />
+    ) : null,
+    task.recurrenceRule != null ? (
+      <RecurrenceLabel rule={task.recurrenceRule} />
     ) : null,
     task.githubLinks.length > 0 ? (
       <GithubLinksChipGroup links={task.githubLinks} />

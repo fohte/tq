@@ -18,7 +18,8 @@
     "./schemas/task": "./src/schemas/task.ts",
     "./schemas/task-comment": "./src/schemas/task-comment.ts",
     "./schemas/task-page": "./src/schemas/task-page.ts",
-    "./search-query-parser": "./src/search-query-parser.ts"
+    "./search-query-parser": "./src/search-query-parser.ts",
+    "./services/recurrence": "./src/services/recurrence.ts"
   },
   "imports": {
     "#*": "./src/*.ts"

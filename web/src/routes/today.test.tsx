@@ -9,6 +9,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { makeTask as makeBaseTask } from '#components/task/task-row-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 import { TodayFocus } from '#routes/today'
 
@@ -34,32 +35,13 @@ vi.mock('#hooks/use-queues', () => ({
 }))
 
 function makeTask(overrides: Partial<Task> = {}): Task {
-  return {
+  return makeBaseTask({
     id: 'task-1',
-    number: 1,
     title: 'Task 1',
-    description: null,
-    status: 'todo',
-    statusReason: null,
-    duplicateOfNumber: null,
-    blockedByNumbers: [],
     context: 'work',
-    commitment: 'active',
-    labels: [],
-    startDate: null,
-    dueDate: null,
     estimatedMinutes: 30,
-    remindAt: null,
-    parentId: null,
-    parentNumber: null,
-    projectId: null,
-    recurrenceRuleId: null,
-    githubLinks: [],
-    createdAt: '2026-03-20T00:00:00.000Z',
-    updatedAt: '2026-03-20T00:00:00.000Z',
-    childCompletionCount: { completed: 0, total: 0 },
     ...overrides,
-  }
+  })
 }
 
 function setup({

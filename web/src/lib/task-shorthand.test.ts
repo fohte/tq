@@ -4,6 +4,7 @@ import {
   detectTrigger,
   extractShorthandTokens,
   getSuggestions,
+  parseRecurrenceShorthand,
 } from '#lib/task-shorthand'
 
 beforeEach(() => {
@@ -145,6 +146,68 @@ describe('extractShorthandTokens', () => {
     })
   })
 
+  it('parses a recurrence type with *daily', () => {
+    expect(extractShorthandTokens('Task *daily ')).toEqual({
+      title: 'Task ',
+      recurrenceRule: { type: 'daily', interval: 1 },
+      labels: [],
+    })
+  })
+
+  it('parses a recurrence type with *monthly', () => {
+    expect(extractShorthandTokens('Task *monthly ')).toEqual({
+      title: 'Task ',
+      recurrenceRule: { type: 'monthly', interval: 1 },
+      labels: [],
+    })
+  })
+
+  it('parses a single weekday as weekly with that day', () => {
+    expect(extractShorthandTokens('Task *sun ')).toEqual({
+      title: 'Task ',
+      recurrenceRule: { type: 'weekly', interval: 1, daysOfWeek: [0] },
+      labels: [],
+    })
+  })
+
+  it('accumulates multiple weekday tokens into one weekly rule', () => {
+    expect(extractShorthandTokens('Task *mon *thu ')).toEqual({
+      title: 'Task ',
+      recurrenceRule: { type: 'weekly', interval: 1, daysOfWeek: [1, 4] },
+      labels: [],
+    })
+  })
+
+  it('parses a recurrence type with the Japanese alias *毎週', () => {
+    expect(extractShorthandTokens('Task *毎週 ')).toEqual({
+      title: 'Task ',
+      recurrenceRule: { type: 'weekly', interval: 1 },
+      labels: [],
+    })
+  })
+
+  it('parses a weekday with the Japanese alias *日曜', () => {
+    expect(extractShorthandTokens('Task *日曜 ')).toEqual({
+      title: 'Task ',
+      recurrenceRule: { type: 'weekly', interval: 1, daysOfWeek: [0] },
+      labels: [],
+    })
+  })
+
+  it('leaves *月 as title text since it is ambiguous between Monday and monthly', () => {
+    expect(extractShorthandTokens('Task *月 ')).toEqual({
+      title: 'Task *月 ',
+      labels: [],
+    })
+  })
+
+  it('leaves unrecognized * tokens as title text', () => {
+    expect(extractShorthandTokens('Task *important ')).toEqual({
+      title: 'Task *important ',
+      labels: [],
+    })
+  })
+
   it('parses a GitHub issue URL once followed by a space', () => {
     expect(
       extractShorthandTokens('Fix bug https://github.com/fohte/tq/issues/123 '),
@@ -260,6 +323,14 @@ describe('detectTrigger', () => {
   it('returns null right after a completed token followed by a space', () => {
     expect(detectTrigger('Task @30m ', 10)).toBeNull()
   })
+
+  it('detects the * recurrence trigger', () => {
+    expect(detectTrigger('Task *we', 8)).toEqual({
+      trigger: '*',
+      partial: 'we',
+      tokenStart: 5,
+    })
+  })
 })
 
 describe('getSuggestions', () => {
@@ -295,5 +366,66 @@ describe('getSuggestions', () => {
 
   it('returns no items for ^ since its suggestions are fetched asynchronously', () => {
     expect(getSuggestions('^', '')).toEqual([])
+  })
+
+  it('returns recurrence type and weekday items for *', () => {
+    expect(getSuggestions('*', '')).toEqual([
+      { value: 'daily', display: 'daily' },
+      { value: 'weekly', display: 'weekly' },
+      { value: 'monthly', display: 'monthly' },
+      { value: 'sun', display: 'sun' },
+      { value: 'mon', display: 'mon' },
+      { value: 'tue', display: 'tue' },
+      { value: 'wed', display: 'wed' },
+      { value: 'thu', display: 'thu' },
+      { value: 'fri', display: 'fri' },
+      { value: 'sat', display: 'sat' },
+    ])
+  })
+
+  it('filters * suggestions by a case-insensitive prefix match', () => {
+    expect(getSuggestions('*', 'MONT')).toEqual([
+      { value: 'monthly', display: 'monthly' },
+    ])
+  })
+})
+
+describe('parseRecurrenceShorthand', () => {
+  it('parses a bare weekday without a leading *', () => {
+    expect(parseRecurrenceShorthand('sun')).toEqual({
+      type: 'weekly',
+      interval: 1,
+      daysOfWeek: [0],
+    })
+  })
+
+  it('parses a bare recurrence type without a leading *', () => {
+    expect(parseRecurrenceShorthand('daily')).toEqual({
+      type: 'daily',
+      interval: 1,
+    })
+  })
+
+  it('still accepts an explicit leading *', () => {
+    expect(parseRecurrenceShorthand('*weekly')).toEqual({
+      type: 'weekly',
+      interval: 1,
+    })
+  })
+
+  it('accumulates multiple bare weekday tokens', () => {
+    expect(parseRecurrenceShorthand('mon thu')).toEqual({
+      type: 'weekly',
+      interval: 1,
+      daysOfWeek: [1, 4],
+    })
+  })
+
+  it('returns undefined for an empty input', () => {
+    expect(parseRecurrenceShorthand('')).toBeUndefined()
+  })
+
+  it('returns undefined for an unrecognized keyword', () => {
+    expect(parseRecurrenceShorthand('nonsense')).toBeUndefined()
   })
 })

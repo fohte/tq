@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { Bell, CalendarRange } from 'lucide-react'
+import { Bell, CalendarRange, Repeat } from 'lucide-react'
 import { useState } from 'react'
 
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
@@ -9,6 +9,7 @@ import type { SearchResult } from '#hooks/use-search'
 import type { Task } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatMinutes, formatReminderTime } from '#lib/format'
+import { formatRecurrenceSummary, type RecurrenceRule } from '#lib/recurrence'
 import { formatShortDate, isTaskOverdue } from '#lib/task-due-date'
 import { tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
@@ -186,6 +187,15 @@ export function ParentTaskLabel({ parentNumber }: { parentNumber: number }) {
   return (
     <span className="shrink-0 font-mono text-xs text-muted-foreground">
       ← #{parentNumber}
+    </span>
+  )
+}
+
+export function RecurrenceLabel({ rule }: { rule: RecurrenceRule }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground">
+      <Repeat className="size-3" />
+      {formatRecurrenceSummary(rule)}
     </span>
   )
 }
