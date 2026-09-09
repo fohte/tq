@@ -217,6 +217,22 @@ export const WithEstimate: Story = {
   },
 }
 
+export const WithRecurrence: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Water the plants',
+      recurrenceRule: {
+        id: 'recurrence-1',
+        type: 'weekly',
+        interval: 1,
+        daysOfWeek: [0, 3],
+        dayOfMonth: null,
+      },
+    },
+  },
+}
+
 export const WithGithubLink: Story = {
   args: {
     task: {

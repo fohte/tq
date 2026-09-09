@@ -11,7 +11,6 @@ import {
   createTask,
   TEST_UUID,
   withoutLinkSync,
-  withoutRecurrenceRule,
 } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
@@ -130,7 +129,7 @@ describe('read tools', () => {
 
       expect(parseJson(toolResult)).toEqual([
         {
-          ...withoutLinkSync(withoutRecurrenceRule(task)),
+          ...withoutLinkSync(task),
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
@@ -148,7 +147,7 @@ describe('read tools', () => {
 
       expect(parseJson(toolResult)).toEqual([
         {
-          ...withoutLinkSync(withoutRecurrenceRule(parent)),
+          ...withoutLinkSync(parent),
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
@@ -188,7 +187,7 @@ describe('read tools', () => {
         blocking: [],
         subtasks: [
           {
-            ...withoutLinkSync(withoutRecurrenceRule(child)),
+            ...withoutLinkSync(child),
             parentNumber: parent.number,
             duplicateOfNumber: null,
             blockedByNumbers: [],
@@ -327,7 +326,7 @@ describe('read tools', () => {
 
       expect(parseJson(toolResult)).toEqual([
         {
-          ...withoutLinkSync(withoutRecurrenceRule(match)),
+          ...withoutLinkSync(match),
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
@@ -344,7 +343,7 @@ describe('read tools', () => {
 
       expect(parseJson(toolResult)).toEqual([
         {
-          ...withoutLinkSync(withoutRecurrenceRule(withoutEstimate)),
+          ...withoutLinkSync(withoutEstimate),
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
@@ -363,7 +362,7 @@ describe('read tools', () => {
 
       expect(parseJson(toolResult)).toEqual([
         {
-          ...withoutLinkSync(withoutRecurrenceRule(withDue)),
+          ...withoutLinkSync(withDue),
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
