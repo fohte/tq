@@ -65,11 +65,7 @@ function formatHm(date: Date): string {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
-// Matches the `.fc-timegrid-slot` height in fullcalendar.css and the
-// slotDuration="00:30:00" below — FullCalendar's timeGrid DOM has no "1 day ×
-// 30 min" cell to hover (rows span all days, columns span the full day), so
-// the hovered slot has to be computed from the pointer position by hand.
-const SLOT_HEIGHT_PX = 26
+// 24h / 30min slots (matches slotMinTime/slotMaxTime/slotDuration below).
 const SLOTS_PER_DAY = 48
 
 interface SlotGhostRect {
@@ -269,18 +265,38 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         setSlotGhost(null)
         return
       }
+      // Day columns have no per-slot subdivision, so the slot height is read
+      // off a real slot row instead of duplicating it as a constant.
+      const slotHeight = e.currentTarget
+        .querySelector('.fc-timegrid-slot')
+        ?.getBoundingClientRect().height
+      if (slotHeight == null) {
+        setSlotGhost(null)
+        return
+      }
       const containerRect = e.currentTarget.getBoundingClientRect()
       const colRect = colEl.getBoundingClientRect()
       const slotIndex = Math.min(
-        Math.max(Math.floor((e.clientY - colRect.top) / SLOT_HEIGHT_PX), 0),
+        Math.max(Math.floor((e.clientY - colRect.top) / slotHeight), 0),
         SLOTS_PER_DAY - 1,
       )
-      setSlotGhost({
-        top: colRect.top - containerRect.top + slotIndex * SLOT_HEIGHT_PX,
+      const next: SlotGhostRect = {
+        top: colRect.top - containerRect.top + slotIndex * slotHeight,
         left: colRect.left - containerRect.left,
         width: colRect.width,
-        height: SLOT_HEIGHT_PX,
-      })
+        height: slotHeight,
+      }
+      // Skip the update when nothing moved, so FullCalendar doesn't rebuild
+      // its event store on every mousemove within the same slot.
+      setSlotGhost((prev) =>
+        prev &&
+        prev.top === next.top &&
+        prev.left === next.left &&
+        prev.width === next.width &&
+        prev.height === next.height
+          ? prev
+          : next,
+      )
     }
 
     const handleGridMouseLeave = () => {
@@ -315,6 +331,9 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         className="tq-calendar relative h-full"
         onMouseMove={handleGridMouseMove}
         onMouseLeave={handleGridMouseLeave}
+        // Scrolling `.fc-scroller` without moving the pointer would
+        // otherwise leave the ghost stale; capture since scroll doesn't bubble.
+        onScrollCapture={handleGridMouseLeave}
       >
         <FullCalendar
           ref={fullCalendarRef}

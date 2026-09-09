@@ -187,7 +187,12 @@ export const HoverEmptySlot: Story = {
       ),
     )
     const ghostRect = ghost.getBoundingClientRect()
-    await expect(ghostRect.height).toBe(26)
+    const slotHeight = assertDefined(
+      canvasElement.querySelector('.fc-timegrid-slot')?.getBoundingClientRect()
+        .height,
+      'slot element not found',
+    )
+    await expect(ghostRect.height).toBe(slotHeight)
     await expect(ghostRect.top).toBeLessThanOrEqual(hoverY)
     await expect(ghostRect.bottom).toBeGreaterThan(hoverY)
   },
@@ -212,6 +217,33 @@ export const HoverExistingEvent: Story = {
     await fireEvent.mouseMove(gymEvent, {
       clientX: gymRect.left + gymRect.width / 2,
       clientY: gymRect.top + gymRect.height / 2,
+    })
+
+    await waitFor(() =>
+      expect(canvasElement.querySelector('.tq-slot-hover-ghost')).toBeNull(),
+    )
+  },
+}
+
+export const HoverAxisColumn: Story = {
+  args: {
+    activeView: 'day',
+  },
+  parameters: {
+    // The time-label gutter never renders a ghost, so the DOM never
+    // changes — the screenshot would be identical to DayView.
+    screenshot: { skip: true },
+  },
+  play: async ({ canvasElement }) => {
+    const axisCol = assertDefined(
+      canvasElement.querySelector<HTMLElement>('.fc-timegrid-axis'),
+      'time-axis column not found',
+    )
+    const rect = axisCol.getBoundingClientRect()
+
+    await fireEvent.mouseMove(axisCol, {
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2,
     })
 
     await waitFor(() =>
