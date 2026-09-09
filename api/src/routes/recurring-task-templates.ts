@@ -251,7 +251,7 @@ export const recurringTaskTemplatesApp = new Hono()
                   labelsInput,
                   updatedTemplate.context,
                 )
-              : await getTemplateLabelNames(id)
+              : await getTemplateLabelNames(id, tx)
 
           return { updatedTemplate, rule, labelNames }
         },

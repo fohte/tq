@@ -49,8 +49,9 @@ export async function syncTemplateLabels(
 
 export async function getTemplateLabelNames(
   templateId: string,
+  executor: DbTransaction | typeof db = db,
 ): Promise<string[]> {
-  const rows = await db
+  const rows = await executor
     .select({ name: labels.name })
     .from(recurringTaskTemplateLabels)
     .innerJoin(labels, eq(recurringTaskTemplateLabels.labelId, labels.id))
