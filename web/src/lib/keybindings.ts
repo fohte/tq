@@ -69,3 +69,15 @@ export const allKeybindings: Keybinding[] = [
   newTaskKeybinding,
   ...Object.values(navKeybindings),
 ]
+
+// Only active on the calendar screen (see use-calendar-keybindings.ts),
+// unlike allKeybindings' entries which work anywhere in the app — kept
+// separate so the settings list can label them accordingly.
+export const calendarKeybindings: Keybinding[] = [
+  { id: 'calendar-today', keys: 't', description: 'jump to today' },
+  { id: 'calendar-prev', keys: '←', description: 'previous period' },
+  { id: 'calendar-next', keys: '→', description: 'next period' },
+  { id: 'calendar-day-view', keys: 'd', description: 'day view' },
+  { id: 'calendar-week-view', keys: 'w', description: 'week view' },
+  { id: 'calendar-month-view', keys: 'm', description: 'month view' },
+]
