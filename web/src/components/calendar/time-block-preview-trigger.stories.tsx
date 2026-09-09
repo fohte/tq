@@ -10,9 +10,6 @@ import { formatLocalDate } from '#lib/date-range'
 
 const taskId = '00000000-0000-0000-0000-000000000001'
 
-// Stands in for EventBlock's rendered chip: this file only exercises the
-// hover-card wiring, not the chip's own appearance (covered by
-// event-block.stories.tsx).
 function Chip({ label }: { label: string }) {
   return (
     <div className="flex h-full w-full items-center bg-primary/20 px-1 text-2xs">
@@ -49,8 +46,6 @@ function autoBlockQueueItems() {
   return [makeQueueItem({ taskId, periodStart: autoEventLocalDate })]
 }
 
-// A schedule event never carries a taskId, so this is the "chip unchanged"
-// passthrough case alongside a redacted task block.
 const redactedEvent = {
   id: 'block-redacted',
   start: new Date('2026-07-29T16:00:00.000Z'),

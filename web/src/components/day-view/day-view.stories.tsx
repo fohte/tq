@@ -139,6 +139,7 @@ const sampleEvents: TimeBlockEvent[] = [
     type: 'manual',
     parentRef: '#488 tq 作成',
     taskId: 'task-tb-4',
+    isAutoScheduled: false,
   },
   {
     id: 'tb-5',
@@ -154,6 +155,7 @@ const sampleEvents: TimeBlockEvent[] = [
     end: `${dateStr}T13:45:00`,
     type: 'auto',
     taskId: 'task-tb-6',
+    isAutoScheduled: true,
   },
   {
     id: 'tb-7',

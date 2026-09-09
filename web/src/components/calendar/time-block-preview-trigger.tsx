@@ -1,5 +1,5 @@
 import { PreviewCard as PreviewCardPrimitive } from '@base-ui/react/preview-card'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 
 import { TimeBlockCard } from '#components/task/time-block-card'
 import {
@@ -75,9 +75,11 @@ function AutoTimeBlockPreview({
   block: PreviewBlock
   children: React.ReactNode
 }) {
+  const [open, setOpen] = useState(false)
   const { onDelete, isDeleting } = useRemoveFromDayQueue(
     taskId,
     formatLocalDate(new Date(block.startTime)),
+    { enabled: open },
   )
 
   return (
@@ -85,6 +87,7 @@ function AutoTimeBlockPreview({
       block={block}
       onDelete={onDelete}
       isDeleting={isDeleting}
+      onOpenChange={setOpen}
     >
       {children}
     </TimeBlockPreviewPopup>
@@ -115,33 +118,25 @@ function ManualTimeBlockPreview({
   )
 }
 
-/**
- * The trigger's `render` element is a transparent full-size div, not the
- * chip itself: EventBlock's own div fills its FullCalendar-provided harness
- * via `h-full`, so this wrapper must match that sizing instead of adding a
- * visible box around it.
- *
- * Closing on the trigger's own pointerdown (rather than e.g. FullCalendar's
- * eventDragStart) is enough to keep the card from covering a drag in
- * progress: a drag can only start from a pointerdown on this same chip, and
- * this only ever affects this chip's own card. `close()` is a no-op if the
- * card isn't open.
- */
+// Closes the card on the trigger's own pointerdown so it doesn't obstruct a
+// drag that starts from the same chip.
 function TimeBlockPreviewPopup({
   block,
   onDelete,
   isDeleting,
+  onOpenChange,
   children,
 }: {
   block: PreviewBlock
   onDelete: () => void
   isDeleting: boolean
+  onOpenChange?: (open: boolean) => void
   children: React.ReactNode
 }) {
   const actionsRef = useRef<PreviewCardPrimitive.Root.Actions>(null)
 
   return (
-    <PreviewCard actionsRef={actionsRef}>
+    <PreviewCard actionsRef={actionsRef} onOpenChange={onOpenChange}>
       <PreviewCardTrigger
         render={<div className="h-full w-full" />}
         onPointerDown={() => actionsRef.current?.close()}
