@@ -55,6 +55,26 @@
   border-color: var(--surface-strong);
 }
 
+/* Range-selection highlight FullCalendar draws while drag-selecting a time
+   range, and the synthetic .tq-slot-hover-ghost below reuses this class so
+   hovering an empty slot and drag-selecting one read as the same
+   interaction. --surface-strong (not --card) because today's column is
+   already tinted --card in week view, which would make the highlight
+   invisible there. */
+.tq-calendar .fc-highlight {
+  background-color: var(--surface-strong);
+}
+
+/* Ghost block for the 30-minute slot under the pointer. FullCalendar's
+   timeGrid DOM has no per-day-per-slot cell to hover (rows span every day,
+   columns span the whole day), so calendar-grid.tsx computes this box from
+   the pointer position instead. */
+.tq-calendar .tq-slot-hover-ghost {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+}
+
 /* Now indicator — thin red line + square marker */
 .tq-calendar .fc-timegrid-now-indicator-line {
   border-color: var(--primary);

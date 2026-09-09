@@ -11,7 +11,13 @@ import type {
 import interactionPlugin, { Draggable } from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react'
 
 import {
   type CalendarViewType,
@@ -59,6 +65,20 @@ function formatHm(date: Date): string {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
+// Matches the `.fc-timegrid-slot` height in fullcalendar.css and the
+// slotDuration="00:30:00" below — FullCalendar's timeGrid DOM has no "1 day ×
+// 30 min" cell to hover (rows span all days, columns span the full day), so
+// the hovered slot has to be computed from the pointer position by hand.
+const SLOT_HEIGHT_PX = 26
+const SLOTS_PER_DAY = 48
+
+interface SlotGhostRect {
+  top: number
+  left: number
+  width: number
+  height: number
+}
+
 interface CalendarGridProps {
   events: TimeBlockEvent[]
   activeView: CalendarViewType
@@ -94,6 +114,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
   ) {
     const isDesktop = useIsDesktop()
     const fullCalendarRef = useRef<FullCalendar>(null)
+    const [slotGhost, setSlotGhost] = useState<SlotGhostRect | null>(null)
     useImperativeHandle<FullCalendar | null, FullCalendar | null>(
       ref,
       () => fullCalendarRef.current,
@@ -237,6 +258,35 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       }
     }
 
+    const handleGridMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+      const target = e.target instanceof HTMLElement ? e.target : null
+      const colEl = target?.closest('.fc-timegrid-col')
+      if (
+        !colEl ||
+        colEl.classList.contains('fc-timegrid-axis') ||
+        target?.closest('.fc-event')
+      ) {
+        setSlotGhost(null)
+        return
+      }
+      const containerRect = e.currentTarget.getBoundingClientRect()
+      const colRect = colEl.getBoundingClientRect()
+      const slotIndex = Math.min(
+        Math.max(Math.floor((e.clientY - colRect.top) / SLOT_HEIGHT_PX), 0),
+        SLOTS_PER_DAY - 1,
+      )
+      setSlotGhost({
+        top: colRect.top - containerRect.top + slotIndex * SLOT_HEIGHT_PX,
+        left: colRect.left - containerRect.left,
+        width: colRect.width,
+        height: SLOT_HEIGHT_PX,
+      })
+    }
+
+    const handleGridMouseLeave = () => {
+      setSlotGhost(null)
+    }
+
     const handleSelect = (info: DateSelectArg) => {
       if (!onSelectRange || info.allDay) return
       onSelectRange({ start: info.start, end: info.end })
@@ -261,7 +311,11 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     }
 
     return (
-      <div className="tq-calendar h-full">
+      <div
+        className="tq-calendar relative h-full"
+        onMouseMove={handleGridMouseMove}
+        onMouseLeave={handleGridMouseLeave}
+      >
         <FullCalendar
           ref={fullCalendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
@@ -378,6 +432,17 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
             : {})}
           {...(onDatesSet ? { datesSet: onDatesSet } : {})}
         />
+        {slotGhost && (
+          <div
+            className="fc-highlight tq-slot-hover-ghost"
+            style={{
+              top: slotGhost.top,
+              left: slotGhost.left,
+              width: slotGhost.width,
+              height: slotGhost.height,
+            }}
+          />
+        )}
       </div>
     )
   },
