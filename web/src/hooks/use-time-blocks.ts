@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
+import { taskKeys } from '#hooks/use-tasks'
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
 
@@ -206,4 +207,22 @@ export function useDeleteTimeBlock() {
       void queryClient.invalidateQueries({ queryKey: timeBlockKeys.all })
     },
   })
+}
+
+export function useDeleteManualTimeBlock(taskId: string, blockId: string) {
+  const queryClient = useQueryClient()
+  const deleteTimeBlock = useDeleteTimeBlock()
+
+  return {
+    onDelete: () => {
+      deleteTimeBlock.mutate(blockId, {
+        onSuccess: () => {
+          void queryClient.invalidateQueries({
+            queryKey: taskKeys.detail(taskId),
+          })
+        },
+      })
+    },
+    isDeleting: deleteTimeBlock.isPending,
+  }
 }

@@ -20,6 +20,7 @@ import {
 } from '#components/calendar/calendar-header'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { EventBlock, GcalStatusBand } from '#components/calendar/event-block'
+import { TimeBlockPreviewTrigger } from '#components/calendar/time-block-preview-trigger'
 import { useIsDesktop } from '#hooks/use-is-desktop'
 import {
   getEventProps,
@@ -171,6 +172,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         parentRef: event.parentRef,
         color: event.color,
         taskId: event.taskId,
+        isAutoScheduled: event.isAutoScheduled,
         scheduleId: event.scheduleId,
         scheduleStart: event.start,
         redacted: event.redacted,
@@ -306,16 +308,23 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
             // real event.end to show the correct cross-day time range
             const startDate = arg.event.start
             const endDate = arg.event.end
-            if (
+            const content =
               !arg.event.allDay &&
               startDate &&
               endDate &&
-              endDate.getDate() !== startDate.getDate()
-            ) {
-              const overrideTimeText = `${formatHm(startDate)}–${formatHm(endDate)}`
-              return <EventBlock {...arg} timeText={overrideTimeText} />
-            }
-            return <EventBlock {...arg} />
+              endDate.getDate() !== startDate.getDate() ? (
+                <EventBlock
+                  {...arg}
+                  timeText={`${formatHm(startDate)}–${formatHm(endDate)}`}
+                />
+              ) : (
+                <EventBlock {...arg} />
+              )
+            return (
+              <TimeBlockPreviewTrigger event={arg.event}>
+                {content}
+              </TimeBlockPreviewTrigger>
+            )
           }}
           nowIndicator={true}
           nowIndicatorContent={(arg) => {

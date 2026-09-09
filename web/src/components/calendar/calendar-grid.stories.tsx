@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 import { expect, fn } from 'storybook/test'
 
 import {
@@ -7,6 +9,7 @@ import {
 } from '#components/calendar/calendar-grid'
 import type { CalendarViewType } from '#components/calendar/calendar-header'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
+import { DAY_QUEUE_KEY } from '#hooks/use-queues'
 import { formatLocalDate } from '#lib/date-range'
 import { assertDefined } from '#lib/test-utils'
 
@@ -91,6 +94,15 @@ const meta = {
     // clientWidth by a fixed ~80px whenever its vertical scrollbar is
     // forced on — a library-internal sizing artifact, not fixable here.
     overflowCheck: { ignoreSelectors: ['.fc-scroller'] },
+    // The 'task-2' auto block's hover-card preview eagerly loads the day
+    // queue (see useRemoveFromDayQueue), regardless of whether it's hovered.
+    msw: {
+      handlers: [
+        http.get(`/api/queues/${DAY_QUEUE_KEY}/items`, () =>
+          HttpResponse.json([]),
+        ),
+      ],
+    },
   },
   argTypes: {
     activeView: {
@@ -100,9 +112,15 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div style={{ height: '100vh' }}>
-        <Story />
-      </div>
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <div style={{ height: '100vh' }}>
+          <Story />
+        </div>
+      </QueryClientProvider>
     ),
   ],
   args: {

@@ -102,3 +102,25 @@ export function useSetQueueItems() {
     },
   })
 }
+
+export function useRemoveFromDayQueue(taskId: string, localDate: string) {
+  const dayQueueItems = useQueueItems(DAY_QUEUE_KEY, localDate)
+  const setQueueItems = useSetQueueItems()
+
+  return {
+    onDelete: () => {
+      setQueueItems.mutate({
+        key: DAY_QUEUE_KEY,
+        date: localDate,
+        taskIds: (dayQueueItems.data ?? [])
+          .map((item) => item.taskId)
+          .filter((id) => id !== taskId),
+      })
+    },
+    isDeleting:
+      setQueueItems.isPending ||
+      dayQueueItems.isLoading ||
+      dayQueueItems.isError ||
+      dayQueueItems.data === undefined,
+  }
+}

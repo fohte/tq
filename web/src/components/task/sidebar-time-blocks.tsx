@@ -1,14 +1,7 @@
-import { useQueryClient } from '@tanstack/react-query'
-
 import { TimeBlockCard } from '#components/task/time-block-card'
-import {
-  DAY_QUEUE_KEY,
-  useQueueItems,
-  useSetQueueItems,
-} from '#hooks/use-queues'
+import { useRemoveFromDayQueue } from '#hooks/use-queues'
 import type { TaskDetail } from '#hooks/use-tasks'
-import { taskKeys } from '#hooks/use-tasks'
-import { useDeleteTimeBlock } from '#hooks/use-time-blocks'
+import { useDeleteManualTimeBlock } from '#hooks/use-time-blocks'
 import { formatLocalDate } from '#lib/date-range'
 
 type TimeBlockItem = TaskDetail['timeBlocks'][number]
@@ -47,23 +40,10 @@ function ManualTimeBlockRow({
   taskId: string
   block: TimeBlockItem
 }) {
-  const queryClient = useQueryClient()
-  const deleteTimeBlock = useDeleteTimeBlock()
+  const { onDelete, isDeleting } = useDeleteManualTimeBlock(taskId, block.id)
 
   return (
-    <TimeBlockCard
-      block={block}
-      isDeleting={deleteTimeBlock.isPending}
-      onDelete={() => {
-        deleteTimeBlock.mutate(block.id, {
-          onSuccess: () => {
-            void queryClient.invalidateQueries({
-              queryKey: taskKeys.detail(taskId),
-            })
-          },
-        })
-      }}
-    />
+    <TimeBlockCard block={block} isDeleting={isDeleting} onDelete={onDelete} />
   )
 }
 
@@ -77,28 +57,12 @@ function AutoTimeBlockRow({
   taskId: string
   block: TimeBlockItem
 }) {
-  const localDate = formatLocalDate(new Date(block.startTime))
-  const dayQueueItems = useQueueItems(DAY_QUEUE_KEY, localDate)
-  const setQueueItems = useSetQueueItems()
+  const { onDelete, isDeleting } = useRemoveFromDayQueue(
+    taskId,
+    formatLocalDate(new Date(block.startTime)),
+  )
 
   return (
-    <TimeBlockCard
-      block={block}
-      isDeleting={
-        setQueueItems.isPending ||
-        dayQueueItems.isLoading ||
-        dayQueueItems.isError ||
-        dayQueueItems.data === undefined
-      }
-      onDelete={() => {
-        setQueueItems.mutate({
-          key: DAY_QUEUE_KEY,
-          date: localDate,
-          taskIds: (dayQueueItems.data ?? [])
-            .map((item) => item.taskId)
-            .filter((id) => id !== taskId),
-        })
-      }}
-    />
+    <TimeBlockCard block={block} isDeleting={isDeleting} onDelete={onDelete} />
   )
 }
