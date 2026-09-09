@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { expect, fireEvent, fn, waitFor } from 'storybook/test'
 
 import {
@@ -33,6 +34,7 @@ const sampleEvents: TimeBlockEvent[] = [
     type: 'auto',
     parentRef: '#488 tq 作成',
     taskId: 'task-2',
+    isAutoScheduled: true,
   },
   {
     id: '3',
@@ -98,11 +100,20 @@ const meta = {
       options: ['day', 'week', 'month'] satisfies CalendarViewType[],
     },
   },
+  // AutoTimeBlockPreview's hover-card wiring calls a query hook on mount
+  // regardless of whether it's ever hovered, so a QueryClientProvider is
+  // required even though the query itself only fires once opened.
   decorators: [
     (Story) => (
-      <div style={{ height: '100vh' }}>
-        <Story />
-      </div>
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <div style={{ height: '100vh' }}>
+          <Story />
+        </div>
+      </QueryClientProvider>
     ),
   ],
   args: {

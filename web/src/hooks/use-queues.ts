@@ -40,7 +40,13 @@ export function useQueues() {
   })
 }
 
-export function useQueueItems(key: string, date: string) {
+export function useQueueItems(
+  key: string,
+  date: string,
+  options?: { enabled?: boolean },
+) {
+  const enabled = options?.enabled
+
   return useQuery({
     queryKey: queueKeys.items(key, date),
     queryFn: async () => {
@@ -50,6 +56,10 @@ export function useQueueItems(key: string, date: string) {
       })
       return unwrapOrThrow(assertOk(res)).json()
     },
+    // exactOptionalPropertyTypes rejects `enabled: undefined` since Enabled
+    // itself doesn't include undefined, so the key must be omitted entirely
+    // to fall back to react-query's default (enabled).
+    ...(enabled === undefined ? {} : { enabled }),
   })
 }
 
@@ -101,4 +111,30 @@ export function useSetQueueItems() {
       queryClient.setQueryData(queueKeys.items(key, date), data)
     },
   })
+}
+
+export function useRemoveFromDayQueue(
+  taskId: string,
+  localDate: string,
+  options?: { enabled?: boolean },
+) {
+  const dayQueueItems = useQueueItems(DAY_QUEUE_KEY, localDate, options)
+  const setQueueItems = useSetQueueItems()
+
+  return {
+    onDelete: () => {
+      setQueueItems.mutate({
+        key: DAY_QUEUE_KEY,
+        date: localDate,
+        taskIds: (dayQueueItems.data ?? [])
+          .map((item) => item.taskId)
+          .filter((id) => id !== taskId),
+      })
+    },
+    isDeleting:
+      setQueueItems.isPending ||
+      dayQueueItems.isLoading ||
+      dayQueueItems.isError ||
+      dayQueueItems.data === undefined,
+  }
 }

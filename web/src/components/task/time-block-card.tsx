@@ -29,7 +29,7 @@ export function TimeBlockCard({
   onDelete,
   isDeleting,
 }: {
-  block: TimeBlock
+  block: Pick<TimeBlock, 'startTime' | 'endTime' | 'isAutoScheduled'>
   onDelete: () => void
   isDeleting?: boolean
 }) {

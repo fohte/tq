@@ -37,6 +37,8 @@ export interface TimeBlockEvent {
   }
   /** Underlying task id, present when type is 'manual' | 'auto' | 'completed' */
   taskId?: string
+  /** Underlying time block's raw auto-scheduled flag; present when type is 'manual' | 'auto' | 'completed' */
+  isAutoScheduled?: boolean
   /** Underlying schedule id, present when type is 'schedule' */
   scheduleId?: string
   /** Google Calendar's color for the event's calendar; used as an accent on gcal events except gcal-solo, which renders without a calendar accent */

@@ -13,6 +13,8 @@ export interface CalendarEventProps {
   parentRef?: string
   color?: { accent: string }
   taskId?: string
+  /** Underlying time block's raw auto-scheduled flag; present when type is 'manual' | 'auto' | 'completed'. Independent of `type`, since a completed task's block can have been either. */
+  isAutoScheduled?: boolean
   scheduleId?: string
   /** Raw start ISO string, used to disambiguate cross-midnight blocks sharing a scheduleId */
   scheduleStart?: string

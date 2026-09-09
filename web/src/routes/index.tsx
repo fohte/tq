@@ -242,6 +242,7 @@ function DayView() {
               ? 'auto'
               : 'manual',
         taskId: block.taskId,
+        isAutoScheduled: block.isAutoScheduled,
         ...(parentTask != null
           ? { parentRef: `#${String(parentTask.number)} ${parentTask.title}` }
           : {}),
