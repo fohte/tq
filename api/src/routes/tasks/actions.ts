@@ -5,13 +5,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { db, type DbTransaction } from '#db/connection'
-import {
-  labels,
-  recurrenceRules,
-  taskLabels,
-  taskRelations,
-  tasks,
-} from '#db/schema'
+import { recurrenceRules, taskRelations, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
 import { taskIdOrNumber } from '#lib/numeric-id'
@@ -24,7 +18,7 @@ import {
 } from '#routes/tasks/shared'
 import { taskStatus, taskStatusReason } from '#schemas/task'
 import { buildNextTaskData } from '#services/recurrence'
-import { syncTaskLabels } from '#services/task-labels'
+import { getTaskLabelNames, syncTaskLabels } from '#services/task-labels'
 import { syncTaskLinks, type TaskLinkSyncResult } from '#services/task-links'
 import { getIncompleteBlockerNumbers } from '#services/task-relations'
 
@@ -358,15 +352,14 @@ export const tasksActionsApp = new Hono()
               { action: 'create' },
               SYSTEM_AUTHOR,
             )
-            const completedTaskLabels = await tx
-              .select({ name: labels.name })
-              .from(taskLabels)
-              .innerJoin(labels, eq(taskLabels.labelId, labels.id))
-              .where(eq(taskLabels.taskId, updatedTask.id))
+            const completedTaskLabelNames = await getTaskLabelNames(
+              tx,
+              updatedTask.id,
+            )
             await syncTaskLabels(
               tx,
               created.id,
-              completedTaskLabels.map((label) => label.name),
+              completedTaskLabelNames,
               created.context,
             )
             return created
