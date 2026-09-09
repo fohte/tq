@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   formatMinutes,
   formatRelativeTime,
-  formatShortDateTime,
+  formatReminderTime,
 } from '#lib/format'
 
 describe('formatMinutes', () => {
@@ -58,18 +58,35 @@ describe('formatRelativeTime', () => {
   })
 })
 
-describe('formatShortDateTime', () => {
+describe('formatReminderTime', () => {
+  // Friday 2026-03-20 21:00 JST.
   const now = new Date('2026-03-20T12:00:00.000Z')
 
-  it('omits the year when the instant is in the current year', () => {
-    expect(formatShortDateTime('2026-03-25T09:00:00.000Z', now)).toBe(
-      'Mar 25, 6:00 PM',
+  it('formats a bare time for later the same calendar day', () => {
+    expect(formatReminderTime('2026-03-20T14:00:00.000Z', now)).toBe('23:00')
+  })
+
+  it('formats "tomorrow H:MM" for the next calendar day', () => {
+    expect(formatReminderTime('2026-03-21T00:30:00.000Z', now)).toBe(
+      'tomorrow 09:30',
     )
   })
 
-  it('includes the year when the instant is in a different year', () => {
-    expect(formatShortDateTime('2027-01-05T00:30:00.000Z', now)).toBe(
-      'Jan 5, 2027, 9:30 AM',
+  it('formats a short weekday within the next 7 days', () => {
+    expect(formatReminderTime('2026-03-24T00:00:00.000Z', now)).toBe(
+      'Tue 09:00',
+    )
+  })
+
+  it('formats a short date without a year for the same year, 7 days or more out', () => {
+    expect(formatReminderTime('2026-03-30T00:00:00.000Z', now)).toBe(
+      'Mar 30 09:00',
+    )
+  })
+
+  it('formats a short date with a year for a different year', () => {
+    expect(formatReminderTime('2027-01-05T00:30:00.000Z', now)).toBe(
+      'Jan 5, 2027 09:30',
     )
   })
 })

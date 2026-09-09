@@ -11,10 +11,32 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date)
+  result.setDate(result.getDate() + days)
+  return result
+}
+
+export const LaterToday: Story = {
   args: {
-    // Far future so the rendered year suffix never flips as wall-clock time
-    // passes (see StartDateBadge's story for the same pattern).
-    remindAt: '2099-06-15T09:00:00.000Z',
+    remindAt: addDays(new Date(), 0).toISOString(),
+  },
+}
+
+export const Tomorrow: Story = {
+  args: {
+    remindAt: addDays(new Date(), 1).toISOString(),
+  },
+}
+
+export const WithinAWeek: Story = {
+  args: {
+    remindAt: addDays(new Date(), 4).toISOString(),
+  },
+}
+
+export const BeyondAWeek: Story = {
+  args: {
+    remindAt: addDays(new Date(), 10).toISOString(),
   },
 }

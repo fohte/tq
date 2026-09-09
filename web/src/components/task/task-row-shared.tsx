@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
+import { Bell, CalendarRange } from 'lucide-react'
 import { useState } from 'react'
 
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
@@ -7,7 +8,7 @@ import { useProject } from '#hooks/use-projects'
 import type { SearchResult } from '#hooks/use-search'
 import type { Task } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
-import { formatMinutes, formatShortDateTime } from '#lib/format'
+import { formatMinutes, formatReminderTime } from '#lib/format'
 import { formatShortDate, isTaskOverdue } from '#lib/task-due-date'
 import { tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
@@ -126,39 +127,41 @@ export function TagTokens({
   )
 }
 
-export function DueDateBadge({
+// Start date and due date share one CalendarRange icon rather than one
+// icon each: at 12px, a second calendar-family glyph reads as the same
+// blob as the first, so the pair can't be told apart by shape.
+export function DateRangeBadge({
+  startDate,
   dueDate,
   status,
 }: {
-  dueDate: string
+  startDate: string | null
+  dueDate: string | null
   status: Task['status']
 }) {
+  if (startDate == null && dueDate == null) return null
+
   const overdue = isTaskOverdue({ status, dueDate })
 
   return (
-    <span
-      className={cn(
-        'shrink-0 font-mono text-xs',
-        overdue ? 'text-primary' : 'text-muted-foreground',
+    <span className="inline-flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground">
+      <CalendarRange className="size-3" />
+      {startDate != null && <span>{formatShortDate(startDate)}</span>}
+      <span>→</span>
+      {dueDate != null && (
+        <span className={cn(overdue && 'text-primary')}>
+          {formatShortDate(dueDate)}
+        </span>
       )}
-    >
-      {formatShortDate(dueDate)}
-    </span>
-  )
-}
-
-export function StartDateBadge({ startDate }: { startDate: string }) {
-  return (
-    <span className="shrink-0 font-mono text-xs text-muted-foreground">
-      {formatShortDate(startDate)}
     </span>
   )
 }
 
 export function RemindBadge({ remindAt }: { remindAt: string }) {
   return (
-    <span className="shrink-0 font-mono text-xs text-muted-foreground">
-      {formatShortDateTime(remindAt)}
+    <span className="inline-flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground">
+      <Bell className="size-3" />
+      {formatReminderTime(remindAt)}
     </span>
   )
 }

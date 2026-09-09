@@ -154,6 +154,18 @@ export const WithStartDate: Story = {
   },
 }
 
+export const WithDateRange: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Task with a start date and a due date',
+      startDate: '2026-03-25',
+      // Far future so this story never flips to overdue.
+      dueDate: '2099-06-15',
+    },
+  },
+}
+
 export const WithRemindAt: Story = {
   args: {
     task: {
