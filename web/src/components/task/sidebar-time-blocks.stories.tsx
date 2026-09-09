@@ -53,7 +53,7 @@ const meta = {
           new QueryClient({ defaultOptions: { queries: { retry: false } } })
         }
       >
-        <div className="max-w-sm">
+        <div className="max-w-sm border border-border">
           <Story />
         </div>
       </QueryClientProvider>
