@@ -23,6 +23,7 @@ import { EventBlock, GcalStatusBand } from '#components/calendar/event-block'
 import { useIsDesktop } from '#hooks/use-is-desktop'
 import {
   getEventProps,
+  isClickableEvent,
   isGcalEventType,
   isPendingGcalResponse,
 } from '#lib/calendar-utils'
@@ -64,6 +65,7 @@ interface CalendarGridProps {
   externalDragContainerRef?: React.RefObject<HTMLElement | null> | undefined
   onDateClick?: (date: Date) => void
   onScheduleClick?: ((scheduleId: string, start: string) => void) | undefined
+  onTaskClick?: ((taskId: string) => void) | undefined
   onSelectRange?: ((info: { start: Date; end: Date }) => void) | undefined
   initialDate?: Date
 }
@@ -78,6 +80,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       externalDragContainerRef,
       onDateClick,
       onScheduleClick,
+      onTaskClick,
       onSelectRange,
       initialDate,
     },
@@ -161,6 +164,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         type: event.type,
         parentRef: event.parentRef,
         color: event.color,
+        taskId: event.taskId,
         scheduleId: event.scheduleId,
         scheduleStart: event.start,
         redacted: event.redacted,
@@ -201,19 +205,18 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     }
 
     const handleEventClick = (info: EventClickArg) => {
-      if (!onScheduleClick) return
-      const { type, scheduleId, scheduleStart, redacted } = getEventProps(
-        info.event,
-      )
-      if (
-        type !== 'schedule' ||
-        scheduleId == null ||
-        scheduleStart == null ||
-        redacted === true
-      ) {
+      const props = getEventProps(info.event)
+      if (!isClickableEvent(props)) return
+      const { type, scheduleId, scheduleStart, taskId } = props
+      if (type === 'schedule') {
+        if (scheduleId != null && scheduleStart != null) {
+          onScheduleClick?.(scheduleId, scheduleStart)
+        }
         return
       }
-      onScheduleClick(scheduleId, scheduleStart)
+      if (taskId != null) {
+        onTaskClick?.(taskId)
+      }
     }
 
     const handleSelect = (info: DateSelectArg) => {
@@ -253,6 +256,11 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           }}
           {...(initialDate ? { initialDate } : {})}
           headerToolbar={false}
+          eventClassNames={(arg) =>
+            isClickableEvent(getEventProps(arg.event))
+              ? ['tq-event-clickable']
+              : []
+          }
           events={calendarEvents}
           eventContent={(arg) => {
             // In month view, render compact event pill with title

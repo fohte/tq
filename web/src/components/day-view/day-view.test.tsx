@@ -1,4 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -27,6 +34,7 @@ describe('estimateMinutesForRange', () => {
 
 let capturedOnSelectRange:
   ((info: { start: Date; end: Date }) => void) | undefined
+let capturedOnTaskClick: ((taskId: string) => void) | undefined
 let capturedModalProps: {
   open: boolean
   defaultStartDate?: string
@@ -37,8 +45,10 @@ let capturedModalProps: {
 vi.mock('#components/calendar/calendar-view', () => ({
   CalendarView: (props: {
     onSelectRange?: (info: { start: Date; end: Date }) => void
+    onTaskClick?: (taskId: string) => void
   }) => {
     capturedOnSelectRange = props.onSelectRange
+    capturedOnTaskClick = props.onTaskClick
     return null
   },
 }))
@@ -50,7 +60,10 @@ vi.mock('#components/task/create-task-modal', () => ({
   },
 }))
 
-function renderDayView(
+// The router's first route match resolves asynchronously even with no
+// loaders, so router.load() is awaited before render() to avoid an initial
+// blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
+async function renderDayView(
   overrides: Partial<DayViewPresentationProps> = {},
   onCreateTimeBlock = vi.fn(),
 ) {
@@ -78,17 +91,34 @@ function renderDayView(
     onViewModeChange: vi.fn(),
     ...overrides,
   }
+  const rootRoute = createRootRoute({
+    component: () => <DayViewPresentation {...props} />,
+  })
+  // The navigation target — a no-op component, matching how
+  // StoryRouter/tree-task-grid-row.test.tsx register targets.
+  const taskDetailRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/tasks/$taskId',
+    component: () => null,
+  })
+  rootRoute.addChildren([taskDetailRoute])
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  })
+  await router.load()
+
   render(
     <QueryClientProvider client={queryClient}>
-      <DayViewPresentation {...props} />
+      <RouterProvider router={router} />
     </QueryClientProvider>,
   )
-  return { onCreateTimeBlock }
+  return { onCreateTimeBlock, router }
 }
 
 describe('DayViewPresentation', () => {
-  it('prefills the modal from a calendar selection and creates a time block once the task is created', () => {
-    const { onCreateTimeBlock } = renderDayView()
+  it('prefills the modal from a calendar selection and creates a time block once the task is created', async () => {
+    const { onCreateTimeBlock } = await renderDayView()
     const start = new Date('2026-07-20T09:00:00')
     const end = new Date('2026-07-20T10:00:00')
 
@@ -113,7 +143,7 @@ describe('DayViewPresentation', () => {
 
   it('does not create a time block when the task is created from the "New task" button', async () => {
     const user = userEvent.setup()
-    const { onCreateTimeBlock } = renderDayView()
+    const { onCreateTimeBlock } = await renderDayView()
 
     await user.click(screen.getByLabelText('New task'))
     act(() => {
@@ -121,5 +151,15 @@ describe('DayViewPresentation', () => {
     })
 
     expect(onCreateTimeBlock).not.toHaveBeenCalled()
+  })
+
+  it('navigates to the task detail route when a calendar task event is clicked', async () => {
+    const { router } = await renderDayView()
+
+    act(() => {
+      capturedOnTaskClick?.('task-42')
+    })
+
+    expect(router.state.location.pathname).toBe('/tasks/task-42')
   })
 })

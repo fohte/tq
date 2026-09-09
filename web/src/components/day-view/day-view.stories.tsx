@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { RouterProvider } from '@tanstack/react-router'
 import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { expect, fn, within } from 'storybook/test'
@@ -12,7 +13,7 @@ import type { Schedule } from '#hooks/use-schedules'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { assertDefined, atIndex, findVisible } from '#lib/test-utils'
-import { StoryRouter } from '#storybook-config/story-router'
+import { createStoryRouter } from '#storybook-config/story-router'
 
 const today = new Date()
 const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -137,6 +138,7 @@ const sampleEvents: TimeBlockEvent[] = [
     end: `${dateStr}T11:30:00`,
     type: 'manual',
     parentRef: '#488 tq 作成',
+    taskId: 'task-tb-4',
   },
   {
     id: 'tb-5',
@@ -151,6 +153,7 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T13:00:00`,
     end: `${dateStr}T13:45:00`,
     type: 'auto',
+    taskId: 'task-tb-6',
   },
   {
     id: 'tb-7',
@@ -201,16 +204,24 @@ const sampleSchedules: Schedule[] = [
   }),
 ]
 
+// Exposes the router the Default-args stories run under, so a play function
+// (e.g. NavigatesToTaskDetail) can assert on its location after a navigation
+// that the mounted tree itself doesn't visibly react to (DayViewPresentation
+// is the router's root route component, not routed content behind an
+// Outlet).
+let dayViewRouter: ReturnType<typeof createStoryRouter> | undefined
+
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
+  dayViewRouter = createStoryRouter({
+    component: () => <>{children}</>,
+    paths: ['/tasks', '/tasks/$taskId'],
+  })
   return (
     <QueryClientProvider client={queryClient}>
-      <StoryRouter
-        component={() => <>{children}</>}
-        paths={['/tasks', '/tasks/$taskId']}
-      />
+      <RouterProvider router={dayViewRouter} />
     </QueryClientProvider>
   )
 }
@@ -362,6 +373,20 @@ export const OpensEditScheduleModal: Story = {
     await expect(
       atIndex(await body.findAllByPlaceholderText('Schedule title'), 0),
     ).toHaveValue('Sleep')
+  },
+}
+
+export const NavigatesToTaskDetail: Story = {
+  args: Default.args,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByText('#507 ビルド改善'))
+
+    // DayViewPresentation is the router's root route component rather than
+    // content behind an Outlet, so it stays mounted across the navigation —
+    // asserting on the router's own location is the only real signal here.
+    await expect(dayViewRouter?.state.location.pathname).toBe(
+      '/tasks/task-tb-4',
+    )
   },
 }
 

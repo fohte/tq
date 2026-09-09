@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { fn } from 'storybook/test'
+import { expect, fn } from 'storybook/test'
 
 import {
   type CalendarDndCallbacks,
@@ -8,6 +8,7 @@ import {
 import type { CalendarViewType } from '#components/calendar/calendar-header'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { formatLocalDate } from '#lib/date-range'
+import { assertDefined } from '#lib/test-utils'
 
 const today = new Date()
 const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -22,6 +23,7 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T09:00:00`,
     end: `${dateStr}T10:00:00`,
     type: 'manual',
+    taskId: 'task-1',
   },
   {
     id: '2',
@@ -30,6 +32,7 @@ const sampleEvents: TimeBlockEvent[] = [
     end: `${dateStr}T11:30:00`,
     type: 'auto',
     parentRef: '#488 tq 作成',
+    taskId: 'task-2',
   },
   {
     id: '3',
@@ -45,6 +48,7 @@ const sampleEvents: TimeBlockEvent[] = [
     end: `${dateStr}T08:00:00`,
     type: 'schedule',
     color: { accent: '#52B788' },
+    scheduleId: 'sched-gym',
   },
   {
     id: '5',
@@ -105,6 +109,8 @@ const meta = {
     events: sampleEvents,
     dndCallbacks,
     onDateClick: fn(),
+    onScheduleClick: fn(),
+    onTaskClick: fn(),
   },
 } satisfies Meta<typeof CalendarGrid>
 
@@ -133,5 +139,38 @@ export const Empty: Story = {
   args: {
     activeView: 'day',
     events: [],
+  },
+}
+
+export const ClickTaskEvent: Story = {
+  args: {
+    activeView: 'day',
+  },
+  play: async ({ canvas, userEvent, args }) => {
+    await userEvent.click(await canvas.findByText('API ドキュメント作成'))
+    await expect(args.onTaskClick).toHaveBeenCalledWith('task-1')
+  },
+}
+
+export const ClickGcalEvent: Story = {
+  args: {
+    activeView: 'day',
+  },
+  play: async ({ canvas, userEvent, args }) => {
+    const manualEvent = assertDefined(
+      (await canvas.findByText('API ドキュメント作成')).closest('.fc-event'),
+      'manual event .fc-event ancestor not found',
+    )
+    const gcalEvent = assertDefined(
+      canvas.getByText('Team standup').closest('.fc-event'),
+      'gcal event .fc-event ancestor not found',
+    )
+
+    await userEvent.click(canvas.getByText('Team standup'))
+
+    await expect(args.onTaskClick).not.toHaveBeenCalled()
+    await expect(args.onScheduleClick).not.toHaveBeenCalled()
+    await expect(getComputedStyle(gcalEvent).cursor).toBe('default')
+    await expect(getComputedStyle(manualEvent).cursor).toBe('pointer')
   },
 }

@@ -1,4 +1,9 @@
-import type { DateSelectArg, EventDropArg } from '@fullcalendar/core'
+import type {
+  DateSelectArg,
+  EventClickArg,
+  EventContentArg,
+  EventDropArg,
+} from '@fullcalendar/core'
 import { render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -49,6 +54,31 @@ function renderAndGetSelect(
   )
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- captured prop is the real FullCalendar select handler
   return capturedProps['select'] as (info: DateSelectArg) => void
+}
+
+function renderAndGetEventClick({
+  onScheduleClick,
+  onTaskClick,
+}: {
+  onScheduleClick?: (scheduleId: string, start: string) => void
+  onTaskClick?: (taskId: string) => void
+}) {
+  render(
+    <CalendarGrid
+      events={[]}
+      activeView="day"
+      onScheduleClick={onScheduleClick}
+      onTaskClick={onTaskClick}
+    />,
+  )
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- captured prop is the real FullCalendar eventClick handler
+  return capturedProps['eventClick'] as (info: EventClickArg) => void
+}
+
+function renderAndGetEventClassNames() {
+  render(<CalendarGrid events={[]} activeView="day" />)
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- captured prop is the real FullCalendar eventClassNames handler
+  return capturedProps['eventClassNames'] as (arg: EventContentArg) => string[]
 }
 
 describe('CalendarGrid', () => {
@@ -125,5 +155,131 @@ describe('CalendarGrid', () => {
     select({ start, end, allDay: true } as unknown as DateSelectArg)
 
     expect(onSelectRange).not.toHaveBeenCalled()
+  })
+
+  it('routes a manual event click to onTaskClick', () => {
+    const onScheduleClick = vi.fn()
+    const onTaskClick = vi.fn()
+    const eventClick = renderAndGetEventClick({ onScheduleClick, onTaskClick })
+    const info = {
+      event: { extendedProps: { type: 'manual', taskId: 'task-1' } },
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventClick reads
+    eventClick(info as unknown as EventClickArg)
+
+    expect(onTaskClick).toHaveBeenCalledExactlyOnceWith('task-1')
+    expect(onScheduleClick).not.toHaveBeenCalled()
+  })
+
+  it('routes an auto event click to onTaskClick', () => {
+    const onScheduleClick = vi.fn()
+    const onTaskClick = vi.fn()
+    const eventClick = renderAndGetEventClick({ onScheduleClick, onTaskClick })
+    const info = {
+      event: { extendedProps: { type: 'auto', taskId: 'task-1' } },
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventClick reads
+    eventClick(info as unknown as EventClickArg)
+
+    expect(onTaskClick).toHaveBeenCalledExactlyOnceWith('task-1')
+  })
+
+  it('routes a completed event click to onTaskClick', () => {
+    const onScheduleClick = vi.fn()
+    const onTaskClick = vi.fn()
+    const eventClick = renderAndGetEventClick({ onScheduleClick, onTaskClick })
+    const info = {
+      event: { extendedProps: { type: 'completed', taskId: 'task-1' } },
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventClick reads
+    eventClick(info as unknown as EventClickArg)
+
+    expect(onTaskClick).toHaveBeenCalledExactlyOnceWith('task-1')
+  })
+
+  it('routes a schedule event click to onScheduleClick', () => {
+    const onScheduleClick = vi.fn()
+    const onTaskClick = vi.fn()
+    const eventClick = renderAndGetEventClick({ onScheduleClick, onTaskClick })
+    const info = {
+      event: {
+        extendedProps: {
+          type: 'schedule',
+          scheduleId: 'sched-1',
+          scheduleStart: '2026-07-20T09:00:00',
+        },
+      },
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventClick reads
+    eventClick(info as unknown as EventClickArg)
+
+    expect(onScheduleClick).toHaveBeenCalledExactlyOnceWith(
+      'sched-1',
+      '2026-07-20T09:00:00',
+    )
+    expect(onTaskClick).not.toHaveBeenCalled()
+  })
+
+  it('ignores a gcal event click', () => {
+    const onScheduleClick = vi.fn()
+    const onTaskClick = vi.fn()
+    const eventClick = renderAndGetEventClick({ onScheduleClick, onTaskClick })
+    const info = {
+      event: { extendedProps: { type: 'gcal-meeting' } },
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventClick reads
+    eventClick(info as unknown as EventClickArg)
+
+    expect(onTaskClick).not.toHaveBeenCalled()
+    expect(onScheduleClick).not.toHaveBeenCalled()
+  })
+
+  it('ignores a redacted event click', () => {
+    const onScheduleClick = vi.fn()
+    const onTaskClick = vi.fn()
+    const eventClick = renderAndGetEventClick({ onScheduleClick, onTaskClick })
+    const info = {
+      event: {
+        extendedProps: { type: 'manual', taskId: 'task-1', redacted: true },
+      },
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventClick reads
+    eventClick(info as unknown as EventClickArg)
+
+    expect(onTaskClick).not.toHaveBeenCalled()
+  })
+
+  it('marks a manual event as clickable', () => {
+    const eventClassNames = renderAndGetEventClassNames()
+    const arg = { event: { extendedProps: { type: 'manual' } } }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields eventClassNames reads
+    expect(eventClassNames(arg as unknown as EventContentArg)).toEqual([
+      'tq-event-clickable',
+    ])
+  })
+
+  it('marks a schedule event as clickable', () => {
+    const eventClassNames = renderAndGetEventClassNames()
+    const arg = { event: { extendedProps: { type: 'schedule' } } }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields eventClassNames reads
+    expect(eventClassNames(arg as unknown as EventContentArg)).toEqual([
+      'tq-event-clickable',
+    ])
+  })
+
+  it('does not mark a gcal event as clickable', () => {
+    const eventClassNames = renderAndGetEventClassNames()
+    const arg = { event: { extendedProps: { type: 'gcal-meeting' } } }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields eventClassNames reads
+    expect(eventClassNames(arg as unknown as EventContentArg)).toEqual([])
+  })
+
+  it('does not mark a redacted event as clickable', () => {
+    const eventClassNames = renderAndGetEventClassNames()
+    const arg = {
+      event: { extendedProps: { type: 'manual', redacted: true } },
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields eventClassNames reads
+    expect(eventClassNames(arg as unknown as EventContentArg)).toEqual([])
   })
 })

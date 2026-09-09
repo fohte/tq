@@ -38,6 +38,25 @@ export function isGcalEventType(type: CalendarEventProps['type']): boolean {
   return type != null && type.startsWith('gcal')
 }
 
+const CLICKABLE_EVENT_TYPES = new Set<CalendarEventProps['type']>([
+  'manual',
+  'auto',
+  'completed',
+  'schedule',
+])
+
+/**
+ * True when a click on this event has a destination (task detail for
+ * manual/auto/completed, the edit modal for schedule). Drives both
+ * handleEventClick's routing and the `cursor: pointer` affordance in
+ * fullcalendar.css, so the two can't drift apart. gcal events have no
+ * destination yet, and a redacted event hides the content a click would
+ * otherwise reveal.
+ */
+export function isClickableEvent(props: CalendarEventProps): boolean {
+  return props.redacted !== true && CLICKABLE_EVENT_TYPES.has(props.type)
+}
+
 /** Shared by EventBlock (day/week) and the month-view pill, so they can't drift on which statuses render dimmed. */
 export function isPendingGcalResponse(props: CalendarEventProps): boolean {
   return (

@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router'
 import { CalendarPlus, Kanban, List, Plus } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
@@ -109,6 +110,7 @@ export function DayViewPresentation({
   viewMode,
   onViewModeChange,
 }: DayViewPresentationProps) {
+  const navigate = useNavigate()
   const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [pendingRange, setPendingRange] = useState<SelectedRange | null>(null)
@@ -180,6 +182,10 @@ export function DayViewPresentation({
     if (!schedule) return
     setEditingSchedule(schedule)
     setIsScheduleModalOpen(true)
+  }
+
+  const handleTaskClick = (taskId: string) => {
+    void navigate({ to: '/tasks/$taskId', params: { taskId } })
   }
 
   return (
@@ -343,6 +349,7 @@ export function DayViewPresentation({
               onDateChange={onDateChange}
               onVisibleRangeChange={onVisibleRangeChange}
               onScheduleClick={handleScheduleClick}
+              onTaskClick={handleTaskClick}
               onSelectRange={openCreateModal}
             />
           </div>
