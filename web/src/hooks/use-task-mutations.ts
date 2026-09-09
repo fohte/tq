@@ -332,6 +332,68 @@ export function useUpdateTaskParent() {
   })
 }
 
+export function useUpdateTaskRecurrenceRule() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      recurrenceRule,
+    }: {
+      id: string
+      recurrenceRule: {
+        type: 'daily' | 'weekly' | 'monthly' | 'custom'
+        interval: number
+        daysOfWeek?: number[]
+        dayOfMonth?: number
+      } | null
+    }) => {
+      const res = await api.api.tasks[':id'].$patch({
+        param: { id },
+        json: { recurrenceRule },
+      })
+      return unwrapOrThrow(assertOk(res)).json()
+    },
+    onMutate: async ({ id, recurrenceRule }) => {
+      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
+
+      const previousDetail = queryClient.getQueryData<TaskDetail>(
+        taskKeys.detail(id),
+      )
+
+      // The server assigns the real rule id; a placeholder stands in until
+      // onSettled's invalidation refetches the real one.
+      if (previousDetail) {
+        queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
+          ...previousDetail,
+          recurrenceRule:
+            recurrenceRule == null
+              ? null
+              : {
+                  id: previousDetail.recurrenceRule?.id ?? 'optimistic',
+                  type: recurrenceRule.type,
+                  interval: recurrenceRule.interval,
+                  daysOfWeek: recurrenceRule.daysOfWeek ?? null,
+                  dayOfMonth: recurrenceRule.dayOfMonth ?? null,
+                },
+          updatedAt: new Date().toISOString(),
+        })
+      }
+
+      return { previousDetail }
+    },
+    onError: (_err, { id }, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
+      }
+    },
+    onSettled: (_data, _err, { id }) => {
+      void queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
+      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+    },
+  })
+}
+
 // Callers pass full LinkedTaskSummary objects (not just ids) since the PATCH
 // response never echoes blockedBy/blocking back for the optimistic update.
 export function useUpdateTaskBlockedBy() {
