@@ -2,7 +2,7 @@ import { zValidator } from '@hono/zod-validator'
 import { and, count, eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
-import { db } from '#db/connection'
+import { db, type DbTransaction } from '#db/connection'
 import { recurrenceRules, taskPages, tasks, timeBlocks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import {
@@ -73,6 +73,32 @@ async function resolveBlockedByTargets(
 
   const targetIds = [...new Set([...resolved.values()].map((t) => t.id))]
   return { targetIds }
+}
+
+// Deletes `recurrenceRules` row `ruleId` if no other task still references it
+// directly, so redirecting or clearing a legacy directly-owned rule doesn't
+// leave it orphaned. `excludeTaskId` is the task being updated/deleted itself,
+// whose own row may still carry the stale reference at the time of this check.
+async function deleteRecurrenceRuleIfUnreferenced(
+  tx: DbTransaction,
+  ruleId: string,
+  excludeTaskId?: string,
+) {
+  const [otherRef] = await tx
+    .select({ id: tasks.id })
+    .from(tasks)
+    .where(
+      excludeTaskId != null
+        ? and(
+            eq(tasks.recurrenceRuleId, ruleId),
+            sql`${tasks.id} != ${excludeTaskId}`,
+          )
+        : eq(tasks.recurrenceRuleId, ruleId),
+    )
+    .limit(1)
+  if (!otherRef) {
+    await tx.delete(recurrenceRules).where(eq(recurrenceRules.id, ruleId))
+  }
 }
 
 export const tasksCrudApp = new Hono()
@@ -350,21 +376,11 @@ export const tasksCrudApp = new Hono()
           // Remove: check shared references before deleting
           recurrenceRuleId = null
           if (existing.recurrenceRuleId != null) {
-            const [otherRef] = await tx
-              .select({ id: tasks.id })
-              .from(tasks)
-              .where(
-                and(
-                  eq(tasks.recurrenceRuleId, existing.recurrenceRuleId),
-                  sql`${tasks.id} != ${id}`,
-                ),
-              )
-              .limit(1)
-            if (!otherRef) {
-              await tx
-                .delete(recurrenceRules)
-                .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
-            }
+            await deleteRecurrenceRuleIfUnreferenced(
+              tx,
+              existing.recurrenceRuleId,
+              id,
+            )
           }
         } else if (recurrenceRuleInput !== undefined) {
           // Setting a recurrence rule redirects into the template model: a
@@ -422,6 +438,17 @@ export const tasksCrudApp = new Hono()
           templateFields = {
             templateId: created.template.id,
             occurrenceDate: created.occurrenceDate,
+          }
+
+          // A task migrated from before the template model may still own a
+          // legacy rule directly; redirecting it into a template must not
+          // orphan that rule.
+          if (existing.recurrenceRuleId != null) {
+            await deleteRecurrenceRuleIfUnreferenced(
+              tx,
+              existing.recurrenceRuleId,
+              id,
+            )
           }
         }
 
@@ -517,16 +544,7 @@ export const tasksCrudApp = new Hono()
 
       // Clean up orphaned recurrence rule
       if (existing.recurrenceRuleId != null) {
-        const [otherRef] = await tx
-          .select({ id: tasks.id })
-          .from(tasks)
-          .where(eq(tasks.recurrenceRuleId, existing.recurrenceRuleId))
-          .limit(1)
-        if (!otherRef) {
-          await tx
-            .delete(recurrenceRules)
-            .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
-        }
+        await deleteRecurrenceRuleIfUnreferenced(tx, existing.recurrenceRuleId)
       }
     })
 

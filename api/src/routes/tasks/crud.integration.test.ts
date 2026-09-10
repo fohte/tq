@@ -2354,6 +2354,33 @@ describe('tasks CRUD API', () => {
             .where(eq(recurrenceRules.id, rule.id)),
         ).toEqual([])
       })
+
+      it('removes a legacy directly-owned recurrence rule when redirected into a new template, deleting the orphaned rule', async () => {
+        const task = await createTask('Recurring')
+        const rule = await attachLegacyRecurrenceRule(task.id, {
+          type: 'daily',
+          interval: 1,
+        })
+
+        const res = await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recurrenceRule: { type: 'weekly', interval: 1, daysOfWeek: [1] },
+          }),
+        })
+
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskResponse>(res)
+        assertDefined(body.templateId)
+
+        expect(
+          await db
+            .select()
+            .from(recurrenceRules)
+            .where(eq(recurrenceRules.id, rule.id)),
+        ).toEqual([])
+      })
     })
 
     describe('GET /api/tasks/:id with recurrence rule', () => {
