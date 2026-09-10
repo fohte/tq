@@ -30,6 +30,8 @@
 | [public.task_relations](public.task_relations.md)                                   | 4       |         | BASE TABLE |
 | [public.task_queues](public.task_queues.md)                                         | 7       |         | BASE TABLE |
 | [public.push_subscriptions](public.push_subscriptions.md)                           | 8       |         | BASE TABLE |
+| [public.recurring_task_template_labels](public.recurring_task_template_labels.md)   | 2       |         | BASE TABLE |
+| [public.recurring_task_templates](public.recurring_task_templates.md)               | 14      |         | BASE TABLE |
 
 ## Relations
 
@@ -61,6 +63,11 @@ erDiagram
 "public.task_agent_sessions" }o--|| "public.agent_sessions" : "FOREIGN KEY (agent_session_id) REFERENCES agent_sessions(id) ON DELETE CASCADE"
 "public.task_relations" }o--|| "public.tasks" : "FOREIGN KEY (source_task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_relations" }o--|| "public.tasks" : "FOREIGN KEY (target_task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+"public.recurring_task_template_labels" }o--|| "public.labels" : "FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE"
+"public.recurring_task_template_labels" }o--|| "public.recurring_task_templates" : "FOREIGN KEY (template_id) REFERENCES recurring_task_templates(id) ON DELETE CASCADE"
+"public.recurring_task_templates" }o--o| "public.projects" : "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL"
+"public.recurring_task_templates" |o--|| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id)"
+"public.recurring_task_templates" }o--o| "public.tasks" : "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL"
 
 "public.images" {
   text id
@@ -317,6 +324,26 @@ erDiagram
   text context
   timestamp_with_time_zone created_at
   timestamp_with_time_zone last_success_at
+}
+"public.recurring_task_template_labels" {
+  text template_id FK
+  text label_id FK
+}
+"public.recurring_task_templates" {
+  text id
+  text title
+  text description
+  integer estimated_minutes
+  text project_id FK
+  text parent_id FK
+  text context
+  text recurrence_rule_id FK
+  integer start_offset_days
+  date anchor_date
+  date last_generated_date
+  boolean enabled
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
 }
 ```
 

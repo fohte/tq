@@ -138,6 +138,11 @@ export const EXCLUDED_ROUTES = {
   'GET /api/github/sync-rules': 'settings covered by the web UI',
   'PATCH /api/github/sync-rules/:id': 'settings covered by the web UI',
   'DELETE /api/github/sync-rules/:id': 'settings covered by the web UI',
+  'POST /api/recurring-task-templates': 'settings covered by the web UI',
+  'GET /api/recurring-task-templates': 'settings covered by the web UI',
+  'GET /api/recurring-task-templates/:id': 'settings covered by the web UI',
+  'PATCH /api/recurring-task-templates/:id': 'settings covered by the web UI',
+  'DELETE /api/recurring-task-templates/:id': 'settings covered by the web UI',
 
   // Time blocks and recurring schedules are calendar-UI operations: faster
   // to drag/resize directly than to drive through a CLI.

@@ -2,15 +2,15 @@
 
 ## Columns
 
-| Name         | Type                     | Default | Nullable | Children                                                                | Parents | Comment |
-| ------------ | ------------------------ | ------- | -------- | ----------------------------------------------------------------------- | ------- | ------- |
-| id           | text                     |         | false    | [public.schedules](public.schedules.md) [public.tasks](public.tasks.md) |         |         |
-| type         | text                     |         | false    |                                                                         |         |         |
-| interval     | integer                  | 1       | false    |                                                                         |         |         |
-| days_of_week | integer[]                |         | true     |                                                                         |         |         |
-| day_of_month | integer                  |         | true     |                                                                         |         |         |
-| created_at   | timestamp with time zone | now()   | false    |                                                                         |         |         |
-| updated_at   | timestamp with time zone | now()   | false    |                                                                         |         |         |
+| Name         | Type                     | Default | Nullable | Children                                                                                                                                      | Parents | Comment |
+| ------------ | ------------------------ | ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------- |
+| id           | text                     |         | false    | [public.schedules](public.schedules.md) [public.tasks](public.tasks.md) [public.recurring_task_templates](public.recurring_task_templates.md) |         |         |
+| type         | text                     |         | false    |                                                                                                                                               |         |         |
+| interval     | integer                  | 1       | false    |                                                                                                                                               |         |         |
+| days_of_week | integer[]                |         | true     |                                                                                                                                               |         |         |
+| day_of_month | integer                  |         | true     |                                                                                                                                               |         |         |
+| created_at   | timestamp with time zone | now()   | false    |                                                                                                                                               |         |         |
+| updated_at   | timestamp with time zone | now()   | false    |                                                                                                                                               |         |         |
 
 ## Constraints
 
@@ -31,6 +31,7 @@ erDiagram
 
 "public.schedules" }o--o| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL"
 "public.tasks" }o--o| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL"
+"public.recurring_task_templates" |o--|| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id)"
 
 "public.recurrence_rules" {
   text id
@@ -70,6 +71,22 @@ erDiagram
   text commitment
   text status_reason
   timestamp_with_time_zone remind_at
+}
+"public.recurring_task_templates" {
+  text id
+  text title
+  text description
+  integer estimated_minutes
+  text project_id FK
+  text parent_id FK
+  text context
+  text recurrence_rule_id FK
+  integer start_offset_days
+  date anchor_date
+  date last_generated_date
+  boolean enabled
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
 }
 ```
 

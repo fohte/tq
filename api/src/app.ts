@@ -16,6 +16,7 @@ import { mcpApp } from '#routes/mcp/index'
 import { projectsApp } from '#routes/projects'
 import { pushApp } from '#routes/push'
 import { queuesApp } from '#routes/queues'
+import { recurringTaskTemplatesApp } from '#routes/recurring-task-templates'
 import { savedViewsApp } from '#routes/saved-views'
 import { schedulesApp } from '#routes/schedules'
 import { schedulingSettingsApp } from '#routes/scheduling-settings'
@@ -63,6 +64,7 @@ const app = new Hono()
   .route('/api/projects', projectsApp)
   .route('/api/push', pushApp)
   .route('/api/queues', queuesApp)
+  .route('/api/recurring-task-templates', recurringTaskTemplatesApp)
   .route('/api/saved-views', savedViewsApp)
   .route('/api/schedule', schedulesApp)
   .route('/api/calendar', calendarApp)

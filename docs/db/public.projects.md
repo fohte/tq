@@ -2,19 +2,19 @@
 
 ## Columns
 
-| Name        | Type                     | Default          | Nullable | Children                                                                                | Parents | Comment |
-| ----------- | ------------------------ | ---------------- | -------- | --------------------------------------------------------------------------------------- | ------- | ------- |
-| id          | text                     |                  | false    | [public.tasks](public.tasks.md) [public.github_sync_rules](public.github_sync_rules.md) |         |         |
-| title       | text                     |                  | false    |                                                                                         |         |         |
-| description | text                     |                  | true     |                                                                                         |         |         |
-| status      | text                     | 'active'::text   | false    |                                                                                         |         |         |
-| start_date  | date                     |                  | true     |                                                                                         |         |         |
-| target_date | date                     |                  | true     |                                                                                         |         |         |
-| color       | text                     |                  | true     |                                                                                         |         |         |
-| sort_order  | integer                  | 0                | false    |                                                                                         |         |         |
-| created_at  | timestamp with time zone | now()            | false    |                                                                                         |         |         |
-| updated_at  | timestamp with time zone | now()            | false    |                                                                                         |         |         |
-| context     | text                     | 'personal'::text | false    |                                                                                         |         |         |
+| Name        | Type                     | Default          | Nullable | Children                                                                                                                                                      | Parents | Comment |
+| ----------- | ------------------------ | ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------- |
+| id          | text                     |                  | false    | [public.tasks](public.tasks.md) [public.github_sync_rules](public.github_sync_rules.md) [public.recurring_task_templates](public.recurring_task_templates.md) |         |         |
+| title       | text                     |                  | false    |                                                                                                                                                               |         |         |
+| description | text                     |                  | true     |                                                                                                                                                               |         |         |
+| status      | text                     | 'active'::text   | false    |                                                                                                                                                               |         |         |
+| start_date  | date                     |                  | true     |                                                                                                                                                               |         |         |
+| target_date | date                     |                  | true     |                                                                                                                                                               |         |         |
+| color       | text                     |                  | true     |                                                                                                                                                               |         |         |
+| sort_order  | integer                  | 0                | false    |                                                                                                                                                               |         |         |
+| created_at  | timestamp with time zone | now()            | false    |                                                                                                                                                               |         |         |
+| updated_at  | timestamp with time zone | now()            | false    |                                                                                                                                                               |         |         |
+| context     | text                     | 'personal'::text | false    |                                                                                                                                                               |         |         |
 
 ## Constraints
 
@@ -38,6 +38,7 @@ erDiagram
 
 "public.tasks" }o--o| "public.projects" : "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL"
 "public.github_sync_rules" }o--|| "public.projects" : "FOREIGN KEY (target_project_id) REFERENCES projects(id) ON DELETE CASCADE"
+"public.recurring_task_templates" }o--o| "public.projects" : "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL"
 
 "public.projects" {
   text id
@@ -83,6 +84,22 @@ erDiagram
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
   bigint seq
+}
+"public.recurring_task_templates" {
+  text id
+  text title
+  text description
+  integer estimated_minutes
+  text project_id FK
+  text parent_id FK
+  text context
+  text recurrence_rule_id FK
+  integer start_offset_days
+  date anchor_date
+  date last_generated_date
+  boolean enabled
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
 }
 ```
 

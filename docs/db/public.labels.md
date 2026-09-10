@@ -2,13 +2,13 @@
 
 ## Columns
 
-| Name       | Type                     | Default          | Nullable | Children                                    | Parents | Comment |
-| ---------- | ------------------------ | ---------------- | -------- | ------------------------------------------- | ------- | ------- |
-| id         | text                     |                  | false    | [public.task_labels](public.task_labels.md) |         |         |
-| name       | text                     |                  | false    |                                             |         |         |
-| color      | text                     |                  | true     |                                             |         |         |
-| created_at | timestamp with time zone | now()            | false    |                                             |         |         |
-| context    | text                     | 'personal'::text | false    |                                             |         |         |
+| Name       | Type                     | Default          | Nullable | Children                                                                                                                      | Parents | Comment |
+| ---------- | ------------------------ | ---------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------- | ------- | ------- |
+| id         | text                     |                  | false    | [public.task_labels](public.task_labels.md) [public.recurring_task_template_labels](public.recurring_task_template_labels.md) |         |         |
+| name       | text                     |                  | false    |                                                                                                                               |         |         |
+| color      | text                     |                  | true     |                                                                                                                               |         |         |
+| created_at | timestamp with time zone | now()            | false    |                                                                                                                               |         |         |
+| context    | text                     | 'personal'::text | false    |                                                                                                                               |         |         |
 
 ## Constraints
 
@@ -31,6 +31,7 @@
 erDiagram
 
 "public.task_labels" }o--|| "public.labels" : "FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE"
+"public.recurring_task_template_labels" }o--|| "public.labels" : "FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE"
 
 "public.labels" {
   text id
@@ -41,6 +42,10 @@ erDiagram
 }
 "public.task_labels" {
   text task_id FK
+  text label_id FK
+}
+"public.recurring_task_template_labels" {
+  text template_id FK
   text label_id FK
 }
 ```
