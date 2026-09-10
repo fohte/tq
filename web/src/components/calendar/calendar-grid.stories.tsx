@@ -85,12 +85,13 @@ const dndCallbacks: CalendarDndCallbacks = {
 }
 
 // Resolves the topmost element via hit-testing before dispatching mouseMove.
-function hoverPoint(x: number, y: number) {
+async function hoverPoint(x: number, y: number): Promise<Element> {
   const target = assertDefined(
     document.elementFromPoint(x, y),
     `no element found at (${String(x)}, ${String(y)})`,
   )
-  return fireEvent.mouseMove(target, { clientX: x, clientY: y })
+  await fireEvent.mouseMove(target, { clientX: x, clientY: y })
+  return target
 }
 
 // FullCalendar renders more than one `.fc-scroller` (header/body/etc.);
@@ -232,7 +233,7 @@ export const HoverEmptySlot: Story = {
     // Gym ends at 08:00, and the next event starts at 09:00.
     const hoverY = gymRect.bottom + 10
 
-    await hoverPoint(hoverX, hoverY)
+    const hoveredEl = await hoverPoint(hoverX, hoverY)
 
     const ghost = await waitFor(() =>
       assertDefined(
@@ -249,6 +250,7 @@ export const HoverEmptySlot: Story = {
     await expect(ghostRect.height).toBe(slotHeight)
     await expect(ghostRect.top).toBeLessThanOrEqual(hoverY)
     await expect(ghostRect.bottom).toBeGreaterThan(hoverY)
+    await expect(getComputedStyle(hoveredEl).cursor).toBe('cell')
   },
 }
 
