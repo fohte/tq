@@ -366,7 +366,7 @@ export const tasksCrudApp = new Hono()
           ? ((await getLabelNamesByTaskId([id])).get(id) ?? [])
           : []
 
-      const { updatedTask, updatedRule } = await db.transaction(async (tx) => {
+      const result = await db.transaction(async (tx) => {
         let recurrenceRuleId: string | null | undefined = undefined
         let updatedRule: typeof recurrenceRules.$inferSelect | null = null
         let templateFields:
@@ -383,6 +383,27 @@ export const tasksCrudApp = new Hono()
             )
           }
         } else if (recurrenceRuleInput !== undefined) {
+          // A concurrent PATCH may have linked this task to a different
+          // template between the initial requireTask read and this lock;
+          // re-check templateId under the row lock so only one request
+          // creates a template for it.
+          const locked = firstOrThrow(
+            await tx
+              .select({ templateId: tasks.templateId })
+              .from(tasks)
+              .where(eq(tasks.id, id))
+              .for('update'),
+          )
+          if (locked.templateId != null) {
+            return {
+              kind: 'error' as const,
+              body: {
+                error: 'Task was concurrently linked to a recurrence template',
+              },
+              status: 409 as const,
+            }
+          }
+
           // Setting a recurrence rule redirects into the template model: a
           // template owns the rule from here on, and this task becomes its
           // first generated instance instead of owning a rule directly.
@@ -496,8 +517,13 @@ export const tasksCrudApp = new Hono()
           )
         }
 
-        return { updatedTask, updatedRule }
+        return { kind: 'ok' as const, updatedTask, updatedRule }
       })
+
+      if (result.kind === 'error') {
+        return c.json(result.body, result.status)
+      }
+      const { updatedTask, updatedRule } = result
 
       const linkSync =
         'description' in taskFields ? await syncTaskLinks(id) : undefined
