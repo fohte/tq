@@ -2208,6 +2208,8 @@ describe('tasks CRUD API', () => {
       it('creates a template from a plain task and links it as the first occurrence, keeping the same id/number', async () => {
         const task = await createTask('Task')
 
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2026-04-01T12:00:00Z'))
         const res = await app.request(`/api/tasks/${task.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -2219,18 +2221,18 @@ describe('tasks CRUD API', () => {
             },
           }),
         })
+        vi.useRealTimers()
 
         expect(res.status).toBe(200)
         const body = await jsonBody<TaskResponse>(res)
         assertDefined(body.templateId)
-        assertDefined(body.occurrenceDate)
         expect(body.id).toBe(task.id)
         expect(body.number).toBe(task.number)
         expect(normalizeRecurringTask(body)).toEqual(
           normalizeRecurringTask({
             ...withoutLinkSync(task),
-            dueDate: body.occurrenceDate,
-            occurrenceDate: body.occurrenceDate,
+            dueDate: '2026-04-01',
+            occurrenceDate: '2026-04-01',
             templateId: body.templateId,
             recurrenceRule: {
               id: 'ignored',
