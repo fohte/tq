@@ -18,6 +18,7 @@ function EventBlockPreview({
   allDay = false,
   widthPx = 288,
   short = false,
+  isMirror = false,
 }: {
   type?: EventType
   title?: string
@@ -31,6 +32,7 @@ function EventBlockPreview({
   allDay?: boolean
   widthPx?: number
   short?: boolean
+  isMirror?: boolean
 }) {
   const arg = {
     event: {
@@ -50,6 +52,7 @@ function EventBlockPreview({
     },
     timeText,
     isStart: true,
+    isMirror,
   }
 
   return (
@@ -252,5 +255,18 @@ export const NarrowOverlappingColumn: Story = {
     timeText: '11:00–11:30',
     widthPx: 84,
     short: true,
+  },
+}
+
+// Same narrow+short chip while being dragged: the time stays visible since
+// it's the only feedback for where the drop will land.
+export const NarrowOverlappingColumnDragging: Story = {
+  args: {
+    type: 'gcal-meeting',
+    title: 'Team standup',
+    timeText: '11:15–11:45',
+    widthPx: 95,
+    short: true,
+    isMirror: true,
   },
 }

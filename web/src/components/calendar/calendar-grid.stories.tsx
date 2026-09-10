@@ -402,3 +402,63 @@ export const ClickGcalEvent: Story = {
     await expect(getComputedStyle(manualEvent).cursor).toBe('pointer')
   },
 }
+
+export const DragUpdatesTimeLabelLive: Story = {
+  args: {
+    activeView: 'day',
+  },
+  parameters: {
+    // Mid-drag mirror is a transient DOM node gone by mouseup, and
+    // onEventDrop is a bare mock, so the story's rendered end state is
+    // identical to DayView — nothing new to screenshot.
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, canvasElement }) => {
+    resetVerticalScroll(canvasElement)
+    const chip = assertDefined(
+      (await canvas.findByText('API ドキュメント作成')).closest<HTMLElement>(
+        '.fc-event',
+      ),
+      'manual event .fc-event ancestor not found',
+    )
+    const chipRect = chip.getBoundingClientRect()
+    const x = chipRect.left + chipRect.width / 2
+    const y = chipRect.top + chipRect.height / 2
+
+    await fireEvent.mouseDown(chip, {
+      clientX: x,
+      clientY: y,
+      button: 0,
+      buttons: 1,
+    })
+    // One 26px slot = 30 minutes (see fullcalendar.css); well past the 5px
+    // eventDragMinDistance needed to enter drag mode.
+    await hoverPoint(x, y + 26)
+
+    // Re-queried fresh at each checkpoint: FullCalendar may swap in a new
+    // mirror node per hit.
+    await waitFor(async () => {
+      const timeLabel = assertDefined(
+        canvasElement.querySelector<HTMLElement>(
+          '.fc-event-mirror [data-testid="event-time"]',
+        ),
+        'drag mirror time label not rendered',
+      )
+      await expect(timeLabel.textContent).toBe('09:30–10:30')
+    })
+
+    await hoverPoint(x, y + 52)
+
+    await waitFor(async () => {
+      const timeLabel = assertDefined(
+        canvasElement.querySelector<HTMLElement>(
+          '.fc-event-mirror [data-testid="event-time"]',
+        ),
+        'drag mirror time label not rendered',
+      )
+      await expect(timeLabel.textContent).toBe('10:00–11:00')
+    })
+
+    await fireEvent.mouseUp(document, { clientX: x, clientY: y + 52 })
+  },
+}

@@ -65,7 +65,7 @@ function GcalEventIconTitle({
 }
 
 export function EventBlock(arg: EventContentArg) {
-  const { event, timeText } = arg
+  const { event, timeText, isMirror } = arg
   const props = getEventProps(event)
   const type = props.type ?? 'manual'
   const parentRef = props.parentRef
@@ -152,6 +152,7 @@ export function EventBlock(arg: EventContentArg) {
       }
       badge={badge}
       meta={isShort ? timeText : timeDetails}
+      isMirror={isMirror}
     />
   )
 }
@@ -182,6 +183,7 @@ function EventBlockShell({
   title,
   badge,
   meta,
+  isMirror = false,
 }: {
   isShort: boolean
   className?: string
@@ -189,6 +191,7 @@ function EventBlockShell({
   title: React.ReactNode
   badge?: string | undefined
   meta: React.ReactNode
+  isMirror?: boolean
 }) {
   return (
     <div
@@ -208,9 +211,14 @@ function EventBlockShell({
         )}
       </div>
       <span
+        data-testid="event-time"
         className={cn(
           'shrink-0 truncate font-mono text-2xs whitespace-nowrap text-muted-foreground-faint',
-          isShort && 'ml-auto hidden @min-[100px]/chip:inline',
+          isShort && 'ml-auto',
+          // The mirror is the only feedback for where a drag will land, so
+          // it must keep showing the time even on a chip too narrow to fit
+          // it normally.
+          isShort && !isMirror && 'hidden @min-[100px]/chip:inline',
         )}
       >
         {meta}
