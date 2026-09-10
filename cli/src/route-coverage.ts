@@ -139,6 +139,14 @@ export const EXCLUDED_ROUTES = {
   'PATCH /api/github/sync-rules/:id': 'settings covered by the web UI',
   'DELETE /api/github/sync-rules/:id': 'settings covered by the web UI',
 
+  // Recurring task template configuration is a web UI feature; no CLI use
+  // case for authoring templates directly yet.
+  'POST /api/recurring-task-templates': 'settings covered by the web UI',
+  'GET /api/recurring-task-templates': 'settings covered by the web UI',
+  'GET /api/recurring-task-templates/:id': 'settings covered by the web UI',
+  'PATCH /api/recurring-task-templates/:id': 'settings covered by the web UI',
+  'DELETE /api/recurring-task-templates/:id': 'settings covered by the web UI',
+
   // Time blocks and recurring schedules are calendar-UI operations: faster
   // to drag/resize directly than to drive through a CLI.
   'POST /api/schedule/time-blocks':
