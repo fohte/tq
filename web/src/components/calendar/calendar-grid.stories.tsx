@@ -335,6 +335,12 @@ export const HoverEmptySlotWeekView: Story = {
   args: {
     activeView: 'week',
   },
+  parameters: {
+    // WeekView has no play function, but this story's assertion lives in
+    // play's expect calls, not in the rendered appearance, so its
+    // screenshot is redundant with WeekView's.
+    screenshot: { skip: true },
+  },
   play: async ({ canvasElement }) => {
     // All sample events fall on today (see `dateStr` above), so every other
     // day's column is fully empty — pick one that isn't today's.
