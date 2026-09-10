@@ -314,7 +314,6 @@ describe('update_task_status tool', () => {
       githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
-      nextTask: null,
     })
   })
 
@@ -348,7 +347,6 @@ describe('update_task_status tool', () => {
       githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
-      nextTask: null,
     })
   })
 
@@ -388,83 +386,6 @@ describe('update_task_status tool', () => {
     })
   })
 
-  it('completes a recurring task and generates its next occurrence', async () => {
-    const created = await callTool('create_task', {
-      title: 'Daily recurring task',
-      dueDate: '2026-03-22',
-      recurrenceRule: { type: 'daily', interval: 1 },
-    })
-    const createdData = passthroughSchema<{ id: string }>().parse(
-      parseToolJson(created),
-    )
-
-    const result = await callTool('update_task_status', {
-      taskId: createdData.id,
-      status: 'completed',
-    })
-
-    expect(parseToolData(result)).toEqual({
-      id: '<uuid>',
-      number: '<number>',
-      title: 'Daily recurring task',
-      description: null,
-      status: 'completed',
-      statusReason: 'completed',
-      context: 'personal',
-      commitment: 'inbox',
-      labels: [],
-      startDate: null,
-      dueDate: '2026-03-22',
-      estimatedMinutes: null,
-      remindAt: null,
-      parentId: null,
-      projectId: null,
-      recurrenceRuleId: '<uuid>',
-      recurrenceRule: {
-        id: '<uuid>',
-        type: 'daily',
-        interval: 1,
-        daysOfWeek: null,
-        dayOfMonth: null,
-      },
-      githubLinks: [],
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-      nextTask: {
-        id: '<uuid>',
-        number: '<number>',
-        title: 'Daily recurring task',
-        description: null,
-        status: 'todo',
-        statusReason: null,
-        context: 'personal',
-        commitment: 'inbox',
-        labels: [],
-        startDate: null,
-        dueDate: '2026-03-23',
-        estimatedMinutes: null,
-        remindAt: null,
-        parentId: null,
-        projectId: null,
-        recurrenceRuleId: '<uuid>',
-        recurrenceRule: {
-          id: '<uuid>',
-          type: 'daily',
-          interval: 1,
-          daysOfWeek: null,
-          dayOfMonth: null,
-        },
-        githubLinks: [],
-        createdAt: '<timestamp>',
-        updatedAt: '<timestamp>',
-        linkSync: {
-          outgoing: [],
-          unresolvedRefs: [],
-        },
-      },
-    })
-  })
-
   it('closes a task as a duplicate and records the target', async () => {
     const target = await createTask('Target')
     const task = await createTask('Duplicate me')
@@ -497,7 +418,6 @@ describe('update_task_status tool', () => {
       githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
-      nextTask: null,
     })
 
     // The tool response itself carries no duplicateOfNumber/duplicateOfTask

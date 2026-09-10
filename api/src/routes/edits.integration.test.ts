@@ -388,35 +388,6 @@ describe('edit log', () => {
     })
   })
 
-  describe('recurring task completion', () => {
-    it('records the generated next task as system-authored', async () => {
-      const task = await createTask('Recurring', {
-        dueDate: '2026-01-01',
-        recurrenceRule: { type: 'daily', interval: 1 },
-      })
-
-      const completeRes = await app.request(`/api/tasks/${task.id}/complete`, {
-        method: 'POST',
-      })
-      await assertStatus(completeRes, 200)
-      const body = await jsonBody<{ nextTask: TaskResponse | null }>(
-        completeRes,
-      )
-      assertDefined(body.nextTask)
-
-      expect(await fetchEdits(body.nextTask.id)).toEqual([
-        {
-          pageId: null,
-          commentId: null,
-          action: 'create',
-          field: null,
-          authorKind: 'system',
-          authorAgent: null,
-        },
-      ])
-    })
-  })
-
   describe('aggregation window', () => {
     it('collapses a second edit within 10 minutes into the same row', async () => {
       const task = await createTask('Task')

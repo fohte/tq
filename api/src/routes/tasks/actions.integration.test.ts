@@ -483,7 +483,7 @@ describe('tasks actions API', () => {
   })
 
   describe('POST /api/tasks/:id/complete with recurrence', () => {
-    it('generates next task for daily recurrence', async () => {
+    it('does not generate a next task', async () => {
       const task = await createRecurringTask(
         'Daily task',
         { type: 'daily', interval: 1 },
@@ -495,138 +495,14 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<
-        TaskResponse & { nextTask: TaskResponse | null }
-      >(res)
-      expect(body.status).toBe('completed')
-      assertDefined(body.nextTask)
-      expect(body.nextTask.title).toBe('Daily task')
-      expect(body.nextTask.status).toBe('todo')
-      expect(body.nextTask.dueDate).toBe('2026-03-23')
-      expect(body.nextTask.recurrenceRuleId).toBe(task.recurrenceRuleId)
-    })
+      const body = await jsonBody<Record<string, unknown>>(res)
+      expect(body).not.toHaveProperty('nextTask')
 
-    it('generates next task for weekly recurrence with daysOfWeek', async () => {
-      const task = await createRecurringTask(
-        'Weekly task',
-        { type: 'weekly', interval: 1, daysOfWeek: [1, 3, 5] },
-        { dueDate: '2026-03-23' }, // Monday
-      )
-
-      const res = await app.request(`/api/tasks/${task.id}/complete`, {
-        method: 'POST',
-      })
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<
-        TaskResponse & { nextTask: TaskResponse | null }
-      >(res)
-      assertDefined(body.nextTask)
-      expect(body.nextTask.dueDate).toBe('2026-03-25') // Wednesday
-    })
-
-    it('generates next task for monthly recurrence', async () => {
-      const task = await createRecurringTask(
-        'Monthly task',
-        { type: 'monthly', interval: 1, dayOfMonth: 15 },
-        { dueDate: '2026-03-15' },
-      )
-
-      const res = await app.request(`/api/tasks/${task.id}/complete`, {
-        method: 'POST',
-      })
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<
-        TaskResponse & { nextTask: TaskResponse | null }
-      >(res)
-      assertDefined(body.nextTask)
-      expect(body.nextTask.dueDate).toBe('2026-04-15')
-    })
-
-    it('does not generate next task for non-recurring task', async () => {
-      const task = await createTask('Normal task')
-
-      const res = await app.request(`/api/tasks/${task.id}/complete`, {
-        method: 'POST',
-      })
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<
-        TaskResponse & { nextTask: TaskResponse | null }
-      >(res)
-      expect(body.nextTask).toBeNull()
-    })
-
-    it('does not generate next task after recurrence rule is removed', async () => {
-      const task = await createRecurringTask(
-        'Was recurring',
-        { type: 'daily', interval: 1 },
-        { dueDate: '2026-03-22' },
-      )
-
-      // Remove recurrence rule
-      await app.request(`/api/tasks/${task.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recurrenceRule: null }),
-      })
-
-      const res = await app.request(`/api/tasks/${task.id}/complete`, {
-        method: 'POST',
-      })
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<
-        TaskResponse & { nextTask: TaskResponse | null }
-      >(res)
-      expect(body.nextTask).toBeNull()
-    })
-
-    it('copies task properties to next instance', async () => {
-      const task = await createRecurringTask(
-        'Recurring with details',
-        { type: 'daily', interval: 1 },
-        {
-          dueDate: '2026-03-22',
-          description: 'Important recurring task',
-          estimatedMinutes: 30,
-          context: 'work',
-        },
-      )
-
-      const res = await app.request(`/api/tasks/${task.id}/complete`, {
-        method: 'POST',
-      })
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<
-        TaskResponse & { nextTask: TaskResponse | null }
-      >(res)
-      assertDefined(body.nextTask)
-      expect(body.nextTask.description).toBe('Important recurring task')
-      expect(body.nextTask.estimatedMinutes).toBe(30)
-      expect(body.nextTask.context).toBe('work')
-    })
-
-    it('copies labels to next instance', async () => {
-      await createLabel('blog')
-      const task = await createRecurringTask(
-        'Recurring with labels',
-        { type: 'daily', interval: 1 },
-        { dueDate: '2026-03-22', labels: ['blog'] },
-      )
-
-      const res = await app.request(`/api/tasks/${task.id}/complete`, {
-        method: 'POST',
-      })
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<
-        TaskResponse & { nextTask: TaskResponse | null }
-      >(res)
-      assertDefined(body.nextTask)
-      expect(body.nextTask.labels).toEqual(['blog'])
+      const rows = await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(eq(tasks.title, 'Daily task'))
+      expect(rows).toEqual([{ id: task.id }])
     })
 
     it('includes recurrenceRule in completed task response', async () => {
@@ -641,9 +517,7 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<
-        TaskResponse & { nextTask: TaskResponse | null }
-      >(res)
+      const body = await jsonBody<TaskResponse>(res)
       assertDefined(body.recurrenceRule)
       expect(body.recurrenceRule.type).toBe('daily')
     })

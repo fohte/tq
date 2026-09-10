@@ -1,4 +1,3 @@
-import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
 import { eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
@@ -7,7 +6,6 @@ import { z } from 'zod'
 import { db, type DbTransaction } from '#db/connection'
 import { recurrenceRules, taskRelations, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { recordStatusChanged } from '#lib/task-events'
 import {
@@ -17,9 +15,6 @@ import {
   taskToResponse,
 } from '#routes/tasks/shared'
 import { taskStatus, taskStatusReason } from '#schemas/task'
-import { buildNextTaskData } from '#services/recurrence'
-import { getTaskLabelNames, syncTaskLabels } from '#services/task-labels'
-import { syncTaskLinks, type TaskLinkSyncResult } from '#services/task-links'
 import { getIncompleteBlockerNumbers } from '#services/task-relations'
 
 const updateStatusSchema = z.object({
@@ -321,80 +316,23 @@ export const tasksActionsApp = new Hono()
       }
       const updatedTask = result.task
 
-      let createdTask: typeof tasks.$inferSelect | null = null
       let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
-      let linkSync: TaskLinkSyncResult | undefined
       if (updatedTask.recurrenceRuleId != null) {
         completedTaskRule =
           (await db.query.recurrenceRules.findFirst({
             where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
           })) ?? null
-
-        if (completedTaskRule) {
-          const nextDataResult = buildNextTaskData(
-            updatedTask,
-            completedTaskRule,
-          )
-          if (nextDataResult.isErr()) {
-            captureWithFingerprint(
-              nextDataResult.error,
-              'api.tasks.build-next-task-data-failed',
-            )
-            return c.json({ error: 'Internal server error' }, 500)
-          }
-          const created = await db.transaction(async (tx) => {
-            const created = firstOrThrow(
-              await tx.insert(tasks).values(nextDataResult.value).returning(),
-            )
-            await recordEdit(
-              tx,
-              { taskId: created.id },
-              { action: 'create' },
-              SYSTEM_AUTHOR,
-            )
-            const completedTaskLabelNames = await getTaskLabelNames(
-              tx,
-              updatedTask.id,
-            )
-            await syncTaskLabels(
-              tx,
-              created.id,
-              completedTaskLabelNames,
-              created.context,
-            )
-            return created
-          })
-          linkSync = await syncTaskLinks(created.id)
-          createdTask = created
-        }
       }
 
-      const labelsByTaskId = await getLabelNamesByTaskId(
-        createdTask != null ? [id, createdTask.id] : [id],
-      )
-      const nextTask =
-        createdTask != null
-          ? {
-              ...taskToResponse(
-                createdTask,
-                completedTaskRule,
-                undefined,
-                labelsByTaskId.get(createdTask.id) ?? [],
-              ),
-              linkSync,
-            }
-          : null
+      const labelsByTaskId = await getLabelNamesByTaskId([id])
 
       return c.json(
-        {
-          ...taskToResponse(
-            updatedTask,
-            completedTaskRule,
-            undefined,
-            labelsByTaskId.get(id) ?? [],
-          ),
-          nextTask,
-        },
+        taskToResponse(
+          updatedTask,
+          completedTaskRule,
+          undefined,
+          labelsByTaskId.get(id) ?? [],
+        ),
         200,
       )
     },

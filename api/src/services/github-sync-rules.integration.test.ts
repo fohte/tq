@@ -118,6 +118,8 @@ describe('syncGithubAssignedIssues', () => {
       parentId: null,
       projectId: project.id,
       recurrenceRuleId: null,
+      templateId: null,
+      occurrenceDate: null,
       context: 'personal',
       commitment: 'inbox',
       createdAt: 'DATE',

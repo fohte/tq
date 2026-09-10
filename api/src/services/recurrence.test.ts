@@ -1,7 +1,11 @@
 import { ok } from 'neverthrow'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { buildNextTaskData, computeNextDate } from '#services/recurrence'
+import {
+  buildNextTaskData,
+  computeDueOccurrences,
+  computeNextDate,
+} from '#services/recurrence'
 
 describe('computeNextDate', () => {
   describe('daily', () => {
@@ -155,6 +159,59 @@ describe('computeNextDate', () => {
   })
 })
 
+describe('computeDueOccurrences', () => {
+  it('returns no occurrences when today is before the next occurrence', () => {
+    expect(
+      computeDueOccurrences(
+        '2026-03-22',
+        { type: 'daily', interval: 1 },
+        '2026-03-22',
+      ),
+    ).toEqual(ok([]))
+  })
+
+  it('returns exactly one occurrence when today is the next occurrence', () => {
+    expect(
+      computeDueOccurrences(
+        '2026-03-22',
+        { type: 'daily', interval: 1 },
+        '2026-03-23',
+      ),
+    ).toEqual(ok(['2026-03-23']))
+  })
+
+  it('catches up multiple occurrences when behind by several days', () => {
+    expect(
+      computeDueOccurrences(
+        '2026-03-15',
+        { type: 'daily', interval: 1 },
+        '2026-03-19',
+      ),
+    ).toEqual(ok(['2026-03-16', '2026-03-17', '2026-03-18', '2026-03-19']))
+  })
+
+  it('includes an occurrence that falls exactly on today', () => {
+    expect(
+      computeDueOccurrences(
+        '2026-03-24',
+        { type: 'daily', interval: 1 },
+        '2026-03-25',
+      ),
+    ).toEqual(ok(['2026-03-25']))
+  })
+
+  it('catches up multiple occurrences for a weekly rule with daysOfWeek', () => {
+    // 2026-03-22 is a Sunday (day 0); daysOfWeek=[1,3,5] visits Mon/Wed/Fri
+    expect(
+      computeDueOccurrences(
+        '2026-03-22',
+        { type: 'weekly', interval: 1, daysOfWeek: [1, 3, 5] },
+        '2026-03-28',
+      ),
+    ).toEqual(ok(['2026-03-23', '2026-03-25', '2026-03-27']))
+  })
+})
+
 describe('buildNextTaskData', () => {
   const baseTask = {
     id: 'task-1',
@@ -172,6 +229,8 @@ describe('buildNextTaskData', () => {
     parentId: null,
     projectId: 'proj-1',
     recurrenceRuleId: 'rule-1',
+    templateId: null,
+    occurrenceDate: null,
     createdAt: new Date('2026-03-22T00:00:00Z'),
     updatedAt: new Date('2026-03-22T00:00:00Z'),
   }

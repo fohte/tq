@@ -17,12 +17,7 @@ import {
   addRecurrenceOptions,
   parseRecurrenceRule,
 } from '#commands/task-recurrence'
-import {
-  printJson,
-  printJsonList,
-  printJsonWithLinkSync,
-  printLinkSync,
-} from '#output'
+import { printJson, printJsonList, printJsonWithLinkSync } from '#output'
 import { fail } from '#result'
 import { addSchemaOptions, pickSchemaFields } from '#schema-options'
 
@@ -378,9 +373,7 @@ export function registerTaskCommands(
           json,
         })
         if (!res.ok) return fail(command, await toApiError(res))
-        const body = await res.json()
-        printJson(body)
-        printLinkSync(body.nextTask?.linkSync)
+        printJson(await res.json())
       },
     )
 

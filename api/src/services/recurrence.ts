@@ -12,6 +12,13 @@ export class EmptyDaysOfWeekError extends Error {
   }
 }
 
+export interface RecurrenceRuleInput {
+  type: 'daily' | 'weekly' | 'monthly' | 'custom'
+  interval: number
+  daysOfWeek?: number[] | null
+  dayOfMonth?: number | null
+}
+
 /**
  * Compute the next occurrence date based on a recurrence rule.
  * Returns a 'YYYY-MM-DD' string, or an EmptyDaysOfWeekError if a weekly
@@ -19,12 +26,7 @@ export class EmptyDaysOfWeekError extends Error {
  */
 export function computeNextDate(
   baseDate: string,
-  rule: {
-    type: 'daily' | 'weekly' | 'monthly' | 'custom'
-    interval: number
-    daysOfWeek?: number[] | null
-    dayOfMonth?: number | null
-  },
+  rule: RecurrenceRuleInput,
 ): Result<string, EmptyDaysOfWeekError> {
   const base = new Date(baseDate + 'T00:00:00')
 
@@ -121,7 +123,29 @@ function computeNextWeeklyDate(
   return ok(formatDate(next))
 }
 
-function formatDate(d: Date): string {
+/**
+ * Every occurrence date strictly after `baseDate` up to and including
+ * `today`, in chronological order. Lets a template that fell behind by
+ * more than one occurrence (e.g. disabled for weeks) catch up in a single
+ * call instead of one occurrence per invocation.
+ */
+export function computeDueOccurrences(
+  baseDate: string,
+  rule: RecurrenceRuleInput,
+  today: string,
+): Result<string[], EmptyDaysOfWeekError> {
+  const dates: string[] = []
+  let current = baseDate
+  for (;;) {
+    const nextResult = computeNextDate(current, rule)
+    if (nextResult.isErr()) return err(nextResult.error)
+    if (nextResult.value > today) return ok(dates)
+    dates.push(nextResult.value)
+    current = nextResult.value
+  }
+}
+
+export function formatDate(d: Date): string {
   const year = String(d.getFullYear())
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')

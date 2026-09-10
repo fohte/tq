@@ -13,6 +13,8 @@ import {
   unique,
 } from 'drizzle-orm/pg-core'
 
+import { recurringTaskTemplates } from '#db/schema/recurring-task-templates'
+
 export const projects = pgTable(
   'projects',
   {
@@ -102,6 +104,20 @@ export const tasks = pgTable(
       () => recurrenceRules.id,
       { onDelete: 'set null' },
     ),
+    // Template this task was generated from by the recurring task
+    // scheduler; null for a plain (non-generated) task.
+    //
+    // Explicit `AnyPgColumn` return type breaks the circular type
+    // inference from the recurring-task-templates.ts <-> core.ts import
+    // cycle, same as the `parentId` self-reference below.
+    templateId: text('template_id').references(
+      (): AnyPgColumn => recurringTaskTemplates.id,
+      { onDelete: 'set null' },
+    ),
+    // The occurrence date this generated instance stands for. Paired with
+    // `templateId` to prevent the scheduler from generating the same
+    // occurrence twice; null for a plain task.
+    occurrenceDate: date('occurrence_date'),
     context: text('context', {
       enum: ['work', 'personal'],
     })
@@ -133,6 +149,14 @@ export const tasks = pgTable(
     index('idx_tasks_project_id').on(table.projectId),
     index('idx_tasks_project_status').on(table.projectId, table.status),
     index('idx_tasks_commitment').on(table.commitment),
+    index('idx_tasks_template_id').on(table.templateId),
+    // NULLs distinct (the default): plain tasks have both columns NULL and
+    // must not collide with each other; only a real (templateId,
+    // occurrenceDate) pair needs to be unique.
+    unique('tasks_template_id_occurrence_date_unique').on(
+      table.templateId,
+      table.occurrenceDate,
+    ),
     // Partial: `remind_at` is NULL on all but the handful of tasks with a
     // pending reminder, and the poll's predicate never matches NULL anyway.
     index('idx_tasks_remind_at')
