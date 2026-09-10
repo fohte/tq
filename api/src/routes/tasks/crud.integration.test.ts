@@ -97,11 +97,7 @@ function normalizeTask<
   }
 }
 
-// Simulates data that predates the recurring-task-templates migration (see
-// api/drizzle/0040_add_recurring_task_templates.sql and 0041): a task with
-// its own `recurrenceRuleId` and no `templateId`. No create/update pathway
-// produces this shape anymore -- only pre-migration data can -- so it's
-// built directly against the DB rather than through the API.
+// Simulates a legacy task where recurrenceRuleId is owned directly without a template.
 async function attachLegacyRecurrenceRule(
   taskId: string,
   rule: {
