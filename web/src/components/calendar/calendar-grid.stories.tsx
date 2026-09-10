@@ -336,11 +336,8 @@ export const HoverEmptySlotWeekView: Story = {
     activeView: 'week',
   },
   parameters: {
-    // vrt-capture's duplicate-screenshot check found this byte-identical
-    // to WeekView's, even though the play function below confirms the
-    // ghost renders at the right position — skip per
-    // storybook-vrt-workflows' triage rule (only one of the pair has a
-    // play function).
+    // Byte-identical to WeekView's screenshot despite the ghost rendering
+    // (see play below) — skip this one since WeekView has no play function.
     screenshot: { skip: true },
   },
   play: async ({ canvasElement }) => {
