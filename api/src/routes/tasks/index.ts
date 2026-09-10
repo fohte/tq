@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { tasksActionsApp } from '#routes/tasks/actions'
 import { tasksActivityApp } from '#routes/tasks/activity'
 import { tasksCrudApp } from '#routes/tasks/crud'
+import { tasksDetailApp } from '#routes/tasks/detail'
 import { tasksGithubApp } from '#routes/tasks/github'
 import { tasksSearchApp } from '#routes/tasks/search'
 
@@ -12,5 +13,6 @@ export const tasksApp = new Hono()
   .route('/', tasksSearchApp)
   .route('/', tasksGithubApp)
   .route('/', tasksCrudApp)
+  .route('/', tasksDetailApp)
   .route('/', tasksActionsApp)
   .route('/', tasksActivityApp)
