@@ -2170,9 +2170,22 @@ describe('tasks CRUD API', () => {
           .from(recurringTaskTemplates)
           .where(eq(recurringTaskTemplates.id, body.templateId))
         assertDefined(template)
-        expect(template.title).toBe('Daily standup')
-        expect(template.anchorDate).toBe('2026-03-22')
-        expect(template.recurrenceRuleId).toBe(body.recurrenceRule.id)
+        expect(normalizeTemplate(template)).toEqual({
+          id: 'ID',
+          title: 'Daily standup',
+          description: null,
+          estimatedMinutes: null,
+          projectId: null,
+          parentId: null,
+          context: 'personal',
+          recurrenceRuleId: body.recurrenceRule.id,
+          startOffsetDays: null,
+          anchorDate: '2026-03-22',
+          lastGeneratedDate: null,
+          enabled: true,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        })
       })
 
       it('creates a task without recurrence rule (backward compat)', async () => {
@@ -2393,11 +2406,20 @@ describe('tasks CRUD API', () => {
 
         expect(res.status).toBe(200)
         const body = await jsonBody<TaskResponse>(res)
-        expect(body.templateId).toBe(task.templateId)
-        expect(body.occurrenceDate).toBe(task.occurrenceDate)
-        assertDefined(body.recurrenceRule)
-        expect(body.recurrenceRule.type).toBe('monthly')
-        expect(body.recurrenceRule.dayOfMonth).toBe(15)
+        expect(body).toEqual({
+          ...withoutLinkSync(task),
+          titleAuthor: { kind: 'human', agent: null },
+          descriptionAuthor: { kind: 'human', agent: null },
+          childCompletionCount: { total: 0, completed: 0 },
+          pages: [],
+          timeBlocks: [],
+          links: { outgoing: [], incoming: [] },
+          parentNumber: null,
+          duplicateOfNumber: null,
+          duplicateOfTask: null,
+          blockedBy: [],
+          blocking: [],
+        })
       })
 
       it('prefers the rule from a linked template over a legacy directly-owned rule when both are set', async () => {
@@ -2458,11 +2480,9 @@ describe('tasks CRUD API', () => {
         const body = await jsonBody<TaskListItemResponse[]>(res)
         const item = body.find((t) => t.id === task.id)
         assertDefined(item)
-        expect(item.templateId).toBe(task.templateId)
-        expect(item.occurrenceDate).toBe(task.occurrenceDate)
-        assertDefined(item.recurrenceRule)
-        expect(item.recurrenceRule.type).toBe('monthly')
-        expect(item.recurrenceRule.dayOfMonth).toBe(15)
+        expect(normalizeRecurringTask(item)).toEqual(
+          normalizeRecurringTask(toListItemResponse(task)),
+        )
       })
     })
   })
