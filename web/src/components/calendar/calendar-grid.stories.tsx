@@ -408,9 +408,9 @@ export const DragUpdatesTimeLabelLive: Story = {
     activeView: 'day',
   },
   parameters: {
-    // Mid-drag DOM state is transient (mirror node is gone by the time a
-    // screenshot could be taken), and onEventDrop is a bare mock so the
-    // dropped state never persists/re-renders — same as ClickTaskEvent.
+    // Mid-drag mirror is a transient DOM node gone by mouseup, and
+    // onEventDrop is a bare mock, so the story's rendered end state is
+    // identical to DayView — nothing new to screenshot.
     screenshot: { skip: true },
   },
   play: async ({ canvas, canvasElement }) => {
@@ -435,23 +435,28 @@ export const DragUpdatesTimeLabelLive: Story = {
     // eventDragMinDistance needed to enter drag mode.
     await hoverPoint(x, y + 26)
 
-    const mirrorAt0930 = await waitFor(() =>
-      assertDefined(
-        canvasElement.querySelector<HTMLElement>('.fc-event-mirror'),
-        'drag mirror not rendered',
-      ),
-    )
-    await expect(mirrorAt0930.textContent).toContain('09:30')
+    // Re-queried fresh at each checkpoint: FullCalendar may swap in a new
+    // mirror node per hit.
+    await waitFor(async () => {
+      const timeLabel = assertDefined(
+        canvasElement.querySelector<HTMLElement>(
+          '.fc-event-mirror [data-testid="event-time"]',
+        ),
+        'drag mirror time label not rendered',
+      )
+      await expect(timeLabel.textContent).toBe('09:30–10:30')
+    })
 
     await hoverPoint(x, y + 52)
 
-    // Re-query fresh: FullCalendar may swap in a new mirror node per hit.
     await waitFor(async () => {
-      const mirrorAt1000 = assertDefined(
-        canvasElement.querySelector<HTMLElement>('.fc-event-mirror'),
-        'drag mirror not rendered',
+      const timeLabel = assertDefined(
+        canvasElement.querySelector<HTMLElement>(
+          '.fc-event-mirror [data-testid="event-time"]',
+        ),
+        'drag mirror time label not rendered',
       )
-      await expect(mirrorAt1000.textContent).toContain('10:00')
+      await expect(timeLabel.textContent).toBe('10:00–11:00')
     })
 
     await fireEvent.mouseUp(document, { clientX: x, clientY: y + 52 })

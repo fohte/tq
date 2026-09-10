@@ -211,6 +211,7 @@ function EventBlockShell({
         )}
       </div>
       <span
+        data-testid="event-time"
         className={cn(
           'shrink-0 truncate font-mono text-2xs whitespace-nowrap text-muted-foreground-faint',
           isShort && 'ml-auto',
