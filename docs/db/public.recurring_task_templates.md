@@ -2,22 +2,22 @@
 
 ## Columns
 
-| Name                | Type                     | Default          | Nullable | Children                                                                          | Parents                                               | Comment |
-| ------------------- | ------------------------ | ---------------- | -------- | --------------------------------------------------------------------------------- | ----------------------------------------------------- | ------- |
-| id                  | text                     |                  | false    | [public.recurring_task_template_labels](public.recurring_task_template_labels.md) |                                                       |         |
-| title               | text                     |                  | false    |                                                                                   |                                                       |         |
-| description         | text                     |                  | true     |                                                                                   |                                                       |         |
-| estimated_minutes   | integer                  |                  | true     |                                                                                   |                                                       |         |
-| project_id          | text                     |                  | true     |                                                                                   | [public.projects](public.projects.md)                 |         |
-| parent_id           | text                     |                  | true     |                                                                                   | [public.tasks](public.tasks.md)                       |         |
-| context             | text                     | 'personal'::text | false    |                                                                                   |                                                       |         |
-| recurrence_rule_id  | text                     |                  | false    |                                                                                   | [public.recurrence_rules](public.recurrence_rules.md) |         |
-| start_offset_days   | integer                  |                  | true     |                                                                                   |                                                       |         |
-| anchor_date         | date                     |                  | false    |                                                                                   |                                                       |         |
-| last_generated_date | date                     |                  | true     |                                                                                   |                                                       |         |
-| enabled             | boolean                  | true             | false    |                                                                                   |                                                       |         |
-| created_at          | timestamp with time zone | now()            | false    |                                                                                   |                                                       |         |
-| updated_at          | timestamp with time zone | now()            | false    |                                                                                   |                                                       |         |
+| Name                | Type                     | Default          | Nullable | Children                                                                                                          | Parents                                               | Comment |
+| ------------------- | ------------------------ | ---------------- | -------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------- |
+| id                  | text                     |                  | false    | [public.tasks](public.tasks.md) [public.recurring_task_template_labels](public.recurring_task_template_labels.md) |                                                       |         |
+| title               | text                     |                  | false    |                                                                                                                   |                                                       |         |
+| description         | text                     |                  | true     |                                                                                                                   |                                                       |         |
+| estimated_minutes   | integer                  |                  | true     |                                                                                                                   |                                                       |         |
+| project_id          | text                     |                  | true     |                                                                                                                   | [public.projects](public.projects.md)                 |         |
+| parent_id           | text                     |                  | true     |                                                                                                                   | [public.tasks](public.tasks.md)                       |         |
+| context             | text                     | 'personal'::text | false    |                                                                                                                   |                                                       |         |
+| recurrence_rule_id  | text                     |                  | false    |                                                                                                                   | [public.recurrence_rules](public.recurrence_rules.md) |         |
+| start_offset_days   | integer                  |                  | true     |                                                                                                                   |                                                       |         |
+| anchor_date         | date                     |                  | false    |                                                                                                                   |                                                       |         |
+| last_generated_date | date                     |                  | true     |                                                                                                                   |                                                       |         |
+| enabled             | boolean                  | true             | false    |                                                                                                                   |                                                       |         |
+| created_at          | timestamp with time zone | now()            | false    |                                                                                                                   |                                                       |         |
+| updated_at          | timestamp with time zone | now()            | false    |                                                                                                                   |                                                       |         |
 
 ## Constraints
 
@@ -46,6 +46,7 @@
 ```mermaid
 erDiagram
 
+"public.tasks" }o--o| "public.recurring_task_templates" : "FOREIGN KEY (template_id) REFERENCES recurring_task_templates(id) ON DELETE SET NULL"
 "public.recurring_task_template_labels" }o--|| "public.recurring_task_templates" : "FOREIGN KEY (template_id) REFERENCES recurring_task_templates(id) ON DELETE CASCADE"
 "public.recurring_task_templates" }o--o| "public.projects" : "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL"
 "public.recurring_task_templates" }o--o| "public.tasks" : "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL"
@@ -67,23 +68,6 @@ erDiagram
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
 }
-"public.recurring_task_template_labels" {
-  text template_id FK
-  text label_id FK
-}
-"public.projects" {
-  text id
-  text title
-  text description
-  text status
-  date start_date
-  date target_date
-  text color
-  integer sort_order
-  timestamp_with_time_zone created_at
-  timestamp_with_time_zone updated_at
-  text context
-}
 "public.tasks" {
   text id
   text title
@@ -102,6 +86,25 @@ erDiagram
   text commitment
   text status_reason
   timestamp_with_time_zone remind_at
+  text template_id FK
+  date occurrence_date
+}
+"public.recurring_task_template_labels" {
+  text template_id FK
+  text label_id FK
+}
+"public.projects" {
+  text id
+  text title
+  text description
+  text status
+  date start_date
+  date target_date
+  text color
+  integer sort_order
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+  text context
 }
 "public.recurrence_rules" {
   text id

@@ -837,12 +837,11 @@ describe('task parent', () => {
 })
 
 describe('task complete', () => {
-  it('sends an empty body and prints the whole response, including nextTask', async () => {
+  it('sends an empty body and prints the whole response', async () => {
     const completed = {
       id: 't1',
       number: 1,
       status: 'completed',
-      nextTask: null,
     }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(completed), { status: 200 }),
@@ -872,7 +871,6 @@ describe('task complete', () => {
       id: 't1',
       number: 1,
       status: 'completed',
-      nextTask: null,
     }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(completed), { status: 200 }),
@@ -898,7 +896,6 @@ describe('task complete', () => {
       id: 't1',
       number: 1,
       status: 'completed',
-      nextTask: null,
     }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(completed), { status: 200 }),
@@ -934,7 +931,6 @@ describe('task complete', () => {
       id: 't1',
       number: 1,
       status: 'completed',
-      nextTask: null,
     }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(completed), { status: 200 }),
@@ -980,36 +976,6 @@ describe('task complete', () => {
     )
 
     expect(exitCode).not.toBe(0)
-  })
-
-  it('prints the linkSync summary to stderr when nextTask includes one', async () => {
-    const completed = {
-      id: 't1',
-      number: 1,
-      status: 'completed',
-      nextTask: {
-        id: 't2',
-        number: 2,
-        status: 'todo',
-        linkSync: {
-          outgoing: [{ number: 76, title: 'Fix bug' }],
-          unresolvedRefs: [],
-        },
-      },
-    }
-    const { fetchStub } = captureFetch(
-      () => new Response(JSON.stringify(completed), { status: 200 }),
-    )
-    const stderr = spyStderr()
-
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'task', 'complete', '42'],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(exitCode).toBe(0)
-    expect(stderr.mock.calls).toEqual([['Linked tasks:\n  #76 Fix bug\n']])
   })
 })
 

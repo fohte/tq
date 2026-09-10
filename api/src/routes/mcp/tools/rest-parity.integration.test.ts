@@ -13,12 +13,7 @@ import {
   type TaskResponse,
   withoutLinkSync,
 } from '#routes/tasks/testing'
-import {
-  assertDefined,
-  jsonBody,
-  passthroughSchema,
-  setupTestDb,
-} from '#testing'
+import { jsonBody, passthroughSchema, setupTestDb } from '#testing'
 
 setupTestDb()
 
@@ -26,10 +21,6 @@ setupTestDb()
 // in the same shape, through the plain REST routes the web UI reads from —
 // not the MCP read tools (read-tools.integration.test.ts) and not the write
 // tool's own response (write-tools.integration.test.ts).
-
-type CompletedTaskResponse = TaskResponse & {
-  nextTask: TaskResponse | null
-}
 
 let client: Client
 
@@ -46,42 +37,6 @@ async function callTool(
   args: Record<string, unknown>,
 ): Promise<CallToolResult> {
   return callMcpTool(client, name, args)
-}
-
-async function completeRecurringTask(): Promise<{
-  completedTask: TaskResponse
-  nextTask: TaskResponse
-}> {
-  const created = await callTool('create_task', {
-    title: 'Recurring via MCP',
-    dueDate: '2026-03-22',
-    recurrenceRule: { type: 'daily', interval: 1 },
-  })
-  const createdData = passthroughSchema<TaskResponse>().parse(
-    parseToolJson(created),
-  )
-
-  const completed = await callTool('update_task_status', {
-    taskId: createdData.id,
-    status: 'completed',
-  })
-  const completedResult = passthroughSchema<CompletedTaskResponse>().parse(
-    parseToolJson(completed),
-  )
-  assertDefined(
-    completedResult.nextTask,
-    'expected a next task to be generated',
-  )
-
-  return {
-    completedTask: {
-      ...withoutLinkSync(createdData),
-      status: 'completed',
-      statusReason: 'completed',
-      updatedAt: completedResult.updatedAt,
-    },
-    nextTask: withoutLinkSync(completedResult.nextTask),
-  }
 }
 
 describe('REST/MCP parity', () => {
@@ -238,71 +193,8 @@ describe('REST/MCP parity', () => {
 
     expect(await jsonBody(res)).toEqual({
       ...data,
-      // `data` carries `nextTask` from the update_task_status tool's
-      // completion response, but the plain task-detail GET has no such
-      // field.
-      nextTask: undefined,
       titleAuthor: { kind: 'human', agent: null },
       descriptionAuthor: { kind: 'human', agent: null },
-      childCompletionCount: { total: 0, completed: 0 },
-      pages: [],
-      timeBlocks: [],
-      links: { outgoing: [], incoming: [] },
-      labels: [],
-      parentNumber: null,
-      duplicateOfNumber: null,
-      duplicateOfTask: null,
-      blockedBy: [],
-      blocking: [],
-    })
-  })
-
-  it('completing a recurring task via update_task_status generates a next occurrence visible through GET /api/tasks (list)', async () => {
-    const { completedTask, nextTask } = await completeRecurringTask()
-
-    const res = await app.request('/api/tasks?context=personal')
-    expect(res.status).toBe(200)
-
-    const byId = (a: { id: string }, b: { id: string }) =>
-      a.id.localeCompare(b.id)
-    const expected = [
-      {
-        ...completedTask,
-        parentNumber: null,
-        duplicateOfNumber: null,
-        blockedByNumbers: [],
-        labels: [],
-        childCompletionCount: { total: 0, completed: 0 },
-      },
-      {
-        ...nextTask,
-        parentNumber: null,
-        duplicateOfNumber: null,
-        blockedByNumbers: [],
-        labels: [],
-        childCompletionCount: { total: 0, completed: 0 },
-      },
-    ]
-
-    // completedTask and nextTask share one recurrenceRuleId, exercising the
-    // list endpoint's dedup-then-batch-fetch of recurrence rules. Sorting
-    // both sides by id avoids depending on the unspecified tie-break order
-    // Postgres uses when createdAt is identical for both tasks.
-    expect((await jsonBody<{ id: string }[]>(res)).sort(byId)).toEqual(
-      expected.sort(byId),
-    )
-  })
-
-  it('completing a recurring task via update_task_status generates a next occurrence visible through GET /api/tasks/:id', async () => {
-    const { nextTask } = await completeRecurringTask()
-
-    const res = await app.request(`/api/tasks/${nextTask.id}`)
-    expect(res.status).toBe(200)
-
-    expect(await jsonBody(res)).toEqual({
-      ...nextTask,
-      titleAuthor: { kind: 'system', agent: null },
-      descriptionAuthor: { kind: 'system', agent: null },
       childCompletionCount: { total: 0, completed: 0 },
       pages: [],
       timeBlocks: [],

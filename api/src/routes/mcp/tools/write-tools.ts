@@ -125,12 +125,11 @@ export function registerWriteTools(server: McpServer): void {
     'update_task_status',
     {
       description:
-        'Change a task to todo or completed. Completing a task that has a ' +
-        'recurrenceRule creates the next occurrence of that task. ' +
-        'Completing an already-completed task is rejected. When closing a ' +
-        'task (status: completed), optionally pass statusReason to record ' +
-        "why it was closed, and, when statusReason is 'duplicate', " +
-        'duplicateOfTaskId to record which task it duplicates.',
+        'Change a task to todo or completed. Completing an already-completed ' +
+        'task is rejected. When closing a task (status: completed), ' +
+        'optionally pass statusReason to record why it was closed, and, ' +
+        "when statusReason is 'duplicate', duplicateOfTaskId to record " +
+        'which task it duplicates.',
       inputSchema: z.object({
         taskId: taskIdOrNumber,
         status: taskStatus,
@@ -139,8 +138,9 @@ export function registerWriteTools(server: McpServer): void {
         agent: agentArgSchema,
       }),
     },
-    // Completing routes through /complete for its recurrence side effect;
-    // todo routes through the plain /status PATCH.
+    // Completing routes through /complete since only it rejects an
+    // already-completed task with 409; todo routes through the plain
+    // /status PATCH.
     async ({ taskId, status, statusReason, duplicateOfTaskId, agent }) =>
       status === 'completed'
         ? callRoute(`/api/tasks/${String(taskId)}/complete`, agent, {

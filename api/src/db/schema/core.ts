@@ -11,7 +11,10 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
+
+import { recurringTaskTemplates } from '#db/schema/recurring-task-templates'
 
 export const projects = pgTable(
   'projects',
@@ -102,6 +105,19 @@ export const tasks = pgTable(
       () => recurrenceRules.id,
       { onDelete: 'set null' },
     ),
+    // Template this task was generated from by the recurring task
+    // scheduler; null for a plain (non-generated) task.
+    //
+    // Explicit `AnyPgColumn` return type breaks circular type inference with
+    // recurring-task-templates.ts.
+    templateId: text('template_id').references(
+      (): AnyPgColumn => recurringTaskTemplates.id,
+      { onDelete: 'set null' },
+    ),
+    // The occurrence date this generated instance stands for. Paired with
+    // `templateId` (both null or both set; enforced below) to prevent the
+    // scheduler from generating the same occurrence twice.
+    occurrenceDate: date('occurrence_date'),
     context: text('context', {
       enum: ['work', 'personal'],
     })
@@ -133,6 +149,12 @@ export const tasks = pgTable(
     index('idx_tasks_project_id').on(table.projectId),
     index('idx_tasks_project_status').on(table.projectId, table.status),
     index('idx_tasks_commitment').on(table.commitment),
+    index('idx_tasks_template_id').on(table.templateId),
+    // Partial, like `idx_tasks_remind_at` below: `template_id` is NULL on
+    // every task except scheduler-generated ones.
+    uniqueIndex('tasks_template_id_occurrence_date_unique')
+      .on(table.templateId, table.occurrenceDate)
+      .where(sql`${table.templateId} IS NOT NULL`),
     // Partial: `remind_at` is NULL on all but the handful of tasks with a
     // pending reminder, and the poll's predicate never matches NULL anyway.
     index('idx_tasks_remind_at')
@@ -141,6 +163,10 @@ export const tasks = pgTable(
     check(
       'tasks_status_reason_check',
       sql`${table.status} = 'completed' OR ${table.statusReason} IS NULL`,
+    ),
+    check(
+      'tasks_template_occurrence_paired_check',
+      sql`(${table.templateId} IS NULL) = (${table.occurrenceDate} IS NULL)`,
     ),
   ],
 )

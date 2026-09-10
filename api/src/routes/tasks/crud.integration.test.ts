@@ -2026,33 +2026,6 @@ describe('tasks CRUD API', () => {
       })
       expect(newTask.recurrenceRuleId).not.toBe(ruleId)
     })
-
-    it('does not delete shared recurrence rule when deleting task', async () => {
-      // Create a recurring task and complete it to generate next instance
-      const task = await createRecurringTask(
-        'Shared rule delete test',
-        { type: 'daily', interval: 1 },
-        { dueDate: '2026-03-22' },
-      )
-
-      const completeRes = await app.request(`/api/tasks/${task.id}/complete`, {
-        method: 'POST',
-      })
-      const completeBody = await jsonBody<
-        TaskResponse & { nextTask: TaskResponse | null }
-      >(completeRes)
-      assertDefined(completeBody.nextTask)
-      const nextTask = completeBody.nextTask
-
-      // Delete the completed task
-      await app.request(`/api/tasks/${task.id}`, { method: 'DELETE' })
-
-      // The next active task should still have its recurrence rule intact
-      const nextRes = await app.request(`/api/tasks/${nextTask.id}`)
-      const nextBody = await jsonBody<TaskResponse>(nextRes)
-      expect(nextBody.recurrenceRuleId).toBe(task.recurrenceRuleId)
-      expect(nextBody.recurrenceRule).not.toBeNull()
-    })
   })
 
   describe('sequential number', () => {
@@ -2185,48 +2158,6 @@ describe('tasks CRUD API', () => {
         expect(body.recurrenceRuleId).toBeNull()
         expect(body.recurrenceRule).toBeNull()
       })
-
-      it('creates new rule instead of mutating shared rule', async () => {
-        // Create a recurring task and complete it so both tasks share the rule
-        const task = await createRecurringTask(
-          'Shared rule update test',
-          { type: 'daily', interval: 1 },
-          { dueDate: '2026-03-22' },
-        )
-
-        const completeRes = await app.request(
-          `/api/tasks/${task.id}/complete`,
-          { method: 'POST' },
-        )
-        const completeBody = await jsonBody<
-          TaskResponse & { nextTask: TaskResponse | null }
-        >(completeRes)
-        assertDefined(completeBody.nextTask)
-        const nextTask = completeBody.nextTask
-        assertDefined(task.recurrenceRuleId)
-        const originalRuleId = task.recurrenceRuleId
-
-        // Update the recurrence rule on the next task
-        const patchRes = await app.request(`/api/tasks/${nextTask.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            recurrenceRule: { type: 'weekly', interval: 1, daysOfWeek: [1] },
-          }),
-        })
-
-        expect(patchRes.status).toBe(200)
-        const patchBody = await jsonBody<TaskResponse>(patchRes)
-        // Should get a NEW rule ID since the old one was shared
-        expect(patchBody.recurrenceRuleId).not.toBe(originalRuleId)
-        assertDefined(patchBody.recurrenceRule)
-        expect(patchBody.recurrenceRule.type).toBe('weekly')
-
-        // The completed task should still reference the original rule
-        const origRes = await app.request(`/api/tasks/${task.id}`)
-        const origBody = await jsonBody<TaskResponse>(origRes)
-        expect(origBody.recurrenceRuleId).toBe(originalRuleId)
-      })
     })
 
     describe('GET /api/tasks/:id with recurrence rule', () => {
@@ -2275,39 +2206,6 @@ describe('tasks CRUD API', () => {
           interval: 1,
         })
         expect(newTask.recurrenceRuleId).not.toBe(ruleId)
-      })
-
-      it('does not delete shared recurrence rule when another task uses it', async () => {
-        // Create a recurring task and complete it to generate next instance
-        const task = await createRecurringTask(
-          'Shared rule task',
-          { type: 'daily', interval: 1 },
-          { dueDate: '2026-03-22' },
-        )
-
-        const completeRes = await app.request(
-          `/api/tasks/${task.id}/complete`,
-          { method: 'POST' },
-        )
-        const completeBody = await jsonBody<
-          TaskResponse & { nextTask: TaskResponse | null }
-        >(completeRes)
-        assertDefined(completeBody.nextTask)
-        const nextTask = completeBody.nextTask
-        expect(nextTask.recurrenceRuleId).toBe(task.recurrenceRuleId)
-
-        // Remove recurrence from the completed task
-        await app.request(`/api/tasks/${task.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ recurrenceRule: null }),
-        })
-
-        // The next active task should still have its recurrence rule intact
-        const nextRes = await app.request(`/api/tasks/${nextTask.id}`)
-        const nextBody = await jsonBody<TaskResponse>(nextRes)
-        expect(nextBody.recurrenceRuleId).toBe(task.recurrenceRuleId)
-        expect(nextBody.recurrenceRule).not.toBeNull()
       })
     })
   })

@@ -5,20 +5,6 @@ import type { DbTransaction } from '#db/connection'
 import { labels, taskLabels } from '#db/schema'
 import type { contextEnum } from '#schemas/task'
 
-// tx-scoped, unlike shared.ts's getLabelNamesByTaskId, for callers that must
-// read a task's labels inside the same transaction as a later write.
-export async function getTaskLabelNames(
-  tx: DbTransaction,
-  taskId: string,
-): Promise<string[]> {
-  const rows = await tx
-    .select({ name: labels.name })
-    .from(taskLabels)
-    .innerJoin(labels, eq(taskLabels.labelId, labels.id))
-    .where(eq(taskLabels.taskId, taskId))
-  return rows.map((row) => row.name)
-}
-
 // Full replacement, not add/remove: callers must pass the complete desired
 // set of names each time, so an empty array clears every label from the task.
 export async function syncTaskLabels(

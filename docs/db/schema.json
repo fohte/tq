@@ -806,6 +806,16 @@
           "name": "remind_at",
           "type": "timestamp with time zone",
           "nullable": true
+        },
+        {
+          "name": "template_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "occurrence_date",
+          "type": "date",
+          "nullable": true
         }
       ],
       "indexes": [
@@ -868,6 +878,18 @@
           "def": "CREATE INDEX idx_tasks_remind_at ON public.tasks USING btree (remind_at) WHERE (remind_at IS NOT NULL)",
           "table": "public.tasks",
           "columns": ["remind_at"]
+        },
+        {
+          "name": "idx_tasks_template_id",
+          "def": "CREATE INDEX idx_tasks_template_id ON public.tasks USING btree (template_id)",
+          "table": "public.tasks",
+          "columns": ["template_id"]
+        },
+        {
+          "name": "tasks_template_id_occurrence_date_unique",
+          "def": "CREATE UNIQUE INDEX tasks_template_id_occurrence_date_unique ON public.tasks USING btree (template_id, occurrence_date) WHERE (template_id IS NOT NULL)",
+          "table": "public.tasks",
+          "columns": ["template_id", "occurrence_date"]
         }
       ],
       "constraints": [
@@ -878,6 +900,14 @@
           "table": "public.tasks",
           "referenced_table": "",
           "columns": ["status", "status_reason"]
+        },
+        {
+          "name": "tasks_template_occurrence_paired_check",
+          "type": "CHECK",
+          "def": "CHECK (((template_id IS NULL) = (occurrence_date IS NULL)))",
+          "table": "public.tasks",
+          "referenced_table": "",
+          "columns": ["template_id", "occurrence_date"]
         },
         {
           "name": "tasks_project_id_projects_id_fk",
@@ -921,6 +951,15 @@
           "table": "public.tasks",
           "referenced_table": "",
           "columns": ["number"]
+        },
+        {
+          "name": "tasks_template_id_recurring_task_templates_id_fk",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (template_id) REFERENCES recurring_task_templates(id) ON DELETE SET NULL",
+          "table": "public.tasks",
+          "referenced_table": "public.recurring_task_templates",
+          "columns": ["template_id"],
+          "referenced_columns": ["id"]
         }
       ]
     },
@@ -2806,6 +2845,15 @@
       "parent_columns": ["id"],
       "parent_cardinality": "zero_or_one",
       "def": "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "public.tasks",
+      "columns": ["template_id"],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.recurring_task_templates",
+      "parent_columns": ["id"],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (template_id) REFERENCES recurring_task_templates(id) ON DELETE SET NULL"
     },
     {
       "table": "public.time_blocks",

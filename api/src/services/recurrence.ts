@@ -1,15 +1,17 @@
 import { err, ok, type Result } from 'neverthrow'
 
-import type { recurrenceRules, tasks } from '#db/schema'
-
-type RecurrenceRule = typeof recurrenceRules.$inferSelect
-type Task = typeof tasks.$inferSelect
-
 export class EmptyDaysOfWeekError extends Error {
   constructor() {
     super('daysOfWeek must be non-empty')
     this.name = 'EmptyDaysOfWeekError'
   }
+}
+
+export interface RecurrenceRuleInput {
+  type: 'daily' | 'weekly' | 'monthly' | 'custom'
+  interval: number
+  daysOfWeek?: number[] | null
+  dayOfMonth?: number | null
 }
 
 /**
@@ -19,12 +21,7 @@ export class EmptyDaysOfWeekError extends Error {
  */
 export function computeNextDate(
   baseDate: string,
-  rule: {
-    type: 'daily' | 'weekly' | 'monthly' | 'custom'
-    interval: number
-    daysOfWeek?: number[] | null
-    dayOfMonth?: number | null
-  },
+  rule: RecurrenceRuleInput,
 ): Result<string, EmptyDaysOfWeekError> {
   const base = new Date(baseDate + 'T00:00:00')
 
@@ -121,65 +118,31 @@ function computeNextWeeklyDate(
   return ok(formatDate(next))
 }
 
-function formatDate(d: Date): string {
+/**
+ * Every occurrence date strictly after `baseDate` up to and including
+ * `today`, in chronological order. Lets a template that fell behind by
+ * more than one occurrence (e.g. disabled for weeks) catch up in a single
+ * call instead of one occurrence per invocation.
+ */
+export function computeDueOccurrences(
+  baseDate: string,
+  rule: RecurrenceRuleInput,
+  today: string,
+): Result<string[], EmptyDaysOfWeekError> {
+  const dates: string[] = []
+  let current = baseDate
+  for (;;) {
+    const nextResult = computeNextDate(current, rule)
+    if (nextResult.isErr()) return err(nextResult.error)
+    if (nextResult.value > today) return ok(dates)
+    dates.push(nextResult.value)
+    current = nextResult.value
+  }
+}
+
+export function formatDate(d: Date): string {
   const year = String(d.getFullYear())
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
-}
-
-/**
- * Build the data for the next recurring task instance from a completed task.
- */
-export function buildNextTaskData(
-  completedTask: Task,
-  rule: RecurrenceRule,
-): Result<
-  {
-    title: string
-    description: string | null
-    status: 'todo'
-    startDate: string | null
-    dueDate: string | null
-    estimatedMinutes: number | null
-    parentId: string | null
-    projectId: string | null
-    recurrenceRuleId: string
-    context: 'work' | 'personal'
-  },
-  EmptyDaysOfWeekError
-> {
-  const today = formatDate(new Date())
-  const baseDate = completedTask.dueDate ?? today
-
-  return computeNextDate(baseDate, {
-    type: rule.type,
-    interval: rule.interval,
-    daysOfWeek: rule.daysOfWeek,
-    dayOfMonth: rule.dayOfMonth,
-  }).map((nextDueDate) => {
-    // Shift startDate by the same offset if both startDate and dueDate exist
-    let nextStartDate: string | null = null
-    if (completedTask.startDate != null && completedTask.dueDate != null) {
-      const startMs = new Date(completedTask.startDate + 'T00:00:00').getTime()
-      const dueMs = new Date(completedTask.dueDate + 'T00:00:00').getTime()
-      const offsetDays = Math.round((dueMs - startMs) / (1000 * 60 * 60 * 24))
-      const nextDue = new Date(nextDueDate + 'T00:00:00')
-      nextDue.setDate(nextDue.getDate() - offsetDays)
-      nextStartDate = formatDate(nextDue)
-    }
-
-    return {
-      title: completedTask.title,
-      description: completedTask.description,
-      status: 'todo' as const,
-      startDate: nextStartDate,
-      dueDate: nextDueDate,
-      estimatedMinutes: completedTask.estimatedMinutes,
-      parentId: completedTask.parentId,
-      projectId: completedTask.projectId,
-      recurrenceRuleId: rule.id,
-      context: completedTask.context,
-    }
-  })
 }

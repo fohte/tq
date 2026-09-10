@@ -10,7 +10,6 @@ import {
 import {
   createComment,
   createPage,
-  createRecurringTask,
   createTask,
   type LinkedTaskResponse,
   type LinkSyncResponse,
@@ -18,12 +17,7 @@ import {
   type TaskResponse,
   toListItemResponse,
 } from '#routes/tasks/testing'
-import {
-  assertDefined,
-  jsonBody,
-  passthroughSchema,
-  setupTestDb,
-} from '#testing'
+import { jsonBody, passthroughSchema, setupTestDb } from '#testing'
 
 setupTestDb()
 
@@ -422,29 +416,6 @@ describe('task mention links', () => {
     })
 
     expect(await getLinks(source.id)).toEqual({
-      outgoing: [linkedTaskDetail(target)],
-      incoming: [],
-    })
-  })
-
-  it('links the next occurrence generated when a recurring task completes', async () => {
-    const target = await createTask('Target')
-    const source = await createRecurringTask(
-      'Recurring source',
-      { type: 'daily', interval: 1 },
-      { dueDate: '2026-03-22', description: `See #${String(target.number)}` },
-    )
-
-    const res = await app.request(`/api/tasks/${source.id}/complete`, {
-      method: 'POST',
-    })
-    expect(res.status).toBe(200)
-    const body = await jsonBody<
-      TaskResponse & { nextTask: TaskResponse | null }
-    >(res)
-    assertDefined(body.nextTask)
-
-    expect(await getLinks(body.nextTask.id)).toEqual({
       outgoing: [linkedTaskDetail(target)],
       incoming: [],
     })

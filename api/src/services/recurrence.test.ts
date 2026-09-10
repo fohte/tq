@@ -1,7 +1,7 @@
 import { ok } from 'neverthrow'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-import { buildNextTaskData, computeNextDate } from '#services/recurrence'
+import { computeDueOccurrences, computeNextDate } from '#services/recurrence'
 
 describe('computeNextDate', () => {
   describe('daily', () => {
@@ -155,100 +155,45 @@ describe('computeNextDate', () => {
   })
 })
 
-describe('buildNextTaskData', () => {
-  const baseTask = {
-    id: 'task-1',
-    number: 1,
-    title: 'Daily standup',
-    description: 'Morning standup meeting',
-    status: 'completed' as const,
-    statusReason: 'completed' as const,
-    context: 'work' as const,
-    commitment: 'active' as const,
-    startDate: null,
-    dueDate: '2026-03-22',
-    estimatedMinutes: 15,
-    remindAt: null,
-    parentId: null,
-    projectId: 'proj-1',
-    recurrenceRuleId: 'rule-1',
-    createdAt: new Date('2026-03-22T00:00:00Z'),
-    updatedAt: new Date('2026-03-22T00:00:00Z'),
-  }
-
-  const baseRule = {
-    id: 'rule-1',
-    type: 'daily' as const,
-    interval: 1,
-    daysOfWeek: null,
-    dayOfMonth: null,
-    createdAt: new Date('2026-01-01T00:00:00Z'),
-    updatedAt: new Date('2026-01-01T00:00:00Z'),
-  }
-
-  it('builds the next task data from a completed task', () => {
-    expect(buildNextTaskData(baseTask, baseRule)).toEqual(
-      ok({
-        title: 'Daily standup',
-        description: 'Morning standup meeting',
-        status: 'todo',
-        startDate: null,
-        dueDate: '2026-03-23',
-        estimatedMinutes: 15,
-        parentId: null,
-        projectId: 'proj-1',
-        recurrenceRuleId: 'rule-1',
-        context: 'work',
-      }),
-    )
+describe('computeDueOccurrences', () => {
+  it('returns no occurrences when today is before the next occurrence', () => {
+    expect(
+      computeDueOccurrences(
+        '2026-03-22',
+        { type: 'daily', interval: 1 },
+        '2026-03-22',
+      ),
+    ).toEqual(ok([]))
   })
 
-  it('shifts startDate by the same offset when both dates exist', () => {
-    const task = {
-      ...baseTask,
-      startDate: '2026-03-20',
-      dueDate: '2026-03-22',
-    }
-    // dueDate offset is 2 days (22 - 20), next due is 23, so start = 21
-    expect(buildNextTaskData(task, baseRule)).toEqual(
-      ok({
-        title: 'Daily standup',
-        description: 'Morning standup meeting',
-        status: 'todo',
-        startDate: '2026-03-21',
-        dueDate: '2026-03-23',
-        estimatedMinutes: 15,
-        parentId: null,
-        projectId: 'proj-1',
-        recurrenceRuleId: 'rule-1',
-        context: 'work',
-      }),
-    )
+  it('returns exactly one occurrence when today is the next occurrence', () => {
+    expect(
+      computeDueOccurrences(
+        '2026-03-22',
+        { type: 'daily', interval: 1 },
+        '2026-03-23',
+      ),
+    ).toEqual(ok(['2026-03-23']))
   })
 
-  it('uses today as base when task has no dueDate', () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-03-22T12:00:00Z'))
-
-    const task = { ...baseTask, dueDate: null }
-    // Should be tomorrow (today + 1 for daily interval 1)
-    expect(buildNextTaskData(task, baseRule)).toEqual(
-      ok({
-        title: 'Daily standup',
-        description: 'Morning standup meeting',
-        status: 'todo',
-        startDate: null,
-        dueDate: '2026-03-23',
-        estimatedMinutes: 15,
-        parentId: null,
-        projectId: 'proj-1',
-        recurrenceRuleId: 'rule-1',
-        context: 'work',
-      }),
-    )
+  it('catches up multiple occurrences when behind by several days', () => {
+    expect(
+      computeDueOccurrences(
+        '2026-03-15',
+        { type: 'daily', interval: 1 },
+        '2026-03-19',
+      ),
+    ).toEqual(ok(['2026-03-16', '2026-03-17', '2026-03-18', '2026-03-19']))
   })
 
-  afterEach(() => {
-    vi.useRealTimers()
+  it('catches up multiple occurrences for a weekly rule with daysOfWeek', () => {
+    // 2026-03-22 is a Sunday (day 0); daysOfWeek=[1,3,5] visits Mon/Wed/Fri
+    expect(
+      computeDueOccurrences(
+        '2026-03-22',
+        { type: 'weekly', interval: 1, daysOfWeek: [1, 3, 5] },
+        '2026-03-28',
+      ),
+    ).toEqual(ok(['2026-03-23', '2026-03-25', '2026-03-27']))
   })
 })

@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm'
+import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import {
   boolean,
   check,
@@ -27,7 +28,9 @@ export const recurringTaskTemplates = pgTable(
     }),
     // Task under which each generated instance is nested, not another
     // template -- a template has no parent/child hierarchy of its own.
-    parentId: text('parent_id').references(() => tasks.id, {
+    // Explicit `AnyPgColumn` return type breaks circular type inference
+    // with core.ts.
+    parentId: text('parent_id').references((): AnyPgColumn => tasks.id, {
       onDelete: 'set null',
     }),
     context: text('context', {
