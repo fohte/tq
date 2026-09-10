@@ -94,3 +94,72 @@ export function classifyGcalEvent(event: {
   }
   return event.hasOtherAttendees ? 'gcal-meeting' : 'gcal-solo'
 }
+
+// 24h / 30min slots (matches slotMinTime/slotMaxTime/slotDuration in
+// calendar-grid.tsx).
+const SLOTS_PER_DAY = 48
+
+export interface SlotGhostRect {
+  top: number
+  left: number
+  width: number
+  height: number
+}
+
+/**
+ * Resolves the day column and 30-minute slot under the pointer, for
+ * calendar-grid.tsx's hover-preview ghost. Slot lines overlay day columns
+ * in FullCalendar, so the column is found by pointer coordinates rather
+ * than `event.target`'s ancestry.
+ */
+export function findHoveredSlot(
+  container: HTMLElement,
+  clientX: number,
+  clientY: number,
+): SlotGhostRect | null {
+  const colEl = Array.from(
+    container.querySelectorAll<HTMLElement>(
+      '.fc-timegrid-col:not(.fc-timegrid-axis)',
+    ),
+  ).find((col) => {
+    const rect = col.getBoundingClientRect()
+    return (
+      clientX >= rect.left &&
+      clientX < rect.right &&
+      clientY >= rect.top &&
+      clientY < rect.bottom
+    )
+  })
+  if (!colEl) return null
+
+  // Day columns extend beyond the visible scroll area; clip against the scroller bounds.
+  const scrollerRect = colEl
+    .closest<HTMLElement>('.fc-scroller')
+    ?.getBoundingClientRect()
+  if (
+    scrollerRect &&
+    (clientY < scrollerRect.top || clientY >= scrollerRect.bottom)
+  ) {
+    return null
+  }
+
+  // Day columns have no per-slot subdivision, so the slot height is read
+  // off a real slot row instead of duplicating it as a constant.
+  const slotHeight = container
+    .querySelector('.fc-timegrid-slot')
+    ?.getBoundingClientRect().height
+  if (slotHeight == null) return null
+
+  const containerRect = container.getBoundingClientRect()
+  const colRect = colEl.getBoundingClientRect()
+  const slotIndex = Math.min(
+    Math.max(Math.floor((clientY - colRect.top) / slotHeight), 0),
+    SLOTS_PER_DAY - 1,
+  )
+  return {
+    top: colRect.top - containerRect.top + slotIndex * slotHeight,
+    left: colRect.left - containerRect.left,
+    width: colRect.width,
+    height: slotHeight,
+  }
+}

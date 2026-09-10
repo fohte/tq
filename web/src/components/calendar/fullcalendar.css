@@ -55,6 +55,15 @@
   border-color: var(--surface-strong);
 }
 
+/* cursor: cell targets the slot lane, not .fc-timegrid-col-frame -- the
+   day column's own background/event layers collapse to zero height
+   wherever there's no highlight or event, so the slot lane underneath
+   is what the pointer actually lands on over an empty grid area (see
+   findHoveredSlot in lib/calendar-utils.ts for the same hit-testing fact). */
+.tq-calendar .fc-timegrid-slot-lane {
+  cursor: cell;
+}
+
 /* --surface-strong keeps this visible on today's --card tinted column in
    week view. */
 .tq-calendar .fc-highlight {
