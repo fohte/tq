@@ -71,6 +71,8 @@ erDiagram
   text commitment
   text status_reason
   timestamp_with_time_zone remind_at
+  text template_id FK
+  date occurrence_date
 }
 "public.recurring_task_templates" {
   text id

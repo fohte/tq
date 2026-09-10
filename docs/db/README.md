@@ -13,7 +13,7 @@
 | [public.task_comments](public.task_comments.md)                                     | 5       |         | BASE TABLE |
 | [public.task_labels](public.task_labels.md)                                         | 2       |         | BASE TABLE |
 | [public.task_pages](public.task_pages.md)                                           | 8       |         | BASE TABLE |
-| [public.tasks](public.tasks.md)                                                     | 17      |         | BASE TABLE |
+| [public.tasks](public.tasks.md)                                                     | 19      |         | BASE TABLE |
 | [public.time_blocks](public.time_blocks.md)                                         | 7       |         | BASE TABLE |
 | [public.task_queue_items](public.task_queue_items.md)                               | 7       |         | BASE TABLE |
 | [public.edits](public.edits.md)                                                     | 10      |         | BASE TABLE |
@@ -46,6 +46,7 @@ erDiagram
 "public.tasks" }o--o| "public.projects" : "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL"
 "public.tasks" }o--o| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL"
 "public.tasks" }o--o| "public.tasks" : "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL"
+"public.tasks" }o--o| "public.recurring_task_templates" : "FOREIGN KEY (template_id) REFERENCES recurring_task_templates(id) ON DELETE SET NULL"
 "public.time_blocks" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_queue_items" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_queue_items" }o--|| "public.task_queues" : "FOREIGN KEY (queue_id) REFERENCES task_queues(id) ON DELETE CASCADE"
@@ -166,6 +167,8 @@ erDiagram
   text commitment
   text status_reason
   timestamp_with_time_zone remind_at
+  text template_id FK
+  date occurrence_date
 }
 "public.time_blocks" {
   text id
