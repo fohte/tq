@@ -252,14 +252,14 @@ export const tasksCrudApp = new Hono()
         .from(timeBlocks)
         .where(eq(timeBlocks.taskId, id))
         .orderBy(timeBlocks.startTime),
-      task.recurrenceRuleId != null
-        ? db.query.recurrenceRules.findFirst({
-            where: eq(recurrenceRules.id, task.recurrenceRuleId),
-          })
-        : templateId != null
-          ? getRecurrenceRulesByTemplateIds([templateId]).then(
-              (rulesByTemplateId) => rulesByTemplateId.get(templateId) ?? null,
-            )
+      templateId != null
+        ? getRecurrenceRulesByTemplateIds([templateId]).then(
+            (rulesByTemplateId) => rulesByTemplateId.get(templateId) ?? null,
+          )
+        : task.recurrenceRuleId != null
+          ? db.query.recurrenceRules.findFirst({
+              where: eq(recurrenceRules.id, task.recurrenceRuleId),
+            })
           : Promise.resolve(null),
       getGithubLinksByTaskId([id]),
       getTaskLinks(id),
@@ -492,16 +492,19 @@ export const tasksCrudApp = new Hono()
             .where(eq(tasks.id, id))
             .returning(),
         )
-        if (updatedRule == null && updatedTask.recurrenceRuleId != null) {
-          updatedRule =
-            (await tx.query.recurrenceRules.findFirst({
-              where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
-            })) ?? null
-        } else if (updatedRule == null && updatedTask.templateId != null) {
+        if (updatedRule == null && updatedTask.templateId != null) {
           const rulesByTemplateId = await getRecurrenceRulesByTemplateIds([
             updatedTask.templateId,
           ])
           updatedRule = rulesByTemplateId.get(updatedTask.templateId) ?? null
+        } else if (
+          updatedRule == null &&
+          updatedTask.recurrenceRuleId != null
+        ) {
+          updatedRule =
+            (await tx.query.recurrenceRules.findFirst({
+              where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
+            })) ?? null
         }
 
         if (labelsInput !== undefined) {

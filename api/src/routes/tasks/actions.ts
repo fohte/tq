@@ -318,17 +318,17 @@ export const tasksActionsApp = new Hono()
       const updatedTask = result.task
 
       let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
-      if (updatedTask.recurrenceRuleId != null) {
-        completedTaskRule =
-          (await db.query.recurrenceRules.findFirst({
-            where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
-          })) ?? null
-      } else if (updatedTask.templateId != null) {
+      if (updatedTask.templateId != null) {
         const rulesByTemplateId = await getRecurrenceRulesByTemplateIds([
           updatedTask.templateId,
         ])
         completedTaskRule =
           rulesByTemplateId.get(updatedTask.templateId) ?? null
+      } else if (updatedTask.recurrenceRuleId != null) {
+        completedTaskRule =
+          (await db.query.recurrenceRules.findFirst({
+            where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
+          })) ?? null
       }
 
       const labelsByTaskId = await getLabelNamesByTaskId([id])

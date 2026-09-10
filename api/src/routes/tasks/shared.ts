@@ -300,10 +300,10 @@ export async function hydrateTaskListRows(
     ...taskListItemToResponse(
       r.task,
       r.parentNumber,
-      r.task.recurrenceRuleId != null
-        ? (recurrenceRulesById.get(r.task.recurrenceRuleId) ?? null)
-        : r.task.templateId != null
-          ? (recurrenceRulesByTemplateId.get(r.task.templateId) ?? null)
+      r.task.templateId != null
+        ? (recurrenceRulesByTemplateId.get(r.task.templateId) ?? null)
+        : r.task.recurrenceRuleId != null
+          ? (recurrenceRulesById.get(r.task.recurrenceRuleId) ?? null)
           : null,
       githubLinksByTaskId.get(r.task.id) ?? [],
       labelsByTaskId.get(r.task.id) ?? [],

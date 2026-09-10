@@ -2403,6 +2403,47 @@ describe('tasks CRUD API', () => {
         expect(body.recurrenceRule.type).toBe('monthly')
         expect(body.recurrenceRule.dayOfMonth).toBe(15)
       })
+
+      it('prefers the rule from a linked template over a legacy directly-owned rule when both are set', async () => {
+        const task = await createTask('Recurring')
+        await attachLegacyRecurrenceRule(task.id, {
+          type: 'daily',
+          interval: 1,
+        })
+
+        const templateRule = firstOrThrow(
+          await db
+            .insert(recurrenceRules)
+            .values({ type: 'weekly', interval: 1, daysOfWeek: [2] })
+            .returning(),
+        )
+        const template = firstOrThrow(
+          await db
+            .insert(recurringTaskTemplates)
+            .values({
+              title: 'Template title',
+              anchorDate: '2026-03-01',
+              recurrenceRuleId: templateRule.id,
+            })
+            .returning(),
+        )
+        await db
+          .update(tasks)
+          .set({ templateId: template.id, occurrenceDate: '2026-03-01' })
+          .where(eq(tasks.id, task.id))
+
+        const res = await app.request(`/api/tasks/${task.id}`)
+
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskResponse>(res)
+        expect(body.recurrenceRule).toEqual({
+          id: templateRule.id,
+          type: 'weekly',
+          interval: 1,
+          daysOfWeek: [2],
+          dayOfMonth: null,
+        })
+      })
     })
 
     describe('GET /api/tasks with recurrence rule', () => {
