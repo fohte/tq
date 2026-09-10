@@ -335,10 +335,6 @@ export const tasksCrudApp = new Hono()
         'description',
       ])
 
-      // Seeds the new template from `existing` (the pre-PATCH row), not
-      // `taskFields` from this same call -- the only caller that sets
-      // `recurrenceRule` (`useUpdateTaskRecurrenceRule` in web) always sends
-      // `{ recurrenceRule }` alone.
       const existingLabelNames =
         recurrenceRuleInput != null
           ? ((await getLabelNamesByTaskId([id])).get(id) ?? [])
@@ -374,16 +370,43 @@ export const tasksCrudApp = new Hono()
           // Setting a recurrence rule redirects into the template model: a
           // template owns the rule from here on, and this task becomes its
           // first generated instance instead of owning a rule directly.
+          // Merge this same request's field edits over `existing` so the
+          // template reflects the effective post-update task, not the
+          // pre-PATCH row.
+          const effectiveTitle = taskFields.title ?? existing.title
+          const effectiveDescription =
+            'description' in taskFields
+              ? (taskFields.description ?? null)
+              : existing.description
+          const effectiveEstimatedMinutes =
+            'estimatedMinutes' in taskFields
+              ? (taskFields.estimatedMinutes ?? null)
+              : existing.estimatedMinutes
+          const effectiveProjectId =
+            'projectId' in taskFields
+              ? (taskFields.projectId ?? null)
+              : existing.projectId
+          const effectiveContext = taskFields.context ?? existing.context
+          const effectiveStartDate =
+            'startDate' in taskFields
+              ? (taskFields.startDate ?? null)
+              : existing.startDate
+          const effectiveDueDate =
+            'dueDate' in taskFields
+              ? (taskFields.dueDate ?? null)
+              : existing.dueDate
+          const effectiveLabelNames = labelsInput ?? existingLabelNames
+
           const created = await createTemplateFromTaskFields(
             tx,
             {
-              title: existing.title,
-              description: existing.description,
-              estimatedMinutes: existing.estimatedMinutes,
-              projectId: existing.projectId,
+              title: effectiveTitle,
+              description: effectiveDescription,
+              estimatedMinutes: effectiveEstimatedMinutes,
+              projectId: effectiveProjectId,
               parentId: existing.parentId,
-              context: existing.context,
-              labels: existingLabelNames,
+              context: effectiveContext,
+              labels: effectiveLabelNames,
             },
             {
               type: recurrenceRuleInput.type,
@@ -391,8 +414,8 @@ export const tasksCrudApp = new Hono()
               daysOfWeek: recurrenceRuleInput.daysOfWeek ?? null,
               dayOfMonth: recurrenceRuleInput.dayOfMonth ?? null,
             },
-            existing.startDate,
-            existing.dueDate,
+            effectiveStartDate,
+            effectiveDueDate,
           )
           updatedRule = created.rule
           recurrenceRuleId = null

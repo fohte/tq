@@ -139,6 +139,17 @@ function normalizeRecurringTask<
   }
 }
 
+function normalizeTemplate(
+  template: typeof recurringTaskTemplates.$inferSelect,
+) {
+  return {
+    ...template,
+    id: 'ID',
+    createdAt: 'TIMESTAMP',
+    updatedAt: 'TIMESTAMP',
+  }
+}
+
 describe('tasks CRUD API', () => {
   describe('POST /api/tasks', () => {
     it('creates a task with only title', async () => {
@@ -2221,6 +2232,63 @@ describe('tasks CRUD API', () => {
             },
           }),
         )
+      })
+
+      it("seeds the template from this same request's field edits, not the pre-PATCH row", async () => {
+        const task = await createTask('Old title')
+
+        const res = await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: 'New title',
+            dueDate: '2026-06-01',
+            recurrenceRule: { type: 'daily', interval: 1 },
+          }),
+        })
+
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskResponse>(res)
+        assertDefined(body.templateId)
+        expect(normalizeRecurringTask(body)).toEqual(
+          normalizeRecurringTask({
+            ...withoutLinkSync(task),
+            title: 'New title',
+            dueDate: '2026-06-01',
+            occurrenceDate: '2026-06-01',
+            templateId: body.templateId,
+            recurrenceRule: {
+              id: 'ignored',
+              type: 'daily',
+              interval: 1,
+              daysOfWeek: null,
+              dayOfMonth: null,
+            },
+          }),
+        )
+
+        assertDefined(body.recurrenceRule)
+        const [template] = await db
+          .select()
+          .from(recurringTaskTemplates)
+          .where(eq(recurringTaskTemplates.id, body.templateId))
+        assertDefined(template)
+        expect(normalizeTemplate(template)).toEqual({
+          id: 'ID',
+          title: 'New title',
+          description: null,
+          estimatedMinutes: null,
+          projectId: null,
+          parentId: null,
+          context: 'personal',
+          recurrenceRuleId: body.recurrenceRule.id,
+          startOffsetDays: null,
+          anchorDate: '2026-06-01',
+          lastGeneratedDate: null,
+          enabled: true,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        })
       })
 
       async function patchRecurrenceOnTemplateLinkedTask(
