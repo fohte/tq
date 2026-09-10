@@ -8,7 +8,10 @@ import { expect, fn, within } from 'storybook/test'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import {
+  makeTask,
+  makeTaskDetail,
+} from '#components/task/task-row-test-fixtures'
 import type { Schedule } from '#hooks/use-schedules'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
@@ -383,6 +386,17 @@ export const NavigatesToTaskDetail: Story = (() => {
       // content behind an <Outlet>, so navigating away renders nothing new —
       // the screenshot is identical to Default.
       screenshot: { skip: true },
+      // Clicking the chip hovers it first, opening its TimeBlockPreviewCard
+      // popup, which fetches the task behind it.
+      msw: {
+        handlers: [
+          http.get('/api/tasks/task-tb-4', () =>
+            HttpResponse.json(
+              makeTaskDetail({ id: 'task-tb-4', title: '#507 ビルド改善' }),
+            ),
+          ),
+        ],
+      },
     },
     render: (args) => {
       router = createStoryRouter({

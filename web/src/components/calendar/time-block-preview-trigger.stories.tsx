@@ -5,10 +5,21 @@ import { expect, fireEvent, userEvent, waitFor, within } from 'storybook/test'
 
 import { TimeBlockPreviewTrigger } from '#components/calendar/time-block-preview-trigger'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
+import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { DAY_QUEUE_KEY } from '#hooks/use-queues'
 import { formatLocalDate } from '#lib/date-range'
 
 const taskId = '00000000-0000-0000-0000-000000000001'
+
+const taskFixture = makeTaskDetail({
+  id: taskId,
+  number: 12,
+  title: 'Write onboarding doc',
+})
+
+const taskHandler = http.get('/api/tasks/:id', () =>
+  HttpResponse.json(taskFixture),
+)
 
 function Chip({ label }: { label: string }) {
   return (
@@ -87,10 +98,14 @@ export const Manual: Story = {
     event: manualEvent,
     children: <Chip label="Manual task" />,
   },
+  parameters: {
+    msw: { handlers: [taskHandler] },
+  },
   play: async ({ canvas, canvasElement }) => {
     await userEvent.hover(canvas.getByText('Manual task'))
     const body = within(canvasElement.ownerDocument.body)
     await waitFor(() => expect(body.getByText('manual')).toBeVisible())
+    await expect(await body.findByText(taskFixture.title)).toBeVisible()
   },
 }
 
@@ -104,6 +119,7 @@ export const DeleteManualBlock: Story = {
   parameters: {
     msw: {
       handlers: [
+        taskHandler,
         http.delete('/api/schedule/time-blocks/:id', ({ params }) => {
           const id = params['id']
           deletedTimeBlockId = typeof id === 'string' ? id : null
@@ -139,6 +155,7 @@ export const Auto: Story = {
   parameters: {
     msw: {
       handlers: [
+        taskHandler,
         http.get(`/api/queues/${DAY_QUEUE_KEY}/items`, () =>
           HttpResponse.json(autoBlockQueueItems()),
         ),
@@ -149,6 +166,7 @@ export const Auto: Story = {
     await userEvent.hover(canvas.getByText('Auto task'))
     const body = within(canvasElement.ownerDocument.body)
     await waitFor(() => expect(body.getByText('auto')).toBeVisible())
+    await expect(await body.findByText(taskFixture.title)).toBeVisible()
   },
 }
 
@@ -162,6 +180,7 @@ export const RemoveAutoBlockFromQueue: Story = {
   parameters: {
     msw: {
       handlers: [
+        taskHandler,
         http.get(`/api/queues/${DAY_QUEUE_KEY}/items`, () =>
           HttpResponse.json(autoBlockQueueItems()),
         ),
@@ -215,6 +234,9 @@ export const ClosesOnPointerDown: Story = {
   args: {
     event: manualEvent,
     children: <Chip label="Manual task" />,
+  },
+  parameters: {
+    msw: { handlers: [taskHandler] },
   },
   play: async ({ canvas, canvasElement }) => {
     const chip = canvas.getByText('Manual task')
