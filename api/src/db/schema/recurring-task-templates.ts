@@ -28,11 +28,8 @@ export const recurringTaskTemplates = pgTable(
     }),
     // Task under which each generated instance is nested, not another
     // template -- a template has no parent/child hierarchy of its own.
-    //
-    // Explicit `AnyPgColumn` return type breaks the circular type
-    // inference from the core.ts <-> recurring-task-templates.ts import
-    // cycle (core.ts references `recurringTaskTemplates.id` for
-    // `tasks.templateId`).
+    // Explicit `AnyPgColumn` return type breaks circular type inference
+    // with core.ts.
     parentId: text('parent_id').references((): AnyPgColumn => tasks.id, {
       onDelete: 'set null',
     }),

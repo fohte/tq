@@ -37,9 +37,7 @@ async function generateForTemplate(
   const rule = await db.query.recurrenceRules.findFirst({
     where: eq(recurrenceRules.id, template.recurrenceRuleId),
   })
-  // Shouldn't happen -- recurrenceRuleId is .notNull() -- but the FK doesn't
-  // guarantee the row survives forever, so this is defensive rather than
-  // reported as an error.
+  // Defensive guard against a missing recurrence rule row.
   if (!rule) return
 
   const dueResult = computeDueOccurrences(
@@ -58,17 +56,14 @@ async function generateForTemplate(
 
   const occurrenceDates = dueResult.value
   const newLastGeneratedDate = occurrenceDates.at(-1)
-  // Also covers the empty-occurrences case: `.at(-1)` on `[]` is `undefined`.
   if (newLastGeneratedDate == null) return
 
   // One transaction for the claim and every insert it authorizes: a
   // mid-batch failure rolls back the claim too, so the next tick retries the
   // whole batch from scratch instead of reasoning about a partial batch.
   const createdTaskIds = await db.transaction(async (tx) => {
-    // Compare-and-set on the `lastGeneratedDate` snapshot read above (not a
-    // fresh read here): zero rows updated means another process already
-    // claimed this template, or it's no longer eligible (disabled/changed)
-    // since that snapshot was taken.
+    // Optimistic lock: only claims if lastGeneratedDate still matches the
+    // snapshot read above.
     const claimed = await tx
       .update(recurringTaskTemplates)
       .set({ lastGeneratedDate: newLastGeneratedDate, updatedAt: new Date() })

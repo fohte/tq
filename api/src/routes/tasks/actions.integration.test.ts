@@ -12,6 +12,7 @@ import {
   TaskListItemResponse,
   TaskResponse,
   TEST_UUID,
+  withoutLinkSync,
 } from '#routes/tasks/testing'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
@@ -495,8 +496,13 @@ describe('tasks actions API', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await jsonBody<Record<string, unknown>>(res)
-      expect(body).not.toHaveProperty('nextTask')
+      const body = await jsonBody<TaskResponse>(res)
+      expect(body).toEqual({
+        ...withoutLinkSync(task),
+        status: 'completed',
+        statusReason: 'completed',
+        updatedAt: body.updatedAt,
+      })
 
       const rows = await db
         .select({ id: tasks.id })

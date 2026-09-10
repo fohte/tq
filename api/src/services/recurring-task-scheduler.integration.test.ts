@@ -274,4 +274,29 @@ describe('generateDueRecurringTasks', () => {
       lastGeneratedDate: '2026-03-23',
     })
   })
+
+  it('copies description, estimatedMinutes, and context from the template', async () => {
+    fakeToday('2026-03-23')
+    const template = await createTemplate(
+      { type: 'daily', interval: 1 },
+      {
+        anchorDate: '2026-03-22',
+        description: 'Weekly grocery run notes',
+        estimatedMinutes: 45,
+        context: 'work',
+      },
+    )
+
+    await generateDueRecurringTasks()
+
+    expect(await outcome(template.id)).toEqual({
+      tasks: [
+        expectedTask(template, {
+          dueDate: '2026-03-23',
+          occurrenceDate: '2026-03-23',
+        }),
+      ],
+      lastGeneratedDate: '2026-03-23',
+    })
+  })
 })

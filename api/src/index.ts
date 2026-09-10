@@ -15,9 +15,7 @@ serve({ fetch: app.fetch, port }, (info) => {
 const reminderTimer = startReminderScheduler()
 const recurringTaskTimer = startRecurringTaskScheduler()
 
-// Otherwise the two intervals keep the process alive with no way to stop
-// them (confirmed nothing already handles SIGTERM/SIGINT: `rg -n
-// "SIGTERM|SIGINT|clearInterval" src` finds nothing before this change).
+// Otherwise the two intervals keep the process alive with no way to stop them.
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.on(signal, () => {
     clearInterval(reminderTimer)

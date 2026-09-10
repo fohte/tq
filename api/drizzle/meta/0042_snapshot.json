@@ -1,5 +1,5 @@
 {
-  "id": "87a633aa-2be2-45c0-8f9c-2aeede675469",
+  "id": "3fc04114-eab0-4b98-b556-34b4380334cf",
   "prevId": "3c279fd5-0b42-46ec-8315-cba5d264fe51",
   "version": "7",
   "dialect": "postgresql",
@@ -1187,6 +1187,28 @@
           "method": "btree",
           "with": {}
         },
+        "tasks_template_id_occurrence_date_unique": {
+          "name": "tasks_template_id_occurrence_date_unique",
+          "columns": [
+            {
+              "expression": "template_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurrence_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"tasks\".\"template_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "idx_tasks_remind_at": {
           "name": "idx_tasks_remind_at",
           "columns": [
@@ -1248,11 +1270,6 @@
           "name": "tasks_number_unique",
           "nullsNotDistinct": false,
           "columns": ["number"]
-        },
-        "tasks_template_id_occurrence_date_unique": {
-          "name": "tasks_template_id_occurrence_date_unique",
-          "nullsNotDistinct": false,
-          "columns": ["template_id", "occurrence_date"]
         }
       },
       "policies": {},
@@ -1260,6 +1277,10 @@
         "tasks_status_reason_check": {
           "name": "tasks_status_reason_check",
           "value": "\"tasks\".\"status\" = 'completed' OR \"tasks\".\"status_reason\" IS NULL"
+        },
+        "tasks_template_occurrence_paired_check": {
+          "name": "tasks_template_occurrence_paired_check",
+          "value": "(\"tasks\".\"template_id\" IS NULL) = (\"tasks\".\"occurrence_date\" IS NULL)"
         }
       },
       "isRLSEnabled": false
