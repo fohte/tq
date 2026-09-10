@@ -64,6 +64,7 @@ export function TaskSidebar({ task }: { task: TaskDetail }) {
         taskId={task.id}
         dueDate={task.dueDate}
         recurrenceRule={task.recurrenceRule}
+        templateId={task.templateId}
       />
       <SidebarRemindField taskId={task.id} remindAt={task.remindAt} />
       <SidebarParentField taskId={task.id} parentId={task.parentId} />
@@ -134,6 +135,7 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
             taskId={task.id}
             dueDate={task.dueDate}
             recurrenceRule={task.recurrenceRule}
+            templateId={task.templateId}
           />
         </MobileFieldCell>
         <MobileFieldCell className="col-span-2">

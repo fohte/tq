@@ -5,6 +5,7 @@ import { expect, waitFor, within } from 'storybook/test'
 
 import { makeResolveGithubUrlResult } from '#components/task/github-link-test-fixtures'
 import { GithubUrlChip } from '#components/task/github-url-chip'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
 import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
 import { StoryRouter } from '#storybook-config/story-router'
@@ -122,24 +123,10 @@ export const LinkedToTask: Story = {
     raw: LINKED_ISSUE_URL,
     result: {
       linked: true,
-      task: {
+      task: makeTask({
         id: '00000000-0000-0000-0000-000000000001',
         number: 7,
         title: 'Fix flaky test',
-        description: null,
-        status: 'todo',
-        statusReason: null,
-        context: 'personal',
-        commitment: 'active',
-        labels: [],
-        startDate: null,
-        dueDate: null,
-        estimatedMinutes: null,
-        remindAt: null,
-        parentId: null,
-        projectId: null,
-        recurrenceRuleId: null,
-        recurrenceRule: null,
         githubLinks: [
           {
             id: 'link-1',
@@ -153,9 +140,7 @@ export const LinkedToTask: Story = {
             lastSyncedAt: '2026-03-20T00:00:00.000Z',
           },
         ],
-        createdAt: '2026-03-20T00:00:00.000Z',
-        updatedAt: '2026-03-20T00:00:00.000Z',
-      },
+      }),
     },
   },
   play: async ({ canvas, canvasElement, userEvent }) => {

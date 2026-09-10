@@ -77,6 +77,8 @@ export interface TaskResponse {
   projectId: string | null
   recurrenceRuleId: string | null
   recurrenceRule: RecurrenceRuleResponse | null
+  templateId: string | null
+  occurrenceDate: string | null
   githubLinks: GithubLinkResponse[]
   createdAt: string
   updatedAt: string
@@ -116,6 +118,8 @@ export interface TaskListItemResponse {
   projectId: string | null
   recurrenceRuleId: string | null
   recurrenceRule: RecurrenceRuleResponse | null
+  templateId: string | null
+  occurrenceDate: string | null
   githubLinks: GithubLinkResponse[]
   createdAt: string
   updatedAt: string
@@ -160,6 +164,8 @@ export function toListItemResponse(
     | 'projectId'
     | 'recurrenceRuleId'
     | 'recurrenceRule'
+    | 'templateId'
+    | 'occurrenceDate'
     | 'githubLinks'
     | 'createdAt'
     | 'updatedAt'
@@ -187,6 +193,8 @@ export function toListItemResponse(
     projectId: task.projectId,
     recurrenceRuleId: task.recurrenceRuleId,
     recurrenceRule: task.recurrenceRule,
+    templateId: task.templateId,
+    occurrenceDate: task.occurrenceDate,
     githubLinks: task.githubLinks,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
@@ -269,6 +277,8 @@ const taskListItemResponseSchema = z.object({
   projectId: z.string().nullable(),
   recurrenceRuleId: z.string().nullable(),
   recurrenceRule: recurrenceRuleResponseSchema.nullable(),
+  templateId: z.string().nullable(),
+  occurrenceDate: z.string().nullable(),
   githubLinks: z.array(githubLinkResponseSchema),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -298,6 +308,8 @@ const taskResponseSchema = z.object({
   projectId: z.string().nullable(),
   recurrenceRuleId: z.string().nullable(),
   recurrenceRule: recurrenceRuleResponseSchema.nullable(),
+  templateId: z.string().nullable(),
+  occurrenceDate: z.string().nullable(),
   githubLinks: z.array(githubLinkResponseSchema),
   createdAt: z.string(),
   updatedAt: z.string(),
