@@ -402,3 +402,58 @@ export const ClickGcalEvent: Story = {
     await expect(getComputedStyle(manualEvent).cursor).toBe('pointer')
   },
 }
+
+export const DragUpdatesTimeLabelLive: Story = {
+  args: {
+    activeView: 'day',
+  },
+  parameters: {
+    // Mid-drag DOM state is transient (mirror node is gone by the time a
+    // screenshot could be taken), and onEventDrop is a bare mock so the
+    // dropped state never persists/re-renders — same as ClickTaskEvent.
+    screenshot: { skip: true },
+  },
+  play: async ({ canvas, canvasElement }) => {
+    resetVerticalScroll(canvasElement)
+    const chip = assertDefined(
+      (await canvas.findByText('API ドキュメント作成')).closest<HTMLElement>(
+        '.fc-event',
+      ),
+      'manual event .fc-event ancestor not found',
+    )
+    const chipRect = chip.getBoundingClientRect()
+    const x = chipRect.left + chipRect.width / 2
+    const y = chipRect.top + chipRect.height / 2
+
+    await fireEvent.mouseDown(chip, {
+      clientX: x,
+      clientY: y,
+      button: 0,
+      buttons: 1,
+    })
+    // One 26px slot = 30 minutes (see fullcalendar.css); well past the 5px
+    // eventDragMinDistance needed to enter drag mode.
+    await hoverPoint(x, y + 26)
+
+    const mirrorAt0930 = await waitFor(() =>
+      assertDefined(
+        canvasElement.querySelector<HTMLElement>('.fc-event-mirror'),
+        'drag mirror not rendered',
+      ),
+    )
+    await expect(mirrorAt0930.textContent).toContain('09:30')
+
+    await hoverPoint(x, y + 52)
+
+    // Re-query fresh: FullCalendar may swap in a new mirror node per hit.
+    await waitFor(async () => {
+      const mirrorAt1000 = assertDefined(
+        canvasElement.querySelector<HTMLElement>('.fc-event-mirror'),
+        'drag mirror not rendered',
+      )
+      await expect(mirrorAt1000.textContent).toContain('10:00')
+    })
+
+    await fireEvent.mouseUp(document, { clientX: x, clientY: y + 52 })
+  },
+}
