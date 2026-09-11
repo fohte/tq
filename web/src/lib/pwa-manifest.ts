@@ -10,6 +10,9 @@ export const pwaManifest: Partial<ManifestOptions> = {
   start_url: '/',
   scope: '/',
   lang: 'ja',
+  launch_handler: {
+    client_mode: 'navigate-existing',
+  },
   icons: [
     {
       src: 'icon-192.png',
