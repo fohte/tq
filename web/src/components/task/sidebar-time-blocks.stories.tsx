@@ -108,6 +108,12 @@ export const DeleteManualBlock: Story = {
         }),
       ],
     },
+    // Whether the delete trigger's focus ring survives the dialog closing
+    // depends on the race between the mutation settling (which disables the
+    // trigger via `isDeleting`, blurring it per the HTML focus-fixup rule)
+    // and Base UI restoring focus to it, so the capture is flaky in CI.
+    // WithManualAndAutoBlocks already covers this row's appearance.
+    screenshot: { skip: true },
   },
   play: async ({ canvasElement }) => {
     deletedTimeBlockId = null
@@ -143,6 +149,9 @@ export const RemoveAutoBlockFromQueue: Story = {
         }),
       ],
     },
+    // Same focus-ring race as DeleteManualBlock's screenshot skip above.
+    // WithManualAndAutoBlocks already covers this row's appearance.
+    screenshot: { skip: true },
   },
   play: async ({ canvasElement }) => {
     putQueueItemsBody = null
