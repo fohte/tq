@@ -78,6 +78,11 @@ export const Empty: Story = {
     label: 'Active',
     templates: [],
   },
+  parameters: {
+    // Renders null by design, so the screenshot is blank — VRT's
+    // blank-screenshot check flags that as a likely render failure.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas }) => {
     await expect(canvas.queryByText(/Active/)).not.toBeInTheDocument()
   },

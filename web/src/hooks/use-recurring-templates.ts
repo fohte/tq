@@ -14,7 +14,7 @@ export interface RecurringTemplateFilter {
   enabled?: boolean
 }
 
-export const recurringTemplateKeys = {
+const recurringTemplateKeys = {
   all: ['recurring-templates'] as const,
   lists: ['recurring-templates', 'list'] as const,
   list: (filter?: RecurringTemplateFilter) =>

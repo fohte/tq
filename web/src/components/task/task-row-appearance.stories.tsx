@@ -248,6 +248,11 @@ export const WithRecurrenceFromTemplate: Story = {
       templateId: '00000000-0000-0000-0000-000000000002',
     },
   },
+  play: async ({ canvas, userEvent }) => {
+    // Clicking navigates to /recurring/$templateId; this story only
+    // exercises that the click doesn't throw.
+    await userEvent.click(canvas.getByText('Weekly · Sun, Wed'))
+  },
 }
 
 export const WithGithubLink: Story = {
