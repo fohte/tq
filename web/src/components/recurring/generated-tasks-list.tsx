@@ -6,9 +6,8 @@ import { SectionHeading } from '#components/ui/section-heading'
 import { useTaskList } from '#hooks/use-tasks'
 
 export function GeneratedTasksList({ templateId }: { templateId: string }) {
-  const { data: tasks, isLoading } = useTaskList({ templateId })
+  const { data: tasks, isLoading, isError } = useTaskList({ templateId })
 
-  // Most recent occurrence first.
   const sorted = [...(tasks ?? [])].sort((a, b) =>
     (b.dueDate ?? '').localeCompare(a.dueDate ?? ''),
   )
@@ -18,6 +17,10 @@ export function GeneratedTasksList({ templateId }: { templateId: string }) {
       <SectionHeading level={3}>Generated tasks</SectionHeading>
       {isLoading ? (
         <ListAreaMessage>Loading...</ListAreaMessage>
+      ) : isError ? (
+        <p className="font-mono text-xs text-destructive">
+          Failed to load generated tasks.
+        </p>
       ) : sorted.length === 0 ? (
         <ListAreaMessage>No tasks generated yet.</ListAreaMessage>
       ) : (

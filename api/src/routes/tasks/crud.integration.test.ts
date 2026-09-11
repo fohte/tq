@@ -409,10 +409,7 @@ describe('tasks CRUD API', () => {
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body).toHaveLength(1)
-      expect(body.every((t) => t.templateId === templateTask.templateId)).toBe(
-        true,
-      )
+      expect(body.map((t) => t.id)).toEqual([templateTask.id])
     })
 
     it('excludes tasks with a parent when parentId is "root"', async () => {

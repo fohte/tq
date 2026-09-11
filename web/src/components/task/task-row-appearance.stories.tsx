@@ -233,6 +233,23 @@ export const WithRecurrence: Story = {
   },
 }
 
+export const WithRecurrenceFromTemplate: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Water the plants',
+      recurrenceRule: {
+        id: 'recurrence-1',
+        type: 'weekly',
+        interval: 1,
+        daysOfWeek: [0, 3],
+        dayOfMonth: null,
+      },
+      templateId: '00000000-0000-0000-0000-000000000002',
+    },
+  },
+}
+
 export const WithGithubLink: Story = {
   args: {
     task: {

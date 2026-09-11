@@ -117,10 +117,6 @@ export function TemplateRepeatField({
     recurrenceRule.dayOfMonth != null ? String(recurrenceRule.dayOfMonth) : '',
   )
   const hasChanges = JSON.stringify(draftRule) !== JSON.stringify(originalRule)
-  // draftRule is only ever null here if intervalValue is invalid — a rule
-  // always exists once type/interval are set, so this is a type-safety
-  // formality rather than a real "cleared" state (see TemplateRecurrenceType
-  // above).
   const canSave = hasChanges && draftRule != null
 
   const nextOccurrence =

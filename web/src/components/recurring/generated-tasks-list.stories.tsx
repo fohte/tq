@@ -93,8 +93,6 @@ export const Empty: Story = {
   },
 }
 
-// The tasks request is held open (rather than resolved) so the loading
-// state stays visible.
 export const Loading: Story = {
   parameters: {
     msw: {

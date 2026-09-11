@@ -3,16 +3,16 @@ import { Repeat } from 'lucide-react'
 
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import type { RecurringTemplate } from '#hooks/use-recurring-templates'
-import { computeNextOccurrence, formatRecurrenceSummary } from '#lib/recurrence'
+import {
+  formatRecurrenceSummary,
+  templateNextOccurrence,
+} from '#lib/recurrence'
 import { formatShortDate } from '#lib/task-due-date'
 
 function nextOccurrenceLabel(template: RecurringTemplate): string {
   if (!template.enabled) return 'Not generating'
 
-  const next = computeNextOccurrence(
-    template.lastGeneratedDate ?? template.anchorDate,
-    template.recurrenceRule,
-  )
+  const next = templateNextOccurrence(template)
   return next != null ? `Next: ${formatShortDate(next)}` : '—'
 }
 

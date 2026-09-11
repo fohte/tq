@@ -73,6 +73,29 @@ export interface UpdateRecurringTemplateInput {
   enabled?: boolean
 }
 
+function applyUpdateInput(
+  template: RecurringTemplate,
+  input: UpdateRecurringTemplateInput,
+): RecurringTemplate {
+  const { recurrenceRule, ...rest } = input
+  return {
+    ...template,
+    ...rest,
+    ...(recurrenceRule != null
+      ? {
+          recurrenceRule: {
+            id: template.recurrenceRule.id,
+            type: recurrenceRule.type,
+            interval: recurrenceRule.interval,
+            daysOfWeek: recurrenceRule.daysOfWeek ?? null,
+            dayOfMonth: recurrenceRule.dayOfMonth ?? null,
+          },
+        }
+      : {}),
+    updatedAt: new Date().toISOString(),
+  }
+}
+
 export function useUpdateRecurringTemplate() {
   const queryClient = useQueryClient()
 
@@ -89,6 +112,49 @@ export function useUpdateRecurringTemplate() {
         json: input,
       })
       return unwrapOrThrow(assertOk(res)).json()
+    },
+    onMutate: async ({ id, input }) => {
+      await queryClient.cancelQueries({
+        queryKey: recurringTemplateKeys.detail(id),
+      })
+      await queryClient.cancelQueries({ queryKey: recurringTemplateKeys.lists })
+
+      const previousDetail = queryClient.getQueryData<RecurringTemplate>(
+        recurringTemplateKeys.detail(id),
+      )
+      const previousLists = queryClient.getQueriesData<RecurringTemplate[]>({
+        queryKey: recurringTemplateKeys.lists,
+      })
+
+      if (previousDetail) {
+        queryClient.setQueryData<RecurringTemplate>(
+          recurringTemplateKeys.detail(id),
+          applyUpdateInput(previousDetail, input),
+        )
+      }
+
+      queryClient.setQueriesData<RecurringTemplate[]>(
+        { queryKey: recurringTemplateKeys.lists },
+        (old) =>
+          old?.map((template) =>
+            template.id === id ? applyUpdateInput(template, input) : template,
+          ),
+      )
+
+      return { previousDetail, previousLists }
+    },
+    onError: (_err, { id }, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(
+          recurringTemplateKeys.detail(id),
+          context.previousDetail,
+        )
+      }
+      if (context?.previousLists) {
+        for (const [key, data] of context.previousLists) {
+          queryClient.setQueryData(key, data)
+        }
+      }
     },
     onSettled: (_data, _err, { id }) => {
       void queryClient.invalidateQueries({

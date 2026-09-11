@@ -5,7 +5,7 @@ import type { RecurringTemplate } from '#hooks/use-recurring-templates'
 import { useUpdateRecurringTemplate } from '#hooks/use-recurring-templates'
 import { selectHandler } from '#lib/form-utils'
 import { formatMinutes } from '#lib/format'
-import { computeNextOccurrence } from '#lib/recurrence'
+import { templateNextOccurrence } from '#lib/recurrence'
 import { formatShortDate } from '#lib/task-due-date'
 
 // --- Sidebar (PC) ---
@@ -102,10 +102,7 @@ export function RecurringTemplateSidebarMobile({
 
 function nextValueLabel(template: RecurringTemplate): string {
   if (!template.enabled) return 'Not generating'
-  const next = computeNextOccurrence(
-    template.lastGeneratedDate ?? template.anchorDate,
-    template.recurrenceRule,
-  )
+  const next = templateNextOccurrence(template)
   return next != null ? formatShortDate(next) : '—'
 }
 

@@ -19,9 +19,7 @@ export type RecurrenceTypeOption = '' | 'daily' | 'weekly' | 'monthly'
 /**
  * Assemble a draft recurrence rule from a recurrence-editing popup's
  * controls, or null if the draft doesn't describe a rule yet (type unset or
- * interval invalid). Shared by every recurrence-editing popup (task sidebar,
- * template sidebar) so the *sun shorthand and PATCH payload shape can't
- * drift between them.
+ * interval invalid).
  */
 export function buildRecurrenceRule(
   type: RecurrenceTypeOption,
@@ -118,4 +116,20 @@ export function computeNextOccurrence(
   rule: RecurrenceRule,
 ): string | null {
   return computeNextDate(baseDate, rule).unwrapOr(null)
+}
+
+/**
+ * Next occurrence for a recurring template, matching
+ * `generateForTemplate`'s `lastGeneratedDate ?? anchorDate` base-date choice
+ * in `api/src/services/recurring-task-scheduler.ts`.
+ */
+export function templateNextOccurrence(template: {
+  lastGeneratedDate: string | null
+  anchorDate: string
+  recurrenceRule: RecurrenceRule
+}): string | null {
+  return computeNextOccurrence(
+    template.lastGeneratedDate ?? template.anchorDate,
+    template.recurrenceRule,
+  )
 }
