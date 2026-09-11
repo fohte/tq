@@ -223,11 +223,8 @@ export const HoverEmptySlot: Story = {
     activeView: 'day',
   },
   parameters: {
-    // The hover ghost can be cleared by a scroll that happens between play
-    // running and the screenshot being taken (FullCalendar's now-indicator
-    // re-render restores scroll position, which fires onScrollCapture) —
-    // flaky pixel diff, not a real visual change. Ghost position/height is
-    // still verified by the play function below.
+    // A post-play scroll restores FullCalendar's viewport but also clears
+    // the hover ghost (see onScrollCapture), making the screenshot flaky.
     screenshot: { skip: true },
   },
   play: async ({ canvas, canvasElement }) => {
