@@ -25,6 +25,7 @@ export interface TaskListFilter {
   context?: TaskContext
   commitment?: TaskCommitment
   parentId?: string
+  templateId?: string
   label?: string
   projectId?: string
   sortBy?: TaskSortBy

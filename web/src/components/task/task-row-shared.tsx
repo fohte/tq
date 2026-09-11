@@ -191,12 +191,40 @@ export function ParentTaskLabel({ parentNumber }: { parentNumber: number }) {
   )
 }
 
-export function RecurrenceLabel({ rule }: { rule: RecurrenceRule }) {
+export function RecurrenceLabel({
+  rule,
+  templateId,
+}: {
+  rule: RecurrenceRule
+  templateId?: string | null
+}) {
+  const navigate = useNavigate()
+  const summary = formatRecurrenceSummary(rule)
+
+  if (templateId == null) {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground">
+        <Repeat className="size-3" />
+        {summary}
+      </span>
+    )
+  }
+
+  // A <button>, not a <Link>: this renders inside the row's own outer Link
+  // to the task, and nesting an <a> inside another <a> is invalid HTML.
   return (
-    <span className="inline-flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground">
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        void navigate({ to: '/recurring/$templateId', params: { templateId } })
+      }}
+      className="inline-flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground"
+    >
       <Repeat className="size-3" />
-      {formatRecurrenceSummary(rule)}
-    </span>
+      {summary}
+    </button>
   )
 }
 

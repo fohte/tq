@@ -12,6 +12,51 @@ export interface RecurrenceRule {
   dayOfMonth?: number | null
 }
 
+// The subset of RecurrenceType a recurrence-editing popup's Select offers —
+// 'custom' is only reachable via the API/MCP, never chosen through this UI.
+export type RecurrenceTypeOption = '' | 'daily' | 'weekly' | 'monthly'
+
+/**
+ * Assemble a draft recurrence rule from a recurrence-editing popup's
+ * controls, or null if the draft doesn't describe a rule yet (type unset or
+ * interval invalid). Shared by every recurrence-editing popup (task sidebar,
+ * template sidebar) so the *sun shorthand and PATCH payload shape can't
+ * drift between them.
+ */
+export function buildRecurrenceRule(
+  type: RecurrenceTypeOption,
+  interval: number | null,
+  daysOfWeek: number[],
+  dayOfMonth: string,
+) {
+  if (type === '' || interval == null) return null
+  return {
+    type,
+    interval,
+    ...(type === 'weekly' && daysOfWeek.length > 0
+      ? { daysOfWeek: [...daysOfWeek].sort((a, b) => a - b) }
+      : {}),
+    ...(type === 'monthly' && dayOfMonth
+      ? { dayOfMonth: Number.parseInt(dayOfMonth, 10) }
+      : {}),
+  }
+}
+
+export function intervalUnitLabel(
+  type: 'daily' | 'weekly' | 'monthly',
+  interval: number,
+): string {
+  const plural = interval !== 1
+  switch (type) {
+    case 'daily':
+      return plural ? 'days' : 'day'
+    case 'weekly':
+      return plural ? 'weeks' : 'week'
+    case 'monthly':
+      return plural ? 'months' : 'month'
+  }
+}
+
 function ordinal(n: number): string {
   const s = String(n)
   const rem100 = n % 100

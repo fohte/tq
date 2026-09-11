@@ -15,8 +15,10 @@ import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TasksIndexRouteImport } from './routes/tasks/index'
+import { Route as RecurringIndexRouteImport } from './routes/recurring/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks/$taskId'
+import { Route as RecurringTemplateIdRouteImport } from './routes/recurring/$templateId'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as TasksTaskIdPagesPageIdRouteImport } from './routes/tasks/$taskId_.pages.$pageId'
 
@@ -50,6 +52,11 @@ const TasksIndexRoute = TasksIndexRouteImport.update({
   path: '/tasks/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RecurringIndexRoute = RecurringIndexRouteImport.update({
+  id: '/recurring/',
+  path: '/recurring/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
   id: '/projects/',
   path: '/projects/',
@@ -58,6 +65,11 @@ const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
 const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
   id: '/tasks/$taskId',
   path: '/tasks/$taskId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecurringTemplateIdRoute = RecurringTemplateIdRouteImport.update({
+  id: '/recurring/$templateId',
+  path: '/recurring/$templateId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
@@ -78,8 +90,10 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/today': typeof TodayRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/recurring/$templateId': typeof RecurringTemplateIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/recurring/': typeof RecurringIndexRoute
   '/tasks/': typeof TasksIndexRoute
   '/tasks/$taskId/pages/$pageId': typeof TasksTaskIdPagesPageIdRoute
 }
@@ -90,8 +104,10 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/today': typeof TodayRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/recurring/$templateId': typeof RecurringTemplateIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/projects': typeof ProjectsIndexRoute
+  '/recurring': typeof RecurringIndexRoute
   '/tasks': typeof TasksIndexRoute
   '/tasks/$taskId/pages/$pageId': typeof TasksTaskIdPagesPageIdRoute
 }
@@ -103,8 +119,10 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/today': typeof TodayRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/recurring/$templateId': typeof RecurringTemplateIdRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/recurring/': typeof RecurringIndexRoute
   '/tasks/': typeof TasksIndexRoute
   '/tasks/$taskId_/pages/$pageId': typeof TasksTaskIdPagesPageIdRoute
 }
@@ -117,8 +135,10 @@ export interface FileRouteTypes {
     | '/settings'
     | '/today'
     | '/projects/$projectId'
+    | '/recurring/$templateId'
     | '/tasks/$taskId'
     | '/projects/'
+    | '/recurring/'
     | '/tasks/'
     | '/tasks/$taskId/pages/$pageId'
   fileRoutesByTo: FileRoutesByTo
@@ -129,8 +149,10 @@ export interface FileRouteTypes {
     | '/settings'
     | '/today'
     | '/projects/$projectId'
+    | '/recurring/$templateId'
     | '/tasks/$taskId'
     | '/projects'
+    | '/recurring'
     | '/tasks'
     | '/tasks/$taskId/pages/$pageId'
   id:
@@ -141,8 +163,10 @@ export interface FileRouteTypes {
     | '/settings'
     | '/today'
     | '/projects/$projectId'
+    | '/recurring/$templateId'
     | '/tasks/$taskId'
     | '/projects/'
+    | '/recurring/'
     | '/tasks/'
     | '/tasks/$taskId_/pages/$pageId'
   fileRoutesById: FileRoutesById
@@ -154,8 +178,10 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   TodayRoute: typeof TodayRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
+  RecurringTemplateIdRoute: typeof RecurringTemplateIdRoute
   TasksTaskIdRoute: typeof TasksTaskIdRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
+  RecurringIndexRoute: typeof RecurringIndexRoute
   TasksIndexRoute: typeof TasksIndexRoute
   TasksTaskIdPagesPageIdRoute: typeof TasksTaskIdPagesPageIdRoute
 }
@@ -204,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasksIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/recurring/': {
+      id: '/recurring/'
+      path: '/recurring'
+      fullPath: '/recurring/'
+      preLoaderRoute: typeof RecurringIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projects/': {
       id: '/projects/'
       path: '/projects'
@@ -216,6 +249,13 @@ declare module '@tanstack/react-router' {
       path: '/tasks/$taskId'
       fullPath: '/tasks/$taskId'
       preLoaderRoute: typeof TasksTaskIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recurring/$templateId': {
+      id: '/recurring/$templateId'
+      path: '/recurring/$templateId'
+      fullPath: '/recurring/$templateId'
+      preLoaderRoute: typeof RecurringTemplateIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects/$projectId': {
@@ -242,8 +282,10 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   TodayRoute: TodayRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
+  RecurringTemplateIdRoute: RecurringTemplateIdRoute,
   TasksTaskIdRoute: TasksTaskIdRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
+  RecurringIndexRoute: RecurringIndexRoute,
   TasksIndexRoute: TasksIndexRoute,
   TasksTaskIdPagesPageIdRoute: TasksTaskIdPagesPageIdRoute,
 }
