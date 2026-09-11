@@ -235,6 +235,11 @@ export const HoverEmptySlot: Story = {
   args: {
     activeView: 'day',
   },
+  parameters: {
+    // A post-play scroll restores FullCalendar's viewport but also clears
+    // the hover ghost (see onScrollCapture), making the screenshot flaky.
+    screenshot: { skip: true },
+  },
   play: async ({ canvas, canvasElement }) => {
     resetVerticalScroll(canvasElement)
     const gymEvent = assertDefined(
