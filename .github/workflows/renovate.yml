@@ -37,7 +37,7 @@ jobs:
           identity: tq-renovate
           domain: octo-sts.fohte.net
 
-      - uses: renovatebot/github-action@1a96852b0384df1837619d04c60b2d10d1f9ff08 # v46.1.21
+      - uses: renovatebot/github-action@39b914146caeff8cd512e61c8992f1d5913af85c # v46.2.5
         with:
           token: ${{ steps.octo-sts.outputs.token }}
           # Renovate runs inside Docker, so share /tmp to let the next step read the report.
