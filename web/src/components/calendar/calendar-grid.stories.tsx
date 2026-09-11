@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 import { expect, fireEvent, fn, waitFor } from 'storybook/test'
 
 import {
@@ -8,6 +9,7 @@ import {
 } from '#components/calendar/calendar-grid'
 import type { CalendarViewType } from '#components/calendar/calendar-header'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
+import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { formatLocalDate } from '#lib/date-range'
 import { assertDefined } from '#lib/test-utils'
 
@@ -211,6 +213,17 @@ export const ClickTaskEvent: Story = {
     // onTaskClick is a bare mock, so clicking the event never changes the
     // rendered DOM — the screenshot is identical to DayView.
     screenshot: { skip: true },
+    // Clicking the chip hovers it first, opening its TimeBlockPreviewCard
+    // popup, which fetches the task behind it.
+    msw: {
+      handlers: [
+        http.get('/api/tasks/task-1', () =>
+          HttpResponse.json(
+            makeTaskDetail({ id: 'task-1', title: 'API ドキュメント作成' }),
+          ),
+        ),
+      ],
+    },
   },
   play: async ({ canvas, userEvent, args }) => {
     await userEvent.click(await canvas.findByText('API ドキュメント作成'))
