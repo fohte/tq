@@ -108,6 +108,9 @@ export const DeleteManualBlock: Story = {
         }),
       ],
     },
+    // Closing the dialog leaves focus restoration flaky in CI;
+    // WithManualAndAutoBlocks already covers this row's appearance.
+    screenshot: { skip: true },
   },
   play: async ({ canvasElement }) => {
     deletedTimeBlockId = null
@@ -143,6 +146,9 @@ export const RemoveAutoBlockFromQueue: Story = {
         }),
       ],
     },
+    // Closing the dialog leaves focus restoration flaky in CI;
+    // WithManualAndAutoBlocks already covers this row's appearance.
+    screenshot: { skip: true },
   },
   play: async ({ canvasElement }) => {
     putQueueItemsBody = null
