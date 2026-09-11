@@ -75,10 +75,12 @@ export function SidebarRecurrenceField({
   taskId,
   dueDate,
   recurrenceRule,
+  templateId,
 }: {
   taskId: string
   dueDate: string | null
   recurrenceRule: RecurrenceRule | null
+  templateId: string | null
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const anchorRef = useRef<HTMLButtonElement>(null)
@@ -175,6 +177,26 @@ export function SidebarRecurrenceField({
     if (!canSave) return
     updateRecurrenceRule.mutate({ id: taskId, recurrenceRule: draftRule })
     stopEditing()
+  }
+
+  // A template-generated task can't PATCH recurrenceRule (the API rejects
+  // it with 400), so this renders a read-only summary instead of the
+  // editable popup below.
+  if (templateId != null) {
+    return (
+      <SidebarField label="RECURRENCE">
+        <div className="flex flex-col gap-0.5">
+          <span>
+            {recurrenceRule != null
+              ? formatRecurrenceSummary(recurrenceRule)
+              : '—'}
+          </span>
+          <span className="font-mono text-2xs text-muted-foreground-faint">
+            Generated from a template
+          </span>
+        </div>
+      </SidebarField>
+    )
   }
 
   return (

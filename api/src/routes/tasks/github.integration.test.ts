@@ -74,6 +74,8 @@ describe('POST /api/tasks/from-github', () => {
         projectId: null,
         recurrenceRuleId: null,
         recurrenceRule: null,
+        templateId: null,
+        occurrenceDate: null,
         githubLinks: [
           {
             id: 'ID',

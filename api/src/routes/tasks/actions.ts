@@ -10,6 +10,7 @@ import { taskIdOrNumber } from '#lib/numeric-id'
 import { recordStatusChanged } from '#lib/task-events'
 import {
   getLabelNamesByTaskId,
+  getRecurrenceRulesByTemplateIds,
   requireTask,
   resolveParentId,
   taskToResponse,
@@ -317,7 +318,13 @@ export const tasksActionsApp = new Hono()
       const updatedTask = result.task
 
       let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
-      if (updatedTask.recurrenceRuleId != null) {
+      if (updatedTask.templateId != null) {
+        const rulesByTemplateId = await getRecurrenceRulesByTemplateIds([
+          updatedTask.templateId,
+        ])
+        completedTaskRule =
+          rulesByTemplateId.get(updatedTask.templateId) ?? null
+      } else if (updatedTask.recurrenceRuleId != null) {
         completedTaskRule =
           (await db.query.recurrenceRules.findFirst({
             where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),

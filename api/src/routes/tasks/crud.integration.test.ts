@@ -3,7 +3,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { taskRelations, tasks } from '#db/schema'
+import {
+  recurrenceRules,
+  recurringTaskTemplates,
+  taskRelations,
+  tasks,
+} from '#db/schema'
+import { firstOrThrow } from '#lib/drizzle-utils'
 import {
   createComment,
   createLabel,
@@ -91,6 +97,55 @@ function normalizeTask<
   }
 }
 
+// Simulates a legacy task where recurrenceRuleId is owned directly without a template.
+async function attachLegacyRecurrenceRule(
+  taskId: string,
+  rule: {
+    type: 'daily' | 'weekly' | 'monthly' | 'custom'
+    interval: number
+  },
+) {
+  const insertedRule = firstOrThrow(
+    await db.insert(recurrenceRules).values(rule).returning(),
+  )
+  await db
+    .update(tasks)
+    .set({ recurrenceRuleId: insertedRule.id })
+    .where(eq(tasks.id, taskId))
+  return insertedRule
+}
+
+function normalizeRecurringTask<
+  T extends {
+    id: string
+    number: number
+    createdAt: string
+    updatedAt: string
+    recurrenceRule: { id: string } | null
+    templateId: string | null
+  },
+>(task: T) {
+  return {
+    ...normalizeTask(task),
+    recurrenceRule:
+      task.recurrenceRule != null
+        ? { ...task.recurrenceRule, id: 'RULE_ID' }
+        : null,
+    templateId: task.templateId != null ? 'TEMPLATE_ID' : null,
+  }
+}
+
+function normalizeTemplate(
+  template: typeof recurringTaskTemplates.$inferSelect,
+) {
+  return {
+    ...template,
+    id: 'ID',
+    createdAt: 'TIMESTAMP',
+    updatedAt: 'TIMESTAMP',
+  }
+}
+
 describe('tasks CRUD API', () => {
   describe('POST /api/tasks', () => {
     it('creates a task with only title', async () => {
@@ -161,6 +216,8 @@ describe('tasks CRUD API', () => {
         projectId: null,
         recurrenceRuleId: null,
         recurrenceRule: null,
+        templateId: null,
+        occurrenceDate: null,
         githubLinks: [],
         createdAt: 'TIMESTAMP',
         updatedAt: 'TIMESTAMP',
@@ -2010,21 +2067,20 @@ describe('tasks CRUD API', () => {
     })
 
     it('cleans up orphaned recurrence rule on delete', async () => {
-      const task = await createRecurringTask('Recurring to delete', {
+      const task = await createTask('Recurring to delete')
+      const rule = await attachLegacyRecurrenceRule(task.id, {
         type: 'daily',
         interval: 1,
       })
-      assertDefined(task.recurrenceRuleId)
-      const ruleId = task.recurrenceRuleId
 
       await app.request(`/api/tasks/${task.id}`, { method: 'DELETE' })
 
-      // Creating a new recurring task should get a different rule ID
-      const newTask = await createRecurringTask('New recurring', {
-        type: 'daily',
-        interval: 1,
-      })
-      expect(newTask.recurrenceRuleId).not.toBe(ruleId)
+      expect(
+        await db
+          .select()
+          .from(recurrenceRules)
+          .where(eq(recurrenceRules.id, rule.id)),
+      ).toEqual([])
     })
   })
 
@@ -2062,7 +2118,7 @@ describe('tasks CRUD API', () => {
 
   describe('recurrence', () => {
     describe('POST /api/tasks with recurrenceRule', () => {
-      it('creates a task with a recurrence rule', async () => {
+      it('creates a recurring task template and links the task as its first occurrence', async () => {
         const res = await app.request('/api/tasks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2075,10 +2131,61 @@ describe('tasks CRUD API', () => {
 
         expect(res.status).toBe(201)
         const body = await jsonBody<TaskResponse>(res)
-        expect(body.recurrenceRuleId).not.toBeNull()
+        assertDefined(body.templateId)
+        expect(normalizeRecurringTask(body)).toEqual({
+          id: 'ID',
+          number: -1,
+          title: 'Daily standup',
+          description: null,
+          status: 'todo',
+          statusReason: null,
+          context: 'personal',
+          commitment: 'inbox',
+          labels: [],
+          startDate: null,
+          dueDate: '2026-03-22',
+          estimatedMinutes: null,
+          remindAt: null,
+          parentId: null,
+          projectId: null,
+          recurrenceRuleId: null,
+          recurrenceRule: {
+            id: 'RULE_ID',
+            type: 'daily',
+            interval: 1,
+            daysOfWeek: null,
+            dayOfMonth: null,
+          },
+          templateId: 'TEMPLATE_ID',
+          occurrenceDate: '2026-03-22',
+          githubLinks: [],
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+          linkSync: { outgoing: [], unresolvedRefs: [] },
+        })
+
         assertDefined(body.recurrenceRule)
-        expect(body.recurrenceRule.type).toBe('daily')
-        expect(body.recurrenceRule.interval).toBe(1)
+        const [template] = await db
+          .select()
+          .from(recurringTaskTemplates)
+          .where(eq(recurringTaskTemplates.id, body.templateId))
+        assertDefined(template)
+        expect(normalizeTemplate(template)).toEqual({
+          id: 'ID',
+          title: 'Daily standup',
+          description: null,
+          estimatedMinutes: null,
+          projectId: null,
+          parentId: null,
+          context: 'personal',
+          recurrenceRuleId: body.recurrenceRule.id,
+          startOffsetDays: null,
+          anchorDate: '2026-03-22',
+          lastGeneratedDate: null,
+          enabled: true,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        })
       })
 
       it('creates a task without recurrence rule (backward compat)', async () => {
@@ -2092,13 +2199,17 @@ describe('tasks CRUD API', () => {
         const body = await jsonBody<TaskResponse>(res)
         expect(body.recurrenceRuleId).toBeNull()
         expect(body.recurrenceRule).toBeNull()
+        expect(body.templateId).toBeNull()
+        expect(body.occurrenceDate).toBeNull()
       })
     })
 
     describe('PATCH /api/tasks/:id with recurrenceRule', () => {
-      it('adds a recurrence rule to an existing task', async () => {
+      it('creates a template from a plain task and links it as the first occurrence, keeping the same id/number', async () => {
         const task = await createTask('Task')
 
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2026-04-01T12:00:00Z'))
         const res = await app.request(`/api/tasks/${task.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -2110,39 +2221,128 @@ describe('tasks CRUD API', () => {
             },
           }),
         })
+        vi.useRealTimers()
 
         expect(res.status).toBe(200)
         const body = await jsonBody<TaskResponse>(res)
-        assertDefined(body.recurrenceRule)
-        expect(body.recurrenceRule.type).toBe('weekly')
-        expect(body.recurrenceRule.daysOfWeek).toEqual([1, 3, 5])
+        assertDefined(body.templateId)
+        expect(body.id).toBe(task.id)
+        expect(body.number).toBe(task.number)
+        expect(normalizeRecurringTask(body)).toEqual(
+          normalizeRecurringTask({
+            ...withoutLinkSync(task),
+            dueDate: '2026-04-01',
+            occurrenceDate: '2026-04-01',
+            templateId: body.templateId,
+            recurrenceRule: {
+              id: 'ignored',
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [1, 3, 5],
+              dayOfMonth: null,
+            },
+          }),
+        )
       })
 
-      it('updates an existing recurrence rule', async () => {
-        const task = await createRecurringTask('Recurring', {
-          type: 'daily',
-          interval: 1,
-        })
+      it("seeds the template from this same request's field edits, not the pre-PATCH row", async () => {
+        const task = await createTask('Old title')
 
         const res = await app.request(`/api/tasks/${task.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            recurrenceRule: { type: 'weekly', interval: 2, daysOfWeek: [1] },
+            title: 'New title',
+            dueDate: '2026-06-01',
+            recurrenceRule: { type: 'daily', interval: 1 },
           }),
         })
 
         expect(res.status).toBe(200)
         const body = await jsonBody<TaskResponse>(res)
+        assertDefined(body.templateId)
+        expect(normalizeRecurringTask(body)).toEqual(
+          normalizeRecurringTask({
+            ...withoutLinkSync(task),
+            title: 'New title',
+            dueDate: '2026-06-01',
+            occurrenceDate: '2026-06-01',
+            templateId: body.templateId,
+            recurrenceRule: {
+              id: 'ignored',
+              type: 'daily',
+              interval: 1,
+              daysOfWeek: null,
+              dayOfMonth: null,
+            },
+          }),
+        )
+
         assertDefined(body.recurrenceRule)
-        expect(body.recurrenceRule.type).toBe('weekly')
-        expect(body.recurrenceRule.interval).toBe(2)
-        // Same rule ID (updated in place)
-        expect(body.recurrenceRuleId).toBe(task.recurrenceRuleId)
+        const [template] = await db
+          .select()
+          .from(recurringTaskTemplates)
+          .where(eq(recurringTaskTemplates.id, body.templateId))
+        assertDefined(template)
+        expect(normalizeTemplate(template)).toEqual({
+          id: 'ID',
+          title: 'New title',
+          description: null,
+          estimatedMinutes: null,
+          projectId: null,
+          parentId: null,
+          context: 'personal',
+          recurrenceRuleId: body.recurrenceRule.id,
+          startOffsetDays: null,
+          anchorDate: '2026-06-01',
+          lastGeneratedDate: null,
+          enabled: true,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        })
       })
 
-      it('removes recurrence rule when set to null', async () => {
+      async function patchRecurrenceOnTemplateLinkedTask(
+        recurrenceRule: unknown,
+      ) {
         const task = await createRecurringTask('Recurring', {
+          type: 'daily',
+          interval: 1,
+        })
+        assertDefined(task.templateId)
+
+        return app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recurrenceRule }),
+        })
+      }
+
+      it('returns 400 when setting a new recurrence rule on a task already linked to a template', async () => {
+        const res = await patchRecurrenceOnTemplateLinkedTask({
+          type: 'weekly',
+          interval: 1,
+          daysOfWeek: [1],
+        })
+
+        expect(res.status).toBe(400)
+        expect(await jsonBody<{ error: string }>(res)).toEqual({
+          error: 'Cannot edit recurrence on a task generated from a template',
+        })
+      })
+
+      it('returns 400 when clearing recurrence on a task already linked to a template', async () => {
+        const res = await patchRecurrenceOnTemplateLinkedTask(null)
+
+        expect(res.status).toBe(400)
+        expect(await jsonBody<{ error: string }>(res)).toEqual({
+          error: 'Cannot edit recurrence on a task generated from a template',
+        })
+      })
+
+      it('removes a legacy directly-owned recurrence rule when set to null, deleting the orphaned rule', async () => {
+        const task = await createTask('Recurring')
+        const rule = await attachLegacyRecurrenceRule(task.id, {
           type: 'daily',
           interval: 1,
         })
@@ -2157,55 +2357,134 @@ describe('tasks CRUD API', () => {
         const body = await jsonBody<TaskResponse>(res)
         expect(body.recurrenceRuleId).toBeNull()
         expect(body.recurrenceRule).toBeNull()
+
+        expect(
+          await db
+            .select()
+            .from(recurrenceRules)
+            .where(eq(recurrenceRules.id, rule.id)),
+        ).toEqual([])
+      })
+
+      it('removes a legacy directly-owned recurrence rule when redirected into a new template, deleting the orphaned rule', async () => {
+        const task = await createTask('Recurring')
+        const rule = await attachLegacyRecurrenceRule(task.id, {
+          type: 'daily',
+          interval: 1,
+        })
+
+        const res = await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recurrenceRule: { type: 'weekly', interval: 1, daysOfWeek: [1] },
+          }),
+        })
+
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskResponse>(res)
+        assertDefined(body.templateId)
+
+        expect(
+          await db
+            .select()
+            .from(recurrenceRules)
+            .where(eq(recurrenceRules.id, rule.id)),
+        ).toEqual([])
       })
     })
 
     describe('GET /api/tasks/:id with recurrence rule', () => {
-      it('includes recurrence rule in response', async () => {
+      it('includes recurrence rule derived from the linked template', async () => {
         const task = await createRecurringTask('Recurring', {
           type: 'monthly',
           interval: 1,
           dayOfMonth: 15,
         })
+        assertDefined(task.templateId)
+        assertDefined(task.occurrenceDate)
 
         const res = await app.request(`/api/tasks/${task.id}`)
 
         expect(res.status).toBe(200)
         const body = await jsonBody<TaskResponse>(res)
-        assertDefined(body.recurrenceRule)
-        expect(body.recurrenceRule.type).toBe('monthly')
-        expect(body.recurrenceRule.dayOfMonth).toBe(15)
+        expect(body).toEqual({
+          ...withoutLinkSync(task),
+          titleAuthor: { kind: 'human', agent: null },
+          descriptionAuthor: { kind: 'human', agent: null },
+          childCompletionCount: { total: 0, completed: 0 },
+          pages: [],
+          timeBlocks: [],
+          links: { outgoing: [], incoming: [] },
+          parentNumber: null,
+          duplicateOfNumber: null,
+          duplicateOfTask: null,
+          blockedBy: [],
+          blocking: [],
+        })
+      })
+
+      it('prefers the rule from a linked template over a legacy directly-owned rule when both are set', async () => {
+        const task = await createTask('Recurring')
+        await attachLegacyRecurrenceRule(task.id, {
+          type: 'daily',
+          interval: 1,
+        })
+
+        const templateRule = firstOrThrow(
+          await db
+            .insert(recurrenceRules)
+            .values({ type: 'weekly', interval: 1, daysOfWeek: [2] })
+            .returning(),
+        )
+        const template = firstOrThrow(
+          await db
+            .insert(recurringTaskTemplates)
+            .values({
+              title: 'Template title',
+              anchorDate: '2026-03-01',
+              recurrenceRuleId: templateRule.id,
+            })
+            .returning(),
+        )
+        await db
+          .update(tasks)
+          .set({ templateId: template.id, occurrenceDate: '2026-03-01' })
+          .where(eq(tasks.id, task.id))
+
+        const res = await app.request(`/api/tasks/${task.id}`)
+
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskResponse>(res)
+        expect(body.recurrenceRule).toEqual({
+          id: templateRule.id,
+          type: 'weekly',
+          interval: 1,
+          daysOfWeek: [2],
+          dayOfMonth: null,
+        })
       })
     })
 
-    describe('PATCH /api/tasks/:id recurrence rule removal', () => {
-      it('deletes orphaned recurrence rule record when no other task uses it', async () => {
+    describe('GET /api/tasks with recurrence rule', () => {
+      it('includes recurrence rule derived from the linked template in the list response', async () => {
         const task = await createRecurringTask('Recurring', {
-          type: 'daily',
+          type: 'monthly',
           interval: 1,
+          dayOfMonth: 15,
         })
-        assertDefined(task.recurrenceRuleId)
-        const ruleId = task.recurrenceRuleId
+        assertDefined(task.templateId)
+        assertDefined(task.occurrenceDate)
 
-        // Remove recurrence rule
-        await app.request(`/api/tasks/${task.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ recurrenceRule: null }),
-        })
+        const res = await app.request('/api/tasks')
 
-        // Verify the rule was removed from the task
-        const getRes = await app.request(`/api/tasks/${task.id}`)
-        const body = await jsonBody<TaskResponse>(getRes)
-        expect(body.recurrenceRuleId).toBeNull()
-
-        // Create a new task with the same rule type to verify old rule is gone
-        // by checking that a new rule gets a different ID
-        const newTask = await createRecurringTask('New recurring', {
-          type: 'daily',
-          interval: 1,
-        })
-        expect(newTask.recurrenceRuleId).not.toBe(ruleId)
+        expect(res.status).toBe(200)
+        const body = await jsonBody<TaskListItemResponse[]>(res)
+        const item = body.find((t) => t.id === task.id)
+        assertDefined(item)
+        expect(normalizeRecurringTask(item)).toEqual(
+          normalizeRecurringTask(toListItemResponse(task)),
+        )
       })
     })
   })

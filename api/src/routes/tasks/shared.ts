@@ -6,6 +6,7 @@ import { db } from '#db/connection'
 import {
   labels,
   recurrenceRules,
+  recurringTaskTemplates,
   taskGithubLinks,
   taskLabels,
   tasks,
@@ -93,6 +94,8 @@ function taskCoreToResponse(
     projectId: task.projectId,
     recurrenceRuleId: task.recurrenceRuleId,
     recurrenceRule: rule ? recurrenceRuleToResponse(rule) : null,
+    templateId: task.templateId,
+    occurrenceDate: task.occurrenceDate,
     githubLinks: githubLinks.map(githubLinkToResponse),
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
@@ -143,6 +146,26 @@ async function getRecurrenceRulesByIds(
     .where(inArray(recurrenceRules.id, ruleIds))
 
   return new Map(rows.map((row) => [row.id, row]))
+}
+
+// Batch-fetches recurrence rules for template-generated tasks (whose own
+// recurrenceRuleId is null but whose templateId points at a template that
+// owns a rule), keyed by templateId.
+export async function getRecurrenceRulesByTemplateIds(
+  templateIds: string[],
+): Promise<Map<string, typeof recurrenceRules.$inferSelect>> {
+  if (templateIds.length === 0) return new Map()
+
+  const rows = await db
+    .select({ templateId: recurringTaskTemplates.id, rule: recurrenceRules })
+    .from(recurringTaskTemplates)
+    .innerJoin(
+      recurrenceRules,
+      eq(recurringTaskTemplates.recurrenceRuleId, recurrenceRules.id),
+    )
+    .where(inArray(recurringTaskTemplates.id, templateIds))
+
+  return new Map(rows.map((row) => [row.templateId, row.rule]))
 }
 
 // Batch-fetches GitHub links grouped by task ID, ordered by createdAt
@@ -252,6 +275,9 @@ export async function hydrateTaskListRows(
       rows.map((r) => r.task.recurrenceRuleId).filter((id) => id != null),
     ),
   ]
+  const templateIds = [
+    ...new Set(rows.map((r) => r.task.templateId).filter((id) => id != null)),
+  ]
   const [
     labelsByTaskId,
     childCompletionCountsByTaskId,
@@ -259,6 +285,7 @@ export async function hydrateTaskListRows(
     duplicateOfNumbersByTaskId,
     blockedByNumbersByTaskId,
     recurrenceRulesById,
+    recurrenceRulesByTemplateId,
   ] = await Promise.all([
     getLabelNamesByTaskId(ids),
     getChildCompletionCountsByTaskId(ids),
@@ -266,15 +293,18 @@ export async function hydrateTaskListRows(
     getDuplicateOfNumbersByTaskId(ids),
     getBlockedByNumbersByTaskId(ids),
     getRecurrenceRulesByIds(ruleIds),
+    getRecurrenceRulesByTemplateIds(templateIds),
   ])
 
   return rows.map((r) => ({
     ...taskListItemToResponse(
       r.task,
       r.parentNumber,
-      r.task.recurrenceRuleId != null
-        ? (recurrenceRulesById.get(r.task.recurrenceRuleId) ?? null)
-        : null,
+      r.task.templateId != null
+        ? (recurrenceRulesByTemplateId.get(r.task.templateId) ?? null)
+        : r.task.recurrenceRuleId != null
+          ? (recurrenceRulesById.get(r.task.recurrenceRuleId) ?? null)
+          : null,
       githubLinksByTaskId.get(r.task.id) ?? [],
       labelsByTaskId.get(r.task.id) ?? [],
       r.task.statusReason === 'duplicate'

@@ -60,6 +60,7 @@ export const NoRule: Story = {
     taskId,
     dueDate,
     recurrenceRule: null,
+    templateId: null,
   },
 }
 
@@ -68,6 +69,7 @@ export const WeeklySummary: Story = {
     taskId,
     dueDate,
     recurrenceRule: weeklyRule,
+    templateId: null,
   },
 }
 
@@ -76,6 +78,7 @@ export const MonthlySummary: Story = {
     taskId,
     dueDate,
     recurrenceRule: monthlyRule,
+    templateId: null,
   },
 }
 
@@ -84,6 +87,7 @@ export const OpenEditor: Story = {
     taskId,
     dueDate,
     recurrenceRule: weeklyRule,
+    templateId: null,
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -111,6 +115,7 @@ export const SaveDisabledWithoutChanges: Story = {
     taskId,
     dueDate,
     recurrenceRule: customRule,
+    templateId: null,
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -135,6 +140,7 @@ export const PickWeeklyAndSave: Story = {
     taskId,
     dueDate,
     recurrenceRule: null,
+    templateId: null,
   },
   parameters: {
     // recurrenceRule is controlled by the (unchanging) prop, so the
@@ -176,6 +182,7 @@ export const PickMonthlyAndSave: Story = {
     taskId,
     dueDate,
     recurrenceRule: null,
+    templateId: null,
   },
   parameters: {
     screenshot: { skip: true },
@@ -216,6 +223,7 @@ export const TypeShorthandAndSave: Story = {
     taskId,
     dueDate,
     recurrenceRule: null,
+    templateId: null,
   },
   parameters: {
     screenshot: { skip: true },
@@ -253,6 +261,7 @@ export const ClearRecurrence: Story = {
     taskId,
     dueDate,
     recurrenceRule: weeklyRule,
+    templateId: null,
   },
   parameters: {
     // recurrenceRule is controlled by the (unchanging) prop, so the
@@ -283,5 +292,21 @@ export const ClearRecurrence: Story = {
     await waitFor(async () => {
       await expect(patchedBody).toEqual({ recurrenceRule: null })
     })
+  },
+}
+
+export const GeneratedFromTemplate: Story = {
+  args: {
+    taskId,
+    dueDate,
+    recurrenceRule: weeklyRule,
+    templateId: '00000000-0000-0000-0000-000000000002',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Weekly · Sun, Wed')).toBeInTheDocument()
+    await expect(
+      canvas.getByText('Generated from a template'),
+    ).toBeInTheDocument()
   },
 }
