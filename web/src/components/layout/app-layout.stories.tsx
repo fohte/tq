@@ -189,6 +189,59 @@ export const SidebarStaysPinnedWhileScrollingDocument: Story = {
   },
 }
 
+// Regression check: the task page editor route (/tasks/$taskId/pages/$pageId)
+// pins its content to the viewport like day view (see app-layout.tsx's
+// isViewportPinned), so an h-full child fills the viewport instead of
+// collapsing to its intrinsic content size.
+export const TaskPageRouteFillsViewport: Story = {
+  args: {
+    currentPath: '/tasks/1/pages/2',
+  },
+  parameters: {
+    screenshot: { skip: true },
+  },
+  render: () => (
+    <StoryRouter
+      component={() => (
+        <QueryClientProvider
+          client={
+            new QueryClient({
+              defaultOptions: {
+                queries: { retry: false, staleTime: Infinity },
+              },
+            })
+          }
+        >
+          <AppLayout>
+            <div data-testid="fill-child" className="h-full" />
+          </AppLayout>
+        </QueryClientProvider>
+      )}
+      initialPath="/tasks/1/pages/2"
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await expectDocumentFitsViewport(canvasElement)
+
+    // main, not the window, is the h-full contract: StatusLine and
+    // BottomTabBar also share the shell, so main is shorter than the
+    // viewport even when everything is wired correctly.
+    const main = assertDefined(
+      canvasElement.querySelector('main'),
+      'AppLayout renders a <main> wrapping children',
+    )
+    const child = assertDefined(
+      canvasElement.querySelector('[data-testid="fill-child"]'),
+      'the story renders an h-full child inside AppLayout',
+    )
+    const heightDiff = Math.abs(
+      child.getBoundingClientRect().height -
+        main.getBoundingClientRect().height,
+    )
+    await expect(heightDiff).toBeLessThanOrEqual(1)
+  },
+}
+
 // Composes the real DayViewPresentation (unlike day-view.stories.tsx, which
 // fixes the shell height via a decorator) so AppLayout's own height capping
 // is what's under test, with enough queue candidates to make the pane
