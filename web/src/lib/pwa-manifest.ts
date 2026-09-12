@@ -13,6 +13,12 @@ export const pwaManifest: Partial<ManifestOptions> = {
   launch_handler: {
     client_mode: 'navigate-existing',
   },
+  protocol_handlers: [
+    {
+      protocol: 'web+tq',
+      url: '/protocol-handler?url=%s',
+    },
+  ],
   icons: [
     {
       src: 'icon-192.png',
