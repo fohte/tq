@@ -196,7 +196,7 @@ export function resolveGithubUrl(
 }
 
 // DB-only counterpart to resolveGithubUrl: never calls the GitHub API, so it
-// answers `{ task: null }` for an unlinked URL instead of falling back to a
+// resolves to `null` for an unlinked ref instead of falling back to a
 // preview fetch.
 export function findTaskByGithubRef(
   ref: GithubResourceRef,

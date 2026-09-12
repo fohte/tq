@@ -58,9 +58,8 @@ export const githubApp = new Hono()
       (error) => githubLinkErrorResponse(c, error, 'github.resolve'),
     )
   })
-  // DB-only counterpart to /resolve, for callers that poll on every page
-  // view (the browser extension's content script) and must not spend a
-  // GitHub API call on URLs that aren't tracked.
+  // DB-only counterpart to /resolve: never calls the GitHub API, so an
+  // untracked URL simply resolves to `{ task: null }`.
   .get('/link', zValidator('query', linkQuerySchema), async (c) => {
     const { url } = c.req.valid('query')
 
