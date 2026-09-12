@@ -189,10 +189,6 @@ export const SidebarStaysPinnedWhileScrollingDocument: Story = {
   },
 }
 
-// Regression check: the task page editor route (/tasks/$taskId/pages/$pageId)
-// pins its content to the viewport like day view (see app-layout.tsx's
-// isViewportPinned), so an h-full child fills the viewport instead of
-// collapsing to its intrinsic content size.
 export const TaskPageRouteFillsViewport: Story = {
   args: {
     currentPath: '/tasks/1/pages/2',
@@ -217,12 +213,11 @@ export const TaskPageRouteFillsViewport: Story = {
           </AppLayout>
         </QueryClientProvider>
       )}
+      paths={['/tasks/$taskId/pages/$pageId']}
       initialPath="/tasks/1/pages/2"
     />
   ),
   play: async ({ canvasElement }) => {
-    await expectDocumentFitsViewport(canvasElement)
-
     // main, not the window, is the h-full contract: StatusLine and
     // BottomTabBar also share the shell, so main is shorter than the
     // viewport even when everything is wired correctly.

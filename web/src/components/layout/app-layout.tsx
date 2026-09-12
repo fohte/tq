@@ -1,4 +1,4 @@
-import { useRouterState } from '@tanstack/react-router'
+import { useMatchRoute } from '@tanstack/react-router'
 import { type ReactNode, useCallback, useState } from 'react'
 
 import { BottomTabBar } from '#components/layout/bottom-tab-bar'
@@ -23,17 +23,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
     }, []),
   })
 
-  // Viewport-pinned routes (day view "/" and the task page editor) size
-  // their content with h-full off of <main>'s flex-allotted height instead
-  // of scrolling the document. Every other route relies on <main>'s content
-  // being free to grow past that allotment (flexbox's automatic minimum
-  // size), which is what makes the *document* scroll — so min-h-0 can't
-  // apply unconditionally without breaking that for every other route.
-  const isViewportPinned = useRouterState({
-    select: (state) =>
-      state.location.pathname === '/' ||
-      /^\/tasks\/[^/]+\/pages\/[^/]+$/.test(state.location.pathname),
-  })
+  // Viewport-pinned routes need min-h-0 so their h-full content resolves
+  // against <main>'s flex-allotted height; other routes rely on the default
+  // min-height: auto to let the *document* scroll instead.
+  const matchRoute = useMatchRoute()
+  const isViewportPinned =
+    matchRoute({ to: '/', fuzzy: false }) !== false ||
+    matchRoute({ to: '/tasks/$taskId/pages/$pageId', fuzzy: false }) !== false
 
   return (
     <div
