@@ -17,5 +17,7 @@ subpackages:
     web_app: true
 -   name: cli
     type: node
+-   name: extension
+    type: node
 type: base
 use_release_please: false

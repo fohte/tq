@@ -1,0 +1,21 @@
+{
+  "name": "extension",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
+  "scripts": {
+    "build": "esbuild src/content.ts --bundle --format=iife --outdir=dist",
+    "test": "conc pnpm:test:type pnpm:test:unit",
+    "test:type": "tsc --noEmit",
+    "test:unit": "vitest run"
+  },
+  "dependencies": {
+    "neverthrow": "8.2.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "0.2.8",
+    "esbuild": "0.28.2"
+  }
+}

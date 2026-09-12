@@ -7,3 +7,6 @@ scope/api:
 scope/cli:
   - changed-files:
       - any-glob-to-any-file: cli/**
+scope/extension:
+  - changed-files:
+      - any-glob-to-any-file: extension/**
