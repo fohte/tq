@@ -175,6 +175,11 @@ export const EXCLUDED_ROUTES = {
   // Not a REST resource: a JSON-RPC/MCP transport endpoint, not a CLI concern.
   'ALL /api/mcp': 'MCP transport endpoint, not a REST resource',
 
+  // DB-only variant of resolve for the browser extension's high-frequency
+  // polling (every GitHub issue/PR page view); `tq github resolve` already
+  // covers the CLI's occasional lookup use case via POST /api/github/resolve.
+  'GET /api/github/link': "not a CLI concern; covered by 'tq github resolve'",
+
   // Autocomplete backends for the web editor's search bar and `#` mention
   // picker; they return canned/UI-shaped data, not task data a CLI use case
   // would want on its own.
