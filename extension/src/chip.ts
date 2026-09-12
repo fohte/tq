@@ -72,13 +72,21 @@ function applyAppearance(chip: Element, appearance: ChipAppearance): void {
   }
 }
 
+function findExistingChip(stateLabel: Element): Element | null {
+  const parent = stateLabel.parentElement
+  if (parent === null) return null
+  return (
+    Array.from(parent.children).find((child) =>
+      child.hasAttribute(CHIP_ATTR),
+    ) ?? null
+  )
+}
+
 export function syncChipNextTo(
   stateLabel: Element,
   appearance: ChipAppearance | null,
 ): void {
-  const sibling = stateLabel.nextElementSibling
-  const existing =
-    sibling !== null && sibling.hasAttribute(CHIP_ATTR) ? sibling : null
+  const existing = findExistingChip(stateLabel)
 
   if (appearance === null) {
     existing?.remove()

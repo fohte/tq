@@ -86,6 +86,23 @@ describe('syncChipNextTo', () => {
     )
   })
 
+  it('finds the existing chip even when another element lands between it and the label', () => {
+    syncChipNextTo(stateLabel(), { text: '+ tq', href: null, variant: 'empty' })
+
+    const badge = document.createElement('span')
+    stateLabel().insertAdjacentElement('afterend', badge)
+
+    syncChipNextTo(stateLabel(), {
+      text: 'tq #42',
+      href: 'https://tq.fohte.net/tasks/uuid-1',
+      variant: 'linked',
+    })
+
+    expect(document.body.innerHTML).toBe(
+      '<div data-component="StateLabel">Open</div><span></span><a data-tq-chip="linked" href="https://tq.fohte.net/tasks/uuid-1">tq #42</a>',
+    )
+  })
+
   it('clears the href when an existing chip becomes unlinked', () => {
     syncChipNextTo(stateLabel(), {
       text: 'tq #42',

@@ -17,7 +17,6 @@ if (insertChips() === 0) {
   console.warn('tq: no GitHub state label found; chip was not inserted')
 }
 
-// GitHub recreates StateLabel nodes on scroll and in-page navigation.
 new MutationObserver(insertChips).observe(document.body, {
   childList: true,
   subtree: true,

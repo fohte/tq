@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const STATE_LABEL_HTML = '<div data-component="StateLabel">Open</div>'
-const CHIP_HTML = '<a data-tq-chip="empty">+ tq</a>'
+// Wrapped in its own container per label, matching the real page: the
+// header and sticky-header state labels sit in separate subtrees, not as
+// siblings under one shared parent.
+const LABEL_ONLY = '<div><div data-component="StateLabel">Open</div></div>'
+const LABEL_WITH_CHIP =
+  '<div><div data-component="StateLabel">Open</div><a data-tq-chip="empty">+ tq</a></div>'
 
 const createdObservers: MutationObserver[] = []
 
@@ -28,17 +32,15 @@ afterEach(() => {
 
 describe('content script', () => {
   it('inserts a chip after every state label on the page', async () => {
-    document.body.innerHTML = STATE_LABEL_HTML + STATE_LABEL_HTML
+    document.body.innerHTML = LABEL_ONLY + LABEL_ONLY
 
     await import('#content')
 
-    expect(document.body.innerHTML).toBe(
-      STATE_LABEL_HTML + CHIP_HTML + STATE_LABEL_HTML + CHIP_HTML,
-    )
+    expect(document.body.innerHTML).toBe(LABEL_WITH_CHIP + LABEL_WITH_CHIP)
   })
 
   it('does not insert a second chip when the observer reruns after an unrelated mutation', async () => {
-    document.body.innerHTML = STATE_LABEL_HTML
+    document.body.innerHTML = LABEL_ONLY
 
     await import('#content')
 
@@ -47,18 +49,18 @@ describe('content script', () => {
     filler.remove()
 
     await vi.waitFor(() => {
-      expect(document.body.innerHTML).toBe(STATE_LABEL_HTML + CHIP_HTML)
+      expect(document.body.innerHTML).toBe(LABEL_WITH_CHIP)
     })
   })
 
   it('reinserts the chip after the state label node is replaced', async () => {
-    document.body.innerHTML = STATE_LABEL_HTML
+    document.body.innerHTML = LABEL_ONLY
     await import('#content')
 
-    document.body.innerHTML = STATE_LABEL_HTML
+    document.body.innerHTML = LABEL_ONLY
 
     await vi.waitFor(() => {
-      expect(document.body.innerHTML).toBe(STATE_LABEL_HTML + CHIP_HTML)
+      expect(document.body.innerHTML).toBe(LABEL_WITH_CHIP)
     })
   })
 })
