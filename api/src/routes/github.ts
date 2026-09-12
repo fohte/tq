@@ -11,9 +11,13 @@ import {
 } from '#routes/integration-handlers'
 import { taskToResponse } from '#routes/tasks/shared'
 import { syncAllGithubLinks } from '#services/github-sync'
-import { resolveGithubUrl } from '#services/task-github-links'
+import {
+  findTaskByGithubRef,
+  resolveGithubUrl,
+} from '#services/task-github-links'
 
 const resolveSchema = z.object({ url: z.string().min(1) })
+const linkQuerySchema = z.object({ url: z.string().min(1) })
 
 // Connection status/auth-url/disconnect are handled generically by
 // routes/integrations.ts. This file only keeps the OAuth callback (its URL
@@ -52,6 +56,29 @@ export const githubApp = new Hono()
             )
           : c.json({ linked: false, preview: resolved.preview }, 200),
       (error) => githubLinkErrorResponse(c, error, 'github.resolve'),
+    )
+  })
+  // DB-only counterpart to /resolve, for callers that poll on every page
+  // view (the browser extension's content script) and must not spend a
+  // GitHub API call on URLs that aren't tracked.
+  .get('/link', zValidator('query', linkQuerySchema), async (c) => {
+    const { url } = c.req.valid('query')
+
+    const result = await parseGithubIssueUrl(url).asyncAndThen((ref) =>
+      findTaskByGithubRef(ref),
+    )
+
+    return result.match(
+      (found) =>
+        c.json(
+          {
+            task: found
+              ? taskToResponse(found.task, undefined, [found.link])
+              : null,
+          },
+          200,
+        ),
+      (error) => githubLinkErrorResponse(c, error, 'github.link'),
     )
   })
   // Triggered by the web client while it's open and focused (mount, window

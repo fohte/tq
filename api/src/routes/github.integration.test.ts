@@ -79,6 +79,53 @@ describe('POST /api/github/resolve', () => {
   })
 })
 
+describe('GET /api/github/link', () => {
+  async function link(url: string) {
+    return app.request(`/api/github/link?url=${encodeURIComponent(url)}`)
+  }
+
+  it('returns task: null for an unlinked URL, without calling the GitHub API', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+
+    const res = await link('https://github.com/fohte/tq/issues/42')
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ task: null })
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns the linked task without calling the GitHub API', async () => {
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse()
+    const created = await app.request('/api/tasks/from-github', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/42' }),
+    })
+    const createdBody = await jsonBody<{ task: TaskResponse }>(created)
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    fetchSpy.mockClear()
+
+    const res = await link('https://github.com/fohte/tq/issues/42')
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ task: createdBody.task })
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 for a non-GitHub URL', async () => {
+    const res = await link('https://example.com/not-github')
+
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when the url query param is missing', async () => {
+    const res = await app.request('/api/github/link')
+
+    expect(res.status).toBe(400)
+  })
+})
+
 describe('POST /api/github/sync', () => {
   it('syncs every linked task', async () => {
     await upsertGithubToken('valid-token')
