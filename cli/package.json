@@ -18,7 +18,7 @@
   "dependencies": {
     "api": "workspace:*",
     "commander": "15.0.0",
-    "hono": "4.12.34",
+    "hono": "4.13.5",
     "neverthrow": "8.2.0",
     "zod": "4.3.6"
   },
