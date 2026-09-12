@@ -195,6 +195,21 @@ export function resolveGithubUrl(
   })
 }
 
+// DB-only counterpart to resolveGithubUrl: never calls the GitHub API, so it
+// resolves to `null` for an unlinked ref instead of falling back to a
+// preview fetch.
+export function findTaskByGithubRef(
+  ref: GithubResourceRef,
+): ResultAsync<
+  { task: TaskRow; link: LinkRow } | null,
+  GithubLinkConsistencyError
+> {
+  return findLinkByRef(ref).andThen((link) => {
+    if (!link) return okAsync(null)
+    return findTaskForLink(link).map((task) => ({ task, link }))
+  })
+}
+
 // The task insert and the link insert must commit or roll back together:
 // without a transaction, a concurrent link created for the same issue
 // between the two inserts (see insertLink's comment) leaves this task
