@@ -233,6 +233,28 @@ export const WithRecurrence: Story = {
   },
 }
 
+export const WithRecurrenceFromTemplate: Story = {
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Water the plants',
+      recurrenceRule: {
+        id: 'recurrence-1',
+        type: 'weekly',
+        interval: 1,
+        daysOfWeek: [0, 3],
+        dayOfMonth: null,
+      },
+      templateId: '00000000-0000-0000-0000-000000000002',
+    },
+  },
+  play: async ({ canvas, userEvent }) => {
+    // Clicking navigates to /recurring/$templateId; this story only
+    // exercises that the click doesn't throw.
+    await userEvent.click(canvas.getByText('Weekly · Sun, Wed'))
+  },
+}
+
 export const WithGithubLink: Story = {
   args: {
     task: {

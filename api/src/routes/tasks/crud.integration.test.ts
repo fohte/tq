@@ -395,6 +395,23 @@ describe('tasks CRUD API', () => {
       expect(body.every((t) => t.parentId === parent.id)).toBe(true)
     })
 
+    it('filters by templateId', async () => {
+      const templateTask = await createRecurringTask('Recurring', {
+        type: 'daily',
+        interval: 1,
+      })
+      assertDefined(templateTask.templateId)
+      await createTask('Plain')
+
+      const res = await app.request(
+        `/api/tasks?templateId=${templateTask.templateId}`,
+      )
+
+      expect(res.status).toBe(200)
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+      expect(body.map((t) => t.id)).toEqual([templateTask.id])
+    })
+
     it('excludes tasks with a parent when parentId is "root"', async () => {
       const parent = await createTask('Parent')
       await createTask('Child', { parentId: parent.id })

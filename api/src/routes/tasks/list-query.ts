@@ -202,6 +202,10 @@ function buildConditions(query: ListTasksQuery) {
     conditions.push(eq(tasks.parentId, parentId))
   }
 
+  if (query.templateId != null) {
+    conditions.push(eq(tasks.templateId, query.templateId))
+  }
+
   if (projectIdentifier != null) {
     // UUID-shaped values are treated as an id match, not a title match, even
     // though `projects.title` has no format constraint and could coincide.

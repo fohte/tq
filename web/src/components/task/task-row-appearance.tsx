@@ -92,7 +92,10 @@ export function TaskRowAppearance({
       <EstimateLabel minutes={task.estimatedMinutes} />
     ) : null,
     task.recurrenceRule != null ? (
-      <RecurrenceLabel rule={task.recurrenceRule} />
+      <RecurrenceLabel
+        rule={task.recurrenceRule}
+        templateId={task.templateId}
+      />
     ) : null,
     task.githubLinks.length > 0 ? (
       <GithubLinksChipGroup links={task.githubLinks} />

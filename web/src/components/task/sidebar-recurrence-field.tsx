@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 
 import {
@@ -22,54 +23,22 @@ import { useUpdateTaskRecurrenceRule } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
 import { selectValueHandler } from '#lib/form-utils'
 import {
+  buildRecurrenceRule,
   computeNextOccurrence,
   formatRecurrenceSummary,
+  intervalUnitLabel,
   type RecurrenceRule,
+  type RecurrenceTypeOption,
 } from '#lib/recurrence'
 import { formatShortDate } from '#lib/task-due-date'
 import { parseRecurrenceShorthand } from '#lib/task-shorthand'
 
-type RecurrenceTypeOption = '' | 'daily' | 'weekly' | 'monthly'
 const recurrenceTypeOptions: readonly RecurrenceTypeOption[] = [
   '',
   'daily',
   'weekly',
   'monthly',
 ]
-
-function buildRule(
-  type: RecurrenceTypeOption,
-  interval: number | null,
-  daysOfWeek: number[],
-  dayOfMonth: string,
-) {
-  if (type === '' || interval == null) return null
-  return {
-    type,
-    interval,
-    ...(type === 'weekly' && daysOfWeek.length > 0
-      ? { daysOfWeek: [...daysOfWeek].sort((a, b) => a - b) }
-      : {}),
-    ...(type === 'monthly' && dayOfMonth
-      ? { dayOfMonth: Number.parseInt(dayOfMonth, 10) }
-      : {}),
-  }
-}
-
-function intervalUnitLabel(
-  type: 'daily' | 'weekly' | 'monthly',
-  interval: number,
-): string {
-  const plural = interval !== 1
-  switch (type) {
-    case 'daily':
-      return plural ? 'days' : 'day'
-    case 'weekly':
-      return plural ? 'weeks' : 'week'
-    case 'monthly':
-      return plural ? 'months' : 'month'
-  }
-}
 
 export function SidebarRecurrenceField({
   taskId,
@@ -151,7 +120,12 @@ export function SidebarRecurrenceField({
       ? parsedInterval
       : null
 
-  const draftRule = buildRule(type, intervalValue, daysOfWeek, dayOfMonth)
+  const draftRule = buildRecurrenceRule(
+    type,
+    intervalValue,
+    daysOfWeek,
+    dayOfMonth,
+  )
 
   // A rule of type 'custom' (only reachable via the API/MCP) has no
   // matching Select option, so initialType is '' even though a rule
@@ -159,7 +133,7 @@ export function SidebarRecurrenceField({
   // selected") keeps Save disabled until something actually changes,
   // rather than defaulting to an enabled Save that would silently clear
   // that custom rule on the first click.
-  const originalRule = buildRule(
+  const originalRule = buildRecurrenceRule(
     initialType,
     recurrenceRule?.interval ?? 1,
     recurrenceRule?.daysOfWeek ?? [],
@@ -191,9 +165,13 @@ export function SidebarRecurrenceField({
               ? formatRecurrenceSummary(recurrenceRule)
               : '—'}
           </span>
-          <span className="font-mono text-2xs text-muted-foreground-faint">
-            Generated from a template
-          </span>
+          <Link
+            to="/recurring/$templateId"
+            params={{ templateId }}
+            className="font-mono text-2xs text-muted-foreground-faint transition-colors hover:text-muted-foreground-strong"
+          >
+            Edit template →
+          </Link>
         </div>
       </SidebarField>
     )

@@ -1,3 +1,6 @@
+import { Link } from '@tanstack/react-router'
+import { Repeat } from 'lucide-react'
+
 import { Button } from '#components/ui/button'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { newTaskKeybinding } from '#lib/keybindings'
@@ -9,6 +12,13 @@ interface TaskListToolbarProps {
 export function TaskListToolbar({ onCreateNew }: TaskListToolbarProps) {
   return (
     <div className="ml-auto flex items-center gap-2">
+      <Link
+        to="/recurring"
+        className="inline-flex items-center gap-1 font-mono text-2xs text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <Repeat className="size-3" />
+        recurring
+      </Link>
       <Button
         type="button"
         size="xs"

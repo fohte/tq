@@ -8,6 +8,7 @@ import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
 import { computeNextOccurrence, type RecurrenceRule } from '#lib/recurrence'
 import { formatShortDate } from '#lib/task-due-date'
 import { assertDefined, clickSelectOption } from '#lib/test-utils'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const taskId = '00000000-0000-0000-0000-000000000001'
 const dueDate = '2026-03-25'
@@ -302,11 +303,17 @@ export const GeneratedFromTemplate: Story = {
     recurrenceRule: weeklyRule,
     templateId: '00000000-0000-0000-0000-000000000002',
   },
+  decorators: [
+    (Story) => (
+      <StoryRouter
+        paths={['/recurring/$templateId']}
+        component={() => <Story />}
+      />
+    ),
+  ],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Weekly · Sun, Wed')).toBeInTheDocument()
-    await expect(
-      canvas.getByText('Generated from a template'),
-    ).toBeInTheDocument()
+    await expect(canvas.getByText('Edit template →')).toBeInTheDocument()
   },
 }
