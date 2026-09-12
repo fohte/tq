@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "tq for GitHub",
+  "version": "0.1.0",
+  "description": "Show tq task links on GitHub issue and pull request pages.",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://github.com/*/*/issues/*",
+        "https://github.com/*/*/pull/*"
+      ],
+      "js": ["dist/content.js"]
+    }
+  ]
+}

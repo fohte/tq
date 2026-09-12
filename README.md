@@ -58,6 +58,18 @@ pnpm --filter web exec playwright install --with-deps chromium
 pnpm --filter web run test:storybook
 ```
 
+### Browser extension
+
+`extension/` is a Chrome extension (Manifest V3). Build it, then load it unpacked:
+
+```sh
+pnpm --filter extension run build
+```
+
+1. Open `chrome://extensions`.
+2. Enable **Developer mode**.
+3. Click **Load unpacked** and select the `extension/` directory.
+
 ### Scripts
 
 | Command                             | Description                          |

@@ -4,7 +4,8 @@
   "workspaces": [
     "web",
     "api",
-    "cli"
+    "cli",
+    "extension"
   ],
   "packageManager": "pnpm@11.25.0",
   "type": "module",

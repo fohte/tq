@@ -2,6 +2,7 @@ packages:
   - 'web'
   - 'api'
   - 'cli'
+  - 'extension'
 
 allowBuilds:
   # required by vitest's transformer
