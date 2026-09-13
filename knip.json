@@ -24,6 +24,9 @@
     },
     "cli": {
       "entry": ["src/route-coverage.ts"]
+    },
+    "extension": {
+      "ignoreDependencies": ["neverthrow"]
     }
   }
 }
