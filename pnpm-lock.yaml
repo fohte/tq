@@ -138,6 +138,10 @@ importers:
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.26)(supports-color@10.2.2)(tsx@4.23.13)(typescript@6.0.3)(yaml@2.9.0)
 
   extension:
+    dependencies:
+      neverthrow:
+        specifier: 8.2.0
+        version: 8.2.0
     devDependencies:
       '@types/chrome':
         specifier: 0.2.8
