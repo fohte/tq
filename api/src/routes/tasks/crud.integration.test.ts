@@ -1902,6 +1902,94 @@ describe('tasks CRUD API', () => {
       })
     })
 
+    describe('POST /api/tasks', () => {
+      it('persists a task_relations row for a single blocker', async () => {
+        const blocker = await createTask('Blocker')
+
+        const res = await app.request('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'Blocked', blockedBy: [blocker.id] }),
+        })
+
+        expect(res.status).toBe(201)
+        const body = await jsonBody<TaskResponse>(res)
+        expect(await fetchBlockedByRelations(body.id)).toEqual([
+          {
+            sourceTaskId: body.id,
+            targetTaskId: blocker.id,
+            type: 'blocked_by',
+          },
+        ])
+      })
+
+      it('accepts a blocker task number in place of its id', async () => {
+        const blocker = await createTask('Blocker')
+
+        const res = await app.request('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: 'Blocked',
+            blockedBy: [String(blocker.number)],
+          }),
+        })
+
+        expect(res.status).toBe(201)
+        const body = await jsonBody<TaskResponse>(res)
+        expect(await fetchBlockedByRelations(body.id)).toEqual([
+          {
+            sourceTaskId: body.id,
+            targetTaskId: blocker.id,
+            type: 'blocked_by',
+          },
+        ])
+      })
+
+      it('dedupes the same blocker given as both its id and its number', async () => {
+        const blocker = await createTask('Blocker')
+
+        const res = await app.request('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: 'Blocked',
+            blockedBy: [blocker.id, String(blocker.number)],
+          }),
+        })
+
+        expect(res.status).toBe(201)
+        const body = await jsonBody<TaskResponse>(res)
+        expect(await fetchBlockedByRelations(body.id)).toEqual([
+          {
+            sourceTaskId: body.id,
+            targetTaskId: blocker.id,
+            type: 'blocked_by',
+          },
+        ])
+      })
+
+      it.each(['id', 'number'] as const)(
+        'returns 404 without creating the task when a blocker %s does not reference an existing task',
+        async (kind) => {
+          const res = await app.request('/api/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: 'Blocked',
+              blockedBy: [kind === 'id' ? TEST_UUID : '999999999'],
+            }),
+          })
+
+          expect(res.status).toBe(404)
+          expect(await jsonBody<{ error: string }>(res)).toEqual({
+            error: 'Blocking task not found',
+          })
+          expect(await db.select({ id: tasks.id }).from(tasks)).toEqual([])
+        },
+      )
+    })
+
     describe('GET /api/tasks/:id', () => {
       it('returns tasks that block this task, ordered by number', async () => {
         const blockerA = await createTask('Blocker A')

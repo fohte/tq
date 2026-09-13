@@ -79,7 +79,9 @@ export function registerWriteTools(server: McpServer): void {
         'repeat count (e.g. 2 with type weekly means every 2 weeks), ' +
         '`daysOfWeek` (0=Sunday..6=Saturday) restricts a weekly rule to ' +
         'specific days, and `dayOfMonth` (1-31) fixes the day for a ' +
-        'monthly rule.',
+        'monthly rule. `blockedBy` is an array of task ids or numbers that ' +
+        'must complete before this task can, resolved to a 404 if any of ' +
+        'them do not exist.',
       inputSchema: z.object({
         ...createTaskSchema.shape,
         agent: agentArgSchema,

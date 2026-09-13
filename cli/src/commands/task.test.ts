@@ -367,6 +367,35 @@ describe('task create', () => {
     })
   })
 
+  it('splits --blocked-by into an id/number array', async () => {
+    const created = { id: 't1', number: 1, title: 'New task' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'New task',
+        '--blocked-by',
+        '312, 315',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'POST',
+      pathname: '/api/tasks',
+      query: {},
+      body: { title: 'New task', blockedBy: ['312', '315'] },
+    })
+  })
+
   it('assembles the --recurrence-* flags into a recurrenceRule object', async () => {
     const created = { id: 't1', number: 1, title: 'New task' }
     const { fetchStub, calls } = captureFetch(
