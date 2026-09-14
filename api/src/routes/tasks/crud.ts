@@ -3,7 +3,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db, type DbTransaction } from '#db/connection'
-import { recurrenceRules, tasks } from '#db/schema'
+import { recurrenceRules, taskRelations, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { diffFields, recordEdit } from '#lib/edits'
 import { queryTaskList } from '#routes/tasks/list-query'
@@ -27,29 +27,15 @@ import { syncTaskLabels } from '#services/task-labels'
 import { syncTaskLinks } from '#services/task-links'
 import { syncTaskBlockedBy } from '#services/task-relations'
 
-// Self-reference and existence are cheap, non-racy checks -- the cycle check
-// needs the transactional lock in `syncTaskBlockedBy` instead. Self-reference
-// is checked first, against the raw input, so it never costs a DB round trip
-// and always wins over an existence error when a request combines its own
-// id/number with an unrelated missing blocker.
-async function resolveBlockedByTargets(
-  task: { id: string; number: number },
+// Existence is a cheap, non-racy check -- the cycle check needs the
+// transactional lock in `syncTaskBlockedBy` instead.
+async function resolveBlockedByExistence(
   blockedBy: string[],
 ): Promise<
-  | { targetIds: string[] }
-  | { error: { body: { error: string }; status: 400 | 404 } }
+  { targetIds: string[] } | { error: { body: { error: string }; status: 404 } }
 > {
   const uniqueRaw = [...new Set(blockedBy)]
   if (uniqueRaw.length === 0) return { targetIds: [] }
-
-  if (uniqueRaw.includes(task.id) || uniqueRaw.includes(String(task.number))) {
-    return {
-      error: {
-        body: { error: 'A task cannot be blocked by itself' },
-        status: 400,
-      },
-    }
-  }
 
   const resolved = await findTasksByIdsOrNumbers(uniqueRaw)
   const missing = uniqueRaw.filter((raw) => !resolved.has(raw))
@@ -61,6 +47,28 @@ async function resolveBlockedByTargets(
 
   const targetIds = [...new Set([...resolved.values()].map((t) => t.id))]
   return { targetIds }
+}
+
+// Self-reference is checked first, against the raw input, so it never costs a
+// DB round trip and always wins over an existence error when a request
+// combines its own id/number with an unrelated missing blocker.
+async function resolveBlockedByTargets(
+  task: { id: string; number: number },
+  blockedBy: string[],
+): Promise<
+  | { targetIds: string[] }
+  | { error: { body: { error: string }; status: 400 | 404 } }
+> {
+  if (blockedBy.includes(task.id) || blockedBy.includes(String(task.number))) {
+    return {
+      error: {
+        body: { error: 'A task cannot be blocked by itself' },
+        status: 400,
+      },
+    }
+  }
+
+  return resolveBlockedByExistence(blockedBy)
 }
 
 // Deletes `recurrenceRules` row `ruleId` if no other task still references it
@@ -101,6 +109,17 @@ export const tasksCrudApp = new Hono()
         return c.json(resolved.error.body, resolved.error.status)
       }
       parentId = resolved.id
+    }
+
+    let blockedByTargetIds: string[] = []
+    if (input.blockedBy != null) {
+      const resolved = await resolveBlockedByExistence(
+        input.blockedBy.map(String),
+      )
+      if ('error' in resolved) {
+        return c.json(resolved.error.body, resolved.error.status)
+      }
+      blockedByTargetIds = resolved.targetIds
     }
 
     const { task, createdRule, labelNames } = await db.transaction(
@@ -162,6 +181,21 @@ export const tasksCrudApp = new Hono()
           input.labels != null
             ? await syncTaskLabels(tx, task.id, input.labels, task.context)
             : []
+
+        // Inserted directly (not via `syncTaskBlockedBy`) so a blocker
+        // deleted between the existence check above and here aborts the
+        // whole insert atomically instead of leaving an orphaned task with
+        // a missing blocker. A cycle can't happen for a brand-new task, so
+        // `syncTaskBlockedBy`'s advisory-lock/cycle check isn't needed here.
+        if (blockedByTargetIds.length > 0) {
+          await tx.insert(taskRelations).values(
+            blockedByTargetIds.map((targetTaskId) => ({
+              sourceTaskId: task.id,
+              targetTaskId,
+              type: 'blocked_by' as const,
+            })),
+          )
+        }
 
         await recordEdit(tx, { taskId: task.id }, { action: 'create' }, author)
 

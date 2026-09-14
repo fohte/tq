@@ -89,7 +89,7 @@
     "jsdom": "29.1.1",
     "msw": "2.15.0",
     "msw-storybook-addon": "3.0.0",
-    "playwright": "1.62.1",
+    "playwright": "1.63.0",
     "reg-publish-s3-plugin": "0.14.4",
     "reg-simple-keygen-plugin": "0.14.2",
     "reg-suit": "0.14.5",

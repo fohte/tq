@@ -36,6 +36,7 @@ export const createTaskSchema = z.object({
   commitment: commitmentEnum.optional(),
   labels: z.array(labelNameSchema).optional(),
   recurrenceRule: recurrenceRuleSchema.optional(),
+  blockedBy: z.array(taskIdOrNumber).optional(),
 })
 
 export const updateTaskSchema = z.object({
