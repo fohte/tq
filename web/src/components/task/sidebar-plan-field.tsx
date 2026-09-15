@@ -6,7 +6,7 @@ import { SidebarField } from '#components/task/sidebar-field'
 import { useTaskPlan } from '#hooks/use-queues'
 import { useUpdateTask } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
-import { ordinal } from '#lib/recurrence'
+import { ordinal } from '#lib/format'
 
 export function SidebarPlanField({
   taskId,
@@ -16,7 +16,7 @@ export function SidebarPlanField({
   commitment: 'inbox' | 'active' | 'someday'
 }) {
   const date = useMemo(() => formatLocalDate(new Date()), [])
-  const { plan, position, setPlan } = useTaskPlan(taskId, date)
+  const { plan, position, setPlan, isLoading } = useTaskPlan(taskId, date)
   const updateTask = useUpdateTask()
 
   const handleChange = (next: PlanValue | '') => {
@@ -30,7 +30,7 @@ export function SidebarPlanField({
 
   return (
     <SidebarField label="PLAN">
-      <PlanTabStrip value={plan} onChange={handleChange} />
+      <PlanTabStrip value={plan} onChange={handleChange} disabled={isLoading} />
       {position != null && (
         <p className="mt-1 text-2xs text-muted-foreground-faint">
           in {plan === 'day' ? "today's" : "this week's"} queue ·{' '}

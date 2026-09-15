@@ -7,8 +7,10 @@ import { PlanTabStrip } from '#components/task/plan-tab-strip'
 
 function PlanTabStripDemo({
   onChange,
+  disabled,
 }: {
   onChange: (value: PlanValue | '') => void
+  disabled?: boolean
 }) {
   const [value, setValue] = useState<PlanValue | ''>('')
 
@@ -19,6 +21,7 @@ function PlanTabStripDemo({
         setValue(next)
         onChange(next)
       }}
+      {...(disabled != null ? { disabled } : {})}
     />
   )
 }
@@ -60,5 +63,15 @@ export const SelectsThisWeek: Story = {
       'aria-pressed',
       'true',
     )
+  },
+}
+
+export const Disabled: Story = {
+  args: { disabled: true },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByText('today'))
+    await expect(args.onChange).not.toHaveBeenCalled()
+    await expect(canvas.getByText('today')).toBeDisabled()
   },
 }

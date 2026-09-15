@@ -8,6 +8,7 @@ import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { SidebarPlanField } from '#components/task/sidebar-plan-field'
 import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
 import { formatLocalDate } from '#lib/date-range'
+import { assertDefined, readQueuePutBody } from '#lib/test-utils'
 
 const taskId = '00000000-0000-0000-0000-000000000001'
 const today = formatLocalDate(new Date())
@@ -39,12 +40,18 @@ function seedQueues(
   )
 }
 
+// Captured so a play function can inspect cache state (e.g. whether a query
+// was invalidated) after an interaction — the QueryClient itself isn't
+// exposed through Storybook's play-function context.
+let capturedQueryClient: QueryClient | null = null
+
 function withSeededQueues(dayTaskIds: string[], weekTaskIds: string[]) {
   return (Story: ComponentType) => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     })
     seedQueues(queryClient, dayTaskIds, weekTaskIds)
+    capturedQueryClient = queryClient
     return (
       <QueryClientProvider client={queryClient}>
         <div className="w-60 border-l border-border p-4">
@@ -91,11 +98,7 @@ export const SelectsTodayUpgradesInboxCommitment: Story = {
     msw: {
       handlers: [
         http.put('/api/queues/:key/items', async ({ request, params }) => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- this story controls the request body it sends (useSetQueueItems's mutate call) in the play function below
-          const body = (await request.json()) as {
-            date: string
-            taskIds: string[]
-          }
+          const body = await readQueuePutBody(request)
           putBody = { key: params['key'], ...body }
           return HttpResponse.json([])
         }),
@@ -133,11 +136,7 @@ export const ClearingPlanDoesNotChangeCommitment: Story = {
     msw: {
       handlers: [
         http.put('/api/queues/:key/items', async ({ request, params }) => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- this story controls the request body it sends (useSetQueueItems's mutate call) in the play function below
-          const body = (await request.json()) as {
-            date: string
-            taskIds: string[]
-          }
+          const body = await readQueuePutBody(request)
           putBody = { key: params['key'], ...body }
           return HttpResponse.json([])
         }),
@@ -159,5 +158,46 @@ export const ClearingPlanDoesNotChangeCommitment: Story = {
       await expect(putBody).toEqual({ key: 'day', date: today, taskIds: [] })
     })
     await expect(patchedBody).toBeNull()
+  },
+}
+
+export const SwitchingFromTodayToThisWeekMovesTheTask: Story = {
+  decorators: [withSeededQueues([taskId], [])],
+  args: { taskId, commitment: 'active' },
+  parameters: {
+    msw: {
+      handlers: [
+        // useTaskPlan's setPlan invalidates the day queue's cache after the
+        // week PUT succeeds; the day queue is still mounted (this component
+        // always queries both), so invalidation triggers a real refetch.
+        http.get('/api/queues/:key/items', () => HttpResponse.json([])),
+        http.put('/api/queues/:key/items', async ({ request, params }) => {
+          const body = await readQueuePutBody(request)
+          putBody = { key: params['key'], ...body }
+          return HttpResponse.json([])
+        }),
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    putBody = null
+    const canvas = within(canvasElement)
+
+    await userEvent.click(canvas.getByText('this week'))
+
+    await waitFor(async () => {
+      await expect(putBody).toEqual({
+        key: 'week',
+        date: today,
+        taskIds: [taskId],
+      })
+    })
+    await waitFor(async () => {
+      await expect(
+        assertDefined(capturedQueryClient).getQueryData(
+          queueKeys.items(DAY_QUEUE_KEY, today),
+        ),
+      ).toEqual([])
+    })
   },
 }

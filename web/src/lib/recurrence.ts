@@ -4,6 +4,7 @@ import {
   dayLabels,
   type RecurrenceType,
 } from '#components/schedule/create-schedule-modal'
+import { ordinal } from '#lib/format'
 
 export interface RecurrenceRule {
   type: RecurrenceType
@@ -52,22 +53,6 @@ export function intervalUnitLabel(
       return plural ? 'weeks' : 'week'
     case 'monthly':
       return plural ? 'months' : 'month'
-  }
-}
-
-export function ordinal(n: number): string {
-  const s = String(n)
-  const rem100 = n % 100
-  if (rem100 >= 11 && rem100 <= 13) return `${s}th`
-  switch (n % 10) {
-    case 1:
-      return `${s}st`
-    case 2:
-      return `${s}nd`
-    case 3:
-      return `${s}rd`
-    default:
-      return `${s}th`
   }
 }
 

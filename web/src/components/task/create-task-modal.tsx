@@ -22,6 +22,7 @@ import { useLinkTaskToGithub } from '#hooks/use-github-link'
 import { useGithubUrlPreview } from '#hooks/use-github-url-preview'
 import {
   DAY_QUEUE_KEY,
+  queueKeyForPlan,
   useQueueItems,
   useSetQueueItems,
   WEEK_QUEUE_KEY,
@@ -244,9 +245,17 @@ export function CreateTaskModal({
     }
   }
 
+  // Blocks submit until the relevant queue's current items have loaded —
+  // otherwise the queue-append below would send only the new task's ID,
+  // and PUT /api/queues/:key/items replaces the queue's contents wholesale.
+  const planQueueLoading =
+    (plan === 'day' && dayItems.data === undefined) ||
+    (plan === 'week' && weekItems.data === undefined)
+
   const canSubmit =
     title.trim() !== '' &&
     !createTask.isPending &&
+    !planQueueLoading &&
     !parentNotFound &&
     !parentPending &&
     !githubPending &&
@@ -289,13 +298,20 @@ export function CreateTaskModal({
           )
         }
         if (plan !== '') {
-          const key = plan === 'day' ? DAY_QUEUE_KEY : WEEK_QUEUE_KEY
+          const key = queueKeyForPlan(plan)
           const items = plan === 'day' ? dayItems.data : weekItems.data
-          setQueueItems.mutate({
-            key,
-            date: today,
-            taskIds: [...(items ?? []).map((item) => item.taskId), task.id],
-          })
+          setQueueItems.mutate(
+            {
+              key,
+              date: today,
+              taskIds: [...(items ?? []).map((item) => item.taskId), task.id],
+            },
+            {
+              onError: (error) => {
+                console.error('Failed to add task to queue', error)
+              },
+            },
+          )
         }
         resetForm()
         onOpenChange(false)

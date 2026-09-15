@@ -123,6 +123,10 @@ export interface TaskPlanPosition {
   total: number
 }
 
+export function queueKeyForPlan(plan: PlanValue | ''): string {
+  return plan === 'day' ? DAY_QUEUE_KEY : WEEK_QUEUE_KEY
+}
+
 /**
  * Whether a task is in today's queue, this week's queue, or neither ('' when
  * the corresponding queue data hasn't loaded yet either), plus its position
@@ -157,23 +161,29 @@ export function useTaskPlan(taskId: string, date: string) {
   const setPlan = (next: PlanValue | '') => {
     if (next === plan) return
 
+    const onError = (error: unknown) => {
+      console.error('Failed to update task queue', error)
+    }
+
     if (next === '') {
-      const key = plan === 'day' ? DAY_QUEUE_KEY : WEEK_QUEUE_KEY
+      const key = queueKeyForPlan(plan)
       const items = plan === 'day' ? dayItems.data : weekItems.data
-      setQueueItems.mutate({
-        key,
-        date,
-        taskIds: (items ?? [])
-          .map((item) => item.taskId)
-          .filter((id) => id !== taskId),
-      })
+      setQueueItems.mutate(
+        {
+          key,
+          date,
+          taskIds: (items ?? [])
+            .map((item) => item.taskId)
+            .filter((id) => id !== taskId),
+        },
+        { onError },
+      )
       return
     }
 
-    const key = next === 'day' ? DAY_QUEUE_KEY : WEEK_QUEUE_KEY
+    const key = queueKeyForPlan(next)
     const items = next === 'day' ? dayItems.data : weekItems.data
-    const previousKey =
-      plan === '' ? null : plan === 'day' ? DAY_QUEUE_KEY : WEEK_QUEUE_KEY
+    const previousKey = plan === '' ? null : queueKeyForPlan(plan)
 
     setQueueItems.mutate(
       {
@@ -181,15 +191,18 @@ export function useTaskPlan(taskId: string, date: string) {
         date,
         taskIds: [...(items ?? []).map((item) => item.taskId), taskId],
       },
-      previousKey == null
-        ? undefined
-        : {
-            onSuccess: () => {
-              void queryClient.invalidateQueries({
-                queryKey: queueKeys.items(previousKey, date),
-              })
-            },
-          },
+      {
+        onError,
+        ...(previousKey == null
+          ? {}
+          : {
+              onSuccess: () => {
+                void queryClient.invalidateQueries({
+                  queryKey: queueKeys.items(previousKey, date),
+                })
+              },
+            }),
+      },
     )
   }
 
@@ -197,7 +210,8 @@ export function useTaskPlan(taskId: string, date: string) {
     plan,
     position,
     setPlan,
-    isLoading: dayItems.isLoading || weekItems.isLoading,
+    isLoading:
+      dayItems.isLoading || weekItems.isLoading || setQueueItems.isPending,
   }
 }
 

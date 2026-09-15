@@ -14,7 +14,7 @@ import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
 import { DAY_QUEUE_KEY, queueKeys } from '#hooks/use-queues'
 import { taskMentionKeys } from '#hooks/use-task-mentions'
 import { formatLocalDate } from '#lib/date-range'
-import { assertDefined, atIndex } from '#lib/test-utils'
+import { assertDefined, atIndex, readQueuePutBody } from '#lib/test-utils'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -247,7 +247,7 @@ export const ShorthandSyntaxAppliesPlan: Story = {
     screenshot: { skip: true },
     msw: {
       // Story-level handlers replace meta's entirely (not merge) — see the
-      // comment on CaretShorthandSubmitsRawParentNumber above. The queue
+      // comment on CaretShorthandSubmitsRawParentNumber below. The queue
       // items GET handler is needed here because setting PLAN via `!today`
       // enables the modal's day-queue fetch.
       handlers: [
@@ -314,11 +314,7 @@ export const SelectingTodayActivatesCommitmentAndQueuesTheTask: Story = {
           })
         }),
         http.put('/api/queues/:key/items', async ({ request, params }) => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- this story controls the request body it sends (useSetQueueItems's mutate call) in the play function below
-          const body = (await request.json()) as {
-            date: string
-            taskIds: string[]
-          }
+          const body = await readQueuePutBody(request)
           queuePutBody = { key: params['key'], ...body }
           return HttpResponse.json([])
         }),

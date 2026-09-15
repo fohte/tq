@@ -7,6 +7,22 @@ export function formatMinutes(minutes: number): string {
   return `${String(minutes)}m`
 }
 
+export function ordinal(n: number): string {
+  const s = String(n)
+  const rem100 = n % 100
+  if (rem100 >= 11 && rem100 <= 13) return `${s}th`
+  switch (n % 10) {
+    case 1:
+      return `${s}st`
+    case 2:
+      return `${s}nd`
+    case 3:
+      return `${s}rd`
+    default:
+      return `${s}th`
+  }
+}
+
 function yearIfDifferent(date: Date, now: Date): 'numeric' | undefined {
   return date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
 }
