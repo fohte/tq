@@ -334,11 +334,21 @@ export const SelectingTodayActivatesCommitmentAndQueuesTheTask: Story = {
 
     // Wait for the day queue's current items to load before submitting —
     // otherwise the queue PUT below would race the GET and drop
-    // 'existing-task' from the appended taskIds.
+    // 'existing-task' from the appended taskIds. `queryClient` is shared
+    // across every story in this file, so a plain "is defined" check can
+    // pass instantly on another story's leftover cache entry for the same
+    // key; asserting the exact expected value forces this to wait for this
+    // story's own mocked GET to resolve.
     await waitFor(async () => {
       await expect(
         queryClient.getQueryData(queueKeys.items(DAY_QUEUE_KEY, today)),
-      ).toBeDefined()
+      ).toEqual([
+        makeQueueItem({
+          id: 'existing-item',
+          taskId: 'existing-task',
+          periodStart: today,
+        }),
+      ])
     })
 
     const enabledCreateButton = body
