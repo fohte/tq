@@ -1,9 +1,20 @@
 import path from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
 
+<<<<<<< before updating
 import { createStorybookProject } from '@fohte/storybook-addon/vitest-plugin'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vitest/config'
+||||||| last update
+import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
+import { playwright } from '@vitest/browser-playwright'
+import { defineConfig, mergeConfig } from 'vitest/config'
+=======
+import { BLOCK_EXTERNAL_REQUESTS_ARGS } from '@fohte/storybook-addon/vitest-plugin'
+import { storybookTest } from '@storybook/addon-vitest/vitest-plugin'
+import { playwright } from '@vitest/browser-playwright'
+import { defineConfig, mergeConfig } from 'vitest/config'
+>>>>>>> after updating
 
 import {
   DESKTOP_ONLY_TAG,
@@ -14,6 +25,7 @@ import {
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
+<<<<<<< before updating
 const alias = {
   '@storybook-config': fileURLToPath(new URL('./.storybook', import.meta.url)),
 }
@@ -53,6 +65,63 @@ export default defineConfig({
           // (e.g. date-range.test.ts) can't pass by accident when the host
           // machine happens to run in UTC.
           env: { TZ: 'Asia/Tokyo' },
+||||||| last update
+export default mergeConfig(
+  viteConfig,
+  defineConfig({
+    test: {
+      projects: [
+        {
+          extends: true,
+          test: {
+            name: 'unit',
+          },
+        },
+        {
+          extends: true,
+          plugins: [
+            storybookTest({ configDir: path.join(dirname, '.storybook') }),
+          ],
+          test: {
+            name: 'storybook',
+            browser: {
+              enabled: true,
+              provider: playwright(),
+              headless: true,
+              instances: [{ browser: 'chromium' }],
+            },
+            setupFiles: ['./.storybook/vitest.setup.ts'],
+          },
+=======
+export default mergeConfig(
+  viteConfig,
+  defineConfig({
+    test: {
+      projects: [
+        {
+          extends: true,
+          test: {
+            name: 'unit',
+          },
+        },
+        {
+          extends: true,
+          plugins: [
+            storybookTest({ configDir: path.join(dirname, '.storybook') }),
+          ],
+          test: {
+            name: 'storybook',
+            browser: {
+              enabled: true,
+              provider: playwright({
+                launchOptions: { args: [...BLOCK_EXTERNAL_REQUESTS_ARGS] },
+              }),
+              headless: true,
+              instances: [{ browser: 'chromium' }],
+            },
+            setupFiles: ['./.storybook/vitest.setup.ts'],
+          },
+>>>>>>> after updating
         },
       },
       withTailwind(
