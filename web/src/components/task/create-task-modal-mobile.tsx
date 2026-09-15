@@ -1,4 +1,12 @@
-import { Calendar, CalendarPlus, Clock, Inbox, Layers, X } from 'lucide-react'
+import {
+  Calendar,
+  CalendarClock,
+  CalendarPlus,
+  Clock,
+  Inbox,
+  Layers,
+  X,
+} from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import {
@@ -8,7 +16,9 @@ import {
   contextLabels,
   type ContextValue,
   contextValues,
+  type PlanValue,
 } from '#components/task/create-task-modal-fields'
+import { PlanTabStrip } from '#components/task/plan-tab-strip'
 import { TagsInput } from '#components/task/tags-input'
 import { TaskTitleInput } from '#components/task/task-title-input'
 import {
@@ -46,6 +56,8 @@ export function CreateTaskModalMobile({
   setContext,
   commitment,
   setCommitment,
+  plan,
+  setPlan,
   labels,
   setLabels,
   handleOpenChange,
@@ -69,6 +81,8 @@ export function CreateTaskModalMobile({
   setContext: (value: ContextValue | '') => void
   commitment: CommitmentValue | ''
   setCommitment: (value: CommitmentValue | '') => void
+  plan: PlanValue | ''
+  setPlan: (value: PlanValue | '') => void
   labels: string[]
   setLabels: (labels: string[]) => void
   handleOpenChange: (open: boolean) => void
@@ -224,6 +238,10 @@ export function CreateTaskModalMobile({
                 </Select>
               )}
             />
+            <div className="flex shrink-0 items-center gap-1.5">
+              <CalendarClock className="size-3.5 text-muted-foreground" />
+              <PlanTabStrip value={plan} onChange={setPlan} />
+            </div>
           </div>
 
           {/* Tags */}

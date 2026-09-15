@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
+import type { PlanValue } from '#components/task/create-task-modal-fields'
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
@@ -13,6 +14,10 @@ import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 // api/src/services/task-queues.ts's DAY_QUEUE_KEY for the backend side of
 // the same special-casing.
 export const DAY_QUEUE_KEY = 'day'
+
+// The only other queue the PLAN field writes to; unlike DAY_QUEUE_KEY, no
+// backend code depends on this name specifically.
+export const WEEK_QUEUE_KEY = 'week'
 
 export type Queue = InferResponseType<
   (typeof api.api.queues)['$get'],
@@ -111,6 +116,89 @@ export function useSetQueueItems() {
       queryClient.setQueryData(queueKeys.items(key, date), data)
     },
   })
+}
+
+export interface TaskPlanPosition {
+  index: number
+  total: number
+}
+
+/**
+ * Whether a task is in today's queue, this week's queue, or neither ('' when
+ * the corresponding queue data hasn't loaded yet either), plus its position
+ * within that queue (for a "3rd of 5" hint) and a setter that adds, moves, or
+ * removes it. Today and this week are mutually exclusive — PUT
+ * /api/queues/:key/items auto-evicts a task from any other queue whose
+ * period also covers `date` (see api/src/routes/queues.ts) — so switching
+ * between them only PUTs the destination queue and invalidates the source's
+ * cache, rather than PUTting both.
+ */
+export function useTaskPlan(taskId: string, date: string) {
+  const dayItems = useQueueItems(DAY_QUEUE_KEY, date)
+  const weekItems = useQueueItems(WEEK_QUEUE_KEY, date)
+  const setQueueItems = useSetQueueItems()
+  const queryClient = useQueryClient()
+
+  const dayIndex =
+    dayItems.data?.findIndex((item) => item.taskId === taskId) ?? -1
+  const weekIndex =
+    weekItems.data?.findIndex((item) => item.taskId === taskId) ?? -1
+
+  const plan: PlanValue | '' =
+    dayIndex >= 0 ? 'day' : weekIndex >= 0 ? 'week' : ''
+
+  const position: TaskPlanPosition | null =
+    plan === 'day' && dayItems.data
+      ? { index: dayIndex, total: dayItems.data.length }
+      : plan === 'week' && weekItems.data
+        ? { index: weekIndex, total: weekItems.data.length }
+        : null
+
+  const setPlan = (next: PlanValue | '') => {
+    if (next === plan) return
+
+    if (next === '') {
+      const key = plan === 'day' ? DAY_QUEUE_KEY : WEEK_QUEUE_KEY
+      const items = plan === 'day' ? dayItems.data : weekItems.data
+      setQueueItems.mutate({
+        key,
+        date,
+        taskIds: (items ?? [])
+          .map((item) => item.taskId)
+          .filter((id) => id !== taskId),
+      })
+      return
+    }
+
+    const key = next === 'day' ? DAY_QUEUE_KEY : WEEK_QUEUE_KEY
+    const items = next === 'day' ? dayItems.data : weekItems.data
+    const previousKey =
+      plan === '' ? null : plan === 'day' ? DAY_QUEUE_KEY : WEEK_QUEUE_KEY
+
+    setQueueItems.mutate(
+      {
+        key,
+        date,
+        taskIds: [...(items ?? []).map((item) => item.taskId), taskId],
+      },
+      previousKey == null
+        ? undefined
+        : {
+            onSuccess: () => {
+              void queryClient.invalidateQueries({
+                queryKey: queueKeys.items(previousKey, date),
+              })
+            },
+          },
+    )
+  }
+
+  return {
+    plan,
+    position,
+    setPlan,
+    isLoading: dayItems.isLoading || weekItems.isLoading,
+  }
 }
 
 export function useRemoveFromDayQueue(

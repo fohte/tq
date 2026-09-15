@@ -5,6 +5,7 @@ import {
   SidebarField,
 } from '#components/task/sidebar-field'
 import { SidebarParentField } from '#components/task/sidebar-parent-field'
+import { SidebarPlanField } from '#components/task/sidebar-plan-field'
 import { SidebarProjectField } from '#components/task/sidebar-project-field'
 import { SidebarRecurrenceField } from '#components/task/sidebar-recurrence-field'
 import { SidebarRemindField } from '#components/task/sidebar-remind-field'
@@ -44,6 +45,7 @@ export function TaskSidebar({ task }: { task: TaskDetail }) {
         status={task.status}
         statusReason={task.statusReason}
       />
+      <SidebarPlanField taskId={task.id} commitment={task.commitment} />
       <SidebarEstimateField
         taskId={task.id}
         estimatedMinutes={task.estimatedMinutes}
@@ -100,13 +102,16 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
   return (
     <div className="flex flex-col gap-3">
       <SectionLabel>DETAILS</SectionLabel>
-      <div className="grid grid-cols-2 border border-border">
+      <div className="grid grid-flow-dense grid-cols-2 border border-border">
         <MobileFieldCell>
           <SidebarStatusField
             taskId={task.id}
             status={task.status}
             statusReason={task.statusReason}
           />
+        </MobileFieldCell>
+        <MobileFieldCell className="col-span-2">
+          <SidebarPlanField taskId={task.id} commitment={task.commitment} />
         </MobileFieldCell>
         <MobileFieldCell>
           <SidebarEstimateField

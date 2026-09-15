@@ -5,6 +5,7 @@ import { CreateTaskModalDesktop } from '#components/task/create-task-modal-deskt
 import type {
   CommitmentValue,
   ContextValue,
+  PlanValue,
 } from '#components/task/create-task-modal-fields'
 import { CreateTaskModalMobile } from '#components/task/create-task-modal-mobile'
 import { GithubRefSummary } from '#components/task/github-ref-summary'
@@ -19,9 +20,16 @@ import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useLinkTaskToGithub } from '#hooks/use-github-link'
 import { useGithubUrlPreview } from '#hooks/use-github-url-preview'
+import {
+  DAY_QUEUE_KEY,
+  useQueueItems,
+  useSetQueueItems,
+  WEEK_QUEUE_KEY,
+} from '#hooks/use-queues'
 import { useTaskMentionPreview } from '#hooks/use-task-mentions'
 import type { CreateTaskInput } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
+import { formatLocalDate } from '#lib/date-range'
 import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
 import {
@@ -81,6 +89,7 @@ export function CreateTaskModal({
     effectiveDefaultContext,
   )
   const [commitment, setCommitment] = useState<CommitmentValue | ''>('')
+  const [plan, setPlan] = useState<PlanValue | ''>('')
   const [labels, setLabels] = useState<string[]>(defaultLabels ?? [])
   // Set when the user types a `^N` shorthand token, overriding the
   // parent passed in via props (e.g. from "Add subtask").
@@ -95,6 +104,16 @@ export function CreateTaskModal({
   >(undefined)
   const createTask = useCreateTask()
   const linkGithub = useLinkTaskToGithub()
+  const today = useMemo(() => formatLocalDate(new Date()), [])
+  // Only fetched once a plan is actually chosen, since it's only needed to
+  // append the new task to the end of the existing queue on submit.
+  const dayItems = useQueueItems(DAY_QUEUE_KEY, today, {
+    enabled: plan === 'day',
+  })
+  const weekItems = useQueueItems(WEEK_QUEUE_KEY, today, {
+    enabled: plan === 'week',
+  })
+  const setQueueItems = useSetQueueItems()
 
   const parentOverridePreview = useTaskMentionPreview(
     parentOverrideNumber ?? 0,
@@ -163,6 +182,7 @@ export function CreateTaskModal({
     setEstimateInput(estimateInputFor(defaultEstimateMinutes))
     setContext(effectiveDefaultContext)
     setCommitment('')
+    setPlan('')
     setLabels(defaultLabels ?? [])
     setParentOverrideNumber(undefined)
     setGithubUrl(undefined)
@@ -201,6 +221,7 @@ export function CreateTaskModal({
     if (parsed.parentNumber != null)
       setParentOverrideNumber(parsed.parentNumber)
     if (parsed.githubUrl != null) setGithubUrl(parsed.githubUrl)
+    if (parsed.plan != null) setPlan(parsed.plan)
     if (parsed.recurrenceRule != null) {
       // Each completed `*` token is stripped from the title before the next
       // one is typed (see the comment above), so a second `*weekday` token
@@ -232,6 +253,11 @@ export function CreateTaskModal({
     !githubUnresolvable &&
     !githubAlreadyLinked
 
+  // Choosing today/this week already means triage is done, so it implies
+  // commitment: active unless the user picked one explicitly.
+  const effectiveCommitment: CommitmentValue | '' =
+    commitment || (plan !== '' ? 'active' : '')
+
   const handleSubmit = () => {
     if (!canSubmit) return
 
@@ -243,7 +269,7 @@ export function CreateTaskModal({
       ...(dueDate ? { dueDate } : {}),
       ...(parsedMinutes != null ? { estimatedMinutes: parsedMinutes } : {}),
       ...(context ? { context } : {}),
-      ...(commitment ? { commitment } : {}),
+      ...(effectiveCommitment ? { commitment: effectiveCommitment } : {}),
       ...(labels.length > 0 ? { labels } : {}),
       ...(projectId != null ? { projectId } : {}),
       ...(effectiveParentId != null ? { parentId: effectiveParentId } : {}),
@@ -261,6 +287,15 @@ export function CreateTaskModal({
               },
             },
           )
+        }
+        if (plan !== '') {
+          const key = plan === 'day' ? DAY_QUEUE_KEY : WEEK_QUEUE_KEY
+          const items = plan === 'day' ? dayItems.data : weekItems.data
+          setQueueItems.mutate({
+            key,
+            date: today,
+            taskIds: [...(items ?? []).map((item) => item.taskId), task.id],
+          })
         }
         resetForm()
         onOpenChange(false)
@@ -376,6 +411,8 @@ export function CreateTaskModal({
             setContext={setContext}
             commitment={commitment}
             setCommitment={setCommitment}
+            plan={plan}
+            setPlan={setPlan}
             labels={labels}
             setLabels={setLabels}
             handleOpenChange={handleOpenChange}
@@ -400,6 +437,8 @@ export function CreateTaskModal({
             setContext={setContext}
             commitment={commitment}
             setCommitment={setCommitment}
+            plan={plan}
+            setPlan={setPlan}
             labels={labels}
             setLabels={setLabels}
             handleOpenChange={handleOpenChange}

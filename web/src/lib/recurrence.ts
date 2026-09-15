@@ -55,7 +55,7 @@ export function intervalUnitLabel(
   }
 }
 
-function ordinal(n: number): string {
+export function ordinal(n: number): string {
   const s = String(n)
   const rem100 = n % 100
   if (rem100 >= 11 && rem100 <= 13) return `${s}th`
