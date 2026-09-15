@@ -1,6 +1,7 @@
 import {
   type ContextValue,
   contextValues,
+  type PlanValue,
 } from '#components/task/create-task-modal-fields'
 import { formatLocalDate } from '#lib/date-range'
 import { parseDurationToMinutes } from '#lib/parse-duration'
@@ -21,6 +22,7 @@ export interface ShorthandExtraction {
   parentNumber?: number
   githubUrl?: string
   recurrenceRule?: ShorthandRecurrenceRule
+  plan?: PlanValue
 }
 
 function isContextValue(value: string): value is ContextValue {
@@ -96,6 +98,7 @@ function resolveDateKeyword(keyword: string): string | null {
  * - `*daily` / `*weekly` / `*monthly` / `*sun`…`*sat` (English or Japanese
  *   alias) → recurrenceRule; multiple weekday tokens accumulate into one
  *   weekly rule's daysOfWeek
+ * - `!today` / `!week` → plan
  *
  * A token counts as "completed" only once it's followed by whitespace, so
  * the word currently being typed is never touched. Unrecognized tokens are
@@ -160,6 +163,17 @@ export function extractShorthandTokens(input: string): ShorthandExtraction {
           consumed = true
           continue
         }
+      } else if (word.startsWith('!')) {
+        if (value === 'today') {
+          result.plan = 'day'
+          consumed = true
+          continue
+        }
+        if (value === 'week') {
+          result.plan = 'week'
+          consumed = true
+          continue
+        }
       } else {
         const githubMatch = GITHUB_URL_RE.exec(word)
         if (githubMatch != null) {
@@ -192,7 +206,7 @@ export function extractShorthandTokens(input: string): ShorthandExtraction {
   return result
 }
 
-export type TriggerChar = '@' | '>' | '#' | '%' | '^' | '*'
+export type TriggerChar = '@' | '>' | '#' | '%' | '^' | '*' | '!'
 
 export interface SuggestionItem {
   value: string
@@ -216,6 +230,11 @@ const START_DATE_SUGGESTIONS: SuggestionItem[] = [
 const CONTEXT_SUGGESTIONS: SuggestionItem[] = [
   { value: 'work', display: 'work' },
   { value: 'personal', display: 'personal' },
+]
+
+const PLAN_SUGGESTIONS: SuggestionItem[] = [
+  { value: 'today', display: 'today' },
+  { value: 'week', display: 'week' },
 ]
 
 const RECURRENCE_SUGGESTIONS: SuggestionItem[] = [
@@ -254,7 +273,8 @@ export function detectTrigger(
     firstChar === '#' ||
     firstChar === '%' ||
     firstChar === '^' ||
-    firstChar === '*'
+    firstChar === '*' ||
+    firstChar === '!'
   ) {
     return { trigger: firstChar, partial: token.slice(1), tokenStart: start }
   }
@@ -292,6 +312,9 @@ export function getSuggestions(
       break
     case '*':
       items = RECURRENCE_SUGGESTIONS
+      break
+    case '!':
+      items = PLAN_SUGGESTIONS
       break
   }
 

@@ -208,6 +208,29 @@ describe('extractShorthandTokens', () => {
     })
   })
 
+  it('parses a plan with !today', () => {
+    expect(extractShorthandTokens('Task !today ')).toEqual({
+      title: 'Task ',
+      plan: 'day',
+      labels: [],
+    })
+  })
+
+  it('parses a plan with !week', () => {
+    expect(extractShorthandTokens('Task !week ')).toEqual({
+      title: 'Task ',
+      plan: 'week',
+      labels: [],
+    })
+  })
+
+  it('leaves unrecognized ! tokens as title text', () => {
+    expect(extractShorthandTokens('Task !urgent ')).toEqual({
+      title: 'Task !urgent ',
+      labels: [],
+    })
+  })
+
   it('parses a GitHub issue URL once followed by a space', () => {
     expect(
       extractShorthandTokens('Fix bug https://github.com/fohte/tq/issues/123 '),
@@ -331,6 +354,14 @@ describe('detectTrigger', () => {
       tokenStart: 5,
     })
   })
+
+  it('detects the ! plan trigger', () => {
+    expect(detectTrigger('Task !tod', 9)).toEqual({
+      trigger: '!',
+      partial: 'tod',
+      tokenStart: 5,
+    })
+  })
 })
 
 describe('getSuggestions', () => {
@@ -386,6 +417,13 @@ describe('getSuggestions', () => {
   it('filters * suggestions by a case-insensitive prefix match', () => {
     expect(getSuggestions('*', 'MONT')).toEqual([
       { value: 'monthly', display: 'monthly' },
+    ])
+  })
+
+  it('returns today and week items for !', () => {
+    expect(getSuggestions('!', '')).toEqual([
+      { value: 'today', display: 'today' },
+      { value: 'week', display: 'week' },
     ])
   })
 })

@@ -8,11 +8,13 @@ import {
   makeGithubLink,
   makeResolveGithubUrlResult,
 } from '#components/task/github-link-test-fixtures'
+import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
+import { DAY_QUEUE_KEY, queueKeys } from '#hooks/use-queues'
 import { taskMentionKeys } from '#hooks/use-task-mentions'
 import { formatLocalDate } from '#lib/date-range'
-import { atIndex } from '#lib/test-utils'
+import { assertDefined, atIndex, readQueuePutBody } from '#lib/test-utils'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -235,6 +237,133 @@ export const ShorthandSyntaxAppliesFields: Story = {
     await expect(body.getAllByDisplayValue(tomorrow).length).toBeGreaterThan(0)
     await expect(body.getAllByText('groceries').length).toBeGreaterThan(0)
     await expect(body.getAllByText('Work').length).toBeGreaterThan(0)
+  },
+}
+
+export const ShorthandSyntaxAppliesPlan: Story = {
+  parameters: {
+    // Same reasoning as ShorthandSyntaxAppliesFields: the "today" tab
+    // rendering pressed isn't new coverage on its own.
+    screenshot: { skip: true },
+    msw: {
+      // Story-level handlers replace meta's entirely (not merge) — see the
+      // comment on CaretShorthandSubmitsRawParentNumber below. The queue
+      // items GET handler is needed here because setting PLAN via `!today`
+      // enables the modal's day-queue fetch.
+      handlers: [
+        http.get('/api/labels', () => HttpResponse.json([])),
+        http.get('/api/tasks/mentions', () => HttpResponse.json([])),
+        http.get('/api/queues/:key/items', () => HttpResponse.json([])),
+      ],
+    },
+  },
+  play: async ({ canvasElement, userEvent }) => {
+    const body = within(canvasElement.ownerDocument.body)
+    const titleInputs =
+      body.getAllByPlaceholderText(/task title|タスクのタイトル/i)
+    const titleInput = atIndex(titleInputs, 0)
+
+    await userEvent.type(titleInput, 'Ship it !today ')
+
+    await waitFor(async () => {
+      await expect(
+        atIndex(
+          body.getAllByPlaceholderText(/task title|タスクのタイトル/i),
+          0,
+        ),
+      ).toHaveValue('Ship it ')
+    })
+
+    for (const button of body.getAllByText('today')) {
+      await expect(button).toHaveAttribute('aria-pressed', 'true')
+    }
+  },
+}
+
+let createdTaskBody: unknown = null
+let queuePutBody: unknown = null
+
+const today = formatLocalDate(new Date())
+
+const existingQueueItem = makeQueueItem({
+  id: 'existing-item',
+  taskId: 'existing-task',
+  periodStart: today,
+})
+
+export const SelectingTodayActivatesCommitmentAndQueuesTheTask: Story = {
+  parameters: {
+    screenshot: { skip: true },
+    msw: {
+      handlers: [
+        http.get('/api/labels', () => HttpResponse.json([])),
+        http.get('/api/tasks/mentions', () => HttpResponse.json([])),
+        http.get('/api/queues/:key/items', () =>
+          HttpResponse.json([existingQueueItem]),
+        ),
+        http.post('/api/tasks', async ({ request }) => {
+          createdTaskBody = await request.json()
+          return HttpResponse.json({
+            id: 'new-task-id',
+            number: 2,
+            title: 'temp',
+            description: null,
+            status: 'todo',
+            context: 'personal',
+            labels: [],
+          })
+        }),
+        http.put('/api/queues/:key/items', async ({ request, params }) => {
+          const body = await readQueuePutBody(request)
+          queuePutBody = { key: params['key'], ...body }
+          return HttpResponse.json([])
+        }),
+      ],
+    },
+  },
+  play: async ({ canvasElement, userEvent }) => {
+    createdTaskBody = null
+    queuePutBody = null
+    const body = within(canvasElement.ownerDocument.body)
+
+    const titleInputs =
+      body.getAllByPlaceholderText(/task title|タスクのタイトル/i)
+    await userEvent.type(atIndex(titleInputs, 0), 'Ship it %personal ')
+
+    await userEvent.click(atIndex(body.getAllByText('today'), 0))
+
+    // Wait for the day queue's current items to load before submitting —
+    // otherwise the queue PUT below would race the GET and drop
+    // 'existing-task' from the appended taskIds. `queryClient` is shared
+    // across every story in this file, so a plain "is defined" check can
+    // pass instantly on another story's leftover cache entry for the same
+    // key; asserting the exact expected value forces this to wait for this
+    // story's own mocked GET to resolve.
+    await waitFor(async () => {
+      await expect(
+        queryClient.getQueryData(queueKeys.items(DAY_QUEUE_KEY, today)),
+      ).toEqual([existingQueueItem])
+    })
+
+    const enabledCreateButton = body
+      .getAllByRole('button', { name: /create/i })
+      .find((btn) => !btn.hasAttribute('disabled'))
+    await userEvent.click(assertDefined(enabledCreateButton))
+
+    await waitFor(async () => {
+      await expect(createdTaskBody).toEqual({
+        title: 'Ship it',
+        context: 'personal',
+        commitment: 'active',
+      })
+    })
+    await waitFor(async () => {
+      await expect(queuePutBody).toEqual({
+        key: 'day',
+        date: today,
+        taskIds: ['existing-task', 'new-task-id'],
+      })
+    })
   },
 }
 

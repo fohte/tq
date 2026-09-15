@@ -1,5 +1,6 @@
 import {
   Calendar,
+  CalendarClock,
   CalendarPlus,
   Clock,
   Inbox,
@@ -14,7 +15,9 @@ import {
   commitmentValues,
   type ContextValue,
   contextValues,
+  type PlanValue,
 } from '#components/task/create-task-modal-fields'
+import { PlanTabStrip } from '#components/task/plan-tab-strip'
 import { TagsInput } from '#components/task/tags-input'
 import { TaskTitleInput } from '#components/task/task-title-input'
 import { Button } from '#components/ui/button'
@@ -47,6 +50,8 @@ export function CreateTaskModalDesktop({
   setContext,
   commitment,
   setCommitment,
+  plan,
+  setPlan,
   labels,
   setLabels,
   handleOpenChange,
@@ -68,6 +73,8 @@ export function CreateTaskModalDesktop({
   setContext: (value: ContextValue | '') => void
   commitment: CommitmentValue | ''
   setCommitment: (value: CommitmentValue | '') => void
+  plan: PlanValue | ''
+  setPlan: (value: PlanValue | '') => void
   labels: string[]
   setLabels: (labels: string[]) => void
   handleOpenChange: (open: boolean) => void
@@ -203,6 +210,13 @@ export function CreateTaskModalDesktop({
                 </SelectContent>
               </Select>
             </InlineFieldGroup>
+            <div className="flex flex-col gap-1">
+              <span className="flex items-center gap-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
+                <CalendarClock className="size-3.5" />
+                PLAN
+              </span>
+              <PlanTabStrip value={plan} onChange={setPlan} />
+            </div>
           </div>
 
           {/* Tags */}
