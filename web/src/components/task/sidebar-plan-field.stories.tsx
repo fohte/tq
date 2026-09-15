@@ -13,6 +13,16 @@ import { assertDefined, readQueuePutBody } from '#lib/test-utils'
 const taskId = '00000000-0000-0000-0000-000000000001'
 const today = formatLocalDate(new Date())
 
+function toQueueItems(prefix: string, taskIds: string[]) {
+  return taskIds.map((id, index) =>
+    makeQueueItem({
+      id: `${prefix}-${String(index)}`,
+      taskId: id,
+      sortOrder: index,
+    }),
+  )
+}
+
 function seedQueues(
   queryClient: QueryClient,
   dayTaskIds: string[],
@@ -20,23 +30,11 @@ function seedQueues(
 ) {
   queryClient.setQueryData(
     queueKeys.items(DAY_QUEUE_KEY, today),
-    dayTaskIds.map((id, index) =>
-      makeQueueItem({
-        id: `day-${String(index)}`,
-        taskId: id,
-        sortOrder: index,
-      }),
-    ),
+    toQueueItems('day', dayTaskIds),
   )
   queryClient.setQueryData(
     queueKeys.items(WEEK_QUEUE_KEY, today),
-    weekTaskIds.map((id, index) =>
-      makeQueueItem({
-        id: `week-${String(index)}`,
-        taskId: id,
-        sortOrder: index,
-      }),
-    ),
+    toQueueItems('week', weekTaskIds),
   )
 }
 
@@ -91,30 +89,20 @@ export const InThisWeekQueue: Story = {
 let putBody: unknown = null
 let patchedBody: unknown = null
 
-// Mirrors PUT /api/queues/:key/items' real contract (see
-// api/src/routes/queues.ts) of echoing back the resulting item list, so a
-// story's post-`play` render reflects the queue it actually asked for
-// instead of always looking empty.
-function echoQueueItems(taskIds: string[]) {
-  return taskIds.map((id, index) =>
-    makeQueueItem({
-      id: `item-${String(index)}`,
-      taskId: id,
-      sortOrder: index,
-    }),
-  )
-}
-
 export const SelectsTodayUpgradesInboxCommitment: Story = {
   decorators: [withSeededQueues([], [])],
   args: { taskId, commitment: 'inbox' },
   parameters: {
     msw: {
       handlers: [
+        // Echoes back the resulting item list, mirroring PUT
+        // /api/queues/:key/items' real contract (see api/src/routes/
+        // queues.ts) so the post-`play` render reflects the queue it
+        // actually asked for instead of always looking empty.
         http.put('/api/queues/:key/items', async ({ request, params }) => {
           const body = await readQueuePutBody(request)
           putBody = { key: params['key'], ...body }
-          return HttpResponse.json(echoQueueItems(body.taskIds))
+          return HttpResponse.json(toQueueItems('item', body.taskIds))
         }),
         http.patch('/api/tasks/:id', async ({ request }) => {
           patchedBody = await request.json()
@@ -156,7 +144,7 @@ export const ClearingPlanDoesNotChangeCommitment: Story = {
         http.put('/api/queues/:key/items', async ({ request, params }) => {
           const body = await readQueuePutBody(request)
           putBody = { key: params['key'], ...body }
-          return HttpResponse.json(echoQueueItems(body.taskIds))
+          return HttpResponse.json(toQueueItems('item', body.taskIds))
         }),
         http.patch('/api/tasks/:id', async ({ request }) => {
           patchedBody = await request.json()
@@ -196,7 +184,7 @@ export const SwitchingFromTodayToThisWeekMovesTheTask: Story = {
         http.put('/api/queues/:key/items', async ({ request, params }) => {
           const body = await readQueuePutBody(request)
           putBody = { key: params['key'], ...body }
-          return HttpResponse.json(echoQueueItems(body.taskIds))
+          return HttpResponse.json(toQueueItems('item', body.taskIds))
         }),
       ],
     },
