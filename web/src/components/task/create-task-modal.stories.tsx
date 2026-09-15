@@ -285,6 +285,12 @@ let queuePutBody: unknown = null
 
 const today = formatLocalDate(new Date())
 
+const existingQueueItem = makeQueueItem({
+  id: 'existing-item',
+  taskId: 'existing-task',
+  periodStart: today,
+})
+
 export const SelectingTodayActivatesCommitmentAndQueuesTheTask: Story = {
   parameters: {
     screenshot: { skip: true },
@@ -293,13 +299,7 @@ export const SelectingTodayActivatesCommitmentAndQueuesTheTask: Story = {
         http.get('/api/labels', () => HttpResponse.json([])),
         http.get('/api/tasks/mentions', () => HttpResponse.json([])),
         http.get('/api/queues/:key/items', () =>
-          HttpResponse.json([
-            makeQueueItem({
-              id: 'existing-item',
-              taskId: 'existing-task',
-              periodStart: today,
-            }),
-          ]),
+          HttpResponse.json([existingQueueItem]),
         ),
         http.post('/api/tasks', async ({ request }) => {
           createdTaskBody = await request.json()
@@ -342,13 +342,7 @@ export const SelectingTodayActivatesCommitmentAndQueuesTheTask: Story = {
     await waitFor(async () => {
       await expect(
         queryClient.getQueryData(queueKeys.items(DAY_QUEUE_KEY, today)),
-      ).toEqual([
-        makeQueueItem({
-          id: 'existing-item',
-          taskId: 'existing-task',
-          periodStart: today,
-        }),
-      ])
+      ).toEqual([existingQueueItem])
     })
 
     const enabledCreateButton = body
