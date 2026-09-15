@@ -191,18 +191,19 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-  # Aggregation gate for unit-test-run's matrix and the vrt reusable workflow
-  # call. Matrix leg names are dynamic and cannot be pinned as a required
-  # status check, so this single fixed-name job is the branch protection gate
-  # instead. It fails only when a needed job failed; when every leg succeeds
-  # (or a job is skipped because nothing changed) it is skipped, and a
-  # skipped required check counts as success.
+  # Aggregation gate for unit-test-run's matrix, the vrt reusable workflow
+  # call, and knip (which has no `needs`). Matrix leg names are dynamic and
+  # cannot be pinned as a required status check, so this single fixed-name job
+  # is the branch protection gate instead. It fails only when a needed job
+  # failed; when every leg succeeds (or a job is skipped because nothing
+  # changed) it is skipped, and a skipped required check counts as success.
   unit-test:
     runs-on: ubuntu-slim
     needs:
       - setup
       - unit-test-run
       - vrt
+      - knip
     if: failure()
     steps:
       - run: exit 1
