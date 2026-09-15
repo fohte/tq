@@ -103,13 +103,7 @@ Keep in the route file: data fetching, URL parameter handling, and composing alr
 
 ### Prefer Storybook over manual browser checks
 
-<<<<<<< before updating
 When you need to check how a component looks or behaves in a given state, write or update its story and verify it with `pnpm --filter web run test:storybook --changed origin/main` instead of starting a dev server and driving a browser manually — dropping `origin/main` limits `--changed` to staged/unstaged files only, so it silently runs nothing once you've committed. `pnpm --filter web run storybook` is for a human watching the browser — you could screenshot it yourself instead, but that's far more wasteful than the check above.
-||||||| last update
-When you need to check how a component looks or behaves in a given state, write or update its story and view it via the `storybook` script (`storybook dev`) before starting a dev server and driving a browser manually.
-=======
-When you need to check how a component looks or behaves in a given state, write or update its story and verify it with `cd web && pnpm run storybook:screenshot -- --changed origin/main` (swap `origin/main` for this repo's default branch if it differs) instead of starting a dev server and driving a browser manually. Dropping the ref limits `--changed` to staged/unstaged files only, so it silently runs nothing once the change is committed. The `vrt` CI check already renders and diffs every story on every PR, so this scoped run is enough — running the full `storybook:screenshot` suite instead keeps a headless Chromium instance (a multi-process browser, not a single lightweight process) busy per worker for as long as it takes to get through every story, competing with any other concurrent session or worktree for the same machine's CPU and memory.
->>>>>>> after updating
 
 ## Visual Regression Testing (VRT)
 
