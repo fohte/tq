@@ -118,7 +118,7 @@ export function useSetQueueItems() {
   })
 }
 
-export interface TaskPlanPosition {
+interface TaskPlanPosition {
   index: number
   total: number
 }

@@ -91,6 +91,20 @@ export const InThisWeekQueue: Story = {
 let putBody: unknown = null
 let patchedBody: unknown = null
 
+// Mirrors PUT /api/queues/:key/items' real contract (see
+// api/src/routes/queues.ts) of echoing back the resulting item list, so a
+// story's post-`play` render reflects the queue it actually asked for
+// instead of always looking empty.
+function echoQueueItems(taskIds: string[]) {
+  return taskIds.map((id, index) =>
+    makeQueueItem({
+      id: `item-${String(index)}`,
+      taskId: id,
+      sortOrder: index,
+    }),
+  )
+}
+
 export const SelectsTodayUpgradesInboxCommitment: Story = {
   decorators: [withSeededQueues([], [])],
   args: { taskId, commitment: 'inbox' },
@@ -100,7 +114,7 @@ export const SelectsTodayUpgradesInboxCommitment: Story = {
         http.put('/api/queues/:key/items', async ({ request, params }) => {
           const body = await readQueuePutBody(request)
           putBody = { key: params['key'], ...body }
-          return HttpResponse.json([])
+          return HttpResponse.json(echoQueueItems(body.taskIds))
         }),
         http.patch('/api/tasks/:id', async ({ request }) => {
           patchedBody = await request.json()
@@ -133,12 +147,16 @@ export const ClearingPlanDoesNotChangeCommitment: Story = {
   decorators: [withSeededQueues([taskId], [])],
   args: { taskId, commitment: 'active' },
   parameters: {
+    // Clearing the plan always empties the queue, so this ends up rendering
+    // the same "no plan" state as NoPlan — the play only proves the request
+    // shape, not a distinct look.
+    screenshot: { skip: true },
     msw: {
       handlers: [
         http.put('/api/queues/:key/items', async ({ request, params }) => {
           const body = await readQueuePutBody(request)
           putBody = { key: params['key'], ...body }
-          return HttpResponse.json([])
+          return HttpResponse.json(echoQueueItems(body.taskIds))
         }),
         http.patch('/api/tasks/:id', async ({ request }) => {
           patchedBody = await request.json()
@@ -165,6 +183,10 @@ export const SwitchingFromTodayToThisWeekMovesTheTask: Story = {
   decorators: [withSeededQueues([taskId], [])],
   args: { taskId, commitment: 'active' },
   parameters: {
+    // Ends with the task 1st of 1 in this week's queue, same as
+    // InThisWeekQueue's seeded state — the play only proves the request
+    // shape and cache invalidation, not a distinct look.
+    screenshot: { skip: true },
     msw: {
       handlers: [
         // useTaskPlan's setPlan invalidates the day queue's cache after the
@@ -174,7 +196,7 @@ export const SwitchingFromTodayToThisWeekMovesTheTask: Story = {
         http.put('/api/queues/:key/items', async ({ request, params }) => {
           const body = await readQueuePutBody(request)
           putBody = { key: params['key'], ...body }
-          return HttpResponse.json([])
+          return HttpResponse.json(echoQueueItems(body.taskIds))
         }),
       ],
     },
