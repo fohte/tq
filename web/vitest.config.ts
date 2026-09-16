@@ -39,8 +39,6 @@ function withTailwind(project: ReturnType<typeof createStorybookProject>): any {
   }
 }
 
-// A test needing browser DOM APIs or Testing Library is named
-// `*.browser.test.ts(x)`; everything else runs under `node`.
 const BROWSER_TEST_PATTERN = '**/*.browser.test.{ts,tsx}'
 
 export default defineConfig({
