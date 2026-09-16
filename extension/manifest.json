@@ -3,6 +3,10 @@
   "name": "tq for GitHub",
   "version": "0.1.0",
   "description": "Show tq task links on GitHub issue and pull request pages.",
+  "background": {
+    "service_worker": "dist/background.js"
+  },
+  "host_permissions": ["https://tq.fohte.net/*"],
   "content_scripts": [
     {
       "matches": [
