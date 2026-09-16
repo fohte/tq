@@ -320,12 +320,8 @@ export const OvernightEvents: Story = {
         color: { accent: '#6C63FF' },
       },
     ],
-  },
-  play: async ({ canvas }) => {
-    // The initial scroll position sits above the 23:00 events this story
-    // exists to cover, so the screenshot needs an explicit scroll to bring
-    // them into view.
-    const overnightEvent = await canvas.findByText('Overnight deploy')
-    overnightEvent.scrollIntoView({ block: 'center' })
+    // The computed default scroll position sits above the 23:00 events this
+    // story exists to cover — pin it so they're in view without a play.
+    initialScrollTime: '21:00:00',
   },
 }

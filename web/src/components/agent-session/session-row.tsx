@@ -42,11 +42,13 @@ function durationMinutes(session: AgentSession): number {
 function EditableSessionLabel({
   id,
   label,
+  defaultEditing,
 }: {
   id: string
   label: string | null
+  defaultEditing?: boolean
 }) {
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditing, setIsEditing] = useState(defaultEditing ?? false)
   const [value, setValue] = useState(label ?? '')
   const updateCustomLabel = useUpdateAgentSessionCustomLabel()
   const savingRef = useRef(false)
@@ -187,9 +189,11 @@ function SessionOpenButton({
 export function SessionRow({
   session,
   isDimmed,
+  labelDefaultEditing,
 }: {
   session: AgentSession
   isDimmed: boolean
+  labelDefaultEditing?: boolean
 }) {
   const active = isAgentSessionActive(session)
   const label = session.customLabel ?? session.label
@@ -216,7 +220,13 @@ export function SessionRow({
           <span className="truncate font-mono text-xs text-foreground">
             {session.cwd}
           </span>
-          <EditableSessionLabel id={session.id} label={label} />
+          <EditableSessionLabel
+            id={session.id}
+            label={label}
+            {...(labelDefaultEditing !== undefined
+              ? { defaultEditing: labelDefaultEditing }
+              : {})}
+          />
           <Chip className="shrink-0">{session.context}</Chip>
         </div>
         <span className="ml-auto shrink-0 font-mono text-xs text-muted-foreground">

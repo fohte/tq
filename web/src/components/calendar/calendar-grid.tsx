@@ -104,6 +104,7 @@ interface CalendarGridProps {
   onTaskClick?: ((taskId: string) => void) | undefined
   onSelectRange?: ((info: { start: Date; end: Date }) => void) | undefined
   initialDate?: Date
+  initialScrollTime?: string
 }
 
 export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
@@ -119,6 +120,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       onTaskClick,
       onSelectRange,
       initialDate,
+      initialScrollTime,
     },
     ref,
   ) {
@@ -134,8 +136,10 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     // `scrollTime` is a real FullCalendar option, but — like `initialView`
     // below — it only takes effect on first mount. handleDatesSet's
     // imperative scrollToTime call covers every later navigation instead.
-    const [initialScrollTime] = useState(() =>
-      getScrollTime(...getDayRange(initialDate ?? new Date())),
+    const [scrollTime] = useState(
+      () =>
+        initialScrollTime ??
+        getScrollTime(...getDayRange(initialDate ?? new Date())),
     )
 
     // `initialView` only applies on FullCalendar's first mount, so if
@@ -421,7 +425,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           allDaySlot={true}
           slotMinTime="00:00:00"
           slotMaxTime="24:00:00"
-          scrollTime={initialScrollTime}
+          scrollTime={scrollTime}
           slotDuration="00:30:00"
           slotLabelInterval="01:00:00"
           slotLabelFormat={{
