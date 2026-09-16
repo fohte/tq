@@ -24,6 +24,17 @@ type UpdateCustomLabelResult = ReturnType<
   typeof useUpdateAgentSessionCustomLabel
 >
 
+function mockUpdateCustomLabel(mutate = vi.fn()) {
+  mockUseUpdateAgentSessionCustomLabel.mockReturnValue(
+    partialMutation<UpdateCustomLabelResult>({
+      mutate,
+      isPending: false,
+      isError: false,
+    }),
+  )
+  return mutate
+}
+
 const baseSession: AgentSession = {
   id: '1',
   provider: 'claude_code',
@@ -65,13 +76,7 @@ describe('SessionRow', () => {
   // saves — when a test's cleanup() unmounts it. Without a default mock
   // return, that unrelated save crashes on `.mutate` of undefined.
   beforeEach(() => {
-    mockUseUpdateAgentSessionCustomLabel.mockReturnValue(
-      partialMutation<UpdateCustomLabelResult>({
-        mutate: vi.fn(),
-        isPending: false,
-        isError: false,
-      }),
-    )
+    mockUpdateCustomLabel()
   })
 
   describe('label editing', () => {
@@ -86,14 +91,7 @@ describe('SessionRow', () => {
     })
 
     it('saves the edited label on Enter', async () => {
-      const mutate = vi.fn()
-      mockUseUpdateAgentSessionCustomLabel.mockReturnValue(
-        partialMutation<UpdateCustomLabelResult>({
-          mutate,
-          isPending: false,
-          isError: false,
-        }),
-      )
+      const mutate = mockUpdateCustomLabel()
       const { container } = renderSessionRow({
         session: { ...baseSession, id: '8' },
       })
@@ -113,14 +111,7 @@ describe('SessionRow', () => {
     })
 
     it('clears the custom label when saved empty', async () => {
-      const mutate = vi.fn()
-      mockUseUpdateAgentSessionCustomLabel.mockReturnValue(
-        partialMutation<UpdateCustomLabelResult>({
-          mutate,
-          isPending: false,
-          isError: false,
-        }),
-      )
+      const mutate = mockUpdateCustomLabel()
       const { container } = renderSessionRow({
         session: { ...baseSession, id: '10' },
       })
@@ -135,14 +126,7 @@ describe('SessionRow', () => {
     })
 
     it('discards the edit and reverts to the original label on Escape', async () => {
-      const mutate = vi.fn()
-      mockUseUpdateAgentSessionCustomLabel.mockReturnValue(
-        partialMutation<UpdateCustomLabelResult>({
-          mutate,
-          isPending: false,
-          isError: false,
-        }),
-      )
+      const mutate = mockUpdateCustomLabel()
       const { container } = renderSessionRow({
         session: { ...baseSession, id: '9' },
       })
