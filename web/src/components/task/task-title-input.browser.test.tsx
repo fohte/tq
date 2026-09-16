@@ -44,6 +44,14 @@ describe('TaskTitleInput', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     })
+    // useTaskMentionSuggestions debounces 150ms, and each digit of '^12'
+    // lands as its own keystroke event — in this real-browser test
+    // environment that's consistently enough to settle its own debounced
+    // value, so '', '1', and '12' each fire their own query. Seed every
+    // partial, or an un-cached key falls through to a real (failing)
+    // network fetch.
+    queryClient.setQueryData(taskMentionKeys.suggestions(''), [])
+    queryClient.setQueryData(taskMentionKeys.suggestions('1'), [])
     queryClient.setQueryData(taskMentionKeys.suggestions('12'), [
       makeMentionSuggestion({ number: 12, title: 'Deploy to production' }),
     ])

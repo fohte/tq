@@ -23,23 +23,28 @@ export function TaskTitleInput({
   placeholder,
   autoFocus,
   className,
+  detectInitialTrigger = false,
 }: {
   value: string
   onChange: (value: string) => void
   placeholder?: string
   autoFocus?: boolean
   className?: string
+  /** Lets a story render the suggestion-menu-open state from `value` alone,
+   * without a play function. Real callers never set this — they always
+   * mount with an empty title, so the popup only opens once the user types. */
+  detectInitialTrigger?: boolean
 }) {
   const context = useCurrentContext()
   const { data: labelsData } = useLabels({ context })
   const [selectedIndex, setSelectedIndex] = useState(0)
-  // Lazy-initialized from the initial value so a story can render the
-  // suggestion-menu-open state from `value` alone, without a play function.
   const [cursorTrigger, setCursorTrigger] = useState<{
     trigger: TriggerChar
     partial: string
     tokenStart: number
-  } | null>(() => detectTrigger(value, value.length))
+  } | null>(() =>
+    detectInitialTrigger ? detectTrigger(value, value.length) : null,
+  )
   const inputRef = useRef<HTMLInputElement>(null)
 
   const availableLabels = useMemo(

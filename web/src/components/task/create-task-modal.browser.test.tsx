@@ -1,8 +1,6 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { QueryClient } from '@tanstack/react-query'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ComponentProps } from 'react'
-import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { CreateTaskModal } from '#components/task/create-task-modal'
@@ -48,43 +46,6 @@ const mockUseLinkTaskToGithub = vi.mocked(useLinkTaskToGithub)
 const mockUseSetQueueItems = vi.mocked(useSetQueueItems)
 
 const githubIssueUrl = 'https://github.com/fohte/tq/issues/123'
-
-function renderCreateTaskModal(
-  props: Omit<
-    ComponentProps<typeof CreateTaskModal>,
-    'open' | 'onOpenChange'
-  > = {},
-  options: { queryClient?: QueryClient } = {},
-) {
-  const queryClient =
-    options.queryClient ??
-    new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const onOpenChange = vi.fn()
-
-  function Managed() {
-    const [open, setOpen] = useState(true)
-    return (
-      <CreateTaskModal
-        {...props}
-        open={open}
-        onOpenChange={(next) => {
-          onOpenChange(next)
-          setOpen(next)
-        }}
-      />
-    )
-  }
-
-  return {
-    queryClient,
-    onOpenChange,
-    ...render(
-      <QueryClientProvider client={queryClient}>
-        <Managed />
-      </QueryClientProvider>,
-    ),
-  }
-}
 
 // The component reads `task.id` (and passes the whole task to `onCreated`)
 // once `mutate`'s `onSuccess` fires, so the mock must actually invoke it
@@ -170,7 +131,7 @@ describe('CreateTaskModal', () => {
   describe('tags', () => {
     it('adds a tag typed into the tag input', async () => {
       const user = userEvent.setup()
-      renderCreateTaskModal()
+      renderControlledModal(CreateTaskModal, {})
 
       const addTagButtons = screen.getAllByRole('button', {
         name: '+ add tag',
@@ -185,7 +146,7 @@ describe('CreateTaskModal', () => {
 
     it('does not close the modal when Escape is pressed inside the tag input', async () => {
       const user = userEvent.setup()
-      const { onOpenChange } = renderCreateTaskModal()
+      const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
 
       const addTagButtons = screen.getAllByRole('button', {
         name: '+ add tag',
@@ -206,7 +167,7 @@ describe('CreateTaskModal', () => {
   describe('title shorthand menu', () => {
     it('does not close the modal when Escape is pressed inside the shorthand suggestion menu', async () => {
       const user = userEvent.setup()
-      const { onOpenChange } = renderCreateTaskModal()
+      const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
 
       const titleInput = atIndex(
         screen.getAllByPlaceholderText(titleInputPlaceholder),
@@ -228,7 +189,7 @@ describe('CreateTaskModal', () => {
   describe('shorthand syntax', () => {
     it('applies parsed shorthand tokens (estimate, dates, label, context) to their respective fields', async () => {
       const user = userEvent.setup()
-      renderCreateTaskModal()
+      renderControlledModal(CreateTaskModal, {})
 
       const today = formatLocalDate(new Date())
       const tomorrowDate = new Date()
@@ -258,7 +219,7 @@ describe('CreateTaskModal', () => {
 
     it('activates the "today" plan tab via the !today shorthand', async () => {
       const user = userEvent.setup()
-      renderCreateTaskModal()
+      renderControlledModal(CreateTaskModal, {})
 
       const titleInput = atIndex(
         screen.getAllByPlaceholderText(titleInputPlaceholder),
@@ -300,7 +261,7 @@ describe('CreateTaskModal', () => {
         }),
       )
 
-      renderCreateTaskModal({}, { queryClient })
+      renderControlledModal(CreateTaskModal, {}, { queryClient })
 
       const titleInput = atIndex(
         screen.getAllByPlaceholderText(titleInputPlaceholder),
@@ -341,7 +302,7 @@ describe('CreateTaskModal', () => {
       const user = userEvent.setup()
       const mutate = mockCreateTaskSuccess(makeTask())
 
-      renderCreateTaskModal({ defaultContext: 'work' })
+      renderControlledModal(CreateTaskModal, { defaultContext: 'work' })
 
       const titleInput = atIndex(
         screen.getAllByPlaceholderText(titleInputPlaceholder),
@@ -370,7 +331,7 @@ describe('CreateTaskModal', () => {
     it('closes the modal on Cmd+Enter from the title field', async () => {
       const user = userEvent.setup()
       mockCreateTaskSuccess(makeTask())
-      const { onOpenChange } = renderCreateTaskModal()
+      const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
 
       const titleInput = atIndex(
         screen.getAllByPlaceholderText(titleInputPlaceholder),
@@ -387,7 +348,7 @@ describe('CreateTaskModal', () => {
       const createdTask = makeTask({ id: 'temp-id' })
       mockCreateTaskSuccess(createdTask)
       const onCreated = vi.fn()
-      renderCreateTaskModal({ onCreated })
+      renderControlledModal(CreateTaskModal, { onCreated })
 
       const titleInput = atIndex(
         screen.getAllByPlaceholderText(titleInputPlaceholder),
@@ -402,7 +363,7 @@ describe('CreateTaskModal', () => {
     it('closes the modal on Cmd+Enter from the description field', async () => {
       const user = userEvent.setup()
       mockCreateTaskSuccess(makeTask())
-      const { onOpenChange } = renderCreateTaskModal()
+      const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
 
       const titleInput = atIndex(
         screen.getAllByPlaceholderText(titleInputPlaceholder),
@@ -426,14 +387,23 @@ describe('CreateTaskModal', () => {
     it('overrides the parent prop when a valid ^N token is typed', async () => {
       const user = userEvent.setup()
       const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false } },
+        defaultOptions: { queries: { retry: false, staleTime: Infinity } },
       })
       queryClient.setQueryData(
         taskMentionKeys.preview(34),
         makeTaskDetail({ number: 34, title: 'Refactor auth module' }),
       )
+      // TaskTitleInput's own suggestion popup (separate from the
+      // parent-preview lookup above) also queries on '^' — useDebounce
+      // settles once per keystroke in this real-browser test environment,
+      // so '', '3', and '34' each fire their own query. Seed every partial,
+      // or an un-cached key falls through to a real (failing) network fetch.
+      queryClient.setQueryData(taskMentionKeys.suggestions(''), [])
+      queryClient.setQueryData(taskMentionKeys.suggestions('3'), [])
+      queryClient.setQueryData(taskMentionKeys.suggestions('34'), [])
 
-      renderCreateTaskModal(
+      renderControlledModal(
+        CreateTaskModal,
         {
           parentId: 'parent-task-id',
           parentTaskNumber: 12,
@@ -450,6 +420,7 @@ describe('CreateTaskModal', () => {
         screen.getAllByPlaceholderText(titleInputPlaceholder),
         0,
       )
+
       await user.type(titleInput, '^34 ')
 
       await waitFor(() => {
@@ -465,18 +436,25 @@ describe('CreateTaskModal', () => {
     it('submits the raw shorthand number as parentId, not the resolved task id', async () => {
       const user = userEvent.setup()
       const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false } },
+        defaultOptions: { queries: { retry: false, staleTime: Infinity } },
       })
       queryClient.setQueryData(
         taskMentionKeys.preview(34),
         makeTaskDetail({ number: 34, title: 'Refactor auth module' }),
       )
+      queryClient.setQueryData(taskMentionKeys.suggestions(''), [])
+      queryClient.setQueryData(taskMentionKeys.suggestions('3'), [])
+      queryClient.setQueryData(taskMentionKeys.suggestions('34'), [])
       // `parentId` is intentionally sent as the raw shorthand number ('34'),
       // not the resolved task's UUID — see the comment on
       // `effectiveParentId` in create-task-modal.tsx.
       const mutate = mockCreateTaskSuccess(makeTask())
 
-      renderCreateTaskModal({ defaultContext: 'work' }, { queryClient })
+      renderControlledModal(
+        CreateTaskModal,
+        { defaultContext: 'work' },
+        { queryClient },
+      )
 
       const titleInput = atIndex(
         screen.getAllByPlaceholderText(titleInputPlaceholder),
@@ -502,11 +480,15 @@ describe('CreateTaskModal', () => {
     it('disables submit when the ^N parent is not found, until the override is removed', async () => {
       const user = userEvent.setup()
       const queryClient = new QueryClient({
-        defaultOptions: { queries: { retry: false } },
+        defaultOptions: { queries: { retry: false, staleTime: Infinity } },
       })
       queryClient.setQueryData(taskMentionKeys.preview(999), null)
+      queryClient.setQueryData(taskMentionKeys.suggestions(''), [])
+      queryClient.setQueryData(taskMentionKeys.suggestions('9'), [])
+      queryClient.setQueryData(taskMentionKeys.suggestions('99'), [])
+      queryClient.setQueryData(taskMentionKeys.suggestions('999'), [])
 
-      renderCreateTaskModal({}, { queryClient })
+      renderControlledModal(CreateTaskModal, {}, { queryClient })
 
       const titleInput = atIndex(
         screen.getAllByPlaceholderText(titleInputPlaceholder),
@@ -562,7 +544,7 @@ describe('CreateTaskModal', () => {
         }),
       )
 
-      renderCreateTaskModal({}, { queryClient })
+      renderControlledModal(CreateTaskModal, {}, { queryClient })
 
       const titleInput = atIndex(
         screen.getAllByPlaceholderText(titleInputPlaceholder),
@@ -599,7 +581,7 @@ describe('CreateTaskModal', () => {
         null,
       )
 
-      renderCreateTaskModal({}, { queryClient })
+      renderControlledModal(CreateTaskModal, {}, { queryClient })
 
       const titleInput = atIndex(
         screen.getAllByPlaceholderText(titleInputPlaceholder),
@@ -632,7 +614,7 @@ describe('CreateTaskModal', () => {
         }),
       })
 
-      renderCreateTaskModal({}, { queryClient })
+      renderControlledModal(CreateTaskModal, {}, { queryClient })
 
       const titleInput = atIndex(
         screen.getAllByPlaceholderText(titleInputPlaceholder),

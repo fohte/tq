@@ -39,9 +39,21 @@ parentSuggestionsQueryClient.setQueryData(
   parentSuggestions,
 )
 
-function TaskTitleInputHarness({ initialValue }: { initialValue: string }) {
+function TaskTitleInputHarness({
+  initialValue,
+  detectInitialTrigger,
+}: {
+  initialValue: string
+  detectInitialTrigger?: boolean
+}) {
   const [value, setValue] = useState(initialValue)
-  return <TaskTitleInput value={value} onChange={setValue} />
+  return (
+    <TaskTitleInput
+      value={value}
+      onChange={setValue}
+      detectInitialTrigger={detectInitialTrigger ?? false}
+    />
+  )
 }
 
 const meta = {
@@ -81,24 +93,28 @@ export const Empty: Story = {
 export const ShowsEstimateSuggestionsOnAt: Story = {
   args: {
     initialValue: 'Buy milk @',
+    detectInitialTrigger: true,
   },
 }
 
 export const FiltersSuggestionsByPartialText: Story = {
   args: {
     initialValue: 'Buy milk @tom',
+    detectInitialTrigger: true,
   },
 }
 
 export const ShowsContextSuggestionsOnPercent: Story = {
   args: {
     initialValue: 'Buy milk %w',
+    detectInitialTrigger: true,
   },
 }
 
 export const ShowsLabelSuggestionsOnHash: Story = {
   args: {
     initialValue: 'Buy milk #urg',
+    detectInitialTrigger: true,
   },
   decorators: [
     (Story) => (
@@ -112,6 +128,7 @@ export const ShowsLabelSuggestionsOnHash: Story = {
 export const ShowsParentSuggestionsOnCaret: Story = {
   args: {
     initialValue: 'Buy milk ^',
+    detectInitialTrigger: true,
   },
   decorators: [
     (Story) => (
