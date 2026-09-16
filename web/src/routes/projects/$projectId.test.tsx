@@ -223,13 +223,15 @@ describe('ProjectDetailPage', () => {
     // breadcrumb leaf, once per layout (PC + SP) — scoped to each <nav> so
     // this stays unaffected by unrelated "ISUCON14" text elsewhere on the
     // page.
-    const breadcrumbNavs = screen.getAllByRole('navigation')
+    const breadcrumbNavs = screen.getAllByRole('navigation', { hidden: true })
     expect(breadcrumbNavs).toHaveLength(2)
     for (const nav of breadcrumbNavs) {
       expect(within(nav).getByText('ISUCON14')).toBeInTheDocument()
     }
     // editable title button, once per layout (PC + SP)
-    expect(screen.getAllByRole('button', { name: 'ISUCON14' })).toHaveLength(2)
+    expect(
+      screen.getAllByRole('button', { name: 'ISUCON14', hidden: true }),
+    ).toHaveLength(2)
   })
 
   it('renders description editor with project description', async () => {

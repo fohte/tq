@@ -42,7 +42,9 @@ async function renderBottomTabBar() {
 describe('BottomTabBar', () => {
   it('is hidden above the md breakpoint', async () => {
     await renderBottomTabBar()
-    expect(screen.getByRole('navigation').className).toBe(
+    const nav = screen.getByRole('navigation', { hidden: true })
+    expect(nav.checkVisibility()).toBe(false)
+    expect(nav.className).toBe(
       'sticky bottom-0 flex shrink-0 flex-col border-t border-border bg-background md:hidden',
     )
   })

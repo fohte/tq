@@ -1,5 +1,7 @@
 import { Result } from 'neverthrow'
 
+import { reloadPage } from '#lib/reload-page'
+
 // Cloudflare Access redirects an expired session cross-origin to its login
 // page. Fetch follows that redirect by default, and the browser then blocks
 // it as a CORS error since the redirect target has no CORS headers. Using
@@ -31,7 +33,7 @@ export async function sessionAwareFetch(
   } else if (!reloadTriggered) {
     reloadTriggered = true
     writeReloadMarker()
-    location.reload()
+    reloadPage()
   }
 
   // Never resolve: the page is about to be replaced by the reload, or the
@@ -87,6 +89,18 @@ let reloadAlreadyFailed = readReloadMarker()
 // independently triggering their own reload.
 let reloadTriggered = false
 
+// A real navigation re-evaluates this module from scratch, recomputing the
+// two variables above for free. Vitest's browser-mode `vi.resetModules()`
+// can't reproduce that: browser-mode tests run against real native ESM,
+// where a module is a singleton per URL and dynamic re-import returns the
+// same cached instance instead of re-executing it. Tests simulating a fresh
+// page load call this to get the reset a navigation would otherwise give
+// them.
+export function resetSessionAwareFetchStateForTest(): void {
+  reloadAlreadyFailed = readReloadMarker()
+  reloadTriggered = false
+}
+
 const NOTICE_TEXT = {
   heading: 'Session recovery failed',
   body: "tq couldn't restore your session automatically. Check your Cloudflare Access login, then reload this page.",
@@ -117,7 +131,7 @@ function showRecoveryFailedNotice(): void {
   button.textContent = NOTICE_TEXT.button
   button.className = 'rounded-md bg-primary px-5 py-2 text-primary-foreground'
   button.addEventListener('click', () => {
-    location.reload()
+    reloadPage()
   })
 
   notice.append(heading, body, button)

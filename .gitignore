@@ -138,3 +138,6 @@ __screenshots__/
 
 # reg-suit working directory
 .reg/
+
+# Vitest browser-mode failure screenshots
+.vitest-attachments/

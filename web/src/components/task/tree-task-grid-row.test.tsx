@@ -63,7 +63,12 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     }: { children: React.ReactNode } & Record<string, unknown>) => (
       <a
         href={typeof props['to'] === 'string' ? props['to'] : '#'}
-        onClick={mockLinkOnClick}
+        onClick={(event: React.MouseEvent) => {
+          // A real browser follows the href on click; jsdom didn't, so the
+          // stub relied on that to avoid navigating away mid-test.
+          event.preventDefault()
+          mockLinkOnClick(event)
+        }}
       >
         {children}
       </a>

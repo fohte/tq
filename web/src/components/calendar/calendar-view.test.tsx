@@ -82,7 +82,13 @@ vi.mock('@fullcalendar/react', async () => {
 
 vi.mock('@fullcalendar/timegrid', () => ({ default: {} }))
 vi.mock('@fullcalendar/daygrid', () => ({ default: {} }))
-vi.mock('@fullcalendar/interaction', () => ({ default: {} }))
+// Real ESM import bindings are checked statically, so the mock must still
+// provide every named export `calendar-grid.tsx` imports (`Draggable`), even
+// though this test never exercises the external-drag code path.
+vi.mock('@fullcalendar/interaction', () => ({
+  default: {},
+  Draggable: function Draggable() {},
+}))
 
 function fireDatesSet(
   currentStart: Date,

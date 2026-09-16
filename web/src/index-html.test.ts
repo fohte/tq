@@ -8,29 +8,40 @@ import { pwaManifest } from '#lib/pwa-manifest'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// index.html is small, static, and fully controlled by this repo, so a
+// regex extractor for the exact tags below is enough — no need to pull in
+// a real DOM parser just to read this file.
+function extractMetaContent(html: string, name: string): string | undefined {
+  return html.match(
+    new RegExp(`<meta\\s+name="${name}"\\s+content="([^"]*)"`),
+  )?.[1]
+}
+
+function extractLinkHrefs(html: string, rel: string): string[] {
+  return Array.from(
+    html.matchAll(new RegExp(`<link\\s+rel="${rel}"\\s+href="([^"]*)"`, 'g')),
+    (match) => match[1],
+  ).filter((href): href is string => href !== undefined)
+}
+
 function readIndexHtmlHead() {
   const html = fs.readFileSync(
     path.resolve(dirname, '..', 'index.html'),
     'utf-8',
   )
-  const doc = new DOMParser().parseFromString(html, 'text/html')
 
   return {
-    themeColor: doc
-      .querySelector('meta[name="theme-color"]')
-      ?.getAttribute('content'),
-    appleMobileWebAppCapable: doc
-      .querySelector('meta[name="apple-mobile-web-app-capable"]')
-      ?.getAttribute('content'),
-    appleMobileWebAppTitle: doc
-      .querySelector('meta[name="apple-mobile-web-app-title"]')
-      ?.getAttribute('content'),
-    appleTouchIconHrefs: Array.from(
-      doc.querySelectorAll('link[rel="apple-touch-icon"]'),
-    ).map((el) => el.getAttribute('href')),
-    faviconHrefs: Array.from(doc.querySelectorAll('link[rel="icon"]')).map(
-      (el) => el.getAttribute('href'),
+    themeColor: extractMetaContent(html, 'theme-color'),
+    appleMobileWebAppCapable: extractMetaContent(
+      html,
+      'apple-mobile-web-app-capable',
     ),
+    appleMobileWebAppTitle: extractMetaContent(
+      html,
+      'apple-mobile-web-app-title',
+    ),
+    appleTouchIconHrefs: extractLinkHrefs(html, 'apple-touch-icon'),
+    faviconHrefs: extractLinkHrefs(html, 'icon'),
   }
 }
 

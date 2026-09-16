@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
 
@@ -39,7 +40,27 @@ function withTailwind(project: ReturnType<typeof createStorybookProject>): any {
   }
 }
 
-const browserTestFiles = ['src/components/label/edit-label-dialog.test.tsx']
+// A test needs a real DOM if it renders components (@testing-library/react,
+// @testing-library/user-event) or touches browser globals directly
+// (document, window, sessionStorage, ...); everything else is plain logic
+// that runs faster under Node. Classifying by content instead of a
+// hand-maintained list means a new test file lands on the right project
+// automatically.
+const DOM_USAGE_PATTERN =
+  /from ['"]@testing-library\/(?:react|user-event)['"]|\b(?:document|window|navigator|sessionStorage|localStorage|HTMLElement|Element|Storage|Range)\.|\bResizeObserver\b/
+
+function findTestFiles(dir: string): string[] {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const fullPath = path.join(dir, entry.name)
+    if (entry.isDirectory()) return findTestFiles(fullPath)
+    return /\.test\.tsx?$/.test(entry.name) ? [fullPath] : []
+  })
+}
+
+const srcDir = path.join(dirname, 'src')
+const browserTestFiles = findTestFiles(srcDir)
+  .filter((file) => DOM_USAGE_PATTERN.test(fs.readFileSync(file, 'utf-8')))
+  .map((file) => path.relative(dirname, file).split(path.sep).join('/'))
 
 export default defineConfig({
   resolve: { alias },
@@ -49,9 +70,8 @@ export default defineConfig({
       {
         resolve: { alias },
         test: {
-          name: 'unit',
-          environment: 'jsdom',
-          setupFiles: ['./src/test-setup.ts'],
+          name: 'node',
+          environment: 'node',
           exclude: [...configDefaults.exclude, ...browserTestFiles],
           // Pin a non-UTC offset so tests asserting local<->UTC conversion
           // (e.g. date-range.test.ts) can't pass by accident when the host
@@ -60,6 +80,7 @@ export default defineConfig({
         },
       },
       {
+        plugins: [tailwindcss()],
         test: {
           name: 'browser',
           include: browserTestFiles,

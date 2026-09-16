@@ -295,7 +295,9 @@ describe('Sidebar', () => {
       it('shows a nested tag by its last path segment only, not its full name', async () => {
         await renderSidebar({ tasks: nestedTasks, labels: nestedLabels })
 
-        expect(screen.getByRole('link', { name: /^#tq1$/ })).toBeInTheDocument()
+        expect(
+          screen.getByRole('link', { name: /^#\s*tq\s*1$/ }),
+        ).toBeInTheDocument()
       })
 
       it('links a synthesized parent to /tasks scoped to its own name', async () => {
