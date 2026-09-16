@@ -133,9 +133,7 @@ jobs:
         uses: ./.github/actions/start-postgres
 
       # The `web` package's `browser` vitest project renders in a real
-      # Chromium (see web/vitest.config.ts). Keyed on the playwright package
-      # version, not hashFiles('pnpm-lock.yaml'), since the cached binary
-      # depends only on that.
+      # Chromium (see web/vitest.config.ts).
       - name: Get Playwright version
         id: playwright-version
         if: matrix.package == 'web'
