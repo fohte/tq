@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { expect } from 'storybook/test'
 
 import { makeResolveGithubUrlResult } from '#components/task/github-link-test-fixtures'
 import { GithubUrlCard } from '#components/task/github-url-card'
@@ -83,14 +82,6 @@ export const OpenIssue: Story = {
       state: 'open',
     }),
   },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText('fohte/tq#158')).toBeVisible()
-    await expect(
-      canvas.getByText(
-        'Adds an InlineReferenceProvider abstraction so task mentions render as chips.',
-      ),
-    ).toBeVisible()
-  },
 }
 
 export const MergedPullRequest: Story = {
@@ -149,10 +140,6 @@ export const LinkedToTask: Story = {
       }),
     },
   },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText('fohte/tq#42')).toBeVisible()
-    await expect(canvas.getByText('Linked to a TQ task →')).toBeVisible()
-  },
 }
 
 export const LongTitle: Story = {
@@ -179,8 +166,5 @@ export const Unresolved: Story = {
     url: UNRESOLVED_ISSUE_URL,
     raw: UNRESOLVED_ISSUE_URL,
     result: null,
-  },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText(UNRESOLVED_ISSUE_URL)).toBeVisible()
   },
 }

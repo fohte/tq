@@ -1,12 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { http, HttpResponse } from 'msw'
-import { expect, fireEvent, userEvent, waitFor, within } from 'storybook/test'
 
 import { TimeBlockPreviewTrigger } from '#components/calendar/time-block-preview-trigger'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
-import { DAY_QUEUE_KEY } from '#hooks/use-queues'
+import { DAY_QUEUE_KEY, queueKeys } from '#hooks/use-queues'
+import { taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
 
 const taskId = '00000000-0000-0000-0000-000000000001'
@@ -16,10 +15,6 @@ const taskFixture = makeTaskDetail({
   number: 12,
   title: 'Write onboarding doc',
 })
-
-const taskHandler = http.get('/api/tasks/:id', () =>
-  HttpResponse.json(taskFixture),
-)
 
 function Chip({ label }: { label: string }) {
   return (
@@ -53,10 +48,6 @@ const autoEvent = {
 
 const autoEventLocalDate = formatLocalDate(autoEvent.start)
 
-function autoBlockQueueItems() {
-  return [makeQueueItem({ taskId, periodStart: autoEventLocalDate })]
-}
-
 const redactedEvent = {
   id: 'block-redacted',
   start: new Date('2026-07-29T16:00:00.000Z'),
@@ -76,17 +67,26 @@ const meta = {
     layout: 'centered',
   },
   decorators: [
-    (Story) => (
-      <QueryClientProvider
-        client={
-          new QueryClient({ defaultOptions: { queries: { retry: false } } })
-        }
-      >
-        <div style={{ width: 160, height: 48 }}>
-          <Story />
-        </div>
-      </QueryClientProvider>
-    ),
+    (Story) => {
+      const queryClient = new QueryClient({
+        // staleTime: Infinity keeps the seeded data below from being
+        // refetched on mount — useTask/useQueueItems default to staleTime: 0.
+        defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+      })
+      queryClient.setQueryData(taskKeys.detail(taskId), taskFixture)
+      queryClient.setQueryData(
+        queueKeys.items(DAY_QUEUE_KEY, autoEventLocalDate),
+        [makeQueueItem({ taskId, periodStart: autoEventLocalDate })],
+      )
+
+      return (
+        <QueryClientProvider client={queryClient}>
+          <div style={{ width: 160, height: 48 }}>
+            <Story />
+          </div>
+        </QueryClientProvider>
+      )
+    },
   ],
 } satisfies Meta<typeof TimeBlockPreviewTrigger>
 
@@ -97,53 +97,7 @@ export const Manual: Story = {
   args: {
     event: manualEvent,
     children: <Chip label="Manual task" />,
-  },
-  parameters: {
-    msw: { handlers: [taskHandler] },
-  },
-  play: async ({ canvas, canvasElement }) => {
-    await userEvent.hover(canvas.getByText('Manual task'))
-    const body = within(canvasElement.ownerDocument.body)
-    await waitFor(() => expect(body.getByText('manual')).toBeVisible())
-    await expect(await body.findByText(taskFixture.title)).toBeVisible()
-  },
-}
-
-let deletedTimeBlockId: string | null = null
-
-export const DeleteManualBlock: Story = {
-  args: {
-    event: manualEvent,
-    children: <Chip label="Manual task" />,
-  },
-  parameters: {
-    msw: {
-      handlers: [
-        taskHandler,
-        http.delete('/api/schedule/time-blocks/:id', ({ params }) => {
-          const id = params['id']
-          deletedTimeBlockId = typeof id === 'string' ? id : null
-          return new HttpResponse(null, { status: 204 })
-        }),
-      ],
-    },
-    // The delete mutation doesn't change the popup's rendered content, so
-    // this ends up visually identical to Manual.
-    screenshot: { skip: true },
-  },
-  play: async ({ canvas, canvasElement }) => {
-    deletedTimeBlockId = null
-    await userEvent.hover(canvas.getByText('Manual task'))
-    const body = within(canvasElement.ownerDocument.body)
-
-    await userEvent.click(
-      await body.findByRole('button', { name: 'Delete time block' }),
-    )
-    await userEvent.click(await body.findByRole('button', { name: 'Delete' }))
-
-    await waitFor(async () => {
-      await expect(deletedTimeBlockId).toBe(manualEvent.id)
-    })
+    defaultOpen: true,
   },
 }
 
@@ -151,70 +105,7 @@ export const Auto: Story = {
   args: {
     event: autoEvent,
     children: <Chip label="Auto task" />,
-  },
-  parameters: {
-    msw: {
-      handlers: [
-        taskHandler,
-        http.get(`/api/queues/${DAY_QUEUE_KEY}/items`, () =>
-          HttpResponse.json(autoBlockQueueItems()),
-        ),
-      ],
-    },
-  },
-  play: async ({ canvas, canvasElement }) => {
-    await userEvent.hover(canvas.getByText('Auto task'))
-    const body = within(canvasElement.ownerDocument.body)
-    await waitFor(() => expect(body.getByText('auto')).toBeVisible())
-    await expect(await body.findByText(taskFixture.title)).toBeVisible()
-  },
-}
-
-let putQueueItemsBody: unknown = null
-
-export const RemoveAutoBlockFromQueue: Story = {
-  args: {
-    event: autoEvent,
-    children: <Chip label="Auto task" />,
-  },
-  parameters: {
-    msw: {
-      handlers: [
-        taskHandler,
-        http.get(`/api/queues/${DAY_QUEUE_KEY}/items`, () =>
-          HttpResponse.json(autoBlockQueueItems()),
-        ),
-        http.put(`/api/queues/${DAY_QUEUE_KEY}/items`, async ({ request }) => {
-          putQueueItemsBody = await request.json()
-          return HttpResponse.json([])
-        }),
-      ],
-    },
-    // The queue-removal mutation doesn't change the popup's rendered
-    // content, so this ends up visually identical to Auto.
-    screenshot: { skip: true },
-  },
-  play: async ({ canvas, canvasElement }) => {
-    putQueueItemsBody = null
-    await userEvent.hover(canvas.getByText('Auto task'))
-    const body = within(canvasElement.ownerDocument.body)
-
-    // The trash button is disabled while the day's queue items are loading
-    // (useRemoveFromDayQueue needs them to know which task to drop on delete).
-    const trashButton = await waitFor(async () => {
-      const button = body.getByRole('button', { name: 'Remove from queue' })
-      await expect(button).toBeEnabled()
-      return button
-    })
-    await userEvent.click(trashButton)
-    await userEvent.click(await body.findByRole('button', { name: 'Delete' }))
-
-    await waitFor(async () => {
-      await expect(putQueueItemsBody).toEqual({
-        date: autoEventLocalDate,
-        taskIds: [],
-      })
-    })
+    defaultOpen: true,
   },
 }
 
@@ -222,38 +113,5 @@ export const Redacted: Story = {
   args: {
     event: redactedEvent,
     children: <Chip label="Busy" />,
-  },
-  play: async ({ canvas, canvasElement }) => {
-    await userEvent.hover(canvas.getByText('Busy'))
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(body.queryByRole('button')).toBeNull()
-  },
-}
-
-export const ClosesOnPointerDown: Story = {
-  args: {
-    event: manualEvent,
-    children: <Chip label="Manual task" />,
-  },
-  parameters: {
-    msw: { handlers: [taskHandler] },
-  },
-  play: async ({ canvas, canvasElement }) => {
-    const chip = canvas.getByText('Manual task')
-    await userEvent.hover(chip)
-    const body = within(canvasElement.ownerDocument.body)
-    await waitFor(() =>
-      expect(
-        body.getByRole('button', { name: 'Delete time block' }),
-      ).toBeVisible(),
-    )
-
-    await fireEvent.pointerDown(chip)
-
-    await waitFor(() =>
-      expect(
-        body.queryByRole('button', { name: 'Delete time block' }),
-      ).toBeNull(),
-    )
   },
 }

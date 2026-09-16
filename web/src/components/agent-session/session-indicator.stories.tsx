@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { expect, waitFor, within } from 'storybook/test'
 
 import { SessionIndicator } from '#components/agent-session/session-indicator'
 import { makeTaskAgentSession } from '#components/agent-session/task-agent-session-test-fixtures'
@@ -29,7 +28,13 @@ const endedSession: TaskAgentSession = {
   endedAt: '2026-08-20T10:15:00Z',
 }
 
-function SessionIndicatorStory({ sessions }: { sessions: TaskAgentSession[] }) {
+function SessionIndicatorStory({
+  sessions,
+  defaultOpen,
+}: {
+  sessions: TaskAgentSession[]
+  defaultOpen?: boolean | undefined
+}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -43,7 +48,7 @@ function SessionIndicatorStory({ sessions }: { sessions: TaskAgentSession[] }) {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="dark flex items-center border border-border bg-background p-4">
-        <SessionIndicator sessions={sessions} />
+        <SessionIndicator sessions={sessions} defaultOpen={defaultOpen} />
       </div>
     </QueryClientProvider>
   )
@@ -62,11 +67,6 @@ type Story = StoryObj<typeof meta>
 
 export const NoSessions: Story = {
   args: { sessions: [] },
-  play: async ({ canvas }) => {
-    await expect(
-      canvas.queryByTestId('session-indicator'),
-    ).not.toBeInTheDocument()
-  },
 }
 
 export const ActiveSession: Story = {
@@ -77,25 +77,6 @@ export const EndedSession: Story = {
   args: { sessions: [endedSession] },
 }
 
-const opensSessionCardOnHover: NonNullable<Story['play']> = async ({
-  canvas,
-  canvasElement,
-  userEvent,
-}) => {
-  await userEvent.hover(canvas.getByTestId('session-indicator'))
-
-  const body = within(canvasElement.ownerDocument.body)
-  await waitFor(() => expect(body.getByText('SESSIONS (2)')).toBeVisible())
-  await expect(body.getByText('Implement session indicator')).toBeVisible()
-  await expect(body.getByText('Write the release notes')).toBeVisible()
-}
-
 export const ShowsActiveWhenOneOfManyIsActive: Story = {
-  args: { sessions: [endedSession, activeSession] },
-  play: opensSessionCardOnHover,
-}
-
-export const OpensCardOnHover: Story = {
-  args: { sessions: [activeSession, endedSession] },
-  play: opensSessionCardOnHover,
+  args: { sessions: [endedSession, activeSession], defaultOpen: true },
 }

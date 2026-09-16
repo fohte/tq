@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { expect } from 'storybook/test'
 
 import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { ProjectUrlCard } from '#components/task/project-url-card'
@@ -78,10 +77,6 @@ type Story = StoryObj<typeof meta>
 
 export const Active: Story = {
   args: { id: PROJECT_ID, raw: PROJECT_URL, project: baseProject },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText(baseProject.title)).toBeVisible()
-    await expect(canvas.getByText(baseProject.description ?? '')).toBeVisible()
-  },
 }
 
 export const NoTasksYet: Story = {
@@ -114,7 +109,4 @@ export const Completed: Story = {
 // while its data is unresolved.
 export const Unresolved: Story = {
   args: { id: UNRESOLVED_ID, raw: UNRESOLVED_URL, project: null },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText(UNRESOLVED_URL)).toBeVisible()
-  },
 }

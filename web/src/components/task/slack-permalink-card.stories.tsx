@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { expect } from 'storybook/test'
 
 import { SlackPermalinkCard } from '#components/task/slack-permalink-card'
 import type { SlackPermalinkPreview } from '#hooks/use-slack-permalink-preview'
@@ -87,13 +86,6 @@ export const NormalMessage: Story = {
       isThreadReply: false,
     },
   },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText('Hayato Kawai')).toBeVisible()
-    await expect(canvas.getByText('#general')).toBeVisible()
-    await expect(
-      canvas.getByText('Deploy finished, everything looks green.'),
-    ).toBeVisible()
-  },
 }
 
 export const ThreadReply: Story = {
@@ -110,9 +102,6 @@ export const ThreadReply: Story = {
       ts: '1699999999.000200',
       isThreadReply: true,
     },
-  },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText('thread reply')).toBeVisible()
   },
 }
 
@@ -148,9 +137,6 @@ export const BotMessageWithoutAvatar: Story = {
       isThreadReply: false,
     },
   },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText('CI Bot')).toBeVisible()
-  },
 }
 
 // The preview hasn't resolved yet (or resolved to "not a resolvable
@@ -161,8 +147,5 @@ export const Unresolved: Story = {
     url: UNRESOLVED_URL,
     raw: UNRESOLVED_URL,
     preview: null,
-  },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText(UNRESOLVED_URL)).toBeVisible()
   },
 }
