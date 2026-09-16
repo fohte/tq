@@ -25,6 +25,7 @@ import type { SavedView } from '#hooks/use-saved-views'
 import { savedViewKeys } from '#hooks/use-saved-views'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
+import { assertDefined } from '#lib/test-utils'
 
 // Only Link/useMatchRoute are stubbed — useSearch stays real so the
 // VIEWS/TAGS sections' active-item derivation keeps working. The stub
@@ -169,6 +170,22 @@ describe('Sidebar', () => {
       expect(screen.queryByText('VIEWS')).not.toBeInTheDocument()
     })
 
+    it('opens the actions menu with edit/delete items on trigger click', async () => {
+      const user = userEvent.setup()
+      const { container } = await renderSidebar({ savedViews: views })
+      const trigger = assertDefined(
+        container.querySelector<HTMLElement>(
+          '[data-slot="dropdown-menu-trigger"][aria-label="View actions"]',
+        ),
+        'desktop trigger not found',
+      )
+
+      await user.click(trigger)
+
+      expect(await screen.findByText('rename…')).toBeInTheDocument()
+      expect(screen.getByText('delete…')).toBeInTheDocument()
+    })
+
     describe('with more than 5 views', () => {
       const manyViews = Array.from({ length: 7 }, (_, i) =>
         makeSavedView({
@@ -269,6 +286,25 @@ describe('Sidebar', () => {
       expect(screen.getByRole('link', { name: /urgent/ })).toHaveClass(
         'text-muted-foreground-strong',
       )
+    })
+
+    it('opens the actions menu with edit/delete items on trigger click', async () => {
+      const user = userEvent.setup()
+      const { container } = await renderSidebar({
+        tasks: tasksWithTags,
+        labels: labelsForTasksWithTags,
+      })
+      const trigger = assertDefined(
+        container.querySelector<HTMLElement>(
+          '[data-slot="dropdown-menu-trigger"][aria-label="Tag actions"]',
+        ),
+        'desktop trigger not found',
+      )
+
+      await user.click(trigger)
+
+      expect(await screen.findByText('edit…')).toBeInTheDocument()
+      expect(screen.getByText('delete…')).toBeInTheDocument()
     })
 
     describe('with a "/"-separated tag hierarchy', () => {

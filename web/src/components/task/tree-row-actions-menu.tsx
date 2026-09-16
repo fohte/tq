@@ -8,17 +8,20 @@ export function TreeRowActionsMenu({
   onMoveUnder,
   onSetProject,
   onDelete,
+  defaultOpen,
 }: {
   onAddSubtask: () => void
   onLinkExisting: () => void
   onMoveUnder: () => void
   onSetProject: () => void
   onDelete: () => void
+  defaultOpen?: 'desktop' | 'mobile' | undefined
 }) {
   return (
     <ActionsMenu
       aria-label="Task actions"
       desktopTriggerClassName="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
+      defaultOpen={defaultOpen}
       items={[
         {
           icon: <Plus className="h-4 w-4" />,
