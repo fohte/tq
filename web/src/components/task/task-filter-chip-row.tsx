@@ -29,6 +29,9 @@ const filterTriggerClassName =
 
 const freeTextInputId = 'task-filter-free-text'
 
+type TaskFilterKind =
+  'status' | 'project' | 'label' | 'pages' | 'parent' | 'sort'
+
 interface TaskFilterChipRowProps {
   onQueryChange: (query: string) => void
   parsed: ParsedQuery
@@ -44,6 +47,7 @@ interface TaskFilterChipRowProps {
   // list is scoped to a different project than the one the rest of the
   // screen (title, task summary, "Add task") actually targets.
   disableProjectFilter?: boolean
+  defaultOpenFilter?: TaskFilterKind
 }
 
 export function TaskFilterChipRow({
@@ -52,6 +56,7 @@ export function TaskFilterChipRow({
   projects,
   hideSaveView = false,
   disableProjectFilter = false,
+  defaultOpenFilter,
 }: TaskFilterChipRowProps) {
   const sortBy = parsed.sortBy ?? 'updated'
   // The chip label falls back to the raw value for a sort the picker below
@@ -152,6 +157,7 @@ export function TaskFilterChipRow({
               .map((status) => statusChipLabels[status])
               .join(', ')}
             menuTitle="Status"
+            defaultOpen={defaultOpenFilter === 'status'}
           >
             <TaskStatusFilterFields
               status={parsed.status}
@@ -167,6 +173,7 @@ export function TaskFilterChipRow({
             attribute="project"
             value={selectedProject.title}
             menuTitle="Project"
+            defaultOpen={defaultOpenFilter === 'project'}
           >
             <TaskProjectFilterFields
               projects={projects}
@@ -183,6 +190,7 @@ export function TaskFilterChipRow({
             attribute="label"
             value={`#${parsed.label}`}
             menuTitle="Label"
+            defaultOpen={defaultOpenFilter === 'label'}
           >
             <TaskLabelFilterFields
               selectedLabel={parsed.label}
@@ -194,7 +202,12 @@ export function TaskFilterChipRow({
         )}
 
         {parsed.hasPages === true && (
-          <TaskFilterChip attribute="has" value="pages" menuTitle="Pages">
+          <TaskFilterChip
+            attribute="has"
+            value="pages"
+            menuTitle="Pages"
+            defaultOpen={defaultOpenFilter === 'pages'}
+          >
             <div className="flex items-center gap-2">
               <Checkbox
                 id="task-filter-has-pages"
@@ -222,6 +235,7 @@ export function TaskFilterChipRow({
                 : (parentTaskQuery.data?.title ?? parsed.parentId)
             }
             menuTitle="Parent"
+            defaultOpen={defaultOpenFilter === 'parent'}
           >
             <Button
               variant="outline"
@@ -262,6 +276,7 @@ export function TaskFilterChipRow({
         }
         menuTitle="Sort"
         className="shrink-0"
+        defaultOpen={defaultOpenFilter === 'sort'}
       >
         <TaskSortFilterFields
           sortBy={pickerSortBy}
