@@ -178,8 +178,9 @@ export const SidebarWithTimeBlocks: Story = {
   },
 }
 
-// Opens the STATUS select to exercise the "Close as" group (completed /
-// not planned / duplicate), which the closed trigger alone never renders.
+// These three stories render the STATUS select already open (defaultOpen)
+// to exercise the "Close as" group (completed / not planned / duplicate),
+// which the closed trigger alone never renders.
 export const SidebarCompletedOpen: Story = {
   args: {
     task: { ...baseTask, status: 'completed', statusReason: 'completed' },
