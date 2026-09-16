@@ -3,10 +3,17 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { TimeBlockPreviewTrigger } from '#components/calendar/time-block-preview-trigger'
-import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
+import {
+  autoEvent,
+  manualEvent,
+  redactedEvent,
+  taskFixture,
+  taskId,
+} from '#components/calendar/time-block-preview-trigger-test-fixtures'
 import { useRemoveFromDayQueue } from '#hooks/use-queues'
 import { useTask } from '#hooks/use-tasks'
 import { useDeleteManualTimeBlock } from '#hooks/use-time-blocks'
+import { formatLocalDate } from '#lib/date-range'
 import { partialMutation } from '#lib/test-utils'
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
@@ -50,50 +57,8 @@ const mockUseRemoveFromDayQueue = vi.mocked(useRemoveFromDayQueue)
 
 type UseTaskResult = ReturnType<typeof useTask>
 
-const taskId = '00000000-0000-0000-0000-000000000001'
-
-const taskFixture = makeTaskDetail({
-  id: taskId,
-  number: 12,
-  title: 'Write onboarding doc',
-})
-
 function Chip({ label }: { label: string }) {
   return <div>{label}</div>
-}
-
-const manualEvent = {
-  id: 'block-manual',
-  start: new Date('2026-07-29T16:00:00.000Z'),
-  end: new Date('2026-07-29T16:45:00.000Z'),
-  extendedProps: {
-    type: 'manual' as const,
-    taskId,
-    isAutoScheduled: false,
-  },
-}
-
-const autoEvent = {
-  id: 'block-auto',
-  start: new Date('2026-07-30T10:00:00.000Z'),
-  end: new Date('2026-07-30T11:30:00.000Z'),
-  extendedProps: {
-    type: 'auto' as const,
-    taskId,
-    isAutoScheduled: true,
-  },
-}
-
-const redactedEvent = {
-  id: 'block-redacted',
-  start: new Date('2026-07-29T16:00:00.000Z'),
-  end: new Date('2026-07-29T16:45:00.000Z'),
-  extendedProps: {
-    type: 'manual' as const,
-    taskId,
-    isAutoScheduled: false,
-    redacted: true,
-  },
 }
 
 describe('TimeBlockPreviewTrigger', () => {
@@ -141,10 +106,14 @@ describe('TimeBlockPreviewTrigger', () => {
     )
     await user.click(await screen.findByRole('button', { name: 'Delete' }))
 
+    expect(mockUseDeleteManualTimeBlock).toHaveBeenCalledWith(
+      taskId,
+      manualEvent.id,
+    )
     expect(onDelete).toHaveBeenCalled()
   })
 
-  it('shows the task and queue info on hover for an auto block', async () => {
+  it('shows the task on hover for an auto block', async () => {
     mockUseTask.mockReturnValue(
       partialMutation<UseTaskResult>({ data: taskFixture, isError: false }),
     )
@@ -185,6 +154,11 @@ describe('TimeBlockPreviewTrigger', () => {
     )
     await user.click(await screen.findByRole('button', { name: 'Delete' }))
 
+    expect(mockUseRemoveFromDayQueue).toHaveBeenCalledWith(
+      taskId,
+      formatLocalDate(autoEvent.start),
+      { enabled: true },
+    )
     expect(onDelete).toHaveBeenCalled()
   })
 

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 import { SlackPermalinkChip } from '#components/task/slack-permalink-chip'
+import { makeSlackPermalinkPreview } from '#components/task/slack-permalink-test-fixtures'
 import type { SlackPermalinkPreview } from '#hooks/use-slack-permalink-preview'
 import { slackPermalinkPreviewKeys } from '#hooks/use-slack-permalink-preview'
 
@@ -83,16 +84,7 @@ export const NormalMessage: Story = {
   args: {
     url: NORMAL_MESSAGE_URL,
     raw: NORMAL_MESSAGE_URL,
-    preview: {
-      channelId: 'C0123ABCDEF',
-      channelName: 'general',
-      isPrivate: false,
-      authorName: 'Hayato Kawai',
-      authorAvatarUrl: AVATAR_URL,
-      text: 'Deploy finished, everything looks green.',
-      ts: '1699999999.000100',
-      isThreadReply: false,
-    },
+    preview: makeSlackPermalinkPreview({ authorAvatarUrl: AVATAR_URL }),
     defaultOpen: true,
   },
 }

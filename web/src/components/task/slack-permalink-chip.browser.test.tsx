@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
 import { SlackPermalinkChip } from '#components/task/slack-permalink-chip'
+import { makeSlackPermalinkPreview } from '#components/task/slack-permalink-test-fixtures'
 import type { SlackPermalinkPreview } from '#hooks/use-slack-permalink-preview'
 import { slackPermalinkPreviewKeys } from '#hooks/use-slack-permalink-preview'
 
@@ -29,21 +30,21 @@ function renderWithPreview(preview: SlackPermalinkPreview) {
 describe('SlackPermalinkChip', () => {
   it('shows the message text in a popup on hover', async () => {
     const user = userEvent.setup()
-    renderWithPreview({
-      channelId: 'C0123ABCDEF',
-      channelName: 'general',
-      isPrivate: false,
-      authorName: 'Hayato Kawai',
-      authorAvatarUrl: null,
-      text: 'Deploy finished, everything looks green.',
-      ts: '1699999999.000100',
-      isThreadReply: false,
-    })
+    renderWithPreview(makeSlackPermalinkPreview())
 
     await user.hover(screen.getByText('Hayato Kawai:'))
 
-    expect(
-      await screen.findByText('Deploy finished, everything looks green.'),
-    ).toBeVisible()
+    // The trigger already renders the full (untruncated) message text, so a
+    // plain screen.findByText would match it even if the popup never opens.
+    // Scope the query to the popup to actually verify the hover behavior.
+    await waitFor(() => {
+      const popup = document.querySelector('[data-slot="preview-card-popup"]')
+      if (!(popup instanceof HTMLElement)) {
+        throw new Error('Expected the preview card popup to be in the DOM')
+      }
+      expect(
+        within(popup).getByText('Deploy finished, everything looks green.'),
+      ).toBeVisible()
+    })
   })
 })

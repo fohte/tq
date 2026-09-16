@@ -4,26 +4,12 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
 import { SessionIndicator } from '#components/agent-session/session-indicator'
-import { makeTaskAgentSession } from '#components/agent-session/task-agent-session-test-fixtures'
+import {
+  activeAgentSession,
+  endedAgentSession,
+} from '#components/agent-session/task-agent-session-test-fixtures'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
-
-const activeSession: TaskAgentSession = makeTaskAgentSession({
-  id: '1',
-  label: 'Implement session indicator',
-  startedAt: new Date(Date.now() - 34 * 60_000).toISOString(),
-  lastActiveAt: new Date(Date.now() - 2 * 60_000).toISOString(),
-})
-
-const endedSession: TaskAgentSession = {
-  ...activeSession,
-  id: '2',
-  sessionId: 'session-2',
-  label: 'Write the release notes',
-  startedAt: '2026-08-20T09:00:00Z',
-  lastActiveAt: '2026-08-20T10:15:00Z',
-  endedAt: '2026-08-20T10:15:00Z',
-}
 
 function renderSessionIndicator(sessions: TaskAgentSession[]) {
   const queryClient = new QueryClient({
@@ -52,7 +38,7 @@ describe('SessionIndicator', () => {
 
   it('opens the session card on hover', async () => {
     const user = userEvent.setup()
-    renderSessionIndicator([endedSession, activeSession])
+    renderSessionIndicator([endedAgentSession, activeAgentSession])
 
     await user.hover(screen.getByTestId('session-indicator'))
 

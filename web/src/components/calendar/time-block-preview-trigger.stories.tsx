@@ -2,19 +2,17 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { TimeBlockPreviewTrigger } from '#components/calendar/time-block-preview-trigger'
+import {
+  autoEvent,
+  manualEvent,
+  redactedEvent,
+  taskFixture,
+  taskId,
+} from '#components/calendar/time-block-preview-trigger-test-fixtures'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
-import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { DAY_QUEUE_KEY, queueKeys } from '#hooks/use-queues'
 import { taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
-
-const taskId = '00000000-0000-0000-0000-000000000001'
-
-const taskFixture = makeTaskDetail({
-  id: taskId,
-  number: 12,
-  title: 'Write onboarding doc',
-})
 
 function Chip({ label }: { label: string }) {
   return (
@@ -24,41 +22,7 @@ function Chip({ label }: { label: string }) {
   )
 }
 
-const manualEvent = {
-  id: 'block-manual',
-  start: new Date('2026-07-29T16:00:00.000Z'),
-  end: new Date('2026-07-29T16:45:00.000Z'),
-  extendedProps: {
-    type: 'manual' as const,
-    taskId,
-    isAutoScheduled: false,
-  },
-}
-
-const autoEvent = {
-  id: 'block-auto',
-  start: new Date('2026-07-30T10:00:00.000Z'),
-  end: new Date('2026-07-30T11:30:00.000Z'),
-  extendedProps: {
-    type: 'auto' as const,
-    taskId,
-    isAutoScheduled: true,
-  },
-}
-
 const autoEventLocalDate = formatLocalDate(autoEvent.start)
-
-const redactedEvent = {
-  id: 'block-redacted',
-  start: new Date('2026-07-29T16:00:00.000Z'),
-  end: new Date('2026-07-29T16:45:00.000Z'),
-  extendedProps: {
-    type: 'manual' as const,
-    taskId,
-    isAutoScheduled: false,
-    redacted: true,
-  },
-}
 
 const meta = {
   title: 'Calendar/TimeBlockPreviewTrigger',
