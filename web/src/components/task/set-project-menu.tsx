@@ -4,8 +4,57 @@ import {
   DialogHeader,
   DialogTitle,
 } from '#components/ui/dialog'
+import type { Project } from '#hooks/use-projects'
 import { useProjects } from '#hooks/use-projects'
 import { useUpdateTask } from '#hooks/use-tasks'
+
+export function SetProjectMenuAppearance({
+  open,
+  onOpenChange,
+  taskNumber,
+  projects,
+  onSelectProject,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  taskNumber: number
+  projects: Project[]
+  onSelectProject: (projectId: string | null) => void
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{`Set project for #${String(taskNumber)}`}</DialogTitle>
+        </DialogHeader>
+
+        <div className="max-h-72 overflow-y-auto">
+          <button
+            type="button"
+            className="flex min-h-11 w-full items-center px-3 text-left text-sm text-popover-foreground hover:bg-accent/50"
+            onClick={() => {
+              onSelectProject(null)
+            }}
+          >
+            —
+          </button>
+          {projects.map((project) => (
+            <button
+              key={project.id}
+              type="button"
+              className="flex min-h-11 w-full items-center px-3 text-left text-sm text-popover-foreground hover:bg-accent/50"
+              onClick={() => {
+                onSelectProject(project.id)
+              }}
+            >
+              {project.title}
+            </button>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 export function SetProjectMenu({
   open,
@@ -33,36 +82,12 @@ export function SetProjectMenu({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{`Set project for #${String(taskNumber)}`}</DialogTitle>
-        </DialogHeader>
-
-        <div className="max-h-72 overflow-y-auto">
-          <button
-            type="button"
-            className="flex min-h-11 w-full items-center px-3 text-left text-sm text-popover-foreground hover:bg-accent/50"
-            onClick={() => {
-              selectProject(null)
-            }}
-          >
-            —
-          </button>
-          {(projects ?? []).map((project) => (
-            <button
-              key={project.id}
-              type="button"
-              className="flex min-h-11 w-full items-center px-3 text-left text-sm text-popover-foreground hover:bg-accent/50"
-              onClick={() => {
-                selectProject(project.id)
-              }}
-            >
-              {project.title}
-            </button>
-          ))}
-        </div>
-      </DialogContent>
-    </Dialog>
+    <SetProjectMenuAppearance
+      open={open}
+      onOpenChange={onOpenChange}
+      taskNumber={taskNumber}
+      projects={projects ?? []}
+      onSelectProject={selectProject}
+    />
   )
 }

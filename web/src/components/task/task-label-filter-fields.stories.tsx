@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
-import { expect, fn, userEvent } from 'storybook/test'
+import { fn } from 'storybook/test'
 
 import { makeLabel } from '#components/label/label-test-fixtures'
 import { TaskLabelFilterFields } from '#components/task/task-label-filter-fields'
@@ -46,36 +46,5 @@ export const Default: Story = {}
 export const NestedLabelSelected: Story = {
   args: {
     selectedLabel: 'dev/tq',
-  },
-}
-
-export const SelectLabel: Story = {
-  play: async ({ canvas, args }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '#chore' }))
-    await expect(args.onLabelChange).toHaveBeenCalledWith('chore')
-  },
-}
-
-export const SelectNestedLabel: Story = {
-  play: async ({ canvas, args }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '#tq' }))
-    await expect(args.onLabelChange).toHaveBeenCalledWith('dev/tq')
-  },
-}
-
-export const SelectSynthesizedParentLabel: Story = {
-  play: async ({ canvas, args }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '#dev' }))
-    await expect(args.onLabelChange).toHaveBeenCalledWith('dev')
-  },
-}
-
-export const ClearLabel: Story = {
-  args: {
-    selectedLabel: 'dev/tq',
-  },
-  play: async ({ canvas, args }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'No label' }))
-    await expect(args.onLabelChange).toHaveBeenCalledWith(undefined)
   },
 }

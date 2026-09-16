@@ -9,35 +9,27 @@ import {
 import { Input } from '#components/ui/input'
 import { type SearchResult, useSearchTasks } from '#hooks/use-search'
 
-export function TaskSearchCandidateDialog({
+export function TaskSearchCandidateDialogAppearance({
   open,
   onOpenChange,
   title,
-  excludedTaskIds,
+  query,
+  onQueryChange,
+  candidates,
+  isFetching,
   onSelectCandidate,
   skipAction,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string
-  excludedTaskIds: Set<string>
+  query: string
+  onQueryChange: (query: string) => void
+  candidates: SearchResult[]
+  isFetching: boolean
   onSelectCandidate: (candidate: SearchResult) => void
-  skipAction?: { label: string; onSkip: () => void }
+  skipAction?: { label: string; onSkip: () => void } | undefined
 }) {
-  const [query, setQuery] = useState('')
-
-  useEffect(() => {
-    if (open) {
-      setQuery('')
-    }
-  }, [open])
-
-  const { data: searchResults, isFetching } = useSearchTasks(query)
-
-  const candidates = (searchResults ?? []).filter(
-    (t) => !excludedTaskIds.has(t.id),
-  )
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -49,7 +41,7 @@ export function TaskSearchCandidateDialog({
           type="text"
           value={query}
           onChange={(e) => {
-            setQuery(e.target.value)
+            onQueryChange(e.target.value)
           }}
           placeholder="Search tasks..."
           autoFocus
@@ -100,5 +92,49 @@ export function TaskSearchCandidateDialog({
         )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+export function TaskSearchCandidateDialog({
+  open,
+  onOpenChange,
+  title,
+  excludedTaskIds,
+  onSelectCandidate,
+  skipAction,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  title: string
+  excludedTaskIds: Set<string>
+  onSelectCandidate: (candidate: SearchResult) => void
+  skipAction?: { label: string; onSkip: () => void }
+}) {
+  const [query, setQuery] = useState('')
+
+  useEffect(() => {
+    if (open) {
+      setQuery('')
+    }
+  }, [open])
+
+  const { data: searchResults, isFetching } = useSearchTasks(query)
+
+  const candidates = (searchResults ?? []).filter(
+    (t) => !excludedTaskIds.has(t.id),
+  )
+
+  return (
+    <TaskSearchCandidateDialogAppearance
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      query={query}
+      onQueryChange={setQuery}
+      candidates={candidates}
+      isFetching={isFetching}
+      onSelectCandidate={onSelectCandidate}
+      skipAction={skipAction}
+    />
   )
 }
