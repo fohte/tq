@@ -61,6 +61,7 @@ export function SidebarActionableRow({
   deleteTitle,
   deleteDescription,
   onDelete,
+  defaultOpen,
 }: {
   search: { q: string }
   isActive: boolean
@@ -72,6 +73,7 @@ export function SidebarActionableRow({
   deleteTitle: string
   deleteDescription: string
   onDelete: () => void
+  defaultOpen?: 'desktop' | 'mobile' | undefined
 }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
 
@@ -83,6 +85,7 @@ export function SidebarActionableRow({
           aria-label={actionsAriaLabel}
           desktopTriggerClassName="h-3.5 w-3.5"
           mobileTriggerClassName="h-4 w-4"
+          defaultOpen={defaultOpen}
           items={[
             {
               icon: <Pencil className="h-4 w-4" />,
