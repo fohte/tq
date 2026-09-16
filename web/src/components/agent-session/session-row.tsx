@@ -46,7 +46,7 @@ function EditableSessionLabel({
 }: {
   id: string
   label: string | null
-  defaultEditing?: boolean
+  defaultEditing?: boolean | undefined
 }) {
   const [isEditing, setIsEditing] = useState(defaultEditing ?? false)
   const [value, setValue] = useState(label ?? '')
@@ -193,7 +193,7 @@ export function SessionRow({
 }: {
   session: AgentSession
   isDimmed: boolean
-  labelDefaultEditing?: boolean
+  labelDefaultEditing?: boolean | undefined
 }) {
   const active = isAgentSessionActive(session)
   const label = session.customLabel ?? session.label
@@ -223,9 +223,7 @@ export function SessionRow({
           <EditableSessionLabel
             id={session.id}
             label={label}
-            {...(labelDefaultEditing !== undefined
-              ? { defaultEditing: labelDefaultEditing }
-              : {})}
+            defaultEditing={labelDefaultEditing}
           />
           <Chip className="shrink-0">{session.context}</Chip>
         </div>

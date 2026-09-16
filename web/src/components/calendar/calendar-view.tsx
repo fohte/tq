@@ -58,7 +58,7 @@ interface CalendarViewProps {
   dndCallbacks?: CalendarDndCallbacks | undefined
   externalDragContainerRef?: React.RefObject<HTMLElement | null> | undefined
   initialView?: CalendarViewType
-  initialScrollTime?: string
+  initialScrollTime?: string | undefined
   selectedDate: Date
   onDateChange: (date: Date) => void
   onVisibleRangeChange?:
@@ -207,7 +207,7 @@ export function CalendarView({
           onTaskClick={onTaskClick}
           onSelectRange={onSelectRange}
           initialDate={selectedDate}
-          {...(initialScrollTime !== undefined ? { initialScrollTime } : {})}
+          initialScrollTime={initialScrollTime}
         />
       </div>
     </div>

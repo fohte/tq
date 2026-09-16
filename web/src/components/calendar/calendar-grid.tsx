@@ -104,7 +104,7 @@ interface CalendarGridProps {
   onTaskClick?: ((taskId: string) => void) | undefined
   onSelectRange?: ((info: { start: Date; end: Date }) => void) | undefined
   initialDate?: Date
-  initialScrollTime?: string
+  initialScrollTime?: string | undefined
 }
 
 export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
