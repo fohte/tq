@@ -10,7 +10,7 @@ import {
   useUpdateSchedule,
 } from '#hooks/use-schedules'
 import { renderControlledModal } from '#lib/render-controlled-modal'
-import { assertDefined, atIndex } from '#lib/test-utils'
+import { assertDefined, atIndex, partialMutation } from '#lib/test-utils'
 
 vi.mock('#hooks/use-schedules', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-schedules')>()
@@ -25,11 +25,6 @@ vi.mock('#hooks/use-schedules', async (importOriginal) => {
 const mockUseCreateSchedule = vi.mocked(useCreateSchedule)
 const mockUseUpdateSchedule = vi.mocked(useUpdateSchedule)
 const mockUseDeleteSchedule = vi.mocked(useDeleteSchedule)
-
-function partialMutation<T>(partial: Partial<T>): T {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
-  return partial as T
-}
 
 function setupMocks() {
   const createMutate = vi.fn()
