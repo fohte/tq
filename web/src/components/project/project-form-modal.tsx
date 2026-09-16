@@ -171,6 +171,7 @@ export function ProjectFormModal({
           setTitle(e.target.value)
         }}
         placeholder="Project name"
+        autoFocus
         className="h-auto border-0 bg-transparent p-0 text-xl font-medium shadow-none focus-visible:border-0 focus-visible:ring-0"
       />
 

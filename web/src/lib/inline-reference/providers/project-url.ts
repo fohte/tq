@@ -16,7 +16,7 @@ export const projectUrlProvider: InlineReferenceProvider<ProjectUrlData> = {
   // `GET /api/projects/:id` — the same endpoint the project detail page
   // resolves through (see `useProject`).
   findMatches(text) {
-    return matchAppResourceUrls(text, window.location.host, 'projects').map(
+    return matchAppResourceUrls(text, location.host, 'projects').map(
       (match) => ({
         start: match.start,
         end: match.end,

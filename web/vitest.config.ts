@@ -39,7 +39,7 @@ function withTailwind(project: ReturnType<typeof createStorybookProject>): any {
   }
 }
 
-const browserTestFiles = ['src/components/label/edit-label-dialog.test.tsx']
+const BROWSER_TEST_PATTERN = '**/*.browser.test.{ts,tsx}'
 
 export default defineConfig({
   resolve: { alias },
@@ -49,10 +49,9 @@ export default defineConfig({
       {
         resolve: { alias },
         test: {
-          name: 'unit',
-          environment: 'jsdom',
-          setupFiles: ['./src/test-setup.ts'],
-          exclude: [...configDefaults.exclude, ...browserTestFiles],
+          name: 'node',
+          environment: 'node',
+          exclude: [...configDefaults.exclude, BROWSER_TEST_PATTERN],
           // Pin a non-UTC offset so tests asserting local<->UTC conversion
           // (e.g. date-range.test.ts) can't pass by accident when the host
           // machine happens to run in UTC.
@@ -60,9 +59,10 @@ export default defineConfig({
         },
       },
       {
+        plugins: [tailwindcss()],
         test: {
           name: 'browser',
-          include: browserTestFiles,
+          include: [BROWSER_TEST_PATTERN],
           setupFiles: ['./src/browser-test-setup.ts'],
           browser: {
             enabled: true,
