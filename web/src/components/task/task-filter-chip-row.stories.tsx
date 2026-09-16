@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { ParsedQuery } from 'api/search-query-parser'
 import { http, HttpResponse } from 'msw'
 import { fn } from 'storybook/test'
 
 import { makeProject } from '#components/project/project-test-fixtures'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
+import { makeParsedQuery } from '#components/task/task-filter-test-fixtures'
 import type { Project } from '#hooks/use-projects'
 import { taskKeys } from '#hooks/use-task-queries'
 
@@ -31,11 +31,7 @@ const projectB: Project = makeProject({ id: 'proj-2', title: 'Mobile App' })
 
 const projects = [projectA, projectB]
 
-const defaultParsed: ParsedQuery = {
-  freeText: '',
-  status: ['todo'],
-  sortBy: 'updated',
-}
+const defaultParsed = makeParsedQuery()
 
 const meta = {
   title: 'Task/TaskFilterChipRow',
@@ -121,7 +117,7 @@ export const OpenStatusMenu: Story = {
   tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, status: ['todo', 'completed'] },
-    openFilter: 'status',
+    defaultOpenFilter: 'status',
   },
 }
 
@@ -129,7 +125,7 @@ export const OpenProjectMenu: Story = {
   tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, projectId: 'proj-1' },
-    openFilter: 'project',
+    defaultOpenFilter: 'project',
   },
 }
 
@@ -137,7 +133,7 @@ export const OpenLabelMenu: Story = {
   tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, label: 'dev:tq' },
-    openFilter: 'label',
+    defaultOpenFilter: 'label',
   },
 }
 
@@ -145,7 +141,7 @@ export const OpenPagesMenu: Story = {
   tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, hasPages: true },
-    openFilter: 'pages',
+    defaultOpenFilter: 'pages',
   },
 }
 
@@ -153,7 +149,7 @@ export const OpenParentMenu: Story = {
   tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, parentId: 'parent-abc' },
-    openFilter: 'parent',
+    defaultOpenFilter: 'parent',
   },
 }
 
@@ -162,12 +158,10 @@ export const OpenParentMenu: Story = {
 export const OpenSortMenu: Story = {
   tags: ['desktop-only'],
   args: {
-    openFilter: 'sort',
+    defaultOpenFilter: 'sort',
   },
 }
 
-// Covers the state removeLastChip's priority order (parent before label) is
-// tested against: both chips applied at once.
 export const ParentAndLabelChips: Story = {
   args: {
     parsed: { ...defaultParsed, parentId: 'parent-abc', label: 'dev:tq' },

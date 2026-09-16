@@ -1,12 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ParsedQuery } from 'api/search-query-parser'
 import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { makeProject } from '#components/project/project-test-fixtures'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
+import { makeParsedQuery } from '#components/task/task-filter-test-fixtures'
 import type { Project } from '#hooks/use-projects'
 import { waitForFocus } from '#lib/test-utils'
 
@@ -45,11 +45,7 @@ const projectA: Project = makeProject({
 const projectB: Project = makeProject({ id: 'proj-2', title: 'Mobile App' })
 const projects = [projectA, projectB]
 
-const defaultParsed: ParsedQuery = {
-  freeText: '',
-  status: ['todo'],
-  sortBy: 'updated',
-}
+const defaultParsed = makeParsedQuery()
 
 function renderRow(
   props: Partial<ComponentProps<typeof TaskFilterChipRow>> = {},
@@ -218,8 +214,8 @@ describe('TaskFilterChipRow', () => {
     expect(onQueryChange).toHaveBeenCalledWith('is:todo sort:updated')
   })
 
-  it('resets free text on Escape without committing', async () => {
-    const { onQueryChange } = renderRow()
+  it('clears the free-text input on Escape', async () => {
+    renderRow()
     const user = userEvent.setup()
 
     const input = screen.getByRole('textbox', { name: 'Filter query' })
@@ -227,6 +223,16 @@ describe('TaskFilterChipRow', () => {
     await user.keyboard('{Escape}')
 
     expect(input).toHaveValue('')
+  })
+
+  it('does not commit on Escape', async () => {
+    const { onQueryChange } = renderRow()
+    const user = userEvent.setup()
+
+    const input = screen.getByRole('textbox', { name: 'Filter query' })
+    await user.type(input, 'has:pages')
+    await user.keyboard('{Escape}')
+
     expect(onQueryChange).not.toHaveBeenCalled()
   })
 
