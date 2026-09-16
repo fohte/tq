@@ -64,8 +64,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
       <a
         href={typeof props['to'] === 'string' ? props['to'] : '#'}
         onClick={(event: React.MouseEvent) => {
-          // A real browser follows the href on click; jsdom didn't, so the
-          // stub relied on that to avoid navigating away mid-test.
+          // Stop the real navigation a browser would follow on this href.
           event.preventDefault()
           mockLinkOnClick(event)
         }}

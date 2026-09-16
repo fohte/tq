@@ -30,19 +30,11 @@ function raceWithPending<T>(promise: Promise<T>): Promise<T | typeof PENDING> {
   ])
 }
 
-// The reload/notice decision is seeded once when the module is evaluated
-// (see session-aware-fetch.ts), mirroring a real page load. `resetModules()`
-// + re-import can't reproduce that reset here: browser-mode tests run
-// against real native ESM, where re-importing the same specifier returns the
-// already-evaluated module instead of re-running its top-level code. Calling
-// `resetSessionAwareFetchStateForTest()` gets the same reset a real
-// navigation would give for free, re-reading whatever sessionStorage holds
-// at that moment. `reload-page.ts`'s mock gets reset the same way, so its
-// call history must be re-fetched fresh too — the mock instance bound to a
-// previous import no longer sees calls made by the newly re-imported
-// sessionAwareFetch.
+// Re-importing under real ESM returns the already-evaluated module instead
+// of re-running its top-level code, so state is reset explicitly instead;
+// reload-page's mock is re-fetched and cleared since it's bound to the new
+// import.
 async function importFreshSessionAwareFetch() {
-  vi.resetModules()
   const [
     { sessionAwareFetch: freshFetch, resetSessionAwareFetchStateForTest },
     { reloadPage },

@@ -40,14 +40,10 @@ function withTailwind(project: ReturnType<typeof createStorybookProject>): any {
   }
 }
 
-// A test needs a real DOM if it renders components (@testing-library/react,
-// @testing-library/user-event) or touches browser globals directly
-// (document, window, sessionStorage, ...); everything else is plain logic
-// that runs faster under Node. Classifying by content instead of a
-// hand-maintained list means a new test file lands on the right project
-// automatically.
+// Matches test files requiring browser DOM APIs or Testing Library, routing
+// them to the browser project instead of node.
 const DOM_USAGE_PATTERN =
-  /from ['"]@testing-library\/(?:react|user-event)['"]|\b(?:document|window|navigator|sessionStorage|localStorage|HTMLElement|Element|Storage|Range)\.|\bResizeObserver\b/
+  /from ['"]@testing-library\/(?:react|user-event)['"]|from ['"]#lib\/render-controlled-modal['"]|\b(?:document|window|navigator|sessionStorage|localStorage|HTMLElement|Element|Storage|Range)\.|\bResizeObserver\b/
 
 function findTestFiles(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

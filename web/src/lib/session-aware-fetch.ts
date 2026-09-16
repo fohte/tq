@@ -89,13 +89,9 @@ let reloadAlreadyFailed = readReloadMarker()
 // independently triggering their own reload.
 let reloadTriggered = false
 
-// A real navigation re-evaluates this module from scratch, recomputing the
-// two variables above for free. Vitest's browser-mode `vi.resetModules()`
-// can't reproduce that: browser-mode tests run against real native ESM,
-// where a module is a singleton per URL and dynamic re-import returns the
-// same cached instance instead of re-executing it. Tests simulating a fresh
-// page load call this to get the reset a navigation would otherwise give
-// them.
+// A real navigation re-evaluates this module, resetting the state above for
+// free. Real ESM's per-URL module singleton means a dynamic re-import in
+// tests doesn't, so tests simulating a fresh page load call this instead.
 export function resetSessionAwareFetchStateForTest(): void {
   reloadAlreadyFailed = readReloadMarker()
   reloadTriggered = false

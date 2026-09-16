@@ -8,9 +8,6 @@ import { pwaManifest } from '#lib/pwa-manifest'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// index.html is small, static, and fully controlled by this repo, so a
-// regex extractor for the exact tags below is enough — no need to pull in
-// a real DOM parser just to read this file.
 function extractMetaContent(html: string, name: string): string | undefined {
   return html.match(
     new RegExp(`<meta\\s+name="${name}"\\s+content="([^"]*)"`),
