@@ -8,7 +8,7 @@ import { makeTask } from '#components/task/task-row-test-fixtures'
 import { useProjects, useProjectTaskIds } from '#hooks/use-projects'
 import { type SearchResult, useSearchTasks } from '#hooks/use-search'
 import { useUpdateTask } from '#hooks/use-tasks'
-import { partialMutation } from '#lib/test-utils'
+import { mockMutateCallingOnSuccess, partialMutation } from '#lib/test-utils'
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-search')>()
@@ -128,12 +128,7 @@ describe('LinkExistingProjectTaskMenu', () => {
 
   it('moves an orphan candidate directly and closes without a confirm dialog', async () => {
     mockSearchResults([orphanCandidate])
-    const mutate = vi.fn(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double: this test's onSuccess callback ignores every argument, so the exact mutate signature doesn't matter here
-      ((_vars: unknown, options?: { onSuccess?: () => void }) => {
-        options?.onSuccess?.()
-      }) as UpdateTaskResult['mutate'],
-    )
+    const mutate = mockMutateCallingOnSuccess<UpdateTaskResult['mutate']>()
     mockUseUpdateTask.mockReturnValue(
       partialMutation<UpdateTaskResult>({ mutate }),
     )

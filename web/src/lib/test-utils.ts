@@ -1,4 +1,4 @@
-import { expect, waitFor } from 'storybook/test'
+import { expect, fn, waitFor } from 'storybook/test'
 
 export { defined as assertDefined, atIndex } from 'api/lib/test-utils'
 
@@ -36,6 +36,20 @@ export async function clickSelectOption(
 export function partialMutation<T>(partial: Partial<T>): T {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
   return partial as T
+}
+
+/**
+ * Creates a `mutate` test double that synchronously invokes `onSuccess`, for
+ * components whose success handling only needs the callback to fire.
+ */
+export function mockMutateCallingOnSuccess<
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- explicit-only generic: callers pin their own mutate type here so the unsafe cast below stays centralized instead of repeated at each call site
+  TMutate extends (vars: never, options?: { onSuccess?: () => void }) => void,
+>(): TMutate {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double: callers' onSuccess ignores every argument, so the exact mutate signature doesn't matter here
+  return fn((_vars: unknown, options?: { onSuccess?: () => void }) => {
+    options?.onSuccess?.()
+  }) as unknown as TMutate
 }
 
 /**

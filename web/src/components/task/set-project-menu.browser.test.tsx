@@ -6,7 +6,7 @@ import { makeProject } from '#components/project/project-test-fixtures'
 import { SetProjectMenu } from '#components/task/set-project-menu'
 import { useProjects } from '#hooks/use-projects'
 import { useUpdateTask } from '#hooks/use-tasks'
-import { partialMutation } from '#lib/test-utils'
+import { mockMutateCallingOnSuccess, partialMutation } from '#lib/test-utils'
 
 vi.mock('#hooks/use-projects', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-projects')>()
@@ -47,12 +47,7 @@ describe('SetProjectMenu', () => {
     mockUseProjects.mockReturnValue(
       partialMutation<ProjectsResult>({ data: [projectA, projectB] }),
     )
-    const mutate = vi.fn(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double: SetProjectMenu's onSuccess callback ignores every argument, so the exact mutate signature doesn't matter here
-      ((_vars: unknown, options?: { onSuccess?: () => void }) => {
-        options?.onSuccess?.()
-      }) as UpdateTaskResult['mutate'],
-    )
+    const mutate = mockMutateCallingOnSuccess<UpdateTaskResult['mutate']>()
     mockUseUpdateTask.mockReturnValue(
       partialMutation<UpdateTaskResult>({ mutate }),
     )
