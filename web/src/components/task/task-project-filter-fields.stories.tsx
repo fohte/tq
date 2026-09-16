@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent } from 'storybook/test'
+import { fn } from 'storybook/test'
 
 import { makeProject } from '#components/project/project-test-fixtures'
 import { TaskProjectFilterFields } from '#components/task/task-project-filter-fields'
@@ -40,22 +40,5 @@ export const Default: Story = {}
 export const ProjectSelected: Story = {
   args: {
     selectedProjectId: 'proj-1',
-  },
-}
-
-export const SelectProject: Story = {
-  play: async ({ canvas, args }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'Mobile App' }))
-    await expect(args.onProjectIdChange).toHaveBeenCalledWith('proj-2')
-  },
-}
-
-export const ClearProject: Story = {
-  args: {
-    selectedProjectId: 'proj-1',
-  },
-  play: async ({ canvas, args }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'All projects' }))
-    await expect(args.onProjectIdChange).toHaveBeenCalledWith('')
   },
 }

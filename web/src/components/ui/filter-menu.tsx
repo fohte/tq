@@ -23,6 +23,7 @@ interface FilterMenuProps {
   triggerClassName?: string
   title: string
   children: React.ReactNode
+  defaultOpen?: boolean | undefined
 }
 
 // Picks the container only: a popover on desktop, a bottom sheet below the
@@ -36,9 +37,10 @@ export function FilterMenu({
   triggerClassName,
   title,
   children,
+  defaultOpen = false,
 }: FilterMenuProps) {
   const isDesktop = useIsDesktop()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   const triggerRef = useRef<HTMLButtonElement>(null)
 
   if (isDesktop) {
@@ -68,7 +70,7 @@ export function FilterMenu({
   }
 
   return (
-    <Dialog>
+    <Dialog defaultOpen={defaultOpen}>
       <DialogTrigger className={triggerClassName}>{trigger}</DialogTrigger>
       <DialogPortal>
         <DialogOverlay />

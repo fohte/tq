@@ -14,15 +14,17 @@ import { cn } from '#lib/utils'
 
 export function SessionIndicator({
   sessions,
+  defaultOpen,
 }: {
   sessions: TaskAgentSession[]
+  defaultOpen?: boolean | undefined
 }) {
   if (sessions.length === 0) return null
 
   const active = sessions.some((session) => isAgentSessionActive(session))
 
   return (
-    <PreviewCard>
+    <PreviewCard defaultOpen={defaultOpen}>
       <PreviewCardTrigger
         render={<span />}
         tabIndex={0}
