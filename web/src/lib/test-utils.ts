@@ -1,4 +1,5 @@
-import { expect, fn, waitFor } from 'storybook/test'
+import { expect, waitFor } from 'storybook/test'
+import { vi } from 'vitest'
 
 export { defined as assertDefined, atIndex } from 'api/lib/test-utils'
 
@@ -41,17 +42,26 @@ export function partialMutation<T>(partial: Partial<T>): T {
 }
 
 /**
- * Creates a `mutate` test double that synchronously invokes `onSuccess`, for
- * components whose success handling only needs the callback to fire.
+ * Mock `mutate` that synchronously invokes the caller's `onSuccess` option.
+ * Only fits a `useMutation`-shaped hook whose success handler ignores every
+ * argument `mutate` receives.
  */
-export function mockMutateCallingOnSuccess<
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- explicit-only generic: callers pin their own mutate type here so the unsafe cast below stays centralized instead of repeated at each call site
-  TMutate extends (vars: never, options?: { onSuccess?: () => void }) => void,
->(): TMutate {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double: callers' onSuccess ignores every argument, so the exact mutate signature doesn't matter here
-  return fn((_vars: unknown, options?: { onSuccess?: () => void }) => {
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- TMutate exists so callers can pin the return type to their hook's `mutate` signature; the cast below is inherently unchecked
+export function mutateInvokingOnSuccess<TMutate>(): TMutate {
+  const mock = (_variables: unknown, options?: { onSuccess?: () => void }) => {
     options?.onSuccess?.()
-  }) as unknown as TMutate
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double: caller's onSuccess handler ignores every argument, so the exact mutate signature doesn't matter here
+  return vi.fn(mock) as TMutate
+}
+
+/**
+ * Matches the `{ onSuccess }` options object a `mutate` call passes, without
+ * asserting the callback's identity.
+ */
+export const withOnSuccess = {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- vitest's expect.any() return type isn't generic, so TS can only type this property as `any`
+  onSuccess: expect.any(Function),
 }
 
 /**

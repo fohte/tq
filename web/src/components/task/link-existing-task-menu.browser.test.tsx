@@ -6,7 +6,11 @@ import { LinkExistingTaskMenu } from '#components/task/link-existing-task-menu'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { type SearchResult, useSearchTasks } from '#hooks/use-search'
 import { useTaskList, useUpdateTaskParent } from '#hooks/use-tasks'
-import { mockMutateCallingOnSuccess, partialMutation } from '#lib/test-utils'
+import {
+  mutateInvokingOnSuccess,
+  partialMutation,
+  withOnSuccess,
+} from '#lib/test-utils'
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-search')>()
@@ -113,8 +117,7 @@ describe('LinkExistingTaskMenu', () => {
 
   it('moves an orphan candidate directly and closes without a confirm dialog', async () => {
     mockSearchResults([orphanCandidate])
-    const mutate =
-      mockMutateCallingOnSuccess<UpdateTaskParentResult['mutate']>()
+    const mutate = mutateInvokingOnSuccess<UpdateTaskParentResult['mutate']>()
     mockUseUpdateTaskParent.mockReturnValue(
       partialMutation<UpdateTaskParentResult>({ mutate }),
     )
@@ -134,8 +137,7 @@ describe('LinkExistingTaskMenu', () => {
 
     expect(mutate).toHaveBeenCalledWith(
       { id: orphanCandidate.id, parentId },
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- vitest's expect.any() return type isn't generic, so TS can only type this property as `any`
-      { onSuccess: expect.any(Function) },
+      withOnSuccess,
     )
     expect(screen.queryByText('Change parent task?')).not.toBeInTheDocument()
     expect(onOpenChange).toHaveBeenCalledWith(false)

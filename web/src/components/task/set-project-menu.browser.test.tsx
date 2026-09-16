@@ -6,7 +6,11 @@ import { makeProject } from '#components/project/project-test-fixtures'
 import { SetProjectMenu } from '#components/task/set-project-menu'
 import { useProjects } from '#hooks/use-projects'
 import { useUpdateTask } from '#hooks/use-tasks'
-import { mockMutateCallingOnSuccess, partialMutation } from '#lib/test-utils'
+import {
+  mutateInvokingOnSuccess,
+  partialMutation,
+  withOnSuccess,
+} from '#lib/test-utils'
 
 vi.mock('#hooks/use-projects', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-projects')>()
@@ -47,7 +51,7 @@ describe('SetProjectMenu', () => {
     mockUseProjects.mockReturnValue(
       partialMutation<ProjectsResult>({ data: [projectA, projectB] }),
     )
-    const mutate = mockMutateCallingOnSuccess<UpdateTaskResult['mutate']>()
+    const mutate = mutateInvokingOnSuccess<UpdateTaskResult['mutate']>()
     mockUseUpdateTask.mockReturnValue(
       partialMutation<UpdateTaskResult>({ mutate }),
     )
@@ -66,8 +70,7 @@ describe('SetProjectMenu', () => {
 
     expect(mutate).toHaveBeenCalledWith(
       { id: taskId, input: { projectId: projectB.id } },
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- vitest's expect.any() return type isn't generic, so TS can only type this property as `any`
-      { onSuccess: expect.any(Function) },
+      withOnSuccess,
     )
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })

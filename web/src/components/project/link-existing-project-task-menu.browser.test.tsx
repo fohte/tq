@@ -8,7 +8,11 @@ import { makeTask } from '#components/task/task-row-test-fixtures'
 import { useProjects, useProjectTaskIds } from '#hooks/use-projects'
 import { type SearchResult, useSearchTasks } from '#hooks/use-search'
 import { useUpdateTask } from '#hooks/use-tasks'
-import { mockMutateCallingOnSuccess, partialMutation } from '#lib/test-utils'
+import {
+  mutateInvokingOnSuccess,
+  partialMutation,
+  withOnSuccess,
+} from '#lib/test-utils'
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-search')>()
@@ -128,7 +132,7 @@ describe('LinkExistingProjectTaskMenu', () => {
 
   it('moves an orphan candidate directly and closes without a confirm dialog', async () => {
     mockSearchResults([orphanCandidate])
-    const mutate = mockMutateCallingOnSuccess<UpdateTaskResult['mutate']>()
+    const mutate = mutateInvokingOnSuccess<UpdateTaskResult['mutate']>()
     mockUseUpdateTask.mockReturnValue(
       partialMutation<UpdateTaskResult>({ mutate }),
     )
@@ -148,8 +152,7 @@ describe('LinkExistingProjectTaskMenu', () => {
 
     expect(mutate).toHaveBeenCalledWith(
       { id: orphanCandidate.id, input: { projectId } },
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- vitest's expect.any() return type isn't generic, so TS can only type this property as `any`
-      { onSuccess: expect.any(Function) },
+      withOnSuccess,
     )
     expect(screen.queryByText('Move to this project?')).not.toBeInTheDocument()
     expect(onOpenChange).toHaveBeenCalledWith(false)

@@ -13,6 +13,58 @@ import { Input } from '#components/ui/input'
 import type { SavedView } from '#hooks/use-saved-views'
 import { useRenameSavedView } from '#hooks/use-saved-views'
 
+export function RenameSavedViewDialogAppearance({
+  open,
+  onOpenChange,
+  name,
+  errorMessage,
+  saveDisabled,
+  onNameChange,
+  onSubmit,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  name: string
+  errorMessage: string | null
+  saveDisabled: boolean
+  onNameChange: (name: string) => void
+  onSubmit: () => void
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Rename view</DialogTitle>
+        </DialogHeader>
+        <Input
+          autoFocus
+          value={name}
+          onChange={(e) => {
+            onNameChange(e.target.value)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              onSubmit()
+            }
+          }}
+        />
+        {errorMessage != null && (
+          <p className="text-sm text-destructive">{errorMessage}</p>
+        )}
+        <DialogFooter>
+          <DialogClose render={<Button variant="outline" />}>
+            Cancel
+          </DialogClose>
+          <Button onClick={onSubmit} disabled={saveDisabled}>
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export function RenameSavedViewDialog({
   view,
   open,
@@ -44,41 +96,16 @@ export function RenameSavedViewDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Rename view</DialogTitle>
-        </DialogHeader>
-        <Input
-          autoFocus
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              handleSubmit()
-            }
-          }}
-        />
-        {renameSavedView.isError && (
-          <p className="text-sm text-destructive">
-            {renameSavedView.error.message}
-          </p>
-        )}
-        <DialogFooter>
-          <DialogClose render={<Button variant="outline" />}>
-            Cancel
-          </DialogClose>
-          <Button
-            onClick={handleSubmit}
-            disabled={!name.trim() || renameSavedView.isPending}
-          >
-            Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <RenameSavedViewDialogAppearance
+      open={open}
+      onOpenChange={onOpenChange}
+      name={name}
+      errorMessage={
+        renameSavedView.isError ? renameSavedView.error.message : null
+      }
+      saveDisabled={!name.trim() || renameSavedView.isPending}
+      onNameChange={setName}
+      onSubmit={handleSubmit}
+    />
   )
 }

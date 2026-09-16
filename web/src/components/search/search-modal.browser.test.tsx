@@ -226,13 +226,17 @@ describe('SearchModal', () => {
 
     const options = screen.getAllByRole('option')
     expect(options[0]).toHaveAttribute('aria-selected', 'true')
+    expect(options[0]).toHaveClass('bg-accent')
 
     await user.keyboard('{ArrowDown}')
     expect(options[1]).toHaveAttribute('aria-selected', 'true')
+    expect(options[1]).toHaveClass('bg-accent')
     expect(options[0]).toHaveAttribute('aria-selected', 'false')
+    expect(options[0]).not.toHaveClass('bg-accent')
 
     await user.keyboard('{ArrowUp}')
     expect(options[0]).toHaveAttribute('aria-selected', 'true')
+    expect(options[0]).toHaveClass('bg-accent')
   })
 
   it('applies suggestion with Tab key', async () => {
