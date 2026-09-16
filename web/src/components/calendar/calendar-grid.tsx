@@ -126,6 +126,10 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
   ) {
     const isDesktop = useIsDesktop()
     const fullCalendarRef = useRef<FullCalendar>(null)
+    // FullCalendar fires its first datesSet synchronously while mounting,
+    // before this component's own mount effect below can run — so this flag
+    // is still false for that call and only flips true for later navigation.
+    const hasMountedRef = useRef(false)
     const [slotGhost, setSlotGhost] = useState<SlotGhostRect | null>(null)
     useImperativeHandle<FullCalendar | null, FullCalendar | null>(
       ref,
@@ -141,6 +145,10 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         initialScrollTime ??
         getScrollTime(...getDayRange(initialDate ?? new Date())),
     )
+
+    useEffect(() => {
+      hasMountedRef.current = true
+    }, [])
 
     // `initialView` only applies on FullCalendar's first mount, so if
     // isDesktop's value flips afterward (e.g. the test runner resizes the
@@ -312,7 +320,11 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
 
     const handleDatesSet = (info: DatesSetArg) => {
       onDatesSet?.(info)
-      // Covers navigation; initialScrollTime above covers first mount.
+      // FullCalendar fires datesSet synchronously on its own initial mount
+      // too, before hasMountedRef flips true — skip that call so it can't
+      // recompute and overwrite the `scrollTime` option (seeded from
+      // initialScrollTime above) before it's ever visible.
+      if (!hasMountedRef.current) return
       fullCalendarRef.current
         ?.getApi()
         .scrollToTime(getScrollTime(info.start, info.end))
