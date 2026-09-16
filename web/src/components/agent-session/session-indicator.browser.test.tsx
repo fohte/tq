@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
@@ -43,7 +43,9 @@ describe('SessionIndicator', () => {
     await user.hover(screen.getByTestId('session-indicator'))
 
     const body = within(document.body)
-    expect(await body.findByText('SESSIONS (2)')).toBeVisible()
+    await waitFor(() => {
+      expect(body.getByText('SESSIONS (2)')).toBeVisible()
+    })
     expect(body.getByText('Implement session indicator')).toBeVisible()
     expect(body.getByText('Write the release notes')).toBeVisible()
   })
