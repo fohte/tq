@@ -6,7 +6,7 @@
     "#*": "./src/*.ts"
   },
   "scripts": {
-    "build": "esbuild src/content.ts src/background.ts --bundle --format=iife --outdir=dist",
+    "build": "node build.mjs",
     "test": "conc pnpm:test:type pnpm:test:unit",
     "test:type": "tsc --noEmit",
     "test:unit": "vitest run"

@@ -1,6 +1,6 @@
 import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 
-const TQ_API_ORIGIN = 'https://tq.fohte.net'
+import { TQ_ORIGIN } from '#config'
 
 export interface LinkedTask {
   id: string
@@ -33,10 +33,9 @@ export function lookupTask(
 ): ResultAsync<LinkedTask | null, Error> {
   return (
     ResultAsync.fromPromise(
-      fetchImpl(
-        `${TQ_API_ORIGIN}/api/github/link?url=${encodeURIComponent(url)}`,
-        { credentials: 'include' },
-      ),
+      fetchImpl(`${TQ_ORIGIN}/api/github/link?url=${encodeURIComponent(url)}`, {
+        credentials: 'include',
+      }),
       (cause) => new Error('tq lookup request failed', { cause }),
     )
       .andThen((res) =>

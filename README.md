@@ -68,9 +68,11 @@ pnpm --filter web run test:storybook
 pnpm --filter extension run build
 ```
 
+This writes the bundled scripts and a generated `manifest.json` to `extension/dist/`. The tq origin the extension talks to (`host_permissions` and API requests) defaults to `https://tq.fohte.net`; override it at build time with `TQ_ORIGIN`, e.g. `TQ_ORIGIN=http://localhost:5173 pnpm --filter extension run build`.
+
 1. Open `chrome://extensions`.
 2. Enable **Developer mode**.
-3. Click **Load unpacked** and select the `extension/` directory.
+3. Click **Load unpacked** and select the `extension/dist` directory.
 
 ### Scripts
 
