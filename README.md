@@ -68,7 +68,7 @@ pnpm --filter web run test:storybook
 TQ_ORIGIN=https://tq.fohte.net pnpm --filter extension run build
 ```
 
-`TQ_ORIGIN` is the tq instance the extension talks to (`host_permissions` and API requests); the build fails without it. This writes the bundled scripts and a generated `manifest.json` to `extension/dist/`. Point it at a local dev server instead with `TQ_ORIGIN=http://localhost:5173`.
+`TQ_ORIGIN` is the tq instance the extension talks to (`host_permissions` and API requests); the build fails without it. This writes the bundled scripts and a generated `manifest.json` to `extension/dist/`. Point it at a local dev server instead: `TQ_ORIGIN=http://localhost:5173 pnpm --filter extension run build`.
 
 1. Open `chrome://extensions`.
 2. Enable **Developer mode**.

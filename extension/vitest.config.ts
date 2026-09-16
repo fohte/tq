@@ -7,8 +7,6 @@ export default defineConfig({
     // behavior is unchanged.
     include: ['**/*.{test,spec}.?(c|m)[jt]s?(x)'],
     environment: 'jsdom',
-    // config.ts requires TQ_ORIGIN to be set (no shipped default); tests
-    // don't talk to a real tq instance, so any origin works.
     env: { TQ_ORIGIN: 'https://tq.example.test' },
   },
 })
