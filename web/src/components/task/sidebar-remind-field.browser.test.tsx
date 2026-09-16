@@ -86,7 +86,7 @@ describe('SidebarRemindField', () => {
     expect(mutate).not.toHaveBeenCalled()
   })
 
-  it('commits the preset and closes the popup when a preset is clicked', async () => {
+  it('commits the preset when it is clicked', async () => {
     const mutate = mockMutate()
     const user = userEvent.setup()
     render(<SidebarRemindField taskId={taskId} remindAt={null} />)
@@ -101,10 +101,22 @@ describe('SidebarRemindField', () => {
         input: { remindAt: expectedDate.toISOString() },
       })
     })
-    expect(screen.queryByPlaceholderText(inputPlaceholder)).toBeNull()
   })
 
-  it('commits the typed date and closes the popup when Enter is pressed', async () => {
+  it('closes the popup after a preset is clicked', async () => {
+    mockMutate()
+    const user = userEvent.setup()
+    render(<SidebarRemindField taskId={taskId} remindAt={null} />)
+
+    await user.click(screen.getByText('なし'))
+    await user.click(await screen.findByText('今日18:00'))
+
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText(inputPlaceholder)).toBeNull()
+    })
+  })
+
+  it('commits the typed date when Enter is pressed', async () => {
     const mutate = mockMutate()
     const user = userEvent.setup()
     render(<SidebarRemindField taskId={taskId} remindAt={null} />)
@@ -121,10 +133,25 @@ describe('SidebarRemindField', () => {
       id: taskId,
       input: { remindAt: expectedDate.toISOString() },
     })
+  })
+
+  it('closes the popup when Enter is pressed', async () => {
+    mockMutate()
+    const user = userEvent.setup()
+    render(<SidebarRemindField taskId={taskId} remindAt={null} />)
+
+    await user.click(screen.getByText('なし'))
+    await user.type(screen.getByPlaceholderText(inputPlaceholder), '明日9時')
+
+    const expectedDate = assertDefined(await parseReminderInput('明日9時'))
+    await screen.findByText(formatAbsoluteReminder(expectedDate))
+
+    await user.keyboard('{Enter}')
+
     expect(screen.queryByPlaceholderText(inputPlaceholder)).toBeNull()
   })
 
-  it('clears the reminder and closes the popup when "なし" is clicked from the popup', async () => {
+  it('clears the reminder when "なし" is clicked from the popup', async () => {
     const mutate = mockMutate()
     const remindAt = '2026-03-25T09:00:00.000Z'
     const user = userEvent.setup()
@@ -139,6 +166,19 @@ describe('SidebarRemindField', () => {
       id: taskId,
       input: { remindAt: null },
     })
+  })
+
+  it('closes the popup after clearing the reminder', async () => {
+    mockMutate()
+    const remindAt = '2026-03-25T09:00:00.000Z'
+    const user = userEvent.setup()
+    render(<SidebarRemindField taskId={taskId} remindAt={remindAt} />)
+
+    await user.click(
+      screen.getByText(formatReminderSummary(new Date(remindAt))),
+    )
+    await user.click(await screen.findByText('なし'))
+
     expect(screen.queryByPlaceholderText(inputPlaceholder)).toBeNull()
   })
 })

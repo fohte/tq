@@ -72,7 +72,7 @@ describe('SidebarParentField', () => {
     expect(screen.getByPlaceholderText('Search tasks...')).toBeInTheDocument()
   })
 
-  it('selects a candidate, updates the parent, and closes the popup', async () => {
+  it('selects a candidate and updates the parent', async () => {
     const mutate = vi.fn()
     mockUseTaskList.mockReturnValue(
       partialMutation<UseTaskListResult>({
@@ -99,10 +99,34 @@ describe('SidebarParentField', () => {
       id: currentTask.id,
       parentId: searchCandidate.id,
     })
+  })
+
+  it('closes the popup after selecting a candidate', async () => {
+    mockUseTaskList.mockReturnValue(
+      partialMutation<UseTaskListResult>({
+        categorized: { all: [currentTask] },
+      }),
+    )
+    mockUseSearchTasks.mockReturnValue(
+      partialMutation<UseSearchTasksResult>({
+        data: [searchCandidate],
+        isFetching: false,
+      }),
+    )
+    mockUseUpdateTaskParent.mockReturnValue(
+      partialMutation<UseUpdateTaskParentResult>({ mutate: vi.fn() }),
+    )
+    const user = userEvent.setup()
+    render(<SidebarParentField taskId={currentTask.id} parentId={null} />)
+
+    await user.click(screen.getByRole('button', { name: '—' }))
+    await user.type(screen.getByPlaceholderText('Search tasks...'), 'Deploy')
+    await user.click(screen.getByText(searchCandidate.title))
+
     expect(screen.queryByPlaceholderText('Search tasks...')).toBeNull()
   })
 
-  it('clears the parent and closes the popup when the "—" row is clicked', async () => {
+  it('clears the parent when the "—" row is clicked', async () => {
     const mutate = vi.fn()
     mockUseTaskList.mockReturnValue(
       partialMutation<UseTaskListResult>({
@@ -134,6 +158,35 @@ describe('SidebarParentField', () => {
       id: currentTask.id,
       parentId: null,
     })
+  })
+
+  it('closes the popup after clearing the parent', async () => {
+    mockUseTaskList.mockReturnValue(
+      partialMutation<UseTaskListResult>({
+        categorized: { all: [currentTask, existingParentTask] },
+      }),
+    )
+    mockUseSearchTasks.mockReturnValue(
+      partialMutation<UseSearchTasksResult>({ data: [], isFetching: false }),
+    )
+    mockUseUpdateTaskParent.mockReturnValue(
+      partialMutation<UseUpdateTaskParentResult>({ mutate: vi.fn() }),
+    )
+    const user = userEvent.setup()
+    render(
+      <SidebarParentField
+        taskId={currentTask.id}
+        parentId={existingParentTask.id}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole('button', {
+        name: `#${String(existingParentTask.number)} ${existingParentTask.title}`,
+      }),
+    )
+    await user.click(screen.getByRole('button', { name: '—' }))
+
     expect(screen.queryByPlaceholderText('Search tasks...')).toBeNull()
   })
 
@@ -180,9 +233,10 @@ describe('SidebarParentField', () => {
     await user.click(screen.getByRole('button', { name: '—' }))
     await user.type(screen.getByPlaceholderText('Search tasks...'), 'task')
 
-    expect(screen.queryByText(currentTask.title)).toBeNull()
-    expect(screen.queryByText(childTask.title)).toBeNull()
-    expect(screen.queryByText(grandchildTask.title)).toBeNull()
-    expect(screen.queryByText(unrelatedTask.title)).not.toBeNull()
+    expect(
+      screen
+        .getAllByRole('button', { name: /^#\d+ / })
+        .map((el) => el.textContent),
+    ).toEqual([`#${String(unrelatedTask.number)}${unrelatedTask.title}`])
   })
 })

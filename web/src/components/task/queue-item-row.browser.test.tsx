@@ -64,7 +64,7 @@ describe('QueueItemRow', () => {
     expect(screen.getByPlaceholderText(formatMinutes(30))).toBeInTheDocument()
   })
 
-  it('commits a valid duration on blur and exits edit mode', async () => {
+  it('commits a valid duration on blur', async () => {
     const mutate = vi.fn()
     mockUseUpdateTask.mockReturnValue(
       partialMutation<UseUpdateTaskResult>({ mutate }),
@@ -84,10 +84,27 @@ describe('QueueItemRow', () => {
       id: task.id,
       input: { estimatedMinutes: 45 },
     })
+  })
+
+  it('exits edit mode after committing on blur', async () => {
+    mockUseUpdateTask.mockReturnValue(
+      partialMutation<UseUpdateTaskResult>({ mutate: vi.fn() }),
+    )
+    const user = userEvent.setup()
+    render(
+      <Providers>
+        <QueueItemRow task={task} queueKey="day" onRemove={vi.fn()} />
+      </Providers>,
+    )
+
+    await user.click(await screen.findByText('No estimate'))
+    await user.type(screen.getByPlaceholderText(formatMinutes(30)), '45')
+    await user.tab()
+
     expect(screen.getByText('No estimate')).toBeInTheDocument()
   })
 
-  it('cancels without committing when Escape is pressed', async () => {
+  it('does not commit when Escape is pressed', async () => {
     const mutate = vi.fn()
     mockUseUpdateTask.mockReturnValue(
       partialMutation<UseUpdateTaskResult>({ mutate }),
@@ -104,6 +121,23 @@ describe('QueueItemRow', () => {
     await user.keyboard('{Escape}')
 
     expect(mutate).not.toHaveBeenCalled()
+  })
+
+  it('exits edit mode when Escape is pressed', async () => {
+    mockUseUpdateTask.mockReturnValue(
+      partialMutation<UseUpdateTaskResult>({ mutate: vi.fn() }),
+    )
+    const user = userEvent.setup()
+    render(
+      <Providers>
+        <QueueItemRow task={task} queueKey="day" onRemove={vi.fn()} />
+      </Providers>,
+    )
+
+    await user.click(await screen.findByText('No estimate'))
+    await user.type(screen.getByPlaceholderText(formatMinutes(30)), '45')
+    await user.keyboard('{Escape}')
+
     expect(screen.getByText('No estimate')).toBeInTheDocument()
   })
 

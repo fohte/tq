@@ -15,7 +15,7 @@ const searchCandidate = makeTask({
 })
 
 const meta = {
-  title: 'Task/TaskDetail/SidebarParentField',
+  title: 'Task/TaskDetail/SidebarParentFieldAppearance',
   component: SidebarParentFieldAppearance,
   parameters: {
     layout: 'fullscreen',

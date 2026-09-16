@@ -19,7 +19,7 @@ const monthlyRule: RecurrenceRule = {
 }
 
 const meta = {
-  title: 'Recurring/TemplateRepeatField',
+  title: 'Recurring/TemplateRepeatFieldAppearance',
   component: TemplateRepeatFieldAppearance,
   parameters: {
     layout: 'fullscreen',

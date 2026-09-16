@@ -30,8 +30,10 @@ export async function clickSelectOption(
 }
 
 /**
- * Casts a partial hook-return mock (e.g. `useMutation`) to its full type.
- * Callers only set the fields their test reads, never the ones it doesn't.
+ * Casts a partial hook-return mock to its full type. Named after its
+ * original `useMutation` use case, but works for any hook's return value
+ * (`useQuery`, `useTaskList`, ...) — callers only set the fields their test
+ * reads, never the ones it doesn't.
  */
 export function partialMutation<T>(partial: Partial<T>): T {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value

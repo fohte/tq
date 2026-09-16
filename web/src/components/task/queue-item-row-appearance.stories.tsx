@@ -54,7 +54,7 @@ const stubDndProps = {
 }
 
 const meta = {
-  title: 'Task/QueueItemRow',
+  title: 'Task/QueueItemRowAppearance',
   component: QueueItemRowAppearance,
   parameters: {
     layout: 'centered',

@@ -14,7 +14,7 @@ function atOffsetDays(days: number, hours: number, minutes: number): string {
 }
 
 const meta = {
-  title: 'Task/TaskDetail/SidebarRemindField',
+  title: 'Task/TaskDetail/SidebarRemindFieldAppearance',
   component: SidebarRemindFieldAppearance,
   parameters: {
     layout: 'centered',

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import { Input } from '#components/ui/input'
 import { ExpandableFieldChip } from '#components/ui/modal-field'
-import { ExpandableContextChipDemo } from '#components/ui/modal-field.stories'
+import { ExpandableContextChipDemo } from '#components/ui/modal-field-test-fixtures'
 import { clickSelectOption } from '#lib/test-utils'
 
 describe('ExpandableFieldChip', () => {

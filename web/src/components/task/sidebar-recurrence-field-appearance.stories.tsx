@@ -25,7 +25,7 @@ const customRule: RecurrenceRule = {
 }
 
 const meta = {
-  title: 'Task/TaskDetail/SidebarRecurrenceField',
+  title: 'Task/TaskDetail/SidebarRecurrenceFieldAppearance',
   component: SidebarRecurrenceFieldAppearance,
   parameters: {
     layout: 'fullscreen',
