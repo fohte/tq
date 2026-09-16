@@ -12,15 +12,17 @@ import type { SlackPermalinkData } from '#lib/inline-reference/providers/slack-p
 export function SlackPermalinkChip({
   data,
   raw,
+  defaultOpen,
 }: {
   data: SlackPermalinkData
   raw: string
+  defaultOpen?: boolean | undefined
 }) {
   const { data: preview } = useSlackPermalinkPreview(data.url)
   if (preview == null) return <span className="break-all">{raw}</span>
 
   return (
-    <PreviewCard>
+    <PreviewCard defaultOpen={defaultOpen}>
       <PreviewCardTrigger
         render={<span />}
         className="inline-flex cursor-text items-center gap-1 border border-border bg-secondary/50 px-1.5 py-0.5 align-baseline text-sm leading-none"

@@ -1,6 +1,11 @@
+import type {
+  DraggableAttributes,
+  DraggableSyntheticListeners,
+} from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { X } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { useRef, useState } from 'react'
 
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
@@ -16,6 +21,104 @@ import { parseDurationToMinutes } from '#lib/parse-duration'
 export interface QueueTaskDragData extends Record<string, unknown> {
   type: 'queue-task'
   queueKey: string
+}
+
+export function QueueItemRowAppearance({
+  task,
+  onRemove,
+  attributes,
+  listeners,
+  setNodeRef,
+  style,
+  isEditingEstimate,
+  estimateInput,
+  onEstimateInputChange,
+  onStartEditingEstimate,
+  onCommitEstimate,
+  onCancelEstimate,
+}: {
+  task: Task
+  onRemove: () => void
+  attributes: DraggableAttributes
+  listeners: DraggableSyntheticListeners
+  setNodeRef: (node: HTMLElement | null) => void
+  style: CSSProperties
+  isEditingEstimate: boolean
+  estimateInput: string
+  onEstimateInputChange: (value: string) => void
+  onStartEditingEstimate: () => void
+  onCommitEstimate: () => void
+  onCancelEstimate: () => void
+}) {
+  // The value itself renders through TaskRowAppearance's own second line;
+  // this only supplies the null-estimate affordances (chip / input).
+  const estimateItem =
+    task.estimatedMinutes != null ? null : isEditingEstimate ? (
+      <Input
+        autoFocus
+        value={estimateInput}
+        onChange={(e) => {
+          onEstimateInputChange(e.target.value)
+        }}
+        onBlur={onCommitEstimate}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur()
+          if (e.key === 'Escape') onCancelEstimate()
+        }}
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+        }}
+        placeholder={formatMinutes(30)}
+        className="h-6 w-16 shrink-0 py-0.5 font-mono text-xs"
+      />
+    ) : (
+      <Chip
+        as="button"
+        size="md"
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          onStartEditingEstimate()
+        }}
+        title="No estimate set — excluded from auto-scheduling"
+        className="shrink-0 whitespace-nowrap border-destructive text-destructive"
+      >
+        No estimate
+      </Chip>
+    )
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-1 border-b border-border"
+    >
+      <DragHandle
+        attributes={attributes}
+        listeners={listeners}
+        aria-label="Reorder task"
+      />
+
+      <div className="min-w-0 flex-1">
+        <TaskRowAppearance
+          task={task}
+          draggable={task.status !== 'completed'}
+          secondLineExtras={[estimateItem]}
+        />
+      </div>
+
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        onClick={onRemove}
+        aria-label="Remove from queue"
+        className="shrink-0 text-muted-foreground hover:text-destructive"
+      >
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
+  )
 }
 
 export function QueueItemRow({
@@ -64,77 +167,26 @@ export function QueueItemRow({
     setIsEditingEstimate(false)
   }
 
-  // The value itself renders through TaskRowAppearance's own second line;
-  // this only supplies the null-estimate affordances (chip / input).
-  const estimateItem =
-    task.estimatedMinutes != null ? null : isEditingEstimate ? (
-      <Input
-        autoFocus
-        value={estimateInput}
-        onChange={(e) => {
-          setEstimateInput(e.target.value)
-        }}
-        onBlur={commitEstimate}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') e.currentTarget.blur()
-          if (e.key === 'Escape') {
-            cancelingRef.current = true
-            setIsEditingEstimate(false)
-          }
-        }}
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-        }}
-        placeholder={formatMinutes(30)}
-        className="h-6 w-16 shrink-0 py-0.5 font-mono text-xs"
-      />
-    ) : (
-      <Chip
-        as="button"
-        size="md"
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          setEstimateInput('')
-          setIsEditingEstimate(true)
-        }}
-        title="No estimate set — excluded from auto-scheduling"
-        className="shrink-0 whitespace-nowrap border-destructive text-destructive"
-      >
-        No estimate
-      </Chip>
-    )
-
   return (
-    <div
-      ref={setNodeRef}
+    <QueueItemRowAppearance
+      task={task}
+      onRemove={onRemove}
+      attributes={attributes}
+      listeners={listeners}
+      setNodeRef={setNodeRef}
       style={style}
-      className="flex items-center gap-1 border-b border-border"
-    >
-      <DragHandle
-        attributes={attributes}
-        listeners={listeners}
-        aria-label="Reorder task"
-      />
-
-      <div className="min-w-0 flex-1">
-        <TaskRowAppearance
-          task={task}
-          draggable={task.status !== 'completed'}
-          secondLineExtras={[estimateItem]}
-        />
-      </div>
-
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        onClick={onRemove}
-        aria-label="Remove from queue"
-        className="shrink-0 text-muted-foreground hover:text-destructive"
-      >
-        <X className="h-4 w-4" />
-      </Button>
-    </div>
+      isEditingEstimate={isEditingEstimate}
+      estimateInput={estimateInput}
+      onEstimateInputChange={setEstimateInput}
+      onStartEditingEstimate={() => {
+        setEstimateInput('')
+        setIsEditingEstimate(true)
+      }}
+      onCommitEstimate={commitEstimate}
+      onCancelEstimate={() => {
+        cancelingRef.current = true
+        setIsEditingEstimate(false)
+      }}
+    />
   )
 }
