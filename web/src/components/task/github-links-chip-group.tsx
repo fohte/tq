@@ -19,7 +19,13 @@ function pickRepresentativeGithubLink(links: GithubLink[]): GithubLink | null {
   )
 }
 
-export function GithubLinksChipGroup({ links }: { links: GithubLink[] }) {
+export function GithubLinksChipGroup({
+  links,
+  defaultOpen,
+}: {
+  links: GithubLink[]
+  defaultOpen?: boolean | undefined
+}) {
   const representative = pickRepresentativeGithubLink(links)
   if (representative == null) return null
 
@@ -28,7 +34,7 @@ export function GithubLinksChipGroup({ links }: { links: GithubLink[] }) {
   }
 
   return (
-    <PreviewCard>
+    <PreviewCard defaultOpen={defaultOpen}>
       <PreviewCardTrigger render={<span />} data-testid="github-links-chip">
         <GithubLinkBadge link={representative} extraCount={links.length - 1} />
       </PreviewCardTrigger>

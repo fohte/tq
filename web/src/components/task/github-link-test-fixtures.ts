@@ -17,6 +17,33 @@ export function makeGithubLink(
   }
 }
 
+export const issueLink = makeGithubLink({
+  id: 'link-issue',
+  number: 412,
+  kind: 'issue',
+  state: 'open',
+  title: 'Support multiple GitHub links per task',
+  url: 'https://github.com/fohte/tq/issues/412',
+})
+
+export const mergedPrLink = makeGithubLink({
+  id: 'link-pr-436',
+  number: 436,
+  kind: 'pull_request',
+  state: 'merged',
+  title: 'api: allow associating multiple GitHub links with a task',
+  url: 'https://github.com/fohte/tq/pull/436',
+})
+
+export const openPrLink = makeGithubLink({
+  id: 'link-pr-441',
+  number: 441,
+  kind: 'pull_request',
+  state: 'open',
+  title: 'web: show representative chip with +N and hover popup',
+  url: 'https://github.com/fohte/tq/pull/441',
+})
+
 export type GithubUrlPreview = Extract<
   ResolveGithubUrlResult,
   { linked: false }

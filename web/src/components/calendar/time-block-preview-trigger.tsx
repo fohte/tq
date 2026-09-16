@@ -36,9 +36,11 @@ type PreviewBlock = Pick<TimeBlock, 'startTime' | 'endTime' | 'isAutoScheduled'>
 export function TimeBlockPreviewTrigger({
   event,
   children,
+  defaultOpen,
 }: {
   event: PreviewableEvent
   children: React.ReactNode
+  defaultOpen?: boolean | undefined
 }) {
   const { taskId, redacted, isAutoScheduled } = event.extendedProps
 
@@ -58,11 +60,20 @@ export function TimeBlockPreviewTrigger({
   }
 
   return isAutoScheduled === true ? (
-    <AutoTimeBlockPreview taskId={taskId} block={block}>
+    <AutoTimeBlockPreview
+      taskId={taskId}
+      block={block}
+      defaultOpen={defaultOpen}
+    >
       {children}
     </AutoTimeBlockPreview>
   ) : (
-    <ManualTimeBlockPreview taskId={taskId} blockId={event.id} block={block}>
+    <ManualTimeBlockPreview
+      taskId={taskId}
+      blockId={event.id}
+      block={block}
+      defaultOpen={defaultOpen}
+    >
       {children}
     </ManualTimeBlockPreview>
   )
@@ -72,12 +83,14 @@ function AutoTimeBlockPreview({
   taskId,
   block,
   children,
+  defaultOpen,
 }: {
   taskId: string
   block: PreviewBlock
   children: React.ReactNode
+  defaultOpen?: boolean | undefined
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen ?? false)
   const { onDelete, isDeleting } = useRemoveFromDayQueue(
     taskId,
     formatLocalDate(new Date(block.startTime)),
@@ -94,6 +107,7 @@ function AutoTimeBlockPreview({
       block={block}
       onDelete={onDelete}
       isDeleting={isDeleting}
+      defaultOpen={defaultOpen}
       onOpenChange={setOpen}
     >
       {children}
@@ -106,13 +120,15 @@ function ManualTimeBlockPreview({
   blockId,
   block,
   children,
+  defaultOpen,
 }: {
   taskId: string
   blockId: string
   block: PreviewBlock
   children: React.ReactNode
+  defaultOpen?: boolean | undefined
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen ?? false)
   const { onDelete, isDeleting } = useDeleteManualTimeBlock(taskId, blockId)
   const { data: task, isError: isTaskError } = useTask(taskId, {
     enabled: open,
@@ -125,6 +141,7 @@ function ManualTimeBlockPreview({
       block={block}
       onDelete={onDelete}
       isDeleting={isDeleting}
+      defaultOpen={defaultOpen}
       onOpenChange={setOpen}
     >
       {children}
@@ -140,6 +157,7 @@ function TimeBlockPreviewPopup({
   block,
   onDelete,
   isDeleting,
+  defaultOpen,
   onOpenChange,
   children,
 }: {
@@ -148,13 +166,18 @@ function TimeBlockPreviewPopup({
   block: PreviewBlock
   onDelete: () => void
   isDeleting: boolean
+  defaultOpen?: boolean | undefined
   onOpenChange: (open: boolean) => void
   children: React.ReactNode
 }) {
   const actionsRef = useRef<PreviewCardPrimitive.Root.Actions>(null)
 
   return (
-    <PreviewCard actionsRef={actionsRef} onOpenChange={onOpenChange}>
+    <PreviewCard
+      actionsRef={actionsRef}
+      defaultOpen={defaultOpen}
+      onOpenChange={onOpenChange}
+    >
       <PreviewCardTrigger
         render={<div className="h-full w-full" />}
         onPointerDown={() => actionsRef.current?.close()}
