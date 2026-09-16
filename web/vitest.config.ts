@@ -39,9 +39,6 @@ function withTailwind(project: ReturnType<typeof createStorybookProject>): any {
   }
 }
 
-// Files listed here run against a real Chromium instead of jsdom (the
-// `browser` project below) and must stay out of the `unit` project's jsdom
-// run, so both projects reference this single list instead of drifting.
 const browserTestFiles = ['src/components/label/edit-label-dialog.test.tsx']
 
 export default defineConfig({

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { EditLabelDialog } from '#components/label/edit-label-dialog'
 import { makeLabel } from '#components/label/label-test-fixtures'
 import { useUpdateLabel } from '#hooks/use-labels'
-import { clickSelectOption } from '#lib/test-utils'
+import { clickSelectOption, partialMutation } from '#lib/test-utils'
 
 vi.mock('#hooks/use-labels', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-labels')>()
@@ -19,19 +19,16 @@ const mockUseUpdateLabel = vi.mocked(useUpdateLabel)
 
 type UpdateLabelResult = ReturnType<typeof useUpdateLabel>
 
-function partialMutation(
-  partial: Partial<UpdateLabelResult>,
-): UpdateLabelResult {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
-  return partial as UpdateLabelResult
-}
-
 const label = makeLabel({ name: 'oncall', context: 'work' })
 
 describe('EditLabelDialog', () => {
   it('disables Save when the name is cleared', async () => {
     mockUseUpdateLabel.mockReturnValue(
-      partialMutation({ mutate: vi.fn(), isPending: false, isError: false }),
+      partialMutation<UpdateLabelResult>({
+        mutate: vi.fn(),
+        isPending: false,
+        isError: false,
+      }),
     )
     const user = userEvent.setup()
     render(<EditLabelDialog label={label} open onOpenChange={vi.fn()} />)
@@ -49,7 +46,11 @@ describe('EditLabelDialog', () => {
       }) as UpdateLabelResult['mutate'],
     )
     mockUseUpdateLabel.mockReturnValue(
-      partialMutation({ mutate, isPending: false, isError: false }),
+      partialMutation<UpdateLabelResult>({
+        mutate,
+        isPending: false,
+        isError: false,
+      }),
     )
     const onOpenChange = vi.fn()
     const user = userEvent.setup()
@@ -66,7 +67,11 @@ describe('EditLabelDialog', () => {
   it('submits the updated name and context', async () => {
     const mutate = vi.fn<UpdateLabelResult['mutate']>()
     mockUseUpdateLabel.mockReturnValue(
-      partialMutation({ mutate, isPending: false, isError: false }),
+      partialMutation<UpdateLabelResult>({
+        mutate,
+        isPending: false,
+        isError: false,
+      }),
     )
     const user = userEvent.setup()
     render(<EditLabelDialog label={label} open onOpenChange={vi.fn()} />)
@@ -80,13 +85,14 @@ describe('EditLabelDialog', () => {
 
     expect(mutate).toHaveBeenCalledWith(
       { id: label.id, input: { name: 'oncall', context: 'personal' } },
-      expect.anything(),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- vitest's expect.any() return type isn't generic, so TS can only type this property as `any`
+      { onSuccess: expect.any(Function) },
     )
   })
 
   it('shows the error message when the mutation fails', () => {
     mockUseUpdateLabel.mockReturnValue(
-      partialMutation({
+      partialMutation<UpdateLabelResult>({
         mutate: vi.fn(),
         isPending: false,
         isError: true,

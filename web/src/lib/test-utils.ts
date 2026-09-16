@@ -30,6 +30,15 @@ export async function clickSelectOption(
 }
 
 /**
+ * Casts a partial hook-return mock (e.g. `useMutation`) to its full type.
+ * Callers only set the fields their test reads, never the ones it doesn't.
+ */
+export function partialMutation<T>(partial: Partial<T>): T {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
+  return partial as T
+}
+
+/**
  * Parses the JSON body of a mocked `PUT /api/queues/:key/items` request.
  * Callers only register this handler for a request whose body they
  * constructed themselves via `useSetQueueItems`'s `mutate` call, so the cast

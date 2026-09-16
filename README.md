@@ -54,7 +54,7 @@ pnpm --filter web exec playwright install --with-deps chromium
 pnpm --filter web run test
 ```
 
-Storybook stories also render in Playwright chromium, but as a separate project (`test:storybook`) that isn't part of `pnpm --filter web run test`. CI installs the browser and its system dependencies as two separate, independently cached steps for that project (`.github/workflows/vrt.yml`); locally, `--with-deps` above already covers it.
+Storybook stories also render in Playwright chromium, but as a separate project (`test:storybook`) that isn't part of `pnpm --filter web run test`. CI installs the browser separately for that project (`.github/workflows/vrt.yml`); locally, `--with-deps` above already covers it.
 
 ```sh
 pnpm --filter web run test:storybook
