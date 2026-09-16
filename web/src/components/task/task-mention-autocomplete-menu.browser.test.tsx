@@ -97,7 +97,10 @@ describe('TaskMentionAutocompleteMenu', () => {
   })
 
   it('falls back to the no-results state when the suggestions fetch fails', async () => {
-    mockSuggestions = undefined
+    // use-task-mentions.ts's queryFn maps a non-2xx response to `[]` rather
+    // than throwing, so a failed fetch settles as an empty array, not
+    // `undefined`.
+    mockSuggestions = []
     const { store } = renderMenu()
 
     await screen.findByText('No matching tasks')
