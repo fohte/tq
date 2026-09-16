@@ -31,34 +31,29 @@ export function lookupTask(
   url: string,
   fetchImpl: typeof fetch = fetch,
 ): ResultAsync<LinkedTask | null, Error> {
-  return (
-    ResultAsync.fromPromise(
-      fetchImpl(`${TQ_ORIGIN}/api/github/link?url=${encodeURIComponent(url)}`, {
-        credentials: 'include',
-      }),
-      (cause) => new Error('tq lookup request failed', { cause }),
-    )
-      .andThen((res) =>
-        res.ok
-          ? okAsync(res)
-          : errAsync(
-              new Error(`tq lookup returned status ${String(res.status)}`),
-            ),
-      )
-      .andThen((res) =>
-        ResultAsync.fromPromise(
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the res.ok check above is the runtime guarantee for this endpoint's documented response shape (api/src/routes/github.ts's GET /link)
-          res.json() as Promise<LinkResponseBody>,
-          (cause) => new Error('failed to parse tq lookup response', { cause }),
-        ),
-      )
-      // The API response includes the full task (title, description, status,
-      // ...); narrowed here to LinkedTask so only what the chip needs crosses
-      // into the content script running on github.com.
-      .map((body) =>
-        body.task ? { id: body.task.id, number: body.task.number } : null,
-      )
+  return ResultAsync.fromPromise(
+    fetchImpl(`${TQ_ORIGIN}/api/github/link?url=${encodeURIComponent(url)}`, {
+      credentials: 'include',
+    }),
+    (cause) => new Error('tq lookup request failed', { cause }),
   )
+    .andThen((res) =>
+      res.ok
+        ? okAsync(res)
+        : errAsync(
+            new Error(`tq lookup returned status ${String(res.status)}`),
+          ),
+    )
+    .andThen((res) =>
+      ResultAsync.fromPromise(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the res.ok check above is the runtime guarantee for this endpoint's documented response shape (api/src/routes/github.ts's GET /link)
+        res.json() as Promise<LinkResponseBody>,
+        (cause) => new Error('failed to parse tq lookup response', { cause }),
+      ),
+    )
+    .map((body) =>
+      body.task ? { id: body.task.id, number: body.task.number } : null,
+    )
 }
 
 chrome.runtime.onMessage.addListener(

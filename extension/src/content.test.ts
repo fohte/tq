@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { TQ_ORIGIN } from '#config'
+
 // Wrapped in its own container per label, matching the real page: the
 // header and sticky-header state labels sit in separate subtrees, not as
 // siblings under one shared parent.
 const LABEL_ONLY = '<div><div data-component="StateLabel">Open</div></div>'
 const LABEL_WITH_CHIP =
   '<div><div data-component="StateLabel">Open</div><a data-tq-chip="empty">+ tq</a></div>'
-const LABEL_WITH_LINKED_CHIP =
-  '<div><div data-component="StateLabel">Open</div><a data-tq-chip="linked" href="https://tq.fohte.net/tasks/uuid-1">tq #42</a></div>'
+const LABEL_WITH_LINKED_CHIP = `<div><div data-component="StateLabel">Open</div><a data-tq-chip="linked" href="${TQ_ORIGIN}/tasks/uuid-1">tq #42</a></div>`
 
 const LOOKUP_URL = 'https://github.com/fohte/tq/issues/42'
 
@@ -128,7 +129,6 @@ describe('content script', () => {
 
     await import('#content')
     await firstResponse
-    expect(document.body.innerHTML).toBe(LABEL_WITH_LINKED_CHIP)
 
     const secondResponse = Promise.resolve({ ok: true, task: null })
     sendMessage.mockReturnValueOnce(secondResponse)

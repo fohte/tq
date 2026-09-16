@@ -1,7 +1,5 @@
-// api's GITHUB_ISSUE_URL_PATTERN (api/src/integrations/github/issues.ts) is
-// anchored at the end, so a trailing path segment (e.g. `/pull/12/files`)
-// fails to match and 400s; truncating it off here also collapses every page
-// under one issue/PR to the same lookup URL.
+// A trailing path segment (e.g. `/pull/12/files`) makes the lookup API
+// 400; truncating it also collapses every page under one issue/PR to one URL.
 const GITHUB_ISSUE_OR_PULL_URL_PATTERN =
   /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/(?:issues|pull)\/\d+/
 

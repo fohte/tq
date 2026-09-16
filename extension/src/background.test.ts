@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { TQ_ORIGIN } from '#config'
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -26,7 +28,7 @@ describe('lookupTask', () => {
     await lookupTask('https://github.com/fohte/tq/issues/42', fetchImpl)
 
     expect(fetchImpl).toHaveBeenCalledWith(
-      'https://tq.fohte.net/api/github/link?url=https%3A%2F%2Fgithub.com%2Ffohte%2Ftq%2Fissues%2F42',
+      `${TQ_ORIGIN}/api/github/link?url=https%3A%2F%2Fgithub.com%2Ffohte%2Ftq%2Fissues%2F42`,
       { credentials: 'include' },
     )
   })
@@ -97,12 +99,17 @@ type MessageListener = (
   sendResponse: (response?: unknown) => void,
 ) => boolean
 
+function assertDefined<T>(value: T | undefined): asserts value is T {
+  expect(value).toBeDefined()
+}
+
 async function importAndCaptureListener(): Promise<MessageListener> {
-  const addListener = vi.fn()
+  const addListener = vi.fn<(listener: MessageListener) => void>()
   vi.stubGlobal('chrome', { runtime: { onMessage: { addListener } } })
   await import('#background')
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- vi.fn()'s recorded call args are untyped; background.ts's own addListener call site is the runtime guarantee for this shape
-  const [listener] = addListener.mock.calls[0] as [MessageListener]
+  const call = addListener.mock.calls[0]
+  assertDefined(call)
+  const [listener] = call
   return listener
 }
 
