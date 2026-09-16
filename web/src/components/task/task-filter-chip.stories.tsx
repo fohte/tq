@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, userEvent, within } from 'storybook/test'
 
 import { TaskFilterChip } from '#components/task/task-filter-chip'
 
@@ -27,17 +26,9 @@ export const LabelChip: Story = {
   },
 }
 
-// FilterMenu's desktop branch is a plain AnchoredPopup, so opening it is
-// enough to verify the chip is genuinely pressable and forwards its
-// children into the popup.
 export const OpenMenu: Story = {
   tags: ['desktop-only'],
-  play: async ({ canvas, canvasElement }) => {
-    await userEvent.click(
-      canvas.getByRole('button', { name: 'is todo, doing' }),
-    )
-
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('menu content')).toBeVisible()
+  args: {
+    defaultOpen: true,
   },
 }

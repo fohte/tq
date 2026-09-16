@@ -8,6 +8,7 @@ interface TaskFilterChipProps {
   menuTitle: string
   className?: string
   children: React.ReactNode
+  defaultOpen?: boolean
 }
 
 // An applied filter chip split into a dim attribute part and a foreground
@@ -21,6 +22,7 @@ export function TaskFilterChip({
   menuTitle,
   className,
   children,
+  defaultOpen,
 }: TaskFilterChipProps) {
   return (
     <FilterMenu
@@ -36,6 +38,7 @@ export function TaskFilterChip({
         className,
       )}
       title={menuTitle}
+      defaultOpen={defaultOpen}
     >
       {children}
     </FilterMenu>
