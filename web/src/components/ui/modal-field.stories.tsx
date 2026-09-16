@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { CalendarPlus, Layers } from 'lucide-react'
 import { useState } from 'react'
-import { expect, within } from 'storybook/test'
 
 import { Input } from '#components/ui/input'
 import {
@@ -16,7 +15,6 @@ import {
   SelectValue,
 } from '#components/ui/select'
 import { selectValueHandler } from '#lib/form-utils'
-import { clickSelectOption } from '#lib/test-utils'
 
 const meta = {
   title: 'UI/ModalField',
@@ -79,6 +77,7 @@ export const ExpandableFieldChipExpanded: Story = {
     <ExpandableFieldChip
       icon={<CalendarPlus className="size-3.5" />}
       label="Start"
+      defaultOpen
       expanded={() => (
         <Input
           type="date"
@@ -89,11 +88,6 @@ export const ExpandableFieldChipExpanded: Story = {
       )}
     />
   ),
-  play: async ({ canvasElement, userEvent }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Start' }))
-    await expect(canvas.getByDisplayValue('2026-08-01')).toBeVisible()
-  },
 }
 
 type ContextValue = 'work' | 'personal' | 'dev'
@@ -109,7 +103,11 @@ const contextLabels: Record<ContextValue, string> = {
   dev: 'Dev',
 }
 
-function ExpandableContextChipDemo() {
+export function ExpandableContextChipDemo({
+  defaultOpen,
+}: {
+  defaultOpen?: boolean
+}) {
   const [context, setContext] = useState<ContextValue | ''>('')
 
   return (
@@ -117,6 +115,7 @@ function ExpandableContextChipDemo() {
       icon={<Layers className="size-3.5" />}
       label={context ? contextLabels[context] : 'Context'}
       active={context !== ''}
+      {...(defaultOpen !== undefined && { defaultOpen })}
       expanded={(close) => (
         <Select
           value={context}
@@ -145,20 +144,5 @@ function ExpandableContextChipDemo() {
 }
 
 export const ExpandableFieldChipExpandedWithSelect: Story = {
-  render: () => <ExpandableContextChipDemo />,
-  play: async ({ canvasElement, userEvent }) => {
-    const canvas = within(canvasElement)
-    const body = within(canvasElement.ownerDocument.body)
-
-    await userEvent.click(canvas.getByRole('button', { name: 'Context' }))
-    await userEvent.click(canvas.getByRole('combobox'))
-    await clickSelectOption(
-      userEvent,
-      await body.findByRole('option', { name: 'Work' }),
-    )
-
-    // Picking a value closes the chip via the `close()` callback rather than
-    // its blur handler, so the collapsed label updates immediately.
-    await expect(canvas.getByRole('button', { name: 'Work' })).toBeVisible()
-  },
+  render: () => <ExpandableContextChipDemo defaultOpen />,
 }
