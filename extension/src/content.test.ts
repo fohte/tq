@@ -39,20 +39,6 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-// content.ts awaits the same promise returned here (chained off of
-// chrome.runtime.sendMessage) before updating the DOM. Waiting on it again
-// here, plus one macrotask so content.ts's own .then/.catch reactions have
-// had a chance to run, makes the DOM update visible before the assertion.
-async function settle(response: Promise<unknown>): Promise<void> {
-  await response.catch(() => {
-    // only used to wait for the rejection to be observable below; content.ts
-    // handles the rejection itself via its own .catch
-  })
-  await new Promise((resolve) => {
-    setTimeout(resolve, 0)
-  })
-}
-
 describe('content script', () => {
   it('sends a lookup message for the current page URL', async () => {
     document.body.innerHTML = LABEL_ONLY
@@ -64,6 +50,16 @@ describe('content script', () => {
       type: 'lookup',
       url: LOOKUP_URL,
     })
+  })
+
+  it('does not query the background on a page that is not an issue/PR', async () => {
+    document.body.innerHTML = LABEL_ONLY
+    vi.stubGlobal('location', { href: 'https://github.com/fohte/tq' })
+
+    await import('#content')
+
+    expect(sendMessage).not.toHaveBeenCalled()
+    expect(document.body.innerHTML).toBe(LABEL_ONLY)
   })
 
   it('does not insert a chip before the lookup resolves', async () => {
@@ -81,7 +77,7 @@ describe('content script', () => {
     sendMessage.mockReturnValue(response)
 
     await import('#content')
-    await settle(response)
+    await response
 
     expect(document.body.innerHTML).toBe(LABEL_WITH_CHIP + LABEL_WITH_CHIP)
   })
@@ -95,7 +91,7 @@ describe('content script', () => {
     sendMessage.mockReturnValue(response)
 
     await import('#content')
-    await settle(response)
+    await response
 
     expect(document.body.innerHTML).toBe(LABEL_WITH_LINKED_CHIP)
   })
@@ -106,7 +102,7 @@ describe('content script', () => {
     sendMessage.mockReturnValue(response)
 
     await import('#content')
-    await settle(response)
+    await response
 
     expect(document.body.innerHTML).toBe(LABEL_ONLY)
   })
@@ -117,9 +113,42 @@ describe('content script', () => {
     sendMessage.mockReturnValue(response)
 
     await import('#content')
-    await settle(response)
+    await response.catch(() => {})
 
     expect(document.body.innerHTML).toBe(LABEL_ONLY)
+  })
+
+  it('re-runs the lookup and drops the stale chip after a same-document navigation to a different issue', async () => {
+    document.body.innerHTML = LABEL_ONLY
+    const firstResponse = Promise.resolve({
+      ok: true,
+      task: { id: 'uuid-1', number: 42 },
+    })
+    sendMessage.mockReturnValueOnce(firstResponse)
+
+    await import('#content')
+    await firstResponse
+    expect(document.body.innerHTML).toBe(LABEL_WITH_LINKED_CHIP)
+
+    const secondResponse = Promise.resolve({ ok: true, task: null })
+    sendMessage.mockReturnValueOnce(secondResponse)
+    vi.stubGlobal('location', {
+      href: 'https://github.com/fohte/tq/issues/43',
+    })
+    // Turbo morphs the DOM in place instead of reloading the content script.
+    document.body.innerHTML = LABEL_ONLY
+
+    await vi.waitFor(() => {
+      expect(sendMessage).toHaveBeenLastCalledWith({
+        type: 'lookup',
+        url: 'https://github.com/fohte/tq/issues/43',
+      })
+    })
+    await secondResponse
+
+    await vi.waitFor(() => {
+      expect(document.body.innerHTML).toBe(LABEL_WITH_CHIP)
+    })
   })
 
   it('does not insert a second chip when the observer reruns after an unrelated mutation', async () => {
@@ -128,7 +157,7 @@ describe('content script', () => {
     sendMessage.mockReturnValue(response)
 
     await import('#content')
-    await settle(response)
+    await response
     expect(document.body.innerHTML).toBe(LABEL_WITH_CHIP)
 
     const filler = document.createElement('div')
@@ -146,7 +175,7 @@ describe('content script', () => {
     sendMessage.mockReturnValue(response)
 
     await import('#content')
-    await settle(response)
+    await response
     expect(document.body.innerHTML).toBe(LABEL_WITH_CHIP)
 
     document.body.innerHTML = LABEL_ONLY
