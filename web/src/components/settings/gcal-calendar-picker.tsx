@@ -13,10 +13,14 @@ import { cn } from '#lib/utils'
 
 export interface GcalCalendarPickerProps {
   account: IntegrationAccountView
+  initialOpen?: boolean
 }
 
-export function GcalCalendarPicker({ account }: GcalCalendarPickerProps) {
-  const [open, setOpen] = useState(false)
+export function GcalCalendarPicker({
+  account,
+  initialOpen = false,
+}: GcalCalendarPickerProps) {
+  const [open, setOpen] = useState(initialOpen)
 
   const calendarsQuery = useGcalCalendarsList(account.id, open)
   const updateSubscription = useUpdateCalendarSubscription(account.id)

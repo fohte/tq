@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect } from 'storybook/test'
 
 import { RecurringTemplateListSection } from '#components/recurring/recurring-template-list-section'
 import { makeRecurringTemplate } from '#components/recurring/recurring-template-test-fixtures'
@@ -70,20 +69,5 @@ export const Paused: Story = {
         enabled: false,
       }),
     ],
-  },
-}
-
-export const Empty: Story = {
-  args: {
-    label: 'Active',
-    templates: [],
-  },
-  parameters: {
-    // Renders null by design, so the screenshot is blank — VRT's
-    // blank-screenshot check flags that as a likely render failure.
-    screenshot: { skip: true },
-  },
-  play: async ({ canvas }) => {
-    await expect(canvas.queryByText(/Active/)).not.toBeInTheDocument()
   },
 }

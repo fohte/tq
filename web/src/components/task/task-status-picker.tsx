@@ -33,16 +33,18 @@ export function TaskStatusPicker({
   status,
   statusReason,
   onValueChange,
+  defaultOpen,
 }: {
   status: Task['status']
   statusReason: Task['statusReason']
   onValueChange: (value: StatusPickerValue) => void
+  defaultOpen?: boolean | undefined
 }) {
   const value: StatusPickerValue =
     status === 'completed' ? (statusReason ?? 'completed') : 'todo'
 
   return (
-    <DropdownMenu>
+    <DropdownMenu defaultOpen={defaultOpen}>
       <DropdownMenuTrigger
         aria-label="Change task status"
         onClick={(e) => {

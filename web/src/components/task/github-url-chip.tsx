@@ -15,9 +15,11 @@ import type { GithubUrlData } from '#lib/inline-reference/providers/github-url'
 export function GithubUrlChip({
   data,
   raw,
+  defaultOpen,
 }: {
   data: GithubUrlData
   raw: string
+  defaultOpen?: boolean | undefined
 }) {
   const { data: result } = useGithubUrlPreview(data.url)
   if (result == null) return <span>{raw}</span>
@@ -26,7 +28,7 @@ export function GithubUrlChip({
   if (summary == null) return <span>{raw}</span>
 
   return (
-    <PreviewCard>
+    <PreviewCard defaultOpen={defaultOpen}>
       <PreviewCardTrigger
         render={<span />}
         className="inline-flex cursor-text items-center gap-1 border border-border bg-secondary/50 px-1.5 py-0.5 align-baseline text-sm leading-none"

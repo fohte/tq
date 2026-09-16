@@ -37,6 +37,155 @@ const recurrenceTypeOptions: readonly TemplateRecurrenceType[] = [
   'monthly',
 ]
 
+export function TemplateRepeatFieldAppearance({
+  recurrenceRule,
+  isEditing,
+  onOpenChange,
+  type,
+  onTypeChange,
+  intervalInput,
+  onIntervalInputChange,
+  daysOfWeek,
+  onToggleDay,
+  dayOfMonth,
+  onDayOfMonthChange,
+  anchorDate,
+  lastGeneratedDate,
+  canSave,
+  onSave,
+}: {
+  recurrenceRule: RecurrenceRule
+  isEditing: boolean
+  onOpenChange: (open: boolean) => void
+  type: TemplateRecurrenceType
+  onTypeChange: (type: TemplateRecurrenceType) => void
+  intervalInput: string
+  onIntervalInputChange: (value: string) => void
+  daysOfWeek: number[]
+  onToggleDay: (day: number) => void
+  dayOfMonth: string
+  onDayOfMonthChange: (value: string) => void
+  anchorDate: string
+  lastGeneratedDate: string | null
+  canSave: boolean
+  onSave: () => void
+}) {
+  const anchorRef = useRef<HTMLButtonElement>(null)
+
+  const parsedInterval = Number.parseInt(intervalInput, 10)
+  const intervalValue =
+    Number.isInteger(parsedInterval) && parsedInterval > 0
+      ? parsedInterval
+      : null
+
+  const draftRule = buildRecurrenceRule(
+    type,
+    intervalValue,
+    daysOfWeek,
+    dayOfMonth,
+  )
+
+  const nextOccurrence =
+    draftRule != null
+      ? computeNextOccurrence(lastGeneratedDate ?? anchorDate, draftRule)
+      : null
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="font-mono text-2xs text-muted-foreground-faint">
+        REPEAT
+      </span>
+      <div className="font-mono text-xs text-foreground">
+        <button
+          ref={anchorRef}
+          type="button"
+          onClick={() => {
+            onOpenChange(true)
+          }}
+          className="w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
+        >
+          {formatRecurrenceSummary(recurrenceRule)}
+        </button>
+        <AnchoredPopup
+          open={isEditing}
+          onOpenChange={onOpenChange}
+          anchor={anchorRef}
+          className="w-72 p-3"
+        >
+          <div className="flex flex-col gap-3">
+            <Select
+              value={type}
+              onValueChange={selectValueHandler(
+                onTypeChange,
+                recurrenceTypeOptions,
+              )}
+            >
+              <SelectTrigger size="sm" className={fieldValueClassName}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="daily">Daily</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex items-center gap-1.5 text-xs text-foreground">
+              Every
+              <Input
+                type="number"
+                min="1"
+                value={intervalInput}
+                onChange={(e) => {
+                  onIntervalInputChange(e.target.value)
+                }}
+                className="h-auto w-12 border-0 bg-transparent p-0 text-center shadow-none focus-visible:ring-0"
+              />
+              {intervalUnitLabel(type, intervalValue ?? 1)}
+            </div>
+
+            {type === 'weekly' && (
+              <WeekdayToggleRow
+                daysOfWeek={daysOfWeek}
+                toggleDay={onToggleDay}
+              />
+            )}
+
+            {type === 'monthly' && (
+              <Input
+                type="number"
+                min="1"
+                max="31"
+                value={dayOfMonth}
+                onChange={(e) => {
+                  onDayOfMonthChange(e.target.value)
+                }}
+                placeholder="Day of month (1-31)"
+                className="h-auto w-full border-0 border-b border-border bg-transparent p-0 pb-1 text-xs shadow-none focus-visible:ring-0"
+              />
+            )}
+
+            {nextOccurrence != null && (
+              <p className="text-2xs text-muted-foreground">
+                Next: {formatShortDate(nextOccurrence)}
+              </p>
+            )}
+
+            <Button
+              size="sm"
+              onClick={onSave}
+              disabled={!canSave}
+              className="self-end"
+            >
+              Save
+            </Button>
+          </div>
+        </AnchoredPopup>
+      </div>
+    </div>
+  )
+}
+
 export function TemplateRepeatField({
   templateId,
   recurrenceRule,
@@ -49,7 +198,6 @@ export function TemplateRepeatField({
   anchorDate: string
 }) {
   const [isEditing, setIsEditing] = useState(false)
-  const anchorRef = useRef<HTMLButtonElement>(null)
   const updateTemplate = useUpdateRecurringTemplate()
 
   // A 'custom' rule (only reachable via the API/MCP, never created by this
@@ -93,6 +241,14 @@ export function TemplateRepeatField({
     setIsEditing(false)
   }
 
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      openEditing()
+    } else {
+      stopEditing()
+    }
+  }
+
   const toggleDay = (day: number) => {
     setDaysOfWeek((prev) => toggleWeekday(prev, day))
   }
@@ -119,11 +275,6 @@ export function TemplateRepeatField({
   const hasChanges = JSON.stringify(draftRule) !== JSON.stringify(originalRule)
   const canSave = hasChanges && draftRule != null
 
-  const nextOccurrence =
-    draftRule != null
-      ? computeNextOccurrence(lastGeneratedDate ?? anchorDate, draftRule)
-      : null
-
   const handleSave = () => {
     if (draftRule == null) return
     updateTemplate.mutate({
@@ -134,91 +285,22 @@ export function TemplateRepeatField({
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <span className="font-mono text-2xs text-muted-foreground-faint">
-        REPEAT
-      </span>
-      <div className="font-mono text-xs text-foreground">
-        <button
-          ref={anchorRef}
-          type="button"
-          onClick={openEditing}
-          className="w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
-        >
-          {formatRecurrenceSummary(recurrenceRule)}
-        </button>
-        <AnchoredPopup
-          open={isEditing}
-          onOpenChange={(open) => {
-            if (!open) stopEditing()
-          }}
-          anchor={anchorRef}
-          className="w-72 p-3"
-        >
-          <div className="flex flex-col gap-3">
-            <Select
-              value={type}
-              onValueChange={selectValueHandler(setType, recurrenceTypeOptions)}
-            >
-              <SelectTrigger size="sm" className={fieldValueClassName}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="daily">Daily</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <div className="flex items-center gap-1.5 text-xs text-foreground">
-              Every
-              <Input
-                type="number"
-                min="1"
-                value={intervalInput}
-                onChange={(e) => {
-                  setIntervalInput(e.target.value)
-                }}
-                className="h-auto w-12 border-0 bg-transparent p-0 text-center shadow-none focus-visible:ring-0"
-              />
-              {intervalUnitLabel(type, intervalValue ?? 1)}
-            </div>
-
-            {type === 'weekly' && (
-              <WeekdayToggleRow daysOfWeek={daysOfWeek} toggleDay={toggleDay} />
-            )}
-
-            {type === 'monthly' && (
-              <Input
-                type="number"
-                min="1"
-                max="31"
-                value={dayOfMonth}
-                onChange={(e) => {
-                  setDayOfMonth(e.target.value)
-                }}
-                placeholder="Day of month (1-31)"
-                className="h-auto w-full border-0 border-b border-border bg-transparent p-0 pb-1 text-xs shadow-none focus-visible:ring-0"
-              />
-            )}
-
-            {nextOccurrence != null && (
-              <p className="text-2xs text-muted-foreground">
-                Next: {formatShortDate(nextOccurrence)}
-              </p>
-            )}
-
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={!canSave}
-              className="self-end"
-            >
-              Save
-            </Button>
-          </div>
-        </AnchoredPopup>
-      </div>
-    </div>
+    <TemplateRepeatFieldAppearance
+      recurrenceRule={recurrenceRule}
+      isEditing={isEditing}
+      onOpenChange={handleOpenChange}
+      type={type}
+      onTypeChange={setType}
+      intervalInput={intervalInput}
+      onIntervalInputChange={setIntervalInput}
+      daysOfWeek={daysOfWeek}
+      onToggleDay={toggleDay}
+      dayOfMonth={dayOfMonth}
+      onDayOfMonthChange={setDayOfMonth}
+      anchorDate={anchorDate}
+      lastGeneratedDate={lastGeneratedDate}
+      canSave={canSave}
+      onSave={handleSave}
+    />
   )
 }

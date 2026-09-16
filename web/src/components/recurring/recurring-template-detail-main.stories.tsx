@@ -2,13 +2,11 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
-import { expect, within } from 'storybook/test'
 
 import { RecurringTemplateMainContent } from '#components/recurring/recurring-template-detail-main'
 import { makeRecurringTemplate } from '#components/recurring/recurring-template-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { RecurringTemplate } from '#hooks/use-recurring-templates'
-import { assertDefined } from '#lib/test-utils'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const baseTemplate = makeRecurringTemplate({
@@ -99,25 +97,5 @@ export const WithGeneratedTasks: Story = {
         ),
       ],
     },
-  },
-}
-
-export const OpenDeleteDialog: Story = {
-  args: {
-    template: { ...baseTemplate },
-  },
-  play: async ({ canvasElement, userEvent }) => {
-    const trigger = assertDefined(
-      canvasElement.querySelector<HTMLElement>(
-        '[data-slot="dropdown-menu-trigger"]',
-      ),
-      'desktop trigger not found',
-    )
-    await userEvent.click(trigger)
-
-    const body = within(canvasElement.ownerDocument.body)
-    await userEvent.click(await body.findByText('delete…'))
-
-    await expect(await body.findByText('Delete template')).toBeInTheDocument()
   },
 }

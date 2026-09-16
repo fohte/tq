@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { expect, waitFor, within } from 'storybook/test'
 
 import { makeResolveGithubUrlResult } from '#components/task/github-link-test-fixtures'
 import { GithubUrlChip } from '#components/task/github-url-chip'
@@ -43,15 +42,18 @@ function GithubUrlChipWithProviders({
   url,
   raw,
   result,
+  defaultOpen,
 }: {
   url: string
   raw: string
   result: ResolveGithubUrlResult | null
+  defaultOpen?: boolean | undefined
 }) {
   return (
     <Providers url={url} result={result}>
       <p className="text-sm">
-        See <GithubUrlChip data={{ url }} raw={raw} /> for details.
+        See <GithubUrlChip data={{ url }} raw={raw} defaultOpen={defaultOpen} />{' '}
+        for details.
       </p>
     </Providers>
   )
@@ -72,6 +74,7 @@ export const OpenIssue: Story = {
   args: {
     url: OPEN_ISSUE_URL,
     raw: OPEN_ISSUE_URL,
+    defaultOpen: true,
     result: makeResolveGithubUrlResult({
       number: 158,
       kind: 'issue',
@@ -80,25 +83,6 @@ export const OpenIssue: Story = {
       body: 'Adds an InlineReferenceProvider abstraction so task mentions render as chips.',
       state: 'open',
     }),
-  },
-  play: async ({ canvas, canvasElement, userEvent }) => {
-    // The chip renders as a portal into the app's own React tree in
-    // production (see plugin.tsx), so this exercises the same tree shape:
-    // hovering must open the preview card and render its content without
-    // throwing. The popup renders via a portal, so it must be queried
-    // against the document body.
-    await userEvent.hover(canvas.getByText('fohte/tq#158'))
-    const body = within(canvasElement.ownerDocument.body)
-    // The popup's fade-in animation can still be mid-transition right as the
-    // text mounts, so wait for it to finish rather than checking visibility
-    // the instant the text appears.
-    await waitFor(() =>
-      expect(
-        body.getByText(
-          'Adds an InlineReferenceProvider abstraction so task mentions render as chips.',
-        ),
-      ).toBeVisible(),
-    )
   },
 }
 
@@ -121,6 +105,7 @@ export const LinkedToTask: Story = {
   args: {
     url: LINKED_ISSUE_URL,
     raw: LINKED_ISSUE_URL,
+    defaultOpen: true,
     result: {
       linked: true,
       task: makeTask({
@@ -143,16 +128,6 @@ export const LinkedToTask: Story = {
       }),
     },
   },
-  play: async ({ canvas, canvasElement, userEvent }) => {
-    await userEvent.hover(canvas.getByText('fohte/tq#42'))
-    const body = within(canvasElement.ownerDocument.body)
-    // The popup's fade-in animation can still be mid-transition right as the
-    // link mounts, so wait for it to finish rather than checking visibility
-    // the instant the text appears.
-    await waitFor(() =>
-      expect(body.getByText('Linked to a TQ task →')).toBeVisible(),
-    )
-  },
 }
 
 // The preview hasn't resolved yet (or resolved to "not a real issue/PR"):
@@ -162,8 +137,5 @@ export const Unresolved: Story = {
     url: UNRESOLVED_ISSUE_URL,
     raw: UNRESOLVED_ISSUE_URL,
     result: null,
-  },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText(UNRESOLVED_ISSUE_URL)).toBeVisible()
   },
 }

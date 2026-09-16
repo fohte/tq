@@ -1,11 +1,10 @@
-import { closestCenter, DndContext } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import type { DraggableAttributes } from '@dnd-kit/core'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { type ReactNode, useState } from 'react'
 import { fn } from 'storybook/test'
 
-import { QueueItemRow } from '#components/task/queue-item-row'
+import { QueueItemRowAppearance } from '#components/task/queue-item-row'
 import { makeTask as makeBaseTask } from '#components/task/task-row-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 import { MemoizedStoryRouter } from '#storybook-config/story-router'
@@ -37,9 +36,26 @@ function makeTask(overrides: Partial<Task> = {}): Task {
   })
 }
 
+// Matches what useSortable produces outside an active drag; there's no real
+// DndContext driving a drag in these stories, so these are static stand-ins
+// for the plumbing QueueItemRow would otherwise compute and forward.
+const stubDndProps = {
+  attributes: {
+    role: 'button',
+    tabIndex: 0,
+    'aria-disabled': false,
+    'aria-pressed': undefined,
+    'aria-roledescription': 'sortable',
+    'aria-describedby': 'stub',
+  } satisfies DraggableAttributes,
+  listeners: undefined,
+  setNodeRef: () => {},
+  style: {},
+}
+
 const meta = {
-  title: 'Task/QueueItemRow',
-  component: QueueItemRow,
+  title: 'Task/QueueItemRowAppearance',
+  component: QueueItemRowAppearance,
   parameters: {
     layout: 'centered',
   },
@@ -47,23 +63,22 @@ const meta = {
     (Story) => (
       <Providers>
         <div className="w-full max-w-96">
-          <DndContext collisionDetection={closestCenter}>
-            <SortableContext
-              items={['00000000-0000-0000-0000-000000000001']}
-              strategy={verticalListSortingStrategy}
-            >
-              <Story />
-            </SortableContext>
-          </DndContext>
+          <Story />
         </div>
       </Providers>
     ),
   ],
   args: {
-    queueKey: 'day',
+    ...stubDndProps,
     onRemove: fn(),
+    isEditingEstimate: false,
+    estimateInput: '',
+    onEstimateInputChange: fn(),
+    onStartEditingEstimate: fn(),
+    onCommitEstimate: fn(),
+    onCancelEstimate: fn(),
   },
-} satisfies Meta<typeof QueueItemRow>
+} satisfies Meta<typeof QueueItemRowAppearance>
 
 export default meta
 type Story = StoryObj<typeof meta>
@@ -83,9 +98,7 @@ export const MissingEstimate: Story = {
 export const EditingEstimate: Story = {
   args: {
     task: makeTask({ estimatedMinutes: null, title: 'Plan the launch' }),
-  },
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByText('No estimate'))
+    isEditingEstimate: true,
   },
 }
 

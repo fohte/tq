@@ -40,6 +40,188 @@ const recurrenceTypeOptions: readonly RecurrenceTypeOption[] = [
   'monthly',
 ]
 
+export function SidebarRecurrenceFieldAppearance({
+  templateId,
+  recurrenceRule,
+  isEditing,
+  onOpenChange,
+  type,
+  onTypeChange,
+  intervalInput,
+  onIntervalInputChange,
+  daysOfWeek,
+  onToggleDay,
+  dayOfMonth,
+  onDayOfMonthChange,
+  shorthandInput,
+  onShorthandInputChange,
+  dueDate,
+  canSave,
+  onSave,
+}: {
+  templateId: string | null
+  recurrenceRule: RecurrenceRule | null
+  isEditing: boolean
+  onOpenChange: (open: boolean) => void
+  type: RecurrenceTypeOption
+  onTypeChange: (type: RecurrenceTypeOption) => void
+  intervalInput: string
+  onIntervalInputChange: (value: string) => void
+  daysOfWeek: number[]
+  onToggleDay: (day: number) => void
+  dayOfMonth: string
+  onDayOfMonthChange: (value: string) => void
+  shorthandInput: string
+  onShorthandInputChange: (value: string) => void
+  dueDate: string | null
+  canSave: boolean
+  onSave: () => void
+}) {
+  const anchorRef = useRef<HTMLButtonElement>(null)
+
+  // A template-generated task can't PATCH recurrenceRule (the API rejects
+  // it with 400), so this renders a read-only summary instead of the
+  // editable popup below.
+  if (templateId != null) {
+    return (
+      <SidebarField label="RECURRENCE">
+        <div className="flex flex-col gap-0.5">
+          <span>
+            {recurrenceRule != null
+              ? formatRecurrenceSummary(recurrenceRule)
+              : '—'}
+          </span>
+          <Link
+            to="/recurring/$templateId"
+            params={{ templateId }}
+            className="font-mono text-2xs text-muted-foreground-faint transition-colors hover:text-muted-foreground-strong"
+          >
+            Edit template →
+          </Link>
+        </div>
+      </SidebarField>
+    )
+  }
+
+  const parsedInterval = Number.parseInt(intervalInput, 10)
+  const intervalValue =
+    Number.isInteger(parsedInterval) && parsedInterval > 0
+      ? parsedInterval
+      : null
+
+  const draftRule = buildRecurrenceRule(
+    type,
+    intervalValue,
+    daysOfWeek,
+    dayOfMonth,
+  )
+
+  const nextOccurrence =
+    draftRule != null
+      ? computeNextOccurrence(dueDate ?? formatLocalDate(new Date()), draftRule)
+      : null
+
+  return (
+    <SidebarField label="RECURRENCE">
+      <button
+        ref={anchorRef}
+        type="button"
+        onClick={() => {
+          onOpenChange(true)
+        }}
+        className="w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
+      >
+        {recurrenceRule != null ? formatRecurrenceSummary(recurrenceRule) : '—'}
+      </button>
+      <AnchoredPopup
+        open={isEditing}
+        onOpenChange={onOpenChange}
+        anchor={anchorRef}
+        className="w-72 p-3"
+      >
+        <div className="flex flex-col gap-3">
+          <Input
+            type="text"
+            value={shorthandInput}
+            onChange={(e) => {
+              onShorthandInputChange(e.target.value)
+            }}
+            placeholder="*weekly, *sun, *毎週 ..."
+            className="h-auto w-full border-0 border-b border-border bg-transparent p-0 pb-1 text-xs shadow-none focus-visible:ring-0"
+          />
+
+          <Select
+            value={type}
+            onValueChange={selectValueHandler(
+              onTypeChange,
+              recurrenceTypeOptions,
+            )}
+          >
+            <SelectTrigger size="sm" className={fieldValueClassName}>
+              <SelectValue placeholder="None" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">None</SelectItem>
+              <SelectItem value="daily">Daily</SelectItem>
+              <SelectItem value="weekly">Weekly</SelectItem>
+              <SelectItem value="monthly">Monthly</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {type !== '' && (
+            <div className="flex items-center gap-1.5 text-xs text-foreground">
+              Every
+              <Input
+                type="number"
+                min="1"
+                value={intervalInput}
+                onChange={(e) => {
+                  onIntervalInputChange(e.target.value)
+                }}
+                className="h-auto w-12 border-0 bg-transparent p-0 text-center shadow-none focus-visible:ring-0"
+              />
+              {intervalUnitLabel(type, intervalValue ?? 1)}
+            </div>
+          )}
+
+          {type === 'weekly' && (
+            <WeekdayToggleRow daysOfWeek={daysOfWeek} toggleDay={onToggleDay} />
+          )}
+
+          {type === 'monthly' && (
+            <Input
+              type="number"
+              min="1"
+              max="31"
+              value={dayOfMonth}
+              onChange={(e) => {
+                onDayOfMonthChange(e.target.value)
+              }}
+              placeholder="Day of month (1-31)"
+              className="h-auto w-full border-0 border-b border-border bg-transparent p-0 pb-1 text-xs shadow-none focus-visible:ring-0"
+            />
+          )}
+
+          {nextOccurrence != null && (
+            <p className="text-2xs text-muted-foreground">
+              Next: {formatShortDate(nextOccurrence)}
+            </p>
+          )}
+
+          <Button
+            size="sm"
+            onClick={onSave}
+            disabled={!canSave}
+            className="self-end"
+          >
+            Save
+          </Button>
+        </div>
+      </AnchoredPopup>
+    </SidebarField>
+  )
+}
+
 export function SidebarRecurrenceField({
   taskId,
   dueDate,
@@ -52,7 +234,6 @@ export function SidebarRecurrenceField({
   templateId: string | null
 }) {
   const [isEditing, setIsEditing] = useState(false)
-  const anchorRef = useRef<HTMLButtonElement>(null)
   const updateRecurrenceRule = useUpdateTaskRecurrenceRule()
 
   // A 'custom' rule (only reachable via the API/MCP directly, never created
@@ -101,13 +282,9 @@ export function SidebarRecurrenceField({
     setDaysOfWeek(rule.daysOfWeek ?? [])
   }
 
-  const openEditing = () => {
-    resetDraft()
-    setIsEditing(true)
-  }
-
-  const stopEditing = () => {
-    setIsEditing(false)
+  const handleOpenChange = (open: boolean) => {
+    if (open) resetDraft()
+    setIsEditing(open)
   }
 
   const toggleDay = (day: number) => {
@@ -142,135 +319,31 @@ export function SidebarRecurrenceField({
   const hasChanges = JSON.stringify(draftRule) !== JSON.stringify(originalRule)
   const canSave = hasChanges && (type === '' || intervalValue != null)
 
-  const nextOccurrence =
-    draftRule != null
-      ? computeNextOccurrence(dueDate ?? formatLocalDate(new Date()), draftRule)
-      : null
-
   const handleSave = () => {
     if (!canSave) return
     updateRecurrenceRule.mutate({ id: taskId, recurrenceRule: draftRule })
-    stopEditing()
-  }
-
-  // A template-generated task can't PATCH recurrenceRule (the API rejects
-  // it with 400), so this renders a read-only summary instead of the
-  // editable popup below.
-  if (templateId != null) {
-    return (
-      <SidebarField label="RECURRENCE">
-        <div className="flex flex-col gap-0.5">
-          <span>
-            {recurrenceRule != null
-              ? formatRecurrenceSummary(recurrenceRule)
-              : '—'}
-          </span>
-          <Link
-            to="/recurring/$templateId"
-            params={{ templateId }}
-            className="font-mono text-2xs text-muted-foreground-faint transition-colors hover:text-muted-foreground-strong"
-          >
-            Edit template →
-          </Link>
-        </div>
-      </SidebarField>
-    )
+    setIsEditing(false)
   }
 
   return (
-    <SidebarField label="RECURRENCE">
-      <button
-        ref={anchorRef}
-        type="button"
-        onClick={openEditing}
-        className="w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
-      >
-        {recurrenceRule != null ? formatRecurrenceSummary(recurrenceRule) : '—'}
-      </button>
-      <AnchoredPopup
-        open={isEditing}
-        onOpenChange={(open) => {
-          if (!open) stopEditing()
-        }}
-        anchor={anchorRef}
-        className="w-72 p-3"
-      >
-        <div className="flex flex-col gap-3">
-          <Input
-            type="text"
-            value={shorthandInput}
-            onChange={(e) => {
-              handleShorthandInputChange(e.target.value)
-            }}
-            placeholder="*weekly, *sun, *毎週 ..."
-            className="h-auto w-full border-0 border-b border-border bg-transparent p-0 pb-1 text-xs shadow-none focus-visible:ring-0"
-          />
-
-          <Select
-            value={type}
-            onValueChange={selectValueHandler(setType, recurrenceTypeOptions)}
-          >
-            <SelectTrigger size="sm" className={fieldValueClassName}>
-              <SelectValue placeholder="None" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">None</SelectItem>
-              <SelectItem value="daily">Daily</SelectItem>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="monthly">Monthly</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {type !== '' && (
-            <div className="flex items-center gap-1.5 text-xs text-foreground">
-              Every
-              <Input
-                type="number"
-                min="1"
-                value={intervalInput}
-                onChange={(e) => {
-                  setIntervalInput(e.target.value)
-                }}
-                className="h-auto w-12 border-0 bg-transparent p-0 text-center shadow-none focus-visible:ring-0"
-              />
-              {intervalUnitLabel(type, intervalValue ?? 1)}
-            </div>
-          )}
-
-          {type === 'weekly' && (
-            <WeekdayToggleRow daysOfWeek={daysOfWeek} toggleDay={toggleDay} />
-          )}
-
-          {type === 'monthly' && (
-            <Input
-              type="number"
-              min="1"
-              max="31"
-              value={dayOfMonth}
-              onChange={(e) => {
-                setDayOfMonth(e.target.value)
-              }}
-              placeholder="Day of month (1-31)"
-              className="h-auto w-full border-0 border-b border-border bg-transparent p-0 pb-1 text-xs shadow-none focus-visible:ring-0"
-            />
-          )}
-
-          {nextOccurrence != null && (
-            <p className="text-2xs text-muted-foreground">
-              Next: {formatShortDate(nextOccurrence)}
-            </p>
-          )}
-
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={!canSave}
-            className="self-end"
-          >
-            Save
-          </Button>
-        </div>
-      </AnchoredPopup>
-    </SidebarField>
+    <SidebarRecurrenceFieldAppearance
+      templateId={templateId}
+      recurrenceRule={recurrenceRule}
+      isEditing={isEditing}
+      onOpenChange={handleOpenChange}
+      type={type}
+      onTypeChange={setType}
+      intervalInput={intervalInput}
+      onIntervalInputChange={setIntervalInput}
+      daysOfWeek={daysOfWeek}
+      onToggleDay={toggleDay}
+      dayOfMonth={dayOfMonth}
+      onDayOfMonthChange={setDayOfMonth}
+      shorthandInput={shorthandInput}
+      onShorthandInputChange={handleShorthandInputChange}
+      dueDate={dueDate}
+      canSave={canSave}
+      onSave={handleSave}
+    />
   )
 }

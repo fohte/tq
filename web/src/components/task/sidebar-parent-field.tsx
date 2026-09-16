@@ -12,46 +12,28 @@ import { useSearchTasks } from '#hooks/use-search'
 import { useTaskList, useUpdateTaskParent } from '#hooks/use-tasks'
 import { getDescendantIds } from '#lib/task-tree'
 
-export function SidebarParentField({
-  taskId,
-  parentId,
+export function SidebarParentFieldAppearance({
+  currentParent,
+  isEditing,
+  onOpenChange,
+  query,
+  onQueryChange,
+  isFetching,
+  candidates,
+  onClear,
+  onSelectCandidate,
 }: {
-  taskId: string
-  parentId: string | null
+  currentParent: { number: number; title: string } | null
+  isEditing: boolean
+  onOpenChange: (open: boolean) => void
+  query: string
+  onQueryChange: (value: string) => void
+  isFetching: boolean
+  candidates: SearchResult[]
+  onClear: () => void
+  onSelectCandidate: (candidate: SearchResult) => void
 }) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [query, setQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
-
-  const { categorized } = useTaskList()
-  const updateParent = useUpdateTaskParent()
-
-  const allTasks = categorized.all
-  const invalidParentIds = new Set([
-    taskId,
-    ...getDescendantIds(allTasks, taskId),
-  ])
-  const currentParent = allTasks.find((t) => t.id === parentId)
-
-  const { data: searchResults, isFetching } = useSearchTasks(query)
-  const candidates = (searchResults ?? []).filter(
-    (t) => !invalidParentIds.has(t.id),
-  )
-
-  const stopEditing = () => {
-    setIsEditing(false)
-    setQuery('')
-  }
-
-  const clearParent = () => {
-    updateParent.mutate({ id: taskId, parentId: null })
-    stopEditing()
-  }
-
-  const selectCandidate = (candidate: SearchResult) => {
-    updateParent.mutate({ id: taskId, parentId: candidate.id })
-    stopEditing()
-  }
 
   return (
     <SidebarField label="PARENT">
@@ -61,13 +43,15 @@ export function SidebarParentField({
           type="text"
           value={query}
           onChange={(e) => {
-            setQuery(e.target.value)
+            onQueryChange(e.target.value)
           }}
-          onBlur={stopEditing}
+          onBlur={() => {
+            onOpenChange(false)
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
               e.preventDefault()
-              stopEditing()
+              onOpenChange(false)
             }
           }}
           placeholder="Search tasks..."
@@ -78,7 +62,7 @@ export function SidebarParentField({
         <button
           type="button"
           onClick={() => {
-            setIsEditing(true)
+            onOpenChange(true)
           }}
           className="w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
         >
@@ -90,7 +74,7 @@ export function SidebarParentField({
       <AnchoredPopup
         open={isEditing}
         onOpenChange={(open) => {
-          if (!open) stopEditing()
+          if (!open) onOpenChange(false)
         }}
         anchor={inputRef}
         // Base UI's popover moves focus to the popup's first focusable
@@ -105,7 +89,7 @@ export function SidebarParentField({
           className="w-full px-3 py-1.5 text-left text-sm text-popover-foreground hover:bg-accent/50"
           onMouseDown={(e) => {
             e.preventDefault()
-            clearParent()
+            onClear()
           }}
         >
           —
@@ -128,11 +112,72 @@ export function SidebarParentField({
               candidates={candidates}
               highlightedIndex={-1}
               indexOffset={1}
-              onSelectCandidate={selectCandidate}
+              onSelectCandidate={onSelectCandidate}
             />
           )}
         </div>
       </AnchoredPopup>
     </SidebarField>
+  )
+}
+
+export function SidebarParentField({
+  taskId,
+  parentId,
+}: {
+  taskId: string
+  parentId: string | null
+}) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [query, setQuery] = useState('')
+
+  const { categorized } = useTaskList()
+  const updateParent = useUpdateTaskParent()
+
+  const allTasks = categorized.all
+  const invalidParentIds = new Set([
+    taskId,
+    ...getDescendantIds(allTasks, taskId),
+  ])
+  const currentParent = allTasks.find((t) => t.id === parentId) ?? null
+
+  const { data: searchResults, isFetching } = useSearchTasks(query)
+  const candidates = (searchResults ?? []).filter(
+    (t) => !invalidParentIds.has(t.id),
+  )
+
+  const stopEditing = () => {
+    setIsEditing(false)
+    setQuery('')
+  }
+
+  return (
+    <SidebarParentFieldAppearance
+      currentParent={
+        currentParent != null
+          ? { number: currentParent.number, title: currentParent.title }
+          : null
+      }
+      isEditing={isEditing}
+      onOpenChange={(open) => {
+        if (open) {
+          setIsEditing(true)
+        } else {
+          stopEditing()
+        }
+      }}
+      query={query}
+      onQueryChange={setQuery}
+      isFetching={isFetching}
+      candidates={candidates}
+      onClear={() => {
+        updateParent.mutate({ id: taskId, parentId: null })
+        stopEditing()
+      }}
+      onSelectCandidate={(candidate) => {
+        updateParent.mutate({ id: taskId, parentId: candidate.id })
+        stopEditing()
+      }}
+    />
   )
 }

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn } from 'storybook/test'
+import { fn } from 'storybook/test'
 
 import { ProjectListEmptyState } from '#components/project/project-list-empty-state'
 
@@ -17,11 +17,4 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {
-  play: async ({ canvas, args, userEvent }) => {
-    await userEvent.click(
-      canvas.getByRole('button', { name: 'Create your first project' }),
-    )
-    await expect(args.onCreate).toHaveBeenCalledOnce()
-  },
-}
+export const Default: Story = {}

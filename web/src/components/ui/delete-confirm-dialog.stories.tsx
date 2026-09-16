@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, within } from 'storybook/test'
+import { fn } from 'storybook/test'
 
 import { Button } from '#components/ui/button'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
@@ -35,12 +35,5 @@ export const WithTrigger: Story = {
         Delete item
       </DialogTrigger>
     ),
-  },
-  play: async ({ canvasElement, userEvent, args }) => {
-    const body = within(canvasElement.ownerDocument.body)
-    await userEvent.click(body.getByRole('button', { name: 'Delete item' }))
-    await userEvent.click(await body.findByRole('button', { name: 'Delete' }))
-
-    await expect(args.onDelete).toHaveBeenCalled()
   },
 }

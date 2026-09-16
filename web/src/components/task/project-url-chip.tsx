@@ -18,9 +18,11 @@ import type { ProjectUrlData } from '#lib/inline-reference/providers/project-url
 export function ProjectUrlChip({
   data,
   raw,
+  defaultOpen,
 }: {
   data: ProjectUrlData
   raw: string
+  defaultOpen?: boolean | undefined
 }) {
   const { data: project } = useProjectUrlPreview(data.id)
 
@@ -28,7 +30,7 @@ export function ProjectUrlChip({
   const status = isProjectStatus(project.status) ? project.status : 'active'
 
   return (
-    <PreviewCard>
+    <PreviewCard defaultOpen={defaultOpen}>
       <PreviewCardTrigger
         render={<span />}
         className="inline-flex cursor-text items-center gap-1.5 border border-border bg-secondary/50 px-1.5 py-0.5 align-baseline text-sm leading-none"
