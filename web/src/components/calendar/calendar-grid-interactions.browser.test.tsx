@@ -14,6 +14,7 @@ import {
   CalendarGrid,
 } from '#components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
+import { makeTimeBlockEvent } from '#components/calendar/time-block-event-test-fixtures'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { formatLocalDate } from '#lib/date-range'
 import { assertDefined } from '#lib/test-utils'
@@ -43,22 +44,22 @@ tomorrow.setDate(tomorrow.getDate() + 1)
 const tomorrowStr = formatLocalDate(tomorrow)
 
 const sampleEvents: TimeBlockEvent[] = [
-  {
+  makeTimeBlockEvent({
     id: '1',
     title: 'API ドキュメント作成',
     start: `${dateStr}T09:00:00`,
     end: `${dateStr}T10:00:00`,
     type: 'manual',
     taskId: 'task-1',
-  },
-  {
+  }),
+  makeTimeBlockEvent({
     id: '3',
     title: 'Team standup',
     start: `${dateStr}T11:00:00`,
     end: `${dateStr}T11:30:00`,
     type: 'gcal-meeting',
-  },
-  {
+  }),
+  makeTimeBlockEvent({
     id: '4',
     title: 'Gym',
     start: `${dateStr}T07:00:00`,
@@ -66,15 +67,15 @@ const sampleEvents: TimeBlockEvent[] = [
     type: 'schedule',
     color: { accent: '#52B788' },
     scheduleId: 'sched-gym',
-  },
-  {
+  }),
+  makeTimeBlockEvent({
     id: '5',
     title: 'Company holiday',
     start: dateStr,
     end: tomorrowStr,
     type: 'gcal-info',
     allDay: true,
-  },
+  }),
 ]
 
 const dndCallbacks: CalendarDndCallbacks = {
@@ -108,8 +109,8 @@ function resetVerticalScroll(container: HTMLElement) {
   findVerticalScroller(container).scrollTop = 0
 }
 
-// CalendarGrid needs a QueryClientProvider (the 'auto' sample event mounts
-// AutoTimeBlockPreview, which calls a query hook on mount unconditionally)
+// CalendarGrid needs a QueryClientProvider (the 'manual' event with a taskId
+// mounts ManualTimeBlockPreview, which calls useTask on mount unconditionally)
 // and a sized wrapper div (FullCalendar needs real layout height).
 function renderCalendarGrid(
   props: Partial<React.ComponentProps<typeof CalendarGrid>> = {},
@@ -262,10 +263,21 @@ describe('CalendarGrid interactions', () => {
     expect(ghostRect.width).toBeCloseTo(colRect.width, 0)
   })
 
-  it('treats a gcal event click as a no-op', async () => {
+  it('does not call onTaskClick or onScheduleClick when a gcal event is clicked', async () => {
     const onTaskClick = vi.fn()
     const onScheduleClick = vi.fn()
     const { container } = renderCalendarGrid({ onTaskClick, onScheduleClick })
+    const canvas = within(container)
+    const user = userEvent.setup()
+
+    await user.click(canvas.getByText('Team standup'))
+
+    expect(onTaskClick).not.toHaveBeenCalled()
+    expect(onScheduleClick).not.toHaveBeenCalled()
+  })
+
+  it('shows a default cursor on gcal events and a pointer cursor on manual events', async () => {
+    const { container } = renderCalendarGrid()
     const canvas = within(container)
     const manualEvent = assertDefined(
       (await canvas.findByText('API ドキュメント作成')).closest('.fc-event'),
@@ -275,10 +287,7 @@ describe('CalendarGrid interactions', () => {
       canvas.getByText('Team standup').closest('.fc-event'),
       'gcal event .fc-event ancestor not found',
     )
-    const user = userEvent.setup()
-    await user.click(canvas.getByText('Team standup'))
-    expect(onTaskClick).not.toHaveBeenCalled()
-    expect(onScheduleClick).not.toHaveBeenCalled()
+
     expect(getComputedStyle(gcalEvent).cursor).toBe('default')
     expect(getComputedStyle(manualEvent).cursor).toBe('pointer')
   })
