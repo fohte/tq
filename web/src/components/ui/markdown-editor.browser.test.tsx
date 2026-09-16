@@ -6,8 +6,41 @@ import { describe, expect, it, vi } from 'vitest'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { assertDefined } from '#lib/test-utils'
 
+// Content ending in a blockquote (rather than a paragraph/heading) is
+// required here: Milkdown's built-in `trailing` plugin
+// (@milkdown/plugin-trailing) appends an empty paragraph via
+// `appendTransaction` whenever any transaction is dispatched while the doc
+// doesn't already end in a paragraph/heading, regardless of whether that
+// transaction itself changed anything. Content ending in a *list* doesn't
+// exercise this: Crepe's list-item node view dispatches its own
+// content-neutral selection-sync transaction the moment the editor mounts,
+// which already closes this same gap before a click ever happens. The block
+// count is the assertion below that distinguishes the two outcomes.
 const TRAILING_BLOCKQUOTE_CONTENT =
   'Some intro text.\n\n> A blockquote at the very end.'
+
+describe('MarkdownEditor size', () => {
+  // Regression check: 'compact' (a few-lines inline editor, e.g. a
+  // task/project description) must render its own min-height (120px) rather
+  // than the 'default' size's 400px or collapsing to the content's own
+  // height.
+  it("renders the compact size's own min-height", async () => {
+    const { container } = render(
+      <MarkdownEditor placeholder="Write something..." size="compact" />,
+    )
+    await waitFor(() => {
+      expect(container.querySelector('.milkdown-wrapper')).not.toBeNull()
+    })
+
+    const wrapper = assertDefined(
+      container.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
+    )
+    const height = wrapper.getBoundingClientRect().height
+    expect(height).toBeGreaterThanOrEqual(120)
+    expect(height).toBeLessThan(200)
+  })
+})
 
 describe('MarkdownEditor mode toggle', () => {
   it('does not autosave when switching mode without editing', async () => {

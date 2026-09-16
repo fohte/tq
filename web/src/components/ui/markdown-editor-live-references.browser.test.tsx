@@ -1,11 +1,4 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
@@ -23,6 +16,7 @@ import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
 import { taskMentionKeys } from '#hooks/use-task-mentions'
 import { assertDefined } from '#lib/test-utils'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const MENTION_FIXTURE_NUMBER = 9101
 const GITHUB_URL_FIXTURE = 'https://github.com/fohte/tq/issues/9102'
@@ -90,8 +84,8 @@ function seedLinkedGithubUrlFixture(queryClient: QueryClient) {
 }
 
 // Chips/cards render as portals into the app's own React tree (see
-// plugin.tsx), so they need a QueryClientProvider and RouterProvider
-// ancestor here the same way the app's real root provides them.
+// plugin.tsx), so they need a QueryClientProvider and router ancestor here
+// the same way the app's real root provides them.
 function renderWithProviders(
   ui: ReactNode,
   seed?: (queryClient: QueryClient) => void,
@@ -101,21 +95,9 @@ function renderWithProviders(
   })
   seed?.(queryClient)
 
-  const rootRoute = createRootRoute({ component: () => ui })
-  const taskRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/tasks/$taskId',
-    component: () => null,
-  })
-  rootRoute.addChildren([taskRoute])
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-
   return render(
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <StoryRouter component={() => <>{ui}</>} paths={['/tasks/$taskId']} />
     </QueryClientProvider>,
   )
 }
@@ -140,6 +122,34 @@ describe('MarkdownEditor live references', () => {
     await expect(
       screen.findByText(GITHUB_URL_FIXTURE_TITLE),
     ).resolves.toBeVisible()
+  })
+
+  // Clicking anywhere in the read-only view switches to edit mode: chips
+  // disappear and the raw Markdown source they were hiding becomes visible
+  // instead. The click lands on the paragraph itself rather than on the
+  // chip, since hovering the chip opens its own preview popup that would
+  // otherwise intercept the click.
+  it('reveals the raw markdown source and hides the chip when clicking into edit mode', async () => {
+    const { container } = renderWithProviders(
+      <MarkdownEditor
+        defaultValue={`See #${String(MENTION_FIXTURE_NUMBER)} for details.`}
+        viewEditToggle={{}}
+      />,
+      seedLiveReferenceFixtures,
+    )
+    await screen.findByText(MENTION_FIXTURE_TITLE)
+    const paragraph = assertDefined(
+      container.querySelector('.milkdown .ProseMirror p'),
+      'editor always renders a paragraph',
+    )
+
+    const user = userEvent.setup()
+    await user.click(paragraph)
+
+    await expect(
+      screen.findByText(new RegExp(`#${String(MENTION_FIXTURE_NUMBER)}`)),
+    ).resolves.toBeVisible()
+    expect(screen.queryByText(MENTION_FIXTURE_TITLE)).not.toBeInTheDocument()
   })
 
   // Cards must stay clickable without ever flipping the editor into edit
