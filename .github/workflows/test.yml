@@ -132,6 +132,13 @@ jobs:
         if: matrix.package == 'api'
         uses: ./.github/actions/start-postgres
 
+      # The `web` package's `browser` vitest project renders in a real
+      # Chromium (see web/vitest.config.ts).
+      - name: Install Playwright browser
+        if: matrix.package == 'web'
+        working-directory: web
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Run tests
         working-directory: ${{ matrix.package }}
         run: pnpm run test
