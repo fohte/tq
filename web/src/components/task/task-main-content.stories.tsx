@@ -21,11 +21,13 @@ import type { AgentSession } from '#hooks/use-agent-sessions'
 import { labelKeys } from '#hooks/use-labels'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
+import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
 import { activityKeys } from '#hooks/use-task-activity'
 import { commentKeys } from '#hooks/use-task-comments'
 import type { TaskPage } from '#hooks/use-task-pages'
 import type { Task, TaskDetail } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
+import { formatLocalDate } from '#lib/date-range'
 import { assertDefined } from '#lib/test-utils'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -95,8 +97,8 @@ function Providers({
   })
   // TaskMainContent always mounts TaskActivity; FullPagePC/FullPageSP also
   // mount TaskSidebar (SidebarParentField/SidebarProjectField/
-  // SidebarTagsField). Seed every query they read so no individual story
-  // needs its own seeding.
+  // SidebarTagsField/SidebarPlanField). Seed every query they read so no
+  // individual story needs its own seeding.
   queryClient.setQueryData(commentKeys.all(baseTask.id), [])
   queryClient.setQueryData(activityKeys.all(baseTask.id), [])
   queryClient.setQueryData(taskKeys.list(undefined), [])
@@ -105,6 +107,9 @@ function Providers({
     projectKeys.list(undefined),
     project ? [project] : [],
   )
+  const todayStr = formatLocalDate(new Date())
+  queryClient.setQueryData(queueKeys.items(DAY_QUEUE_KEY, todayStr), [])
+  queryClient.setQueryData(queueKeys.items(WEEK_QUEUE_KEY, todayStr), [])
   if (project) {
     queryClient.setQueryData(projectKeys.detail(project.id), project)
   }

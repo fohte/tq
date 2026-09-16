@@ -107,7 +107,12 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
       children,
       ...props
     }: { children: ReactNode } & Record<string, unknown>) => (
-      <a href={typeof props['to'] === 'string' ? props['to'] : '#'}>
+      <a
+        href={typeof props['to'] === 'string' ? props['to'] : '#'}
+        onClick={(event: React.MouseEvent) => {
+          event.preventDefault()
+        }}
+      >
         {children}
       </a>
     ),

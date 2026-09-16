@@ -3,7 +3,8 @@ import { fileURLToPath, URL } from 'node:url'
 
 import { createStorybookProject } from '@fohte/storybook-addon/vitest-plugin'
 import tailwindcss from '@tailwindcss/vite'
-import { defineConfig } from 'vitest/config'
+import { playwright } from '@vitest/browser-playwright'
+import { configDefaults, defineConfig } from 'vitest/config'
 
 import {
   DESKTOP_ONLY_TAG,
@@ -38,6 +39,8 @@ function withTailwind(project: ReturnType<typeof createStorybookProject>): any {
   }
 }
 
+const BROWSER_TEST_PATTERN = '**/*.browser.test.{ts,tsx}'
+
 export default defineConfig({
   resolve: { alias },
   test: {
@@ -46,13 +49,27 @@ export default defineConfig({
       {
         resolve: { alias },
         test: {
-          name: 'unit',
-          environment: 'jsdom',
-          setupFiles: ['./src/test-setup.ts'],
+          name: 'node',
+          environment: 'node',
+          exclude: [...configDefaults.exclude, BROWSER_TEST_PATTERN],
           // Pin a non-UTC offset so tests asserting local<->UTC conversion
           // (e.g. date-range.test.ts) can't pass by accident when the host
           // machine happens to run in UTC.
           env: { TZ: 'Asia/Tokyo' },
+        },
+      },
+      {
+        plugins: [tailwindcss()],
+        test: {
+          name: 'browser',
+          include: [BROWSER_TEST_PATTERN],
+          setupFiles: ['./src/browser-test-setup.ts'],
+          browser: {
+            enabled: true,
+            provider: playwright(),
+            headless: true,
+            instances: [{ browser: 'chromium' }],
+          },
         },
       },
       withTailwind(

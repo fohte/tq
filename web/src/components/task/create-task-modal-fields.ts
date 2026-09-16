@@ -23,3 +23,13 @@ export const commitmentLabels: Record<CommitmentValue, string> = {
   active: 'Active',
   someday: 'Someday',
 }
+
+export type PlanValue = 'day' | 'week'
+export const planValues = ['', 'day', 'week'] as const satisfies readonly (
+  PlanValue | ''
+)[]
+
+export const planLabels: Record<PlanValue, string> = {
+  day: 'today',
+  week: 'this week',
+}

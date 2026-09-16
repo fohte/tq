@@ -63,7 +63,11 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     }: { children: React.ReactNode } & Record<string, unknown>) => (
       <a
         href={typeof props['to'] === 'string' ? props['to'] : '#'}
-        onClick={mockLinkOnClick}
+        onClick={(event: React.MouseEvent) => {
+          // Stop the real navigation a browser would follow on this href.
+          event.preventDefault()
+          mockLinkOnClick(event)
+        }}
       >
         {children}
       </a>

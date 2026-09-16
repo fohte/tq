@@ -132,6 +132,37 @@ jobs:
         if: matrix.package == 'api'
         uses: ./.github/actions/start-postgres
 
+      # The `web` package's `browser` vitest project renders in a real
+      # Chromium (see web/vitest.config.ts).
+      - name: Get Playwright version
+        id: playwright-version
+        if: matrix.package == 'web'
+        working-directory: web
+        run: |
+          version=$(pnpm exec playwright --version | awk '{print $2}')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        if: matrix.package == 'web'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright chromium
+        if: matrix.package == 'web' && steps.playwright-cache.outputs.cache-hit != 'true'
+        working-directory: web
+        run: pnpm exec playwright install chromium
+
+      - name: Install Playwright system dependencies
+        if: matrix.package == 'web'
+        uses: fohte/storybook-vrt-workflows/apt-install@b1745100ad0c07758b763db13f25e5a0f2d7beec # v0.1.5
+        with:
+          key: playwright-deps
+          cache-key-suffix: ${{ steps.playwright-version.outputs.version }}
+          install-command: cd web && pnpm exec playwright install-deps chromium
+
       - name: Run tests
         working-directory: ${{ matrix.package }}
         run: pnpm run test
@@ -191,18 +222,19 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-  # Aggregation gate for unit-test-run's matrix and the vrt reusable workflow
-  # call. Matrix leg names are dynamic and cannot be pinned as a required
-  # status check, so this single fixed-name job is the branch protection gate
-  # instead. It fails only when a needed job failed; when every leg succeeds
-  # (or a job is skipped because nothing changed) it is skipped, and a
-  # skipped required check counts as success.
+  # Aggregation gate for unit-test-run's matrix, the vrt reusable workflow
+  # call, and knip (which has no `needs`). Matrix leg names are dynamic and
+  # cannot be pinned as a required status check, so this single fixed-name job
+  # is the branch protection gate instead. It fails only when a needed job
+  # failed; when every leg succeeds (or a job is skipped because nothing
+  # changed) it is skipped, and a skipped required check counts as success.
   unit-test:
     runs-on: ubuntu-slim
     needs:
       - setup
       - unit-test-run
       - vrt
+      - knip
     if: failure()
     steps:
       - run: exit 1
