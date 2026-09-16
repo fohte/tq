@@ -65,10 +65,10 @@ pnpm --filter web run test:storybook
 `extension/` is a Chrome extension (Manifest V3). Build it, then load it unpacked:
 
 ```sh
-pnpm --filter extension run build
+TQ_ORIGIN=https://tq.fohte.net pnpm --filter extension run build
 ```
 
-This writes the bundled scripts and a generated `manifest.json` to `extension/dist/`. The tq origin the extension talks to (`host_permissions` and API requests) defaults to `https://tq.fohte.net`; override it at build time with `TQ_ORIGIN`, e.g. `TQ_ORIGIN=http://localhost:5173 pnpm --filter extension run build`.
+`TQ_ORIGIN` is the tq instance the extension talks to (`host_permissions` and API requests); the build fails without it. This writes the bundled scripts and a generated `manifest.json` to `extension/dist/`. Point it at a local dev server instead with `TQ_ORIGIN=http://localhost:5173`.
 
 1. Open `chrome://extensions`.
 2. Enable **Developer mode**.

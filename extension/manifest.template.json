@@ -6,7 +6,7 @@
   "background": {
     "service_worker": "background.js"
   },
-  "host_permissions": ["https://tq.fohte.net/*"],
+  "host_permissions": [],
   "content_scripts": [
     {
       "matches": [

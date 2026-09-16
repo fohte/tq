@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 
 import * as esbuild from 'esbuild'
 
-const TQ_ORIGIN = process.env.TQ_ORIGIN ?? 'https://tq.fohte.net'
+import { TQ_ORIGIN } from '#config'
 
 await esbuild.build({
   entryPoints: ['src/content.ts', 'src/background.ts'],
