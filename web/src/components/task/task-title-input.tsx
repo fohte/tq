@@ -33,11 +33,13 @@ export function TaskTitleInput({
   const context = useCurrentContext()
   const { data: labelsData } = useLabels({ context })
   const [selectedIndex, setSelectedIndex] = useState(0)
+  // Lazy-initialized from the initial value so a story can render the
+  // suggestion-menu-open state from `value` alone, without a play function.
   const [cursorTrigger, setCursorTrigger] = useState<{
     trigger: TriggerChar
     partial: string
     tokenStart: number
-  } | null>(null)
+  } | null>(() => detectTrigger(value, value.length))
   const inputRef = useRef<HTMLInputElement>(null)
 
   const availableLabels = useMemo(

@@ -68,14 +68,19 @@ function LabelSuggestion({
 export function TagsInput({
   labels,
   onLabelsChange,
+  defaultIsAdding = false,
+  defaultInput = '',
 }: {
   labels: string[]
   onLabelsChange: (next: string[]) => void
+  /** Lets a story render the "adding a tag" state without a play function. */
+  defaultIsAdding?: boolean
+  defaultInput?: string
 }) {
   const context = useCurrentContext()
   const { data: labelsData } = useLabels({ context })
-  const [isAdding, setIsAdding] = useState(false)
-  const [input, setInput] = useState('')
+  const [isAdding, setIsAdding] = useState(defaultIsAdding)
+  const [input, setInput] = useState(defaultInput)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
