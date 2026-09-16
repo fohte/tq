@@ -4,7 +4,11 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { SaveViewButton } from '#components/saved-view/save-view-button'
 import { useCreateSavedView } from '#hooks/use-saved-views'
-import { partialMutation } from '#lib/test-utils'
+import {
+  mutateInvokingOnSuccess,
+  partialMutation,
+  withOnSuccess,
+} from '#lib/test-utils'
 
 vi.mock('#hooks/use-saved-views', async (importOriginal) => {
   const original =
@@ -57,12 +61,7 @@ describe('SaveViewButton', () => {
   })
 
   it('closes the dialog once the save succeeds', async () => {
-    const mutate = vi.fn(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double: SaveViewButton's onSuccess callback ignores every argument, so the exact mutate signature doesn't matter here
-      ((_vars: unknown, options?: { onSuccess?: () => void }) => {
-        options?.onSuccess?.()
-      }) as CreateSavedViewResult['mutate'],
-    )
+    const mutate = mutateInvokingOnSuccess<CreateSavedViewResult['mutate']>()
     mockUseCreateSavedView.mockReturnValue(
       partialMutation<CreateSavedViewResult>({
         mutate,
@@ -96,11 +95,7 @@ describe('SaveViewButton', () => {
     await user.type(screen.getByPlaceholderText('View name'), '  Now  ')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(mutate).toHaveBeenCalledWith(
-      { name: 'Now', query },
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- vitest's expect.any() return type isn't generic, so TS can only type this property as `any`
-      { onSuccess: expect.any(Function) },
-    )
+    expect(mutate).toHaveBeenCalledWith({ name: 'Now', query }, withOnSuccess)
   })
 
   it('shows the error message when the mutation fails', () => {

@@ -4,7 +4,11 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { DeleteRecurringTemplateDialog } from '#components/recurring/delete-recurring-template-dialog'
 import { useDeleteRecurringTemplate } from '#hooks/use-recurring-templates'
-import { partialMutation } from '#lib/test-utils'
+import {
+  mutateInvokingOnSuccess,
+  partialMutation,
+  withOnSuccess,
+} from '#lib/test-utils'
 
 vi.mock('#hooks/use-recurring-templates', async (importOriginal) => {
   const original =
@@ -22,13 +26,33 @@ type DeleteRecurringTemplateResult = ReturnType<
 >
 
 describe('DeleteRecurringTemplateDialog', () => {
-  it('deletes the template and calls onDeleted on success', async () => {
-    const mutate = vi.fn(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double: DeleteRecurringTemplateDialog's onSuccess callback ignores every argument, so the exact mutate signature doesn't matter here
-      ((_id: unknown, options?: { onSuccess?: () => void }) => {
-        options?.onSuccess?.()
-      }) as DeleteRecurringTemplateResult['mutate'],
+  it('calls mutate with the template id', async () => {
+    const mutate = vi.fn<DeleteRecurringTemplateResult['mutate']>()
+    mockUseDeleteRecurringTemplate.mockReturnValue(
+      partialMutation<DeleteRecurringTemplateResult>({ mutate }),
     )
+    const user = userEvent.setup()
+    render(
+      <DeleteRecurringTemplateDialog
+        open
+        onOpenChange={vi.fn()}
+        templateId="00000000-0000-0000-0000-000000000001"
+        templateTitle="Write weekly report"
+        onDeleted={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
+
+    expect(mutate).toHaveBeenCalledWith(
+      '00000000-0000-0000-0000-000000000001',
+      withOnSuccess,
+    )
+  })
+
+  it('calls onDeleted when the deletion succeeds', async () => {
+    const mutate =
+      mutateInvokingOnSuccess<DeleteRecurringTemplateResult['mutate']>()
     mockUseDeleteRecurringTemplate.mockReturnValue(
       partialMutation<DeleteRecurringTemplateResult>({ mutate }),
     )
@@ -46,11 +70,6 @@ describe('DeleteRecurringTemplateDialog', () => {
 
     await user.click(screen.getByRole('button', { name: 'Delete' }))
 
-    expect(mutate).toHaveBeenCalledWith(
-      '00000000-0000-0000-0000-000000000001',
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- vitest's expect.any() return type isn't generic, so TS can only type this property as `any`
-      { onSuccess: expect.any(Function) },
-    )
     expect(onDeleted).toHaveBeenCalled()
   })
 })

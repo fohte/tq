@@ -33,9 +33,8 @@ function Providers({
 }) {
   const queryClient = new QueryClient({
     // staleTime: Infinity keeps the seeded data from being considered stale,
-    // so enabling the query (clicking to expand) never triggers a background
-    // refetch that a story — which can't register an MSW handler via play —
-    // would leave unhandled.
+    // so the Expanded story's query never triggers a background refetch —
+    // stories don't register an MSW handler, so it would go unhandled.
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
   queryClient.setQueryData(gcalCalendarsKeys.list(account.id), calendars)

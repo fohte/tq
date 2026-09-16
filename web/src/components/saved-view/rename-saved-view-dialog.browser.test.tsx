@@ -5,7 +5,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { makeSavedView } from '#components/layout/sidebar-test-fixtures'
 import { RenameSavedViewDialog } from '#components/saved-view/rename-saved-view-dialog'
 import { useRenameSavedView } from '#hooks/use-saved-views'
-import { partialMutation } from '#lib/test-utils'
+import {
+  mutateInvokingOnSuccess,
+  partialMutation,
+  withOnSuccess,
+} from '#lib/test-utils'
 
 vi.mock('#hooks/use-saved-views', async (importOriginal) => {
   const original =
@@ -40,12 +44,7 @@ describe('RenameSavedViewDialog', () => {
   })
 
   it('closes the dialog once the rename succeeds', async () => {
-    const mutate = vi.fn(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double: RenameSavedViewDialog's onSuccess callback ignores every argument, so the exact mutate signature doesn't matter here
-      ((_vars: unknown, options?: { onSuccess?: () => void }) => {
-        options?.onSuccess?.()
-      }) as RenameSavedViewResult['mutate'],
-    )
+    const mutate = mutateInvokingOnSuccess<RenameSavedViewResult['mutate']>()
     mockUseRenameSavedView.mockReturnValue(
       partialMutation<RenameSavedViewResult>({
         mutate,
@@ -86,8 +85,7 @@ describe('RenameSavedViewDialog', () => {
 
     expect(mutate).toHaveBeenCalledWith(
       { id: view.id, name: 'Later' },
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- vitest's expect.any() return type isn't generic, so TS can only type this property as `any`
-      { onSuccess: expect.any(Function) },
+      withOnSuccess,
     )
   })
 

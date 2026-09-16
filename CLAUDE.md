@@ -82,6 +82,7 @@ Existing factories, one file per type-family, each exporting a `make<Type>(overr
 - `web/src/components/schedule/schedule-test-fixtures.ts`: `makeSchedule`
 - `web/src/components/layout/sidebar-test-fixtures.ts`: `makeLabel`/`makeSavedView`, plus re-exports of `makeTask`/`makeProject` for sidebar stories/tests that need them alongside the sidebar-only fixtures
 - `web/src/components/recurring/recurring-template-test-fixtures.ts`: `makeRecurringTemplate`, covering `RecurringTemplate`
+- `web/src/components/settings/gcal-calendar-test-fixtures.ts`: `makeGcalCalendar`, covering `GcalCalendar`
 
 Before writing a fixture object literal, check whether a factory for that type already exists. Call it and pass only the fields that matter for that story/test (id, title, status, dates, ...) as overrides — never write the full object literal by hand. Add a thin local wrapper (e.g. a `makeProjectTask` that layers a fixed `projectId` on top of `makeTask`) when a group of stories/tests in one file shares a non-default override.
 
