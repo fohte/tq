@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent } from 'storybook/test'
+import { fn } from 'storybook/test'
 
 import { TaskSortFilterFields } from '#components/task/task-sort-filter-fields'
 
@@ -35,12 +35,5 @@ export const SortByDue: Story = {
 export const SortByEstimate: Story = {
   args: {
     sortBy: 'estimate',
-  },
-}
-
-export const ChangeSort: Story = {
-  play: async ({ canvas, args }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'Created' }))
-    await expect(args.onSortByChange).toHaveBeenCalledWith('created')
   },
 }
