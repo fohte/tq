@@ -7,10 +7,6 @@ function seedNotes(taskId: string, value: string) {
   localStorage.setItem(`tq:focus-notes:${taskId}`, value)
 }
 
-beforeEach(() => {
-  localStorage.clear()
-})
-
 describe('useFocusNotes', () => {
   it('returns an empty string when no notes are stored for the task', () => {
     const { result } = renderHook(() => useFocusNotes('task-1'))

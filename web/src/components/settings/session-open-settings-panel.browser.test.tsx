@@ -1,12 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { SessionOpenSettingsPanel } from '#components/settings/session-open-settings-panel'
-
-beforeEach(() => {
-  localStorage.clear()
-})
 
 describe('SessionOpenSettingsPanel', () => {
   it('updates the input as the user types a focus template', async () => {

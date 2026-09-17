@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { makeNode } from '#components/task/task-row-test-fixtures'
 import type { TreeNode } from '#hooks/use-tasks'
@@ -302,10 +302,6 @@ describe('useTreeOutliner', () => {
 })
 
 describe('useExpandedIds', () => {
-  beforeEach(() => {
-    localStorage.clear()
-  })
-
   it('with defaultExpanded true, starts with everything expanded and toggling collapses', () => {
     const { result } = renderHook(() => useExpandedIds(true))
 

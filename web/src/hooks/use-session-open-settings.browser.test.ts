@@ -1,14 +1,10 @@
 import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import {
   STORAGE_KEY,
   useSessionOpenSettings,
 } from '#hooks/use-session-open-settings'
-
-beforeEach(() => {
-  localStorage.clear()
-})
 
 describe('useSessionOpenSettings', () => {
   it('defaults to personal context and no templates when nothing is stored', () => {
