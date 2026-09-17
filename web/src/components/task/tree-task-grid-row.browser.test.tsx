@@ -17,7 +17,7 @@ import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TreeNode } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
-import { atIndex } from '#lib/test-utils'
+import { assertDefined, atIndex } from '#lib/test-utils'
 
 const mockMutate = vi.fn()
 const mockUpdateStatusMutate = vi.fn()
@@ -144,15 +144,25 @@ function TreeHarness({
 async function renderTree(
   node: TreeNode,
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]> = new Map(),
+  // Only used by the narrow-container width regression test below; every
+  // other caller renders at the default (unconstrained) width.
+  wrapperClassName?: string,
 ) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   const rootRoute = createRootRoute({
     validateSearch: (search: Record<string, unknown>) => search,
-    component: () => (
-      <TreeHarness node={node} sessionsByTaskId={sessionsByTaskId} />
-    ),
+    component: () => {
+      const harness = (
+        <TreeHarness node={node} sessionsByTaskId={sessionsByTaskId} />
+      )
+      return wrapperClassName != null ? (
+        <div className={wrapperClassName}>{harness}</div>
+      ) : (
+        harness
+      )
+    },
   })
   // A tag token navigates to /tasks, so that route must be registered for
   // the navigation to resolve instead of erroring on an unmatched route.
@@ -393,5 +403,37 @@ describe('TreeTaskGridRow', () => {
 
     expect(mockMutate).not.toHaveBeenCalled()
     expect(mockUpdateStatusMutate).not.toHaveBeenCalled()
+  })
+
+  it('keeps the title from collapsing to 0 width in a narrow container', async () => {
+    // The title `<span>` has a `min-w-16` (64px) floor, not `min-w-0` (see
+    // task-row-appearance.tsx).
+    await renderTree(
+      makeNode({ title: 'Todo task (personal)' }),
+      new Map(),
+      'w-xl',
+    )
+
+    expect(
+      screen.getByText('Todo task (personal)').getBoundingClientRect().width,
+    ).toBeGreaterThan(0)
+  })
+
+  it('hides the desktop actions trigger by default and reveals it on focus', async () => {
+    const { container } = await renderTree(makeNode())
+    const trigger = assertDefined(
+      container.querySelector<HTMLElement>(
+        '[data-slot="dropdown-menu-trigger"][aria-label="Task actions"]',
+      ),
+      'desktop trigger not found',
+    )
+
+    // opacity-0 by default (see desktopTriggerClassName in
+    // tree-row-actions-menu.tsx); revealed via `.group:hover` or its own
+    // `:focus-visible`.
+    expect(trigger).not.toBeVisible()
+
+    trigger.focus()
+    expect(trigger).toBeVisible()
   })
 })

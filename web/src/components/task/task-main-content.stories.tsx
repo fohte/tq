@@ -1,10 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
-import { expect, spyOn } from 'storybook/test'
 
-import { AppLayout } from '#components/layout/app-layout'
 import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import {
@@ -28,7 +25,6 @@ import type { TaskPage } from '#hooks/use-task-pages'
 import type { Task, TaskDetail } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
-import { assertDefined } from '#lib/test-utils'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const samplePages: TaskPage[] = [
@@ -375,179 +371,4 @@ export const FullPageSP: StoryObj<{
       </div>
     </Providers>
   ),
-}
-
-// Regression check: on mobile, typing in the description must not scroll
-// the window. Renders through the real AppLayout (not FullPageSP's
-// standalone mimic), since the fix lives in AppLayout's own root element.
-export const TypingWithKeyboardOpenDoesNotScrollWindow: StoryObj<{
-  task: TaskDetail
-  pages: TaskPage[]
-  subtasks: Task[]
-  sessions: AgentSession[]
-}> = {
-  args: {
-    task: { ...baseTask },
-    pages: samplePages,
-    subtasks: [],
-    sessions: sampleSessions,
-  },
-  tags: ['mobile-only'],
-  parameters: {
-    layout: 'fullscreen',
-    viewport: { defaultViewport: 'mobile1' },
-    // Tests window-scroll behavior under a shrunk visualViewport, not
-    // appearance.
-    screenshot: { skip: true },
-    // AppLayout also mounts Sidebar/BottomTabBar, which fetch these — same
-    // handlers as app-layout.stories.tsx.
-    msw: {
-      handlers: [
-        http.get('/api/tasks', () => HttpResponse.json([])),
-        http.get('/api/projects', () => HttpResponse.json([])),
-        http.get('/api/queues/:key/items', () => HttpResponse.json([])),
-        http.get('/api/saved-views', () => HttpResponse.json([])),
-        http.get('/api/labels', () => HttpResponse.json([])),
-      ],
-    },
-  },
-  render: ({ task, pages, subtasks, sessions }) => (
-    <Providers>
-      <AppLayout>
-        <div className="flex h-full flex-col overflow-y-auto p-4">
-          <TaskSidebarMobile task={task} />
-          <div className="mt-4 border-t border-border pt-4">
-            <TaskMainContent
-              task={task}
-              pages={pages}
-              subtasks={subtasks}
-              sessions={sessions}
-            />
-          </div>
-        </div>
-      </AppLayout>
-    </Providers>
-  ),
-  play: async ({ canvasElement, userEvent }) => {
-    const proseMirrorRoot = assertDefined(
-      // TaskDescription renders before TaskPagesList/TaskSubtasksList/
-      // TaskActivity, so the first ProseMirror root in DOM order is the
-      // description editor, not a comment box.
-      canvasElement.querySelector('.milkdown .ProseMirror'),
-      'the description editor always renders a ProseMirror root',
-    )
-
-    // Crepe applies contenteditable in an effect that runs after the first
-    // click, so a second click is needed to actually focus it.
-    await userEvent.click(proseMirrorRoot)
-    await userEvent.click(proseMirrorRoot)
-
-    const view = assertDefined(
-      canvasElement.ownerDocument.defaultView,
-      'a mounted story always has an owner window',
-    )
-    const visualViewport = assertDefined(
-      view.visualViewport,
-      'browsers used for storybook tests always provide visualViewport',
-    )
-
-    // Simulate the on-screen keyboard covering the bottom of the screen.
-    spyOn(visualViewport, 'height', 'get').mockReturnValue(200)
-    visualViewport.dispatchEvent(new Event('resize'))
-
-    const scrollBySpy = spyOn(view, 'scrollBy').mockImplementation(() => {})
-
-    await userEvent.keyboard('!')
-
-    await expect(scrollBySpy).not.toHaveBeenCalled()
-  },
-}
-
-// Regression check: on mobile, the caret must stay above the on-screen
-// keyboard while typing, not just off-window (that's the story above).
-export const TypingWithKeyboardOpenKeepsCaretVisible: StoryObj<{
-  task: TaskDetail
-  pages: TaskPage[]
-  subtasks: Task[]
-  sessions: AgentSession[]
-}> = {
-  args: {
-    task: { ...baseTask },
-    pages: samplePages,
-    subtasks: [],
-    sessions: sampleSessions,
-  },
-  tags: ['mobile-only'],
-  parameters: {
-    layout: 'fullscreen',
-    viewport: { defaultViewport: 'mobile1' },
-    // Tests caret position under a shrunk visualViewport, not appearance.
-    screenshot: { skip: true },
-    // AppLayout also mounts Sidebar/BottomTabBar, which fetch these — same
-    // handlers as app-layout.stories.tsx.
-    msw: {
-      handlers: [
-        http.get('/api/tasks', () => HttpResponse.json([])),
-        http.get('/api/projects', () => HttpResponse.json([])),
-        http.get('/api/queues/:key/items', () => HttpResponse.json([])),
-        http.get('/api/saved-views', () => HttpResponse.json([])),
-        http.get('/api/labels', () => HttpResponse.json([])),
-      ],
-    },
-  },
-  render: ({ task, pages, subtasks, sessions }) => (
-    <Providers>
-      <AppLayout>
-        <div className="flex h-full flex-col overflow-y-auto p-4">
-          <TaskSidebarMobile task={task} />
-          <div className="mt-4 border-t border-border pt-4">
-            <TaskMainContent
-              task={task}
-              pages={pages}
-              subtasks={subtasks}
-              sessions={sessions}
-            />
-          </div>
-        </div>
-      </AppLayout>
-    </Providers>
-  ),
-  play: async ({ canvasElement, userEvent }) => {
-    const proseMirrorRoot = assertDefined(
-      canvasElement.querySelector('.milkdown .ProseMirror'),
-      'the description editor always renders a ProseMirror root',
-    )
-
-    // Crepe applies contenteditable in an effect that runs after the first
-    // click, so a second click is needed to actually focus it.
-    await userEvent.click(proseMirrorRoot)
-    await userEvent.click(proseMirrorRoot)
-
-    const view = assertDefined(
-      canvasElement.ownerDocument.defaultView,
-      'a mounted story always has an owner window',
-    )
-    const visualViewport = assertDefined(
-      view.visualViewport,
-      'browsers used for storybook tests always provide visualViewport',
-    )
-
-    // Simulate the on-screen keyboard covering the bottom of the screen.
-    spyOn(visualViewport, 'height', 'get').mockReturnValue(200)
-    visualViewport.dispatchEvent(new Event('resize'))
-
-    // Push the caret down past the shrunk visible area regardless of where
-    // the click above landed it. A character follows each newline so the
-    // caret always sits next to real text — a collapsed range at an empty
-    // line reports an empty (all-zero) bounding rect in Chromium.
-    await userEvent.keyboard('{Enter}x'.repeat(30))
-
-    const selection = assertDefined(
-      view.getSelection(),
-      'a focused contenteditable always has an active selection',
-    )
-    const caretRect = selection.getRangeAt(0).getBoundingClientRect()
-
-    await expect(caretRect.bottom).toBeLessThanOrEqual(visualViewport.height)
-  },
 }

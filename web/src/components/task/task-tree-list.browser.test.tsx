@@ -14,7 +14,7 @@ import { makeNode, makeTask } from '#components/task/task-row-test-fixtures'
 import type { TaskTreeListProps } from '#components/task/task-tree-list'
 import { TaskTreeList } from '#components/task/task-tree-list'
 import type { TreeNode } from '#hooks/use-tasks'
-import { atIndex } from '#lib/test-utils'
+import { assertDefined, atIndex } from '#lib/test-utils'
 
 // fetchTaskList is only exercised by the lazy-mode tests below (regular
 // tests never pass lazyChildrenFilter, so TaskTreeList never calls it).
@@ -243,6 +243,26 @@ describe('TaskTreeList', () => {
 
     await screen.findAllByPlaceholderText(/task title|タスクのタイトル/i)
     expect(screen.queryByText(/#1 Root Task/)).toBeNull()
+  })
+
+  it("opens the create-task modal with the row's parent when 'add subtask' is clicked via the row actions menu", async () => {
+    const user = userEvent.setup()
+    const root = makeNode({ id: 'root-1', number: 5, title: 'Parent Task' })
+    const { container } = await renderTaskTreeList([root])
+
+    const trigger = assertDefined(
+      container.querySelector<HTMLElement>(
+        '[data-slot="dropdown-menu-trigger"][aria-label="Task actions"]',
+      ),
+      'desktop trigger not found',
+    )
+    await user.click(trigger)
+    await user.click(
+      await screen.findByRole('menuitem', { name: /add subtask/i }),
+    )
+
+    await screen.findAllByPlaceholderText(/task title|タスクのタイトル/i)
+    expect(screen.getAllByText(/#5 Parent Task/).length).toBeGreaterThan(0)
   })
 
   it('keeps rows far past the visible range out of the DOM', async () => {

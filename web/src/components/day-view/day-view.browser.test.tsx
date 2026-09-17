@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-router'
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { page } from '@vitest/browser/context'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
@@ -15,6 +16,9 @@ import {
   type DayViewPresentationProps,
   estimateMinutesForRange,
 } from '#components/day-view/day-view'
+import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
+import { assertDefined, findVisible } from '#lib/test-utils'
+import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
 describe('estimateMinutesForRange', () => {
   it('uses the selected range length when it is at least 30 minutes', () => {
@@ -35,6 +39,8 @@ describe('estimateMinutesForRange', () => {
 let capturedOnSelectRange:
   ((info: { start: Date; end: Date }) => void) | undefined
 let capturedOnTaskClick: ((taskId: string) => void) | undefined
+let capturedOnScheduleClick:
+  ((scheduleId: string, start: string) => void) | undefined
 let capturedModalProps: {
   open: boolean
   defaultStartDate?: string
@@ -46,9 +52,11 @@ vi.mock('#components/calendar/calendar-view', () => ({
   CalendarView: (props: {
     onSelectRange?: (info: { start: Date; end: Date }) => void
     onTaskClick?: (taskId: string) => void
+    onScheduleClick?: (scheduleId: string, start: string) => void
   }) => {
     capturedOnSelectRange = props.onSelectRange
     capturedOnTaskClick = props.onTaskClick
+    capturedOnScheduleClick = props.onScheduleClick
     return null
   },
 }))
@@ -161,5 +169,95 @@ describe('DayViewPresentation', () => {
     })
 
     expect(router.state.location.pathname).toBe('/tasks/task-42')
+  })
+
+  it('opens the real CreateScheduleModal when the "New schedule" button is clicked', async () => {
+    const user = userEvent.setup()
+    await renderDayView()
+
+    await user.click(screen.getByLabelText('New schedule'))
+
+    // CreateScheduleModal always renders both its desktop and mobile panels
+    // and lets CSS pick which is shown, so the "Schedule title" input exists
+    // twice — only the one matching the current viewport is visible.
+    const titleInputs = await screen.findAllByPlaceholderText('Schedule title')
+    expect(
+      assertDefined(
+        findVisible(titleInputs),
+        'no visible "Schedule title" input found',
+      ),
+    ).toBeVisible()
+  })
+
+  it('opens the CreateTaskModal when the "New task" button is clicked', async () => {
+    const user = userEvent.setup()
+    await renderDayView()
+
+    await user.click(screen.getByLabelText('New task'))
+
+    expect(capturedModalProps.open).toBe(true)
+  })
+
+  it('opens the real CreateScheduleModal pre-filled when a calendar schedule block is clicked', async () => {
+    const schedule = makeSchedule({
+      scheduleId: 'sched-sleep',
+      title: 'Sleep',
+      start: '2026-07-20T00:00:00',
+      end: '2026-07-20T07:00:00',
+    })
+    await renderDayView({ schedules: [schedule] })
+
+    act(() => {
+      capturedOnScheduleClick?.('sched-sleep', schedule.start)
+    })
+
+    const titleInputs = await screen.findAllByPlaceholderText('Schedule title')
+    expect(
+      assertDefined(
+        findVisible(titleInputs),
+        'no visible "Schedule title" input found',
+      ),
+    ).toHaveValue('Sleep')
+  })
+
+  it('has no reachable mobile Layout action-sheet trigger while the calendar tab is active', async () => {
+    await renderDayView()
+
+    expect(
+      document.body.querySelector('[data-slot="action-sheet-trigger"]'),
+    ).not.toBeInTheDocument()
+  })
+
+  it('switches to the tasks pane when the mobile "tasks" tab is clicked', async () => {
+    await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
+    const user = userEvent.setup()
+    await renderDayView()
+
+    expect(
+      document.body.querySelector('[data-slot="action-sheet-trigger"]'),
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'tasks' }))
+
+    expect(
+      document.body.querySelector('[data-slot="action-sheet-trigger"]'),
+    ).toBeInTheDocument()
+  })
+
+  it('reveals the "List"/"Board" layout picker items once the mobile tasks tab is active', async () => {
+    await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
+    const user = userEvent.setup()
+    await renderDayView({ initialMobileTab: 'tasks' })
+
+    const trigger = assertDefined(
+      document.body.querySelector<HTMLElement>(
+        '[data-slot="action-sheet-trigger"]',
+      ),
+      'mobile layout trigger not found',
+    )
+    await user.click(trigger)
+
+    expect(await screen.findByText('List')).toBeInTheDocument()
+    expect(screen.getByText('Board')).toBeInTheDocument()
   })
 })
