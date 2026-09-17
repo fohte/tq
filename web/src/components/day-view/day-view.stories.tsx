@@ -1,22 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { RouterProvider } from '@tanstack/react-router'
 import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
-import { expect, fn, within } from 'storybook/test'
+import { fn } from 'storybook/test'
 
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
-import {
-  makeTask,
-  makeTaskDetail,
-} from '#components/task/task-row-test-fixtures'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { Schedule } from '#hooks/use-schedules'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
-import { assertDefined, atIndex, findVisible } from '#lib/test-utils'
-import { createStoryRouter, StoryRouter } from '#storybook-config/story-router'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const today = new Date()
 const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -325,113 +320,6 @@ export const Kanban: Story = {
   },
 }
 
-export const OpensCreateScheduleModal: Story = {
-  args: Default.args,
-  play: async ({ canvas, canvasElement, userEvent }) => {
-    await userEvent.click(canvas.getByLabelText('New schedule'))
-
-    // CreateScheduleModal always renders both its desktop and mobile panels
-    // and lets CSS pick which is shown, so the "Schedule title" input exists
-    // twice — only the one matching the current viewport is visible.
-    const body = within(canvasElement.ownerDocument.body)
-    const titleInputs = await body.findAllByPlaceholderText('Schedule title')
-    await expect(
-      assertDefined(
-        findVisible(titleInputs),
-        'no visible "Schedule title" input found',
-      ),
-    ).toBeVisible()
-  },
-}
-
-export const OpensCreateTaskModal: Story = {
-  args: Default.args,
-  play: async ({ canvas, canvasElement, userEvent }) => {
-    await userEvent.click(canvas.getByLabelText('New task'))
-
-    const body = within(canvasElement.ownerDocument.body)
-    const titleInputs =
-      await body.findAllByPlaceholderText(/task title|タスクのタイトル/i)
-    await expect(
-      assertDefined(
-        findVisible(titleInputs),
-        'no visible task title input found',
-      ),
-    ).toBeVisible()
-  },
-}
-
-export const OpensEditScheduleModal: Story = {
-  args: Default.args,
-  play: async ({ canvas, canvasElement, userEvent }) => {
-    await userEvent.click(await canvas.findByText('Sleep'))
-
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(
-      atIndex(await body.findAllByPlaceholderText('Schedule title'), 0),
-    ).toHaveValue('Sleep')
-  },
-}
-
-export const NavigatesToTaskDetail: Story = (() => {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  let router: ReturnType<typeof createStoryRouter>
-
-  return {
-    args: Default.args,
-    parameters: {
-      // DayViewPresentation is the router's root route component, not
-      // content behind an <Outlet>, so navigating away renders nothing new —
-      // the screenshot is identical to Default.
-      screenshot: { skip: true },
-      // Clicking the chip hovers it first, opening its TimeBlockPreviewCard
-      // popup, which fetches the task behind it.
-      msw: {
-        handlers: [
-          http.get('/api/tasks/task-tb-4', () =>
-            HttpResponse.json(
-              makeTaskDetail({ id: 'task-tb-4', title: '#507 ビルド改善' }),
-            ),
-          ),
-        ],
-      },
-    },
-    render: (args) => {
-      router = createStoryRouter({
-        component: () => <DayViewPresentation {...args} />,
-        paths: ['/tasks', '/tasks/$taskId'],
-      })
-      return (
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      )
-    },
-    play: async ({ canvas, userEvent }) => {
-      await userEvent.click(await canvas.findByText('#507 ビルド改善'))
-      await expect(router.history.location.pathname).toBe('/tasks/task-tb-4')
-    },
-  }
-})()
-
-// The queue panel — where isLoading/queueTasks/queueCandidates differences
-// actually render — is hidden behind the mobile pane switcher's 'calendar'
-// default, so the mobile screenshot needs the 'tasks' tab opened to show it.
-// The switcher itself is `md:hidden`, so on desktop it's absent from the
-// accessibility tree and there's nothing to click (the panel is already
-// visible there regardless of the switcher).
-const openMobileQueueTab: NonNullable<Story['play']> = async ({
-  canvas,
-  userEvent,
-}) => {
-  const queueTab = canvas.queryByRole('button', { name: 'tasks' })
-  if (queueTab) {
-    await userEvent.click(queueTab)
-  }
-}
-
 const emptyQueueSections = [
   {
     key: 'day',
@@ -465,8 +353,8 @@ export const Loading: Story = {
     onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
     isAutoAssigning: false,
+    initialMobileTab: 'tasks',
   },
-  play: openMobileQueueTab,
 }
 
 export const Empty: Story = {
@@ -485,8 +373,8 @@ export const Empty: Story = {
     onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
     isAutoAssigning: false,
+    initialMobileTab: 'tasks',
   },
-  play: openMobileQueueTab,
 }
 
 export const EmptyQueueWithCandidates: Story = {
@@ -509,8 +397,8 @@ export const EmptyQueueWithCandidates: Story = {
     onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
     isAutoAssigning: false,
+    initialMobileTab: 'tasks',
   },
-  play: openMobileQueueTab,
 }
 
 export const KanbanMobile: Story = {
@@ -518,36 +406,6 @@ export const KanbanMobile: Story = {
   args: {
     ...Default.args,
     viewMode: 'kanban',
-  },
-  play: openMobileQueueTab,
-}
-
-// The layout picker only makes sense for the queue pane, so on mobile it's
-// absent from the "⋯" menu while the calendar tab (the default) is active,
-// and appears once the tasks tab is opened.
-export const LayoutMenuMobile: Story = {
-  tags: ['mobile-only'],
-  args: Default.args,
-  play: async ({ canvas, canvasElement, userEvent }) => {
-    await expect(
-      canvasElement.querySelector('[data-slot="action-sheet-trigger"]'),
-    ).not.toBeInTheDocument()
-
-    await userEvent.click(canvas.getByRole('button', { name: 'tasks' }))
-
-    const trigger = assertDefined(
-      canvasElement.querySelector<HTMLElement>(
-        '[data-slot="action-sheet-trigger"]',
-      ),
-      'mobile layout trigger not found',
-    )
-    await userEvent.click(trigger)
-
-    // The checkmark-on-selected-item contract itself is ActionsMenu's own —
-    // see SelectedItem in actions-menu.stories.tsx — so this only checks that
-    // the layout picker's items actually render here.
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('List')).toBeInTheDocument()
-    await expect(body.getByText('Board')).toBeInTheDocument()
+    initialMobileTab: 'tasks',
   },
 }

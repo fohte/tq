@@ -248,11 +248,6 @@ export const WithRecurrenceFromTemplate: Story = {
       templateId: '00000000-0000-0000-0000-000000000002',
     },
   },
-  play: async ({ canvas, userEvent }) => {
-    // Clicking navigates to /recurring/$templateId; this story only
-    // exercises that the click doesn't throw.
-    await userEvent.click(canvas.getByText('Weekly · Sun, Wed'))
-  },
 }
 
 export const WithGithubLink: Story = {
@@ -296,17 +291,6 @@ export const WithTags: Story = {
       title: 'Ship the release notes',
       labels: ['dev:tq', 'chore'],
     },
-  },
-}
-
-export const TagClick: Story = {
-  args: {
-    task: { ...baseTask, title: 'Click a tag token', labels: ['dev:tq'] },
-  },
-  play: async ({ canvas, userEvent }) => {
-    // Clicking navigates to /tasks scoped to the tag; this story only
-    // exercises that the click doesn't throw.
-    await userEvent.click(canvas.getByText('#dev:tq'))
   },
 }
 

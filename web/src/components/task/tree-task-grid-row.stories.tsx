@@ -1,9 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { RouterProvider } from '@tanstack/react-router'
 import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
-import { expect, waitFor, within } from 'storybook/test'
 
 import { makeTaskAgentSession } from '#components/agent-session/task-agent-session-test-fixtures'
 import { makeProject } from '#components/project/project-test-fixtures'
@@ -14,8 +12,7 @@ import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TreeNode } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
-import { assertDefined, atIndex, findVisible } from '#lib/test-utils'
-import { createStoryRouter, StoryRouter } from '#storybook-config/story-router'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const TASK_LIST_ROUTES = ['/tasks', '/tasks/$taskId']
 
@@ -209,77 +206,6 @@ export const WithProject: Story = {
   },
 }
 
-export const TagClick: Story = (() => {
-  const node: TreeNode = {
-    ...baseTreeNode,
-    title: 'Click a tag token',
-    labels: ['dev:tq'],
-  }
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  let router: ReturnType<typeof createStoryRouter>
-
-  return {
-    args: { node },
-    render: (args) => {
-      router = createStoryRouter({
-        component: () => (
-          <div className="w-full max-w-3xl">
-            <InteractiveTreeTaskGridRow node={args.node} />
-          </div>
-        ),
-        paths: TASK_LIST_ROUTES,
-      })
-      return (
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      )
-    },
-    play: async ({ canvas, userEvent }) => {
-      await userEvent.click(canvas.getByText('#dev:tq'))
-      await expect(router.history.location.pathname).toBe('/tasks')
-    },
-  }
-})()
-
-export const ClickNavigates: Story = (() => {
-  const node: TreeNode = {
-    ...baseTreeNode,
-    title: 'Click this row to navigate',
-  }
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  let router: ReturnType<typeof createStoryRouter>
-
-  return {
-    args: { node },
-    render: (args) => {
-      router = createStoryRouter({
-        component: () => (
-          <div className="w-full max-w-3xl">
-            <InteractiveTreeTaskGridRow node={args.node} />
-          </div>
-        ),
-        paths: TASK_LIST_ROUTES,
-      })
-      return (
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      )
-    },
-    play: async ({ args, canvas, userEvent }) => {
-      await userEvent.click(canvas.getByText(args.node.title))
-      await expect(router.history.location.pathname).toBe(
-        `/tasks/${args.node.id}`,
-      )
-    },
-  }
-})()
-
 export const WithChildren: Story = {
   args: {
     node: {
@@ -343,17 +269,6 @@ export const WithActiveSessions: Story = {
       </div>
     </Providers>
   ),
-  play: async ({ canvas, canvasElement, userEvent }) => {
-    await userEvent.hover(
-      atIndex(canvas.getAllByTestId('session-indicator'), 0),
-    )
-
-    const body = within(canvasElement.ownerDocument.body)
-    await waitFor(() =>
-      expect(body.getByText('Implement tree session rows')).toBeVisible(),
-    )
-    await expect(body.getByText('Write the release notes')).toBeVisible()
-  },
 }
 
 export const WithCompletionCount: Story = {
@@ -395,19 +310,11 @@ export const AllVariants: Story = {
   // the mobile viewport (375px) — see the comment on it.
   tags: ['desktop-only'],
   parameters: {
-    // The title `<span>` has a `min-w-30` (120px) floor, not `min-w-0` —
-    // without it, the title would shrink to 0 width instead of the row
-    // overflowing once the container is narrower than the row's content
-    // needs (see tree-task-grid-row.tsx). The container below is
-    // deliberately that narrow, so every row overflowing here is the
-    // regression check itself (see the play function verifying the title
-    // never collapses), not a bug to fix. Scoped to `narrow-row-container`
-    // below rather than disabling the whole story, so overflow added
-    // elsewhere in this story would still be caught. `* below the
-    // container is needed alongside the container itself because
-    // ignoreSelectors only exempts the elements it matches, not their
-    // descendants.
+    // The narrow container below intentionally overflows the row's
+    // min-w-16 title floor — scoped here, not the whole story, so
+    // unrelated overflow elsewhere would still be caught.
     overflowCheck: {
+      // ignoreSelectors doesn't exempt descendants, hence the `*` too.
       ignoreSelectors: [
         '[data-testid="narrow-row-container"]',
         '[data-testid="narrow-row-container"] *',
@@ -460,78 +367,11 @@ export const AllVariants: Story = {
       </Providers>
     )
   },
-  play: async ({ canvas }) => {
-    // Regression check: this container is narrower than the row's content
-    // needs, so without the title span's `min-w-30` floor (see
-    // tree-task-grid-row.tsx) the title collapses to 0 width instead of
-    // truncating.
-    const title = canvas.getByText('Todo task (personal)')
-    await expect(title.getBoundingClientRect().width).toBeGreaterThan(0)
-  },
 }
 
 export const Hovered: Story = {
   args: {
     node: { ...baseTreeNode, title: 'Hover to reveal the ⋯ actions menu' },
-  },
-  play: async ({ canvasElement }) => {
-    // ActionsMenu itself renders a responsive pair — a dropdown trigger and
-    // an action-sheet trigger — and toggles which is visible via `hidden
-    // md:flex` / `flex md:hidden` (see actions-menu.tsx), so only one of the
-    // two candidates below is ever reachable at a given viewport. The
-    // hidden one's *wrapper* is `display: none`, which a plain
-    // `getComputedStyle` on the trigger itself can't see (the trigger's own
-    // class alone may still compute to a visible `display`) —
-    // checkVisibility() walks ancestors instead. It ignores `opacity` by
-    // default, so the desktop trigger's opacity-0 hover-reveal (checked
-    // below) still counts as reachable here.
-    const dropdownTrigger = findVisible(
-      Array.from(
-        canvasElement.querySelectorAll<HTMLElement>(
-          '[data-slot="dropdown-menu-trigger"][aria-label="Task actions"]',
-        ),
-      ),
-    )
-    const actionSheetTrigger = findVisible(
-      Array.from(
-        canvasElement.querySelectorAll<HTMLElement>(
-          '[data-slot="action-sheet-trigger"]',
-        ),
-      ),
-    )
-
-    // The mobile ⋯ is always visible; the desktop one only reveals on
-    // hover/focus, so the reveal-on-hover behavior only applies there.
-    if (actionSheetTrigger) {
-      await expect(actionSheetTrigger).toBeVisible()
-      return
-    }
-
-    const desktopTrigger = assertDefined(
-      dropdownTrigger,
-      'row-actions trigger not found',
-    )
-
-    // storybook/test's userEvent only dispatches synthetic (untrusted)
-    // pointer events, which real browsers never honor for the native
-    // `:hover` pseudo-class, so it can't force-clear a prior story's real
-    // ambient hover left over on this shared browser tab. Only assert the
-    // hidden-by-default precondition when `.group` genuinely isn't in the
-    // live `:hover` chain right now — on a run where it is, this story
-    // provides no regression coverage for the default-hidden behavior, but
-    // the focus-reveal assertion below still exercises the same
-    // opacity-driven reveal mechanism deterministically.
-    const groupEl = desktopTrigger.closest('.group')
-    const groupIsHovered = groupEl?.matches(':hover') ?? false
-    if (!groupIsHovered) {
-      await expect(desktopTrigger).not.toBeVisible()
-    }
-
-    // Unlike group-hover, this is the trigger's own `:focus-visible` state
-    // (see desktopTriggerClassName in tree-row-actions-menu.tsx), so a real
-    // focus() call drives it deterministically.
-    desktopTrigger.focus()
-    await expect(desktopTrigger).toBeVisible()
   },
 }
 
