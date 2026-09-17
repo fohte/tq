@@ -6,16 +6,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { assertDefined } from '#lib/test-utils'
 
-// Content ending in a blockquote (rather than a paragraph/heading) is
-// required here: Milkdown's built-in `trailing` plugin
-// (@milkdown/plugin-trailing) appends an empty paragraph via
-// `appendTransaction` whenever any transaction is dispatched while the doc
-// doesn't already end in a paragraph/heading, regardless of whether that
-// transaction itself changed anything. Content ending in a *list* doesn't
-// exercise this: Crepe's list-item node view dispatches its own
-// content-neutral selection-sync transaction the moment the editor mounts,
-// which already closes this same gap before a click ever happens. The block
-// count is the assertion below that distinguishes the two outcomes.
+// Must end in a blockquote, not a list: a list's own mount-time selection-sync
+// transaction already masks the bug this fixture is meant to expose
+// (@milkdown/plugin-trailing appending a paragraph on any transaction).
 const TRAILING_BLOCKQUOTE_CONTENT =
   'Some intro text.\n\n> A blockquote at the very end.'
 
