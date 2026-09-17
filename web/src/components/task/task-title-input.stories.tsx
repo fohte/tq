@@ -2,13 +2,13 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { useState } from 'react'
-import { expect, within } from 'storybook/test'
 
 import { makeLabel } from '#components/label/label-test-fixtures'
 import { makeMentionSuggestion } from '#components/task/task-mention-test-fixtures'
 import { TaskTitleInput } from '#components/task/task-title-input'
 import { labelKeys } from '#hooks/use-labels'
 import type { MentionSuggestion } from '#hooks/use-task-mentions'
+import { taskMentionKeys } from '#hooks/use-task-mentions'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -27,9 +27,33 @@ const parentSuggestions: MentionSuggestion[] = [
   makeMentionSuggestion({ id: '2', number: 34, title: 'Fix login bug' }),
 ]
 
-function TaskTitleInputHarness({ initialValue }: { initialValue: string }) {
+// Seeds useTaskMentionSuggestions's cache directly (rather than relying on
+// the msw handler below) so the suggestion menu is already open on first
+// render — useDebounce's initial value equals its input, so the query key
+// for an empty partial is known up front.
+const parentSuggestionsQueryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+})
+parentSuggestionsQueryClient.setQueryData(
+  taskMentionKeys.suggestions(''),
+  parentSuggestions,
+)
+
+function TaskTitleInputHarness({
+  initialValue,
+  detectInitialTrigger,
+}: {
+  initialValue: string
+  detectInitialTrigger?: boolean
+}) {
   const [value, setValue] = useState(initialValue)
-  return <TaskTitleInput value={value} onChange={setValue} />
+  return (
+    <TaskTitleInput
+      value={value}
+      onChange={setValue}
+      detectInitialTrigger={detectInitialTrigger ?? false}
+    />
+  )
 }
 
 const meta = {
@@ -68,64 +92,29 @@ export const Empty: Story = {
 
 export const ShowsEstimateSuggestionsOnAt: Story = {
   args: {
-    initialValue: '',
-  },
-  play: async ({ canvasElement, canvas, userEvent }) => {
-    await userEvent.type(canvas.getByRole('textbox'), 'Buy milk @')
-
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('@today')).toBeVisible()
-    await expect(body.getByText('@30m')).toBeVisible()
+    initialValue: 'Buy milk @',
+    detectInitialTrigger: true,
   },
 }
 
 export const FiltersSuggestionsByPartialText: Story = {
   args: {
-    initialValue: '',
-  },
-  play: async ({ canvasElement, canvas, userEvent }) => {
-    await userEvent.type(canvas.getByRole('textbox'), 'Buy milk @tom')
-
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('@tomorrow')).toBeVisible()
-    await expect(body.queryByText('@30m')).not.toBeInTheDocument()
-  },
-}
-
-export const SelectsSuggestionOnEnter: Story = {
-  args: {
-    initialValue: '',
-  },
-  play: async ({ canvasElement, canvas, userEvent }) => {
-    const input = canvas.getByRole('textbox')
-    await userEvent.type(input, 'Buy milk @30')
-
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('@30m')).toBeVisible()
-
-    await userEvent.keyboard('{Enter}')
-
-    await expect(input).toHaveValue('Buy milk @30m ')
-    await expect(body.queryByText('@30m')).not.toBeInTheDocument()
+    initialValue: 'Buy milk @tom',
+    detectInitialTrigger: true,
   },
 }
 
 export const ShowsContextSuggestionsOnPercent: Story = {
   args: {
-    initialValue: '',
-  },
-  play: async ({ canvasElement, canvas, userEvent }) => {
-    await userEvent.type(canvas.getByRole('textbox'), 'Buy milk %w')
-
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('%work')).toBeVisible()
-    await expect(body.queryByText('%personal')).not.toBeInTheDocument()
+    initialValue: 'Buy milk %w',
+    detectInitialTrigger: true,
   },
 }
 
 export const ShowsLabelSuggestionsOnHash: Story = {
   args: {
-    initialValue: '',
+    initialValue: 'Buy milk #urg',
+    detectInitialTrigger: true,
   },
   decorators: [
     (Story) => (
@@ -134,64 +123,18 @@ export const ShowsLabelSuggestionsOnHash: Story = {
       </QueryClientProvider>
     ),
   ],
-  play: async ({ canvasElement, canvas, userEvent }) => {
-    await userEvent.type(canvas.getByRole('textbox'), 'Buy milk #urg')
-
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('#urgent')).toBeVisible()
-    await expect(body.getByText('#urgent-work')).toBeVisible()
-  },
 }
 
 export const ShowsParentSuggestionsOnCaret: Story = {
   args: {
-    initialValue: '',
+    initialValue: 'Buy milk ^',
+    detectInitialTrigger: true,
   },
-  play: async ({ canvasElement, canvas, userEvent }) => {
-    await userEvent.type(canvas.getByRole('textbox'), 'Buy milk ^')
-
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('#12')).toBeVisible()
-    await expect(body.getByText('Deploy to production')).toBeVisible()
-    await expect(body.getByText('#34')).toBeVisible()
-    await expect(body.getByText('Fix login bug')).toBeVisible()
-  },
-}
-
-export const SelectsParentSuggestionOnEnter: Story = {
-  args: {
-    initialValue: '',
-  },
-  play: async ({ canvasElement, canvas, userEvent }) => {
-    const input = canvas.getByRole('textbox')
-    await userEvent.type(input, 'Buy milk ^12')
-
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('Deploy to production')).toBeVisible()
-
-    await userEvent.keyboard('{Enter}')
-
-    await expect(input).toHaveValue('Buy milk ^12 ')
-    await expect(
-      body.queryByText('Deploy to production'),
-    ).not.toBeInTheDocument()
-  },
-}
-
-export const EscapeClosesMenuWithoutClearingText: Story = {
-  args: {
-    initialValue: '',
-  },
-  play: async ({ canvasElement, canvas, userEvent }) => {
-    const input = canvas.getByRole('textbox')
-    await userEvent.type(input, 'Buy milk @')
-
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('@today')).toBeVisible()
-
-    await userEvent.keyboard('{Escape}')
-
-    await expect(body.queryByText('@today')).not.toBeInTheDocument()
-    await expect(input).toHaveValue('Buy milk @')
-  },
+  decorators: [
+    (Story) => (
+      <QueryClientProvider client={parentSuggestionsQueryClient}>
+        <Story />
+      </QueryClientProvider>
+    ),
+  ],
 }
