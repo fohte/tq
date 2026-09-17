@@ -19,7 +19,6 @@ afterEach(() => {
 })
 
 // Milkdown throws contextNotFound during async cleanup when unmounting.
-// This is a library limitation, not an application bug.
 
 function hasCode(value: unknown, code: string): boolean {
   if (value == null || typeof value !== 'object' || !('code' in value)) {

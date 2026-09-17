@@ -70,7 +70,6 @@ async function placeCaretAtStart(
 }
 
 describe('MarkdownEditor list indent keymap', () => {
-  // Sinking the second item nests it into a new list inside the first item.
   it('indents the second item when Space is pressed at its start', async () => {
     const { container } = render(
       <MarkdownEditor defaultValue={TWO_ITEM_LIST} viewEditToggle={{}} />,
@@ -113,7 +112,6 @@ describe('MarkdownEditor list indent keymap', () => {
     expect(container.querySelector('.milkdown .ProseMirror li li')).toBeNull()
   })
 
-  // Backspace at a nested list item's start outdents it into the outer list.
   it('outdents a nested list item when Backspace is pressed at its start', async () => {
     const { container } = render(
       <MarkdownEditor defaultValue={NESTED_LIST} viewEditToggle={{}} />,

@@ -4,53 +4,19 @@ import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 
-import {
-  makeGithubLink,
-  makeResolveGithubUrlResult,
-} from '#components/task/github-link-test-fixtures'
-import {
-  makeTask,
-  makeTaskDetail,
-} from '#components/task/task-row-test-fixtures'
+import { makeGithubLink } from '#components/task/github-link-test-fixtures'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
+import {
+  GITHUB_URL_FIXTURE,
+  GITHUB_URL_FIXTURE_TITLE,
+  MENTION_FIXTURE_NUMBER,
+  MENTION_FIXTURE_TITLE,
+  seedLiveReferenceFixtures,
+} from '#components/ui/markdown-editor-live-references-test-fixtures'
 import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
-import { taskMentionKeys } from '#hooks/use-task-mentions'
 import { assertDefined } from '#lib/test-utils'
 import { StoryRouter } from '#storybook-config/story-router'
-
-const MENTION_FIXTURE_NUMBER = 9101
-const GITHUB_URL_FIXTURE = 'https://github.com/fohte/tq/issues/9102'
-const MENTION_FIXTURE_TITLE = 'Investigate flaky auth test suite'
-const GITHUB_URL_FIXTURE_TITLE =
-  'Support live-preview chips and autocomplete for task mentions'
-
-// Seeds the query cache the decoration plugin's chips render through (see
-// plugin.tsx's `createChipWidgetComponent`), so both providers resolve their
-// chip synchronously instead of via a real network round-trip.
-function seedLiveReferenceFixtures(queryClient: QueryClient) {
-  const task = makeTaskDetail({
-    id: '00000000-0000-0000-0000-000000000099',
-    number: MENTION_FIXTURE_NUMBER,
-    title: MENTION_FIXTURE_TITLE,
-    description: null,
-    startDate: null,
-    dueDate: null,
-    estimatedMinutes: null,
-  })
-  queryClient.setQueryData(
-    taskMentionKeys.preview(MENTION_FIXTURE_NUMBER),
-    task,
-  )
-
-  queryClient.setQueryData(
-    githubUrlPreviewKeys.preview(GITHUB_URL_FIXTURE),
-    makeResolveGithubUrlResult({
-      number: 9102,
-      url: GITHUB_URL_FIXTURE,
-      title: GITHUB_URL_FIXTURE_TITLE,
-    }),
-  )
-}
 
 const LINKED_GITHUB_URL_FIXTURE = 'https://github.com/fohte/tq/issues/9104'
 const LINKED_TASK_LINK_TEXT = 'Linked to a TQ task →'

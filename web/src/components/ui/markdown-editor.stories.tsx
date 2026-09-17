@@ -3,10 +3,12 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import type { ComponentProps, ReactNode } from 'react'
 import { fn } from 'storybook/test'
 
-import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
-import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
-import { taskMentionKeys } from '#hooks/use-task-mentions'
+import {
+  GITHUB_URL_FIXTURE,
+  MENTION_FIXTURE_NUMBER,
+  seedLiveReferenceFixtures,
+} from '#components/ui/markdown-editor-live-references-test-fixtures'
 import { queryClient } from '#lib/query-client'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -54,45 +56,6 @@ export const Compact: Story = {
   },
 }
 
-const MENTION_FIXTURE_NUMBER = 9101
-const GITHUB_URL_FIXTURE = 'https://github.com/fohte/tq/issues/9102'
-const MENTION_FIXTURE_TITLE = 'Investigate flaky auth test suite'
-const GITHUB_URL_FIXTURE_TITLE =
-  'Support live-preview chips and autocomplete for task mentions'
-
-// Seeds the app-wide query cache the decoration plugin's chips render
-// through (see plugin.tsx's `createChipWidgetComponent`), so both providers
-// resolve their chip synchronously instead of via a real network round-trip.
-function seedLiveReferenceFixtures() {
-  const task = makeTaskDetail({
-    id: '00000000-0000-0000-0000-000000000099',
-    number: MENTION_FIXTURE_NUMBER,
-    title: MENTION_FIXTURE_TITLE,
-    description: null,
-    startDate: null,
-    dueDate: null,
-    estimatedMinutes: null,
-  })
-  queryClient.setQueryData(
-    taskMentionKeys.preview(MENTION_FIXTURE_NUMBER),
-    task,
-  )
-
-  queryClient.setQueryData(githubUrlPreviewKeys.preview(GITHUB_URL_FIXTURE), {
-    linked: false,
-    preview: {
-      owner: 'fohte',
-      repo: 'tq',
-      number: 9102,
-      kind: 'issue',
-      url: GITHUB_URL_FIXTURE,
-      title: GITHUB_URL_FIXTURE_TITLE,
-      body: null,
-      state: 'open',
-    },
-  })
-}
-
 // Chips render as portals into the app's own React tree (see plugin.tsx),
 // so they need a QueryClientProvider and RouterProvider ancestor here the
 // same way the app's real root provides them.
@@ -108,7 +71,7 @@ function LiveReferencesProviders({ children }: { children: ReactNode }) {
 }
 
 function renderWithLiveReferences(args: ComponentProps<typeof MarkdownEditor>) {
-  seedLiveReferenceFixtures()
+  seedLiveReferenceFixtures(queryClient)
   return (
     <LiveReferencesProviders>
       <MarkdownEditor {...args} />
