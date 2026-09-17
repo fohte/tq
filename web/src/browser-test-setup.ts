@@ -11,9 +11,7 @@ import { DESKTOP_VIEWPORT } from '#storybook-config/screenshot-viewports'
 // desktop so components render their desktop layout unless a test overrides
 // it with its own `page.viewport(...)` call.
 beforeEach(async () => {
-  // Vitest browser mode reuses the same page across test files, so
-  // localStorage writes from one file (e.g. session-open-settings) leak
-  // into the next file's tests unless cleared here.
+  // Vitest browser mode reuses the same page across test files.
   localStorage.clear()
 
   await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)

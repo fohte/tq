@@ -34,7 +34,6 @@ beforeEach(() => {
   })
   vi.clearAllMocks()
   mockFetchTaskList.mockResolvedValue([])
-  localStorage.clear()
 })
 
 describe('useLazyTaskTree', () => {
