@@ -477,4 +477,15 @@ describe('CalendarGrid', () => {
       expect(scrollToTimeSpy).toHaveBeenCalledExactlyOnceWith('00:00:00')
     })
   })
+
+  it('uses the provided initialScrollTime instead of the computed default', () => {
+    render(
+      <CalendarGrid
+        events={[]}
+        activeView="day"
+        initialScrollTime="22:00:00"
+      />,
+    )
+    expect(capturedProps['scrollTime']).toBe('22:00:00')
+  })
 })
