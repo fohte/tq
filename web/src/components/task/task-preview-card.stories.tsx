@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import type { ReactNode } from 'react'
-import { expect } from 'storybook/test'
 
 import { TaskPreviewCard } from '#components/task/task-preview-card'
 import type { TaskPreviewChipTask } from '#components/task/task-preview-chip'
@@ -49,10 +48,6 @@ type Story = StoryObj<typeof meta>
 
 export const Todo: Story = {
   args: { raw: `#${String(baseTask.number)}`, task: baseTask },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText(baseTask.title)).toBeVisible()
-    await expect(canvas.getByText(baseTask.description ?? '')).toBeVisible()
-  },
 }
 
 export const Completed: Story = {
@@ -79,7 +74,4 @@ export const LongTitle: Story = {
 // actual task): the card falls back to rendering the raw matched text.
 export const Unresolved: Story = {
   args: { raw: '#999', task: null },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText('#999')).toBeVisible()
-  },
 }

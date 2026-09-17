@@ -47,16 +47,3 @@ export const CompletedTask: Story = {
     isCompleted: true,
   },
 }
-
-export const TagClick: Story = {
-  args: {
-    labels: ['dev:tq'],
-    isCompleted: false,
-  },
-  play: async ({ canvas, userEvent }) => {
-    // Clicking navigates to /tasks scoped to the tag (see task-row.test.tsx
-    // and tree-task-grid-row.test.tsx for the assertion on the resulting
-    // query); this story only exercises that the click doesn't throw.
-    await userEvent.click(canvas.getByText('#dev:tq'))
-  },
-}

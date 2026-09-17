@@ -17,14 +17,12 @@ export const taskUrlProvider: InlineReferenceProvider<TaskUrlData> = {
   // through (see `findTaskByIdOrNumber`), which already accepts either
   // form.
   findMatches(text) {
-    return matchAppResourceUrls(text, window.location.host, 'tasks').map(
-      (match) => ({
-        start: match.start,
-        end: match.end,
-        raw: match.raw,
-        data: { id: match.id },
-      }),
-    )
+    return matchAppResourceUrls(text, location.host, 'tasks').map((match) => ({
+      start: match.start,
+      end: match.end,
+      raw: match.raw,
+      data: { id: match.id },
+    }))
   },
 
   Chip: TaskUrlChip,

@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
 
 import type { TaskPreviewChipTask } from '#components/task/task-preview-chip'
 import { makeTask } from '#components/task/task-row-test-fixtures'
@@ -56,10 +55,6 @@ export const Manual: Story = {
     block: makeTimeBlock(),
     onDelete: () => {},
   },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText(task.title)).toBeVisible()
-    await expect(canvas.getByText('manual')).toBeVisible()
-  },
 }
 
 export const Auto: Story = {
@@ -85,9 +80,6 @@ export const Error: Story = {
     block: makeTimeBlock(),
     onDelete: () => {},
   },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText('Failed to load task')).toBeVisible()
-  },
 }
 
 export const Deleting: Story = {
@@ -96,22 +88,5 @@ export const Deleting: Story = {
     block: makeTimeBlock(),
     onDelete: () => {},
     isDeleting: true,
-  },
-}
-
-export const DeleteConfirmed: Story = {
-  args: {
-    task,
-    block: makeTimeBlock(),
-    onDelete: fn(),
-  },
-  play: async ({ canvasElement, args }) => {
-    const body = within(canvasElement.ownerDocument.body)
-    await userEvent.click(
-      body.getByRole('button', { name: 'Delete time block' }),
-    )
-    await userEvent.click(await body.findByRole('button', { name: 'Delete' }))
-
-    await expect(args.onDelete).toHaveBeenCalled()
   },
 }

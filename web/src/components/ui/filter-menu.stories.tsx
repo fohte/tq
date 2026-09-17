@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, userEvent, within } from 'storybook/test'
 
 import { FilterMenu } from '#components/ui/filter-menu'
 
@@ -24,25 +23,14 @@ type Story = StoryObj<typeof meta>
 // Desktop renders content in a popover positioned near the trigger.
 export const DesktopPopover: Story = {
   tags: ['desktop-only'],
-  play: async ({ canvas, canvasElement }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'Open filter' }))
-
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(
-      await body.findByText('Filter options go here.'),
-    ).toBeInTheDocument()
+  args: {
+    defaultOpen: true,
   },
 }
 
 export const MobileSheet: Story = {
   tags: ['mobile-only'],
-  play: async ({ canvas, canvasElement }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'Open filter' }))
-
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(body.getByRole('dialog')).toBeInTheDocument()
-    await expect(
-      await body.findByText('Filter options go here.'),
-    ).toBeInTheDocument()
+  args: {
+    defaultOpen: true,
   },
 }

@@ -42,16 +42,18 @@ export function ActionsMenu({
   desktopTriggerClassName,
   mobileTriggerClassName,
   'aria-label': ariaLabel = 'Actions',
+  defaultOpen,
 }: {
   items: ActionsMenuItem[]
   mobileItems?: ActionsMenuItem[]
   desktopTriggerClassName?: string
   mobileTriggerClassName?: string
   'aria-label'?: string
+  defaultOpen?: 'desktop' | 'mobile' | undefined
 }) {
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu defaultOpen={defaultOpen === 'desktop'}>
         <DropdownMenuTrigger
           aria-label={ariaLabel}
           onClick={stopRowNavigation}
@@ -89,7 +91,7 @@ export function ActionsMenu({
       </DropdownMenu>
 
       {mobileItems.length > 0 && (
-        <ActionSheet>
+        <ActionSheet defaultOpen={defaultOpen === 'mobile'}>
           <ActionSheetTrigger
             aria-label={ariaLabel}
             onClick={stopRowNavigation}

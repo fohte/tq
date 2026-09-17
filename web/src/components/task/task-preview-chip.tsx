@@ -24,14 +24,16 @@ export interface TaskPreviewChipTask {
 export function TaskPreviewChip({
   task,
   raw,
+  defaultOpen,
 }: {
   task: TaskPreviewChipTask | null
   raw: string
+  defaultOpen?: boolean | undefined
 }) {
   if (task == null) return <span>{raw}</span>
 
   return (
-    <PreviewCard>
+    <PreviewCard defaultOpen={defaultOpen}>
       <PreviewCardTrigger
         render={<span />}
         className="inline-flex cursor-text items-center gap-1 border border-border bg-secondary/50 px-1.5 py-0.5 align-baseline text-sm leading-none"

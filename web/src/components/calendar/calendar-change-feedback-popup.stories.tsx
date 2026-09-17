@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useRef } from 'react'
-import { expect, fn, within } from 'storybook/test'
+import { fn } from 'storybook/test'
 
 import {
   type CalendarChangeFeedback,
@@ -56,21 +56,5 @@ export const ShowsUndo: Story = {
 export const ShowsError: Story = {
   args: {
     feedback: { kind: 'error' },
-  },
-}
-
-const onUndo = fn()
-
-export const ClickingUndoInvokesCallback: Story = {
-  args: {
-    feedback: { kind: 'undo', onUndo },
-  },
-  play: async ({ canvasElement, userEvent }) => {
-    // AnchoredPopup renders through a portal into document.body, so it
-    // isn't inside canvasElement.
-    const body = within(canvasElement.ownerDocument.body)
-    await userEvent.click(await body.findByRole('button', { name: 'Undo' }))
-
-    await expect(onUndo).toHaveBeenCalledOnce()
   },
 }

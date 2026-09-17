@@ -85,6 +85,8 @@ export interface DayViewPresentationProps {
   onVisibleRangeChange?: (range: { start: Date; end: Date }) => void
   viewMode: DayViewMode
   onViewModeChange: (mode: DayViewMode) => void
+  /** Mounts with the mobile calendar/tasks pane switcher already on this tab. */
+  initialMobileTab?: MobileTab
 }
 
 export function DayViewPresentation({
@@ -109,9 +111,12 @@ export function DayViewPresentation({
   onVisibleRangeChange,
   viewMode,
   onViewModeChange,
+  initialMobileTab,
 }: DayViewPresentationProps) {
   const navigate = useNavigate()
-  const [mobileTab, setMobileTab] = useState<MobileTab>('calendar')
+  const [mobileTab, setMobileTab] = useState<MobileTab>(
+    initialMobileTab ?? 'calendar',
+  )
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [pendingRange, setPendingRange] = useState<SelectedRange | null>(null)
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)

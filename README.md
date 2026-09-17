@@ -47,14 +47,16 @@ Migrations are applied automatically by the test global setup (`api/src/global-s
 
 #### Web tests
 
-```sh
-pnpm --filter web run test
-```
-
-Storybook stories render in a headless Playwright chromium browser, which must be installed once per machine. This runs separately from `pnpm --filter web run test`. CI installs the browser and its system dependencies as two separate, independently cached steps (`.github/workflows/vrt.yml`); locally, `--with-deps` does both in one command.
+`pnpm --filter web run test`'s `browser` vitest project renders in a headless Playwright chromium browser, which must be installed once per machine before it will pass.
 
 ```sh
 pnpm --filter web exec playwright install --with-deps chromium
+pnpm --filter web run test
+```
+
+Storybook stories also render in Playwright chromium, but as a separate project (`test:storybook`) that isn't part of `pnpm --filter web run test`. CI installs the browser separately for that project (`.github/workflows/vrt.yml`); locally, `--with-deps` above already covers it.
+
+```sh
 pnpm --filter web run test:storybook
 ```
 
@@ -63,12 +65,14 @@ pnpm --filter web run test:storybook
 `extension/` is a Chrome extension (Manifest V3). Build it, then load it unpacked:
 
 ```sh
-pnpm --filter extension run build
+TQ_ORIGIN=https://tq.fohte.net pnpm --filter extension run build
 ```
+
+`TQ_ORIGIN` is the tq instance the extension talks to (`host_permissions` and API requests); the build fails without it. This writes the bundled scripts and a generated `manifest.json` to `extension/dist/`. Point it at a local dev server instead: `TQ_ORIGIN=http://localhost:5173 pnpm --filter extension run build`.
 
 1. Open `chrome://extensions`.
 2. Enable **Developer mode**.
-3. Click **Load unpacked** and select the `extension/` directory.
+3. Click **Load unpacked** and select the `extension/dist` directory.
 
 ### Scripts
 

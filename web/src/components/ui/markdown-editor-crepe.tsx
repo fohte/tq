@@ -217,9 +217,18 @@ function CrepeEditor({
     lastSyncedValueRef.current = incoming
     const crepe = crepeRef.current
     if (!crepe || crepe.getMarkdown() === incoming) return
-    // flush: true avoids dispatching a transaction, for the same reason
-    // setReadonly above does.
-    crepe.editor.action(replaceAll(incoming, true))
+    // Deferred to a microtask: `flush: true` below replaces the whole
+    // EditorState, which makes ProseMirror tear down and recreate every
+    // plugin view (e.g. the task-mention autocomplete popup's own React
+    // root). Doing that synchronously inside this passive effect nests it
+    // inside React's own commit for the render that changed `defaultValue`,
+    // which logs "Attempted to synchronously unmount a root while React was
+    // already rendering". Deferring past that commit avoids the overlap.
+    queueMicrotask(() => {
+      // flush: true avoids dispatching a transaction, for the same reason
+      // setReadonly above does.
+      crepe.editor.action(replaceAll(incoming, true))
+    })
   }, [defaultValue, mode])
 
   return <Milkdown />

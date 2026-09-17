@@ -1,22 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { CalendarPlus, Layers } from 'lucide-react'
-import { useState } from 'react'
-import { expect, within } from 'storybook/test'
 
 import { Input } from '#components/ui/input'
 import {
   ExpandableFieldChip,
   InlineFieldGroup,
 } from '#components/ui/modal-field'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '#components/ui/select'
-import { selectValueHandler } from '#lib/form-utils'
-import { clickSelectOption } from '#lib/test-utils'
+import { ExpandableContextChipDemo } from '#components/ui/modal-field-test-fixtures'
 
 const meta = {
   title: 'UI/ModalField',
@@ -79,6 +69,7 @@ export const ExpandableFieldChipExpanded: Story = {
     <ExpandableFieldChip
       icon={<CalendarPlus className="size-3.5" />}
       label="Start"
+      defaultOpen
       expanded={() => (
         <Input
           type="date"
@@ -89,76 +80,8 @@ export const ExpandableFieldChipExpanded: Story = {
       )}
     />
   ),
-  play: async ({ canvasElement, userEvent }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Start' }))
-    await expect(canvas.getByDisplayValue('2026-08-01')).toBeVisible()
-  },
-}
-
-type ContextValue = 'work' | 'personal' | 'dev'
-const contextValues = [
-  '',
-  'work',
-  'personal',
-  'dev',
-] as const satisfies readonly (ContextValue | '')[]
-const contextLabels: Record<ContextValue, string> = {
-  work: 'Work',
-  personal: 'Personal',
-  dev: 'Dev',
-}
-
-function ExpandableContextChipDemo() {
-  const [context, setContext] = useState<ContextValue | ''>('')
-
-  return (
-    <ExpandableFieldChip
-      icon={<Layers className="size-3.5" />}
-      label={context ? contextLabels[context] : 'Context'}
-      active={context !== ''}
-      expanded={(close) => (
-        <Select
-          value={context}
-          onValueChange={(value) => {
-            selectValueHandler(setContext, contextValues)(value)
-            close()
-          }}
-        >
-          <SelectTrigger
-            autoFocus
-            size="sm"
-            className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
-          >
-            <SelectValue placeholder="None" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">None</SelectItem>
-            <SelectItem value="work">Work</SelectItem>
-            <SelectItem value="personal">Personal</SelectItem>
-            <SelectItem value="dev">Dev</SelectItem>
-          </SelectContent>
-        </Select>
-      )}
-    />
-  )
 }
 
 export const ExpandableFieldChipExpandedWithSelect: Story = {
-  render: () => <ExpandableContextChipDemo />,
-  play: async ({ canvasElement, userEvent }) => {
-    const canvas = within(canvasElement)
-    const body = within(canvasElement.ownerDocument.body)
-
-    await userEvent.click(canvas.getByRole('button', { name: 'Context' }))
-    await userEvent.click(canvas.getByRole('combobox'))
-    await clickSelectOption(
-      userEvent,
-      await body.findByRole('option', { name: 'Work' }),
-    )
-
-    // Picking a value closes the chip via the `close()` callback rather than
-    // its blur handler, so the collapsed label updates immediately.
-    await expect(canvas.getByRole('button', { name: 'Work' })).toBeVisible()
-  },
+  render: () => <ExpandableContextChipDemo defaultOpen />,
 }

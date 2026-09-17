@@ -14,8 +14,14 @@ import {
 import { Input } from '#components/ui/input'
 import { useCreateSavedView } from '#hooks/use-saved-views'
 
-export function SaveViewButton({ query }: { query: string }) {
-  const [open, setOpen] = useState(false)
+export function SaveViewButton({
+  query,
+  initialOpen = false,
+}: {
+  query: string
+  initialOpen?: boolean
+}) {
+  const [open, setOpen] = useState(initialOpen)
   const [name, setName] = useState('')
   const createSavedView = useCreateSavedView()
 

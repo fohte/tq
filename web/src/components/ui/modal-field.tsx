@@ -29,13 +29,15 @@ export function ExpandableFieldChip({
   label,
   active,
   expanded,
+  defaultOpen,
 }: {
   icon: React.ReactNode
   label: string
   active?: boolean
   expanded?: (close: () => void) => React.ReactNode
+  defaultOpen?: boolean
 }) {
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditing, setIsEditing] = useState(defaultOpen ?? false)
   const close = () => {
     setIsEditing(false)
   }

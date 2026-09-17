@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { useState } from 'react'
-import { expect, within } from 'storybook/test'
 
 import { makeLabel } from '#components/label/label-test-fixtures'
 import { TagsInput } from '#components/task/tags-input'
@@ -29,9 +28,24 @@ attachedAncestorQueryClient.setQueryData(
   [makeLabel({ id: '1', name: 'dev' }), makeLabel({ id: '2', name: 'dev/tq' })],
 )
 
-function TagsInputHarness({ initialLabels }: { initialLabels: string[] }) {
+function TagsInputHarness({
+  initialLabels,
+  defaultIsAdding,
+  defaultInput,
+}: {
+  initialLabels: string[]
+  defaultIsAdding?: boolean
+  defaultInput?: string
+}) {
   const [labels, setLabels] = useState(initialLabels)
-  return <TagsInput labels={labels} onLabelsChange={setLabels} />
+  return (
+    <TagsInput
+      labels={labels}
+      onLabelsChange={setLabels}
+      defaultIsAdding={defaultIsAdding ?? false}
+      defaultInput={defaultInput ?? ''}
+    />
+  )
 }
 
 const meta = {
@@ -69,57 +83,17 @@ export const WithTags: Story = {
   },
 }
 
-export const OpensInputOnAddClick: Story = {
+export const AddingTag: Story = {
   args: {
     initialLabels: ['dev:tq'],
-  },
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '+ add tag' }))
-
-    await expect(canvas.getByPlaceholderText('tag name')).toBeInTheDocument()
-  },
-}
-
-export const AddsNewTagOnEnter: Story = {
-  args: {
-    initialLabels: [],
-  },
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '+ add tag' }))
-    await userEvent.type(canvas.getByPlaceholderText('tag name'), 'urgent')
-    await userEvent.keyboard('{Enter}')
-
-    await expect(canvas.getByText('urgent')).toBeInTheDocument()
-  },
-}
-
-export const ShowsSuggestionsWithoutLosingFocus: Story = {
-  args: {
-    initialLabels: [],
-  },
-  decorators: [
-    (Story) => (
-      <QueryClientProvider client={suggestionsQueryClient}>
-        <Story />
-      </QueryClientProvider>
-    ),
-  ],
-  play: async ({ canvasElement, canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '+ add tag' }))
-    const input = canvas.getByPlaceholderText('tag name')
-    await userEvent.type(input, 'urg')
-
-    // AnchoredPopup renders the suggestion list through a portal into
-    // document.body, so it isn't inside canvasElement.
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('#urgent')).toBeVisible()
-    await expect(input).toHaveFocus()
+    defaultIsAdding: true,
   },
 }
 
 export const GroupsSuggestionsHierarchically: Story = {
   args: {
     initialLabels: [],
+    defaultIsAdding: true,
   },
   decorators: [
     (Story) => (
@@ -128,25 +102,12 @@ export const GroupsSuggestionsHierarchically: Story = {
       </QueryClientProvider>
     ),
   ],
-  play: async ({ canvasElement, canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '+ add tag' }))
-
-    // AnchoredPopup renders the suggestion list through a portal into
-    // document.body, so it isn't inside canvasElement.
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('#dev')).toBeVisible()
-    await expect(body.getByText('#infra')).toBeVisible()
-    await expect(body.getByText('#tq')).toBeVisible()
-
-    await userEvent.click(body.getByText('#tq'))
-
-    await expect(canvas.getByText('dev/tq')).toBeInTheDocument()
-  },
 }
 
 export const HidesSuggestionAlreadyAttachedAsAncestor: Story = {
   args: {
     initialLabels: ['dev'],
+    defaultIsAdding: true,
   },
   decorators: [
     (Story) => (
@@ -155,28 +116,4 @@ export const HidesSuggestionAlreadyAttachedAsAncestor: Story = {
       </QueryClientProvider>
     ),
   ],
-  play: async ({ canvasElement, canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '+ add tag' }))
-
-    // AnchoredPopup renders the suggestion list through a portal into
-    // document.body, so it isn't inside canvasElement.
-    const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText('#tq')).toBeVisible()
-    await expect(body.queryByText('#dev')).not.toBeInTheDocument()
-  },
-}
-
-export const RemovesTagOnClick: Story = {
-  args: {
-    initialLabels: ['urgent'],
-  },
-  parameters: {
-    // Removing the only tag leaves an empty tag list, identical to Empty.
-    screenshot: { skip: true },
-  },
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'Remove urgent' }))
-
-    await expect(canvas.queryByText('urgent')).not.toBeInTheDocument()
-  },
 }

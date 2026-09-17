@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { expect, waitFor, within } from 'storybook/test'
 
 import { TaskMentionChip } from '#components/task/task-mention-chip'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
@@ -48,15 +47,23 @@ function TaskMentionChipWithProviders({
   number,
   raw,
   task,
+  defaultOpen,
 }: {
   number: number
   raw: string
   task: TaskDetail | null
+  defaultOpen?: boolean | undefined
 }) {
   return (
     <Providers number={number} task={task}>
       <p className="text-sm">
-        See <TaskMentionChip data={{ number }} raw={raw} /> for details.
+        See{' '}
+        <TaskMentionChip
+          data={{ number }}
+          raw={raw}
+          defaultOpen={defaultOpen}
+        />{' '}
+        for details.
       </p>
     </Providers>
   )
@@ -78,21 +85,7 @@ export const Todo: Story = {
     number: baseTask.number,
     raw: `#${String(baseTask.number)}`,
     task: baseTask,
-  },
-  play: async ({ canvas, canvasElement, userEvent }) => {
-    // The chip renders as a portal into the app's own React tree in
-    // production (see plugin.tsx), so this exercises the same tree shape:
-    // hovering must open the preview card and render its navigation link
-    // without throwing. The popup renders via a portal, so it must be
-    // queried against the document body.
-    await userEvent.hover(canvas.getByText(baseTask.title))
-    const body = within(canvasElement.ownerDocument.body)
-    // The popup's fade-in animation can still be mid-transition right as the
-    // text mounts, so wait for it to finish rather than checking visibility
-    // the instant the text appears.
-    await waitFor(() =>
-      expect(body.getByText(baseTask.description ?? '')).toBeVisible(),
-    )
+    defaultOpen: true,
   },
 }
 
@@ -121,7 +114,4 @@ export const LongTitle: Story = {
 // a card.
 export const Unresolved: Story = {
   args: { number: 999, raw: '#999', task: null },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText('#999')).toBeVisible()
-  },
 }

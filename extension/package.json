@@ -6,7 +6,7 @@
     "#*": "./src/*.ts"
   },
   "scripts": {
-    "build": "esbuild src/content.ts --bundle --format=iife --outdir=dist",
+    "build": "node build.mjs",
     "test": "conc pnpm:test:type pnpm:test:unit",
     "test:type": "tsc --noEmit",
     "test:unit": "vitest run"
@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@types/chrome": "0.2.9",
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "jsdom": "29.1.1"
   }
 }

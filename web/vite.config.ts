@@ -26,6 +26,11 @@ export default defineConfig({
       // the login page.
       useCredentials: true,
       manifest: pwaManifest,
+      injectManifest: {
+        // Keep index.html uncached so navigation requests reach the
+        // network and receive auth redirects.
+        globIgnores: ['**/index.html'],
+      },
     }),
   ],
   server: {

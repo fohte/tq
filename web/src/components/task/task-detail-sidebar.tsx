@@ -36,7 +36,13 @@ import { cn } from '#lib/utils'
 
 // --- Sidebar (PC) ---
 
-export function TaskSidebar({ task }: { task: TaskDetail }) {
+export function TaskSidebar({
+  task,
+  defaultOpen,
+}: {
+  task: TaskDetail
+  defaultOpen?: boolean | undefined
+}) {
   return (
     <DetailSidebarPanel>
       <SectionLabel>DETAILS</SectionLabel>
@@ -44,6 +50,7 @@ export function TaskSidebar({ task }: { task: TaskDetail }) {
         taskId={task.id}
         status={task.status}
         statusReason={task.statusReason}
+        defaultOpen={defaultOpen}
       />
       <SidebarPlanField taskId={task.id} commitment={task.commitment} />
       <SidebarEstimateField
@@ -179,10 +186,12 @@ function SidebarStatusField({
   taskId,
   status,
   statusReason,
+  defaultOpen,
 }: {
   taskId: string
   status: TaskDetail['status']
   statusReason: TaskDetail['statusReason']
+  defaultOpen?: boolean | undefined
 }) {
   const { handleValueChange, duplicatePicker } = useHandleStatusChange(
     taskId,
@@ -201,6 +210,7 @@ function SidebarStatusField({
           'not_planned',
           'duplicate',
         ])}
+        defaultOpen={defaultOpen}
       >
         <SelectTrigger size="sm" className={fieldValueClassName}>
           <SelectValue />

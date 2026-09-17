@@ -5,10 +5,14 @@ import type { TaskMentionData } from '#lib/inline-reference/providers/task-menti
 export function TaskMentionChip({
   data,
   raw,
+  defaultOpen,
 }: {
   data: TaskMentionData
   raw: string
+  defaultOpen?: boolean | undefined
 }) {
   const { data: task } = useTaskMentionPreview(data.number)
-  return <TaskPreviewChip task={task ?? null} raw={raw} />
+  return (
+    <TaskPreviewChip task={task ?? null} raw={raw} defaultOpen={defaultOpen} />
+  )
 }

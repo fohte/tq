@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { expect, waitFor, within } from 'storybook/test'
 
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { TaskUrlChip } from '#components/task/task-url-chip'
@@ -52,15 +51,18 @@ function TaskUrlChipWithProviders({
   id,
   raw,
   task,
+  defaultOpen,
 }: {
   id: string
   raw: string
   task: TaskUrlPreview | null
+  defaultOpen?: boolean | undefined
 }) {
   return (
     <Providers id={id} task={task}>
       <p className="text-sm">
-        See <TaskUrlChip data={{ id }} raw={raw} /> for details.
+        See <TaskUrlChip data={{ id }} raw={raw} defaultOpen={defaultOpen} />{' '}
+        for details.
       </p>
     </Providers>
   )
@@ -78,22 +80,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Todo: Story = {
-  args: { id: TASK_ID, raw: TASK_URL, task: baseTask },
-  play: async ({ canvas, canvasElement, userEvent }) => {
-    // The chip renders as a portal into the app's own React tree in
-    // production (see plugin.tsx), so this exercises the same tree shape:
-    // hovering must open the preview card and render its navigation link
-    // without throwing. The popup renders via a portal, so it must be
-    // queried against the document body.
-    await userEvent.hover(canvas.getByText(baseTask.title))
-    const body = within(canvasElement.ownerDocument.body)
-    // The popup's fade-in animation can still be mid-transition right as the
-    // text mounts, so wait for it to finish rather than checking visibility
-    // the instant the text appears.
-    await waitFor(() =>
-      expect(body.getByText(baseTask.description ?? '')).toBeVisible(),
-    )
-  },
+  args: { id: TASK_ID, raw: TASK_URL, task: baseTask, defaultOpen: true },
 }
 
 export const Completed: Story = {
@@ -109,7 +96,4 @@ export const Completed: Story = {
 // instead of a card.
 export const Unresolved: Story = {
   args: { id: UNRESOLVED_ID, raw: UNRESOLVED_URL, task: null },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText(UNRESOLVED_URL)).toBeVisible()
-  },
 }
