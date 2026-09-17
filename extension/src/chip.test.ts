@@ -121,6 +121,21 @@ describe('syncChipNextTo', () => {
     )
   })
 
+  it('adopts a chip already placed by another instance of this script instead of duplicating it', () => {
+    document.body.innerHTML =
+      '<div data-component="StateLabel">Open</div><a data-tq-chip="empty">+ tq</a>'
+
+    syncChipNextTo(stateLabel(), {
+      text: 'tq #42',
+      href: `${TQ_ORIGIN}/tasks/uuid-1`,
+      variant: 'linked',
+    })
+
+    expect(document.body.innerHTML).toBe(
+      `<div data-component="StateLabel">Open</div><a data-tq-chip="linked" href="${TQ_ORIGIN}/tasks/uuid-1">tq #42</a>`,
+    )
+  })
+
   it('recovers the chip when another script rewraps the state label in a new parent', () => {
     syncChipNextTo(stateLabel(), { text: '+ tq', href: null, variant: 'empty' })
 
