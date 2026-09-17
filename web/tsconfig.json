@@ -3,7 +3,13 @@
     "@tsconfig/node-lts/tsconfig.json",
     "@tsconfig/strictest/tsconfig.json"
   ],
-  "include": ["src", ".storybook/**/*", "vite.config.ts", "vitest.config.ts"],
+  "include": [
+    "src",
+    ".storybook/**/*",
+    "vite.config.ts",
+    "vite.config.test.ts",
+    "vitest.config.ts"
+  ],
   "exclude": ["**/*.cjs"],
   "compilerOptions": {
     "module": "preserve",
