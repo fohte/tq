@@ -27,11 +27,8 @@ export default defineConfig({
       useCredentials: true,
       manifest: pwaManifest,
       injectManifest: {
-        // Precaching index.html would make the service worker answer `/`
-        // navigations from cache, swallowing the Cloudflare Access login
-        // redirect that a session-expiry reload depends on to recover
-        // (see web/src/lib/session-aware-fetch.ts and the comment in
-        // web/src/sw.ts).
+        // Keep index.html uncached so navigation requests reach the
+        // network and receive auth redirects.
         globIgnores: ['**/index.html'],
       },
     }),
