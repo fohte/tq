@@ -29,6 +29,12 @@ export function chipAppearance(state: ChipState): ChipAppearance | null {
 const CHIP_ATTR = 'data-tq-chip'
 const STYLE_ELEMENT_ID = 'tq-chip-styles'
 
+// Keyed by the state label reference instead of DOM position: some other
+// browser extensions (e.g. Refined GitHub) rewrap a state label in a newly
+// created parent, which would otherwise strand the chip in the old parent
+// and make a position-scoped lookup miss it.
+const chipsByStateLabel = new WeakMap<Element, Element>()
+
 function ensureStylesInjected(): void {
   if (document.getElementById(STYLE_ELEMENT_ID) !== null) return
 
@@ -75,13 +81,21 @@ function applyAppearance(chip: Element, appearance: ChipAppearance): void {
 }
 
 function findExistingChip(stateLabel: Element): Element | null {
+  const tracked = chipsByStateLabel.get(stateLabel)
+  if (tracked !== undefined && tracked.isConnected) return tracked
+
+  // Fall back to a direct-child scan for a chip this call didn't create
+  // itself (e.g. inserted by another instance of this content script) so
+  // it's adopted instead of duplicated.
   const parent = stateLabel.parentElement
   if (parent === null) return null
-  return (
-    Array.from(parent.children).find((child) =>
-      child.hasAttribute(CHIP_ATTR),
-    ) ?? null
+  const adjacent = Array.from(parent.children).find((child) =>
+    child.hasAttribute(CHIP_ATTR),
   )
+  if (adjacent === undefined) return null
+
+  chipsByStateLabel.set(stateLabel, adjacent)
+  return adjacent
 }
 
 export function syncChipNextTo(
@@ -101,10 +115,17 @@ export function syncChipNextTo(
     if (!matchesAppearance(existing, appearance)) {
       applyAppearance(existing, appearance)
     }
+    // The label was moved into a different parent (e.g. rewrapped by
+    // another extension) without the chip following along; bring it back
+    // next to the label instead of leaving it behind.
+    if (existing.parentElement !== stateLabel.parentElement) {
+      stateLabel.insertAdjacentElement('afterend', existing)
+    }
     return
   }
 
   const chip = document.createElement('a')
   applyAppearance(chip, appearance)
   stateLabel.insertAdjacentElement('afterend', chip)
+  chipsByStateLabel.set(stateLabel, chip)
 }
