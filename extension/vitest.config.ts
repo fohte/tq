@@ -7,5 +7,6 @@ export default defineConfig({
     // behavior is unchanged.
     include: ['**/*.{test,spec}.?(c|m)[jt]s?(x)'],
     environment: 'jsdom',
+    env: { TQ_ORIGIN: 'https://tq.example.test' },
   },
 })

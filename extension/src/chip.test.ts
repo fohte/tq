@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { chipAppearance, type ChipState, syncChipNextTo } from '#chip'
+import { TQ_ORIGIN } from '#config'
 
 describe('chipAppearance', () => {
   it('renders a linked task', () => {
@@ -12,7 +13,7 @@ describe('chipAppearance', () => {
 
     expect(chipAppearance(state)).toEqual({
       text: 'tq #42',
-      href: 'https://tq.fohte.net/tasks/uuid-1',
+      href: `${TQ_ORIGIN}/tasks/uuid-1`,
       variant: 'linked',
     })
   })
@@ -60,12 +61,12 @@ describe('syncChipNextTo', () => {
   it('sets the href when the appearance has one', () => {
     syncChipNextTo(stateLabel(), {
       text: 'tq #42',
-      href: 'https://tq.fohte.net/tasks/uuid-1',
+      href: `${TQ_ORIGIN}/tasks/uuid-1`,
       variant: 'linked',
     })
 
     expect(document.body.innerHTML).toBe(
-      '<div data-component="StateLabel">Open</div><a data-tq-chip="linked" href="https://tq.fohte.net/tasks/uuid-1">tq #42</a>',
+      `<div data-component="StateLabel">Open</div><a data-tq-chip="linked" href="${TQ_ORIGIN}/tasks/uuid-1">tq #42</a>`,
     )
   })
 
@@ -77,12 +78,12 @@ describe('syncChipNextTo', () => {
     })
     syncChipNextTo(stateLabel(), {
       text: 'tq #42',
-      href: 'https://tq.fohte.net/tasks/uuid-1',
+      href: `${TQ_ORIGIN}/tasks/uuid-1`,
       variant: 'linked',
     })
 
     expect(document.body.innerHTML).toBe(
-      '<div data-component="StateLabel">Open</div><a data-tq-chip="linked" href="https://tq.fohte.net/tasks/uuid-1">tq #42</a>',
+      `<div data-component="StateLabel">Open</div><a data-tq-chip="linked" href="${TQ_ORIGIN}/tasks/uuid-1">tq #42</a>`,
     )
   })
 
@@ -94,19 +95,19 @@ describe('syncChipNextTo', () => {
 
     syncChipNextTo(stateLabel(), {
       text: 'tq #42',
-      href: 'https://tq.fohte.net/tasks/uuid-1',
+      href: `${TQ_ORIGIN}/tasks/uuid-1`,
       variant: 'linked',
     })
 
     expect(document.body.innerHTML).toBe(
-      '<div data-component="StateLabel">Open</div><span></span><a data-tq-chip="linked" href="https://tq.fohte.net/tasks/uuid-1">tq #42</a>',
+      `<div data-component="StateLabel">Open</div><span></span><a data-tq-chip="linked" href="${TQ_ORIGIN}/tasks/uuid-1">tq #42</a>`,
     )
   })
 
   it('clears the href when an existing chip becomes unlinked', () => {
     syncChipNextTo(stateLabel(), {
       text: 'tq #42',
-      href: 'https://tq.fohte.net/tasks/uuid-1',
+      href: `${TQ_ORIGIN}/tasks/uuid-1`,
       variant: 'linked',
     })
     syncChipNextTo(stateLabel(), {

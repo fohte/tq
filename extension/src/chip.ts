@@ -1,3 +1,5 @@
+import { TQ_ORIGIN } from '#config'
+
 export type ChipState =
   | { kind: 'linked'; taskId: string; taskNumber: number }
   | { kind: 'unlinked' }
@@ -14,7 +16,7 @@ export function chipAppearance(state: ChipState): ChipAppearance | null {
     case 'linked':
       return {
         text: `tq #${String(state.taskNumber)}`,
-        href: `https://tq.fohte.net/tasks/${state.taskId}`,
+        href: `${TQ_ORIGIN}/tasks/${state.taskId}`,
         variant: 'linked',
       }
     case 'unlinked':
