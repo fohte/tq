@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { makeLinkedTask } from '#background-test-fixtures'
 import { TQ_ORIGIN } from '#config'
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -49,7 +50,7 @@ describe('lookupTask', () => {
     const { lookupTask } = await import('#background')
     const fetchImpl = vi.fn().mockResolvedValue(
       jsonResponse({
-        task: { id: 'uuid-1', number: 42, title: 'some task title' },
+        task: { ...makeLinkedTask(), title: 'some task title' },
       }),
     )
 
@@ -58,7 +59,7 @@ describe('lookupTask', () => {
       fetchImpl,
     )
 
-    expect(result._unsafeUnwrap()).toEqual({ id: 'uuid-1', number: 42 })
+    expect(result._unsafeUnwrap()).toEqual(makeLinkedTask())
   })
 
   it('errs on a non-200 response', async () => {
@@ -89,6 +90,80 @@ describe('lookupTask', () => {
 
     expect(result._unsafeUnwrapErr()).toEqual(
       new Error('tq lookup request failed', { cause: networkError }),
+    )
+  })
+})
+
+describe('createTask', () => {
+  it('posts the URL to the from-github endpoint with cookie credentials', async () => {
+    const { createTask } = await import('#background')
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ created: true, task: makeLinkedTask() }, 201),
+      )
+
+    await createTask('https://github.com/fohte/tq/issues/42', fetchImpl)
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      `${TQ_ORIGIN}/api/tasks/from-github`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: 'https://github.com/fohte/tq/issues/42' }),
+      },
+    )
+  })
+
+  it('resolves to the created task, narrowed to just id and number, regardless of the created flag', async () => {
+    const { createTask } = await import('#background')
+    const fetchImpl = vi.fn().mockResolvedValue(
+      jsonResponse(
+        {
+          created: false,
+          task: { ...makeLinkedTask(), title: 'some task title' },
+        },
+        200,
+      ),
+    )
+
+    const result = await createTask(
+      'https://github.com/fohte/tq/issues/42',
+      fetchImpl,
+    )
+
+    expect(result._unsafeUnwrap()).toEqual(makeLinkedTask())
+  })
+
+  it('errs on a non-2xx response', async () => {
+    const { createTask } = await import('#background')
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ error: 'nope' }, 400))
+
+    const result = await createTask(
+      'https://github.com/fohte/tq/issues/42',
+      fetchImpl,
+    )
+
+    expect(result._unsafeUnwrapErr()).toEqual(
+      new Error('tq create returned status 400'),
+    )
+  })
+
+  it('errs when the fetch itself rejects', async () => {
+    const { createTask } = await import('#background')
+    const networkError = new Error('network down')
+    const fetchImpl = vi.fn().mockRejectedValue(networkError)
+
+    const result = await createTask(
+      'https://github.com/fohte/tq/issues/42',
+      fetchImpl,
+    )
+
+    expect(result._unsafeUnwrapErr()).toEqual(
+      new Error('tq create request failed', { cause: networkError }),
     )
   })
 })
@@ -128,11 +203,7 @@ describe('onMessage listener', () => {
   it('responds with the linked task for a valid lookup message', async () => {
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValue(
-          jsonResponse({ task: { id: 'uuid-1', number: 42 } }),
-        ),
+      vi.fn().mockResolvedValue(jsonResponse({ task: makeLinkedTask() })),
     )
     const listener = await importAndCaptureListener()
     const sendResponse = vi.fn()
@@ -147,7 +218,7 @@ describe('onMessage listener', () => {
     await vi.waitFor(() => {
       expect(sendResponse).toHaveBeenCalledWith({
         ok: true,
-        task: { id: 'uuid-1', number: 42 },
+        task: makeLinkedTask(),
       })
     })
   })
@@ -159,6 +230,49 @@ describe('onMessage listener', () => {
 
     listener(
       { type: 'lookup', url: 'https://github.com/fohte/tq/issues/42' },
+      {},
+      sendResponse,
+    )
+
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith({ ok: false })
+    })
+  })
+
+  it('responds with the created task for a valid create message', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          jsonResponse({ created: true, task: makeLinkedTask() }, 201),
+        ),
+    )
+    const listener = await importAndCaptureListener()
+    const sendResponse = vi.fn()
+
+    const handled = listener(
+      { type: 'create', url: 'https://github.com/fohte/tq/issues/42' },
+      {},
+      sendResponse,
+    )
+
+    expect(handled).toBe(true)
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith({
+        ok: true,
+        task: makeLinkedTask(),
+      })
+    })
+  })
+
+  it('responds with ok: false when creation fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({}, 500)))
+    const listener = await importAndCaptureListener()
+    const sendResponse = vi.fn()
+
+    listener(
+      { type: 'create', url: 'https://github.com/fohte/tq/issues/42' },
       {},
       sendResponse,
     )

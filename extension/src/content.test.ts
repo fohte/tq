@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { makeLinkedTask } from '#background-test-fixtures'
 import { TQ_ORIGIN } from '#config'
 
 // Wrapped in its own container per label, matching the real page: the
@@ -87,7 +88,7 @@ describe('content script', () => {
     document.body.innerHTML = LABEL_ONLY
     const response = Promise.resolve({
       ok: true,
-      task: { id: 'uuid-1', number: 42 },
+      task: makeLinkedTask(),
     })
     sendMessage.mockReturnValue(response)
 
@@ -123,7 +124,7 @@ describe('content script', () => {
     document.body.innerHTML = LABEL_ONLY
     const firstResponse = Promise.resolve({
       ok: true,
-      task: { id: 'uuid-1', number: 42 },
+      task: makeLinkedTask(),
     })
     sendMessage.mockReturnValueOnce(firstResponse)
 
@@ -183,5 +184,138 @@ describe('content script', () => {
     await vi.waitFor(() => {
       expect(document.body.innerHTML).toBe(LABEL_WITH_CHIP)
     })
+  })
+})
+
+describe('creating a task from an unlinked chip', () => {
+  function unlinkedChip(): Element {
+    const el = document.querySelector('[data-tq-chip="empty"]')
+    if (el === null) throw new Error('unlinked chip not found in test fixture')
+    return el
+  }
+
+  function click(el: Element): void {
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  }
+
+  async function renderUnlinkedChip(): Promise<void> {
+    document.body.innerHTML = LABEL_ONLY
+    sendMessage.mockReturnValueOnce(Promise.resolve({ ok: true, task: null }))
+    await import('#content')
+    await vi.waitFor(() => {
+      expect(document.body.innerHTML).toBe(LABEL_WITH_CHIP)
+    })
+  }
+
+  it('sends a create message for the looked-up URL when the chip is clicked', async () => {
+    await renderUnlinkedChip()
+    sendMessage.mockReturnValue(new Promise<never>(() => {}))
+
+    click(unlinkedChip())
+
+    expect(sendMessage).toHaveBeenLastCalledWith({
+      type: 'create',
+      url: LOOKUP_URL,
+    })
+  })
+
+  it('shows a creating state immediately after the chip is clicked', async () => {
+    await renderUnlinkedChip()
+    sendMessage.mockReturnValue(new Promise<never>(() => {}))
+
+    click(unlinkedChip())
+
+    expect(document.body.innerHTML).toBe(
+      '<div><div data-component="StateLabel">Open</div><a data-tq-chip="empty">tq: creating...</a></div>',
+    )
+  })
+
+  it('ignores a second click while a create request is in flight', async () => {
+    await renderUnlinkedChip()
+    sendMessage.mockReturnValue(new Promise<never>(() => {}))
+    click(unlinkedChip())
+    sendMessage.mockClear()
+
+    click(unlinkedChip())
+
+    expect(sendMessage).not.toHaveBeenCalled()
+  })
+
+  it('opens the created task once creation succeeds', async () => {
+    await renderUnlinkedChip()
+    const createResponse = Promise.resolve({
+      ok: true,
+      task: makeLinkedTask(),
+    })
+    sendMessage.mockReturnValue(createResponse)
+
+    click(unlinkedChip())
+    await createResponse
+
+    expect(document.body.innerHTML).toBe(LABEL_WITH_LINKED_CHIP)
+    expect(location.href).toBe(`${TQ_ORIGIN}/tasks/uuid-1`)
+  })
+
+  async function renderFailedChip(): Promise<void> {
+    await renderUnlinkedChip()
+    sendMessage.mockReturnValue(Promise.resolve({ ok: false }))
+    click(unlinkedChip())
+    await vi.waitFor(() => {
+      expect(document.body.innerHTML).toBe(
+        '<div><div data-component="StateLabel">Open</div><a data-tq-chip="empty">tq: failed</a></div>',
+      )
+    })
+  }
+
+  it('shows a failed state when creation fails', async () => {
+    await renderFailedChip()
+
+    expect(document.body.innerHTML).toBe(
+      '<div><div data-component="StateLabel">Open</div><a data-tq-chip="empty">tq: failed</a></div>',
+    )
+  })
+
+  it('retries and opens the task when the failed chip is clicked again', async () => {
+    await renderFailedChip()
+    const retryResponse = Promise.resolve({
+      ok: true,
+      task: makeLinkedTask(),
+    })
+    sendMessage.mockReturnValue(retryResponse)
+
+    click(unlinkedChip())
+    await retryResponse
+
+    expect(document.body.innerHTML).toBe(LABEL_WITH_LINKED_CHIP)
+  })
+
+  it('does not create a task when a linked chip is clicked', async () => {
+    document.body.innerHTML = LABEL_ONLY
+    sendMessage.mockReturnValueOnce(
+      Promise.resolve({ ok: true, task: makeLinkedTask() }),
+    )
+    await import('#content')
+    await vi.waitFor(() => {
+      expect(document.body.innerHTML).toBe(LABEL_WITH_LINKED_CHIP)
+    })
+
+    const linkedChip = document.querySelector('[data-tq-chip="linked"]')
+    if (linkedChip === null) throw new Error('linked chip not found')
+    click(linkedChip)
+
+    expect(sendMessage).toHaveBeenCalledTimes(1)
+  })
+
+  it('errs when the fetch itself rejects', async () => {
+    await renderUnlinkedChip()
+    const rejection = Promise.reject(new Error('extension context invalidated'))
+    sendMessage.mockReturnValue(rejection)
+
+    click(unlinkedChip())
+    await rejection.catch(() => {})
+
+    expect(document.body.innerHTML).toBe(
+      '<div><div data-component="StateLabel">Open</div><a data-tq-chip="empty">tq: failed</a></div>',
+    )
   })
 })
