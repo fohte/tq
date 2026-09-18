@@ -8,11 +8,36 @@ When a change would push a file's non-test code past ~500 lines, split it along 
 
 Prefer creating a new focused file over appending to the largest existing one.
 
+## Testing
+
+### Running tests
+
+```sh
+pnpm run test              # all workspaces
+pnpm --filter api run test # API only (runs tsc --noEmit + vitest in parallel)
+pnpm --filter web run test # web only
+```
+
+### API integration tests — database setup
+
+API integration tests require PostgreSQL running via Docker.
+
+```sh
+mise run db:up                                  # skip if already running
+docker compose exec db createdb -U tq tq_test   # first time only
+```
+
+The Compose file uses a fixed project name (`tq-infra`), so the same PostgreSQL container is shared across all worktrees. Running `mise run db:up` from any worktree is safe and will not create duplicate containers — skip if already running for development.
+
+The `db` service publishes Postgres on a random host port to avoid clashing with other projects. `mise run db:up` resolves the assigned port and writes it to `.env.runtime` as both `DATABASE_URL` (`tq_dev`) and `TEST_DATABASE_URL` (`tq_test`); mise loads both automatically and `api`'s test runs prefer `TEST_DATABASE_URL`. Do not point `DATABASE_URL` at `tq_dev` for tests — existing data there causes test failures.
+
+Migrations are applied automatically by `api/src/global-setup.ts`.
+
 ## Error handling rules
 
 ### Return a `Result` instead of throwing
 
-`errorHandling` in `eslint.config.js` bans `throw`/`try-catch` in production code and requires every returned `Result` to be consumed (`no-restricted-syntax`, `neverthrow/must-use-result` in `@fohte/eslint-config`). Return a `Result`/`ResultAsync` from [neverthrow](https://github.com/supermacro/neverthrow) instead (add it as a dependency first if this package doesn't have it yet):
+`errorHandling` in `eslint.config.js` bans `throw`/`try-catch` in production code and requires every returned `Result` to be consumed (`no-restricted-syntax`, `neverthrow/must-use-result` in `@fohte/eslint-config`). Both rules are enforced repo-wide, including `web/`. Return a `Result`/`ResultAsync` from [neverthrow](https://github.com/supermacro/neverthrow) instead (add it as a dependency first if this package doesn't have it yet):
 
 ```ts
 // bad: throws
@@ -28,19 +53,48 @@ function parseConfig(raw: string): Result<Config, ConfigError> {
 }
 ```
 
-Use `ResultAsync.fromPromise()` or `Result.fromThrowable()` to interop with a throwing API without a local try/catch. If the throw-based contract genuinely can't be wrapped that way, catch the exception, wrap it in a `BoundaryError` subclass (see `src/errors.ts`), and rethrow it — `no-restricted-syntax` bans `try`/`throw` as separate selectors, so both the `try` and the `throw` need their own `eslint-disable-next-line no-restricted-syntax` comment explaining why.
+Use `ResultAsync.fromPromise()` or `Result.fromThrowable()` to interop with a throwing API without a local try/catch. If the throw-based contract genuinely can't be wrapped that way, catch the exception, wrap it in a `BoundaryError` subclass (see `api/src/errors.ts`), and rethrow it — `no-restricted-syntax` bans `try`/`throw` as separate selectors, so both the `try` and the `throw` need their own `eslint-disable-next-line no-restricted-syntax` comment explaining why.
 
 ## Storybook
 
 ### Write a story for every presentational component
 
-Every presentational component under `src/components/` should have a co-located `.stories.tsx` file matching the component's filename (e.g. `src/components/card.tsx` pairs with `src/components/card.stories.tsx`). If a source file exports multiple components, give each one its own `<component-name>.stories.tsx` file instead of matching the source filename. Write one story per meaningful state/variant of the component.
+Every presentational component under `web/src/components/` should have a co-located `.stories.tsx` file matching the component's filename (e.g. `web/src/components/task/task-row-appearance.stories.tsx` for `task-row-appearance.tsx`). If a source file exports multiple components, give each one its own `<component-name>.stories.tsx` file instead of matching the source filename (e.g. `project-detail-sidebar.tsx` exports `ProjectSidebar` and `ProjectSidebarMobile`, backed by `project-sidebar.stories.tsx` and `project-sidebar-mobile.stories.tsx` respectively). Follow the pattern of existing stories: one story per meaningful state/variant of the component. If a component depends on routing or React Query, wrap it in a local provider helper in the story file (see `task-row-appearance.stories.tsx` for a reference implementation).
+
+Stories aren't just documentation — they run as the `storybook` project in `web/vitest.config.ts` (`@storybook/addon-vitest` + `@vitest/browser-playwright`), rendering each story in a real headless Chromium:
+
+```sh
+pnpm --filter web run test:storybook # vitest run --project=storybook --project=storybook-mobile
+```
+
+This is separate from `pnpm --filter web run test`, so writing the story is not enforced by the default test run — write it anyway when adding or changing a presentational component.
+
+### Build a shared factory for fixtures duplicated across files
+
+A type needs a shared factory once its fixture is hand-written as a full object literal in 2 or more `.stories.tsx`/`.test.tsx`/`.test.ts` files: every field the type gains (e.g. on an API response change) then needs a manual edit in each of those files. A single file that defines one local object and spreads it internally doesn't qualify — that edit already stays in one place.
+
+Existing factories, one file per type-family, each exporting a `make<Type>(overrides: Partial<T> = {}): T` function:
+
+- `web/src/components/task/task-row-test-fixtures.ts`: `makeTask`/`makeTaskDetail`/`makeNode`, covering `Task`/`TaskDetail`/`TreeNode` and their structurally-identical aliases (`SearchResult`, `LinkedTaskSummary`, `ProjectTask`, `TaskUrlPreview`, ...)
+- `web/src/components/task/github-link-test-fixtures.ts`: `makeGithubLink`
+- `web/src/components/task/task-page-test-fixtures.ts`: `makeTaskPage`
+- `web/src/components/project/project-test-fixtures.ts`: `makeProject`/`makeProjectDetail`, covering `Project`/`ProjectDetail` and their structurally-identical alias `ProjectUrlPreview`
+- `web/src/components/schedule/schedule-test-fixtures.ts`: `makeSchedule`
+- `web/src/components/layout/sidebar-test-fixtures.ts`: `makeLabel`/`makeSavedView`, plus re-exports of `makeTask`/`makeProject` for sidebar stories/tests that need them alongside the sidebar-only fixtures
+- `web/src/components/recurring/recurring-template-test-fixtures.ts`: `makeRecurringTemplate`, covering `RecurringTemplate`
+- `web/src/components/settings/gcal-calendar-test-fixtures.ts`: `makeGcalCalendar`, covering `GcalCalendar`
+
+Before writing a fixture object literal, check whether a factory for that type already exists. Call it and pass only the fields that matter for that story/test (id, title, status, dates, ...) as overrides — never write the full object literal by hand. Add a thin local wrapper (e.g. a `makeProjectTask` that layers a fixed `projectId` on top of `makeTask`) when a group of stories/tests in one file shares a non-default override.
+
+When a type crosses the 2-file threshold for the first time, add its factory to the closest existing file if the type belongs to that domain, otherwise create a new `<domain>-test-fixtures.ts` colocated with the component directory most associated with the type.
 
 ### Extract route-inline UI that has its own appearance or state
 
-Stories are the only thing the `vrt` CI check renders and screenshots. A route file is never rendered by a story, so UI written inline in a route — a `<select>`, a checkbox, a column header, an empty state, a full-screen loading/not-found view — has no visual-regression coverage even when the rule above (every presentational component under `src/components/` has a story) is fully satisfied.
+Stories are the only thing the VRT job (`vrt / shard (storybook, N)` / `vrt / shard (storybook-mobile, N)`) renders and screenshots. Route files under `web/src/routes/` are never rendered by a story, so UI written inline in a route — a `<select>`, a checkbox, a column header, an empty state, a full-screen loading/not-found view — has no visual-regression coverage even when the rule above (every presentational component under `web/src/components/` has a story) is fully satisfied.
 
-Keep in the route file: data fetching, URL parameter handling, and composing already-extracted, already-storied components into the screen layout. Extract into `src/components/` (with a story) anything that has its own visual appearance or state, even a few lines of JSX, since a story is the only way it gets checked for a visual regression.
+Keep in the route file: data fetching (React Query hooks), URL search param validation/updates, and composing already-extracted, already-storied components into the screen layout. Extract into `web/src/components/` (with a story) anything that has its own visual appearance or state, even a few lines of JSX, since a story is the only way it gets checked for a visual regression.
+
+Boundary in practice: `web/src/routes/index.tsx` renders nothing itself and delegates entirely to `DayViewPresentation` — the target shape for a route file. `web/src/routes/settings.tsx`'s `SettingsIntegrationRow` stays inline because it only calls a hook and forwards the result to the already-storied `IntegrationCard`; it introduces no new appearance to verify.
 
 ### A story is a prop-driven visual state, not a behavior test
 
@@ -50,7 +104,7 @@ For a state that would otherwise take interaction to reach — an open menu/popo
 
 ### Prefer Storybook over manual browser checks
 
-When you need to check how a component looks in a given state, write or update its story and verify it with `cd web && pnpm run storybook:screenshot -- --changed origin/main` (swap `origin/main` for this repo's default branch if it differs) instead of starting a dev server and driving a browser manually. Dropping the ref limits `--changed` to staged/unstaged files only, so it silently runs nothing once the change is committed. The `vrt` CI check already renders and diffs every story on every PR, so this scoped run is enough — running the full `storybook:screenshot` suite instead keeps a headless Chromium instance (a multi-process browser, not a single lightweight process) busy per worker for as long as it takes to get through every story, competing with any other concurrent session or worktree for the same machine's CPU and memory.
+When you need to check how a component looks or behaves in a given state, write or update its story and verify it with `pnpm --filter web run test:storybook --changed origin/main` instead of starting a dev server and driving a browser manually — dropping `origin/main` limits `--changed` to staged/unstaged files only, so it silently runs nothing once you've committed. `pnpm --filter web run storybook` is for a human watching the browser — you could screenshot it yourself instead, but that's far more wasteful than the check above.
 
 ## Visual Regression Testing (VRT)
 
