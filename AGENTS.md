@@ -80,7 +80,8 @@ Existing factories, one file per type-family, each exporting a `make<Type>(overr
 - `web/src/components/task/task-page-test-fixtures.ts`: `makeTaskPage`
 - `web/src/components/project/project-test-fixtures.ts`: `makeProject`/`makeProjectDetail`, covering `Project`/`ProjectDetail` and their structurally-identical alias `ProjectUrlPreview`
 - `web/src/components/schedule/schedule-test-fixtures.ts`: `makeSchedule`
-- `web/src/components/layout/sidebar-test-fixtures.ts`: `makeLabel`/`makeSavedView`, plus re-exports of `makeTask`/`makeProject` for sidebar stories/tests that need them alongside the sidebar-only fixtures
+- `web/src/components/label/label-test-fixtures.ts`: `makeLabel`, covering `Label`
+- `web/src/components/layout/sidebar-test-fixtures.ts`: `makeSavedView`, plus re-exports of `makeTask`/`makeProject`/`makeLabel` for sidebar stories/tests that need them alongside the sidebar-only fixtures
 - `web/src/components/recurring/recurring-template-test-fixtures.ts`: `makeRecurringTemplate`, covering `RecurringTemplate`
 - `web/src/components/settings/gcal-calendar-test-fixtures.ts`: `makeGcalCalendar`, covering `GcalCalendar`
 
@@ -94,7 +95,7 @@ Stories are the only thing the VRT job (`vrt / shard (storybook, N)` / `vrt / sh
 
 Keep in the route file: data fetching (React Query hooks), URL search param validation/updates, and composing already-extracted, already-storied components into the screen layout. Extract into `web/src/components/` (with a story) anything that has its own visual appearance or state, even a few lines of JSX, since a story is the only way it gets checked for a visual regression.
 
-Boundary in practice: `web/src/routes/index.tsx` renders nothing itself and delegates entirely to `DayViewPresentation` — the target shape for a route file. `web/src/routes/settings.tsx`'s `SettingsIntegrationRow` stays inline because it only calls a hook and forwards the result to the already-storied `IntegrationCard`; it introduces no new appearance to verify.
+Boundary in practice: `web/src/routes/index.tsx` renders nothing itself and composes `DayViewPresentation` and the already-storied `CalendarChangeFeedbackPopup` — the target shape for a route file. `web/src/routes/settings.tsx`'s `SettingsIntegrationRow` stays inline because it only calls a hook and forwards the result to the already-storied `IntegrationCard`; it introduces no new appearance to verify.
 
 ### A story is a prop-driven visual state, not a behavior test
 
