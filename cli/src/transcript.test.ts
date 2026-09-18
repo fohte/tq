@@ -147,7 +147,7 @@ describe('resolveSessionLabel with provider: codex', () => {
     }
   }
 
-  it('falls back to the cwd basename when the transcript has nothing usable', () => {
+  it('falls back to the cwd basename when the transcript has nothing usable (codex)', () => {
     expect(
       resolveSessionLabel('', '/home/user/ghq/example/app', 'codex'),
     ).toEqual({
@@ -176,6 +176,24 @@ describe('resolveSessionLabel with provider: codex', () => {
         type: 'response_item',
         payload: { type: 'function_call', name: 'shell' },
       },
+      codexMessage('user', 'Fix the login bug'),
+    )
+    expect(resolveSessionLabel(transcript, '/home/user/app', 'codex')).toEqual({
+      label: 'Fix the login bug',
+      lastMessage: null,
+    })
+  })
+
+  it('skips the synthetic AGENTS.md instructions and environment_context user turns Codex inserts before the real prompt', () => {
+    const transcript = jsonl(
+      codexMessage(
+        'user',
+        '# AGENTS.md instructions for /home/user/app\n\n<INSTRUCTIONS>\nSome repo rule.',
+      ),
+      codexMessage(
+        'user',
+        '<environment_context>\n  <cwd>/home/user/app</cwd>\n</environment_context>',
+      ),
       codexMessage('user', 'Fix the login bug'),
     )
     expect(resolveSessionLabel(transcript, '/home/user/app', 'codex')).toEqual({

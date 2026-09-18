@@ -39,7 +39,7 @@ const hookInputSchema = z.object({
   transcript_path: z.string().optional(),
 })
 
-const agentProviderSchema = z.enum(['claude_code', 'codex'])
+const agentProviderSchema = upsertAgentSessionSchema.shape.provider
 
 async function readTranscript(
   transcriptPath: string | undefined,
@@ -126,6 +126,10 @@ async function reportHookEvent(
     await persistSessionIdToEnvFile(input.data.session_id)
   }
 
+  // The `: 'claude_code'` branch never actually runs: the --provider
+  // Option's .choices() already rejects any other value before the action
+  // handler runs. safeParse only exists to narrow `options['provider']`
+  // (unknown) to AgentProvider without an unsafe type assertion.
   const parsedProvider = agentProviderSchema.safeParse(options['provider'])
   const provider = parsedProvider.success ? parsedProvider.data : 'claude_code'
 

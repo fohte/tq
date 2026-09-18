@@ -116,8 +116,18 @@ function resolveClaudeCodeSessionLabel(
   }
 }
 
+// Before the real first user turn, Codex inserts synthetic `role: "user"`
+// response_items carrying its own AGENTS.md instructions and environment
+// context, not anything the user typed — confirmed across every rollout
+// file under ~/.codex/sessions. Both prefixes must be skipped, or the
+// label ends up being Codex's own instructions text instead of the task.
+const CODEX_SYNTHETIC_USER_PREFIXES = [
+  '# AGENTS.md instructions for ',
+  '<environment_context>',
+]
+
 /**
- * Codex has no title concept, so the label is always the first user
+ * Codex has no title concept, so the label is the first real user
  * message. Each rollout line is `{ type: 'response_item', payload: {
  * type: 'message', role, content: [...] } }`; the message text sits in
  * `input_text` blocks for the user and `output_text` blocks for the
@@ -144,7 +154,12 @@ function resolveCodexSessionLabel(
       const text = textFromContentBlocks(payload['content'], ['input_text'])
       if (text !== undefined) {
         const normalized = normalize(text)
-        if (normalized.length > 0) firstUserPrompt = normalized
+        const isSynthetic = CODEX_SYNTHETIC_USER_PREFIXES.some((prefix) =>
+          normalized.startsWith(prefix),
+        )
+        if (normalized.length > 0 && !isSynthetic) {
+          firstUserPrompt = normalized
+        }
       }
     } else if (payload['role'] === 'assistant') {
       const text = textFromContentBlocks(payload['content'], ['output_text'])
