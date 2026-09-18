@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const upsertAgentSessionSchema = z.object({
-  provider: z.literal('claude_code'),
+  provider: z.enum(['claude_code', 'codex']),
   sessionId: z.string().min(1),
   cwd: z.string().min(1),
   context: z.enum(['work', 'personal']).optional(),
