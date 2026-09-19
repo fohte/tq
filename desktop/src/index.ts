@@ -1,12 +1,8 @@
-import { app, BrowserWindow, globalShortcut, shell } from 'electron'
+import { app, BrowserWindow, shell } from 'electron'
 import { ResultAsync } from 'neverthrow'
 
 import { EXTERNAL_SCHEMES, TQ_ORIGIN } from '#config'
 import { classifyNavigation } from '#navigation'
-
-// Three modifiers plus Space isn't in Apple's reserved-shortcut list
-// (https://support.apple.com/en-us/102650).
-const TOGGLE_SHORTCUT = 'Control+Option+Command+Space'
 
 let isQuitting = false
 
@@ -29,8 +25,8 @@ const openExternal = (url: string) =>
 const createWindow = (): BrowserWindow => {
   const win = new BrowserWindow({ webPreferences: { sandbox: true } })
 
-  // Hide instead of closing so that reopening from the Dock or the shortcut
-  // keeps the page state; `before-quit` lets a real quit through.
+  // Hide instead of closing so that reopening from the Dock keeps the page
+  // state; `before-quit` lets a real quit through.
   win.on('close', (event) => {
     if (!isQuitting) {
       event.preventDefault()
@@ -46,18 +42,6 @@ const createWindow = (): BrowserWindow => {
 const showWindow = (win: BrowserWindow) => {
   app.show()
   win.show()
-  // Needed when triggered by the global shortcut while another app is active.
-  app.focus({ steal: true })
-}
-
-const toggleWindow = (win: BrowserWindow) => {
-  if (win.isVisible() && win.isFocused()) {
-    // Hides the whole app rather than just the window, so that focus returns
-    // to the previously active app.
-    app.hide()
-  } else {
-    showWindow(win)
-  }
 }
 
 app.on('before-quit', () => {
@@ -94,10 +78,6 @@ app.on('web-contents-created', (_event, contents) => {
 // Keep running with no visible window; the default is to quit.
 app.on('window-all-closed', () => undefined)
 
-app.on('will-quit', () => {
-  globalShortcut.unregisterAll()
-})
-
 // Top-level `await app.whenReady()` never resolves in an ESM main process.
 void app.whenReady().then(() => {
   const mainWindow = createWindow()
@@ -105,13 +85,4 @@ void app.whenReady().then(() => {
   app.on('activate', () => {
     showWindow(mainWindow)
   })
-
-  // `register` returns false, without throwing, when another app already owns
-  // the shortcut.
-  const registered = globalShortcut.register(TOGGLE_SHORTCUT, () => {
-    toggleWindow(mainWindow)
-  })
-  if (!registered) {
-    console.error(`failed to register the global shortcut ${TOGGLE_SHORTCUT}`)
-  }
 })
