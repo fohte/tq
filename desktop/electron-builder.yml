@@ -5,6 +5,9 @@ directories:
 files:
   - dist/**
 mac:
+  # Reuses the PWA icon so the app icon stays in sync with the web one.
+  # electron-builder converts the 512x512 PNG to .icns.
+  icon: ../web/public/icon-512.png
   # An unpacked .app; the default dmg/zip targets assume code signing.
   target: dir
   identity: null
