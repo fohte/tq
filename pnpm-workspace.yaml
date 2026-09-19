@@ -3,6 +3,7 @@ packages:
   - 'api'
   - 'cli'
   - 'extension'
+  - 'desktop'
 
 allowBuilds:
   # required by vitest's transformer

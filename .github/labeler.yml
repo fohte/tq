@@ -10,3 +10,6 @@ scope/cli:
 scope/extension:
   - changed-files:
       - any-glob-to-any-file: extension/**
+scope/desktop:
+  - changed-files:
+      - any-glob-to-any-file: desktop/**
