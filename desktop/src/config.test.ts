@@ -55,3 +55,22 @@ describe('TQ_ORIGIN', () => {
     expect(TQ_ORIGIN).toBe('https://tq.example.com')
   })
 })
+
+describe('EXTERNAL_SCHEMES', () => {
+  it('defaults to none', async () => {
+    vi.stubEnv('TQ_ORIGIN', 'https://tq.example.com')
+
+    const { EXTERNAL_SCHEMES } = await import('#config')
+
+    expect(EXTERNAL_SCHEMES).toEqual([])
+  })
+
+  it('splits a comma-separated list, trimming and lowercasing each scheme', async () => {
+    vi.stubEnv('TQ_ORIGIN', 'https://tq.example.com')
+    vi.stubEnv('TQ_EXTERNAL_SCHEMES', ' Example-App, other-app ,,')
+
+    const { EXTERNAL_SCHEMES } = await import('#config')
+
+    expect(EXTERNAL_SCHEMES).toEqual(['example-app', 'other-app'])
+  })
+})

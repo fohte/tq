@@ -14,3 +14,14 @@ if (!/^https?:\/\//.test(explicitOrigin)) {
 }
 
 export const TQ_ORIGIN: string = explicitOrigin
+
+// Comma-separated URL schemes without the colon (e.g. `myapp,otherapp`) that
+// tq pages may hand to the OS, such as the scheme behind the session
+// focus/resume URL templates. Beyond http(s) and mailto, only these are
+// opened; every other scheme is blocked.
+export const EXTERNAL_SCHEMES: readonly string[] = (
+  process.env['TQ_EXTERNAL_SCHEMES'] ?? ''
+)
+  .split(',')
+  .map((scheme) => scheme.trim().toLowerCase())
+  .filter((scheme) => scheme !== '')

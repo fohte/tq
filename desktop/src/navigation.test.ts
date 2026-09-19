@@ -6,32 +6,45 @@ const ORIGIN = 'https://tq.example.com'
 
 describe('classifyNavigation', () => {
   describe('from a tq page', () => {
-    it.each<[string, string, NavigationAction]>([
-      ['same origin', `${ORIGIN}/tasks/2`, 'allow'],
-      ['other site', 'https://github.com/example/repo', 'open-external'],
+    it.each<[string, NavigationAction, string]>([
+      ['same origin', 'allow', `${ORIGIN}/tasks/2`],
+      ['other site', 'open-external', 'https://github.com/example/repo'],
       [
         'host that only starts with the origin',
-        'https://tq.example.com.evil.test/',
         'open-external',
+        'https://tq.example.com.evil.test/',
       ],
-      ['other port', 'https://tq.example.com:8443/', 'open-external'],
-      ['other scheme', 'http://tq.example.com/', 'open-external'],
-      ['unregistered scheme', 'example-app://open', 'deny'],
-      ['file scheme', 'file:///etc/hosts', 'deny'],
-      ['unparsable url', 'not a url', 'deny'],
-    ])('%s -> %s', (_name, targetUrl, expected) => {
+      ['other port', 'open-external', 'https://tq.example.com:8443/'],
+      ['other scheme', 'open-external', 'http://tq.example.com/'],
+      ['mailto', 'open-external', 'mailto:someone@example.com'],
+      ['scheme not on the allowlist', 'deny', 'example-app://open'],
+      ['file scheme', 'deny', 'file:///etc/hosts'],
+      ['unparsable url', 'deny', 'not a url'],
+    ])('%s -> %s', (_name, expected, targetUrl) => {
       expect(classifyNavigation(`${ORIGIN}/tasks/1`, targetUrl, ORIGIN)).toBe(
         expected,
       )
     })
   })
 
-  it.each<[string, NavigationAction]>([
-    [`${ORIGIN}/tasks/2`, 'allow'],
-    ['https://github.com/example/repo', 'open-external'],
+  it.each<[string, NavigationAction, string]>([
+    ['scheme on the allowlist', 'open-external', 'example-app://open'],
+    ['scheme not on the allowlist', 'deny', 'other-app://open'],
+    ['file scheme, never allowlisted by default', 'deny', 'file:///etc/hosts'],
+  ])('with allowed schemes: %s -> %s', (_name, expected, targetUrl) => {
+    expect(
+      classifyNavigation(`${ORIGIN}/tasks/1`, targetUrl, ORIGIN, [
+        'example-app',
+      ]),
+    ).toBe(expected)
+  })
+
+  it.each<[string, NavigationAction, string]>([
+    ['same origin', 'allow', `${ORIGIN}/tasks/2`],
+    ['other site', 'open-external', 'https://github.com/example/repo'],
   ])(
     'ignores the path of a configured origin with a trailing slash: %s -> %s',
-    (targetUrl, expected) => {
+    (_name, expected, targetUrl) => {
       expect(
         classifyNavigation(`${ORIGIN}/tasks/1`, targetUrl, `${ORIGIN}/`),
       ).toBe(expected)

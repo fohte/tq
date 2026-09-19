@@ -21,9 +21,16 @@ const isInternal = (url: string, origin: string): boolean => {
   return urlOrigin !== undefined && urlOrigin === originOf(origin)
 }
 
-const isWebUrl = (url: string): boolean =>
+const DEFAULT_EXTERNAL_PROTOCOLS = ['http:', 'https:', 'mailto:']
+
+const isOpenableExternally = (
+  url: string,
+  externalSchemes: readonly string[],
+): boolean =>
   parseUrl(url).match(
-    (parsed) => parsed.protocol === 'http:' || parsed.protocol === 'https:',
+    (parsed) =>
+      DEFAULT_EXTERNAL_PROTOCOLS.includes(parsed.protocol) ||
+      externalSchemes.some((scheme) => `${scheme}:` === parsed.protocol),
     () => false,
   )
 
@@ -33,12 +40,15 @@ export const classifyNavigation = (
   currentUrl: string,
   targetUrl: string,
   origin: string,
+  externalSchemes: readonly string[] = [],
 ): NavigationAction => {
   // Leave pages outside tq (e.g. the Cloudflare Access / IdP login) alone;
   // otherwise the first sign-in can never complete inside the app.
   if (!isInternal(currentUrl, origin)) return 'allow'
   if (isInternal(targetUrl, origin)) return 'allow'
   // `shell.openExternal` launches whatever handler is registered for the
-  // scheme, so only hand web URLs to it.
-  return isWebUrl(targetUrl) ? 'open-external' : 'deny'
+  // scheme, so only hand it schemes known to be safe to open.
+  return isOpenableExternally(targetUrl, externalSchemes)
+    ? 'open-external'
+    : 'deny'
 }

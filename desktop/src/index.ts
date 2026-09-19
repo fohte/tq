@@ -1,7 +1,7 @@
 import { app, BrowserWindow, globalShortcut, shell } from 'electron'
 import { ResultAsync } from 'neverthrow'
 
-import { TQ_ORIGIN } from '#config'
+import { EXTERNAL_SCHEMES, TQ_ORIGIN } from '#config'
 import { classifyNavigation } from '#navigation'
 
 // Three modifiers plus Space isn't in Apple's reserved-shortcut list
@@ -68,14 +68,24 @@ app.on('before-quit', () => {
 // `web-contents-created` so it also covers windows opened later.
 app.on('web-contents-created', (_event, contents) => {
   contents.on('will-navigate', (event) => {
-    const action = classifyNavigation(contents.getURL(), event.url, TQ_ORIGIN)
+    const action = classifyNavigation(
+      contents.getURL(),
+      event.url,
+      TQ_ORIGIN,
+      EXTERNAL_SCHEMES,
+    )
     if (action === 'allow') return
     event.preventDefault()
     if (action === 'open-external') void openExternal(event.url)
   })
 
   contents.setWindowOpenHandler(({ url }) => {
-    const action = classifyNavigation(contents.getURL(), url, TQ_ORIGIN)
+    const action = classifyNavigation(
+      contents.getURL(),
+      url,
+      TQ_ORIGIN,
+      EXTERNAL_SCHEMES,
+    )
     if (action === 'open-external') void openExternal(url)
     return { action: action === 'allow' ? 'allow' : 'deny' }
   })
