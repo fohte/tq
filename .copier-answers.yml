@@ -19,5 +19,7 @@ subpackages:
     type: node
 -   name: extension
     type: node
+-   name: desktop
+    type: node
 type: base
 use_release_please: false

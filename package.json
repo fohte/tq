@@ -5,7 +5,8 @@
     "web",
     "api",
     "cli",
-    "extension"
+    "extension",
+    "desktop"
   ],
   "packageManager": "pnpm@12.4.0",
   "type": "module",
