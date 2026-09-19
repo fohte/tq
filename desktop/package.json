@@ -1,16 +1,25 @@
 {
   "name": "desktop",
   "private": true,
+  "version": "0.0.0",
+  "description": "tq desktop app",
   "type": "module",
+  "main": "dist/index.js",
   "imports": {
     "#*": "./src/*.ts"
   },
   "scripts": {
+    "build": "tsup",
+    "start": "pnpm run build && electron .",
+    "package": "pnpm run build && electron-builder",
     "test": "conc pnpm:test:type pnpm:test:unit",
     "test:type": "tsc --noEmit",
     "test:unit": "vitest run"
   },
-  "dependencies": {
-    "neverthrow": "8.2.0"
+  "devDependencies": {
+    "electron": "44.3.0",
+    "electron-builder": "26.15.3",
+    "neverthrow": "8.2.0",
+    "tsup": "8.5.1"
   }
 }
