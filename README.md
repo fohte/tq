@@ -89,6 +89,7 @@ TQ_ORIGIN=https://tq.fohte.net pnpm --filter desktop run package
 - `http(s)` and `mailto:` links that leave `TQ_ORIGIN` open in the default browser. To also open a custom URL scheme, such as the one behind the session focus/resume URL templates, list it at build time: `TQ_EXTERNAL_SCHEMES=myapp,otherapp` (scheme names without the colon). Any other scheme is blocked.
 - Pages outside `TQ_ORIGIN`, such as the sign-in flow, keep navigating inside the window.
 - Back / Forward are in the History menu (`Cmd+[` / `Cmd+]`); the window has no browser toolbar.
+- `tq://<host>/<path>` opens `https://<host>/<path>` in the window, e.g. from a browser extension that rewrites tq links. The scheme is registered by the packaged app only (not by `pnpm --filter desktop run start`), and a link whose host is not `TQ_ORIGIN` is ignored.
 - Closing the window hides it; the app keeps running and comes back from the Dock.
 - Errors (a failed page load) are written to stderr, so they are visible only when started from a terminal with `pnpm --filter desktop run start`.
 

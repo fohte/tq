@@ -11,5 +11,11 @@ mac:
   # An unpacked .app; the default dmg/zip targets assume code signing.
   target: dir
   identity: null
+  # Written to Info.plist as CFBundleURLTypes, which is what registers `tq://`
+  # with macOS. Keep in sync with DEEP_LINK_SCHEME in src/navigation.ts.
+  protocols:
+    name: tq
+    schemes:
+      - tq
   # Signing off with Hardened Runtime on can leave the app unable to launch.
   hardenedRuntime: false

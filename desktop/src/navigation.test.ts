@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { classifyNavigation, type NavigationAction } from '#navigation'
+import {
+  classifyNavigation,
+  type NavigationAction,
+  resolveDeepLink,
+} from '#navigation'
 
 const ORIGIN = 'https://tq.example.com'
 
@@ -59,5 +63,44 @@ describe('classifyNavigation', () => {
         ORIGIN,
       ),
     ).toBe('allow')
+  })
+})
+
+describe('resolveDeepLink', () => {
+  it.each<[string, string, string | undefined]>([
+    [
+      'same host and path',
+      'tq://tq.example.com/tasks/1?tab=a#b',
+      `${ORIGIN}/tasks/1?tab=a#b`,
+    ],
+    ['host only', 'tq://tq.example.com', `${ORIGIN}/`],
+    [
+      'host in a different case',
+      'tq://TQ.EXAMPLE.COM/tasks/1',
+      `${ORIGIN}/tasks/1`,
+    ],
+    [
+      'host that only starts with the origin host',
+      'tq://tq.example.com.evil.test/',
+      undefined,
+    ],
+    ['other host', 'tq://evil.test/tasks/1', undefined],
+    ['other port', 'tq://tq.example.com:8443/', undefined],
+    [
+      'origin host as userinfo of another host',
+      'tq://tq.example.com@evil.test/',
+      undefined,
+    ],
+    ['https scheme', `${ORIGIN}/tasks/1`, undefined],
+    ['other scheme', 'example-app://tq.example.com/tasks/1', undefined],
+    ['unparsable url', 'not a url', undefined],
+  ])('%s: %s -> %s', (_name, deepLink, expected) => {
+    expect(resolveDeepLink(deepLink, ORIGIN)).toBe(expected)
+  })
+
+  it('keeps the scheme of an http origin', () => {
+    expect(
+      resolveDeepLink('tq://localhost:3000/tasks/1', 'http://localhost:3000'),
+    ).toBe('http://localhost:3000/tasks/1')
   })
 })

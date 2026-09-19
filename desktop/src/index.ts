@@ -3,9 +3,16 @@ import { ResultAsync } from 'neverthrow'
 
 import { EXTERNAL_SCHEMES, TQ_ORIGIN } from '#config'
 import { buildMenuTemplate } from '#menu'
-import { classifyNavigation } from '#navigation'
+import {
+  classifyNavigation,
+  DEEP_LINK_SCHEME,
+  resolveDeepLink,
+} from '#navigation'
 
 let isQuitting = false
+let mainWindow: BrowserWindow | undefined
+// A deep link can arrive before the window exists (cold start from a link).
+let pendingUrl: string | undefined
 
 // Both `loadURL` and `shell.openExternal` can reject; there is no caller to
 // hand the error to, so log it.
@@ -23,7 +30,7 @@ const openExternal = (url: string) =>
     `failed to open ${url} in the default browser`,
   )
 
-const createWindow = (): BrowserWindow => {
+const createWindow = (url: string): BrowserWindow => {
   const win = new BrowserWindow({ webPreferences: { sandbox: true } })
 
   // Hide instead of closing so that reopening from the Dock keeps the page
@@ -35,7 +42,7 @@ const createWindow = (): BrowserWindow => {
     }
   })
 
-  void logRejection(win.loadURL(TQ_ORIGIN), `failed to load ${TQ_ORIGIN}`)
+  void logRejection(win.loadURL(url), `failed to load ${url}`)
 
   return win
 }
@@ -47,6 +54,21 @@ const showWindow = (win: BrowserWindow) => {
 
 app.on('before-quit', () => {
   isQuitting = true
+})
+
+// Must be registered before `ready`: macOS can deliver the launch URL earlier,
+// and a listener added later misses it.
+app.on('open-url', (event, url) => {
+  event.preventDefault()
+  const target = resolveDeepLink(url, TQ_ORIGIN)
+  if (target === undefined) return
+
+  if (mainWindow === undefined) {
+    pendingUrl = target
+    return
+  }
+  void logRejection(mainWindow.loadURL(target), `failed to load ${target}`)
+  showWindow(mainWindow)
 })
 
 // Route every external link to the default browser. Registered on
@@ -81,15 +103,21 @@ app.on('window-all-closed', () => undefined)
 
 // Top-level `await app.whenReady()` never resolves in an ESM main process.
 void app.whenReady().then(() => {
-  const mainWindow = createWindow()
+  // Only a packaged app has the `tq` scheme in its Info.plist; in development
+  // this would claim the scheme for the bare Electron binary.
+  if (app.isPackaged) app.setAsDefaultProtocolClient(DEEP_LINK_SCHEME)
+
+  const win = createWindow(pendingUrl ?? TQ_ORIGIN)
+  mainWindow = win
+  pendingUrl = undefined
 
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
-      buildMenuTemplate(mainWindow.webContents.navigationHistory),
+      buildMenuTemplate(win.webContents.navigationHistory),
     ),
   )
 
   app.on('activate', () => {
-    showWindow(mainWindow)
+    showWindow(win)
   })
 })

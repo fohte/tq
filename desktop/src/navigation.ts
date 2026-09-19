@@ -21,6 +21,38 @@ const isInternal = (url: string, origin: string): boolean => {
   return urlOrigin !== undefined && urlOrigin === originOf(origin)
 }
 
+// Keep in sync with `mac.protocols.schemes` in electron-builder.yml.
+export const DEEP_LINK_SCHEME = 'tq'
+
+const DEEP_LINK_PROTOCOL = `${DEEP_LINK_SCHEME}:`
+
+// Turns `tq://<host>/<path>` into the `TQ_ORIGIN` URL with the same host and
+// path, or `undefined` when it is not a tq deep link for `origin`. Any site can
+// link to `tq://`, so a link for another host must never reach `loadURL`.
+export const resolveDeepLink = (
+  deepLink: string,
+  origin: string,
+): string | undefined => {
+  const originProtocol = parseUrl(origin).match(
+    (parsed) => parsed.protocol,
+    () => undefined,
+  )
+  if (originProtocol === undefined) return undefined
+
+  return parseUrl(deepLink).match(
+    (parsed) => {
+      if (parsed.protocol !== DEEP_LINK_PROTOCOL) return undefined
+      const target = `${originProtocol}${parsed.href.slice(DEEP_LINK_PROTOCOL.length)}`
+      // Reparse as http(s), unlike the opaque host of `tq:`, to lowercase it.
+      return parseUrl(target).match(
+        (url) => (isInternal(url.href, origin) ? url.href : undefined),
+        () => undefined,
+      )
+    },
+    () => undefined,
+  )
+}
+
 const DEFAULT_EXTERNAL_PROTOCOLS = ['http:', 'https:', 'mailto:']
 
 const isOpenableExternally = (
