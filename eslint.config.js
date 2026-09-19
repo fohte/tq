@@ -22,6 +22,10 @@ export default config(
     ignores: ['**/mockServiceWorker.js'],
   },
   {
+    // tsup bundle of the Electron main process (git-ignored build output).
+    ignores: ['desktop/dist'],
+  },
+  {
     // vite.config.ts/vitest.config.ts are loaded through Vite's own
     // esbuild-based config loader, which doesn't resolve the package.json
     // "imports" field, unlike the Rollup pipeline that bundles the app itself.
