@@ -7,7 +7,7 @@ import {
   within,
 } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   type CalendarDndCallbacks,
@@ -136,18 +136,65 @@ function renderCalendarGrid(
 }
 
 describe('CalendarGrid interactions', () => {
-  it('scrolls to an hour before the current time on mount', async () => {
-    const { container } = renderCalendarGrid()
-    await screen.findByText('API ドキュメント作成')
-    const scroller = findVerticalScroller(container)
-    const now = new Date()
-    const expectedMinutes = Math.max(
-      0,
-      now.getHours() * 60 + now.getMinutes() - 60,
-    )
-    const expectedPx = expectedMinutes * (26 / 30)
-    expect(scroller.scrollTop).toBeGreaterThan(expectedPx - 15)
-    expect(scroller.scrollTop).toBeLessThan(expectedPx + 15)
+  // The 1280x800 viewport (web/src/browser-test-setup.ts) only leaves ~745px
+  // of scrollable height for the 24h time grid (~1248px), so any target past
+  // ~10:40 can't be reached and scrollTop clamps to the bottom of the
+  // scrollable range — fake the clock so these tests aren't at the mercy of
+  // what time CI happens to run.
+  describe('mount scroll position', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('scrolls to an hour before the current time on mount', async () => {
+      // Only fake `Date` — faking timers wholesale also stubs the
+      // `requestAnimationFrame` calls FullCalendar's layout/scroll pipeline
+      // relies on, which hangs `findByText` below.
+      vi.useFakeTimers({ toFake: ['Date'] })
+      const now = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        9,
+        0,
+        0,
+      )
+      vi.setSystemTime(now)
+
+      const { container } = renderCalendarGrid()
+      await screen.findByText('API ドキュメント作成')
+      const scroller = findVerticalScroller(container)
+      const expectedMinutes = Math.max(
+        0,
+        now.getHours() * 60 + now.getMinutes() - 60,
+      )
+      const expectedPx = expectedMinutes * (26 / 30)
+      expect(scroller.scrollTop).toBeGreaterThan(expectedPx - 15)
+      expect(scroller.scrollTop).toBeLessThan(expectedPx + 15)
+    })
+
+    it('clamps to the bottom of the scrollable range when an hour before the current time is unreachable', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(
+        new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate(),
+          20,
+          0,
+          0,
+        ),
+      )
+
+      const { container } = renderCalendarGrid()
+      await screen.findByText('API ドキュメント作成')
+      const scroller = findVerticalScroller(container)
+
+      expect(scroller.scrollTop).toBeCloseTo(
+        scroller.scrollHeight - scroller.clientHeight,
+        0,
+      )
+    })
   })
 
   it('calls onTaskClick with the task id when a manual event is clicked', async () => {
