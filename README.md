@@ -74,6 +74,8 @@ TQ_ORIGIN=https://tq.fohte.net pnpm --filter extension run build
 2. Enable **Developer mode**.
 3. Click **Load unpacked** and select the `extension/dist` directory.
 
+Opening a URL under `TQ_ORIGIN` in a new tab from outside tq (e.g. a link in Slack) navigates and focuses the most recently used other tq tab and closes the new tab; if there is none, the new tab is left as is. Chrome lists the `tabs` permission the extension declares for this on install.
+
 ### Scripts
 
 | Command                             | Description                          |
