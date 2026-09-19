@@ -14,7 +14,10 @@ function jsonResponse(body: unknown, status = 200): Response {
 // time, so `chrome` must be stubbed before each dynamic import.
 beforeEach(() => {
   vi.resetModules()
-  vi.stubGlobal('chrome', { runtime: { onMessage: { addListener: vi.fn() } } })
+  vi.stubGlobal('chrome', {
+    runtime: { onMessage: { addListener: vi.fn() } },
+    tabs: { onCreated: { addListener: vi.fn() } },
+  })
 })
 
 afterEach(() => {
@@ -180,7 +183,10 @@ function assertDefined<T>(value: T | undefined): asserts value is T {
 
 async function importAndCaptureListener(): Promise<MessageListener> {
   const addListener = vi.fn<(listener: MessageListener) => void>()
-  vi.stubGlobal('chrome', { runtime: { onMessage: { addListener } } })
+  vi.stubGlobal('chrome', {
+    runtime: { onMessage: { addListener } },
+    tabs: { onCreated: { addListener: vi.fn() } },
+  })
   await import('#background')
   const call = addListener.mock.calls[0]
   assertDefined(call)
