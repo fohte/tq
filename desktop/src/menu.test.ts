@@ -1,36 +1,63 @@
 import { describe, expect, it } from 'vitest'
 
-import { goBack, goForward, type NavigationHistory } from '#menu'
+import { historyItems, type NavigationHistory } from '#menu'
 
-// Records which history methods were called; `canGo` decides whether the
-// history has an entry in either direction.
-const fakeHistory = (canGo: boolean) => {
+type Can = { back: boolean; forward: boolean }
+
+// Records which history methods were called. `can` sets each direction
+// independently, since the realistic states are one-directional (e.g. right
+// after the first navigation there is a way back but none forward).
+const fakeHistory = (can: Can) => {
   const calls: string[] = []
   const history: NavigationHistory = {
-    canGoBack: () => canGo,
+    canGoBack: () => can.back,
     goBack: () => calls.push('goBack'),
-    canGoForward: () => canGo,
+    canGoForward: () => can.forward,
     goForward: () => calls.push('goForward'),
   }
   return { calls, history }
 }
 
-describe('history navigation', () => {
-  it('goes back and forward when the history has an entry to go to', () => {
-    const { calls, history } = fakeHistory(true)
+const clickItem = (label: string, can: Can): string[] => {
+  const { calls, history } = fakeHistory(can)
+  historyItems(history)
+    .find((item) => item.label === label)
+    ?.click()
+  return calls
+}
 
-    goBack(history)
-    goForward(history)
+describe('historyItems', () => {
+  it('binds the browser shortcuts', () => {
+    const { history } = fakeHistory({ back: true, forward: true })
 
-    expect(calls).toEqual(['goBack', 'goForward'])
+    expect(
+      historyItems(history).map(({ label, accelerator }) => ({
+        label,
+        accelerator,
+      })),
+    ).toEqual([
+      { label: 'Back', accelerator: 'CmdOrCtrl+[' },
+      { label: 'Forward', accelerator: 'CmdOrCtrl+]' },
+    ])
   })
 
-  it('does nothing when the history has no entry to go to', () => {
-    const { calls, history } = fakeHistory(false)
+  it('Back goes back when there is a previous entry', () => {
+    expect(clickItem('Back', { back: true, forward: false })).toEqual([
+      'goBack',
+    ])
+  })
 
-    goBack(history)
-    goForward(history)
+  it('Back does nothing when there is no previous entry', () => {
+    expect(clickItem('Back', { back: false, forward: true })).toEqual([])
+  })
 
-    expect(calls).toEqual([])
+  it('Forward goes forward when there is a next entry', () => {
+    expect(clickItem('Forward', { back: false, forward: true })).toEqual([
+      'goForward',
+    ])
+  })
+
+  it('Forward does nothing when there is no next entry', () => {
+    expect(clickItem('Forward', { back: true, forward: false })).toEqual([])
   })
 })

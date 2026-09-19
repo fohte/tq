@@ -5,13 +5,28 @@ export type NavigationHistory = Pick<
   'canGoBack' | 'goBack' | 'canGoForward' | 'goForward'
 >
 
-export const goBack = (history: NavigationHistory) => {
-  if (history.canGoBack()) history.goBack()
+type HistoryItem = {
+  label: string
+  accelerator: string
+  click: () => void
 }
 
-export const goForward = (history: NavigationHistory) => {
-  if (history.canGoForward()) history.goForward()
-}
+export const historyItems = (history: NavigationHistory): HistoryItem[] => [
+  {
+    label: 'Back',
+    accelerator: 'CmdOrCtrl+[',
+    click: () => {
+      if (history.canGoBack()) history.goBack()
+    },
+  },
+  {
+    label: 'Forward',
+    accelerator: 'CmdOrCtrl+]',
+    click: () => {
+      if (history.canGoForward()) history.goForward()
+    },
+  },
+]
 
 // The window has no browser chrome, so the menu is the only place to put the
 // history shortcuts. Setting a menu replaces Electron's default one, so the
@@ -23,24 +38,6 @@ export const buildMenuTemplate = (
   { role: 'fileMenu' },
   { role: 'editMenu' },
   { role: 'viewMenu' },
-  {
-    label: 'History',
-    submenu: [
-      {
-        label: 'Back',
-        accelerator: 'CmdOrCtrl+[',
-        click: () => {
-          goBack(history)
-        },
-      },
-      {
-        label: 'Forward',
-        accelerator: 'CmdOrCtrl+]',
-        click: () => {
-          goForward(history)
-        },
-      },
-    ],
-  },
+  { label: 'History', submenu: historyItems(history) },
   { role: 'windowMenu' },
 ]
