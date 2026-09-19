@@ -1,7 +1,8 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, Menu, shell } from 'electron'
 import { ResultAsync } from 'neverthrow'
 
 import { EXTERNAL_SCHEMES, TQ_ORIGIN } from '#config'
+import { buildMenuTemplate } from '#menu'
 import { classifyNavigation } from '#navigation'
 
 let isQuitting = false
@@ -81,6 +82,12 @@ app.on('window-all-closed', () => undefined)
 // Top-level `await app.whenReady()` never resolves in an ESM main process.
 void app.whenReady().then(() => {
   const mainWindow = createWindow()
+
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(
+      buildMenuTemplate(mainWindow.webContents.navigationHistory),
+    ),
+  )
 
   app.on('activate', () => {
     showWindow(mainWindow)
