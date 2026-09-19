@@ -1,0 +1,12 @@
+appId: net.fohte.tq
+productName: tq
+directories:
+  output: release
+files:
+  - dist/**
+mac:
+  # An unpacked .app; the default dmg/zip targets assume code signing.
+  target: dir
+  identity: null
+  # Signing off with Hardened Runtime on can leave the app unable to launch.
+  hardenedRuntime: false

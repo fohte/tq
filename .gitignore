@@ -141,3 +141,6 @@ __screenshots__/
 
 # Vitest browser-mode failure screenshots
 .vitest-attachments/
+
+# Electron app build output (desktop)
+desktop/release/

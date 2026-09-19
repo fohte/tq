@@ -76,6 +76,20 @@ TQ_ORIGIN=https://tq.fohte.net pnpm --filter extension run build
 
 Opening a URL under `TQ_ORIGIN` in a new tab from outside tq (e.g. a link in Slack) navigates and focuses the most recently used other tq tab and closes the new tab; if there is none, the new tab is left as is. Chrome lists the `tabs` permission the extension declares for this on install.
 
+### Desktop app
+
+`desktop/` is an Electron app (macOS) that shows tq in its own window. Build an unsigned `.app`:
+
+```sh
+TQ_ORIGIN=https://tq.fohte.net pnpm --filter desktop run package
+```
+
+`TQ_ORIGIN` is the tq instance the window loads, with the same rules as the extension's. The build writes `desktop/release/mac-arm64/tq.app`. Run it in development with `TQ_ORIGIN=... pnpm --filter desktop run start`.
+
+- Links that leave `TQ_ORIGIN` open in the default browser.
+- Closing the window hides it; the app keeps running and comes back from the Dock.
+- `Control+Option+Command+Space` shows or hides the window from anywhere. If another app already owns the shortcut, registration fails and the error is logged.
+
 ### Scripts
 
 | Command                             | Description                          |
