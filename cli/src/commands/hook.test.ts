@@ -77,6 +77,66 @@ describe('hook', () => {
     ])
   })
 
+  it('reports provider: codex and resolves the label/lastMessage from the Codex rollout format', async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-hook-'))
+    const transcriptPath = join(tmpDir, 'rollout.jsonl')
+    await writeFile(
+      transcriptPath,
+      [
+        JSON.stringify({
+          type: 'response_item',
+          payload: {
+            type: 'message',
+            role: 'user',
+            content: [{ type: 'input_text', text: 'Fix the login bug' }],
+          },
+        }),
+        JSON.stringify({
+          type: 'response_item',
+          payload: {
+            type: 'message',
+            role: 'assistant',
+            content: [{ type: 'output_text', text: 'Done' }],
+          },
+        }),
+      ].join('\n'),
+      'utf8',
+    )
+
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify({ id: 's1' }), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'hook', 'SessionStart', '--provider', 'codex'],
+      fetchStub,
+      stdinWith(
+        JSON.stringify({
+          session_id: 'sess-1',
+          cwd: '/home/user/app',
+          transcript_path: transcriptPath,
+        }),
+      ),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(calls).toEqual([
+      {
+        method: 'POST',
+        url: `${apiUrl}/api/agent-sessions`,
+        headers: { 'content-type': 'application/json' },
+        body: {
+          provider: 'codex',
+          sessionId: 'sess-1',
+          cwd: '/home/user/app',
+          label: 'Fix the login bug',
+          lastMessage: 'Done',
+          ended: false,
+        },
+      },
+    ])
+  })
+
   it('sets ended: true only for SessionEnd', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify({ id: 's1' }), { status: 200 }),

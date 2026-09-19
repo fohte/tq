@@ -132,3 +132,73 @@ describe('resolveSessionLabel', () => {
     })
   })
 })
+
+describe('resolveSessionLabel with provider: codex', () => {
+  function codexMessage(role: 'user' | 'assistant', text: string) {
+    return {
+      type: 'response_item',
+      payload: {
+        type: 'message',
+        role,
+        content: [
+          { type: role === 'user' ? 'input_text' : 'output_text', text },
+        ],
+      },
+    }
+  }
+
+  it('falls back to the cwd basename when the transcript has nothing usable (codex)', () => {
+    expect(
+      resolveSessionLabel('', '/home/user/ghq/example/app', 'codex'),
+    ).toEqual({
+      label: 'app',
+      lastMessage: null,
+    })
+  })
+
+  it('uses the first user message as the label and the last assistant message as lastMessage', () => {
+    const transcript = jsonl(
+      codexMessage('user', 'Fix the login bug'),
+      codexMessage('assistant', 'First reply'),
+      codexMessage('user', 'A follow-up question'),
+      codexMessage('assistant', 'Second reply'),
+    )
+    expect(resolveSessionLabel(transcript, '/home/user/app', 'codex')).toEqual({
+      label: 'Fix the login bug',
+      lastMessage: 'Second reply',
+    })
+  })
+
+  it('ignores non-message response_item entries and other record types', () => {
+    const transcript = jsonl(
+      { type: 'session_meta', payload: { cwd: '/home/user/app' } },
+      {
+        type: 'response_item',
+        payload: { type: 'function_call', name: 'shell' },
+      },
+      codexMessage('user', 'Fix the login bug'),
+    )
+    expect(resolveSessionLabel(transcript, '/home/user/app', 'codex')).toEqual({
+      label: 'Fix the login bug',
+      lastMessage: null,
+    })
+  })
+
+  it('skips the synthetic AGENTS.md instructions and environment_context user turns Codex inserts before the real prompt', () => {
+    const transcript = jsonl(
+      codexMessage(
+        'user',
+        '# AGENTS.md instructions for /home/user/app\n\n<INSTRUCTIONS>\nSome repo rule.',
+      ),
+      codexMessage(
+        'user',
+        '<environment_context>\n  <cwd>/home/user/app</cwd>\n</environment_context>',
+      ),
+      codexMessage('user', 'Fix the login bug'),
+    )
+    expect(resolveSessionLabel(transcript, '/home/user/app', 'codex')).toEqual({
+      label: 'Fix the login bug',
+      lastMessage: null,
+    })
+  })
+})

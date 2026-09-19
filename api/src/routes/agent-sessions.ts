@@ -22,7 +22,7 @@ const STALE_SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 
 function findAgentSessionBySessionId(
   tx: DbTransaction,
-  provider: 'claude_code',
+  provider: 'claude_code' | 'codex',
   sessionId: string,
 ) {
   return tx.query.agentSessions.findFirst({

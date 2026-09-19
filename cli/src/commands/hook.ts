@@ -2,6 +2,7 @@ import { appendFile, readFile } from 'node:fs/promises'
 
 import { upsertAgentSessionSchema } from 'api/schemas/agent-session'
 import type { Command } from 'commander'
+import { Option } from 'commander'
 import type { InferRequestType } from 'hono/client'
 import { z } from 'zod'
 
@@ -38,6 +39,8 @@ const hookInputSchema = z.object({
   transcript_path: z.string().optional(),
 })
 
+const agentProviderSchema = upsertAgentSessionSchema.shape.provider
+
 async function readTranscript(
   transcriptPath: string | undefined,
 ): Promise<string> {
@@ -69,7 +72,12 @@ export function registerHookCommands(
     program
       .command('hook <event>')
       .description(
-        'Report a Claude Code hook event (SessionStart, Stop, SessionEnd) to tq, reading the hook JSON payload from stdin. Never fails: a broken connection or malformed input is swallowed silently so it never blocks Claude Code.',
+        'Report a coding agent hook event (SessionStart, Stop, SessionEnd) to tq, reading the hook JSON payload from stdin. Never fails: a broken connection or malformed input is swallowed silently so it never blocks the agent.',
+      )
+      .addOption(
+        new Option('--provider <provider>', 'Agent reporting this session')
+          .choices(agentProviderSchema.options)
+          .default('claude_code'),
       ),
     upsertAgentSessionSchema,
     HOOK_MANAGED_FIELDS,
@@ -118,8 +126,19 @@ async function reportHookEvent(
     await persistSessionIdToEnvFile(input.data.session_id)
   }
 
+  // The `: 'claude_code'` branch never actually runs: the --provider
+  // Option's .choices() already rejects any other value before the action
+  // handler runs. safeParse only exists to narrow `options['provider']`
+  // (unknown) to AgentProvider without an unsafe type assertion.
+  const parsedProvider = agentProviderSchema.safeParse(options['provider'])
+  const provider = parsedProvider.success ? parsedProvider.data : 'claude_code'
+
   const transcript = await readTranscript(input.data.transcript_path)
-  const { label, lastMessage } = resolveSessionLabel(transcript, input.data.cwd)
+  const { label, lastMessage } = resolveSessionLabel(
+    transcript,
+    input.data.cwd,
+    provider,
+  )
 
   const client = buildClient(command, fetchImpl).match(
     (value) => value,
@@ -139,7 +158,7 @@ async function reportHookEvent(
       (value) => value,
       () => ({}),
     ),
-    provider: 'claude_code',
+    provider,
     sessionId: input.data.session_id,
     cwd: input.data.cwd,
     label,
