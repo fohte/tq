@@ -13,9 +13,8 @@ export default defineConfig({
   clean: true,
   define: { 'process.env.TQ_ORIGIN': JSON.stringify(TQ_ORIGIN) },
   // `electron` resolves to the runtime's built-in module, never the npm
-  // package (whose default export is just the binary path).
+  // package (whose default export is just the binary path). Everything else
+  // is bundled because runtime libraries live in devDependencies, so the
+  // packaged app needs no node_modules.
   external: ['electron'],
-  // Bundle everything else, including `#*` subpath imports, so the packaged
-  // app needs no node_modules.
-  noExternal: [/^#/, 'neverthrow'],
 })
