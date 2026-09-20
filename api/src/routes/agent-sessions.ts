@@ -19,6 +19,7 @@ import { taskSummaryColumns } from '#services/task-links'
 // this age can never be resumed regardless of what tq does with it:
 // https://code.claude.com/docs/en/settings-reference#cleanupperioddays
 const STALE_SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
+const agentProviderSchema = upsertAgentSessionSchema.shape.provider
 
 function findAgentSessionBySessionId(
   tx: DbTransaction,
@@ -235,13 +236,16 @@ export const agentSessionsApp = new Hono()
     return c.json(agentSessionToResponse(session), 200)
   })
   // Resolves tq's internal id from the (provider, session_id) pair a hook
-  // integration knows about, e.g. Claude Code's session_id — the only
-  // identifier `tq link`/`tq unlink` has on hand at runtime.
+  // integration knows about, e.g. a Claude Code or Codex session_id — the
+  // only identifier `tq link`/`tq unlink` has on hand at runtime.
   .get('/by-session/:provider/:sessionId', async (c) => {
-    const provider = c.req.param('provider')
-    if (provider !== 'claude_code') {
+    const parsedProvider = agentProviderSchema.safeParse(
+      c.req.param('provider'),
+    )
+    if (!parsedProvider.success) {
       return c.json({ error: 'Agent session not found' }, 404)
     }
+    const provider = parsedProvider.data
     const sessionId = c.req.param('sessionId')
 
     const session = await db.query.agentSessions.findFirst({
@@ -260,10 +264,13 @@ export const agentSessionsApp = new Hono()
   // else in this file: an external session manager only ever knows the
   // former, since it never sees a session until it reports through here.
   .delete('/by-session/:provider/:sessionId', async (c) => {
-    const provider = c.req.param('provider')
-    if (provider !== 'claude_code') {
+    const parsedProvider = agentProviderSchema.safeParse(
+      c.req.param('provider'),
+    )
+    if (!parsedProvider.success) {
       return c.json({ error: 'Agent session not found' }, 404)
     }
+    const provider = parsedProvider.data
     const sessionId = c.req.param('sessionId')
 
     const deleted = await db
