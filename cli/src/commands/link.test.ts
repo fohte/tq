@@ -105,7 +105,7 @@ describe('link', () => {
     expect(calls.length).toBe(0)
     expect(stderr.mock.calls).toEqual([
       [
-        'Error: No agent session ID is set. Run this from within a supported coding agent session with the SessionStart hook configured to run `tq hook SessionStart`.\n',
+        'Error: No agent session ID is set. Expected CODEX_SESSION_ID for Codex or TQ_SESSION_ID for Claude Code (set by the SessionStart hook configured to run `tq hook SessionStart`).\n',
       ],
     ])
   })
@@ -215,7 +215,7 @@ describe('unlink', () => {
     expect(calls.length).toBe(0)
     expect(stderr.mock.calls).toEqual([
       [
-        'Error: No agent session ID is set. Run this from within a supported coding agent session with the SessionStart hook configured to run `tq hook SessionStart`.\n',
+        'Error: No agent session ID is set. Expected CODEX_SESSION_ID for Codex or TQ_SESSION_ID for Claude Code (set by the SessionStart hook configured to run `tq hook SessionStart`).\n',
       ],
     ])
   })

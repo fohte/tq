@@ -1,3 +1,4 @@
+import type { AgentProvider } from 'api/schemas/agent-session'
 import type { Command } from 'commander'
 import { err, ok, Result } from 'neverthrow'
 
@@ -6,12 +7,14 @@ import { toApiError } from '#client'
 import { buildClient } from '#command-context'
 import { printJson } from '#output'
 import { fail } from '#result'
-import type { AgentProvider } from '#transcript'
 
 interface AgentSessionReference {
   provider: AgentProvider
   sessionId: string
 }
+
+const NO_AGENT_SESSION_ID_ERROR =
+  'No agent session ID is set. Expected CODEX_SESSION_ID for Codex or TQ_SESSION_ID for Claude Code (set by the SessionStart hook configured to run `tq hook SessionStart`).'
 
 // Codex exposes its session id in the shell environment, while Claude Code's
 // hook persists its id through CLAUDE_ENV_FILE. Prefer the native Codex value
@@ -27,11 +30,7 @@ function resolveAgentSession(): Result<AgentSessionReference, Error> {
     return ok({ provider: 'claude_code', sessionId: claudeSessionId })
   }
 
-  return err(
-    new Error(
-      'No agent session ID is set. Run this from within a supported coding agent session with the SessionStart hook configured to run `tq hook SessionStart`.',
-    ),
-  )
+  return err(new Error(NO_AGENT_SESSION_ID_ERROR))
 }
 
 async function resolveAgentSessionId(
