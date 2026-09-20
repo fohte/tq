@@ -1,5 +1,7 @@
 import { basename } from 'node:path'
 
+import type { AgentProvider } from 'api/schemas/agent-session'
+
 import { tryParseJson } from '#result'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -33,8 +35,6 @@ export interface ResolvedSession {
   label: string
   lastMessage: string | null
 }
-
-export type AgentProvider = 'claude_code' | 'codex'
 
 const MAX_LABEL_LENGTH = 120
 

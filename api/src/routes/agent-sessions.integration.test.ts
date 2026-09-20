@@ -755,6 +755,24 @@ describe('agent sessions API', () => {
       expect(await jsonBody<AgentSessionResponse>(res)).toEqual(created)
     })
 
+    it('resolves a Codex session by provider and session id', async () => {
+      const created = await upsertSessionAndGetBody({
+        provider: 'codex',
+        sessionId: 'codex-session-1',
+        cwd: '/home/fohte/project',
+        context: 'work',
+        label: 'A label',
+        lastMessage: 'A message',
+      })
+
+      const res = await app.request(
+        '/api/agent-sessions/by-session/codex/codex-session-1',
+      )
+
+      expect(res.status).toBe(200)
+      expect(await jsonBody<AgentSessionResponse>(res)).toEqual(created)
+    })
+
     it('returns 404 for a non-existent session id', async () => {
       const res = await app.request(
         '/api/agent-sessions/by-session/claude_code/nonexistent',
@@ -793,6 +811,26 @@ describe('agent sessions API', () => {
       expect(getRes.status).toBe(404)
     })
 
+    it('deletes a Codex session by provider and session id', async () => {
+      const created = await upsertSessionAndGetBody({
+        provider: 'codex',
+        sessionId: 'codex-session-1',
+        cwd: '/home/fohte/project',
+        context: 'work',
+        label: 'A label',
+        lastMessage: 'A message',
+      })
+
+      const res = await app.request(
+        '/api/agent-sessions/by-session/codex/codex-session-1',
+        { method: 'DELETE' },
+      )
+
+      expect(res.status).toBe(204)
+      const getRes = await app.request(`/api/agent-sessions/${created.id}`)
+      expect(getRes.status).toBe(404)
+    })
+
     it('returns 404 for a non-existent session id', async () => {
       const res = await app.request(
         '/api/agent-sessions/by-session/claude_code/nonexistent',
@@ -814,7 +852,7 @@ describe('agent sessions API', () => {
 })
 
 interface UpsertSessionInput {
-  provider: 'claude_code'
+  provider: 'claude_code' | 'codex'
   sessionId: string
   parentSessionId?: string
   cwd: string

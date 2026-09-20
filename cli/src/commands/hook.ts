@@ -1,6 +1,9 @@
 import { appendFile, readFile } from 'node:fs/promises'
 
-import { upsertAgentSessionSchema } from 'api/schemas/agent-session'
+import {
+  agentProviderSchema,
+  upsertAgentSessionSchema,
+} from 'api/schemas/agent-session'
 import type { Command } from 'commander'
 import { Option } from 'commander'
 import type { InferRequestType } from 'hono/client'
@@ -38,8 +41,6 @@ const hookInputSchema = z.object({
   cwd: z.string().min(1),
   transcript_path: z.string().optional(),
 })
-
-const agentProviderSchema = upsertAgentSessionSchema.shape.provider
 
 async function readTranscript(
   transcriptPath: string | undefined,

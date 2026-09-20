@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { runCli } from '#cli'
 import {
@@ -16,6 +16,11 @@ function spyStderr() {
 afterEach(() => {
   vi.restoreAllMocks()
   vi.unstubAllEnvs()
+})
+
+beforeEach(() => {
+  vi.stubEnv('TQ_SESSION_ID', '')
+  vi.stubEnv('CODEX_SESSION_ID', '')
 })
 
 describe('link', () => {
@@ -51,7 +56,40 @@ describe('link', () => {
     ])
   })
 
-  it('fails before making any fetch call when TQ_SESSION_ID is not set', async () => {
+  it('prefers the Codex session when both agent session ids are set', async () => {
+    vi.stubEnv('TQ_SESSION_ID', 'claude-sess-1')
+    vi.stubEnv('CODEX_SESSION_ID', 'codex-sess-1')
+    const session = { id: 'agent-session-1', sessionId: 'codex-sess-1' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(session), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'link', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'GET',
+      pathname: '/api/agent-sessions/by-session/codex/codex-sess-1',
+      query: {},
+      body: undefined,
+    })
+    expect(request(calls[1])).toEqual({
+      method: 'POST',
+      pathname: '/api/tasks/42/agent-sessions',
+      query: {},
+      body: { agentSessionId: 'agent-session-1' },
+    })
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify(session, null, 2)}\n`],
+    ])
+  })
+
+  it('fails before making any fetch call when no agent session id is set', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify({}), { status: 200 }),
     )
@@ -67,7 +105,7 @@ describe('link', () => {
     expect(calls.length).toBe(0)
     expect(stderr.mock.calls).toEqual([
       [
-        'Error: TQ_SESSION_ID is not set. Run this from within a Claude Code session with the SessionStart hook configured to run `tq hook SessionStart`.\n',
+        'Error: No agent session ID is set. Expected CODEX_SESSION_ID for Codex or TQ_SESSION_ID for Claude Code (set by the SessionStart hook configured to run `tq hook SessionStart`).\n',
       ],
     ])
   })
@@ -129,7 +167,39 @@ describe('unlink', () => {
     ])
   })
 
-  it('fails before making any fetch call when TQ_SESSION_ID is not set', async () => {
+  it('resolves a Codex session and unlinks it from the task', async () => {
+    vi.stubEnv('CODEX_SESSION_ID', 'codex-sess-1')
+    const session = { id: 'agent-session-1', sessionId: 'codex-sess-1' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(session), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'unlink', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(exitCode).toBe(0)
+    expect(request(calls[0])).toEqual({
+      method: 'GET',
+      pathname: '/api/agent-sessions/by-session/codex/codex-sess-1',
+      query: {},
+      body: undefined,
+    })
+    expect(request(calls[1])).toEqual({
+      method: 'DELETE',
+      pathname: '/api/tasks/42/agent-sessions/agent-session-1',
+      query: {},
+      body: undefined,
+    })
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify({ unlinked: true, taskId: '42' }, null, 2)}\n`],
+    ])
+  })
+
+  it('fails before making any fetch call when no agent session id is set', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify({}), { status: 200 }),
     )
@@ -145,7 +215,7 @@ describe('unlink', () => {
     expect(calls.length).toBe(0)
     expect(stderr.mock.calls).toEqual([
       [
-        'Error: TQ_SESSION_ID is not set. Run this from within a Claude Code session with the SessionStart hook configured to run `tq hook SessionStart`.\n',
+        'Error: No agent session ID is set. Expected CODEX_SESSION_ID for Codex or TQ_SESSION_ID for Claude Code (set by the SessionStart hook configured to run `tq hook SessionStart`).\n',
       ],
     ])
   })

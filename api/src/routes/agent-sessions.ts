@@ -7,7 +7,9 @@ import { ResultAsync } from 'neverthrow'
 import type { DbTransaction } from '#db/connection'
 import { db } from '#db/connection'
 import { agentSessions, taskAgentSessions, tasks } from '#db/schema'
+import type { AgentProvider } from '#schemas/agent-session'
 import {
+  agentProviderSchema,
   listAgentSessionsQuerySchema,
   updateAgentSessionSchema,
   upsertAgentSessionSchema,
@@ -20,9 +22,14 @@ import { taskSummaryColumns } from '#services/task-links'
 // https://code.claude.com/docs/en/settings-reference#cleanupperioddays
 const STALE_SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 
+function parseAgentProvider(value: string): AgentProvider | undefined {
+  const parsed = agentProviderSchema.safeParse(value)
+  return parsed.success ? parsed.data : undefined
+}
+
 function findAgentSessionBySessionId(
   tx: DbTransaction,
-  provider: 'claude_code' | 'codex',
+  provider: AgentProvider,
   sessionId: string,
 ) {
   return tx.query.agentSessions.findFirst({
@@ -235,11 +242,11 @@ export const agentSessionsApp = new Hono()
     return c.json(agentSessionToResponse(session), 200)
   })
   // Resolves tq's internal id from the (provider, session_id) pair a hook
-  // integration knows about, e.g. Claude Code's session_id — the only
-  // identifier `tq link`/`tq unlink` has on hand at runtime.
+  // integration knows about, e.g. a Claude Code or Codex session_id — the
+  // only identifier `tq link`/`tq unlink` has on hand at runtime.
   .get('/by-session/:provider/:sessionId', async (c) => {
-    const provider = c.req.param('provider')
-    if (provider !== 'claude_code') {
+    const provider = parseAgentProvider(c.req.param('provider'))
+    if (provider === undefined) {
       return c.json({ error: 'Agent session not found' }, 404)
     }
     const sessionId = c.req.param('sessionId')
@@ -260,8 +267,8 @@ export const agentSessionsApp = new Hono()
   // else in this file: an external session manager only ever knows the
   // former, since it never sees a session until it reports through here.
   .delete('/by-session/:provider/:sessionId', async (c) => {
-    const provider = c.req.param('provider')
-    if (provider !== 'claude_code') {
+    const provider = parseAgentProvider(c.req.param('provider'))
+    if (provider === undefined) {
       return c.json({ error: 'Agent session not found' }, 404)
     }
     const sessionId = c.req.param('sessionId')
