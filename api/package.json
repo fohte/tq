@@ -45,7 +45,7 @@
     "@modelcontextprotocol/server": "2.0.0",
     "@opentelemetry/api": "1.9.1",
     "drizzle-orm": "0.45.2",
-    "hono": "4.12.34",
+    "hono": "4.13.5",
     "neverthrow": "8.2.0",
     "postgres": "3.4.9",
     "web-push": "3.6.7",
