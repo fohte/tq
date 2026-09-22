@@ -27,10 +27,10 @@ const REASON_PRIORITY: Record<CandidateReason['kind'], number> = {
   active: 4,
 }
 
-function daysBetween(dateStr: string, todayStr: string): number {
-  const date = new Date(`${dateStr}T00:00:00`)
-  const today = new Date(`${todayStr}T00:00:00`)
-  return Math.round((today.getTime() - date.getTime()) / 86_400_000)
+function daysBetween(fromDateStr: string, toDateStr: string): number {
+  const fromDate = new Date(`${fromDateStr}T00:00:00`)
+  const toDate = new Date(`${toDateStr}T00:00:00`)
+  return Math.round((toDate.getTime() - fromDate.getTime()) / 86_400_000)
 }
 
 function reasonDays(reason: CandidateReason): number {
@@ -56,16 +56,17 @@ export function getCandidateReason(
   if (task.dueDate === today) {
     return { kind: 'due-today' }
   }
-  const isStartable = task.startDate != null && task.startDate <= today
+  const startableDate =
+    task.startDate != null && task.startDate <= today ? task.startDate : null
   if (
     task.dueDate != null &&
     task.dueDate > today &&
-    (isStartable || task.commitment === 'active')
+    (startableDate != null || task.commitment === 'active')
   ) {
     return { kind: 'due-later', days: daysBetween(today, task.dueDate) }
   }
-  if (task.startDate != null && task.startDate <= today) {
-    return { kind: 'starts', days: daysBetween(task.startDate, today) }
+  if (startableDate != null) {
+    return { kind: 'starts', days: daysBetween(startableDate, today) }
   }
   if (task.commitment === 'active') {
     return { kind: 'active' }
