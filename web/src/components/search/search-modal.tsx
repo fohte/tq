@@ -149,6 +149,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
         <div
           className="flex max-h-120 w-full max-w-160 flex-col overflow-hidden border border-border bg-popover text-popover-foreground"
           role="dialog"
+          aria-modal="true"
           aria-label="Search"
         >
           {/* Search input */}
