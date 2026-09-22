@@ -200,7 +200,13 @@ describe('getSearchQuerySuggestions', () => {
 
   it('returns all token categories when category is omitted', () => {
     expect(
-      getSearchQuerySuggestions('').map((suggestion) => suggestion.category),
+      Array.from(
+        new Set(
+          getSearchQuerySuggestions('').map(
+            (suggestion) => suggestion.category,
+          ),
+        ),
+      ),
     ).toEqual([
       'is',
       'context',
