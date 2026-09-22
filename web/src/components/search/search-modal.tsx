@@ -273,9 +273,9 @@ export function SearchModal({
     }
   }
 
-  const hasSuggestions =
-    suggestions != null && suggestions.length > 0 && currentPrefix.length > 0
-  const hasTasks = query.length > 0 && tasks != null && tasks.length > 0
+  const visibleGroups = indexedGroups.filter((group) =>
+    group.isVisible(query, group.items.length),
+  )
 
   if (!open) return null
 
@@ -336,47 +336,40 @@ export function SearchModal({
             role="listbox"
             aria-label="Search results"
           >
-            {indexedGroups
-              .filter((group) => group.isVisible(query, group.items.length))
-              .map((group, groupIndex) => (
-                <Fragment key={group.id}>
-                  {groupIndex > 0 && (
-                    <div className="mx-4 my-1 h-px bg-border" />
-                  )}
-                  <div className="px-4 py-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
-                    {group.title}
-                  </div>
-                  {group.items.map(({ item, globalIndex }) => (
-                    <Fragment key={item.key}>
-                      {item.render({
-                        isSelected: selectedIndex === globalIndex,
-                        onMouseMove: (e) => {
-                          if (
-                            e.clientX !== lastMousePos.current.x ||
-                            e.clientY !== lastMousePos.current.y
-                          ) {
-                            lastMousePos.current = {
-                              x: e.clientX,
-                              y: e.clientY,
-                            }
-                            setSelectedIndex(globalIndex)
+            {visibleGroups.map((group, groupIndex) => (
+              <Fragment key={group.id}>
+                {groupIndex > 0 && <div className="mx-4 my-1 h-px bg-border" />}
+                <div className="px-4 py-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
+                  {group.title}
+                </div>
+                {group.items.map(({ item, globalIndex }) => (
+                  <Fragment key={item.key}>
+                    {item.render({
+                      isSelected: selectedIndex === globalIndex,
+                      onMouseMove: (e) => {
+                        if (
+                          e.clientX !== lastMousePos.current.x ||
+                          e.clientY !== lastMousePos.current.y
+                        ) {
+                          lastMousePos.current = {
+                            x: e.clientX,
+                            y: e.clientY,
                           }
-                        },
-                      })}
-                    </Fragment>
-                  ))}
-                </Fragment>
-              ))}
+                          setSelectedIndex(globalIndex)
+                        }
+                      },
+                    })}
+                  </Fragment>
+                ))}
+              </Fragment>
+            ))}
 
             {/* Empty state */}
-            {query.length > 0 &&
-              !isFetching &&
-              !hasTasks &&
-              !hasSuggestions && (
-                <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
-                  {`no results for "${query}"`}
-                </div>
-              )}
+            {query.length > 0 && !isFetching && visibleGroups.length === 0 && (
+              <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
+                {`no results for "${query}"`}
+              </div>
+            )}
 
             {/* Initial state */}
             {query.length === 0 && (
