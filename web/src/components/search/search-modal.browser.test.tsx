@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SearchModal } from '#components/search/search-modal'
-import { STORAGE_KEY } from '#hooks/use-session-open-settings'
+import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 
 interface MockTask {
   id: string
@@ -160,7 +160,7 @@ describe('SearchModal', () => {
   })
 
   it('shows the current context as the search scope', () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ localContext: 'work' }))
+    resetSessionOpenSettings({ localContext: 'work' })
 
     renderSearchModal()
 
@@ -170,7 +170,7 @@ describe('SearchModal', () => {
   })
 
   it('clears the current context when Backspace is pressed on an empty query', async () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ localContext: 'work' }))
+    resetSessionOpenSettings({ localContext: 'work' })
 
     const user = userEvent.setup()
     renderSearchModal()
@@ -181,10 +181,7 @@ describe('SearchModal', () => {
   })
 
   it('shows an explicit context token as the active search scope', async () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ localContext: 'personal' }),
-    )
+    resetSessionOpenSettings({ localContext: 'personal' })
 
     const user = userEvent.setup()
     renderSearchModal()
