@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { parseSearchQuery } from 'api/search-query-parser'
 import type { InferResponseType } from 'hono/client'
 
 import { useDebounce } from '#hooks/use-debounce'
@@ -26,8 +27,16 @@ export const searchKeys = {
 /**
  * Hook for the command palette search modal (Cmd+K).
  */
-export function useSearchTasks(query: string, context?: SearchContext) {
+export function resolveSearchContext(
+  query: string,
+  defaultContext?: SearchContext,
+): SearchContext | undefined {
+  return parseSearchQuery(query).context ?? defaultContext
+}
+
+export function useSearchTasks(query: string, defaultContext?: SearchContext) {
   const debouncedQuery = useDebounce(query, 200)
+  const context = resolveSearchContext(debouncedQuery, defaultContext)
 
   return useQuery({
     queryKey: searchKeys.results(debouncedQuery, context),
@@ -42,8 +51,10 @@ export function useSearchTasks(query: string, context?: SearchContext) {
       return unwrapOrThrow(assertOk(res)).json()
     },
     enabled: debouncedQuery.length > 0,
-    placeholderData: (prev, prevQuery) =>
-      prevQuery?.queryKey[3] === context ? prev : undefined,
+    placeholderData: (prev, prevQuery) => {
+      const [, , , prevContext] = prevQuery?.queryKey ?? []
+      return prevContext === context ? prev : undefined
+    },
   })
 }
 

@@ -1,5 +1,4 @@
 import { useNavigate } from '@tanstack/react-router'
-import { parseSearchQuery } from 'api/search-query-parser'
 import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -12,6 +11,7 @@ import type { SearchResult, Suggestion } from '#hooks/use-search'
 import {
   applySuggestionToQuery,
   extractCurrentPrefix,
+  resolveSearchContext,
   useSearchSuggestions,
   useSearchTasks,
 } from '#hooks/use-search'
@@ -20,13 +20,18 @@ import { cn } from '#lib/utils'
 interface SearchModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  defaultContext?: 'work' | 'personal' | null
 }
 
 type ListItem =
   | { type: 'suggestion'; data: Suggestion }
   | { type: 'task'; data: SearchResult }
 
-export function SearchModal({ open, onOpenChange }: SearchModalProps) {
+export function SearchModal({
+  open,
+  onOpenChange,
+  defaultContext: contextOverride,
+}: SearchModalProps) {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isContextCleared, setIsContextCleared] = useState(false)
@@ -35,11 +40,18 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
   const lastMousePos = useRef({ x: 0, y: 0 })
   const navigate = useNavigate()
   const currentContext = useCurrentContext()
-  const context =
-    parseSearchQuery(query).context ??
-    (isContextCleared ? undefined : currentContext)
+  const configuredContext =
+    contextOverride === undefined
+      ? currentContext
+      : (contextOverride ?? undefined)
+  const defaultSearchContext = isContextCleared ? undefined : configuredContext
+  const context = resolveSearchContext(query, defaultSearchContext)
+  const canClearContext = query === '' && context != null
 
-  const { data: tasks, isFetching } = useSearchTasks(query, context)
+  const { data: tasks, isFetching } = useSearchTasks(
+    query,
+    defaultSearchContext,
+  )
 
   const currentPrefix = extractCurrentPrefix(query)
   const { data: suggestions } = useSearchSuggestions(currentPrefix)
@@ -136,7 +148,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
         onOpenChange(false)
         break
       case 'Backspace':
-        if (query === '' && context != null) {
+        if (canClearContext) {
           e.preventDefault()
           setIsContextCleared(true)
         }
@@ -345,7 +357,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
             <span>open</span>
             <KeybindHint variant="boxed">Esc</KeybindHint>
             <span>close</span>
-            {query === '' && context != null && (
+            {canClearContext && (
               <>
                 <KeybindHint variant="boxed">Backspace</KeybindHint>
                 <span>clear context</span>
