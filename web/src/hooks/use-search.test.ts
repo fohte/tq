@@ -1,6 +1,24 @@
 import { describe, expect, it } from 'vitest'
 
-import { applySuggestionToQuery, extractCurrentPrefix } from '#hooks/use-search'
+import {
+  applySuggestionToQuery,
+  extractCurrentPrefix,
+  resolveSearchContext,
+} from '#hooks/use-search'
+
+describe('resolveSearchContext', () => {
+  it('uses the default context when the query has no context token', () => {
+    expect(resolveSearchContext('urgent', 'personal')).toBe('personal')
+  })
+
+  it('prefers an explicit context token over the default context', () => {
+    expect(resolveSearchContext('urgent context:work', 'personal')).toBe('work')
+  })
+
+  it('leaves context unset when no default is provided', () => {
+    expect(resolveSearchContext('urgent')).toBeUndefined()
+  })
+})
 
 describe('extractCurrentPrefix', () => {
   it('returns the whole query when it is a single bare word', () => {
