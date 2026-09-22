@@ -19,6 +19,7 @@ export type { Project, ProjectDetail, ProjectTask }
 type ProjectStatus = 'active' | 'paused' | 'completed' | 'archived'
 
 export interface ProjectFilter {
+  q?: string
   status?: ProjectStatus
   context?: 'work' | 'personal'
 }
@@ -50,7 +51,11 @@ export function useProjects(
     queryKey: projectKeys.list(filter),
     queryFn: async () => {
       const res = await api.api.projects.$get({
-        query: filter ?? {},
+        query: {
+          ...(filter?.q == null ? {} : { q: filter.q }),
+          ...(filter?.status == null ? {} : { status: filter.status }),
+          ...(filter?.context == null ? {} : { context: filter.context }),
+        },
       })
       return unwrapOrThrow(assertOk(res)).json()
     },

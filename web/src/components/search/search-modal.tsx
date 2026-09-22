@@ -11,10 +11,19 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 
+import {
+  isProjectStatus,
+  type ProjectStatus,
+  ProjectStatusMark,
+} from '#components/project/project-status-mark'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useCurrentContext } from '#hooks/use-current-context'
+import type { Project } from '#hooks/use-projects'
+import { useProjects } from '#hooks/use-projects'
+import type { SavedView } from '#hooks/use-saved-views'
+import { useSavedViews } from '#hooks/use-saved-views'
 import type { SearchResult, Suggestion } from '#hooks/use-search'
 import {
   applySuggestionToQuery,
@@ -80,11 +89,21 @@ export function SearchModal({
   const defaultSearchContext = isContextCleared ? undefined : configuredContext
   const context = resolveSearchContext(query, defaultSearchContext)
   const canClearContext = query === '' && context != null
+  const searchFilter =
+    query.length > 0
+      ? { q: query, ...(context == null ? {} : { context }) }
+      : undefined
 
   const { data: tasks, isFetching } = useSearchTasks(
     query,
     defaultSearchContext,
   )
+  const { data: projects } = useProjects(searchFilter, {
+    enabled: searchFilter != null,
+  })
+  const { data: savedViews } = useSavedViews(searchFilter, {
+    enabled: searchFilter != null,
+  })
 
   const currentPrefix = extractCurrentPrefix(query)
   const { data: suggestions } = useSearchSuggestions(currentPrefix)
@@ -116,6 +135,22 @@ export function SearchModal({
     void navigateRef.current({
       to: '/tasks/$taskId',
       params: { taskId: task.id },
+    })
+  }, [])
+
+  const openProject = useCallback((project: Project) => {
+    onOpenChangeRef.current(false)
+    void navigateRef.current({
+      to: '/projects/$projectId',
+      params: { projectId: project.id },
+    })
+  }, [])
+
+  const openView = useCallback((view: SavedView) => {
+    onOpenChangeRef.current(false)
+    void navigateRef.current({
+      to: '/tasks',
+      search: { q: view.query },
     })
   }, [])
 
@@ -189,6 +224,68 @@ export function SearchModal({
           </div>
         ),
       })) ?? []
+    const projectItems: ListItem[] =
+      projects?.map((project) => {
+        const status: ProjectStatus = isProjectStatus(project.status)
+          ? project.status
+          : 'active'
+        const select = () => {
+          openProject(project)
+        }
+
+        return {
+          key: `project:${project.id}`,
+          select,
+          render: ({ isSelected, onMouseMove }) => (
+            <button
+              type="button"
+              role="option"
+              aria-selected={isSelected}
+              data-selected={isSelected}
+              onClick={select}
+              onMouseMove={onMouseMove}
+              className={cn(
+                'flex w-full items-center gap-2 px-4 py-2 text-left',
+                isSelected ? 'bg-accent' : 'hover:bg-accent/50',
+              )}
+            >
+              <ProjectStatusMark status={status} />
+              <span className="truncate font-mono text-sm text-foreground">
+                {project.title}
+              </span>
+            </button>
+          ),
+        }
+      }) ?? []
+    const viewItems: ListItem[] =
+      savedViews?.map((view) => {
+        const select = () => {
+          openView(view)
+        }
+
+        return {
+          key: `view:${view.id}`,
+          select,
+          render: ({ isSelected, onMouseMove }) => (
+            <button
+              type="button"
+              role="option"
+              aria-selected={isSelected}
+              data-selected={isSelected}
+              onClick={select}
+              onMouseMove={onMouseMove}
+              className={cn(
+                'flex w-full items-center gap-2 px-4 py-2 text-left',
+                isSelected ? 'bg-accent' : 'hover:bg-accent/50',
+              )}
+            >
+              <span className="font-mono text-sm text-foreground">
+                {view.name}
+              </span>
+            </button>
+          ),
+        }
+      }) ?? []
 
     return [
       {
@@ -203,8 +300,30 @@ export function SearchModal({
         items: taskItems,
         isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
       },
+      {
+        id: 'projects',
+        title: 'Projects',
+        items: projectItems,
+        isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
+      },
+      {
+        id: 'views',
+        title: 'Views',
+        items: viewItems,
+        isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
+      },
     ]
-  }, [suggestions, tasks, currentPrefix, applySuggestion, openTask])
+  }, [
+    suggestions,
+    tasks,
+    projects,
+    savedViews,
+    currentPrefix,
+    applySuggestion,
+    openTask,
+    openProject,
+    openView,
+  ])
 
   const { items, indexedGroups } = useMemo((): {
     items: ListItem[]

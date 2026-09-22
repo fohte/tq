@@ -4,8 +4,12 @@ import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { makeSavedView } from '#components/layout/sidebar-test-fixtures'
+import { makeProject } from '#components/project/project-test-fixtures'
 import { SearchModal } from '#components/search/search-modal'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
+import type { Project } from '#hooks/use-projects'
+import type { SavedView } from '#hooks/use-saved-views'
 
 interface MockTask {
   id: string
@@ -83,6 +87,8 @@ const mockSuggestions = [
 
 let mockSearchData: typeof mockTasks = []
 let mockSuggestionData: typeof mockSuggestions = []
+let mockProjectData: Project[] = []
+let mockSavedViewData: SavedView[] = []
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-search')>()
@@ -95,6 +101,22 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
     useSearchSuggestions: () => ({
       data: mockSuggestionData.length > 0 ? mockSuggestionData : undefined,
     }),
+  }
+})
+
+vi.mock('#hooks/use-projects', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-projects')>()
+  return {
+    ...actual,
+    useProjects: () => ({ data: mockProjectData }),
+  }
+})
+
+vi.mock('#hooks/use-saved-views', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-saved-views')>()
+  return {
+    ...actual,
+    useSavedViews: () => ({ data: mockSavedViewData }),
   }
 })
 
@@ -151,6 +173,8 @@ describe('SearchModal', () => {
   beforeEach(() => {
     mockSearchData = []
     mockSuggestionData = []
+    mockProjectData = []
+    mockSavedViewData = []
     mockNavigate.mockClear()
   })
 
@@ -223,6 +247,29 @@ describe('SearchModal', () => {
 
     expect(screen.getByText('Implement task list UI')).toBeInTheDocument()
     expect(screen.getByText('Review pull request')).toBeInTheDocument()
+  })
+
+  it('shows project and saved view results', async () => {
+    mockProjectData = [makeProject({ title: 'Project alpha' })]
+    mockSavedViewData = [makeSavedView({ name: 'Active tasks' })]
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    await user.type(screen.getByLabelText('Search tasks'), 'alpha')
+
+    const getOutput = () => ({
+      groupTitles: ['Projects', 'Views'].map(
+        (title) => screen.getByText(title).textContent,
+      ),
+      options: screen
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    })
+    expect(getOutput()).toEqual({
+      groupTitles: ['Projects', 'Views'],
+      options: ['Project alpha', 'Active tasks'],
+    })
   })
 
   it('displays context badge for personal tasks', async () => {
@@ -365,6 +412,66 @@ describe('SearchModal', () => {
     expect(mockNavigate).toHaveBeenCalledWith({
       to: '/tasks/$taskId',
       params: { taskId: '00000000-0000-0000-0000-000000000001' },
+    })
+  })
+
+  it('closes modal and navigates to project on Enter', async () => {
+    const project = makeProject({ id: 'project-alpha', title: 'Project alpha' })
+    mockProjectData = [project]
+    const onOpenChange = vi.fn()
+
+    const user = userEvent.setup()
+    renderSearchModal({ onOpenChange })
+
+    await user.type(screen.getByLabelText('Search tasks'), 'alpha')
+    await user.keyboard('{Enter}')
+
+    const getOutput = () => ({
+      onOpenChange: onOpenChange.mock.calls,
+      navigate: mockNavigate.mock.calls,
+    })
+    expect(getOutput()).toEqual({
+      onOpenChange: [[false]],
+      navigate: [
+        [
+          {
+            to: '/projects/$projectId',
+            params: { projectId: project.id },
+          },
+        ],
+      ],
+    })
+  })
+
+  it('closes modal and navigates to saved view on Enter', async () => {
+    const view = makeSavedView({
+      id: 'view-alpha',
+      name: 'Active tasks',
+      query: 'is:todo',
+    })
+    mockSavedViewData = [view]
+    const onOpenChange = vi.fn()
+
+    const user = userEvent.setup()
+    renderSearchModal({ onOpenChange })
+
+    await user.type(screen.getByLabelText('Search tasks'), 'active')
+    await user.keyboard('{Enter}')
+
+    const getOutput = () => ({
+      onOpenChange: onOpenChange.mock.calls,
+      navigate: mockNavigate.mock.calls,
+    })
+    expect(getOutput()).toEqual({
+      onOpenChange: [[false]],
+      navigate: [
+        [
+          {
+            to: '/tasks',
+            search: { q: view.query },
+          },
+        ],
+      ],
     })
   })
 
