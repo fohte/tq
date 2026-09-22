@@ -98,7 +98,7 @@ describe('openTqLinkInApp', () => {
   })
 
   it('ignores a lookalike host', async () => {
-    stubChrome({ 9: makeTab({ id: 9, url: 'https://example.test/source' }) })
+    stubChrome({})
 
     expect(
       await run(
@@ -110,7 +110,7 @@ describe('openTqLinkInApp', () => {
   })
 
   it('ignores a different port', async () => {
-    stubChrome({ 9: makeTab({ id: 9, url: 'https://example.test/source' }) })
+    stubChrome({})
 
     expect(
       await run(
@@ -136,6 +136,19 @@ describe('openTqLinkInApp', () => {
       calls: [
         ['tabs.get', 9],
         ['tabs.get', 5],
+        ['tabs.update', 9, { url: 'tq://tq.example.test/tasks/42' }],
+        ['tabs.remove', 9],
+      ],
+    })
+  })
+
+  it('closes a new tab with no opener after handing it off', async () => {
+    stubChrome({ 9: makeTab({ id: 9, url: 'chrome://newtab/' }) })
+
+    expect(await run(makeWebNavigationDetails())).toEqual({
+      error: null,
+      calls: [
+        ['tabs.get', 9],
         ['tabs.update', 9, { url: 'tq://tq.example.test/tasks/42' }],
         ['tabs.remove', 9],
       ],
