@@ -41,7 +41,7 @@ function SearchModalStory({
         <SearchModal
           open={open}
           onOpenChange={setOpen}
-          defaultContext={defaultContext}
+          {...(defaultContext === undefined ? {} : { defaultContext })}
         />
       </div>
     </Providers>
