@@ -320,7 +320,16 @@ export function getSuggestions(
 
   if (!partial) return items
   const lower = partial.toLowerCase()
-  return items.filter((item) => item.value.toLowerCase().startsWith(lower))
+  const prefixMatches: SuggestionItem[] = []
+  const substringMatches: SuggestionItem[] = []
+
+  for (const item of items) {
+    const value = item.value.toLowerCase()
+    if (value.startsWith(lower)) prefixMatches.push(item)
+    else if (value.includes(lower)) substringMatches.push(item)
+  }
+
+  return [...prefixMatches, ...substringMatches]
 }
 
 /**
