@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { taskPages, tasks } from '#db/schema'
+import { pageSummaryToResponse } from '#routes/task-pages'
 import { contextEnum } from '#schemas/task'
 
 const MAX_QUERY_TERMS = 20
@@ -78,16 +79,7 @@ export const pageSearchApp = new Hono().get(
 
     const results = await db
       .select({
-        page: {
-          id: taskPages.id,
-          taskId: taskPages.taskId,
-          title: taskPages.title,
-          content: taskPages.content,
-          format: taskPages.format,
-          sortOrder: taskPages.sortOrder,
-          createdAt: taskPages.createdAt,
-          updatedAt: taskPages.updatedAt,
-        },
+        page: taskPages,
         task: {
           id: tasks.id,
           number: tasks.number,
@@ -104,15 +96,7 @@ export const pageSearchApp = new Hono().get(
 
     return c.json(
       results.map(({ page, task }) => ({
-        page: {
-          id: page.id,
-          taskId: page.taskId,
-          title: page.title,
-          format: page.format,
-          sortOrder: page.sortOrder,
-          createdAt: page.createdAt.toISOString(),
-          updatedAt: page.updatedAt.toISOString(),
-        },
+        page: pageSummaryToResponse(page),
         task,
         match: findMatch(page.content, terms),
       })),

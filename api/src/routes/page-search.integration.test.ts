@@ -149,4 +149,48 @@ describe('GET /api/pages/search', () => {
       ],
     })
   })
+
+  it('treats LIKE wildcard characters in q as literal text', async () => {
+    const task = await createTask('Search notes')
+    await createPage(task.id, 'Literal value', 'The value is 100\\%_done.')
+    await createPage(task.id, 'Backslash decoy', 'The value is 100%_done.')
+    await createPage(task.id, 'Wildcard decoy', 'The value is 100XXdone.')
+
+    const query = encodeURIComponent('100\\%_done')
+    const res = await app.request(`/api/pages/search?q=${query}`)
+    const body = await jsonBody<PageSearchResult[]>(res)
+
+    expect(normalizeResponse(res.status, body)).toEqual({
+      status: 200,
+      body: [
+        expectedResult(
+          task,
+          'Literal value',
+          '100\\%_done',
+          'The value is 100\\%_done.',
+        ),
+      ],
+    })
+  })
+
+  it('returns 400 when q is empty after trimming', async () => {
+    const res = await app.request('/api/pages/search?q=%20')
+
+    expect(res.status).toBe(400)
+  })
+
+  it('truncates long excerpts around the matched term', async () => {
+    const task = await createTask('Search notes')
+    const content = `${'x'.repeat(100)}Needle${'y'.repeat(100)}`
+    const excerpt = `…${'x'.repeat(80)}Needle${'y'.repeat(80)}…`
+    await createPage(task.id, 'Long note', content)
+
+    const res = await app.request('/api/pages/search?q=needle')
+    const body = await jsonBody<PageSearchResult[]>(res)
+
+    expect(normalizeResponse(res.status, body)).toEqual({
+      status: 200,
+      body: [expectedResult(task, 'Long note', 'needle', excerpt)],
+    })
+  })
 })
