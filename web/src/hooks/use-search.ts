@@ -11,12 +11,14 @@ type Suggestion = InferResponseType<
   (typeof api.api.tasks.search)['suggest']['$get'],
   200
 >[number]
+type SearchContext = 'work' | 'personal'
 
 export type { SearchResult, Suggestion }
 
 export const searchKeys = {
   all: ['search'] as const,
-  results: (q: string) => [...searchKeys.all, 'results', q] as const,
+  results: (q: string, context: SearchContext | undefined) =>
+    [...searchKeys.all, 'results', q, context] as const,
   suggestions: (prefix: string) =>
     [...searchKeys.all, 'suggestions', prefix] as const,
 }
@@ -24,19 +26,24 @@ export const searchKeys = {
 /**
  * Hook for the command palette search modal (Cmd+K).
  */
-export function useSearchTasks(query: string) {
+export function useSearchTasks(query: string, context?: SearchContext) {
   const debouncedQuery = useDebounce(query, 200)
 
   return useQuery({
-    queryKey: searchKeys.results(debouncedQuery),
+    queryKey: searchKeys.results(debouncedQuery, context),
     queryFn: async () => {
       const res = await api.api.tasks.$get({
-        query: { q: debouncedQuery, limit: '20' },
+        query: {
+          q: debouncedQuery,
+          limit: '20',
+          ...(context == null ? {} : { context }),
+        },
       })
       return unwrapOrThrow(assertOk(res)).json()
     },
     enabled: debouncedQuery.length > 0,
-    placeholderData: (prev) => prev,
+    placeholderData: (prev, prevQuery) =>
+      prevQuery?.queryKey[3] === context ? prev : undefined,
   })
 }
 

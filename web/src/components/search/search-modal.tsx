@@ -1,10 +1,13 @@
 import { useNavigate } from '@tanstack/react-router'
+import { parseSearchQuery } from 'api/search-query-parser'
 import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
+import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
+import { useCurrentContext } from '#hooks/use-current-context'
 import type { SearchResult, Suggestion } from '#hooks/use-search'
 import {
   applySuggestionToQuery,
@@ -26,12 +29,17 @@ type ListItem =
 export function SearchModal({ open, onOpenChange }: SearchModalProps) {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [isContextCleared, setIsContextCleared] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const lastMousePos = useRef({ x: 0, y: 0 })
   const navigate = useNavigate()
+  const currentContext = useCurrentContext()
+  const context =
+    parseSearchQuery(query).context ??
+    (isContextCleared ? undefined : currentContext)
 
-  const { data: tasks, isFetching } = useSearchTasks(query)
+  const { data: tasks, isFetching } = useSearchTasks(query, context)
 
   const currentPrefix = extractCurrentPrefix(query)
   const { data: suggestions } = useSearchSuggestions(currentPrefix)
@@ -59,6 +67,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
     if (open) {
       setQuery('')
       setSelectedIndex(0)
+      setIsContextCleared(false)
     }
   }, [open])
 
@@ -101,6 +110,8 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
   )
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.nativeEvent.isComposing) return
+
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
@@ -123,6 +134,12 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
       case 'Escape':
         e.preventDefault()
         onOpenChange(false)
+        break
+      case 'Backspace':
+        if (query === '' && context != null) {
+          e.preventDefault()
+          setIsContextCleared(true)
+        }
         break
     }
   }
@@ -157,6 +174,11 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
             <span className="font-mono text-sm font-bold text-primary">
               &gt;
             </span>
+            {context != null && (
+              <Chip size="md" active data-testid="search-context-scope">
+                context:{context}
+              </Chip>
+            )}
             <input
               ref={inputRef}
               type="text"
@@ -166,7 +188,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
               }}
               placeholder="Search tasks..."
               autoFocus
-              className="flex-1 border-0 bg-transparent font-mono text-sm outline-none placeholder:text-muted-foreground"
+              className="min-w-0 flex-1 border-0 bg-transparent font-mono text-sm outline-none placeholder:text-muted-foreground"
               aria-label="Search tasks"
             />
             {isFetching && (
@@ -314,7 +336,7 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
           </div>
 
           {/* Footer with keyboard hints */}
-          <div className="flex h-9 items-center gap-1.5 border-t border-border px-4 font-mono text-2xs text-muted-foreground-ghost">
+          <div className="flex min-h-9 flex-wrap items-center gap-1.5 border-t border-border px-4 py-2 font-mono text-2xs text-muted-foreground-ghost">
             <KeybindHint variant="boxed">↑↓</KeybindHint>
             <span>navigate</span>
             <KeybindHint variant="boxed">Tab</KeybindHint>
@@ -323,6 +345,12 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
             <span>open</span>
             <KeybindHint variant="boxed">Esc</KeybindHint>
             <span>close</span>
+            {query === '' && context != null && (
+              <>
+                <KeybindHint variant="boxed">Backspace</KeybindHint>
+                <span>clear context</span>
+              </>
+            )}
           </div>
         </div>
       </div>
