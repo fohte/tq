@@ -74,7 +74,7 @@ TQ_ORIGIN=https://tq.fohte.net pnpm --filter extension run build
 2. Enable **Developer mode**.
 3. Click **Load unpacked** and select the `extension/dist` directory.
 
-Opening a URL under `TQ_ORIGIN` from outside tq (for example, a link in Slack) opens it in the tq desktop app. Navigations from a tq page stay in the browser, and a newly opened empty tab is closed after the link is handed off. Chrome lists the `tabs` and `webNavigation` permissions the extension declares for this on install.
+Opening a URL under `TQ_ORIGIN` from outside tq (for example, a link in Slack) opens it in the tq desktop app. The desktop app must be installed with the `tq://` handler registered (see Desktop app below). Navigations from a tq page stay in the browser, and a newly opened empty tab is closed after the link is handed off. Chrome lists the `tabs` and `webNavigation` permissions the extension declares for this on install.
 
 ### Desktop app
 

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TQ_ORIGIN } from '#config'
 import { openTqLinkInApp } from '#open-in-app'
 import { makeTab } from '#tab-test-fixtures'
+import { makeWebNavigationDetails } from '#web-navigation-test-fixtures'
 
 type ChromeCall = 'tabs.get' | 'tabs.update' | 'tabs.remove'
 
@@ -35,22 +36,6 @@ function stubChrome(
   vi.stubGlobal('chrome', { tabs: { get, update, remove } })
 }
 
-function makeNavigationDetails(
-  overrides: Partial<chrome.webNavigation.WebNavigationBaseCallbackDetails> = {},
-): chrome.webNavigation.WebNavigationBaseCallbackDetails {
-  return {
-    documentLifecycle: 'active',
-    frameId: 0,
-    frameType: 'outermost_frame',
-    parentFrameId: -1,
-    processId: 1,
-    tabId: 9,
-    timeStamp: 0,
-    url: `${TQ_ORIGIN}/tasks/42`,
-    ...overrides,
-  }
-}
-
 async function run(
   details: chrome.webNavigation.WebNavigationBaseCallbackDetails,
 ): Promise<{ error: Error | null; calls: unknown[][] }> {
@@ -68,7 +53,7 @@ describe('openTqLinkInApp', () => {
 
     expect(
       await run(
-        makeNavigationDetails({
+        makeWebNavigationDetails({
           url: `${TQ_ORIGIN}/tasks/42?view=compact#comments`,
         }),
       ),
@@ -88,7 +73,7 @@ describe('openTqLinkInApp', () => {
   it('leaves a tq page navigation in the browser', async () => {
     stubChrome({ 9: makeTab({ id: 9, url: `${TQ_ORIGIN}/tasks/7` }) })
 
-    expect(await run(makeNavigationDetails())).toEqual({
+    expect(await run(makeWebNavigationDetails())).toEqual({
       error: null,
       calls: [['tabs.get', 9]],
     })
@@ -97,30 +82,43 @@ describe('openTqLinkInApp', () => {
   it('ignores subframe navigations', async () => {
     stubChrome({ 9: makeTab({ id: 9, url: 'https://example.test/source' }) })
 
-    expect(await run(makeNavigationDetails({ frameId: 1 }))).toEqual({
+    expect(await run(makeWebNavigationDetails({ frameId: 1 }))).toEqual({
       error: null,
       calls: [],
     })
   })
 
-  it('ignores lookalike hosts and different ports', async () => {
+  it('ignores a navigation without an associated tab', async () => {
+    stubChrome({})
+
+    expect(await run(makeWebNavigationDetails({ tabId: -1 }))).toEqual({
+      error: null,
+      calls: [],
+    })
+  })
+
+  it('ignores a lookalike host', async () => {
     stubChrome({ 9: makeTab({ id: 9, url: 'https://example.test/source' }) })
 
-    const results = await Promise.all([
-      run(
-        makeNavigationDetails({
+    expect(
+      await run(
+        makeWebNavigationDetails({
           url: 'https://tq.example.test.attacker.invalid/tasks/42',
         }),
       ),
-      run(
-        makeNavigationDetails({ url: 'https://tq.example.test:8443/tasks/42' }),
-      ),
-    ])
+    ).toEqual({ error: null, calls: [] })
+  })
 
-    expect(results).toEqual([
-      { error: null, calls: [] },
-      { error: null, calls: [] },
-    ])
+  it('ignores a different port', async () => {
+    stubChrome({ 9: makeTab({ id: 9, url: 'https://example.test/source' }) })
+
+    expect(
+      await run(
+        makeWebNavigationDetails({
+          url: 'https://tq.example.test:8443/tasks/42',
+        }),
+      ),
+    ).toEqual({ error: null, calls: [] })
   })
 
   it('hands a new tab to tq and closes it after the handoff', async () => {
@@ -129,12 +127,11 @@ describe('openTqLinkInApp', () => {
       9: makeTab({
         id: 9,
         openerTabId: 5,
-        pendingUrl: `${TQ_ORIGIN}/tasks/42`,
         url: 'chrome://newtab/',
       }),
     })
 
-    expect(await run(makeNavigationDetails())).toEqual({
+    expect(await run(makeWebNavigationDetails())).toEqual({
       error: null,
       calls: [
         ['tabs.get', 9],
@@ -151,7 +148,7 @@ describe('openTqLinkInApp', () => {
       9: makeTab({ id: 9, openerTabId: 5, url: 'chrome://newtab/' }),
     })
 
-    expect(await run(makeNavigationDetails())).toEqual({
+    expect(await run(makeWebNavigationDetails())).toEqual({
       error: null,
       calls: [
         ['tabs.get', 9],
@@ -170,7 +167,7 @@ describe('openTqLinkInApp', () => {
       { 'tabs.update': failure },
     )
 
-    expect(await run(makeNavigationDetails())).toEqual({
+    expect(await run(makeWebNavigationDetails())).toEqual({
       error: new Error('tq link handoff failed', { cause: failure }),
       calls: [
         ['tabs.get', 9],

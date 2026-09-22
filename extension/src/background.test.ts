@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeLinkedTask } from '#background-test-fixtures'
 import { TQ_ORIGIN } from '#config'
+import { makeWebNavigationDetails } from '#web-navigation-test-fixtures'
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -292,7 +293,7 @@ describe('onMessage listener', () => {
 })
 
 describe('webNavigation.onBeforeNavigate listener', () => {
-  const TQ_URL = 'https://tq.example.test/tasks/42'
+  const TQ_URL = `${TQ_ORIGIN}/tasks/42`
 
   async function importAndCaptureNavigationListener(
     tabs: Record<string, unknown>,
@@ -326,16 +327,7 @@ describe('webNavigation.onBeforeNavigate listener', () => {
       get: vi.fn().mockRejectedValue(failure),
     })
 
-    listener({
-      documentLifecycle: 'active',
-      frameId: 0,
-      frameType: 'outermost_frame',
-      parentFrameId: -1,
-      processId: 1,
-      tabId: 9,
-      timeStamp: 0,
-      url: TQ_URL,
-    })
+    listener(makeWebNavigationDetails({ url: TQ_URL }))
 
     await vi.waitFor(() => {
       expect(warn.mock.calls).toEqual([
