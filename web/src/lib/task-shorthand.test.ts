@@ -378,6 +378,21 @@ describe('getSuggestions', () => {
     ])
   })
 
+  it('matches labels when the partial appears inside the name', () => {
+    expect(getSuggestions('#', 'tq', ['dev/tq', 'other'])).toEqual([
+      { value: 'dev/tq', display: 'dev/tq' },
+    ])
+  })
+
+  it('prioritizes prefix matches over substring matches', () => {
+    expect(
+      getSuggestions('#', 'backend', ['api/backend', 'backend-tools']),
+    ).toEqual([
+      { value: 'backend-tools', display: 'backend-tools' },
+      { value: 'api/backend', display: 'api/backend' },
+    ])
+  })
+
   it('returns no labels for # when none are available', () => {
     expect(getSuggestions('#', '')).toEqual([])
   })
