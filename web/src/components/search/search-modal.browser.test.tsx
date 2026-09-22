@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SearchModal } from '#components/search/search-modal'
+import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 
 interface MockTask {
   id: string
@@ -156,6 +157,40 @@ describe('SearchModal', () => {
   it('renders the search input when open', () => {
     renderSearchModal()
     expect(screen.getByLabelText('Search tasks')).toBeInTheDocument()
+  })
+
+  it('shows the current context as the search scope', () => {
+    resetSessionOpenSettings({ localContext: 'work' })
+
+    renderSearchModal()
+
+    expect(screen.getByTestId('search-context-scope').textContent).toBe(
+      'context:work',
+    )
+  })
+
+  it('clears the current context when Backspace is pressed on an empty query', async () => {
+    resetSessionOpenSettings({ localContext: 'work' })
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    await user.keyboard('{Backspace}')
+
+    expect(screen.queryByTestId('search-context-scope')).toBeNull()
+  })
+
+  it('shows an explicit context token as the active search scope', async () => {
+    resetSessionOpenSettings({ localContext: 'personal' })
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    await user.type(screen.getByLabelText('Search tasks'), 'context:work')
+
+    expect(screen.getByTestId('search-context-scope').textContent).toBe(
+      'context:work',
+    )
   })
 
   it('shows initial empty state', () => {

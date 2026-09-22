@@ -20,7 +20,11 @@ function Providers({ children }: { children: ReactNode }) {
   )
 }
 
-function SearchModalStory() {
+function SearchModalStory({
+  defaultContext,
+}: {
+  defaultContext?: 'work' | 'personal' | null
+} = {}) {
   const [open, setOpen] = useState(true)
   return (
     <Providers>
@@ -34,7 +38,11 @@ function SearchModalStory() {
         >
           Open Search (Cmd+K)
         </button>
-        <SearchModal open={open} onOpenChange={setOpen} />
+        <SearchModal
+          open={open}
+          onOpenChange={setOpen}
+          {...(defaultContext === undefined ? {} : { defaultContext })}
+        />
       </div>
     </Providers>
   )
@@ -52,3 +60,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+export const AllContexts: Story = {
+  args: { defaultContext: null },
+}
