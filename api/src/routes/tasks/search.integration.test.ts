@@ -237,14 +237,15 @@ describe('tasks search API', () => {
       ).toEqual({ status: 200, body: { results: [] } })
     })
 
-    it('applies the result limit after sorting matches across sources', async () => {
+    it('treats LIKE wildcard characters as literal search text', async () => {
       const task = await createTask('Unrelated task')
-      const first = await createPage(task.id, 'First page', 'beacon signal')
-      const second = await createPage(task.id, 'Second page', 'beacon signal')
-      const expectedPageId = [first.id, second.id].sort()[0]
+      const pageContent = '100%_complete \\path'
+      const page = await createPage(task.id, 'Symbols', pageContent)
+      await createPage(task.id, 'Wildcard decoy', '100XXcomplete \\path')
+      await createPage(task.id, 'Escape decoy', '100%_complete path')
 
       const res = await app.request(
-        `/api/tasks/search/pages?q=${encodeURIComponent('beacon signal')}&limit=1`,
+        `/api/tasks/search/pages?q=${encodeURIComponent(pageContent)}`,
       )
       const body = await jsonBody<{ results: PageSearchResult[] }>(res)
 
@@ -261,9 +262,57 @@ describe('tasks search API', () => {
               source: 'page',
               taskNumber: task.number,
               taskTitle: 'Unrelated task',
-              pageId: expectedPageId,
-              pageTitle:
-                expectedPageId === first.id ? 'First page' : 'Second page',
+              pageId: page.id,
+              pageTitle: 'Symbols',
+              snippet: pageContent,
+              matchCount: 2,
+              updatedAt: 'DATE',
+            },
+          ],
+        },
+      })
+    })
+
+    it('returns no results when q contains no free-text terms', async () => {
+      const task = await createTask('Task with pages')
+      await createPage(task.id, 'Page', 'content')
+
+      const res = await app.request('/api/tasks/search/pages?q=has%3Apages')
+
+      expect(
+        makePageSearchResponse(
+          res.status,
+          (await jsonBody<{ results: PageSearchResult[] }>(res)).results,
+        ),
+      ).toEqual({ status: 200, body: { results: [] } })
+    })
+
+    it('applies the result limit after sorting matches across sources', async () => {
+      const task = await createTask('Unrelated task')
+      await createPage(task.id, 'First page', 'beacon signal')
+      await createPage(task.id, 'Second page', 'beacon signal')
+      await createComment(task.id, 'beacon signal')
+
+      const res = await app.request(
+        `/api/tasks/search/pages?q=${encodeURIComponent('beacon signal')}&limit=1`,
+      )
+      const body = await jsonBody<{ results: PageSearchResult[] }>(res)
+
+      expect(
+        makePageSearchResponse(
+          res.status,
+          body.results.map(normalizePageSearchResult),
+        ),
+      ).toEqual({
+        status: 200,
+        body: {
+          results: [
+            {
+              source: 'comment',
+              taskNumber: task.number,
+              taskTitle: 'Unrelated task',
+              pageId: null,
+              pageTitle: null,
               snippet: 'beacon signal',
               matchCount: 2,
               updatedAt: 'DATE',

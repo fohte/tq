@@ -62,7 +62,7 @@ function buildSnippet(content: SQL, words: string[]) {
   )`
 }
 
-async function queryPageResults(words: string[]) {
+async function queryPageResults(words: string[], limit: number) {
   const content = sql`${taskPages.content}`
 
   return db
@@ -79,10 +79,11 @@ async function queryPageResults(words: string[]) {
     .from(taskPages)
     .innerJoin(tasks, eq(taskPages.taskId, tasks.id))
     .where(and(...buildTermConditions(content, words)))
-    .orderBy(desc(taskPages.updatedAt), taskPages.id)
+    .orderBy(desc(taskPages.updatedAt), desc(tasks.number), taskPages.id)
+    .limit(limit)
 }
 
-async function queryCommentResults(words: string[]) {
+async function queryCommentResults(words: string[], limit: number) {
   const content = sql`${taskComments.content}`
 
   return db
@@ -99,10 +100,11 @@ async function queryCommentResults(words: string[]) {
     .from(taskComments)
     .innerJoin(tasks, eq(taskComments.taskId, tasks.id))
     .where(and(...buildTermConditions(content, words)))
-    .orderBy(desc(taskComments.updatedAt), taskComments.id)
+    .orderBy(desc(taskComments.updatedAt), desc(tasks.number), taskComments.id)
+    .limit(limit)
 }
 
-async function queryTaskResults(words: string[]) {
+async function queryTaskResults(words: string[], limit: number) {
   const content = sql`concat_ws(' ', ${tasks.title}, ${tasks.description})`
 
   return db
@@ -118,7 +120,8 @@ async function queryTaskResults(words: string[]) {
     })
     .from(tasks)
     .where(and(...buildTermConditions(content, words)))
-    .orderBy(desc(tasks.updatedAt), tasks.id)
+    .orderBy(desc(tasks.updatedAt), desc(tasks.number), tasks.id)
+    .limit(limit)
 }
 
 function compareResults(left: PageSearchResult, right: PageSearchResult) {
@@ -142,13 +145,14 @@ export async function queryPageSearch(query: {
 
   if (words.length === 0) return []
 
+  const limit = query.limit ?? DEFAULT_LIMIT
   const [pageResults, commentResults, taskResults] = await Promise.all([
-    queryPageResults(words),
-    queryCommentResults(words),
-    queryTaskResults(words),
+    queryPageResults(words, limit),
+    queryCommentResults(words, limit),
+    queryTaskResults(words, limit),
   ])
 
   return [...pageResults, ...commentResults, ...taskResults]
     .sort(compareResults)
-    .slice(0, query.limit ?? DEFAULT_LIMIT)
+    .slice(0, limit)
 }
