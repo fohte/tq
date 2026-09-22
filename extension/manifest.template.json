@@ -2,11 +2,11 @@
   "manifest_version": 3,
   "name": "tq for GitHub",
   "version": "0.1.0",
-  "description": "Show tq task links on GitHub issue and pull request pages, and reuse an already-open tq tab when a tq link is opened in a new tab.",
+  "description": "Show tq task links on GitHub issue and pull request pages, and open tq links in the tq desktop app.",
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["tabs"],
+  "permissions": ["tabs", "webNavigation"],
   "host_permissions": [],
   "content_scripts": [
     {

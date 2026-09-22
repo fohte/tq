@@ -1,5 +1,6 @@
 import type { ParsedQuery } from 'api/search-query-parser'
 import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
+import { useEffect } from 'react'
 
 import { SaveViewButton } from '#components/saved-view/save-view-button'
 import { TaskFilterChip } from '#components/task/task-filter-chip'
@@ -10,7 +11,9 @@ import { TaskSortFilterFields } from '#components/task/task-sort-filter-fields'
 import { TaskStatusFilterFields } from '#components/task/task-status-filter-fields'
 import { Button } from '#components/ui/button'
 import { Checkbox } from '#components/ui/checkbox'
+import { shouldIgnoreShortcut } from '#hooks/use-global-keybindings'
 import type { Project } from '#hooks/use-projects'
+import { useSearchModalOpen } from '#hooks/use-search-modal-open'
 import { useTask } from '#hooks/use-task-queries'
 import {
   sortLabels,
@@ -58,6 +61,29 @@ export function TaskFilterChipRow({
   disableProjectFilter = false,
   defaultOpenFilter,
 }: TaskFilterChipRowProps) {
+  const searchModalOpen = useSearchModalOpen()
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key !== '/' ||
+        e.repeat ||
+        searchModalOpen ||
+        shouldIgnoreShortcut(e)
+      ) {
+        return
+      }
+
+      e.preventDefault()
+      document.getElementById(freeTextInputId)?.focus()
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [searchModalOpen])
+
   const sortBy = parsed.sortBy ?? 'updated'
   // The chip label falls back to the raw value for a sort the picker below
   // doesn't offer (e.g. a hand-edited `sort:due` in the URL), but the

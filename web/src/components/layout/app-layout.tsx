@@ -7,6 +7,7 @@ import { StatusLine } from '#components/layout/status-line'
 import { SearchModal } from '#components/search/search-modal'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { useGlobalKeybindings } from '#hooks/use-global-keybindings'
+import { SearchModalOpenContext } from '#hooks/use-search-modal-open'
 import { useVisualViewportInsets } from '#hooks/use-visual-viewport-insets'
 import { cn } from '#lib/utils'
 
@@ -48,7 +49,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <main className={cn('flex-1', isViewportPinned && 'min-h-0')}>
-          {children}
+          <SearchModalOpenContext.Provider value={searchOpen}>
+            {children}
+          </SearchModalOpenContext.Provider>
         </main>
         <StatusLine />
         <BottomTabBar />
