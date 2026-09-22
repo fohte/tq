@@ -22,9 +22,8 @@ export function isEditableTarget(target: EventTarget | null): boolean {
   )
 }
 
-// Base UI's Dialog sets this on <html> while any modal (e.g. CreateTaskModal)
-// is open; SearchModal isn't Base UI-based, so its own `searchOpen` is passed
-// in separately.
+// Base UI's Dialog sets this on <html> while a modal is open. SearchModal
+// state is handled separately because it isn't Base UI-based.
 function isBaseUiDialogOpen(): boolean {
   return document.documentElement.hasAttribute('data-base-ui-scroll-locked')
 }
