@@ -54,7 +54,7 @@
     "@tailwindcss/vite": "4.2.2",
     "@tanstack/react-query": "5.91.2",
     "@tanstack/react-router": "1.167.5",
-    "@tanstack/react-virtual": "3.14.12",
+    "@tanstack/react-virtual": "3.14.13",
     "api": "workspace:*",
     "chrono-node": "2.10.1",
     "class-variance-authority": "0.7.1",
