@@ -16,8 +16,42 @@ describe('tasks search API', () => {
         await jsonBody<
           Array<{ value: string; display: string; category: string }>
         >(res)
-      expect(body.length).toBeGreaterThan(0)
-      expect(body.every((s) => s.category === 'is')).toBe(true)
+      expect(body).toEqual([
+        { value: 'is:todo', display: 'Todo', category: 'is' },
+        { value: 'is:completed', display: 'Completed', category: 'is' },
+      ])
+    })
+
+    it('returns suggestions for reason values', async () => {
+      const res = await app.request('/api/tasks/search/suggest?prefix=reason:')
+
+      expect(res.status).toBe(200)
+      const body =
+        await jsonBody<
+          Array<{ value: string; display: string; category: string }>
+        >(res)
+      expect(body).toEqual([
+        { value: 'reason:completed', display: 'Completed', category: 'reason' },
+        {
+          value: 'reason:not_planned',
+          display: 'Not planned',
+          category: 'reason',
+        },
+        { value: 'reason:duplicate', display: 'Duplicate', category: 'reason' },
+      ])
+    })
+
+    it('returns a key-only suggestion for a dynamic token', async () => {
+      const res = await app.request('/api/tasks/search/suggest?prefix=label:')
+
+      expect(res.status).toBe(200)
+      const body =
+        await jsonBody<
+          Array<{ value: string; display: string; category: string }>
+        >(res)
+      expect(body).toEqual([
+        { value: 'label:', display: 'Label', category: 'label' },
+      ])
     })
   })
 

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildSearchQuery, parseSearchQuery } from '#search-query-parser'
+import {
+  buildSearchQuery,
+  getSearchQuerySuggestions,
+  parseSearchQuery,
+} from '#search-query-parser'
 
 describe('parseSearchQuery', () => {
   it('extracts free text when no prefixes are present', () => {
@@ -60,6 +64,13 @@ describe('parseSearchQuery', () => {
     expect(parseSearchQuery('reason:not_planned')).toEqual({
       freeText: '',
       reason: 'not_planned',
+    })
+  })
+
+  it('parses reason:completed', () => {
+    expect(parseSearchQuery('reason:completed')).toEqual({
+      freeText: '',
+      reason: 'completed',
     })
   })
 
@@ -170,6 +181,90 @@ describe('parseSearchQuery', () => {
 
   it('handles empty string', () => {
     expect(parseSearchQuery('')).toEqual({ freeText: '' })
+  })
+})
+
+describe('getSearchQuerySuggestions', () => {
+  it('returns fixed values for a token category', () => {
+    expect(getSearchQuerySuggestions('is:', 'is')).toEqual([
+      { value: 'is:todo', display: 'Todo', category: 'is' },
+      { value: 'is:completed', display: 'Completed', category: 'is' },
+    ])
+  })
+
+  it('returns only the key for a dynamic token', () => {
+    expect(getSearchQuerySuggestions('label:', 'label')).toEqual([
+      { value: 'label:', display: 'Label', category: 'label' },
+    ])
+  })
+
+  it('returns all suggestions when category is omitted', () => {
+    expect(getSearchQuerySuggestions('')).toEqual([
+      { value: 'is:todo', display: 'Todo', category: 'is' },
+      { value: 'is:completed', display: 'Completed', category: 'is' },
+      { value: 'context:work', display: 'Work', category: 'context' },
+      { value: 'context:personal', display: 'Personal', category: 'context' },
+      { value: 'commitment:inbox', display: 'Inbox', category: 'commitment' },
+      {
+        value: 'commitment:active',
+        display: 'Active',
+        category: 'commitment',
+      },
+      {
+        value: 'commitment:someday',
+        display: 'Someday',
+        category: 'commitment',
+      },
+      { value: 'sort:due', display: 'Sort by due date', category: 'sort' },
+      {
+        value: 'sort:created',
+        display: 'Sort by creation date',
+        category: 'sort',
+      },
+      {
+        value: 'sort:updated',
+        display: 'Sort by update date',
+        category: 'sort',
+      },
+      {
+        value: 'sort:estimate',
+        display: 'Sort by estimate',
+        category: 'sort',
+      },
+      { value: 'has:pages', display: 'Has pages', category: 'has' },
+      { value: 'has:comments', display: 'Has comments', category: 'has' },
+      {
+        value: 'has:no-children',
+        display: 'Has no children',
+        category: 'has',
+      },
+      { value: 'has:blockers', display: 'Has blockers', category: 'has' },
+      {
+        value: 'has:no-blockers',
+        display: 'Has no blockers',
+        category: 'has',
+      },
+      { value: 'reason:completed', display: 'Completed', category: 'reason' },
+      {
+        value: 'reason:not_planned',
+        display: 'Not planned',
+        category: 'reason',
+      },
+      { value: 'reason:duplicate', display: 'Duplicate', category: 'reason' },
+      { value: 'label:', display: 'Label', category: 'label' },
+      { value: 'parent:', display: 'Parent task', category: 'parent' },
+      { value: 'project:', display: 'Project', category: 'project' },
+    ])
+  })
+
+  it('filters values by prefix', () => {
+    expect(getSearchQuerySuggestions('sort:created')).toEqual([
+      {
+        value: 'sort:created',
+        display: 'Sort by creation date',
+        category: 'sort',
+      },
+    ])
   })
 })
 

@@ -17,30 +17,169 @@ export interface ParsedQuery {
   sortBy?: 'due' | 'created' | 'updated' | 'estimate'
 }
 
-const STATUS_VALUES: ReadonlySet<'todo' | 'completed'> = new Set([
-  'todo',
-  'completed',
-])
-const REASON_VALUES: ReadonlySet<TaskStatusReason> = new Set(
-  taskStatusReason.options,
-)
-const CONTEXT_VALUES: ReadonlySet<'work' | 'personal'> = new Set([
-  'work',
-  'personal',
-])
-const COMMITMENT_VALUES: ReadonlySet<'inbox' | 'active' | 'someday'> = new Set([
-  'inbox',
-  'active',
-  'someday',
-])
-const SORT_VALUES: ReadonlySet<'due' | 'created' | 'updated' | 'estimate'> =
-  new Set(['due', 'created', 'updated', 'estimate'])
+type SearchQueryTokenValue = {
+  value: string
+  display: string
+  parse: (result: ParsedQuery) => void
+}
 
-function isOneOf<T extends string>(
-  value: string,
-  set: ReadonlySet<T>,
-): value is T {
-  return (set as ReadonlySet<string>).has(value)
+type SearchQueryTokenDefinition =
+  | { values: readonly SearchQueryTokenValue[] }
+  | {
+      display: string
+      parse: (result: ParsedQuery, value: string) => void
+    }
+
+function defineFixedToken<
+  const Values extends readonly (readonly [string, string])[],
+>(
+  values: Values,
+  parse: (result: ParsedQuery, value: Values[number][0]) => void,
+) {
+  return {
+    values: values.map(([value, display]) => ({
+      value,
+      display,
+      parse: (result: ParsedQuery) => {
+        parse(result, value)
+      },
+    })),
+  }
+}
+
+const searchQueryTokenDefinitions = new Map(
+  Object.entries({
+    is: defineFixedToken(
+      [
+        ['todo', 'Todo'],
+        ['completed', 'Completed'],
+      ],
+      (result, value) => {
+        result.status = [...(result.status ?? []), value]
+      },
+    ),
+    context: defineFixedToken(
+      [
+        ['work', 'Work'],
+        ['personal', 'Personal'],
+      ],
+      (result, value) => {
+        result.context = value
+      },
+    ),
+    commitment: defineFixedToken(
+      [
+        ['inbox', 'Inbox'],
+        ['active', 'Active'],
+        ['someday', 'Someday'],
+      ],
+      (result, value) => {
+        result.commitment = value
+      },
+    ),
+    sort: defineFixedToken(
+      [
+        ['due', 'Sort by due date'],
+        ['created', 'Sort by creation date'],
+        ['updated', 'Sort by update date'],
+        ['estimate', 'Sort by estimate'],
+      ],
+      (result, value) => {
+        result.sortBy = value
+      },
+    ),
+    has: defineFixedToken(
+      [
+        ['pages', 'Has pages'],
+        ['comments', 'Has comments'],
+        ['no-children', 'Has no children'],
+        ['blockers', 'Has blockers'],
+        ['no-blockers', 'Has no blockers'],
+      ],
+      (result, value) => {
+        switch (value) {
+          case 'pages':
+            result.hasPages = true
+            break
+          case 'comments':
+            result.hasComments = true
+            break
+          case 'no-children':
+            result.hasNoChildren = true
+            break
+          case 'blockers':
+            result.hasBlockers = true
+            delete result.hasNoBlockers
+            break
+          case 'no-blockers':
+            result.hasNoBlockers = true
+            delete result.hasBlockers
+            break
+          default: {
+            const unhandledValue: never = value
+            return unhandledValue
+          }
+        }
+      },
+    ),
+    reason: defineFixedToken(
+      taskStatusReason.options.map(
+        (value) =>
+          [
+            value,
+            value
+              .replace(/_/g, ' ')
+              .replace(/^./, (char) => char.toUpperCase()),
+          ] as const,
+      ),
+      (result, value) => {
+        result.reason = value
+      },
+    ),
+    label: {
+      display: 'Label',
+      parse: (result: ParsedQuery, value: string) => {
+        result.label = value
+      },
+    },
+    parent: {
+      display: 'Parent task',
+      parse: (result: ParsedQuery, value: string) => {
+        result.parentId = value
+      },
+    },
+    project: {
+      display: 'Project',
+      parse: (result: ParsedQuery, value: string) => {
+        result.projectId = value
+      },
+    },
+  } satisfies Record<string, SearchQueryTokenDefinition>),
+)
+
+export function getSearchQuerySuggestions(prefix: string, category?: string) {
+  const categories =
+    category == null
+      ? Array.from(searchQueryTokenDefinitions.keys())
+      : [category]
+
+  return categories.flatMap((key) => {
+    const definition = searchQueryTokenDefinitions.get(key)
+    if (definition === undefined) return []
+
+    const suggestions =
+      'values' in definition
+        ? definition.values.map(({ value, display }) => ({
+            value: `${key}:${value}`,
+            display,
+            category: key,
+          }))
+        : [{ value: `${key}:`, display: definition.display, category: key }]
+
+    return suggestions.filter((suggestion) =>
+      suggestion.value.startsWith(prefix),
+    )
+  })
 }
 
 export function parseSearchQuery(q: string): ParsedQuery {
@@ -60,75 +199,21 @@ export function parseSearchQuery(q: string): ParsedQuery {
     const prefix = token.slice(0, colonIndex).toLowerCase()
     const value = token.slice(colonIndex + 1)
 
-    if (value === '') {
+    const definition = searchQueryTokenDefinitions.get(prefix)
+    if (value === '' || definition === undefined) {
       freeTextParts.push(token)
       continue
     }
 
-    switch (prefix) {
-      case 'is':
-        if (isOneOf(value, STATUS_VALUES)) {
-          result.status = [...(result.status ?? []), value]
-        } else {
-          freeTextParts.push(token)
-        }
-        break
-      case 'label':
-        result.label = value
-        break
-      case 'context':
-        if (isOneOf(value, CONTEXT_VALUES)) {
-          result.context = value
-        } else {
-          freeTextParts.push(token)
-        }
-        break
-      case 'commitment':
-        if (isOneOf(value, COMMITMENT_VALUES)) {
-          result.commitment = value
-        } else {
-          freeTextParts.push(token)
-        }
-        break
-      case 'reason':
-        if (isOneOf(value, REASON_VALUES)) {
-          result.reason = value
-        } else {
-          freeTextParts.push(token)
-        }
-        break
-      case 'has':
-        if (value === 'pages') {
-          result.hasPages = true
-        } else if (value === 'comments') {
-          result.hasComments = true
-        } else if (value === 'no-children') {
-          result.hasNoChildren = true
-        } else if (value === 'blockers') {
-          result.hasBlockers = true
-          delete result.hasNoBlockers
-        } else if (value === 'no-blockers') {
-          result.hasNoBlockers = true
-          delete result.hasBlockers
-        } else {
-          freeTextParts.push(token)
-        }
-        break
-      case 'parent':
-        result.parentId = value
-        break
-      case 'project':
-        result.projectId = value
-        break
-      case 'sort':
-        if (isOneOf(value, SORT_VALUES)) {
-          result.sortBy = value
-        } else {
-          freeTextParts.push(token)
-        }
-        break
-      default:
+    if ('values' in definition) {
+      const option = definition.values.find((item) => item.value === value)
+      if (option === undefined) {
         freeTextParts.push(token)
+      } else {
+        option.parse(result)
+      }
+    } else {
+      definition.parse(result, value)
     }
   }
 
