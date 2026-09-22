@@ -79,3 +79,7 @@ export const calendarKeybindings: Keybinding[] = [
   { id: 'calendar-week-view', keys: 'w', description: 'week view' },
   { id: 'calendar-month-view', keys: 'm', description: 'month view' },
 ]
+
+export const filterKeybindings: Keybinding[] = [
+  { id: 'focus-filter', keys: '/', description: 'focus filter' },
+]
