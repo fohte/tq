@@ -123,13 +123,25 @@ describe('getCandidateReason', () => {
     ).toEqual({ kind: 'starts', days: 3 })
   })
 
-  it('returns active when the due date is in the future', () => {
+  it('returns due-later when an active task has a future due date', () => {
     expect(
       getCandidateReason(
         makeCandidateTask({ dueDate: '2026-03-25', commitment: 'active' }),
         now,
       ),
-    ).toEqual({ kind: 'active' })
+    ).toEqual({ kind: 'due-later', days: 5 })
+  })
+
+  it('prefers due-later over a past start date', () => {
+    expect(
+      getCandidateReason(
+        makeCandidateTask({
+          dueDate: '2026-03-25',
+          startDate: '2026-03-10',
+        }),
+        now,
+      ),
+    ).toEqual({ kind: 'due-later', days: 5 })
   })
 })
 
@@ -147,33 +159,72 @@ describe('getQueueCandidates', () => {
     ).toEqual([{ task: candidateTask, reason: { kind: 'overdue', days: 3 } }])
   })
 
-  it('sorts candidates by reason priority, then by days within a priority', () => {
+  it('sorts candidates by reason priority', () => {
     const overdueTask = makeCandidateTask({ id: '1', dueDate: '2026-03-17' })
-    const moreOverdueTask = makeCandidateTask({
-      id: '2',
-      dueDate: '2026-03-10',
+    const dueTodayTask = makeCandidateTask({ id: '2', dueDate: '2026-03-20' })
+    const dueLaterTask = makeCandidateTask({
+      id: '3',
+      dueDate: '2026-03-22',
+      commitment: 'active',
     })
-    const dueTodayTask = makeCandidateTask({ id: '3', dueDate: '2026-03-20' })
-    const startsTodayTask = makeCandidateTask({
-      id: '4',
-      startDate: '2026-03-20',
-    })
+    const startsTask = makeCandidateTask({ id: '4', startDate: '2026-03-20' })
     const activeTask = makeCandidateTask({ id: '5', commitment: 'active' })
-    const tasks = [
-      activeTask,
-      dueTodayTask,
-      overdueTask,
-      startsTodayTask,
-      moreOverdueTask,
-    ]
 
-    expect(getQueueCandidates(tasks, new Set(), now)).toEqual([
-      { task: moreOverdueTask, reason: { kind: 'overdue', days: 10 } },
+    expect(
+      getQueueCandidates(
+        [activeTask, startsTask, dueLaterTask, overdueTask, dueTodayTask],
+        new Set(),
+        now,
+      ),
+    ).toEqual([
       { task: overdueTask, reason: { kind: 'overdue', days: 3 } },
       { task: dueTodayTask, reason: { kind: 'due-today' } },
-      { task: startsTodayTask, reason: { kind: 'starts', days: 0 } },
+      { task: dueLaterTask, reason: { kind: 'due-later', days: 2 } },
+      { task: startsTask, reason: { kind: 'starts', days: 0 } },
       { task: activeTask, reason: { kind: 'active' } },
     ])
+  })
+
+  it('orders due-later candidates by soonest due date first', () => {
+    const farTask = makeCandidateTask({
+      id: '1',
+      dueDate: '2026-04-20',
+      commitment: 'active',
+    })
+    const nearTask = makeCandidateTask({
+      id: '2',
+      dueDate: '2026-03-22',
+      commitment: 'active',
+    })
+
+    expect(getQueueCandidates([farTask, nearTask], new Set(), now)).toEqual([
+      { task: nearTask, reason: { kind: 'due-later', days: 2 } },
+      { task: farTask, reason: { kind: 'due-later', days: 31 } },
+    ])
+  })
+
+  it('orders overdue candidates by longest overdue first', () => {
+    const recentTask = makeCandidateTask({ id: '1', dueDate: '2026-03-17' })
+    const olderTask = makeCandidateTask({ id: '2', dueDate: '2026-03-10' })
+
+    expect(getQueueCandidates([recentTask, olderTask], new Set(), now)).toEqual(
+      [
+        { task: olderTask, reason: { kind: 'overdue', days: 10 } },
+        { task: recentTask, reason: { kind: 'overdue', days: 3 } },
+      ],
+    )
+  })
+
+  it('orders starts candidates by oldest start date first', () => {
+    const recentTask = makeCandidateTask({ id: '1', startDate: '2026-03-17' })
+    const olderTask = makeCandidateTask({ id: '2', startDate: '2026-02-18' })
+
+    expect(getQueueCandidates([recentTask, olderTask], new Set(), now)).toEqual(
+      [
+        { task: olderTask, reason: { kind: 'starts', days: 30 } },
+        { task: recentTask, reason: { kind: 'starts', days: 3 } },
+      ],
+    )
   })
 })
 
@@ -186,6 +237,12 @@ describe('formatCandidateReason', () => {
 
   it('formats due-today', () => {
     expect(formatCandidateReason({ kind: 'due-today' })).toBe('due today')
+  })
+
+  it('formats due-later', () => {
+    expect(formatCandidateReason({ kind: 'due-later', days: 2 })).toBe(
+      'due in 2d',
+    )
   })
 
   it('formats starts today', () => {

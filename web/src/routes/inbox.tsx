@@ -30,7 +30,7 @@ function InboxKanban() {
   const updateTask = useUpdateTask()
 
   const columnFilters: Record<TaskCommitment, TaskListFilter> = {
-    inbox: { context, commitment: 'inbox', status: 'todo' },
+    inbox: { context, commitment: 'inbox', status: 'todo', sortBy: 'due' },
     active: {
       context,
       commitment: 'active',

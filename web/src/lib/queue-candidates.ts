@@ -10,6 +10,7 @@ interface CandidateCheckable extends DueDateCheckable {
 export type CandidateReason =
   | { kind: 'overdue'; days: number }
   | { kind: 'due-today' }
+  | { kind: 'due-later'; days: number }
   | { kind: 'starts'; days: number }
   | { kind: 'active' }
 
@@ -21,14 +22,15 @@ export interface QueueCandidate<T> {
 const REASON_PRIORITY: Record<CandidateReason['kind'], number> = {
   overdue: 0,
   'due-today': 1,
-  starts: 2,
-  active: 3,
+  'due-later': 2,
+  starts: 3,
+  active: 4,
 }
 
-function daysBetween(dateStr: string, todayStr: string): number {
-  const date = new Date(`${dateStr}T00:00:00`)
-  const today = new Date(`${todayStr}T00:00:00`)
-  return Math.round((today.getTime() - date.getTime()) / 86_400_000)
+function daysBetween(fromDateStr: string, toDateStr: string): number {
+  const fromDate = new Date(`${fromDateStr}T00:00:00`)
+  const toDate = new Date(`${toDateStr}T00:00:00`)
+  return Math.round((toDate.getTime() - fromDate.getTime()) / 86_400_000)
 }
 
 function reasonDays(reason: CandidateReason): number {
@@ -38,10 +40,8 @@ function reasonDays(reason: CandidateReason): number {
 /**
  * A task is a queue candidate when it's not completed and it's overdue, due
  * today, startable (start date today or earlier), or has commitment
- * "active" (the user has committed to working on it now, regardless of
- * whether it has a date, or its date is still in the future). Overdue takes
- * precedence over the other reasons since it's the most urgent one; a
- * commitment-active task is the lowest-priority reason.
+ * "active". A future due date takes precedence over startability or active
+ * commitment for tasks that would already be candidates for either reason.
  */
 export function getCandidateReason(
   task: CandidateCheckable,
@@ -56,8 +56,17 @@ export function getCandidateReason(
   if (task.dueDate === today) {
     return { kind: 'due-today' }
   }
-  if (task.startDate != null && task.startDate <= today) {
-    return { kind: 'starts', days: daysBetween(task.startDate, today) }
+  const startableDate =
+    task.startDate != null && task.startDate <= today ? task.startDate : null
+  if (
+    task.dueDate != null &&
+    task.dueDate > today &&
+    (startableDate != null || task.commitment === 'active')
+  ) {
+    return { kind: 'due-later', days: daysBetween(today, task.dueDate) }
+  }
+  if (startableDate != null) {
+    return { kind: 'starts', days: daysBetween(startableDate, today) }
   }
   if (task.commitment === 'active') {
     return { kind: 'active' }
@@ -67,8 +76,9 @@ export function getCandidateReason(
 
 /**
  * Candidate tasks for today's queue, excluding tasks already queued.
- * Sorted by reason priority (overdue, then due-today, then starts, then
- * active), and within a reason, by how long it's been true (longest first).
+ * Sorted by reason priority (overdue, due-today, due-later, starts, active).
+ * Due-later tasks are ordered by their due date; overdue and starts tasks are
+ * ordered by how long their reason has been true (longest first).
  */
 export function getQueueCandidates<T extends CandidateCheckable>(
   tasks: T[],
@@ -84,9 +94,11 @@ export function getQueueCandidates<T extends CandidateCheckable>(
   return candidates.sort((a, b) => {
     const priorityDiff =
       REASON_PRIORITY[a.reason.kind] - REASON_PRIORITY[b.reason.kind]
-    return priorityDiff !== 0
-      ? priorityDiff
-      : reasonDays(b.reason) - reasonDays(a.reason)
+    if (priorityDiff !== 0) return priorityDiff
+    if (a.reason.kind === 'due-later' && b.reason.kind === 'due-later') {
+      return a.reason.days - b.reason.days
+    }
+    return reasonDays(b.reason) - reasonDays(a.reason)
   })
 }
 
@@ -96,6 +108,8 @@ export function formatCandidateReason(reason: CandidateReason): string {
       return `${String(reason.days)}d overdue`
     case 'due-today':
       return 'due today'
+    case 'due-later':
+      return `due in ${String(reason.days)}d`
     case 'starts':
       return reason.days === 0
         ? 'starts today'
