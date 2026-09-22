@@ -1,10 +1,29 @@
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
-import { createTask } from '#routes/tasks/testing'
+import { createComment, createPage, createTask } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
+
+interface PageSearchResult {
+  source: 'page' | 'comment' | 'task'
+  taskNumber: number
+  taskTitle: string
+  pageId: string | null
+  pageTitle: string | null
+  snippet: string
+  matchCount: number
+  updatedAt: string
+}
+
+function normalizePageSearchResult(result: PageSearchResult) {
+  return { ...result, updatedAt: 'DATE' }
+}
+
+function makePageSearchResponse(status: number, results: PageSearchResult[]) {
+  return { status, body: { results } }
+}
 
 describe('tasks search API', () => {
   describe('GET /api/tasks/search/suggest', () => {
@@ -137,6 +156,170 @@ describe('tasks search API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<MentionSummary[]>(res)
       expect(body).toEqual([toMentionSummary(task1), toMentionSummary(task2)])
+    })
+  })
+
+  describe('GET /api/tasks/search/pages', () => {
+    it('returns matching pages, comments, and tasks with snippets', async () => {
+      const task = await createTask('Archive', {
+        description: 'beacon signal beacon signal',
+      })
+      const pageContent = `${'x'.repeat(70)}beacon signal beacon signal${'y'.repeat(100)}`
+      const page = await createPage(task.id, 'Reference', pageContent)
+      await createComment(task.id, 'beacon signal beacon signal')
+
+      const res = await app.request(
+        `/api/tasks/search/pages?q=${encodeURIComponent('beacon signal')}`,
+      )
+
+      const body = await jsonBody<{ results: PageSearchResult[] }>(res)
+      expect(
+        makePageSearchResponse(
+          res.status,
+          body.results
+            .map(normalizePageSearchResult)
+            .sort((left, right) => left.source.localeCompare(right.source)),
+        ),
+      ).toEqual({
+        status: 200,
+        body: {
+          results: [
+            {
+              source: 'comment',
+              taskNumber: task.number,
+              taskTitle: 'Archive',
+              pageId: null,
+              pageTitle: null,
+              snippet: 'beacon signal beacon signal',
+              matchCount: 4,
+              updatedAt: 'DATE',
+            },
+            {
+              source: 'page',
+              taskNumber: task.number,
+              taskTitle: 'Archive',
+              pageId: page.id,
+              pageTitle: 'Reference',
+              snippet: `${'x'.repeat(60)}beacon signal beacon signal${'y'.repeat(73)}`,
+              matchCount: 4,
+              updatedAt: 'DATE',
+            },
+            {
+              source: 'task',
+              taskNumber: task.number,
+              taskTitle: 'Archive',
+              pageId: null,
+              pageTitle: null,
+              snippet: 'Archive beacon signal beacon signal',
+              matchCount: 4,
+              updatedAt: 'DATE',
+            },
+          ],
+        },
+      })
+    })
+
+    it('requires every search word to match within one source', async () => {
+      const task = await createTask('Unrelated task')
+      await createPage(task.id, 'Beacon notes', 'beacon appears here')
+      await createPage(task.id, 'Signal notes', 'signal appears here')
+      await createComment(task.id, 'beacon appears in this comment')
+
+      const res = await app.request(
+        `/api/tasks/search/pages?q=${encodeURIComponent('beacon signal')}`,
+      )
+
+      expect(
+        makePageSearchResponse(
+          res.status,
+          (await jsonBody<{ results: PageSearchResult[] }>(res)).results,
+        ),
+      ).toEqual({ status: 200, body: { results: [] } })
+    })
+
+    it('treats LIKE wildcard characters as literal search text', async () => {
+      const task = await createTask('Unrelated task')
+      const pageContent = '100%_complete \\path'
+      const page = await createPage(task.id, 'Symbols', pageContent)
+      await createPage(task.id, 'Wildcard decoy', '100XXcomplete \\path')
+      await createPage(task.id, 'Escape decoy', '100%_complete path')
+
+      const res = await app.request(
+        `/api/tasks/search/pages?q=${encodeURIComponent(pageContent)}`,
+      )
+      const body = await jsonBody<{ results: PageSearchResult[] }>(res)
+
+      expect(
+        makePageSearchResponse(
+          res.status,
+          body.results.map(normalizePageSearchResult),
+        ),
+      ).toEqual({
+        status: 200,
+        body: {
+          results: [
+            {
+              source: 'page',
+              taskNumber: task.number,
+              taskTitle: 'Unrelated task',
+              pageId: page.id,
+              pageTitle: 'Symbols',
+              snippet: pageContent,
+              matchCount: 2,
+              updatedAt: 'DATE',
+            },
+          ],
+        },
+      })
+    })
+
+    it('returns no results when q contains no free-text terms', async () => {
+      const task = await createTask('Task with pages')
+      await createPage(task.id, 'Page', 'content')
+
+      const res = await app.request('/api/tasks/search/pages?q=has%3Apages')
+
+      expect(
+        makePageSearchResponse(
+          res.status,
+          (await jsonBody<{ results: PageSearchResult[] }>(res)).results,
+        ),
+      ).toEqual({ status: 200, body: { results: [] } })
+    })
+
+    it('applies the result limit after sorting matches across sources', async () => {
+      const task = await createTask('Unrelated task')
+      await createPage(task.id, 'First page', 'beacon signal')
+      await createPage(task.id, 'Second page', 'beacon signal')
+      await createComment(task.id, 'beacon signal')
+
+      const res = await app.request(
+        `/api/tasks/search/pages?q=${encodeURIComponent('beacon signal')}&limit=1`,
+      )
+      const body = await jsonBody<{ results: PageSearchResult[] }>(res)
+
+      expect(
+        makePageSearchResponse(
+          res.status,
+          body.results.map(normalizePageSearchResult),
+        ),
+      ).toEqual({
+        status: 200,
+        body: {
+          results: [
+            {
+              source: 'comment',
+              taskNumber: task.number,
+              taskTitle: 'Unrelated task',
+              pageId: null,
+              pageTitle: null,
+              snippet: 'beacon signal',
+              matchCount: 2,
+              updatedAt: 'DATE',
+            },
+          ],
+        },
+      })
     })
   })
 })
