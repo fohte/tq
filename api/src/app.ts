@@ -13,6 +13,7 @@ import { imagesApp } from '#routes/images'
 import { integrationsApp } from '#routes/integrations'
 import { labelsApp } from '#routes/labels'
 import { mcpApp } from '#routes/mcp/index'
+import { pageSearchApp } from '#routes/page-search'
 import { projectsApp } from '#routes/projects'
 import { pushApp } from '#routes/push'
 import { queuesApp } from '#routes/queues'
@@ -56,6 +57,7 @@ const app = new Hono()
     return c.json({ status: 'ok' })
   })
   .route('/api/agent-sessions', agentSessionsApp)
+  .route('/api/pages', pageSearchApp)
   .route('/api/tasks', tasksApp)
   .route('/api/tasks', taskCommentsApp)
   .route('/api/tasks/:taskId/pages', taskPagesApp)
