@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ReactNode } from 'react'
+import type { MouseEventHandler, ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SearchModal } from '#components/search/search-modal'
@@ -128,12 +128,33 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     useNavigate: () => mockNavigate,
     Link: ({
       children,
-      ...props
-    }: { children: ReactNode } & Record<string, unknown>) => (
+      onClick,
+      to,
+      role,
+      'aria-selected': ariaSelected,
+      'data-selected': dataSelected,
+      onMouseMove,
+      className,
+    }: {
+      children: ReactNode
+      onClick?: MouseEventHandler<HTMLAnchorElement>
+      to?: unknown
+      role?: string
+      'aria-selected'?: boolean
+      'data-selected'?: boolean
+      onMouseMove?: MouseEventHandler<HTMLAnchorElement>
+      className?: string
+    }) => (
       <a
-        href={typeof props['to'] === 'string' ? props['to'] : '#'}
-        onClick={(event: React.MouseEvent) => {
+        href={typeof to === 'string' ? to : '#'}
+        role={role}
+        aria-selected={ariaSelected}
+        data-selected={dataSelected}
+        onMouseMove={onMouseMove}
+        className={className}
+        onClick={(event) => {
           event.preventDefault()
+          onClick?.(event)
         }}
       >
         {children}
@@ -249,7 +270,15 @@ describe('SearchModal', () => {
   })
 
   it('shows page results with their owning task', async () => {
-    mockPageSearchData = [makePageSearchResult()]
+    mockPageSearchData = [
+      makePageSearchResult(),
+      makePageSearchResult({
+        source: 'comment',
+        pageId: null,
+        pageTitle: null,
+        snippet: 'This comment should stay out of Pages.',
+      }),
+    ]
 
     const user = userEvent.setup()
     renderSearchModal()
@@ -263,12 +292,16 @@ describe('SearchModal', () => {
       snippet: screen.getByText(
         'The architecture notes mention the search flow.',
       ).textContent,
+      commentSnippet:
+        screen.queryByText('This comment should stay out of Pages.')
+          ?.textContent ?? null,
     })
     expect(getOutput()).toEqual({
       group: 'Pages',
       pageTitle: 'Architecture notes',
       task: '#42 Roadmap task',
       snippet: 'The architecture notes mention the search flow.',
+      commentSnippet: null,
     })
   })
 
@@ -297,6 +330,32 @@ describe('SearchModal', () => {
         ],
       ],
     })
+  })
+
+  it('closes modal when clicking a page row', async () => {
+    mockPageSearchData = [makePageSearchResult()]
+    const onOpenChange = vi.fn()
+
+    const user = userEvent.setup()
+    renderSearchModal({ onOpenChange })
+
+    await user.type(screen.getByLabelText('Search tasks'), 'architecture')
+    await user.click(screen.getByText('Architecture notes'))
+
+    expect(onOpenChange.mock.calls).toEqual([[false]])
+  })
+
+  it('keeps modal open when opening a page row in a new tab', async () => {
+    mockPageSearchData = [makePageSearchResult()]
+    const onOpenChange = vi.fn()
+
+    const user = userEvent.setup()
+    renderSearchModal({ onOpenChange })
+
+    await user.type(screen.getByLabelText('Search tasks'), 'architecture')
+    fireEvent.click(screen.getByText('Architecture notes'), { metaKey: true })
+
+    expect(onOpenChange.mock.calls).toEqual([])
   })
 
   it('displays context badge for personal tasks', async () => {

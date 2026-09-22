@@ -70,7 +70,7 @@ export function useSearchPages(query: string) {
     queryKey: searchKeys.pages(debouncedQuery),
     queryFn: async () => {
       const res = await api.api.tasks.search.pages.$get({
-        query: { q: debouncedQuery, limit: '20' },
+        query: { q: debouncedQuery, limit: '20', source: 'page' },
       })
       return unwrapOrThrow(assertOk(res))
         .json()
