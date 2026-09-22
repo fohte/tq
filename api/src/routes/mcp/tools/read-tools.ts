@@ -277,7 +277,9 @@ export function registerReadTools(server: McpServer): void {
           .min(1)
           .max(50)
           .optional()
-          .describe('Maximum number of matching locations to return (1-50).'),
+          .describe(
+            'Maximum number of matching locations to return (1-50). Defaults to 20.',
+          ),
       }),
       annotations: { readOnlyHint: true },
     },

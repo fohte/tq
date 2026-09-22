@@ -382,21 +382,53 @@ describe('read tools', () => {
       expect(result.isError).toBe(true)
     })
 
-    it('returns the page search endpoint response unchanged', async () => {
+    it('returns page matches with location metadata', async () => {
       const task = await createTask('Task with searchable history')
-      await createPage(task.id, 'Investigation log', 'mcp locator phrase')
-      await createComment(task.id, 'mcp locator phrase')
-
-      const expectedResponse = await app.request(
-        `/api/tasks/search/pages?q=${encodeURIComponent('mcp locator phrase')}&limit=2`,
-      )
+      await createPage(task.id, 'Investigation log', 'mcp page locator')
 
       const toolResult = await callTool('search_pages', {
-        q: 'mcp locator phrase',
-        limit: 2,
+        q: 'mcp page locator',
+        limit: 1,
       })
 
-      expect(parseJson(toolResult)).toEqual(await expectedResponse.json())
+      expect(normalizeDynamicValues(parseJson(toolResult))).toEqual({
+        results: [
+          {
+            source: 'page',
+            taskNumber: task.number,
+            taskTitle: 'Task with searchable history',
+            pageId: '<uuid>',
+            pageTitle: 'Investigation log',
+            snippet: 'mcp page locator',
+            matchCount: 3,
+            updatedAt: '<timestamp>',
+          },
+        ],
+      })
+    })
+
+    it('returns comment matches without page metadata', async () => {
+      const task = await createTask('Task with searchable history')
+      await createComment(task.id, 'mcp comment locator')
+
+      const toolResult = await callTool('search_pages', {
+        q: 'mcp comment locator',
+      })
+
+      expect(normalizeDynamicValues(parseJson(toolResult))).toEqual({
+        results: [
+          {
+            source: 'comment',
+            taskNumber: task.number,
+            taskTitle: 'Task with searchable history',
+            pageId: null,
+            pageTitle: null,
+            snippet: 'mcp comment locator',
+            matchCount: 3,
+            updatedAt: '<timestamp>',
+          },
+        ],
+      })
     })
   })
 
