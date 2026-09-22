@@ -3,7 +3,6 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import type { TaskKanbanColumn } from '#components/kanban/task-kanban'
 import { TaskKanban } from '#components/kanban/task-kanban'
-import { TaskKanbanSeeAllLink } from '#components/kanban/task-kanban-see-all-link'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { useCurrentContext } from '#hooks/use-current-context'
@@ -13,10 +12,6 @@ import { taskKeys, useTaskList, useUpdateTask } from '#hooks/use-tasks'
 export const Route = createFileRoute('/inbox')({
   component: InboxKanban,
 })
-
-// Active/someday are drop targets, not browsing views — only the most
-// recently triaged tasks show; the full set stays in the /tasks list.
-const RECENT_LIMIT = 5
 
 const COMMITMENTS: TaskCommitment[] = ['inbox', 'active', 'someday']
 
@@ -36,14 +31,12 @@ function InboxKanban() {
       commitment: 'active',
       status: 'todo',
       sortBy: 'updated',
-      limit: RECENT_LIMIT,
     },
     someday: {
       context,
       commitment: 'someday',
       status: 'todo',
       sortBy: 'updated',
-      limit: RECENT_LIMIT,
     },
   }
 
@@ -63,16 +56,12 @@ function InboxKanban() {
       title: 'Active',
       tasks: active.categorized.all,
       isLoading: active.isLoading,
-      showCount: false,
-      footer: <TaskKanbanSeeAllLink commitment="active" />,
     },
     {
       id: 'someday',
       title: 'Someday',
       tasks: someday.categorized.all,
       isLoading: someday.isLoading,
-      showCount: false,
-      footer: <TaskKanbanSeeAllLink commitment="someday" />,
     },
   ]
 
