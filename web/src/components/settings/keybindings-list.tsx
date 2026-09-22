@@ -4,6 +4,7 @@ import { SectionHeading } from '#components/ui/section-heading'
 import {
   allKeybindings,
   calendarKeybindings,
+  filterKeybindings,
   type Keybinding,
 } from '#lib/keybindings'
 
@@ -35,6 +36,11 @@ export function KeybindingsList() {
       <SectionHeading level={3}>calendar keybindings</SectionHeading>
       <Panel>
         <KeybindingGrid keybindings={calendarKeybindings} />
+      </Panel>
+
+      <SectionHeading level={3}>filter keybindings</SectionHeading>
+      <Panel>
+        <KeybindingGrid keybindings={filterKeybindings} />
       </Panel>
     </div>
   )

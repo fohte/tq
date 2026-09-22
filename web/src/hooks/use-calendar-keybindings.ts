@@ -5,6 +5,7 @@ import {
   CHORD_TIMEOUT_MS,
   shouldIgnoreShortcut,
 } from '#hooks/use-global-keybindings'
+import { useSearchModalOpen } from '#hooks/use-search-modal-open'
 
 export function useCalendarKeybindings({
   onToday,
@@ -17,6 +18,8 @@ export function useCalendarKeybindings({
   onNext: () => void
   onViewChange: (view: CalendarViewType) => void
 }) {
+  const searchModalOpen = useSearchModalOpen()
+
   useEffect(() => {
     // useGlobalKeybindings treats any key right after 'g' as the possible
     // second half of a "g <key>" chord (e.g. g d -> /today). Mirror that
@@ -32,7 +35,7 @@ export function useCalendarKeybindings({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.repeat) return
-      if (shouldIgnoreShortcut(e)) {
+      if (shouldIgnoreShortcut(e) || searchModalOpen) {
         resetChord()
         return
       }
@@ -83,5 +86,5 @@ export function useCalendarKeybindings({
       document.removeEventListener('keydown', handleKeyDown)
       resetChord()
     }
-  }, [onToday, onPrev, onNext, onViewChange])
+  }, [onToday, onPrev, onNext, onViewChange, searchModalOpen])
 }
