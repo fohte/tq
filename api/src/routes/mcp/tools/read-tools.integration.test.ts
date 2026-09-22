@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import {
+  createComment,
   createLabel,
   createPage,
   createTask,
@@ -23,6 +24,7 @@ const READ_TOOL_NAMES = [
   'list_labels',
   'list_projects',
   'list_tasks',
+  'search_pages',
   'search_tasks',
 ]
 
@@ -110,6 +112,7 @@ describe('read tools', () => {
       { name: 'list_labels', readOnlyHint: true },
       { name: 'list_projects', readOnlyHint: true },
       { name: 'list_tasks', readOnlyHint: true },
+      { name: 'search_pages', readOnlyHint: true },
       { name: 'search_tasks', readOnlyHint: true },
     ])
   })
@@ -369,6 +372,63 @@ describe('read tools', () => {
           childCompletionCount: { total: 0, completed: 0 },
         },
       ])
+    })
+  })
+
+  describe('search_pages', () => {
+    it('rejects invalid input', async () => {
+      const result = await callTool('search_pages', { q: '   ' })
+
+      expect(result.isError).toBe(true)
+    })
+
+    it('returns page matches with location metadata', async () => {
+      const task = await createTask('Task with searchable history')
+      await createPage(task.id, 'Investigation log', 'mcp page locator')
+
+      const toolResult = await callTool('search_pages', {
+        q: 'mcp page locator',
+        limit: 1,
+      })
+
+      expect(normalizeDynamicValues(parseJson(toolResult))).toEqual({
+        results: [
+          {
+            source: 'page',
+            taskNumber: task.number,
+            taskTitle: 'Task with searchable history',
+            pageId: '<uuid>',
+            pageTitle: 'Investigation log',
+            snippet: 'mcp page locator',
+            matchCount: 3,
+            updatedAt: '<timestamp>',
+          },
+        ],
+      })
+    })
+
+    it('returns comment matches without page metadata', async () => {
+      const task = await createTask('Task with searchable history')
+      await createComment(task.id, 'mcp comment locator')
+
+      const toolResult = await callTool('search_pages', {
+        q: 'mcp comment locator',
+      })
+
+      expect(normalizeDynamicValues(parseJson(toolResult))).toEqual({
+        results: [
+          {
+            source: 'comment',
+            taskNumber: task.number,
+            taskTitle: 'Task with searchable history',
+            pageId: null,
+            pageTitle: null,
+            snippet: 'mcp comment locator',
+            matchCount: 3,
+            updatedAt: '<timestamp>',
+          },
+        ],
+      })
     })
   })
 
