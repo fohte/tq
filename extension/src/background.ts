@@ -1,7 +1,7 @@
 import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 
 import { TQ_ORIGIN } from '#config'
-import { reuseExistingTqTab } from '#tab-reuse'
+import { openTqLinkInApp } from '#open-in-app'
 
 export interface LinkedTask {
   id: string
@@ -140,11 +140,11 @@ chrome.runtime.onMessage.addListener(
   },
 )
 
-chrome.tabs.onCreated.addListener((tab) => {
-  void reuseExistingTqTab(tab).match(
+chrome.webNavigation.onBeforeNavigate.addListener((details) => {
+  void openTqLinkInApp(details).match(
     () => undefined,
     (error) => {
-      console.warn('tq: tab reuse failed', error)
+      console.warn('tq: link handoff failed', error)
     },
   )
 })
