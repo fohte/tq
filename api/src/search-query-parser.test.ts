@@ -198,25 +198,62 @@ describe('getSearchQuerySuggestions', () => {
     ])
   })
 
-  it('returns all token categories when category is omitted', () => {
-    expect(
-      Array.from(
-        new Set(
-          getSearchQuerySuggestions('').map(
-            (suggestion) => suggestion.category,
-          ),
-        ),
-      ),
-    ).toEqual([
-      'is',
-      'context',
-      'commitment',
-      'sort',
-      'has',
-      'reason',
-      'label',
-      'parent',
-      'project',
+  it('returns all suggestions when category is omitted', () => {
+    expect(getSearchQuerySuggestions('')).toEqual([
+      { value: 'is:todo', display: 'Todo', category: 'is' },
+      { value: 'is:completed', display: 'Completed', category: 'is' },
+      { value: 'context:work', display: 'Work', category: 'context' },
+      { value: 'context:personal', display: 'Personal', category: 'context' },
+      { value: 'commitment:inbox', display: 'Inbox', category: 'commitment' },
+      {
+        value: 'commitment:active',
+        display: 'Active',
+        category: 'commitment',
+      },
+      {
+        value: 'commitment:someday',
+        display: 'Someday',
+        category: 'commitment',
+      },
+      { value: 'sort:due', display: 'Sort by due date', category: 'sort' },
+      {
+        value: 'sort:created',
+        display: 'Sort by creation date',
+        category: 'sort',
+      },
+      {
+        value: 'sort:updated',
+        display: 'Sort by update date',
+        category: 'sort',
+      },
+      {
+        value: 'sort:estimate',
+        display: 'Sort by estimate',
+        category: 'sort',
+      },
+      { value: 'has:pages', display: 'Has pages', category: 'has' },
+      { value: 'has:comments', display: 'Has comments', category: 'has' },
+      {
+        value: 'has:no-children',
+        display: 'Has no children',
+        category: 'has',
+      },
+      { value: 'has:blockers', display: 'Has blockers', category: 'has' },
+      {
+        value: 'has:no-blockers',
+        display: 'Has no blockers',
+        category: 'has',
+      },
+      { value: 'reason:completed', display: 'Completed', category: 'reason' },
+      {
+        value: 'reason:not_planned',
+        display: 'Not planned',
+        category: 'reason',
+      },
+      { value: 'reason:duplicate', display: 'Duplicate', category: 'reason' },
+      { value: 'label:', display: 'Label', category: 'label' },
+      { value: 'parent:', display: 'Parent task', category: 'parent' },
+      { value: 'project:', display: 'Project', category: 'project' },
     ])
   })
 
