@@ -320,7 +320,7 @@ export function getSuggestions(
 
   if (!partial) return items
   const lower = partial.toLowerCase()
-  return items.filter((item) => item.value.toLowerCase().startsWith(lower))
+  return items.filter((item) => item.value.toLowerCase().includes(lower))
 }
 
 /**
