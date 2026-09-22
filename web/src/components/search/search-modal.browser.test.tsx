@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SearchModal } from '#components/search/search-modal'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
+import type { PageSearchResult } from '#hooks/use-search'
 
 interface MockTask {
   id: string
@@ -56,6 +57,22 @@ function makeTask(overrides: Partial<MockTask> = {}): MockTask {
   }
 }
 
+function makePageSearchResult(
+  overrides: Partial<PageSearchResult> = {},
+): PageSearchResult {
+  return {
+    source: 'page',
+    taskNumber: 42,
+    taskTitle: 'Roadmap task',
+    pageId: 'page-001',
+    pageTitle: 'Architecture notes',
+    snippet: 'The architecture notes mention the search flow.',
+    matchCount: 1,
+    updatedAt: '2026-03-20T00:00:00.000Z',
+    ...overrides,
+  }
+}
+
 const mockTasks = [
   makeTask(),
   makeTask({
@@ -82,6 +99,7 @@ const mockSuggestions = [
 ]
 
 let mockSearchData: typeof mockTasks = []
+let mockPageSearchData: PageSearchResult[] = []
 let mockSuggestionData: typeof mockSuggestions = []
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
@@ -90,6 +108,10 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
     ...actual,
     useSearchTasks: () => ({
       data: mockSearchData.length > 0 ? mockSearchData : undefined,
+      isFetching: false,
+    }),
+    useSearchPages: () => ({
+      data: mockPageSearchData.length > 0 ? mockPageSearchData : undefined,
       isFetching: false,
     }),
     useSearchSuggestions: () => ({
@@ -150,6 +172,7 @@ function renderSearchModal(
 describe('SearchModal', () => {
   beforeEach(() => {
     mockSearchData = []
+    mockPageSearchData = []
     mockSuggestionData = []
     mockNavigate.mockClear()
   })
@@ -223,6 +246,57 @@ describe('SearchModal', () => {
 
     expect(screen.getByText('Implement task list UI')).toBeInTheDocument()
     expect(screen.getByText('Review pull request')).toBeInTheDocument()
+  })
+
+  it('shows page results with their owning task', async () => {
+    mockPageSearchData = [makePageSearchResult()]
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    await user.type(screen.getByLabelText('Search tasks'), 'architecture')
+
+    const getOutput = () => ({
+      group: screen.getByText('Pages').textContent,
+      pageTitle: screen.getByText('Architecture notes').textContent,
+      task: screen.getByText('#42 Roadmap task').textContent,
+      snippet: screen.getByText(
+        'The architecture notes mention the search flow.',
+      ).textContent,
+    })
+    expect(getOutput()).toEqual({
+      group: 'Pages',
+      pageTitle: 'Architecture notes',
+      task: '#42 Roadmap task',
+      snippet: 'The architecture notes mention the search flow.',
+    })
+  })
+
+  it('navigates to a page detail on Enter', async () => {
+    mockPageSearchData = [makePageSearchResult()]
+    const onOpenChange = vi.fn()
+
+    const user = userEvent.setup()
+    renderSearchModal({ onOpenChange })
+
+    await user.type(screen.getByLabelText('Search tasks'), 'architecture')
+    await user.keyboard('{Enter}')
+
+    const getOutput = () => ({
+      onOpenChange: onOpenChange.mock.calls,
+      navigate: mockNavigate.mock.calls,
+    })
+    expect(getOutput()).toEqual({
+      onOpenChange: [[false]],
+      navigate: [
+        [
+          {
+            to: '/tasks/$taskId/pages/$pageId',
+            params: { taskId: '42', pageId: 'page-001' },
+          },
+        ],
+      ],
+    })
   })
 
   it('displays context badge for personal tasks', async () => {

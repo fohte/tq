@@ -1,4 +1,4 @@
-import { useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import type { MouseEvent, ReactNode } from 'react'
 import {
@@ -15,11 +15,16 @@ import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useCurrentContext } from '#hooks/use-current-context'
-import type { SearchResult, Suggestion } from '#hooks/use-search'
+import type {
+  PageSearchResult,
+  SearchResult,
+  Suggestion,
+} from '#hooks/use-search'
 import {
   applySuggestionToQuery,
   extractCurrentPrefix,
   resolveSearchContext,
+  useSearchPages,
   useSearchSuggestions,
   useSearchTasks,
 } from '#hooks/use-search'
@@ -81,11 +86,13 @@ export function SearchModal({
   const context = resolveSearchContext(query, defaultSearchContext)
   const canClearContext = query === '' && context != null
 
-  const { data: tasks, isFetching } = useSearchTasks(
+  const { data: tasks, isFetching: isFetchingTasks } = useSearchTasks(
     query,
     defaultSearchContext,
   )
 
+  const { data: pages, isFetching: isFetchingPages } = useSearchPages(query)
+  const isFetching = isFetchingTasks || isFetchingPages
   const currentPrefix = extractCurrentPrefix(query)
   const { data: suggestions } = useSearchSuggestions(currentPrefix)
 
@@ -116,6 +123,18 @@ export function SearchModal({
     void navigateRef.current({
       to: '/tasks/$taskId',
       params: { taskId: task.id },
+    })
+  }, [])
+
+  const openPage = useCallback((page: PageSearchResult) => {
+    if (page.pageId == null) return
+    onOpenChangeRef.current(false)
+    void navigateRef.current({
+      to: '/tasks/$taskId/pages/$pageId',
+      params: {
+        taskId: String(page.taskNumber),
+        pageId: page.pageId,
+      },
     })
   }, [])
 
@@ -189,6 +208,65 @@ export function SearchModal({
           </div>
         ),
       })) ?? []
+    const pageItems: ListItem[] =
+      pages?.flatMap((page: PageSearchResult): ListItem[] => {
+        if (
+          page.source !== 'page' ||
+          page.pageId == null ||
+          page.pageTitle == null
+        ) {
+          return []
+        }
+        const pageId = page.pageId
+        const select = () => {
+          openPage(page)
+        }
+        return [
+          {
+            key: pageId,
+            select,
+            render: ({ isSelected, onMouseMove }: ListItemRenderProps) => (
+              <Link
+                to="/tasks/$taskId/pages/$pageId"
+                params={{
+                  taskId: String(page.taskNumber),
+                  pageId,
+                }}
+                role="option"
+                aria-selected={isSelected}
+                data-selected={isSelected}
+                onMouseMove={onMouseMove}
+                onClick={(e) => {
+                  if (
+                    e.button !== 0 ||
+                    e.metaKey ||
+                    e.ctrlKey ||
+                    e.shiftKey ||
+                    e.altKey
+                  ) {
+                    return
+                  }
+                  onOpenChangeRef.current(false)
+                }}
+                className={cn(
+                  'block px-4 py-2',
+                  isSelected ? 'bg-accent' : 'hover:bg-accent/50',
+                )}
+              >
+                <span className="block truncate font-mono text-sm font-medium text-foreground">
+                  {page.pageTitle}
+                </span>
+                <div className="truncate text-2xs text-muted-foreground">
+                  #{page.taskNumber} {page.taskTitle}
+                </div>
+                <p className="line-clamp-2 text-xs text-muted-foreground">
+                  {page.snippet}
+                </p>
+              </Link>
+            ),
+          },
+        ]
+      }) ?? []
 
     return [
       {
@@ -203,8 +281,22 @@ export function SearchModal({
         items: taskItems,
         isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
       },
+      {
+        id: 'pages',
+        title: 'Pages',
+        items: pageItems,
+        isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
+      },
     ]
-  }, [suggestions, tasks, currentPrefix, applySuggestion, openTask])
+  }, [
+    suggestions,
+    tasks,
+    pages,
+    currentPrefix,
+    applySuggestion,
+    openTask,
+    openPage,
+  ])
 
   const { items, indexedGroups } = useMemo((): {
     items: ListItem[]
