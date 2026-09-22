@@ -143,6 +143,22 @@ describe('projects API', () => {
       ])
     })
 
+    it('filters by a case-insensitive title substring', async () => {
+      const matchingProject = await createProject('Personal Sample Project')
+      await createProject('Another Project')
+
+      const res = await app.request('/api/projects?q=sample%20pro')
+
+      expect(res.status).toBe(200)
+      expect(await jsonBody<ProjectDetailResponse[]>(res)).toEqual([
+        {
+          ...matchingProject,
+          completionRate: 0,
+          taskCount: { total: 0, completed: 0 },
+        },
+      ])
+    })
+
     it('includes task counts for each project', async () => {
       const project = await createProject('My project')
       await createTask('Task 1', { projectId: project.id })

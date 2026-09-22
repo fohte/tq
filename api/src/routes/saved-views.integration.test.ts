@@ -118,6 +118,18 @@ describe('saved views API', () => {
       const body = await jsonBody<SavedViewResponse[]>(res)
       expect(body).toEqual([workView])
     })
+
+    it('filters by a case-insensitive name substring', async () => {
+      const matchingView = await createSavedView('Weekly Sample View')
+      await createSavedView('Another View')
+
+      const res = await app.request('/api/saved-views?q=sample%20v')
+
+      expect(res.status).toBe(200)
+      expect(
+        (await jsonBody<SavedViewResponse[]>(res)).map(normalizeSavedView),
+      ).toEqual([normalizeSavedView(matchingView)])
+    })
   })
 
   describe('GET /api/saved-views/:id', () => {

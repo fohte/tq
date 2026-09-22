@@ -17,5 +17,6 @@ export const updateSavedViewSchema = z.object({
 })
 
 export const listSavedViewsQuerySchema = z.object({
+  q: z.string().optional(),
   context: contextEnum.optional(),
 })
