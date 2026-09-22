@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeLinkedTask } from '#background-test-fixtures'
 import { TQ_ORIGIN } from '#config'
-import { makeTab } from '#tab-test-fixtures'
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -17,7 +16,8 @@ beforeEach(() => {
   vi.resetModules()
   vi.stubGlobal('chrome', {
     runtime: { onMessage: { addListener: vi.fn() } },
-    tabs: { onCreated: { addListener: vi.fn() } },
+    webNavigation: { onBeforeNavigate: { addListener: vi.fn() } },
+    tabs: {},
   })
 })
 
@@ -186,7 +186,8 @@ async function importAndCaptureListener(): Promise<MessageListener> {
   const addListener = vi.fn<(listener: MessageListener) => void>()
   vi.stubGlobal('chrome', {
     runtime: { onMessage: { addListener } },
-    tabs: { onCreated: { addListener: vi.fn() } },
+    webNavigation: { onBeforeNavigate: { addListener: vi.fn() } },
+    tabs: {},
   })
   await import('#background')
   const call = addListener.mock.calls[0]
@@ -290,18 +291,26 @@ describe('onMessage listener', () => {
   })
 })
 
-describe('tabs.onCreated listener', () => {
-  const TQ_URL = `${TQ_ORIGIN}/tasks/42`
+describe('webNavigation.onBeforeNavigate listener', () => {
+  const TQ_URL = 'https://tq.example.test/tasks/42'
 
-  async function importAndCaptureTabListener(
+  async function importAndCaptureNavigationListener(
     tabs: Record<string, unknown>,
-  ): Promise<(tab: chrome.tabs.Tab) => void> {
+  ): Promise<
+    (details: chrome.webNavigation.WebNavigationBaseCallbackDetails) => void
+  > {
     const addListener =
-      vi.fn<(listener: (tab: chrome.tabs.Tab) => void) => void>()
+      vi.fn<
+        (
+          listener: (
+            details: chrome.webNavigation.WebNavigationBaseCallbackDetails,
+          ) => void,
+        ) => void
+      >()
     vi.stubGlobal('chrome', {
       runtime: { onMessage: { addListener: vi.fn() } },
-      tabs: { onCreated: { addListener }, ...tabs },
-      windows: { update: vi.fn().mockResolvedValue(undefined) },
+      webNavigation: { onBeforeNavigate: { addListener } },
+      tabs,
     })
     await import('#background')
     const call = addListener.mock.calls[0]
@@ -310,39 +319,29 @@ describe('tabs.onCreated listener', () => {
     return listener
   }
 
-  it('hands a new tq tab to the existing tq tab', async () => {
-    const update = vi.fn().mockResolvedValue(undefined)
-    const remove = vi.fn().mockResolvedValue(undefined)
-    const listener = await importAndCaptureTabListener({
-      query: vi
-        .fn()
-        .mockResolvedValue([makeTab({ id: 1, url: `${TQ_ORIGIN}/` })]),
-      update,
-      remove,
-    })
-
-    listener(makeTab({ id: 9, pendingUrl: TQ_URL, url: '' }))
-
-    await vi.waitFor(() => {
-      expect(remove.mock.calls).toEqual([[9]])
-    })
-    expect(update.mock.calls).toEqual([[1, { url: TQ_URL, active: true }]])
-  })
-
-  it('logs a warning when reusing a tab fails', async () => {
+  it('logs a warning when handing a link to tq fails', async () => {
     const failure = new Error('tabs unavailable')
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    const listener = await importAndCaptureTabListener({
-      query: vi.fn().mockRejectedValue(failure),
+    const listener = await importAndCaptureNavigationListener({
+      get: vi.fn().mockRejectedValue(failure),
     })
 
-    listener(makeTab({ id: 9, pendingUrl: TQ_URL, url: '' }))
+    listener({
+      documentLifecycle: 'active',
+      frameId: 0,
+      frameType: 'outermost_frame',
+      parentFrameId: -1,
+      processId: 1,
+      tabId: 9,
+      timeStamp: 0,
+      url: TQ_URL,
+    })
 
     await vi.waitFor(() => {
       expect(warn.mock.calls).toEqual([
         [
-          'tq: tab reuse failed',
-          new Error('tq tab reuse failed', { cause: failure }),
+          'tq: link handoff failed',
+          new Error('tq link handoff failed', { cause: failure }),
         ],
       ])
     })
