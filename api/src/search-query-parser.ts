@@ -30,153 +30,112 @@ type SearchQueryTokenDefinition =
       parse: (result: ParsedQuery, value: string) => void
     }
 
+function defineFixedToken<
+  const Values extends readonly (readonly [string, string])[],
+>(
+  values: Values,
+  parse: (result: ParsedQuery, value: Values[number][0]) => void,
+) {
+  return {
+    values: values.map(([value, display]) => ({
+      value,
+      display,
+      parse: (result: ParsedQuery) => {
+        parse(result, value)
+      },
+    })),
+  }
+}
+
 const searchQueryTokenDefinitions = new Map(
   Object.entries({
-    is: {
-      values: [
-        {
-          value: 'todo',
-          display: 'Todo',
-          parse: (result: ParsedQuery) => {
-            result.status = [...(result.status ?? []), 'todo']
-          },
-        },
-        {
-          value: 'completed',
-          display: 'Completed',
-          parse: (result: ParsedQuery) => {
-            result.status = [...(result.status ?? []), 'completed']
-          },
-        },
+    is: defineFixedToken(
+      [
+        ['todo', 'Todo'],
+        ['completed', 'Completed'],
       ],
-    },
-    context: {
-      values: [
-        {
-          value: 'work',
-          display: 'Work',
-          parse: (result: ParsedQuery) => {
-            result.context = 'work'
-          },
-        },
-        {
-          value: 'personal',
-          display: 'Personal',
-          parse: (result: ParsedQuery) => {
-            result.context = 'personal'
-          },
-        },
+      (result, value) => {
+        result.status = [...(result.status ?? []), value]
+      },
+    ),
+    context: defineFixedToken(
+      [
+        ['work', 'Work'],
+        ['personal', 'Personal'],
       ],
-    },
-    commitment: {
-      values: [
-        {
-          value: 'inbox',
-          display: 'Inbox',
-          parse: (result: ParsedQuery) => {
-            result.commitment = 'inbox'
-          },
-        },
-        {
-          value: 'active',
-          display: 'Active',
-          parse: (result: ParsedQuery) => {
-            result.commitment = 'active'
-          },
-        },
-        {
-          value: 'someday',
-          display: 'Someday',
-          parse: (result: ParsedQuery) => {
-            result.commitment = 'someday'
-          },
-        },
+      (result, value) => {
+        result.context = value
+      },
+    ),
+    commitment: defineFixedToken(
+      [
+        ['inbox', 'Inbox'],
+        ['active', 'Active'],
+        ['someday', 'Someday'],
       ],
-    },
-    sort: {
-      values: [
-        {
-          value: 'due',
-          display: 'Sort by due date',
-          parse: (result: ParsedQuery) => {
-            result.sortBy = 'due'
-          },
-        },
-        {
-          value: 'created',
-          display: 'Sort by creation date',
-          parse: (result: ParsedQuery) => {
-            result.sortBy = 'created'
-          },
-        },
-        {
-          value: 'updated',
-          display: 'Sort by update date',
-          parse: (result: ParsedQuery) => {
-            result.sortBy = 'updated'
-          },
-        },
-        {
-          value: 'estimate',
-          display: 'Sort by estimate',
-          parse: (result: ParsedQuery) => {
-            result.sortBy = 'estimate'
-          },
-        },
+      (result, value) => {
+        result.commitment = value
+      },
+    ),
+    sort: defineFixedToken(
+      [
+        ['due', 'Sort by due date'],
+        ['created', 'Sort by creation date'],
+        ['updated', 'Sort by update date'],
+        ['estimate', 'Sort by estimate'],
       ],
-    },
-    has: {
-      values: [
-        {
-          value: 'pages',
-          display: 'Has pages',
-          parse: (result: ParsedQuery) => {
+      (result, value) => {
+        result.sortBy = value
+      },
+    ),
+    has: defineFixedToken(
+      [
+        ['pages', 'Has pages'],
+        ['comments', 'Has comments'],
+        ['no-children', 'Has no children'],
+        ['blockers', 'Has blockers'],
+        ['no-blockers', 'Has no blockers'],
+      ],
+      (result, value) => {
+        switch (value) {
+          case 'pages':
             result.hasPages = true
-          },
-        },
-        {
-          value: 'comments',
-          display: 'Has comments',
-          parse: (result: ParsedQuery) => {
+            break
+          case 'comments':
             result.hasComments = true
-          },
-        },
-        {
-          value: 'no-children',
-          display: 'Has no children',
-          parse: (result: ParsedQuery) => {
+            break
+          case 'no-children':
             result.hasNoChildren = true
-          },
-        },
-        {
-          value: 'blockers',
-          display: 'Has blockers',
-          parse: (result: ParsedQuery) => {
+            break
+          case 'blockers':
             result.hasBlockers = true
             delete result.hasNoBlockers
-          },
-        },
-        {
-          value: 'no-blockers',
-          display: 'Has no blockers',
-          parse: (result: ParsedQuery) => {
+            break
+          case 'no-blockers':
             result.hasNoBlockers = true
             delete result.hasBlockers
-          },
-        },
-      ],
-    },
-    reason: {
-      values: taskStatusReason.options.map((value) => ({
-        value,
-        display: value
-          .replace(/_/g, ' ')
-          .replace(/^./, (char) => char.toUpperCase()),
-        parse: (result: ParsedQuery) => {
-          result.reason = value
-        },
-      })),
-    },
+            break
+          default: {
+            const unhandledValue: never = value
+            return unhandledValue
+          }
+        }
+      },
+    ),
+    reason: defineFixedToken(
+      taskStatusReason.options.map(
+        (value) =>
+          [
+            value,
+            value
+              .replace(/_/g, ' ')
+              .replace(/^./, (char) => char.toUpperCase()),
+          ] as const,
+      ),
+      (result, value) => {
+        result.reason = value
+      },
+    ),
     label: {
       display: 'Label',
       parse: (result: ParsedQuery, value: string) => {

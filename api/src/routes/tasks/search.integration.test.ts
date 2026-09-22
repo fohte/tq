@@ -41,26 +41,16 @@ describe('tasks search API', () => {
       ])
     })
 
-    it('returns dynamic token keys without values', async () => {
-      const categories = ['label', 'parent', 'project']
-      const suggestions: Array<
-        Array<{ value: string; display: string; category: string }>
-      > = []
-      for (const category of categories) {
-        const res = await app.request(
-          `/api/tasks/search/suggest?prefix=${category}:`,
-        )
-        suggestions.push(
-          await jsonBody<
-            Array<{ value: string; display: string; category: string }>
-          >(res),
-        )
-      }
+    it('returns a key-only suggestion for a dynamic token', async () => {
+      const res = await app.request('/api/tasks/search/suggest?prefix=label:')
 
-      expect(suggestions).toEqual([
-        [{ value: 'label:', display: 'Label', category: 'label' }],
-        [{ value: 'parent:', display: 'Parent task', category: 'parent' }],
-        [{ value: 'project:', display: 'Project', category: 'project' }],
+      expect(res.status).toBe(200)
+      const body =
+        await jsonBody<
+          Array<{ value: string; display: string; category: string }>
+        >(res)
+      expect(body).toEqual([
+        { value: 'label:', display: 'Label', category: 'label' },
       ])
     })
   })

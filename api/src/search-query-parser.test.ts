@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildSearchQuery, parseSearchQuery } from '#search-query-parser'
+import {
+  buildSearchQuery,
+  getSearchQuerySuggestions,
+  parseSearchQuery,
+} from '#search-query-parser'
 
 describe('parseSearchQuery', () => {
   it('extracts free text when no prefixes are present', () => {
@@ -177,6 +181,47 @@ describe('parseSearchQuery', () => {
 
   it('handles empty string', () => {
     expect(parseSearchQuery('')).toEqual({ freeText: '' })
+  })
+})
+
+describe('getSearchQuerySuggestions', () => {
+  it('returns fixed values for a token category', () => {
+    expect(getSearchQuerySuggestions('is:', 'is')).toEqual([
+      { value: 'is:todo', display: 'Todo', category: 'is' },
+      { value: 'is:completed', display: 'Completed', category: 'is' },
+    ])
+  })
+
+  it('returns only the key for a dynamic token', () => {
+    expect(getSearchQuerySuggestions('label:', 'label')).toEqual([
+      { value: 'label:', display: 'Label', category: 'label' },
+    ])
+  })
+
+  it('returns all token categories when category is omitted', () => {
+    expect(
+      getSearchQuerySuggestions('').map((suggestion) => suggestion.category),
+    ).toEqual([
+      'is',
+      'context',
+      'commitment',
+      'sort',
+      'has',
+      'reason',
+      'label',
+      'parent',
+      'project',
+    ])
+  })
+
+  it('filters values by prefix', () => {
+    expect(getSearchQuerySuggestions('sort:created')).toEqual([
+      {
+        value: 'sort:created',
+        display: 'Sort by creation date',
+        category: 'sort',
+      },
+    ])
   })
 })
 
