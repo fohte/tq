@@ -63,6 +63,13 @@ describe('parseSearchQuery', () => {
     })
   })
 
+  it('parses reason:completed', () => {
+    expect(parseSearchQuery('reason:completed')).toEqual({
+      freeText: '',
+      reason: 'completed',
+    })
+  })
+
   it('parses reason:duplicate', () => {
     expect(parseSearchQuery('reason:duplicate')).toEqual({
       freeText: '',

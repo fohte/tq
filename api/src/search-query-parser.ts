@@ -17,30 +17,210 @@ export interface ParsedQuery {
   sortBy?: 'due' | 'created' | 'updated' | 'estimate'
 }
 
-const STATUS_VALUES: ReadonlySet<'todo' | 'completed'> = new Set([
-  'todo',
-  'completed',
-])
-const REASON_VALUES: ReadonlySet<TaskStatusReason> = new Set(
-  taskStatusReason.options,
-)
-const CONTEXT_VALUES: ReadonlySet<'work' | 'personal'> = new Set([
-  'work',
-  'personal',
-])
-const COMMITMENT_VALUES: ReadonlySet<'inbox' | 'active' | 'someday'> = new Set([
-  'inbox',
-  'active',
-  'someday',
-])
-const SORT_VALUES: ReadonlySet<'due' | 'created' | 'updated' | 'estimate'> =
-  new Set(['due', 'created', 'updated', 'estimate'])
+type SearchQueryTokenValue = {
+  value: string
+  display: string
+  parse: (result: ParsedQuery) => void
+}
 
-function isOneOf<T extends string>(
-  value: string,
-  set: ReadonlySet<T>,
-): value is T {
-  return (set as ReadonlySet<string>).has(value)
+type SearchQueryTokenDefinition =
+  | { values: readonly SearchQueryTokenValue[] }
+  | {
+      display: string
+      parse: (result: ParsedQuery, value: string) => void
+    }
+
+const searchQueryTokenDefinitions = new Map(
+  Object.entries({
+    is: {
+      values: [
+        {
+          value: 'todo',
+          display: 'Todo',
+          parse: (result: ParsedQuery) => {
+            result.status = [...(result.status ?? []), 'todo']
+          },
+        },
+        {
+          value: 'completed',
+          display: 'Completed',
+          parse: (result: ParsedQuery) => {
+            result.status = [...(result.status ?? []), 'completed']
+          },
+        },
+      ],
+    },
+    context: {
+      values: [
+        {
+          value: 'work',
+          display: 'Work',
+          parse: (result: ParsedQuery) => {
+            result.context = 'work'
+          },
+        },
+        {
+          value: 'personal',
+          display: 'Personal',
+          parse: (result: ParsedQuery) => {
+            result.context = 'personal'
+          },
+        },
+      ],
+    },
+    commitment: {
+      values: [
+        {
+          value: 'inbox',
+          display: 'Inbox',
+          parse: (result: ParsedQuery) => {
+            result.commitment = 'inbox'
+          },
+        },
+        {
+          value: 'active',
+          display: 'Active',
+          parse: (result: ParsedQuery) => {
+            result.commitment = 'active'
+          },
+        },
+        {
+          value: 'someday',
+          display: 'Someday',
+          parse: (result: ParsedQuery) => {
+            result.commitment = 'someday'
+          },
+        },
+      ],
+    },
+    sort: {
+      values: [
+        {
+          value: 'due',
+          display: 'Sort by due date',
+          parse: (result: ParsedQuery) => {
+            result.sortBy = 'due'
+          },
+        },
+        {
+          value: 'created',
+          display: 'Sort by creation date',
+          parse: (result: ParsedQuery) => {
+            result.sortBy = 'created'
+          },
+        },
+        {
+          value: 'updated',
+          display: 'Sort by update date',
+          parse: (result: ParsedQuery) => {
+            result.sortBy = 'updated'
+          },
+        },
+        {
+          value: 'estimate',
+          display: 'Sort by estimate',
+          parse: (result: ParsedQuery) => {
+            result.sortBy = 'estimate'
+          },
+        },
+      ],
+    },
+    has: {
+      values: [
+        {
+          value: 'pages',
+          display: 'Has pages',
+          parse: (result: ParsedQuery) => {
+            result.hasPages = true
+          },
+        },
+        {
+          value: 'comments',
+          display: 'Has comments',
+          parse: (result: ParsedQuery) => {
+            result.hasComments = true
+          },
+        },
+        {
+          value: 'no-children',
+          display: 'Has no children',
+          parse: (result: ParsedQuery) => {
+            result.hasNoChildren = true
+          },
+        },
+        {
+          value: 'blockers',
+          display: 'Has blockers',
+          parse: (result: ParsedQuery) => {
+            result.hasBlockers = true
+            delete result.hasNoBlockers
+          },
+        },
+        {
+          value: 'no-blockers',
+          display: 'Has no blockers',
+          parse: (result: ParsedQuery) => {
+            result.hasNoBlockers = true
+            delete result.hasBlockers
+          },
+        },
+      ],
+    },
+    reason: {
+      values: taskStatusReason.options.map((value) => ({
+        value,
+        display: value
+          .replace(/_/g, ' ')
+          .replace(/^./, (char) => char.toUpperCase()),
+        parse: (result: ParsedQuery) => {
+          result.reason = value
+        },
+      })),
+    },
+    label: {
+      display: 'Label',
+      parse: (result: ParsedQuery, value: string) => {
+        result.label = value
+      },
+    },
+    parent: {
+      display: 'Parent task',
+      parse: (result: ParsedQuery, value: string) => {
+        result.parentId = value
+      },
+    },
+    project: {
+      display: 'Project',
+      parse: (result: ParsedQuery, value: string) => {
+        result.projectId = value
+      },
+    },
+  } satisfies Record<string, SearchQueryTokenDefinition>),
+)
+
+export function getSearchQuerySuggestions(prefix: string, category?: string) {
+  const categories =
+    category == null
+      ? Array.from(searchQueryTokenDefinitions.keys())
+      : [category]
+
+  return categories.flatMap((key) => {
+    const definition = searchQueryTokenDefinitions.get(key)
+    if (definition === undefined) return []
+
+    const suggestions =
+      'values' in definition
+        ? definition.values.map(({ value, display }) => ({
+            value: `${key}:${value}`,
+            display,
+            category: key,
+          }))
+        : [{ value: `${key}:`, display: definition.display, category: key }]
+
+    return suggestions.filter((suggestion) =>
+      suggestion.value.startsWith(prefix),
+    )
+  })
 }
 
 export function parseSearchQuery(q: string): ParsedQuery {
@@ -60,75 +240,21 @@ export function parseSearchQuery(q: string): ParsedQuery {
     const prefix = token.slice(0, colonIndex).toLowerCase()
     const value = token.slice(colonIndex + 1)
 
-    if (value === '') {
+    const definition = searchQueryTokenDefinitions.get(prefix)
+    if (value === '' || definition === undefined) {
       freeTextParts.push(token)
       continue
     }
 
-    switch (prefix) {
-      case 'is':
-        if (isOneOf(value, STATUS_VALUES)) {
-          result.status = [...(result.status ?? []), value]
-        } else {
-          freeTextParts.push(token)
-        }
-        break
-      case 'label':
-        result.label = value
-        break
-      case 'context':
-        if (isOneOf(value, CONTEXT_VALUES)) {
-          result.context = value
-        } else {
-          freeTextParts.push(token)
-        }
-        break
-      case 'commitment':
-        if (isOneOf(value, COMMITMENT_VALUES)) {
-          result.commitment = value
-        } else {
-          freeTextParts.push(token)
-        }
-        break
-      case 'reason':
-        if (isOneOf(value, REASON_VALUES)) {
-          result.reason = value
-        } else {
-          freeTextParts.push(token)
-        }
-        break
-      case 'has':
-        if (value === 'pages') {
-          result.hasPages = true
-        } else if (value === 'comments') {
-          result.hasComments = true
-        } else if (value === 'no-children') {
-          result.hasNoChildren = true
-        } else if (value === 'blockers') {
-          result.hasBlockers = true
-          delete result.hasNoBlockers
-        } else if (value === 'no-blockers') {
-          result.hasNoBlockers = true
-          delete result.hasBlockers
-        } else {
-          freeTextParts.push(token)
-        }
-        break
-      case 'parent':
-        result.parentId = value
-        break
-      case 'project':
-        result.projectId = value
-        break
-      case 'sort':
-        if (isOneOf(value, SORT_VALUES)) {
-          result.sortBy = value
-        } else {
-          freeTextParts.push(token)
-        }
-        break
-      default:
+    if ('values' in definition) {
+      const option = definition.values.find((item) => item.value === value)
+      if (option === undefined) {
         freeTextParts.push(token)
+      } else {
+        option.parse(result)
+      }
+    } else {
+      definition.parse(result, value)
     }
   }
 

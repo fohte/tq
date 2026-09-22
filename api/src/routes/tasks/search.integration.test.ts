@@ -16,8 +16,52 @@ describe('tasks search API', () => {
         await jsonBody<
           Array<{ value: string; display: string; category: string }>
         >(res)
-      expect(body.length).toBeGreaterThan(0)
-      expect(body.every((s) => s.category === 'is')).toBe(true)
+      expect(body).toEqual([
+        { value: 'is:todo', display: 'Todo', category: 'is' },
+        { value: 'is:completed', display: 'Completed', category: 'is' },
+      ])
+    })
+
+    it('returns suggestions for reason values', async () => {
+      const res = await app.request('/api/tasks/search/suggest?prefix=reason:')
+
+      expect(res.status).toBe(200)
+      const body =
+        await jsonBody<
+          Array<{ value: string; display: string; category: string }>
+        >(res)
+      expect(body).toEqual([
+        { value: 'reason:completed', display: 'Completed', category: 'reason' },
+        {
+          value: 'reason:not_planned',
+          display: 'Not planned',
+          category: 'reason',
+        },
+        { value: 'reason:duplicate', display: 'Duplicate', category: 'reason' },
+      ])
+    })
+
+    it('returns dynamic token keys without values', async () => {
+      const categories = ['label', 'parent', 'project']
+      const suggestions: Array<
+        Array<{ value: string; display: string; category: string }>
+      > = []
+      for (const category of categories) {
+        const res = await app.request(
+          `/api/tasks/search/suggest?prefix=${category}:`,
+        )
+        suggestions.push(
+          await jsonBody<
+            Array<{ value: string; display: string; category: string }>
+          >(res),
+        )
+      }
+
+      expect(suggestions).toEqual([
+        [{ value: 'label:', display: 'Label', category: 'label' }],
+        [{ value: 'parent:', display: 'Parent task', category: 'parent' }],
+        [{ value: 'project:', display: 'Project', category: 'project' }],
+      ])
     })
   })
 

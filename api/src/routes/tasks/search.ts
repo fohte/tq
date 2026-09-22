@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { queryTaskList } from '#routes/tasks/list-query'
+import { getSearchQuerySuggestions } from '#search-query-parser'
 
 const suggestQuerySchema = z.object({
   prefix: z.string(),
@@ -17,48 +18,7 @@ const mentionsQuerySchema = z.object({
 export const tasksSearchApp = new Hono()
   .get('/search/suggest', zValidator('query', suggestQuerySchema), (c) => {
     const { prefix, category } = c.req.valid('query')
-
-    const allSuggestions: Record<
-      string,
-      Array<{ value: string; display: string }>
-    > = {
-      is: [
-        { value: 'is:todo', display: 'Todo' },
-        { value: 'is:completed', display: 'Completed' },
-      ],
-      context: [
-        { value: 'context:work', display: 'Work' },
-        { value: 'context:personal', display: 'Personal' },
-      ],
-      commitment: [
-        { value: 'commitment:inbox', display: 'Inbox' },
-        { value: 'commitment:active', display: 'Active' },
-        { value: 'commitment:someday', display: 'Someday' },
-      ],
-      sort: [
-        { value: 'sort:due', display: 'Sort by due date' },
-        { value: 'sort:created', display: 'Sort by creation date' },
-        { value: 'sort:updated', display: 'Sort by update date' },
-        { value: 'sort:estimate', display: 'Sort by estimate' },
-      ],
-      has: [
-        { value: 'has:pages', display: 'Has pages' },
-        { value: 'has:comments', display: 'Has comments' },
-        { value: 'has:no-children', display: 'Has no children' },
-        { value: 'has:blockers', display: 'Has blockers' },
-        { value: 'has:no-blockers', display: 'Has no blockers' },
-      ],
-    }
-
-    const categories =
-      category != null ? [category] : Object.keys(allSuggestions)
-    const suggestions = categories.flatMap((cat) =>
-      (allSuggestions[cat] ?? [])
-        .filter((s) => s.value.startsWith(prefix))
-        .map((s) => ({ ...s, category: cat })),
-    )
-
-    return c.json(suggestions, 200)
+    return c.json(getSearchQuerySuggestions(prefix, category), 200)
   })
   // Backs the editor's `#` mention autocomplete. Search condition building
   // is shared with GET /api/tasks via queryTaskList; this endpoint only
