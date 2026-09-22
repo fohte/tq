@@ -20,6 +20,7 @@ const REGISTERED_TOOL_NAMES = [
   'list_labels',
   'list_projects',
   'list_tasks',
+  'search_pages',
   'search_tasks',
   'update_comment',
   'update_page',

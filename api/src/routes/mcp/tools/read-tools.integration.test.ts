@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import {
+  createComment,
   createLabel,
   createPage,
   createTask,
@@ -23,6 +24,7 @@ const READ_TOOL_NAMES = [
   'list_labels',
   'list_projects',
   'list_tasks',
+  'search_pages',
   'search_tasks',
 ]
 
@@ -110,6 +112,7 @@ describe('read tools', () => {
       { name: 'list_labels', readOnlyHint: true },
       { name: 'list_projects', readOnlyHint: true },
       { name: 'list_tasks', readOnlyHint: true },
+      { name: 'search_pages', readOnlyHint: true },
       { name: 'search_tasks', readOnlyHint: true },
     ])
   })
@@ -369,6 +372,31 @@ describe('read tools', () => {
           childCompletionCount: { total: 0, completed: 0 },
         },
       ])
+    })
+  })
+
+  describe('search_pages', () => {
+    it('rejects invalid input', async () => {
+      const result = await callTool('search_pages', { q: '   ' })
+
+      expect(result.isError).toBe(true)
+    })
+
+    it('returns the page search endpoint response unchanged', async () => {
+      const task = await createTask('Task with searchable history')
+      await createPage(task.id, 'Investigation log', 'mcp locator phrase')
+      await createComment(task.id, 'mcp locator phrase')
+
+      const expectedResponse = await app.request(
+        `/api/tasks/search/pages?q=${encodeURIComponent('mcp locator phrase')}&limit=2`,
+      )
+
+      const toolResult = await callTool('search_pages', {
+        q: 'mcp locator phrase',
+        limit: 2,
+      })
+
+      expect(parseJson(toolResult)).toEqual(await expectedResponse.json())
     })
   })
 
