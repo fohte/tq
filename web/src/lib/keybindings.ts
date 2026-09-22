@@ -80,6 +80,7 @@ export const calendarKeybindings: Keybinding[] = [
   { id: 'calendar-month-view', keys: 'm', description: 'month view' },
 ]
 
+// Only active on screens with task filters; see TaskFilterChipRow.
 export const filterKeybindings: Keybinding[] = [
   { id: 'focus-filter', keys: '/', description: 'focus filter' },
 ]

@@ -31,8 +31,8 @@ function isModalOpen(): boolean {
   )
 }
 
-// Shared by every keybinding hook (see use-calendar-keybindings.ts) that
-// listens on `document` alongside this one.
+// Shared by document-level shortcut listeners so they agree on editable
+// targets and modal state.
 export function shouldIgnoreShortcut(e: KeyboardEvent): boolean {
   return (
     e.metaKey ||
