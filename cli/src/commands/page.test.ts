@@ -116,6 +116,31 @@ describe('page search', () => {
       output: [[`${JSON.stringify(response, null, 2)}\n`]],
     })
   })
+
+  it('omits the limit query when no limit is given', async () => {
+    const response = { results: [] }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(response), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'page', 'search', 'orbit marker'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(makePageSearchOutput(exitCode, calls, write.mock.calls)).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'GET',
+        pathname: '/api/tasks/search/pages',
+        query: { q: 'orbit marker' },
+        body: undefined,
+      },
+      output: [[`${JSON.stringify(response, null, 2)}\n`]],
+    })
+  })
 })
 
 describe('page get', () => {
