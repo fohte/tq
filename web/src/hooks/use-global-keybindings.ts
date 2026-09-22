@@ -22,13 +22,11 @@ export function isEditableTarget(target: EventTarget | null): boolean {
   )
 }
 
-// Base UI marks modal presence on <html>; custom dialogs expose it with
-// aria-modal.
-function isModalOpen(): boolean {
-  return (
-    document.documentElement.hasAttribute('data-base-ui-scroll-locked') ||
-    document.querySelector('[role="dialog"][aria-modal="true"]') != null
-  )
+// Base UI's Dialog sets this on <html> while any modal (e.g. CreateTaskModal)
+// is open; SearchModal isn't Base UI-based, so its own `searchOpen` is passed
+// in separately.
+function isBaseUiDialogOpen(): boolean {
+  return document.documentElement.hasAttribute('data-base-ui-scroll-locked')
 }
 
 // Shared by document-level shortcut listeners so they agree on editable
@@ -39,7 +37,7 @@ export function shouldIgnoreShortcut(e: KeyboardEvent): boolean {
     e.ctrlKey ||
     e.altKey ||
     isEditableTarget(e.target) ||
-    isModalOpen()
+    isBaseUiDialogOpen()
   )
 }
 
