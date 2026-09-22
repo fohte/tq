@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
+import { parseSearchQuery } from 'api/search-query-parser'
 import { Loader2 } from 'lucide-react'
 import {
   Fragment,
@@ -19,6 +20,7 @@ import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useCurrentContext } from '#hooks/use-current-context'
+import { useDebounce } from '#hooks/use-debounce'
 import type { Project } from '#hooks/use-projects'
 import { useProjects } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
@@ -76,9 +78,15 @@ export function SearchModal({
   const defaultSearchContext = isContextCleared ? undefined : configuredContext
   const context = resolveSearchContext(query, defaultSearchContext)
   const canClearContext = query === '' && context != null
+  const freeTextQuery = parseSearchQuery(query).freeText
+  const debouncedFreeTextQuery = useDebounce(freeTextQuery, 200)
+  const debouncedContext = useDebounce(context, 200)
   const searchFilter =
-    query.length > 0
-      ? { q: query, ...(context == null ? {} : { context }) }
+    debouncedFreeTextQuery.length > 0
+      ? {
+          q: debouncedFreeTextQuery,
+          ...(debouncedContext == null ? {} : { context: debouncedContext }),
+        }
       : undefined
 
   const { data: tasks, isFetching } = useSearchTasks(

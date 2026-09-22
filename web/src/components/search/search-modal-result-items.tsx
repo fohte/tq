@@ -21,6 +21,33 @@ export interface ListItemRenderProps {
   onMouseMove: (event: MouseEvent<HTMLElement>) => void
 }
 
+function createOptionItem(
+  key: string,
+  select: () => void,
+  content: ReactNode,
+): ListItem {
+  return {
+    key,
+    select,
+    render: ({ isSelected, onMouseMove }) => (
+      <button
+        type="button"
+        role="option"
+        aria-selected={isSelected}
+        data-selected={isSelected}
+        onClick={select}
+        onMouseMove={onMouseMove}
+        className={cn(
+          'flex w-full items-center gap-2 px-4 py-2 text-left',
+          isSelected ? 'bg-accent' : 'hover:bg-accent/50',
+        )}
+      >
+        {content}
+      </button>
+    ),
+  }
+}
+
 export function createProjectItems(
   projects: Project[] | undefined,
   openProject: (project: Project) => void,
@@ -34,29 +61,16 @@ export function createProjectItems(
         openProject(project)
       }
 
-      return {
-        key: `project:${project.id}`,
+      return createOptionItem(
+        `project:${project.id}`,
         select,
-        render: ({ isSelected, onMouseMove }) => (
-          <button
-            type="button"
-            role="option"
-            aria-selected={isSelected}
-            data-selected={isSelected}
-            onClick={select}
-            onMouseMove={onMouseMove}
-            className={cn(
-              'flex w-full items-center gap-2 px-4 py-2 text-left',
-              isSelected ? 'bg-accent' : 'hover:bg-accent/50',
-            )}
-          >
-            <ProjectStatusMark status={status} />
-            <span className="truncate font-mono text-sm text-foreground">
-              {project.title}
-            </span>
-          </button>
-        ),
-      }
+        <>
+          <ProjectStatusMark status={status} />
+          <span className="truncate font-mono text-sm text-foreground">
+            {project.title}
+          </span>
+        </>,
+      )
     }) ?? []
   )
 }
@@ -71,28 +85,11 @@ export function createViewItems(
         openView(view)
       }
 
-      return {
-        key: `view:${view.id}`,
+      return createOptionItem(
+        `view:${view.id}`,
         select,
-        render: ({ isSelected, onMouseMove }) => (
-          <button
-            type="button"
-            role="option"
-            aria-selected={isSelected}
-            data-selected={isSelected}
-            onClick={select}
-            onMouseMove={onMouseMove}
-            className={cn(
-              'flex w-full items-center gap-2 px-4 py-2 text-left',
-              isSelected ? 'bg-accent' : 'hover:bg-accent/50',
-            )}
-          >
-            <span className="font-mono text-sm text-foreground">
-              {view.name}
-            </span>
-          </button>
-        ),
-      }
+        <span className="font-mono text-sm text-foreground">{view.name}</span>,
+      )
     }) ?? []
   )
 }

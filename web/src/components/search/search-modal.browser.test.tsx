@@ -249,9 +249,8 @@ describe('SearchModal', () => {
     expect(screen.getByText('Review pull request')).toBeInTheDocument()
   })
 
-  it('shows project and saved view results', async () => {
+  it('shows project results', async () => {
     mockProjectData = [makeProject({ title: 'Project alpha' })]
-    mockSavedViewData = [makeSavedView({ name: 'Active tasks' })]
 
     const user = userEvent.setup()
     renderSearchModal()
@@ -259,16 +258,34 @@ describe('SearchModal', () => {
     await user.type(screen.getByLabelText('Search tasks'), 'alpha')
 
     const getOutput = () => ({
-      groupTitles: ['Projects', 'Views'].map(
-        (title) => screen.getByText(title).textContent,
-      ),
+      groupTitle: screen.getByText('Projects').textContent,
       options: screen
         .getAllByRole('option')
         .map((option) => option.textContent),
     })
     expect(getOutput()).toEqual({
-      groupTitles: ['Projects', 'Views'],
-      options: ['Project alpha', 'Active tasks'],
+      groupTitle: 'Projects',
+      options: ['Project alpha'],
+    })
+  })
+
+  it('shows saved view results', async () => {
+    mockSavedViewData = [makeSavedView({ name: 'Active tasks' })]
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    await user.type(screen.getByLabelText('Search tasks'), 'active')
+
+    const getOutput = () => ({
+      groupTitle: screen.getByText('Views').textContent,
+      options: screen
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    })
+    expect(getOutput()).toEqual({
+      groupTitle: 'Views',
+      options: ['Active tasks'],
     })
   })
 
