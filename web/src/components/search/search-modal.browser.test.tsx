@@ -250,6 +250,35 @@ describe('SearchModal', () => {
     expect(screen.getByText('is:completed')).toBeInTheDocument()
   })
 
+  it('navigates through suggestions and selects the following task', async () => {
+    mockSuggestionData = mockSuggestions
+    mockSearchData = mockTasks
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    await user.type(screen.getByLabelText('Search tasks'), 'is:')
+    const options = screen.getAllByRole('option')
+
+    await user.keyboard('{ArrowDown}{ArrowDown}{Enter}')
+
+    const getOutput = () => [
+      options.map((option) => option.getAttribute('aria-selected')),
+      mockNavigate.mock.calls,
+    ]
+    expect(getOutput()).toEqual([
+      ['false', 'false', 'true', 'false'],
+      [
+        [
+          {
+            to: '/tasks/$taskId',
+            params: { taskId: '00000000-0000-0000-0000-000000000001' },
+          },
+        ],
+      ],
+    ])
+  })
+
   it('navigates results with arrow keys', async () => {
     mockSearchData = mockTasks
 
