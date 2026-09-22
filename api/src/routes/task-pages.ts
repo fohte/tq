@@ -42,33 +42,19 @@ function validateContentLength(
     : null
 }
 
-export function pageSummaryToResponse(page: typeof taskPages.$inferSelect) {
-  return {
-    id: page.id,
-    taskId: page.taskId,
-    title: page.title,
-    format: page.format,
-    sortOrder: page.sortOrder,
-    createdAt: page.createdAt.toISOString(),
-    updatedAt: page.updatedAt.toISOString(),
-  }
-}
-
 export function pageToResponse(
   page: typeof taskPages.$inferSelect,
   author: EditAuthorInfo | null = null,
 ) {
-  const summary = pageSummaryToResponse(page)
-
   return {
-    id: summary.id,
-    taskId: summary.taskId,
-    title: summary.title,
+    id: page.id,
+    taskId: page.taskId,
+    title: page.title,
     content: page.content,
-    format: summary.format,
-    sortOrder: summary.sortOrder,
-    createdAt: summary.createdAt,
-    updatedAt: summary.updatedAt,
+    format: page.format,
+    sortOrder: page.sortOrder,
+    createdAt: page.createdAt.toISOString(),
+    updatedAt: page.updatedAt.toISOString(),
     author,
   }
 }
