@@ -1,6 +1,14 @@
 import { useNavigate } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { createPortal } from 'react-dom'
 
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
@@ -23,9 +31,28 @@ interface SearchModalProps {
   defaultContext?: 'work' | 'personal' | null
 }
 
-type ListItem =
-  | { type: 'suggestion'; data: Suggestion }
-  | { type: 'task'; data: SearchResult }
+interface ListItem {
+  key: string
+  select: () => void
+  selectOnTab?: () => void
+  render: (props: ListItemRenderProps) => ReactNode
+}
+
+interface ListItemRenderProps {
+  isSelected: boolean
+  onMouseMove: (event: MouseEvent<HTMLElement>) => void
+}
+
+interface ResultGroup {
+  id: string
+  title: string
+  items: ListItem[]
+  isVisible: (query: string, itemCount: number) => boolean
+}
+
+interface IndexedResultGroup extends Omit<ResultGroup, 'items'> {
+  items: { item: ListItem; globalIndex: number }[]
+}
 
 export function SearchModal({
   open,
@@ -38,7 +65,13 @@ export function SearchModal({
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const lastMousePos = useRef({ x: 0, y: 0 })
+  const queryRef = useRef(query)
+  const onOpenChangeRef = useRef(onOpenChange)
+  queryRef.current = query
+  onOpenChangeRef.current = onOpenChange
   const navigate = useNavigate()
+  const navigateRef = useRef(navigate)
+  navigateRef.current = navigate
   const currentContext = useCurrentContext()
   const configuredContext =
     contextOverride === undefined
@@ -55,25 +88,6 @@ export function SearchModal({
 
   const currentPrefix = extractCurrentPrefix(query)
   const { data: suggestions } = useSearchSuggestions(currentPrefix)
-
-  const items = useMemo((): ListItem[] => {
-    const result: ListItem[] = []
-    if (suggestions && currentPrefix.length > 0) {
-      for (const s of suggestions) {
-        result.push({ type: 'suggestion', data: s })
-      }
-    }
-    if (tasks) {
-      for (const t of tasks) {
-        result.push({ type: 'task', data: t })
-      }
-    }
-    return result
-  }, [suggestions, tasks, currentPrefix])
-
-  useEffect(() => {
-    setSelectedIndex(0)
-  }, [items])
 
   useEffect(() => {
     if (open) {
@@ -92,33 +106,138 @@ export function SearchModal({
     }
   }, [selectedIndex])
 
-  const applySuggestion = useCallback(
-    (suggestion: Suggestion) => {
-      setQuery(applySuggestionToQuery(query, suggestion))
-      inputRef.current?.focus()
-    },
-    [query],
-  )
+  const applySuggestion = useCallback((suggestion: Suggestion) => {
+    setQuery(applySuggestionToQuery(queryRef.current, suggestion))
+    inputRef.current?.focus()
+  }, [])
 
-  const openTask = useCallback(
-    (task: SearchResult) => {
-      onOpenChange(false)
-      void navigate({ to: '/tasks/$taskId', params: { taskId: task.id } })
-    },
-    [navigate, onOpenChange],
-  )
+  const openTask = useCallback((task: SearchResult) => {
+    onOpenChangeRef.current(false)
+    void navigateRef.current({
+      to: '/tasks/$taskId',
+      params: { taskId: task.id },
+    })
+  }, [])
+
+  const resultGroups = useMemo((): ResultGroup[] => {
+    const suggestionItems: ListItem[] =
+      suggestions && currentPrefix.length > 0
+        ? suggestions.map((suggestion) => {
+            const select = () => {
+              applySuggestion(suggestion)
+            }
+
+            return {
+              key: suggestion.value,
+              select,
+              selectOnTab: select,
+              render: ({ isSelected, onMouseMove }) => (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  data-selected={isSelected}
+                  onClick={select}
+                  onMouseMove={onMouseMove}
+                  className={cn(
+                    'flex w-full items-center gap-2 px-4 py-2 text-left',
+                    isSelected ? 'bg-accent' : 'hover:bg-accent/50',
+                  )}
+                >
+                  <span className="font-mono text-sm text-foreground">
+                    {suggestion.value}
+                  </span>
+                  <span className="text-2xs text-muted-foreground">
+                    {suggestion.display}
+                  </span>
+                </button>
+              ),
+            }
+          })
+        : []
+    const taskItems: ListItem[] =
+      tasks?.map((task) => ({
+        key: task.id,
+        select: () => {
+          openTask(task)
+        },
+        render: ({ isSelected, onMouseMove }) => (
+          <div
+            role="option"
+            aria-selected={isSelected}
+            data-selected={isSelected}
+            onMouseMove={onMouseMove}
+            className={cn(isSelected ? 'bg-accent' : 'hover:bg-accent/50')}
+          >
+            <TaskRowAppearance
+              task={task}
+              onClick={(e) => {
+                // Let the router's own modifier/middle-click handling
+                // open a new tab without closing this one's search.
+                if (
+                  e.button !== 0 ||
+                  e.metaKey ||
+                  e.ctrlKey ||
+                  e.shiftKey ||
+                  e.altKey
+                ) {
+                  return
+                }
+                onOpenChangeRef.current(false)
+              }}
+            />
+          </div>
+        ),
+      })) ?? []
+
+    return [
+      {
+        id: 'suggestions',
+        title: 'Suggestions',
+        items: suggestionItems,
+        isVisible: (_query, itemCount) => itemCount > 0,
+      },
+      {
+        id: 'tasks',
+        title: 'Tasks',
+        items: taskItems,
+        isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
+      },
+    ]
+  }, [suggestions, tasks, currentPrefix, applySuggestion, openTask])
+
+  const { items, indexedGroups } = useMemo((): {
+    items: ListItem[]
+    indexedGroups: IndexedResultGroup[]
+  } => {
+    let globalIndex = 0
+    const indexedGroups = resultGroups.map((group) => ({
+      ...group,
+      items: group.items.map((item) => ({
+        item,
+        globalIndex: globalIndex++,
+      })),
+    }))
+
+    return {
+      indexedGroups,
+      items: indexedGroups.flatMap((group) =>
+        group.items.map(({ item }) => item),
+      ),
+    }
+  }, [resultGroups])
+
+  useEffect(() => {
+    setSelectedIndex(0)
+  }, [items])
 
   const handleSelect = useCallback(
     (index: number) => {
       const item = items[index]
       if (item == null) return
-      if (item.type === 'suggestion') {
-        applySuggestion(item.data)
-      } else {
-        openTask(item.data)
-      }
+      item.select()
     },
-    [items, applySuggestion, openTask],
+    [items],
   )
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -139,9 +258,7 @@ export function SearchModal({
         break
       case 'Tab':
         e.preventDefault()
-        if (items[selectedIndex]?.type === 'suggestion') {
-          handleSelect(selectedIndex)
-        }
+        items[selectedIndex]?.selectOnTab?.()
         break
       case 'Escape':
         e.preventDefault()
@@ -219,115 +336,37 @@ export function SearchModal({
             role="listbox"
             aria-label="Search results"
           >
-            {/* Suggestions section */}
-            {hasSuggestions && (
-              <>
-                <div className="px-4 py-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
-                  Suggestions
-                </div>
-                {suggestions.map((suggestion, i) => {
-                  const globalIndex = i
-                  return (
-                    <button
-                      type="button"
-                      key={suggestion.value}
-                      role="option"
-                      aria-selected={selectedIndex === globalIndex}
-                      data-selected={selectedIndex === globalIndex}
-                      onClick={() => {
-                        applySuggestion(suggestion)
-                      }}
-                      onMouseMove={(e) => {
-                        if (
-                          e.clientX !== lastMousePos.current.x ||
-                          e.clientY !== lastMousePos.current.y
-                        ) {
-                          lastMousePos.current = {
-                            x: e.clientX,
-                            y: e.clientY,
-                          }
-                          setSelectedIndex(globalIndex)
-                        }
-                      }}
-                      className={cn(
-                        'flex w-full items-center gap-2 px-4 py-2 text-left',
-                        selectedIndex === globalIndex
-                          ? 'bg-accent'
-                          : 'hover:bg-accent/50',
-                      )}
-                    >
-                      <span className="font-mono text-sm text-foreground">
-                        {suggestion.value}
-                      </span>
-                      <span className="text-2xs text-muted-foreground">
-                        {suggestion.display}
-                      </span>
-                    </button>
-                  )
-                })}
-              </>
-            )}
-
-            {/* Divider between suggestions and tasks */}
-            {hasSuggestions && hasTasks && (
-              <div className="mx-4 my-1 h-px bg-border" />
-            )}
-
-            {/* Tasks section */}
-            {hasTasks && (
-              <>
-                <div className="px-4 py-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
-                  Tasks
-                </div>
-                {tasks.map((task, i) => {
-                  const globalIndex =
-                    (hasSuggestions ? suggestions.length : 0) + i
-                  return (
-                    <div
-                      key={task.id}
-                      role="option"
-                      aria-selected={selectedIndex === globalIndex}
-                      data-selected={selectedIndex === globalIndex}
-                      onMouseMove={(e) => {
-                        if (
-                          e.clientX !== lastMousePos.current.x ||
-                          e.clientY !== lastMousePos.current.y
-                        ) {
-                          lastMousePos.current = {
-                            x: e.clientX,
-                            y: e.clientY,
-                          }
-                          setSelectedIndex(globalIndex)
-                        }
-                      }}
-                      className={cn(
-                        selectedIndex === globalIndex
-                          ? 'bg-accent'
-                          : 'hover:bg-accent/50',
-                      )}
-                    >
-                      <TaskRowAppearance
-                        task={task}
-                        onClick={(e) => {
-                          // Let the router's own modifier/middle-click handling
-                          // open a new tab without closing this one's search.
+            {indexedGroups
+              .filter((group) => group.isVisible(query, group.items.length))
+              .map((group, groupIndex) => (
+                <Fragment key={group.id}>
+                  {groupIndex > 0 && (
+                    <div className="mx-4 my-1 h-px bg-border" />
+                  )}
+                  <div className="px-4 py-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
+                    {group.title}
+                  </div>
+                  {group.items.map(({ item, globalIndex }) => (
+                    <Fragment key={item.key}>
+                      {item.render({
+                        isSelected: selectedIndex === globalIndex,
+                        onMouseMove: (e) => {
                           if (
-                            e.button !== 0 ||
-                            e.metaKey ||
-                            e.ctrlKey ||
-                            e.shiftKey ||
-                            e.altKey
+                            e.clientX !== lastMousePos.current.x ||
+                            e.clientY !== lastMousePos.current.y
                           ) {
-                            return
+                            lastMousePos.current = {
+                              x: e.clientX,
+                              y: e.clientY,
+                            }
+                            setSelectedIndex(globalIndex)
                           }
-                          onOpenChange(false)
-                        }}
-                      />
-                    </div>
-                  )
-                })}
-              </>
-            )}
+                        },
+                      })}
+                    </Fragment>
+                  ))}
+                </Fragment>
+              ))}
 
             {/* Empty state */}
             {query.length > 0 &&
