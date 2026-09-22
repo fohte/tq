@@ -1,5 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, count, eq, inArray, sql } from 'drizzle-orm'
+import { and, count, eq, ilike, inArray, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
@@ -66,6 +66,9 @@ export const projectsApp = new Hono()
     }
     if (query.context) {
       conditions.push(eq(projects.context, query.context))
+    }
+    if (query.q != null && query.q !== '') {
+      conditions.push(ilike(projects.title, `%${query.q}%`))
     }
 
     const result = await db

@@ -1,5 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, ilike } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
@@ -48,6 +48,9 @@ export const savedViewsApp = new Hono()
 
     if (query.context) {
       conditions.push(eq(savedViews.context, query.context))
+    }
+    if (query.q != null && query.q !== '') {
+      conditions.push(ilike(savedViews.name, `%${query.q}%`))
     }
 
     const result = await db
