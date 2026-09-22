@@ -195,6 +195,7 @@ export const EXCLUDED_ROUTES = {
 
   // Exposed for global search clients that use the API directly.
   'GET /api/pages/search': 'global page search is not a tq CLI command',
+  'GET /api/tasks/search/pages': 'task content search is not a tq CLI command',
 } as const satisfies Partial<Record<AllRoutes, string>>
 
 type ExcludedRoutes = keyof typeof EXCLUDED_ROUTES
