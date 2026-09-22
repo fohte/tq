@@ -129,13 +129,21 @@ export const MixedReasons: Story = {
       makeQueueCandidate({
         task: makeTask({
           id: '4',
+          title: 'Prepare quarterly review',
+          dueDate: '2026-03-22',
+        }),
+        reason: { kind: 'due-later', days: 2 },
+      }),
+      makeQueueCandidate({
+        task: makeTask({
+          id: '5',
           title: 'Plan the launch',
           startDate: '2026-03-20',
         }),
         reason: { kind: 'starts', days: 0 },
       }),
       makeQueueCandidate({
-        task: makeTask({ id: '5', title: 'Refactor the auth module' }),
+        task: makeTask({ id: '6', title: 'Refactor the auth module' }),
         reason: { kind: 'active' },
       }),
     ] satisfies QueueCandidate<Task>[],

@@ -73,6 +73,16 @@ export const DueToday: Story = {
   },
 }
 
+export const DueLater: Story = {
+  args: {
+    task: makeTask({
+      title: 'Prepare quarterly review',
+      dueDate: '2026-03-22',
+    }),
+    reason: { kind: 'due-later', days: 2 },
+  },
+}
+
 export const StartsToday: Story = {
   args: {
     task: makeTask({ title: 'Plan the launch', startDate: '2026-03-20' }),

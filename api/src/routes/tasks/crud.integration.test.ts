@@ -1270,15 +1270,23 @@ describe('tasks CRUD API', () => {
     })
 
     it('sorts by due date ascending when sortBy=due', async () => {
+      const taskWithoutDueFirst = await createTask('No due date first')
       const taskA = await createTask('Task A', { dueDate: '2026-03-25' })
       const taskB = await createTask('Task B', { dueDate: '2026-03-20' })
       const taskC = await createTask('Task C', { dueDate: '2026-03-22' })
+      const taskWithoutDueSecond = await createTask('No due date second')
 
       const res = await app.request('/api/tasks?sortBy=due')
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body.map((t) => t.id)).toEqual([taskB.id, taskC.id, taskA.id])
+      expect(body.map((t) => t.id)).toEqual([
+        taskB.id,
+        taskC.id,
+        taskA.id,
+        taskWithoutDueFirst.id,
+        taskWithoutDueSecond.id,
+      ])
     })
 
     it('sorts by estimate ascending when sortBy=estimate', async () => {
