@@ -12,14 +12,19 @@ type Suggestion = InferResponseType<
   (typeof api.api.tasks.search)['suggest']['$get'],
   200
 >[number]
+type PageSearchResult = InferResponseType<
+  (typeof api.api.tasks.search)['pages']['$get'],
+  200
+>['results'][number]
 type SearchContext = 'work' | 'personal'
 
-export type { SearchResult, Suggestion }
+export type { PageSearchResult, SearchResult, Suggestion }
 
 export const searchKeys = {
   all: ['search'] as const,
   results: (q: string, context: SearchContext | undefined) =>
     [...searchKeys.all, 'results', q, context] as const,
+  pages: (q: string) => [...searchKeys.all, 'pages', q] as const,
   suggestions: (prefix: string) =>
     [...searchKeys.all, 'suggestions', prefix] as const,
 }
@@ -55,6 +60,23 @@ export function useSearchTasks(query: string, defaultContext?: SearchContext) {
       const [, , , prevContext] = prevQuery?.queryKey ?? []
       return prevContext === context ? prev : undefined
     },
+  })
+}
+
+export function useSearchPages(query: string) {
+  const debouncedQuery = useDebounce(query, 200)
+
+  return useQuery({
+    queryKey: searchKeys.pages(debouncedQuery),
+    queryFn: async () => {
+      const res = await api.api.tasks.search.pages.$get({
+        query: { q: debouncedQuery, limit: '20', source: 'page' },
+      })
+      return unwrapOrThrow(assertOk(res))
+        .json()
+        .then((body) => body.results)
+    },
+    enabled: debouncedQuery.length > 0,
   })
 }
 

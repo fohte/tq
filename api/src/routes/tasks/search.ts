@@ -19,6 +19,7 @@ const mentionsQuerySchema = z.object({
 const pageSearchQuerySchema = z.object({
   q: z.string().trim().min(1),
   limit: z.coerce.number().int().min(1).max(50).optional(),
+  source: z.enum(['page', 'comment', 'task']).optional(),
 })
 
 export const tasksSearchApp = new Hono()
@@ -30,10 +31,11 @@ export const tasksSearchApp = new Hono()
     '/search/pages',
     zValidator('query', pageSearchQuerySchema),
     async (c) => {
-      const { q, limit } = c.req.valid('query')
+      const { q, limit, source } = c.req.valid('query')
       const results = await queryPageSearch({
         q,
         ...(limit === undefined ? {} : { limit }),
+        ...(source === undefined ? {} : { source }),
       })
 
       return c.json({ results }, 200)
