@@ -8,6 +8,8 @@ import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 type SearchResult = InferResponseType<typeof api.api.tasks.$get, 200>[number]
 
+type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
+
 type Suggestion = InferResponseType<
   (typeof api.api.tasks.search)['suggest']['$get'],
   200
@@ -24,6 +26,8 @@ export const searchKeys = {
   all: ['search'] as const,
   results: (q: string, context: SearchContext | undefined) =>
     [...searchKeys.all, 'results', q, context] as const,
+  number: (number: string | undefined) =>
+    [...searchKeys.all, 'number', number] as const,
   pages: (q: string) => [...searchKeys.all, 'pages', q] as const,
   suggestions: (prefix: string) =>
     [...searchKeys.all, 'suggestions', prefix] as const,
@@ -39,8 +43,12 @@ export function resolveSearchContext(
   return parseSearchQuery(query).context ?? defaultContext
 }
 
+function useDebouncedSearchQuery(query: string) {
+  return useDebounce(query, 200)
+}
+
 export function useSearchTasks(query: string, defaultContext?: SearchContext) {
-  const debouncedQuery = useDebounce(query, 200)
+  const debouncedQuery = useDebouncedSearchQuery(query)
   const context = resolveSearchContext(debouncedQuery, defaultContext)
 
   return useQuery({
@@ -63,6 +71,66 @@ export function useSearchTasks(query: string, defaultContext?: SearchContext) {
   })
 }
 
+export function extractTaskNumber(query: string): string | undefined {
+  return /^#?(\d+)$/.exec(query)?.[1]
+}
+
+export function taskDetailToSearchResult(task: TaskDetail): SearchResult {
+  return {
+    id: task.id,
+    number: task.number,
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    statusReason: task.statusReason,
+    context: task.context,
+    commitment: task.commitment,
+    labels: task.labels,
+    startDate: task.startDate,
+    dueDate: task.dueDate,
+    estimatedMinutes: task.estimatedMinutes,
+    remindAt: task.remindAt,
+    parentId: task.parentId,
+    parentNumber: task.parentNumber,
+    projectId: task.projectId,
+    recurrenceRuleId: task.recurrenceRuleId,
+    recurrenceRule: task.recurrenceRule,
+    templateId: task.templateId,
+    occurrenceDate: task.occurrenceDate,
+    githubLinks: task.githubLinks,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+    childCompletionCount: task.childCompletionCount,
+    duplicateOfNumber: task.duplicateOfNumber ?? null,
+    blockedByNumbers: task.blockedBy.map(({ number }) => number),
+  }
+}
+
+export function useSearchTaskByNumber(query: string) {
+  const debouncedQuery = useDebouncedSearchQuery(query)
+  const taskNumber = extractTaskNumber(debouncedQuery)
+
+  return useQuery({
+    queryKey: searchKeys.number(taskNumber),
+    queryFn: async () => {
+      if (taskNumber == null) return null
+
+      const res = await api.api.tasks[':id'].$get({
+        param: { id: taskNumber },
+      })
+      if (res.status === 404) return null
+
+      return taskDetailToSearchResult(await unwrapOrThrow(assertOk(res)).json())
+    },
+    enabled: taskNumber != null,
+    retry: false,
+    throwOnError: (error) => {
+      console.error('Failed to load task by number', error)
+      return false
+    },
+  })
+}
+
 export function useSearchPages(query: string) {
   const debouncedQuery = useDebounce(query, 200)
 
@@ -79,7 +147,6 @@ export function useSearchPages(query: string) {
     enabled: debouncedQuery.length > 0,
   })
 }
-
 /**
  * Extract the token currently being typed (the last whitespace-delimited
  * word) so it can be used as the suggest API's `prefix`. Returns '' once

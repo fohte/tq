@@ -57,6 +57,8 @@ function makeTask(overrides: Partial<MockTask> = {}): MockTask {
   }
 }
 
+const firstMockTask = makeTask()
+
 function makePageSearchResult(
   overrides: Partial<PageSearchResult> = {},
 ): PageSearchResult {
@@ -74,7 +76,7 @@ function makePageSearchResult(
 }
 
 const mockTasks = [
-  makeTask(),
+  firstMockTask,
   makeTask({
     id: '00000000-0000-0000-0000-000000000002',
     number: 2,
@@ -99,6 +101,7 @@ const mockSuggestions = [
 ]
 
 let mockSearchData: typeof mockTasks = []
+let mockNumberTaskData: MockTask | undefined
 let mockPageSearchData: PageSearchResult[] = []
 let mockSuggestionData: typeof mockSuggestions = []
 
@@ -108,6 +111,10 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
     ...actual,
     useSearchTasks: () => ({
       data: mockSearchData.length > 0 ? mockSearchData : undefined,
+      isFetching: false,
+    }),
+    useSearchTaskByNumber: () => ({
+      data: mockNumberTaskData,
       isFetching: false,
     }),
     useSearchPages: () => ({
@@ -193,6 +200,7 @@ function renderSearchModal(
 describe('SearchModal', () => {
   beforeEach(() => {
     mockSearchData = []
+    mockNumberTaskData = undefined
     mockPageSearchData = []
     mockSuggestionData = []
     mockNavigate.mockClear()
@@ -267,6 +275,64 @@ describe('SearchModal', () => {
 
     expect(screen.getByText('Implement task list UI')).toBeInTheDocument()
     expect(screen.getByText('Review pull request')).toBeInTheDocument()
+  })
+
+  it('opens an exact task number match before scoped search results', async () => {
+    mockNumberTaskData = personalTask
+    mockSearchData = mockTasks.slice(1, 2)
+    const onOpenChange = vi.fn()
+
+    const user = userEvent.setup()
+    renderSearchModal({ onOpenChange })
+
+    await user.type(screen.getByLabelText('Search tasks'), '#3')
+
+    const options = screen.getAllByRole('option')
+    const directIndex = options.findIndex((option) =>
+      option.contains(screen.getByText('Plan weekend trip')),
+    )
+    const searchIndex = options.findIndex((option) =>
+      option.contains(screen.getByText('Review pull request')),
+    )
+    await user.keyboard('{Enter}')
+
+    const getOutput = () => [
+      directIndex,
+      searchIndex,
+      options.map((option) => option.getAttribute('aria-selected')),
+      onOpenChange.mock.calls,
+      mockNavigate.mock.calls,
+    ]
+    expect(getOutput()).toEqual([
+      0,
+      1,
+      ['true', 'false'],
+      [[false]],
+      [
+        [
+          {
+            to: '/tasks/$taskId',
+            params: { taskId: personalTask.id },
+          },
+        ],
+      ],
+    ])
+  })
+
+  it('does not repeat the exact match in scoped search results', async () => {
+    mockNumberTaskData = firstMockTask
+    mockSearchData = [firstMockTask]
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    await user.type(screen.getByLabelText('Search tasks'), '#1')
+
+    expect(
+      screen
+        .getAllByText('Implement task list UI')
+        .map((element) => element.textContent),
+    ).toEqual(['Implement task list UI'])
   })
 
   it('shows page results with their owning task', async () => {

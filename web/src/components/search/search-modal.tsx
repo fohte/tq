@@ -26,6 +26,7 @@ import {
   resolveSearchContext,
   useSearchPages,
   useSearchSuggestions,
+  useSearchTaskByNumber,
   useSearchTasks,
 } from '#hooks/use-search'
 import { cn } from '#lib/utils'
@@ -59,6 +60,39 @@ interface IndexedResultGroup extends Omit<ResultGroup, 'items'> {
   items: { item: ListItem; globalIndex: number }[]
 }
 
+function renderTaskOption(
+  task: SearchResult,
+  onOpenChangeRef: { current: (open: boolean) => void },
+): ListItem['render'] {
+  return ({ isSelected, onMouseMove }) => (
+    <div
+      role="option"
+      aria-selected={isSelected}
+      data-selected={isSelected}
+      onMouseMove={onMouseMove}
+      className={cn(isSelected ? 'bg-accent' : 'hover:bg-accent/50')}
+    >
+      <TaskRowAppearance
+        task={task}
+        onClick={(e) => {
+          // Let the router's own modifier/middle-click handling
+          // open a new tab without closing this one's search.
+          if (
+            e.button !== 0 ||
+            e.metaKey ||
+            e.ctrlKey ||
+            e.shiftKey ||
+            e.altKey
+          ) {
+            return
+          }
+          onOpenChangeRef.current(false)
+        }}
+      />
+    </div>
+  )
+}
+
 export function SearchModal({
   open,
   onOpenChange,
@@ -90,9 +124,11 @@ export function SearchModal({
     query,
     defaultSearchContext,
   )
-
+  const { data: taskByNumber, isFetching: isFetchingTaskByNumber } =
+    useSearchTaskByNumber(query)
   const { data: pages, isFetching: isFetchingPages } = useSearchPages(query)
-  const isFetching = isFetchingTasks || isFetchingPages
+  const isFetching =
+    isFetchingTasks || isFetchingTaskByNumber || isFetchingPages
   const currentPrefix = extractCurrentPrefix(query)
   const { data: suggestions } = useSearchSuggestions(currentPrefix)
 
@@ -174,40 +210,19 @@ export function SearchModal({
             }
           })
         : []
+    const toTaskListItem = (task: SearchResult, keyPrefix = ''): ListItem => ({
+      key: `${keyPrefix}${task.id}`,
+      select: () => {
+        openTask(task)
+      },
+      render: renderTaskOption(task, onOpenChangeRef),
+    })
     const taskItems: ListItem[] =
-      tasks?.map((task) => ({
-        key: task.id,
-        select: () => {
-          openTask(task)
-        },
-        render: ({ isSelected, onMouseMove }) => (
-          <div
-            role="option"
-            aria-selected={isSelected}
-            data-selected={isSelected}
-            onMouseMove={onMouseMove}
-            className={cn(isSelected ? 'bg-accent' : 'hover:bg-accent/50')}
-          >
-            <TaskRowAppearance
-              task={task}
-              onClick={(e) => {
-                // Let the router's own modifier/middle-click handling
-                // open a new tab without closing this one's search.
-                if (
-                  e.button !== 0 ||
-                  e.metaKey ||
-                  e.ctrlKey ||
-                  e.shiftKey ||
-                  e.altKey
-                ) {
-                  return
-                }
-                onOpenChangeRef.current(false)
-              }}
-            />
-          </div>
-        ),
-      })) ?? []
+      tasks
+        ?.filter((task) => task.id !== taskByNumber?.id)
+        .map((task) => toTaskListItem(task)) ?? []
+    const taskNumberItems: ListItem[] =
+      taskByNumber == null ? [] : [toTaskListItem(taskByNumber, 'number:')]
     const pageItems: ListItem[] =
       pages?.flatMap((page: PageSearchResult): ListItem[] => {
         if (
@@ -270,6 +285,12 @@ export function SearchModal({
 
     return [
       {
+        id: 'task-number',
+        title: 'Task number',
+        items: taskNumberItems,
+        isVisible: (_query, itemCount) => itemCount > 0,
+      },
+      {
         id: 'suggestions',
         title: 'Suggestions',
         items: suggestionItems,
@@ -291,6 +312,7 @@ export function SearchModal({
   }, [
     suggestions,
     tasks,
+    taskByNumber,
     pages,
     currentPrefix,
     applySuggestion,
