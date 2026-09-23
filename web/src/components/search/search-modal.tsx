@@ -1,4 +1,4 @@
-import { Link, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import { parseSearchQuery } from 'api/search-query-parser'
 import { Loader2 } from 'lucide-react'
 import {
@@ -13,11 +13,12 @@ import { createPortal } from 'react-dom'
 
 import {
   createOptionItem,
+  createPageItems,
   createProjectItems,
   createViewItems,
   type ListItem,
+  renderTaskOption,
 } from '#components/search/search-modal-result-items'
-import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useCurrentContext } from '#hooks/use-current-context'
@@ -40,7 +41,6 @@ import {
   useSearchTaskByNumber,
   useSearchTasks,
 } from '#hooks/use-search'
-import { cn } from '#lib/utils'
 
 interface SearchModalProps {
   open: boolean
@@ -57,39 +57,6 @@ interface ResultGroup {
 
 interface IndexedResultGroup extends Omit<ResultGroup, 'items'> {
   items: { item: ListItem; globalIndex: number }[]
-}
-
-function renderTaskOption(
-  task: SearchResult,
-  onOpenChangeRef: { current: (open: boolean) => void },
-): ListItem['render'] {
-  return ({ isSelected, onMouseMove }) => (
-    <div
-      role="option"
-      aria-selected={isSelected}
-      data-selected={isSelected}
-      onMouseMove={onMouseMove}
-      className={cn(isSelected ? 'bg-accent' : 'hover:bg-accent/50')}
-    >
-      <TaskRowAppearance
-        task={task}
-        onClick={(e) => {
-          // Let the router's own modifier/middle-click handling
-          // open a new tab without closing this one's search.
-          if (
-            e.button !== 0 ||
-            e.metaKey ||
-            e.ctrlKey ||
-            e.shiftKey ||
-            e.altKey
-          ) {
-            return
-          }
-          onOpenChangeRef.current(false)
-        }}
-      />
-    </div>
-  )
 }
 
 export function SearchModal({
@@ -242,65 +209,7 @@ export function SearchModal({
         .map((task) => toTaskListItem(task)) ?? []
     const taskNumberItems: ListItem[] =
       taskByNumber == null ? [] : [toTaskListItem(taskByNumber, 'number:')]
-    const pageItems: ListItem[] =
-      pages?.flatMap((page: PageSearchResult): ListItem[] => {
-        if (
-          page.source !== 'page' ||
-          page.pageId == null ||
-          page.pageTitle == null
-        ) {
-          return []
-        }
-        const pageId = page.pageId
-        const select = () => {
-          openPage(page)
-        }
-        return [
-          {
-            key: pageId,
-            select,
-            render: ({ isSelected, onMouseMove }) => (
-              <Link
-                to="/tasks/$taskId/pages/$pageId"
-                params={{
-                  taskId: String(page.taskNumber),
-                  pageId,
-                }}
-                role="option"
-                aria-selected={isSelected}
-                data-selected={isSelected}
-                onMouseMove={onMouseMove}
-                onClick={(e) => {
-                  if (
-                    e.button !== 0 ||
-                    e.metaKey ||
-                    e.ctrlKey ||
-                    e.shiftKey ||
-                    e.altKey
-                  ) {
-                    return
-                  }
-                  onOpenChangeRef.current(false)
-                }}
-                className={cn(
-                  'block px-4 py-2',
-                  isSelected ? 'bg-accent' : 'hover:bg-accent/50',
-                )}
-              >
-                <span className="block truncate font-mono text-sm font-medium text-foreground">
-                  {page.pageTitle}
-                </span>
-                <div className="truncate text-2xs text-muted-foreground">
-                  #{page.taskNumber} {page.taskTitle}
-                </div>
-                <p className="line-clamp-2 text-xs text-muted-foreground">
-                  {page.snippet}
-                </p>
-              </Link>
-            ),
-          },
-        ]
-      }) ?? []
+    const pageItems = createPageItems(pages, openPage, onOpenChangeRef)
     const projectItems = hasAuxiliarySearch
       ? createProjectItems(projects, openProject)
       : []
