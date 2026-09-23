@@ -1,21 +1,51 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  makeTask,
+  makeTaskDetail,
+} from '#components/task/task-row-test-fixtures'
+import {
   applySuggestionToQuery,
   extractCurrentPrefix,
   extractTaskNumber,
   resolveSearchContext,
+  taskDetailToSearchResult,
 } from '#hooks/use-search'
 
 describe('extractTaskNumber', () => {
-  it('accepts bare and hash-prefixed numbers only', () => {
-    expect(['5', '#5', '#task', '5 task', ''].map(extractTaskNumber)).toEqual([
-      '5',
-      '5',
-      undefined,
-      undefined,
-      undefined,
-    ])
+  it('accepts a bare number', () => {
+    expect(extractTaskNumber('5')).toBe('5')
+  })
+
+  it('accepts a hash-prefixed number', () => {
+    expect(extractTaskNumber('#5')).toBe('5')
+  })
+
+  it('rejects a non-numeric hash token', () => {
+    expect(extractTaskNumber('#task')).toBeUndefined()
+  })
+
+  it('rejects a number followed by other text', () => {
+    expect(extractTaskNumber('5 task')).toBeUndefined()
+  })
+
+  it('rejects an empty query', () => {
+    expect(extractTaskNumber('')).toBeUndefined()
+  })
+})
+
+describe('taskDetailToSearchResult', () => {
+  it('maps detail relation fields to the list result shape', () => {
+    const task = makeTaskDetail({
+      duplicateOfNumber: null,
+      blockedBy: [makeTask({ number: 12 }), makeTask({ number: 18 })],
+    })
+
+    expect(taskDetailToSearchResult(task)).toEqual({
+      ...task,
+      duplicateOfNumber: null,
+      blockedByNumbers: [12, 18],
+    })
   })
 })
 

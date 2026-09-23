@@ -66,7 +66,7 @@ export function extractTaskNumber(query: string): string | undefined {
   return /^#?(\d+)$/.exec(query)?.[1]
 }
 
-function taskDetailToSearchResult(task: TaskDetail): SearchResult {
+export function taskDetailToSearchResult(task: TaskDetail): SearchResult {
   return {
     ...task,
     duplicateOfNumber: task.duplicateOfNumber ?? null,
@@ -86,11 +86,16 @@ export function useSearchTaskByNumber(query: string) {
       const res = await api.api.tasks[':id'].$get({
         param: { id: taskNumber },
       })
-      if (res.status === 404) return null
+      if (!res.ok) return null
 
-      return taskDetailToSearchResult(await unwrapOrThrow(assertOk(res)).json())
+      return taskDetailToSearchResult(await res.json())
     },
     enabled: taskNumber != null,
+    retry: false,
+    throwOnError: (error) => {
+      console.error('Failed to load task by number', error)
+      return false
+    },
   })
 }
 

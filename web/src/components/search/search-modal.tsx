@@ -55,6 +55,39 @@ interface IndexedResultGroup extends Omit<ResultGroup, 'items'> {
   items: { item: ListItem; globalIndex: number }[]
 }
 
+function renderTaskOption(
+  task: SearchResult,
+  onOpenChangeRef: { current: (open: boolean) => void },
+): ListItem['render'] {
+  return ({ isSelected, onMouseMove }) => (
+    <div
+      role="option"
+      aria-selected={isSelected}
+      data-selected={isSelected}
+      onMouseMove={onMouseMove}
+      className={cn(isSelected ? 'bg-accent' : 'hover:bg-accent/50')}
+    >
+      <TaskRowAppearance
+        task={task}
+        onClick={(e) => {
+          // Let the router's own modifier/middle-click handling
+          // open a new tab without closing this one's search.
+          if (
+            e.button !== 0 ||
+            e.metaKey ||
+            e.ctrlKey ||
+            e.shiftKey ||
+            e.altKey
+          ) {
+            return
+          }
+          onOpenChangeRef.current(false)
+        }}
+      />
+    </div>
+  )
+}
+
 export function SearchModal({
   open,
   onOpenChange,
@@ -165,33 +198,7 @@ export function SearchModal({
         select: () => {
           openTask(task)
         },
-        render: ({ isSelected, onMouseMove }) => (
-          <div
-            role="option"
-            aria-selected={isSelected}
-            data-selected={isSelected}
-            onMouseMove={onMouseMove}
-            className={cn(isSelected ? 'bg-accent' : 'hover:bg-accent/50')}
-          >
-            <TaskRowAppearance
-              task={task}
-              onClick={(e) => {
-                // Let the router's own modifier/middle-click handling
-                // open a new tab without closing this one's search.
-                if (
-                  e.button !== 0 ||
-                  e.metaKey ||
-                  e.ctrlKey ||
-                  e.shiftKey ||
-                  e.altKey
-                ) {
-                  return
-                }
-                onOpenChangeRef.current(false)
-              }}
-            />
-          </div>
-        ),
+        render: renderTaskOption(task, onOpenChangeRef),
       })) ?? []
     const taskNumberItems: ListItem[] =
       taskByNumber == null
@@ -202,33 +209,7 @@ export function SearchModal({
               select: () => {
                 openTask(taskByNumber)
               },
-              render: ({ isSelected, onMouseMove }) => (
-                <div
-                  role="option"
-                  aria-selected={isSelected}
-                  data-selected={isSelected}
-                  onMouseMove={onMouseMove}
-                  className={cn(
-                    isSelected ? 'bg-accent' : 'hover:bg-accent/50',
-                  )}
-                >
-                  <TaskRowAppearance
-                    task={taskByNumber}
-                    onClick={(e) => {
-                      if (
-                        e.button !== 0 ||
-                        e.metaKey ||
-                        e.ctrlKey ||
-                        e.shiftKey ||
-                        e.altKey
-                      ) {
-                        return
-                      }
-                      onOpenChangeRef.current(false)
-                    }}
-                  />
-                </div>
-              ),
+              render: renderTaskOption(taskByNumber, onOpenChangeRef),
             },
           ]
 
