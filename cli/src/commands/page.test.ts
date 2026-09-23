@@ -9,9 +9,22 @@ import {
   apiUrl,
   captureFetch,
   fakeStdin,
+  request,
   spyStderr,
   spyStdout,
 } from '#commands/test-support'
+
+function makePageSearchOutput(
+  exitCode: number,
+  calls: ReturnType<typeof captureFetch>['calls'],
+  output: unknown,
+) {
+  return {
+    exitCode,
+    request: request(calls[0]),
+    output,
+  }
+}
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -52,6 +65,81 @@ describe('page list', () => {
 
     expect(exitCode).toBe(0)
     expect(write.mock.calls).toEqual([[`${JSON.stringify(pages, null, 2)}\n`]])
+  })
+})
+
+describe('page search', () => {
+  it('searches page and comment content and prints the results', async () => {
+    const response = {
+      results: [
+        {
+          source: 'page',
+          taskNumber: 708,
+          taskTitle: 'Archive migration',
+          pageId: 'page-omega',
+          pageTitle: 'Migration log',
+          snippet: '...orbit marker appears here...',
+          matchCount: 1,
+          updatedAt: '2026-09-23T00:00:00.000Z',
+        },
+        {
+          source: 'comment',
+          taskNumber: 709,
+          taskTitle: 'Review checklist',
+          pageId: null,
+          pageTitle: null,
+          snippet: '...orbit marker in a comment...',
+          matchCount: 1,
+          updatedAt: '2026-09-22T00:00:00.000Z',
+        },
+      ],
+    }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(response), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'page', 'search', 'orbit marker', '--limit', '5'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(makePageSearchOutput(exitCode, calls, write.mock.calls)).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'GET',
+        pathname: '/api/tasks/search/pages',
+        query: { q: 'orbit marker', limit: '5' },
+        body: undefined,
+      },
+      output: [[`${JSON.stringify(response, null, 2)}\n`]],
+    })
+  })
+
+  it('omits the limit query when no limit is given', async () => {
+    const response = { results: [] }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(response), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'page', 'search', 'orbit marker'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(makePageSearchOutput(exitCode, calls, write.mock.calls)).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'GET',
+        pathname: '/api/tasks/search/pages',
+        query: { q: 'orbit marker' },
+        body: undefined,
+      },
+      output: [[`${JSON.stringify(response, null, 2)}\n`]],
+    })
   })
 })
 
