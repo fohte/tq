@@ -34,7 +34,13 @@ export const taskPages = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [index('idx_task_pages_task_id').on(table.taskId)],
+  (table) => [
+    index('idx_task_pages_task_id').on(table.taskId),
+    index('idx_task_pages_content_trgm').using(
+      'gin',
+      table.content.op('gin_trgm_ops'),
+    ),
+  ],
 )
 
 export const taskComments = pgTable(
@@ -57,6 +63,10 @@ export const taskComments = pgTable(
   (table) => [
     index('idx_task_comments_task_id').on(table.taskId),
     index('idx_task_comments_created_at').on(table.taskId, table.createdAt),
+    index('idx_task_comments_content_trgm').using(
+      'gin',
+      table.content.op('gin_trgm_ops'),
+    ),
   ],
 )
 

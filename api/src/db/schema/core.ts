@@ -144,6 +144,11 @@ export const tasks = pgTable(
   (table) => [
     index('idx_tasks_parent_id').on(table.parentId),
     index('idx_tasks_status').on(table.status),
+    index('idx_tasks_title_trgm').using('gin', table.title.op('gin_trgm_ops')),
+    index('idx_tasks_description_trgm').using(
+      'gin',
+      table.description.op('gin_trgm_ops'),
+    ),
     index('idx_tasks_start_date').on(table.startDate),
     index('idx_tasks_due_date').on(table.dueDate),
     index('idx_tasks_project_id').on(table.projectId),
