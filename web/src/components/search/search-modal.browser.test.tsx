@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -89,6 +89,8 @@ let mockSearchData: typeof mockTasks = []
 let mockSuggestionData: typeof mockSuggestions = []
 let mockProjectData: Project[] = []
 let mockSavedViewData: SavedView[] = []
+let mockProjectCalls: Array<{ filter: unknown; options: unknown }> = []
+let mockSavedViewCalls: Array<{ filter: unknown; options: unknown }> = []
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-search')>()
@@ -108,7 +110,10 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-projects')>()
   return {
     ...actual,
-    useProjects: () => ({ data: mockProjectData }),
+    useProjects: (filter: unknown, options: unknown) => {
+      mockProjectCalls.push({ filter, options })
+      return { data: mockProjectData }
+    },
   }
 })
 
@@ -116,7 +121,10 @@ vi.mock('#hooks/use-saved-views', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-saved-views')>()
   return {
     ...actual,
-    useSavedViews: () => ({ data: mockSavedViewData }),
+    useSavedViews: (filter: unknown, options: unknown) => {
+      mockSavedViewCalls.push({ filter, options })
+      return { data: mockSavedViewData }
+    },
   }
 })
 
@@ -175,6 +183,8 @@ describe('SearchModal', () => {
     mockSuggestionData = []
     mockProjectData = []
     mockSavedViewData = []
+    mockProjectCalls = []
+    mockSavedViewCalls = []
     mockNavigate.mockClear()
   })
 
@@ -287,6 +297,51 @@ describe('SearchModal', () => {
       groupTitle: 'Views',
       options: ['Active tasks'],
     })
+  })
+
+  it('passes parsed free text and context to project and view searches', async () => {
+    resetSessionOpenSettings({ localContext: 'personal' })
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    await user.type(
+      screen.getByLabelText('Search tasks'),
+      'context:work active',
+    )
+
+    await waitFor(() => {
+      const getOutput = () => ({
+        project: mockProjectCalls[mockProjectCalls.length - 1],
+        view: mockSavedViewCalls[mockSavedViewCalls.length - 1],
+      })
+      expect(getOutput()).toEqual({
+        project: {
+          filter: { q: 'active', context: 'work' },
+          options: { enabled: true },
+        },
+        view: {
+          filter: { q: 'active', context: 'work' },
+          options: { enabled: true },
+        },
+      })
+    })
+  })
+
+  it('hides project and view results for syntax-only queries', async () => {
+    mockProjectData = [makeProject({ title: 'Project alpha' })]
+    mockSavedViewData = [makeSavedView({ name: 'Active tasks' })]
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    await user.type(screen.getByLabelText('Search tasks'), 'context:work')
+
+    const getOutput = () => ({
+      project: screen.queryByText('Project alpha')?.textContent ?? null,
+      view: screen.queryByText('Active tasks')?.textContent ?? null,
+    })
+    expect(getOutput()).toEqual({ project: null, view: null })
   })
 
   it('displays context badge for personal tasks', async () => {

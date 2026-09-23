@@ -21,14 +21,16 @@ interface ListItemRenderProps {
   onMouseMove: (event: MouseEvent<HTMLElement>) => void
 }
 
-function createOptionItem(
+export function createOptionItem(
   key: string,
   select: () => void,
   content: ReactNode,
+  options: { selectOnTab?: () => void } = {},
 ): ListItem {
   return {
     key,
     select,
+    ...options,
     render: ({ isSelected, onMouseMove }) => (
       <button
         type="button"

@@ -12,6 +12,7 @@ import {
 import { createPortal } from 'react-dom'
 
 import {
+  createOptionItem,
   createProjectItems,
   createViewItems,
   type ListItem,
@@ -88,6 +89,7 @@ export function SearchModal({
           ...(debouncedContext == null ? {} : { context: debouncedContext }),
         }
       : undefined
+  const hasAuxiliarySearch = freeTextQuery.length > 0
 
   const { data: tasks, isFetching } = useSearchTasks(
     query,
@@ -157,32 +159,19 @@ export function SearchModal({
               applySuggestion(suggestion)
             }
 
-            return {
-              key: suggestion.value,
+            return createOptionItem(
+              suggestion.value,
               select,
-              selectOnTab: select,
-              render: ({ isSelected, onMouseMove }) => (
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={isSelected}
-                  data-selected={isSelected}
-                  onClick={select}
-                  onMouseMove={onMouseMove}
-                  className={cn(
-                    'flex w-full items-center gap-2 px-4 py-2 text-left',
-                    isSelected ? 'bg-accent' : 'hover:bg-accent/50',
-                  )}
-                >
-                  <span className="font-mono text-sm text-foreground">
-                    {suggestion.value}
-                  </span>
-                  <span className="text-2xs text-muted-foreground">
-                    {suggestion.display}
-                  </span>
-                </button>
-              ),
-            }
+              <>
+                <span className="font-mono text-sm text-foreground">
+                  {suggestion.value}
+                </span>
+                <span className="text-2xs text-muted-foreground">
+                  {suggestion.display}
+                </span>
+              </>,
+              { selectOnTab: select },
+            )
           })
         : []
     const taskItems: ListItem[] =
@@ -219,8 +208,12 @@ export function SearchModal({
           </div>
         ),
       })) ?? []
-    const projectItems = createProjectItems(projects, openProject)
-    const viewItems = createViewItems(savedViews, openView)
+    const projectItems = hasAuxiliarySearch
+      ? createProjectItems(projects, openProject)
+      : []
+    const viewItems = hasAuxiliarySearch
+      ? createViewItems(savedViews, openView)
+      : []
 
     return [
       {
@@ -258,6 +251,7 @@ export function SearchModal({
     openTask,
     openProject,
     openView,
+    hasAuxiliarySearch,
   ])
 
   const { items, indexedGroups } = useMemo((): {

@@ -41,6 +41,7 @@ export function useSavedViews(
       return unwrapOrThrow(assertOk(res)).json()
     },
     enabled: options?.enabled ?? true,
+    placeholderData: (previous) => previous,
   })
 }
 
