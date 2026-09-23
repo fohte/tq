@@ -17,7 +17,7 @@
     "test:unit": "vitest run"
   },
   "devDependencies": {
-    "electron": "44.3.0",
+    "electron": "44.4.1",
     "electron-builder": "26.15.3",
     "neverthrow": "8.2.0",
     "tsup": "8.5.1"

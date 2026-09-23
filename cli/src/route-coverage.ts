@@ -50,6 +50,7 @@ export const COVERED_ROUTES = [
 
   // task
   'GET /api/tasks',
+  'GET /api/tasks/search/pages',
   'POST /api/tasks',
   'GET /api/tasks/:id',
   'PATCH /api/tasks/:id',
@@ -192,8 +193,6 @@ export const EXCLUDED_ROUTES = {
   // `GET /api/projects/:id` already covers a CLI's project-summary use case.
   'GET /api/projects/:id/task-ids':
     'backs the web project detail page, not a CLI concern',
-
-  'GET /api/tasks/search/pages': 'task content search is not a tq CLI command',
 } as const satisfies Partial<Record<AllRoutes, string>>
 
 type ExcludedRoutes = keyof typeof EXCLUDED_ROUTES

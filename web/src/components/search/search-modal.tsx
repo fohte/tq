@@ -1,4 +1,4 @@
-import { useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { parseSearchQuery } from 'api/search-query-parser'
 import { Loader2 } from 'lucide-react'
 import {
@@ -26,12 +26,18 @@ import type { Project } from '#hooks/use-projects'
 import { useProjects } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
 import { useSavedViews } from '#hooks/use-saved-views'
-import type { SearchResult, Suggestion } from '#hooks/use-search'
+import type {
+  PageSearchResult,
+  SearchResult,
+  Suggestion,
+} from '#hooks/use-search'
 import {
   applySuggestionToQuery,
   extractCurrentPrefix,
   resolveSearchContext,
+  useSearchPages,
   useSearchSuggestions,
+  useSearchTaskByNumber,
   useSearchTasks,
 } from '#hooks/use-search'
 import { cn } from '#lib/utils'
@@ -51,6 +57,39 @@ interface ResultGroup {
 
 interface IndexedResultGroup extends Omit<ResultGroup, 'items'> {
   items: { item: ListItem; globalIndex: number }[]
+}
+
+function renderTaskOption(
+  task: SearchResult,
+  onOpenChangeRef: { current: (open: boolean) => void },
+): ListItem['render'] {
+  return ({ isSelected, onMouseMove }) => (
+    <div
+      role="option"
+      aria-selected={isSelected}
+      data-selected={isSelected}
+      onMouseMove={onMouseMove}
+      className={cn(isSelected ? 'bg-accent' : 'hover:bg-accent/50')}
+    >
+      <TaskRowAppearance
+        task={task}
+        onClick={(e) => {
+          // Let the router's own modifier/middle-click handling
+          // open a new tab without closing this one's search.
+          if (
+            e.button !== 0 ||
+            e.metaKey ||
+            e.ctrlKey ||
+            e.shiftKey ||
+            e.altKey
+          ) {
+            return
+          }
+          onOpenChangeRef.current(false)
+        }}
+      />
+    </div>
+  )
 }
 
 export function SearchModal({
@@ -91,7 +130,7 @@ export function SearchModal({
       : undefined
   const hasAuxiliarySearch = freeTextQuery.length > 0
 
-  const { data: tasks, isFetching } = useSearchTasks(
+  const { data: tasks, isFetching: isFetchingTasks } = useSearchTasks(
     query,
     defaultSearchContext,
   )
@@ -102,6 +141,11 @@ export function SearchModal({
     enabled: searchFilter != null,
   })
 
+  const { data: taskByNumber, isFetching: isFetchingTaskByNumber } =
+    useSearchTaskByNumber(query)
+  const { data: pages, isFetching: isFetchingPages } = useSearchPages(query)
+  const isFetching =
+    isFetchingTasks || isFetchingTaskByNumber || isFetchingPages
   const currentPrefix = extractCurrentPrefix(query)
   const { data: suggestions } = useSearchSuggestions(currentPrefix)
 
@@ -151,6 +195,17 @@ export function SearchModal({
     })
   }, [])
 
+  const openPage = useCallback((page: PageSearchResult) => {
+    if (page.pageId == null) return
+    onOpenChangeRef.current(false)
+    void navigateRef.current({
+      to: '/tasks/$taskId/pages/$pageId',
+      params: {
+        taskId: String(page.taskNumber),
+        pageId: page.pageId,
+      },
+    })
+  }, [])
   const resultGroups = useMemo((): ResultGroup[] => {
     const suggestionItems: ListItem[] =
       suggestions && currentPrefix.length > 0
@@ -174,40 +229,78 @@ export function SearchModal({
             )
           })
         : []
+    const toTaskListItem = (task: SearchResult, keyPrefix = ''): ListItem => ({
+      key: `${keyPrefix}${task.id}`,
+      select: () => {
+        openTask(task)
+      },
+      render: renderTaskOption(task, onOpenChangeRef),
+    })
     const taskItems: ListItem[] =
-      tasks?.map((task) => ({
-        key: task.id,
-        select: () => {
-          openTask(task)
-        },
-        render: ({ isSelected, onMouseMove }) => (
-          <div
-            role="option"
-            aria-selected={isSelected}
-            data-selected={isSelected}
-            onMouseMove={onMouseMove}
-            className={cn(isSelected ? 'bg-accent' : 'hover:bg-accent/50')}
-          >
-            <TaskRowAppearance
-              task={task}
-              onClick={(e) => {
-                // Let the router's own modifier/middle-click handling
-                // open a new tab without closing this one's search.
-                if (
-                  e.button !== 0 ||
-                  e.metaKey ||
-                  e.ctrlKey ||
-                  e.shiftKey ||
-                  e.altKey
-                ) {
-                  return
-                }
-                onOpenChangeRef.current(false)
-              }}
-            />
-          </div>
-        ),
-      })) ?? []
+      tasks
+        ?.filter((task) => task.id !== taskByNumber?.id)
+        .map((task) => toTaskListItem(task)) ?? []
+    const taskNumberItems: ListItem[] =
+      taskByNumber == null ? [] : [toTaskListItem(taskByNumber, 'number:')]
+    const pageItems: ListItem[] =
+      pages?.flatMap((page: PageSearchResult): ListItem[] => {
+        if (
+          page.source !== 'page' ||
+          page.pageId == null ||
+          page.pageTitle == null
+        ) {
+          return []
+        }
+        const pageId = page.pageId
+        const select = () => {
+          openPage(page)
+        }
+        return [
+          {
+            key: pageId,
+            select,
+            render: ({ isSelected, onMouseMove }) => (
+              <Link
+                to="/tasks/$taskId/pages/$pageId"
+                params={{
+                  taskId: String(page.taskNumber),
+                  pageId,
+                }}
+                role="option"
+                aria-selected={isSelected}
+                data-selected={isSelected}
+                onMouseMove={onMouseMove}
+                onClick={(e) => {
+                  if (
+                    e.button !== 0 ||
+                    e.metaKey ||
+                    e.ctrlKey ||
+                    e.shiftKey ||
+                    e.altKey
+                  ) {
+                    return
+                  }
+                  onOpenChangeRef.current(false)
+                }}
+                className={cn(
+                  'block px-4 py-2',
+                  isSelected ? 'bg-accent' : 'hover:bg-accent/50',
+                )}
+              >
+                <span className="block truncate font-mono text-sm font-medium text-foreground">
+                  {page.pageTitle}
+                </span>
+                <div className="truncate text-2xs text-muted-foreground">
+                  #{page.taskNumber} {page.taskTitle}
+                </div>
+                <p className="line-clamp-2 text-xs text-muted-foreground">
+                  {page.snippet}
+                </p>
+              </Link>
+            ),
+          },
+        ]
+      }) ?? []
     const projectItems = hasAuxiliarySearch
       ? createProjectItems(projects, openProject)
       : []
@@ -216,6 +309,12 @@ export function SearchModal({
       : []
 
     return [
+      {
+        id: 'task-number',
+        title: 'Task number',
+        items: taskNumberItems,
+        isVisible: (_query, itemCount) => itemCount > 0,
+      },
       {
         id: 'suggestions',
         title: 'Suggestions',
@@ -240,10 +339,18 @@ export function SearchModal({
         items: viewItems,
         isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
       },
+      {
+        id: 'pages',
+        title: 'Pages',
+        items: pageItems,
+        isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
+      },
     ]
   }, [
     suggestions,
     tasks,
+    taskByNumber,
+    pages,
     projects,
     savedViews,
     currentPrefix,
@@ -251,6 +358,7 @@ export function SearchModal({
     openTask,
     openProject,
     openView,
+    openPage,
     hasAuxiliarySearch,
   ])
 

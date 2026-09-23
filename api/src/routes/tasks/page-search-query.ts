@@ -20,6 +20,8 @@ export interface PageSearchResult {
   updatedAt: Date
 }
 
+type PageSearchSource = PageSearchResult['source']
+
 function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, '\\$&')
 }
@@ -136,6 +138,7 @@ function compareResults(left: PageSearchResult, right: PageSearchResult) {
 export async function queryPageSearch(query: {
   q: string
   limit?: number
+  source?: PageSearchSource
 }): Promise<PageSearchResult[]> {
   const freeText = parseSearchQuery(query.q).freeText
   const words = freeText
@@ -147,9 +150,15 @@ export async function queryPageSearch(query: {
 
   const limit = query.limit ?? DEFAULT_LIMIT
   const [pageResults, commentResults, taskResults] = await Promise.all([
-    queryPageResults(words, limit),
-    queryCommentResults(words, limit),
-    queryTaskResults(words, limit),
+    query.source === undefined || query.source === 'page'
+      ? queryPageResults(words, limit)
+      : Promise.resolve([]),
+    query.source === undefined || query.source === 'comment'
+      ? queryCommentResults(words, limit)
+      : Promise.resolve([]),
+    query.source === undefined || query.source === 'task'
+      ? queryTaskResults(words, limit)
+      : Promise.resolve([]),
   ])
 
   return [...pageResults, ...commentResults, ...taskResults]

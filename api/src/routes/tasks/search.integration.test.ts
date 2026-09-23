@@ -219,6 +219,43 @@ describe('tasks search API', () => {
       })
     })
 
+    it('filters results by source when requested', async () => {
+      const task = await createTask('Notebook task', {
+        description: 'page-only content',
+      })
+      const page = await createPage(
+        task.id,
+        'Notebook page',
+        'page-only content',
+      )
+      await createComment(task.id, 'page-only content')
+
+      const res = await app.request(
+        `/api/tasks/search/pages?q=${encodeURIComponent('page-only content')}&source=page`,
+      )
+      const body = await jsonBody<{ results: PageSearchResult[] }>(res)
+
+      const getOutput = () => ({
+        status: res.status,
+        results: body.results.map(normalizePageSearchResult),
+      })
+      expect(getOutput()).toEqual({
+        status: 200,
+        results: [
+          {
+            source: 'page',
+            taskNumber: task.number,
+            taskTitle: 'Notebook task',
+            pageId: page.id,
+            pageTitle: 'Notebook page',
+            snippet: 'page-only content',
+            matchCount: 2,
+            updatedAt: 'DATE',
+          },
+        ],
+      })
+    })
+
     it('requires every search word to match within one source', async () => {
       const task = await createTask('Unrelated task')
       await createPage(task.id, 'Beacon notes', 'beacon appears here')

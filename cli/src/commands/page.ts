@@ -23,6 +23,9 @@ type CreatePageJson = InferRequestType<
 type UpdatePageJson = InferRequestType<
   Client['api']['tasks'][':taskId']['pages'][':pageId']['$patch']
 >['json']
+type SearchPagesQuery = InferRequestType<
+  Client['api']['tasks']['search']['pages']['$get']
+>['query']
 
 interface CreateOptions extends Record<string, unknown> {
   file?: string
@@ -38,6 +41,29 @@ export function registerPageCommands(
   stdin: ReadableStdin,
 ): void {
   const page = program.command('page').description('Manage task pages')
+
+  page
+    .command('search <query>')
+    .description('Search task, page, and comment content')
+    .option('--limit <number>', 'Maximum number of results')
+    .action(
+      async (query: string, options: { limit?: string }, command: Command) => {
+        const client = buildClient(command, fetchImpl).match(
+          (value) => value,
+          (error) => fail(command, error),
+        )
+        const searchQuery: SearchPagesQuery = {
+          q: query,
+          ...(options.limit !== undefined ? { limit: options.limit } : {}),
+        }
+        const res = await client.api.tasks.search.pages.$get({
+          query: searchQuery,
+        })
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 200 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
+        if (!res.ok) return fail(command, await toApiError(res))
+        printJson(await res.json())
+      },
+    )
 
   page
     .command('list <taskId>')

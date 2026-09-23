@@ -1,10 +1,76 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  makeTask,
+  makeTaskDetail,
+} from '#components/task/task-row-test-fixtures'
+import {
   applySuggestionToQuery,
   extractCurrentPrefix,
+  extractTaskNumber,
   resolveSearchContext,
+  taskDetailToSearchResult,
 } from '#hooks/use-search'
+
+describe('extractTaskNumber', () => {
+  it('accepts a bare number', () => {
+    expect(extractTaskNumber('5')).toBe('5')
+  })
+
+  it('accepts a hash-prefixed number', () => {
+    expect(extractTaskNumber('#5')).toBe('5')
+  })
+
+  it('rejects a non-numeric hash token', () => {
+    expect(extractTaskNumber('#task')).toBeUndefined()
+  })
+
+  it('rejects a number followed by other text', () => {
+    expect(extractTaskNumber('5 task')).toBeUndefined()
+  })
+
+  it('rejects an empty query', () => {
+    expect(extractTaskNumber('')).toBeUndefined()
+  })
+})
+
+describe('taskDetailToSearchResult', () => {
+  it('maps detail relation fields to the list result shape', () => {
+    const task = makeTaskDetail({
+      duplicateOfNumber: null,
+      blockedBy: [makeTask({ number: 12 }), makeTask({ number: 18 })],
+    })
+
+    expect(taskDetailToSearchResult(task)).toEqual({
+      id: task.id,
+      number: task.number,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      statusReason: task.statusReason,
+      context: task.context,
+      commitment: task.commitment,
+      labels: task.labels,
+      startDate: task.startDate,
+      dueDate: task.dueDate,
+      estimatedMinutes: task.estimatedMinutes,
+      remindAt: task.remindAt,
+      parentId: task.parentId,
+      parentNumber: task.parentNumber,
+      projectId: task.projectId,
+      recurrenceRuleId: task.recurrenceRuleId,
+      recurrenceRule: task.recurrenceRule,
+      templateId: task.templateId,
+      occurrenceDate: task.occurrenceDate,
+      githubLinks: task.githubLinks,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt,
+      childCompletionCount: task.childCompletionCount,
+      duplicateOfNumber: null,
+      blockedByNumbers: [12, 18],
+    })
+  })
+})
 
 describe('resolveSearchContext', () => {
   it('uses the default context when the query has no context token', () => {
