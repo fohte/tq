@@ -88,7 +88,7 @@
     "@vitest/browser": "4.1.11",
     "@vitest/browser-playwright": "4.1.11",
     "msw": "2.15.0",
-    "msw-storybook-addon": "3.0.0",
+    "msw-storybook-addon": "3.0.3",
     "playwright": "1.63.0",
     "reg-publish-s3-plugin": "0.14.4",
     "reg-simple-keygen-plugin": "0.14.2",
