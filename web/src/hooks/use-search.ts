@@ -67,10 +67,29 @@ export function extractTaskNumber(query: string): string | undefined {
 }
 
 export function taskDetailToSearchResult(task: TaskDetail): SearchResult {
+  const {
+    titleAuthor,
+    descriptionAuthor,
+    duplicateOfTask,
+    pages,
+    timeBlocks,
+    links,
+    blockedBy,
+    blocking,
+    ...listFields
+  } = task
+  void titleAuthor
+  void descriptionAuthor
+  void duplicateOfTask
+  void pages
+  void timeBlocks
+  void links
+  void blocking
+
   return {
-    ...task,
+    ...listFields,
     duplicateOfNumber: task.duplicateOfNumber ?? null,
-    blockedByNumbers: task.blockedBy.map(({ number }) => number),
+    blockedByNumbers: blockedBy.map(({ number }) => number),
   }
 }
 
@@ -86,9 +105,9 @@ export function useSearchTaskByNumber(query: string) {
       const res = await api.api.tasks[':id'].$get({
         param: { id: taskNumber },
       })
-      if (!res.ok) return null
+      if (res.status === 404) return null
 
-      return taskDetailToSearchResult(await res.json())
+      return taskDetailToSearchResult(await unwrapOrThrow(assertOk(res)).json())
     },
     enabled: taskNumber != null,
     retry: false,
