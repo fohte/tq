@@ -193,13 +193,15 @@ export function SearchModal({
           })
         : []
     const taskItems: ListItem[] =
-      tasks?.map((task) => ({
-        key: task.id,
-        select: () => {
-          openTask(task)
-        },
-        render: renderTaskOption(task, onOpenChangeRef),
-      })) ?? []
+      tasks
+        ?.filter((task) => task.id !== taskByNumber?.id)
+        .map((task) => ({
+          key: task.id,
+          select: () => {
+            openTask(task)
+          },
+          render: renderTaskOption(task, onOpenChangeRef),
+        })) ?? []
     const taskNumberItems: ListItem[] =
       taskByNumber == null
         ? []

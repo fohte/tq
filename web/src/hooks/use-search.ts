@@ -67,29 +67,33 @@ export function extractTaskNumber(query: string): string | undefined {
 }
 
 export function taskDetailToSearchResult(task: TaskDetail): SearchResult {
-  const {
-    titleAuthor,
-    descriptionAuthor,
-    duplicateOfTask,
-    pages,
-    timeBlocks,
-    links,
-    blockedBy,
-    blocking,
-    ...listFields
-  } = task
-  void titleAuthor
-  void descriptionAuthor
-  void duplicateOfTask
-  void pages
-  void timeBlocks
-  void links
-  void blocking
-
   return {
-    ...listFields,
+    id: task.id,
+    number: task.number,
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    statusReason: task.statusReason,
+    context: task.context,
+    commitment: task.commitment,
+    labels: task.labels,
+    startDate: task.startDate,
+    dueDate: task.dueDate,
+    estimatedMinutes: task.estimatedMinutes,
+    remindAt: task.remindAt,
+    parentId: task.parentId,
+    parentNumber: task.parentNumber,
+    projectId: task.projectId,
+    recurrenceRuleId: task.recurrenceRuleId,
+    recurrenceRule: task.recurrenceRule,
+    templateId: task.templateId,
+    occurrenceDate: task.occurrenceDate,
+    githubLinks: task.githubLinks,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+    childCompletionCount: task.childCompletionCount,
     duplicateOfNumber: task.duplicateOfNumber ?? null,
-    blockedByNumbers: blockedBy.map(({ number }) => number),
+    blockedByNumbers: task.blockedBy.map(({ number }) => number),
   }
 }
 

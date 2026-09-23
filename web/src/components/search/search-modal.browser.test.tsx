@@ -56,8 +56,10 @@ function makeTask(overrides: Partial<MockTask> = {}): MockTask {
   }
 }
 
+const firstMockTask = makeTask()
+
 const mockTasks = [
-  makeTask(),
+  firstMockTask,
   makeTask({
     id: '00000000-0000-0000-0000-000000000002',
     number: 2,
@@ -272,6 +274,23 @@ describe('SearchModal', () => {
         ],
       ],
     ])
+  })
+
+  it('does not repeat the exact match in scoped search results', async () => {
+    resetSessionOpenSettings({ localContext: 'personal' })
+    mockNumberTaskData = firstMockTask
+    mockSearchData = [firstMockTask]
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    await user.type(screen.getByLabelText('Search tasks'), '#1')
+
+    expect(
+      screen
+        .getAllByText('Implement task list UI')
+        .map((element) => element.textContent),
+    ).toEqual(['Implement task list UI'])
   })
 
   it('displays context badge for personal tasks', async () => {
