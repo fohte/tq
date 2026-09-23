@@ -15,6 +15,7 @@ export type SavedView = InferResponseType<
 >[number]
 
 export interface SavedViewFilter {
+  q?: string
   context?: 'work' | 'personal'
 }
 
@@ -24,15 +25,23 @@ export const savedViewKeys = {
   list: (filter?: SavedViewFilter) => [...savedViewKeys.lists, filter] as const,
 }
 
-export function useSavedViews(filter?: SavedViewFilter) {
+export function useSavedViews(
+  filter?: SavedViewFilter,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: savedViewKeys.list(filter),
     queryFn: async () => {
       const res = await api.api['saved-views'].$get({
-        query: filter?.context ? { context: filter.context } : {},
+        query: {
+          ...(filter?.q == null ? {} : { q: filter.q }),
+          ...(filter?.context == null ? {} : { context: filter.context }),
+        },
       })
       return unwrapOrThrow(assertOk(res)).json()
     },
+    enabled: options?.enabled ?? true,
+    placeholderData: (previous) => previous,
   })
 }
 
