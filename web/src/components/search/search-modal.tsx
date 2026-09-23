@@ -1,4 +1,3 @@
-import { useNavigate } from '@tanstack/react-router'
 import { parseSearchQuery } from 'api/search-query-parser'
 import { Loader2 } from 'lucide-react'
 import {
@@ -11,6 +10,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 
+import { useSearchModalNavigation } from '#components/search/search-modal-navigation'
 import {
   createOptionItem,
   createPageItems,
@@ -23,15 +23,9 @@ import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useDebounce } from '#hooks/use-debounce'
-import type { Project } from '#hooks/use-projects'
 import { useProjects } from '#hooks/use-projects'
-import type { SavedView } from '#hooks/use-saved-views'
 import { useSavedViews } from '#hooks/use-saved-views'
-import type {
-  PageSearchResult,
-  SearchResult,
-  Suggestion,
-} from '#hooks/use-search'
+import type { SearchResult, Suggestion } from '#hooks/use-search'
 import {
   applySuggestionToQuery,
   extractCurrentPrefix,
@@ -74,9 +68,8 @@ export function SearchModal({
   const onOpenChangeRef = useRef(onOpenChange)
   queryRef.current = query
   onOpenChangeRef.current = onOpenChange
-  const navigate = useNavigate()
-  const navigateRef = useRef(navigate)
-  navigateRef.current = navigate
+  const { openTask, openProject, openView, openPage } =
+    useSearchModalNavigation(onOpenChangeRef)
   const currentContext = useCurrentContext()
   const configuredContext =
     contextOverride === undefined
@@ -138,41 +131,6 @@ export function SearchModal({
     inputRef.current?.focus()
   }, [])
 
-  const openTask = useCallback((task: SearchResult) => {
-    onOpenChangeRef.current(false)
-    void navigateRef.current({
-      to: '/tasks/$taskId',
-      params: { taskId: task.id },
-    })
-  }, [])
-
-  const openProject = useCallback((project: Project) => {
-    onOpenChangeRef.current(false)
-    void navigateRef.current({
-      to: '/projects/$projectId',
-      params: { projectId: project.id },
-    })
-  }, [])
-
-  const openView = useCallback((view: SavedView) => {
-    onOpenChangeRef.current(false)
-    void navigateRef.current({
-      to: '/tasks',
-      search: { q: view.query },
-    })
-  }, [])
-
-  const openPage = useCallback((page: PageSearchResult) => {
-    if (page.pageId == null) return
-    onOpenChangeRef.current(false)
-    void navigateRef.current({
-      to: '/tasks/$taskId/pages/$pageId',
-      params: {
-        taskId: String(page.taskNumber),
-        pageId: page.pageId,
-      },
-    })
-  }, [])
   const resultGroups = useMemo((): ResultGroup[] => {
     const suggestionItems: ListItem[] =
       suggestions && currentPrefix.length > 0
