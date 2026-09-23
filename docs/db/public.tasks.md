@@ -53,6 +53,8 @@
 | idx_tasks_remind_at                      | CREATE INDEX idx_tasks_remind_at ON public.tasks USING btree (remind_at) WHERE (remind_at IS NOT NULL)                                                  |
 | idx_tasks_template_id                    | CREATE INDEX idx_tasks_template_id ON public.tasks USING btree (template_id)                                                                            |
 | tasks_template_id_occurrence_date_unique | CREATE UNIQUE INDEX tasks_template_id_occurrence_date_unique ON public.tasks USING btree (template_id, occurrence_date) WHERE (template_id IS NOT NULL) |
+| idx_tasks_title_trgm                     | CREATE INDEX idx_tasks_title_trgm ON public.tasks USING gin (title gin_trgm_ops)                                                                        |
+| idx_tasks_description_trgm               | CREATE INDEX idx_tasks_description_trgm ON public.tasks USING gin (description gin_trgm_ops)                                                            |
 
 ## Relations
 

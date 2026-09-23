@@ -22,10 +22,11 @@
 
 ## Indexes
 
-| Name                   | Definition                                                                     |
-| ---------------------- | ------------------------------------------------------------------------------ |
-| task_pages_pkey        | CREATE UNIQUE INDEX task_pages_pkey ON public.task_pages USING btree (id)      |
-| idx_task_pages_task_id | CREATE INDEX idx_task_pages_task_id ON public.task_pages USING btree (task_id) |
+| Name                        | Definition                                                                                     |
+| --------------------------- | ---------------------------------------------------------------------------------------------- |
+| task_pages_pkey             | CREATE UNIQUE INDEX task_pages_pkey ON public.task_pages USING btree (id)                      |
+| idx_task_pages_task_id      | CREATE INDEX idx_task_pages_task_id ON public.task_pages USING btree (task_id)                 |
+| idx_task_pages_content_trgm | CREATE INDEX idx_task_pages_content_trgm ON public.task_pages USING gin (content gin_trgm_ops) |
 
 ## Relations
 
