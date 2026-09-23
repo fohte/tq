@@ -16,7 +16,7 @@ export interface ListItem {
   render: (props: ListItemRenderProps) => ReactNode
 }
 
-export interface ListItemRenderProps {
+interface ListItemRenderProps {
   isSelected: boolean
   onMouseMove: (event: MouseEvent<HTMLElement>) => void
 }
