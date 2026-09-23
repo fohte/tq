@@ -8,6 +8,8 @@ import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 
 type SearchResult = InferResponseType<typeof api.api.tasks.$get, 200>[number]
 
+type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
+
 type Suggestion = InferResponseType<
   (typeof api.api.tasks.search)['suggest']['$get'],
   200
@@ -20,6 +22,8 @@ export const searchKeys = {
   all: ['search'] as const,
   results: (q: string, context: SearchContext | undefined) =>
     [...searchKeys.all, 'results', q, context] as const,
+  number: (number: string | undefined) =>
+    [...searchKeys.all, 'number', number] as const,
   suggestions: (prefix: string) =>
     [...searchKeys.all, 'suggestions', prefix] as const,
 }
@@ -55,6 +59,38 @@ export function useSearchTasks(query: string, defaultContext?: SearchContext) {
       const [, , , prevContext] = prevQuery?.queryKey ?? []
       return prevContext === context ? prev : undefined
     },
+  })
+}
+
+export function extractTaskNumber(query: string): string | undefined {
+  return /^#?(\d+)$/.exec(query)?.[1]
+}
+
+function taskDetailToSearchResult(task: TaskDetail): SearchResult {
+  return {
+    ...task,
+    duplicateOfNumber: task.duplicateOfNumber ?? null,
+    blockedByNumbers: task.blockedBy.map(({ number }) => number),
+  }
+}
+
+export function useSearchTaskByNumber(query: string) {
+  const debouncedQuery = useDebounce(query, 200)
+  const taskNumber = extractTaskNumber(debouncedQuery)
+
+  return useQuery({
+    queryKey: searchKeys.number(taskNumber),
+    queryFn: async () => {
+      if (taskNumber == null) return null
+
+      const res = await api.api.tasks[':id'].$get({
+        param: { id: taskNumber },
+      })
+      if (res.status === 404) return null
+
+      return taskDetailToSearchResult(await unwrapOrThrow(assertOk(res)).json())
+    },
+    enabled: taskNumber != null,
   })
 }
 

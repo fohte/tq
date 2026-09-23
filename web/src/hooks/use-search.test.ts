@@ -3,8 +3,21 @@ import { describe, expect, it } from 'vitest'
 import {
   applySuggestionToQuery,
   extractCurrentPrefix,
+  extractTaskNumber,
   resolveSearchContext,
 } from '#hooks/use-search'
+
+describe('extractTaskNumber', () => {
+  it('accepts bare and hash-prefixed numbers only', () => {
+    expect(['5', '#5', '#task', '5 task', ''].map(extractTaskNumber)).toEqual([
+      '5',
+      '5',
+      undefined,
+      undefined,
+      undefined,
+    ])
+  })
+})
 
 describe('resolveSearchContext', () => {
   it('uses the default context when the query has no context token', () => {

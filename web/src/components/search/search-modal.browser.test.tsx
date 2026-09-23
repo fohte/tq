@@ -82,6 +82,7 @@ const mockSuggestions = [
 ]
 
 let mockSearchData: typeof mockTasks = []
+let mockNumberTaskData: MockTask | undefined
 let mockSuggestionData: typeof mockSuggestions = []
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
@@ -90,6 +91,10 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
     ...actual,
     useSearchTasks: () => ({
       data: mockSearchData.length > 0 ? mockSearchData : undefined,
+      isFetching: false,
+    }),
+    useSearchTaskByNumber: () => ({
+      data: mockNumberTaskData,
       isFetching: false,
     }),
     useSearchSuggestions: () => ({
@@ -150,6 +155,7 @@ function renderSearchModal(
 describe('SearchModal', () => {
   beforeEach(() => {
     mockSearchData = []
+    mockNumberTaskData = undefined
     mockSuggestionData = []
     mockNavigate.mockClear()
   })
@@ -223,6 +229,49 @@ describe('SearchModal', () => {
 
     expect(screen.getByText('Implement task list UI')).toBeInTheDocument()
     expect(screen.getByText('Review pull request')).toBeInTheDocument()
+  })
+
+  it('opens an exact task number match before scoped search results', async () => {
+    resetSessionOpenSettings({ localContext: 'work' })
+    mockNumberTaskData = personalTask
+    mockSearchData = mockTasks.slice(1, 2)
+    const onOpenChange = vi.fn()
+
+    const user = userEvent.setup()
+    renderSearchModal({ onOpenChange })
+
+    await user.type(screen.getByLabelText('Search tasks'), '#3')
+
+    const options = screen.getAllByRole('option')
+    const directIndex = options.findIndex((option) =>
+      option.contains(screen.getByText('Plan weekend trip')),
+    )
+    const searchIndex = options.findIndex((option) =>
+      option.contains(screen.getByText('Review pull request')),
+    )
+    await user.keyboard('{Enter}')
+
+    const getOutput = () => [
+      directIndex,
+      searchIndex,
+      options.map((option) => option.getAttribute('aria-selected')),
+      onOpenChange.mock.calls,
+      mockNavigate.mock.calls,
+    ]
+    expect(getOutput()).toEqual([
+      0,
+      1,
+      ['true', 'false'],
+      [[false]],
+      [
+        [
+          {
+            to: '/tasks/$taskId',
+            params: { taskId: personalTask.id },
+          },
+        ],
+      ],
+    ])
   })
 
   it('displays context badge for personal tasks', async () => {
