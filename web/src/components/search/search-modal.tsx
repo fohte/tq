@@ -10,6 +10,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 
+import { parseSearchMode } from '#components/search/search-modal-mode'
 import { useSearchModalNavigation } from '#components/search/search-modal-navigation'
 import {
   createOptionItem,
@@ -42,8 +43,6 @@ interface SearchModalProps {
   defaultContext?: 'work' | 'personal' | null
   defaultQuery?: string
 }
-
-type SearchMode = 'tasks' | 'projects' | 'pages'
 
 interface ResultGroup {
   id: string
@@ -80,15 +79,12 @@ export function SearchModal({
       ? currentContext
       : (contextOverride ?? undefined)
   const defaultSearchContext = isContextCleared ? undefined : configuredContext
-  const searchMode: SearchMode | undefined = query.startsWith('#')
-    ? 'tasks'
-    : query.startsWith('!')
-      ? 'projects'
-      : query.startsWith('/')
-        ? 'pages'
-        : undefined
-  const modePrefix = searchMode == null ? undefined : query[0]
-  const searchQuery = searchMode == null ? query : query.slice(1).trimStart()
+  const {
+    mode: searchMode,
+    prefix: modePrefix,
+    text: searchQuery,
+  } = parseSearchMode(query)
+  const hasSearchQuery = searchQuery.length > 0
   const context = resolveSearchContext(searchQuery, defaultSearchContext)
   const canClearContext = query === '' && context != null
   const freeTextQuery = parseSearchQuery(searchQuery).freeText
@@ -106,22 +102,21 @@ export function SearchModal({
   const canSearchTasks = searchMode == null || searchMode === 'tasks'
   const canSearchProjects = searchMode == null || searchMode === 'projects'
   const canSearchPages = searchMode == null || searchMode === 'pages'
+  const canSearchViews = searchMode == null
+  const canSuggest = searchMode == null
   const { data: tasks, isFetching: isFetchingTasks } = useSearchTasks(
     canSearchTasks ? searchQuery : '',
     defaultSearchContext,
   )
   const { data: projects, isFetching: isFetchingProjects } = useProjects(
-    canSearchProjects ? searchFilter : undefined,
+    searchFilter,
     {
       enabled: canSearchProjects && searchFilter != null,
     },
   )
-  const { data: savedViews } = useSavedViews(
-    searchMode == null ? searchFilter : undefined,
-    {
-      enabled: searchMode == null && searchFilter != null,
-    },
-  )
+  const { data: savedViews } = useSavedViews(searchFilter, {
+    enabled: canSearchViews && searchFilter != null,
+  })
 
   const { data: taskByNumber, isFetching: isFetchingTaskByNumber } =
     useSearchTaskByNumber(canSearchTasks ? searchQuery : '')
@@ -133,9 +128,7 @@ export function SearchModal({
     isFetchingTaskByNumber ||
     isFetchingPages ||
     isFetchingProjects
-  const currentPrefix = extractCurrentPrefix(
-    searchMode == null ? searchQuery : '',
-  )
+  const currentPrefix = extractCurrentPrefix(canSuggest ? searchQuery : '')
   const { data: suggestions } = useSearchSuggestions(currentPrefix)
 
   useEffect(() => {
@@ -190,24 +183,26 @@ export function SearchModal({
       },
       render: renderTaskOption(task, onOpenChangeRef),
     })
-    const taskItems: ListItem[] = canSearchTasks
-      ? (tasks
-          ?.filter((task) => task.id !== taskByNumber?.id)
-          .map((task) => toTaskListItem(task)) ?? [])
-      : []
+    const taskItems: ListItem[] =
+      canSearchTasks && hasSearchQuery
+        ? (tasks
+            ?.filter((task) => task.id !== taskByNumber?.id)
+            .map((task) => toTaskListItem(task)) ?? [])
+        : []
     const taskNumberItems: ListItem[] =
-      canSearchTasks && taskByNumber != null
+      canSearchTasks && hasSearchQuery && taskByNumber != null
         ? [toTaskListItem(taskByNumber, 'number:')]
         : []
-    const pageItems = canSearchPages
-      ? createPageItems(pages, openPage, onOpenChangeRef)
-      : []
+    const pageItems =
+      canSearchPages && hasSearchQuery
+        ? createPageItems(pages, openPage, onOpenChangeRef)
+        : []
     const projectItems =
       canSearchProjects && hasAuxiliarySearch
         ? createProjectItems(projects, openProject)
         : []
     const viewItems =
-      searchMode == null && hasAuxiliarySearch
+      canSearchViews && hasAuxiliarySearch
         ? createViewItems(savedViews, openView)
         : []
 
@@ -221,7 +216,7 @@ export function SearchModal({
       {
         id: 'suggestions',
         title: 'Suggestions',
-        items: searchMode == null ? suggestionItems : [],
+        items: canSuggest ? suggestionItems : [],
         isVisible: (_query, itemCount) => itemCount > 0,
       },
       {
@@ -266,7 +261,9 @@ export function SearchModal({
     canSearchTasks,
     canSearchProjects,
     canSearchPages,
-    searchMode,
+    canSearchViews,
+    canSuggest,
+    hasSearchQuery,
   ])
 
   const { items, indexedGroups } = useMemo((): {
@@ -328,7 +325,7 @@ export function SearchModal({
         onOpenChange(false)
         break
       case 'Backspace':
-        if (modePrefix != null && query === modePrefix) {
+        if (searchMode != null && !hasSearchQuery) {
           e.preventDefault()
           setQuery('')
         } else if (canClearContext) {
@@ -340,7 +337,7 @@ export function SearchModal({
   }
 
   const visibleGroups = indexedGroups.filter((group) =>
-    group.isVisible(query, group.items.length),
+    group.isVisible(searchQuery, group.items.length),
   )
 
   if (!open) return null
