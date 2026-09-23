@@ -16,7 +16,14 @@ import { makePageSearchResult } from '#components/search/search-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { StoryRouter } from '#storybook-config/story-router'
 
-type ResultKind = 'task' | 'project' | 'view' | 'page'
+type ResultKind =
+  | 'task'
+  | 'project'
+  | 'view'
+  | 'page'
+  | 'taskLongTitle'
+  | 'projectLongTitle'
+  | 'pageLongContent'
 
 interface SearchModalResultItemStoryProps {
   kind: ResultKind
@@ -30,6 +37,13 @@ const task = makeTask({
   context: 'work',
   estimatedMinutes: 30,
 })
+const taskLongTitle = makeTask({
+  id: 'task-long-title-story',
+  number: 14,
+  title:
+    'Review the customer onboarding flow across account and workspace configurations',
+  context: 'work',
+})
 const noop = () => undefined
 const taskOnOpenChangeRef = { current: noop }
 const pageOnOpenChangeRef = { current: noop }
@@ -42,8 +56,25 @@ const itemsByKind: Record<ResultKind, ListItem[]> = {
       render: renderTaskOption(task, taskOnOpenChangeRef),
     },
   ],
+  taskLongTitle: [
+    {
+      key: taskLongTitle.id,
+      select: noop,
+      render: renderTaskOption(taskLongTitle, taskOnOpenChangeRef),
+    },
+  ],
   project: createProjectItems(
     [makeProject({ id: 'project-story', title: 'Website refresh' })],
+    noop,
+  ),
+  projectLongTitle: createProjectItems(
+    [
+      makeProject({
+        id: 'project-long-title-story',
+        title:
+          'Coordinate the customer onboarding redesign across product and support teams',
+      }),
+    ],
     noop,
   ),
   view: createViewItems(
@@ -58,6 +89,22 @@ const itemsByKind: Record<ResultKind, ListItem[]> = {
         pageId: 'page-story',
         pageTitle: 'Release checklist',
         snippet: 'Review the rollout steps before the next release.',
+      }),
+    ],
+    noop,
+    pageOnOpenChangeRef,
+  ),
+  pageLongContent: createPageItems(
+    [
+      makePageSearchResult({
+        taskNumber: 14,
+        taskTitle:
+          'Review onboarding behavior for new users across projects and saved views',
+        pageId: 'page-long-content-story',
+        pageTitle:
+          'Implementation notes for the redesigned onboarding and account configuration workflow',
+        snippet:
+          'The page records how the redesigned onboarding flow guides new users through account setup, project selection, saved views, and the first task creation. It also lists the empty states and validation messages that need to remain consistent while the workflow loads data and moves between sections. The release checklist covers keyboard navigation, narrow viewport layout, and recovery when a step cannot be completed.',
       }),
     ],
     noop,
@@ -130,6 +177,18 @@ export const View: Story = {
 
 export const Page: Story = {
   args: { kind: 'page', isSelected: false },
+}
+
+export const LongTaskTitle: Story = {
+  args: { kind: 'taskLongTitle', isSelected: false },
+}
+
+export const LongProjectTitle: Story = {
+  args: { kind: 'projectLongTitle', isSelected: false },
+}
+
+export const LongPageContent: Story = {
+  args: { kind: 'pageLongContent', isSelected: false },
 }
 
 export const SelectedTask: Story = {
