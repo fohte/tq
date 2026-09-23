@@ -302,6 +302,13 @@
       "when": 1789012201738,
       "tag": "0042_zippy_toro",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1790185940713,
+      "tag": "0043_uneven_karnak",
+      "breakpoints": true
     }
   ]
 }

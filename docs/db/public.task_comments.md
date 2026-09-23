@@ -19,11 +19,12 @@
 
 ## Indexes
 
-| Name                         | Definition                                                                                          |
-| ---------------------------- | --------------------------------------------------------------------------------------------------- |
-| task_comments_pkey           | CREATE UNIQUE INDEX task_comments_pkey ON public.task_comments USING btree (id)                     |
-| idx_task_comments_task_id    | CREATE INDEX idx_task_comments_task_id ON public.task_comments USING btree (task_id)                |
-| idx_task_comments_created_at | CREATE INDEX idx_task_comments_created_at ON public.task_comments USING btree (task_id, created_at) |
+| Name                           | Definition                                                                                           |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| task_comments_pkey             | CREATE UNIQUE INDEX task_comments_pkey ON public.task_comments USING btree (id)                      |
+| idx_task_comments_task_id      | CREATE INDEX idx_task_comments_task_id ON public.task_comments USING btree (task_id)                 |
+| idx_task_comments_created_at   | CREATE INDEX idx_task_comments_created_at ON public.task_comments USING btree (task_id, created_at)  |
+| idx_task_comments_content_trgm | CREATE INDEX idx_task_comments_content_trgm ON public.task_comments USING gin (content gin_trgm_ops) |
 
 ## Relations
 

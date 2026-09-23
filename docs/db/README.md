@@ -33,6 +33,42 @@
 | [public.recurring_task_template_labels](public.recurring_task_template_labels.md)   | 2       |         | BASE TABLE |
 | [public.recurring_task_templates](public.recurring_task_templates.md)               | 14      |         | BASE TABLE |
 
+## Stored procedures and functions
+
+| Name                                             | ReturnType | Arguments                                                                 | Type     |
+| ------------------------------------------------ | ---------- | ------------------------------------------------------------------------- | -------- |
+| public.set_limit                                 | float4     | real                                                                      | FUNCTION |
+| public.show_limit                                | float4     |                                                                           | FUNCTION |
+| public.show_trgm                                 | _text      | text                                                                      | FUNCTION |
+| public.similarity                                | float4     | text, text                                                                | FUNCTION |
+| public.similarity_op                             | bool       | text, text                                                                | FUNCTION |
+| public.word_similarity                           | float4     | text, text                                                                | FUNCTION |
+| public.word_similarity_op                        | bool       | text, text                                                                | FUNCTION |
+| public.word_similarity_commutator_op             | bool       | text, text                                                                | FUNCTION |
+| public.similarity_dist                           | float4     | text, text                                                                | FUNCTION |
+| public.word_similarity_dist_op                   | float4     | text, text                                                                | FUNCTION |
+| public.word_similarity_dist_commutator_op        | float4     | text, text                                                                | FUNCTION |
+| public.gtrgm_in                                  | gtrgm      | cstring                                                                   | FUNCTION |
+| public.gtrgm_out                                 | cstring    | gtrgm                                                                     | FUNCTION |
+| public.gtrgm_consistent                          | bool       | internal, text, smallint, oid, internal                                   | FUNCTION |
+| public.gtrgm_distance                            | float8     | internal, text, smallint, oid, internal                                   | FUNCTION |
+| public.gtrgm_compress                            | internal   | internal                                                                  | FUNCTION |
+| public.gtrgm_decompress                          | internal   | internal                                                                  | FUNCTION |
+| public.gtrgm_penalty                             | internal   | internal, internal, internal                                              | FUNCTION |
+| public.gtrgm_picksplit                           | internal   | internal, internal                                                        | FUNCTION |
+| public.gtrgm_union                               | gtrgm      | internal, internal                                                        | FUNCTION |
+| public.gtrgm_same                                | internal   | gtrgm, gtrgm, internal                                                    | FUNCTION |
+| public.gin_extract_value_trgm                    | internal   | text, internal                                                            | FUNCTION |
+| public.gin_extract_query_trgm                    | internal   | text, internal, smallint, internal, internal, internal, internal          | FUNCTION |
+| public.gin_trgm_consistent                       | bool       | internal, smallint, text, integer, internal, internal, internal, internal | FUNCTION |
+| public.gin_trgm_triconsistent                    | char       | internal, smallint, text, integer, internal, internal, internal           | FUNCTION |
+| public.strict_word_similarity                    | float4     | text, text                                                                | FUNCTION |
+| public.strict_word_similarity_op                 | bool       | text, text                                                                | FUNCTION |
+| public.strict_word_similarity_commutator_op      | bool       | text, text                                                                | FUNCTION |
+| public.strict_word_similarity_dist_op            | float4     | text, text                                                                | FUNCTION |
+| public.strict_word_similarity_dist_commutator_op | float4     | text, text                                                                | FUNCTION |
+| public.gtrgm_options                             | void       | internal                                                                  | FUNCTION |
+
 ## Relations
 
 ```mermaid
