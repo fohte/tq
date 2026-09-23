@@ -14,9 +14,13 @@ type Suggestion = InferResponseType<
   (typeof api.api.tasks.search)['suggest']['$get'],
   200
 >[number]
+type PageSearchResult = InferResponseType<
+  (typeof api.api.tasks.search)['pages']['$get'],
+  200
+>['results'][number]
 type SearchContext = 'work' | 'personal'
 
-export type { SearchResult, Suggestion }
+export type { PageSearchResult, SearchResult, Suggestion }
 
 export const searchKeys = {
   all: ['search'] as const,
@@ -24,6 +28,7 @@ export const searchKeys = {
     [...searchKeys.all, 'results', q, context] as const,
   number: (number: string | undefined) =>
     [...searchKeys.all, 'number', number] as const,
+  pages: (q: string) => [...searchKeys.all, 'pages', q] as const,
   suggestions: (prefix: string) =>
     [...searchKeys.all, 'suggestions', prefix] as const,
 }
@@ -126,6 +131,22 @@ export function useSearchTaskByNumber(query: string) {
   })
 }
 
+export function useSearchPages(query: string) {
+  const debouncedQuery = useDebounce(query, 200)
+
+  return useQuery({
+    queryKey: searchKeys.pages(debouncedQuery),
+    queryFn: async () => {
+      const res = await api.api.tasks.search.pages.$get({
+        query: { q: debouncedQuery, limit: '20', source: 'page' },
+      })
+      return unwrapOrThrow(assertOk(res))
+        .json()
+        .then((body) => body.results)
+    },
+    enabled: debouncedQuery.length > 0,
+  })
+}
 /**
  * Extract the token currently being typed (the last whitespace-delimited
  * word) so it can be used as the suggest API's `prefix`. Returns '' once
