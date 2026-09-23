@@ -234,7 +234,6 @@ describe('SearchModal', () => {
   })
 
   it('opens an exact task number match before scoped search results', async () => {
-    resetSessionOpenSettings({ localContext: 'work' })
     mockNumberTaskData = personalTask
     mockSearchData = mockTasks.slice(1, 2)
     const onOpenChange = vi.fn()
@@ -277,7 +276,6 @@ describe('SearchModal', () => {
   })
 
   it('does not repeat the exact match in scoped search results', async () => {
-    resetSessionOpenSettings({ localContext: 'personal' })
     mockNumberTaskData = firstMockTask
     mockSearchData = [firstMockTask]
 

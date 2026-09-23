@@ -192,28 +192,19 @@ export function SearchModal({
             }
           })
         : []
+    const toTaskListItem = (task: SearchResult, keyPrefix = ''): ListItem => ({
+      key: `${keyPrefix}${task.id}`,
+      select: () => {
+        openTask(task)
+      },
+      render: renderTaskOption(task, onOpenChangeRef),
+    })
     const taskItems: ListItem[] =
       tasks
         ?.filter((task) => task.id !== taskByNumber?.id)
-        .map((task) => ({
-          key: task.id,
-          select: () => {
-            openTask(task)
-          },
-          render: renderTaskOption(task, onOpenChangeRef),
-        })) ?? []
+        .map((task) => toTaskListItem(task)) ?? []
     const taskNumberItems: ListItem[] =
-      taskByNumber == null
-        ? []
-        : [
-            {
-              key: `number:${taskByNumber.id}`,
-              select: () => {
-                openTask(taskByNumber)
-              },
-              render: renderTaskOption(taskByNumber, onOpenChangeRef),
-            },
-          ]
+      taskByNumber == null ? [] : [toTaskListItem(taskByNumber, 'number:')]
 
     return [
       {

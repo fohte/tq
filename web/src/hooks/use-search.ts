@@ -38,8 +38,12 @@ export function resolveSearchContext(
   return parseSearchQuery(query).context ?? defaultContext
 }
 
+function useDebouncedSearchQuery(query: string) {
+  return useDebounce(query, 200)
+}
+
 export function useSearchTasks(query: string, defaultContext?: SearchContext) {
-  const debouncedQuery = useDebounce(query, 200)
+  const debouncedQuery = useDebouncedSearchQuery(query)
   const context = resolveSearchContext(debouncedQuery, defaultContext)
 
   return useQuery({
@@ -98,7 +102,7 @@ export function taskDetailToSearchResult(task: TaskDetail): SearchResult {
 }
 
 export function useSearchTaskByNumber(query: string) {
-  const debouncedQuery = useDebounce(query, 200)
+  const debouncedQuery = useDebouncedSearchQuery(query)
   const taskNumber = extractTaskNumber(debouncedQuery)
 
   return useQuery({
