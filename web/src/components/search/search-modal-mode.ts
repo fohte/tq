@@ -2,11 +2,12 @@ const MODE_BY_PREFIX = {
   '#': 'tasks',
   '!': 'projects',
   '/': 'pages',
+  '>': 'commands',
 } as const
 
 export function parseSearchMode(query: string) {
   const prefix = query[0]
-  if (prefix === '#' || prefix === '!' || prefix === '/') {
+  if (prefix === '#' || prefix === '!' || prefix === '/' || prefix === '>') {
     return {
       mode: MODE_BY_PREFIX[prefix],
       prefix,

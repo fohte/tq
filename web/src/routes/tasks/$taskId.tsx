@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useEffect } from 'react'
 
 import {
   TaskMainContent,
@@ -9,6 +10,7 @@ import { FullPageLoading } from '#components/ui/full-page-loading'
 import { FullPageMessage } from '#components/ui/full-page-message'
 import { useSyncTaskGithubLink } from '#hooks/use-github-link'
 import { useTask } from '#hooks/use-tasks'
+import { recordRecentSearchItem } from '#lib/recent-search-items'
 
 export const Route = createFileRoute('/tasks/$taskId')({
   component: TaskPage,
@@ -18,6 +20,16 @@ function TaskPage() {
   const { taskId } = Route.useParams()
   const { data: task, isLoading, error } = useTask(taskId)
   useSyncTaskGithubLink(taskId, (task?.githubLinks.length ?? 0) > 0)
+
+  useEffect(() => {
+    if (isLoading || error || task == null) return
+    recordRecentSearchItem({
+      kind: 'task',
+      id: task.id,
+      title: task.title,
+      number: task.number,
+    })
+  }, [error, isLoading, task?.id, task?.number, task?.title])
 
   if (isLoading) {
     return <FullPageLoading />

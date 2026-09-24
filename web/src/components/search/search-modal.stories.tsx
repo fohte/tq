@@ -135,6 +135,7 @@ function SearchModalStory({
         <SearchModal
           open={open}
           onOpenChange={setOpen}
+          onNewTask={() => undefined}
           {...(defaultContext === undefined ? {} : { defaultContext })}
           {...(defaultQuery === undefined ? {} : { defaultQuery })}
         />
@@ -224,6 +225,10 @@ export const ProjectMode: Story = {
 
 export const PageMode: Story = {
   args: { defaultContext: 'work', defaultQuery: `/${keyboardQuery}` },
+}
+
+export const CommandMode: Story = {
+  args: { defaultContext: 'work', defaultQuery: '>' },
 }
 
 export const CrossSearch: Story = {
