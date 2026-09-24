@@ -1,24 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { SearchModalRecentItem } from '#components/search/search-modal-recent-item'
-import type { RecentSearchItem } from '#lib/recent-search-items'
+import {
+  makeRecentProject,
+  makeRecentTask,
+} from '#components/search/search-test-fixtures'
 
-const viewedAt = 1_800_000_000_000
-const task: RecentSearchItem = {
-  kind: 'task',
-  id: '00000000-0000-0000-0000-000000000042',
-  number: 42,
-  title: 'Prepare the weekly review',
-  context: 'work',
-  viewedAt,
-}
-const project: RecentSearchItem = {
-  kind: 'project',
-  id: '00000000-0000-0000-0000-000000000142',
-  title: 'Website refresh',
-  context: 'work',
-  viewedAt,
-}
+const task = makeRecentTask({ title: 'Prepare the weekly review' })
+const project = makeRecentProject({ title: 'Website refresh' })
 
 const meta = {
   title: 'Search/SearchModalRecentItem',
