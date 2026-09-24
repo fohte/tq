@@ -59,8 +59,9 @@ function ProjectDetailPage() {
       kind: 'project',
       id: project.id,
       title: project.title,
+      context: project.context,
     })
-  }, [error, isProjectLoading, project?.id, project?.title])
+  }, [error, isProjectLoading, project?.context, project?.id, project?.title])
 
   const setQuery = (newQuery: string) => {
     void navigate({

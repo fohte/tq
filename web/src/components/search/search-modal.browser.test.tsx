@@ -692,7 +692,7 @@ describe('SearchModal', () => {
     expect(getOutput()).toEqual({
       scopes: [`parent:${firstMockTask.id}`],
       inputValue: '',
-      mode: '>',
+      mode: '›',
     })
   })
 

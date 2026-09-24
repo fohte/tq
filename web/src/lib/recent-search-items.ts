@@ -1,4 +1,5 @@
 import { getStorageItem, parseJson, setStorageItem } from '#lib/local-storage'
+import { isRecord } from '#lib/type-guards'
 
 const STORAGE_KEY = 'tq:recent-search-items'
 const MAX_ITEMS_PER_KIND = 5
@@ -8,6 +9,7 @@ export interface RecentTask {
   id: string
   title: string
   number: number
+  context?: 'work' | 'personal'
   viewedAt: number
 }
 
@@ -15,16 +17,13 @@ export interface RecentProject {
   kind: 'project'
   id: string
   title: string
+  context?: 'work' | 'personal'
   viewedAt: number
 }
 
 export type RecentSearchItem = RecentTask | RecentProject
 export type RecentSearchItemInput =
   Omit<RecentTask, 'viewedAt'> | Omit<RecentProject, 'viewedAt'>
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
 
 function isRecentSearchItem(value: unknown): value is RecentSearchItem {
   if (!isRecord(value)) return false
@@ -33,10 +32,12 @@ function isRecentSearchItem(value: unknown): value is RecentSearchItem {
   const id = value['id']
   const title = value['title']
   const viewedAt = value['viewedAt']
+  const context = value['context']
   if (
     typeof id !== 'string' ||
     typeof title !== 'string' ||
-    typeof viewedAt !== 'number'
+    typeof viewedAt !== 'number' ||
+    (context !== undefined && context !== 'work' && context !== 'personal')
   ) {
     return false
   }
@@ -49,30 +50,24 @@ function isRecentSearchItem(value: unknown): value is RecentSearchItem {
   )
 }
 
-function isRecentSearchItems(value: unknown): value is RecentSearchItem[] {
-  return Array.isArray(value) && value.every(isRecentSearchItem)
+function toRecentSearchItems(value: unknown): RecentSearchItem[] {
+  return Array.isArray(value) ? value.filter(isRecentSearchItem) : []
 }
 
-export function getRecentSearchItems(): RecentSearchItem[] {
-  const raw = getStorageItem(STORAGE_KEY).unwrapOr(null)
-  if (raw == null) return []
-
-  return parseJson(raw)
-    .map((value) => (isRecentSearchItems(value) ? value : []))
-    .unwrapOr([])
-    .sort((a, b) => b.viewedAt - a.viewedAt)
-}
-
-export function recordRecentSearchItem(item: RecentSearchItemInput) {
+export function addRecentSearchItem(
+  items: RecentSearchItem[],
+  item: RecentSearchItemInput,
+  viewedAt: number,
+): RecentSearchItem[] {
   const updated = [
-    { ...item, viewedAt: Date.now() },
-    ...getRecentSearchItems().filter(
+    { ...item, viewedAt },
+    ...items.filter(
       (recent) => recent.kind !== item.kind || recent.id !== item.id,
     ),
   ]
   let taskCount = 0
   let projectCount = 0
-  const limited = updated.filter((recent) => {
+  return updated.filter((recent) => {
     if (recent.kind === 'task') {
       taskCount += 1
       return taskCount <= MAX_ITEMS_PER_KIND
@@ -80,6 +75,34 @@ export function recordRecentSearchItem(item: RecentSearchItemInput) {
     projectCount += 1
     return projectCount <= MAX_ITEMS_PER_KIND
   })
+}
 
-  setStorageItem(STORAGE_KEY, JSON.stringify(limited)).unwrapOr(undefined)
+export function getRecentSearchItems(): RecentSearchItem[] {
+  const raw = getStorageItem(STORAGE_KEY).unwrapOr(null)
+  if (raw == null) return []
+
+  return parseJson(raw)
+    .map(toRecentSearchItems)
+    .unwrapOr([])
+    .sort((a, b) => b.viewedAt - a.viewedAt)
+}
+
+export function recordRecentSearchItem(item: RecentSearchItemInput) {
+  const recentItems = addRecentSearchItem(
+    getRecentSearchItems(),
+    item,
+    Date.now(),
+  )
+
+  setStorageItem(STORAGE_KEY, JSON.stringify(recentItems)).unwrapOr(undefined)
+}
+
+export function removeRecentSearchItem(
+  kind: RecentSearchItem['kind'],
+  id: string,
+) {
+  const recentItems = getRecentSearchItems().filter(
+    (item) => item.kind !== kind || item.id !== id,
+  )
+  setStorageItem(STORAGE_KEY, JSON.stringify(recentItems)).unwrapOr(undefined)
 }

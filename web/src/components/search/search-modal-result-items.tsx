@@ -28,12 +28,13 @@ export function createOptionItem(
   key: string,
   select: () => void,
   content: ReactNode,
-  options: { selectOnTab?: () => void } = {},
+  options: { selectOnTab?: () => void; className?: string } = {},
 ): ListItem {
+  const { className, ...listItemOptions } = options
   return {
     key,
     select,
-    ...options,
+    ...listItemOptions,
     render: ({ isSelected, onMouseMove }) => (
       <button
         type="button"
@@ -45,6 +46,7 @@ export function createOptionItem(
         className={cn(
           'flex w-full items-center gap-2 px-4 py-2 text-left',
           isSelected ? 'bg-accent' : 'hover:bg-accent/50',
+          className,
         )}
       >
         {content}

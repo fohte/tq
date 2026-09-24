@@ -9,12 +9,14 @@ const task: RecentSearchItem = {
   id: '00000000-0000-0000-0000-000000000042',
   number: 42,
   title: 'Prepare the weekly review',
+  context: 'work',
   viewedAt,
 }
 const project: RecentSearchItem = {
   kind: 'project',
   id: '00000000-0000-0000-0000-000000000142',
   title: 'Website refresh',
+  context: 'work',
   viewedAt,
 }
 

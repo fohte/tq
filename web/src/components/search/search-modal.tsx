@@ -47,6 +47,7 @@ interface SearchModalProps {
   onOpenChange: (open: boolean) => void
   defaultContext?: 'work' | 'personal' | null
   defaultQuery?: string
+  defaultRecentItems?: RecentSearchItem[]
   onNewTask?: () => void
 }
 
@@ -55,12 +56,15 @@ export function SearchModal({
   onOpenChange,
   defaultContext: contextOverride,
   defaultQuery = '',
+  defaultRecentItems,
   onNewTask,
 }: SearchModalProps) {
   const [query, setQuery] = useState(defaultQuery)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isContextCleared, setIsContextCleared] = useState(false)
-  const [recentItems, setRecentItems] = useState<RecentSearchItem[]>([])
+  const [recentItems, setRecentItems] = useState<RecentSearchItem[]>(
+    defaultRecentItems ?? [],
+  )
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const onOpenChangeRef = useRef(onOpenChange)
@@ -142,9 +146,9 @@ export function SearchModal({
       setQuery(defaultQuery)
       setSelectedIndex(0)
       setIsContextCleared(false)
-      setRecentItems(getRecentSearchItems())
+      setRecentItems(defaultRecentItems ?? getRecentSearchItems())
     }
-  }, [open, defaultQuery])
+  }, [open, defaultQuery, defaultRecentItems])
 
   // Scroll selected item into view
   useEffect(() => {
@@ -158,7 +162,15 @@ export function SearchModal({
   const resultGroups = useMemo((): ResultGroup[] => {
     const recentListItems =
       query === ''
-        ? createRecentSearchItems(recentItems, openTask, openProject)
+        ? createRecentSearchItems(
+            context == null
+              ? recentItems
+              : recentItems.filter(
+                  (item) => item.context == null || item.context === context,
+                ),
+            openTask,
+            openProject,
+          )
         : []
     const commandItems =
       searchMode === 'commands'
@@ -285,6 +297,7 @@ export function SearchModal({
     recentItems,
     searchMode,
     searchInputValue,
+    context,
     onNewTask,
     openRoute,
     suggestions,
@@ -413,7 +426,7 @@ export function SearchModal({
               data-testid="search-mode-indicator"
               aria-hidden="true"
             >
-              {modePrefix ?? '>'}
+              {modePrefix ?? '›'}
             </span>
             {context != null && (
               <Chip size="md" active data-testid="search-context-scope">

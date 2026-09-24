@@ -1,8 +1,8 @@
-import type { MouseEvent } from 'react'
-
-import type { ListItem } from '#components/search/search-modal-result-items'
+import {
+  createOptionItem,
+  type ListItem,
+} from '#components/search/search-modal-result-items'
 import type { RecentSearchItem } from '#lib/recent-search-items'
-import { cn } from '#lib/utils'
 
 export function SearchModalRecentItem({
   item,
@@ -12,30 +12,22 @@ export function SearchModalRecentItem({
 }: {
   item: RecentSearchItem
   isSelected: boolean
-  onMouseMove: (event: MouseEvent<HTMLElement>) => void
+  onMouseMove: Parameters<ListItem['render']>[0]['onMouseMove']
   onSelect: () => void
 }) {
-  return (
-    <button
-      type="button"
-      role="option"
-      aria-selected={isSelected}
-      data-selected={isSelected}
-      onClick={onSelect}
-      onMouseMove={onMouseMove}
-      className={cn(
-        'flex w-full items-center gap-3 px-4 py-2 text-left',
-        isSelected ? 'bg-accent' : 'hover:bg-accent/50',
-      )}
-    >
+  return createOptionItem(
+    `recent:${item.kind}:${item.id}`,
+    onSelect,
+    <>
       <span className="w-12 shrink-0 font-mono text-2xs text-muted-foreground">
         {item.kind === 'task' ? `#${String(item.number)}` : 'Project'}
       </span>
       <span className="truncate font-mono text-sm text-foreground">
         {item.title}
       </span>
-    </button>
-  )
+    </>,
+    { className: 'gap-3' },
+  ).render({ isSelected, onMouseMove })
 }
 
 export function createRecentSearchItems(

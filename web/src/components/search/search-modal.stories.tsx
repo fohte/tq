@@ -15,6 +15,7 @@ import {
   makeTask,
   makeTaskDetail,
 } from '#components/task/task-row-test-fixtures'
+import type { RecentSearchItem } from '#lib/recent-search-items'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const keyboardQuery = 'keyboard'
@@ -93,6 +94,23 @@ const searchPage = makePageSearchResult({
   pageTitle: 'Keyboard shortcuts',
   snippet: 'Keyboard shortcuts for searching and navigation.',
 })
+const recentItems: RecentSearchItem[] = [
+  {
+    kind: 'task',
+    id: searchTask.id,
+    number: searchTask.number,
+    title: searchTask.title,
+    context: 'work',
+    viewedAt: 1_800_000_000_000,
+  },
+  {
+    kind: 'project',
+    id: searchProject.id,
+    title: searchProject.title,
+    context: 'work',
+    viewedAt: 1_799_999_000_000,
+  },
+]
 
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
@@ -115,9 +133,11 @@ function Providers({ children }: { children: ReactNode }) {
 function SearchModalStory({
   defaultContext,
   defaultQuery,
+  defaultRecentItems,
 }: {
   defaultContext?: 'work' | 'personal' | null
   defaultQuery?: string
+  defaultRecentItems?: RecentSearchItem[]
 } = {}) {
   const [open, setOpen] = useState(true)
   return (
@@ -138,6 +158,7 @@ function SearchModalStory({
           onNewTask={() => undefined}
           {...(defaultContext === undefined ? {} : { defaultContext })}
           {...(defaultQuery === undefined ? {} : { defaultQuery })}
+          {...(defaultRecentItems === undefined ? {} : { defaultRecentItems })}
         />
       </div>
     </Providers>
@@ -229,6 +250,10 @@ export const PageMode: Story = {
 
 export const CommandMode: Story = {
   args: { defaultContext: 'work', defaultQuery: '>' },
+}
+
+export const RecentlyViewed: Story = {
+  args: { defaultContext: 'work', defaultRecentItems: recentItems },
 }
 
 export const CrossSearch: Story = {

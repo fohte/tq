@@ -3,6 +3,7 @@ import {
   type ListItem,
 } from '#components/search/search-modal-result-items'
 import {
+  type Keybinding,
   type NavKeybinding,
   navKeybindings,
   newTaskKeybinding,
@@ -14,24 +15,22 @@ export function createCommandItems(
   openNewTask?: () => void,
 ): ListItem[] {
   const normalizedQuery = query.trim().toLowerCase()
-  const keybindings = [
-    ...Object.values(navKeybindings),
-    ...(openNewTask == null ? [] : [newTaskKeybinding]),
-  ]
+  const commands: { keybinding: Keybinding; select: () => void }[] =
+    Object.values(navKeybindings).map((keybinding) => ({
+      keybinding,
+      select: () => {
+        openRoute(keybinding.to)
+      },
+    }))
+  if (openNewTask != null) {
+    commands.push({ keybinding: newTaskKeybinding, select: openNewTask })
+  }
 
-  return keybindings
-    .filter((keybinding) =>
+  return commands
+    .filter(({ keybinding }) =>
       keybinding.description.toLowerCase().includes(normalizedQuery),
     )
-    .map((keybinding) => {
-      const select = () => {
-        if ('to' in keybinding) {
-          openRoute(keybinding.to)
-        } else {
-          openNewTask?.()
-        }
-      }
-
+    .map(({ keybinding, select }) => {
       return createOptionItem(
         `command:${keybinding.id}`,
         select,

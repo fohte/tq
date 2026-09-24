@@ -28,8 +28,9 @@ function TaskPage() {
       id: task.id,
       title: task.title,
       number: task.number,
+      context: task.context,
     })
-  }, [error, isLoading, task?.id, task?.number, task?.title])
+  }, [error, isLoading, task?.context, task?.id, task?.number, task?.title])
 
   if (isLoading) {
     return <FullPageLoading />
