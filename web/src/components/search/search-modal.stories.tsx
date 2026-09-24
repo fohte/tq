@@ -107,13 +107,13 @@ export const AllContexts: Story = {
 }
 
 export const TaskMode: Story = {
-  args: { defaultQuery: '#keyboard' },
+  args: { defaultContext: 'work', defaultQuery: '#keyboard' },
 }
 
 export const ProjectMode: Story = {
-  args: { defaultQuery: '!keyboard' },
+  args: { defaultContext: 'work', defaultQuery: '!keyboard' },
 }
 
 export const PageMode: Story = {
-  args: { defaultQuery: '/keyboard' },
+  args: { defaultContext: 'work', defaultQuery: '/keyboard' },
 }
