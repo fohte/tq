@@ -10,7 +10,7 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="w-96 bg-background p-4">
+      <div className="w-full max-w-96 bg-background p-4">
         <div className="flex justify-end">
           <Story />
         </div>
