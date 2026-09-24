@@ -201,6 +201,7 @@ function renderSearchModal(
   props: {
     open?: boolean
     onOpenChange?: (open: boolean) => void
+    defaultQuery?: string
   } = {},
 ) {
   const onOpenChange = props.onOpenChange ?? vi.fn()
@@ -209,7 +210,13 @@ function renderSearchModal(
     onOpenChange,
     ...render(
       <Wrapper>
-        <SearchModal open={props.open ?? true} onOpenChange={onOpenChange} />
+        <SearchModal
+          open={props.open ?? true}
+          onOpenChange={onOpenChange}
+          {...(props.defaultQuery === undefined
+            ? {}
+            : { defaultQuery: props.defaultQuery })}
+        />
       </Wrapper>,
     ),
   }
@@ -254,6 +261,49 @@ describe('SearchModal', () => {
     expect(screen.queryByTestId('search-context-scope')).toBeNull()
   })
 
+  it('removes the last scope before clearing the current context', async () => {
+    resetSessionOpenSettings({ localContext: 'work' })
+    mockSearchData = [firstMockTask]
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    const input = screen.getByLabelText('Search tasks')
+    await user.type(input, 'task')
+    await user.keyboard('{Tab}{Backspace}')
+
+    const getOutput = () => ({
+      scopes: screen
+        .queryAllByTestId('search-scope-token')
+        .map((element) => element.textContent),
+      context:
+        screen.queryByTestId('search-context-scope')?.textContent ?? null,
+    })
+    expect(getOutput()).toEqual({ scopes: [], context: 'context:work' })
+  })
+
+  it('removes only the latest scope token with Backspace', async () => {
+    const projectId = '00000000-0000-0000-0000-000000000101'
+    const parentId = '00000000-0000-0000-0000-000000000102'
+    const user = userEvent.setup()
+    renderSearchModal({
+      defaultQuery: `project:${projectId} parent:${parentId} `,
+    })
+
+    await user.keyboard('{Backspace}')
+
+    const getOutput = () => ({
+      scopes: screen
+        .queryAllByTestId('search-scope-token')
+        .map((element) => element.textContent),
+      inputValue: screen.getByLabelText<HTMLInputElement>('Search tasks').value,
+    })
+    expect(getOutput()).toEqual({
+      scopes: [`project:${projectId}`],
+      inputValue: '',
+    })
+  })
+
   it('shows an explicit context token as the active search scope', async () => {
     resetSessionOpenSettings({ localContext: 'personal' })
 
@@ -292,7 +342,7 @@ describe('SearchModal', () => {
     const user = userEvent.setup()
     renderSearchModal()
 
-    const input = screen.getByLabelText('Search tasks')
+    const input = screen.getByLabelText<HTMLInputElement>('Search tasks')
     await user.type(input, 'task')
 
     expect(screen.getByText('Implement task list UI')).toBeInTheDocument()
@@ -620,6 +670,72 @@ describe('SearchModal', () => {
 
     await user.keyboard('{Tab}')
     expect(input).toHaveValue('is:todo ')
+  })
+
+  it('narrows a selected task to its children with Tab and returns to default mode', async () => {
+    mockSearchData = [firstMockTask]
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    const input = screen.getByLabelText<HTMLInputElement>('Search tasks')
+    await user.type(input, '#task')
+    await user.keyboard('{Tab}')
+
+    const getOutput = () => ({
+      scopes: screen
+        .queryAllByTestId('search-scope-token')
+        .map((element) => element.textContent),
+      inputValue: input.value,
+      mode: screen.getByTestId('search-mode-indicator').textContent,
+    })
+    expect(getOutput()).toEqual({
+      scopes: [`parent:${firstMockTask.id}`],
+      inputValue: '',
+      mode: '>',
+    })
+  })
+
+  it('narrows a selected project to its tasks with Tab', async () => {
+    const project = makeProject({
+      id: '00000000-0000-0000-0000-000000000103',
+      title: 'Project alpha',
+    })
+    mockProjectData = [project]
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    const input = screen.getByLabelText<HTMLInputElement>('Search tasks')
+    await user.type(input, 'alpha')
+    await user.keyboard('{Tab}')
+
+    const getOutput = () => ({
+      scopes: screen
+        .queryAllByTestId('search-scope-token')
+        .map((element) => element.textContent),
+      inputValue: input.value,
+    })
+    expect(getOutput()).toEqual({
+      scopes: [`project:${project.id}`],
+      inputValue: '',
+    })
+  })
+
+  it('keeps an unfinished project token editable', async () => {
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    const input = screen.getByLabelText<HTMLInputElement>('Search tasks')
+    await user.type(input, 'project:alpha')
+
+    const getOutput = () => ({
+      scopes: screen
+        .queryAllByTestId('search-scope-token')
+        .map((element) => element.textContent),
+      inputValue: input.value,
+    })
+    expect(getOutput()).toEqual({ scopes: [], inputValue: 'project:alpha' })
   })
 
   it('shows no results message when search returns empty and query is typed', async () => {

@@ -43,7 +43,7 @@ const searchProject = makeProject({
   title: 'Keyboard navigation',
   context: 'work',
 })
-const projectScopeQuery = `project:${searchProject.id}`
+const projectScopeQuery = `project:${searchProject.id} `
 const projectScopedTask = makeTask({
   id: '00000000-0000-0000-0000-000000000143',
   number: 143,
@@ -51,7 +51,7 @@ const projectScopedTask = makeTask({
   context: 'work',
   projectId: searchProject.id,
 })
-const taskScopeQuery = `parent:${searchTask.id}`
+const taskScopeQuery = `parent:${searchTask.id} `
 const taskScopedTask = makeTask({
   id: '00000000-0000-0000-0000-000000000043',
   number: 43,

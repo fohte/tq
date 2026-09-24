@@ -339,7 +339,9 @@ export function SearchModal({
           setQuery('')
         } else if (canPopScope) {
           e.preventDefault()
-          setQuery(removeLastSearchScopeToken(searchQuery))
+          setQuery(
+            `${modePrefix ?? ''}${removeLastSearchScopeToken(searchQuery)}`,
+          )
         } else if (canClearContext) {
           e.preventDefault()
           setIsContextCleared(true)

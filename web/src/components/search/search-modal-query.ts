@@ -9,7 +9,7 @@ import {
 } from '#hooks/use-search'
 
 const scopeTokenPattern =
-  /(?:^|\s)((?:project|parent):(?:"(?:\\.|[^"])*"|'(?:\\.|[^'])*'|\S+))/g
+  /(?:^|\s)((?:project|parent):(?:"(?:\\.|[^"])*"|'(?:\\.|[^'])*'|\S+))(?=\s)/g
 
 export function extractSearchScopeTokens(query: string): string[] {
   return Array.from(
@@ -19,7 +19,7 @@ export function extractSearchScopeTokens(query: string): string[] {
 }
 
 export function stripSearchScopeTokens(query: string): string {
-  return query.replace(scopeTokenPattern, ' ').trim()
+  return query.replace(scopeTokenPattern, '').replace(/^\s+/, '')
 }
 
 export function removeLastSearchScopeToken(query: string): string {
@@ -43,7 +43,9 @@ export function addSearchScope(query: string, scopeToken: string): string {
   delete filters.projectId
   const filterQuery = buildSearchQuery(filters)
 
-  return [...existingScopes, filterQuery, scopeToken].filter(Boolean).join(' ')
+  return (
+    [...existingScopes, filterQuery, scopeToken].filter(Boolean).join(' ') + ' '
+  )
 }
 
 export function useSearchModalQuery(
