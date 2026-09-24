@@ -6,7 +6,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { page } from '@vitest/browser/context'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -19,14 +19,15 @@ import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TreeNode } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { assertDefined, atIndex } from '#lib/test-utils'
-import {
-  DESKTOP_VIEWPORT,
-  MOBILE_VIEWPORT,
-} from '#storybook-config/screenshot-viewports'
+import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
 const mockMutate = vi.fn()
 const mockUpdateStatusMutate = vi.fn()
 const mockSelectRow = vi.fn()
+// Reveal whether portal press events still bubble into the row's Link.
+const mockLinkOnMouseDown = vi.fn()
+const mockLinkOnPointerDown = vi.fn()
+const mockLinkOnTouchStart = vi.fn()
 // Fires when a click bubbles up to the row's Link. A tag token's onClick
 // calls stopPropagation, so this spy lets tests confirm that click never
 // reaches the Link (i.e. no navigation), without relying on jsdom's <a> not
@@ -56,9 +57,8 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
   }
 })
 
-// Only Link is stubbed (to spy on mockLinkOnClick instead of really
-// navigating) — useNavigate/router-building exports stay real so a tag
-// token's navigate({ to: '/tasks', ... }) keeps working.
+// Only Link is stubbed so its synthetic click and press events can be observed
+// without navigating. Router-building exports stay real for tag navigation.
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
   return {
@@ -69,6 +69,9 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     }: { children: React.ReactNode } & Record<string, unknown>) => (
       <a
         href={typeof props['to'] === 'string' ? props['to'] : '#'}
+        onMouseDown={mockLinkOnMouseDown}
+        onPointerDown={mockLinkOnPointerDown}
+        onTouchStart={mockLinkOnTouchStart}
         onClick={(event: React.MouseEvent) => {
           // Stop the real navigation a browser would follow on this href.
           event.preventDefault()
@@ -234,6 +237,7 @@ describe('TreeTaskGridRow', () => {
       document.querySelector<HTMLElement>('[data-slot="dialog-overlay"]'),
       'action sheet backdrop not found',
     )
+    fireEvent.touchStart(overlay)
     await user.click(overlay)
 
     function getInteractionResult() {
@@ -241,6 +245,9 @@ describe('TreeTaskGridRow', () => {
         ['actionSheetOpen', screen.queryByText('add subtask') != null],
         ['rowSelectCalls', mockSelectRow.mock.calls.length],
         ['linkClickCalls', mockLinkOnClick.mock.calls.length],
+        ['linkMouseDownCalls', mockLinkOnMouseDown.mock.calls.length],
+        ['linkPointerDownCalls', mockLinkOnPointerDown.mock.calls.length],
+        ['linkTouchStartCalls', mockLinkOnTouchStart.mock.calls.length],
       ]
     }
 
@@ -249,9 +256,11 @@ describe('TreeTaskGridRow', () => {
         ['actionSheetOpen', false],
         ['rowSelectCalls', 0],
         ['linkClickCalls', 0],
+        ['linkMouseDownCalls', 0],
+        ['linkPointerDownCalls', 0],
+        ['linkTouchStartCalls', 0],
       ])
     })
-    await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
   })
 
   it('renders the task number', async () => {

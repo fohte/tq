@@ -30,7 +30,7 @@ function stopRowNavigation(e: React.MouseEvent) {
   e.stopPropagation()
 }
 
-function stopClickPropagation(e: React.MouseEvent) {
+function stopEventPropagation(e: React.SyntheticEvent) {
   e.stopPropagation()
 }
 
@@ -56,8 +56,15 @@ export function ActionsMenu({
   defaultOpen?: 'desktop' | 'mobile' | undefined
 }) {
   return (
-    // Portal events follow this React subtree, so backdrop clicks need to stop here too.
-    <div className="contents" onClick={stopClickPropagation}>
+    // Portal events bubble through this React tree. Stop clicks and presses before
+    // they reach a row handler.
+    <div
+      className="contents"
+      onClick={stopEventPropagation}
+      onMouseDown={stopEventPropagation}
+      onPointerDown={stopEventPropagation}
+      onTouchStart={stopEventPropagation}
+    >
       <DropdownMenu defaultOpen={defaultOpen === 'desktop'}>
         <DropdownMenuTrigger
           aria-label={ariaLabel}
@@ -70,12 +77,7 @@ export function ActionsMenu({
         >
           <MoreHorizontal className="h-3.5 w-3.5" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          onClick={(e) => {
-            e.stopPropagation()
-          }}
-        >
+        <DropdownMenuContent align="end">
           {items.map((item) => (
             <DropdownMenuItem
               key={item.label}
@@ -108,11 +110,7 @@ export function ActionsMenu({
           >
             <MoreHorizontal className="h-4 w-4" />
           </ActionSheetTrigger>
-          <ActionSheetContent
-            onClick={(e) => {
-              e.stopPropagation()
-            }}
-          >
+          <ActionSheetContent>
             {mobileItems.map((item) => (
               <ActionSheetItem
                 key={item.label}

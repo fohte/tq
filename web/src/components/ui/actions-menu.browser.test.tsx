@@ -6,10 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { ActionsMenu } from '#components/ui/actions-menu'
 import { assertDefined } from '#lib/test-utils'
-import {
-  DESKTOP_VIEWPORT,
-  MOBILE_VIEWPORT,
-} from '#storybook-config/screenshot-viewports'
+import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
 const items = [
   { icon: <Pencil className="h-4 w-4" />, label: 'rename…', onClick: vi.fn() },
@@ -62,19 +59,28 @@ describe('ActionsMenu', () => {
   })
 
   it('does not bubble an outside dropdown click to a row link', async () => {
-    await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
     const user = userEvent.setup()
     const rowClick = vi.fn()
+    const rowMouseDown = vi.fn()
+    const rowPointerDown = vi.fn()
     const linkClick = vi.fn()
+    const linkMouseDown = vi.fn()
+    const linkPointerDown = vi.fn()
     render(
       <a
         href="/tasks/example"
+        onMouseDown={linkMouseDown}
+        onPointerDown={linkPointerDown}
         onClick={(event) => {
           event.preventDefault()
           linkClick()
         }}
       >
-        <div onClick={rowClick}>
+        <div
+          onClick={rowClick}
+          onMouseDown={rowMouseDown}
+          onPointerDown={rowPointerDown}
+        >
           <ActionsMenu items={items} defaultOpen="desktop" />
         </div>
       </a>,
@@ -82,10 +88,8 @@ describe('ActionsMenu', () => {
 
     await screen.findByText('rename…')
     const backdrop = assertDefined(
-      document.querySelector<HTMLElement>(
-        '[data-base-ui-inert][role="presentation"]',
-      ),
-      'dropdown backdrop not found',
+      document.elementFromPoint(window.innerWidth - 1, window.innerHeight - 1),
+      'dropdown backdrop not found at viewport corner',
     )
     await user.click(backdrop)
 
@@ -93,7 +97,11 @@ describe('ActionsMenu', () => {
       return [
         ['dropdownOpen', screen.queryByText('rename…') != null],
         ['rowClickCount', rowClick.mock.calls.length],
+        ['rowMouseDownCount', rowMouseDown.mock.calls.length],
+        ['rowPointerDownCount', rowPointerDown.mock.calls.length],
         ['linkClickCount', linkClick.mock.calls.length],
+        ['linkMouseDownCount', linkMouseDown.mock.calls.length],
+        ['linkPointerDownCount', linkPointerDown.mock.calls.length],
       ]
     }
 
@@ -101,7 +109,11 @@ describe('ActionsMenu', () => {
       expect(getInteractionResult()).toEqual([
         ['dropdownOpen', false],
         ['rowClickCount', 0],
+        ['rowMouseDownCount', 0],
+        ['rowPointerDownCount', 0],
         ['linkClickCount', 0],
+        ['linkMouseDownCount', 0],
+        ['linkPointerDownCount', 0],
       ])
     })
   })
