@@ -56,6 +56,7 @@ export function createOptionItem(
 export function createProjectItems(
   projects: Project[] | undefined,
   openProject: (project: Project) => void,
+  scopeProject?: (project: Project) => void,
 ): ListItem[] {
   return (
     projects?.map((project) => {
@@ -65,6 +66,12 @@ export function createProjectItems(
       const select = () => {
         openProject(project)
       }
+      const selectOnTab =
+        scopeProject == null
+          ? undefined
+          : () => {
+              scopeProject(project)
+            }
 
       return createOptionItem(
         `project:${project.id}`,
@@ -75,6 +82,7 @@ export function createProjectItems(
             {project.title}
           </span>
         </>,
+        selectOnTab == null ? {} : { selectOnTab },
       )
     }) ?? []
   )
