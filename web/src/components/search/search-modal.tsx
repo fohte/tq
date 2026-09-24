@@ -365,7 +365,7 @@ export function SearchModal({
           aria-label="Search"
         >
           {/* Search input */}
-          <div className="flex h-12 items-center gap-3 border-b border-border px-4">
+          <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
             <span
               className="font-mono text-sm font-bold text-primary"
               data-testid="search-mode-indicator"
