@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeSavedView } from '#components/layout/sidebar-test-fixtures'
 import { makeProject } from '#components/project/project-test-fixtures'
 import { SearchModal } from '#components/search/search-modal'
+import { makePageSearchResult } from '#components/search/search-test-fixtures'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { Project } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
@@ -62,22 +63,6 @@ function makeTask(overrides: Partial<MockTask> = {}): MockTask {
 }
 
 const firstMockTask = makeTask()
-
-function makePageSearchResult(
-  overrides: Partial<PageSearchResult> = {},
-): PageSearchResult {
-  return {
-    source: 'page',
-    taskNumber: 42,
-    taskTitle: 'Roadmap task',
-    pageId: 'page-001',
-    pageTitle: 'Architecture notes',
-    snippet: 'The architecture notes mention the search flow.',
-    matchCount: 1,
-    updatedAt: '2026-03-20T00:00:00.000Z',
-    ...overrides,
-  }
-}
 
 const mockTasks = [
   firstMockTask,
