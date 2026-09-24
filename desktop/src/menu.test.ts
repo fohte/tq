@@ -69,7 +69,10 @@ describe('historyItems', () => {
 
 describe('pageItems', () => {
   it('binds the Copy URL shortcut', () => {
-    const items = pageItems({ getURL: () => '' }, { writeText: () => {} })
+    const items = pageItems(
+      { getURL: () => '', executeJavaScript: () => Promise.resolve('') },
+      { writeText: () => {} },
+    )
 
     expect(
       items.map(({ label, accelerator }) => ({ label, accelerator })),
@@ -78,12 +81,18 @@ describe('pageItems', () => {
 
   it('copies the URL the page has at click time', () => {
     let currentUrl = 'https://example.test/tasks/41'
-    const copiedUrls: string[] = []
+    const calls: { operation: 'copy' | 'dispatch'; value: string }[] = []
     const [copyUrl] = pageItems(
-      { getURL: () => currentUrl },
+      {
+        getURL: () => currentUrl,
+        executeJavaScript: (script) => {
+          calls.push({ operation: 'dispatch', value: script })
+          return Promise.resolve('')
+        },
+      },
       {
         writeText: (url) => {
-          copiedUrls.push(url)
+          calls.push({ operation: 'copy', value: url })
         },
       },
     )
@@ -91,7 +100,14 @@ describe('pageItems', () => {
     currentUrl = 'https://example.test/tasks/42'
     copyUrl?.click()
 
-    expect(copiedUrls).toEqual(['https://example.test/tasks/42'])
+    expect(calls).toEqual([
+      { operation: 'copy', value: 'https://example.test/tasks/42' },
+      {
+        operation: 'dispatch',
+        value:
+          'window.dispatchEvent(new CustomEvent(\'tq:url-copied\', { detail: { url: "https://example.test/tasks/42" } }))',
+      },
+    ])
   })
 })
 
@@ -100,7 +116,7 @@ describe('buildMenuTemplate', () => {
     const { history } = fakeHistory({ back: false, forward: false })
     const menu = buildMenuTemplate(
       history,
-      { getURL: () => '' },
+      { getURL: () => '', executeJavaScript: () => Promise.resolve('') },
       { writeText: () => {} },
     )
     const pageMenu = menu.find(({ label }) => label === 'Page')

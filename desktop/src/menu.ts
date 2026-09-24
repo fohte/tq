@@ -11,7 +11,7 @@ type ShortcutItem = {
   click: () => void
 }
 
-type CurrentPage = Pick<WebContents, 'getURL'>
+type CurrentPage = Pick<WebContents, 'executeJavaScript' | 'getURL'>
 
 type ClipboardWriter = {
   writeText: (text: string) => void
@@ -42,7 +42,11 @@ export const pageItems = (
     label: 'Copy URL',
     accelerator: 'CmdOrCtrl+Shift+C',
     click: () => {
-      clipboard.writeText(webContents.getURL())
+      const url = webContents.getURL()
+      clipboard.writeText(url)
+      void webContents.executeJavaScript(
+        `window.dispatchEvent(new CustomEvent('tq:url-copied', { detail: { url: ${JSON.stringify(url)} } }))`,
+      )
     },
   },
 ]

@@ -4,16 +4,19 @@ import { type ReactNode, useCallback, useState } from 'react'
 import { BottomTabBar } from '#components/layout/bottom-tab-bar'
 import { Sidebar } from '#components/layout/sidebar'
 import { StatusLine } from '#components/layout/status-line'
+import { UrlCopiedToast } from '#components/layout/url-copied-toast'
 import { SearchModal } from '#components/search/search-modal'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { useGlobalKeybindings } from '#hooks/use-global-keybindings'
 import { SearchModalOpenContext } from '#hooks/use-search-modal-open'
+import { useUrlCopiedToast } from '#hooks/use-url-copied-toast'
 import { useVisualViewportInsets } from '#hooks/use-visual-viewport-insets'
 import { cn } from '#lib/utils'
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [newTaskOpen, setNewTaskOpen] = useState(false)
+  const copiedUrl = useUrlCopiedToast()
   const openNewTask = useCallback(() => {
     setNewTaskOpen(true)
   }, [])
@@ -63,6 +66,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         onNewTask={openNewTask}
       />
       <CreateTaskModal open={newTaskOpen} onOpenChange={setNewTaskOpen} />
+      <UrlCopiedToast url={copiedUrl} />
     </div>
   )
 }
