@@ -1,14 +1,8 @@
 import { parseSearchQuery } from 'api/search-query-parser'
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+import { createCommandItems } from '#components/search/search-modal-command-items'
 import { SearchModalFooter } from '#components/search/search-modal-footer'
 import { useSearchModalHelp } from '#components/search/search-modal-help'
 import { SearchModalInput } from '#components/search/search-modal-input'
@@ -17,6 +11,7 @@ import {
   removeLastSearchScopeToken,
   useSearchModalQuery,
 } from '#components/search/search-modal-query'
+import { createRecentSearchItems } from '#components/search/search-modal-recent-item'
 import {
   createOptionItem,
   createPageItems,
@@ -25,20 +20,29 @@ import {
   type ListItem,
   renderTaskOption,
 } from '#components/search/search-modal-result-items'
+import {
+  indexResultGroups,
+  type ResultGroup,
+  SearchModalResultList,
+} from '#components/search/search-modal-result-list'
 import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPanel } from '#components/search/search-syntax-help-panel'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useDebounce } from '#hooks/use-debounce'
 import { useProjects } from '#hooks/use-projects'
 import { useSavedViews } from '#hooks/use-saved-views'
-import type { SearchResult } from '#hooks/use-search'
 import {
   resolveSearchContext,
+  type SearchResult,
   useSearchPages,
   useSearchSuggestions,
   useSearchTaskByNumber,
   useSearchTasks,
 } from '#hooks/use-search'
+import {
+  getRecentSearchItems,
+  type RecentSearchItem,
+} from '#lib/recent-search-items'
 
 interface SearchModalProps {
   open: boolean
@@ -46,17 +50,8 @@ interface SearchModalProps {
   defaultContext?: 'work' | 'personal' | null
   defaultQuery?: string
   defaultHelpOpen?: boolean
-}
-
-interface ResultGroup {
-  id: string
-  title: string
-  items: ListItem[]
-  isVisible: (query: string, itemCount: number) => boolean
-}
-
-interface IndexedResultGroup extends Omit<ResultGroup, 'items'> {
-  items: { item: ListItem; globalIndex: number }[]
+  defaultRecentItems?: RecentSearchItem[]
+  onNewTask?: () => void
 }
 
 export function SearchModal({
@@ -65,10 +60,15 @@ export function SearchModal({
   defaultContext: contextOverride,
   defaultQuery = '',
   defaultHelpOpen = false,
+  defaultRecentItems,
+  onNewTask,
 }: SearchModalProps) {
   const [query, setQuery] = useState(defaultQuery)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isContextCleared, setIsContextCleared] = useState(false)
+  const [recentItems, setRecentItems] = useState<RecentSearchItem[]>(
+    defaultRecentItems ?? [],
+  )
   const inputRef = useRef<HTMLInputElement>(null)
   const helpBackButtonRef = useRef<HTMLButtonElement>(null)
   const {
@@ -77,7 +77,6 @@ export function SearchModal({
     handleKeyDown: handleHelpKeyDown,
   } = useSearchModalHelp(open, inputRef, helpBackButtonRef, defaultHelpOpen)
   const listRef = useRef<HTMLDivElement>(null)
-  const lastMousePos = useRef({ x: 0, y: 0 })
   const onOpenChangeRef = useRef(onOpenChange)
   onOpenChangeRef.current = onOpenChange
   const {
@@ -91,7 +90,7 @@ export function SearchModal({
     applyScope,
     updateInputValue,
   } = useSearchModalQuery(query, setQuery, inputRef)
-  const { openTask, openProject, openView, openPage } =
+  const { openTask, openProject, openView, openPage, openRoute } =
     useSearchModalNavigation(onOpenChangeRef)
   const currentContext = useCurrentContext()
   const configuredContext =
@@ -100,7 +99,10 @@ export function SearchModal({
       : (contextOverride ?? undefined)
   const defaultSearchContext = isContextCleared ? undefined : configuredContext
   const hasSearchQuery = searchQuery.length > 0
-  const context = resolveSearchContext(searchQuery, defaultSearchContext)
+  const context =
+    searchMode === 'commands'
+      ? undefined
+      : resolveSearchContext(searchQuery, defaultSearchContext)
   const canPopScope = searchInputValue === '' && searchScopeTokens.length > 0
   const canClearContext =
     searchInputValue === '' && searchScopeTokens.length === 0 && context != null
@@ -154,8 +156,9 @@ export function SearchModal({
       setQuery(defaultQuery)
       setSelectedIndex(0)
       setIsContextCleared(false)
+      setRecentItems(defaultRecentItems ?? getRecentSearchItems())
     }
-  }, [open, defaultQuery])
+  }, [open, defaultQuery, defaultRecentItems])
 
   // Scroll selected item into view
   useEffect(() => {
@@ -167,6 +170,31 @@ export function SearchModal({
   }, [selectedIndex])
 
   const resultGroups = useMemo((): ResultGroup[] => {
+    const recentListItems =
+      query === ''
+        ? createRecentSearchItems(
+            context == null
+              ? recentItems
+              : recentItems.filter(
+                  (item) => item.context == null || item.context === context,
+                ),
+            openTask,
+            openProject,
+          )
+        : []
+    const commandItems =
+      searchMode === 'commands'
+        ? createCommandItems(
+            searchInputValue,
+            openRoute,
+            onNewTask == null
+              ? undefined
+              : () => {
+                  onOpenChangeRef.current(false)
+                  onNewTask()
+                },
+          )
+        : []
     const suggestionItems: ListItem[] =
       suggestions && currentPrefix.length > 0
         ? suggestions.map((suggestion) => {
@@ -226,6 +254,18 @@ export function SearchModal({
 
     return [
       {
+        id: 'commands',
+        title: 'Commands',
+        items: commandItems,
+        isVisible: (_query, itemCount) => itemCount > 0,
+      },
+      {
+        id: 'recent',
+        title: 'Recently viewed',
+        items: recentListItems,
+        isVisible: (_query, itemCount) => itemCount > 0,
+      },
+      {
         id: 'task-number',
         title: 'Task number',
         items: taskNumberItems,
@@ -263,6 +303,13 @@ export function SearchModal({
       },
     ]
   }, [
+    query,
+    recentItems,
+    searchMode,
+    searchInputValue,
+    context,
+    onNewTask,
+    openRoute,
     suggestions,
     tasks,
     taskByNumber,
@@ -285,26 +332,10 @@ export function SearchModal({
     hasSearchQuery,
   ])
 
-  const { items, indexedGroups } = useMemo((): {
-    items: ListItem[]
-    indexedGroups: IndexedResultGroup[]
-  } => {
-    let globalIndex = 0
-    const indexedGroups = resultGroups.map((group) => ({
-      ...group,
-      items: group.items.map((item) => ({
-        item,
-        globalIndex: globalIndex++,
-      })),
-    }))
-
-    return {
-      indexedGroups,
-      items: indexedGroups.flatMap((group) =>
-        group.items.map(({ item }) => item),
-      ),
-    }
-  }, [resultGroups])
+  const { items, indexedGroups } = useMemo(
+    () => indexResultGroups(resultGroups),
+    [resultGroups],
+  )
 
   useEffect(() => {
     setSelectedIndex(0)
@@ -365,6 +396,17 @@ export function SearchModal({
     group.isVisible(searchQuery, group.items.length),
   )
 
+  const emptyMessage =
+    searchQuery.length > 0 && !isFetching && visibleGroups.length === 0
+      ? searchInputValue.length === 0
+        ? 'no results in this scope'
+        : `no results for "${searchInputValue}"`
+      : undefined
+  const initialMessage =
+    searchQuery.length === 0 && items.length === 0
+      ? `Type to search ${searchMode ?? 'tasks'}`
+      : undefined
+
   if (!open) return null
 
   const searchTarget = searchMode ?? 'tasks'
@@ -402,66 +444,21 @@ export function SearchModal({
             }}
           />
 
-          {/* Results list */}
-          <div
-            ref={listRef}
-            className="flex-1 overflow-y-auto py-2"
-            role="listbox"
-            aria-label="Search results"
-            hidden={isHelpOpen}
-          >
-            {visibleGroups.map((group, groupIndex) => (
-              <Fragment key={group.id}>
-                {groupIndex > 0 && <div className="mx-4 my-1 h-px bg-border" />}
-                <div className="px-4 py-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
-                  {group.title}
-                </div>
-                {group.items.map(({ item, globalIndex }) => (
-                  <Fragment key={item.key}>
-                    {item.render({
-                      isSelected: selectedIndex === globalIndex,
-                      onMouseMove: (e) => {
-                        if (
-                          e.clientX !== lastMousePos.current.x ||
-                          e.clientY !== lastMousePos.current.y
-                        ) {
-                          lastMousePos.current = {
-                            x: e.clientX,
-                            y: e.clientY,
-                          }
-                          setSelectedIndex(globalIndex)
-                        }
-                      },
-                    })}
-                  </Fragment>
-                ))}
-              </Fragment>
-            ))}
-
-            {/* Empty state */}
-            {searchQuery.length > 0 &&
-              !isFetching &&
-              visibleGroups.length === 0 && (
-                <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
-                  {searchInputValue.length === 0
-                    ? 'no results in this scope'
-                    : `no results for "${searchInputValue}"`}
-                </div>
-              )}
-
-            {/* Initial state */}
-            {searchQuery.length === 0 && (
-              <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
-                {`Type to search ${searchTarget}`}
-              </div>
-            )}
-          </div>
-          {isHelpOpen && (
+          {isHelpOpen ? (
             <SearchSyntaxHelpPanel
               sections={getSearchSyntaxHelpSections()}
               onBack={closeHelp}
               className="flex-1"
               backButtonRef={helpBackButtonRef}
+            />
+          ) : (
+            <SearchModalResultList
+              groups={visibleGroups}
+              listRef={listRef}
+              selectedIndex={selectedIndex}
+              onSelectedIndexChange={setSelectedIndex}
+              {...(emptyMessage == null ? {} : { emptyMessage })}
+              {...(initialMessage == null ? {} : { initialMessage })}
             />
           )}
 

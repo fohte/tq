@@ -15,6 +15,7 @@ import {
   makeTask,
   makeTaskDetail,
 } from '#components/task/task-row-test-fixtures'
+import type { RecentSearchItem } from '#lib/recent-search-items'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const keyboardQuery = 'keyboard'
@@ -93,6 +94,23 @@ const searchPage = makePageSearchResult({
   pageTitle: 'Keyboard shortcuts',
   snippet: 'Keyboard shortcuts for searching and navigation.',
 })
+const recentItems: RecentSearchItem[] = [
+  {
+    kind: 'task',
+    id: searchTask.id,
+    number: searchTask.number,
+    title: searchTask.title,
+    context: 'work',
+    viewedAt: 1_800_000_000_000,
+  },
+  {
+    kind: 'project',
+    id: searchProject.id,
+    title: searchProject.title,
+    context: 'work',
+    viewedAt: 1_799_999_000_000,
+  },
+]
 
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
@@ -116,10 +134,12 @@ function SearchModalStory({
   defaultContext,
   defaultQuery,
   defaultHelpOpen,
+  defaultRecentItems,
 }: {
   defaultContext?: 'work' | 'personal' | null
   defaultQuery?: string
   defaultHelpOpen?: boolean
+  defaultRecentItems?: RecentSearchItem[]
 } = {}) {
   const [open, setOpen] = useState(true)
   return (
@@ -137,9 +157,11 @@ function SearchModalStory({
         <SearchModal
           open={open}
           onOpenChange={setOpen}
+          onNewTask={() => undefined}
           {...(defaultContext === undefined ? {} : { defaultContext })}
           {...(defaultQuery === undefined ? {} : { defaultQuery })}
           {...(defaultHelpOpen === undefined ? {} : { defaultHelpOpen })}
+          {...(defaultRecentItems === undefined ? {} : { defaultRecentItems })}
         />
       </div>
     </Providers>
@@ -227,6 +249,14 @@ export const ProjectMode: Story = {
 
 export const PageMode: Story = {
   args: { defaultContext: 'work', defaultQuery: `/${keyboardQuery}` },
+}
+
+export const CommandMode: Story = {
+  args: { defaultContext: 'work', defaultQuery: '>' },
+}
+
+export const RecentlyViewed: Story = {
+  args: { defaultContext: 'work', defaultRecentItems: recentItems },
 }
 
 export const CrossSearch: Story = {

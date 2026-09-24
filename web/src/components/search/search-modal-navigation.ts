@@ -1,9 +1,9 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useCallback, useRef } from 'react'
 
-import type { Project } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
 import type { PageSearchResult, SearchResult } from '#hooks/use-search'
+import type { NavKeybinding } from '#lib/keybindings'
 
 export function useSearchModalNavigation(onOpenChangeRef: {
   current: (open: boolean) => void
@@ -12,7 +12,7 @@ export function useSearchModalNavigation(onOpenChangeRef: {
   const navigateRef = useRef(navigate)
   navigateRef.current = navigate
 
-  const openTask = useCallback((task: SearchResult) => {
+  const openTask = useCallback((task: Pick<SearchResult, 'id'>) => {
     onOpenChangeRef.current(false)
     void navigateRef.current({
       to: '/tasks/$taskId',
@@ -20,12 +20,17 @@ export function useSearchModalNavigation(onOpenChangeRef: {
     })
   }, [])
 
-  const openProject = useCallback((project: Project) => {
+  const openProject = useCallback((project: { id: string }) => {
     onOpenChangeRef.current(false)
     void navigateRef.current({
       to: '/projects/$projectId',
       params: { projectId: project.id },
     })
+  }, [])
+
+  const openRoute = useCallback((to: NavKeybinding['to']) => {
+    onOpenChangeRef.current(false)
+    void navigateRef.current({ to })
   }, [])
 
   const openView = useCallback((view: SavedView) => {
@@ -48,5 +53,5 @@ export function useSearchModalNavigation(onOpenChangeRef: {
     })
   }, [])
 
-  return { openTask, openProject, openView, openPage }
+  return { openTask, openProject, openView, openPage, openRoute }
 }

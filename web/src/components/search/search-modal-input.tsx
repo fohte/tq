@@ -8,7 +8,7 @@ interface SearchModalInputProps {
   context?: 'work' | 'personal' | undefined
   searchScopeTokens: string[]
   searchInputValue: string
-  searchTarget: 'tasks' | 'projects' | 'pages'
+  searchTarget: 'tasks' | 'projects' | 'pages' | 'commands'
   isFetching: boolean
   onInputValueChange: (value: string) => void
   inputRef?: React.RefObject<HTMLInputElement | null>
@@ -31,7 +31,7 @@ export function SearchModalInput({
         data-testid="search-mode-indicator"
         aria-hidden="true"
       >
-        {modePrefix ?? '>'}
+        {modePrefix ?? '›'}
       </span>
       {context != null && (
         <Chip size="md" active data-testid="search-context-scope">

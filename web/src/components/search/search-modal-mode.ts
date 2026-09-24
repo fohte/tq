@@ -14,11 +14,16 @@ export const SEARCH_MODE_DEFINITIONS = {
     label: 'Pages',
     description: 'Search page, comment, and task text.',
   },
+  '>': {
+    mode: 'commands',
+    label: 'Commands',
+    description: 'Browse available navigation commands.',
+  },
 } as const
 
 export function parseSearchMode(query: string) {
   const prefix = query[0]
-  if (prefix === '#' || prefix === '!' || prefix === '/') {
+  if (prefix === '#' || prefix === '!' || prefix === '/' || prefix === '>') {
     return {
       mode: SEARCH_MODE_DEFINITIONS[prefix].mode,
       prefix,

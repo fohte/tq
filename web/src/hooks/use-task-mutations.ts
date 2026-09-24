@@ -10,6 +10,7 @@ import type {
 import { taskKeys } from '#hooks/use-task-queries'
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
+import { removeRecentSearchItem } from '#lib/recent-search-items'
 
 export interface CreateTaskInput {
   title: string
@@ -540,6 +541,9 @@ export function useDeleteTask() {
         param: { id },
       })
       assertOkOrThrow(res)
+    },
+    onSuccess: (_data, id) => {
+      removeRecentSearchItem('task', id)
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists })
