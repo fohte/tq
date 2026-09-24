@@ -1,5 +1,6 @@
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
 import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
+import { useEffect } from 'react'
 
 import {
   ProjectMainContent,
@@ -12,6 +13,7 @@ import { FullPageMessage } from '#components/ui/full-page-message'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
 import { useProject, useProjects } from '#hooks/use-projects'
 import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
+import { recordRecentSearchItem } from '#lib/recent-search-items'
 
 const projectTasksSearchDefaults = {
   q: buildSearchQuery({
@@ -50,6 +52,16 @@ function ProjectDetailPage() {
     error,
   } = useProject(projectId)
   const projects = useProjects()
+
+  useEffect(() => {
+    if (isProjectLoading || error || project == null) return
+    recordRecentSearchItem({
+      kind: 'project',
+      id: project.id,
+      title: project.title,
+      context: project.context,
+    })
+  }, [error, isProjectLoading, project?.context, project?.id, project?.title])
 
   const setQuery = (newQuery: string) => {
     void navigate({

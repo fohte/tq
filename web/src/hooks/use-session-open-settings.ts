@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 
 import { getStorageItem, parseJson, setStorageItem } from '#lib/local-storage'
 import type { SessionOpenSettings } from '#lib/session-open'
+import { isRecord } from '#lib/type-guards'
 
 export const STORAGE_KEY = 'tq:session-open-settings'
 
@@ -17,10 +18,6 @@ function isContext(value: unknown): value is 'work' | 'personal' {
 
 function toTemplate(value: unknown): string | null {
   return typeof value === 'string' && value !== '' ? value : null
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }
 
 // Settings edited through our own UI, so validation here is only a defense

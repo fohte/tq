@@ -1,4 +1,5 @@
 import { parseJson } from '#lib/local-storage'
+import { isRecord } from '#lib/type-guards'
 
 // Shown when a push arrives with no usable payload. Swallowing such a push
 // silently is not an option: iOS revokes the permission when a push wakes the
@@ -10,10 +11,6 @@ const FALLBACK_URL = '/'
 export interface PushNotification {
   title: string
   options: NotificationOptions
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
 }
 
 function readString(source: unknown, key: string): string | undefined {

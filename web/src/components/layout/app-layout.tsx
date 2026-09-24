@@ -14,14 +14,15 @@ import { cn } from '#lib/utils'
 export function AppLayout({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [newTaskOpen, setNewTaskOpen] = useState(false)
+  const openNewTask = useCallback(() => {
+    setNewTaskOpen(true)
+  }, [])
   const insets = useVisualViewportInsets()
 
   useGlobalKeybindings({
     searchOpen,
     onSearchOpenChange: setSearchOpen,
-    onNewTask: useCallback(() => {
-      setNewTaskOpen(true)
-    }, []),
+    onNewTask: openNewTask,
   })
 
   // Viewport-pinned routes need min-h-0 so their h-full content resolves
@@ -56,7 +57,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <StatusLine />
         <BottomTabBar />
       </div>
-      <SearchModal open={searchOpen} onOpenChange={setSearchOpen} />
+      <SearchModal
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        onNewTask={openNewTask}
+      />
       <CreateTaskModal open={newTaskOpen} onOpenChange={setNewTaskOpen} />
     </div>
   )
