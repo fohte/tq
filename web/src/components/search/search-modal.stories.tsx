@@ -4,10 +4,14 @@ import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 
+import { makeSavedView } from '#components/layout/sidebar-test-fixtures'
 import { makeProject } from '#components/project/project-test-fixtures'
 import { SearchModal } from '#components/search/search-modal'
 import { makePageSearchResult } from '#components/search/search-test-fixtures'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import {
+  makeTask,
+  makeTaskDetail,
+} from '#components/task/task-row-test-fixtures'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const searchTask = makeTask({
@@ -20,6 +24,25 @@ const searchTask = makeTask({
 const searchProject = makeProject({
   id: '00000000-0000-0000-0000-000000000142',
   title: 'Keyboard navigation',
+  context: 'work',
+})
+
+const searchView = makeSavedView({
+  id: '00000000-0000-0000-0000-000000000242',
+  name: 'Keyboard view',
+  context: 'work',
+})
+
+const isolatedView = makeSavedView({
+  id: '00000000-0000-0000-0000-000000000243',
+  name: 'Workbench',
+  context: 'work',
+})
+
+const numberedTask = makeTaskDetail({
+  id: '00000000-0000-0000-0000-000000000312',
+  number: 312,
+  title: 'Search modal keyboard shortcuts',
   context: 'work',
 })
 
@@ -87,11 +110,43 @@ const meta = {
     layout: 'fullscreen',
     msw: {
       handlers: [
-        http.get('/api/tasks', () => HttpResponse.json([searchTask])),
-        http.get('/api/projects', () => HttpResponse.json([searchProject])),
-        http.get('/api/tasks/search/pages', () =>
-          HttpResponse.json({ results: [searchPage] }),
-        ),
+        http.get('/api/tasks', ({ request }) => {
+          const query = new URL(request.url).searchParams.get('q')
+          return HttpResponse.json(query === 'keyboard' ? [searchTask] : [])
+        }),
+        http.get('/api/tasks/312', () => HttpResponse.json(numberedTask)),
+        http.get('/api/projects', ({ request }) => {
+          const query = new URL(request.url).searchParams.get('q')
+          return HttpResponse.json(query === 'keyboard' ? [searchProject] : [])
+        }),
+        http.get('/api/saved-views', ({ request }) => {
+          const query = new URL(request.url).searchParams.get('q')
+          return HttpResponse.json(
+            query === 'keyboard'
+              ? [searchView]
+              : query === 'workbench'
+                ? [isolatedView]
+                : [],
+          )
+        }),
+        http.get('/api/tasks/search/pages', ({ request }) => {
+          const query = new URL(request.url).searchParams.get('q')
+          return HttpResponse.json({
+            results: query === 'keyboard' ? [searchPage] : [],
+          })
+        }),
+        http.get('/api/tasks/search/suggest', ({ request }) => {
+          const prefix = new URL(request.url).searchParams.get('prefix') ?? ''
+          const suggestions = [
+            { value: 'is:todo', display: 'Todo', category: 'is' },
+            { value: 'is:completed', display: 'Completed', category: 'is' },
+          ]
+          return HttpResponse.json(
+            suggestions.filter((suggestion) =>
+              suggestion.value.startsWith(prefix),
+            ),
+          )
+        }),
       ],
     },
   },
@@ -116,4 +171,24 @@ export const ProjectMode: Story = {
 
 export const PageMode: Story = {
   args: { defaultContext: 'work', defaultQuery: '/keyboard' },
+}
+
+export const CrossSearch: Story = {
+  args: { defaultContext: 'work', defaultQuery: 'keyboard' },
+}
+
+export const TaskNumber: Story = {
+  args: { defaultContext: 'work', defaultQuery: '#312' },
+}
+
+export const Suggestions: Story = {
+  args: { defaultContext: 'work', defaultQuery: 'is:' },
+}
+
+export const Views: Story = {
+  args: { defaultContext: 'work', defaultQuery: 'workbench' },
+}
+
+export const NoResults: Story = {
+  args: { defaultContext: 'work', defaultQuery: 'nothing-matches' },
 }
