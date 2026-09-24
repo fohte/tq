@@ -1,108 +1,27 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
+@import '@fohte/ui/tokens.css';
 @import '@fontsource-variable/jetbrains-mono';
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
 @import '@fontsource/ibm-plex-mono/600.css';
 @import '#components/calendar/fullcalendar.css';
 
-@custom-variant dark (&:is(.dark *));
-
-/*
- * Single dark palette: the light theme is unused (web/index.html hardcodes
- * class="dark" and no theme toggle exists), so all tokens live directly on
- * :root instead of duplicating them under a separate .dark block.
- */
 :root {
-  --background: #0a0a0a;
-  --foreground: #fafafa;
-  --card: #141414;
-  --card-foreground: #fafafa;
-  --popover: #141414;
-  --popover-foreground: #fafafa;
-  /*
-   * --primary stays the one accent color (used broadly as text-primary /
-   * bg-primary for links, active nav state, focus borders, etc. across the
-   * app) — it is red here, not a gray fill. Button's own primary look
-   * (bordered dark box) intentionally does NOT use --primary; see
-   * --surface-strong below.
-   */
-  --primary: #ef4444;
-  --primary-foreground: #fafafa;
-  --secondary: #141414;
-  --secondary-foreground: #fafafa;
-  --muted: #141414;
-  --muted-foreground: #71717a;
-  /*
-   * Distinct from --popover/--card (both #141414): --accent marks the
-   * keyboard-highlighted row in menus rendered on those surfaces, so it must
-   * not match their background.
-   */
-  --accent: #1f1f1f;
-  --accent-foreground: #fafafa;
-  --destructive: #ef4444;
-  --border: #2a2a2a;
-  --input: #2a2a2a;
-  --ring: #ef4444;
-  --radius: 0rem;
-  --sidebar: #0a0a0a;
-  --sidebar-foreground: #fafafa;
-  --sidebar-primary: #ef4444;
-  --sidebar-primary-foreground: #fafafa;
-  --sidebar-accent: #141414;
-  --sidebar-accent-foreground: #fafafa;
-  --sidebar-border: #2a2a2a;
-  --sidebar-ring: #ef4444;
-
-  /* Extra tiers the shadcn set has no slot for — see docs/design-system.md */
-  --border-strong: #71717a;
-  --surface-strong: #1f1f1f;
-  --muted-foreground-strong: #a1a1aa;
-  --muted-foreground-faint: #52525b;
-  --muted-foreground-ghost: #3f3f46;
-
-  /*
-   * Second app accent, scoped to the `completed` close-reason status icon
-   * only (see docs/design-system.md Status convention) — same hex as
-   * --github-merged below, but a separate token since --github-merged is
-   * reserved for GitHub state display only.
-   */
   --status-completed: #a371f7;
-
-  /*
-   * GitHub's own brand colors for PR/issue state — not part of the app's
-   * status/accent system, so kept separate from --primary and friends.
-   */
   --github-open: #3fb950;
   --github-closed: #f85149;
   --github-merged: #a371f7;
 
-  /*
-   * Values that would otherwise be bracket arbitrary values, referenced via
-   * the css-var arbitrary-value syntax (e.g. rounded-(--btn-radius-xs))
-   * instead — see docs/design-system.md. None of these match a Tailwind
-   * theme namespace (--radius-*, --spacing-*, etc.), so they don't need
-   * @theme; a plain custom property is enough for rounded-(--x)/max-w-(--x)
-   * to resolve.
-   */
-  /* Button size radii — still derived from --radius-md, so they resolve to
-   * 0rem while --radius is 0rem; see docs/design-system.md Radius policy. */
+  /* Button size radii still resolve to 0rem through the shared radius scale. */
   --btn-radius-xs: min(var(--radius-md), 10px);
   --btn-radius-sm: min(var(--radius-md), 12px);
-
-  /* Shared by Kbd and KeybindHint's boxed variant — see docs/design-system.md Radius policy */
-  --keycap-radius: 4px;
-
   --dialog-inset: calc(100% - 2rem);
   --tabs-trigger-height: calc(100% - 1px);
   --tooltip-arrow-offset: calc(-50% - 2px);
   --width-preview-popup: min(28rem, calc(100vw - 2rem));
 
-  /*
-   * Popup width floors — the trigger's own width (--anchor-width, set by
-   * Base UI) so a narrow trigger never forces a wider content list to wrap.
-   */
   --dropdown-menu-min-width: max(
     var(--anchor-width),
     calc(var(--spacing) * 32)
@@ -114,15 +33,7 @@
 }
 
 @theme inline {
-  --font-sans:
-    'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans',
-    Meiryo, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', 'IBM Plex Mono', monospace;
-  --font-editor: 'IBM Plex Mono', monospace;
-
-  /* Smallest tier of the mono UI chrome type scale — see docs/design-system.md */
-  --text-2xs: 0.625rem;
-  --text-2xs--line-height: 0.875rem;
+  --font-editor: var(--font-code);
 
   /* Overlay viewport-relative sizing — see docs/design-system.md */
   --max-height-sheet: calc(var(--visual-viewport-height, 100vh) * 0.85);
@@ -131,48 +42,10 @@
 
   /* Above any possible stacking context — see docs/design-system.md */
   --z-index-max: 2147483647;
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-border-strong: var(--border-strong);
-  --color-surface-strong: var(--surface-strong);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted-foreground-strong: var(--muted-foreground-strong);
-  --color-muted-foreground-faint: var(--muted-foreground-faint);
-  --color-muted-foreground-ghost: var(--muted-foreground-ghost);
   --color-status-completed: var(--status-completed);
   --color-github-open: var(--github-open);
   --color-github-closed: var(--github-closed);
   --color-github-merged: var(--github-merged);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --color-foreground: var(--foreground);
-  --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
 
   /* Grid track definitions — see docs/design-system.md "Grid tracks". */
   --project-list-columns: 14px 1fr 96px 190px 78px;

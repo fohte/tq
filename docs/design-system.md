@@ -9,7 +9,8 @@ PR/issue state, the one deliberate exception to the single-accent rule (see
 
 Source of truth for every value in this doc:
 
-- Tokens: `web/src/index.css` (`:root` and `@theme inline` blocks)
+- Shared tokens: `@fohte/ui/tokens.css`
+- tq-specific tokens and utilities: `web/src/index.css`
 - Primitives: `web/src/components/ui/{section-heading,screen-header-bar,tab-strip,chip,keybind-hint,panel,progress-bar,button}.tsx`
 
 If this doc and the source ever disagree, the source wins — but please fix
@@ -38,9 +39,10 @@ after confirming none of the three options above fit.
 
 ## Design tokens
 
-All tokens live directly on `:root` (there is no `.dark` block — the app
-always renders with `class="dark"` and has no theme toggle, so a single dark
-palette is the only palette).
+Shared palette tokens are defined on `:root` for light mode and `.dark` for
+dark mode in `@fohte/ui/tokens.css`. The app always renders with
+`class="dark"` and has no theme toggle, so its active palette is `.dark`.
+tq-specific tokens remain in `web/src/index.css`.
 
 ### Surfaces
 
@@ -157,17 +159,18 @@ all resolve to `0rem` too.
 
 ## Fonts
 
-Three font roles, each its own CSS custom property in the `@theme inline`
-block. **Do not conflate "monospace UI chrome" with "monospace editor
-content"** — `--font-mono` and `--font-editor` are deliberately different
-stacks (JetBrains-Mono-first vs. IBM-Plex-Mono-first) even though both
-eventually fall back to similar faces.
+`@fohte/ui/tokens.css` defines the shared font tokens in `@theme static`.
+**Do not conflate "monospace UI chrome" with "monospace editor content"** —
+`--font-mono` and `--font-code` are deliberately different stacks
+(JetBrains-Mono-first vs. IBM-Plex-Mono-first) even though both eventually
+fall back to similar faces. tq maps `--font-editor` to `--font-code` so
+existing editor utilities keep their name.
 
-| Role             | CSS variable    | Font stack                                                                          | Tailwind utility                                                                | Use for                                                                                                          |
-| ---------------- | --------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Sans (default)   | `--font-sans`   | Helvetica Neue, Arial, Hiragino Kaku Gothic ProN, Hiragino Sans, Meiryo, sans-serif | `font-sans` (applied at `html` level, so this is the default — no class needed) | Reading content: task titles, descriptions, prose                                                                |
-| Mono (UI chrome) | `--font-mono`   | JetBrains Mono Variable, IBM Plex Mono, monospace                                   | `font-mono`                                                                     | ALL UI chrome: nav labels, tabs, section headings, badges/chips, buttons, keybind hints, numeric counters        |
-| Editor           | `--font-editor` | IBM Plex Mono, monospace                                                            | `font-editor`                                                                   | Plain textareas (`FocusView`, page excerpts) and the markdown editor's `code`/`pre` ONLY — not general UI chrome |
+| Role             | CSS variable                                | Font stack                                                                          | Tailwind utility                                                                | Use for                                                                                                          |
+| ---------------- | ------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Sans (default)   | `--font-sans`                               | Helvetica Neue, Arial, Hiragino Kaku Gothic ProN, Hiragino Sans, Meiryo, sans-serif | `font-sans` (applied at `html` level, so this is the default — no class needed) | Reading content: task titles, descriptions, prose                                                                |
+| Mono (UI chrome) | `--font-mono`                               | JetBrains Mono Variable, IBM Plex Mono, monospace                                   | `font-mono`                                                                     | ALL UI chrome: nav labels, tabs, section headings, badges/chips, buttons, keybind hints, numeric counters        |
+| Editor           | `--font-code` (`--font-editor` alias in tq) | IBM Plex Mono, monospace                                                            | `font-editor`                                                                   | Plain textareas (`FocusView`, page excerpts) and the markdown editor's `code`/`pre` ONLY — not general UI chrome |
 
 Examples:
 
@@ -483,10 +486,10 @@ default, including every Tailwind `rounded-*` utility that derives from the
 There are exactly **two** sanctioned exceptions, both **hardcoded** (not
 derived from the `--radius` token):
 
-| Exception                | Where                                                                                                                                                                                                                 |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--keycap-radius` (4px)  | Shared by `Kbd` (`web/src/components/ui/kbd.tsx`) and `KeybindHint`'s `boxed` variant (`web/src/components/ui/keybind-hint.tsx`) — both call `rounded-(--keycap-radius)`, a token defined once in `web/src/index.css` |
-| Inline `<code>` elements | `border-radius: 4px` on `.ProseMirror code` in `web/src/components/ui/markdown-editor.css`                                                                                                                            |
+| Exception                | Where                                                                                                                                                                                                               |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--keycap-radius` (4px)  | Shared by `Kbd` (`web/src/components/ui/kbd.tsx`) and `KeybindHint`'s `boxed` variant (`web/src/components/ui/keybind-hint.tsx`) — both call `rounded-(--keycap-radius)`, a token defined in `@fohte/ui/tokens.css` |
+| Inline `<code>` elements | `border-radius: 4px` on `.ProseMirror code` in `web/src/components/ui/markdown-editor.css`                                                                                                                          |
 
 **Do not introduce new radius exceptions without updating this doc.**
 
