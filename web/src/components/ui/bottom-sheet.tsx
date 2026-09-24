@@ -27,7 +27,7 @@ function BottomSheetOverlay({
     <div
       data-slot="bottom-sheet-overlay"
       className={cn(
-        'fixed inset-x-0 z-50 flex items-end',
+        'pointer-events-none fixed inset-x-0 z-50 flex items-end',
         insets === null && 'inset-y-0',
         className,
       )}
@@ -49,7 +49,7 @@ function BottomSheetPanel({
     <div
       data-slot="bottom-sheet-panel"
       className={cn(
-        'max-h-sheet w-full overflow-y-auto rounded-t-xl bg-card pb-5 shadow-2xl ring-1 ring-foreground/10',
+        'pointer-events-auto max-h-sheet w-full overflow-y-auto rounded-t-xl bg-card pb-5 shadow-2xl ring-1 ring-foreground/10',
         className,
       )}
       {...props}

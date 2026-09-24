@@ -50,8 +50,8 @@ export function ScheduleModalMobilePanel({
   handleSubmit,
 }: SchedulePanelProps) {
   return (
-    <BottomSheetOverlay className="pointer-events-none md:hidden">
-      <BottomSheetPanel className="pointer-events-auto">
+    <BottomSheetOverlay className="md:hidden">
+      <BottomSheetPanel>
         {/* Header */}
         <BottomSheetHeader>
           <span className="text-base font-semibold text-foreground">

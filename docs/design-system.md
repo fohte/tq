@@ -778,13 +778,17 @@ search command palette (`search-modal.tsx`), which is a structurally
 distinct pattern (no PC/mobile split, no shared `Dialog` primitive).
 
 ```tsx
-<div className="fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex">
+<div className="pointer-events-none fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex">
   <ModalPanel>
     <DialogHeaderBar>...</DialogHeaderBar>
     <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">...</div>
   </ModalPanel>
 </div>
 ```
+
+The wrapper covers the viewport above the Dialog backdrop, so it must let
+pointer events pass through to the backdrop. `ModalPanel` keeps pointer events
+enabled so the form remains interactive.
 
 ### `DetailSidebarPanel`
 

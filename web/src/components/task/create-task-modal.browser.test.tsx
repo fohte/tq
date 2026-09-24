@@ -27,7 +27,6 @@ import {
   atIndex,
   findVisible,
   partialMutation,
-  tapAtViewportPoint,
 } from '#lib/test-utils'
 import {
   DESKTOP_VIEWPORT,
@@ -141,23 +140,26 @@ describe('CreateTaskModal', () => {
     expect(onOpenChange.mock.calls).toEqual([[false]])
   })
 
-  it('closes when the mobile backdrop is tapped', async () => {
+  it('closes when a click reaches the mobile backdrop', async () => {
     await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
     const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
-    assertDefined(tapAtViewportPoint(1, 1), 'no target at backdrop')
+    const user = userEvent.setup()
+    await user.click(
+      assertDefined(document.elementFromPoint(1, 1), 'no target at backdrop'),
+    )
 
     expect(onOpenChange.mock.calls).toEqual([[false]])
   })
 
-  it('stays open when a title field is clicked inside desktop and mobile panels', async () => {
-    const user = userEvent.setup()
-
-    for (const viewport of [DESKTOP_VIEWPORT, MOBILE_VIEWPORT]) {
+  it.each([
+    ['desktop', DESKTOP_VIEWPORT],
+    ['mobile', MOBILE_VIEWPORT],
+  ] as const)(
+    'stays open when a title field is clicked inside the %s panel',
+    async (_viewportName, viewport) => {
       await page.viewport(viewport.width, viewport.height)
-      const { onOpenChange, unmount } = renderControlledModal(
-        CreateTaskModal,
-        {},
-      )
+      const user = userEvent.setup()
+      const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
       const titleInput = assertDefined(
         findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
         'no visible task title input',
@@ -166,9 +168,8 @@ describe('CreateTaskModal', () => {
       await user.click(titleInput)
 
       expect(onOpenChange.mock.calls).toEqual([])
-      unmount()
-    }
-  })
+    },
+  )
 
   it('prefills the estimate field from defaultEstimateMinutes', () => {
     renderControlledModal(CreateTaskModal, { defaultEstimateMinutes: 90 })
