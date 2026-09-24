@@ -13,6 +13,10 @@ Source of truth for every value in this doc:
 - tq-specific tokens and utilities: `web/src/index.css`
 - Primitives: `web/src/components/ui/{section-heading,screen-header-bar,tab-strip,chip,keybind-hint,panel,progress-bar,button}.tsx`
 
+Add tq-specific tokens to `web/src/index.css`. Shared tokens come from the
+`@fohte/ui` dependency; when a dependency update changes their values, update
+the tables in this doc in the same PR.
+
 If this doc and the source ever disagree, the source wins — but please fix
 the doc in the same PR.
 
@@ -43,6 +47,8 @@ Shared palette tokens are defined on `:root` for light mode and `.dark` for
 dark mode in `@fohte/ui/tokens.css`. The app always renders with
 `class="dark"` and has no theme toggle, so its active palette is `.dark`.
 tq-specific tokens remain in `web/src/index.css`.
+Palette values in the tables below show `.dark`; the package's `:root` values
+provide the unused light palette.
 
 ### Surfaces
 

@@ -14,7 +14,6 @@
   --github-closed: #f85149;
   --github-merged: #a371f7;
 
-  /* Button size radii still resolve to 0rem through the shared radius scale. */
   --btn-radius-xs: min(var(--radius-md), 10px);
   --btn-radius-sm: min(var(--radius-md), 12px);
   --dialog-inset: calc(100% - 2rem);
