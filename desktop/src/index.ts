@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, shell } from 'electron'
+import { app, BrowserWindow, clipboard, Menu, shell } from 'electron'
 import { ResultAsync } from 'neverthrow'
 
 import { EXTERNAL_SCHEMES, TQ_ORIGIN } from '#config'
@@ -113,7 +113,11 @@ void app.whenReady().then(() => {
 
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
-      buildMenuTemplate(win.webContents.navigationHistory),
+      buildMenuTemplate(
+        win.webContents.navigationHistory,
+        win.webContents,
+        clipboard,
+      ),
     ),
   )
 

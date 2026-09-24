@@ -5,13 +5,19 @@ export type NavigationHistory = Pick<
   'canGoBack' | 'goBack' | 'canGoForward' | 'goForward'
 >
 
-type HistoryItem = {
+type ShortcutItem = {
   label: string
   accelerator: string
   click: () => void
 }
 
-export const historyItems = (history: NavigationHistory): HistoryItem[] => [
+type CurrentPage = Pick<WebContents, 'getURL'>
+
+type ClipboardWriter = {
+  writeText: (text: string) => void
+}
+
+export const historyItems = (history: NavigationHistory): ShortcutItem[] => [
   {
     label: 'Back',
     accelerator: 'CmdOrCtrl+[',
@@ -28,16 +34,32 @@ export const historyItems = (history: NavigationHistory): HistoryItem[] => [
   },
 ]
 
-// The window has no browser chrome, so the menu is the only place to put the
-// history shortcuts. Setting a menu replaces Electron's default one, so the
-// standard roles are listed again to keep clipboard, reload, etc. working.
+export const pageItems = (
+  webContents: CurrentPage,
+  clipboard: ClipboardWriter,
+): ShortcutItem[] => [
+  {
+    label: 'Copy URL',
+    accelerator: 'CmdOrCtrl+Shift+C',
+    click: () => {
+      clipboard.writeText(webContents.getURL())
+    },
+  },
+]
+
+// The window has no browser chrome, so history and page URL shortcuts live in
+// the menu. Setting a menu replaces Electron's default one, so the standard
+// roles are listed again to keep clipboard, reload, etc. working.
 export const buildMenuTemplate = (
   history: NavigationHistory,
+  webContents: CurrentPage,
+  clipboard: ClipboardWriter,
 ): MenuItemConstructorOptions[] => [
   { role: 'appMenu' },
   { role: 'fileMenu' },
   { role: 'editMenu' },
   { role: 'viewMenu' },
+  { label: 'Page', submenu: pageItems(webContents, clipboard) },
   { label: 'History', submenu: historyItems(history) },
   { role: 'windowMenu' },
 ]
