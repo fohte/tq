@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildMenuTemplate, historyItems, type NavigationHistory } from '#menu'
+import {
+  buildMenuTemplate,
+  historyItems,
+  type NavigationHistory,
+  pageItems,
+} from '#menu'
 
 type Can = { back: boolean; forward: boolean }
 
@@ -25,20 +30,6 @@ const clickItem = (label: string, can: Can): string[] => {
     ?.click()
   return calls
 }
-
-const copiedUrlResult = (
-  item:
-    | {
-        label?: string
-        accelerator?: string
-      }
-    | undefined,
-  copiedUrls: string[],
-) => ({
-  label: item?.label,
-  accelerator: item?.accelerator,
-  copiedUrls,
-})
 
 describe('historyItems', () => {
   it('binds the browser shortcuts', () => {
@@ -76,13 +67,19 @@ describe('historyItems', () => {
   })
 })
 
-describe('buildMenuTemplate', () => {
-  it('copies the current page URL from the Page menu', () => {
-    const { history } = fakeHistory({ back: false, forward: false })
+describe('pageItems', () => {
+  it('binds the Copy URL shortcut', () => {
+    const items = pageItems({ getURL: () => '' }, { writeText: () => {} })
+
+    expect(
+      items.map(({ label, accelerator }) => ({ label, accelerator })),
+    ).toEqual([{ label: 'Copy URL', accelerator: 'CmdOrCtrl+Shift+C' }])
+  })
+
+  it('copies the URL the page has at click time', () => {
     let currentUrl = 'https://example.test/tasks/41'
     const copiedUrls: string[] = []
-    const menu = buildMenuTemplate(
-      history,
+    const [copyUrl] = pageItems(
       { getURL: () => currentUrl },
       {
         writeText: (url) => {
@@ -90,19 +87,32 @@ describe('buildMenuTemplate', () => {
         },
       },
     )
-    const pageMenu = menu.find(
-      (item) => 'label' in item && item.label === 'Page',
-    )
-    const copyUrlItem =
-      pageMenu && 'submenu' in pageMenu ? pageMenu.submenu[0] : undefined
 
     currentUrl = 'https://example.test/tasks/42'
-    copyUrlItem?.click()
+    copyUrl?.click()
 
-    expect(copiedUrlResult(copyUrlItem, copiedUrls)).toEqual({
-      label: 'Copy URL',
-      accelerator: 'CmdOrCtrl+Shift+C',
-      copiedUrls: ['https://example.test/tasks/42'],
-    })
+    expect(copiedUrls).toEqual(['https://example.test/tasks/42'])
+  })
+})
+
+describe('buildMenuTemplate', () => {
+  it('includes Copy URL in the Page menu', () => {
+    const { history } = fakeHistory({ back: false, forward: false })
+    const menu = buildMenuTemplate(
+      history,
+      { getURL: () => '' },
+      { writeText: () => {} },
+    )
+    const pageMenu = menu.find(({ label }) => label === 'Page')
+    const pageSubmenu =
+      pageMenu && Array.isArray(pageMenu.submenu) ? pageMenu.submenu : []
+    const items = pageSubmenu.map(({ label, accelerator }) => ({
+      label,
+      accelerator,
+    }))
+
+    expect(items).toEqual([
+      { label: 'Copy URL', accelerator: 'CmdOrCtrl+Shift+C' },
+    ])
   })
 })
