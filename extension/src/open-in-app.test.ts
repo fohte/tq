@@ -9,13 +9,18 @@ type ChromeCall = 'tabs.get' | 'tabs.update' | 'tabs.remove'
 type NavigationErrorDetails =
   chrome.webNavigation.WebNavigationFramedErrorCallbackDetails
 
+const TQ_DEEP_LINK = 'tq://tq.example.test/tasks/42'
+
 let calls: unknown[][] = []
 
 function stubChrome(
   tabs: Record<number, chrome.tabs.Tab>,
   failures: Partial<Record<ChromeCall, Error>> = {},
+  options: { deferUpdate?: boolean } = {},
 ): {
   updateCalled: Promise<void>
+  readonly updatePromise: Promise<chrome.tabs.Tab> | undefined
+  resolveUpdate: (tabId: number) => void
   emitNavigationError: (
     overrides?: Partial<chrome.webNavigation.WebNavigationBaseCallbackDetails>,
   ) => void
@@ -26,6 +31,8 @@ function stubChrome(
     (details: NavigationErrorDetails) => void
   >()
   let resolveUpdateCalled: () => void = () => {}
+  let resolveUpdate: (tab: chrome.tabs.Tab) => void = () => {}
+  let updatePromise: Promise<chrome.tabs.Tab> | undefined
   const updateCalled = new Promise<void>((resolve) => {
     resolveUpdateCalled = resolve
   })
@@ -40,7 +47,13 @@ function stubChrome(
       calls.push(['tabs.update', tabId, properties])
       resolveUpdateCalled()
       const failure = failures['tabs.update']
-      return failure ? Promise.reject(failure) : Promise.resolve(tabs[tabId])
+      if (failure) return Promise.reject(failure)
+      if (options.deferUpdate !== true) return Promise.resolve(tabs[tabId])
+
+      updatePromise = new Promise((resolve) => {
+        resolveUpdate = resolve
+      })
+      return updatePromise
     },
   )
   const remove = vi.fn((tabId: number) => {
@@ -71,10 +84,17 @@ function stubChrome(
 
   return {
     updateCalled,
+    get updatePromise() {
+      return updatePromise
+    },
+    resolveUpdate: (tabId) => {
+      const tab = tabs[tabId]
+      if (tab !== undefined) resolveUpdate(tab)
+    },
     emitNavigationError: (overrides = {}) => {
       const details: NavigationErrorDetails = {
         ...makeWebNavigationDetails({
-          url: `tq://${TQ_ORIGIN.replace(/^https?:\/\//, '').replace(/\/$/, '')}/tasks/42`,
+          url: TQ_DEEP_LINK,
           ...overrides,
         }),
         documentId: 'test-document',
@@ -176,23 +196,27 @@ describe('openTqLinkInApp', () => {
     ).toEqual({ error: null, calls: [] })
   })
 
-  it('hands a new tab to tq and closes it after the handoff', async () => {
-    const chromeStub = stubChrome({
-      5: makeTab({ id: 5, url: 'https://example.test/source' }),
-      9: makeTab({
-        id: 9,
-        openerTabId: 5,
-        url: 'chrome://newtab/',
-      }),
-    })
+  it('waits for the matching tq navigation error before closing an empty tab', async () => {
+    const chromeStub = stubChrome(
+      {
+        5: makeTab({ id: 5, url: 'https://example.test/source' }),
+        9: makeTab({
+          id: 9,
+          openerTabId: 5,
+          url: 'chrome://newtab/',
+        }),
+      },
+      {},
+      { deferUpdate: true },
+    )
     const result = run(makeWebNavigationDetails())
     await chromeStub.updateCalled
-    await Promise.resolve()
-    await Promise.resolve()
-    chromeStub.emitNavigationError({ tabId: 5 })
-    chromeStub.emitNavigationError({ frameId: 1 })
-    chromeStub.emitNavigationError({ url: `${TQ_ORIGIN}/tasks/42` })
-    chromeStub.emitNavigationError()
+    void chromeStub.updatePromise?.then(() => {
+      queueMicrotask(() => {
+        chromeStub.emitNavigationError()
+      })
+    })
+    chromeStub.resolveUpdate(9)
 
     expect(await result).toEqual({
       error: null,
@@ -200,26 +224,42 @@ describe('openTqLinkInApp', () => {
         ['tabs.get', 9],
         ['tabs.get', 5],
         ['webNavigation.onErrorOccurred.addListener'],
-        ['tabs.update', 9, { url: 'tq://tq.example.test/tasks/42' }],
-        [
-          'webNavigation.onErrorOccurred.emit',
-          5,
-          0,
-          'tq://tq.example.test/tasks/42',
-        ],
-        [
-          'webNavigation.onErrorOccurred.emit',
-          9,
-          1,
-          'tq://tq.example.test/tasks/42',
-        ],
+        ['tabs.update', 9, { url: TQ_DEEP_LINK }],
+        ['webNavigation.onErrorOccurred.emit', 9, 0, TQ_DEEP_LINK],
+        ['webNavigation.onErrorOccurred.removeListener'],
+        ['tabs.remove', 9],
+      ],
+    })
+  })
+
+  it('ignores navigation errors that do not match the handoff', async () => {
+    const chromeStub = stubChrome(
+      { 9: makeTab({ id: 9, url: 'chrome://newtab/' }) },
+      {},
+      { deferUpdate: true },
+    )
+    const result = run(makeWebNavigationDetails())
+    await chromeStub.updateCalled
+    void chromeStub.updatePromise?.then(() => {
+      queueMicrotask(() => {
+        chromeStub.emitNavigationError({ tabId: 5 })
+        chromeStub.emitNavigationError({ frameId: 1 })
+        chromeStub.emitNavigationError({ url: `${TQ_ORIGIN}/tasks/42` })
+        chromeStub.emitNavigationError()
+      })
+    })
+    chromeStub.resolveUpdate(9)
+
+    expect(await result).toEqual({
+      error: null,
+      calls: [
+        ['tabs.get', 9],
+        ['webNavigation.onErrorOccurred.addListener'],
+        ['tabs.update', 9, { url: TQ_DEEP_LINK }],
+        ['webNavigation.onErrorOccurred.emit', 5, 0, TQ_DEEP_LINK],
+        ['webNavigation.onErrorOccurred.emit', 9, 1, TQ_DEEP_LINK],
         ['webNavigation.onErrorOccurred.emit', 9, 0, `${TQ_ORIGIN}/tasks/42`],
-        [
-          'webNavigation.onErrorOccurred.emit',
-          9,
-          0,
-          'tq://tq.example.test/tasks/42',
-        ],
+        ['webNavigation.onErrorOccurred.emit', 9, 0, TQ_DEEP_LINK],
         ['webNavigation.onErrorOccurred.removeListener'],
         ['tabs.remove', 9],
       ],
@@ -227,27 +267,29 @@ describe('openTqLinkInApp', () => {
   })
 
   it('closes a new tab with no opener after handing it off', async () => {
-    const chromeStub = stubChrome({
-      9: makeTab({ id: 9, url: 'chrome://newtab/' }),
-    })
+    const chromeStub = stubChrome(
+      {
+        9: makeTab({ id: 9, url: 'chrome://newtab/' }),
+      },
+      {},
+      { deferUpdate: true },
+    )
     const result = run(makeWebNavigationDetails())
     await chromeStub.updateCalled
-    await Promise.resolve()
-    await Promise.resolve()
-    chromeStub.emitNavigationError()
+    void chromeStub.updatePromise?.then(() => {
+      queueMicrotask(() => {
+        chromeStub.emitNavigationError()
+      })
+    })
+    chromeStub.resolveUpdate(9)
 
     expect(await result).toEqual({
       error: null,
       calls: [
         ['tabs.get', 9],
         ['webNavigation.onErrorOccurred.addListener'],
-        ['tabs.update', 9, { url: 'tq://tq.example.test/tasks/42' }],
-        [
-          'webNavigation.onErrorOccurred.emit',
-          9,
-          0,
-          'tq://tq.example.test/tasks/42',
-        ],
+        ['tabs.update', 9, { url: TQ_DEEP_LINK }],
+        ['webNavigation.onErrorOccurred.emit', 9, 0, TQ_DEEP_LINK],
         ['webNavigation.onErrorOccurred.removeListener'],
         ['tabs.remove', 9],
       ],
@@ -285,7 +327,7 @@ describe('openTqLinkInApp', () => {
         ['tabs.get', 9],
         ['tabs.get', 5],
         ['webNavigation.onErrorOccurred.addListener'],
-        ['tabs.update', 9, { url: 'tq://tq.example.test/tasks/42' }],
+        ['tabs.update', 9, { url: TQ_DEEP_LINK }],
         ['webNavigation.onErrorOccurred.removeListener'],
       ],
     })

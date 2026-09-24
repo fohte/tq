@@ -46,22 +46,19 @@ function waitForTqHandoff(
   tabId: number,
   deepLink: string,
 ): { promise: Promise<void>; cancel: () => void } {
-  let resolve: () => void = () => {}
-  let listener:
-    | ((
-        details: chrome.webNavigation.WebNavigationFramedErrorCallbackDetails,
-      ) => void)
-    | undefined
-  let listening = true
+  type NavigationErrorListener = (
+    details: chrome.webNavigation.WebNavigationFramedErrorCallbackDetails,
+  ) => void
 
-  const removeListener = () => {
-    if (!listening || listener === undefined) return
-    listening = false
+  let listener: NavigationErrorListener | undefined
+
+  const cancel = () => {
+    if (listener === undefined) return
     chrome.webNavigation.onErrorOccurred.removeListener(listener)
+    listener = undefined
   }
 
   const promise = new Promise<void>((resolvePromise) => {
-    resolve = resolvePromise
     listener = (details) => {
       if (
         details.tabId !== tabId ||
@@ -71,13 +68,13 @@ function waitForTqHandoff(
         return
       }
 
-      removeListener()
-      resolve()
+      cancel()
+      resolvePromise()
     }
     chrome.webNavigation.onErrorOccurred.addListener(listener)
   })
 
-  return { promise, cancel: removeListener }
+  return { promise, cancel }
 }
 
 export function openTqLinkInApp(
