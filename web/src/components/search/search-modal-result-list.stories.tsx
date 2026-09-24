@@ -43,7 +43,7 @@ const recentGroup: IndexedResultGroup = {
 function ResultListStory({ state }: ResultListStoryProps) {
   const listRef = useRef<HTMLDivElement>(null)
   return (
-    <div className="flex h-72 w-full max-w-160 flex-col border border-border bg-popover text-popover-foreground">
+    <div className="mx-auto flex h-72 w-full max-w-160 flex-col border border-border bg-popover text-popover-foreground">
       <SearchModalResultList
         groups={state === 'recent' ? [recentGroup] : []}
         listRef={listRef}
@@ -64,7 +64,7 @@ const meta = {
   title: 'Search/SearchModalResultList',
   component: ResultListStory,
   args: { state: 'recent' },
-  parameters: { layout: 'centered' },
+  parameters: { layout: 'fullscreen' },
 } satisfies Meta<typeof ResultListStory>
 
 export default meta
