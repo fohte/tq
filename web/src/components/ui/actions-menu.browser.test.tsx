@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { page } from '@vitest/browser/context'
 import { Kanban, List, Pencil, Trash2 } from 'lucide-react'
@@ -6,7 +6,10 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { ActionsMenu } from '#components/ui/actions-menu'
 import { assertDefined } from '#lib/test-utils'
-import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
+import {
+  DESKTOP_VIEWPORT,
+  MOBILE_VIEWPORT,
+} from '#storybook-config/screenshot-viewports'
 
 const items = [
   { icon: <Pencil className="h-4 w-4" />, label: 'rename…', onClick: vi.fn() },
@@ -56,6 +59,51 @@ describe('ActionsMenu', () => {
 
     expect(await screen.findByText('rename…')).toBeInTheDocument()
     expect(screen.getByText('delete…')).toBeInTheDocument()
+  })
+
+  it('does not bubble an outside dropdown click to a row link', async () => {
+    await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
+    const user = userEvent.setup()
+    const rowClick = vi.fn()
+    const linkClick = vi.fn()
+    render(
+      <a
+        href="/tasks/example"
+        onClick={(event) => {
+          event.preventDefault()
+          linkClick()
+        }}
+      >
+        <div onClick={rowClick}>
+          <ActionsMenu items={items} defaultOpen="desktop" />
+        </div>
+      </a>,
+    )
+
+    await screen.findByText('rename…')
+    const backdrop = assertDefined(
+      document.querySelector<HTMLElement>(
+        '[data-base-ui-inert][role="presentation"]',
+      ),
+      'dropdown backdrop not found',
+    )
+    await user.click(backdrop)
+
+    function getInteractionResult() {
+      return [
+        ['dropdownOpen', screen.queryByText('rename…') != null],
+        ['rowClickCount', rowClick.mock.calls.length],
+        ['linkClickCount', linkClick.mock.calls.length],
+      ]
+    }
+
+    await waitFor(() => {
+      expect(getInteractionResult()).toEqual([
+        ['dropdownOpen', false],
+        ['rowClickCount', 0],
+        ['linkClickCount', 0],
+      ])
+    })
   })
 
   it('shows a checkmark only on the selected item', async () => {

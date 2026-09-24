@@ -6,8 +6,9 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { page } from '@vitest/browser/context'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeTaskAgentSession } from '#components/agent-session/task-agent-session-test-fixtures'
@@ -18,9 +19,14 @@ import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TreeNode } from '#hooks/use-tasks'
 import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { assertDefined, atIndex } from '#lib/test-utils'
+import {
+  DESKTOP_VIEWPORT,
+  MOBILE_VIEWPORT,
+} from '#storybook-config/screenshot-viewports'
 
 const mockMutate = vi.fn()
 const mockUpdateStatusMutate = vi.fn()
+const mockSelectRow = vi.fn()
 // Fires when a click bubbles up to the row's Link. A tag token's onClick
 // calls stopPropagation, so this spy lets tests confirm that click never
 // reaches the Link (i.e. no navigation), without relying on jsdom's <a> not
@@ -132,7 +138,10 @@ function TreeHarness({
       isExpanded={outliner.isExpanded}
       onToggleExpand={outliner.toggleExpand}
       selectedRowId={outliner.selectedRowId}
-      onSelectRow={outliner.selectRow}
+      onSelectRow={(id) => {
+        outliner.selectRow(id)
+        mockSelectRow(id)
+      }}
       onAddSubtask={() => {}}
     />
   )
@@ -206,6 +215,43 @@ describe('TreeTaskGridRow', () => {
     // ActionsMenu itself renders one trigger per layout (desktop dropdown +
     // mobile action sheet), and the row mounts TreeRowActionsMenu once.
     expect(screen.getAllByLabelText('Task actions')).toHaveLength(2)
+  })
+
+  it('closes the mobile action sheet without selecting the row when its backdrop is tapped', async () => {
+    await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
+    const user = userEvent.setup()
+    const { container } = await renderTree(makeNode())
+    const trigger = assertDefined(
+      container.querySelector<HTMLElement>(
+        '[data-slot="action-sheet-trigger"]',
+      ),
+      'mobile action trigger not found',
+    )
+
+    await user.click(trigger)
+
+    const overlay = assertDefined(
+      document.querySelector<HTMLElement>('[data-slot="dialog-overlay"]'),
+      'action sheet backdrop not found',
+    )
+    await user.click(overlay)
+
+    function getInteractionResult() {
+      return [
+        ['actionSheetOpen', screen.queryByText('add subtask') != null],
+        ['rowSelectCalls', mockSelectRow.mock.calls.length],
+        ['linkClickCalls', mockLinkOnClick.mock.calls.length],
+      ]
+    }
+
+    await waitFor(() => {
+      expect(getInteractionResult()).toEqual([
+        ['actionSheetOpen', false],
+        ['rowSelectCalls', 0],
+        ['linkClickCalls', 0],
+      ])
+    })
+    await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
   })
 
   it('renders the task number', async () => {

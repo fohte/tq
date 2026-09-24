@@ -30,6 +30,10 @@ function stopRowNavigation(e: React.MouseEvent) {
   e.stopPropagation()
 }
 
+function stopClickPropagation(e: React.MouseEvent) {
+  e.stopPropagation()
+}
+
 // The same items rendered twice: a dropdown on desktop and a bottom action
 // sheet on touch, picked by the `hidden md:flex` / `flex md:hidden` split.
 // `mobileItems` lets the two diverge (e.g. an item that's hidden on mobile
@@ -52,7 +56,8 @@ export function ActionsMenu({
   defaultOpen?: 'desktop' | 'mobile' | undefined
 }) {
   return (
-    <>
+    // Portal events follow this React subtree, so backdrop clicks need to stop here too.
+    <div className="contents" onClick={stopClickPropagation}>
       <DropdownMenu defaultOpen={defaultOpen === 'desktop'}>
         <DropdownMenuTrigger
           aria-label={ariaLabel}
@@ -124,6 +129,6 @@ export function ActionsMenu({
           </ActionSheetContent>
         </ActionSheet>
       )}
-    </>
+    </div>
   )
 }
