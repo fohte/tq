@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react'
 
+import type { SearchMode } from '#components/search/search-modal-mode'
 import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
 
@@ -8,7 +9,7 @@ interface SearchModalInputProps {
   context?: 'work' | 'personal' | undefined
   searchScopeTokens: string[]
   searchInputValue: string
-  searchTarget: 'tasks' | 'projects' | 'pages' | 'commands'
+  searchTarget: SearchMode
   isFetching: boolean
   onInputValueChange: (value: string) => void
   inputRef?: React.RefObject<HTMLInputElement | null>

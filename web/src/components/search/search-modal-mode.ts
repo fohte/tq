@@ -17,13 +17,26 @@ export const SEARCH_MODE_DEFINITIONS = {
   '>': {
     mode: 'commands',
     label: 'Commands',
-    description: 'Browse available navigation commands.',
+    description: 'Browse available commands.',
   },
 } as const
 
+type SearchModePrefix = keyof typeof SEARCH_MODE_DEFINITIONS
+export type SearchMode =
+  (typeof SEARCH_MODE_DEFINITIONS)[SearchModePrefix]['mode']
+
+function isSearchModePrefix(
+  prefix: string | undefined,
+): prefix is SearchModePrefix {
+  return (
+    prefix != null &&
+    Object.prototype.hasOwnProperty.call(SEARCH_MODE_DEFINITIONS, prefix)
+  )
+}
+
 export function parseSearchMode(query: string) {
   const prefix = query[0]
-  if (prefix === '#' || prefix === '!' || prefix === '/' || prefix === '>') {
+  if (isSearchModePrefix(prefix)) {
     return {
       mode: SEARCH_MODE_DEFINITIONS[prefix].mode,
       prefix,
