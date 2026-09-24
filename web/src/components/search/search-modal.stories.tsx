@@ -6,7 +6,7 @@ import { useState } from 'react'
 
 import { makeProject } from '#components/project/project-test-fixtures'
 import { SearchModal } from '#components/search/search-modal'
-import { makePageSearchResult } from '#components/search/search-modal-test-fixtures'
+import { makePageSearchResult } from '#components/search/search-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { StoryRouter } from '#storybook-config/story-router'
 
