@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { runInNewContext } from 'node:vm'
+
+import { describe, expect, it, vi } from 'vitest'
 
 import {
   buildMenuTemplate,
@@ -30,6 +32,15 @@ const clickItem = (label: string, can: Can): string[] => {
     ?.click()
   return calls
 }
+
+const fakePage = (
+  getURL: () => string = () => '',
+  executeJavaScript: (script: string) => Promise<unknown> = () =>
+    Promise.resolve(''),
+) => ({
+  getURL,
+  executeJavaScript,
+})
 
 describe('historyItems', () => {
   it('binds the browser shortcuts', () => {
@@ -69,10 +80,7 @@ describe('historyItems', () => {
 
 describe('pageItems', () => {
   it('binds the Copy URL shortcut', () => {
-    const items = pageItems(
-      { getURL: () => '', executeJavaScript: () => Promise.resolve('') },
-      { writeText: () => {} },
-    )
+    const items = pageItems(fakePage(), { writeText: () => {} })
 
     expect(
       items.map(({ label, accelerator }) => ({ label, accelerator })),
@@ -81,18 +89,12 @@ describe('pageItems', () => {
 
   it('copies the URL the page has at click time', () => {
     let currentUrl = 'https://example.test/tasks/41'
-    const calls: { operation: 'copy' | 'dispatch'; value: string }[] = []
+    const copiedUrls: string[] = []
     const [copyUrl] = pageItems(
-      {
-        getURL: () => currentUrl,
-        executeJavaScript: (script) => {
-          calls.push({ operation: 'dispatch', value: script })
-          return Promise.resolve('')
-        },
-      },
+      fakePage(() => currentUrl),
       {
         writeText: (url) => {
-          calls.push({ operation: 'copy', value: url })
+          copiedUrls.push(url)
         },
       },
     )
@@ -100,13 +102,65 @@ describe('pageItems', () => {
     currentUrl = 'https://example.test/tasks/42'
     copyUrl?.click()
 
-    expect(calls).toEqual([
-      { operation: 'copy', value: 'https://example.test/tasks/42' },
-      {
-        operation: 'dispatch',
-        value:
-          'window.dispatchEvent(new CustomEvent(\'tq:url-copied\', { detail: { url: "https://example.test/tasks/42" } }))',
+    expect(copiedUrls).toEqual(['https://example.test/tasks/42'])
+  })
+
+  it('notifies the page of the copied URL', () => {
+    const url = 'https://example.test/#a\\b"c'
+    const events: { type: string; detail: unknown }[] = []
+    class FakeCustomEvent {
+      constructor(
+        readonly type: string,
+        readonly options: { detail?: unknown },
+      ) {}
+
+      get detail() {
+        return this.options.detail
+      }
+    }
+    const fakeWindow = {
+      dispatchEvent: (event: FakeCustomEvent) => {
+        events.push({ type: event.type, detail: event.detail })
+        return true
       },
+    }
+    const [copyUrl] = pageItems(
+      fakePage(
+        () => url,
+        (script) => {
+          runInNewContext(script, {
+            window: fakeWindow,
+            CustomEvent: FakeCustomEvent,
+          })
+          return Promise.resolve('')
+        },
+      ),
+      { writeText: () => {} },
+    )
+
+    copyUrl?.click()
+
+    expect(events).toEqual([{ type: 'tq:url-copied', detail: { url } }])
+  })
+
+  it('logs when the page cannot display the copied URL toast', async () => {
+    const failure = new Error('renderer unavailable')
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const [copyUrl] = pageItems(
+      fakePage(
+        () => 'https://example.test/tasks/42',
+        () => Promise.reject(failure),
+      ),
+      { writeText: () => {} },
+    )
+
+    copyUrl?.click()
+    await Promise.resolve()
+    const loggedCalls = errorLog.mock.calls
+    errorLog.mockRestore()
+
+    expect(loggedCalls).toEqual([
+      ['failed to show the URL copied toast', failure],
     ])
   })
 })
@@ -114,11 +168,7 @@ describe('pageItems', () => {
 describe('buildMenuTemplate', () => {
   it('includes Copy URL in the Page menu', () => {
     const { history } = fakeHistory({ back: false, forward: false })
-    const menu = buildMenuTemplate(
-      history,
-      { getURL: () => '', executeJavaScript: () => Promise.resolve('') },
-      { writeText: () => {} },
-    )
+    const menu = buildMenuTemplate(history, fakePage(), { writeText: () => {} })
     const pageMenu = menu.find(({ label }) => label === 'Page')
     const pageSubmenu =
       pageMenu && Array.isArray(pageMenu.submenu) ? pageMenu.submenu : []

@@ -44,9 +44,13 @@ export const pageItems = (
     click: () => {
       const url = webContents.getURL()
       clipboard.writeText(url)
-      void webContents.executeJavaScript(
-        `window.dispatchEvent(new CustomEvent('tq:url-copied', { detail: { url: ${JSON.stringify(url)} } }))`,
-      )
+      void webContents
+        .executeJavaScript(
+          `window.dispatchEvent(new CustomEvent('tq:url-copied', { detail: { url: ${JSON.stringify(url)} } }))`,
+        )
+        .catch((caughtErr: unknown) => {
+          console.error('failed to show the URL copied toast', caughtErr)
+        })
     },
   },
 ]
