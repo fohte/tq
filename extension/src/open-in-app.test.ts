@@ -6,14 +6,29 @@ import { makeTab } from '#tab-test-fixtures'
 import { makeWebNavigationDetails } from '#web-navigation-test-fixtures'
 
 type ChromeCall = 'tabs.get' | 'tabs.update' | 'tabs.remove'
+type NavigationErrorDetails =
+  chrome.webNavigation.WebNavigationFramedErrorCallbackDetails
 
 let calls: unknown[][] = []
 
 function stubChrome(
   tabs: Record<number, chrome.tabs.Tab>,
   failures: Partial<Record<ChromeCall, Error>> = {},
-): void {
+): {
+  updateCalled: Promise<void>
+  emitNavigationError: (
+    overrides?: Partial<chrome.webNavigation.WebNavigationBaseCallbackDetails>,
+  ) => void
+} {
   calls = []
+
+  const navigationListeners = new Set<
+    (details: NavigationErrorDetails) => void
+  >()
+  let resolveUpdateCalled: () => void = () => {}
+  const updateCalled = new Promise<void>((resolve) => {
+    resolveUpdateCalled = resolve
+  })
 
   const get = vi.fn((tabId: number) => {
     calls.push(['tabs.get', tabId])
@@ -23,6 +38,7 @@ function stubChrome(
   const update = vi.fn(
     (tabId: number, properties: chrome.tabs.UpdateProperties) => {
       calls.push(['tabs.update', tabId, properties])
+      resolveUpdateCalled()
       const failure = failures['tabs.update']
       return failure ? Promise.reject(failure) : Promise.resolve(tabs[tabId])
     },
@@ -33,7 +49,46 @@ function stubChrome(
     return failure ? Promise.reject(failure) : Promise.resolve()
   })
 
-  vi.stubGlobal('chrome', { tabs: { get, update, remove } })
+  const onErrorOccurred = {
+    addListener: vi.fn(
+      (listener: (details: NavigationErrorDetails) => void) => {
+        calls.push(['webNavigation.onErrorOccurred.addListener'])
+        navigationListeners.add(listener)
+      },
+    ),
+    removeListener: vi.fn(
+      (listener: (details: NavigationErrorDetails) => void) => {
+        calls.push(['webNavigation.onErrorOccurred.removeListener'])
+        navigationListeners.delete(listener)
+      },
+    ),
+  }
+
+  vi.stubGlobal('chrome', {
+    tabs: { get, update, remove },
+    webNavigation: { onErrorOccurred },
+  })
+
+  return {
+    updateCalled,
+    emitNavigationError: (overrides = {}) => {
+      const details: NavigationErrorDetails = {
+        ...makeWebNavigationDetails({
+          url: `tq://${TQ_ORIGIN.replace(/^https?:\/\//, '').replace(/\/$/, '')}/tasks/42`,
+          ...overrides,
+        }),
+        documentId: 'test-document',
+        error: 'test navigation error',
+      }
+      calls.push([
+        'webNavigation.onErrorOccurred.emit',
+        details.tabId,
+        details.frameId,
+        details.url,
+      ])
+      for (const listener of navigationListeners) listener(details)
+    },
+  }
 }
 
 async function run(
@@ -122,7 +177,7 @@ describe('openTqLinkInApp', () => {
   })
 
   it('hands a new tab to tq and closes it after the handoff', async () => {
-    stubChrome({
+    const chromeStub = stubChrome({
       5: makeTab({ id: 5, url: 'https://example.test/source' }),
       9: makeTab({
         id: 9,
@@ -130,26 +185,70 @@ describe('openTqLinkInApp', () => {
         url: 'chrome://newtab/',
       }),
     })
+    const result = run(makeWebNavigationDetails())
+    await chromeStub.updateCalled
+    await Promise.resolve()
+    await Promise.resolve()
+    chromeStub.emitNavigationError({ tabId: 5 })
+    chromeStub.emitNavigationError({ frameId: 1 })
+    chromeStub.emitNavigationError({ url: `${TQ_ORIGIN}/tasks/42` })
+    chromeStub.emitNavigationError()
 
-    expect(await run(makeWebNavigationDetails())).toEqual({
+    expect(await result).toEqual({
       error: null,
       calls: [
         ['tabs.get', 9],
         ['tabs.get', 5],
+        ['webNavigation.onErrorOccurred.addListener'],
         ['tabs.update', 9, { url: 'tq://tq.example.test/tasks/42' }],
+        [
+          'webNavigation.onErrorOccurred.emit',
+          5,
+          0,
+          'tq://tq.example.test/tasks/42',
+        ],
+        [
+          'webNavigation.onErrorOccurred.emit',
+          9,
+          1,
+          'tq://tq.example.test/tasks/42',
+        ],
+        ['webNavigation.onErrorOccurred.emit', 9, 0, `${TQ_ORIGIN}/tasks/42`],
+        [
+          'webNavigation.onErrorOccurred.emit',
+          9,
+          0,
+          'tq://tq.example.test/tasks/42',
+        ],
+        ['webNavigation.onErrorOccurred.removeListener'],
         ['tabs.remove', 9],
       ],
     })
   })
 
   it('closes a new tab with no opener after handing it off', async () => {
-    stubChrome({ 9: makeTab({ id: 9, url: 'chrome://newtab/' }) })
+    const chromeStub = stubChrome({
+      9: makeTab({ id: 9, url: 'chrome://newtab/' }),
+    })
+    const result = run(makeWebNavigationDetails())
+    await chromeStub.updateCalled
+    await Promise.resolve()
+    await Promise.resolve()
+    chromeStub.emitNavigationError()
 
-    expect(await run(makeWebNavigationDetails())).toEqual({
+    expect(await result).toEqual({
       error: null,
       calls: [
         ['tabs.get', 9],
+        ['webNavigation.onErrorOccurred.addListener'],
         ['tabs.update', 9, { url: 'tq://tq.example.test/tasks/42' }],
+        [
+          'webNavigation.onErrorOccurred.emit',
+          9,
+          0,
+          'tq://tq.example.test/tasks/42',
+        ],
+        ['webNavigation.onErrorOccurred.removeListener'],
         ['tabs.remove', 9],
       ],
     })
@@ -185,7 +284,9 @@ describe('openTqLinkInApp', () => {
       calls: [
         ['tabs.get', 9],
         ['tabs.get', 5],
+        ['webNavigation.onErrorOccurred.addListener'],
         ['tabs.update', 9, { url: 'tq://tq.example.test/tasks/42' }],
+        ['webNavigation.onErrorOccurred.removeListener'],
       ],
     })
   })

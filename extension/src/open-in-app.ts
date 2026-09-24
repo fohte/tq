@@ -42,6 +42,44 @@ function isEmptyTabUrl(url: string | undefined): boolean {
   )
 }
 
+function waitForTqHandoff(
+  tabId: number,
+  deepLink: string,
+): { promise: Promise<void>; cancel: () => void } {
+  let resolve: () => void = () => {}
+  let listener:
+    | ((
+        details: chrome.webNavigation.WebNavigationFramedErrorCallbackDetails,
+      ) => void)
+    | undefined
+  let listening = true
+
+  const removeListener = () => {
+    if (!listening || listener === undefined) return
+    listening = false
+    chrome.webNavigation.onErrorOccurred.removeListener(listener)
+  }
+
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise
+    listener = (details) => {
+      if (
+        details.tabId !== tabId ||
+        details.frameId !== 0 ||
+        details.url !== deepLink
+      ) {
+        return
+      }
+
+      removeListener()
+      resolve()
+    }
+    chrome.webNavigation.onErrorOccurred.addListener(listener)
+  })
+
+  return { promise, cancel: removeListener }
+}
+
 export function openTqLinkInApp(
   details: chrome.webNavigation.WebNavigationBaseCallbackDetails,
 ): ResultAsync<void, Error> {
@@ -62,12 +100,22 @@ export function openTqLinkInApp(
     return openerTabResult.andThen((openerTab) => {
       if (isTqUrl(openerTab?.url)) return okAsync(undefined)
 
-      return wrap(chrome.tabs.update(details.tabId, { url: deepLink })).andThen(
-        () =>
-          closeTabAfterHandoff
-            ? wrap(chrome.tabs.remove(details.tabId)).map(() => undefined)
-            : okAsync(undefined),
-      )
+      const handoff = closeTabAfterHandoff
+        ? waitForTqHandoff(details.tabId, deepLink)
+        : undefined
+
+      return wrap(chrome.tabs.update(details.tabId, { url: deepLink }))
+        .andThen(() =>
+          handoff === undefined
+            ? okAsync(undefined)
+            : wrap(handoff.promise).andThen(() =>
+                wrap(chrome.tabs.remove(details.tabId)).map(() => undefined),
+              ),
+        )
+        .mapErr((error) => {
+          handoff?.cancel()
+          return error
+        })
     })
   })
 }
