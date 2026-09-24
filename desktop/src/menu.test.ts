@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { historyItems, type NavigationHistory } from '#menu'
+import { buildMenuTemplate, historyItems, type NavigationHistory } from '#menu'
 
 type Can = { back: boolean; forward: boolean }
 
@@ -25,6 +25,20 @@ const clickItem = (label: string, can: Can): string[] => {
     ?.click()
   return calls
 }
+
+const copiedUrlResult = (
+  item:
+    | {
+        label?: string
+        accelerator?: string
+      }
+    | undefined,
+  copiedUrls: string[],
+) => ({
+  label: item?.label,
+  accelerator: item?.accelerator,
+  copiedUrls,
+})
 
 describe('historyItems', () => {
   it('binds the browser shortcuts', () => {
@@ -59,5 +73,36 @@ describe('historyItems', () => {
 
   it('Forward does nothing when there is no next entry', () => {
     expect(clickItem('Forward', { back: true, forward: false })).toEqual([])
+  })
+})
+
+describe('buildMenuTemplate', () => {
+  it('copies the current page URL from the Page menu', () => {
+    const { history } = fakeHistory({ back: false, forward: false })
+    let currentUrl = 'https://example.test/tasks/41'
+    const copiedUrls: string[] = []
+    const menu = buildMenuTemplate(
+      history,
+      { getURL: () => currentUrl },
+      {
+        writeText: (url) => {
+          copiedUrls.push(url)
+        },
+      },
+    )
+    const pageMenu = menu.find(
+      (item) => 'label' in item && item.label === 'Page',
+    )
+    const copyUrlItem =
+      pageMenu && 'submenu' in pageMenu ? pageMenu.submenu[0] : undefined
+
+    currentUrl = 'https://example.test/tasks/42'
+    copyUrlItem?.click()
+
+    expect(copiedUrlResult(copyUrlItem, copiedUrls)).toEqual({
+      label: 'Copy URL',
+      accelerator: 'CmdOrCtrl+Shift+C',
+      copiedUrls: ['https://example.test/tasks/42'],
+    })
   })
 })
