@@ -1,4 +1,3 @@
-import { useNavigate } from '@tanstack/react-router'
 import { parseSearchQuery } from 'api/search-query-parser'
 import { Loader2 } from 'lucide-react'
 import {
@@ -11,6 +10,8 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 
+import { parseSearchMode } from '#components/search/search-modal-mode'
+import { useSearchModalNavigation } from '#components/search/search-modal-navigation'
 import {
   createOptionItem,
   createPageItems,
@@ -23,15 +24,9 @@ import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useDebounce } from '#hooks/use-debounce'
-import type { Project } from '#hooks/use-projects'
 import { useProjects } from '#hooks/use-projects'
-import type { SavedView } from '#hooks/use-saved-views'
 import { useSavedViews } from '#hooks/use-saved-views'
-import type {
-  PageSearchResult,
-  SearchResult,
-  Suggestion,
-} from '#hooks/use-search'
+import type { SearchResult, Suggestion } from '#hooks/use-search'
 import {
   applySuggestionToQuery,
   extractCurrentPrefix,
@@ -46,6 +41,7 @@ interface SearchModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   defaultContext?: 'work' | 'personal' | null
+  defaultQuery?: string
 }
 
 interface ResultGroup {
@@ -63,8 +59,9 @@ export function SearchModal({
   open,
   onOpenChange,
   defaultContext: contextOverride,
+  defaultQuery = '',
 }: SearchModalProps) {
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(defaultQuery)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isContextCleared, setIsContextCleared] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -74,18 +71,23 @@ export function SearchModal({
   const onOpenChangeRef = useRef(onOpenChange)
   queryRef.current = query
   onOpenChangeRef.current = onOpenChange
-  const navigate = useNavigate()
-  const navigateRef = useRef(navigate)
-  navigateRef.current = navigate
+  const { openTask, openProject, openView, openPage } =
+    useSearchModalNavigation(onOpenChangeRef)
   const currentContext = useCurrentContext()
   const configuredContext =
     contextOverride === undefined
       ? currentContext
       : (contextOverride ?? undefined)
   const defaultSearchContext = isContextCleared ? undefined : configuredContext
-  const context = resolveSearchContext(query, defaultSearchContext)
+  const {
+    mode: searchMode,
+    prefix: modePrefix,
+    text: searchQuery,
+  } = parseSearchMode(query)
+  const hasSearchQuery = searchQuery.length > 0
+  const context = resolveSearchContext(searchQuery, defaultSearchContext)
   const canClearContext = query === '' && context != null
-  const freeTextQuery = parseSearchQuery(query).freeText
+  const freeTextQuery = parseSearchQuery(searchQuery).freeText
   const debouncedFreeTextQuery = useDebounce(freeTextQuery, 200)
   const debouncedContext = useDebounce(context, 200)
   const searchFilter =
@@ -97,32 +99,45 @@ export function SearchModal({
       : undefined
   const hasAuxiliarySearch = freeTextQuery.length > 0
 
+  const canSearchTasks = searchMode == null || searchMode === 'tasks'
+  const canSearchProjects = searchMode == null || searchMode === 'projects'
+  const canSearchPages = searchMode == null || searchMode === 'pages'
+  const canSearchViews = searchMode == null
+  const canSuggest = searchMode == null
   const { data: tasks, isFetching: isFetchingTasks } = useSearchTasks(
-    query,
+    canSearchTasks ? searchQuery : '',
     defaultSearchContext,
   )
-  const { data: projects } = useProjects(searchFilter, {
-    enabled: searchFilter != null,
-  })
+  const { data: projects, isFetching: isFetchingProjects } = useProjects(
+    searchFilter,
+    {
+      enabled: canSearchProjects && searchFilter != null,
+    },
+  )
   const { data: savedViews } = useSavedViews(searchFilter, {
-    enabled: searchFilter != null,
+    enabled: canSearchViews && searchFilter != null,
   })
 
   const { data: taskByNumber, isFetching: isFetchingTaskByNumber } =
-    useSearchTaskByNumber(query)
-  const { data: pages, isFetching: isFetchingPages } = useSearchPages(query)
+    useSearchTaskByNumber(canSearchTasks ? searchQuery : '')
+  const { data: pages, isFetching: isFetchingPages } = useSearchPages(
+    canSearchPages ? searchQuery : '',
+  )
   const isFetching =
-    isFetchingTasks || isFetchingTaskByNumber || isFetchingPages
-  const currentPrefix = extractCurrentPrefix(query)
+    isFetchingTasks ||
+    isFetchingTaskByNumber ||
+    isFetchingPages ||
+    isFetchingProjects
+  const currentPrefix = extractCurrentPrefix(canSuggest ? searchQuery : '')
   const { data: suggestions } = useSearchSuggestions(currentPrefix)
 
   useEffect(() => {
     if (open) {
-      setQuery('')
+      setQuery(defaultQuery)
       setSelectedIndex(0)
       setIsContextCleared(false)
     }
-  }, [open])
+  }, [open, defaultQuery])
 
   // Scroll selected item into view
   useEffect(() => {
@@ -138,41 +153,6 @@ export function SearchModal({
     inputRef.current?.focus()
   }, [])
 
-  const openTask = useCallback((task: SearchResult) => {
-    onOpenChangeRef.current(false)
-    void navigateRef.current({
-      to: '/tasks/$taskId',
-      params: { taskId: task.id },
-    })
-  }, [])
-
-  const openProject = useCallback((project: Project) => {
-    onOpenChangeRef.current(false)
-    void navigateRef.current({
-      to: '/projects/$projectId',
-      params: { projectId: project.id },
-    })
-  }, [])
-
-  const openView = useCallback((view: SavedView) => {
-    onOpenChangeRef.current(false)
-    void navigateRef.current({
-      to: '/tasks',
-      search: { q: view.query },
-    })
-  }, [])
-
-  const openPage = useCallback((page: PageSearchResult) => {
-    if (page.pageId == null) return
-    onOpenChangeRef.current(false)
-    void navigateRef.current({
-      to: '/tasks/$taskId/pages/$pageId',
-      params: {
-        taskId: String(page.taskNumber),
-        pageId: page.pageId,
-      },
-    })
-  }, [])
   const resultGroups = useMemo((): ResultGroup[] => {
     const suggestionItems: ListItem[] =
       suggestions && currentPrefix.length > 0
@@ -204,18 +184,27 @@ export function SearchModal({
       render: renderTaskOption(task, onOpenChangeRef),
     })
     const taskItems: ListItem[] =
-      tasks
-        ?.filter((task) => task.id !== taskByNumber?.id)
-        .map((task) => toTaskListItem(task)) ?? []
+      canSearchTasks && hasSearchQuery
+        ? (tasks
+            ?.filter((task) => task.id !== taskByNumber?.id)
+            .map((task) => toTaskListItem(task)) ?? [])
+        : []
     const taskNumberItems: ListItem[] =
-      taskByNumber == null ? [] : [toTaskListItem(taskByNumber, 'number:')]
-    const pageItems = createPageItems(pages, openPage, onOpenChangeRef)
-    const projectItems = hasAuxiliarySearch
-      ? createProjectItems(projects, openProject)
-      : []
-    const viewItems = hasAuxiliarySearch
-      ? createViewItems(savedViews, openView)
-      : []
+      canSearchTasks && hasSearchQuery && taskByNumber != null
+        ? [toTaskListItem(taskByNumber, 'number:')]
+        : []
+    const pageItems =
+      canSearchPages && hasSearchQuery
+        ? createPageItems(pages, openPage, onOpenChangeRef)
+        : []
+    const projectItems =
+      canSearchProjects && hasAuxiliarySearch
+        ? createProjectItems(projects, openProject)
+        : []
+    const viewItems =
+      canSearchViews && hasAuxiliarySearch
+        ? createViewItems(savedViews, openView)
+        : []
 
     return [
       {
@@ -227,7 +216,7 @@ export function SearchModal({
       {
         id: 'suggestions',
         title: 'Suggestions',
-        items: suggestionItems,
+        items: canSuggest ? suggestionItems : [],
         isVisible: (_query, itemCount) => itemCount > 0,
       },
       {
@@ -269,6 +258,12 @@ export function SearchModal({
     openView,
     openPage,
     hasAuxiliarySearch,
+    canSearchTasks,
+    canSearchProjects,
+    canSearchPages,
+    canSearchViews,
+    canSuggest,
+    hasSearchQuery,
   ])
 
   const { items, indexedGroups } = useMemo((): {
@@ -330,7 +325,10 @@ export function SearchModal({
         onOpenChange(false)
         break
       case 'Backspace':
-        if (canClearContext) {
+        if (searchMode != null && !hasSearchQuery) {
+          e.preventDefault()
+          setQuery('')
+        } else if (canClearContext) {
           e.preventDefault()
           setIsContextCleared(true)
         }
@@ -339,10 +337,13 @@ export function SearchModal({
   }
 
   const visibleGroups = indexedGroups.filter((group) =>
-    group.isVisible(query, group.items.length),
+    group.isVisible(searchQuery, group.items.length),
   )
 
   if (!open) return null
+
+  const searchTarget = searchMode ?? 'tasks'
+  const inputValue = searchMode == null ? query : searchQuery
 
   return createPortal(
     <>
@@ -365,8 +366,12 @@ export function SearchModal({
         >
           {/* Search input */}
           <div className="flex h-12 items-center gap-3 border-b border-border px-4">
-            <span className="font-mono text-sm font-bold text-primary">
-              &gt;
+            <span
+              className="font-mono text-sm font-bold text-primary"
+              data-testid="search-mode-indicator"
+              aria-hidden="true"
+            >
+              {modePrefix ?? '>'}
             </span>
             {context != null && (
               <Chip size="md" active data-testid="search-context-scope">
@@ -376,14 +381,18 @@ export function SearchModal({
             <input
               ref={inputRef}
               type="text"
-              value={query}
+              value={inputValue}
               onChange={(e) => {
-                setQuery(e.target.value)
+                setQuery(
+                  modePrefix == null
+                    ? e.target.value
+                    : `${modePrefix}${e.target.value}`,
+                )
               }}
-              placeholder="Search tasks..."
+              placeholder={`Search ${searchTarget}...`}
               autoFocus
               className="min-w-0 flex-1 border-0 bg-transparent font-mono text-sm outline-none placeholder:text-muted-foreground"
-              aria-label="Search tasks"
+              aria-label={`Search ${searchTarget}`}
             />
             {isFetching && (
               <Loader2
@@ -430,16 +439,18 @@ export function SearchModal({
             ))}
 
             {/* Empty state */}
-            {query.length > 0 && !isFetching && visibleGroups.length === 0 && (
-              <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
-                {`no results for "${query}"`}
-              </div>
-            )}
+            {searchQuery.length > 0 &&
+              !isFetching &&
+              visibleGroups.length === 0 && (
+                <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
+                  {`no results for "${searchQuery}"`}
+                </div>
+              )}
 
             {/* Initial state */}
-            {query.length === 0 && (
+            {searchQuery.length === 0 && (
               <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
-                Type to search tasks
+                {`Type to search ${searchTarget}`}
               </div>
             )}
           </div>
