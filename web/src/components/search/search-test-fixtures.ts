@@ -1,4 +1,15 @@
-import type { PageSearchResult } from '#hooks/use-search'
+import type { PageSearchResult, Suggestion } from '#hooks/use-search'
+
+export function makeSuggestion(
+  overrides: Partial<Suggestion> = {},
+): Suggestion {
+  return {
+    value: 'is:todo',
+    display: 'Todo',
+    category: 'is',
+    ...overrides,
+  }
+}
 
 export function makePageSearchResult(
   overrides: Partial<PageSearchResult> = {},

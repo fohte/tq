@@ -4,12 +4,13 @@ import userEvent from '@testing-library/user-event'
 import type { ComponentProps, ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { makeSuggestion } from '#components/search/search-test-fixtures'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
 import type { Suggestion } from '#hooks/use-search'
 
 const suggestionFixtures: Suggestion[] = [
-  { value: 'is:todo', display: 'Todo', category: 'is' },
-  { value: 'is:completed', display: 'Completed', category: 'is' },
+  makeSuggestion(),
+  makeSuggestion({ value: 'is:completed', display: 'Completed' }),
 ]
 
 let mockSuggestionData: Suggestion[] = []

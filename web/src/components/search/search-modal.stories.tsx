@@ -7,12 +7,18 @@ import { useState } from 'react'
 import { makeSavedView } from '#components/layout/sidebar-test-fixtures'
 import { makeProject } from '#components/project/project-test-fixtures'
 import { SearchModal } from '#components/search/search-modal'
-import { makePageSearchResult } from '#components/search/search-test-fixtures'
+import {
+  makePageSearchResult,
+  makeSuggestion,
+} from '#components/search/search-test-fixtures'
 import {
   makeTask,
   makeTaskDetail,
 } from '#components/task/task-row-test-fixtures'
 import { StoryRouter } from '#storybook-config/story-router'
+
+const keyboardQuery = 'keyboard'
+const workbenchQuery = 'workbench'
 
 const searchTask = makeTask({
   id: '00000000-0000-0000-0000-000000000042',
@@ -45,6 +51,13 @@ const numberedTask = makeTaskDetail({
   title: 'Search modal keyboard shortcuts',
   context: 'work',
 })
+const numberedTaskNumber = String(numberedTask.number)
+const numberedTaskQuery = `#${numberedTaskNumber}`
+
+const suggestions = [
+  makeSuggestion(),
+  makeSuggestion({ value: 'is:completed', display: 'Completed' }),
+]
 
 const searchPage = makePageSearchResult({
   taskNumber: searchTask.number,
@@ -103,6 +116,16 @@ function SearchModalStory({
   )
 }
 
+function queryResults<T>(request: Request, fixtures: Record<string, T[]>) {
+  const query = new URL(request.url).searchParams.get('q') ?? ''
+  return fixtures[query] ?? []
+}
+
+function jsonByQuery<T>(fixtures: Record<string, T[]>) {
+  return ({ request }: { request: Request }) =>
+    HttpResponse.json(queryResults(request, fixtures))
+}
+
 const meta = {
   title: 'Search/SearchModal',
   component: SearchModalStory,
@@ -110,41 +133,30 @@ const meta = {
     layout: 'fullscreen',
     msw: {
       handlers: [
-        http.get('/api/tasks', ({ request }) => {
-          const query = new URL(request.url).searchParams.get('q')
-          return HttpResponse.json(query === 'keyboard' ? [searchTask] : [])
-        }),
-        http.get('/api/tasks/312', () => HttpResponse.json(numberedTask)),
-        http.get('/api/projects', ({ request }) => {
-          const query = new URL(request.url).searchParams.get('q')
-          return HttpResponse.json(query === 'keyboard' ? [searchProject] : [])
-        }),
-        http.get('/api/saved-views', ({ request }) => {
-          const query = new URL(request.url).searchParams.get('q')
-          return HttpResponse.json(
-            query === 'keyboard'
-              ? [searchView]
-              : query === 'workbench'
-                ? [isolatedView]
-                : [],
-          )
-        }),
+        http.get('/api/tasks', jsonByQuery({ [keyboardQuery]: [searchTask] })),
+        http.get(`/api/tasks/${numberedTaskNumber}`, () =>
+          HttpResponse.json(numberedTask),
+        ),
+        http.get(
+          '/api/projects',
+          jsonByQuery({ [keyboardQuery]: [searchProject] }),
+        ),
+        http.get(
+          '/api/saved-views',
+          jsonByQuery({
+            [keyboardQuery]: [searchView],
+            [workbenchQuery]: [isolatedView],
+          }),
+        ),
         http.get('/api/tasks/search/pages', ({ request }) => {
-          const query = new URL(request.url).searchParams.get('q')
           return HttpResponse.json({
-            results: query === 'keyboard' ? [searchPage] : [],
+            results: queryResults(request, { [keyboardQuery]: [searchPage] }),
           })
         }),
         http.get('/api/tasks/search/suggest', ({ request }) => {
           const prefix = new URL(request.url).searchParams.get('prefix') ?? ''
-          const suggestions = [
-            { value: 'is:todo', display: 'Todo', category: 'is' },
-            { value: 'is:completed', display: 'Completed', category: 'is' },
-          ]
           return HttpResponse.json(
-            suggestions.filter((suggestion) =>
-              suggestion.value.startsWith(prefix),
-            ),
+            suggestions.filter(({ value }) => value.startsWith(prefix)),
           )
         }),
       ],
@@ -162,23 +174,23 @@ export const AllContexts: Story = {
 }
 
 export const TaskMode: Story = {
-  args: { defaultContext: 'work', defaultQuery: '#keyboard' },
+  args: { defaultContext: 'work', defaultQuery: `#${keyboardQuery}` },
 }
 
 export const ProjectMode: Story = {
-  args: { defaultContext: 'work', defaultQuery: '!keyboard' },
+  args: { defaultContext: 'work', defaultQuery: `!${keyboardQuery}` },
 }
 
 export const PageMode: Story = {
-  args: { defaultContext: 'work', defaultQuery: '/keyboard' },
+  args: { defaultContext: 'work', defaultQuery: `/${keyboardQuery}` },
 }
 
 export const CrossSearch: Story = {
-  args: { defaultContext: 'work', defaultQuery: 'keyboard' },
+  args: { defaultContext: 'work', defaultQuery: keyboardQuery },
 }
 
 export const TaskNumber: Story = {
-  args: { defaultContext: 'work', defaultQuery: '#312' },
+  args: { defaultContext: 'work', defaultQuery: numberedTaskQuery },
 }
 
 export const Suggestions: Story = {
@@ -186,7 +198,7 @@ export const Suggestions: Story = {
 }
 
 export const Views: Story = {
-  args: { defaultContext: 'work', defaultQuery: 'workbench' },
+  args: { defaultContext: 'work', defaultQuery: workbenchQuery },
 }
 
 export const NoResults: Story = {
