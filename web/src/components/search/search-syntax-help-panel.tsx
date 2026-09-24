@@ -1,3 +1,5 @@
+import type { RefObject } from 'react'
+
 import type { SearchSyntaxHelpSection } from '#components/search/search-syntax-help-data'
 import { Button } from '#components/ui/button'
 import { cn } from '#lib/utils'
@@ -6,12 +8,14 @@ interface SearchSyntaxHelpPanelProps {
   sections: SearchSyntaxHelpSection[]
   onBack?: () => void
   className?: string
+  backButtonRef?: RefObject<HTMLButtonElement | null>
 }
 
 export function SearchSyntaxHelpPanel({
   sections,
   onBack,
   className,
+  backButtonRef,
 }: SearchSyntaxHelpPanelProps) {
   return (
     <div
@@ -25,7 +29,12 @@ export function SearchSyntaxHelpPanel({
           Search syntax
         </h2>
         {onBack != null && (
-          <Button variant="ghost" size="xs" onClick={onBack}>
+          <Button
+            ref={backButtonRef}
+            variant="ghost"
+            size="xs"
+            onClick={onBack}
+          >
             Back to search
           </Button>
         )}

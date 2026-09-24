@@ -1,5 +1,4 @@
 import { Loader2 } from 'lucide-react'
-import { useRef } from 'react'
 
 import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
@@ -25,9 +24,6 @@ export function SearchModalInput({
   onInputValueChange,
   inputRef,
 }: SearchModalInputProps) {
-  const localInputRef = useRef<HTMLInputElement>(null)
-  const resolvedInputRef = inputRef ?? localInputRef
-
   return (
     <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
       <span
@@ -48,7 +44,7 @@ export function SearchModalInput({
         </Chip>
       ))}
       <input
-        ref={resolvedInputRef}
+        ref={inputRef}
         type="text"
         value={searchInputValue}
         onChange={(e) => {

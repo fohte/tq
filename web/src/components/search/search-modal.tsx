@@ -45,6 +45,7 @@ interface SearchModalProps {
   onOpenChange: (open: boolean) => void
   defaultContext?: 'work' | 'personal' | null
   defaultQuery?: string
+  defaultHelpOpen?: boolean
 }
 
 interface ResultGroup {
@@ -63,16 +64,18 @@ export function SearchModal({
   onOpenChange,
   defaultContext: contextOverride,
   defaultQuery = '',
+  defaultHelpOpen = false,
 }: SearchModalProps) {
   const [query, setQuery] = useState(defaultQuery)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isContextCleared, setIsContextCleared] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const helpBackButtonRef = useRef<HTMLButtonElement>(null)
   const {
     isHelpOpen,
     closeHelp,
     handleKeyDown: handleHelpKeyDown,
-  } = useSearchModalHelp(open, inputRef)
+  } = useSearchModalHelp(open, inputRef, helpBackButtonRef, defaultHelpOpen)
   const listRef = useRef<HTMLDivElement>(null)
   const lastMousePos = useRef({ x: 0, y: 0 })
   const onOpenChangeRef = useRef(onOpenChange)
@@ -458,12 +461,14 @@ export function SearchModal({
               sections={getSearchSyntaxHelpSections()}
               onBack={closeHelp}
               className="flex-1"
+              backButtonRef={helpBackButtonRef}
             />
           )}
 
           <SearchModalFooter
             canClearContext={canClearContext}
             canPopScope={canPopScope}
+            canOpenHelp={searchInputValue.length === 0}
             isHelpOpen={isHelpOpen}
           />
         </div>

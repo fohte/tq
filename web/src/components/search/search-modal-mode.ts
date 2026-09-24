@@ -12,7 +12,7 @@ export const SEARCH_MODE_DEFINITIONS = {
   '/': {
     mode: 'pages',
     label: 'Pages',
-    description: 'Search pages by title or content.',
+    description: 'Search page, comment, and task text.',
   },
 } as const
 

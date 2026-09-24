@@ -3,6 +3,7 @@ import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
 import { useEffect } from 'react'
 
 import { SaveViewButton } from '#components/saved-view/save-view-button'
+import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPopover } from '#components/search/search-syntax-help-popover'
 import { TaskFilterChip } from '#components/task/task-filter-chip'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
@@ -285,7 +286,13 @@ export function TaskFilterChipRow({
           onBackspaceEmpty={removeLastChip}
           placeholder="Filter…"
         />
-        <SearchSyntaxHelpPopover defaultOpen={defaultOpenSearchHelp} />
+        <SearchSyntaxHelpPopover
+          defaultOpen={defaultOpenSearchHelp}
+          sections={getSearchSyntaxHelpSections({
+            audience: 'task-filter',
+            disableProjectFilter,
+          })}
+        />
       </div>
 
       {/* Pinned to the row's right edge, outside the wrapping chip area, so

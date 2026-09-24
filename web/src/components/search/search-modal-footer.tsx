@@ -3,12 +3,14 @@ import { KeybindHint } from '#components/ui/keybind-hint'
 interface SearchModalFooterProps {
   canClearContext: boolean
   canPopScope: boolean
+  canOpenHelp: boolean
   isHelpOpen: boolean
 }
 
 export function SearchModalFooter({
   canClearContext,
   canPopScope,
+  canOpenHelp,
   isHelpOpen,
 }: SearchModalFooterProps) {
   return (
@@ -30,8 +32,12 @@ export function SearchModalFooter({
           <span>open</span>
           <KeybindHint variant="boxed">Esc</KeybindHint>
           <span>close</span>
-          <KeybindHint variant="boxed">?</KeybindHint>
-          <span>help</span>
+          {canOpenHelp && (
+            <>
+              <KeybindHint variant="boxed">?</KeybindHint>
+              <span>help</span>
+            </>
+          )}
           {(canClearContext || canPopScope) && (
             <>
               <KeybindHint variant="boxed">Backspace</KeybindHint>

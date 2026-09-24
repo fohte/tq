@@ -5,7 +5,12 @@ import { SearchModalFooter } from '#components/search/search-modal-footer'
 const meta = {
   title: 'Search/SearchModalFooter',
   component: SearchModalFooter,
-  args: { canClearContext: false, canPopScope: false, isHelpOpen: false },
+  args: {
+    canClearContext: false,
+    canPopScope: false,
+    canOpenHelp: true,
+    isHelpOpen: false,
+  },
   parameters: { layout: 'centered' },
 } satisfies Meta<typeof SearchModalFooter>
 
@@ -24,4 +29,8 @@ export const ClearContext: Story = {
 
 export const HelpOpen: Story = {
   args: { isHelpOpen: true },
+}
+
+export const HelpUnavailableWithQuery: Story = {
+  args: { canOpenHelp: false },
 }

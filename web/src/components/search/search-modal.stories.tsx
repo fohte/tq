@@ -115,9 +115,11 @@ function Providers({ children }: { children: ReactNode }) {
 function SearchModalStory({
   defaultContext,
   defaultQuery,
+  defaultHelpOpen,
 }: {
   defaultContext?: 'work' | 'personal' | null
   defaultQuery?: string
+  defaultHelpOpen?: boolean
 } = {}) {
   const [open, setOpen] = useState(true)
   return (
@@ -137,6 +139,7 @@ function SearchModalStory({
           onOpenChange={setOpen}
           {...(defaultContext === undefined ? {} : { defaultContext })}
           {...(defaultQuery === undefined ? {} : { defaultQuery })}
+          {...(defaultHelpOpen === undefined ? {} : { defaultHelpOpen })}
         />
       </div>
     </Providers>
@@ -248,6 +251,10 @@ export const TaskNumber: Story = {
 
 export const Suggestions: Story = {
   args: { defaultContext: 'work', defaultQuery: 'is:' },
+}
+
+export const HelpOpen: Story = {
+  args: { defaultContext: 'work', defaultHelpOpen: true },
 }
 
 export const Views: Story = {

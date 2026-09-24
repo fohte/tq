@@ -26,11 +26,13 @@ type SearchQueryTokenValue = {
 type SearchQueryTokenDefinition =
   | {
       description: string
+      taskFilter?: boolean
       values: readonly SearchQueryTokenValue[]
     }
   | {
       display: string
       description: string
+      taskFilter?: boolean
       valuePlaceholder: string
       parse: (result: ParsedQuery, value: string) => void
     }
@@ -41,9 +43,11 @@ function defineFixedToken<
   values: Values,
   description: string,
   parse: (result: ParsedQuery, value: Values[number][0]) => void,
+  taskFilter = false,
 ) {
   return {
     description,
+    ...(taskFilter ? { taskFilter } : {}),
     values: values.map(([value, display]) => ({
       value,
       display,
@@ -65,6 +69,7 @@ const searchQueryTokenDefinitions = new Map(
       (result, value) => {
         result.status = [...(result.status ?? []), value]
       },
+      true,
     ),
     context: defineFixedToken(
       [
@@ -75,6 +80,7 @@ const searchQueryTokenDefinitions = new Map(
       (result, value) => {
         result.context = value
       },
+      true,
     ),
     commitment: defineFixedToken(
       [
@@ -98,6 +104,7 @@ const searchQueryTokenDefinitions = new Map(
       (result, value) => {
         result.sortBy = value
       },
+      true,
     ),
     has: defineFixedToken(
       [
@@ -133,6 +140,7 @@ const searchQueryTokenDefinitions = new Map(
           }
         }
       },
+      true,
     ),
     reason: defineFixedToken(
       taskStatusReason.options.map(
@@ -152,6 +160,7 @@ const searchQueryTokenDefinitions = new Map(
     label: {
       display: 'Label',
       description: 'Limit results to tasks with this label.',
+      taskFilter: true,
       valuePlaceholder: 'label',
       parse: (result: ParsedQuery, value: string) => {
         result.label = value
@@ -160,6 +169,7 @@ const searchQueryTokenDefinitions = new Map(
     parent: {
       display: 'Parent task',
       description: 'Limit results to children of this task ID.',
+      taskFilter: true,
       valuePlaceholder: 'task-id',
       parse: (result: ParsedQuery, value: string) => {
         result.parentId = value
@@ -168,6 +178,7 @@ const searchQueryTokenDefinitions = new Map(
     project: {
       display: 'Project',
       description: 'Limit results to tasks in this project ID.',
+      taskFilter: true,
       valuePlaceholder: 'project-id',
       parse: (result: ParsedQuery, value: string) => {
         result.projectId = value
@@ -203,7 +214,9 @@ export function getSearchQuerySuggestions(prefix: string, category?: string) {
 
 export function getSearchQueryHelpTokens() {
   return Array.from(searchQueryTokenDefinitions, ([key, definition]) => ({
+    key,
     description: definition.description,
+    taskFilter: definition.taskFilter ?? false,
     syntax:
       'values' in definition
         ? `${key}:`

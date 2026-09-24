@@ -245,7 +245,6 @@ export const taskShorthandHelpItems = [
 ] as const
 
 export type TriggerChar = (typeof taskShorthandHelpItems)[number]['trigger']
-export type ShorthandHelpItem = (typeof taskShorthandHelpItems)[number]
 
 export interface SuggestionItem {
   value: string

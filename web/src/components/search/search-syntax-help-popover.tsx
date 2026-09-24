@@ -1,49 +1,26 @@
-import { CircleHelp } from 'lucide-react'
-import { useId, useRef, useState } from 'react'
-
-import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
+import {
+  getSearchSyntaxHelpSections,
+  type SearchSyntaxHelpSection,
+} from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPanel } from '#components/search/search-syntax-help-panel'
-import { AnchoredPopup } from '#components/ui/anchored-popup'
-import { Button } from '#components/ui/button'
+import { HelpPopover } from '#components/ui/help-popover'
 
 interface SearchSyntaxHelpPopoverProps {
   defaultOpen?: boolean
+  sections?: SearchSyntaxHelpSection[]
 }
 
 export function SearchSyntaxHelpPopover({
   defaultOpen = false,
+  sections = getSearchSyntaxHelpSections(),
 }: SearchSyntaxHelpPopoverProps) {
-  const [open, setOpen] = useState(defaultOpen)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const popupId = useId()
-
   return (
-    <>
-      <Button
-        ref={triggerRef}
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Search syntax help"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls={open ? popupId : undefined}
-        onClick={() => {
-          setOpen((previous) => !previous)
-        }}
-      >
-        <CircleHelp aria-hidden="true" />
-      </Button>
-      <AnchoredPopup
-        id={popupId}
-        open={open}
-        onOpenChange={setOpen}
-        anchor={triggerRef}
-        align="end"
-        className="w-88 p-0"
-      >
-        <SearchSyntaxHelpPanel sections={getSearchSyntaxHelpSections()} />
-      </AnchoredPopup>
-    </>
+    <HelpPopover
+      label="Search syntax help"
+      defaultOpen={defaultOpen}
+      popupClassName="w-88 p-0"
+    >
+      <SearchSyntaxHelpPanel sections={sections} />
+    </HelpPopover>
   )
 }

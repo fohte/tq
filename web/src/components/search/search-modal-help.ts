@@ -3,11 +3,13 @@ import { useEffect, useState } from 'react'
 export function useSearchModalHelp(
   modalOpen: boolean,
   inputRef: React.RefObject<HTMLInputElement | null>,
+  backButtonRef: React.RefObject<HTMLButtonElement | null>,
+  defaultOpen = false,
 ) {
-  const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const [isHelpOpen, setIsHelpOpen] = useState(defaultOpen)
 
   useEffect(() => {
-    setIsHelpOpen(false)
+    if (!modalOpen) setIsHelpOpen(false)
   }, [modalOpen])
 
   const closeHelp = () => {
@@ -23,6 +25,13 @@ export function useSearchModalHelp(
       if (event.key === 'Escape' || event.key === 'Backspace') {
         event.preventDefault()
         closeHelp()
+      } else if (event.key === 'Tab') {
+        event.preventDefault()
+        const nextFocus =
+          document.activeElement === inputRef.current
+            ? backButtonRef.current
+            : inputRef.current
+        nextFocus?.focus()
       }
       return true
     }

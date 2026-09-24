@@ -14,9 +14,26 @@ export interface SearchSyntaxHelpSection {
   entries: SearchSyntaxHelpEntry[]
 }
 
-export function getSearchSyntaxHelpSections(): SearchSyntaxHelpSection[] {
-  return [
-    {
+export function getSearchSyntaxHelpSections({
+  audience = 'search',
+  disableProjectFilter = false,
+}: {
+  audience?: 'search' | 'task-filter'
+  disableProjectFilter?: boolean
+} = {}): SearchSyntaxHelpSection[] {
+  const queryTokens = getSearchQueryHelpTokens()
+  const filterTokens =
+    audience === 'task-filter'
+      ? queryTokens.filter(
+          (token) =>
+            token.taskFilter &&
+            !(disableProjectFilter && token.key === 'project'),
+        )
+      : queryTokens
+
+  const sections: SearchSyntaxHelpSection[] = []
+  if (audience === 'search') {
+    sections.push({
       title: 'Search targets',
       entries: Object.entries(SEARCH_MODE_DEFINITIONS).map(
         ([prefix, definition]) => ({
@@ -26,14 +43,8 @@ export function getSearchSyntaxHelpSections(): SearchSyntaxHelpSection[] {
           values: [],
         }),
       ),
-    },
-    {
-      title: 'Filters',
-      entries: getSearchQueryHelpTokens().map((token) => ({
-        syntax: token.syntax,
-        description: token.description,
-        values: token.values,
-      })),
-    },
-  ]
+    })
+  }
+  sections.push({ title: 'Filters', entries: filterTokens })
+  return sections
 }
