@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { fn } from 'storybook/test'
 
+import { makeSuggestion } from '#components/search/search-test-fixtures'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
 import { searchKeys } from '#hooks/use-search'
 
@@ -11,8 +12,8 @@ const queryClient = new QueryClient({
 })
 
 const suggestionFixtures = [
-  { value: 'is:todo', display: 'Todo', category: 'is' },
-  { value: 'is:completed', display: 'Completed', category: 'is' },
+  makeSuggestion(),
+  makeSuggestion({ value: 'is:completed', display: 'Completed' }),
 ]
 
 const emptySuggestHandler = http.get('/api/tasks/search/suggest', () =>

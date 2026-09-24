@@ -7,7 +7,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeSavedView } from '#components/layout/sidebar-test-fixtures'
 import { makeProject } from '#components/project/project-test-fixtures'
 import { SearchModal } from '#components/search/search-modal'
-import { makePageSearchResult } from '#components/search/search-test-fixtures'
+import {
+  makePageSearchResult,
+  makeSuggestion,
+} from '#components/search/search-test-fixtures'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { Project } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
@@ -85,8 +88,8 @@ const personalTask = makeTask({
 })
 
 const mockSuggestions = [
-  { value: 'is:todo', display: 'Todo', category: 'is' },
-  { value: 'is:completed', display: 'Completed', category: 'is' },
+  makeSuggestion(),
+  makeSuggestion({ value: 'is:completed', display: 'Completed' }),
 ]
 
 let mockSearchData: typeof mockTasks = []
