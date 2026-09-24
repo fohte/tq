@@ -1,11 +1,13 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
+import { page } from 'vitest/browser'
 
 import { ProjectFormModal } from '#components/project/project-form-modal'
 import { makeProject } from '#components/project/project-test-fixtures'
 import { renderControlledModal } from '#lib/render-controlled-modal'
-import { atIndex } from '#lib/test-utils'
+import { assertDefined, atIndex, findVisible } from '#lib/test-utils'
+import { DESKTOP_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
 function renderModal(
   props: {
@@ -120,5 +122,30 @@ describe('ProjectFormModal', () => {
         screen.queryByPlaceholderText('Project name'),
       ).not.toBeInTheDocument()
     })
+  })
+
+  it('closes when the desktop backdrop is clicked', async () => {
+    const user = userEvent.setup()
+    const { onOpenChange } = renderModal()
+
+    await user.click(
+      assertDefined(document.elementFromPoint(1, 1), 'no target at backdrop'),
+    )
+
+    expect(onOpenChange.mock.calls).toEqual([[false]])
+  })
+
+  it('stays open when a project name field is clicked inside the desktop panel', async () => {
+    await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
+    const user = userEvent.setup()
+    const { onOpenChange } = renderModal()
+    const projectNameInput = assertDefined(
+      findVisible(screen.getAllByPlaceholderText('Project name')),
+      'no visible project name input',
+    )
+
+    await user.click(projectNameInput)
+
+    expect(onOpenChange.mock.calls).toEqual([])
   })
 })

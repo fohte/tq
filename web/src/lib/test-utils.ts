@@ -11,6 +11,39 @@ export function findVisible<T extends Element>(elements: T[]): T | undefined {
   return elements.find((el) => el.checkVisibility())
 }
 
+export function tapAtViewportPoint(x: number, y: number): Element | null {
+  const target = document.elementFromPoint(x, y)
+  if (target === null) return null
+
+  // A mobile tap sends pointer events followed by a synthesized click.
+  const pointerEventInit: PointerEventInit = {
+    bubbles: true,
+    cancelable: true,
+    pointerId: 1,
+    pointerType: 'touch',
+    isPrimary: true,
+    button: 0,
+    clientX: x,
+    clientY: y,
+  }
+  target.dispatchEvent(
+    new PointerEvent('pointerdown', { ...pointerEventInit, buttons: 1 }),
+  )
+  target.dispatchEvent(
+    new PointerEvent('pointerup', { ...pointerEventInit, buttons: 0 }),
+  )
+  target.dispatchEvent(
+    new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      clientX: x,
+      clientY: y,
+    }),
+  )
+  return target
+}
+
 /**
  * Waits until `element` receives focus.
  */

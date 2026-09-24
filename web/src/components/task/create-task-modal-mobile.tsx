@@ -90,8 +90,8 @@ export function CreateTaskModalMobile({
   submitDisabled: boolean
 }) {
   return (
-    <BottomSheetOverlay className="md:hidden">
-      <BottomSheetPanel>
+    <BottomSheetOverlay className="pointer-events-none md:hidden">
+      <BottomSheetPanel className="pointer-events-auto">
         {/* Header */}
         <BottomSheetHeader>
           <div className="flex flex-col">
