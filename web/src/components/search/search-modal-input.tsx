@@ -4,8 +4,8 @@ import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
 
 interface SearchModalInputProps {
-  modePrefix?: string
-  context?: 'work' | 'personal'
+  modePrefix?: string | undefined
+  context?: 'work' | 'personal' | undefined
   searchScopeTokens: string[]
   searchInputValue: string
   searchTarget: 'tasks' | 'projects' | 'pages'

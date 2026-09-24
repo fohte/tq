@@ -8,9 +8,9 @@ import { Button } from '#components/ui/button'
 interface HelpPopoverProps {
   label: string
   children: ReactNode
-  className?: string
+  className?: string | undefined
   defaultOpen?: boolean
-  onOpenChange?: (open: boolean) => void
+  onOpenChange?: ((open: boolean) => void) | undefined
   popupClassName?: string
 }
 

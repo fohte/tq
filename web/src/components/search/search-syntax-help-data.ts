@@ -2,7 +2,7 @@ import { getSearchQueryHelpTokens } from 'api/search-query-parser'
 
 import { SEARCH_MODE_DEFINITIONS } from '#components/search/search-modal-mode'
 
-export interface SearchSyntaxHelpEntry {
+interface SearchSyntaxHelpEntry {
   syntax: string
   label?: string
   description: string

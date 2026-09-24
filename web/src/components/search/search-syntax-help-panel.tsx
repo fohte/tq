@@ -48,9 +48,9 @@ export function SearchSyntaxHelpPanel({
             {section.entries.map((entry) => (
               <div
                 key={entry.syntax}
-                className="flex gap-3 border-t border-border/60 py-2 first:border-t-0"
+                className="flex flex-col gap-1 border-t border-border/60 py-2 first:border-t-0 md:flex-row md:gap-3"
               >
-                <dt className="w-40 shrink-0 whitespace-nowrap text-primary">
+                <dt className="min-w-0 break-all text-primary md:w-40 md:shrink-0">
                   {entry.syntax}
                 </dt>
                 <dd className="min-w-0 flex-1 text-muted-foreground">
@@ -61,8 +61,8 @@ export function SearchSyntaxHelpPanel({
                   {entry.values.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1">
                       {entry.values.map((value) => (
-                        <span key={value.syntax} className="whitespace-nowrap">
-                          <code className="text-foreground">
+                        <span key={value.syntax}>
+                          <code className="break-all text-foreground">
                             {value.syntax}
                           </code>{' '}
                           <span className="text-muted-foreground-faint">
