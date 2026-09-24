@@ -24,9 +24,16 @@ type SearchQueryTokenValue = {
 }
 
 type SearchQueryTokenDefinition =
-  | { values: readonly SearchQueryTokenValue[] }
+  | {
+      description: string
+      taskFilter?: boolean
+      values: readonly SearchQueryTokenValue[]
+    }
   | {
       display: string
+      description: string
+      taskFilter?: boolean
+      valuePlaceholder: string
       parse: (result: ParsedQuery, value: string) => void
     }
 
@@ -34,9 +41,13 @@ function defineFixedToken<
   const Values extends readonly (readonly [string, string])[],
 >(
   values: Values,
+  description: string,
   parse: (result: ParsedQuery, value: Values[number][0]) => void,
+  taskFilter = false,
 ) {
   return {
+    description,
+    ...(taskFilter ? { taskFilter } : {}),
     values: values.map(([value, display]) => ({
       value,
       display,
@@ -54,18 +65,22 @@ const searchQueryTokenDefinitions = new Map(
         ['todo', 'Todo'],
         ['completed', 'Completed'],
       ],
+      'Filter by whether a task is todo or completed.',
       (result, value) => {
         result.status = [...(result.status ?? []), value]
       },
+      true,
     ),
     context: defineFixedToken(
       [
         ['work', 'Work'],
         ['personal', 'Personal'],
       ],
+      'Limit results to work or personal tasks.',
       (result, value) => {
         result.context = value
       },
+      true,
     ),
     commitment: defineFixedToken(
       [
@@ -73,6 +88,7 @@ const searchQueryTokenDefinitions = new Map(
         ['active', 'Active'],
         ['someday', 'Someday'],
       ],
+      'Limit tasks by commitment level.',
       (result, value) => {
         result.commitment = value
       },
@@ -84,9 +100,11 @@ const searchQueryTokenDefinitions = new Map(
         ['updated', 'Sort by update date'],
         ['estimate', 'Sort by estimate'],
       ],
+      'Sort results by date or estimate.',
       (result, value) => {
         result.sortBy = value
       },
+      true,
     ),
     has: defineFixedToken(
       [
@@ -96,6 +114,7 @@ const searchQueryTokenDefinitions = new Map(
         ['blockers', 'Has blockers'],
         ['no-blockers', 'Has no blockers'],
       ],
+      'Filter by pages, comments, children, or blockers.',
       (result, value) => {
         switch (value) {
           case 'pages':
@@ -121,6 +140,7 @@ const searchQueryTokenDefinitions = new Map(
           }
         }
       },
+      true,
     ),
     reason: defineFixedToken(
       taskStatusReason.options.map(
@@ -132,24 +152,34 @@ const searchQueryTokenDefinitions = new Map(
               .replace(/^./, (char) => char.toUpperCase()),
           ] as const,
       ),
+      'Filter completed tasks by completion reason.',
       (result, value) => {
         result.reason = value
       },
     ),
     label: {
       display: 'Label',
+      description: 'Limit results to tasks with this label.',
+      taskFilter: true,
+      valuePlaceholder: 'label',
       parse: (result: ParsedQuery, value: string) => {
         result.label = value
       },
     },
     parent: {
       display: 'Parent task',
+      description: 'Limit results to children of this task ID.',
+      taskFilter: true,
+      valuePlaceholder: 'task-id',
       parse: (result: ParsedQuery, value: string) => {
         result.parentId = value
       },
     },
     project: {
       display: 'Project',
+      description: 'Limit results to tasks in this project ID.',
+      taskFilter: true,
+      valuePlaceholder: 'project-id',
       parse: (result: ParsedQuery, value: string) => {
         result.projectId = value
       },
@@ -180,6 +210,25 @@ export function getSearchQuerySuggestions(prefix: string, category?: string) {
       suggestion.value.startsWith(prefix),
     )
   })
+}
+
+export function getSearchQueryHelpTokens() {
+  return Array.from(searchQueryTokenDefinitions, ([key, definition]) => ({
+    key,
+    description: definition.description,
+    taskFilter: definition.taskFilter ?? false,
+    syntax:
+      'values' in definition
+        ? `${key}:`
+        : `${key}:<${definition.valuePlaceholder}>`,
+    values:
+      'values' in definition
+        ? definition.values.map(({ value, display }) => ({
+            syntax: `${key}:${value}`,
+            display,
+          }))
+        : [],
+  }))
 }
 
 export function parseSearchQuery(q: string): ParsedQuery {

@@ -104,6 +104,12 @@ export const FreeTextInInput: Story = {
   },
 }
 
+export const SearchHelpOpen: Story = {
+  args: {
+    defaultOpenSearchHelp: true,
+  },
+}
+
 export const ParentIdChip: Story = {
   args: {
     parsed: { ...defaultParsed, parentId: 'parent-abc' },

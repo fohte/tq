@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 
 import { TaskMentionSummary } from '#components/task/task-mention-summary'
+import { TaskShorthandHelp } from '#components/task/task-shorthand-help'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
 import { Input } from '#components/ui/input'
 import { useCurrentContext } from '#hooks/use-current-context'
@@ -134,28 +135,36 @@ export function TaskTitleInput({
 
   return (
     <>
-      <Input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value)
-          updateTrigger(
-            e.target.value,
-            e.target.selectionStart ?? e.target.value.length,
-          )
-        }}
-        onKeyDown={handleKeyDown}
-        onSelect={(e) => {
-          updateTrigger(
-            e.currentTarget.value,
-            e.currentTarget.selectionStart ?? e.currentTarget.value.length,
-          )
-        }}
-        placeholder={placeholder}
-        autoFocus={autoFocus}
-        className={className}
-      />
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value)
+            updateTrigger(
+              e.target.value,
+              e.target.selectionStart ?? e.target.value.length,
+            )
+          }}
+          onKeyDown={handleKeyDown}
+          onSelect={(e) => {
+            updateTrigger(
+              e.currentTarget.value,
+              e.currentTarget.selectionStart ?? e.currentTarget.value.length,
+            )
+          }}
+          placeholder={placeholder}
+          autoFocus={autoFocus}
+          className={cn(className, 'pr-9')}
+        />
+        <TaskShorthandHelp
+          className="absolute top-1/2 right-0.5 -translate-y-1/2 text-muted-foreground"
+          onOpenChange={(open) => {
+            if (open) setCursorTrigger(null)
+          }}
+        />
+      </div>
       <AnchoredPopup
         open={suggestionCount > 0}
         onOpenChange={(nextOpen) => {

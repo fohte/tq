@@ -9,6 +9,8 @@ import { makeProject } from '#components/project/project-test-fixtures'
 import { SearchModal } from '#components/search/search-modal'
 import {
   makePageSearchResult,
+  makeRecentProject,
+  makeRecentTask,
   makeSuggestion,
 } from '#components/search/search-test-fixtures'
 import {
@@ -95,21 +97,17 @@ const searchPage = makePageSearchResult({
   snippet: 'Keyboard shortcuts for searching and navigation.',
 })
 const recentItems: RecentSearchItem[] = [
-  {
-    kind: 'task',
+  makeRecentTask({
     id: searchTask.id,
     number: searchTask.number,
     title: searchTask.title,
-    context: 'work',
     viewedAt: 1_800_000_000_000,
-  },
-  {
-    kind: 'project',
+  }),
+  makeRecentProject({
     id: searchProject.id,
     title: searchProject.title,
-    context: 'work',
     viewedAt: 1_799_999_000_000,
-  },
+  }),
 ]
 
 function Providers({ children }: { children: ReactNode }) {
@@ -133,10 +131,12 @@ function Providers({ children }: { children: ReactNode }) {
 function SearchModalStory({
   defaultContext,
   defaultQuery,
+  defaultHelpOpen,
   defaultRecentItems,
 }: {
   defaultContext?: 'work' | 'personal' | null
   defaultQuery?: string
+  defaultHelpOpen?: boolean
   defaultRecentItems?: RecentSearchItem[]
 } = {}) {
   const [open, setOpen] = useState(true)
@@ -158,6 +158,7 @@ function SearchModalStory({
           onNewTask={() => undefined}
           {...(defaultContext === undefined ? {} : { defaultContext })}
           {...(defaultQuery === undefined ? {} : { defaultQuery })}
+          {...(defaultHelpOpen === undefined ? {} : { defaultHelpOpen })}
           {...(defaultRecentItems === undefined ? {} : { defaultRecentItems })}
         />
       </div>
@@ -278,6 +279,10 @@ export const TaskNumber: Story = {
 
 export const Suggestions: Story = {
   args: { defaultContext: 'work', defaultQuery: 'is:' },
+}
+
+export const HelpOpen: Story = {
+  args: { defaultContext: 'work', defaultHelpOpen: true },
 }
 
 export const Views: Story = {

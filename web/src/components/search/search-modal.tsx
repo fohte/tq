@@ -1,9 +1,11 @@
 import { parseSearchQuery } from 'api/search-query-parser'
-import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { createCommandItems } from '#components/search/search-modal-command-items'
+import { SearchModalFooter } from '#components/search/search-modal-footer'
+import { useSearchModalHelp } from '#components/search/search-modal-help'
+import { SearchModalInput } from '#components/search/search-modal-input'
 import { useSearchModalNavigation } from '#components/search/search-modal-navigation'
 import {
   removeLastSearchScopeToken,
@@ -23,8 +25,8 @@ import {
   type ResultGroup,
   SearchModalResultList,
 } from '#components/search/search-modal-result-list'
-import { Chip } from '#components/ui/chip'
-import { KeybindHint } from '#components/ui/keybind-hint'
+import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
+import { SearchSyntaxHelpPanel } from '#components/search/search-syntax-help-panel'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useDebounce } from '#hooks/use-debounce'
 import { useProjects } from '#hooks/use-projects'
@@ -47,6 +49,7 @@ interface SearchModalProps {
   onOpenChange: (open: boolean) => void
   defaultContext?: 'work' | 'personal' | null
   defaultQuery?: string
+  defaultHelpOpen?: boolean
   defaultRecentItems?: RecentSearchItem[]
   onNewTask?: () => void
 }
@@ -56,6 +59,7 @@ export function SearchModal({
   onOpenChange,
   defaultContext: contextOverride,
   defaultQuery = '',
+  defaultHelpOpen = false,
   defaultRecentItems,
   onNewTask,
 }: SearchModalProps) {
@@ -66,6 +70,12 @@ export function SearchModal({
     defaultRecentItems ?? [],
   )
   const inputRef = useRef<HTMLInputElement>(null)
+  const helpBackButtonRef = useRef<HTMLButtonElement>(null)
+  const {
+    isHelpOpen,
+    closeHelp,
+    handleKeyDown: handleHelpKeyDown,
+  } = useSearchModalHelp(open, inputRef, helpBackButtonRef, defaultHelpOpen)
   const listRef = useRef<HTMLDivElement>(null)
   const onOpenChangeRef = useRef(onOpenChange)
   onOpenChangeRef.current = onOpenChange
@@ -342,6 +352,7 @@ export function SearchModal({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.nativeEvent.isComposing) return
+    if (handleHelpKeyDown(e, searchInputValue)) return
 
     switch (e.key) {
       case 'ArrowDown':
@@ -419,77 +430,44 @@ export function SearchModal({
           aria-modal="true"
           aria-label="Search"
         >
-          {/* Search input */}
-          <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
-            <span
-              className="font-mono text-sm font-bold text-primary"
-              data-testid="search-mode-indicator"
-              aria-hidden="true"
-            >
-              {modePrefix ?? '›'}
-            </span>
-            {context != null && (
-              <Chip size="md" active data-testid="search-context-scope">
-                context:{context}
-              </Chip>
-            )}
-            {searchScopeTokens.map((scopeToken, index) => (
-              <Chip
-                key={index}
-                size="md"
-                active
-                data-testid="search-scope-token"
-              >
-                {scopeToken}
-              </Chip>
-            ))}
-            <input
-              ref={inputRef}
-              type="text"
-              value={searchInputValue}
-              onChange={(e) => {
-                updateInputValue(e.target.value)
-              }}
-              placeholder={`Search ${searchTarget}...`}
-              autoFocus
-              className="min-w-0 flex-1 border-0 bg-transparent font-mono text-sm outline-none placeholder:text-muted-foreground"
-              aria-label={`Search ${searchTarget}`}
-            />
-            {isFetching && (
-              <Loader2
-                className="h-4 w-4 shrink-0 animate-spin text-muted-foreground"
-                data-testid="search-loading"
-              />
-            )}
-            <KeybindHint variant="boxed">Esc</KeybindHint>
-          </div>
-
-          <SearchModalResultList
-            groups={visibleGroups}
-            listRef={listRef}
-            selectedIndex={selectedIndex}
-            onSelectedIndexChange={setSelectedIndex}
-            {...(emptyMessage == null ? {} : { emptyMessage })}
-            {...(initialMessage == null ? {} : { initialMessage })}
+          <SearchModalInput
+            modePrefix={modePrefix}
+            context={context}
+            searchScopeTokens={searchScopeTokens}
+            searchInputValue={searchInputValue}
+            searchTarget={searchTarget}
+            isFetching={isFetching}
+            inputRef={inputRef}
+            onInputValueChange={(value) => {
+              closeHelp()
+              updateInputValue(value)
+            }}
           />
 
-          {/* Footer with keyboard hints */}
-          <div className="flex min-h-9 flex-wrap items-center gap-1.5 border-t border-border px-4 py-2 font-mono text-2xs text-muted-foreground-ghost">
-            <KeybindHint variant="boxed">↑↓</KeybindHint>
-            <span>navigate</span>
-            <KeybindHint variant="boxed">Tab</KeybindHint>
-            <span>filter / autocomplete</span>
-            <KeybindHint variant="boxed">Enter</KeybindHint>
-            <span>open</span>
-            <KeybindHint variant="boxed">Esc</KeybindHint>
-            <span>close</span>
-            {(canClearContext || canPopScope) && (
-              <>
-                <KeybindHint variant="boxed">Backspace</KeybindHint>
-                <span>{canPopScope ? 'remove scope' : 'clear context'}</span>
-              </>
-            )}
-          </div>
+          {isHelpOpen ? (
+            <SearchSyntaxHelpPanel
+              sections={getSearchSyntaxHelpSections()}
+              onBack={closeHelp}
+              className="flex-1"
+              backButtonRef={helpBackButtonRef}
+            />
+          ) : (
+            <SearchModalResultList
+              groups={visibleGroups}
+              listRef={listRef}
+              selectedIndex={selectedIndex}
+              onSelectedIndexChange={setSelectedIndex}
+              {...(emptyMessage == null ? {} : { emptyMessage })}
+              {...(initialMessage == null ? {} : { initialMessage })}
+            />
+          )}
+
+          <SearchModalFooter
+            canClearContext={canClearContext}
+            canPopScope={canPopScope}
+            canOpenHelp={searchInputValue.length === 0}
+            isHelpOpen={isHelpOpen}
+          />
         </div>
       </div>
     </>,
