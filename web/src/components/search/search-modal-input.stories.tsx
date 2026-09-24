@@ -15,7 +15,7 @@ const meta = {
   parameters: { layout: 'centered' },
   decorators: [
     (Story) => (
-      <div className="w-full max-w-160 overflow-hidden bg-popover text-popover-foreground">
+      <div className="w-full max-w-160 bg-popover text-popover-foreground">
         <Story />
       </div>
     ),
@@ -28,6 +28,7 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {}
 
 export const ScopedAndLoading: Story = {
+  tags: ['desktop-only'],
   args: {
     modePrefix: '#',
     context: 'work',
