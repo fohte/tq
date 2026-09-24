@@ -10,6 +10,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 
+import { SearchModalFooter } from '#components/search/search-modal-footer'
 import { useSearchModalNavigation } from '#components/search/search-modal-navigation'
 import {
   removeLastSearchScopeToken,
@@ -476,23 +477,10 @@ export function SearchModal({
             )}
           </div>
 
-          {/* Footer with keyboard hints */}
-          <div className="flex min-h-9 flex-wrap items-center gap-1.5 border-t border-border px-4 py-2 font-mono text-2xs text-muted-foreground-ghost">
-            <KeybindHint variant="boxed">↑↓</KeybindHint>
-            <span>navigate</span>
-            <KeybindHint variant="boxed">Tab</KeybindHint>
-            <span>filter / autocomplete</span>
-            <KeybindHint variant="boxed">Enter</KeybindHint>
-            <span>open</span>
-            <KeybindHint variant="boxed">Esc</KeybindHint>
-            <span>close</span>
-            {(canClearContext || canPopScope) && (
-              <>
-                <KeybindHint variant="boxed">Backspace</KeybindHint>
-                <span>{canPopScope ? 'remove scope' : 'clear context'}</span>
-              </>
-            )}
-          </div>
+          <SearchModalFooter
+            canClearContext={canClearContext}
+            canPopScope={canPopScope}
+          />
         </div>
       </div>
     </>,
