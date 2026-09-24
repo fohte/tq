@@ -43,6 +43,22 @@ const searchProject = makeProject({
   title: 'Keyboard navigation',
   context: 'work',
 })
+const projectScopeQuery = `project:${searchProject.id}`
+const projectScopedTask = makeTask({
+  id: '00000000-0000-0000-0000-000000000143',
+  number: 143,
+  title: 'Project scoped task',
+  context: 'work',
+  projectId: searchProject.id,
+})
+const taskScopeQuery = `parent:${searchTask.id}`
+const taskScopedTask = makeTask({
+  id: '00000000-0000-0000-0000-000000000043',
+  number: 43,
+  title: 'Child task',
+  context: 'work',
+  parentId: searchTask.id,
+})
 
 const searchView = makeSavedView({
   id: '00000000-0000-0000-0000-000000000242',
@@ -149,6 +165,8 @@ const meta = {
           jsonByQuery({
             [keyboardQuery]: [searchTask],
             [scrollableQuery]: scrollableTasks,
+            [projectScopeQuery]: [projectScopedTask],
+            [taskScopeQuery]: [taskScopedTask],
           }),
         ),
         http.get(`/api/tasks/${numberedTaskNumber}`, () =>
@@ -157,6 +175,9 @@ const meta = {
         http.get(
           '/api/projects',
           jsonByQuery({ [keyboardQuery]: [searchProject] }),
+        ),
+        http.get(`/api/projects/${searchProject.id}`, () =>
+          HttpResponse.json(searchProject),
         ),
         http.get(
           '/api/saved-views',
@@ -167,7 +188,10 @@ const meta = {
         ),
         http.get('/api/tasks/search/pages', ({ request }) => {
           return HttpResponse.json({
-            results: queryResults(request, { [keyboardQuery]: [searchPage] }),
+            results: queryResults(request, {
+              [keyboardQuery]: [searchPage],
+              [projectScopeQuery]: [searchPage],
+            }),
           })
         }),
         http.get('/api/tasks/search/suggest', ({ request }) => {
@@ -204,6 +228,14 @@ export const PageMode: Story = {
 
 export const CrossSearch: Story = {
   args: { defaultContext: 'work', defaultQuery: keyboardQuery },
+}
+
+export const ProjectScope: Story = {
+  args: { defaultContext: 'work', defaultQuery: projectScopeQuery },
+}
+
+export const TaskScope: Story = {
+  args: { defaultContext: 'work', defaultQuery: taskScopeQuery },
 }
 
 export const ScrollableResults: Story = {

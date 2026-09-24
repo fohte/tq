@@ -10,8 +10,11 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 
-import { parseSearchMode } from '#components/search/search-modal-mode'
 import { useSearchModalNavigation } from '#components/search/search-modal-navigation'
+import {
+  removeLastSearchScopeToken,
+  useSearchModalQuery,
+} from '#components/search/search-modal-query'
 import {
   createOptionItem,
   createPageItems,
@@ -26,10 +29,8 @@ import { useCurrentContext } from '#hooks/use-current-context'
 import { useDebounce } from '#hooks/use-debounce'
 import { useProjects } from '#hooks/use-projects'
 import { useSavedViews } from '#hooks/use-saved-views'
-import type { SearchResult, Suggestion } from '#hooks/use-search'
+import type { SearchResult } from '#hooks/use-search'
 import {
-  applySuggestionToQuery,
-  extractCurrentPrefix,
   resolveSearchContext,
   useSearchPages,
   useSearchSuggestions,
@@ -67,10 +68,19 @@ export function SearchModal({
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const lastMousePos = useRef({ x: 0, y: 0 })
-  const queryRef = useRef(query)
   const onOpenChangeRef = useRef(onOpenChange)
-  queryRef.current = query
   onOpenChangeRef.current = onOpenChange
+  const {
+    searchMode,
+    modePrefix,
+    searchQuery,
+    searchScopeTokens,
+    searchInputValue,
+    currentPrefix,
+    applySuggestion,
+    applyScope,
+    updateInputValue,
+  } = useSearchModalQuery(query, setQuery, inputRef)
   const { openTask, openProject, openView, openPage } =
     useSearchModalNavigation(onOpenChangeRef)
   const currentContext = useCurrentContext()
@@ -79,14 +89,11 @@ export function SearchModal({
       ? currentContext
       : (contextOverride ?? undefined)
   const defaultSearchContext = isContextCleared ? undefined : configuredContext
-  const {
-    mode: searchMode,
-    prefix: modePrefix,
-    text: searchQuery,
-  } = parseSearchMode(query)
   const hasSearchQuery = searchQuery.length > 0
   const context = resolveSearchContext(searchQuery, defaultSearchContext)
-  const canClearContext = query === '' && context != null
+  const canPopScope = searchInputValue === '' && searchScopeTokens.length > 0
+  const canClearContext =
+    searchInputValue === '' && searchScopeTokens.length === 0 && context != null
   const freeTextQuery = parseSearchQuery(searchQuery).freeText
   const debouncedFreeTextQuery = useDebounce(freeTextQuery, 200)
   const debouncedContext = useDebounce(context, 200)
@@ -101,7 +108,9 @@ export function SearchModal({
 
   const canSearchTasks = searchMode == null || searchMode === 'tasks'
   const canSearchProjects = searchMode == null || searchMode === 'projects'
-  const canSearchPages = searchMode == null || searchMode === 'pages'
+  const canSearchPages =
+    (searchMode == null || searchMode === 'pages') &&
+    parseSearchQuery(searchQuery).projectId == null
   const canSearchViews = searchMode == null
   const canSuggest = searchMode == null
   const { data: tasks, isFetching: isFetchingTasks } = useSearchTasks(
@@ -128,7 +137,6 @@ export function SearchModal({
     isFetchingTaskByNumber ||
     isFetchingPages ||
     isFetchingProjects
-  const currentPrefix = extractCurrentPrefix(canSuggest ? searchQuery : '')
   const { data: suggestions } = useSearchSuggestions(currentPrefix)
 
   useEffect(() => {
@@ -147,11 +155,6 @@ export function SearchModal({
       selected.scrollIntoView({ block: 'nearest' })
     }
   }, [selectedIndex])
-
-  const applySuggestion = useCallback((suggestion: Suggestion) => {
-    setQuery(applySuggestionToQuery(queryRef.current, suggestion))
-    inputRef.current?.focus()
-  }, [])
 
   const resultGroups = useMemo((): ResultGroup[] => {
     const suggestionItems: ListItem[] =
@@ -181,6 +184,9 @@ export function SearchModal({
       select: () => {
         openTask(task)
       },
+      selectOnTab: () => {
+        applyScope(`parent:${task.id}`)
+      },
       render: renderTaskOption(task, onOpenChangeRef),
     })
     const taskItems: ListItem[] =
@@ -199,7 +205,9 @@ export function SearchModal({
         : []
     const projectItems =
       canSearchProjects && hasAuxiliarySearch
-        ? createProjectItems(projects, openProject)
+        ? createProjectItems(projects, openProject, (project) => {
+            applyScope(`project:${project.id}`)
+          })
         : []
     const viewItems =
       canSearchViews && hasAuxiliarySearch
@@ -253,6 +261,7 @@ export function SearchModal({
     savedViews,
     currentPrefix,
     applySuggestion,
+    applyScope,
     openTask,
     openProject,
     openView,
@@ -328,6 +337,9 @@ export function SearchModal({
         if (searchMode != null && !hasSearchQuery) {
           e.preventDefault()
           setQuery('')
+        } else if (canPopScope) {
+          e.preventDefault()
+          setQuery(removeLastSearchScopeToken(searchQuery))
         } else if (canClearContext) {
           e.preventDefault()
           setIsContextCleared(true)
@@ -343,7 +355,6 @@ export function SearchModal({
   if (!open) return null
 
   const searchTarget = searchMode ?? 'tasks'
-  const inputValue = searchMode == null ? query : searchQuery
 
   return createPortal(
     <>
@@ -378,16 +389,22 @@ export function SearchModal({
                 context:{context}
               </Chip>
             )}
+            {searchScopeTokens.map((scopeToken, index) => (
+              <Chip
+                key={index}
+                size="md"
+                active
+                data-testid="search-scope-token"
+              >
+                {scopeToken}
+              </Chip>
+            ))}
             <input
               ref={inputRef}
               type="text"
-              value={inputValue}
+              value={searchInputValue}
               onChange={(e) => {
-                setQuery(
-                  modePrefix == null
-                    ? e.target.value
-                    : `${modePrefix}${e.target.value}`,
-                )
+                updateInputValue(e.target.value)
               }}
               placeholder={`Search ${searchTarget}...`}
               autoFocus
@@ -443,7 +460,9 @@ export function SearchModal({
               !isFetching &&
               visibleGroups.length === 0 && (
                 <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
-                  {`no results for "${searchQuery}"`}
+                  {searchInputValue.length === 0
+                    ? 'no results in this scope'
+                    : `no results for "${searchInputValue}"`}
                 </div>
               )}
 
@@ -460,15 +479,15 @@ export function SearchModal({
             <KeybindHint variant="boxed">↑↓</KeybindHint>
             <span>navigate</span>
             <KeybindHint variant="boxed">Tab</KeybindHint>
-            <span>autocomplete</span>
+            <span>filter / autocomplete</span>
             <KeybindHint variant="boxed">Enter</KeybindHint>
             <span>open</span>
             <KeybindHint variant="boxed">Esc</KeybindHint>
             <span>close</span>
-            {canClearContext && (
+            {(canClearContext || canPopScope) && (
               <>
                 <KeybindHint variant="boxed">Backspace</KeybindHint>
-                <span>clear context</span>
+                <span>{canPopScope ? 'remove scope' : 'clear context'}</span>
               </>
             )}
           </div>
