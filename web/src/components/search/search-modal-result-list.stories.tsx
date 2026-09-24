@@ -43,7 +43,7 @@ const recentGroup: IndexedResultGroup = {
 function ResultListStory({ state }: ResultListStoryProps) {
   const listRef = useRef<HTMLDivElement>(null)
   return (
-    <div className="flex h-72 w-160 flex-col border border-border bg-popover text-popover-foreground">
+    <div className="flex h-72 w-full max-w-160 flex-col border border-border bg-popover text-popover-foreground">
       <SearchModalResultList
         groups={state === 'recent' ? [recentGroup] : []}
         listRef={listRef}
