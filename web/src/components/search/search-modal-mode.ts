@@ -1,14 +1,26 @@
-const MODE_BY_PREFIX = {
-  '#': 'tasks',
-  '!': 'projects',
-  '/': 'pages',
+export const SEARCH_MODE_DEFINITIONS = {
+  '#': {
+    mode: 'tasks',
+    label: 'Tasks',
+    description: 'Search tasks by title or task number.',
+  },
+  '!': {
+    mode: 'projects',
+    label: 'Projects',
+    description: 'Search projects by name.',
+  },
+  '/': {
+    mode: 'pages',
+    label: 'Pages',
+    description: 'Search pages by title or content.',
+  },
 } as const
 
 export function parseSearchMode(query: string) {
   const prefix = query[0]
   if (prefix === '#' || prefix === '!' || prefix === '/') {
     return {
-      mode: MODE_BY_PREFIX[prefix],
+      mode: SEARCH_MODE_DEFINITIONS[prefix].mode,
       prefix,
       text: query.slice(1).trimStart(),
     }

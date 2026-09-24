@@ -10,6 +10,7 @@ import {
 import { createPortal } from 'react-dom'
 
 import { SearchModalFooter } from '#components/search/search-modal-footer'
+import { useSearchModalHelp } from '#components/search/search-modal-help'
 import { SearchModalInput } from '#components/search/search-modal-input'
 import { useSearchModalNavigation } from '#components/search/search-modal-navigation'
 import {
@@ -24,6 +25,8 @@ import {
   type ListItem,
   renderTaskOption,
 } from '#components/search/search-modal-result-items'
+import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
+import { SearchSyntaxHelpPanel } from '#components/search/search-syntax-help-panel'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useDebounce } from '#hooks/use-debounce'
 import { useProjects } from '#hooks/use-projects'
@@ -65,6 +68,11 @@ export function SearchModal({
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isContextCleared, setIsContextCleared] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const {
+    isHelpOpen,
+    closeHelp,
+    handleKeyDown: handleHelpKeyDown,
+  } = useSearchModalHelp(open, inputRef)
   const listRef = useRef<HTMLDivElement>(null)
   const lastMousePos = useRef({ x: 0, y: 0 })
   const onOpenChangeRef = useRef(onOpenChange)
@@ -310,6 +318,7 @@ export function SearchModal({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.nativeEvent.isComposing) return
+    if (handleHelpKeyDown(e, searchInputValue)) return
 
     switch (e.key) {
       case 'ArrowDown':
@@ -384,7 +393,10 @@ export function SearchModal({
             searchTarget={searchTarget}
             isFetching={isFetching}
             inputRef={inputRef}
-            onInputValueChange={updateInputValue}
+            onInputValueChange={(value) => {
+              closeHelp()
+              updateInputValue(value)
+            }}
           />
 
           {/* Results list */}
@@ -393,6 +405,7 @@ export function SearchModal({
             className="flex-1 overflow-y-auto py-2"
             role="listbox"
             aria-label="Search results"
+            hidden={isHelpOpen}
           >
             {visibleGroups.map((group, groupIndex) => (
               <Fragment key={group.id}>
@@ -440,10 +453,18 @@ export function SearchModal({
               </div>
             )}
           </div>
+          {isHelpOpen && (
+            <SearchSyntaxHelpPanel
+              sections={getSearchSyntaxHelpSections()}
+              onBack={closeHelp}
+              className="flex-1"
+            />
+          )}
 
           <SearchModalFooter
             canClearContext={canClearContext}
             canPopScope={canPopScope}
+            isHelpOpen={isHelpOpen}
           />
         </div>
       </div>

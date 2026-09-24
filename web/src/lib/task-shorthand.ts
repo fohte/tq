@@ -206,7 +206,46 @@ export function extractShorthandTokens(input: string): ShorthandExtraction {
   return result
 }
 
-export type TriggerChar = '@' | '>' | '#' | '%' | '^' | '*' | '!'
+export const taskShorthandHelpItems = [
+  {
+    trigger: '@',
+    description: 'Set a due date or estimate',
+    examples: ['@today', '@1h'],
+  },
+  {
+    trigger: '>',
+    description: 'Set a start date',
+    examples: ['>today', '>YYYY-MM-DD'],
+  },
+  {
+    trigger: '#',
+    description: 'Add a label',
+    examples: ['#label'],
+  },
+  {
+    trigger: '%',
+    description: 'Set the work or personal context',
+    examples: ['%work', '%personal'],
+  },
+  {
+    trigger: '^',
+    description: 'Set a parent task by its number',
+    examples: ['^123'],
+  },
+  {
+    trigger: '*',
+    description: 'Set a recurrence rule',
+    examples: ['*daily', '*mon'],
+  },
+  {
+    trigger: '!',
+    description: 'Add the task to a planning period',
+    examples: ['!today', '!week'],
+  },
+] as const
+
+export type TriggerChar = (typeof taskShorthandHelpItems)[number]['trigger']
+export type ShorthandHelpItem = (typeof taskShorthandHelpItems)[number]
 
 export interface SuggestionItem {
   value: string
