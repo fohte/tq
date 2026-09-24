@@ -1,5 +1,3 @@
-export type SearchMode = 'tasks' | 'projects' | 'pages'
-
 const MODE_BY_PREFIX = {
   '#': 'tasks',
   '!': 'projects',
