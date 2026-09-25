@@ -94,13 +94,13 @@ export function TreeTaskGridRow({
       variant="ghost"
       onClick={handleExpand}
       data-no-dnd=""
-      className="min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+      className="min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex size-5 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
       aria-label={expanded ? 'Collapse' : 'Expand'}
     >
       {expanded ? (
-        <ChevronDown className="h-3.5 w-3.5" />
+        <ChevronDown className="size-3.5" />
       ) : (
-        <ChevronRight className="h-3.5 w-3.5" />
+        <ChevronRight className="size-3.5" />
       )}
     </Button>
   ) : (

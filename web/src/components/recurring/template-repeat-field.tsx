@@ -102,9 +102,11 @@ export function TemplateRepeatFieldAppearance({
           onClick={() => {
             onOpenChange(true)
           }}
-          className="h-auto w-full min-w-0 shrink justify-start rounded-none border-0 bg-transparent p-0 text-left font-normal text-foreground shadow-none cursor-text truncate transition-colors hover:bg-transparent hover:text-muted-foreground-strong active:translate-y-0 focus-visible:border-0 focus-visible:ring-0"
+          className="h-auto w-full min-w-0 shrink justify-start rounded-none border-0 bg-transparent p-0 text-left font-normal text-foreground shadow-none cursor-text transition-colors hover:bg-transparent hover:text-muted-foreground-strong active:translate-y-0 focus-visible:border-0 focus-visible:ring-0"
         >
-          {formatRecurrenceSummary(recurrenceRule)}
+          <span className="min-w-0 truncate">
+            {formatRecurrenceSummary(recurrenceRule)}
+          </span>
         </Button>
         <AnchoredPopup
           open={isEditing}

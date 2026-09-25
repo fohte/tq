@@ -25,7 +25,7 @@ export function TaskCandidateList({
           variant="ghost"
           className={cn(
             'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
-            'flex min-h-11 w-full items-center gap-2 px-3 text-left text-sm',
+            'flex min-h-11 w-full items-center justify-start gap-2 px-3 text-left text-sm',
             highlightedIndex === index + indexOffset
               ? 'bg-accent text-accent-foreground'
               : 'text-popover-foreground hover:bg-accent/50',
@@ -41,7 +41,7 @@ export function TaskCandidateList({
           <span className="shrink-0 text-muted-foreground-faint">
             #{candidate.number}
           </span>
-          <span className="truncate">{candidate.title}</span>
+          <span className="min-w-0 flex-1 truncate">{candidate.title}</span>
           {candidate.parentId != null && candidate.parentNumber != null && (
             <span className="ml-auto shrink-0 text-xs text-muted-foreground-faint">
               ← #{candidate.parentNumber}

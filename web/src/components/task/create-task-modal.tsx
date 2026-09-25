@@ -360,7 +360,7 @@ export function CreateTaskModal({
           aria-label="Remove parent override"
           className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 text-muted-foreground-faint hover:text-destructive"
         >
-          <X className="h-2.5 w-2.5" />
+          <X className="size-2.5" />
         </Button>
       )}
     </span>
@@ -393,7 +393,7 @@ export function CreateTaskModal({
         aria-label="Remove GitHub link"
         className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 text-muted-foreground-faint hover:text-destructive"
       >
-        <X className="h-2.5 w-2.5" />
+        <X className="size-2.5" />
       </Button>
     </span>
   )

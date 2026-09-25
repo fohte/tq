@@ -63,11 +63,13 @@ export function SidebarParentFieldAppearance({
           onClick={() => {
             onOpenChange(true)
           }}
-          className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
+          className="h-auto min-h-0 min-w-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full cursor-text text-left transition-colors hover:text-muted-foreground-strong"
         >
-          {currentParent != null
-            ? `#${String(currentParent.number)} ${currentParent.title}`
-            : '—'}
+          <span className="min-w-0 truncate">
+            {currentParent != null
+              ? `#${String(currentParent.number)} ${currentParent.title}`
+              : '—'}
+          </span>
         </Button>
       )}
       <AnchoredPopup
@@ -86,7 +88,7 @@ export function SidebarParentFieldAppearance({
         <Button
           type="button"
           variant="ghost"
-          className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full px-3 py-1.5 text-left text-sm text-popover-foreground hover:bg-accent/50"
+          className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full px-3 py-1.5 text-left text-sm text-popover-foreground hover:bg-accent/50"
           onMouseDown={(e) => {
             e.preventDefault()
             onClear()

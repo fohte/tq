@@ -44,7 +44,7 @@ function LabelSuggestion({
           }
           className={cn(
             'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
-            'w-full py-1.5 pr-3 pl-(--label-suggestion-indent) text-left font-mono text-xs',
+            'w-full justify-start py-1.5 pr-3 pl-(--label-suggestion-indent) text-left font-mono text-xs',
             index === selectedIndex
               ? 'bg-accent text-accent-foreground'
               : 'text-popover-foreground hover:bg-accent/50',
@@ -186,7 +186,7 @@ export function TagsInput({
             aria-label={`Remove ${label}`}
             className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 text-muted-foreground-faint hover:text-destructive"
           >
-            <X className="h-2.5 w-2.5" />
+            <X className="size-2.5" />
           </Button>
         </Chip>
       ))}

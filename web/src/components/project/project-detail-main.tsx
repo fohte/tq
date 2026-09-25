@@ -174,7 +174,7 @@ function EditableProjectTitle({
         savingRef.current = false
         setIsEditing(true)
       }}
-      className="h-auto min-w-0 flex-1 shrink justify-start rounded-none border-0 bg-transparent p-0 text-left font-mono text-2xl font-bold text-foreground shadow-none hover:bg-transparent hover:text-foreground active:translate-y-0 focus-visible:border-0 focus-visible:ring-0"
+      className="h-auto min-w-0 flex-1 shrink justify-start whitespace-normal break-words rounded-none border-0 bg-transparent p-0 text-left font-mono text-2xl font-bold text-foreground shadow-none hover:bg-transparent hover:text-foreground active:translate-y-0 focus-visible:border-0 focus-visible:ring-0"
     >
       {value}
     </Button>

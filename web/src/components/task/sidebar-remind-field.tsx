@@ -14,7 +14,7 @@ import {
 import { cn } from '#lib/utils'
 
 const popupRowClassName =
-  'block w-full px-3 py-1.5 text-left text-sm text-popover-foreground hover:bg-accent/50'
+  'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 block w-full px-3 py-1.5 text-left text-sm text-popover-foreground hover:bg-accent/50'
 
 export function SidebarRemindFieldAppearance({
   remindAtLabel,
@@ -73,9 +73,9 @@ export function SidebarRemindFieldAppearance({
           onClick={() => {
             onOpenChange(true)
           }}
-          className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
+          className="h-auto min-h-0 min-w-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full cursor-text text-left transition-colors hover:text-muted-foreground-strong"
         >
-          {remindAtLabel}
+          <span className="min-w-0 truncate">{remindAtLabel}</span>
         </Button>
       )}
       <AnchoredPopup
@@ -92,10 +92,7 @@ export function SidebarRemindFieldAppearance({
         <Button
           type="button"
           variant="ghost"
-          className={cn(
-            'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
-            popupRowClassName,
-          )}
+          className={popupRowClassName}
           onMouseDown={(e) => {
             e.preventDefault()
             onClear()
@@ -110,10 +107,7 @@ export function SidebarRemindFieldAppearance({
                 key={preset}
                 type="button"
                 variant="ghost"
-                className={cn(
-                  'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
-                  popupRowClassName,
-                )}
+                className={popupRowClassName}
                 onMouseDown={(e) => {
                   e.preventDefault()
                   onSelectPreset(preset)
@@ -126,11 +120,7 @@ export function SidebarRemindFieldAppearance({
             <Button
               type="button"
               variant="ghost"
-              className={cn(
-                'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
-                popupRowClassName,
-                'font-mono',
-              )}
+              className={cn(popupRowClassName, 'font-mono')}
               onMouseDown={(e) => {
                 e.preventDefault()
                 onCommit(parsedDate)

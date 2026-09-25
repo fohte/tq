@@ -176,6 +176,10 @@ function StatusSelect({
 
   return (
     <Select
+      items={statusValues.map((value) => ({
+        value,
+        label: statusLabels[value],
+      }))}
       value={status}
       onValueChange={selectValueHandler((value: ProjectDetail['status']) => {
         updateProject.mutate({ id: projectId, input: { status: value } })
@@ -210,6 +214,10 @@ function ContextSelect({
 
   return (
     <Select
+      items={contextValues.map((value) => ({
+        value,
+        label: contextLabels[value],
+      }))}
       value={context}
       onValueChange={selectValueHandler((value: ProjectDetail['context']) => {
         updateProject.mutate({ id: projectId, input: { context: value } })

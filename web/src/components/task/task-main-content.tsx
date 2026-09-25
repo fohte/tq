@@ -314,7 +314,7 @@ function EditableTitle({
           onClick={() => {
             setIsEditing(true)
           }}
-          className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex-1 cursor-text text-left text-2xl font-bold text-foreground"
+          className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex-1 cursor-text text-left text-2xl font-bold text-foreground"
         >
           {value}
         </Button>

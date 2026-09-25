@@ -236,7 +236,7 @@ export function DayViewPresentation({
           }}
           aria-label="New task"
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus className="size-3.5" />
         </Button>
 
         <Button
@@ -248,7 +248,7 @@ export function DayViewPresentation({
           }}
           aria-label="New schedule"
         >
-          <CalendarPlus className="h-3.5 w-3.5" />
+          <CalendarPlus className="size-3.5" />
         </Button>
 
         <ActionsMenu

@@ -165,7 +165,7 @@ function TaskKanbanCandidateCard({
         aria-label="Add to today's queue"
         className="mr-1 shrink-0 text-muted-foreground hover:text-foreground"
       >
-        <Plus className="h-3.5 w-3.5" />
+        <Plus className="size-3.5" />
       </Button>
     </div>
   )

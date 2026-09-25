@@ -35,7 +35,7 @@ export function TaskMentionAutocompleteMenuAppearance({
               variant="ghost"
               className={cn(
                 'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
-                'flex w-full items-center gap-2 px-2 py-1.5 text-left',
+                'flex w-full items-center justify-start gap-2 px-2 py-1.5 text-left',
                 index === highlightedIndex &&
                   'bg-accent text-accent-foreground',
               )}

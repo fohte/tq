@@ -127,9 +127,13 @@ export function SidebarRecurrenceFieldAppearance({
         onClick={() => {
           onOpenChange(true)
         }}
-        className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
+        className="h-auto min-h-0 min-w-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full cursor-text text-left transition-colors hover:text-muted-foreground-strong"
       >
-        {recurrenceRule != null ? formatRecurrenceSummary(recurrenceRule) : '—'}
+        <span className="min-w-0 truncate">
+          {recurrenceRule != null
+            ? formatRecurrenceSummary(recurrenceRule)
+            : '—'}
+        </span>
       </Button>
       <AnchoredPopup
         open={isEditing}

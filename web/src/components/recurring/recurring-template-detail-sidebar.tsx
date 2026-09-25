@@ -176,6 +176,10 @@ function StateSelect({
 
   return (
     <Select
+      items={stateValues.map((value) => ({
+        value,
+        label: value === 'active' ? 'Active' : 'Paused',
+      }))}
       value={enabled ? 'active' : 'paused'}
       onValueChange={selectValueHandler(
         (value: (typeof stateValues)[number]) => {

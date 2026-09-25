@@ -22,13 +22,13 @@ export function StatusIcon({
     return (
       <span
         className={cn(
-          'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-background',
+          'flex size-5 shrink-0 items-center justify-center rounded-full text-background',
           reason === 'completed'
             ? 'bg-status-completed'
             : 'bg-muted-foreground-faint',
         )}
       >
-        <Glyph className="h-3 w-3" />
+        <Glyph className="size-3" />
       </span>
     )
   }
@@ -36,7 +36,7 @@ export function StatusIcon({
   return (
     <svg
       viewBox="0 0 20 20"
-      className="h-5 w-5 shrink-0 text-muted-foreground"
+      className="size-5 shrink-0 text-muted-foreground"
       aria-hidden="true"
     >
       <circle

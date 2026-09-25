@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { Button } from '#components/ui/button'
+import { Checkbox } from '#components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -117,7 +118,18 @@ export function GithubSyncRuleFormModal({
     )
   }
 
-  const projectIds = (projects.data ?? []).map((project) => project.id)
+  const projectOptions = (projects.data ?? []).map((project) => ({
+    value: project.id,
+    label: project.title,
+  }))
+  const projectIds = projectOptions.map((project) => project.value)
+  const projectItems = [
+    ...projectOptions,
+    ...(targetProjectId !== '' &&
+    !projectOptions.some((project) => project.value === targetProjectId)
+      ? [{ value: targetProjectId, label: '…' }]
+      : []),
+  ]
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -196,6 +208,7 @@ export function GithubSyncRuleFormModal({
 
           <FieldRow label="反映先プロジェクト">
             <Select
+              items={projectItems}
               value={targetProjectId}
               onValueChange={selectValueHandler(setTargetProjectId, projectIds)}
             >
@@ -214,13 +227,9 @@ export function GithubSyncRuleFormModal({
 
           {!rule && (
             <label className="flex items-center gap-2 text-sm text-foreground">
-              <Input
-                type="checkbox"
+              <Checkbox
                 checked={includeExisting}
-                onChange={(e) => {
-                  setIncludeExisting(e.target.checked)
-                }}
-                className="h-4 w-4 rounded border-border bg-transparent p-0"
+                onCheckedChange={setIncludeExisting}
               />
               現在アサイン済みの open issue も取り込む
             </label>

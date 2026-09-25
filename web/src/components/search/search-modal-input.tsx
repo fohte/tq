@@ -111,7 +111,7 @@ function RemovableScopeChip({
           }
         }}
       >
-        <X className="h-2.5 w-2.5" aria-hidden="true" />
+        <X className="size-2.5" aria-hidden="true" />
       </Button>
     </Chip>
   )
