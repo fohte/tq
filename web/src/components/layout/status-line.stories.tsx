@@ -84,12 +84,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the status line shows navigation details for the home route',
   args: {
     currentPath: '/',
   },
 }
 
 export const TasksPath: Story = {
+  name: 'the status line shows the current task route',
   args: {
     currentPath: '/tasks',
   },

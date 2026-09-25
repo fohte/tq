@@ -22,8 +22,17 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Task: Story = { args: { item: task } }
+export const Task: Story = {
+  name: 'a recently viewed task appears in the search history',
+  args: { item: task },
+}
 
-export const Project: Story = { args: { item: project } }
+export const Project: Story = {
+  name: 'a recently viewed project appears in the search history',
+  args: { item: project },
+}
 
-export const Selected: Story = { args: { item: task, isSelected: true } }
+export const Selected: Story = {
+  name: 'a recently viewed task is highlighted for keyboard selection',
+  args: { item: task, isSelected: true },
+}

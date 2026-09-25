@@ -50,12 +50,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const ClosedTrigger: Story = {
+  name: 'shows the actions button before opening the sheet',
   args: {
     open: false,
   },
 }
 
 export const Open: Story = {
+  name: 'shows task actions in an open mobile sheet',
   args: {
     open: true,
   },

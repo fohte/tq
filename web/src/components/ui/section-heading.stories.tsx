@@ -18,6 +18,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Level2: Story = {
+  name: 'shows a task heading beside its open count',
   args: {
     level: 2,
     children: 'tasks',
@@ -31,6 +32,7 @@ export const Level2: Story = {
 }
 
 export const Level3: Story = {
+  name: 'shows a subtask heading above its progress count',
   args: {
     level: 3,
     children: 'subtasks',
@@ -47,6 +49,7 @@ export const Level3: Story = {
 }
 
 export const AllLevels: Story = {
+  name: 'compares the task and subtask heading sizes',
   args: {
     level: 2,
     children: 'tasks',

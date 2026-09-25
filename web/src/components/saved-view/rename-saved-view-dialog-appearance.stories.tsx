@@ -22,9 +22,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the rename dialog shows an existing saved view name',
+}
 
 export const EmptyNameDisablesSave: Story = {
+  name: 'the rename dialog disables saving when the name is empty',
   args: {
     name: '',
     saveDisabled: true,

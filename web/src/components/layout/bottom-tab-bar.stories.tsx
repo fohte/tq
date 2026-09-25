@@ -35,18 +35,21 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the mobile tab bar highlights the calendar section on the home route',
   args: {
     currentPath: '/',
   },
 }
 
 export const TasksActive: Story = {
+  name: 'the mobile tab bar highlights the tasks section',
   args: {
     currentPath: '/tasks',
   },
 }
 
 export const BrowseActive: Story = {
+  name: 'the mobile tab bar highlights the browse section',
   args: {
     currentPath: '/browse',
   },

@@ -26,12 +26,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const NoneSelected: Story = {
+  name: 'both task statuses are unchecked',
   args: {
     status: [],
   },
 }
 
 export const AllSelected: Story = {
+  name: 'todo and completed tasks are both included',
   args: {
     status: ['todo', 'completed'],
   },
@@ -41,6 +43,7 @@ export const AllSelected: Story = {
 // everything" (no is: tokens at all) rather than "show nothing" — so the
 // sole checked box is disabled instead of lying about being clickable.
 export const SingleSelected: Story = {
+  name: 'todo remains selected as the only available status',
   args: {
     status: ['todo'],
   },

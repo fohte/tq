@@ -20,6 +20,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows a dimmed backdrop behind an open task sheet',
   args: {
     children: null,
   },

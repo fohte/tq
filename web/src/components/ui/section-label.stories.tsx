@@ -12,6 +12,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows a DETAILS label above a section',
   args: {
     children: 'DETAILS',
   },

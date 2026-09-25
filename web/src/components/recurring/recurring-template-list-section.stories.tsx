@@ -30,6 +30,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Active: Story = {
+  name: 'the active section lists weekly and monthly templates',
   args: {
     label: 'Active',
     templates: [
@@ -55,6 +56,7 @@ export const Active: Story = {
 }
 
 export const Paused: Story = {
+  name: 'the paused section lists templates that no longer generate tasks',
   args: {
     label: 'Paused',
     templates: [

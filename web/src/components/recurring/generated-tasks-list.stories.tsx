@@ -78,6 +78,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const WithTasks: Story = {
+  name: 'the generated tasks list shows upcoming instances of a template',
   parameters: {
     msw: {
       handlers: [http.get('/api/tasks', () => HttpResponse.json(sampleTasks))],
@@ -86,6 +87,7 @@ export const WithTasks: Story = {
 }
 
 export const Empty: Story = {
+  name: 'the generated tasks list explains that no tasks exist yet',
   parameters: {
     msw: {
       handlers: [http.get('/api/tasks', () => HttpResponse.json([]))],
@@ -94,6 +96,7 @@ export const Empty: Story = {
 }
 
 export const Loading: Story = {
+  name: 'the generated tasks list shows a loading state',
   parameters: {
     msw: {
       handlers: [

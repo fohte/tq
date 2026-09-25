@@ -18,6 +18,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Plain: Story = {
+  name: 'shows a dim keyboard shortcut for sidebar navigation',
   args: {
     children: 'g t',
   },
@@ -27,6 +28,7 @@ export const Plain: Story = {
 // Brighter contexts, like the status line's `⌘K search`, override the color
 // via className instead of a dedicated variant.
 export const PlainBright: Story = {
+  name: 'shows a brighter shortcut for the command palette',
   args: {
     className: 'text-muted-foreground-strong',
     children: '⌘K',
@@ -34,6 +36,7 @@ export const PlainBright: Story = {
 }
 
 export const Boxed: Story = {
+  name: 'shows the command palette shortcut in a boxed key style',
   args: {
     variant: 'boxed',
     children: '⌘K',

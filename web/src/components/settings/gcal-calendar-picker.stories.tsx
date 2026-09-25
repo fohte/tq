@@ -72,10 +72,12 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Collapsed: Story = {
+  name: 'the calendar picker shows its selected calendar in a collapsed row',
   args: {},
 }
 
 export const Expanded: Story = {
+  name: 'the calendar picker lists available calendars while expanded',
   args: {
     initialOpen: true,
   },

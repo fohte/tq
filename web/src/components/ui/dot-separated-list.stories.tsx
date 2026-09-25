@@ -12,12 +12,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'separates a task title, project, and date with dots',
   args: {
     items: ['Design system setup', 'work', 'Mar 25'],
   },
 }
 
 export const SingleItem: Story = {
+  name: 'shows a task title without separators',
   args: {
     items: ['Design system setup'],
   },

@@ -11,12 +11,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Loading: Story = {
+  name: 'a settings panel shows a loading message',
   args: {
     status: 'loading',
   },
 }
 
 export const ErrorState: Story = {
+  name: 'a settings panel shows an error message',
   args: {
     status: 'error',
     message: 'データの取得に失敗しました',
@@ -24,6 +26,7 @@ export const ErrorState: Story = {
 }
 
 export const LoadingSmall: Story = {
+  name: 'a compact settings panel shows a loading message',
   args: {
     status: 'loading',
     size: 'xs',

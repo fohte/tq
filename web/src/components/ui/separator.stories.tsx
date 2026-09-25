@@ -12,6 +12,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Horizontal: Story = {
+  name: 'separates two product detail sections horizontally',
   render: () => (
     <div className="flex w-64 flex-col gap-4">
       <div className="space-y-1">
@@ -32,6 +33,7 @@ export const Horizontal: Story = {
 }
 
 export const Vertical: Story = {
+  name: 'separates Blog, Docs, and Source links vertically',
   render: () => (
     <div className="flex h-5 items-center gap-4 text-sm">
       <span>Blog</span>

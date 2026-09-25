@@ -33,9 +33,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the delete dialog asks whether to remove a recurring template',
+}
 
 export const LongTitle: Story = {
+  name: 'a long recurring template title wraps in the delete dialog',
   args: {
     templateTitle:
       'Send a weekly summary of ISUCON14 practice benchmark progress to the team channel',

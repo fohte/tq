@@ -21,22 +21,27 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Active: Story = {
+  name: 'a project status badge marks an active project',
   args: { status: 'active' },
 }
 
 export const Paused: Story = {
+  name: 'a project status badge marks a paused project',
   args: { status: 'paused' },
 }
 
 export const Completed: Story = {
+  name: 'a project status badge marks a completed project',
   args: { status: 'completed' },
 }
 
 export const Archived: Story = {
+  name: 'a project status badge marks an archived project',
   args: { status: 'archived' },
 }
 
 export const AllVariants: Story = {
+  name: 'project status badges compare all four project states',
   args: { status: 'active' },
   render: () => (
     <div className="flex items-center gap-3">
