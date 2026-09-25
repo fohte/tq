@@ -69,6 +69,10 @@
   font-family: inherit;
 }
 
+@utility outline-auto {
+  outline-style: auto;
+}
+
 /*
  * Drops the search modal down from the top of the viewport — padding-top has
  * no @theme namespace to hang a named scale step off of, see

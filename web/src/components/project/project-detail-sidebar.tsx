@@ -187,8 +187,8 @@ function StatusSelect({
     >
       <SelectTrigger
         size="sm"
-        iconClassName="size-3 text-foreground"
-        className="h-auto data-[size=sm]:h-auto w-fit min-w-19 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
+        iconClassName="size-3.5 text-foreground stroke-[2.5]"
+        className="h-auto data-[size=sm]:h-auto w-fit min-w-20 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
       >
         <SelectValue />
       </SelectTrigger>
@@ -226,7 +226,7 @@ function ContextSelect({
     >
       <SelectTrigger
         size="sm"
-        iconClassName="size-3 text-foreground"
+        iconClassName="size-3.5 text-foreground stroke-[2.5]"
         className="h-auto data-[size=sm]:h-auto w-fit min-w-19 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
       >
         <SelectValue />
