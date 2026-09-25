@@ -25,9 +25,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the search input is empty and ready for a query',
+}
 
 export const ScopedAndLoading: Story = {
+  name: 'the search input shows task scopes while results are loading',
   tags: ['desktop-only'],
   args: {
     modePrefix: '#',

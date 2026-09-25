@@ -55,9 +55,11 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const WithDuplicateOfTask: Story = {
+  name: 'the section links to the task this one duplicates.',
   args: { duplicateOfTask },
 }
 
 export const Empty: Story = {
+  name: 'the task has no duplicate target.',
   args: { duplicateOfTask: null },
 }

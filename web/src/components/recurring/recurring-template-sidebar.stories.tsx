@@ -59,12 +59,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Active: Story = {
+  name: 'the sidebar shows an active recurring template and its schedule',
   args: {
     template: { ...baseTemplate },
   },
 }
 
 export const Paused: Story = {
+  name: 'the sidebar shows a paused recurring template',
   args: {
     template: { ...baseTemplate, enabled: false },
   },

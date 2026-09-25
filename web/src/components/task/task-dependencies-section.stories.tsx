@@ -82,13 +82,16 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const WithBothGroups: Story = {
+  name: 'both blocked-by and blocking task groups are visible.',
   args: { blockedBy: blockedByTasks, blocking: blockingTasks },
 }
 
 export const BlockedByOnly: Story = {
+  name: 'the section shows only tasks blocking the current task.',
   args: { blockedBy: blockedByTasks, blocking: [] },
 }
 
 export const Empty: Story = {
+  name: 'the task has no dependencies.',
   args: { blockedBy: [], blocking: [] },
 }

@@ -16,9 +16,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the chip displays a status filter.',
+}
 
 export const LabelChip: Story = {
+  name: 'the chip displays a label filter.',
   args: {
     attribute: 'label',
     value: '#infra',
@@ -27,6 +30,7 @@ export const LabelChip: Story = {
 }
 
 export const OpenMenu: Story = {
+  name: 'the filter chip menu is open.',
   tags: ['desktop-only'],
   args: {
     defaultOpen: true,

@@ -64,18 +64,21 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the recurring template details show its schedule and task description',
   args: {
     template: { ...baseTemplate },
   },
 }
 
 export const NoLabelsOrDescription: Story = {
+  name: 'the recurring template details omit unset labels and description',
   args: {
     template: { ...baseTemplate, labels: [], description: null },
   },
 }
 
 export const WithGeneratedTasks: Story = {
+  name: 'the template details include its generated task history',
   args: {
     template: { ...baseTemplate },
   },

@@ -67,6 +67,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Active: Story = {
+  name: 'a running agent session shows its label and worktree',
   args: {
     session: baseSession,
     isDimmed: false,
@@ -74,6 +75,7 @@ export const Active: Story = {
 }
 
 export const ActiveDimmed: Story = {
+  name: 'a running session from another context appears muted',
   args: {
     session: { ...baseSession, id: '2', context: 'personal' },
     isDimmed: true,
@@ -82,6 +84,7 @@ export const ActiveDimmed: Story = {
 }
 
 export const Ended: Story = {
+  name: 'a finished session shows its start and end times',
   args: {
     session: {
       ...baseSession,
@@ -95,6 +98,7 @@ export const Ended: Story = {
 }
 
 export const EndedDimmed: Story = {
+  name: 'a finished session from another context appears muted',
   args: {
     session: {
       ...baseSession,
@@ -110,6 +114,7 @@ export const EndedDimmed: Story = {
 }
 
 export const NoLabel: Story = {
+  name: 'a running session without a custom label shows its default title',
   args: {
     session: { ...baseSession, id: '5', label: null, customLabel: null },
     isDimmed: false,
@@ -117,6 +122,7 @@ export const NoLabel: Story = {
 }
 
 export const LongCwdAndLabel: Story = {
+  name: 'a long worktree path and session label fit within the row',
   args: {
     session: {
       ...baseSession,
@@ -130,6 +136,7 @@ export const LongCwdAndLabel: Story = {
 }
 
 export const EditingLabel: Story = {
+  name: 'the session row shows its label editor open',
   args: {
     session: { ...baseSession, id: '7' },
     isDimmed: false,
@@ -138,6 +145,7 @@ export const EditingLabel: Story = {
 }
 
 export const NotOpenableFromAnotherContext: Story = {
+  name: 'a session from another context cannot be opened here',
   args: {
     session: { ...baseSession, id: '12' },
     isDimmed: false,

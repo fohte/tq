@@ -72,13 +72,16 @@ export default meta
 type SectionStoryType = StoryObj<typeof meta>
 
 export const Empty: SectionStoryType = {
+  name: 'the task has no linked GitHub issues or pull requests.',
   args: { githubLinks: [] },
 }
 
 export const SingleLink: SectionStoryType = {
+  name: 'the task has one linked GitHub issue.',
   args: { githubLinks: [baseLink] },
 }
 
 export const MixedIssueAndPullRequests: SectionStoryType = {
+  name: 'the task has a GitHub issue and pull requests linked.',
   args: { githubLinks: mixedLinks },
 }

@@ -32,15 +32,19 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Results: Story = {}
+export const Results: Story = {
+  name: 'shows mention suggestions with the first result highlighted.',
+}
 
 export const SecondItemHighlighted: Story = {
+  name: 'highlights the second mention suggestion.',
   args: {
     highlightedIndex: 1,
   },
 }
 
 export const NoResults: Story = {
+  name: 'shows the empty state when no mention suggestions match.',
   args: {
     items: [],
   },

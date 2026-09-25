@@ -50,6 +50,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Todo: Story = {
+  name: 'a task reference chip opens the preview for an unfinished task.',
   args: {
     raw: `#${String(baseTask.number)}`,
     task: baseTask,
@@ -58,6 +59,7 @@ export const Todo: Story = {
 }
 
 export const Completed: Story = {
+  name: 'the chip represents a completed task reference.',
   args: {
     raw: `#${String(baseTask.number)}`,
     task: { ...baseTask, status: 'completed', title: 'Set up CI pipeline' },
@@ -68,5 +70,6 @@ export const Completed: Story = {
 // actual task): the chip falls back to rendering the raw matched text
 // instead of a card.
 export const Unresolved: Story = {
+  name: 'the chip shows raw reference text while the task is unresolved.',
   args: { raw: '#999', task: null },
 }

@@ -48,12 +48,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Closed: Story = {
+  name: 'shows the preview trigger without its popup',
   args: {
     open: false,
   },
 }
 
 export const Open: Story = {
+  name: 'shows preview content beside its trigger',
   args: {
     open: true,
   },

@@ -26,6 +26,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Loading: Story = {
+  name: 'the breadcrumb indicates that page details are still loading.',
   args: {
     isLoading: true,
     taskNumber: undefined,
@@ -34,6 +35,7 @@ export const Loading: Story = {
 }
 
 export const NotFound: Story = {
+  name: 'the breadcrumb indicates that the page could not be found.',
   args: {
     isLoading: false,
     taskNumber: undefined,
@@ -42,6 +44,7 @@ export const NotFound: Story = {
 }
 
 export const Default: Story = {
+  name: 'the breadcrumb links a page to its task number and title.',
   args: {
     isLoading: false,
     taskNumber: 42,
@@ -50,6 +53,7 @@ export const Default: Story = {
 }
 
 export const WithoutTaskNumber: Story = {
+  name: 'the breadcrumb shows the page title without a task number.',
   args: {
     isLoading: false,
     taskNumber: undefined,

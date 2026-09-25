@@ -25,18 +25,21 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Unlinked: Story = {
+  name: 'the field has no GitHub links attached.',
   args: {
     githubLinks: [],
   },
 }
 
 export const SingleLink: Story = {
+  name: 'the field shows one GitHub link.',
   args: {
     githubLinks: [sampleLink],
   },
 }
 
 export const MultipleLinks: Story = {
+  name: 'the field shows several GitHub links.',
   args: {
     githubLinks: [
       sampleLink,

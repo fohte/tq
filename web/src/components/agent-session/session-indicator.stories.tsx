@@ -47,18 +47,22 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const NoSessions: Story = {
+  name: 'the session indicator has no active sessions to show',
   args: { sessions: [] },
 }
 
 export const ActiveSession: Story = {
+  name: 'the session indicator marks one session as running',
   args: { sessions: [activeAgentSession] },
 }
 
 export const EndedSession: Story = {
+  name: 'the session indicator shows a finished session',
   args: { sessions: [endedAgentSession] },
 }
 
 export const ShowsActiveWhenOneOfManyIsActive: Story = {
+  name: 'the indicator marks a mixed session list as active',
   args: {
     sessions: [endedAgentSession, activeAgentSession],
     defaultOpen: true,

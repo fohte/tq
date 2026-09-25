@@ -73,6 +73,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Todo: Story = {
+  name: 'the card previews an unfinished task mention.',
   args: {
     number: baseTask.number,
     raw: `#${String(baseTask.number)}`,
@@ -81,6 +82,7 @@ export const Todo: Story = {
 }
 
 export const Completed: Story = {
+  name: 'the card previews a completed task mention.',
   args: {
     number: baseTask.number,
     raw: `#${String(baseTask.number)}`,
@@ -89,6 +91,7 @@ export const Completed: Story = {
 }
 
 export const LongTitle: Story = {
+  name: 'the card clamps a long task title and description.',
   args: {
     number: baseTask.number,
     raw: `#${String(baseTask.number)}`,
@@ -106,5 +109,6 @@ export const LongTitle: Story = {
 // exist): the card falls back to rendering the raw matched text while its
 // data is unresolved.
 export const Unresolved: Story = {
+  name: 'the card shows raw mention text while its task is unresolved.',
   args: { number: 999, raw: '#999', task: null },
 }

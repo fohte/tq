@@ -23,6 +23,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows task title and description fields with helper text',
   render: () => (
     <FieldGroup className="w-80">
       <Field>
@@ -47,6 +48,7 @@ export const Default: Story = {
 }
 
 export const WithError: Story = {
+  name: 'shows an email field with a validation error',
   render: () => (
     <Field className="w-80" data-invalid="true">
       <FieldLabel htmlFor="field-story-email">Email</FieldLabel>
@@ -57,6 +59,7 @@ export const WithError: Story = {
 }
 
 export const WithMultipleErrors: Story = {
+  name: 'shows a password field with two validation errors',
   render: () => (
     <Field className="w-80" data-invalid="true">
       <FieldLabel htmlFor="field-story-password">Password</FieldLabel>
@@ -72,6 +75,7 @@ export const WithMultipleErrors: Story = {
 }
 
 export const Horizontal: Story = {
+  name: 'shows a notification checkbox beside its label and description',
   render: () => (
     <Field orientation="horizontal" className="w-80">
       <Checkbox id="field-story-notify" />
@@ -86,6 +90,7 @@ export const Horizontal: Story = {
 }
 
 export const WithSeparator: Story = {
+  name: 'separates an email field from the GitHub sign-in action',
   render: () => (
     <FieldGroup className="w-80">
       <Field>

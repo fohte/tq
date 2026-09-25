@@ -15,6 +15,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const WithLabelAndAction: Story = {
+  name: 'shows the queue header with a new action',
   args: {
     children: null,
   },
@@ -35,6 +36,7 @@ export const WithLabelAndAction: Story = {
 }
 
 export const WithScreenTitle: Story = {
+  name: 'shows the tasks screen title in the header',
   args: {
     children: null,
   },

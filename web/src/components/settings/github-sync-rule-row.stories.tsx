@@ -50,6 +50,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const ScopeAllEnabled: Story = {
+  name: 'an enabled sync rule applies to all projects',
   args: {
     rule: { ...baseRule },
     projects: sampleProjects,
@@ -57,6 +58,7 @@ export const ScopeAllEnabled: Story = {
 }
 
 export const ScopeOrgEnabled: Story = {
+  name: 'an enabled sync rule applies to one GitHub organization',
   args: {
     rule: { ...baseRule, scope: 'org', org: 'fohte' },
     projects: sampleProjects,
@@ -64,6 +66,7 @@ export const ScopeOrgEnabled: Story = {
 }
 
 export const ScopeRepoEnabled: Story = {
+  name: 'an enabled sync rule applies to one GitHub repository',
   args: {
     rule: { ...baseRule, scope: 'repo', org: 'fohte', repo: 'tq' },
     projects: sampleProjects,
@@ -71,6 +74,7 @@ export const ScopeRepoEnabled: Story = {
 }
 
 export const ScopeAllDisabled: Story = {
+  name: 'a disabled sync rule for all projects appears inactive',
   args: {
     rule: { ...baseRule, enabled: false },
     projects: sampleProjects,
@@ -78,6 +82,7 @@ export const ScopeAllDisabled: Story = {
 }
 
 export const ScopeOrgDisabled: Story = {
+  name: 'a disabled organization sync rule appears inactive',
   args: {
     rule: { ...baseRule, scope: 'org', org: 'fohte', enabled: false },
     projects: sampleProjects,
@@ -85,6 +90,7 @@ export const ScopeOrgDisabled: Story = {
 }
 
 export const ScopeRepoDisabled: Story = {
+  name: 'a disabled repository sync rule appears inactive',
   args: {
     rule: {
       ...baseRule,
@@ -98,6 +104,7 @@ export const ScopeRepoDisabled: Story = {
 }
 
 export const UnknownProject: Story = {
+  name: 'a sync rule points to a project that cannot be found',
   args: {
     rule: { ...baseRule, targetProjectId: 'missing-project' },
     projects: sampleProjects,

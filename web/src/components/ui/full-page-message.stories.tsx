@@ -18,12 +18,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const TaskNotFound: Story = {
+  name: 'shows a full-page message when a task is missing',
   args: {
     children: 'Task not found',
   },
 }
 
 export const ProjectNotFound: Story = {
+  name: 'shows a full-page message when a project is missing',
   args: {
     children: 'Project not found',
   },

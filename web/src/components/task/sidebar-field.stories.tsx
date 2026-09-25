@@ -21,6 +21,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the field shows an estimate label with a formatted duration.',
   args: {
     label: 'ESTIMATE',
     children: '1h30m',

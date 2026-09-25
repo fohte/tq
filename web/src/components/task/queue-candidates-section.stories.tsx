@@ -56,12 +56,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Empty: Story = {
+  name: 'the section shows when no suggested tasks are available.',
   args: {
     candidates: [],
   },
 }
 
 export const OverdueOnly: Story = {
+  name: 'the section lists tasks that have passed their due dates.',
   args: {
     candidates: [
       makeQueueCandidate({
@@ -85,6 +87,7 @@ export const OverdueOnly: Story = {
 }
 
 export const ActiveOnly: Story = {
+  name: 'the section lists only tasks that are already active.',
   args: {
     candidates: [
       makeQueueCandidate({
@@ -100,6 +103,7 @@ export const ActiveOnly: Story = {
 }
 
 export const MixedReasons: Story = {
+  name: 'the section lists candidates with different scheduling reasons.',
   args: {
     candidates: [
       makeQueueCandidate({

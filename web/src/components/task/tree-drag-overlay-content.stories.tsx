@@ -34,6 +34,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const NoTarget: Story = {
+  name: 'the dragged task follows the pointer before a target is chosen',
   args: {
     node,
     target: null,
@@ -41,6 +42,7 @@ export const NoTarget: Story = {
 }
 
 export const ChildTarget: Story = {
+  name: 'dropping the task on a parent creates a child',
   args: {
     node,
     target: { node: targetNode, depth: 0, mode: 'child' },
@@ -48,6 +50,7 @@ export const ChildTarget: Story = {
 }
 
 export const SiblingTarget: Story = {
+  name: 'dropping the task beside a row creates a sibling',
   args: {
     node,
     target: { node: targetNode, depth: 0, mode: 'sibling' },

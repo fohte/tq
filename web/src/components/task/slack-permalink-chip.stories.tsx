@@ -81,6 +81,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const NormalMessage: Story = {
+  name: 'the chip opens a preview of a Slack message with its author avatar.',
   args: {
     url: NORMAL_MESSAGE_URL,
     raw: NORMAL_MESSAGE_URL,
@@ -90,6 +91,7 @@ export const NormalMessage: Story = {
 }
 
 export const ThreadReply: Story = {
+  name: 'the chip links to a Slack reply in a private thread.',
   args: {
     url: THREAD_REPLY_URL,
     raw: THREAD_REPLY_URL,
@@ -107,6 +109,7 @@ export const ThreadReply: Story = {
 }
 
 export const LongText: Story = {
+  name: 'the chip truncates a long Slack message to one line.',
   args: {
     url: LONG_TEXT_URL,
     raw: LONG_TEXT_URL,
@@ -124,6 +127,7 @@ export const LongText: Story = {
 }
 
 export const BotMessageWithoutAvatar: Story = {
+  name: 'the chip opens a bot message preview without an author avatar.',
   args: {
     url: BOT_MESSAGE_URL,
     raw: BOT_MESSAGE_URL,
@@ -144,6 +148,7 @@ export const BotMessageWithoutAvatar: Story = {
 // The preview hasn't resolved yet (or resolved to "not a resolvable
 // permalink"): the chip falls back to rendering the raw matched text.
 export const Unresolved: Story = {
+  name: 'the chip displays the raw link while the Slack preview is unresolved.',
   args: {
     url: UNRESOLVED_URL,
     raw: UNRESOLVED_URL,

@@ -60,6 +60,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Overdue: Story = {
+  name: 'the row flags a task whose due date has passed.',
   args: {
     task: makeTask({ dueDate: '2026-03-17' }),
     reason: { kind: 'overdue', days: 3 },
@@ -67,6 +68,7 @@ export const Overdue: Story = {
 }
 
 export const DueToday: Story = {
+  name: 'the row highlights a task due today.',
   args: {
     task: makeTask({ title: 'Submit expense report', dueDate: '2026-03-20' }),
     reason: { kind: 'due-today' },
@@ -74,6 +76,7 @@ export const DueToday: Story = {
 }
 
 export const DueLater: Story = {
+  name: 'the row shows a task due after today.',
   args: {
     task: makeTask({
       title: 'Prepare quarterly review',
@@ -84,6 +87,7 @@ export const DueLater: Story = {
 }
 
 export const StartsToday: Story = {
+  name: 'the row shows a task whose start date is today.',
   args: {
     task: makeTask({ title: 'Plan the launch', startDate: '2026-03-20' }),
     reason: { kind: 'starts', days: 0 },
@@ -91,6 +95,7 @@ export const StartsToday: Story = {
 }
 
 export const StartedDaysAgo: Story = {
+  name: 'the row shows a task whose start date passed several days ago.',
   args: {
     task: makeTask({
       title: 'Write API documentation',
@@ -101,6 +106,7 @@ export const StartedDaysAgo: Story = {
 }
 
 export const Active: Story = {
+  name: 'the row marks a task that is already active.',
   args: {
     task: makeTask({ title: 'Refactor the auth module' }),
     reason: { kind: 'active' },

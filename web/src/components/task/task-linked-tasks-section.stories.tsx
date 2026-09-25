@@ -75,17 +75,21 @@ export default meta
 type SectionStoryType = StoryObj<typeof meta>
 
 export const WithBothDirections: SectionStoryType = {
+  name: 'the section shows tasks linked in both directions.',
   args: { outgoing: outgoingTasks, incoming: incomingTasks },
 }
 
 export const OutgoingOnly: SectionStoryType = {
+  name: 'the section shows tasks mentioned by this task.',
   args: { outgoing: outgoingTasks, incoming: [] },
 }
 
 export const IncomingOnly: SectionStoryType = {
+  name: 'the section shows tasks that mention this task.',
   args: { outgoing: [], incoming: incomingTasks },
 }
 
 export const Empty: SectionStoryType = {
+  name: 'the task has no linked tasks.',
   args: { outgoing: [], incoming: [] },
 }

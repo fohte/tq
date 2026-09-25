@@ -63,21 +63,26 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const NoRule: Story = {}
+export const NoRule: Story = {
+  name: 'the recurrence field has no schedule set.',
+}
 
 export const WeeklySummary: Story = {
+  name: 'the recurrence field summarizes a weekly schedule.',
   args: {
     recurrenceRule: weeklyRule,
   },
 }
 
 export const MonthlySummary: Story = {
+  name: 'the recurrence field summarizes a monthly schedule.',
   args: {
     recurrenceRule: monthlyRule,
   },
 }
 
 export const OpenEditor: Story = {
+  name: 'the recurrence editor is open with weekly options selected.',
   args: {
     recurrenceRule: weeklyRule,
     isEditing: true,
@@ -87,6 +92,7 @@ export const OpenEditor: Story = {
 }
 
 export const SaveDisabledWithoutChanges: Story = {
+  name: 'the editor keeps saving disabled until the unsupported rule changes.',
   args: {
     // A 'custom' rule (only reachable via the API/MCP, never created by
     // this UI) has no matching Select option, so opening the editor starts
@@ -100,6 +106,7 @@ export const SaveDisabledWithoutChanges: Story = {
 }
 
 export const GeneratedFromTemplate: Story = {
+  name: 'the recurrence field shows a weekly schedule from a template.',
   args: {
     recurrenceRule: weeklyRule,
     templateId: '00000000-0000-0000-0000-000000000002',

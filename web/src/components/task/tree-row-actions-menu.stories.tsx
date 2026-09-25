@@ -28,9 +28,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the row actions appear when the row is hovered',
+}
 
 export const DesktopMenuOpen: Story = {
+  name: 'the desktop row actions menu is open',
   tags: ['desktop-only'],
   args: {
     defaultOpen: 'desktop',
@@ -38,6 +41,7 @@ export const DesktopMenuOpen: Story = {
 }
 
 export const MobileActionSheetOpen: Story = {
+  name: 'the mobile row actions appear in an open sheet',
   tags: ['mobile-only'],
   args: {
     defaultOpen: 'mobile',

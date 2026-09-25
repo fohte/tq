@@ -70,6 +70,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const OpenIssue: Story = {
+  name: 'previews an open issue with its title and body',
   args: {
     url: OPEN_ISSUE_URL,
     raw: OPEN_ISSUE_URL,
@@ -85,6 +86,7 @@ export const OpenIssue: Story = {
 }
 
 export const MergedPullRequest: Story = {
+  name: 'previews a merged pull request without a body excerpt',
   args: {
     url: MERGED_PR_URL,
     raw: MERGED_PR_URL,
@@ -100,6 +102,7 @@ export const MergedPullRequest: Story = {
 }
 
 export const ClosedIssue: Story = {
+  name: 'previews a closed issue with its body excerpt',
   args: {
     url: CLOSED_ISSUE_URL,
     raw: CLOSED_ISSUE_URL,
@@ -115,6 +118,7 @@ export const ClosedIssue: Story = {
 }
 
 export const LinkedToTask: Story = {
+  name: 'shows an issue card linked to an existing task',
   args: {
     url: LINKED_ISSUE_URL,
     raw: LINKED_ISSUE_URL,
@@ -143,6 +147,7 @@ export const LinkedToTask: Story = {
 }
 
 export const LongTitle: Story = {
+  name: 'clamps a long issue title and body excerpt within the card',
   args: {
     url: LONG_TITLE_URL,
     raw: LONG_TITLE_URL,
@@ -162,6 +167,7 @@ export const LongTitle: Story = {
 // the card falls back to rendering the raw matched text while its data is
 // unresolved.
 export const Unresolved: Story = {
+  name: 'shows the raw URL while GitHub preview details are unavailable',
   args: {
     url: UNRESOLVED_ISSUE_URL,
     raw: UNRESOLVED_ISSUE_URL,

@@ -39,18 +39,21 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows tasks due today with the Today tab selected',
   args: {
     defaultValue: 'today',
   },
 }
 
 export const SecondTabActive: Story = {
+  name: 'shows all tasks with the All tab selected',
   args: {
     defaultValue: 'all',
   },
 }
 
 export const Disabled: Story = {
+  name: 'shows a disabled backlog tab beside tasks due today',
   args: {
     defaultValue: 'today',
     disabledValue: 'backlog',

@@ -27,6 +27,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Open: Story = {
+  name: 'confirms moving a task from its current parent',
   args: {
     candidate,
     parentTaskNumber: 1,

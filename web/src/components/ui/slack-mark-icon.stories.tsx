@@ -21,6 +21,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows the Slack mark on a dark surface',
   args: {
     className: 'size-6',
   },

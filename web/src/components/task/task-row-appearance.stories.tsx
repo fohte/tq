@@ -52,12 +52,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Todo: Story = {
+  name: 'the row shows a task that is not yet complete.',
   args: {
     task: { ...baseTask },
   },
 }
 
 export const Completed: Story = {
+  name: 'the row shows a completed task.',
   args: {
     task: {
       ...baseTask,
@@ -68,6 +70,7 @@ export const Completed: Story = {
 }
 
 export const NotPlanned: Story = {
+  name: 'the row marks a task as not planned.',
   args: {
     task: {
       ...baseTask,
@@ -79,6 +82,7 @@ export const NotPlanned: Story = {
 }
 
 export const Duplicate: Story = {
+  name: 'the row marks a completed task as a duplicate.',
   args: {
     task: {
       ...baseTask,
@@ -90,6 +94,7 @@ export const Duplicate: Story = {
 }
 
 export const DuplicateOfNumber: Story = {
+  name: 'the row links a duplicate task to its original task number.',
   args: {
     task: {
       ...baseTask,
@@ -102,6 +107,7 @@ export const DuplicateOfNumber: Story = {
 }
 
 export const WorkContext: Story = {
+  name: 'the row marks a task as belonging to the work context.',
   args: {
     task: {
       ...baseTask,
@@ -112,6 +118,7 @@ export const WorkContext: Story = {
 }
 
 export const WithDueDate: Story = {
+  name: 'the row shows a task with a future due date.',
   args: {
     task: {
       ...baseTask,
@@ -123,6 +130,7 @@ export const WithDueDate: Story = {
 }
 
 export const Overdue: Story = {
+  name: 'the row highlights a task whose due date has passed.',
   args: {
     task: {
       ...baseTask,
@@ -134,6 +142,7 @@ export const Overdue: Story = {
 }
 
 export const OverdueCompleted: Story = {
+  name: 'the row shows a due date for a completed task.',
   args: {
     task: {
       ...baseTask,
@@ -145,6 +154,7 @@ export const OverdueCompleted: Story = {
 }
 
 export const WithStartDate: Story = {
+  name: 'the row shows a task with a start date.',
   args: {
     task: {
       ...baseTask,
@@ -155,6 +165,7 @@ export const WithStartDate: Story = {
 }
 
 export const WithDateRange: Story = {
+  name: 'the row shows a task with a start date and due date.',
   args: {
     task: {
       ...baseTask,
@@ -167,6 +178,7 @@ export const WithDateRange: Story = {
 }
 
 export const WithRemindAt: Story = {
+  name: 'the row shows the task reminder date and time.',
   args: {
     task: {
       ...baseTask,
@@ -178,6 +190,7 @@ export const WithRemindAt: Story = {
 }
 
 export const WithParentTask: Story = {
+  name: 'the row shows its parent task number.',
   args: {
     task: {
       ...baseTask,
@@ -188,6 +201,7 @@ export const WithParentTask: Story = {
 }
 
 export const WithBlockedBy: Story = {
+  name: 'the row indicates that another task blocks it.',
   args: {
     task: {
       ...baseTask,
@@ -198,6 +212,7 @@ export const WithBlockedBy: Story = {
 }
 
 export const WithMultipleBlockedBy: Story = {
+  name: 'the row lists multiple tasks that block it.',
   args: {
     task: {
       ...baseTask,
@@ -208,6 +223,7 @@ export const WithMultipleBlockedBy: Story = {
 }
 
 export const WithEstimate: Story = {
+  name: 'the row shows a task estimate.',
   args: {
     task: {
       ...baseTask,
@@ -218,6 +234,7 @@ export const WithEstimate: Story = {
 }
 
 export const WithRecurrence: Story = {
+  name: 'the row shows a task with a weekly recurrence.',
   args: {
     task: {
       ...baseTask,
@@ -234,6 +251,7 @@ export const WithRecurrence: Story = {
 }
 
 export const WithGithubLink: Story = {
+  name: 'the row shows a task linked to a GitHub pull request.',
   args: {
     task: {
       ...baseTask,
@@ -244,6 +262,7 @@ export const WithGithubLink: Story = {
 }
 
 export const WithMultipleGithubLinks: Story = {
+  name: 'the row shows a task linked to an issue and a pull request.',
   args: {
     task: {
       ...baseTask,
@@ -268,6 +287,7 @@ export const WithMultipleGithubLinks: Story = {
 }
 
 export const WithTags: Story = {
+  name: 'the row shows a task with two labels.',
   args: {
     task: {
       ...baseTask,
@@ -278,6 +298,7 @@ export const WithTags: Story = {
 }
 
 export const WithProject: Story = {
+  name: 'the row shows a task linked to a project.',
   parameters: {
     msw: {
       handlers: [
@@ -303,6 +324,7 @@ export const WithProject: Story = {
 }
 
 export const WithCompletionCount: Story = {
+  name: 'the row shows how many subtasks are complete.',
   args: {
     task: {
       ...baseTask,
@@ -314,6 +336,7 @@ export const WithCompletionCount: Story = {
 }
 
 export const AllVariants: Story = {
+  name: 'the rows show personal, completed, work, and parent tasks.',
   args: { task: baseTask },
   render: () => {
     const tasks: Task[] = [

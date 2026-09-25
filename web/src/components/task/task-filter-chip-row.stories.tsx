@@ -56,21 +56,26 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the row shows the default status and sort filters.',
+}
 
 export const SaveViewHidden: Story = {
+  name: 'the row hides the save-view action.',
   args: {
     hideSaveView: true,
   },
 }
 
 export const NoFilters: Story = {
+  name: 'the row shows no conditions beside the default sort control.',
   args: {
     parsed: { freeText: '', sortBy: 'updated' },
   },
 }
 
 export const SortByCreated: Story = {
+  name: 'the row sorts tasks by creation date.',
   // The sort chip's value text is hidden below `md` (see the `hidden
   // md:inline` span in TaskFilterChipRow), so this story is visually
   // identical to Default on the mobile viewport.
@@ -81,36 +86,42 @@ export const SortByCreated: Story = {
 }
 
 export const ProjectSelected: Story = {
+  name: 'the row shows a selected project filter.',
   args: {
     parsed: { ...defaultParsed, projectId: 'proj-1' },
   },
 }
 
 export const LabelSelected: Story = {
+  name: 'the row shows a selected label filter.',
   args: {
     parsed: { ...defaultParsed, label: 'dev:tq' },
   },
 }
 
 export const HasPagesChip: Story = {
+  name: 'the row filters for tasks that have pages.',
   args: {
     parsed: { ...defaultParsed, hasPages: true },
   },
 }
 
 export const FreeTextInInput: Story = {
+  name: 'the search input contains a free-text query.',
   args: {
     parsed: { ...defaultParsed, freeText: 'foo bar' },
   },
 }
 
 export const SearchHelpOpen: Story = {
+  name: 'the search syntax help is open.',
   args: {
     defaultOpenSearchHelp: true,
   },
 }
 
 export const ParentIdChip: Story = {
+  name: 'the row shows a parent filter by its task title.',
   args: {
     parsed: { ...defaultParsed, parentId: 'parent-abc' },
   },
@@ -120,6 +131,7 @@ export const ParentIdChip: Story = {
 // both changing the value and removing the condition happen — no need to
 // leave the chip and re-add the condition elsewhere.
 export const OpenStatusMenu: Story = {
+  name: 'the status filter menu is open.',
   tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, status: ['todo', 'completed'] },
@@ -128,6 +140,7 @@ export const OpenStatusMenu: Story = {
 }
 
 export const OpenProjectMenu: Story = {
+  name: 'the project filter menu is open.',
   tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, projectId: 'proj-1' },
@@ -136,6 +149,7 @@ export const OpenProjectMenu: Story = {
 }
 
 export const OpenLabelMenu: Story = {
+  name: 'the label filter menu is open.',
   tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, label: 'dev:tq' },
@@ -144,6 +158,7 @@ export const OpenLabelMenu: Story = {
 }
 
 export const OpenPagesMenu: Story = {
+  name: 'the pages filter menu is open.',
   tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, hasPages: true },
@@ -152,6 +167,7 @@ export const OpenPagesMenu: Story = {
 }
 
 export const OpenParentMenu: Story = {
+  name: 'the parent filter menu is open.',
   tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, parentId: 'parent-abc' },
@@ -162,6 +178,7 @@ export const OpenParentMenu: Story = {
 // Sort is pinned to the row's right edge, outside the wrapping chip area,
 // and opens the same kind of menu as any other axis chip.
 export const OpenSortMenu: Story = {
+  name: 'the sort menu is open.',
   tags: ['desktop-only'],
   args: {
     defaultOpenFilter: 'sort',
@@ -169,6 +186,7 @@ export const OpenSortMenu: Story = {
 }
 
 export const ParentAndLabelChips: Story = {
+  name: 'the row shows parent and label filters together.',
   args: {
     parsed: { ...defaultParsed, parentId: 'parent-abc', label: 'dev:tq' },
   },

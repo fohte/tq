@@ -45,15 +45,19 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Create: Story = {}
+export const Create: Story = {
+  name: 'the project form is ready to create a new project',
+}
 
 export const Edit: Story = {
+  name: 'the project form is populated with an existing project',
   args: {
     project: baseProject,
   },
 }
 
 export const EditWorkContext: Story = {
+  name: 'the project form edits a project in the work context',
   args: {
     project: { ...baseProject, context: 'work' },
   },

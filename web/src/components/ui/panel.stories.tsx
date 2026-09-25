@@ -12,6 +12,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'groups two task rows inside a bordered panel',
   args: {
     children: null,
   },

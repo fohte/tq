@@ -23,12 +23,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Closed: Story = {
+  name: 'the shorthand guide stays collapsed beside the title field',
   args: {
     defaultOpen: false,
   },
 }
 
 export const Open: Story = {
+  name: 'the guide lists task-title shorthand syntax',
   args: {
     defaultOpen: true,
   },

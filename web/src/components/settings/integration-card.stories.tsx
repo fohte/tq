@@ -28,6 +28,7 @@ const githubIcon = <GithubMarkIcon className="size-5 text-foreground" />
 const googleCalendarIcon = <Calendar className="size-5 text-foreground" />
 
 export const NotConfigured: Story = {
+  name: 'the GitHub integration is unavailable until configured',
   args: {
     icon: githubIcon,
     displayName: 'GitHub',
@@ -39,6 +40,7 @@ export const NotConfigured: Story = {
 }
 
 export const Disconnected: Story = {
+  name: 'the GitHub integration offers a connect action',
   args: {
     icon: githubIcon,
     displayName: 'GitHub',
@@ -51,6 +53,7 @@ export const Disconnected: Story = {
 }
 
 export const DisconnectedFetchingAuthUrl: Story = {
+  name: 'the GitHub integration waits for an authorization link',
   args: {
     icon: githubIcon,
     displayName: 'GitHub',
@@ -62,6 +65,7 @@ export const DisconnectedFetchingAuthUrl: Story = {
 }
 
 export const SingleAccountConnected: Story = {
+  name: 'the GitHub integration shows one connected account',
   args: {
     icon: githubIcon,
     displayName: 'GitHub',
@@ -73,6 +77,7 @@ export const SingleAccountConnected: Story = {
 }
 
 export const MultiAccountOneConnected: Story = {
+  name: 'a Google Calendar card shows one connected account and room to add another',
   args: {
     icon: googleCalendarIcon,
     displayName: 'Google Calendar',
@@ -85,6 +90,7 @@ export const MultiAccountOneConnected: Story = {
 }
 
 export const MultiAccountTwoConnected: Story = {
+  name: 'a Google Calendar card shows two connected accounts',
   args: {
     icon: googleCalendarIcon,
     displayName: 'Google Calendar',
@@ -100,6 +106,7 @@ export const MultiAccountTwoConnected: Story = {
 }
 
 export const Disconnecting: Story = {
+  name: 'a Google Calendar card shows one account while it disconnects',
   args: {
     ...MultiAccountTwoConnected.args,
     disconnectingAccountId: 'token-1',
@@ -129,6 +136,7 @@ gcalQueryClient.setQueryData(gcalCalendarsKeys.list('token-1'), [
 ] satisfies GcalCalendar[])
 
 export const WithCalendarPicker: Story = {
+  name: 'a connected Google Calendar account includes its calendar picker',
   args: {
     ...MultiAccountOneConnected.args,
     renderAccountExtra: (account) => <GcalCalendarPicker account={account} />,

@@ -107,12 +107,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Todo: Story = {
+  name: 'a personal task appears in the task grid',
   args: {
     node: { ...baseTreeNode },
   },
 }
 
 export const Completed: Story = {
+  name: 'a completed task keeps its status visible in the row',
   args: {
     node: {
       ...baseTreeNode,
@@ -123,6 +125,7 @@ export const Completed: Story = {
 }
 
 export const WithGithubLink: Story = {
+  name: 'a task row shows a merged pull request link',
   args: {
     node: {
       ...baseTreeNode,
@@ -140,6 +143,7 @@ export const WithGithubLink: Story = {
 }
 
 export const WithTags: Story = {
+  name: 'a task row shows its labels',
   args: {
     node: {
       ...baseTreeNode,
@@ -150,6 +154,7 @@ export const WithTags: Story = {
 }
 
 export const WithStartDate: Story = {
+  name: 'a task row shows its start date',
   args: {
     node: {
       ...baseTreeNode,
@@ -160,6 +165,7 @@ export const WithStartDate: Story = {
 }
 
 export const WithDueDate: Story = {
+  name: 'a task row shows a future due date',
   args: {
     node: {
       ...baseTreeNode,
@@ -171,6 +177,7 @@ export const WithDueDate: Story = {
 }
 
 export const Overdue: Story = {
+  name: 'a task row marks its past due date as overdue',
   args: {
     node: {
       ...baseTreeNode,
@@ -182,6 +189,7 @@ export const Overdue: Story = {
 }
 
 export const WithProject: Story = {
+  name: 'a task row shows its linked project',
   parameters: {
     msw: {
       handlers: [
@@ -207,6 +215,7 @@ export const WithProject: Story = {
 }
 
 export const WithChildren: Story = {
+  name: 'an expanded parent row shows completed and open children',
   args: {
     node: {
       ...baseTreeNode,
@@ -256,6 +265,7 @@ const endedSession: TaskAgentSession = {
 }
 
 export const WithActiveSessions: Story = {
+  name: 'a task row lists its active and ended agent sessions',
   args: { node: baseTreeNode },
   render: () => (
     <Providers>
@@ -272,6 +282,7 @@ export const WithActiveSessions: Story = {
 }
 
 export const WithCompletionCount: Story = {
+  name: 'a parent row summarizes progress across its children',
   args: {
     node: {
       ...baseTreeNode,
@@ -305,6 +316,7 @@ export const WithCompletionCount: Story = {
 }
 
 export const AllVariants: Story = {
+  name: 'the list compares personal completed work and parent task rows',
   args: { node: baseTreeNode },
   // The narrow container below (w-xl, 576px) is intentionally wider than
   // the mobile viewport (375px) — see the comment on it.
@@ -370,12 +382,14 @@ export const AllVariants: Story = {
 }
 
 export const Hovered: Story = {
+  name: 'hovering over a task row reveals its actions menu',
   args: {
     node: { ...baseTreeNode, title: 'Hover to reveal the ⋯ actions menu' },
   },
 }
 
 export const Selected: Story = {
+  name: 'the selected task row receives a visible highlight',
   args: { node: baseTreeNode },
   render: () => (
     <StaticTreeTaskGridRow

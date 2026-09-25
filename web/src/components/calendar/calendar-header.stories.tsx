@@ -29,18 +29,21 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the calendar header offers navigation and controls for a day',
   args: {
     activeView: 'day',
   },
 }
 
 export const WeekView: Story = {
+  name: 'the calendar header shows controls for the weekly view',
   args: {
     activeView: 'week',
   },
 }
 
 export const MonthView: Story = {
+  name: 'the calendar header shows controls for the monthly view',
   args: {
     activeView: 'month',
   },

@@ -54,22 +54,26 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows an empty status selector',
   args: {},
 }
 
 export const WithValue: Story = {
+  name: 'shows In Progress as the selected status',
   args: {
     defaultValue: 'in_progress',
   },
 }
 
 export const Disabled: Story = {
+  name: 'shows a disabled status selector',
   args: {
     disabled: true,
   },
 }
 
 export const Open: Story = {
+  name: 'shows the available task statuses in an open selector',
   args: {
     open: true,
     defaultValue: 'in_progress',

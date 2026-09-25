@@ -20,6 +20,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'a settings row pairs a working hours field with its description',
   args: {
     label: 'Working hours',
     description: 'auto-scheduler が予定を配置できる時間帯',
@@ -28,6 +29,7 @@ export const Default: Story = {
 }
 
 export const LongDescription: Story = {
+  name: 'a settings row wraps a long explanation beside its field',
   args: {
     label: 'Focus URL template',
     description:

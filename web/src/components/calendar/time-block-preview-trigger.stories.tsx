@@ -58,6 +58,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Manual: Story = {
+  name: 'a manually scheduled task opens a preview with its details',
   args: {
     event: manualEvent,
     children: <Chip label="Manual task" />,
@@ -66,6 +67,7 @@ export const Manual: Story = {
 }
 
 export const Auto: Story = {
+  name: 'an automatically scheduled task opens a preview with its details',
   args: {
     event: autoEvent,
     children: <Chip label="Auto task" />,
@@ -74,6 +76,7 @@ export const Auto: Story = {
 }
 
 export const Redacted: Story = {
+  name: 'a private calendar block shows a busy preview without event details',
   args: {
     event: redactedEvent,
     children: <Chip label="Busy" />,

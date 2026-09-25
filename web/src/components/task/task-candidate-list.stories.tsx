@@ -46,6 +46,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'task candidates appear without a highlighted row.',
   args: {
     candidates,
     highlightedIndex: -1,
@@ -53,6 +54,7 @@ export const Default: Story = {
 }
 
 export const FirstHighlighted: Story = {
+  name: 'the first candidate is highlighted for selection.',
   args: {
     candidates,
     highlightedIndex: 0,
@@ -60,6 +62,7 @@ export const FirstHighlighted: Story = {
 }
 
 export const WithIndexOffset: Story = {
+  name: 'candidate numbering starts after an existing index.',
   args: {
     candidates,
     highlightedIndex: 2,

@@ -33,9 +33,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the schedule form is ready to create a recurring time block',
+}
 
 export const Edit: Story = {
+  name: 'the schedule form is populated with an existing time block',
   args: {
     schedule: makeSchedule(),
   },
