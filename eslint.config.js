@@ -38,10 +38,6 @@ export default config(
     rules: { 'no-restricted-imports': 'off' },
   },
   {
-    files: ['web/**/*.stories.tsx'],
-    rules: { 'fohte/require-story-name': 'error' },
-  },
-  {
     files: ['**/*.stories.tsx'],
     rules: { 'fohte/require-story-name': 'error' },
   },
