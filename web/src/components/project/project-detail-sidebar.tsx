@@ -72,10 +72,18 @@ export function ProjectSidebarMobile({ project }: { project: ProjectDetail }) {
       </span>
       <div className="flex flex-col gap-2">
         <ProjectFieldRow label="STATUS">
-          <StatusSelect projectId={project.id} status={project.status} />
+          <StatusSelect
+            projectId={project.id}
+            status={project.status}
+            mobileLayout
+          />
         </ProjectFieldRow>
         <ProjectFieldRow label="CONTEXT">
-          <ContextSelect projectId={project.id} context={project.context} />
+          <ContextSelect
+            projectId={project.id}
+            context={project.context}
+            mobileLayout
+          />
         </ProjectFieldRow>
         <ProjectFieldRow label="START DATE">
           <DateInput
@@ -167,9 +175,11 @@ function ProjectFieldRow({
 function StatusSelect({
   projectId,
   status,
+  mobileLayout = false,
 }: {
   projectId: string
   status: ProjectDetail['status']
+  mobileLayout?: boolean
 }) {
   const updateProject = useUpdateProject()
   const statusValues = ['active', 'paused', 'completed', 'archived'] as const
@@ -188,7 +198,10 @@ function StatusSelect({
       <SelectTrigger
         size="sm"
         iconClassName="size-4 text-foreground native-select-caret-stroke native-select-status-caret-offset"
-        className="h-auto data-[size=sm]:h-auto w-fit min-w-20 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
+        className={cn(
+          'h-auto data-[size=sm]:h-auto w-fit min-w-20 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0',
+          mobileLayout && 'min-h-5 translate-y-px',
+        )}
       >
         <SelectValue />
       </SelectTrigger>
@@ -206,9 +219,11 @@ function StatusSelect({
 function ContextSelect({
   projectId,
   context,
+  mobileLayout = false,
 }: {
   projectId: string
   context: ProjectDetail['context']
+  mobileLayout?: boolean
 }) {
   const updateProject = useUpdateProject()
   const contextValues = ['work', 'personal'] as const
@@ -227,7 +242,10 @@ function ContextSelect({
       <SelectTrigger
         size="sm"
         iconClassName="size-4 -translate-x-1.5 text-foreground native-select-caret-stroke"
-        className="h-auto data-[size=sm]:h-auto w-fit min-w-19 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
+        className={cn(
+          'h-auto data-[size=sm]:h-auto w-fit min-w-21 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0',
+          mobileLayout && 'min-h-5 translate-y-px',
+        )}
       >
         <SelectValue />
       </SelectTrigger>

@@ -14,6 +14,7 @@ import { selectValueHandler } from '#lib/form-utils'
 import { formatMinutes } from '#lib/format'
 import { templateNextOccurrence } from '#lib/recurrence'
 import { formatShortDate } from '#lib/task-due-date'
+import { cn } from '#lib/utils'
 
 // --- Sidebar (PC) ---
 
@@ -98,7 +99,11 @@ export function RecurringTemplateSidebarMobile({
           {template.labels.length > 0 ? template.labels.join(', ') : '—'}
         </TemplateFieldRow>
         <TemplateFieldRow label="STATE">
-          <StateSelect templateId={template.id} enabled={template.enabled} />
+          <StateSelect
+            templateId={template.id}
+            enabled={template.enabled}
+            mobileLayout
+          />
         </TemplateFieldRow>
       </div>
     </div>
@@ -167,9 +172,11 @@ function ProjectTitle({ projectId }: { projectId: string }) {
 function StateSelect({
   templateId,
   enabled,
+  mobileLayout = false,
 }: {
   templateId: string
   enabled: boolean
+  mobileLayout?: boolean
 }) {
   const updateTemplate = useUpdateRecurringTemplate()
   const stateValues = ['active', 'paused'] as const
@@ -194,7 +201,10 @@ function StateSelect({
       <SelectTrigger
         size="sm"
         iconClassName="size-4 -translate-x-0.5 text-foreground native-select-caret-stroke"
-        className="h-auto data-[size=sm]:h-auto w-fit min-w-0 gap-0.5 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
+        className={cn(
+          'h-auto data-[size=sm]:h-auto w-fit min-w-0 gap-0.5 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0',
+          mobileLayout && 'min-h-5 translate-y-px',
+        )}
       >
         <SelectValue />
       </SelectTrigger>
