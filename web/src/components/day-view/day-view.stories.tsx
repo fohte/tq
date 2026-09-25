@@ -7,6 +7,8 @@ import { fn } from 'storybook/test'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
+import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
+import { makeParsedQuery } from '#components/task/task-filter-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { Schedule } from '#hooks/use-schedules'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
@@ -234,9 +236,27 @@ const meta = {
     },
     // CreateTaskModal's TagsInput fetches label suggestions.
     msw: {
-      handlers: [http.get('/api/labels', () => HttpResponse.json([]))],
+      handlers: [
+        http.get('/api/labels', () => HttpResponse.json([])),
+        http.get('/api/tasks/search/suggest', () => HttpResponse.json([])),
+      ],
     },
   },
+  render: (args) => (
+    <DayViewPresentation
+      {...args}
+      kanbanFilterRow={
+        <TaskFilterChipRow
+          onQueryChange={fn()}
+          parsed={makeParsedQuery()}
+          projects={[]}
+          hideStatusFilter
+          hideSortFilter
+          hideSaveView
+        />
+      }
+    />
+  ),
   decorators: [
     (Story) => (
       <Providers>

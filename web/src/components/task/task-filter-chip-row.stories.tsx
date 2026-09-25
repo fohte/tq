@@ -64,6 +64,21 @@ export const SaveViewHidden: Story = {
   },
 }
 
+export const KanbanFilterRow: Story = {
+  args: {
+    parsed: {
+      ...defaultParsed,
+      projectId: 'proj-1',
+      label: 'sample-label',
+      hasPages: true,
+      parentId: 'parent-abc',
+    },
+    hideStatusFilter: true,
+    hideSortFilter: true,
+    hideSaveView: true,
+  },
+}
+
 export const NoFilters: Story = {
   args: {
     parsed: { freeText: '', sortBy: 'updated' },

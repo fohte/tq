@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
+import { parseSearchQuery } from 'api/search-query-parser'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { CalendarChangeFeedbackPopup } from '#components/calendar/calendar-change-feedback-popup'
@@ -10,6 +11,7 @@ import {
   DayViewPresentation,
 } from '#components/day-view/day-view'
 import { buildQueueSections } from '#components/day-view/queue-sections'
+import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { useAutoAssign } from '#hooks/use-auto-assign'
 import { useCalendarChangeFeedback } from '#hooks/use-calendar-change-feedback'
 import { useCurrentContext } from '#hooks/use-current-context'
@@ -20,6 +22,7 @@ import {
   useGcalEvents,
 } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
+import { useProjects } from '#hooks/use-projects'
 import {
   DAY_QUEUE_KEY,
   type QueueItem,
@@ -41,16 +44,22 @@ import { classifyGcalEvent } from '#lib/calendar-utils'
 import { matchesContextFilter } from '#lib/context-filter'
 import { formatLocalDate, toLocalDateRange } from '#lib/date-range'
 import { getQueueCandidates } from '#lib/queue-candidates'
+import { replaceVisibleQueueTaskIds } from '#lib/queue-task-order'
 import { scheduleColorToEventColor } from '#lib/schedule-color'
 
-const dayViewSearchDefaults = { view: 'queue' } as const
+const dayViewSearchDefaults = { view: 'queue', q: '' } as const
 
 interface DayViewSearch {
   view?: DayViewMode
+  q?: string
 }
 
 function validateSearch(search: Record<string, unknown>): DayViewSearch {
-  return search['view'] === 'kanban' ? { view: 'kanban' } : { view: 'queue' }
+  const q = typeof search['q'] === 'string' ? search['q'] : undefined
+  return {
+    view: search['view'] === 'kanban' ? 'kanban' : 'queue',
+    ...(q == null || q === '' ? {} : { q }),
+  }
 }
 
 export const Route = createFileRoute('/')({
@@ -65,11 +74,29 @@ function DayView() {
   const baseFilter = useBaseFilter(true)
   const { isLoading, categorized } = useTaskList(baseFilter)
 
-  const { view: viewMode = 'queue' } = Route.useSearch()
+  const { view: viewMode = 'queue', q = '' } = Route.useSearch()
+  const isKanbanFiltering = viewMode === 'kanban' && q !== ''
+  const filteredTasksQuery = useTaskList(
+    { ...baseFilter, ...(q === '' ? {} : { q }) },
+    { enabled: isKanbanFiltering },
+  )
+  const filterTaskIds = useMemo(
+    () =>
+      isKanbanFiltering
+        ? new Set((filteredTasksQuery.data ?? []).map((task) => task.id))
+        : undefined,
+    [filteredTasksQuery.data, isKanbanFiltering],
+  )
   const navigate = Route.useNavigate()
   const handleViewModeChange = (mode: DayViewMode) => {
     void navigate({
       search: (prev) => ({ ...prev, view: mode }),
+      replace: true,
+    })
+  }
+  const handleFilterQueryChange = (newQuery: string) => {
+    void navigate({
+      search: (prev) => ({ ...prev, q: newQuery }),
       replace: true,
     })
   }
@@ -112,6 +139,7 @@ function DayView() {
   const createTimeBlock = useCreateTimeBlock()
   const context = useCurrentContext()
   const queryClient = useQueryClient()
+  const projects = useProjects()
 
   const {
     changeFeedback,
@@ -147,9 +175,8 @@ function DayView() {
 
   const taskMap = useTaskMap(categorized.all)
 
-  // Raw items per queue key, straight from the API — used as the
-  // authoritative "what's actually stored" source (unaffected by the
-  // completed-task display filtering below).
+  // Queue updates replace the full list, so keep stored IDs separate from
+  // filters applied to the displayed sections.
   const rawItemsByKey = useMemo(() => {
     const map = new Map<string, QueueItem[]>()
     ;(queuesData ?? []).forEach((queue, i) => {
@@ -158,12 +185,21 @@ function DayView() {
     return map
   }, [queuesData, queueItemsResults])
 
-  // A completed task stays visible (with the progress bar) only in the day
-  // queue; every other queue hides it and excludes it from its count, but it
-  // stays in that queue's stored selection (see the PUT handlers below).
+  // Completed tasks remain stored but are omitted from non-day queue sections.
   const queueSections = useMemo(
     () => buildQueueSections(queuesData, rawItemsByKey, taskMap, selectedDate),
     [queuesData, rawItemsByKey, taskMap, selectedDate],
+  )
+
+  const visibleQueueSections = useMemo(
+    () =>
+      filterTaskIds == null
+        ? queueSections
+        : queueSections.map((section) => ({
+            ...section,
+            items: section.items.filter((task) => filterTaskIds.has(task.id)),
+          })),
+    [queueSections, filterTaskIds],
   )
 
   const dayQueueTasks =
@@ -179,9 +215,16 @@ function DayView() {
     return ids
   }, [rawItemsByKey])
 
-  const queueCandidates = useMemo(
+  const allQueueCandidates = useMemo(
     () => getQueueCandidates(categorized.all, allQueuedTaskIds),
     [categorized.all, allQueuedTaskIds],
+  )
+  const queueCandidates = useMemo(
+    () =>
+      filterTaskIds == null
+        ? allQueueCandidates
+        : allQueueCandidates.filter(({ task }) => filterTaskIds.has(task.id)),
+    [allQueueCandidates, filterTaskIds],
   )
 
   const taskEvents: TimeBlockEvent[] = useMemo(() => {
@@ -264,22 +307,17 @@ function DayView() {
     [handleTimeBlockChange, createTimeBlock],
   )
 
-  // The full stored id list for a queue: the given `visibleIds` (already
-  // reordered/inserted/removed by the caller) followed by any completed
-  // tasks currently hidden from that queue's section — a PUT fully replaces
-  // the queue's selection, so leaving a hidden task out here would silently
-  // drop it from storage instead of just hiding it from view.
-  function fullTaskIdsFor(queueKey: string, visibleIds: string[]): string[] {
+  function queueTaskIdsFor(queueKey: string, visibleIds: string[]): string[] {
     const rawIds = (rawItemsByKey.get(queueKey) ?? []).map((i) => i.taskId)
-    const visibleIdSet = new Set(visibleIds)
-    const hiddenIds = rawIds.filter((id) => !visibleIdSet.has(id))
-    return [...visibleIds, ...hiddenIds]
+    const previousVisibleIds = visibleIdsFor(queueKey)
+    return replaceVisibleQueueTaskIds(rawIds, previousVisibleIds, visibleIds)
   }
 
   function visibleIdsFor(queueKey: string): string[] {
     return (
-      queueSections.find((q) => q.key === queueKey)?.items.map((t) => t.id) ??
-      []
+      visibleQueueSections
+        .find((q) => q.key === queueKey)
+        ?.items.map((t) => t.id) ?? []
     )
   }
 
@@ -292,7 +330,7 @@ function DayView() {
     setQueueItems.mutate({
       key: queueKey,
       date: selectedDateStr,
-      taskIds: fullTaskIdsFor(queueKey, newVisibleTaskIds),
+      taskIds: queueTaskIdsFor(queueKey, newVisibleTaskIds),
     })
   }
 
@@ -308,7 +346,7 @@ function DayView() {
     setQueueItems.mutate({
       key: queueKey,
       date: selectedDateStr,
-      taskIds: fullTaskIdsFor(queueKey, nextVisible),
+      taskIds: queueTaskIdsFor(queueKey, nextVisible),
     })
   }
 
@@ -323,11 +361,13 @@ function DayView() {
   const handleRemoveFromQueue = (queueKey: string, taskId: string) => {
     if (setQueueItems.isPending && setQueueItems.variables.key === queueKey)
       return
-    const nextVisible = visibleIdsFor(queueKey).filter((id) => id !== taskId)
+    const rawIds = (rawItemsByKey.get(queueKey) ?? []).map(
+      (item) => item.taskId,
+    )
     setQueueItems.mutate({
       key: queueKey,
       date: selectedDateStr,
-      taskIds: fullTaskIdsFor(queueKey, nextVisible),
+      taskIds: rawIds.filter((id) => id !== taskId),
     })
   }
 
@@ -343,7 +383,7 @@ function DayView() {
       {
         key: toQueueKey,
         date: selectedDateStr,
-        taskIds: fullTaskIdsFor(toQueueKey, nextVisible),
+        taskIds: queueTaskIdsFor(toQueueKey, nextVisible),
       },
       {
         onSuccess: () => {
@@ -385,7 +425,9 @@ function DayView() {
   return (
     <>
       <DayViewPresentation
-        isLoading={isLoading}
+        isLoading={
+          isLoading || (isKanbanFiltering && filteredTasksQuery.isLoading)
+        }
         calendarEvents={calendarEvents}
         schedules={schedulesData ?? []}
         dndCallbacks={dndCallbacks}
@@ -393,7 +435,7 @@ function DayView() {
         {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
           ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
           : {})}
-        queueSections={queueSections}
+        queueSections={visibleQueueSections}
         dayQueueTasks={dayQueueTasks}
         queueCandidates={queueCandidates}
         onReorderQueue={handleReorderQueue}
@@ -408,6 +450,18 @@ function DayView() {
         onVisibleRangeChange={handleVisibleRangeChange}
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
+        kanbanFilterRow={
+          viewMode === 'kanban' ? (
+            <TaskFilterChipRow
+              onQueryChange={handleFilterQueryChange}
+              parsed={parseSearchQuery(q)}
+              projects={projects.data ?? []}
+              hideStatusFilter
+              hideSortFilter
+              hideSaveView
+            />
+          ) : undefined
+        }
       />
       <CalendarChangeFeedbackPopup
         anchor={changeFeedbackAnchorRef}
