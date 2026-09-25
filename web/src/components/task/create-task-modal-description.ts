@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react'
 
 export const DEFAULT_TASK_DESCRIPTION = '## Why\n\n## What'
 
-export function getTaskDescription(
+function getTaskDescription(
   readMarkdown: (() => string) | null,
   fallbackMarkdown: string,
   defaultDescription?: string,

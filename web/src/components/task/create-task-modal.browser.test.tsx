@@ -179,9 +179,7 @@ describe('CreateTaskModal', () => {
     const user = userEvent.setup()
     const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
 
-    await waitFor(() => {
-      expect(document.querySelector('.milkdown .ProseMirror')).not.toBeNull()
-    })
+    await focusDescriptionEditor(user, document.body, { timeout: 10_000 })
     await user.click(
       atIndex(screen.getAllByRole('button', { name: 'Close' }), 0),
     )
