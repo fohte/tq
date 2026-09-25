@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import {
-  fieldValueClassName,
-  SidebarField,
-} from '#components/task/sidebar-field'
+import { SidebarField } from '#components/task/sidebar-field'
 import { SidebarParentField } from '#components/task/sidebar-parent-field'
 import { SidebarPlanField } from '#components/task/sidebar-plan-field'
 import { SidebarProjectField } from '#components/task/sidebar-project-field'
@@ -33,6 +30,9 @@ import { selectValueHandler } from '#lib/form-utils'
 import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
 import { cn } from '#lib/utils'
+
+const fieldValueClassName =
+  'h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0'
 
 // --- Sidebar (PC) ---
 

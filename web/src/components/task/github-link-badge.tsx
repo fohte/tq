@@ -4,12 +4,6 @@ import { Chip } from '#components/ui/chip'
 import type { GithubLink } from '#hooks/use-github-link'
 import { cn } from '#lib/utils'
 
-const STATE_COLORS: Record<GithubLink['state'], string> = {
-  open: 'text-github-open',
-  closed: 'text-github-closed',
-  merged: 'text-github-merged',
-}
-
 // Rendered as a <button>, never an <a>: call sites (e.g. task rows) nest
 // this inside their own navigation <Link>, and a nested <a> would be
 // invalid HTML and hijack the outer navigation's click.
@@ -23,7 +17,12 @@ export function GithubLinkBadge({
   return (
     <Chip
       as="button"
-      className={cn('shrink-0', STATE_COLORS[link.state])}
+      className={cn(
+        'shrink-0',
+        link.state === 'open' && 'text-github-open',
+        link.state === 'closed' && 'text-github-closed',
+        link.state === 'merged' && 'text-github-merged',
+      )}
       onClick={(e) => {
         e.preventDefault()
         e.stopPropagation()

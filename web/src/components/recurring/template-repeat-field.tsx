@@ -4,7 +4,6 @@ import {
   toggleWeekday,
   WeekdayToggleRow,
 } from '#components/schedule/create-schedule-modal'
-import { fieldValueClassName } from '#components/task/sidebar-field'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
 import { Button } from '#components/ui/button'
 import { Input } from '#components/ui/input'
@@ -120,7 +119,10 @@ export function TemplateRepeatFieldAppearance({
                 recurrenceTypeOptions,
               )}
             >
-              <SelectTrigger size="sm" className={fieldValueClassName}>
+              <SelectTrigger
+                size="sm"
+                className="h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
