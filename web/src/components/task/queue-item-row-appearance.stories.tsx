@@ -84,21 +84,21 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const WithEstimate: Story = {
-  name: 'the row displays a task’s estimated time.',
+  name: 'the row displays a task’s estimated time',
   args: {
     task: makeTask(),
   },
 }
 
 export const MissingEstimate: Story = {
-  name: 'the row shows a task without an estimate.',
+  name: 'the row shows a task without an estimate',
   args: {
     task: makeTask({ estimatedMinutes: null, title: 'Plan the launch' }),
   },
 }
 
 export const EditingEstimate: Story = {
-  name: 'the row shows the estimate input open for editing.',
+  name: 'the row shows the estimate input open for editing',
   args: {
     task: makeTask({ estimatedMinutes: null, title: 'Plan the launch' }),
     isEditingEstimate: true,
@@ -106,7 +106,7 @@ export const EditingEstimate: Story = {
 }
 
 export const Completed: Story = {
-  name: 'the row shows a completed task with its estimate.',
+  name: 'the row shows a completed task with its estimate',
   args: {
     task: makeTask({ status: 'completed', title: 'Ship the release notes' }),
   },

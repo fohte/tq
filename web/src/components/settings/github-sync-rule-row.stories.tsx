@@ -50,7 +50,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const ScopeAllEnabled: Story = {
-  name: 'an enabled sync rule applies to all projects',
+  name: 'an enabled sync rule applies to all repositories',
   args: {
     rule: { ...baseRule },
     projects: sampleProjects,
@@ -74,7 +74,7 @@ export const ScopeRepoEnabled: Story = {
 }
 
 export const ScopeAllDisabled: Story = {
-  name: 'a disabled sync rule for all projects appears inactive',
+  name: 'a disabled sync rule for all repositories appears inactive',
   args: {
     rule: { ...baseRule, enabled: false },
     projects: sampleProjects,

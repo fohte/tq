@@ -72,7 +72,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const NormalMessage: Story = {
-  name: 'the card shows a Slack message with its author and channel.',
+  name: 'the card shows a Slack message with its author and channel',
   args: {
     url: NORMAL_MESSAGE_URL,
     raw: NORMAL_MESSAGE_URL,
@@ -90,7 +90,7 @@ export const NormalMessage: Story = {
 }
 
 export const ThreadReply: Story = {
-  name: 'the card marks the Slack message as a reply in a private thread.',
+  name: 'the card marks the Slack message as a reply in a private thread',
   args: {
     url: THREAD_REPLY_URL,
     raw: THREAD_REPLY_URL,
@@ -108,7 +108,7 @@ export const ThreadReply: Story = {
 }
 
 export const LongText: Story = {
-  name: 'the card clamps a long Slack message to three lines.',
+  name: 'the card clamps a long Slack message to three lines',
   args: {
     url: LONG_TEXT_URL,
     raw: LONG_TEXT_URL,
@@ -126,7 +126,7 @@ export const LongText: Story = {
 }
 
 export const BotMessageWithoutAvatar: Story = {
-  name: 'the card shows a bot message without an author avatar.',
+  name: 'the card shows a bot message without an author avatar',
   args: {
     url: BOT_MESSAGE_URL,
     raw: BOT_MESSAGE_URL,
@@ -147,7 +147,7 @@ export const BotMessageWithoutAvatar: Story = {
 // permalink"): the card falls back to rendering the raw matched text while
 // its data is unresolved.
 export const Unresolved: Story = {
-  name: 'the card displays the raw link while the Slack preview is unresolved.',
+  name: 'the card displays the raw link while the Slack preview is unresolved',
   args: {
     url: UNRESOLVED_URL,
     raw: UNRESOLVED_URL,

@@ -14,7 +14,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Todo: Story = {
-  name: 'the icon indicates a task that is not yet complete.',
+  name: 'the icon indicates a task that is not yet complete',
   args: {
     status: 'todo',
     statusReason: null,
@@ -22,7 +22,7 @@ export const Todo: Story = {
 }
 
 export const Completed: Story = {
-  name: 'the icon indicates that the task is completed.',
+  name: 'the icon indicates that the task is completed',
   args: {
     status: 'completed',
     statusReason: null,
@@ -30,7 +30,7 @@ export const Completed: Story = {
 }
 
 export const NotPlanned: Story = {
-  name: 'the icon indicates a task that is not planned.',
+  name: 'the icon indicates a task that is not planned',
   args: {
     status: 'completed',
     statusReason: 'not_planned',
@@ -38,7 +38,7 @@ export const NotPlanned: Story = {
 }
 
 export const Duplicate: Story = {
-  name: 'the icon marks a task as a duplicate.',
+  name: 'the icon marks a task as a duplicate',
   args: {
     status: 'completed',
     statusReason: 'duplicate',

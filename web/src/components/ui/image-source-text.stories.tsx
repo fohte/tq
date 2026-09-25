@@ -19,7 +19,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const InlineImage: Story = {
-  name: 'shows an editable Markdown image source',
+  name: 'shows an editable inline Markdown image source',
   args: {
     initialText: '![a cat](https://example.com/cat.png)',
     editable: true,

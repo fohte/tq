@@ -34,11 +34,11 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const WithProjects: Story = {
-  name: 'the menu lists the available projects for the task.',
+  name: 'the menu lists the available projects for the task',
 }
 
 export const NoProjects: Story = {
-  name: 'the menu shows its empty state when no projects are available.',
+  name: 'the menu shows its empty state when no projects are available',
   args: {
     projects: [],
   },

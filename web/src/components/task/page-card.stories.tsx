@@ -97,27 +97,27 @@ export default meta
 type CardStory = StoryObj<typeof meta>
 
 export const Collapsed: CardStory = {
-  name: 'the card shows a page title with its content collapsed.',
+  name: 'the card shows a page title with its content collapsed',
   args: { page: samplePage, isExpanded: false, deleteDialogOpen: false },
 }
 
 export const Expanded: CardStory = {
-  name: 'the card opens the page content in its editor.',
+  name: 'the card opens the page content in its editor',
   args: { page: samplePage, isExpanded: true, deleteDialogOpen: false },
 }
 
 export const DeleteConfirmation: CardStory = {
-  name: 'the card shows a confirmation prompt before deleting the page.',
+  name: 'the card shows a confirmation prompt before deleting the page',
   args: { page: samplePage, isExpanded: false, deleteDialogOpen: true },
 }
 
 export const EmptyContent: CardStory = {
-  name: 'the card has no page content to preview.',
+  name: 'the card has no page content to preview',
   args: { page: emptyPage, isExpanded: false, deleteDialogOpen: false },
 }
 
 export const LlmAuthored: CardStory = {
-  name: 'the collapsed card marks the page as AI-authored.',
+  name: 'the collapsed card marks the page as AI-authored',
   args: {
     page: { ...samplePage, author: { kind: 'llm', agent: 'claude-opus-5' } },
     isExpanded: false,
@@ -126,11 +126,11 @@ export const LlmAuthored: CardStory = {
 }
 
 export const HtmlCollapsed: CardStory = {
-  name: 'the card shows an HTML page with its content collapsed.',
+  name: 'the card shows an HTML page with its content collapsed',
   args: { page: htmlPage, isExpanded: false, deleteDialogOpen: false },
 }
 
 export const HtmlExpanded: CardStory = {
-  name: 'the card expands an HTML page inside the editor.',
+  name: 'the card expands an HTML page inside the editor',
   args: { page: htmlPage, isExpanded: true, deleteDialogOpen: false },
 }

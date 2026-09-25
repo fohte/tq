@@ -36,11 +36,11 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  name: 'no project is selected in the filter fields.',
+  name: 'no project is selected in the filter fields',
 }
 
 export const ProjectSelected: Story = {
-  name: 'a project is selected in the filter fields.',
+  name: 'a project is selected in the filter fields',
   args: {
     selectedProjectId: 'proj-1',
   },

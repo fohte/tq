@@ -29,7 +29,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  name: 'the row actions appear when the row is hovered',
+  name: 'the desktop row actions trigger stays hidden before the row is hovered',
 }
 
 export const DesktopMenuOpen: Story = {

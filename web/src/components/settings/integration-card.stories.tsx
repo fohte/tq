@@ -106,7 +106,7 @@ export const MultiAccountTwoConnected: Story = {
 }
 
 export const Disconnecting: Story = {
-  name: 'a Google Calendar card shows one account while it disconnects',
+  name: 'a Google Calendar card shows two accounts while one is disconnecting',
   args: {
     ...MultiAccountTwoConnected.args,
     disconnectingAccountId: 'token-1',

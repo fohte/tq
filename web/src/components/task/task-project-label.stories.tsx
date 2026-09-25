@@ -49,6 +49,6 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  name: 'the task row displays its linked project title.',
+  name: 'the task row displays its linked project title',
   args: { projectId: sampleProject.id },
 }

@@ -76,12 +76,12 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Active: Story = {
-  name: 'the card shows an active project with its task summary.',
+  name: 'the card shows an active project with its task summary',
   args: { id: PROJECT_ID, raw: PROJECT_URL, project: baseProject },
 }
 
 export const NoTasksYet: Story = {
-  name: 'the card shows a project with no tasks or completion progress.',
+  name: 'the card shows a project with no tasks or completion progress',
   args: {
     id: PROJECT_ID,
     raw: PROJECT_URL,
@@ -94,7 +94,7 @@ export const NoTasksYet: Story = {
 }
 
 export const Completed: Story = {
-  name: 'the card shows a completed project with all tasks finished.',
+  name: 'the card shows a completed project with all tasks finished',
   args: {
     id: PROJECT_ID,
     raw: PROJECT_URL,
@@ -111,6 +111,6 @@ export const Completed: Story = {
 // actual project): the card falls back to rendering the raw matched text
 // while its data is unresolved.
 export const Unresolved: Story = {
-  name: 'the card falls back to the raw project link while details are unresolved.',
+  name: 'the card falls back to the raw project link while details are unresolved',
   args: { id: UNRESOLVED_ID, raw: UNRESOLVED_URL, project: null },
 }

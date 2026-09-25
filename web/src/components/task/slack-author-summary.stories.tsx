@@ -25,7 +25,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const WithAvatar: Story = {
-  name: 'the summary shows the author avatar beside the channel name.',
+  name: 'the summary shows the author avatar beside the channel name',
   args: {
     authorName: 'Hayato Kawai',
     authorAvatarUrl: AVATAR_URL,
@@ -34,7 +34,7 @@ export const WithAvatar: Story = {
 }
 
 export const WithoutAvatar: Story = {
-  name: 'the summary shows the author name and channel without an avatar.',
+  name: 'the summary shows the author name and channel without an avatar',
   args: {
     authorName: 'CI Bot',
     authorAvatarUrl: null,

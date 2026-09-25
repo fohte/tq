@@ -232,7 +232,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  name: 'the search dialog opens with its initial prompt and recent results',
+  name: 'the search dialog opens with its initial prompt and no recent items',
 }
 
 export const AllContexts: Story = {
@@ -241,7 +241,7 @@ export const AllContexts: Story = {
 }
 
 export const TaskMode: Story = {
-  name: 'the search dialog shows tasks matching a task number query',
+  name: 'the search dialog shows tasks whose titles match a keyword in task mode',
   args: { defaultContext: 'work', defaultQuery: `#${keyboardQuery}` },
 }
 

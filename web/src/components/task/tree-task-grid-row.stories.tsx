@@ -382,7 +382,7 @@ export const AllVariants: Story = {
 }
 
 export const Hovered: Story = {
-  name: 'hovering over a task row reveals its actions menu',
+  name: 'a task row keeps its action menu trigger hidden before hover',
   args: {
     node: { ...baseTreeNode, title: 'Hover to reveal the ⋯ actions menu' },
   },

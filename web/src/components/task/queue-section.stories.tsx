@@ -51,7 +51,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const DayQueue: Story = {
-  name: 'the day queue contains tasks scheduled for today.',
+  name: 'the day queue contains tasks scheduled for today',
   args: {
     queueKey: 'day',
     title: 'today',
@@ -70,7 +70,7 @@ export const DayQueue: Story = {
 }
 
 export const StaticQueueWithoutRange: Story = {
-  name: 'the static queue contains tasks without a date range.',
+  name: 'the static queue contains tasks without a date range',
   args: {
     queueKey: 'someday',
     title: 'someday',
@@ -86,7 +86,7 @@ export const StaticQueueWithoutRange: Story = {
 }
 
 export const Empty: Story = {
-  name: 'the queue shows its empty message without scheduled tasks.',
+  name: 'the queue shows its empty message without scheduled tasks',
   args: {
     queueKey: 'week',
     title: 'this week',

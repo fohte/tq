@@ -38,14 +38,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Empty: Story = {
-  name: 'the tags field has no labels attached to the task.',
+  name: 'the tags field has no labels attached to the task',
   args: {
     labels: [],
   },
 }
 
 export const WithTags: Story = {
-  name: 'the tags field shows the task’s attached labels.',
+  name: 'the tags field shows the task’s attached labels',
   args: {
     labels: ['dev:tq', 'chore'],
   },

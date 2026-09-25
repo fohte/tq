@@ -76,7 +76,7 @@ export const Auto: Story = {
 }
 
 export const Redacted: Story = {
-  name: 'a private calendar block shows a busy preview without event details',
+  name: 'a private calendar block appears as a busy chip without a preview',
   args: {
     event: redactedEvent,
     children: <Chip label="Busy" />,

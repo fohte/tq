@@ -12,7 +12,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const BothDates: Story = {
-  name: 'the badge shows both a start date and a due date.',
+  name: 'the badge shows both a start date and a due date',
   args: {
     startDate: '2099-06-15',
     // Far future so this story never flips to overdue.
@@ -22,7 +22,7 @@ export const BothDates: Story = {
 }
 
 export const StartDateOnly: Story = {
-  name: 'the badge shows only a start date.',
+  name: 'the badge shows only a start date',
   args: {
     startDate: '2099-06-15',
     dueDate: null,
@@ -31,7 +31,7 @@ export const StartDateOnly: Story = {
 }
 
 export const DueDateOnly: Story = {
-  name: 'the badge shows only a due date.',
+  name: 'the badge shows only a due date',
   args: {
     startDate: null,
     dueDate: '2099-06-18',
@@ -40,7 +40,7 @@ export const DueDateOnly: Story = {
 }
 
 export const Overdue: Story = {
-  name: 'the badge marks a task whose due date has passed.',
+  name: 'the badge marks a task whose due date has passed',
   args: {
     startDate: '2020-01-01',
     // Fixed past date so this story always renders as overdue.
@@ -50,7 +50,7 @@ export const Overdue: Story = {
 }
 
 export const OverdueCompleted: Story = {
-  name: 'the badge marks an overdue task that is already completed.',
+  name: 'the badge marks an overdue task that is already completed',
   args: {
     startDate: '2020-01-01',
     dueDate: '2020-01-05',
@@ -59,7 +59,7 @@ export const OverdueCompleted: Story = {
 }
 
 export const AllVariants: Story = {
-  name: 'the badge compares all available date states.',
+  name: 'the badge compares all available date states',
   args: {
     startDate: '2099-06-15',
     dueDate: '2099-06-18',

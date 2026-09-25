@@ -28,7 +28,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const SingleLabel: Story = {
-  name: 'a task displays one label token.',
+  name: 'a task displays one label token',
   args: {
     labels: ['dev:tq'],
     isCompleted: false,
@@ -36,7 +36,7 @@ export const SingleLabel: Story = {
 }
 
 export const MultipleLabels: Story = {
-  name: 'a task displays several label tokens.',
+  name: 'a task displays several label tokens',
   args: {
     labels: ['dev:tq', 'chore', 'urgent'],
     isCompleted: false,
@@ -44,7 +44,7 @@ export const MultipleLabels: Story = {
 }
 
 export const CompletedTask: Story = {
-  name: 'completed tasks display labels in their completed style.',
+  name: 'completed tasks display labels in their completed style',
   args: {
     labels: ['dev:tq'],
     isCompleted: true,

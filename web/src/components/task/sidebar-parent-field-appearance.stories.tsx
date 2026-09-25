@@ -46,11 +46,11 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const NoParent: Story = {
-  name: 'the parent field has no task selected.',
+  name: 'the parent field has no task selected',
 }
 
 export const WithParent: Story = {
-  name: 'the parent field shows the selected parent task.',
+  name: 'the parent field shows the selected parent task',
   args: {
     currentParent: {
       number: existingParentTask.number,
@@ -60,14 +60,14 @@ export const WithParent: Story = {
 }
 
 export const Editing: Story = {
-  name: 'the parent field is open for editing.',
+  name: 'the parent field is open for editing',
   args: {
     isEditing: true,
   },
 }
 
 export const EditingWithCandidates: Story = {
-  name: 'the parent picker lists tasks matching the entered query.',
+  name: 'the parent picker lists tasks matching the entered query',
   args: {
     isEditing: true,
     query: 'Deploy',

@@ -46,7 +46,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const NoProject: Story = {
-  name: 'the project field shows a task without a project.',
+  name: 'the project field shows a task without a project',
   args: {
     taskId,
     projectId: null,
@@ -63,7 +63,7 @@ export const NoProject: Story = {
 }
 
 export const WithProject: Story = {
-  name: 'the project field shows the task’s selected project.',
+  name: 'the project field shows the task’s selected project',
   args: {
     taskId,
     projectId: projectA.id,

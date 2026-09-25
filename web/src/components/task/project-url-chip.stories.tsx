@@ -78,7 +78,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Active: Story = {
-  name: 'the chip opens a preview card for an active project.',
+  name: 'the chip opens a preview card for an active project',
   args: {
     id: PROJECT_ID,
     raw: PROJECT_URL,
@@ -88,7 +88,7 @@ export const Active: Story = {
 }
 
 export const Paused: Story = {
-  name: 'the chip shows a paused project in its preview.',
+  name: 'the chip marks a paused project inline',
   args: {
     id: PROJECT_ID,
     raw: PROJECT_URL,
@@ -97,7 +97,7 @@ export const Paused: Story = {
 }
 
 export const Completed: Story = {
-  name: 'the chip shows a completed project in its preview.',
+  name: 'the chip marks a completed project inline',
   args: {
     id: PROJECT_ID,
     raw: PROJECT_URL,
@@ -109,6 +109,6 @@ export const Completed: Story = {
 // actual project): the chip falls back to rendering the raw matched text
 // instead of a card.
 export const Unresolved: Story = {
-  name: 'the chip falls back to the raw project link while details are unresolved.',
+  name: 'the chip falls back to the raw project link while details are unresolved',
   args: { id: UNRESOLVED_ID, raw: UNRESOLVED_URL, project: null },
 }

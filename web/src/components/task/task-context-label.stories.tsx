@@ -12,14 +12,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Work: Story = {
-  name: 'the label marks a task as work related.',
+  name: 'the label marks a task as work related',
   args: {
     context: 'work',
   },
 }
 
 export const Personal: Story = {
-  name: 'the label marks a task as personal.',
+  name: 'the label marks a task as personal',
   args: {
     context: 'personal',
   },

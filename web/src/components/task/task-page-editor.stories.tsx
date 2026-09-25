@@ -66,7 +66,7 @@ export default meta
 type SubpageStory = StoryObj<typeof meta>
 
 export const Default: SubpageStory = {
-  name: 'the editor shows a populated markdown page.',
+  name: 'the editor shows a populated markdown page',
   args: {
     taskId: 'task-001',
     pageId: 'page-001',
@@ -79,7 +79,7 @@ export const Default: SubpageStory = {
 }
 
 export const Empty: SubpageStory = {
-  name: 'the editor shows an empty markdown page.',
+  name: 'the editor shows an empty markdown page',
   args: {
     taskId: 'task-001',
     pageId: 'page-002',
@@ -90,7 +90,7 @@ export const Empty: SubpageStory = {
 }
 
 export const DefaultSP: SubpageStory = {
-  name: 'the populated page editor fits the mobile viewport.',
+  name: 'the populated page editor fits the mobile viewport',
   args: Default.args,
   tags: ['mobile-only'],
   parameters: {

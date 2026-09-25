@@ -35,7 +35,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  name: 'the mobile tab bar shows its navigation with no section selected',
+  name: 'the mobile tab bar highlights the calendar section on the home route',
   args: {
     currentPath: '/',
   },

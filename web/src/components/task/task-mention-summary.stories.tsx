@@ -19,7 +19,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Todo: Story = {
-  name: 'the summary shows an unfinished task mention.',
+  name: 'the summary shows an unfinished task mention',
   args: {
     status: 'todo',
     number: 42,
@@ -28,7 +28,7 @@ export const Todo: Story = {
 }
 
 export const Completed: Story = {
-  name: 'the summary shows a completed task mention.',
+  name: 'the summary shows a completed task mention',
   args: {
     status: 'completed',
     number: 1,
@@ -37,7 +37,7 @@ export const Completed: Story = {
 }
 
 export const TruncatedTitle: Story = {
-  name: 'the summary truncates a long task title.',
+  name: 'the summary truncates a long task title',
   args: {
     status: 'todo',
     number: 123,

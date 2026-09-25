@@ -41,7 +41,7 @@ export const Enabling: Story = {
 }
 
 export const Enabled: Story = {
-  name: 'push notifications are enabled',
+  name: 'the notification settings show push notifications enabled',
   args: { status: 'enabled' },
 }
 

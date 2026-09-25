@@ -97,7 +97,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Empty: Story = {
-  name: 'the activity timeline has no comments or events.',
+  name: 'the activity timeline has no comments or events',
   args: {
     comments: [],
     events: [],
@@ -105,7 +105,7 @@ export const Empty: Story = {
 }
 
 export const WithComments: Story = {
-  name: 'the timeline shows several comments.',
+  name: 'the timeline shows several comments',
   args: {
     comments: baseComments,
     events: [],
@@ -115,7 +115,7 @@ export const WithComments: Story = {
 const [firstComment] = baseComments
 
 export const SingleComment: Story = {
-  name: 'the timeline shows a single comment.',
+  name: 'the timeline shows a single comment',
   args: {
     comments: firstComment ? [firstComment] : [],
     events: [],
@@ -123,7 +123,7 @@ export const SingleComment: Story = {
 }
 
 export const ManyComments: Story = {
-  name: 'the timeline shows enough comments to fill a long list.',
+  name: 'the timeline shows enough comments to fill a long list',
   args: {
     comments: Array.from({ length: 10 }, (_, i) => ({
       id: `comment-${String(i)}`,
@@ -138,7 +138,7 @@ export const ManyComments: Story = {
 }
 
 export const LlmAuthored: Story = {
-  name: 'the timeline includes a comment authored by an LLM.',
+  name: 'the timeline includes a comment authored by an LLM',
   args: {
     comments: [
       ...baseComments,
@@ -156,7 +156,7 @@ export const LlmAuthored: Story = {
 }
 
 export const MixedTimeline: Story = {
-  name: 'the timeline combines comments with task events.',
+  name: 'the timeline combines comments with task events',
   args: {
     comments: [
       {

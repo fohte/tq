@@ -106,14 +106,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Sidebar: Story = {
-  name: 'the sidebar shows a task with its usual details.',
+  name: 'the sidebar shows a task with its usual details',
   args: {
     task: { ...baseTask },
   },
 }
 
 export const SidebarMinimal: Story = {
-  name: 'a minimal task leaves optional sidebar fields empty.',
+  name: 'a minimal task leaves optional sidebar fields empty',
   args: {
     task: {
       ...baseTask,
@@ -130,7 +130,7 @@ export const SidebarMinimal: Story = {
 // frame, pushing the GitHub link section below the fold and leaving this
 // screenshot identical to Sidebar.
 export const SidebarWithGithubLink: Story = {
-  name: 'a GitHub issue appears in the task sidebar.',
+  name: 'a GitHub issue appears in the task sidebar',
   tags: ['desktop-only'],
   args: {
     task: {
@@ -147,7 +147,7 @@ const sampleProject: ProjectDetail = makeProjectDetail({
 })
 
 export const SidebarWithProject: Story = {
-  name: 'the linked project appears in the task sidebar.',
+  name: 'the linked project appears in the task sidebar',
   args: {
     task: { ...baseTask, projectId: sampleProject.id },
     project: sampleProject,
@@ -158,7 +158,7 @@ export const SidebarWithProject: Story = {
 // frame, pushing TIME BLOCKS — the one thing this story adds — out of the
 // screenshot and leaving it identical to Sidebar.
 export const SidebarWithTimeBlocks: Story = {
-  name: 'scheduled and manual time blocks appear in the task sidebar.',
+  name: 'scheduled and manual time blocks appear in the task sidebar',
   tags: ['desktop-only'],
   args: {
     task: {
@@ -187,7 +187,7 @@ export const SidebarWithTimeBlocks: Story = {
 // to exercise the "Close as" group (completed / not planned / duplicate),
 // which the closed trigger alone never renders.
 export const SidebarCompletedOpen: Story = {
-  name: 'the status menu is open for a completed task.',
+  name: 'the status menu is open for a completed task',
   args: {
     task: { ...baseTask, status: 'completed', statusReason: 'completed' },
     defaultOpen: true,
@@ -195,7 +195,7 @@ export const SidebarCompletedOpen: Story = {
 }
 
 export const SidebarNotPlannedOpen: Story = {
-  name: 'the status menu is open for a task marked not planned.',
+  name: 'the status menu is open for a task marked not planned',
   args: {
     task: { ...baseTask, status: 'completed', statusReason: 'not_planned' },
     defaultOpen: true,
@@ -203,7 +203,7 @@ export const SidebarNotPlannedOpen: Story = {
 }
 
 export const SidebarDuplicateOpen: Story = {
-  name: 'the status menu is open for a duplicate task.',
+  name: 'the status menu is open for a duplicate task',
   args: {
     task: { ...baseTask, status: 'completed', statusReason: 'duplicate' },
     defaultOpen: true,
@@ -214,7 +214,7 @@ export const MobileSidebar: StoryObj<{
   task: TaskDetail
   project?: ProjectDetail | undefined
 }> = {
-  name: 'task details appear in the compact mobile sidebar.',
+  name: 'task details appear in the compact mobile sidebar',
   args: {
     task: { ...baseTask },
   },

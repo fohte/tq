@@ -81,7 +81,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Todo: Story = {
-  name: 'a mention chip opens the preview for an unfinished task.',
+  name: 'a mention chip opens the preview for an unfinished task',
   args: {
     number: baseTask.number,
     raw: `#${String(baseTask.number)}`,
@@ -91,7 +91,7 @@ export const Todo: Story = {
 }
 
 export const Completed: Story = {
-  name: 'the mention chip represents a completed task.',
+  name: 'the mention chip represents a completed task',
   args: {
     number: baseTask.number,
     raw: `#${String(baseTask.number)}`,
@@ -100,7 +100,7 @@ export const Completed: Story = {
 }
 
 export const LongTitle: Story = {
-  name: 'the chip truncates a long task title.',
+  name: 'the chip truncates a long task title',
   args: {
     number: baseTask.number,
     raw: `#${String(baseTask.number)}`,
@@ -116,6 +116,6 @@ export const LongTitle: Story = {
 // exist): the chip falls back to rendering the raw matched text instead of
 // a card.
 export const Unresolved: Story = {
-  name: 'the chip shows raw mention text while its task is unresolved.',
+  name: 'the chip shows raw mention text while its task is unresolved',
   args: { number: 999, raw: '#999', task: null },
 }
