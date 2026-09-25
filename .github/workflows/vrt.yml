@@ -70,6 +70,9 @@ jobs:
       - uses: fohte/storybook-vrt-workflows/vrt-report@691148d6e8e53b86c8f93b5b54cadbd8308b06d3 # v0.1.6
         with:
           package-dir: web
+          # report:vrt in web/package.json resolves --baseline-dir from the published URL.
+          # Keep its depth in sync with --output under custom/.
+          report-command: pnpm run report:vrt
           r2-bucket: tq-vrt
           github-token: ${{ secrets.GITHUB_TOKEN }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}

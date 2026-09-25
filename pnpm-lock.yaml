@@ -446,6 +446,9 @@ importers:
       '@fohte/storybook-addon':
         specifier: 0.2.0
         version: 0.2.0(@storybook/addon-vitest@10.6.0(@vitest/browser-playwright@4.1.11)(@vitest/browser@4.1.11(msw@2.15.0(@types/node@24.13.5)(typescript@6.0.3))(vite@8.3.0(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.13)(yaml@2.9.0))(vitest@4.1.11))(@vitest/runner@4.1.11)(react@19.2.8)(storybook@10.6.0(@types/react@19.3.0)(prettier@3.9.7)(react@19.2.8))(vitest@4.1.11))(@storycap-testrun/browser@3.1.0(@vitest/browser-playwright@4.1.11))(@vitest/browser-playwright@4.1.11)(storybook@10.6.0(@types/react@19.3.0)(prettier@3.9.7)(react@19.2.8))(vitest@4.1.11)
+      '@fohte/vrt-report':
+        specifier: 0.1.0
+        version: 0.1.0
       '@storybook/addon-a11y':
         specifier: 10.6.0
         version: 10.6.0(storybook@10.6.0(@types/react@19.3.0)(prettier@3.9.7)(react@19.2.8))
@@ -2267,6 +2270,11 @@ packages:
 
   '@fohte/ui@0.1.0':
     resolution: {integrity: sha512-J2PtgJ9XwH1ECyHpFjE00T67JeY7dGTZOnmZYDp5Ni2eszlR7nb7A8D6BVJL6sldSlCX02awPBnGH8NBp14Ifg==}
+
+  '@fohte/vrt-report@0.1.0':
+    resolution: {integrity: sha512-n5J3EZGFItnQfvQJgoEfDMwzZT4BEqlSZYAXMseFAlzyyKOYwqhCSYoAAYhKf8kPtMQdzkBQTZ/1gDuEUjtH9g==}
+    engines: {node: '>=24'}
+    hasBin: true
 
   '@fontsource-variable/jetbrains-mono@5.2.8':
     resolution: {integrity: sha512-WBA9elru6Jdp5df2mES55wuOO0WIrn3kpXnI4+W2ek5u3ZgLS9XS4gmIlcQhiZOWEKl95meYdvK7xI+ETLCq/Q==}
@@ -11560,6 +11568,10 @@ snapshots:
       '@vitest/browser-playwright': 4.1.11(msw@2.15.0(@types/node@24.13.5)(typescript@6.0.3))(playwright@1.63.0)(vite@8.3.0(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.13)(yaml@2.9.0))(vitest@4.1.11)
 
   '@fohte/ui@0.1.0': {}
+
+  '@fohte/vrt-report@0.1.0':
+    dependencies:
+      neverthrow: 8.2.0
 
   '@fontsource-variable/jetbrains-mono@5.2.8': {}
 
