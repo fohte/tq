@@ -20,6 +20,8 @@ type PageSearchResult = InferResponseType<
 >['results'][number]
 type SearchContext = 'work' | 'personal'
 
+export const SEARCH_QUERY_DEBOUNCE_MS = 200
+
 export type { PageSearchResult, SearchResult, Suggestion }
 
 export const searchKeys = {
@@ -44,14 +46,14 @@ export function resolveSearchContext(
 }
 
 function useDebouncedSearchQuery(query: string) {
-  return useDebounce(query, 200)
+  return useDebounce(query, SEARCH_QUERY_DEBOUNCE_MS)
 }
 
 export function useSearchTasks(query: string, defaultContext?: SearchContext) {
   const debouncedQuery = useDebouncedSearchQuery(query)
   const context = resolveSearchContext(debouncedQuery, defaultContext)
 
-  return useQuery({
+  const queryResult = useQuery({
     queryKey: searchKeys.results(debouncedQuery, context),
     queryFn: async () => {
       const res = await api.api.tasks.$get({
@@ -69,6 +71,8 @@ export function useSearchTasks(query: string, defaultContext?: SearchContext) {
       return prevContext === context ? prev : undefined
     },
   })
+
+  return { ...queryResult, isDebouncing: debouncedQuery !== query }
 }
 
 export function extractTaskNumber(query: string): string | undefined {
@@ -110,7 +114,7 @@ export function useSearchTaskByNumber(query: string) {
   const debouncedQuery = useDebouncedSearchQuery(query)
   const taskNumber = extractTaskNumber(debouncedQuery)
 
-  return useQuery({
+  const queryResult = useQuery({
     queryKey: searchKeys.number(taskNumber),
     queryFn: async () => {
       if (taskNumber == null) return null
@@ -129,12 +133,14 @@ export function useSearchTaskByNumber(query: string) {
       return false
     },
   })
+
+  return { ...queryResult, isDebouncing: debouncedQuery !== query }
 }
 
 export function useSearchPages(query: string) {
-  const debouncedQuery = useDebounce(query, 200)
+  const debouncedQuery = useDebounce(query, SEARCH_QUERY_DEBOUNCE_MS)
 
-  return useQuery({
+  const queryResult = useQuery({
     queryKey: searchKeys.pages(debouncedQuery),
     queryFn: async () => {
       const res = await api.api.tasks.search.pages.$get({
@@ -146,6 +152,8 @@ export function useSearchPages(query: string) {
     },
     enabled: debouncedQuery.length > 0,
   })
+
+  return { ...queryResult, isDebouncing: debouncedQuery !== query }
 }
 /**
  * Extract the token currently being typed (the last whitespace-delimited

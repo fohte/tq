@@ -92,7 +92,7 @@ export function useSearchModalResultGroups({
   resultGroups: ResultGroup[]
   hasVisibleResults: boolean
 } {
-  return useMemo(() => {
+  const { resultGroups: baseResultGroups, hasVisibleResults } = useMemo(() => {
     const recentListItems =
       query === ''
         ? createRecentSearchItems(
@@ -229,27 +229,6 @@ export function useSearchModalResultGroups({
     const hasVisibleResults = resultGroups.some((group) =>
       group.isVisible(query, group.items.length),
     )
-    if (
-      hasActiveScope &&
-      hasSearchQuery &&
-      !isSearchPending &&
-      !hasVisibleResults
-    ) {
-      resultGroups.push({
-        id: 'search-everywhere',
-        title: 'Search',
-        items: [
-          createOptionItem(
-            'search-everywhere',
-            onSearchEverywhere,
-            <span className="font-mono text-sm text-primary">
-              Search everywhere
-            </span>,
-          ),
-        ],
-        isVisible: () => true,
-      })
-    }
 
     return { resultGroups, hasVisibleResults }
   }, [
@@ -280,8 +259,43 @@ export function useSearchModalResultGroups({
     canSearchViews,
     canSuggest,
     hasSearchQuery,
+  ])
+
+  const resultGroups = useMemo(() => {
+    if (
+      !hasActiveScope ||
+      !hasSearchQuery ||
+      isSearchPending ||
+      hasVisibleResults
+    ) {
+      return baseResultGroups
+    }
+
+    return [
+      ...baseResultGroups,
+      {
+        id: 'search-everywhere',
+        title: 'Search',
+        items: [
+          createOptionItem(
+            'search-everywhere',
+            onSearchEverywhere,
+            <span className="font-mono text-sm text-primary">
+              Search everywhere
+            </span>,
+          ),
+        ],
+        isVisible: () => true,
+      },
+    ]
+  }, [
+    baseResultGroups,
     hasActiveScope,
+    hasSearchQuery,
     isSearchPending,
+    hasVisibleResults,
     onSearchEverywhere,
   ])
+
+  return { resultGroups, hasVisibleResults }
 }

@@ -25,6 +25,7 @@ import { useProjects } from '#hooks/use-projects'
 import { useSavedViews } from '#hooks/use-saved-views'
 import {
   resolveSearchContext,
+  SEARCH_QUERY_DEBOUNCE_MS,
   useSearchPages,
   useSearchSuggestions,
   useSearchTaskByNumber,
@@ -97,16 +98,21 @@ export function SearchModal({
     searchMode === 'commands'
       ? undefined
       : resolveSearchContext(searchQuery, defaultSearchContext)
+  const parsedSearchQuery = parseSearchQuery(searchQuery)
+  const hasTaskSearchScope = searchMode == null || searchMode === 'tasks'
   const hasActiveScope =
-    searchMode !== 'commands' &&
-    (searchScopeTokens.length > 0 || context != null)
+    (hasTaskSearchScope && (searchScopeTokens.length > 0 || context != null)) ||
+    (searchMode === 'projects' && context != null) ||
+    (searchMode === 'pages' && parsedSearchQuery.projectId != null)
   const canPopScope = searchInputValue === '' && searchScopeTokens.length > 0
   const canClearContext =
     searchInputValue === '' && searchScopeTokens.length === 0 && context != null
-  const freeTextQuery = parseSearchQuery(searchQuery).freeText
-  const debouncedSearchQuery = useDebounce(searchQuery, 200)
-  const debouncedFreeTextQuery = useDebounce(freeTextQuery, 200)
-  const debouncedContext = useDebounce(context, 200)
+  const freeTextQuery = parsedSearchQuery.freeText
+  const debouncedFreeTextQuery = useDebounce(
+    freeTextQuery,
+    SEARCH_QUERY_DEBOUNCE_MS,
+  )
+  const debouncedContext = useDebounce(context, SEARCH_QUERY_DEBOUNCE_MS)
   const searchFilter =
     debouncedFreeTextQuery.length > 0
       ? {
@@ -117,11 +123,18 @@ export function SearchModal({
   const hasAuxiliarySearch = freeTextQuery.length > 0
   const searchScopeLabels = useSearchScopeLabels(searchScopeTokens, open)
 
-  const handleRemoveContext = () => {
-    setQuery(`${modePrefix ?? ''}${removeSearchContextTokens(searchQuery)}`)
-    setIsContextCleared(true)
-    inputRef.current?.focus()
-  }
+  const clearContext = useCallback(
+    (value: string) => {
+      setQuery(`${modePrefix ?? ''}${removeSearchContextTokens(value)}`)
+      setIsContextCleared(true)
+      inputRef.current?.focus()
+    },
+    [modePrefix],
+  )
+
+  const handleRemoveContext = useCallback(() => {
+    clearContext(searchQuery)
+  }, [clearContext, searchQuery])
 
   const handleRemoveScopeToken = (index: number) => {
     setQuery(`${modePrefix ?? ''}${removeSearchScopeToken(searchQuery, index)}`)
@@ -132,13 +145,14 @@ export function SearchModal({
   const canSearchProjects = searchMode == null || searchMode === 'projects'
   const canSearchPages =
     (searchMode == null || searchMode === 'pages') &&
-    parseSearchQuery(searchQuery).projectId == null
+    parsedSearchQuery.projectId == null
   const canSearchViews = searchMode == null
   const canSuggest = searchMode == null
-  const { data: tasks, isFetching: isFetchingTasks } = useSearchTasks(
-    canSearchTasks ? searchQuery : '',
-    defaultSearchContext,
-  )
+  const {
+    data: tasks,
+    isFetching: isFetchingTasks,
+    isDebouncing: isDebouncingTasks,
+  } = useSearchTasks(canSearchTasks ? searchQuery : '', defaultSearchContext)
   const { data: projects, isFetching: isFetchingProjects } = useProjects(
     searchFilter,
     {
@@ -152,11 +166,16 @@ export function SearchModal({
     },
   )
 
-  const { data: taskByNumber, isFetching: isFetchingTaskByNumber } =
-    useSearchTaskByNumber(canSearchTasks ? searchQuery : '')
-  const { data: pages, isFetching: isFetchingPages } = useSearchPages(
-    canSearchPages ? searchQuery : '',
-  )
+  const {
+    data: taskByNumber,
+    isFetching: isFetchingTaskByNumber,
+    isDebouncing: isDebouncingTaskByNumber,
+  } = useSearchTaskByNumber(canSearchTasks ? searchQuery : '')
+  const {
+    data: pages,
+    isFetching: isFetchingPages,
+    isDebouncing: isDebouncingPages,
+  } = useSearchPages(canSearchPages ? searchQuery : '')
   const isFetching =
     isFetchingTasks ||
     isFetchingTaskByNumber ||
@@ -165,17 +184,16 @@ export function SearchModal({
     isFetchingSavedViews
   const isSearchPending =
     isFetching ||
-    debouncedSearchQuery !== searchQuery ||
+    isDebouncingTasks ||
+    isDebouncingTaskByNumber ||
+    isDebouncingPages ||
     debouncedFreeTextQuery !== freeTextQuery ||
     debouncedContext !== context
   const { data: suggestions } = useSearchSuggestions(currentPrefix)
 
   const handleSearchEverywhere = useCallback(() => {
-    const unscopedInputValue = removeSearchContextTokens(searchInputValue)
-    setQuery(`${modePrefix ?? ''}${unscopedInputValue}`)
-    setIsContextCleared(true)
-    inputRef.current?.focus()
-  }, [modePrefix, searchInputValue])
+    clearContext(searchInputValue)
+  }, [clearContext, searchInputValue])
 
   useEffect(() => {
     if (open) {
