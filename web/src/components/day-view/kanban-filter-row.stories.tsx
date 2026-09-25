@@ -55,7 +55,7 @@ export const Default: Story = {
 }
 
 export const SearchHelpOpen: Story = {
-  name: 'shows the search help popover beside the query field',
+  name: 'the search syntax help is open',
   args: {
     query: '',
     defaultOpenSearchHelp: true,
