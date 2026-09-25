@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { fn } from 'storybook/test'
 
+import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
 import { makeSuggestion } from '#components/search/search-test-fixtures'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
 import { searchKeys } from '#hooks/use-search'
@@ -41,6 +42,9 @@ const meta = {
     freeText: 'hello',
     onCommit: fn(),
     onBackspaceEmpty: fn(),
+    syntaxHelpSections: getSearchSyntaxHelpSections({
+      audience: 'task-filter',
+    }),
   },
 } satisfies Meta<typeof TaskFilterFreeTextInput>
 
@@ -52,6 +56,14 @@ export const Default: Story = {}
 export const Empty: Story = {
   args: {
     freeText: '',
+    placeholder: 'Filter…',
+  },
+}
+
+export const SyntaxHelpFocused: Story = {
+  args: {
+    freeText: '',
+    autoFocus: true,
     placeholder: 'Filter…',
   },
 }
@@ -71,6 +83,7 @@ suggestionsQueryClient.setQueryData(
 export const WithSuggestionsOpen: Story = {
   args: {
     freeText: 'is:',
+    autoFocus: true,
   },
   decorators: [
     (Story) => (

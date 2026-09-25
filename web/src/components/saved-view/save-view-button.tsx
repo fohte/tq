@@ -47,9 +47,13 @@ export function SaveViewButton({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={
-          <Button variant="ghost" size="sm" className="shrink-0">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="shrink-0 md:h-7 md:w-auto md:gap-1 md:px-2.5"
+          >
             <Bookmark data-icon="inline-start" />
-            Save view
+            <span className="sr-only md:not-sr-only">Save view</span>
           </Button>
         }
       />

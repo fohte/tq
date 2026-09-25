@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { ArrowDownWideNarrow, CircleDot, Tag } from 'lucide-react'
 
 import { TaskFilterChip } from '#components/task/task-filter-chip'
 
@@ -6,6 +7,7 @@ const meta = {
   title: 'Task/TaskFilterChip',
   component: TaskFilterChip,
   args: {
+    icon: CircleDot,
     attribute: 'is',
     value: 'todo, doing',
     menuTitle: 'Status',
@@ -16,13 +18,28 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  args: { onRemove: () => undefined },
+}
 
 export const LabelChip: Story = {
   args: {
+    icon: Tag,
     attribute: 'label',
-    value: '#infra',
+    value: 'infra',
     menuTitle: 'Label',
+    onRemove: () => undefined,
+  },
+}
+
+export const DefaultSort: Story = {
+  args: {
+    icon: ArrowDownWideNarrow,
+    attribute: 'sort',
+    value: 'updated',
+    menuTitle: 'Sort',
+    isDefault: true,
+    onRemove: undefined,
   },
 }
 

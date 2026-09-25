@@ -16,6 +16,10 @@ queryClient.setQueryData(taskKeys.detail('parent-abc'), {
   id: 'parent-abc',
   title: 'Version bump the home cluster',
 })
+queryClient.setQueryData(taskKeys.detail('parent-wrap'), {
+  id: 'parent-wrap',
+  title: 'Review accessibility across compact task views',
+})
 
 const emptySuggestHandler = http.get('/api/tasks/search/suggest', () =>
   HttpResponse.json([]),
@@ -61,6 +65,7 @@ export const Default: Story = {}
 export const SaveViewHidden: Story = {
   args: {
     hideSaveView: true,
+    parsed: makeParsedQuery({ sortBy: 'created' }),
   },
 }
 
@@ -71,10 +76,6 @@ export const NoFilters: Story = {
 }
 
 export const SortByCreated: Story = {
-  // The sort chip's value text is hidden below `md` (see the `hidden
-  // md:inline` span in TaskFilterChipRow), so this story is visually
-  // identical to Default on the mobile viewport.
-  tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, sortBy: 'created' },
   },
@@ -104,9 +105,9 @@ export const FreeTextInInput: Story = {
   },
 }
 
-export const SearchHelpOpen: Story = {
+export const SyntaxHelpFocused: Story = {
   args: {
-    defaultOpenSearchHelp: true,
+    autoFocus: true,
   },
 }
 
@@ -116,9 +117,7 @@ export const ParentIdChip: Story = {
   },
 }
 
-// Every applied filter chip opens a menu scoped to just that axis, where
-// both changing the value and removing the condition happen — no need to
-// leave the chip and re-add the condition elsewhere.
+// Each applied filter chip opens a menu scoped to that axis.
 export const OpenStatusMenu: Story = {
   tags: ['desktop-only'],
   args: {
@@ -159,17 +158,52 @@ export const OpenParentMenu: Story = {
   },
 }
 
-// Sort is pinned to the row's right edge, outside the wrapping chip area,
-// and opens the same kind of menu as any other axis chip.
 export const OpenSortMenu: Story = {
   tags: ['desktop-only'],
-  args: {
-    defaultOpenFilter: 'sort',
-  },
+  args: { defaultOpenFilter: 'sort' },
 }
 
 export const ParentAndLabelChips: Story = {
   args: {
     parsed: { ...defaultParsed, parentId: 'parent-abc', label: 'dev:tq' },
+  },
+}
+
+export const ChangedFilters: Story = {
+  args: {
+    parsed: makeParsedQuery({
+      status: ['todo', 'completed'],
+      projectId: 'proj-1',
+      label: 'research',
+      sortBy: 'estimate',
+    }),
+  },
+}
+
+export const ManyFiltersWrap: Story = {
+  decorators: [
+    (Story) => (
+      <div className="max-w-2xl border border-border bg-background">
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    parsed: makeParsedQuery({
+      status: ['todo', 'completed'],
+      projectId: 'proj-1',
+      label: 'research',
+      hasPages: true,
+      parentId: 'parent-wrap',
+      sortBy: 'estimate',
+    }),
+  },
+}
+
+export const ProjectScoped: Story = {
+  args: {
+    hideSaveView: true,
+    disableProjectFilter: true,
+    parsed: makeParsedQuery({ projectId: 'proj-1' }),
   },
 }

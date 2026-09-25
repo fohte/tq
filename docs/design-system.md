@@ -1,10 +1,9 @@
 # Design system
 
 Contract reference for tq's web UI design system: a near-monochrome dark
-palette with one red accent used only as punctuation, zero border-radius, 1px
-borders, and monospace UI chrome — plus GitHub's own brand colors for
-PR/issue state, the one deliberate exception to the single-accent rule (see
-[GitHub status colors](#github-status-colors)). Modeled on the
+palette with a red accent used as punctuation, blue reserved for task-filter
+values, zero border-radius, 1px borders, and monospace UI chrome — plus
+GitHub's own brand colors for PR/issue state. Modeled on the
 [fohte.net](https://fohte.net) design system.
 
 Source of truth for every value in this doc:
@@ -95,14 +94,14 @@ introduce a new gray value; use the nearest existing tier.
 | `--border-strong` | `#71717a` | `border-border-strong` | Emphasized 1px border — active tab, primary button |
 | `--input`         | `#2a2a2a` | `border-input`         | Form input border (same value as `--border`)       |
 
-### Accent (the one color)
+### Red accent
 
-| Token                  | Value     | Tailwind utility                                 | Usage                                                                                                                                                                           |
-| ---------------------- | --------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--primary`            | `#ef4444` | `text-primary` / `bg-primary` / `border-primary` | The one red accent. Used broadly across existing components as punctuation: active nav state, links, focus borders. **Not** reused by `Button`'s primary look — see note below. |
-| `--primary-foreground` | `#fafafa` | `text-primary-foreground`                        | Text on `bg-primary`                                                                                                                                                            |
-| `--destructive`        | `#ef4444` | `text-destructive` / `border-destructive`        | Same red value as `--primary` — this design has one hue for both "accent" and "danger", not two                                                                                 |
-| `--ring`               | `#ef4444` | `ring-ring`                                      | Focus ring color                                                                                                                                                                |
+| Token                  | Value     | Tailwind utility                                 | Usage                                                                                                                                                                       |
+| ---------------------- | --------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--primary`            | `#ef4444` | `text-primary` / `bg-primary` / `border-primary` | The red accent. Used broadly across existing components as punctuation: active nav state, links, focus borders. **Not** reused by `Button`'s primary look — see note below. |
+| `--primary-foreground` | `#fafafa` | `text-primary-foreground`                        | Text on `bg-primary`                                                                                                                                                        |
+| `--destructive`        | `#ef4444` | `text-destructive` / `border-destructive`        | Same red value as `--primary` — this design has one hue for both "accent" and "danger", not two                                                                             |
+| `--ring`               | `#ef4444` | `ring-ring`                                      | Focus ring color                                                                                                                                                            |
 
 > **Why `Button`'s primary variant doesn't use `--primary`:** `--primary` is
 > consumed by dozens of existing components (active nav state, links, focus
@@ -114,6 +113,16 @@ introduce a new gray value; use the nearest existing tier.
 > rule. Follow the same reasoning in screen PRs: reach for `--primary` when
 > you want a small red accent, and for `--border-strong`/`--surface-strong`
 > when you want an emphasized gray surface.
+
+### Task-filter value accent
+
+| Token                            | Value                   | Tailwind utility                    | Usage                                                  |
+| -------------------------------- | ----------------------- | ----------------------------------- | ------------------------------------------------------ |
+| `--task-filter-value-foreground` | `#79c0ff`               | `text-task-filter-value-foreground` | Value text in task-filter `key:value` conditions       |
+| `--task-filter-value-background` | `rgb(56 139 253 / 18%)` | `bg-task-filter-value-background`   | Value background in task-filter `key:value` conditions |
+
+This blue is limited to task-filter qualifier values. Do not use it as a
+general-purpose accent or substitute it for GitHub status colors.
 
 ### Sidebar
 
@@ -134,8 +143,8 @@ introduce a new gray value; use the nearest existing tier.
 | -------------------- | --------- | ----------------------------------------------- | -------------------------------------------- |
 | `--status-completed` | `#a371f7` | `bg-status-completed` / `text-status-completed` | `StatusIcon`'s `completed` close-reason fill |
 
-A second, narrowly-scoped accent — see [Status convention](#status-convention)
-below for why this doesn't violate the "one accent" rule above. Same hex as
+A narrowly-scoped accent — see [Status convention](#status-convention)
+below for its task-completion meaning. Same hex as
 `--github-merged` below, but a separate token: `--github-merged` is reserved
 for GitHub state display only, never substitute it here or vice versa.
 
@@ -154,9 +163,10 @@ things even where a value might coincidentally look close.
 
 ### Radius
 
-| Token      | Value  |
-| ---------- | ------ |
-| `--radius` | `0rem` |
+| Token                        | Value  |
+| ---------------------------- | ------ |
+| `--radius`                   | `0rem` |
+| `--radius-task-filter-value` | `3px`  |
 
 See [Radius policy](#radius-policy) below — every `--radius-*` Tailwind scale
 value (`radius-sm`, `radius-md`, `radius-lg`, `radius-xl`, `radius-2xl`,
@@ -489,13 +499,14 @@ keeps the title from collapsing to 0 width when the row overflows.
 default, including every Tailwind `rounded-*` utility that derives from the
 `--radius-*` scale.
 
-There are exactly **two** sanctioned exceptions, both **hardcoded** (not
-derived from the `--radius` token):
+There are exactly **three** sanctioned exceptions, each scoped to a distinct
+UI role:
 
-| Exception                | Where                                                                                                                                                                                                               |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--keycap-radius` (4px)  | Shared by `Kbd` (`web/src/components/ui/kbd.tsx`) and `KeybindHint`'s `boxed` variant (`web/src/components/ui/keybind-hint.tsx`) — both call `rounded-(--keycap-radius)`, a token defined in `@fohte/ui/tokens.css` |
-| Inline `<code>` elements | `border-radius: 4px` on `.ProseMirror code` in `web/src/components/ui/markdown-editor.css`                                                                                                                          |
+| Exception                          | Where                                                                                                                                                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--keycap-radius` (4px)            | Shared by `Kbd` (`web/src/components/ui/kbd.tsx`) and `KeybindHint`'s `boxed` variant (`web/src/components/ui/keybind-hint.tsx`) — both call `rounded-(--keycap-radius)`, a token defined in `@fohte/ui/tokens.css` |
+| `--radius-task-filter-value` (3px) | Task-filter condition values use `rounded-task-filter-value` for their blue background                                                                                                                              |
+| Inline `<code>` elements           | `border-radius: 4px` on `.ProseMirror code` in `web/src/components/ui/markdown-editor.css`                                                                                                                          |
 
 **Do not introduce new radius exceptions without updating this doc.**
 
@@ -530,11 +541,12 @@ text. For `status === 'completed'`, the icon further branches on
 | `completed` (reason `not_planned`) | filled circle + `X` (lucide-react)     | `bg-muted-foreground-faint` fill, `text-background` glyph | Same title styling as above                                           |
 | `completed` (reason `duplicate`)   | filled circle + `Equal` (lucide-react) | `bg-muted-foreground-faint` fill, `text-background` glyph | Same title styling as above                                           |
 
-`--status-completed` is a second accent color, spent specifically on "things
+`--status-completed` is another accent color, spent specifically on "things
 actually done" so it stands out when scanning a list. `not_planned` and
 `duplicate` keep the same neutral `bg-muted-foreground-faint` gray fill that
 `completed` always used, and `--status-completed` is the one new non-neutral
-color this change adds, applied narrowly to the default close reason only.
+status color in this convention, applied narrowly to the default close reason
+only.
 
 Row-level metadata for `not_planned`/`duplicate` also gets a plain second-line
 token (`CloseReasonLabel` in `web/src/components/task/task-row-shared.tsx`),
@@ -750,14 +762,14 @@ function Button(
 
 Built on `@base-ui/react/button` + `cva`. Variant looks:
 
-| Variant       | Look                                                                                                                                                      |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `default`     | Emphasized bordered box: `border-border-strong` + `bg-surface-strong` (does **not** use `--primary` — see the [accent token note](#accent-the-one-color)) |
-| `outline`     | `border-border` + `bg-background`, `bg-muted` on hover                                                                                                    |
-| `secondary`   | `border-border`, transparent, `border-border-strong` on hover                                                                                             |
-| `ghost`       | No border, `bg-muted` on hover                                                                                                                            |
-| `destructive` | `border-border`, transparent, `border-destructive`/`text-destructive` on hover                                                                            |
-| `link`        | `text-primary`, underline on hover                                                                                                                        |
+| Variant       | Look                                                                                                                                            |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `default`     | Emphasized bordered box: `border-border-strong` + `bg-surface-strong` (does **not** use `--primary` — see the [accent token note](#red-accent)) |
+| `outline`     | `border-border` + `bg-background`, `bg-muted` on hover                                                                                          |
+| `secondary`   | `border-border`, transparent, `border-border-strong` on hover                                                                                   |
+| `ghost`       | No border, `bg-muted` on hover                                                                                                                  |
+| `destructive` | `border-border`, transparent, `border-destructive`/`text-destructive` on hover                                                                  |
+| `link`        | `text-primary`, underline on hover                                                                                                              |
 
 Use `default` for the primary action on a screen, `outline`/`secondary` for
 secondary actions, `ghost` for low-emphasis icon-only actions, `destructive`

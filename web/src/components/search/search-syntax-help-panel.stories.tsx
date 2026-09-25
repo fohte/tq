@@ -27,3 +27,10 @@ export const Default: Story = {}
 export const WithBackButton: Story = {
   args: { onBack: () => undefined },
 }
+
+export const TaskFilterHelp: Story = {
+  args: {
+    sections: getSearchSyntaxHelpSections({ audience: 'task-filter' }),
+    showFilterIcons: true,
+  },
+}

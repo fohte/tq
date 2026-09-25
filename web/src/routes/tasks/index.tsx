@@ -12,14 +12,10 @@ import { SectionHeading } from '#components/ui/section-heading'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
 import { useProjects } from '#hooks/use-projects'
 import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
-import { sortOptionValues } from '#lib/tasks-query'
+import { sortOptionValues, tasksSearchDefaultQuery } from '#lib/tasks-query'
 
 const tasksSearchDefaults = {
-  q: buildSearchQuery({
-    freeText: '',
-    status: ['todo'],
-    sortBy: 'updated',
-  }),
+  q: tasksSearchDefaultQuery,
 }
 
 interface TasksSearch {
@@ -28,7 +24,12 @@ interface TasksSearch {
 
 function validateSearch(search: Record<string, unknown>): TasksSearch {
   const rawQ = typeof search['q'] === 'string' ? search['q'] : undefined
-  if (rawQ != null && rawQ !== '') return { q: rawQ }
+  if (rawQ != null && rawQ !== '') {
+    const parsed = parseSearchQuery(rawQ)
+    return {
+      q: buildSearchQuery({ ...parsed, sortBy: parsed.sortBy ?? 'updated' }),
+    }
+  }
 
   // Migrate URLs bookmarked/shared before the sortBy/showCompleted/projectId/tag
   // -> q migration, instead of silently discarding their filter.

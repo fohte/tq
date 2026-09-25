@@ -13,6 +13,8 @@
   --github-open: #3fb950;
   --github-closed: #f85149;
   --github-merged: #a371f7;
+  --task-filter-value-foreground: #79c0ff;
+  --task-filter-value-background: rgb(56 139 253 / 18%);
 
   --btn-radius-xs: min(var(--radius-md), 10px);
   --btn-radius-sm: min(var(--radius-md), 12px);
@@ -45,6 +47,9 @@
   --color-github-open: var(--github-open);
   --color-github-closed: var(--github-closed);
   --color-github-merged: var(--github-merged);
+  --color-task-filter-value-foreground: var(--task-filter-value-foreground);
+  --color-task-filter-value-background: var(--task-filter-value-background);
+  --radius-task-filter-value: 3px;
 
   /* Grid track definitions — see docs/design-system.md "Grid tracks". */
   --project-list-columns: 14px 1fr 96px 190px 78px;

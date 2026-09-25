@@ -10,6 +10,12 @@ export const sortOptionValues = [
   'created',
 ] as const satisfies readonly TaskSortBy[]
 
+export const tasksSearchDefaultQuery = buildSearchQuery({
+  freeText: '',
+  status: ['todo'],
+  sortBy: 'updated',
+})
+
 export const sortLabels: Partial<
   Record<NonNullable<ParsedQuery['sortBy']>, string>
 > = {

@@ -29,9 +29,12 @@ interface ProjectDetailSearch {
 
 function validateSearch(search: Record<string, unknown>): ProjectDetailSearch {
   const rawQ = typeof search['q'] === 'string' ? search['q'] : undefined
-  return rawQ != null && rawQ !== ''
-    ? { q: rawQ }
-    : { q: projectTasksSearchDefaults.q }
+  if (rawQ == null || rawQ === '') return { q: projectTasksSearchDefaults.q }
+
+  const parsed = parseSearchQuery(rawQ)
+  return {
+    q: buildSearchQuery({ ...parsed, sortBy: parsed.sortBy ?? 'updated' }),
+  }
 }
 
 export const Route = createFileRoute('/projects/$projectId')({

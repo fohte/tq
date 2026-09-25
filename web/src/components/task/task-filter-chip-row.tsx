@@ -1,10 +1,17 @@
 import type { ParsedQuery } from 'api/search-query-parser'
 import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
-import { useEffect } from 'react'
+import {
+  ArrowDownWideNarrow,
+  CircleDot,
+  FileText,
+  FolderKanban,
+  ListTree,
+  Tag,
+} from 'lucide-react'
+import { useEffect, useId } from 'react'
 
 import { SaveViewButton } from '#components/saved-view/save-view-button'
 import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
-import { SearchSyntaxHelpPopover } from '#components/search/search-syntax-help-popover'
 import { TaskFilterChip } from '#components/task/task-filter-chip'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
 import { TaskLabelFilterFields } from '#components/task/task-label-filter-fields'
@@ -18,21 +25,15 @@ import type { Project } from '#hooks/use-projects'
 import { useSearchModalOpen } from '#hooks/use-search-modal-open'
 import { useTask } from '#hooks/use-task-queries'
 import {
-  sortLabels,
   sortOptionValues,
   statusChipLabels,
+  tasksSearchDefaultQuery,
   withHasPages,
   withLabel,
   withParentId,
   withProjectId,
   withStatus,
 } from '#lib/tasks-query'
-import { cn } from '#lib/utils'
-
-const filterTriggerClassName =
-  'shrink-0 cursor-pointer items-center gap-1 border border-border px-1 font-mono text-2xs text-muted-foreground outline-none hover:text-foreground'
-
-const freeTextInputId = 'task-filter-free-text'
 
 type TaskFilterKind =
   'status' | 'project' | 'label' | 'pages' | 'parent' | 'sort'
@@ -53,7 +54,7 @@ interface TaskFilterChipRowProps {
   // screen (title, task summary, "Add task") actually targets.
   disableProjectFilter?: boolean
   defaultOpenFilter?: TaskFilterKind
-  defaultOpenSearchHelp?: boolean
+  autoFocus?: boolean
 }
 
 export function TaskFilterChipRow({
@@ -63,9 +64,12 @@ export function TaskFilterChipRow({
   hideSaveView = false,
   disableProjectFilter = false,
   defaultOpenFilter,
-  defaultOpenSearchHelp = false,
+  autoFocus = false,
 }: TaskFilterChipRowProps) {
   const searchModalOpen = useSearchModalOpen()
+  const rowId = useId()
+  const freeTextInputId = `task-filter-free-text-${rowId}`
+  const hasPagesCheckboxId = `${freeTextInputId}-has-pages`
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -79,7 +83,14 @@ export function TaskFilterChipRow({
       }
 
       e.preventDefault()
-      document.getElementById(freeTextInputId)?.focus()
+      const inputs = Array.from(
+        document.querySelectorAll<HTMLInputElement>('[data-task-filter-input]'),
+      )
+      const visibleInput = inputs.find(
+        (input) => input.getClientRects().length > 0,
+      )
+      const targetInput = visibleInput ?? inputs[0]
+      targetInput?.focus()
     }
 
     document.addEventListener('keydown', handleKeyDown)
@@ -104,7 +115,9 @@ export function TaskFilterChipRow({
   })
 
   const setParsed = (next: ParsedQuery) => {
-    onQueryChange(buildSearchQuery(next))
+    onQueryChange(
+      buildSearchQuery({ ...next, sortBy: next.sortBy ?? 'updated' }),
+    )
   }
 
   // Merges newly typed free text back into the applied query: anything that
@@ -147,7 +160,9 @@ export function TaskFilterChipRow({
   // condition sits closest to it — i.e. the last chip rendered before the
   // input, in reverse of the render order below.
   const removeLastChip = () => {
-    if (parsed.parentId != null) {
+    if (sortBy !== 'updated') {
+      setParsed({ ...parsed, sortBy: 'updated' })
+    } else if (parsed.parentId != null) {
       setParsed(withParentId(parsed, undefined))
     } else if (parsed.hasPages === true) {
       setParsed(withHasPages(parsed, false))
@@ -160,34 +175,33 @@ export function TaskFilterChipRow({
     }
   }
 
+  const query = buildSearchQuery(parsed)
+
   return (
-    <div className="flex items-start gap-1.5 border-b border-border bg-background px-3 py-2">
-      {/* Always-visible left column marking the row as a token input.
-          Kept as its own flex item (not inside the wrapping chip area
-          below) so a wrapped second line hangs indented under it instead
-          of tucking underneath. Clicking it focuses the free-text input
-          via the native label/input association below — no JS needed. */}
+    <div className="flex min-h-12 items-center gap-3 border-b border-border bg-background px-4">
       <label
         htmlFor={freeTextInputId}
-        className={cn(
-          'inline-flex shrink-0 cursor-text',
-          filterTriggerClassName,
-        )}
+        className="shrink-0 cursor-text font-mono text-sm font-bold text-primary"
       >
-        <span aria-hidden="true">&gt;</span>
+        <span aria-hidden="true">›</span>
       </label>
 
-      {/* Wraps onto multiple lines as conditions accumulate, instead of
-          scrolling horizontally and hiding chips off-screen. */}
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-wrap items-start gap-x-3 gap-y-2">
         {parsed.status != null && parsed.status.length > 0 && (
           <TaskFilterChip
+            icon={CircleDot}
             attribute="is"
             value={parsed.status
               .map((status) => statusChipLabels[status])
               .join(', ')}
             menuTitle="Status"
+            ariaLabel={`is ${parsed.status
+              .map((status) => statusChipLabels[status])
+              .join(', ')}`}
             defaultOpen={defaultOpenFilter === 'status'}
+            onRemove={() => {
+              setParsed(withStatus(parsed, []))
+            }}
           >
             <TaskStatusFilterFields
               status={parsed.status}
@@ -200,10 +214,15 @@ export function TaskFilterChipRow({
 
         {selectedProject != null && (
           <TaskFilterChip
+            icon={FolderKanban}
             attribute="project"
             value={selectedProject.title}
             menuTitle="Project"
+            ariaLabel={`project ${selectedProject.title}`}
             defaultOpen={defaultOpenFilter === 'project'}
+            onRemove={() => {
+              setParsed(withProjectId(parsed, ''))
+            }}
           >
             <TaskProjectFilterFields
               projects={projects}
@@ -217,10 +236,15 @@ export function TaskFilterChipRow({
 
         {parsed.label != null && (
           <TaskFilterChip
+            icon={Tag}
             attribute="label"
-            value={`#${parsed.label}`}
+            value={parsed.label}
             menuTitle="Label"
+            ariaLabel={`label #${parsed.label}`}
             defaultOpen={defaultOpenFilter === 'label'}
+            onRemove={() => {
+              setParsed(withLabel(parsed, undefined))
+            }}
           >
             <TaskLabelFilterFields
               selectedLabel={parsed.label}
@@ -233,21 +257,26 @@ export function TaskFilterChipRow({
 
         {parsed.hasPages === true && (
           <TaskFilterChip
+            icon={FileText}
             attribute="has"
             value="pages"
             menuTitle="Pages"
+            ariaLabel="has pages"
             defaultOpen={defaultOpenFilter === 'pages'}
+            onRemove={() => {
+              setParsed(withHasPages(parsed, false))
+            }}
           >
             <div className="flex items-center gap-2">
               <Checkbox
-                id="task-filter-has-pages"
+                id={hasPagesCheckboxId}
                 checked
                 onCheckedChange={(checked) => {
                   setParsed(withHasPages(parsed, checked))
                 }}
               />
               <label
-                htmlFor="task-filter-has-pages"
+                htmlFor={hasPagesCheckboxId}
                 className="text-sm text-foreground"
               >
                 has pages
@@ -258,6 +287,7 @@ export function TaskFilterChipRow({
 
         {parsed.parentId != null && (
           <TaskFilterChip
+            icon={ListTree}
             attribute="parent"
             value={
               parentTaskQuery.isLoading
@@ -265,7 +295,15 @@ export function TaskFilterChipRow({
                 : (parentTaskQuery.data?.title ?? parsed.parentId)
             }
             menuTitle="Parent"
+            ariaLabel={`parent ${
+              parentTaskQuery.isLoading
+                ? 'Loading…'
+                : (parentTaskQuery.data?.title ?? parsed.parentId)
+            }`}
             defaultOpen={defaultOpenFilter === 'parent'}
+            onRemove={() => {
+              setParsed(withParentId(parsed, undefined))
+            }}
           >
             <Button
               variant="outline"
@@ -279,51 +317,47 @@ export function TaskFilterChipRow({
           </TaskFilterChip>
         )}
 
+        <TaskFilterChip
+          icon={ArrowDownWideNarrow}
+          attribute="sort"
+          value={sortBy}
+          menuTitle="Sort"
+          ariaLabel={`Sort by ${sortBy}`}
+          defaultOpen={defaultOpenFilter === 'sort'}
+          isDefault={sortBy === 'updated'}
+          onRemove={
+            sortBy === 'updated'
+              ? undefined
+              : () => {
+                  setParsed({ ...parsed, sortBy: 'updated' })
+                }
+          }
+        >
+          <TaskSortFilterFields
+            sortBy={pickerSortBy}
+            onSortByChange={(sort) => {
+              setParsed({ ...parsed, sortBy: sort })
+            }}
+          />
+        </TaskFilterChip>
+
         <TaskFilterFreeTextInput
           id={freeTextInputId}
           freeText={parsed.freeText}
           onCommit={commitFreeText}
           onBackspaceEmpty={removeLastChip}
           placeholder="Filter…"
-        />
-        <SearchSyntaxHelpPopover
-          defaultOpen={defaultOpenSearchHelp}
-          sections={getSearchSyntaxHelpSections({
+          autoFocus={autoFocus}
+          syntaxHelpSections={getSearchSyntaxHelpSections({
             audience: 'task-filter',
             disableProjectFilter,
           })}
         />
       </div>
 
-      {/* Pinned to the row's right edge, outside the wrapping chip area, so
-          it stays put at the top-right even once the chips wrap to a second
-          line. Below `md` the value is dropped to save width — same
-          control, same menu, just a shorter label. */}
-      <TaskFilterChip
-        attribute={
-          <>
-            <span className="sr-only">Sort by</span>
-            <span aria-hidden="true">↕</span>
-          </>
-        }
-        value={
-          <span className="hidden md:inline">
-            {sortLabels[sortBy] ?? sortBy}
-          </span>
-        }
-        menuTitle="Sort"
-        className="shrink-0"
-        defaultOpen={defaultOpenFilter === 'sort'}
-      >
-        <TaskSortFilterFields
-          sortBy={pickerSortBy}
-          onSortByChange={(sort) => {
-            setParsed({ ...parsed, sortBy: sort })
-          }}
-        />
-      </TaskFilterChip>
-
-      {!hideSaveView && <SaveViewButton query={buildSearchQuery(parsed)} />}
+      {!hideSaveView && query !== tasksSearchDefaultQuery && (
+        <SaveViewButton query={query} />
+      )}
     </div>
   )
 }
