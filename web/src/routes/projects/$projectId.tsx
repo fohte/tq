@@ -1,5 +1,5 @@
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
-import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
+import { parseSearchQuery } from 'api/search-query-parser'
 import { useEffect } from 'react'
 
 import {
@@ -14,13 +14,10 @@ import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
 import { useProject, useProjects } from '#hooks/use-projects'
 import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
 import { recordRecentSearchItem } from '#lib/recent-search-items'
+import { tasksSearchDefaultQuery } from '#lib/tasks-query'
 
 const projectTasksSearchDefaults = {
-  q: buildSearchQuery({
-    freeText: '',
-    status: ['todo'],
-    sortBy: 'updated',
-  }),
+  q: tasksSearchDefaultQuery,
 }
 
 interface ProjectDetailSearch {
@@ -30,11 +27,7 @@ interface ProjectDetailSearch {
 function validateSearch(search: Record<string, unknown>): ProjectDetailSearch {
   const rawQ = typeof search['q'] === 'string' ? search['q'] : undefined
   if (rawQ == null || rawQ === '') return { q: projectTasksSearchDefaults.q }
-
-  const parsed = parseSearchQuery(rawQ)
-  return {
-    q: buildSearchQuery({ ...parsed, sortBy: parsed.sortBy ?? 'updated' }),
-  }
+  return { q: rawQ }
 }
 
 export const Route = createFileRoute('/projects/$projectId')({

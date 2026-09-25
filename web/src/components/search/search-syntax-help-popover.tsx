@@ -19,7 +19,13 @@ export function SearchSyntaxHelpPopover({
   sections = getSearchSyntaxHelpSections(),
 }: SearchSyntaxHelpPopoverProps) {
   return (
-    <AnchoredPopup anchor={anchor} open={open} className="w-88 p-0">
+    <AnchoredPopup
+      anchor={anchor}
+      open={open}
+      initialFocus={false}
+      finalFocus={false}
+      className="w-88 p-0"
+    >
       <SearchSyntaxHelpPanel sections={sections} showFilterIcons />
     </AnchoredPopup>
   )

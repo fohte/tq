@@ -24,12 +24,7 @@ interface TasksSearch {
 
 function validateSearch(search: Record<string, unknown>): TasksSearch {
   const rawQ = typeof search['q'] === 'string' ? search['q'] : undefined
-  if (rawQ != null && rawQ !== '') {
-    const parsed = parseSearchQuery(rawQ)
-    return {
-      q: buildSearchQuery({ ...parsed, sortBy: parsed.sortBy ?? 'updated' }),
-    }
-  }
+  if (rawQ != null && rawQ !== '') return { q: rawQ }
 
   // Migrate URLs bookmarked/shared before the sortBy/showCompleted/projectId/tag
   // -> q migration, instead of silently discarding their filter.

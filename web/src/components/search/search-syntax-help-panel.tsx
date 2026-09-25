@@ -1,16 +1,7 @@
-import {
-  ArrowDownWideNarrow,
-  BriefcaseBusiness,
-  CircleDot,
-  FileText,
-  FolderKanban,
-  ListTree,
-  type LucideIcon,
-  Tag,
-} from 'lucide-react'
 import type { RefObject } from 'react'
 
 import type { SearchSyntaxHelpSection } from '#components/search/search-syntax-help-data'
+import { taskFilterSyntaxIcons } from '#components/task/task-filter-icons'
 import { Button } from '#components/ui/button'
 import { cn } from '#lib/utils'
 
@@ -20,16 +11,6 @@ interface SearchSyntaxHelpPanelProps {
   className?: string
   backButtonRef?: RefObject<HTMLButtonElement | null>
   showFilterIcons?: boolean
-}
-
-const filterSyntaxIcons: Record<string, LucideIcon> = {
-  is: CircleDot,
-  context: BriefcaseBusiness,
-  sort: ArrowDownWideNarrow,
-  has: FileText,
-  label: Tag,
-  parent: ListTree,
-  project: FolderKanban,
 }
 
 export function SearchSyntaxHelpPanel({
@@ -89,7 +70,7 @@ function HelpEntry({
   showFilterIcons: boolean
 }) {
   const Icon = showFilterIcons
-    ? filterSyntaxIcons[entry.syntax.split(':', 1)[0] ?? '']
+    ? taskFilterSyntaxIcons[entry.syntax.split(':', 1)[0] ?? '']
     : undefined
 
   return (

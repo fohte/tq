@@ -126,7 +126,6 @@ export function TaskFilterFreeTextInput({
     <div className="flex min-w-32 flex-1 items-center">
       <input
         id={id}
-        data-task-filter-input
         ref={inputRef}
         autoFocus={autoFocus}
         type="text"

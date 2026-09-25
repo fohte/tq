@@ -70,8 +70,8 @@ export const SyntaxHelpFocused: Story = {
 
 // Pre-seeds the suggestions query cache with a `staleTime: Infinity` client
 // (instead of typing through a play) so react-query never refetches over
-// the fixture — `freeText: 'is:'` alone makes the component derive
-// `hasSuggestions` and open the popup on first render.
+// the fixture — `autoFocus` focuses the input, while `freeText: 'is:'` derives
+// `hasSuggestions` and opens the suggestions popup.
 const suggestionsQueryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, staleTime: Infinity } },
 })

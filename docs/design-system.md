@@ -495,9 +495,9 @@ keeps the title from collapsing to 0 width when the row overflows.
 
 ## Radius policy
 
-`--radius` is `0rem` globally — every corner in the app is square by
-default, including every Tailwind `rounded-*` utility that derives from the
-`--radius-*` scale.
+`--radius` is `0rem` globally — the standard `--radius-*` scale gives every
+corner in the app a square default. The independent exceptions below use
+their own tokens or rules.
 
 There are exactly **three** sanctioned exceptions, each scoped to a distinct
 UI role:
@@ -505,7 +505,7 @@ UI role:
 | Exception                          | Where                                                                                                                                                                                                               |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--keycap-radius` (4px)            | Shared by `Kbd` (`web/src/components/ui/kbd.tsx`) and `KeybindHint`'s `boxed` variant (`web/src/components/ui/keybind-hint.tsx`) — both call `rounded-(--keycap-radius)`, a token defined in `@fohte/ui/tokens.css` |
-| `--radius-task-filter-value` (3px) | Task-filter condition values use `rounded-task-filter-value` for their blue background                                                                                                                              |
+| `--radius-task-filter-value` (3px) | `TaskFilterChip` condition values use `rounded-task-filter-value` for their blue background; token defined in `web/src/index.css`                                                                                   |
 | Inline `<code>` elements           | `border-radius: 4px` on `.ProseMirror code` in `web/src/components/ui/markdown-editor.css`                                                                                                                          |
 
 **Do not introduce new radius exceptions without updating this doc.**
@@ -541,12 +541,11 @@ text. For `status === 'completed'`, the icon further branches on
 | `completed` (reason `not_planned`) | filled circle + `X` (lucide-react)     | `bg-muted-foreground-faint` fill, `text-background` glyph | Same title styling as above                                           |
 | `completed` (reason `duplicate`)   | filled circle + `Equal` (lucide-react) | `bg-muted-foreground-faint` fill, `text-background` glyph | Same title styling as above                                           |
 
-`--status-completed` is another accent color, spent specifically on "things
-actually done" so it stands out when scanning a list. `not_planned` and
-`duplicate` keep the same neutral `bg-muted-foreground-faint` gray fill that
-`completed` always used, and `--status-completed` is the one new non-neutral
-status color in this convention, applied narrowly to the default close reason
-only.
+`--status-completed` marks tasks closed as actually done so they stand out
+when scanning a list. `not_planned` and `duplicate` use the neutral
+`bg-muted-foreground-faint` gray fill. `--status-completed` is the only
+non-neutral status color in this convention and applies to the implicit
+`completed` reason only.
 
 Row-level metadata for `not_planned`/`duplicate` also gets a plain second-line
 token (`CloseReasonLabel` in `web/src/components/task/task-row-shared.tsx`),
@@ -689,7 +688,7 @@ Renders a keybinding label. `plain` (default) is dim, unboxed text
 (`text-muted-foreground-ghost`) — used for e.g. sidebar nav hints; override
 the color via `className` for brighter contexts (e.g. the status line's
 `⌘K search`) rather than adding a new variant. `boxed` renders a bordered
-key-cap look (`rounded-(--keycap-radius)`, one of the two [radius exceptions](#radius-policy)).
+key-cap look (`rounded-(--keycap-radius)`, one of the three [radius exceptions](#radius-policy)).
 
 ```tsx
 <KeybindHint>g t</KeybindHint>

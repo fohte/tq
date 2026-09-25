@@ -10,7 +10,6 @@ interface TaskFilterChipProps {
   value: React.ReactNode
   menuTitle: string
   ariaLabel?: string
-  className?: string
   children: React.ReactNode
   defaultOpen?: boolean
   onRemove?: (() => void) | undefined
@@ -25,7 +24,6 @@ export function TaskFilterChip({
   value,
   menuTitle,
   ariaLabel,
-  className,
   children,
   defaultOpen,
   onRemove,
@@ -36,7 +34,6 @@ export function TaskFilterChip({
       className={cn(
         'inline-flex min-h-5 min-w-0 items-center gap-1',
         isDefault && 'opacity-50',
-        className,
       )}
     >
       <FilterMenu

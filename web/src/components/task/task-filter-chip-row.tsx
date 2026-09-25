@@ -1,19 +1,12 @@
 import type { ParsedQuery } from 'api/search-query-parser'
 import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
-import {
-  ArrowDownWideNarrow,
-  CircleDot,
-  FileText,
-  FolderKanban,
-  ListTree,
-  Tag,
-} from 'lucide-react'
 import { useEffect, useId } from 'react'
 
 import { SaveViewButton } from '#components/saved-view/save-view-button'
 import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
 import { TaskFilterChip } from '#components/task/task-filter-chip'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
+import { taskFilterAxisIcons } from '#components/task/task-filter-icons'
 import { TaskLabelFilterFields } from '#components/task/task-label-filter-fields'
 import { TaskProjectFilterFields } from '#components/task/task-project-filter-fields'
 import { TaskSortFilterFields } from '#components/task/task-sort-filter-fields'
@@ -25,9 +18,11 @@ import type { Project } from '#hooks/use-projects'
 import { useSearchModalOpen } from '#hooks/use-search-modal-open'
 import { useTask } from '#hooks/use-task-queries'
 import {
+  defaultTaskSort,
   sortOptionValues,
   statusChipLabels,
   tasksSearchDefaultQuery,
+  withDefaultSort,
   withHasPages,
   withLabel,
   withParentId,
@@ -82,30 +77,28 @@ export function TaskFilterChipRow({
         return
       }
 
+      const input = document.getElementById(freeTextInputId)
+      if (
+        !(input instanceof HTMLInputElement) ||
+        input.getClientRects().length === 0
+      ) {
+        return
+      }
+
       e.preventDefault()
-      const inputs = Array.from(
-        document.querySelectorAll<HTMLInputElement>('[data-task-filter-input]'),
-      )
-      const visibleInput = inputs.find(
-        (input) => input.getClientRects().length > 0,
-      )
-      const targetInput = visibleInput ?? inputs[0]
-      targetInput?.focus()
+      input.focus()
     }
 
     document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [searchModalOpen])
+  }, [freeTextInputId, searchModalOpen])
 
-  const sortBy = parsed.sortBy ?? 'updated'
-  // The chip label falls back to the raw value for a sort the picker below
-  // doesn't offer (e.g. a hand-edited `sort:due` in the URL), but the
-  // picker itself only ever offers sortOptionValues, so it takes a
-  // narrowed value instead.
+  const sortBy = parsed.sortBy ?? defaultTaskSort
+  // Keep the picker selection valid if an older URL contains a removed sort.
   const pickerSortBy =
-    sortOptionValues.find((value) => value === sortBy) ?? 'updated'
+    sortOptionValues.find((value) => value === sortBy) ?? defaultTaskSort
   const selectedProject = disableProjectFilter
     ? undefined
     : projects.find((project) => project.id === parsed.projectId)
@@ -115,9 +108,7 @@ export function TaskFilterChipRow({
   })
 
   const setParsed = (next: ParsedQuery) => {
-    onQueryChange(
-      buildSearchQuery({ ...next, sortBy: next.sortBy ?? 'updated' }),
-    )
+    onQueryChange(buildSearchQuery(withDefaultSort(next)))
   }
 
   // Merges newly typed free text back into the applied query: anything that
@@ -160,8 +151,8 @@ export function TaskFilterChipRow({
   // condition sits closest to it — i.e. the last chip rendered before the
   // input, in reverse of the render order below.
   const removeLastChip = () => {
-    if (sortBy !== 'updated') {
-      setParsed({ ...parsed, sortBy: 'updated' })
+    if (sortBy !== defaultTaskSort) {
+      setParsed({ ...parsed, sortBy: defaultTaskSort })
     } else if (parsed.parentId != null) {
       setParsed(withParentId(parsed, undefined))
     } else if (parsed.hasPages === true) {
@@ -175,7 +166,12 @@ export function TaskFilterChipRow({
     }
   }
 
-  const query = buildSearchQuery(parsed)
+  const query = buildSearchQuery(withDefaultSort(parsed))
+  const statusValue =
+    parsed.status?.map((status) => statusChipLabels[status]).join(', ') ?? ''
+  const parentValue = parentTaskQuery.isLoading
+    ? 'Loading…'
+    : (parentTaskQuery.data?.title ?? parsed.parentId ?? '')
 
   return (
     <div className="flex min-h-12 items-center gap-3 border-b border-border bg-background px-4">
@@ -189,15 +185,11 @@ export function TaskFilterChipRow({
       <div className="flex min-w-0 flex-1 flex-wrap items-start gap-x-3 gap-y-2">
         {parsed.status != null && parsed.status.length > 0 && (
           <TaskFilterChip
-            icon={CircleDot}
+            icon={taskFilterAxisIcons.is}
             attribute="is"
-            value={parsed.status
-              .map((status) => statusChipLabels[status])
-              .join(', ')}
+            value={statusValue}
             menuTitle="Status"
-            ariaLabel={`is ${parsed.status
-              .map((status) => statusChipLabels[status])
-              .join(', ')}`}
+            ariaLabel={`is ${statusValue}`}
             defaultOpen={defaultOpenFilter === 'status'}
             onRemove={() => {
               setParsed(withStatus(parsed, []))
@@ -214,7 +206,7 @@ export function TaskFilterChipRow({
 
         {selectedProject != null && (
           <TaskFilterChip
-            icon={FolderKanban}
+            icon={taskFilterAxisIcons.project}
             attribute="project"
             value={selectedProject.title}
             menuTitle="Project"
@@ -236,7 +228,7 @@ export function TaskFilterChipRow({
 
         {parsed.label != null && (
           <TaskFilterChip
-            icon={Tag}
+            icon={taskFilterAxisIcons.label}
             attribute="label"
             value={parsed.label}
             menuTitle="Label"
@@ -257,7 +249,7 @@ export function TaskFilterChipRow({
 
         {parsed.hasPages === true && (
           <TaskFilterChip
-            icon={FileText}
+            icon={taskFilterAxisIcons.has}
             attribute="has"
             value="pages"
             menuTitle="Pages"
@@ -287,19 +279,11 @@ export function TaskFilterChipRow({
 
         {parsed.parentId != null && (
           <TaskFilterChip
-            icon={ListTree}
+            icon={taskFilterAxisIcons.parent}
             attribute="parent"
-            value={
-              parentTaskQuery.isLoading
-                ? 'Loading…'
-                : (parentTaskQuery.data?.title ?? parsed.parentId)
-            }
+            value={parentValue}
             menuTitle="Parent"
-            ariaLabel={`parent ${
-              parentTaskQuery.isLoading
-                ? 'Loading…'
-                : (parentTaskQuery.data?.title ?? parsed.parentId)
-            }`}
+            ariaLabel={`parent ${parentValue}`}
             defaultOpen={defaultOpenFilter === 'parent'}
             onRemove={() => {
               setParsed(withParentId(parsed, undefined))
@@ -318,18 +302,18 @@ export function TaskFilterChipRow({
         )}
 
         <TaskFilterChip
-          icon={ArrowDownWideNarrow}
+          icon={taskFilterAxisIcons.sort}
           attribute="sort"
           value={sortBy}
           menuTitle="Sort"
           ariaLabel={`Sort by ${sortBy}`}
           defaultOpen={defaultOpenFilter === 'sort'}
-          isDefault={sortBy === 'updated'}
+          isDefault={sortBy === defaultTaskSort}
           onRemove={
-            sortBy === 'updated'
+            sortBy === defaultTaskSort
               ? undefined
               : () => {
-                  setParsed({ ...parsed, sortBy: 'updated' })
+                  setParsed({ ...parsed, sortBy: defaultTaskSort })
                 }
           }
         >
