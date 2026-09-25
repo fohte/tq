@@ -37,4 +37,8 @@ export default config(
     files: ['web/vite.config.ts', 'web/vitest.config.ts'],
     rules: { 'no-restricted-imports': 'off' },
   },
+  {
+    files: ['web/**/*.stories.tsx'],
+    rules: { 'fohte/require-story-name': 'error' },
+  },
 )

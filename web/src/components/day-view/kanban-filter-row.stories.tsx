@@ -50,9 +50,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'shows a kanban filter row with its search query',
+}
 
 export const SearchHelpOpen: Story = {
+  name: 'shows the search help popover beside the query field',
   args: {
     query: '',
     defaultOpenSearchHelp: true,
