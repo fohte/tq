@@ -30,12 +30,6 @@ const searchTask = makeTask({
   title: 'Keyboard shortcuts',
   context: 'work',
 })
-const searchTaskDetail = makeTaskDetail({
-  id: searchTask.id,
-  number: searchTask.number,
-  title: searchTask.title,
-  context: 'work',
-})
 const scrollableTasks = Array.from({ length: 16 }, (_, index) => {
   const resultNumber = index + 1
   const resultLabel = String(resultNumber)
@@ -50,6 +44,27 @@ const scrollableTasks = Array.from({ length: 16 }, (_, index) => {
 const searchProject = makeProject({
   id: '00000000-0000-0000-0000-000000000142',
   title: 'Keyboard navigation',
+  context: 'work',
+})
+const searchTaskParent = makeTaskDetail({
+  id: '00000000-0000-0000-0000-000000000044',
+  number: 44,
+  title: 'Search improvements',
+  context: 'work',
+})
+const searchTaskDetail = makeTaskDetail({
+  id: searchTask.id,
+  number: searchTask.number,
+  title: searchTask.title,
+  context: 'work',
+  parentId: searchTaskParent.id,
+  parentNumber: searchTaskParent.number,
+  projectId: searchProject.id,
+})
+const standaloneTaskDetail = makeTaskDetail({
+  id: '00000000-0000-0000-0000-000000000045',
+  number: 45,
+  title: 'Standalone task',
   context: 'work',
 })
 const projectScopeQuery = `project:${searchProject.id} `
@@ -116,7 +131,13 @@ const recentItems: RecentSearchItem[] = [
   }),
 ]
 
-function Providers({ children }: { children: ReactNode }) {
+function Providers({
+  children,
+  initialPath,
+}: {
+  children: ReactNode
+  initialPath?: string
+}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -129,6 +150,7 @@ function Providers({ children }: { children: ReactNode }) {
           '/tasks/$taskId/pages/$pageId',
           '/projects/$projectId',
         ]}
+        {...(initialPath == null ? {} : { initialPath })}
       />
     </QueryClientProvider>
   )
@@ -139,15 +161,25 @@ function SearchModalStory({
   defaultQuery,
   defaultHelpOpen,
   defaultRecentItems,
+  currentTaskRoute,
+  rootTaskRoute,
 }: {
   defaultContext?: 'work' | 'personal' | null
   defaultQuery?: string
   defaultHelpOpen?: boolean
   defaultRecentItems?: RecentSearchItem[]
+  currentTaskRoute?: boolean
+  rootTaskRoute?: boolean
 } = {}) {
   const [open, setOpen] = useState(true)
+  const initialPath =
+    currentTaskRoute === true
+      ? `/tasks/${searchTask.id}`
+      : rootTaskRoute === true
+        ? `/tasks/${standaloneTaskDetail.id}`
+        : undefined
   return (
-    <Providers>
+    <Providers {...(initialPath == null ? {} : { initialPath })}>
       <div className="flex h-screen items-center justify-center bg-background">
         <button
           type="button"
@@ -200,6 +232,12 @@ const meta = {
         ),
         http.get(`/api/tasks/${searchTask.id}`, () =>
           HttpResponse.json(searchTaskDetail),
+        ),
+        http.get(`/api/tasks/${searchTaskParent.id}`, () =>
+          HttpResponse.json(searchTaskParent),
+        ),
+        http.get(`/api/tasks/${standaloneTaskDetail.id}`, () =>
+          HttpResponse.json(standaloneTaskDetail),
         ),
         http.get(`/api/tasks/${numberedTaskNumber}`, () =>
           HttpResponse.json(numberedTask),
@@ -270,6 +308,32 @@ export const PageMode: Story = {
 export const CommandMode: Story = {
   name: 'the search dialog lists available commands',
   args: { defaultContext: 'work', defaultQuery: '>' },
+}
+
+export const CurrentTaskCommands: Story = {
+  name: 'the search dialog lists navigation commands for the current task',
+  args: {
+    defaultContext: 'work',
+    defaultQuery: '>',
+    currentTaskRoute: true,
+  },
+}
+
+export const CurrentTaskNavigationScopes: Story = {
+  name: 'the search dialog offers child and sibling task scopes',
+  args: {
+    defaultContext: 'work',
+    defaultQuery: projectScopeQuery,
+    currentTaskRoute: true,
+  },
+}
+
+export const CurrentRootTaskNavigationScopes: Story = {
+  name: 'the search dialog offers only child task scope for a root task',
+  args: {
+    defaultContext: 'work',
+    rootTaskRoute: true,
+  },
 }
 
 export const RecentlyViewed: Story = {

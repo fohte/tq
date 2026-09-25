@@ -20,8 +20,9 @@ import {
 import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPanel } from '#components/search/search-syntax-help-panel'
 import { useCurrentContext } from '#hooks/use-current-context'
+import { useCurrentRoute } from '#hooks/use-current-route'
 import { useDebounce } from '#hooks/use-debounce'
-import { useProjects } from '#hooks/use-projects'
+import { useProject, useProjects } from '#hooks/use-projects'
 import { useSavedViews } from '#hooks/use-saved-views'
 import {
   resolveSearchContext,
@@ -32,6 +33,7 @@ import {
   useSearchTasks,
 } from '#hooks/use-search'
 import { useSearchScopeLabels } from '#hooks/use-search-scope-labels'
+import { useTask } from '#hooks/use-tasks'
 import {
   getRecentSearchItems,
   type RecentSearchItem,
@@ -88,6 +90,28 @@ export function SearchModal({
   const { openTask, openProject, openView, openPage, openRoute } =
     useSearchModalNavigation(onOpenChangeRef)
   const currentContext = useCurrentContext()
+  const currentRoute = useCurrentRoute()
+  const currentTaskId =
+    currentRoute.kind === 'task-detail' ? currentRoute.taskId : ''
+  const { data: currentTask } = useTask(currentTaskId, {
+    enabled: open && currentRoute.kind === 'task-detail',
+  })
+  const parentTaskId = currentTask?.parentId ?? ''
+  const { data: parentTaskDetail } = useTask(parentTaskId, {
+    enabled: open && parentTaskId !== '',
+  })
+  const parentTask =
+    parentTaskDetail?.id === currentTask?.parentId
+      ? parentTaskDetail
+      : undefined
+  const currentProjectId = currentTask?.projectId ?? ''
+  const { data: taskProjectDetail } = useProject(currentProjectId, {
+    enabled: open && currentProjectId !== '',
+  })
+  const currentProject =
+    taskProjectDetail?.id === currentTask?.projectId
+      ? taskProjectDetail
+      : undefined
   const configuredContext =
     contextOverride === undefined
       ? currentContext
@@ -219,6 +243,9 @@ export function SearchModal({
     searchMode,
     searchInputValue,
     context,
+    currentTask,
+    parentTask,
+    currentProject,
     onNewTask,
     openRoute,
     suggestions,

@@ -64,10 +64,11 @@ export function useProjects(
   })
 }
 
-export function useProject(id: string) {
+export function useProject(id: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: projectKeys.detail(id),
     queryFn: () => fetchProjectDetail(id),
+    enabled: options?.enabled ?? true,
   })
 }
 
