@@ -38,6 +38,8 @@ interface SearchModalResultGroupsOptions {
   currentProject: Pick<Project, 'id' | 'title'> | undefined
   onNewTask: (() => void) | undefined
   openRoute: (to: NavKeybinding['to']) => void
+  completeTask: (task: Pick<TaskDetail, 'id'>) => void
+  copyTaskUrl: (task: Pick<TaskDetail, 'id'>) => void
   suggestions: Suggestion[] | undefined
   tasks: SearchResult[] | undefined
   taskByNumber: SearchResult | null | undefined
@@ -75,6 +77,8 @@ export function useSearchModalResultGroups({
   currentProject,
   onNewTask,
   openRoute,
+  completeTask,
+  copyTaskUrl,
   suggestions,
   tasks,
   taskByNumber,
@@ -175,10 +179,13 @@ export function useSearchModalResultGroups({
       searchMode === 'commands' && currentTask != null
         ? createTaskCommandItems(
             searchInputValue,
+            currentTask,
             parentTask,
             currentProject,
             openTask,
             openProject,
+            completeTask,
+            copyTaskUrl,
           )
         : []
     const taskScopeItems: ListItem[] =

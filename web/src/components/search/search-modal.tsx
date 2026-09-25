@@ -33,7 +33,9 @@ import {
   useSearchTasks,
 } from '#hooks/use-search'
 import { useSearchScopeLabels } from '#hooks/use-search-scope-labels'
+import { useCompleteTask } from '#hooks/use-task-mutations'
 import { useTask } from '#hooks/use-tasks'
+import { notifyUrlCopied } from '#hooks/use-url-copied-toast'
 import {
   getRecentSearchItems,
   type RecentSearchItem,
@@ -96,6 +98,26 @@ export function SearchModal({
   const { data: currentTask } = useTask(currentTaskId, {
     enabled: open && currentRoute.kind === 'task-detail',
   })
+  const { mutate: completeTask } = useCompleteTask()
+  const completeCurrentTask = useCallback(
+    (task: { id: string }) => {
+      onOpenChangeRef.current(false)
+      completeTask({ id: task.id })
+    },
+    [completeTask],
+  )
+  const copyCurrentTaskUrl = useCallback((task: { id: string }) => {
+    const url = new URL(`/tasks/${task.id}`, window.location.origin).toString()
+    onOpenChangeRef.current(false)
+    void navigator.clipboard.writeText(url).then(
+      () => {
+        notifyUrlCopied(url)
+      },
+      (error: unknown) => {
+        console.error('Failed to copy task URL', error)
+      },
+    )
+  }, [])
   const parentTaskId = currentTask?.parentId ?? ''
   const { data: parentTaskDetail } = useTask(parentTaskId, {
     enabled: open && parentTaskId !== '',
@@ -248,6 +270,8 @@ export function SearchModal({
     currentProject,
     onNewTask,
     openRoute,
+    completeTask: completeCurrentTask,
+    copyTaskUrl: copyCurrentTaskUrl,
     suggestions,
     tasks,
     taskByNumber,

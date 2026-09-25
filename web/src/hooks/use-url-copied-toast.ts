@@ -3,6 +3,10 @@ import { useEffect, useState } from 'react'
 const URL_COPIED_EVENT = 'tq:url-copied'
 const URL_COPIED_FEEDBACK_MS = 1500
 
+export function notifyUrlCopied(url: string): void {
+  window.dispatchEvent(new CustomEvent(URL_COPIED_EVENT, { detail: { url } }))
+}
+
 export function useUrlCopiedToast(): string | null {
   const [url, setUrl] = useState<string | null>(null)
 

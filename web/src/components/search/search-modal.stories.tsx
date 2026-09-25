@@ -67,6 +67,13 @@ const standaloneTaskDetail = makeTaskDetail({
   title: 'Standalone task',
   context: 'work',
 })
+const completedSearchTaskDetail = makeTaskDetail({
+  id: '00000000-0000-0000-0000-000000000046',
+  number: 46,
+  title: 'Completed task',
+  status: 'completed',
+  context: 'work',
+})
 const projectScopeQuery = `project:${searchProject.id} `
 const projectScopedTask = makeTask({
   id: '00000000-0000-0000-0000-000000000143',
@@ -162,6 +169,7 @@ function SearchModalStory({
   defaultHelpOpen,
   defaultRecentItems,
   currentTaskRoute,
+  completedTaskRoute,
   rootTaskRoute,
 }: {
   defaultContext?: 'work' | 'personal' | null
@@ -169,15 +177,18 @@ function SearchModalStory({
   defaultHelpOpen?: boolean
   defaultRecentItems?: RecentSearchItem[]
   currentTaskRoute?: boolean
+  completedTaskRoute?: boolean
   rootTaskRoute?: boolean
 } = {}) {
   const [open, setOpen] = useState(true)
   const initialPath =
     currentTaskRoute === true
       ? `/tasks/${searchTask.id}`
-      : rootTaskRoute === true
-        ? `/tasks/${standaloneTaskDetail.id}`
-        : undefined
+      : completedTaskRoute === true
+        ? `/tasks/${completedSearchTaskDetail.id}`
+        : rootTaskRoute === true
+          ? `/tasks/${standaloneTaskDetail.id}`
+          : undefined
   return (
     <Providers {...(initialPath == null ? {} : { initialPath })}>
       <div className="flex h-screen items-center justify-center bg-background">
@@ -238,6 +249,9 @@ const meta = {
         ),
         http.get(`/api/tasks/${standaloneTaskDetail.id}`, () =>
           HttpResponse.json(standaloneTaskDetail),
+        ),
+        http.get(`/api/tasks/${completedSearchTaskDetail.id}`, () =>
+          HttpResponse.json(completedSearchTaskDetail),
         ),
         http.get(`/api/tasks/${numberedTaskNumber}`, () =>
           HttpResponse.json(numberedTask),
@@ -311,11 +325,20 @@ export const CommandMode: Story = {
 }
 
 export const CurrentTaskCommands: Story = {
-  name: 'the search dialog lists navigation commands for the current task',
+  name: 'the search dialog lists actions and navigation for the current task',
   args: {
     defaultContext: 'work',
     defaultQuery: '>',
     currentTaskRoute: true,
+  },
+}
+
+export const CompletedCurrentTaskCommands: Story = {
+  name: 'the search dialog omits the completion action for completed tasks',
+  args: {
+    defaultContext: 'work',
+    defaultQuery: '>',
+    completedTaskRoute: true,
   },
 }
 
