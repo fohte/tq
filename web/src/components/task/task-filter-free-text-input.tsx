@@ -15,6 +15,7 @@ interface TaskFilterFreeTextInputProps {
   freeText: string
   onCommit: (freeText: string) => void
   onBackspaceEmpty: () => void
+  disabledSuggestionCategories?: readonly string[]
   placeholder?: string
 }
 
@@ -29,6 +30,7 @@ export function TaskFilterFreeTextInput({
   freeText,
   onCommit,
   onBackspaceEmpty,
+  disabledSuggestionCategories = [],
   placeholder,
 }: TaskFilterFreeTextInputProps) {
   const [value, setValue] = useState(freeText)
@@ -45,8 +47,13 @@ export function TaskFilterFreeTextInput({
 
   const currentPrefix = extractCurrentPrefix(value)
   const { data: suggestions } = useSearchSuggestions(currentPrefix)
+  const availableSuggestions = suggestions?.filter(
+    (suggestion) => !disabledSuggestionCategories.includes(suggestion.category),
+  )
   const hasSuggestions =
-    suggestions != null && suggestions.length > 0 && currentPrefix.length > 0
+    availableSuggestions != null &&
+    availableSuggestions.length > 0 &&
+    currentPrefix.length > 0
 
   const applySuggestion = (suggestion: Suggestion) => {
     setValue(applySuggestionToQuery(value, suggestion))
@@ -73,18 +80,20 @@ export function TaskFilterFreeTextInput({
       case 'ArrowDown':
         if (!hasSuggestions) return
         e.preventDefault()
-        setSelectedIndex((prev) => (prev + 1) % suggestions.length)
+        setSelectedIndex((prev) => (prev + 1) % availableSuggestions.length)
         break
       case 'ArrowUp':
         if (!hasSuggestions) return
         e.preventDefault()
         setSelectedIndex(
-          (prev) => (prev - 1 + suggestions.length) % suggestions.length,
+          (prev) =>
+            (prev - 1 + availableSuggestions.length) %
+            availableSuggestions.length,
         )
         break
       case 'Tab': {
         if (!hasSuggestions) return
-        const selected = suggestions[selectedIndex]
+        const selected = availableSuggestions[selectedIndex]
         if (selected == null) return
         e.preventDefault()
         applySuggestion(selected)
@@ -92,7 +101,9 @@ export function TaskFilterFreeTextInput({
       }
       case 'Enter': {
         e.preventDefault()
-        const selected = hasSuggestions ? suggestions[selectedIndex] : null
+        const selected = hasSuggestions
+          ? (availableSuggestions[selectedIndex] ?? null)
+          : null
         if (selected != null) {
           applySuggestion(selected)
         } else {
@@ -135,7 +146,7 @@ export function TaskFilterFreeTextInput({
         initialFocus={false}
         className="min-w-(--anchor-width)"
       >
-        {suggestions?.map((suggestion, index) => (
+        {availableSuggestions?.map((suggestion, index) => (
           <button
             key={suggestion.value}
             type="button"

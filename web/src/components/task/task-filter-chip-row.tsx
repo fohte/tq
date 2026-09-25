@@ -52,6 +52,8 @@ interface TaskFilterChipRowProps {
   // list is scoped to a different project than the one the rest of the
   // screen (title, task summary, "Add task") actually targets.
   disableProjectFilter?: boolean
+  disableStatusFilter?: boolean
+  disableSortFilter?: boolean
   defaultOpenFilter?: TaskFilterKind
   defaultOpenSearchHelp?: boolean
 }
@@ -62,6 +64,8 @@ export function TaskFilterChipRow({
   projects,
   hideSaveView = false,
   disableProjectFilter = false,
+  disableStatusFilter = false,
+  disableSortFilter = false,
   defaultOpenFilter,
   defaultOpenSearchHelp = false,
 }: TaskFilterChipRowProps) {
@@ -104,7 +108,10 @@ export function TaskFilterChipRow({
   })
 
   const setParsed = (next: ParsedQuery) => {
-    onQueryChange(buildSearchQuery(next))
+    const filtered = { ...next }
+    if (disableStatusFilter) delete filtered.status
+    if (disableSortFilter) delete filtered.sortBy
+    onQueryChange(buildSearchQuery(filtered))
   }
 
   // Merges newly typed free text back into the applied query: anything that
@@ -117,7 +124,11 @@ export function TaskFilterChipRow({
   const commitFreeText = (freeText: string) => {
     const typed = parseSearchQuery(freeText)
     let next: ParsedQuery = { ...parsed, freeText: typed.freeText }
-    if (typed.status != null && typed.status.length > 0) {
+    if (
+      !disableStatusFilter &&
+      typed.status != null &&
+      typed.status.length > 0
+    ) {
       next = withStatus(next, [
         ...new Set([...(next.status ?? []), ...typed.status]),
       ])
@@ -139,7 +150,9 @@ export function TaskFilterChipRow({
     if (!disableProjectFilter && typed.projectId != null) {
       next = withProjectId(next, typed.projectId)
     }
-    if (typed.sortBy != null) next.sortBy = typed.sortBy
+    if (!disableSortFilter && typed.sortBy != null) {
+      next.sortBy = typed.sortBy
+    }
     setParsed(next)
   }
 
@@ -155,7 +168,11 @@ export function TaskFilterChipRow({
       setParsed(withLabel(parsed, undefined))
     } else if (selectedProject != null) {
       setParsed(withProjectId(parsed, ''))
-    } else if (parsed.status != null && parsed.status.length > 0) {
+    } else if (
+      !disableStatusFilter &&
+      parsed.status != null &&
+      parsed.status.length > 0
+    ) {
       setParsed(withStatus(parsed, []))
     }
   }
@@ -180,23 +197,25 @@ export function TaskFilterChipRow({
       {/* Wraps onto multiple lines as conditions accumulate, instead of
           scrolling horizontally and hiding chips off-screen. */}
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-        {parsed.status != null && parsed.status.length > 0 && (
-          <TaskFilterChip
-            attribute="is"
-            value={parsed.status
-              .map((status) => statusChipLabels[status])
-              .join(', ')}
-            menuTitle="Status"
-            defaultOpen={defaultOpenFilter === 'status'}
-          >
-            <TaskStatusFilterFields
-              status={parsed.status}
-              onStatusChange={(status) => {
-                setParsed(withStatus(parsed, status))
-              }}
-            />
-          </TaskFilterChip>
-        )}
+        {!disableStatusFilter &&
+          parsed.status != null &&
+          parsed.status.length > 0 && (
+            <TaskFilterChip
+              attribute="is"
+              value={parsed.status
+                .map((status) => statusChipLabels[status])
+                .join(', ')}
+              menuTitle="Status"
+              defaultOpen={defaultOpenFilter === 'status'}
+            >
+              <TaskStatusFilterFields
+                status={parsed.status}
+                onStatusChange={(status) => {
+                  setParsed(withStatus(parsed, status))
+                }}
+              />
+            </TaskFilterChip>
+          )}
 
         {selectedProject != null && (
           <TaskFilterChip
@@ -284,6 +303,10 @@ export function TaskFilterChipRow({
           freeText={parsed.freeText}
           onCommit={commitFreeText}
           onBackspaceEmpty={removeLastChip}
+          disabledSuggestionCategories={[
+            ...(disableStatusFilter ? ['is'] : []),
+            ...(disableSortFilter ? ['sort'] : []),
+          ]}
           placeholder="Filter…"
         />
         <SearchSyntaxHelpPopover
@@ -291,6 +314,8 @@ export function TaskFilterChipRow({
           sections={getSearchSyntaxHelpSections({
             audience: 'task-filter',
             disableProjectFilter,
+            disableStatusFilter,
+            disableSortFilter,
           })}
         />
       </div>
@@ -299,29 +324,31 @@ export function TaskFilterChipRow({
           it stays put at the top-right even once the chips wrap to a second
           line. Below `md` the value is dropped to save width — same
           control, same menu, just a shorter label. */}
-      <TaskFilterChip
-        attribute={
-          <>
-            <span className="sr-only">Sort by</span>
-            <span aria-hidden="true">↕</span>
-          </>
-        }
-        value={
-          <span className="hidden md:inline">
-            {sortLabels[sortBy] ?? sortBy}
-          </span>
-        }
-        menuTitle="Sort"
-        className="shrink-0"
-        defaultOpen={defaultOpenFilter === 'sort'}
-      >
-        <TaskSortFilterFields
-          sortBy={pickerSortBy}
-          onSortByChange={(sort) => {
-            setParsed({ ...parsed, sortBy: sort })
-          }}
-        />
-      </TaskFilterChip>
+      {!disableSortFilter && (
+        <TaskFilterChip
+          attribute={
+            <>
+              <span className="sr-only">Sort by</span>
+              <span aria-hidden="true">↕</span>
+            </>
+          }
+          value={
+            <span className="hidden md:inline">
+              {sortLabels[sortBy] ?? sortBy}
+            </span>
+          }
+          menuTitle="Sort"
+          className="shrink-0"
+          defaultOpen={defaultOpenFilter === 'sort'}
+        >
+          <TaskSortFilterFields
+            sortBy={pickerSortBy}
+            onSortByChange={(sort) => {
+              setParsed({ ...parsed, sortBy: sort })
+            }}
+          />
+        </TaskFilterChip>
+      )}
 
       {!hideSaveView && <SaveViewButton query={buildSearchQuery(parsed)} />}
     </div>

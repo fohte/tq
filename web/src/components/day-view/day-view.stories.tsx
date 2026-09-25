@@ -6,6 +6,7 @@ import { fn } from 'storybook/test'
 
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
+import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { Schedule } from '#hooks/use-schedules'
@@ -234,9 +235,20 @@ const meta = {
     },
     // CreateTaskModal's TagsInput fetches label suggestions.
     msw: {
-      handlers: [http.get('/api/labels', () => HttpResponse.json([]))],
+      handlers: [
+        http.get('/api/labels', () => HttpResponse.json([])),
+        http.get('/api/tasks/search/suggest', () => HttpResponse.json([])),
+      ],
     },
   },
+  render: (args) => (
+    <DayViewPresentation
+      {...args}
+      kanbanFilterRow={
+        <KanbanFilterRow onQueryChange={fn()} query="" projects={[]} />
+      }
+    />
+  ),
   decorators: [
     (Story) => (
       <Providers>

@@ -1,5 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { CalendarPlus, Kanban, List, Plus } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
@@ -85,6 +86,7 @@ export interface DayViewPresentationProps {
   onVisibleRangeChange?: (range: { start: Date; end: Date }) => void
   viewMode: DayViewMode
   onViewModeChange: (mode: DayViewMode) => void
+  kanbanFilterRow?: ReactNode
   /** Mounts with the mobile calendar/tasks pane switcher already on this tab. */
   initialMobileTab?: MobileTab
 }
@@ -111,6 +113,7 @@ export function DayViewPresentation({
   onVisibleRangeChange,
   viewMode,
   onViewModeChange,
+  kanbanFilterRow,
   initialMobileTab,
 }: DayViewPresentationProps) {
   const navigate = useNavigate()
@@ -292,6 +295,8 @@ export function DayViewPresentation({
             mobileTab === 'calendar' ? 'hidden md:flex' : 'flex md:flex',
           )}
         >
+          {viewMode === 'kanban' && kanbanFilterRow}
+
           {/* Summary header (today's queue only) */}
           <div className="border-b border-border py-2.5">
             <TaskListHeader tasks={dayQueueTasks} />

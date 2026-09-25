@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
+import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
 import { makeProject } from '#components/project/project-test-fixtures'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { makeParsedQuery } from '#components/task/task-filter-test-fixtures'
@@ -68,6 +69,29 @@ function renderRow(
 }
 
 describe('TaskFilterChipRow', () => {
+  it('does not commit status or sort tokens in the kanban filter row', async () => {
+    const onQueryChange = vi.fn()
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <KanbanFilterRow
+          query=""
+          onQueryChange={onQueryChange}
+          projects={projects}
+        />
+      </QueryClientProvider>,
+    )
+    const user = userEvent.setup()
+
+    const input = screen.getByRole('textbox', { name: 'Filter query' })
+    await user.type(input, 'is:completed sort:due')
+    await user.keyboard('{Enter}')
+
+    expect(onQueryChange.mock.calls).toEqual([['']])
+  })
+
   it('hides the project chip when disableProjectFilter is set', () => {
     renderRow({
       parsed: { ...defaultParsed, projectId: 'proj-1' },
