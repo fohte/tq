@@ -14,6 +14,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const LlmAuthor: Story = {
+  name: 'labels an LLM-authored task with its agent name',
   args: {
     author: { kind: 'llm', agent: 'claude-opus-5' },
   },

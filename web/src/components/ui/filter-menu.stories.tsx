@@ -22,6 +22,7 @@ type Story = StoryObj<typeof meta>
 
 // Desktop renders content in a popover positioned near the trigger.
 export const DesktopPopover: Story = {
+  name: 'shows filter options in an open desktop popover',
   tags: ['desktop-only'],
   args: {
     defaultOpen: true,
@@ -29,6 +30,7 @@ export const DesktopPopover: Story = {
 }
 
 export const MobileSheet: Story = {
+  name: 'shows filter options in an open mobile sheet',
   tags: ['mobile-only'],
   args: {
     defaultOpen: true,

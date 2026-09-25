@@ -99,6 +99,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Manual: Story = {
+  name: 'a manually scheduled task appears as a timed calendar block',
   args: {
     type: 'manual',
     title: 'API ドキュメント作成',
@@ -107,6 +108,7 @@ export const Manual: Story = {
 }
 
 export const ManualWithParent: Story = {
+  name: 'a manually scheduled task block shows its parent reference',
   args: {
     type: 'manual',
     title: 'テスト追加',
@@ -116,6 +118,7 @@ export const ManualWithParent: Story = {
 }
 
 export const AutoScheduled: Story = {
+  name: 'an automatically scheduled task appears as a timed block',
   args: {
     type: 'auto',
     title: 'コードレビュー',
@@ -125,6 +128,7 @@ export const AutoScheduled: Story = {
 
 // 約束 (default eventType, other attendees present): today's card, unmarked.
 export const GoogleCalendarMeeting: Story = {
+  name: 'a Google Calendar meeting appears with its title and time',
   args: {
     type: 'gcal-meeting',
     title: 'Team standup',
@@ -133,6 +137,7 @@ export const GoogleCalendarMeeting: Story = {
 }
 
 export const GoogleCalendarMeetingWithColor: Story = {
+  name: 'a Google Calendar meeting uses its calendar color',
   args: {
     type: 'gcal-meeting',
     title: 'Product sync',
@@ -142,6 +147,7 @@ export const GoogleCalendarMeetingWithColor: Story = {
 }
 
 export const GoogleCalendarMeetingSecondCalendar: Story = {
+  name: 'a meeting from another calendar uses that calendar color',
   args: {
     type: 'gcal-meeting',
     title: 'Dentist appointment',
@@ -151,6 +157,7 @@ export const GoogleCalendarMeetingSecondCalendar: Story = {
 }
 
 export const GoogleCalendarMeetingNeedsAction: Story = {
+  name: 'a meeting awaiting a response shows its RSVP status',
   args: {
     type: 'gcal-meeting',
     title: 'Q3 planning',
@@ -160,6 +167,7 @@ export const GoogleCalendarMeetingNeedsAction: Story = {
 }
 
 export const GoogleCalendarMeetingTentative: Story = {
+  name: 'a tentatively accepted meeting shows its RSVP status',
   args: {
     type: 'gcal-meeting',
     title: 'Design review',
@@ -170,6 +178,7 @@ export const GoogleCalendarMeetingTentative: Story = {
 
 // 自分だけの予定 (default eventType, no other attendees): fill dropped, still unmarked.
 export const GoogleCalendarSolo: Story = {
+  name: 'a personal Google Calendar event appears in the timeline',
   args: {
     type: 'gcal-solo',
     title: '歯医者',
@@ -179,6 +188,7 @@ export const GoogleCalendarSolo: Story = {
 
 // 状態 (outOfOffice / focusTime): a card marked with Google's own icon.
 export const GoogleCalendarStatusOutOfOffice: Story = {
+  name: 'an out-of-office event appears as a status block',
   args: {
     type: 'gcal-status',
     title: '退勤',
@@ -188,6 +198,7 @@ export const GoogleCalendarStatusOutOfOffice: Story = {
 }
 
 export const GoogleCalendarStatusFocusTime: Story = {
+  name: 'a focus time event appears as a status block',
   args: {
     type: 'gcal-status',
     title: '集中作業',
@@ -198,6 +209,7 @@ export const GoogleCalendarStatusFocusTime: Story = {
 
 // 情報 (isAllDay, or workingLocation): rendered in the all-day row.
 export const GoogleCalendarInfoAllDay: Story = {
+  name: 'an all-day Google Calendar event spans the date',
   args: {
     type: 'gcal-info',
     title: 'Company holiday',
@@ -207,6 +219,7 @@ export const GoogleCalendarInfoAllDay: Story = {
 }
 
 export const GoogleCalendarInfoWorkingLocation: Story = {
+  name: 'an all-day working location appears on the calendar',
   args: {
     type: 'gcal-info',
     title: '在宅勤務',
@@ -218,6 +231,7 @@ export const GoogleCalendarInfoWorkingLocation: Story = {
 
 // Masked events render as the generic "予定あり" block regardless of type.
 export const GoogleCalendarRedacted: Story = {
+  name: 'a private Google Calendar event hides its title',
   args: {
     type: 'gcal-solo',
     title: '',
@@ -227,6 +241,7 @@ export const GoogleCalendarRedacted: Story = {
 }
 
 export const Completed: Story = {
+  name: 'a completed task remains visible as a calendar block',
   args: {
     type: 'completed',
     title: 'CI パイプライン構築',
@@ -235,6 +250,7 @@ export const Completed: Story = {
 }
 
 export const SchedulePurple: Story = {
+  name: 'a purple schedule block marks a sleep period',
   args: {
     type: 'schedule',
     title: 'Sleep',
@@ -244,6 +260,7 @@ export const SchedulePurple: Story = {
 }
 
 export const ScheduleGreen: Story = {
+  name: 'a green schedule block marks a gym session',
   args: {
     type: 'schedule',
     title: 'Gym',
@@ -256,6 +273,7 @@ export const ScheduleGreen: Story = {
 // time both hide via container query so the title stays readable instead of
 // being squeezed to 0px.
 export const NarrowOverlappingColumn: Story = {
+  name: 'an overlapping meeting stays readable in a narrow column',
   args: {
     type: 'gcal-meeting',
     title: 'Team standup',
@@ -268,6 +286,7 @@ export const NarrowOverlappingColumn: Story = {
 // Same narrow+short chip while being dragged: the time stays visible since
 // it's the only feedback for where the drop will land.
 export const NarrowOverlappingColumnDragging: Story = {
+  name: 'a narrow overlapping meeting shows its drag preview',
   args: {
     type: 'gcal-meeting',
     title: 'Team standup',

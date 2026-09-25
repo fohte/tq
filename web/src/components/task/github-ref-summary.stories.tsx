@@ -19,6 +19,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const OpenIssue: Story = {
+  name: 'shows an open issue with its repository and title',
   args: {
     kind: 'issue',
     state: 'open',
@@ -30,6 +31,7 @@ export const OpenIssue: Story = {
 }
 
 export const ClosedIssue: Story = {
+  name: 'shows a closed issue with its repository and title',
   args: {
     kind: 'issue',
     state: 'closed',
@@ -41,6 +43,7 @@ export const ClosedIssue: Story = {
 }
 
 export const OpenPullRequest: Story = {
+  name: 'shows an open pull request with its repository and title',
   args: {
     kind: 'pull_request',
     state: 'open',
@@ -52,6 +55,7 @@ export const OpenPullRequest: Story = {
 }
 
 export const MergedPullRequest: Story = {
+  name: 'shows a merged pull request with its repository and title',
   args: {
     kind: 'pull_request',
     state: 'merged',
@@ -63,6 +67,7 @@ export const MergedPullRequest: Story = {
 }
 
 export const ClosedPullRequest: Story = {
+  name: 'shows a closed pull request with its repository and title',
   args: {
     kind: 'pull_request',
     state: 'closed',
@@ -74,6 +79,7 @@ export const ClosedPullRequest: Story = {
 }
 
 export const TruncatedTitle: Story = {
+  name: 'truncates a long issue title to one line',
   args: {
     kind: 'issue',
     state: 'open',

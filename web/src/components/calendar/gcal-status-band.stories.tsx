@@ -38,6 +38,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const OutOfOffice: Story = {
+  name: 'an out-of-office event appears in the calendar status band',
   args: {
     title: '退勤',
     gcalEventType: 'outOfOffice',
@@ -45,6 +46,7 @@ export const OutOfOffice: Story = {
 }
 
 export const FocusTime: Story = {
+  name: 'a focus time event appears in the calendar status band',
   args: {
     title: '集中作業',
     gcalEventType: 'focusTime',

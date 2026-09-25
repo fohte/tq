@@ -41,9 +41,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Empty: Story = {}
+export const Empty: Story = {
+  name: 'the dialog invites you to search for a task',
+}
 
 export const WithCandidates: Story = {
+  name: 'matching tasks appear with their parent context',
   args: {
     query: 'Deploy',
     candidates: [orphanCandidate, candidateWithParent],
@@ -51,6 +54,7 @@ export const WithCandidates: Story = {
 }
 
 export const NoResults: Story = {
+  name: 'the dialog explains when no tasks match the search',
   args: {
     query: 'Deploy',
     candidates: [],
@@ -58,6 +62,7 @@ export const NoResults: Story = {
 }
 
 export const WithSkipAction: Story = {
+  name: 'matching tasks appear alongside an option to skip linking',
   args: {
     title: 'Duplicate of',
     query: 'Deploy',

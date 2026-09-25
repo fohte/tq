@@ -15,6 +15,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Manual: Story = {
+  name: 'a manually scheduled time block can be deleted',
   args: {
     block: makeTimeBlock(),
     onDelete: () => {},
@@ -22,6 +23,7 @@ export const Manual: Story = {
 }
 
 export const Auto: Story = {
+  name: 'an automatically scheduled time block can be deleted',
   args: {
     block: makeTimeBlock({ isAutoScheduled: true }),
     onDelete: () => {},
@@ -29,6 +31,7 @@ export const Auto: Story = {
 }
 
 export const Deleting: Story = {
+  name: 'the time block shows its deleting state',
   args: {
     block: makeTimeBlock(),
     onDelete: () => {},

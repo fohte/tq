@@ -33,6 +33,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows a reorder handle for a task',
   args: {
     ariaLabel: 'Reorder task',
   },

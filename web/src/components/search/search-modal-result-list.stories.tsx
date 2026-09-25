@@ -70,8 +70,17 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const RecentlyViewed: Story = { args: { state: 'recent' } }
+export const RecentlyViewed: Story = {
+  name: 'the result list groups recently viewed tasks and projects',
+  args: { state: 'recent' },
+}
 
-export const Initial: Story = { args: { state: 'initial' } }
+export const Initial: Story = {
+  name: 'the result list prompts the user to type a search query',
+  args: { state: 'initial' },
+}
 
-export const NoResults: Story = { args: { state: 'empty' } }
+export const NoResults: Story = {
+  name: 'the result list shows a message when no results match',
+  args: { state: 'empty' },
+}

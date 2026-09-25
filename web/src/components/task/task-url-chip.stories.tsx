@@ -80,10 +80,12 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Todo: Story = {
+  name: 'an open task appears in an expanded inline preview',
   args: { id: TASK_ID, raw: TASK_URL, task: baseTask, defaultOpen: true },
 }
 
 export const Completed: Story = {
+  name: 'a completed task appears in its inline link',
   args: {
     id: TASK_ID,
     raw: TASK_URL,
@@ -95,5 +97,6 @@ export const Completed: Story = {
 // actual task): the chip falls back to rendering the raw matched text
 // instead of a card.
 export const Unresolved: Story = {
+  name: 'an unresolved task URL stays as plain text',
   args: { id: UNRESOLVED_ID, raw: UNRESOLVED_URL, task: null },
 }

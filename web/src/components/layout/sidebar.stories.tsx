@@ -155,30 +155,35 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the sidebar shows its default navigation sections',
   args: {
     currentPath: '/',
   },
 }
 
 export const TasksActive: Story = {
+  name: 'the sidebar highlights the tasks route',
   args: {
     currentPath: '/tasks',
   },
 }
 
 export const ProjectsActive: Story = {
+  name: 'the sidebar highlights the projects route',
   args: {
     currentPath: '/projects',
   },
 }
 
 export const SettingsActive: Story = {
+  name: 'the sidebar highlights the settings route',
   args: {
     currentPath: '/settings',
   },
 }
 
 export const WithTags: Story = {
+  name: 'the sidebar lists labels used by tasks',
   args: {
     currentPath: '/',
     tasks: tasksWithTags,
@@ -187,6 +192,7 @@ export const WithTags: Story = {
 }
 
 export const WithNestedTags: Story = {
+  name: 'the sidebar nests labels into a hierarchy',
   args: {
     currentPath: '/',
     tasks: tasksWithNestedTags,
@@ -195,6 +201,7 @@ export const WithNestedTags: Story = {
 }
 
 export const WithInboxTasks: Story = {
+  name: 'the sidebar shows an untriaged inbox task',
   args: {
     currentPath: '/',
     tasks: tasksWithInboxItems,
@@ -202,6 +209,7 @@ export const WithInboxTasks: Story = {
 }
 
 export const WithProjects: Story = {
+  name: 'the sidebar lists projects with different statuses',
   args: {
     currentPath: '/',
     projects: projectsAcrossStatuses,
@@ -222,6 +230,7 @@ const manySavedViews: SavedView[] = Array.from({ length: 7 }, (_, i) =>
 )
 
 export const WithViews: Story = {
+  name: 'the sidebar lists saved task views',
   args: {
     currentPath: '/',
     savedViews: fewSavedViews,
@@ -229,6 +238,7 @@ export const WithViews: Story = {
 }
 
 export const WithActiveView: Story = {
+  name: 'the sidebar highlights the saved view matching the current query',
   args: {
     currentPath: '/tasks?q=commitment:active',
     savedViews: fewSavedViews,
@@ -236,6 +246,7 @@ export const WithActiveView: Story = {
 }
 
 export const WithManyViews: Story = {
+  name: 'the sidebar scrolls through a long list of saved views',
   args: {
     currentPath: '/',
     savedViews: manySavedViews,

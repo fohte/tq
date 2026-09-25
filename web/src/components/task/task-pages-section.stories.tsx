@@ -84,19 +84,23 @@ export default meta
 type SectionStoryType = StoryObj<typeof meta>
 
 export const WithPages: SectionStoryType = {
+  name: 'the section lists several markdown pages, including an empty page',
   args: { taskId: 'task-001', pages: samplePages },
 }
 
 export const Empty: SectionStoryType = {
+  name: 'the task has no pages',
   args: { taskId: 'task-empty', pages: [] },
 }
 
 const [firstPage] = samplePages
 
 export const SinglePage: SectionStoryType = {
+  name: 'the section lists a single page',
   args: { taskId: 'task-single', pages: firstPage ? [firstPage] : [] },
 }
 
 export const WithHtmlPage: SectionStoryType = {
+  name: 'the section lists an HTML page with markdown pages',
   args: { taskId: 'task-001', pages: [...samplePages, sampleHtmlPage] },
 }

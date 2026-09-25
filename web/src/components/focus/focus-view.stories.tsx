@@ -89,6 +89,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the focus view shows the current task, subtasks, and next task',
   args: {
     isLoading: false,
     queueTasks: [completedTask, baseTask, nextTask],
@@ -99,6 +100,7 @@ export const Default: Story = {
 }
 
 export const NoSubtasksOrNextTask: Story = {
+  name: 'the focused task appears without subtasks or a next task',
   args: {
     isLoading: false,
     queueTasks: [baseTask],
@@ -109,6 +111,7 @@ export const NoSubtasksOrNextTask: Story = {
 }
 
 export const Loading: Story = {
+  name: 'the focus view shows a loading state while tasks are fetched',
   args: {
     isLoading: true,
     queueTasks: [],
@@ -119,6 +122,7 @@ export const Loading: Story = {
 }
 
 export const EmptyQueue: Story = {
+  name: 'the focus view shows an empty queue with no current task',
   args: {
     isLoading: false,
     queueTasks: [],
@@ -129,6 +133,7 @@ export const EmptyQueue: Story = {
 }
 
 export const AllDone: Story = {
+  name: 'the focus view shows that every queued task is complete',
   args: {
     isLoading: false,
     queueTasks: [completedTask, { ...baseTask, status: 'completed' }],

@@ -34,12 +34,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Empty: Story = {
+  name: 'shows an empty editor with its placeholder',
   args: {
     placeholder: 'Write something...',
   },
 }
 
 export const WithContent: Story = {
+  name: 'shows formatted discussion notes in the editor',
   args: {
     defaultValue:
       '## Discussion Points\n\n- Architecture review\n- Sprint planning\n- Performance improvements\n\nWe decided to go with option B for the following reasons:\n\n1. Better performance\n2. Simpler architecture\n3. Easier to maintain',
@@ -50,6 +52,7 @@ export const WithContent: Story = {
 // description) must render its own min-height (120px) rather than the
 // 'default' size's 400px or collapsing to the content's own height.
 export const Compact: Story = {
+  name: 'shows a compact editor for a short description',
   args: {
     placeholder: 'Write something...',
     size: 'compact',
@@ -87,6 +90,7 @@ function renderWithLiveReferences(args: ComponentProps<typeof MarkdownEditor>) {
 // CommentInput) stays in 'edit' mode and only ever shows raw Markdown
 // source (see markdown-editor-crepe.tsx's CrepeEditorProps.mode comment).
 export const WithLiveReferences: Story = {
+  name: 'renders a task mention and GitHub URL as live chips',
   render: renderWithLiveReferences,
   args: {
     defaultValue: `See #${String(MENTION_FIXTURE_NUMBER)} and ${GITHUB_URL_FIXTURE} for details.`,
@@ -126,6 +130,7 @@ const answer = 42
 `
 
 export const AllMarkdownElementsViewMode: Story = {
+  name: 'renders headings, lists, links, code, and a task mention in view mode',
   render: renderWithLiveReferences,
   args: {
     defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
@@ -134,6 +139,7 @@ export const AllMarkdownElementsViewMode: Story = {
 }
 
 export const AllMarkdownElementsEditMode: Story = {
+  name: 'shows headings, lists, links, and code while editing Markdown',
   render: renderWithLiveReferences,
   args: {
     defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,

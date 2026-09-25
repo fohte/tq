@@ -44,9 +44,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const WithCandidates: Story = {}
+export const WithCandidates: Story = {
+  name: 'lists matching tasks with and without a parent',
+}
 
 export const ConfirmDialog: Story = {
+  name: 'confirms moving a task from another parent',
   args: {
     confirmCandidate: candidateWithParent,
   },

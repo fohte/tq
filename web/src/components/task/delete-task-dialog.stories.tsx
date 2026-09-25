@@ -35,15 +35,19 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'asks to delete the selected task',
+}
 
 export const WithParent: Story = {
+  name: 'keeps subtasks under the parent after deletion',
   args: {
     taskHasParent: true,
   },
 }
 
 export const LongTitle: Story = {
+  name: 'shows a long task title in the confirmation dialog',
   args: {
     taskTitle:
       'Rework the scheduling heuristics so recurring tasks land on the right day',

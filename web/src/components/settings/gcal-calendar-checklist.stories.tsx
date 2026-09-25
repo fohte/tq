@@ -48,6 +48,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the calendar checklist shows enabled calendars and their contexts',
   args: {
     calendars: sampleCalendars,
     onToggle: () => {},
@@ -56,6 +57,7 @@ export const Default: Story = {
 }
 
 export const Updating: Story = {
+  name: 'the calendar checklist marks one calendar while its setting updates',
   args: {
     calendars: sampleCalendars,
     onToggle: () => {},
@@ -65,6 +67,7 @@ export const Updating: Story = {
 }
 
 export const UpdatingContext: Story = {
+  name: 'the calendar checklist marks a context while it updates',
   args: {
     calendars: sampleCalendars,
     onToggle: () => {},
@@ -74,6 +77,7 @@ export const UpdatingContext: Story = {
 }
 
 export const Empty: Story = {
+  name: 'the calendar checklist explains that no calendars are available',
   args: {
     calendars: [],
     onToggle: () => {},

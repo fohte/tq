@@ -32,12 +32,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Empty: Story = {
+  name: 'the progress header shows zero completed tasks',
   args: {
     tasks: [],
   },
 }
 
 export const NoneCompleted: Story = {
+  name: 'the header shows estimated time with no tasks completed',
   args: {
     tasks: makeTasks([
       { title: 'Task A', estimatedMinutes: 60 },
@@ -48,6 +50,7 @@ export const NoneCompleted: Story = {
 }
 
 export const PartiallyCompleted: Story = {
+  name: 'the header shows partial completion and estimated time',
   args: {
     tasks: makeTasks([
       { title: 'Task A', status: 'completed', estimatedMinutes: 60 },
@@ -59,6 +62,7 @@ export const PartiallyCompleted: Story = {
 }
 
 export const AllCompleted: Story = {
+  name: 'the header shows every task completed',
   args: {
     tasks: makeTasks([
       { title: 'Task A', status: 'completed', estimatedMinutes: 60 },
@@ -68,6 +72,7 @@ export const AllCompleted: Story = {
 }
 
 export const NoEstimates: Story = {
+  name: 'the header omits estimated time when tasks have no estimates',
   args: {
     tasks: makeTasks([
       { title: 'Task A' },

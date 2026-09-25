@@ -128,24 +128,28 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const DayView: Story = {
+  name: 'the calendar grid shows hourly slots for a single day',
   args: {
     activeView: 'day',
   },
 }
 
 export const WeekView: Story = {
+  name: 'the calendar grid lays out hourly slots across a week',
   args: {
     activeView: 'week',
   },
 }
 
 export const MonthView: Story = {
+  name: 'the calendar grid displays a full month of date cells',
   args: {
     activeView: 'month',
   },
 }
 
 export const Empty: Story = {
+  name: 'the daily calendar grid remains visible without scheduled events',
   args: {
     activeView: 'day',
     events: [],

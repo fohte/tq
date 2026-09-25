@@ -69,6 +69,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the queue pane groups tasks into today and this week',
   args: {
     isLoading: false,
     queueSections: [
@@ -92,6 +93,7 @@ export const Default: Story = {
 }
 
 export const Empty: Story = {
+  name: 'the queue pane shows empty messages for today and this week',
   args: {
     isLoading: false,
     queueSections: [
@@ -115,6 +117,7 @@ export const Empty: Story = {
 }
 
 export const Loading: Story = {
+  name: 'the queue pane shows loading placeholders for its sections',
   args: {
     isLoading: true,
     queueSections: [],

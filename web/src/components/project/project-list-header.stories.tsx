@@ -61,4 +61,6 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the project list header shows its title and creation control',
+}

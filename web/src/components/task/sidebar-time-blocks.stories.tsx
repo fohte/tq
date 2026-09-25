@@ -64,6 +64,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Empty: Story = {
+  name: 'the section has no scheduled time blocks for the task',
   args: {
     taskId,
     timeBlocks: [],
@@ -71,6 +72,7 @@ export const Empty: Story = {
 }
 
 export const WithManualAndAutoBlocks: Story = {
+  name: 'the section shows manual and automatically scheduled blocks together',
   args: {
     taskId,
     timeBlocks: [autoBlock, manualBlock],

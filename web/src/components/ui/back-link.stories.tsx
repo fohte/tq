@@ -27,6 +27,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const IconOnly: Story = {
+  name: 'shows a back icon without a text label',
   args: {
     to: '/',
     'aria-label': 'Back',
@@ -34,6 +35,7 @@ export const IconOnly: Story = {
 }
 
 export const WithLabel: Story = {
+  name: 'shows a back link labeled Projects',
   args: {
     to: '/',
     children: 'Projects',

@@ -243,64 +243,81 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the search dialog opens with its initial prompt and no recent items',
+}
 
 export const AllContexts: Story = {
+  name: 'the search dialog searches across work and personal contexts',
   args: { defaultContext: null },
 }
 
 export const TaskMode: Story = {
+  name: 'the search dialog shows tasks whose titles match a keyword in task mode',
   args: { defaultContext: 'work', defaultQuery: `#${keyboardQuery}` },
 }
 
 export const ProjectMode: Story = {
+  name: 'the search dialog shows projects matching a name query',
   args: { defaultContext: 'work', defaultQuery: `!${keyboardQuery}` },
 }
 
 export const PageMode: Story = {
+  name: 'the search dialog searches page, comment, and task text',
   args: { defaultContext: 'work', defaultQuery: `/${keyboardQuery}` },
 }
 
 export const CommandMode: Story = {
+  name: 'the search dialog lists available commands',
   args: { defaultContext: 'work', defaultQuery: '>' },
 }
 
 export const RecentlyViewed: Story = {
+  name: 'the search dialog shows recently viewed tasks and projects',
   args: { defaultContext: 'work', defaultRecentItems: recentItems },
 }
 
 export const CrossSearch: Story = {
+  name: 'the search dialog shows matching tasks, projects, and pages together',
   args: { defaultContext: 'work', defaultQuery: keyboardQuery },
 }
 
 export const ProjectScope: Story = {
+  name: 'a project scope token narrows task results to one project',
   args: { defaultContext: 'work', defaultQuery: projectScopeQuery },
 }
 
 export const TaskScope: Story = {
+  name: 'a parent scope token narrows task results to the children of one task',
   args: { defaultContext: 'work', defaultQuery: taskScopeQuery },
 }
 
 export const ScrollableResults: Story = {
+  name: 'the search dialog lets a long result list scroll',
   args: { defaultContext: 'work', defaultQuery: scrollableQuery },
 }
 
 export const TaskNumber: Story = {
+  name: 'a task number query finds the matching task directly',
   args: { defaultContext: 'work', defaultQuery: numberedTaskQuery },
 }
 
 export const Suggestions: Story = {
+  name: 'the search dialog suggests filter values after the is prefix',
   args: { defaultContext: 'work', defaultQuery: 'is:' },
 }
 
 export const HelpOpen: Story = {
+  name: 'the search dialog displays its search syntax guide',
   args: { defaultContext: 'work', defaultHelpOpen: true },
 }
 
 export const Views: Story = {
+  name: 'the search dialog finds a saved view by its name',
   args: { defaultContext: 'work', defaultQuery: workbenchQuery },
 }
 
 export const NoResults: Story = {
+  name: 'the search dialog explains that the query returned no results',
   args: { defaultContext: 'work', defaultQuery: 'nothing-matches' },
 }

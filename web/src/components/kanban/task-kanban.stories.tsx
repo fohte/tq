@@ -92,12 +92,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'tasks are grouped into inbox, active, and someday columns',
   args: {
     columns: baseColumns,
   },
 }
 
 export const Loading: Story = {
+  name: 'the kanban board shows loading placeholders in each column',
   args: {
     columns: [
       { id: 'inbox', title: 'Inbox', tasks: [], isLoading: true },
@@ -108,6 +110,7 @@ export const Loading: Story = {
 }
 
 export const Empty: Story = {
+  name: 'the kanban board shows empty inbox, active, and someday columns',
   args: {
     columns: [
       { id: 'inbox', title: 'Inbox', tasks: [] },
@@ -118,6 +121,7 @@ export const Empty: Story = {
 }
 
 export const WithDateRangeLabel: Story = {
+  name: 'day and week columns show their date ranges above tasks',
   args: {
     columns: [
       {
@@ -137,6 +141,7 @@ export const WithDateRangeLabel: Story = {
 }
 
 export const WithFooter: Story = {
+  name: 'active and someday columns include links below their tasks',
   args: {
     columns: [
       { id: 'inbox', title: 'Inbox', tasks: inboxTasks },
@@ -193,6 +198,7 @@ const candidates: QueueCandidate<Task>[] = [
 // (see the overflowCheck comment on `meta` above), so this would be
 // pixel-identical to WithDateRangeLabel there.
 export const WithCandidates: Story = {
+  name: 'the weekly board shows overdue and due today candidates beside tasks',
   tags: ['desktop-only'],
   args: {
     columns: dayWeekColumns,

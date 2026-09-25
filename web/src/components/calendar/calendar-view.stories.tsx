@@ -218,22 +218,26 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Empty: Story = {
+  name: 'the calendar shows an empty daily timeline',
   args: {},
 }
 
 export const WithEvents: Story = {
+  name: 'the daily calendar places tasks, meetings, and schedules on the timeline',
   args: {
     events: sampleEvents,
   },
 }
 
 export const ManualOnly: Story = {
+  name: 'the daily calendar shows manually scheduled tasks without other events',
   args: {
     events: sampleEvents.filter((e) => e.type === 'manual'),
   },
 }
 
 export const WeekView: Story = {
+  name: 'the weekly calendar arranges timed events across seven days',
   args: {
     events: generateWeekEvents(),
     initialView: 'week',
@@ -241,6 +245,7 @@ export const WeekView: Story = {
 }
 
 export const MonthView: Story = {
+  name: 'the monthly calendar places events in their date cells',
   args: {
     events: generateMonthEvents(),
     initialView: 'month',
@@ -248,6 +253,7 @@ export const MonthView: Story = {
 }
 
 export const WeekViewWithDayEvents: Story = {
+  name: 'the weekly calendar combines timed events with all-day items',
   args: {
     events: [...sampleEvents, ...generateWeekEvents()],
     initialView: 'week',
@@ -255,6 +261,7 @@ export const WeekViewWithDayEvents: Story = {
 }
 
 export const SchedulesOnly: Story = {
+  name: 'the calendar displays recurring schedule blocks without other events',
   args: {
     events: [
       {
@@ -294,6 +301,7 @@ export const SchedulesOnly: Story = {
 }
 
 export const MonthViewEmpty: Story = {
+  name: 'the monthly calendar keeps its date cells visible without events',
   args: {
     events: [],
     initialView: 'month',
@@ -301,6 +309,7 @@ export const MonthViewEmpty: Story = {
 }
 
 export const OvernightEvents: Story = {
+  name: 'the daily timeline shows an event that continues past midnight',
   args: {
     events: [
       ...sampleEvents,

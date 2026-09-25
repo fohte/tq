@@ -52,18 +52,21 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the project sidebar shows its description, dates, and actions',
   args: {
     project: { ...baseProject },
   },
 }
 
 export const NoTargetDate: Story = {
+  name: 'the project sidebar omits a target date that is not set',
   args: {
     project: { ...baseProject, targetDate: null },
   },
 }
 
 export const WorkContext: Story = {
+  name: 'the project sidebar marks the project as work related',
   args: {
     project: { ...baseProject, context: 'work' },
   },

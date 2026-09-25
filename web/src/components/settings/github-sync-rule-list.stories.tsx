@@ -88,6 +88,7 @@ type Story = StoryObj<typeof meta>
 // the component in its initial isLoading render. The sync-rules request is
 // held open (rather than errored) so the loading state stays visible.
 export const Loading: Story = {
+  name: 'the GitHub sync rule list shows loading placeholders',
   args: {},
   parameters: {
     msw: {
@@ -103,6 +104,7 @@ export const Loading: Story = {
 }
 
 export const Empty: Story = {
+  name: 'the GitHub sync rule list explains that no rules exist',
   args: {
     syncRules: [],
   },
@@ -114,6 +116,7 @@ export const Empty: Story = {
 }
 
 export const Populated: Story = {
+  name: 'the GitHub sync rule list shows configured rules',
   args: {
     syncRules: sampleRules,
   },

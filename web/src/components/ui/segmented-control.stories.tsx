@@ -42,18 +42,21 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'selects the week option among three calendar scales',
   args: {
     value: 'week',
   },
 }
 
 export const FirstOption: Story = {
+  name: 'selects the day option among three calendar scales',
   args: {
     value: 'day',
   },
 }
 
 export const WithContainerBackground: Story = {
+  name: 'shows the calendar scale control in a shaded container',
   render: (args) => (
     <SegmentedControl
       value={args.value}
