@@ -17,6 +17,12 @@ export interface ParsedQuery {
   sortBy?: 'due' | 'created' | 'updated' | 'estimate'
 }
 
+export interface SearchQueryTokenRange {
+  value: string
+  start: number
+  end: number
+}
+
 type SearchQueryTokenValue = {
   value: string
   display: string
@@ -327,11 +333,12 @@ function quoteIfNeeded(value: string): string {
   return /[\s"']/.test(value) ? `"${value.replace(/"/g, '\\"')}"` : value
 }
 
-function tokenize(input: string): string[] {
-  const tokens: string[] = []
+export function tokenizeSearchQuery(input: string): SearchQueryTokenRange[] {
+  const tokens: SearchQueryTokenRange[] = []
   let current = ''
   let inQuote = false
   let quoteChar = ''
+  let tokenStart: number | undefined
 
   for (let i = 0; i < input.length; i++) {
     const ch = input.charAt(i)
@@ -345,21 +352,32 @@ function tokenize(input: string): string[] {
         current += ch
       }
     } else if (ch === '"' || ch === "'") {
+      tokenStart ??= i
       inQuote = true
       quoteChar = ch
     } else if (ch === ' ' || ch === '\t') {
       if (current !== '') {
-        tokens.push(current)
+        tokens.push({ value: current, start: tokenStart ?? i, end: i })
         current = ''
       }
+      tokenStart = undefined
     } else {
+      tokenStart ??= i
       current += ch
     }
   }
 
   if (current !== '') {
-    tokens.push(current)
+    tokens.push({
+      value: current,
+      start: tokenStart ?? input.length,
+      end: input.length,
+    })
   }
 
   return tokens
+}
+
+function tokenize(input: string): string[] {
+  return tokenizeSearchQuery(input).map(({ value }) => value)
 }

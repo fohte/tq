@@ -1,4 +1,8 @@
-import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
+import {
+  buildSearchQuery,
+  parseSearchQuery,
+  tokenizeSearchQuery,
+} from 'api/search-query-parser'
 import { useCallback, useRef } from 'react'
 
 import { parseSearchMode } from '#components/search/search-modal-mode'
@@ -39,10 +43,9 @@ export function removeSearchScopeToken(query: string, index: number): string {
 }
 
 export function removeSearchContextTokens(query: string): string {
-  const ranges = getQueryTokenRanges(query).filter(({ start, end }) => {
-    const token = query.slice(start, end)
-    return token === 'context:work' || token === 'context:personal'
-  })
+  const ranges = tokenizeSearchQuery(query).filter(
+    ({ value }) => parseSearchQuery(value).context != null,
+  )
 
   return ranges
     .reverse()
@@ -56,50 +59,9 @@ function removeQueryTokenAt(query: string, start: number, end: number): string {
   const before = query.slice(0, start)
   const after = query.slice(end)
 
-  if (before.endsWith(' ')) return before.slice(0, -1) + after
-  if (after.startsWith(' ')) return before + after.slice(1)
+  if (/[ \t]$/.test(before)) return before.slice(0, -1) + after
+  if (/^[ \t]/.test(after)) return before + after.slice(1)
   return before + after
-}
-
-function getQueryTokenRanges(
-  query: string,
-): Array<{ start: number; end: number }> {
-  const ranges: Array<{ start: number; end: number }> = []
-  let start: number | undefined
-  let quote: '"' | "'" | undefined
-  let escaped = false
-
-  for (let index = 0; index < query.length; index++) {
-    const character = query[index]
-    if (character == null) continue
-
-    if (start == null && /\s/.test(character)) continue
-    start ??= index
-
-    if (escaped) {
-      escaped = false
-      continue
-    }
-    if (quote != null && character === '\\') {
-      escaped = true
-      continue
-    }
-    if (quote === character) {
-      quote = undefined
-      continue
-    }
-    if (quote == null && (character === '"' || character === "'")) {
-      quote = character
-      continue
-    }
-    if (quote == null && /\s/.test(character)) {
-      ranges.push({ start, end: index })
-      start = undefined
-    }
-  }
-
-  if (start != null) ranges.push({ start, end: query.length })
-  return ranges
 }
 
 export function addSearchScope(query: string, scopeToken: string): string {

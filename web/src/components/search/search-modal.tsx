@@ -305,7 +305,7 @@ export function SearchModal({
           <SearchModalInput
             modePrefix={modePrefix}
             context={context}
-            searchScopeTokens={searchScopeLabels}
+            searchScopes={searchScopeLabels}
             searchInputValue={searchInputValue}
             searchTarget={searchTarget}
             isFetching={isFetching}

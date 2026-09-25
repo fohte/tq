@@ -38,10 +38,12 @@ describe('search modal query scopes', () => {
     ).toBe('project:alpha is:todo search ')
   })
 
-  it('removes context filters without changing quoted free text', () => {
+  it('removes parser-recognized context filters and keeps invalid values as text', () => {
     expect(
-      removeSearchContextTokens('search "context:work" context:work is:todo '),
-    ).toBe('search "context:work" is:todo ')
+      removeSearchContextTokens(
+        `search "context:foo" Context:work context:"personal" context:'work' is:todo `,
+      ),
+    ).toBe('search "context:foo" is:todo ')
   })
 
   it('drops free text while preserving filters and earlier scopes', () => {

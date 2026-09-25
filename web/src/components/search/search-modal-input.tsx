@@ -8,7 +8,7 @@ import type { SearchScopeLabel } from '#hooks/use-search-scope-labels'
 interface SearchModalInputProps {
   modePrefix?: string | undefined
   context?: 'work' | 'personal' | undefined
-  searchScopeTokens: SearchScopeLabel[]
+  searchScopes: SearchScopeLabel[]
   searchInputValue: string
   searchTarget: SearchMode
   isFetching: boolean
@@ -21,7 +21,7 @@ interface SearchModalInputProps {
 export function SearchModalInput({
   modePrefix,
   context,
-  searchScopeTokens,
+  searchScopes,
   searchInputValue,
   searchTarget,
   isFetching,
@@ -40,55 +40,21 @@ export function SearchModalInput({
         {modePrefix ?? '›'}
       </span>
       {context != null && (
-        <Chip
-          size="md"
-          active
-          className="max-w-32 gap-1 py-px pr-0.5"
-          data-testid="search-context-scope"
-          title={`context:${context}`}
-        >
-          <span className="min-w-0 truncate">context:{context}</span>
-          <button
-            type="button"
-            aria-label={`Remove context:${context} scope`}
-            className="shrink-0 text-muted-foreground-faint hover:text-destructive"
-            onClick={onRemoveContext}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.stopPropagation()
-              }
-            }}
-          >
-            <X className="h-2.5 w-2.5" aria-hidden="true" />
-          </button>
-        </Chip>
+        <RemovableScopeChip
+          label={`context:${context}`}
+          testId="search-context-scope"
+          onRemove={onRemoveContext}
+        />
       )}
-      {searchScopeTokens.map(({ token, label }, index) => (
-        <Chip
+      {searchScopes.map(({ token, label }, index) => (
+        <RemovableScopeChip
           key={`${token}-${String(index)}`}
-          size="md"
-          active
-          className="max-w-32 gap-1 py-px pr-0.5"
-          data-testid="search-scope-token"
-          title={label}
-        >
-          <span className="min-w-0 truncate">{label}</span>
-          <button
-            type="button"
-            aria-label={`Remove ${label} scope`}
-            className="shrink-0 text-muted-foreground-faint hover:text-destructive"
-            onClick={() => {
-              onRemoveScopeToken(index)
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.stopPropagation()
-              }
-            }}
-          >
-            <X className="h-2.5 w-2.5" aria-hidden="true" />
-          </button>
-        </Chip>
+          label={label}
+          testId="search-scope-token"
+          onRemove={() => {
+            onRemoveScopeToken(index)
+          }}
+        />
       ))}
       <input
         ref={inputRef}
@@ -110,5 +76,40 @@ export function SearchModalInput({
       )}
       <KeybindHint variant="boxed">Esc</KeybindHint>
     </div>
+  )
+}
+
+function RemovableScopeChip({
+  label,
+  testId,
+  onRemove,
+}: {
+  label: string
+  testId: string
+  onRemove: () => void
+}) {
+  return (
+    <Chip
+      size="md"
+      active
+      className="max-w-32 gap-1 py-px pr-0.5"
+      data-testid={testId}
+      title={label}
+    >
+      <span className="min-w-0 truncate">{label}</span>
+      <button
+        type="button"
+        aria-label={`Remove ${label} scope`}
+        className="shrink-0 text-muted-foreground-faint hover:text-destructive"
+        onClick={onRemove}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.stopPropagation()
+          }
+        }}
+      >
+        <X className="h-2.5 w-2.5" aria-hidden="true" />
+      </button>
+    </Chip>
   )
 }

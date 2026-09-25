@@ -327,7 +327,7 @@ describe('SearchModal', () => {
     })
   })
 
-  it('shows resolved scope names and removes only the clicked scope', async () => {
+  it('shows the provided scope names and removes only the clicked scope', async () => {
     const projectId = '00000000-0000-0000-0000-000000000104'
     const parentId = '00000000-0000-0000-0000-000000000105'
     mockScopeLabels = new Map([
@@ -363,7 +363,7 @@ describe('SearchModal', () => {
 
   it('removes an explicit context filter from the query', async () => {
     const user = userEvent.setup()
-    renderSearchModal({ defaultQuery: 'context:work' })
+    renderSearchModal({ defaultQuery: '"context:work"' })
 
     await user.click(
       screen.getByRole('button', { name: 'Remove context:work scope' }),
