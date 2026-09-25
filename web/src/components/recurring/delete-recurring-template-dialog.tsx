@@ -30,7 +30,7 @@ export function DeleteRecurringTemplateDialog({
       onOpenChange={onOpenChange}
       title="Delete template"
       description={`Are you sure you want to delete "${templateTitle}"? Tasks it already generated are kept. This action cannot be undone.`}
-      onDelete={handleDelete}
+      onConfirm={handleDelete}
     />
   )
 }

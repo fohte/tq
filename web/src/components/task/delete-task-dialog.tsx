@@ -38,7 +38,7 @@ export function DeleteTaskDialog({
       onOpenChange={onOpenChange}
       title="Delete task"
       description={`Are you sure you want to delete #${String(taskNumber)} "${taskTitle}"? ${subtasksNote} This action cannot be undone.`}
-      onDelete={handleDelete}
+      onConfirm={handleDelete}
     />
   )
 }

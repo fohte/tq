@@ -10,6 +10,7 @@ import type {
 import { CreateTaskModalMobile } from '#components/task/create-task-modal-mobile'
 import { GithubRefSummary } from '#components/task/github-ref-summary'
 import { toGithubUrlSummary } from '#components/task/github-url-summary'
+import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import {
   Dialog,
   DialogOverlay,
@@ -58,6 +59,7 @@ interface CreateTaskModalProps {
    * together with `parentTaskTitle` whenever `parentId` is set. */
   parentTaskNumber?: number
   parentTaskTitle?: string
+  defaultDiscardConfirmationOpen?: boolean
   onCreated?: (task: { id: string }) => void
 }
 
@@ -73,12 +75,16 @@ export function CreateTaskModal({
   parentId,
   parentTaskNumber,
   parentTaskTitle,
+  defaultDiscardConfirmationOpen = false,
   onCreated,
 }: CreateTaskModalProps) {
   const currentContext = useCurrentContext()
   const effectiveDefaultContext = defaultContext ?? currentContext
 
   const [title, setTitle] = useState('')
+  const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(
+    defaultDiscardConfirmationOpen,
+  )
   const descriptionRef = useRef('')
   const [editorKey, setEditorKey] = useState(0)
   const [startDate, setStartDate] = useState(defaultStartDate ?? '')
@@ -172,6 +178,10 @@ export function CreateTaskModal({
     open,
   ])
 
+  useEffect(() => {
+    if (!open) setDiscardConfirmationOpen(false)
+  }, [open])
+
   const parsedMinutes = parseDurationToMinutes(estimateInput)
 
   const resetForm = useCallback(() => {
@@ -198,12 +208,22 @@ export function CreateTaskModal({
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) {
+        if (title.trim() !== '' || descriptionRef.current.trim() !== '') {
+          setDiscardConfirmationOpen(true)
+          return
+        }
         resetForm()
       }
       onOpenChange(nextOpen)
     },
-    [onOpenChange, resetForm],
+    [onOpenChange, resetForm, title],
   )
+
+  const discardDraft = () => {
+    setDiscardConfirmationOpen(false)
+    resetForm()
+    onOpenChange(false)
+  }
 
   // Stripping a consumed token resets the input's caret to the end of the
   // (now shorter) title, since the value change isn't a plain append. Fine
@@ -313,6 +333,7 @@ export function CreateTaskModal({
             },
           )
         }
+        setDiscardConfirmationOpen(false)
         resetForm()
         onOpenChange(false)
         onCreated?.(task)
@@ -463,6 +484,14 @@ export function CreateTaskModal({
           />
         </DialogPopup>
       </DialogPortal>
+      <DeleteConfirmDialog
+        title="Discard task draft?"
+        description="The task and its description will be discarded."
+        confirmLabel="Discard"
+        onConfirm={discardDraft}
+        open={open && discardConfirmationOpen}
+        onOpenChange={setDiscardConfirmationOpen}
+      />
     </Dialog>
   )
 }

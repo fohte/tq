@@ -73,6 +73,12 @@ export const WithDefaultEstimate: Story = {
   },
 }
 
+export const DiscardConfirmation: Story = {
+  args: {
+    defaultDiscardConfirmationOpen: true,
+  },
+}
+
 export const AsSubtask: Story = {
   args: {
     parentId: 'parent-task-id',

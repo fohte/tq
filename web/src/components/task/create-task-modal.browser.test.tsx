@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query'
-import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent, { type UserEvent } from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
@@ -26,6 +26,7 @@ import {
   assertDefined,
   atIndex,
   findVisible,
+  focusDescriptionEditor,
   partialMutation,
 } from '#lib/test-utils'
 import {
@@ -80,7 +81,65 @@ function mockCreateTaskSuccess(task: Task) {
   return mutate
 }
 
+function mockCreateTaskPendingSuccess() {
+  let onSuccess: ((task: Task) => void) | undefined
+  const mutate = vi.fn(
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double stores the callback to simulate an in-flight mutation
+    ((
+      _input: CreateTaskInput,
+      options?: { onSuccess?: (task: Task) => void },
+    ) => {
+      onSuccess = options?.onSuccess
+    }) as ReturnType<typeof useCreateTask>['mutate'],
+  )
+  mockUseCreateTask.mockReturnValue(
+    partialMutation<ReturnType<typeof useCreateTask>>({
+      mutate,
+      isPending: false,
+    }),
+  )
+  return {
+    mutate,
+    succeed: (task: Task) => {
+      assertDefined(onSuccess)(task)
+    },
+  }
+}
+
 const titleInputPlaceholder = /task title|タスクのタイトル/i
+
+function titleInputValue() {
+  const input = atIndex(
+    screen.getAllByPlaceholderText(titleInputPlaceholder),
+    0,
+  )
+  return input instanceof HTMLInputElement ? input.value : null
+}
+
+function isDiscardConfirmationOpen() {
+  return screen.queryByRole('dialog', { name: 'Discard task draft?' }) !== null
+}
+
+async function clickDiscardConfirmation(
+  user: UserEvent,
+  label: 'Cancel' | 'Discard',
+) {
+  const confirmation = screen.getByRole('dialog', {
+    name: 'Discard task draft?',
+  })
+  await user.click(within(confirmation).getByRole('button', { name: label }))
+}
+
+function closeState(
+  calls: readonly unknown[][],
+  values: Record<string, unknown> = {},
+) {
+  return {
+    ...values,
+    onOpenChange: calls,
+    confirmationOpen: isDiscardConfirmationOpen(),
+  }
+}
 
 describe('CreateTaskModal', () => {
   beforeEach(() => {
@@ -113,6 +172,112 @@ describe('CreateTaskModal', () => {
       expect(
         screen.queryByPlaceholderText('Task title'),
       ).not.toBeInTheDocument()
+    })
+  })
+
+  it('keeps a title draft when closing is canceled', async () => {
+    const user = userEvent.setup()
+    const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
+
+    const titleInput = atIndex(
+      screen.getAllByPlaceholderText(titleInputPlaceholder),
+      0,
+    )
+    await user.type(titleInput, 'A draft task')
+    await user.click(
+      atIndex(screen.getAllByRole('button', { name: 'Close' }), 0),
+    )
+
+    await clickDiscardConfirmation(user, 'Cancel')
+
+    await waitFor(() => {
+      expect(
+        closeState(onOpenChange.mock.calls, { title: titleInputValue() }),
+      ).toEqual({
+        title: 'A draft task',
+        onOpenChange: [],
+        confirmationOpen: false,
+      })
+    })
+  })
+
+  it('asks before closing when the description has content', async () => {
+    const user = userEvent.setup()
+    const { onOpenChange } = renderControlledModal(CreateTaskModal, {
+      defaultDescription: '',
+    })
+
+    const editor = await focusDescriptionEditor(user, document.body, {
+      timeout: 10_000,
+    })
+    await user.keyboard('A draft description')
+    await user.keyboard('{Escape}')
+
+    await clickDiscardConfirmation(user, 'Cancel')
+
+    await waitFor(() => {
+      expect(
+        closeState(onOpenChange.mock.calls, {
+          description: editor.textContent,
+        }),
+      ).toEqual({
+        description: 'A draft description',
+        onOpenChange: [],
+        confirmationOpen: false,
+      })
+    })
+  })
+
+  it('closes and resets the draft when discard is confirmed', async () => {
+    const user = userEvent.setup()
+    const { onOpenChange, setOpen } = renderControlledModal(CreateTaskModal, {})
+
+    const titleInput = atIndex(
+      screen.getAllByPlaceholderText(titleInputPlaceholder),
+      0,
+    )
+    await user.type(titleInput, 'A draft task')
+    await user.click(
+      atIndex(screen.getAllByRole('button', { name: 'Close' }), 0),
+    )
+
+    await clickDiscardConfirmation(user, 'Discard')
+    setOpen(false)
+    setOpen(true)
+
+    await waitFor(() => {
+      expect(
+        closeState(onOpenChange.mock.calls, { title: titleInputValue() }),
+      ).toEqual({
+        title: '',
+        onOpenChange: [[false]],
+        confirmationOpen: false,
+      })
+    })
+  })
+
+  it('closes a discard confirmation when task creation succeeds', async () => {
+    const user = userEvent.setup()
+    const pendingCreate = mockCreateTaskPendingSuccess()
+    const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
+
+    const titleInput = atIndex(
+      screen.getAllByPlaceholderText(titleInputPlaceholder),
+      0,
+    )
+    await user.type(titleInput, 'A draft task')
+    await user.keyboard('{Meta>}{Enter}{/Meta}')
+    await user.click(
+      atIndex(screen.getAllByRole('button', { name: 'Close' }), 0),
+    )
+    pendingCreate.succeed(makeTask())
+
+    await waitFor(() => {
+      const actual = closeState(onOpenChange.mock.calls)
+      expect(actual).toEqual({
+        onOpenChange: [[false]],
+        confirmationOpen: false,
+      })
     })
   })
 
@@ -233,8 +398,15 @@ describe('CreateTaskModal', () => {
       // The suggestion menu closes on Escape, but the event must not bubble
       // up to the Dialog and close the whole modal (and discard the
       // in-progress task).
-      expect(screen.queryByText('@today')).not.toBeInTheDocument()
-      expect(onOpenChange).not.toHaveBeenCalled()
+      expect(
+        closeState(onOpenChange.mock.calls, {
+          suggestionMenuOpen: screen.queryByText('@today') !== null,
+        }),
+      ).toEqual({
+        suggestionMenuOpen: false,
+        onOpenChange: [],
+        confirmationOpen: false,
+      })
     })
   })
 
@@ -392,7 +564,11 @@ describe('CreateTaskModal', () => {
       await user.type(titleInput, 'Cmd enter from title')
       await user.keyboard('{Meta>}{Enter}{/Meta}')
 
-      expect(onOpenChange).toHaveBeenCalledWith(false)
+      const actual = closeState(onOpenChange.mock.calls)
+      expect(actual).toEqual({
+        onOpenChange: [[false]],
+        confirmationOpen: false,
+      })
     })
 
     it('calls onCreated with the created task after submit', async () => {
@@ -423,11 +599,7 @@ describe('CreateTaskModal', () => {
       )
       await user.type(titleInput, 'Cmd enter from description')
 
-      const editor = atIndex(
-        Array.from(document.body.querySelectorAll('[contenteditable="true"]')),
-        0,
-      )
-      await user.click(editor)
+      await focusDescriptionEditor(user, document.body, { timeout: 10_000 })
       await user.keyboard('some description text')
       await user.keyboard('{Meta>}{Enter}{/Meta}')
 

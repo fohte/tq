@@ -25,7 +25,7 @@ export function DeleteConfirmButton({
     <DeleteConfirmDialog
       title={title}
       description={description}
-      onDelete={onDelete}
+      onConfirm={onDelete}
       open={open}
     >
       <DialogTrigger

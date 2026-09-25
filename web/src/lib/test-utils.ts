@@ -1,3 +1,5 @@
+import type { UserEvent } from '@testing-library/user-event'
+import { atIndex } from 'api/lib/test-utils'
 import { expect, waitFor } from 'storybook/test'
 import { vi } from 'vitest'
 
@@ -16,6 +18,25 @@ export function findVisible<T extends Element>(elements: T[]): T | undefined {
  */
 export async function waitForFocus(element: Element): Promise<void> {
   await waitFor(() => expect(element).toHaveFocus())
+}
+
+/**
+ * Waits for the lazy Markdown editor to mount and gives it focus.
+ */
+export async function focusDescriptionEditor(
+  user: UserEvent,
+  root: ParentNode = document.body,
+  options: { timeout?: number } = {},
+): Promise<Element> {
+  const editor = await waitFor(
+    () =>
+      atIndex(Array.from(root.querySelectorAll('.milkdown .ProseMirror')), 0),
+    options,
+  )
+  // Crepe applies contenteditable in an effect that runs after the first click.
+  await user.click(editor)
+  await user.click(editor)
+  return editor
 }
 
 /**

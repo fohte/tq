@@ -6,8 +6,8 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, waitFor } from '@testing-library/react'
-import userEvent, { type UserEvent } from '@testing-library/user-event'
+import { render } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { page } from '@vitest/browser/context'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -26,7 +26,7 @@ import { commentKeys } from '#hooks/use-task-comments'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
-import { assertDefined } from '#lib/test-utils'
+import { assertDefined, focusDescriptionEditor } from '#lib/test-utils'
 import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
 // AppLayout mounts Sidebar/StatusLine, and this test also mounts
@@ -109,22 +109,6 @@ async function renderMobileTaskDetail(task: TaskDetail) {
   )
 }
 
-async function focusDescriptionEditor(container: HTMLElement, user: UserEvent) {
-  // MarkdownEditor loads milkdown/ProseMirror on demand, so the root isn't
-  // present synchronously after render() — see markdown-editor.browser.test.tsx.
-  await waitFor(() => {
-    expect(container.querySelector('.milkdown .ProseMirror')).not.toBeNull()
-  })
-  // The description editor is the first ProseMirror root in DOM order.
-  const proseMirrorRoot = assertDefined(
-    container.querySelector('.milkdown .ProseMirror'),
-    'the description editor always renders a ProseMirror root',
-  )
-  // Crepe applies contenteditable in an effect that runs after the first click.
-  await user.click(proseMirrorRoot)
-  await user.click(proseMirrorRoot)
-}
-
 function shrinkVisualViewportForKeyboard(height: number) {
   const visualViewport = assertDefined(
     window.visualViewport,
@@ -147,7 +131,7 @@ describe('TaskMainContent on mobile with the on-screen keyboard open', () => {
     const user = userEvent.setup()
     const { container } = await renderMobileTaskDetail(makeTaskDetail())
 
-    await focusDescriptionEditor(container, user)
+    await focusDescriptionEditor(user, container)
     shrinkVisualViewportForKeyboard(200)
     const scrollBySpy = vi
       .spyOn(window, 'scrollBy')
@@ -163,7 +147,7 @@ describe('TaskMainContent on mobile with the on-screen keyboard open', () => {
     const user = userEvent.setup()
     const { container } = await renderMobileTaskDetail(makeTaskDetail())
 
-    await focusDescriptionEditor(container, user)
+    await focusDescriptionEditor(user, container)
     const visualViewport = shrinkVisualViewportForKeyboard(200)
 
     // A character follows each newline: a collapsed range at an empty line

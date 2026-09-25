@@ -108,7 +108,7 @@ export function SidebarActionableRow({
         onOpenChange={setDeleteOpen}
         title={deleteTitle}
         description={deleteDescription}
-        onDelete={onDelete}
+        onConfirm={onDelete}
       />
     </>
   )
