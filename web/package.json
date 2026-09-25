@@ -24,6 +24,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "report:vrt": "vrt-report --input .reg/out.json --assets-dir .reg --output .reg/custom/vrt-report.html --baseline-dir ../../../baseline/actual",
     "test": "conc pnpm:test:type pnpm:test:node pnpm:test:browser pnpm:build",
     "test:type": "tsc --noEmit",
     "test:node": "vitest run --project=node",
