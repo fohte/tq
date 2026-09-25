@@ -191,18 +191,19 @@ export function PageCardPresentation({
             )}
           />
         </Button>
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => {
             setInternalExpanded(!isExpanded)
           }}
-          className="flex flex-1 items-center gap-2 overflow-hidden text-left"
+          className="h-auto min-h-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex flex-1 items-center gap-2 overflow-hidden text-left"
         >
           <span className="truncate font-mono text-xs font-medium text-foreground">
             {page.title}
           </span>
           <LlmAuthorLabel author={page.author} />
-        </button>
+        </Button>
 
         <span className="shrink-0 font-mono text-2xs text-muted-foreground-ghost">
           {formatRelativeTime(page.updatedAt)}

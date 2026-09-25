@@ -14,6 +14,7 @@ import { FloatingActionButton } from '#components/task/floating-action-button'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { TaskTreeList } from '#components/task/task-tree-list'
 import { Button } from '#components/ui/button'
+import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { ProgressBar } from '#components/ui/progress-bar'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
@@ -144,7 +145,7 @@ function EditableProjectTitle({
 
   if (isEditing) {
     return (
-      <input
+      <Input
         type="text"
         value={value}
         onChange={(e) => {
@@ -160,22 +161,23 @@ function EditableProjectTitle({
           }
         }}
         autoFocus
-        className="flex-1 bg-transparent font-mono text-2xl font-bold text-foreground outline-none"
+        className="h-auto flex-1 rounded-none border-0 bg-transparent p-0 font-mono text-2xl font-bold text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
       />
     )
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={() => {
         savingRef.current = false
         setIsEditing(true)
       }}
-      className="flex-1 cursor-text text-left font-mono text-2xl font-bold text-foreground"
+      className="h-auto min-w-0 flex-1 shrink justify-start rounded-none border-0 bg-transparent p-0 text-left font-mono text-2xl font-bold text-foreground shadow-none hover:bg-transparent hover:text-foreground active:translate-y-0 focus-visible:border-0 focus-visible:ring-0"
     >
       {value}
-    </button>
+    </Button>
   )
 }
 

@@ -1,9 +1,16 @@
 import { TemplateRepeatField } from '#components/recurring/template-repeat-field'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#components/ui/select'
 import { useProject } from '#hooks/use-projects'
 import type { RecurringTemplate } from '#hooks/use-recurring-templates'
 import { useUpdateRecurringTemplate } from '#hooks/use-recurring-templates'
-import { selectHandler } from '#lib/form-utils'
+import { selectValueHandler } from '#lib/form-utils'
 import { formatMinutes } from '#lib/format'
 import { templateNextOccurrence } from '#lib/recurrence'
 import { formatShortDate } from '#lib/task-due-date'
@@ -168,18 +175,28 @@ function StateSelect({
   const stateValues = ['active', 'paused'] as const
 
   return (
-    <select
+    <Select
       value={enabled ? 'active' : 'paused'}
-      onChange={selectHandler((value: (typeof stateValues)[number]) => {
-        updateTemplate.mutate({
-          id: templateId,
-          input: { enabled: value === 'active' },
-        })
-      }, stateValues)}
-      className="border-none bg-transparent px-0 py-0 font-mono text-xs text-foreground outline-none"
+      onValueChange={selectValueHandler(
+        (value: (typeof stateValues)[number]) => {
+          updateTemplate.mutate({
+            id: templateId,
+            input: { enabled: value === 'active' },
+          })
+        },
+        stateValues,
+      )}
     >
-      <option value="active">Active</option>
-      <option value="paused">Paused</option>
-    </select>
+      <SelectTrigger
+        size="sm"
+        className="h-auto w-fit border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="active">Active</SelectItem>
+        <SelectItem value="paused">Paused</SelectItem>
+      </SelectContent>
+    </Select>
   )
 }

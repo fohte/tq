@@ -34,14 +34,16 @@ function LabelSuggestion({
       {/* Already-attached labels are excluded from indexByName; selecting
           one would otherwise no-op against addTag's duplicate guard. */}
       {index != null && (
-        <button
+        <Button
           type="button"
+          variant="ghost"
           style={
             {
               '--label-suggestion-indent': `${String(12 + depth * 12)}px`,
             } as React.CSSProperties & { '--label-suggestion-indent': string }
           }
           className={cn(
+            'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
             'w-full py-1.5 pr-3 pl-(--label-suggestion-indent) text-left font-mono text-xs',
             index === selectedIndex
               ? 'bg-accent text-accent-foreground'
@@ -53,7 +55,7 @@ function LabelSuggestion({
           }}
         >
           #{displayName}
-        </button>
+        </Button>
       )}
       {node.children.map((child) => (
         <LabelSuggestion
@@ -175,16 +177,17 @@ export function TagsInput({
         <Chip key={label} size="sm" className="gap-1 py-px pr-0.5">
           <span className="text-primary font-bold">#</span>
           {label}
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={() => {
               removeTag(label)
             }}
             aria-label={`Remove ${label}`}
-            className="text-muted-foreground-faint hover:text-destructive"
+            className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 text-muted-foreground-faint hover:text-destructive"
           >
             <X className="h-2.5 w-2.5" />
-          </button>
+          </Button>
         </Chip>
       ))}
 

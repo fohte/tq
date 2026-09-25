@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 
 import { ScheduleModalDesktopPanel } from '#components/schedule/create-schedule-modal-desktop-panel'
 import { ScheduleModalMobilePanel } from '#components/schedule/create-schedule-modal-mobile-panel'
+import { Button } from '#components/ui/button'
 import {
   Dialog,
   DialogOverlay,
@@ -75,21 +76,23 @@ export function WeekdayToggleRow({
   return (
     <div className="flex gap-1">
       {dayLabels.map((label, idx) => (
-        <button
+        <Button
           key={label}
           type="button"
+          variant="ghost"
+          size="icon"
           onClick={() => {
             toggleDay(idx)
           }}
           className={cn(
-            'flex size-8 items-center justify-center border text-xs font-medium transition-colors',
+            'gap-0 rounded-none border bg-transparent p-0 font-normal shadow-none transition-colors hover:bg-transparent active:translate-y-0 text-xs',
             daysOfWeek.includes(idx)
               ? 'border-border-strong bg-surface-strong text-foreground'
               : 'border-border text-muted-foreground hover:border-border-strong',
           )}
         >
           {label.charAt(0)}
-        </button>
+        </Button>
       ))}
     </div>
   )

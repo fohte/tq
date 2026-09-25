@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { SidebarField } from '#components/task/sidebar-field'
 import { TaskCandidateList } from '#components/task/task-candidate-list'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
+import { Button } from '#components/ui/button'
 import { Input } from '#components/ui/input'
 import type { SearchResult } from '#hooks/use-search'
 import { useSearchTasks } from '#hooks/use-search'
@@ -56,17 +57,18 @@ export function SidebarParentFieldAppearance({
           className="h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
         />
       ) : (
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => {
             onOpenChange(true)
           }}
-          className="w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
+          className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
         >
           {currentParent != null
             ? `#${String(currentParent.number)} ${currentParent.title}`
             : '—'}
-        </button>
+        </Button>
       )}
       <AnchoredPopup
         open={isEditing}
@@ -81,16 +83,17 @@ export function SidebarParentFieldAppearance({
         initialFocus={false}
         className="w-72"
       >
-        <button
+        <Button
           type="button"
-          className="w-full px-3 py-1.5 text-left text-sm text-popover-foreground hover:bg-accent/50"
+          variant="ghost"
+          className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full px-3 py-1.5 text-left text-sm text-popover-foreground hover:bg-accent/50"
           onMouseDown={(e) => {
             e.preventDefault()
             onClear()
           }}
         >
           —
-        </button>
+        </Button>
         <div className="mt-1 border-t border-border pt-1">
           {query === '' ? (
             <div className="px-3 py-1.5 text-sm text-muted-foreground">

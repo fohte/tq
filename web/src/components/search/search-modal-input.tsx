@@ -1,7 +1,9 @@
 import { Loader2, X } from 'lucide-react'
 
 import type { SearchMode } from '#components/search/search-modal-mode'
+import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
+import { Input } from '#components/ui/input'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import type { SearchScopeLabel } from '#hooks/use-search-scope-labels'
 
@@ -56,7 +58,7 @@ export function SearchModalInput({
           }}
         />
       ))}
-      <input
+      <Input
         ref={inputRef}
         type="text"
         value={searchInputValue}
@@ -65,7 +67,7 @@ export function SearchModalInput({
         }}
         placeholder={`Search ${searchTarget}...`}
         autoFocus
-        className="min-w-0 flex-1 border-0 bg-transparent font-mono text-sm outline-none placeholder:text-muted-foreground"
+        className="h-auto w-auto min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 font-mono text-sm outline-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
         aria-label={`Search ${searchTarget}`}
       />
       {isFetching && (
@@ -97,10 +99,11 @@ function RemovableScopeChip({
       title={label}
     >
       <span className="min-w-0 truncate">{label}</span>
-      <button
+      <Button
         type="button"
+        variant="ghost"
         aria-label={`Remove ${label} scope`}
-        className="shrink-0 text-muted-foreground-faint hover:text-destructive"
+        className="h-auto min-h-0 w-auto shrink-0 gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 text-muted-foreground-faint hover:text-destructive"
         onClick={onRemove}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
@@ -109,7 +112,7 @@ function RemovableScopeChip({
         }}
       >
         <X className="h-2.5 w-2.5" aria-hidden="true" />
-      </button>
+      </Button>
     </Chip>
   )
 }

@@ -15,6 +15,7 @@ import { CreateTaskModalMobile } from '#components/task/create-task-modal-mobile
 import { createTaskModalTitleChangeHandler } from '#components/task/create-task-modal-title-change'
 import { GithubRefSummary } from '#components/task/github-ref-summary'
 import { toGithubUrlSummary } from '#components/task/github-url-summary'
+import { Button } from '#components/ui/button'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import {
   Dialog,
@@ -350,16 +351,17 @@ export function CreateTaskModal({
         </>
       )}
       {parentOverrideNumber != null && (
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => {
             setParentOverrideNumber(undefined)
           }}
           aria-label="Remove parent override"
-          className="text-muted-foreground-faint hover:text-destructive"
+          className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 text-muted-foreground-faint hover:text-destructive"
         >
           <X className="h-2.5 w-2.5" />
-        </button>
+        </Button>
       )}
     </span>
   )
@@ -382,16 +384,17 @@ export function CreateTaskModal({
       ) : (
         githubSummary && <GithubRefSummary {...githubSummary} />
       )}
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => {
           setGithubUrl(undefined)
         }}
         aria-label="Remove GitHub link"
-        className="text-muted-foreground-faint hover:text-destructive"
+        className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 text-muted-foreground-faint hover:text-destructive"
       >
         <X className="h-2.5 w-2.5" />
-      </button>
+      </Button>
     </span>
   )
 

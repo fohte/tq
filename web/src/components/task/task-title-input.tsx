@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from 'react'
 import { TaskMentionSummary } from '#components/task/task-mention-summary'
 import { TaskShorthandHelp } from '#components/task/task-shorthand-help'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
+import { Button } from '#components/ui/button'
 import { Input } from '#components/ui/input'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useLabels } from '#hooks/use-labels'
@@ -176,10 +177,12 @@ export function TaskTitleInput({
       >
         {isParentTrigger
           ? parentSuggestions.map((item, index) => (
-              <button
+              <Button
                 key={item.id}
                 type="button"
+                variant="ghost"
                 className={cn(
+                  'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
                   'flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs',
                   index === selectedIndex
                     ? 'bg-accent text-accent-foreground'
@@ -195,13 +198,15 @@ export function TaskTitleInput({
                   number={item.number}
                   title={item.title}
                 />
-              </button>
+              </Button>
             ))
           : suggestions.map((item, index) => (
-              <button
+              <Button
                 key={item.value}
                 type="button"
+                variant="ghost"
                 className={cn(
+                  'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
                   'w-full px-3 py-1.5 text-left text-xs',
                   index === selectedIndex
                     ? 'bg-accent text-accent-foreground'
@@ -214,7 +219,7 @@ export function TaskTitleInput({
               >
                 {cursorTrigger?.trigger}
                 {item.display}
-              </button>
+              </Button>
             ))}
       </AnchoredPopup>
     </>

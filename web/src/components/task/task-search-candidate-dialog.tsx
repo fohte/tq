@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 
+import { Button } from '#components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -58,10 +59,11 @@ export function TaskSearchCandidateDialogAppearance({
             </div>
           ) : (
             candidates.map((candidate) => (
-              <button
+              <Button
                 key={candidate.id}
                 type="button"
-                className="flex min-h-11 w-full items-center gap-2 px-3 text-left text-sm text-popover-foreground hover:bg-accent/50"
+                variant="ghost"
+                className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center gap-2 px-3 text-left text-sm text-popover-foreground hover:bg-accent/50"
                 onClick={() => {
                   onSelectCandidate(candidate)
                 }}
@@ -76,19 +78,20 @@ export function TaskSearchCandidateDialogAppearance({
                       ← #{candidate.parentNumber}
                     </span>
                   )}
-              </button>
+              </Button>
             ))
           )}
         </div>
 
         {skipAction != null && (
-          <button
+          <Button
             type="button"
-            className="min-h-11 w-full border-t border-border px-3 text-center text-sm text-muted-foreground hover:bg-accent/50"
+            variant="ghost"
+            className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 min-h-11 w-full border-t border-border px-3 text-center text-sm text-muted-foreground hover:bg-accent/50"
             onClick={skipAction.onSkip}
           >
             {skipAction.label}
-          </button>
+          </Button>
         )}
       </DialogContent>
     </Dialog>

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 
 import { SidebarField } from '#components/task/sidebar-field'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
+import { Button } from '#components/ui/button'
 import { Input } from '#components/ui/input'
 import { useUpdateTask } from '#hooks/use-tasks'
 import {
@@ -66,15 +67,16 @@ export function SidebarRemindFieldAppearance({
           className="h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
         />
       ) : (
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => {
             onOpenChange(true)
           }}
-          className="w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
+          className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
         >
           {remindAtLabel}
-        </button>
+        </Button>
       )}
       <AnchoredPopup
         open={isEditing}
@@ -87,42 +89,55 @@ export function SidebarRemindFieldAppearance({
         initialFocus={false}
         className="w-64"
       >
-        <button
+        <Button
           type="button"
-          className={popupRowClassName}
+          variant="ghost"
+          className={cn(
+            'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
+            popupRowClassName,
+          )}
           onMouseDown={(e) => {
             e.preventDefault()
             onClear()
           }}
         >
           なし
-        </button>
+        </Button>
         <div className="mt-1 border-t border-border pt-1">
           {query.trim() === '' ? (
             REMINDER_PRESETS.map((preset) => (
-              <button
+              <Button
                 key={preset}
                 type="button"
-                className={popupRowClassName}
+                variant="ghost"
+                className={cn(
+                  'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
+                  popupRowClassName,
+                )}
                 onMouseDown={(e) => {
                   e.preventDefault()
                   onSelectPreset(preset)
                 }}
               >
                 {preset}
-              </button>
+              </Button>
             ))
           ) : parsedDate != null ? (
-            <button
+            <Button
               type="button"
-              className={cn(popupRowClassName, 'font-mono')}
+              variant="ghost"
+              className={cn(
+                'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
+                popupRowClassName,
+                'font-mono',
+              )}
               onMouseDown={(e) => {
                 e.preventDefault()
                 onCommit(parsedDate)
               }}
             >
               {formatAbsoluteReminder(parsedDate)}
-            </button>
+            </Button>
           ) : (
             <div className="px-3 py-1.5 text-sm text-muted-foreground">
               解釈できません

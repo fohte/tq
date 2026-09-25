@@ -120,16 +120,17 @@ export function SidebarRecurrenceFieldAppearance({
 
   return (
     <SidebarField label="RECURRENCE">
-      <button
+      <Button
         ref={anchorRef}
         type="button"
+        variant="ghost"
         onClick={() => {
           onOpenChange(true)
         }}
-        className="w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
+        className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
       >
         {recurrenceRule != null ? formatRecurrenceSummary(recurrenceRule) : '—'}
-      </button>
+      </Button>
       <AnchoredPopup
         open={isEditing}
         onOpenChange={onOpenChange}

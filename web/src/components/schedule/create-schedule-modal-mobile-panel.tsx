@@ -196,14 +196,16 @@ export function ScheduleModalMobilePanel({
             <Palette className="size-3.5 text-muted-foreground" />
             <div className="flex gap-1.5">
               {presetColors.map((c) => (
-                <button
+                <Button
                   key={c}
                   type="button"
+                  variant="ghost"
+                  size="icon-xs"
                   onClick={() => {
                     setColor(color === c ? '' : c)
                   }}
                   className={cn(
-                    'size-6 border-2 bg-(--schedule-color) transition-all',
+                    'rounded-none border-2 bg-(--schedule-color) p-0 font-normal shadow-none transition-all hover:bg-(--schedule-color) active:translate-y-0',
                     color === c
                       ? 'border-foreground scale-110'
                       : 'border-transparent hover:scale-110',

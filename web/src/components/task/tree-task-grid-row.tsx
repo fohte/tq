@@ -9,6 +9,7 @@ import { MoveUnderTaskMenu } from '#components/task/move-under-task-menu'
 import { SetProjectMenu } from '#components/task/set-project-menu'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { TreeRowActionsMenu } from '#components/task/tree-row-actions-menu'
+import { Button } from '#components/ui/button'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TreeNode } from '#hooks/use-tasks'
 
@@ -88,11 +89,12 @@ export function TreeTaskGridRow({
   }
 
   const expandToggle = hasChildren ? (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={handleExpand}
       data-no-dnd=""
-      className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+      className="min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
       aria-label={expanded ? 'Collapse' : 'Expand'}
     >
       {expanded ? (
@@ -100,7 +102,7 @@ export function TreeTaskGridRow({
       ) : (
         <ChevronRight className="h-3.5 w-3.5" />
       )}
-    </button>
+    </Button>
   ) : (
     <span className="w-5 shrink-0" />
   )

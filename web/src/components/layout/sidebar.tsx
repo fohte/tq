@@ -10,6 +10,7 @@ import {
   ProjectStatusMark,
 } from '#components/project/project-status-mark'
 import { RenameSavedViewDialog } from '#components/saved-view/rename-saved-view-dialog'
+import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useCurrentContext } from '#hooks/use-current-context'
@@ -173,15 +174,16 @@ function ViewsSection() {
           <ViewLink key={view.id} view={view} isActive={q === view.query} />
         ))}
         {!isExpanded && hiddenCount > 0 && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={() => {
               setIsExpanded(true)
             }}
-            className="px-3.5 py-1 text-left font-mono text-2xs text-muted-foreground-faint hover:text-foreground"
+            className="h-auto min-h-0 w-full justify-start gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 px-3.5 py-1 text-left font-mono text-2xs text-muted-foreground-faint hover:text-foreground"
           >
             + {hiddenCount} more
-          </button>
+          </Button>
         )}
       </div>
     </div>

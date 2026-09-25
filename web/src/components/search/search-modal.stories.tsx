@@ -17,6 +17,7 @@ import {
   makeTask,
   makeTaskDetail,
 } from '#components/task/task-row-test-fixtures'
+import { Button } from '#components/ui/button'
 import type { RecentSearchItem } from '#lib/recent-search-items'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -149,15 +150,16 @@ function SearchModalStory({
   return (
     <Providers>
       <div className="flex h-screen items-center justify-center bg-background">
-        <button
+        <Button
           type="button"
+          variant="secondary"
           onClick={() => {
             setOpen(true)
           }}
-          className="border border-border bg-secondary px-4 py-2 font-mono text-sm text-foreground"
+          className="h-auto rounded-none bg-secondary px-4 py-2 font-normal font-mono text-sm text-foreground hover:border-border hover:bg-secondary active:translate-y-0"
         >
           Open Search (Cmd+K)
-        </button>
+        </Button>
         <SearchModal
           open={open}
           onOpenChange={setOpen}

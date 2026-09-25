@@ -1,3 +1,4 @@
+import { Button } from '#components/ui/button'
 import type { SearchResult } from '#hooks/use-search'
 import { cn } from '#lib/utils'
 
@@ -18,10 +19,12 @@ export function TaskCandidateList({
   return (
     <>
       {candidates.map((candidate, index) => (
-        <button
+        <Button
           key={candidate.id}
           type="button"
+          variant="ghost"
           className={cn(
+            'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
             'flex min-h-11 w-full items-center gap-2 px-3 text-left text-sm',
             highlightedIndex === index + indexOffset
               ? 'bg-accent text-accent-foreground'
@@ -44,7 +47,7 @@ export function TaskCandidateList({
               ← #{candidate.parentNumber}
             </span>
           )}
-        </button>
+        </Button>
       ))}
     </>
   )

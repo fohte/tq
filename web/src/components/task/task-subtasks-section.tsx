@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import type { ContextValue } from '#components/task/create-task-modal-fields'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
+import { Button } from '#components/ui/button'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import { SectionLoadingIndicator } from '#components/ui/section-loading-indicator'
@@ -113,16 +114,17 @@ function AddSubtaskRow({
 
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => {
           setIsModalOpen(true)
         }}
-        className="flex min-h-11 w-full items-center gap-1.5 border-t border-dashed border-border px-3 font-mono text-xs text-muted-foreground-faint transition-colors hover:text-muted-foreground"
+        className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center gap-1.5 border-t border-dashed border-border px-3 font-mono text-xs text-muted-foreground-faint transition-colors hover:text-muted-foreground"
       >
         <Plus className="size-3" />
         add subtask
-      </button>
+      </Button>
       <CreateTaskModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}

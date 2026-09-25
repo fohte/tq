@@ -233,38 +233,39 @@ export function ProjectFormModal({
           label="Start date"
           icon={<CalendarPlus className="size-3.5" />}
         >
-          <input
+          <Input
             type="date"
             value={startDate}
             onChange={(e) => {
               setStartDate(e.target.value)
             }}
-            className="bg-transparent text-sm text-foreground outline-none"
+            className="h-auto w-auto min-w-0 rounded-none border-0 bg-transparent p-0 text-sm text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
           />
         </FieldRow>
 
         <FieldRow label="Target date" icon={<Calendar className="size-3.5" />}>
-          <input
+          <Input
             type="date"
             value={targetDate}
             onChange={(e) => {
               setTargetDate(e.target.value)
             }}
-            className="bg-transparent text-sm text-foreground outline-none"
+            className="h-auto w-auto min-w-0 rounded-none border-0 bg-transparent p-0 text-sm text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
           />
         </FieldRow>
 
         <FieldRow label="Color" icon={<Palette className="size-3.5" />}>
           <div className="flex gap-2">
             {PROJECT_COLOR_PRESETS.map((preset) => (
-              <button
+              <Button
                 key={preset.hex}
                 type="button"
+                variant="ghost"
                 onClick={() => {
                   setColor(preset.hex)
                 }}
                 className={cn(
-                  'size-6 border-2 bg-(--project-color) transition-all',
+                  'size-6 rounded-none border-2 bg-(--project-color) p-0 transition-all hover:bg-(--project-color) active:translate-y-0',
                   color === preset.hex
                     ? 'scale-110 border-foreground'
                     : 'border-transparent hover:scale-110',

@@ -2,6 +2,8 @@ import { parseSearchQuery } from 'api/search-query-parser'
 import { useEffect, useRef, useState } from 'react'
 
 import { AnchoredPopup } from '#components/ui/anchored-popup'
+import { Button } from '#components/ui/button'
+import { Input } from '#components/ui/input'
 import type { Suggestion } from '#hooks/use-search'
 import {
   applySuggestionToQuery,
@@ -125,7 +127,7 @@ export function TaskFilterFreeTextInput({
 
   return (
     <div className="flex min-w-32 flex-1 items-center">
-      <input
+      <Input
         id={id}
         ref={inputRef}
         type="text"
@@ -137,7 +139,7 @@ export function TaskFilterFreeTextInput({
         onKeyDown={handleKeyDown}
         onBlur={commit}
         placeholder={placeholder}
-        className="min-w-0 flex-1 border-0 bg-transparent font-mono text-sm outline-none placeholder:text-muted-foreground"
+        className="h-auto min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-sm outline-none placeholder:text-muted-foreground transition-none focus-visible:border-0 focus-visible:ring-0"
         aria-label="Filter query"
       />
       <AnchoredPopup
@@ -147,14 +149,16 @@ export function TaskFilterFreeTextInput({
         className="min-w-(--anchor-width)"
       >
         {availableSuggestions?.map((suggestion, index) => (
-          <button
+          <Button
             key={suggestion.value}
             type="button"
+            variant="ghost"
             onMouseDown={(e) => {
               e.preventDefault()
               applySuggestion(suggestion)
             }}
             className={cn(
+              'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
               'flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs',
               index === selectedIndex
                 ? 'bg-accent text-accent-foreground'
@@ -163,7 +167,7 @@ export function TaskFilterFreeTextInput({
           >
             <span>{suggestion.value}</span>
             <span className="text-muted-foreground">{suggestion.display}</span>
-          </button>
+          </Button>
         ))}
       </AnchoredPopup>
     </div>

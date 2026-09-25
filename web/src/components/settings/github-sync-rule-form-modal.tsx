@@ -9,14 +9,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '#components/ui/dialog'
+import { Input } from '#components/ui/input'
 import { SegmentedControl } from '#components/ui/segmented-control'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#components/ui/select'
 import type { SyncRule } from '#hooks/use-github-sync-rules'
 import {
   useCreateGithubSyncRule,
   useUpdateGithubSyncRule,
 } from '#hooks/use-github-sync-rules'
 import { useProjects } from '#hooks/use-projects'
-import { selectHandler } from '#lib/form-utils'
+import { selectValueHandler } from '#lib/form-utils'
 
 export interface GithubSyncRuleFormModalProps {
   open: boolean
@@ -159,27 +167,27 @@ export function GithubSyncRuleFormModal({
               </FieldRow>
               {scope !== 'all' && (
                 <FieldRow label="Organization">
-                  <input
+                  <Input
                     type="text"
                     value={org}
                     onChange={(e) => {
                       setOrg(e.target.value)
                     }}
                     placeholder="octocat"
-                    className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50"
+                    className="h-auto w-full rounded-md border border-border bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50 focus-visible:border-primary/50 focus-visible:ring-0"
                   />
                 </FieldRow>
               )}
               {scope === 'repo' && (
                 <FieldRow label="リポジトリ">
-                  <input
+                  <Input
                     type="text"
                     value={repo}
                     onChange={(e) => {
                       setRepo(e.target.value)
                     }}
                     placeholder="hello-world"
-                    className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50"
+                    className="h-auto w-full rounded-md border border-border bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50 focus-visible:border-primary/50 focus-visible:ring-0"
                   />
                 </FieldRow>
               )}
@@ -187,31 +195,32 @@ export function GithubSyncRuleFormModal({
           )}
 
           <FieldRow label="反映先プロジェクト">
-            <select
+            <Select
               value={targetProjectId}
-              onChange={selectHandler(setTargetProjectId, projectIds)}
-              className="w-full bg-transparent text-sm text-foreground outline-none"
+              onValueChange={selectValueHandler(setTargetProjectId, projectIds)}
             >
-              <option value="" disabled>
-                選択してください
-              </option>
-              {projects.data?.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full bg-transparent text-sm text-foreground outline-none">
+                <SelectValue placeholder="選択してください" />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.data?.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FieldRow>
 
           {!rule && (
             <label className="flex items-center gap-2 text-sm text-foreground">
-              <input
+              <Input
                 type="checkbox"
                 checked={includeExisting}
                 onChange={(e) => {
                   setIncludeExisting(e.target.checked)
                 }}
-                className="size-4 rounded border-border"
+                className="h-4 w-4 rounded border-border bg-transparent p-0"
               />
               現在アサイン済みの open issue も取り込む
             </label>

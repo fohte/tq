@@ -11,6 +11,7 @@ import { SidebarTimeBlocks } from '#components/task/sidebar-time-blocks'
 import { StatusIcon } from '#components/task/status-icon'
 import { SidebarGithubLinkField } from '#components/task/task-github-link-field'
 import { useHandleStatusChange } from '#components/task/task-row-shared'
+import { Button } from '#components/ui/button'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
 import { Input } from '#components/ui/input'
 import { SectionLabel } from '#components/ui/section-label'
@@ -302,15 +303,16 @@ function SidebarEstimateField({
           className={fieldValueClassName}
         />
       ) : (
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => {
             setIsEditing(true)
           }}
-          className="w-full cursor-text text-left transition-colors hover:text-muted-foreground-strong"
+          className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full cursor-text text-left transition-colors hover:text-muted-foreground-strong"
         >
           {estimatedMinutes != null ? formatMinutes(estimatedMinutes) : '—'}
-        </button>
+        </Button>
       )}
     </SidebarField>
   )
