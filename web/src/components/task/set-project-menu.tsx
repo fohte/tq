@@ -33,7 +33,7 @@ export function SetProjectMenuAppearance({
           <Button
             type="button"
             variant="ghost"
-            className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center px-3 text-left text-sm text-popover-foreground hover:bg-accent/50 focus:outline-auto"
+            className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center px-3 text-left text-sm text-popover-foreground hover:bg-accent/50 focus:outline-auto max-sm:focus:outline-color-auto"
             onClick={() => {
               onSelectProject(null)
             }}
@@ -45,7 +45,7 @@ export function SetProjectMenuAppearance({
               key={project.id}
               type="button"
               variant="ghost"
-              className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center px-3 text-left text-sm text-popover-foreground hover:bg-accent/50 focus:outline-auto"
+              className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center px-3 text-left text-sm text-popover-foreground hover:bg-accent/50 focus:outline-auto max-sm:focus:outline-color-auto"
               onClick={() => {
                 onSelectProject(project.id)
               }}
