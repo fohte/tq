@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react'
 
-import { SidebarField } from '#components/task/sidebar-field'
+import {
+  SidebarField,
+  sidebarFieldValueButtonClassName,
+} from '#components/task/sidebar-field'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
 import { Button } from '#components/ui/button'
 import { Input } from '#components/ui/input'
@@ -73,7 +76,7 @@ export function SidebarRemindFieldAppearance({
           onClick={() => {
             onOpenChange(true)
           }}
-          className="h-auto min-h-0 min-w-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full cursor-text text-left transition-colors hover:text-muted-foreground-strong"
+          className={`${sidebarFieldValueButtonClassName} min-w-0`}
         >
           <span className="min-w-0 truncate">{remindAtLabel}</span>
         </Button>
