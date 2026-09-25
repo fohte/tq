@@ -9,7 +9,7 @@ import {
 } from '#hooks/use-search'
 
 const scopeTokenPattern =
-  /(?:^|\s)((?:project|parent):(?:"(?:\\.|[^"])*"|'(?:\\.|[^'])*'|\S+))(?=\s)/g
+  /(?:^|\s)((?:project|parent|label):(?:"(?:\\.|[^"])*"|'(?:\\.|[^'])*'|\S+))(?=\s|$)/g
 
 export function extractSearchScopeTokens(query: string): string[] {
   return Array.from(
@@ -41,6 +41,7 @@ export function addSearchScope(query: string, scopeToken: string): string {
   const filters = { ...parseSearchQuery(query), freeText: '' }
   delete filters.parentId
   delete filters.projectId
+  delete filters.label
   const filterQuery = buildSearchQuery(filters)
 
   return (
