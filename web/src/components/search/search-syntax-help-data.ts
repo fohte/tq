@@ -17,9 +17,13 @@ export interface SearchSyntaxHelpSection {
 export function getSearchSyntaxHelpSections({
   audience = 'search',
   disableProjectFilter = false,
+  disableStatusFilter = false,
+  disableSortFilter = false,
 }: {
   audience?: 'search' | 'task-filter'
   disableProjectFilter?: boolean
+  disableStatusFilter?: boolean
+  disableSortFilter?: boolean
 } = {}): SearchSyntaxHelpSection[] {
   const queryTokens = getSearchQueryHelpTokens()
   const filterTokens =
@@ -27,7 +31,9 @@ export function getSearchSyntaxHelpSections({
       ? queryTokens.filter(
           (token) =>
             token.taskFilter &&
-            !(disableProjectFilter && token.key === 'project'),
+            !(disableProjectFilter && token.key === 'project') &&
+            !(disableStatusFilter && token.key === 'is') &&
+            !(disableSortFilter && token.key === 'sort'),
         )
       : queryTokens
 

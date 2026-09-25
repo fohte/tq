@@ -1,4 +1,5 @@
 import { config } from '@fohte/eslint-config'
+import { plugin as shadcn } from '@shadcn/lint'
 import storybook from 'eslint-plugin-storybook'
 
 export default config(
@@ -11,6 +12,10 @@ export default config(
       files: ['web/**/*.ts{,x}'],
       cssConfigPath: 'web/src/index.css',
     },
+  },
+  {
+    // CLI --rule overrides are unscoped, so the plugin must be globally available.
+    plugins: { shadcn },
   },
   {
     ignores: ['**/routeTree.gen.ts'],

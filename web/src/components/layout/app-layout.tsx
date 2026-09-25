@@ -8,6 +8,7 @@ import { UrlCopiedToast } from '#components/layout/url-copied-toast'
 import { SearchModal } from '#components/search/search-modal'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { useGlobalKeybindings } from '#hooks/use-global-keybindings'
+import { useSearchModalDefaultQuery } from '#hooks/use-search-modal-default-query'
 import { SearchModalOpenContext } from '#hooks/use-search-modal-open'
 import { useUrlCopiedToast } from '#hooks/use-url-copied-toast'
 import { useVisualViewportInsets } from '#hooks/use-visual-viewport-insets'
@@ -17,6 +18,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const copiedUrl = useUrlCopiedToast()
+  const defaultSearchQuery = useSearchModalDefaultQuery()
   const openNewTask = useCallback(() => {
     setNewTaskOpen(true)
   }, [])
@@ -63,6 +65,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <SearchModal
         open={searchOpen}
         onOpenChange={setSearchOpen}
+        defaultQuery={defaultSearchQuery}
         onNewTask={openNewTask}
       />
       <CreateTaskModal open={newTaskOpen} onOpenChange={setNewTaskOpen} />
