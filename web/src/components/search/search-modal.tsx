@@ -22,7 +22,7 @@ import { SearchSyntaxHelpPanel } from '#components/search/search-syntax-help-pan
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useCurrentRoute } from '#hooks/use-current-route'
 import { useDebounce } from '#hooks/use-debounce'
-import { useProjects } from '#hooks/use-projects'
+import { useProject, useProjects } from '#hooks/use-projects'
 import { useSavedViews } from '#hooks/use-saved-views'
 import {
   resolveSearchContext,
@@ -100,13 +100,17 @@ export function SearchModal({
     enabled: open && parentTaskId !== '',
   })
   const parentTask =
-    currentTask?.parentId == null ? undefined : parentTaskDetail
-  const { data: taskProjects } = useProjects(undefined, {
-    enabled: open && currentTask?.projectId != null,
+    parentTaskDetail?.id === currentTask?.parentId
+      ? parentTaskDetail
+      : undefined
+  const currentProjectId = currentTask?.projectId ?? ''
+  const { data: taskProjectDetail } = useProject(currentProjectId, {
+    enabled: open && currentProjectId !== '',
   })
-  const currentProject = taskProjects?.find(
-    (project) => project.id === currentTask?.projectId,
-  )
+  const currentProject =
+    taskProjectDetail?.id === currentTask?.projectId
+      ? taskProjectDetail
+      : undefined
   const configuredContext =
     contextOverride === undefined
       ? currentContext

@@ -95,3 +95,39 @@ export function createTaskCommandItems(
       ),
     )
 }
+
+export function createTaskScopeItems(
+  currentTask: Pick<TaskDetail, 'id' | 'number' | 'title'>,
+  parentTask: Pick<TaskDetail, 'id' | 'number' | 'title'> | undefined,
+  applyScope: (scopeToken: string) => void,
+): ListItem[] {
+  const scopes = [
+    {
+      key: `scope:children:${currentTask.id}`,
+      label: `children of #${String(currentTask.number)} ${currentTask.title}`,
+      taskId: currentTask.id,
+    },
+    ...(parentTask == null
+      ? []
+      : [
+          {
+            key: `scope:siblings:${parentTask.id}`,
+            label: `siblings (children of #${String(parentTask.number)} ${parentTask.title})`,
+            taskId: parentTask.id,
+          },
+        ]),
+  ]
+
+  return scopes.map(({ key, label, taskId }) => {
+    const applyTaskScope = () => {
+      applyScope(`parent:${taskId}`)
+    }
+
+    return createOptionItem(
+      key,
+      applyTaskScope,
+      <span className="font-mono text-sm text-foreground">{label}</span>,
+      { selectOnTab: applyTaskScope },
+    )
+  })
+}

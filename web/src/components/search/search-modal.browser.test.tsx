@@ -5,7 +5,10 @@ import type { MouseEventHandler, ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeSavedView } from '#components/layout/sidebar-test-fixtures'
-import { makeProject } from '#components/project/project-test-fixtures'
+import {
+  makeProject,
+  makeProjectDetail,
+} from '#components/project/project-test-fixtures'
 import { SearchModal } from '#components/search/search-modal'
 import {
   makePageSearchResult,
@@ -14,7 +17,7 @@ import {
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { CurrentRoute } from '#hooks/use-current-route'
-import type { Project } from '#hooks/use-projects'
+import type { Project, ProjectDetail } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
 import type { PageSearchResult } from '#hooks/use-search'
 import type { TaskDetail } from '#hooks/use-tasks'
@@ -103,7 +106,7 @@ const currentTaskDetail = makeTaskDetail({
   parentNumber: parentTaskDetail.number,
   projectId: '00000000-0000-0000-0000-000000000032',
 })
-const currentTaskProject = makeProject({
+const currentTaskProject = makeProjectDetail({
   id: currentTaskDetail.projectId ?? '',
   title: 'Product launch',
 })
@@ -118,6 +121,7 @@ let mockNumberTaskData: MockTask | undefined
 let mockPageSearchData: PageSearchResult[] = []
 let mockSuggestionData: typeof mockSuggestions = []
 let mockProjectData: Project[] = []
+let mockProjectDetails: Record<string, ProjectDetail> = {}
 let mockSavedViewData: SavedView[] = []
 let mockScopeLabels = new Map<string, string>()
 let mockProjectCalls: Array<{ filter: unknown; options: unknown }> = []
@@ -167,6 +171,7 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
       mockProjectCalls.push({ filter, options })
       return { data: mockProjectData }
     },
+    useProject: (id: string) => ({ data: mockProjectDetails[id] }),
   }
 })
 
@@ -275,6 +280,9 @@ function setCurrentTaskRoute(
     [task.id]: task,
     ...(task.parentId === parent.id ? { [parent.id]: parent } : {}),
   }
+  if (task.projectId === currentTaskProject.id) {
+    mockProjectDetails[task.projectId] = currentTaskProject
+  }
 }
 
 describe('SearchModal', () => {
@@ -284,6 +292,7 @@ describe('SearchModal', () => {
     mockPageSearchData = []
     mockSuggestionData = []
     mockProjectData = []
+    mockProjectDetails = {}
     mockSavedViewData = []
     mockScopeLabels = new Map()
     mockProjectCalls = []
@@ -951,6 +960,8 @@ describe('SearchModal', () => {
       projectId: null,
     })
     setCurrentTaskRoute(standaloneTask)
+    mockTaskDetails[''] = parentTaskDetail
+    mockProjectDetails[''] = currentTaskProject
 
     renderSearchModal({ defaultQuery: '>' })
 
@@ -971,6 +982,37 @@ describe('SearchModal', () => {
       parentCommand: null,
       projectCommand: null,
     })
+  })
+
+  it('shows only the current task scope when it has no parent', () => {
+    const standaloneTask = makeTaskDetail({
+      id: '00000000-0000-0000-0000-000000000034',
+      number: 34,
+      title: 'Standalone task',
+      parentId: null,
+      parentNumber: null,
+      projectId: null,
+    })
+    setCurrentTaskRoute(standaloneTask)
+    mockTaskDetails[''] = parentTaskDetail
+
+    renderSearchModal()
+
+    const getOutput = () =>
+      screen.getAllByRole('option').map((option) => option.innerText.trim())
+    expect(getOutput()).toEqual(['children of #34 Standalone task'])
+  })
+
+  it('hides task scope candidates while a search query is entered', async () => {
+    setCurrentTaskRoute()
+
+    const user = userEvent.setup()
+    renderSearchModal()
+    await user.type(screen.getByLabelText('Search tasks'), 'unmatched')
+
+    const getOutput = () =>
+      screen.queryAllByRole('option').map((option) => option.innerText.trim())
+    expect(getOutput()).toEqual([])
   })
 
   it('narrows a selected task to its children with Tab and returns to default mode', async () => {

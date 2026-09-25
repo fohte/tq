@@ -61,6 +61,12 @@ const searchTaskDetail = makeTaskDetail({
   parentNumber: searchTaskParent.number,
   projectId: searchProject.id,
 })
+const standaloneTaskDetail = makeTaskDetail({
+  id: '00000000-0000-0000-0000-000000000045',
+  number: 45,
+  title: 'Standalone task',
+  context: 'work',
+})
 const projectScopeQuery = `project:${searchProject.id} `
 const projectScopedTask = makeTask({
   id: '00000000-0000-0000-0000-000000000143',
@@ -156,16 +162,22 @@ function SearchModalStory({
   defaultHelpOpen,
   defaultRecentItems,
   currentTaskRoute,
+  rootTaskRoute,
 }: {
   defaultContext?: 'work' | 'personal' | null
   defaultQuery?: string
   defaultHelpOpen?: boolean
   defaultRecentItems?: RecentSearchItem[]
   currentTaskRoute?: boolean
+  rootTaskRoute?: boolean
 } = {}) {
   const [open, setOpen] = useState(true)
   const initialPath =
-    currentTaskRoute === true ? `/tasks/${searchTask.id}` : undefined
+    currentTaskRoute === true
+      ? `/tasks/${searchTask.id}`
+      : rootTaskRoute === true
+        ? `/tasks/${standaloneTaskDetail.id}`
+        : undefined
   return (
     <Providers {...(initialPath == null ? {} : { initialPath })}>
       <div className="flex h-screen items-center justify-center bg-background">
@@ -223,6 +235,9 @@ const meta = {
         ),
         http.get(`/api/tasks/${searchTaskParent.id}`, () =>
           HttpResponse.json(searchTaskParent),
+        ),
+        http.get(`/api/tasks/${standaloneTaskDetail.id}`, () =>
+          HttpResponse.json(standaloneTaskDetail),
         ),
         http.get(`/api/tasks/${numberedTaskNumber}`, () =>
           HttpResponse.json(numberedTask),
@@ -308,6 +323,13 @@ export const CurrentTaskNavigationScopes: Story = {
     defaultContext: 'work',
     defaultQuery: projectScopeQuery,
     currentTaskRoute: true,
+  },
+}
+
+export const CurrentRootTaskNavigationScopes: Story = {
+  args: {
+    defaultContext: 'work',
+    rootTaskRoute: true,
   },
 }
 

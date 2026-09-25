@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import {
   createCommandItems,
   createTaskCommandItems,
+  createTaskScopeItems,
 } from '#components/search/search-modal-command-items'
 import type { SearchMode } from '#components/search/search-modal-mode'
 import { createRecentSearchItems } from '#components/search/search-modal-recent-item'
@@ -34,7 +35,7 @@ interface SearchModalResultGroupsOptions {
   context: SearchResult['context'] | undefined
   currentTask: TaskDetail | undefined
   parentTask: TaskDetail | undefined
-  currentProject: Project | undefined
+  currentProject: Pick<Project, 'id' | 'title'> | undefined
   onNewTask: (() => void) | undefined
   openRoute: (to: NavKeybinding['to']) => void
   suggestions: Suggestion[] | undefined
@@ -173,41 +174,7 @@ export function useSearchModalResultGroups({
         : []
     const taskScopeItems: ListItem[] =
       searchMode == null && searchInputValue === '' && currentTask != null
-        ? [
-            createOptionItem(
-              `scope:children:${currentTask.id}`,
-              () => {
-                applyScope(`parent:${currentTask.id}`)
-              },
-              <span className="font-mono text-sm text-foreground">
-                children of #{String(currentTask.number)} {currentTask.title}
-              </span>,
-              {
-                selectOnTab: () => {
-                  applyScope(`parent:${currentTask.id}`)
-                },
-              },
-            ),
-            ...(currentTask.parentId == null || parentTask == null
-              ? []
-              : [
-                  createOptionItem(
-                    `scope:siblings:${parentTask.id}`,
-                    () => {
-                      applyScope(`parent:${parentTask.id}`)
-                    },
-                    <span className="font-mono text-sm text-foreground">
-                      siblings (children of #{String(parentTask.number)}{' '}
-                      {parentTask.title})
-                    </span>,
-                    {
-                      selectOnTab: () => {
-                        applyScope(`parent:${parentTask.id}`)
-                      },
-                    },
-                  ),
-                ]),
-          ]
+        ? createTaskScopeItems(currentTask, parentTask, applyScope)
         : []
     const pageItems =
       canSearchPages && hasSearchQuery
@@ -225,15 +192,16 @@ export function useSearchModalResultGroups({
         : []
 
     return [
-      {
-        id: 'current-task-commands',
-        title:
-          currentTask == null
-            ? 'Task navigation'
-            : `#${String(currentTask.number)} ${currentTask.title}`,
-        items: taskCommandItems,
-        isVisible: (_query, itemCount) => itemCount > 0,
-      },
+      ...(currentTask == null
+        ? []
+        : [
+            {
+              id: 'current-task-commands',
+              title: `#${String(currentTask.number)} ${currentTask.title}`,
+              items: taskCommandItems,
+              isVisible: (_query: string, itemCount: number) => itemCount > 0,
+            },
+          ]),
       {
         id: 'commands',
         title: 'Commands',
