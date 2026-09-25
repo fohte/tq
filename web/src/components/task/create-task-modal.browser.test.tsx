@@ -2,6 +2,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { page } from 'vitest/browser'
 
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import {
@@ -21,7 +22,16 @@ import type { CreateTaskInput, Task } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
 import { renderControlledModal } from '#lib/render-controlled-modal'
-import { assertDefined, atIndex, partialMutation } from '#lib/test-utils'
+import {
+  assertDefined,
+  atIndex,
+  findVisible,
+  partialMutation,
+} from '#lib/test-utils'
+import {
+  DESKTOP_VIEWPORT,
+  MOBILE_VIEWPORT,
+} from '#storybook-config/screenshot-viewports'
 
 // Mutation hooks are mocked (see the module-level vi.mock calls below) so a
 // test can assert on their call args directly instead of round-tripping
@@ -118,6 +128,48 @@ describe('CreateTaskModal', () => {
       ).not.toBeInTheDocument()
     })
   })
+
+  it('closes when the desktop backdrop is clicked', async () => {
+    const user = userEvent.setup()
+    const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
+
+    await user.click(
+      assertDefined(document.elementFromPoint(1, 1), 'no target at backdrop'),
+    )
+
+    expect(onOpenChange.mock.calls).toEqual([[false]])
+  })
+
+  it('closes when a click reaches the mobile backdrop', async () => {
+    await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
+    const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
+    const user = userEvent.setup()
+    await user.click(
+      assertDefined(document.elementFromPoint(1, 1), 'no target at backdrop'),
+    )
+
+    expect(onOpenChange.mock.calls).toEqual([[false]])
+  })
+
+  it.each([
+    ['desktop', DESKTOP_VIEWPORT],
+    ['mobile', MOBILE_VIEWPORT],
+  ] as const)(
+    'stays open when a title field is clicked inside the %s panel',
+    async (_viewportName, viewport) => {
+      await page.viewport(viewport.width, viewport.height)
+      const user = userEvent.setup()
+      const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
+      const titleInput = assertDefined(
+        findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
+        'no visible task title input',
+      )
+
+      await user.click(titleInput)
+
+      expect(onOpenChange.mock.calls).toEqual([])
+    },
+  )
 
   it('prefills the estimate field from defaultEstimateMinutes', () => {
     renderControlledModal(CreateTaskModal, { defaultEstimateMinutes: 90 })

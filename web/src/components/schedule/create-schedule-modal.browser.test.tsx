@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { page } from 'vitest/browser'
 
 import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
@@ -10,7 +11,16 @@ import {
   useUpdateSchedule,
 } from '#hooks/use-schedules'
 import { renderControlledModal } from '#lib/render-controlled-modal'
-import { assertDefined, atIndex, partialMutation } from '#lib/test-utils'
+import {
+  assertDefined,
+  atIndex,
+  findVisible,
+  partialMutation,
+} from '#lib/test-utils'
+import {
+  DESKTOP_VIEWPORT,
+  MOBILE_VIEWPORT,
+} from '#storybook-config/screenshot-viewports'
 
 vi.mock('#hooks/use-schedules', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-schedules')>()
@@ -84,6 +94,51 @@ describe('CreateScheduleModal', () => {
       ).not.toBeInTheDocument()
     })
   })
+
+  it('closes when the desktop backdrop is clicked', async () => {
+    setupMocks()
+    const user = userEvent.setup()
+    const { onOpenChange } = renderControlledModal(CreateScheduleModal, {})
+
+    await user.click(
+      assertDefined(document.elementFromPoint(1, 1), 'no target at backdrop'),
+    )
+
+    expect(onOpenChange.mock.calls).toEqual([[false]])
+  })
+
+  it('closes when a click reaches the mobile backdrop', async () => {
+    await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
+    setupMocks()
+    const { onOpenChange } = renderControlledModal(CreateScheduleModal, {})
+    const user = userEvent.setup()
+    await user.click(
+      assertDefined(document.elementFromPoint(1, 1), 'no target at backdrop'),
+    )
+
+    expect(onOpenChange.mock.calls).toEqual([[false]])
+  })
+
+  it.each([
+    ['desktop', DESKTOP_VIEWPORT],
+    ['mobile', MOBILE_VIEWPORT],
+  ] as const)(
+    'stays open when a title field is clicked inside the %s panel',
+    async (_viewportName, viewport) => {
+      await page.viewport(viewport.width, viewport.height)
+      setupMocks()
+      const user = userEvent.setup()
+      const { onOpenChange } = renderControlledModal(CreateScheduleModal, {})
+      const titleInput = assertDefined(
+        findVisible(screen.getAllByPlaceholderText('Schedule title')),
+        'no visible schedule title input',
+      )
+
+      await user.click(titleInput)
+
+      expect(onOpenChange.mock.calls).toEqual([])
+    },
+  )
 
   it('pre-fills the title input with the schedule being edited', () => {
     setupMocks()

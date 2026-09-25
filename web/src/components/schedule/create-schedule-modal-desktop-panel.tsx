@@ -48,7 +48,7 @@ export function ScheduleModalDesktopPanel({
   handleSubmit,
 }: SchedulePanelProps) {
   return (
-    <div className="fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex">
+    <div className="pointer-events-none fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex">
       <ModalPanel>
         {/* Header */}
         <DialogHeaderBar>
