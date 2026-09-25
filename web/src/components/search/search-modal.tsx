@@ -17,6 +17,7 @@ import {
   indexResultGroups,
   SearchModalResultList,
 } from '#components/search/search-modal-result-list'
+import { useSearchModalTaskActions } from '#components/search/search-modal-task-actions'
 import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPanel } from '#components/search/search-syntax-help-panel'
 import { useCurrentContext } from '#hooks/use-current-context'
@@ -89,6 +90,8 @@ export function SearchModal({
   } = useSearchModalQuery(query, setQuery, inputRef)
   const { openTask, openProject, openView, openPage, openRoute } =
     useSearchModalNavigation(onOpenChangeRef)
+  const { completeTask, copyTaskUrl } =
+    useSearchModalTaskActions(onOpenChangeRef)
   const currentContext = useCurrentContext()
   const currentRoute = useCurrentRoute()
   const currentTaskId =
@@ -248,6 +251,8 @@ export function SearchModal({
     currentProject,
     onNewTask,
     openRoute,
+    completeTask,
+    copyTaskUrl,
     suggestions,
     tasks,
     taskByNumber,

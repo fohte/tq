@@ -24,6 +24,7 @@ import {
   SEARCH_QUERY_DEBOUNCE_MS,
 } from '#hooks/use-search'
 import type { TaskDetail } from '#hooks/use-tasks'
+import { getUrlCopiedFromEvent } from '#hooks/use-url-copied-toast'
 
 interface MockTask {
   id: string
@@ -137,6 +138,7 @@ let mockProjectCalls: Array<{ filter: unknown; options: unknown }> = []
 let mockSavedViewCalls: Array<{ filter: unknown; options: unknown }> = []
 let mockCurrentRoute: CurrentRoute = { kind: 'other' }
 let mockTaskDetails: Record<string, TaskDetail> = {}
+const mockCompleteTaskMutate = vi.fn()
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-search')>()
@@ -174,6 +176,15 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
   return {
     ...actual,
     useTask: (id: string) => ({ data: mockTaskDetails[id] }),
+  }
+})
+
+vi.mock('#hooks/use-task-mutations', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('#hooks/use-task-mutations')>()
+  return {
+    ...actual,
+    useCompleteTask: () => ({ mutate: mockCompleteTaskMutate }),
   }
 })
 
@@ -333,6 +344,7 @@ function getNoResultsOutput(query: string) {
         ?.textContent ?? null,
   }
 }
+
 describe('SearchModal', () => {
   beforeEach(() => {
     mockSearchData = []
@@ -351,11 +363,13 @@ describe('SearchModal', () => {
     mockSavedViewCalls = []
     mockCurrentRoute = { kind: 'other' }
     mockTaskDetails = {}
+    mockCompleteTaskMutate.mockClear()
     mockNavigate.mockClear()
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   it('renders the search input when open', () => {
@@ -880,6 +894,8 @@ describe('SearchModal', () => {
       options: [
         'Go to parent: #30 Prepare product launch',
         'Go to project: Product launch',
+        'Mark as completed',
+        'Copy URL',
         'go to today g d',
         'go to calendar g c',
         'go to inbox g i',
@@ -939,6 +955,108 @@ describe('SearchModal', () => {
           },
         ],
       ],
+    })
+  })
+
+  it('completes the current task and closes the modal when selected', async () => {
+    setCurrentTaskRoute()
+    const onOpenChange = vi.fn()
+
+    const user = userEvent.setup()
+    renderSearchModal({ defaultQuery: '>mark', onOpenChange })
+    await user.keyboard('{Enter}')
+
+    const getOutput = () => ({
+      onOpenChange: onOpenChange.mock.calls,
+      completeTask: mockCompleteTaskMutate.mock.calls,
+      navigate: mockNavigate.mock.calls,
+    })
+    expect(getOutput()).toEqual({
+      onOpenChange: [[false]],
+      completeTask: [[{ id: currentTaskDetail.id }]],
+      navigate: [],
+    })
+  })
+
+  it('copies the current task URL, emits the toast event, and closes the modal', async () => {
+    setCurrentTaskRoute()
+    const onOpenChange = vi.fn()
+    const user = userEvent.setup()
+    const clipboardWriteText = vi
+      .spyOn(navigator.clipboard, 'writeText')
+      .mockResolvedValue(undefined)
+    let copiedUrl: string | null = null
+    const copiedEvent = new Promise<void>((resolve) => {
+      window.addEventListener(
+        'tq:url-copied',
+        (event) => {
+          copiedUrl = getUrlCopiedFromEvent(event)
+          resolve()
+        },
+        { once: true },
+      )
+    })
+    const taskUrl = new URL(
+      `/tasks/${currentTaskDetail.id}`,
+      window.location.origin,
+    ).toString()
+
+    renderSearchModal({ defaultQuery: '>copy', onOpenChange })
+    await user.keyboard('{Enter}')
+    await copiedEvent
+
+    const getOutput = () => ({
+      copiedUrls: clipboardWriteText.mock.calls,
+      toastUrl: copiedUrl,
+      onOpenChange: onOpenChange.mock.calls,
+    })
+    expect(getOutput()).toEqual({
+      copiedUrls: [[taskUrl]],
+      toastUrl: taskUrl,
+      onOpenChange: [[false]],
+    })
+  })
+
+  it('keeps the modal open and skips the toast when copying the URL fails', async () => {
+    setCurrentTaskRoute()
+    const onOpenChange = vi.fn()
+    const user = userEvent.setup()
+    const clipboardError = new Error('Clipboard access denied')
+    const clipboardWriteText = vi
+      .spyOn(navigator.clipboard, 'writeText')
+      .mockRejectedValue(clipboardError)
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const failureLogged = new Promise<void>((resolve) => {
+      consoleError.mockImplementation(() => {
+        resolve()
+      })
+    })
+    const dispatchEvent = vi.spyOn(window, 'dispatchEvent')
+    const taskUrl = new URL(
+      `/tasks/${currentTaskDetail.id}`,
+      window.location.origin,
+    ).toString()
+
+    renderSearchModal({ defaultQuery: '>copy', onOpenChange })
+    await user.keyboard('{Enter}')
+    await failureLogged
+
+    const getOutput = () => ({
+      copiedUrls: clipboardWriteText.mock.calls,
+      errors: consoleError.mock.calls,
+      copiedEventCount: dispatchEvent.mock.calls.filter(
+        ([event]) => event.type === 'tq:url-copied',
+      ).length,
+      onOpenChange: onOpenChange.mock.calls,
+      copyCommand:
+        screen.queryByRole('option', { name: 'Copy URL' })?.textContent ?? null,
+    })
+    expect(getOutput()).toEqual({
+      copiedUrls: [[taskUrl]],
+      errors: [['Failed to copy task URL', clipboardError]],
+      copiedEventCount: 0,
+      onOpenChange: [],
+      copyCommand: 'Copy URL',
     })
   })
 
@@ -1006,7 +1124,7 @@ describe('SearchModal', () => {
     })
   })
 
-  it('omits parent and project commands when the current task has neither', () => {
+  it('shows task actions when the current task has no parent or project', () => {
     const standaloneTask = makeTaskDetail({
       id: '00000000-0000-0000-0000-000000000033',
       number: 33,
@@ -1032,11 +1150,38 @@ describe('SearchModal', () => {
         screen.queryByRole('option', {
           name: 'Go to project: Product launch',
         })?.textContent ?? null,
+      completeCommand:
+        screen.queryByRole('option', { name: 'Mark as completed' })
+          ?.textContent ?? null,
+      copyUrlCommand:
+        screen.queryByRole('option', { name: 'Copy URL' })?.textContent ?? null,
     })
     expect(getOutput()).toEqual({
-      taskHeading: null,
+      taskHeading: '#33 Standalone task',
       parentCommand: null,
       projectCommand: null,
+      completeCommand: 'Mark as completed',
+      copyUrlCommand: 'Copy URL',
+    })
+  })
+
+  it('omits the completion action for completed tasks', () => {
+    setCurrentTaskRoute(
+      makeTaskDetail({ ...currentTaskDetail, status: 'completed' }),
+    )
+
+    renderSearchModal({ defaultQuery: '>' })
+
+    const getOutput = () => ({
+      completeCommand:
+        screen.queryByRole('option', { name: 'Mark as completed' })
+          ?.textContent ?? null,
+      copyUrlCommand:
+        screen.queryByRole('option', { name: 'Copy URL' })?.textContent ?? null,
+    })
+    expect(getOutput()).toEqual({
+      completeCommand: null,
+      copyUrlCommand: 'Copy URL',
     })
   })
 
