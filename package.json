@@ -27,7 +27,6 @@
     "@tsconfig/node-lts": "24.0.1",
     "@tsconfig/strictest": "2.0.8",
     "@types/node": "24.13.5",
-    "@typescript-eslint/parser": "8.66.0",
     "concurrently": "10.0.5",
     "eslint": "10.10.0",
     "eslint-plugin-storybook": "10.6.0",

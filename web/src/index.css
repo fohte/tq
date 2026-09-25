@@ -6,6 +6,7 @@
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
 @import '@fontsource/ibm-plex-mono/600.css';
+/* @shadcn/lint cannot resolve the `#components` package.json import alias in CSS imports. */
 @import './components/calendar/fullcalendar.css';
 
 :root {
