@@ -10,7 +10,7 @@ on:
     types: [synchronize, labeled]
 
 jobs:
-  vrt-approval-web:
+  vrt-approval:
     permissions:
       contents: read
       pull-requests: write
