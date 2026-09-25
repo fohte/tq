@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { fn } from 'storybook/test'
 
+import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
 import { makeSuggestion } from '#components/search/search-test-fixtures'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
 import { searchKeys } from '#hooks/use-search'
@@ -41,6 +42,9 @@ const meta = {
     freeText: 'hello',
     onCommit: fn(),
     onBackspaceEmpty: fn(),
+    syntaxHelpSections: getSearchSyntaxHelpSections({
+      audience: 'task-filter',
+    }),
   },
 } satisfies Meta<typeof TaskFilterFreeTextInput>
 
@@ -59,10 +63,19 @@ export const Empty: Story = {
   },
 }
 
+export const SyntaxHelpFocused: Story = {
+  name: 'the focused empty input displays syntax help',
+  args: {
+    freeText: '',
+    autoFocus: true,
+    placeholder: 'Filter…',
+  },
+}
+
 // Pre-seeds the suggestions query cache with a `staleTime: Infinity` client
 // (instead of typing through a play) so react-query never refetches over
-// the fixture — `freeText: 'is:'` alone makes the component derive
-// `hasSuggestions` and open the popup on first render.
+// the fixture — `autoFocus` focuses the input, while `freeText: 'is:'` derives
+// `hasSuggestions` and opens the suggestions popup.
 const suggestionsQueryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, staleTime: Infinity } },
 })
@@ -75,6 +88,7 @@ export const WithSuggestionsOpen: Story = {
   name: 'the input shows suggestions for an incomplete filter',
   args: {
     freeText: 'is:',
+    autoFocus: true,
   },
   decorators: [
     (Story) => (

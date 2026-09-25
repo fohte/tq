@@ -46,6 +46,7 @@
   --color-github-open: var(--github-open);
   --color-github-closed: var(--github-closed);
   --color-github-merged: var(--github-merged);
+  --radius-task-filter-value: 3px;
 
   /* Grid track definitions — see docs/design-system.md "Grid tracks". */
   --project-list-columns: 14px 1fr 96px 190px 78px;

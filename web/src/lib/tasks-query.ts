@@ -10,6 +10,18 @@ export const sortOptionValues = [
   'created',
 ] as const satisfies readonly TaskSortBy[]
 
+export const defaultTaskSort = 'updated' as const
+
+export const tasksSearchDefaultQuery = buildSearchQuery({
+  freeText: '',
+  status: ['todo'],
+  sortBy: defaultTaskSort,
+})
+
+export function withDefaultSort(parsed: ParsedQuery): ParsedQuery {
+  return { ...parsed, sortBy: parsed.sortBy ?? defaultTaskSort }
+}
+
 export const sortLabels: Partial<
   Record<NonNullable<ParsedQuery['sortBy']>, string>
 > = {
@@ -90,7 +102,7 @@ export function tagFilterSearch(tag: string): { q: string } {
       freeText: '',
       status: ['todo'],
       label: tag,
-      sortBy: 'updated',
+      sortBy: defaultTaskSort,
     }),
   }
 }

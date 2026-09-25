@@ -21,6 +21,7 @@ import { useIsDesktop } from '#hooks/use-is-desktop'
 interface FilterMenuProps {
   trigger: React.ReactNode
   triggerClassName?: string
+  triggerAriaLabel?: string | undefined
   title: string
   children: React.ReactNode
   defaultOpen?: boolean | undefined
@@ -35,6 +36,7 @@ interface FilterMenuProps {
 export function FilterMenu({
   trigger,
   triggerClassName,
+  triggerAriaLabel,
   title,
   children,
   defaultOpen = false,
@@ -50,6 +52,7 @@ export function FilterMenu({
           ref={triggerRef}
           type="button"
           className={triggerClassName}
+          aria-label={triggerAriaLabel}
           onClick={() => {
             setOpen((prev) => !prev)
           }}
@@ -71,7 +74,9 @@ export function FilterMenu({
 
   return (
     <Dialog defaultOpen={defaultOpen}>
-      <DialogTrigger className={triggerClassName}>{trigger}</DialogTrigger>
+      <DialogTrigger className={triggerClassName} aria-label={triggerAriaLabel}>
+        {trigger}
+      </DialogTrigger>
       <DialogPortal>
         <DialogOverlay />
         <DialogPopup>

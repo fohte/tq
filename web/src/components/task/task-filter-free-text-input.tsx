@@ -1,6 +1,11 @@
 import { parseSearchQuery } from 'api/search-query-parser'
 import { useEffect, useRef, useState } from 'react'
 
+import {
+  getSearchSyntaxHelpSections,
+  type SearchSyntaxHelpSection,
+} from '#components/search/search-syntax-help-data'
+import { SearchSyntaxHelpPopover } from '#components/search/search-syntax-help-popover'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
 import type { Suggestion } from '#hooks/use-search'
 import {
@@ -17,6 +22,8 @@ interface TaskFilterFreeTextInputProps {
   onBackspaceEmpty: () => void
   disabledSuggestionCategories?: readonly string[]
   placeholder?: string
+  autoFocus?: boolean
+  syntaxHelpSections?: SearchSyntaxHelpSection[]
 }
 
 // The tail of the filter row's token input: a plain text box for the parts
@@ -32,9 +39,12 @@ export function TaskFilterFreeTextInput({
   onBackspaceEmpty,
   disabledSuggestionCategories = [],
   placeholder,
+  autoFocus = false,
+  syntaxHelpSections = getSearchSyntaxHelpSections({ audience: 'task-filter' }),
 }: TaskFilterFreeTextInputProps) {
   const [value, setValue] = useState(freeText)
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Resync when freeText changes for a reason other than our own commit
@@ -128,6 +138,7 @@ export function TaskFilterFreeTextInput({
       <input
         id={id}
         ref={inputRef}
+        autoFocus={autoFocus}
         type="text"
         value={value}
         onChange={(e) => {
@@ -135,13 +146,19 @@ export function TaskFilterFreeTextInput({
           setSelectedIndex(0)
         }}
         onKeyDown={handleKeyDown}
-        onBlur={commit}
+        onFocus={() => {
+          setIsFocused(true)
+        }}
+        onBlur={() => {
+          commit()
+          setIsFocused(false)
+        }}
         placeholder={placeholder}
         className="min-w-0 flex-1 border-0 bg-transparent font-mono text-sm outline-none placeholder:text-muted-foreground"
         aria-label="Filter query"
       />
       <AnchoredPopup
-        open={hasSuggestions}
+        open={isFocused && hasSuggestions}
         anchor={inputRef}
         initialFocus={false}
         className="min-w-(--anchor-width)"
@@ -166,6 +183,11 @@ export function TaskFilterFreeTextInput({
           </button>
         ))}
       </AnchoredPopup>
+      <SearchSyntaxHelpPopover
+        anchor={inputRef}
+        open={isFocused && value.trim() === ''}
+        sections={syntaxHelpSections}
+      />
     </div>
   )
 }

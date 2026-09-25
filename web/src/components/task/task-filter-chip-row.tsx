@@ -1,12 +1,12 @@
 import type { ParsedQuery } from 'api/search-query-parser'
 import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
-import { useEffect } from 'react'
+import { useEffect, useId } from 'react'
 
 import { SaveViewButton } from '#components/saved-view/save-view-button'
 import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
-import { SearchSyntaxHelpPopover } from '#components/search/search-syntax-help-popover'
 import { TaskFilterChip } from '#components/task/task-filter-chip'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
+import { taskFilterAxisIcons } from '#components/task/task-filter-icons'
 import { TaskLabelFilterFields } from '#components/task/task-label-filter-fields'
 import { TaskProjectFilterFields } from '#components/task/task-project-filter-fields'
 import { TaskSortFilterFields } from '#components/task/task-sort-filter-fields'
@@ -18,21 +18,17 @@ import type { Project } from '#hooks/use-projects'
 import { useSearchModalOpen } from '#hooks/use-search-modal-open'
 import { useTask } from '#hooks/use-task-queries'
 import {
-  sortLabels,
+  defaultTaskSort,
   sortOptionValues,
   statusChipLabels,
+  tasksSearchDefaultQuery,
+  withDefaultSort,
   withHasPages,
   withLabel,
   withParentId,
   withProjectId,
   withStatus,
 } from '#lib/tasks-query'
-import { cn } from '#lib/utils'
-
-const filterTriggerClassName =
-  'shrink-0 cursor-pointer items-center gap-1 border border-border px-1 font-mono text-2xs text-muted-foreground outline-none hover:text-foreground'
-
-const freeTextInputId = 'task-filter-free-text'
 
 type TaskFilterKind =
   'status' | 'project' | 'label' | 'pages' | 'parent' | 'sort'
@@ -55,7 +51,7 @@ interface TaskFilterChipRowProps {
   disableStatusFilter?: boolean
   disableSortFilter?: boolean
   defaultOpenFilter?: TaskFilterKind
-  defaultOpenSearchHelp?: boolean
+  autoFocus?: boolean
 }
 
 export function TaskFilterChipRow({
@@ -67,9 +63,12 @@ export function TaskFilterChipRow({
   disableStatusFilter = false,
   disableSortFilter = false,
   defaultOpenFilter,
-  defaultOpenSearchHelp = false,
+  autoFocus = false,
 }: TaskFilterChipRowProps) {
   const searchModalOpen = useSearchModalOpen()
+  const rowId = useId()
+  const freeTextInputId = `task-filter-free-text-${rowId}`
+  const hasPagesCheckboxId = `${freeTextInputId}-has-pages`
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -82,23 +81,28 @@ export function TaskFilterChipRow({
         return
       }
 
+      const input = document.getElementById(freeTextInputId)
+      if (
+        !(input instanceof HTMLInputElement) ||
+        input.getClientRects().length === 0
+      ) {
+        return
+      }
+
       e.preventDefault()
-      document.getElementById(freeTextInputId)?.focus()
+      input.focus()
     }
 
     document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [searchModalOpen])
+  }, [freeTextInputId, searchModalOpen])
 
-  const sortBy = parsed.sortBy ?? 'updated'
-  // The chip label falls back to the raw value for a sort the picker below
-  // doesn't offer (e.g. a hand-edited `sort:due` in the URL), but the
-  // picker itself only ever offers sortOptionValues, so it takes a
-  // narrowed value instead.
+  const sortBy = parsed.sortBy ?? defaultTaskSort
+  // Keep the picker selection valid if an older URL contains a removed sort.
   const pickerSortBy =
-    sortOptionValues.find((value) => value === sortBy) ?? 'updated'
+    sortOptionValues.find((value) => value === sortBy) ?? defaultTaskSort
   const selectedProject = disableProjectFilter
     ? undefined
     : projects.find((project) => project.id === parsed.projectId)
@@ -111,7 +115,11 @@ export function TaskFilterChipRow({
     const filtered = { ...next }
     if (disableStatusFilter) delete filtered.status
     if (disableSortFilter) delete filtered.sortBy
-    onQueryChange(buildSearchQuery(filtered))
+    onQueryChange(
+      buildSearchQuery(
+        disableSortFilter ? filtered : withDefaultSort(filtered),
+      ),
+    )
   }
 
   // Merges newly typed free text back into the applied query: anything that
@@ -160,7 +168,9 @@ export function TaskFilterChipRow({
   // condition sits closest to it — i.e. the last chip rendered before the
   // input, in reverse of the render order below.
   const removeLastChip = () => {
-    if (parsed.parentId != null) {
+    if (!disableSortFilter && sortBy !== defaultTaskSort) {
+      setParsed({ ...parsed, sortBy: defaultTaskSort })
+    } else if (parsed.parentId != null) {
       setParsed(withParentId(parsed, undefined))
     } else if (parsed.hasPages === true) {
       setParsed(withHasPages(parsed, false))
@@ -177,36 +187,36 @@ export function TaskFilterChipRow({
     }
   }
 
+  const query = buildSearchQuery(withDefaultSort(parsed))
+  const statusValue =
+    parsed.status?.map((status) => statusChipLabels[status]).join(', ') ?? ''
+  const parentValue = parentTaskQuery.isLoading
+    ? 'Loading…'
+    : (parentTaskQuery.data?.title ?? parsed.parentId ?? '')
+
   return (
-    <div className="flex items-start gap-1.5 border-b border-border bg-background px-3 py-2">
-      {/* Always-visible left column marking the row as a token input.
-          Kept as its own flex item (not inside the wrapping chip area
-          below) so a wrapped second line hangs indented under it instead
-          of tucking underneath. Clicking it focuses the free-text input
-          via the native label/input association below — no JS needed. */}
+    <div className="flex min-h-12 items-center gap-3 border-b border-border bg-background px-4">
       <label
         htmlFor={freeTextInputId}
-        className={cn(
-          'inline-flex shrink-0 cursor-text',
-          filterTriggerClassName,
-        )}
+        className="shrink-0 cursor-text font-mono text-sm font-bold text-primary"
       >
-        <span aria-hidden="true">&gt;</span>
+        <span aria-hidden="true">›</span>
       </label>
 
-      {/* Wraps onto multiple lines as conditions accumulate, instead of
-          scrolling horizontally and hiding chips off-screen. */}
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-wrap items-start gap-x-3 gap-y-2">
         {!disableStatusFilter &&
           parsed.status != null &&
           parsed.status.length > 0 && (
             <TaskFilterChip
+              icon={taskFilterAxisIcons.is}
               attribute="is"
-              value={parsed.status
-                .map((status) => statusChipLabels[status])
-                .join(', ')}
+              value={statusValue}
               menuTitle="Status"
+              ariaLabel={`is ${statusValue}`}
               defaultOpen={defaultOpenFilter === 'status'}
+              onRemove={() => {
+                setParsed(withStatus(parsed, []))
+              }}
             >
               <TaskStatusFilterFields
                 status={parsed.status}
@@ -219,10 +229,15 @@ export function TaskFilterChipRow({
 
         {selectedProject != null && (
           <TaskFilterChip
+            icon={taskFilterAxisIcons.project}
             attribute="project"
             value={selectedProject.title}
             menuTitle="Project"
+            ariaLabel={`project ${selectedProject.title}`}
             defaultOpen={defaultOpenFilter === 'project'}
+            onRemove={() => {
+              setParsed(withProjectId(parsed, ''))
+            }}
           >
             <TaskProjectFilterFields
               projects={projects}
@@ -236,10 +251,15 @@ export function TaskFilterChipRow({
 
         {parsed.label != null && (
           <TaskFilterChip
+            icon={taskFilterAxisIcons.label}
             attribute="label"
-            value={`#${parsed.label}`}
+            value={parsed.label}
             menuTitle="Label"
+            ariaLabel={`label #${parsed.label}`}
             defaultOpen={defaultOpenFilter === 'label'}
+            onRemove={() => {
+              setParsed(withLabel(parsed, undefined))
+            }}
           >
             <TaskLabelFilterFields
               selectedLabel={parsed.label}
@@ -252,21 +272,26 @@ export function TaskFilterChipRow({
 
         {parsed.hasPages === true && (
           <TaskFilterChip
+            icon={taskFilterAxisIcons.has}
             attribute="has"
             value="pages"
             menuTitle="Pages"
+            ariaLabel="has pages"
             defaultOpen={defaultOpenFilter === 'pages'}
+            onRemove={() => {
+              setParsed(withHasPages(parsed, false))
+            }}
           >
             <div className="flex items-center gap-2">
               <Checkbox
-                id="task-filter-has-pages"
+                id={hasPagesCheckboxId}
                 checked
                 onCheckedChange={(checked) => {
                   setParsed(withHasPages(parsed, checked))
                 }}
               />
               <label
-                htmlFor="task-filter-has-pages"
+                htmlFor={hasPagesCheckboxId}
                 className="text-sm text-foreground"
               >
                 has pages
@@ -277,14 +302,15 @@ export function TaskFilterChipRow({
 
         {parsed.parentId != null && (
           <TaskFilterChip
+            icon={taskFilterAxisIcons.parent}
             attribute="parent"
-            value={
-              parentTaskQuery.isLoading
-                ? 'Loading…'
-                : (parentTaskQuery.data?.title ?? parsed.parentId)
-            }
+            value={parentValue}
             menuTitle="Parent"
+            ariaLabel={`parent ${parentValue}`}
             defaultOpen={defaultOpenFilter === 'parent'}
+            onRemove={() => {
+              setParsed(withParentId(parsed, undefined))
+            }}
           >
             <Button
               variant="outline"
@@ -298,6 +324,32 @@ export function TaskFilterChipRow({
           </TaskFilterChip>
         )}
 
+        {!disableSortFilter && (
+          <TaskFilterChip
+            icon={taskFilterAxisIcons.sort}
+            attribute="sort"
+            value={sortBy}
+            menuTitle="Sort"
+            ariaLabel={`Sort by ${sortBy}`}
+            defaultOpen={defaultOpenFilter === 'sort'}
+            isDefault={sortBy === defaultTaskSort}
+            onRemove={
+              sortBy === defaultTaskSort
+                ? undefined
+                : () => {
+                    setParsed({ ...parsed, sortBy: defaultTaskSort })
+                  }
+            }
+          >
+            <TaskSortFilterFields
+              sortBy={pickerSortBy}
+              onSortByChange={(sort) => {
+                setParsed({ ...parsed, sortBy: sort })
+              }}
+            />
+          </TaskFilterChip>
+        )}
+
         <TaskFilterFreeTextInput
           id={freeTextInputId}
           freeText={parsed.freeText}
@@ -308,10 +360,8 @@ export function TaskFilterChipRow({
             ...(disableSortFilter ? ['sort'] : []),
           ]}
           placeholder="Filter…"
-        />
-        <SearchSyntaxHelpPopover
-          defaultOpen={defaultOpenSearchHelp}
-          sections={getSearchSyntaxHelpSections({
+          autoFocus={autoFocus}
+          syntaxHelpSections={getSearchSyntaxHelpSections({
             audience: 'task-filter',
             disableProjectFilter,
             disableStatusFilter,
@@ -320,37 +370,9 @@ export function TaskFilterChipRow({
         />
       </div>
 
-      {/* Pinned to the row's right edge, outside the wrapping chip area, so
-          it stays put at the top-right even once the chips wrap to a second
-          line. Below `md` the value is dropped to save width — same
-          control, same menu, just a shorter label. */}
-      {!disableSortFilter && (
-        <TaskFilterChip
-          attribute={
-            <>
-              <span className="sr-only">Sort by</span>
-              <span aria-hidden="true">↕</span>
-            </>
-          }
-          value={
-            <span className="hidden md:inline">
-              {sortLabels[sortBy] ?? sortBy}
-            </span>
-          }
-          menuTitle="Sort"
-          preventShrink
-          defaultOpen={defaultOpenFilter === 'sort'}
-        >
-          <TaskSortFilterFields
-            sortBy={pickerSortBy}
-            onSortByChange={(sort) => {
-              setParsed({ ...parsed, sortBy: sort })
-            }}
-          />
-        </TaskFilterChip>
+      {!hideSaveView && query !== tasksSearchDefaultQuery && (
+        <SaveViewButton query={query} />
       )}
-
-      {!hideSaveView && <SaveViewButton query={buildSearchQuery(parsed)} />}
     </div>
   )
 }

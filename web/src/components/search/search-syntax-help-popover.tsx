@@ -1,26 +1,32 @@
+import type { RefObject } from 'react'
+
 import {
   getSearchSyntaxHelpSections,
   type SearchSyntaxHelpSection,
 } from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPanel } from '#components/search/search-syntax-help-panel'
-import { HelpPopover } from '#components/ui/help-popover'
+import { AnchoredPopup } from '#components/ui/anchored-popup'
 
 interface SearchSyntaxHelpPopoverProps {
-  defaultOpen?: boolean
+  anchor: RefObject<HTMLInputElement | null>
+  open: boolean
   sections?: SearchSyntaxHelpSection[]
 }
 
 export function SearchSyntaxHelpPopover({
-  defaultOpen = false,
+  anchor,
+  open,
   sections = getSearchSyntaxHelpSections(),
 }: SearchSyntaxHelpPopoverProps) {
   return (
-    <HelpPopover
-      label="Search syntax help"
-      defaultOpen={defaultOpen}
-      popupClassName="w-88 p-0"
+    <AnchoredPopup
+      anchor={anchor}
+      open={open}
+      initialFocus={false}
+      finalFocus={false}
+      className="w-88 p-0"
     >
-      <SearchSyntaxHelpPanel sections={sections} />
-    </HelpPopover>
+      <SearchSyntaxHelpPanel sections={sections} showFilterIcons />
+    </AnchoredPopup>
   )
 }

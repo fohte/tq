@@ -14,13 +14,10 @@ import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
 import { useProject, useProjects } from '#hooks/use-projects'
 import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
 import { recordRecentSearchItem } from '#lib/recent-search-items'
+import { tasksSearchDefaultQuery, withDefaultSort } from '#lib/tasks-query'
 
 const projectTasksSearchDefaults = {
-  q: buildSearchQuery({
-    freeText: '',
-    status: ['todo'],
-    sortBy: 'updated',
-  }),
+  q: tasksSearchDefaultQuery,
 }
 
 interface ProjectDetailSearch {
@@ -29,9 +26,8 @@ interface ProjectDetailSearch {
 
 function validateSearch(search: Record<string, unknown>): ProjectDetailSearch {
   const rawQ = typeof search['q'] === 'string' ? search['q'] : undefined
-  return rawQ != null && rawQ !== ''
-    ? { q: rawQ }
-    : { q: projectTasksSearchDefaults.q }
+  if (rawQ == null || rawQ === '') return { q: projectTasksSearchDefaults.q }
+  return { q: rawQ }
 }
 
 export const Route = createFileRoute('/projects/$projectId')({
@@ -71,6 +67,7 @@ function ProjectDetailPage() {
   }
 
   const parsedQuery = parseSearchQuery(q)
+  const filteredQuery = buildSearchQuery(withDefaultSort(parsedQuery))
   const {
     isLoading: isFilteredTasksLoading,
     tree,
@@ -80,7 +77,7 @@ function ProjectDetailPage() {
     isFetchingNextPage,
     isFetchNextPageError,
     fetchNextPage,
-  } = useFilteredTaskTree({ q, projectId })
+  } = useFilteredTaskTree({ q: filteredQuery, projectId })
   const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
 
   const isLoading = isProjectLoading
