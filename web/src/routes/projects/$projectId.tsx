@@ -1,5 +1,5 @@
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
-import { parseSearchQuery } from 'api/search-query-parser'
+import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
 import { useEffect } from 'react'
 
 import {
@@ -14,7 +14,7 @@ import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
 import { useProject, useProjects } from '#hooks/use-projects'
 import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
 import { recordRecentSearchItem } from '#lib/recent-search-items'
-import { tasksSearchDefaultQuery } from '#lib/tasks-query'
+import { tasksSearchDefaultQuery, withDefaultSort } from '#lib/tasks-query'
 
 const projectTasksSearchDefaults = {
   q: tasksSearchDefaultQuery,
@@ -67,6 +67,7 @@ function ProjectDetailPage() {
   }
 
   const parsedQuery = parseSearchQuery(q)
+  const filteredQuery = buildSearchQuery(withDefaultSort(parsedQuery))
   const {
     isLoading: isFilteredTasksLoading,
     tree,
@@ -76,7 +77,7 @@ function ProjectDetailPage() {
     isFetchingNextPage,
     isFetchNextPageError,
     fetchNextPage,
-  } = useFilteredTaskTree({ q, projectId })
+  } = useFilteredTaskTree({ q: filteredQuery, projectId })
   const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
 
   const isLoading = isProjectLoading

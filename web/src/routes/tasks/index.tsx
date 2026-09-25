@@ -12,7 +12,11 @@ import { SectionHeading } from '#components/ui/section-heading'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
 import { useProjects } from '#hooks/use-projects'
 import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
-import { sortOptionValues, tasksSearchDefaultQuery } from '#lib/tasks-query'
+import {
+  sortOptionValues,
+  tasksSearchDefaultQuery,
+  withDefaultSort,
+} from '#lib/tasks-query'
 
 const tasksSearchDefaults = {
   q: tasksSearchDefaultQuery,
@@ -65,6 +69,7 @@ export const Route = createFileRoute('/tasks/')({
 function TaskList() {
   const { q = tasksSearchDefaults.q } = Route.useSearch()
   const parsed = parseSearchQuery(q)
+  const filteredQuery = buildSearchQuery(withDefaultSort(parsed))
   const navigate = Route.useNavigate()
   const [isModalOpen, setIsModalOpen] = useState(false)
 
@@ -86,7 +91,7 @@ function TaskList() {
     isFetchingNextPage,
     isFetchNextPageError,
     fetchNextPage,
-  } = useFilteredTaskTree({ q })
+  } = useFilteredTaskTree({ q: filteredQuery })
   const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
 
   return (
