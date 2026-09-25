@@ -39,9 +39,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Create: Story = {}
+export const Create: Story = {
+  name: 'the GitHub sync form is ready to create a new rule',
+}
 
 export const Edit: Story = {
+  name: 'the GitHub sync form is populated with an existing rule',
   args: {
     rule: {
       id: 'rule-1',

@@ -175,6 +175,23 @@ describe('CreateTaskModal', () => {
     })
   })
 
+  it('closes without confirmation when the default description remains untouched', async () => {
+    const user = userEvent.setup()
+    const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
+
+    await focusDescriptionEditor(user, document.body, { timeout: 10_000 })
+    await user.click(
+      atIndex(screen.getAllByRole('button', { name: 'Close' }), 0),
+    )
+
+    await waitFor(() => {
+      expect(closeState(onOpenChange.mock.calls)).toEqual({
+        onOpenChange: [[false]],
+        confirmationOpen: false,
+      })
+    })
+  })
+
   it('keeps a title draft when closing is canceled', async () => {
     const user = userEvent.setup()
     const { onOpenChange } = renderControlledModal(CreateTaskModal, {})

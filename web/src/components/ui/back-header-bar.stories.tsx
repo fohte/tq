@@ -28,6 +28,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows a mobile header with a back link to Projects',
   args: {
     to: '/',
     children: 'Projects',

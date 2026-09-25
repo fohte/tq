@@ -338,7 +338,7 @@ export function TaskFilterChipRow({
             </span>
           }
           menuTitle="Sort"
-          className="shrink-0"
+          preventShrink
           defaultOpen={defaultOpenFilter === 'sort'}
         >
           <TaskSortFilterFields

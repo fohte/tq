@@ -10,10 +10,7 @@ type ChipOwnProps = {
   children: ReactNode
 }
 
-// Exported so other components that render their own button (e.g. a chip
-// wrapped in a FilterMenu trigger) can match Chip's exact look without
-// duplicating these class tokens.
-export function chipClassName({
+function chipClassName({
   size = 'sm',
   active = false,
   className,

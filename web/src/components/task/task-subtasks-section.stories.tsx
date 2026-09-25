@@ -108,13 +108,16 @@ export default meta
 type SectionStoryType = StoryObj<typeof meta>
 
 export const Default: SectionStoryType = {
+  name: 'a parent task lists active and completed subtasks',
   args: { subtasks: mixedSubtasks },
 }
 
 export const AllCompleted: SectionStoryType = {
+  name: 'the parent task has only completed subtasks',
   args: { subtasks: allCompletedSubtasks },
 }
 
 export const Empty: SectionStoryType = {
+  name: 'the parent task has no subtasks yet',
   args: { subtasks: [] },
 }

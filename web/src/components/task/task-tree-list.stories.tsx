@@ -79,6 +79,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the list shows tasks with a nested child',
   args: {
     isLoading: false,
     tasks: sampleTasks,
@@ -87,6 +88,7 @@ export const Default: Story = {
 }
 
 export const Loading: Story = {
+  name: 'the list shows its loading state before tasks arrive',
   args: {
     isLoading: true,
     tasks: [],
@@ -95,6 +97,7 @@ export const Loading: Story = {
 }
 
 export const Empty: Story = {
+  name: 'the list has no tasks to display',
   args: {
     isLoading: false,
     tasks: [],
@@ -103,6 +106,7 @@ export const Empty: Story = {
 }
 
 export const LoadingMore: Story = {
+  name: 'the list shows a loading row while fetching more tasks',
   args: {
     isLoading: false,
     tasks: sampleTasks,
@@ -122,6 +126,7 @@ const manyTasks: Task[] = Array.from({ length: 60 }, (_, i) => ({
 }))
 
 export const LongList: Story = {
+  name: 'the list contains enough tasks to scroll beyond the viewport',
   args: {
     isLoading: false,
     tasks: manyTasks,
@@ -130,6 +135,7 @@ export const LongList: Story = {
 }
 
 export const WithSecondLine: Story = {
+  name: 'a task row places labels dates and a pull request below its title',
   args: {
     isLoading: false,
     tasks: [
@@ -173,6 +179,7 @@ const lazyRootTask: Task = {
 }
 
 export const LazyChildrenCollapsed: Story = {
+  name: 'a task with unloaded children appears collapsed',
   args: {
     isLoading: false,
     tasks: [lazyRootTask],

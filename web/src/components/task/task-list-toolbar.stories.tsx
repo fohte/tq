@@ -24,4 +24,6 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the toolbar links to recurring tasks and offers a new task action',
+}

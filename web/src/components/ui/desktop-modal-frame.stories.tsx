@@ -18,6 +18,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows a create item dialog in a desktop modal frame',
   args: {
     children: null,
   },

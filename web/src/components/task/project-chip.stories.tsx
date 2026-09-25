@@ -49,9 +49,11 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the chip shows a project title and its completion progress',
   args: { projectId: sampleProject.id },
 }
 
 export const UnknownProject: Story = {
+  name: 'the chip shows a fallback when project details cannot be loaded',
   args: { projectId: 'unknown-project-id' },
 }

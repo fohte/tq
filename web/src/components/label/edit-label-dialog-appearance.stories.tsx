@@ -24,9 +24,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the label editor shows an existing label name and color',
+}
 
 export const EmptyName: Story = {
+  name: 'the label editor disables saving when the name is empty',
   args: {
     name: '',
     saveDisabled: true,
@@ -34,6 +37,7 @@ export const EmptyName: Story = {
 }
 
 export const NameConflictError: Story = {
+  name: 'the label editor shows an error for a duplicate name',
   args: {
     name: 'urgent',
     errorMessage: 'A label with this name already exists',

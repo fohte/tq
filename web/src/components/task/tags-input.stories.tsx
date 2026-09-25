@@ -72,18 +72,21 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Empty: Story = {
+  name: 'the task has no labels attached',
   args: {
     initialLabels: [],
   },
 }
 
 export const WithTags: Story = {
+  name: 'the task has two labels attached',
   args: {
     initialLabels: ['dev:tq', 'chore'],
   },
 }
 
 export const AddingTag: Story = {
+  name: 'the input is ready to add another label',
   args: {
     initialLabels: ['dev:tq'],
     defaultIsAdding: true,
@@ -91,6 +94,7 @@ export const AddingTag: Story = {
 }
 
 export const GroupsSuggestionsHierarchically: Story = {
+  name: 'label suggestions are grouped by their hierarchy',
   args: {
     initialLabels: [],
     defaultIsAdding: true,
@@ -105,6 +109,7 @@ export const GroupsSuggestionsHierarchically: Story = {
 }
 
 export const HidesSuggestionAlreadyAttachedAsAncestor: Story = {
+  name: 'an attached parent label is excluded from suggestions while its child remains available',
   args: {
     initialLabels: ['dev'],
     defaultIsAdding: true,

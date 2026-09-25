@@ -28,12 +28,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Empty: Story = {
+  name: 'shows an empty HTML editor with its placeholder',
   args: {
     placeholder: 'Write HTML...',
   },
 }
 
 export const WithContent: Story = {
+  name: 'shows HTML markup in the editor',
   args: {
     defaultValue: SAMPLE_HTML,
   },
@@ -43,6 +45,7 @@ export const WithContent: Story = {
 // HTML branch) must stretch to match a sized flex ancestor rather than the
 // 'default' size's fixed 400px.
 export const Fill: Story = {
+  name: 'fills a flex container with the HTML editor',
   args: {
     defaultValue: SAMPLE_HTML,
     size: 'fill',

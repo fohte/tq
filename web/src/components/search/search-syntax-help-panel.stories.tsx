@@ -22,8 +22,11 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the syntax guide lists search targets and available filters',
+}
 
 export const WithBackButton: Story = {
+  name: 'the syntax guide shows a back button above its filter examples',
   args: { onBack: () => undefined },
 }

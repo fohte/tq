@@ -59,27 +59,33 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'opens an empty task creation form',
+}
 
 export const WithDefaultStartDate: Story = {
+  name: 'prefills the task start date',
   args: {
     defaultStartDate: new Date().toISOString().slice(0, 10),
   },
 }
 
 export const WithDefaultEstimate: Story = {
+  name: 'prefills the task estimate',
   args: {
     defaultEstimateMinutes: 90,
   },
 }
 
 export const DiscardConfirmation: Story = {
+  name: 'asks for confirmation before discarding the draft',
   args: {
     defaultDiscardConfirmationOpen: true,
   },
 }
 
 export const AsSubtask: Story = {
+  name: 'creates a subtask under the selected parent',
   args: {
     parentId: 'parent-task-id',
     parentTaskNumber: 12,
@@ -111,6 +117,7 @@ const longDescription = [
 ].join('\n')
 
 export const LongDescription: Story = {
+  name: 'opens the editor with a long description and start date',
   args: {
     defaultDescription: longDescription,
     defaultStartDate: new Date().toISOString().slice(0, 10),

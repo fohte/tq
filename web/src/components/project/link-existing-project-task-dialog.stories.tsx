@@ -26,6 +26,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Open: Story = {
+  name: 'the open dialog asks which task to link to the current project',
   args: {
     candidate,
     currentProjectTitle: 'Website Redesign',
@@ -35,6 +36,7 @@ export const Open: Story = {
 }
 
 export const UnknownCurrentProject: Story = {
+  name: 'the link dialog shows a candidate when the current project is unavailable',
   args: {
     candidate,
     currentProjectTitle: undefined,

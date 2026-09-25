@@ -15,6 +15,8 @@ interface ViewEditToggleOptions {
 interface MarkdownEditorProps {
   defaultValue?: string
   onChange?: (markdown: string) => void
+  /** Reports the focused editor after a document change so callers can read its current Markdown. */
+  onFocusedDocumentChange?: (readMarkdown: () => string) => void
   placeholder?: string
   /**
    * Enables the view/edit toggle: read-only by default with inline

@@ -45,9 +45,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'a saved view row shows its title and action affordance',
+}
 
 export const ActionsMenuOpen: Story = {
+  name: 'a saved view row displays its open actions menu',
   tags: ['desktop-only'],
   args: {
     defaultOpen: 'desktop',

@@ -13,6 +13,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows a new task title beside a close button',
   args: {
     children: null,
   },

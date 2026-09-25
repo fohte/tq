@@ -1,7 +1,4 @@
-import {
-  fieldValueClassName,
-  SidebarField,
-} from '#components/task/sidebar-field'
+import { SidebarField } from '#components/task/sidebar-field'
 import {
   Select,
   SelectContent,
@@ -55,7 +52,10 @@ export function SidebarProjectField({
           [NO_PROJECT, ...projectItems.map((p) => p.value)],
         )}
       >
-        <SelectTrigger size="sm" className={fieldValueClassName}>
+        <SelectTrigger
+          size="sm"
+          className="h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

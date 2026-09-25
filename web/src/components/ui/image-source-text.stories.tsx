@@ -19,6 +19,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const InlineImage: Story = {
+  name: 'shows an editable inline Markdown image source',
   args: {
     initialText: '![a cat](https://example.com/cat.png)',
     editable: true,
@@ -26,6 +27,7 @@ export const InlineImage: Story = {
 }
 
 export const ImageBlockWithCaption: Story = {
+  name: 'shows an editable Markdown image source with alt text and a title',
   args: {
     initialText: '![1.00](https://example.com/cat.png "my cat")',
     editable: true,
@@ -33,6 +35,7 @@ export const ImageBlockWithCaption: Story = {
 }
 
 export const Readonly: Story = {
+  name: 'shows a read-only Markdown image source',
   args: {
     initialText: '![a cat](https://example.com/cat.png)',
     editable: false,

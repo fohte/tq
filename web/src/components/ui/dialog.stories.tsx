@@ -64,18 +64,21 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const ClosedTrigger: Story = {
+  name: 'shows the profile dialog trigger',
   args: {
     open: false,
   },
 }
 
 export const Open: Story = {
+  name: 'shows a profile editor with cancel and save actions',
   args: {
     open: true,
   },
 }
 
 export const WithoutFooter: Story = {
+  name: 'shows the profile editor without action buttons',
   args: {
     open: true,
     showFooter: false,
@@ -83,6 +86,7 @@ export const WithoutFooter: Story = {
 }
 
 export const WithoutCloseButton: Story = {
+  name: 'shows the profile editor without a close button',
   args: {
     open: true,
     showCloseButton: false,
@@ -90,6 +94,7 @@ export const WithoutCloseButton: Story = {
 }
 
 export const HeaderBar: Story = {
+  name: 'shows a task dialog header with a close button',
   render: () => (
     <DialogHeaderBar>
       <span className="text-base font-semibold text-foreground">New Task</span>

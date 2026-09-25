@@ -164,6 +164,7 @@ export default mainContentMeta
 type Story = StoryObj<typeof mainContentMeta>
 
 export const Default: Story = {
+  name: 'shows an open task with its description and details',
   args: {
     task: { ...baseTask },
     pages: [],
@@ -172,6 +173,7 @@ export const Default: Story = {
 }
 
 export const Completed: Story = {
+  name: 'shows details for a completed task',
   args: {
     task: {
       ...baseTask,
@@ -184,6 +186,7 @@ export const Completed: Story = {
 }
 
 export const NoDescription: Story = {
+  name: 'shows a task without a description',
   args: {
     task: { ...baseTask, description: null, title: 'Task without description' },
     pages: [],
@@ -192,6 +195,7 @@ export const NoDescription: Story = {
 }
 
 export const WithTags: Story = {
+  name: 'shows a task with its labels',
   args: {
     task: {
       ...baseTask,
@@ -204,6 +208,7 @@ export const WithTags: Story = {
 }
 
 export const WithMultipleGithubLinks: Story = {
+  name: 'shows a task linked to several GitHub issues and pull requests',
   args: {
     task: {
       ...baseTask,
@@ -230,6 +235,7 @@ export const WithMultipleGithubLinks: Story = {
 }
 
 export const WithParent: Story = {
+  name: 'shows a child task with its parent reference',
   args: {
     task: {
       ...baseTask,
@@ -242,6 +248,7 @@ export const WithParent: Story = {
 }
 
 export const WithPages: Story = {
+  name: 'shows a task with its attached pages',
   args: {
     task: { ...baseTask, title: 'Task with pages' },
     pages: samplePages,
@@ -250,6 +257,7 @@ export const WithPages: Story = {
 }
 
 export const WithSubtasks: Story = {
+  name: 'shows a task with subtasks and their completion count',
   args: {
     task: {
       ...baseTask,
@@ -262,6 +270,7 @@ export const WithSubtasks: Story = {
 }
 
 export const WithSessions: Story = {
+  name: 'shows a task with its agent session history',
   args: {
     task: { ...baseTask, title: 'Task with sessions' },
     pages: [],
@@ -271,6 +280,7 @@ export const WithSessions: Story = {
 }
 
 export const LlmAuthored: Story = {
+  name: 'shows a task whose title and description were written by an agent',
   args: {
     task: {
       ...baseTask,
@@ -290,6 +300,7 @@ const sampleProject: ProjectDetail = makeProjectDetail({
 })
 
 export const WithProject: Story = {
+  name: 'shows a task assigned to a project',
   args: {
     task: {
       ...baseTask,
@@ -313,6 +324,7 @@ export const FullPagePC: StoryObj<{
   subtasks: Task[]
   sessions: AgentSession[]
 }> = {
+  name: 'shows the task detail page with its desktop sidebar',
   args: {
     task: { ...baseTask },
     pages: samplePages,
@@ -346,6 +358,7 @@ export const FullPageSP: StoryObj<{
   subtasks: Task[]
   sessions: AgentSession[]
 }> = {
+  name: 'shows the task detail page with its mobile sidebar',
   args: {
     task: { ...baseTask },
     pages: samplePages,

@@ -85,12 +85,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Empty: Story = {
+  name: 'the title field is ready for a task name',
   args: {
     initialValue: '',
   },
 }
 
 export const ShowsEstimateSuggestionsOnAt: Story = {
+  name: 'typing an at sign opens estimate suggestions',
   args: {
     initialValue: 'Buy milk @',
     detectInitialTrigger: true,
@@ -98,6 +100,7 @@ export const ShowsEstimateSuggestionsOnAt: Story = {
 }
 
 export const FiltersSuggestionsByPartialText: Story = {
+  name: 'the estimate menu narrows results to the typed text',
   args: {
     initialValue: 'Buy milk @tom',
     detectInitialTrigger: true,
@@ -105,6 +108,7 @@ export const FiltersSuggestionsByPartialText: Story = {
 }
 
 export const ShowsContextSuggestionsOnPercent: Story = {
+  name: 'typing a percent sign opens context suggestions',
   args: {
     initialValue: 'Buy milk %w',
     detectInitialTrigger: true,
@@ -112,6 +116,7 @@ export const ShowsContextSuggestionsOnPercent: Story = {
 }
 
 export const ShowsLabelSuggestionsOnHash: Story = {
+  name: 'typing a hash and label prefix filters label suggestions',
   args: {
     initialValue: 'Buy milk #urg',
     detectInitialTrigger: true,
@@ -126,6 +131,7 @@ export const ShowsLabelSuggestionsOnHash: Story = {
 }
 
 export const ShowsParentSuggestionsOnCaret: Story = {
+  name: 'typing a caret opens parent-task suggestions',
   args: {
     initialValue: 'Buy milk ^',
     detectInitialTrigger: true,

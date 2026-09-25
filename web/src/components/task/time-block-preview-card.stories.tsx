@@ -50,6 +50,7 @@ type Story = StoryObj<typeof meta>
 const task = makeTask({ number: 12, title: 'Write onboarding doc' })
 
 export const Manual: Story = {
+  name: 'a manual time block previews its linked task',
   args: {
     task,
     block: makeTimeBlock(),
@@ -58,6 +59,7 @@ export const Manual: Story = {
 }
 
 export const Auto: Story = {
+  name: 'an auto-scheduled time block previews its linked task',
   args: {
     task,
     block: makeTimeBlock({ isAutoScheduled: true }),
@@ -66,6 +68,7 @@ export const Auto: Story = {
 }
 
 export const Loading: Story = {
+  name: 'the linked task is still loading in the preview',
   args: {
     task: null,
     block: makeTimeBlock(),
@@ -74,6 +77,7 @@ export const Loading: Story = {
 }
 
 export const Error: Story = {
+  name: 'the preview shows an error loading the linked task',
   args: {
     task: null,
     isTaskError: true,
@@ -83,6 +87,7 @@ export const Error: Story = {
 }
 
 export const Deleting: Story = {
+  name: 'the linked task preview shows its deleting state',
   args: {
     task,
     block: makeTimeBlock(),

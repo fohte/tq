@@ -1,9 +1,6 @@
 import { useRef, useState } from 'react'
 
-import {
-  fieldValueClassName,
-  SidebarField,
-} from '#components/task/sidebar-field'
+import { SidebarField } from '#components/task/sidebar-field'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
 import { Input } from '#components/ui/input'
 import { useUpdateTask } from '#hooks/use-tasks'
@@ -66,7 +63,7 @@ export function SidebarRemindFieldAppearance({
           }}
           placeholder="明日9時 など"
           autoFocus
-          className={fieldValueClassName}
+          className="h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
         />
       ) : (
         <button

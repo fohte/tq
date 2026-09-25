@@ -22,14 +22,17 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const OpenIssue: Story = {
+  name: 'shows an open issue link',
   args: { link: makeGithubLink({ state: 'open', kind: 'issue' }) },
 }
 
 export const ClosedIssue: Story = {
+  name: 'shows a closed issue link',
   args: { link: makeGithubLink({ state: 'closed', kind: 'issue' }) },
 }
 
 export const OpenPullRequest: Story = {
+  name: 'shows an open pull request link',
   args: {
     link: makeGithubLink({
       state: 'open',
@@ -41,6 +44,7 @@ export const OpenPullRequest: Story = {
 }
 
 export const MergedPullRequest: Story = {
+  name: 'shows a merged pull request link',
   args: {
     link: makeGithubLink({
       state: 'merged',
@@ -52,6 +56,7 @@ export const MergedPullRequest: Story = {
 }
 
 export const ClosedPullRequest: Story = {
+  name: 'shows a closed pull request link',
   args: {
     link: makeGithubLink({
       state: 'closed',
@@ -63,6 +68,7 @@ export const ClosedPullRequest: Story = {
 }
 
 export const WithExtraCount: Story = {
+  name: 'shows the number of additional linked items',
   args: {
     link: makeGithubLink({
       state: 'merged',

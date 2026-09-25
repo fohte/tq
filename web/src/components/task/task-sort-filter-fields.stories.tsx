@@ -18,21 +18,26 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'tasks are sorted by their last update',
+}
 
 export const SortByCreated: Story = {
+  name: 'tasks are sorted by creation time',
   args: {
     sortBy: 'created',
   },
 }
 
 export const SortByDue: Story = {
+  name: 'tasks are sorted by due date',
   args: {
     sortBy: 'due',
   },
 }
 
 export const SortByEstimate: Story = {
+  name: 'tasks are sorted by estimated duration',
   args: {
     sortBy: 'estimate',
   },

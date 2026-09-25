@@ -14,6 +14,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows a details sidebar with a label and content',
   render: () => (
     <div className="flex h-64">
       <DetailSidebarPanel>
