@@ -6,6 +6,7 @@ import {
   type ContextValue,
 } from '#components/task/create-task-modal-fields'
 import { Button } from '#components/ui/button'
+import { DesktopModalFrame } from '#components/ui/desktop-modal-frame'
 import {
   Dialog,
   DialogHeaderBar,
@@ -14,7 +15,6 @@ import {
   DialogPortal,
 } from '#components/ui/dialog'
 import { Input } from '#components/ui/input'
-import { ModalPanel } from '#components/ui/modal-panel'
 import {
   Select,
   SelectContent,
@@ -286,50 +286,48 @@ export function ProjectFormModal({
 
         <DialogPopup onKeyDown={handleKeyDown}>
           {/* PC Modal */}
-          <div className="pointer-events-none fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex">
-            <ModalPanel>
-              {/* Header */}
-              <DialogHeaderBar>
-                <span className="text-base font-semibold text-foreground">
-                  {isEditing ? 'Edit Project' : 'New Project'}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => {
-                    handleOpenChange(false)
-                  }}
-                >
-                  <X />
-                  <span className="sr-only">Close</span>
-                </Button>
-              </DialogHeaderBar>
+          <DesktopModalFrame>
+            {/* Header */}
+            <DialogHeaderBar>
+              <span className="text-base font-semibold text-foreground">
+                {isEditing ? 'Edit Project' : 'New Project'}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => {
+                  handleOpenChange(false)
+                }}
+              >
+                <X />
+                <span className="sr-only">Close</span>
+              </Button>
+            </DialogHeaderBar>
 
-              {/* Body */}
-              <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
-                {formContent}
-              </div>
+            {/* Body */}
+            <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
+              {formContent}
+            </div>
 
-              {/* Footer */}
-              <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    handleOpenChange(false)
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!title.trim() || isPending}
-                  className="h-9 rounded-lg px-4"
-                >
-                  {isEditing ? 'Save' : 'Create Project'}
-                </Button>
-              </div>
-            </ModalPanel>
-          </div>
+            {/* Footer */}
+            <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  handleOpenChange(false)
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={!title.trim() || isPending}
+                className="h-9 rounded-lg px-4"
+              >
+                {isEditing ? 'Save' : 'Create Project'}
+              </Button>
+            </div>
+          </DesktopModalFrame>
 
           {/* SP Full-screen form */}
           <div className="fixed inset-0 z-50 flex flex-col bg-background md:hidden">

@@ -21,10 +21,10 @@ import { PlanTabStrip } from '#components/task/plan-tab-strip'
 import { TagsInput } from '#components/task/tags-input'
 import { TaskTitleInput } from '#components/task/task-title-input'
 import { Button } from '#components/ui/button'
+import { DesktopModalFrame } from '#components/ui/desktop-modal-frame'
 import { DialogHeaderBar } from '#components/ui/dialog'
 import { Input } from '#components/ui/input'
 import { InlineFieldGroup } from '#components/ui/modal-field'
-import { ModalPanel } from '#components/ui/modal-panel'
 import {
   Select,
   SelectContent,
@@ -82,174 +82,172 @@ export function CreateTaskModalDesktop({
   submitDisabled: boolean
 }) {
   return (
-    <div className="pointer-events-none fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex">
-      <ModalPanel>
-        {/* Header */}
-        <DialogHeaderBar>
-          <div className="flex flex-col">
-            <span className="text-base font-semibold text-foreground">
-              New Task
-            </span>
-            {parentIndicator}
-            {githubIndicator}
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              handleOpenChange(false)
-            }}
-            className="text-muted-foreground"
+    <DesktopModalFrame>
+      {/* Header */}
+      <DialogHeaderBar>
+        <div className="flex flex-col">
+          <span className="text-base font-semibold text-foreground">
+            New Task
+          </span>
+          {parentIndicator}
+          {githubIndicator}
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            handleOpenChange(false)
+          }}
+          className="text-muted-foreground"
+        >
+          <X className="size-5" />
+          <span className="sr-only">Close</span>
+        </Button>
+      </DialogHeaderBar>
+
+      {/* Body (scrollable) */}
+      <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
+        {/* Title */}
+        <TaskTitleInput
+          value={title}
+          onChange={setTitle}
+          placeholder="Task title"
+          autoFocus
+          className="h-auto border-0 bg-transparent p-0 text-xl font-medium text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0 md:text-xl"
+        />
+
+        {/* Description (WYSIWYG) */}
+        <div className="max-h-modal-composer overflow-y-auto rounded-lg border border-border p-1 text-sm focus-within:border-primary/50">
+          {descriptionEditor}
+        </div>
+
+        {/* Option fields */}
+        <div className="flex flex-wrap items-end gap-4">
+          <InlineFieldGroup
+            label="Start"
+            icon={<CalendarPlus className="size-3.5" />}
           >
-            <X className="size-5" />
-            <span className="sr-only">Close</span>
-          </Button>
-        </DialogHeaderBar>
-
-        {/* Body (scrollable) */}
-        <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">
-          {/* Title */}
-          <TaskTitleInput
-            value={title}
-            onChange={setTitle}
-            placeholder="Task title"
-            autoFocus
-            className="h-auto border-0 bg-transparent p-0 text-xl font-medium text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0 md:text-xl"
-          />
-
-          {/* Description (WYSIWYG) */}
-          <div className="max-h-modal-composer overflow-y-auto rounded-lg border border-border p-1 text-sm focus-within:border-primary/50">
-            {descriptionEditor}
-          </div>
-
-          {/* Option fields */}
-          <div className="flex flex-wrap items-end gap-4">
-            <InlineFieldGroup
-              label="Start"
-              icon={<CalendarPlus className="size-3.5" />}
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value)
+              }}
+              className="h-auto w-32 border-0 bg-transparent p-0 text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
+            />
+          </InlineFieldGroup>
+          <InlineFieldGroup
+            label="Due"
+            icon={<Calendar className="size-3.5" />}
+          >
+            <Input
+              type="date"
+              value={dueDate}
+              onChange={(e) => {
+                setDueDate(e.target.value)
+              }}
+              className="h-auto w-32 border-0 bg-transparent p-0 text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
+            />
+          </InlineFieldGroup>
+          <InlineFieldGroup
+            label="Estimate"
+            icon={<Clock className="size-3.5" />}
+          >
+            <Input
+              type="text"
+              value={estimateInput}
+              onChange={(e) => {
+                setEstimateInput(e.target.value)
+              }}
+              placeholder="1h30m"
+              className="h-auto w-16 border-0 bg-transparent p-0 text-xs text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
+            />
+          </InlineFieldGroup>
+          <InlineFieldGroup
+            label="Context"
+            icon={<Layers className="size-3.5" />}
+          >
+            <Select
+              value={context}
+              onValueChange={selectValueHandler(setContext, contextValues)}
             >
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value)
-                }}
-                className="h-auto w-32 border-0 bg-transparent p-0 text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
-              />
-            </InlineFieldGroup>
-            <InlineFieldGroup
-              label="Due"
-              icon={<Calendar className="size-3.5" />}
-            >
-              <Input
-                type="date"
-                value={dueDate}
-                onChange={(e) => {
-                  setDueDate(e.target.value)
-                }}
-                className="h-auto w-32 border-0 bg-transparent p-0 text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
-              />
-            </InlineFieldGroup>
-            <InlineFieldGroup
-              label="Estimate"
-              icon={<Clock className="size-3.5" />}
-            >
-              <Input
-                type="text"
-                value={estimateInput}
-                onChange={(e) => {
-                  setEstimateInput(e.target.value)
-                }}
-                placeholder="1h30m"
-                className="h-auto w-16 border-0 bg-transparent p-0 text-xs text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
-              />
-            </InlineFieldGroup>
-            <InlineFieldGroup
-              label="Context"
-              icon={<Layers className="size-3.5" />}
-            >
-              <Select
-                value={context}
-                onValueChange={selectValueHandler(setContext, contextValues)}
+              <SelectTrigger
+                size="sm"
+                className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
               >
-                <SelectTrigger
-                  size="sm"
-                  className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
-                >
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">—</SelectItem>
-                  <SelectItem value="work">Work</SelectItem>
-                  <SelectItem value="personal">Personal</SelectItem>
-                </SelectContent>
-              </Select>
-            </InlineFieldGroup>
-            <InlineFieldGroup
-              label="Commitment"
-              icon={<Inbox className="size-3.5" />}
+                <SelectValue placeholder="—" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">—</SelectItem>
+                <SelectItem value="work">Work</SelectItem>
+                <SelectItem value="personal">Personal</SelectItem>
+              </SelectContent>
+            </Select>
+          </InlineFieldGroup>
+          <InlineFieldGroup
+            label="Commitment"
+            icon={<Inbox className="size-3.5" />}
+          >
+            <Select
+              value={commitment}
+              onValueChange={selectValueHandler(
+                setCommitment,
+                commitmentValues,
+              )}
             >
-              <Select
-                value={commitment}
-                onValueChange={selectValueHandler(
-                  setCommitment,
-                  commitmentValues,
-                )}
+              <SelectTrigger
+                size="sm"
+                className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
               >
-                <SelectTrigger
-                  size="sm"
-                  className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
-                >
-                  <SelectValue placeholder="Inbox" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Inbox</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="someday">Someday</SelectItem>
-                </SelectContent>
-              </Select>
-            </InlineFieldGroup>
-            <div className="flex flex-col gap-1">
-              <span className="flex items-center gap-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
-                <CalendarClock className="size-3.5" />
-                PLAN
-              </span>
-              <PlanTabStrip value={plan} onChange={setPlan} />
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div className="flex items-center gap-2">
+                <SelectValue placeholder="Inbox" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Inbox</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="someday">Someday</SelectItem>
+              </SelectContent>
+            </Select>
+          </InlineFieldGroup>
+          <div className="flex flex-col gap-1">
             <span className="flex items-center gap-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
-              <Tag className="size-3.5" />
-              TAGS
+              <CalendarClock className="size-3.5" />
+              PLAN
             </span>
-            <TagsInput labels={labels} onLabelsChange={setLabels} />
+            <PlanTabStrip value={plan} onChange={setPlan} />
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-3">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              handleOpenChange(false)
-            }}
-            className="text-muted-foreground"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={submitDisabled}
-            className="h-9 rounded-lg px-4"
-          >
-            Create Task
-          </Button>
+        {/* Tags */}
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
+            <Tag className="size-3.5" />
+            TAGS
+          </span>
+          <TagsInput labels={labels} onLabelsChange={setLabels} />
         </div>
-      </ModalPanel>
-    </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-3">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            handleOpenChange(false)
+          }}
+          className="text-muted-foreground"
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={submitDisabled}
+          className="h-9 rounded-lg px-4"
+        >
+          Create Task
+        </Button>
+      </div>
+    </DesktopModalFrame>
   )
 }
