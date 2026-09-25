@@ -8,6 +8,8 @@ import { SearchModalInput } from '#components/search/search-modal-input'
 import { useSearchModalNavigation } from '#components/search/search-modal-navigation'
 import {
   removeLastSearchScopeToken,
+  removeSearchContextTokens,
+  removeSearchScopeToken,
   useSearchModalQuery,
 } from '#components/search/search-modal-query'
 import { useSearchModalResultGroups } from '#components/search/search-modal-result-groups'
@@ -28,6 +30,7 @@ import {
   useSearchTaskByNumber,
   useSearchTasks,
 } from '#hooks/use-search'
+import { useSearchScopeLabels } from '#hooks/use-search-scope-labels'
 import {
   getRecentSearchItems,
   type RecentSearchItem,
@@ -53,6 +56,8 @@ export function SearchModal({
   onNewTask,
 }: SearchModalProps) {
   const [query, setQuery] = useState(defaultQuery)
+  const defaultQueryRef = useRef(defaultQuery)
+  defaultQueryRef.current = defaultQuery
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isContextCleared, setIsContextCleared] = useState(false)
   const [recentItems, setRecentItems] = useState<RecentSearchItem[]>(
@@ -106,6 +111,18 @@ export function SearchModal({
         }
       : undefined
   const hasAuxiliarySearch = freeTextQuery.length > 0
+  const searchScopeLabels = useSearchScopeLabels(searchScopeTokens, open)
+
+  const handleRemoveContext = () => {
+    setQuery(`${modePrefix ?? ''}${removeSearchContextTokens(searchQuery)}`)
+    setIsContextCleared(true)
+    inputRef.current?.focus()
+  }
+
+  const handleRemoveScopeToken = (index: number) => {
+    setQuery(`${modePrefix ?? ''}${removeSearchScopeToken(searchQuery, index)}`)
+    inputRef.current?.focus()
+  }
 
   const canSearchTasks = searchMode == null || searchMode === 'tasks'
   const canSearchProjects = searchMode == null || searchMode === 'projects'
@@ -142,12 +159,12 @@ export function SearchModal({
 
   useEffect(() => {
     if (open) {
-      setQuery(defaultQuery)
+      setQuery(defaultQueryRef.current)
       setSelectedIndex(0)
       setIsContextCleared(false)
       setRecentItems(defaultRecentItems ?? getRecentSearchItems())
     }
-  }, [open, defaultQuery, defaultRecentItems])
+  }, [open, defaultRecentItems])
 
   // Scroll selected item into view
   useEffect(() => {
@@ -290,11 +307,13 @@ export function SearchModal({
           <SearchModalInput
             modePrefix={modePrefix}
             context={context}
-            searchScopeTokens={searchScopeTokens}
+            searchScopes={searchScopeLabels}
             searchInputValue={searchInputValue}
             searchTarget={searchTarget}
             isFetching={isFetching}
             inputRef={inputRef}
+            onRemoveContext={handleRemoveContext}
+            onRemoveScopeToken={handleRemoveScopeToken}
             onInputValueChange={(value) => {
               closeHelp()
               updateInputValue(value)

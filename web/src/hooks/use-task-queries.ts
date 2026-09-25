@@ -70,6 +70,13 @@ export async function fetchTaskList(filter?: TaskListFilter): Promise<Task[]> {
   return unwrapOrThrow(assertOk(res)).json()
 }
 
+export async function fetchTaskDetail(id: string): Promise<TaskDetail> {
+  const res = await api.api.tasks[':id'].$get({
+    param: { id },
+  })
+  return unwrapOrThrow(assertOk(res)).json()
+}
+
 export function useTaskList(
   filter?: TaskListFilter,
   options?: { enabled?: boolean },
@@ -138,12 +145,7 @@ export function useTaskMap(tasks: Task[]): Map<string, Task> {
 export function useTask(id: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: taskKeys.detail(id),
-    queryFn: async () => {
-      const res = await api.api.tasks[':id'].$get({
-        param: { id },
-      })
-      return unwrapOrThrow(assertOk(res)).json()
-    },
+    queryFn: () => fetchTaskDetail(id),
     enabled: options?.enabled ?? true,
   })
 }

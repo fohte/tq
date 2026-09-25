@@ -4,7 +4,20 @@ import {
   buildSearchQuery,
   getSearchQuerySuggestions,
   parseSearchQuery,
+  tokenizeSearchQuery,
 } from '#search-query-parser'
+
+describe('tokenizeSearchQuery', () => {
+  it('returns source ranges for the same decoded tokens used by parsing', () => {
+    expect(
+      tokenizeSearchQuery('  Context:work\t"context:foo" context:"personal"'),
+    ).toEqual([
+      { value: 'Context:work', start: 2, end: 14 },
+      { value: 'context:foo', start: 15, end: 28 },
+      { value: 'context:personal', start: 29, end: 47 },
+    ])
+  })
+})
 
 describe('parseSearchQuery', () => {
   it('extracts free text when no prefixes are present', () => {
