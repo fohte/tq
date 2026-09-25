@@ -92,6 +92,9 @@ export function SearchModal({
     searchMode === 'commands'
       ? undefined
       : resolveSearchContext(searchQuery, defaultSearchContext)
+  const hasActiveScope =
+    searchMode !== 'commands' &&
+    (searchScopeTokens.length > 0 || context != null)
   const canPopScope = searchInputValue === '' && searchScopeTokens.length > 0
   const canClearContext =
     searchInputValue === '' && searchScopeTokens.length === 0 && context != null
@@ -124,9 +127,12 @@ export function SearchModal({
       enabled: canSearchProjects && searchFilter != null,
     },
   )
-  const { data: savedViews } = useSavedViews(searchFilter, {
-    enabled: canSearchViews && searchFilter != null,
-  })
+  const { data: savedViews, isFetching: isFetchingSavedViews } = useSavedViews(
+    searchFilter,
+    {
+      enabled: canSearchViews && searchFilter != null,
+    },
+  )
 
   const { data: taskByNumber, isFetching: isFetchingTaskByNumber } =
     useSearchTaskByNumber(canSearchTasks ? searchQuery : '')
@@ -137,8 +143,19 @@ export function SearchModal({
     isFetchingTasks ||
     isFetchingTaskByNumber ||
     isFetchingPages ||
-    isFetchingProjects
+    isFetchingProjects ||
+    isFetchingSavedViews
   const { data: suggestions } = useSearchSuggestions(currentPrefix)
+
+  const handleSearchEverywhere = useCallback(() => {
+    const unscopedInputValue = searchInputValue
+      .replace(/(^|\s)context:(?:work|personal)(?=\s|$)/gi, '$1')
+      .replace(/\s+/g, ' ')
+      .trim()
+    setQuery(`${modePrefix ?? ''}${unscopedInputValue}`)
+    setIsContextCleared(true)
+    inputRef.current?.focus()
+  }, [modePrefix, searchInputValue])
 
   useEffect(() => {
     if (open) {
@@ -186,6 +203,9 @@ export function SearchModal({
     canSearchViews,
     canSuggest,
     hasSearchQuery,
+    hasActiveScope,
+    isFetching,
+    onSearchEverywhere: handleSearchEverywhere,
     onOpenChangeRef,
   })
 
@@ -254,7 +274,13 @@ export function SearchModal({
   )
 
   const emptyMessage =
-    searchQuery.length > 0 && !isFetching && visibleGroups.length === 0
+    searchQuery.length > 0 &&
+    !isFetching &&
+    !indexedGroups.some(
+      (group) =>
+        group.id !== 'search-everywhere' &&
+        group.isVisible(searchQuery, group.items.length),
+    )
       ? searchInputValue.length === 0
         ? 'no results in this scope'
         : `no results for "${searchInputValue}"`

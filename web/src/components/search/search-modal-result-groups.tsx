@@ -50,6 +50,9 @@ interface SearchModalResultGroupsOptions {
   canSearchViews: boolean
   canSuggest: boolean
   hasSearchQuery: boolean
+  hasActiveScope: boolean
+  isFetching: boolean
+  onSearchEverywhere: () => void
   onOpenChangeRef: { current: (open: boolean) => void }
 }
 
@@ -81,6 +84,9 @@ export function useSearchModalResultGroups({
   canSearchViews,
   canSuggest,
   hasSearchQuery,
+  hasActiveScope,
+  isFetching,
+  onSearchEverywhere,
   onOpenChangeRef,
 }: SearchModalResultGroupsOptions): ResultGroup[] {
   return useMemo((): ResultGroup[] => {
@@ -166,7 +172,7 @@ export function useSearchModalResultGroups({
         ? createViewItems(savedViews, openView)
         : []
 
-    return [
+    const groups: ResultGroup[] = [
       {
         id: 'commands',
         title: 'Commands',
@@ -216,6 +222,28 @@ export function useSearchModalResultGroups({
         isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
       },
     ]
+
+    const hasVisibleResults = groups.some((group) =>
+      group.isVisible(query, group.items.length),
+    )
+    if (hasActiveScope && hasSearchQuery && !isFetching && !hasVisibleResults) {
+      groups.push({
+        id: 'search-everywhere',
+        title: 'Search',
+        items: [
+          createOptionItem(
+            'search-everywhere',
+            onSearchEverywhere,
+            <span className="font-mono text-sm text-primary">
+              Search everywhere
+            </span>,
+          ),
+        ],
+        isVisible: () => true,
+      })
+    }
+
+    return groups
   }, [
     query,
     recentItems,
@@ -244,5 +272,8 @@ export function useSearchModalResultGroups({
     canSearchViews,
     canSuggest,
     hasSearchQuery,
+    hasActiveScope,
+    isFetching,
+    onSearchEverywhere,
   ])
 }

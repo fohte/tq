@@ -290,5 +290,12 @@ export const Views: Story = {
 }
 
 export const NoResults: Story = {
-  args: { defaultContext: 'work', defaultQuery: 'nothing-matches' },
+  args: { defaultContext: null, defaultQuery: 'nothing-matches' },
+}
+
+export const SearchEverywhere: Story = {
+  args: {
+    defaultContext: 'work',
+    defaultQuery: `${projectScopeQuery}nothing-matches`,
+  },
 }

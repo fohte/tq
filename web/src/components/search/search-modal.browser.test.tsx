@@ -93,6 +93,9 @@ const mockSuggestions = [
 ]
 
 let mockSearchData: typeof mockTasks = []
+let mockSearchDataForQuery:
+  | ((query: string, context?: 'work' | 'personal') => MockTask[] | undefined)
+  | undefined
 let mockNumberTaskData: MockTask | undefined
 let mockPageSearchData: PageSearchResult[] = []
 let mockSuggestionData: typeof mockSuggestions = []
@@ -105,8 +108,10 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-search')>()
   return {
     ...actual,
-    useSearchTasks: () => ({
-      data: mockSearchData.length > 0 ? mockSearchData : undefined,
+    useSearchTasks: (query: string, context?: 'work' | 'personal') => ({
+      data:
+        mockSearchDataForQuery?.(query, context) ??
+        (mockSearchData.length > 0 ? mockSearchData : undefined),
       isFetching: false,
     }),
     useSearchTaskByNumber: () => ({
@@ -201,6 +206,7 @@ function renderSearchModal(
   props: {
     open?: boolean
     onOpenChange?: (open: boolean) => void
+    defaultContext?: 'work' | 'personal' | null
     defaultQuery?: string
   } = {},
 ) {
@@ -213,6 +219,9 @@ function renderSearchModal(
         <SearchModal
           open={props.open ?? true}
           onOpenChange={onOpenChange}
+          {...(props.defaultContext === undefined
+            ? {}
+            : { defaultContext: props.defaultContext })}
           {...(props.defaultQuery === undefined
             ? {}
             : { defaultQuery: props.defaultQuery })}
@@ -225,6 +234,7 @@ function renderSearchModal(
 describe('SearchModal', () => {
   beforeEach(() => {
     mockSearchData = []
+    mockSearchDataForQuery = undefined
     mockNumberTaskData = undefined
     mockPageSearchData = []
     mockSuggestionData = []
@@ -740,12 +750,80 @@ describe('SearchModal', () => {
 
   it('shows no results message when search returns empty and query is typed', async () => {
     const user = userEvent.setup()
-    renderSearchModal()
+    renderSearchModal({ defaultContext: null })
 
     const input = screen.getByLabelText('Search tasks')
     await user.type(input, 'nonexistent')
 
-    expect(screen.getByText('no results for "nonexistent"')).toBeInTheDocument()
+    const getOutput = () => ({
+      message: screen.queryByText('no results for "nonexistent"')?.textContent,
+      options: screen.queryAllByRole('option').length,
+    })
+    expect(getOutput()).toEqual({
+      message: 'no results for "nonexistent"',
+      options: 0,
+    })
+  })
+
+  it('clears the active context and preserves the query when Search everywhere is selected with Enter', async () => {
+    resetSessionOpenSettings({ localContext: 'work' })
+    mockSearchDataForQuery = (query, context) =>
+      query === 'unmatched' && context == null ? [personalTask] : []
+
+    const user = userEvent.setup()
+    renderSearchModal({ defaultQuery: 'unmatched' })
+
+    await user.keyboard('{Enter}')
+
+    const getOutput = () => ({
+      inputValue: screen.getByLabelText<HTMLInputElement>('Search tasks').value,
+      context:
+        screen.queryByTestId('search-context-scope')?.textContent ?? null,
+      scopes: screen
+        .queryAllByTestId('search-scope-token')
+        .map((element) => element.textContent),
+      options: screen.getAllByRole('option').length,
+      result: screen.queryByText('Plan weekend trip')?.textContent ?? null,
+    })
+    expect(getOutput()).toEqual({
+      inputValue: 'unmatched',
+      context: null,
+      scopes: [],
+      options: 1,
+      result: 'Plan weekend trip',
+    })
+  })
+
+  it('clears project and parent scopes and preserves the query when Search everywhere is clicked', async () => {
+    mockSearchDataForQuery = (query, context) =>
+      query === 'unmatched' && context == null ? [personalTask] : []
+
+    const user = userEvent.setup()
+    renderSearchModal({
+      defaultContext: null,
+      defaultQuery:
+        'project:00000000-0000-0000-0000-000000000101 parent:00000000-0000-0000-0000-000000000102 unmatched',
+    })
+
+    await user.click(screen.getByRole('option', { name: 'Search everywhere' }))
+
+    const getOutput = () => ({
+      inputValue: screen.getByLabelText<HTMLInputElement>('Search tasks').value,
+      context:
+        screen.queryByTestId('search-context-scope')?.textContent ?? null,
+      scopes: screen
+        .queryAllByTestId('search-scope-token')
+        .map((element) => element.textContent),
+      options: screen.getAllByRole('option').length,
+      result: screen.queryByText('Plan weekend trip')?.textContent ?? null,
+    })
+    expect(getOutput()).toEqual({
+      inputValue: 'unmatched',
+      context: null,
+      scopes: [],
+      options: 1,
+      result: 'Plan weekend trip',
+    })
   })
 
   it('shows keyboard hints in footer', () => {
