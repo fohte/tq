@@ -1,25 +1,16 @@
 name: VRT approval
 
-<<<<<<< before updating
 # vrt.yml sets the `vrt` commit status per push based on reg-suit's diff
 # result. This workflow lets a human override that to success for an
 # intentional diff via the `vrt-approved` label, and keeps the label from
 # silently surviving a diff nobody has actually reviewed.
 
-||||||| last update
-=======
->>>>>>> after updating
 on:
   pull_request:
     types: [synchronize, labeled]
 
 jobs:
-<<<<<<< before updating
-  vrt-approval:
-||||||| last update
-=======
   vrt-approval-web:
->>>>>>> after updating
     permissions:
       contents: read
       pull-requests: write

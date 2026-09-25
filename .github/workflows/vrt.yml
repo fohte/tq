@@ -1,26 +1,17 @@
 name: VRT
 
 on:
-<<<<<<< before updating
   workflow_call:
     secrets:
       AWS_ACCESS_KEY_ID:
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
-||||||| last update
-=======
-  push:
-    branches:
-      - main
-  pull_request:
->>>>>>> after updating
 
 permissions:
   contents: read
 
 jobs:
-<<<<<<< before updating
   # vitest's shard sequencer sorts specs by sha1(file path) and slices ranges
   # off that order — it never looks at which `--project` a spec belongs to.
   # Running both `storybook` and `storybook-mobile` in one `vitest` invocation
@@ -37,102 +28,20 @@ jobs:
       matrix:
         project: [storybook, storybook-mobile]
         shard: [1, 2]
-||||||| last update
-=======
-  detect-changes-web:
-    runs-on: ubuntu-slim
-    outputs:
-      changed: ${{ steps.changes.outputs.any_changed }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 2
-
-      - name: Check for changes
-        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
-        id: changes
-        with:
-          files: |
-            web/**
-            .github/workflows/vrt.yml
-            package.json
-            pnpm-lock.yaml
-            pnpm-workspace.yaml
-
-  capture-web:
-    needs: detect-changes-web
-    if: needs.detect-changes-web.outputs.changed == 'true'
->>>>>>> after updating
     runs-on: ubuntu-latest
-<<<<<<< before updating
-||||||| last update
-=======
-    permissions:
-      contents: read
->>>>>>> after updating
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-<<<<<<< before updating
       - uses: ./.github/actions/setup-workspace
-||||||| last update
-=======
-      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
-        with:
-          version: 2026.9.5
->>>>>>> after updating
 
-<<<<<<< before updating
-||||||| last update
-=======
-      # corepack creates the pnpm executable inside mise's node install
-      # directory; reshim so the mise shims dir (which is on PATH) picks it up.
-      - run: |
-          corepack enable
-          mise reshim
-
-      - name: Get pnpm store directory
-        id: pnpm-store
-        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ${{ steps.pnpm-store.outputs.path }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-store-
-
-      - run: pnpm install --filter "web..." --frozen-lockfile
-
-      # project must match the `name` passed to createStorybookProject() in
-      # vitest.screenshot.config.ts, and stay unique across every vrt_pkgs
-      # entry -- vrt-capture's upload-artifact step names the artifact
-      # `vrt-screenshots-<project>-<shard>`, and a workflow run can't upload
-      # two artifacts with the same name.
->>>>>>> after updating
       - uses: fohte/storybook-vrt-workflows/vrt-capture@691148d6e8e53b86c8f93b5b54cadbd8308b06d3 # v0.1.6
         with:
-<<<<<<< before updating
           project: ${{ matrix.project }}
           shard: ${{ matrix.shard }}
           shards: 2
-||||||| last update
-=======
-          project: storybook-screenshot-web
-          shard: 1
-          shards: 1
-          capture-script: storybook:screenshot
->>>>>>> after updating
           package-dir: web
-<<<<<<< before updating
           capture-script: test:storybook:capture
-||||||| last update
-=======
-          screenshots-dir: __screenshots__/desktop
->>>>>>> after updating
 
-<<<<<<< before updating
         # reg-suit treats anything present in `expected` but missing from `actual`
         # as deleted, so this job — and everything it does to the baseline — must
         # only run once every shard above has succeeded. `needs: shard` without an
@@ -141,84 +50,29 @@ jobs:
         # written into the shared baseline.
   report:
     needs: shard
-||||||| last update
-=======
-  report-web:
-    needs: capture-web
->>>>>>> after updating
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
       statuses: write
     # Overlapping runs for the same ref would otherwise race to publish to
-<<<<<<< before updating
     # the same R2 key at once — most importantly two main pushes racing to
-||||||| last update
-=======
-    # the same R2 key at once -- most importantly two main pushes racing to
->>>>>>> after updating
     # update the single `baseline/actual/` key, where each run's diff was
     # computed against a baseline the other run is concurrently mutating.
     concurrency:
-<<<<<<< before updating
       group: vrt-report-${{ (github.ref == 'refs/heads/main') && 'push' || 'pr' }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
-||||||| last update
-=======
-      group: vrt-report-web-${{ (github.ref == 'refs/heads/main') && 'push' || 'pr' }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
->>>>>>> after updating
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-<<<<<<< before updating
       - uses: ./.github/actions/setup-workspace
-||||||| last update
-=======
-      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
-        with:
-          version: 2026.9.5
->>>>>>> after updating
 
-<<<<<<< before updating
-||||||| last update
-=======
-      - run: |
-          corepack enable
-          mise reshim
-
-      - name: Get pnpm store directory
-        id: pnpm-store
-        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ${{ steps.pnpm-store.outputs.path }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-store-
-
-      - run: pnpm install --frozen-lockfile
-
-      # Only one `<project_name>-vrt` R2 bucket is provisioned per repo, and
-      # vrt-report's storage keys (baseline/, branch/<branch>/) carry no
-      # per-project segment -- if more than one vrt_pkgs entry exists, their
-      # reports overwrite each other in this bucket. Keep vrt: true on a
-      # single subpackage until fohte/storybook-vrt-workflows adds a key
-      # prefix input.
->>>>>>> after updating
       - uses: fohte/storybook-vrt-workflows/vrt-report@691148d6e8e53b86c8f93b5b54cadbd8308b06d3 # v0.1.6
         with:
           package-dir: web
-<<<<<<< before updating
           # report:vrt in web/package.json resolves --baseline-dir from the published URL.
           # Keep its depth in sync with --output under custom/.
           report-command: pnpm run report:vrt
-||||||| last update
-=======
-          screenshots-dir: __screenshots__/desktop
->>>>>>> after updating
           r2-bucket: tq-vrt
           github-token: ${{ secrets.GITHUB_TOKEN }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
