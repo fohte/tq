@@ -1,5 +1,5 @@
-import { QueryClient } from '@tanstack/react-query'
-import { screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -70,7 +70,75 @@ function mockCreateTaskSuccess(task: Task) {
   return mutate
 }
 
+function renderManuallyControlledModal() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  const onOpenChange = vi.fn()
+  const renderModal = (open: boolean) => (
+    <QueryClientProvider client={queryClient}>
+      <CreateTaskModal open={open} onOpenChange={onOpenChange} />
+    </QueryClientProvider>
+  )
+  const view = render(renderModal(true))
+
+  return {
+    onOpenChange,
+    ...view,
+    setOpen: (open: boolean) => {
+      view.rerender(renderModal(open))
+    },
+  }
+}
+
 const titleInputPlaceholder = /task title|タスクのタイトル/i
+
+function titleInputValue() {
+  const input = atIndex(
+    screen.getAllByPlaceholderText(titleInputPlaceholder),
+    0,
+  )
+  return input instanceof HTMLInputElement ? input.value : null
+}
+
+function hasCloseRequest(calls: readonly unknown[][]) {
+  return calls.some(([nextOpen]) => nextOpen === false)
+}
+
+function isDiscardConfirmationOpen() {
+  return screen.queryByRole('dialog', { name: 'Discard task draft?' }) !== null
+}
+
+function titleCancelState(calls: readonly unknown[][]) {
+  return {
+    title: titleInputValue(),
+    confirmationOpen: isDiscardConfirmationOpen(),
+    closeRequested: hasCloseRequest(calls),
+  }
+}
+
+function descriptionCancelState(editor: Element, calls: readonly unknown[][]) {
+  return {
+    description: editor.textContent,
+    confirmationOpen: isDiscardConfirmationOpen(),
+    closeRequested: hasCloseRequest(calls),
+  }
+}
+
+function discardResultState(calls: readonly unknown[][]) {
+  return {
+    title: titleInputValue(),
+    discardRequested: hasCloseRequest(calls),
+    confirmationOpen: isDiscardConfirmationOpen(),
+  }
+}
+
+function submitCloseState(calls: readonly unknown[][]) {
+  return {
+    closeRequested: hasCloseRequest(calls),
+    discardConfirmationOpen: isDiscardConfirmationOpen(),
+  }
+}
 
 describe('CreateTaskModal', () => {
   beforeEach(() => {
@@ -103,6 +171,96 @@ describe('CreateTaskModal', () => {
       expect(
         screen.queryByPlaceholderText('Task title'),
       ).not.toBeInTheDocument()
+    })
+  })
+
+  it('keeps a title draft when closing is canceled', async () => {
+    const user = userEvent.setup()
+    const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
+
+    const titleInput = atIndex(
+      screen.getAllByPlaceholderText(titleInputPlaceholder),
+      0,
+    )
+    await user.type(titleInput, 'A draft task')
+    await user.click(
+      atIndex(screen.getAllByRole('button', { name: 'Close' }), 0),
+    )
+
+    const confirmation = screen.getByRole('dialog', {
+      name: 'Discard task draft?',
+    })
+    await user.click(
+      within(confirmation).getByRole('button', { name: 'Cancel' }),
+    )
+
+    await waitFor(() => {
+      expect(titleCancelState(onOpenChange.mock.calls)).toEqual({
+        title: 'A draft task',
+        confirmationOpen: false,
+        closeRequested: false,
+      })
+    })
+  })
+
+  it('asks before closing when the description has content', async () => {
+    const user = userEvent.setup()
+    const { onOpenChange } = renderControlledModal(CreateTaskModal, {
+      defaultDescription: '',
+    })
+
+    const editor = await waitFor(() =>
+      atIndex(
+        Array.from(document.body.querySelectorAll('[contenteditable="true"]')),
+        0,
+      ),
+    )
+    await user.click(editor)
+    await user.keyboard('A draft description')
+    await user.keyboard('{Escape}')
+
+    const confirmation = screen.getByRole('dialog', {
+      name: 'Discard task draft?',
+    })
+    await user.click(
+      within(confirmation).getByRole('button', { name: 'Cancel' }),
+    )
+
+    await waitFor(() => {
+      expect(descriptionCancelState(editor, onOpenChange.mock.calls)).toEqual({
+        description: 'A draft description',
+        confirmationOpen: false,
+        closeRequested: false,
+      })
+    })
+  })
+
+  it('closes and resets the draft when discard is confirmed', async () => {
+    const user = userEvent.setup()
+    const { onOpenChange, setOpen } = renderManuallyControlledModal()
+
+    const titleInput = atIndex(
+      screen.getAllByPlaceholderText(titleInputPlaceholder),
+      0,
+    )
+    await user.type(titleInput, 'A draft task')
+    await user.click(
+      atIndex(screen.getAllByRole('button', { name: 'Close' }), 0),
+    )
+
+    const confirmation = screen.getByRole('dialog', {
+      name: 'Discard task draft?',
+    })
+    await user.click(
+      within(confirmation).getByRole('button', { name: 'Discard' }),
+    )
+    setOpen(false)
+    setOpen(true)
+
+    expect(discardResultState(onOpenChange.mock.calls)).toEqual({
+      title: '',
+      discardRequested: true,
+      confirmationOpen: false,
     })
   })
 
@@ -340,7 +498,10 @@ describe('CreateTaskModal', () => {
       await user.type(titleInput, 'Cmd enter from title')
       await user.keyboard('{Meta>}{Enter}{/Meta}')
 
-      expect(onOpenChange).toHaveBeenCalledWith(false)
+      expect(submitCloseState(onOpenChange.mock.calls)).toEqual({
+        closeRequested: true,
+        discardConfirmationOpen: false,
+      })
     })
 
     it('calls onCreated with the created task after submit', async () => {
