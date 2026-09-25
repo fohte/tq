@@ -73,6 +73,17 @@
   outline-style: auto;
 }
 
+/* Align select indicators with the browser's native caret. */
+@utility native-select-caret-stroke {
+  stroke-width: 2.5px;
+}
+
+@utility native-select-status-caret-offset {
+  & path {
+    translate: 3px 0;
+  }
+}
+
 /*
  * Drops the search modal down from the top of the viewport — padding-top has
  * no @theme namespace to hang a named scale step off of, see

@@ -434,6 +434,14 @@ height. `BottomSheetOverlay` (`bottom-sheet.tsx`) sets
 `--visual-viewport-height` from `window.visualViewport`, falling back to
 `100vh` where it's unsupported.
 
+## Native select indicators
+
+Sidebar selects use the `native-select-caret-stroke` utility
+(`stroke-width: 2.5px`) to match the browser's native caret weight. The status
+indicator uses `native-select-status-caret-offset` to shift its SVG path by 3
+user units (about 2 CSS pixels at `size-4`) while keeping the icon's flex box
+within the select trigger.
+
 ## Z-index
 
 Stacking order in the app is ad hoc, not a documented scale: `z-10` marks a
