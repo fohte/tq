@@ -11,7 +11,7 @@ Source of truth for every value in this doc:
 
 - Shared tokens: `@fohte/ui/tokens.css`
 - tq-specific tokens and utilities: `web/src/index.css`
-- Primitives: `web/src/components/ui/{section-heading,screen-header-bar,tab-strip,chip,keybind-hint,panel,progress-bar,button}.tsx`
+- Primitives: `web/src/components/ui/{section-heading,screen-header-bar,tab-strip,chip,keybind-hint,panel,progress-bar,button,modal-panel,desktop-modal-frame}.tsx`
 
 Add tq-specific tokens to `web/src/index.css`. Shared tokens come from the
 `@fohte/ui` dependency; when a dependency update changes their values, update
@@ -769,6 +769,21 @@ for delete/remove actions, `link` for inline text-styled actions.
 <Button size="icon" aria-label="Tasks"><CheckSquare /></Button>
 ```
 
+### `DesktopModalFrame`
+
+`web/src/components/ui/desktop-modal-frame.tsx`
+
+```ts
+function DesktopModalFrame({ children }: { children: ReactNode }): JSX.Element
+```
+
+The centered desktop frame for CRUD-style form modals. It covers the viewport
+above the `Dialog` backdrop while allowing pointer events to pass through to
+the backdrop outside the panel. `ModalPanel` keeps pointer events enabled so
+the form remains interactive. Use this for the PC layout of task, project, and
+schedule forms; the search command palette (`search-modal.tsx`) is a
+structurally distinct pattern.
+
 ### `ModalPanel`
 
 `web/src/components/ui/modal-panel.tsx`
@@ -778,26 +793,18 @@ function ModalPanel(props: React.ComponentProps<'div'>): JSX.Element
 ```
 
 The desktop counterpart to `BottomSheetPanel`
-(`web/src/components/ui/bottom-sheet.tsx`) — a centered card
+(`web/src/components/ui/bottom-sheet.tsx`) — the centered card
 (`max-w-150` (600px) flex column, `rounded-2xl`, `shadow-2xl`,
-`ring-1 ring-foreground/10`, `bg-card`) for the PC layout of a form modal.
-Pair it with `DialogHeaderBar` for the header row. Use for centered
-CRUD-style form modals (create/edit task, project, schedule) — not for the
-search command palette (`search-modal.tsx`), which is a structurally
-distinct pattern (no PC/mobile split, no shared `Dialog` primitive).
+`ring-1 ring-foreground/10`, `bg-card`) inside `DesktopModalFrame`.
+`DesktopModalFrame` handles the viewport placement and backdrop hit testing;
+`ModalPanel` provides the interactive form surface.
 
 ```tsx
-<div className="pointer-events-none fixed inset-0 z-50 hidden items-center justify-center p-8 md:flex">
-  <ModalPanel>
-    <DialogHeaderBar>...</DialogHeaderBar>
-    <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">...</div>
-  </ModalPanel>
-</div>
+<DesktopModalFrame>
+  <DialogHeaderBar>...</DialogHeaderBar>
+  <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-6">...</div>
+</DesktopModalFrame>
 ```
-
-The wrapper covers the viewport above the Dialog backdrop, so it must let
-pointer events pass through to the backdrop. `ModalPanel` keeps pointer events
-enabled so the form remains interactive.
 
 ### `DetailSidebarPanel`
 
