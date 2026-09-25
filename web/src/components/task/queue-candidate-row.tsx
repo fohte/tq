@@ -1,7 +1,6 @@
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { Plus } from 'lucide-react'
-import type { CSSProperties } from 'react'
 
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Button } from '#components/ui/button'
@@ -44,14 +43,16 @@ export function QueueCandidateRow({
 
   const style = {
     transform: CSS.Translate.toString(transform),
-    '--drag-opacity': isDragging ? '0.5' : '1',
-  } as CSSProperties
+  }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-1 border-b border-border opacity-(--drag-opacity)"
+      className={cn(
+        'flex items-center gap-1 border-b border-border',
+        isDragging && 'opacity-50',
+      )}
     >
       <DragHandle
         attributes={attributes}

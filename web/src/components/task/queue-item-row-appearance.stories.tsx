@@ -71,6 +71,7 @@ const meta = {
   args: {
     ...stubDndProps,
     onRemove: fn(),
+    isDragging: false,
     isEditingEstimate: false,
     estimateInput: '',
     onEstimateInputChange: fn(),

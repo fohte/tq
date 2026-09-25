@@ -395,7 +395,7 @@ export function TaskKanban({
                 ? undefined
                 : ({
                     '--kanban-overlay-width': `${String(activeWidth)}px`,
-                  } satisfies KanbanOverlayStyle)
+                  } as KanbanOverlayStyle)
             }
             className="w-(--kanban-overlay-width) rounded-md border border-border bg-card shadow-md"
           >

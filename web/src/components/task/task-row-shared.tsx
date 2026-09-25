@@ -287,17 +287,11 @@ export function BlockedByLabel({
 // through `ROW_INDENT_CLASS_NAME`'s `pl-(--row-indent)` utility.
 export const ROW_INDENT_CLASS_NAME = 'pl-(--row-indent)'
 
-interface RowIndentStyle extends React.CSSProperties {
-  '--row-indent': string
-}
-
 // 3 spacing units (12px) base, +4 units (16px) per depth level — both
 // multiples of Tailwind's --spacing unit, so every depth lands on-grid
 // instead of accumulating an off-grid offset.
-export function rowIndentStyle(depth: number): RowIndentStyle {
-  return {
-    '--row-indent': `calc(var(--spacing) * ${String(3 + depth * 4)})`,
-  }
+export function rowIndentValue(depth: number): string {
+  return `calc(var(--spacing) * ${String(3 + depth * 4)})`
 }
 
 export function rowWrapperClassName(isCompleted: boolean) {

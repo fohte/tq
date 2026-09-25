@@ -208,7 +208,11 @@ export function ScheduleModalMobilePanel({
                       ? 'border-foreground scale-110'
                       : 'border-transparent hover:scale-110',
                   )}
-                  style={{ '--schedule-color': c }}
+                  style={
+                    { '--schedule-color': c } as React.CSSProperties & {
+                      '--schedule-color': string
+                    }
+                  }
                 />
               ))}
             </div>

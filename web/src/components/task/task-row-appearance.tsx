@@ -11,6 +11,7 @@ import {
   RecurrenceLabel,
   RemindBadge,
   ROW_INDENT_CLASS_NAME,
+  rowIndentValue,
   rowTitleClassName,
   rowWrapperClassName,
   TagTokens,
@@ -142,7 +143,7 @@ export function TaskRowAppearance({
           )}
           style={
             {
-              '--row-indent': `calc(var(--spacing) * ${String(3 + depth * 4)})`,
+              '--row-indent': rowIndentValue(depth),
             } as React.CSSProperties & { '--row-indent': string }
           }
         >

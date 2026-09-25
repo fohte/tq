@@ -262,7 +262,11 @@ function ColorSwatches({
               ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background'
               : 'hover:scale-110',
           )}
-          style={{ '--project-color': preset.hex }}
+          style={
+            { '--project-color': preset.hex } as React.CSSProperties & {
+              '--project-color': string
+            }
+          }
           title={preset.name}
         />
       ))}

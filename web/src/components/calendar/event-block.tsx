@@ -125,7 +125,7 @@ export function EventBlock(arg: EventContentArg) {
         BG_CLASS[type],
         type === 'auto' && 'border-dashed',
         type === 'auto' && 'border-l-solid!',
-        accentColor != null && 'border-l-(--event-accent)',
+        type !== 'auto' && accentColor != null && 'border-l-(--event-accent)',
         (isCompleted || isPendingResponse) && 'opacity-50',
       )}
       style={

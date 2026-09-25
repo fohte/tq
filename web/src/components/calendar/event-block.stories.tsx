@@ -58,7 +58,11 @@ function EventBlockPreview({
   return (
     <div
       className="w-(--event-block-width)"
-      style={{ '--event-block-width': `${String(widthPx)}px` }}
+      style={
+        {
+          '--event-block-width': `${String(widthPx)}px`,
+        } as React.CSSProperties & { '--event-block-width': string }
+      }
     >
       <div className="h-20">
         {/* eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- story mock data doesn't match full EventContentArg */}

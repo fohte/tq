@@ -269,7 +269,11 @@ export function ProjectFormModal({
                     ? 'scale-110 border-foreground'
                     : 'border-transparent hover:scale-110',
                 )}
-                style={{ '--project-color': preset.hex }}
+                style={
+                  { '--project-color': preset.hex } as React.CSSProperties & {
+                    '--project-color': string
+                  }
+                }
                 title={preset.name}
               />
             ))}

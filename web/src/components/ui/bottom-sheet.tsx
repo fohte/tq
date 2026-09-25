@@ -3,9 +3,8 @@ import { cn } from '#lib/utils'
 
 function BottomSheetOverlay({
   className,
-  style,
   ...props
-}: React.ComponentProps<'div'>) {
+}: Omit<React.ComponentProps<'div'>, 'style'>) {
   const insets = useVisualViewportInsets()
 
   return (
@@ -20,7 +19,7 @@ function BottomSheetOverlay({
       )}
       style={
         insets === null
-          ? style
+          ? undefined
           : ({
               '--visual-viewport-top': `${String(insets.top)}px`,
               '--visual-viewport-height': `${String(insets.height)}px`,

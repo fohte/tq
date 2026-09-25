@@ -59,7 +59,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           : ({
               '--visual-viewport-top': `${String(insets.top)}px`,
               '--visual-viewport-height': `${String(insets.height)}px`,
-            } satisfies VisualViewportStyle)
+            } as VisualViewportStyle)
       }
     >
       <Sidebar />

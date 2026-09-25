@@ -17,6 +17,7 @@ import type { Task } from '#hooks/use-tasks'
 import { useUpdateTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
+import { cn } from '#lib/utils'
 
 export interface QueueTaskDragData extends Record<string, unknown> {
   type: 'queue-task'
@@ -30,6 +31,7 @@ export function QueueItemRowAppearance({
   listeners,
   setNodeRef,
   style,
+  isDragging = false,
   isEditingEstimate,
   estimateInput,
   onEstimateInputChange,
@@ -43,6 +45,7 @@ export function QueueItemRowAppearance({
   listeners: DraggableSyntheticListeners
   setNodeRef: (node: HTMLElement | null) => void
   style: CSSProperties
+  isDragging?: boolean
   isEditingEstimate: boolean
   estimateInput: string
   onEstimateInputChange: (value: string) => void
@@ -92,7 +95,10 @@ export function QueueItemRowAppearance({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-1 border-b border-border opacity-(--drag-opacity)"
+      className={cn(
+        'flex items-center gap-1 border-b border-border',
+        isDragging && 'opacity-50',
+      )}
     >
       <DragHandle
         attributes={attributes}
@@ -152,7 +158,6 @@ export function QueueItemRow({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    '--drag-opacity': isDragging ? '0.5' : '1',
   } as CSSProperties
 
   const commitEstimate = () => {
@@ -175,6 +180,7 @@ export function QueueItemRow({
       listeners={listeners}
       setNodeRef={setNodeRef}
       style={style}
+      isDragging={isDragging}
       isEditingEstimate={isEditingEstimate}
       estimateInput={estimateInput}
       onEstimateInputChange={setEstimateInput}
