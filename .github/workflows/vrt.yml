@@ -70,8 +70,10 @@ jobs:
       - uses: fohte/storybook-vrt-workflows/vrt-report@691148d6e8e53b86c8f93b5b54cadbd8308b06d3 # v0.1.6
         with:
           package-dir: web
+          # This URL is relative to the published HTML, not the runner's working directory.
+          # Three parent segments from custom/ reach the bucket-root baseline/actual key.
           report-command: >-
-            pnpm dlx @fohte/vrt-report@0.1.0
+            pnpm exec vrt-report
             --input .reg/out.json
             --assets-dir .reg
             --output .reg/custom/vrt-report.html

@@ -74,6 +74,7 @@
   },
   "devDependencies": {
     "@fohte/storybook-addon": "0.2.0",
+    "@fohte/vrt-report": "0.1.0",
     "@storybook/addon-a11y": "10.6.0",
     "@storybook/addon-docs": "10.6.0",
     "@storybook/addon-vitest": "10.6.0",
