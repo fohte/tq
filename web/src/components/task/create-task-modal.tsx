@@ -17,7 +17,10 @@ import {
   DialogPopup,
   DialogPortal,
 } from '#components/ui/dialog'
-import { MarkdownEditor } from '#components/ui/markdown-editor'
+import {
+  MarkdownEditor,
+  type MarkdownEditorHandle,
+} from '#components/ui/markdown-editor'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useLinkTaskToGithub } from '#hooks/use-github-link'
 import { useGithubUrlPreview } from '#hooks/use-github-url-preview'
@@ -86,6 +89,7 @@ export function CreateTaskModal({
     defaultDiscardConfirmationOpen,
   )
   const descriptionRef = useRef('')
+  const descriptionEditorRef = useRef<MarkdownEditorHandle>(null)
   const [editorKey, setEditorKey] = useState(0)
   const [startDate, setStartDate] = useState(defaultStartDate ?? '')
   const [dueDate, setDueDate] = useState('')
@@ -208,7 +212,17 @@ export function CreateTaskModal({
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) {
-        if (title.trim() !== '' || descriptionRef.current.trim() !== '') {
+        const description = descriptionEditorRef.current?.getMarkdown()
+        const initialDescription = (
+          defaultDescription ?? '## Why\n\n## What'
+        ).trim()
+        const hasDescription =
+          description == null
+            ? descriptionRef.current.trim() !== ''
+            : description.trim() !== '' &&
+              description.trim() !== initialDescription
+
+        if (title.trim() !== '' || hasDescription) {
           setDiscardConfirmationOpen(true)
           return
         }
@@ -216,7 +230,7 @@ export function CreateTaskModal({
       }
       onOpenChange(nextOpen)
     },
-    [onOpenChange, resetForm, title],
+    [defaultDescription, onOpenChange, resetForm, title],
   )
 
   const discardDraft = () => {
@@ -415,6 +429,7 @@ export function CreateTaskModal({
 
   const descriptionEditor = (
     <MarkdownEditor
+      ref={descriptionEditorRef}
       key={editorKey}
       defaultValue={defaultDescription ?? '## Why\n\n## What'}
       placeholder="Add description..."

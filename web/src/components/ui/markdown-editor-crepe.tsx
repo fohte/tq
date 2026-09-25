@@ -4,7 +4,9 @@ import '#components/ui/markdown-editor.css'
 
 import { shift } from '@floating-ui/dom'
 import { Crepe } from '@milkdown/crepe'
-import { replaceAll } from '@milkdown/kit/utils'
+import { serializerCtx } from '@milkdown/kit/core'
+import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
+import { $prose, replaceAll } from '@milkdown/kit/utils'
 import { upload, uploadConfig } from '@milkdown/plugin-upload'
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
 import {
@@ -34,6 +36,7 @@ export interface CrepeEditorProps {
   defaultValue?: string
   onChange?: (markdown: string) => void
   placeholder?: string
+  markdownRef?: { current: string | null }
   // Also controls Crepe's readOnly (view => readOnly, edit => editable): the
   // two always move together, since an editable+chip combination would let
   // mid-edit typing form a chip out from under the cursor.
@@ -58,6 +61,7 @@ function CrepeEditor({
   defaultValue,
   onChange,
   placeholder,
+  markdownRef,
   mode,
 }: CrepeEditorProps) {
   const crepeRef = useRef<Crepe | null>(null)
@@ -172,6 +176,30 @@ function CrepeEditor({
       )
       .use(createImageSourceRevealPlugin(widgetViewFactory, viewModeStore))
       .use(listIndentKeymap)
+
+    if (markdownRef != null) {
+      crepe.editor.use(
+        $prose(
+          (ctx) =>
+            new Plugin({
+              key: new PluginKey('markdown-snapshot'),
+              view: (view) => {
+                const serialize = ctx.get(serializerCtx)
+                markdownRef.current = serialize(view.state.doc)
+                return {
+                  update: (nextView, previousState) => {
+                    if (previousState.doc.eq(nextView.state.doc)) return
+                    markdownRef.current = serialize(nextView.state.doc)
+                  },
+                  destroy: () => {
+                    markdownRef.current = null
+                  },
+                }
+              },
+            }),
+        ),
+      )
+    }
 
     if (onChange) {
       crepe.on((listener) => {

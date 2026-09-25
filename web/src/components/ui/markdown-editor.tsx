@@ -1,4 +1,11 @@
-import { lazy, Suspense, useRef, useState } from 'react'
+import {
+  forwardRef,
+  lazy,
+  Suspense,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react'
 
 import { cn } from '#lib/utils'
 
@@ -29,6 +36,10 @@ interface MarkdownEditorProps {
    * surface, 'compact' (120px) for a few-lines inline editor.
    */
   size?: 'default' | 'compact'
+}
+
+export interface MarkdownEditorHandle {
+  getMarkdown(): string | null
 }
 
 // Schemes a rendered Markdown link may click through to in view mode without
@@ -65,16 +76,27 @@ function isEventTargetInsideEditorUi(
   )
 }
 
-export function MarkdownEditor({
-  viewEditToggle,
-  size = 'default',
-  ...editorProps
-}: MarkdownEditorProps) {
+export const MarkdownEditor = forwardRef<
+  MarkdownEditorHandle,
+  MarkdownEditorProps
+>(function MarkdownEditor(
+  { viewEditToggle, size = 'default', ...editorProps },
+  ref,
+) {
   const isToggleEnabled = viewEditToggle != null
   const [mode, setMode] = useState<'view' | 'edit'>(
     viewEditToggle?.defaultMode ?? 'view',
   )
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const markdownRef = useRef<string | null>(null)
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      getMarkdown: () => markdownRef.current,
+    }),
+    [],
+  )
 
   const exitEditMode = () => {
     if (mode !== 'edit') return
@@ -135,9 +157,10 @@ export function MarkdownEditor({
       <Suspense fallback={null}>
         <CrepeEditorRoot
           {...editorProps}
+          {...(ref == null ? {} : { markdownRef })}
           mode={isToggleEnabled ? mode : 'edit'}
         />
       </Suspense>
     </div>
   )
-}
+})
