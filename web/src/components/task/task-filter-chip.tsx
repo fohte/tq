@@ -5,7 +5,7 @@ interface TaskFilterChipProps {
   attribute: React.ReactNode
   value: React.ReactNode
   menuTitle: string
-  className?: 'shrink-0'
+  preventShrink?: boolean
   children: React.ReactNode
   defaultOpen?: boolean
 }
@@ -19,7 +19,7 @@ export function TaskFilterChip({
   attribute,
   value,
   menuTitle,
-  className,
+  preventShrink,
   children,
   defaultOpen,
 }: TaskFilterChipProps) {
@@ -32,9 +32,10 @@ export function TaskFilterChip({
         </>
       }
       triggerClassName={cn(
+        // FilterMenu owns the trigger button, so these tokens mirror Chip's active style.
         'inline-flex items-center gap-1 border px-1 font-mono text-2xs border-border-strong text-foreground',
         'cursor-pointer outline-none hover:opacity-80',
-        className === 'shrink-0' && 'shrink-0',
+        preventShrink === true && 'shrink-0',
       )}
       title={menuTitle}
       defaultOpen={defaultOpen}
