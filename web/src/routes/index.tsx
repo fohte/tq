@@ -9,7 +9,7 @@ import {
   type DayViewMode,
   DayViewPresentation,
 } from '#components/day-view/day-view'
-import type { QueueSectionData } from '#components/day-view/queue-pane'
+import { buildQueueSections } from '#components/day-view/queue-sections'
 import { useAutoAssign } from '#hooks/use-auto-assign'
 import { useCalendarChangeFeedback } from '#hooks/use-calendar-change-feedback'
 import { useCurrentContext } from '#hooks/use-current-context'
@@ -22,7 +22,6 @@ import {
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
 import {
   DAY_QUEUE_KEY,
-  type Queue,
   type QueueItem,
   queueKeys,
   useQueueItemsForQueues,
@@ -32,7 +31,6 @@ import {
 import { useScheduleList } from '#hooks/use-schedules'
 import { useSchedulingSettings } from '#hooks/use-scheduling-settings'
 import { useSelectedDate } from '#hooks/use-selected-date'
-import type { Task } from '#hooks/use-tasks'
 import { useTaskList, useTaskMap } from '#hooks/use-tasks'
 import {
   useCreateTimeBlock,
@@ -41,12 +39,7 @@ import {
 } from '#hooks/use-time-blocks'
 import { classifyGcalEvent } from '#lib/calendar-utils'
 import { matchesContextFilter } from '#lib/context-filter'
-import {
-  formatLocalDate,
-  formatShortDate,
-  formatWeekRangeLabel,
-  toLocalDateRange,
-} from '#lib/date-range'
+import { formatLocalDate, toLocalDateRange } from '#lib/date-range'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { scheduleColorToEventColor } from '#lib/schedule-color'
 
@@ -67,20 +60,6 @@ export const Route = createFileRoute('/')({
   },
   component: DayView,
 })
-
-function dateRangeLabelFor(
-  periodUnit: Queue['periodUnit'],
-  date: Date,
-): string | undefined {
-  switch (periodUnit) {
-    case 'day':
-      return formatShortDate(date)
-    case 'week':
-      return formatWeekRangeLabel(date)
-    default:
-      return undefined
-  }
-}
 
 function DayView() {
   const baseFilter = useBaseFilter(true)
@@ -182,26 +161,8 @@ function DayView() {
   // A completed task stays visible (with the progress bar) only in the day
   // queue; every other queue hides it and excludes it from its count, but it
   // stays in that queue's stored selection (see the PUT handlers below).
-  const queueSections: QueueSectionData[] = useMemo(
-    () =>
-      (queuesData ?? []).map((queue) => {
-        const rawTasks = (rawItemsByKey.get(queue.key) ?? [])
-          .map((item) => taskMap.get(item.taskId))
-          .filter((t): t is Task => t != null)
-        const visibleTasks =
-          queue.key === DAY_QUEUE_KEY
-            ? rawTasks
-            : rawTasks.filter((t) => t.status !== 'completed')
-        const dateRangeLabel = dateRangeLabelFor(queue.periodUnit, selectedDate)
-
-        return {
-          key: queue.key,
-          title: queue.name,
-          items: visibleTasks,
-          ...(dateRangeLabel != null ? { dateRangeLabel } : {}),
-          emptyMessage: `No tasks in ${queue.name}'s queue`,
-        }
-      }),
+  const queueSections = useMemo(
+    () => buildQueueSections(queuesData, rawItemsByKey, taskMap, selectedDate),
     [queuesData, rawItemsByKey, taskMap, selectedDate],
   )
 
