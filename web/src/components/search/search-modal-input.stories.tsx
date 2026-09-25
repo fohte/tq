@@ -6,11 +6,13 @@ const meta = {
   title: 'Search/SearchModalInput',
   component: SearchModalInput,
   args: {
-    searchScopeTokens: [],
+    searchScopes: [],
     searchInputValue: '',
     searchTarget: 'tasks',
     isFetching: false,
     onInputValueChange: () => undefined,
+    onRemoveContext: () => undefined,
+    onRemoveScopeToken: () => undefined,
   },
   parameters: { layout: 'centered' },
   decorators: [
@@ -32,7 +34,10 @@ export const ScopedAndLoading: Story = {
   args: {
     modePrefix: '#',
     context: 'work',
-    searchScopeTokens: ['project:<project-id>', 'parent:<task-id>'],
+    searchScopes: [
+      { token: 'project:<project-id>', label: 'project:Quarterly planning' },
+      { token: 'parent:<task-id>', label: 'parent:#42 Prepare release' },
+    ],
     searchInputValue: 'schedule',
     isFetching: true,
   },

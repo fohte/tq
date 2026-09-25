@@ -30,6 +30,12 @@ const searchTask = makeTask({
   title: 'Keyboard shortcuts',
   context: 'work',
 })
+const searchTaskDetail = makeTaskDetail({
+  id: searchTask.id,
+  number: searchTask.number,
+  title: searchTask.title,
+  context: 'work',
+})
 const scrollableTasks = Array.from({ length: 16 }, (_, index) => {
   const resultNumber = index + 1
   const resultLabel = String(resultNumber)
@@ -192,12 +198,18 @@ const meta = {
             [taskScopeQuery]: [taskScopedTask],
           }),
         ),
+        http.get(`/api/tasks/${searchTask.id}`, () =>
+          HttpResponse.json(searchTaskDetail),
+        ),
         http.get(`/api/tasks/${numberedTaskNumber}`, () =>
           HttpResponse.json(numberedTask),
         ),
         http.get(
           '/api/projects',
-          jsonByQuery({ [keyboardQuery]: [searchProject] }),
+          jsonByQuery({
+            '': [searchProject],
+            [keyboardQuery]: [searchProject],
+          }),
         ),
         http.get(`/api/projects/${searchProject.id}`, () =>
           HttpResponse.json(searchProject),
