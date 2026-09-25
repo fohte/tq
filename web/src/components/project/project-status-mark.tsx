@@ -24,13 +24,13 @@ export function ProjectStatusMark({
     <span
       className={cn(
         'inline-block shrink-0',
+        size === 7 ? 'size-1.75' : 'size-2.25',
         status === 'active' && 'bg-foreground',
         status === 'completed' && 'bg-muted-foreground-faint',
         (status === 'paused' || status === 'archived') &&
           'border border-muted-foreground',
         className,
       )}
-      style={{ width: size, height: size }}
     />
   )
 }

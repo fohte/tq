@@ -67,7 +67,7 @@ function FocusViewWithProviders(
 ) {
   return (
     <Providers>
-      <div style={{ height: '100vh' }}>
+      <div className="h-screen">
         <FocusViewPresentation {...props} />
       </div>
     </Providers>

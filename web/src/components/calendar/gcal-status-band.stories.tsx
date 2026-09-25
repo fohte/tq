@@ -20,10 +20,7 @@ function GcalStatusBandPreview({
 
   return (
     // Mirrors fullcalendar.css's `.fc-bg-event` to preview the band outside of FullCalendar.
-    <div
-      className="flex h-24 w-72 items-center justify-center border-y border-muted-foreground-ghost bg-card"
-      style={{ backgroundImage: 'var(--calendar-status-band-fill)' }}
-    >
+    <div className="flex h-24 w-72 items-center justify-center border-y border-muted-foreground-ghost bg-(image:--calendar-status-band-fill) bg-card">
       <GcalStatusBand {...props} />
     </div>
   )

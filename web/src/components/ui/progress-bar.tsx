@@ -14,8 +14,14 @@ function ProgressBar({
   return (
     <div className={cn('h-0.5 w-full bg-surface-strong', className)}>
       <div
-        className={cn('h-full', fillClassName)}
-        style={{ width: `${String(clamped)}%` }}
+        className={cn('h-full w-(--progress-width)', fillClassName)}
+        style={
+          {
+            '--progress-width': `${String(clamped)}%`,
+          } as React.CSSProperties & {
+            '--progress-width': string
+          }
+        }
       />
     </div>
   )

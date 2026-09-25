@@ -36,9 +36,13 @@ function LabelSuggestion({
       {index != null && (
         <button
           type="button"
-          style={{ paddingLeft: `${String(12 + depth * 12)}px` }}
+          style={
+            {
+              '--label-suggestion-indent': `${String(12 + depth * 12)}px`,
+            } as React.CSSProperties & { '--label-suggestion-indent': string }
+          }
           className={cn(
-            'w-full py-1.5 pr-3 text-left font-mono text-xs',
+            'w-full py-1.5 pr-3 pl-(--label-suggestion-indent) text-left font-mono text-xs',
             index === selectedIndex
               ? 'bg-accent text-accent-foreground'
               : 'text-popover-foreground hover:bg-accent/50',

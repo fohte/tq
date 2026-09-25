@@ -14,6 +14,11 @@ import { useUrlCopiedToast } from '#hooks/use-url-copied-toast'
 import { useVisualViewportInsets } from '#hooks/use-visual-viewport-insets'
 import { cn } from '#lib/utils'
 
+interface VisualViewportStyle extends React.CSSProperties {
+  '--visual-viewport-top': string
+  '--visual-viewport-height': string
+}
+
 export function AppLayout({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [newTaskOpen, setNewTaskOpen] = useState(false)
@@ -46,10 +51,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
         'sticky flex',
         insets === null
           ? cn('top-0', isViewportPinned ? 'h-dvh' : 'min-h-dvh')
-          : 'inset-x-0',
+          : 'inset-x-0 top-(--visual-viewport-top) h-(--visual-viewport-height)',
       )}
       style={
-        insets === null ? undefined : { top: insets.top, height: insets.height }
+        insets === null
+          ? undefined
+          : ({
+              '--visual-viewport-top': `${String(insets.top)}px`,
+              '--visual-viewport-height': `${String(insets.height)}px`,
+            } as VisualViewportStyle)
       }
     >
       <Sidebar />

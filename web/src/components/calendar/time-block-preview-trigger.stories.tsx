@@ -45,7 +45,7 @@ const meta = {
 
       return (
         <QueryClientProvider client={queryClient}>
-          <div style={{ width: 160, height: 48 }}>
+          <div className="h-12 w-40">
             <Story />
           </div>
         </QueryClientProvider>

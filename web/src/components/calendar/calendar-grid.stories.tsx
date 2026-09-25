@@ -109,7 +109,7 @@ const meta = {
           new QueryClient({ defaultOptions: { queries: { retry: false } } })
         }
       >
-        <div style={{ height: '100vh' }}>
+        <div className="h-screen">
           <Story />
         </div>
       </QueryClientProvider>

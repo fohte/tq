@@ -203,7 +203,7 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div style={{ height: '100vh' }}>
+      <div className="h-screen">
         <Story />
       </div>
     ),
