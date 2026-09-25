@@ -46,7 +46,7 @@ export function createOptionItem(
         onClick={select}
         onMouseMove={onMouseMove}
         className={cn(
-          'h-auto min-h-0 w-full justify-start gap-0 rounded-none border-0 bg-transparent p-0 font-sans font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 focus-visible:border-transparent focus-visible:ring-0 flex items-center gap-2 px-4 py-2 text-left',
+          'h-auto min-h-0 w-full justify-start gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 focus-visible:border-transparent focus-visible:ring-0 flex items-center gap-2 px-4 py-2 text-left',
           isSelected ? 'bg-accent' : 'hover:bg-accent/50',
           className,
         )}

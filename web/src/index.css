@@ -65,6 +65,10 @@
   border-left-style: solid;
 }
 
+@utility font-inherit {
+  font-family: inherit;
+}
+
 /*
  * Drops the search modal down from the top of the viewport — padding-top has
  * no @theme namespace to hang a named scale step off of, see

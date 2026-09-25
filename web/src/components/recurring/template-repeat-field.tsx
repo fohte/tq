@@ -124,7 +124,7 @@ export function TemplateRepeatFieldAppearance({
             >
               <SelectTrigger
                 size="sm"
-                className="h-auto data-[size=sm]:h-auto w-full justify-start gap-1 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 font-mono text-xs md:text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
+                className="h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -144,7 +144,7 @@ export function TemplateRepeatFieldAppearance({
                 onChange={(e) => {
                   onIntervalInputChange(e.target.value)
                 }}
-                className="h-auto w-12 border-0 bg-transparent dark:bg-transparent p-0 text-xs md:text-xs text-center shadow-none focus-visible:ring-0"
+                className="h-auto w-12 border-0 bg-transparent p-0 text-center shadow-none focus-visible:ring-0"
               />
               {intervalUnitLabel(type, intervalValue ?? 1)}
             </div>
@@ -166,7 +166,7 @@ export function TemplateRepeatFieldAppearance({
                   onDayOfMonthChange(e.target.value)
                 }}
                 placeholder="Day of month (1-31)"
-                className="h-auto w-full border-0 border-b border-border bg-transparent dark:bg-transparent p-0 pb-1 text-xs md:text-xs shadow-none focus-visible:ring-0"
+                className="h-auto w-full border-0 border-b border-border bg-transparent p-0 pb-1 text-xs shadow-none focus-visible:ring-0"
               />
             )}
 

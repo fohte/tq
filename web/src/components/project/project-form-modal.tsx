@@ -172,7 +172,7 @@ export function ProjectFormModal({
         }}
         placeholder="Project name"
         autoFocus
-        className="h-auto border-0 bg-transparent dark:bg-transparent p-0 text-xl md:text-xl font-medium shadow-none focus-visible:border-0 focus-visible:ring-0"
+        className="h-auto border-0 bg-transparent p-0 text-xl font-medium shadow-none focus-visible:border-0 focus-visible:ring-0"
       />
 
       {/* Description */}
@@ -194,7 +194,7 @@ export function ProjectFormModal({
           >
             <SelectTrigger
               size="sm"
-              className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+              className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
             >
               <SelectValue />
             </SelectTrigger>
@@ -215,7 +215,7 @@ export function ProjectFormModal({
           >
             <SelectTrigger
               size="sm"
-              className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+              className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
             >
               <SelectValue />
             </SelectTrigger>

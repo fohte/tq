@@ -63,7 +63,7 @@ export function TaskSearchCandidateDialogAppearance({
                 key={candidate.id}
                 type="button"
                 variant="ghost"
-                className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-sans font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center gap-2 px-3 text-left text-sm text-popover-foreground hover:bg-accent/50"
+                className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center gap-2 px-3 text-left text-sm text-popover-foreground hover:bg-accent/50"
                 onClick={() => {
                   onSelectCandidate(candidate)
                 }}
@@ -89,7 +89,7 @@ export function TaskSearchCandidateDialogAppearance({
           <Button
             type="button"
             variant="ghost"
-            className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-sans font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 min-h-11 w-full border-t border-border px-3 text-center text-sm text-muted-foreground hover:bg-accent/50"
+            className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 min-h-11 w-full border-t border-border px-3 text-center text-sm text-muted-foreground hover:bg-accent/50"
             onClick={skipAction.onSkip}
           >
             {skipAction.label}

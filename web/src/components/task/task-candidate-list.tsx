@@ -24,7 +24,7 @@ export function TaskCandidateList({
           type="button"
           variant="ghost"
           className={cn(
-            'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-sans font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
+            'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
             'flex min-h-11 w-full items-center justify-start gap-2 px-3 text-left text-sm',
             highlightedIndex === index + indexOffset
               ? 'bg-accent text-accent-foreground'

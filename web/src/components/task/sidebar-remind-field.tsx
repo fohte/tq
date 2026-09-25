@@ -17,7 +17,7 @@ import {
 import { cn } from '#lib/utils'
 
 const popupRowClassName =
-  'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-sans font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 block w-full px-3 py-1.5 text-left text-sm text-popover-foreground hover:bg-accent/50'
+  'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 block w-full px-3 py-1.5 text-left text-sm text-popover-foreground hover:bg-accent/50'
 
 export function SidebarRemindFieldAppearance({
   remindAtLabel,
@@ -67,7 +67,7 @@ export function SidebarRemindFieldAppearance({
           }}
           placeholder="明日9時 など"
           autoFocus
-          className="h-auto w-full justify-start gap-1 border-0 bg-transparent dark:bg-transparent p-0 font-mono text-xs md:text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
+          className="h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
         />
       ) : (
         <Button
