@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { MouseEventHandler, ReactNode } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeSavedView } from '#components/layout/sidebar-test-fixtures'
 import {
@@ -19,7 +19,10 @@ import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixt
 import type { CurrentRoute } from '#hooks/use-current-route'
 import type { Project, ProjectDetail } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
-import type { PageSearchResult } from '#hooks/use-search'
+import {
+  type PageSearchResult,
+  SEARCH_QUERY_DEBOUNCE_MS,
+} from '#hooks/use-search'
 import type { TaskDetail } from '#hooks/use-tasks'
 
 interface MockTask {
@@ -117,6 +120,12 @@ const mockSuggestions = [
 ]
 
 let mockSearchData: typeof mockTasks = []
+let mockSearchDataForQuery:
+  | ((query: string, context?: 'work' | 'personal') => MockTask[] | undefined)
+  | undefined
+let mockIsFetchingTasks = false
+let mockIsDebouncingTasks = false
+let mockIsFetchingSavedViews = false
 let mockNumberTaskData: MockTask | undefined
 let mockPageSearchData: PageSearchResult[] = []
 let mockSuggestionData: typeof mockSuggestions = []
@@ -133,17 +142,22 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-search')>()
   return {
     ...actual,
-    useSearchTasks: () => ({
-      data: mockSearchData.length > 0 ? mockSearchData : undefined,
-      isFetching: false,
+    useSearchTasks: (query: string, context?: 'work' | 'personal') => ({
+      data:
+        mockSearchDataForQuery?.(query, context) ??
+        (mockSearchData.length > 0 ? mockSearchData : undefined),
+      isFetching: mockIsFetchingTasks,
+      isDebouncing: mockIsDebouncingTasks,
     }),
     useSearchTaskByNumber: () => ({
       data: mockNumberTaskData,
       isFetching: false,
+      isDebouncing: false,
     }),
     useSearchPages: () => ({
       data: mockPageSearchData.length > 0 ? mockPageSearchData : undefined,
       isFetching: false,
+      isDebouncing: false,
     }),
     useSearchSuggestions: () => ({
       data: mockSuggestionData.length > 0 ? mockSuggestionData : undefined,
@@ -169,7 +183,7 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
     ...actual,
     useProjects: (filter: unknown, options: unknown) => {
       mockProjectCalls.push({ filter, options })
-      return { data: mockProjectData }
+      return { data: mockProjectData, isFetching: false }
     },
     useProject: (id: string) => ({ data: mockProjectDetails[id] }),
   }
@@ -181,7 +195,7 @@ vi.mock('#hooks/use-saved-views', async (importOriginal) => {
     ...actual,
     useSavedViews: (filter: unknown, options: unknown) => {
       mockSavedViewCalls.push({ filter, options })
-      return { data: mockSavedViewData }
+      return { data: mockSavedViewData, isFetching: mockIsFetchingSavedViews }
     },
   }
 })
@@ -250,6 +264,7 @@ function renderSearchModal(
   props: {
     open?: boolean
     onOpenChange?: (open: boolean) => void
+    defaultContext?: 'work' | 'personal' | null
     defaultQuery?: string
   } = {},
 ) {
@@ -262,6 +277,9 @@ function renderSearchModal(
         <SearchModal
           open={props.open ?? true}
           onOpenChange={onOpenChange}
+          {...(props.defaultContext === undefined
+            ? {}
+            : { defaultContext: props.defaultContext })}
           {...(props.defaultQuery === undefined
             ? {}
             : { defaultQuery: props.defaultQuery })}
@@ -285,9 +303,43 @@ function setCurrentTaskRoute(
   }
 }
 
+function mockUnscopedSearchResult(query: string) {
+  mockSearchDataForQuery = (searchQuery, context) =>
+    searchQuery === query && context == null ? [personalTask] : []
+}
+
+function getSearchEverywhereOutput(
+  searchTarget: 'tasks' | 'projects' = 'tasks',
+) {
+  return {
+    inputValue: screen.getByLabelText<HTMLInputElement>(
+      `Search ${searchTarget}`,
+    ).value,
+    context: screen.queryByTestId('search-context-scope')?.textContent ?? null,
+    scopes: screen
+      .queryAllByTestId('search-scope-token')
+      .map((element) => element.textContent),
+    options: screen.queryAllByRole('option').length,
+    result: screen.queryByText('Plan weekend trip')?.textContent ?? null,
+  }
+}
+
+function getNoResultsOutput(query: string) {
+  return {
+    message:
+      screen.queryByText(`no results for "${query}"`)?.textContent ?? null,
+    searchEverywhere:
+      screen.queryByRole('option', { name: 'Search everywhere' })
+        ?.textContent ?? null,
+  }
+}
 describe('SearchModal', () => {
   beforeEach(() => {
     mockSearchData = []
+    mockSearchDataForQuery = undefined
+    mockIsFetchingTasks = false
+    mockIsDebouncingTasks = false
+    mockIsFetchingSavedViews = false
     mockNumberTaskData = undefined
     mockPageSearchData = []
     mockSuggestionData = []
@@ -300,6 +352,10 @@ describe('SearchModal', () => {
     mockCurrentRoute = { kind: 'other' }
     mockTaskDetails = {}
     mockNavigate.mockClear()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('renders the search input when open', () => {
@@ -1083,12 +1139,239 @@ describe('SearchModal', () => {
 
   it('shows no results message when search returns empty and query is typed', async () => {
     const user = userEvent.setup()
-    renderSearchModal()
+    renderSearchModal({ defaultContext: null })
 
     const input = screen.getByLabelText('Search tasks')
     await user.type(input, 'nonexistent')
 
-    expect(screen.getByText('no results for "nonexistent"')).toBeInTheDocument()
+    const getOutput = () => ({
+      message: screen.queryByText('no results for "nonexistent"')?.textContent,
+      options: screen.queryAllByRole('option').length,
+    })
+    await waitFor(() => {
+      expect(getOutput()).toEqual({
+        message: 'no results for "nonexistent"',
+        options: 0,
+      })
+    })
+  })
+
+  it('does not offer Search everywhere for a context-only pages search', () => {
+    resetSessionOpenSettings({ localContext: 'work' })
+
+    renderSearchModal({ defaultQuery: '/unmatched' })
+
+    const getOutput = () => ({
+      context:
+        screen.queryByTestId('search-context-scope')?.textContent ?? null,
+      searchEverywhere:
+        screen.queryByRole('option', { name: 'Search everywhere' })
+          ?.textContent ?? null,
+    })
+    expect(getOutput()).toEqual({
+      context: 'context:work',
+      searchEverywhere: null,
+    })
+  })
+
+  it('offers Search everywhere when a project scope disables page search', () => {
+    renderSearchModal({
+      defaultContext: null,
+      defaultQuery: '/project:example-project unmatched',
+    })
+
+    const getOutput = () => ({
+      searchEverywhere:
+        screen.queryByRole('option', { name: 'Search everywhere' })
+          ?.textContent ?? null,
+    })
+    expect(getOutput()).toEqual({ searchEverywhere: 'Search everywhere' })
+  })
+
+  it('waits for task search debounce before offering Search everywhere', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    mockIsDebouncingTasks = true
+
+    const view = renderSearchModal({ defaultContext: 'work' })
+
+    const input = screen.getByLabelText<HTMLInputElement>('Search tasks')
+    fireEvent.change(input, { target: { value: 'none' } })
+
+    const getOutput = () => ({
+      inputValue: input.value,
+      searchEverywhere:
+        screen.queryByRole('option', { name: 'Search everywhere' })
+          ?.textContent ?? null,
+    })
+    const states = [getOutput()]
+
+    act(() => {
+      vi.advanceTimersByTime(SEARCH_QUERY_DEBOUNCE_MS)
+    })
+    states.push(getOutput())
+
+    mockIsDebouncingTasks = false
+    view.rerender(
+      <Wrapper>
+        <SearchModal
+          open
+          onOpenChange={view.onOpenChange}
+          defaultContext="work"
+          defaultQuery="none"
+        />
+      </Wrapper>,
+    )
+    states.push(getOutput())
+
+    expect(states).toEqual([
+      { inputValue: 'none', searchEverywhere: null },
+      { inputValue: 'none', searchEverywhere: null },
+      { inputValue: 'none', searchEverywhere: 'Search everywhere' },
+    ])
+  })
+
+  it('does not offer Search everywhere while a task search is fetching', () => {
+    mockIsFetchingTasks = true
+
+    renderSearchModal({ defaultContext: 'work', defaultQuery: 'unmatched' })
+
+    expect(getNoResultsOutput('unmatched')).toEqual({
+      message: null,
+      searchEverywhere: null,
+    })
+  })
+
+  it('does not offer Search everywhere while saved views are fetching', () => {
+    mockIsFetchingSavedViews = true
+
+    renderSearchModal({ defaultContext: 'work', defaultQuery: 'unmatched' })
+
+    expect(getNoResultsOutput('unmatched')).toEqual({
+      message: null,
+      searchEverywhere: null,
+    })
+  })
+
+  it('keeps the selected task when a background fetch starts', async () => {
+    mockSearchData = mockTasks
+
+    const user = userEvent.setup()
+    const view = renderSearchModal({
+      defaultContext: 'work',
+      defaultQuery: 'matching',
+    })
+    await user.keyboard('{ArrowDown}')
+
+    const getSelectedOptions = () =>
+      screen
+        .getAllByRole('option')
+        .map((option) => option.getAttribute('aria-selected') === 'true')
+    const states = [getSelectedOptions()]
+
+    mockIsFetchingTasks = true
+    view.rerender(
+      <Wrapper>
+        <SearchModal
+          open
+          onOpenChange={view.onOpenChange}
+          defaultContext="work"
+          defaultQuery="matching"
+        />
+      </Wrapper>,
+    )
+    states.push(getSelectedOptions())
+
+    expect(states).toEqual([
+      [false, true],
+      [false, true],
+    ])
+  })
+
+  it('clears the active context and preserves the query when Search everywhere is selected with Enter', async () => {
+    resetSessionOpenSettings({ localContext: 'work' })
+    mockUnscopedSearchResult('unmatched')
+
+    const user = userEvent.setup()
+    renderSearchModal({ defaultQuery: 'unmatched' })
+
+    await user.keyboard('{Enter}')
+
+    expect(getSearchEverywhereOutput()).toEqual({
+      inputValue: 'unmatched',
+      context: null,
+      scopes: [],
+      options: 1,
+      result: 'Plan weekend trip',
+    })
+  })
+
+  it('clears project and parent scopes and preserves the query when Search everywhere is clicked', async () => {
+    mockUnscopedSearchResult('unmatched')
+
+    const user = userEvent.setup()
+    renderSearchModal({
+      defaultContext: null,
+      defaultQuery:
+        'project:00000000-0000-0000-0000-000000000101 parent:00000000-0000-0000-0000-000000000102 unmatched',
+    })
+
+    await user.click(screen.getByRole('option', { name: 'Search everywhere' }))
+
+    expect(getSearchEverywhereOutput()).toEqual({
+      inputValue: 'unmatched',
+      context: null,
+      scopes: [],
+      options: 1,
+      result: 'Plan weekend trip',
+    })
+  })
+
+  it('removes an inline context token and preserves the search mode', async () => {
+    const user = userEvent.setup()
+    renderSearchModal({
+      defaultContext: null,
+      defaultQuery: '!foo context:work bar',
+    })
+
+    await user.keyboard('{Enter}')
+
+    const getOutput = () => ({
+      ...getSearchEverywhereOutput('projects'),
+      mode: screen.getByTestId('search-mode-indicator').textContent,
+      lastProjectSearch: mockProjectCalls.at(-1),
+    })
+    await waitFor(() => {
+      expect(getOutput()).toEqual({
+        inputValue: 'foo bar',
+        context: null,
+        scopes: [],
+        options: 0,
+        result: null,
+        mode: '!',
+        lastProjectSearch: {
+          filter: { q: 'foo bar' },
+          options: { enabled: true },
+        },
+      })
+    })
+  })
+
+  it('does not offer Search everywhere when the scoped search has results', () => {
+    resetSessionOpenSettings({ localContext: 'work' })
+    mockSearchData = [firstMockTask]
+
+    renderSearchModal({ defaultQuery: 'task' })
+
+    const getOutput = () => ({
+      result: screen.queryByText(firstMockTask.title)?.textContent ?? null,
+      searchEverywhere:
+        screen.queryByRole('option', { name: 'Search everywhere' })
+          ?.textContent ?? null,
+    })
+    expect(getOutput()).toEqual({
+      result: firstMockTask.title,
+      searchEverywhere: null,
+    })
   })
 
   it('shows keyboard hints in footer', () => {

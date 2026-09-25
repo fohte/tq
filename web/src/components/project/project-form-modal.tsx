@@ -264,12 +264,16 @@ export function ProjectFormModal({
                   setColor(preset.hex)
                 }}
                 className={cn(
-                  'size-6 border-2 transition-all',
+                  'size-6 border-2 bg-(--project-color) transition-all',
                   color === preset.hex
                     ? 'scale-110 border-foreground'
                     : 'border-transparent hover:scale-110',
                 )}
-                style={{ backgroundColor: preset.hex }}
+                style={
+                  { '--project-color': preset.hex } as React.CSSProperties & {
+                    '--project-color': string
+                  }
+                }
                 title={preset.name}
               />
             ))}

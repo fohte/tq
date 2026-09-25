@@ -58,6 +58,9 @@ interface SearchModalResultGroupsOptions {
   canSearchViews: boolean
   canSuggest: boolean
   hasSearchQuery: boolean
+  hasActiveScope: boolean
+  isSearchPending: boolean
+  onSearchEverywhere: () => void
   onOpenChangeRef: { current: (open: boolean) => void }
 }
 
@@ -92,9 +95,15 @@ export function useSearchModalResultGroups({
   canSearchViews,
   canSuggest,
   hasSearchQuery,
+  hasActiveScope,
+  isSearchPending,
+  onSearchEverywhere,
   onOpenChangeRef,
-}: SearchModalResultGroupsOptions): ResultGroup[] {
-  return useMemo((): ResultGroup[] => {
+}: SearchModalResultGroupsOptions): {
+  resultGroups: ResultGroup[]
+  hasVisibleResults: boolean
+} {
+  const { resultGroups: baseResultGroups, hasVisibleResults } = useMemo(() => {
     const recentListItems =
       query === ''
         ? createRecentSearchItems(
@@ -191,7 +200,7 @@ export function useSearchModalResultGroups({
         ? createViewItems(savedViews, openView)
         : []
 
-    return [
+    const resultGroups: ResultGroup[] = [
       ...(currentTask == null
         ? []
         : [
@@ -257,6 +266,12 @@ export function useSearchModalResultGroups({
         isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
       },
     ]
+
+    const hasVisibleResults = resultGroups.some((group) =>
+      group.isVisible(query, group.items.length),
+    )
+
+    return { resultGroups, hasVisibleResults }
   }, [
     query,
     recentItems,
@@ -289,4 +304,42 @@ export function useSearchModalResultGroups({
     canSuggest,
     hasSearchQuery,
   ])
+
+  const resultGroups = useMemo(() => {
+    if (
+      !hasActiveScope ||
+      !hasSearchQuery ||
+      isSearchPending ||
+      hasVisibleResults
+    ) {
+      return baseResultGroups
+    }
+
+    return [
+      ...baseResultGroups,
+      {
+        id: 'search-everywhere',
+        title: 'Search',
+        items: [
+          createOptionItem(
+            'search-everywhere',
+            onSearchEverywhere,
+            <span className="font-mono text-sm text-primary">
+              Search everywhere
+            </span>,
+          ),
+        ],
+        isVisible: () => true,
+      },
+    ]
+  }, [
+    baseResultGroups,
+    hasActiveScope,
+    hasSearchQuery,
+    isSearchPending,
+    hasVisibleResults,
+    onSearchEverywhere,
+  ])
+
+  return { resultGroups, hasVisibleResults }
 }

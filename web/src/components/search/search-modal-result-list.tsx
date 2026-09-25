@@ -58,6 +58,12 @@ export function SearchModalResultList({
       role="listbox"
       aria-label="Search results"
     >
+      {emptyMessage != null && (
+        <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
+          {emptyMessage}
+        </div>
+      )}
+
       {groups.map((group, groupIndex) => (
         <Fragment key={group.id}>
           {groupIndex > 0 && <div className="mx-4 my-1 h-px bg-border" />}
@@ -85,12 +91,6 @@ export function SearchModalResultList({
           ))}
         </Fragment>
       ))}
-
-      {emptyMessage != null && (
-        <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
-          {emptyMessage}
-        </div>
-      )}
 
       {initialMessage != null && (
         <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">

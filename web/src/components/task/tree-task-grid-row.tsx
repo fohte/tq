@@ -67,7 +67,6 @@ export function TreeTaskGridRow({
   )
   const dragStyle = {
     transform: CSS.Transform.toString(transform),
-    opacity: isDragging ? 0.5 : 1,
   }
 
   const sessions = sessionsByTaskId.get(node.id) ?? []
@@ -111,6 +110,7 @@ export function TreeTaskGridRow({
       <div
         ref={setDragDropRef}
         style={dragStyle}
+        className={isDragging ? 'opacity-50' : undefined}
         {...attributes}
         {...listeners}
       >

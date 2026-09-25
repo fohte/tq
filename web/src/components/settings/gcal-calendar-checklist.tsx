@@ -57,8 +57,12 @@ export function GcalCalendarChecklist({
             />
           )}
           <span
-            className="size-2 shrink-0 rounded-full"
-            style={{ backgroundColor: calendar.color ?? '#71717a' }}
+            className="size-2 shrink-0 rounded-full bg-(--calendar-color)"
+            style={
+              {
+                '--calendar-color': calendar.color ?? 'var(--muted-foreground)',
+              } as React.CSSProperties & { '--calendar-color': string }
+            }
           />
           <span
             className={cn(

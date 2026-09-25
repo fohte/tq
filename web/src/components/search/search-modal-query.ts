@@ -44,7 +44,8 @@ export function removeSearchScopeToken(query: string, index: number): string {
 
 export function removeSearchContextTokens(query: string): string {
   const ranges = tokenizeSearchQuery(query).filter(
-    ({ value }) => parseSearchQuery(value).context != null,
+    ({ start, end }) =>
+      parseSearchQuery(query.slice(start, end)).context != null,
   )
 
   return ranges

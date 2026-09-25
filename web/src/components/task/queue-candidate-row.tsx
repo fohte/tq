@@ -43,14 +43,16 @@ export function QueueCandidateRow({
 
   const style = {
     transform: CSS.Translate.toString(transform),
-    opacity: isDragging ? 0.5 : 1,
   }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-1 border-b border-border"
+      className={cn(
+        'flex items-center gap-1 border-b border-border',
+        isDragging && 'opacity-50',
+      )}
     >
       <DragHandle
         attributes={attributes}

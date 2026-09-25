@@ -107,6 +107,8 @@ interface CalendarGridProps {
   initialScrollTime?: string | undefined
 }
 
+type SlotGhostStyle = React.CSSProperties & Record<`--slot-${string}`, string>
+
 export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
   function CalendarGrid(
     {
@@ -482,13 +484,15 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         />
         {slotGhost && (
           <div
-            className="fc-highlight tq-slot-hover-ghost"
-            style={{
-              top: slotGhost.top,
-              left: slotGhost.left,
-              width: slotGhost.width,
-              height: slotGhost.height,
-            }}
+            className="fc-highlight tq-slot-hover-ghost top-(--slot-top)! left-(--slot-left)! w-(--slot-width)! h-(--slot-height)!"
+            style={
+              {
+                '--slot-top': `${String(slotGhost.top)}px`,
+                '--slot-left': `${String(slotGhost.left)}px`,
+                '--slot-width': `${String(slotGhost.width)}px`,
+                '--slot-height': `${String(slotGhost.height)}px`,
+              } as SlotGhostStyle
+            }
           />
         )}
       </div>
