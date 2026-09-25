@@ -243,7 +243,7 @@ function ContextSelect({
         size="sm"
         iconClassName="size-4 -translate-x-1.5 text-foreground native-select-caret-stroke"
         className={cn(
-          'h-auto data-[size=sm]:h-auto w-fit min-w-21 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0',
+          'h-auto data-[size=sm]:h-auto w-fit min-w-20.5 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0',
           mobileLayout && 'min-h-5 translate-y-px',
         )}
       >
