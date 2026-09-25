@@ -194,7 +194,7 @@ export function ProjectFormModal({
           >
             <SelectTrigger
               size="sm"
-              className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+              className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
             >
               <SelectValue />
             </SelectTrigger>
@@ -215,7 +215,7 @@ export function ProjectFormModal({
           >
             <SelectTrigger
               size="sm"
-              className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+              className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
             >
               <SelectValue />
             </SelectTrigger>
@@ -239,7 +239,7 @@ export function ProjectFormModal({
             onChange={(e) => {
               setStartDate(e.target.value)
             }}
-            className="h-auto w-auto min-w-0 rounded-none border-0 bg-transparent p-0 text-sm text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
+            className="h-auto w-auto min-w-0 rounded-none border-0 bg-transparent dark:bg-transparent p-0 text-sm text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
           />
         </FieldRow>
 
@@ -250,7 +250,7 @@ export function ProjectFormModal({
             onChange={(e) => {
               setTargetDate(e.target.value)
             }}
-            className="h-auto w-auto min-w-0 rounded-none border-0 bg-transparent p-0 text-sm text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
+            className="h-auto w-auto min-w-0 rounded-none border-0 bg-transparent dark:bg-transparent p-0 text-sm text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
           />
         </FieldRow>
 
@@ -265,7 +265,7 @@ export function ProjectFormModal({
                   setColor(preset.hex)
                 }}
                 className={cn(
-                  'size-6 rounded-none border-2 bg-(--project-color) p-0 transition-all hover:bg-(--project-color) active:translate-y-0',
+                  'size-6 rounded-none border-2 bg-(--project-color) bg-clip-border p-0 transition-all hover:bg-(--project-color) active:translate-y-0',
                   color === preset.hex
                     ? 'scale-110 border-foreground'
                     : 'border-transparent hover:scale-110',

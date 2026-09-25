@@ -134,7 +134,7 @@ export function CreateTaskModalDesktop({
               onChange={(e) => {
                 setStartDate(e.target.value)
               }}
-              className="h-auto w-32 border-0 bg-transparent p-0 text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
+              className="h-auto w-32 border-0 bg-transparent dark:bg-transparent p-0 text-xs md:text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
             />
           </InlineFieldGroup>
           <InlineFieldGroup
@@ -147,7 +147,7 @@ export function CreateTaskModalDesktop({
               onChange={(e) => {
                 setDueDate(e.target.value)
               }}
-              className="h-auto w-32 border-0 bg-transparent p-0 text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
+              className="h-auto w-32 border-0 bg-transparent dark:bg-transparent p-0 text-xs md:text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
             />
           </InlineFieldGroup>
           <InlineFieldGroup
@@ -161,7 +161,7 @@ export function CreateTaskModalDesktop({
                 setEstimateInput(e.target.value)
               }}
               placeholder="1h30m"
-              className="h-auto w-16 border-0 bg-transparent p-0 text-xs text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
+              className="h-auto w-16 border-0 bg-transparent dark:bg-transparent p-0 text-xs md:text-xs text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
             />
           </InlineFieldGroup>
           <InlineFieldGroup
@@ -174,7 +174,7 @@ export function CreateTaskModalDesktop({
             >
               <SelectTrigger
                 size="sm"
-                className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
               >
                 <SelectValue placeholder="—" />
               </SelectTrigger>
@@ -198,7 +198,7 @@ export function CreateTaskModalDesktop({
             >
               <SelectTrigger
                 size="sm"
-                className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
               >
                 <SelectValue placeholder="Inbox" />
               </SelectTrigger>

@@ -187,7 +187,7 @@ function StatusSelect({
     >
       <SelectTrigger
         size="sm"
-        className="h-auto w-fit border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
+        className="h-auto data-[size=sm]:h-auto w-fit border-0 bg-transparent dark:bg-transparent p-0 font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
       >
         <SelectValue />
       </SelectTrigger>
@@ -225,7 +225,7 @@ function ContextSelect({
     >
       <SelectTrigger
         size="sm"
-        className="h-auto w-fit border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
+        className="h-auto data-[size=sm]:h-auto w-fit border-0 bg-transparent dark:bg-transparent p-0 font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
       >
         <SelectValue />
       </SelectTrigger>
@@ -261,7 +261,7 @@ function DateInput({
           input: { [field]: e.target.value || null },
         })
       }}
-      className="h-auto w-full rounded-none border border-border bg-transparent px-2 py-1 font-mono text-xs text-foreground shadow-none outline-none focus-visible:border-primary/50 focus-visible:ring-0"
+      className="h-auto w-full rounded-none border border-border bg-transparent dark:bg-transparent px-2 py-1 font-mono text-xs md:text-xs text-foreground shadow-none outline-none focus-visible:border-primary/50 focus-visible:ring-0"
     />
   )
 }
@@ -289,7 +289,7 @@ function ColorSwatches({
             })
           }}
           className={cn(
-            'size-5 shrink-0 rounded-none border-0 bg-(--project-color) p-0 transition-all hover:bg-(--project-color) active:translate-y-0',
+            'size-5 shrink-0 rounded-none border-0 bg-(--project-color) bg-clip-border p-0 transition-all hover:bg-(--project-color) active:translate-y-0',
             color === preset.hex
               ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background'
               : 'hover:scale-110',

@@ -139,7 +139,7 @@ export function TaskFilterFreeTextInput({
         onKeyDown={handleKeyDown}
         onBlur={commit}
         placeholder={placeholder}
-        className="h-auto min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-sm outline-none placeholder:text-muted-foreground transition-none focus-visible:border-0 focus-visible:ring-0"
+        className="h-auto min-w-0 flex-1 border-0 bg-transparent dark:bg-transparent p-0 font-mono text-sm outline-none placeholder:text-muted-foreground transition-none focus-visible:border-0 focus-visible:ring-0"
         aria-label="Filter query"
       />
       <AnchoredPopup

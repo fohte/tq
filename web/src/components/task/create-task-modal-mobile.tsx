@@ -147,7 +147,7 @@ export function CreateTaskModalMobile({
                     setStartDate(e.target.value)
                   }}
                   autoFocus
-                  className="h-auto w-28 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:border-0 focus-visible:ring-0"
+                  className="h-auto w-28 border-0 bg-transparent dark:bg-transparent p-0 text-xs shadow-none focus-visible:border-0 focus-visible:ring-0"
                 />
               )}
             />
@@ -164,7 +164,7 @@ export function CreateTaskModalMobile({
                   }}
                   placeholder="1h30m"
                   autoFocus
-                  className="h-auto w-14 border-0 bg-transparent p-0 text-xs shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
+                  className="h-auto w-14 border-0 bg-transparent dark:bg-transparent p-0 text-xs shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
                 />
               )}
             />
@@ -180,7 +180,7 @@ export function CreateTaskModalMobile({
                     setDueDate(e.target.value)
                   }}
                   autoFocus
-                  className="h-auto w-28 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:border-0 focus-visible:ring-0"
+                  className="h-auto w-28 border-0 bg-transparent dark:bg-transparent p-0 text-xs shadow-none focus-visible:border-0 focus-visible:ring-0"
                 />
               )}
             />
@@ -199,7 +199,7 @@ export function CreateTaskModalMobile({
                   <SelectTrigger
                     autoFocus
                     size="sm"
-                    className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                    className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
                   >
                     <SelectValue placeholder="None" />
                   </SelectTrigger>
@@ -226,7 +226,7 @@ export function CreateTaskModalMobile({
                   <SelectTrigger
                     autoFocus
                     size="sm"
-                    className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                    className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
                   >
                     <SelectValue placeholder="Inbox" />
                   </SelectTrigger>

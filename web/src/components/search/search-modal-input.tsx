@@ -67,7 +67,7 @@ export function SearchModalInput({
         }}
         placeholder={`Search ${searchTarget}...`}
         autoFocus
-        className="h-auto w-auto min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 font-mono text-sm outline-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
+        className="h-auto w-auto min-w-0 flex-1 rounded-none border-0 bg-transparent dark:bg-transparent p-0 font-mono text-sm outline-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
         aria-label={`Search ${searchTarget}`}
       />
       {isFetching && (

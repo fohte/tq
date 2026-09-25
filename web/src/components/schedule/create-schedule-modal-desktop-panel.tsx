@@ -77,7 +77,7 @@ export function ScheduleModalDesktopPanel({
           }}
           placeholder="Schedule title"
           autoFocus
-          className="h-auto border-0 bg-transparent p-0 text-xl font-medium shadow-none focus-visible:ring-0 focus-visible:border-0"
+          className="h-auto border-0 bg-transparent dark:bg-transparent p-0 text-xl md:text-xl font-medium shadow-none focus-visible:ring-0 focus-visible:border-0"
         />
 
         {/* Time fields */}
@@ -90,7 +90,7 @@ export function ScheduleModalDesktopPanel({
                 setStartTime(e.target.value)
               }}
               aria-label="Start time"
-              className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
+              className="h-auto w-24 border-0 bg-transparent dark:bg-transparent p-0 text-xs md:text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
             />
           </InlineFieldGroup>
           <InlineFieldGroup label="End" icon={<Clock className="size-3.5" />}>
@@ -101,7 +101,7 @@ export function ScheduleModalDesktopPanel({
                 setEndTime(e.target.value)
               }}
               aria-label="End time"
-              className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
+              className="h-auto w-24 border-0 bg-transparent dark:bg-transparent p-0 text-xs md:text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
             />
           </InlineFieldGroup>
         </div>
@@ -127,7 +127,7 @@ export function ScheduleModalDesktopPanel({
             >
               <SelectTrigger
                 size="sm"
-                className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
               >
                 <SelectValue placeholder="None" />
               </SelectTrigger>
@@ -155,7 +155,7 @@ export function ScheduleModalDesktopPanel({
                   setDayOfMonth(e.target.value)
                 }}
                 placeholder="1-31"
-                className="h-auto w-16 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
+                className="h-auto w-16 border-0 bg-transparent dark:bg-transparent p-0 text-xs md:text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
               />
             </InlineFieldGroup>
           )}
@@ -173,7 +173,7 @@ export function ScheduleModalDesktopPanel({
             >
               <SelectTrigger
                 size="sm"
-                className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
               >
                 <SelectValue placeholder="—" />
               </SelectTrigger>
@@ -201,7 +201,7 @@ export function ScheduleModalDesktopPanel({
                     setColor(color === c ? '' : c)
                   }}
                   className={cn(
-                    'rounded-none border-2 bg-(--schedule-color) p-0 font-normal shadow-none transition-all hover:bg-(--schedule-color) active:translate-y-0',
+                    'rounded-none border-2 bg-(--schedule-color) bg-clip-border p-0 font-normal shadow-none transition-all hover:bg-(--schedule-color) active:translate-y-0',
                     color === c
                       ? 'border-foreground scale-110'
                       : 'border-transparent hover:scale-110',

@@ -161,7 +161,7 @@ function EditableProjectTitle({
           }
         }}
         autoFocus
-        className="h-auto flex-1 rounded-none border-0 bg-transparent p-0 font-mono text-2xl font-bold text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
+        className="h-auto flex-1 rounded-none border-0 bg-transparent dark:bg-transparent p-0 font-mono text-2xl md:text-2xl font-bold text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
       />
     )
   }

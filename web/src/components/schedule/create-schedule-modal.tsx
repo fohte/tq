@@ -85,7 +85,7 @@ export function WeekdayToggleRow({
             toggleDay(idx)
           }}
           className={cn(
-            'gap-0 rounded-none border bg-transparent p-0 font-normal shadow-none transition-colors hover:bg-transparent active:translate-y-0 text-xs',
+            'gap-0 rounded-none border bg-transparent p-0 font-sans font-normal shadow-none transition-colors hover:bg-transparent active:translate-y-0 text-xs',
             daysOfWeek.includes(idx)
               ? 'border-border-strong bg-surface-strong text-foreground'
               : 'border-border text-muted-foreground hover:border-border-strong',

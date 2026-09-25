@@ -80,7 +80,7 @@ export function ScheduleModalMobilePanel({
             }}
             placeholder="Schedule title"
             autoFocus
-            className="h-auto border-0 bg-transparent p-0 text-lg font-medium shadow-none focus-visible:ring-0 focus-visible:border-0"
+            className="h-auto border-0 bg-transparent dark:bg-transparent p-0 text-lg font-medium shadow-none focus-visible:ring-0 focus-visible:border-0"
           />
 
           <div className="h-px bg-border" />
@@ -100,7 +100,7 @@ export function ScheduleModalMobilePanel({
                   }}
                   autoFocus
                   aria-label="Start time"
-                  className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
+                  className="h-auto w-24 border-0 bg-transparent dark:bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
                 />
               )}
             />
@@ -117,7 +117,7 @@ export function ScheduleModalMobilePanel({
                   }}
                   autoFocus
                   aria-label="End time"
-                  className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
+                  className="h-auto w-24 border-0 bg-transparent dark:bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
                 />
               )}
             />
@@ -139,7 +139,7 @@ export function ScheduleModalMobilePanel({
                   <SelectTrigger
                     size="sm"
                     autoFocus
-                    className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                    className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
                   >
                     <SelectValue placeholder="None" />
                   </SelectTrigger>
@@ -167,7 +167,7 @@ export function ScheduleModalMobilePanel({
                   <SelectTrigger
                     size="sm"
                     autoFocus
-                    className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                    className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
                   >
                     <SelectValue placeholder="None" />
                   </SelectTrigger>
@@ -205,7 +205,7 @@ export function ScheduleModalMobilePanel({
                     setColor(color === c ? '' : c)
                   }}
                   className={cn(
-                    'rounded-none border-2 bg-(--schedule-color) p-0 font-normal shadow-none transition-all hover:bg-(--schedule-color) active:translate-y-0',
+                    'rounded-none border-2 bg-(--schedule-color) bg-clip-border p-0 font-normal shadow-none transition-all hover:bg-(--schedule-color) active:translate-y-0',
                     color === c
                       ? 'border-foreground scale-110'
                       : 'border-transparent hover:scale-110',

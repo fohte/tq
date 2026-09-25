@@ -12,9 +12,11 @@ const CLOSE_REASON_GLYPH = {
 export function StatusIcon({
   status,
   statusReason,
+  preserveSvgSize = false,
 }: {
   status: Task['status']
   statusReason: Task['statusReason']
+  preserveSvgSize?: boolean
 }) {
   if (status === 'completed') {
     const reason = statusReason ?? 'completed'
@@ -22,13 +24,13 @@ export function StatusIcon({
     return (
       <span
         className={cn(
-          'flex size-5 shrink-0 items-center justify-center rounded-full text-background',
+          'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-background',
           reason === 'completed'
             ? 'bg-status-completed'
             : 'bg-muted-foreground-faint',
         )}
       >
-        <Glyph className="size-3" />
+        <Glyph className={preserveSvgSize ? 'size-3' : 'h-3 w-3'} />
       </span>
     )
   }
@@ -36,7 +38,10 @@ export function StatusIcon({
   return (
     <svg
       viewBox="0 0 20 20"
-      className="size-5 shrink-0 text-muted-foreground"
+      className={cn(
+        preserveSvgSize ? 'size-5' : 'h-5 w-5',
+        'shrink-0 text-muted-foreground',
+      )}
       aria-hidden="true"
     >
       <circle

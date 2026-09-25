@@ -186,7 +186,7 @@ export function GithubSyncRuleFormModal({
                       setOrg(e.target.value)
                     }}
                     placeholder="octocat"
-                    className="h-auto w-full rounded-md border border-border bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50 focus-visible:border-primary/50 focus-visible:ring-0"
+                    className="h-auto w-full rounded-md border border-border bg-transparent dark:bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50 focus-visible:border-primary/50 focus-visible:ring-0"
                   />
                 </FieldRow>
               )}
@@ -199,7 +199,7 @@ export function GithubSyncRuleFormModal({
                       setRepo(e.target.value)
                     }}
                     placeholder="hello-world"
-                    className="h-auto w-full rounded-md border border-border bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50 focus-visible:border-primary/50 focus-visible:ring-0"
+                    className="h-auto w-full rounded-md border border-border bg-transparent dark:bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50 focus-visible:border-primary/50 focus-visible:ring-0"
                   />
                 </FieldRow>
               )}
@@ -212,7 +212,7 @@ export function GithubSyncRuleFormModal({
               value={targetProjectId}
               onValueChange={selectValueHandler(setTargetProjectId, projectIds)}
             >
-              <SelectTrigger className="w-full bg-transparent text-sm text-foreground outline-none">
+              <SelectTrigger className="h-auto data-[size=default]:h-auto w-full border-0 bg-transparent dark:bg-transparent p-0 text-sm text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0">
                 <SelectValue placeholder="選択してください" />
               </SelectTrigger>
               <SelectContent>
@@ -230,6 +230,7 @@ export function GithubSyncRuleFormModal({
               <Checkbox
                 checked={includeExisting}
                 onCheckedChange={setIncludeExisting}
+                className="rounded border-border bg-transparent dark:bg-transparent"
               />
               現在アサイン済みの open issue も取り込む
             </label>
