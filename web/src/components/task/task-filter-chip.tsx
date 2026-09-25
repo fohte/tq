@@ -44,7 +44,7 @@ export function TaskFilterChip({
               aria-hidden="true"
             />
             <span className="shrink-0 text-muted-foreground">{attribute}:</span>
-            <span className="min-w-0 rounded-task-filter-value bg-task-filter-value-background px-1 text-task-filter-value-foreground">
+            <span className="min-w-0 rounded-task-filter-value bg-tint-blue px-1 text-tint-blue-foreground">
               {value}
             </span>
           </>

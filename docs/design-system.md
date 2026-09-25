@@ -116,13 +116,13 @@ introduce a new gray value; use the nearest existing tier.
 
 ### Task-filter value accent
 
-| Token                            | Value                   | Tailwind utility                    | Usage                                                  |
-| -------------------------------- | ----------------------- | ----------------------------------- | ------------------------------------------------------ |
-| `--task-filter-value-foreground` | `#79c0ff`               | `text-task-filter-value-foreground` | Value text in task-filter `key:value` conditions       |
-| `--task-filter-value-background` | `rgb(56 139 253 / 18%)` | `bg-task-filter-value-background`   | Value background in task-filter `key:value` conditions |
+| Token                    | Value                                      | Tailwind utility            | Usage                                                  |
+| ------------------------ | ------------------------------------------ | --------------------------- | ------------------------------------------------------ |
+| `--tint-blue`            | `color-mix(in srgb, #82aaff 12%, #0a0a0a)` | `bg-tint-blue`              | Value background in task-filter `key:value` conditions |
+| `--tint-blue-foreground` | `#82aaff`                                  | `text-tint-blue-foreground` | Value text in task-filter `key:value` conditions       |
 
-This blue is limited to task-filter qualifier values. Do not use it as a
-general-purpose accent or substitute it for GitHub status colors.
+The tint palette is shared through `@fohte/ui`. GitHub status display keeps
+its dedicated brand colors below.
 
 ### Sidebar
 
@@ -505,7 +505,7 @@ UI role:
 | Exception                          | Where                                                                                                                                                                                                               |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--keycap-radius` (4px)            | Shared by `Kbd` (`web/src/components/ui/kbd.tsx`) and `KeybindHint`'s `boxed` variant (`web/src/components/ui/keybind-hint.tsx`) — both call `rounded-(--keycap-radius)`, a token defined in `@fohte/ui/tokens.css` |
-| `--radius-task-filter-value` (3px) | `TaskFilterChip` condition values use `rounded-task-filter-value` for their blue background; token defined in `web/src/index.css`                                                                                   |
+| `--radius-task-filter-value` (3px) | `TaskFilterChip` condition values use `rounded-task-filter-value` for their tinted background; token defined in `web/src/index.css`                                                                                 |
 | Inline `<code>` elements           | `border-radius: 4px` on `.ProseMirror code` in `web/src/components/ui/markdown-editor.css`                                                                                                                          |
 
 **Do not introduce new radius exceptions without updating this doc.**
