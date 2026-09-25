@@ -37,16 +37,6 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 })
 
-// @storycap-testrun/browser ships a bundled .d.ts with its own copy of
-// vitest's `TestContext`, so it's structurally close but nominally unrelated
-// to ours — cast through `unknown` to sidestep the resulting type error.
-function asScreenshotContext(
-  context: unknown,
-): Parameters<typeof screenshot>[1] {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- see comment above
-  return context as Parameters<typeof screenshot>[1]
-}
-
 // Playwright's own caret-hiding mutation runs with no wait for it to paint,
 // so this settles pending repaints before that capture step runs.
 async function waitForPaint(): Promise<void> {
@@ -61,5 +51,5 @@ async function waitForPaint(): Promise<void> {
 
 afterEach(async (context) => {
   await waitForPaint()
-  await screenshot(page, asScreenshotContext(context))
+  await screenshot(page, context)
 })
