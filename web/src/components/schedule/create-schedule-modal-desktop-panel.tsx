@@ -199,12 +199,12 @@ export function ScheduleModalDesktopPanel({
                     setColor(color === c ? '' : c)
                   }}
                   className={cn(
-                    'size-6 border-2 transition-all',
+                    'size-6 border-2 bg-(--schedule-color) transition-all',
                     color === c
                       ? 'border-foreground scale-110'
                       : 'border-transparent hover:scale-110',
                   )}
-                  style={{ backgroundColor: c }}
+                  style={{ '--schedule-color': c }}
                 />
               ))}
             </div>

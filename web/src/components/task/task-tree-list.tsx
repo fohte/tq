@@ -269,10 +269,12 @@ export function TaskTreeList({
         >
           <div className="py-1" data-testid="task-tree">
             <div
-              style={{
-                position: 'relative',
-                height: rowVirtualizer.getTotalSize(),
-              }}
+              className="relative h-(--task-tree-height)"
+              style={
+                {
+                  '--task-tree-height': `${String(rowVirtualizer.getTotalSize())}px`,
+                } as React.CSSProperties & { '--task-tree-height': string }
+              }
             >
               {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                 const row = renderRows[virtualRow.index]
@@ -283,11 +285,8 @@ export function TaskTreeList({
                     data-index={virtualRow.index}
                     data-testid="task-tree-row"
                     ref={rowVirtualizer.measureElement}
+                    className="absolute top-0 left-0 w-full"
                     style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
                       transform: `translateY(${String(virtualRow.start - rowVirtualizer.options.scrollMargin)}px)`,
                     }}
                   >
@@ -316,7 +315,19 @@ export function TaskTreeList({
 
           <DragOverlay>
             {activeNode && (
-              <div style={{ width: activeWidth ?? undefined }}>
+              <div
+                className="w-(--active-task-width)"
+                style={
+                  {
+                    '--active-task-width':
+                      activeWidth == null
+                        ? undefined
+                        : `${String(activeWidth)}px`,
+                  } as React.CSSProperties & {
+                    '--active-task-width': string | undefined
+                  }
+                }
+              >
                 <TreeDragOverlayContent node={activeNode} target={dropTarget} />
               </div>
             )}

@@ -56,7 +56,10 @@ function EventBlockPreview({
   }
 
   return (
-    <div style={{ width: widthPx }}>
+    <div
+      className="w-(--event-block-width)"
+      style={{ '--event-block-width': `${String(widthPx)}px` }}
+    >
       <div className="h-20">
         {/* eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- story mock data doesn't match full EventContentArg */}
         <EventBlock {...(arg as unknown as Parameters<typeof EventBlock>[0])} />

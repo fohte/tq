@@ -19,9 +19,13 @@ export function FilterOptionButton({
     <button
       type="button"
       onClick={onClick}
-      style={{ paddingLeft: `${String(4 + depth * 16)}px` }}
+      style={
+        {
+          '--filter-option-indent': `${String(4 + depth * 16)}px`,
+        } as React.CSSProperties & { '--filter-option-indent': string }
+      }
       className={cn(
-        'flex min-h-9 w-full items-center justify-between gap-2 border-t border-border pr-1 text-left text-sm first:border-t-0',
+        'flex min-h-9 w-full items-center justify-between gap-2 border-t border-border pr-1 pl-(--filter-option-indent) text-left text-sm first:border-t-0',
         active ? 'text-foreground' : 'text-muted-foreground',
       )}
     >

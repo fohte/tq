@@ -11,7 +11,6 @@ import {
   RecurrenceLabel,
   RemindBadge,
   ROW_INDENT_CLASS_NAME,
-  rowIndentStyle,
   rowTitleClassName,
   rowWrapperClassName,
   TagTokens,
@@ -141,7 +140,11 @@ export function TaskRowAppearance({
             ROW_INDENT_CLASS_NAME,
             selected && 'ring-1 ring-inset ring-border-strong',
           )}
-          style={rowIndentStyle(depth)}
+          style={
+            {
+              '--row-indent': `calc(var(--spacing) * ${String(3 + depth * 4)})`,
+            } as React.CSSProperties & { '--row-indent': string }
+          }
         >
           <div className="flex items-start gap-2" onClick={onClick}>
             {leading}

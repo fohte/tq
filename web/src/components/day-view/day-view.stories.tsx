@@ -252,7 +252,7 @@ const meta = {
   decorators: [
     (Story) => (
       <Providers>
-        <div style={{ height: '100vh' }}>
+        <div className="h-screen">
           <Story />
         </div>
       </Providers>

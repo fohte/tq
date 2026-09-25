@@ -1,7 +1,6 @@
 import { StatusIcon } from '#components/task/status-icon'
 import {
   ROW_INDENT_CLASS_NAME,
-  rowIndentStyle,
   TaskNumberLabel,
 } from '#components/task/task-row-shared'
 import type { TreeNode } from '#hooks/use-tasks'
@@ -34,7 +33,11 @@ export function TreeDragOverlayContent({
     <div className="border border-dashed border-border-strong bg-card">
       <div
         className={`flex items-center gap-2 px-3 py-2 ${ROW_INDENT_CLASS_NAME}`}
-        style={rowIndentStyle(targetDepth)}
+        style={
+          {
+            '--row-indent': `calc(var(--spacing) * ${String(3 + targetDepth * 4)})`,
+          } as React.CSSProperties & { '--row-indent': string }
+        }
       >
         <StatusIcon status={node.status} statusReason={node.statusReason} />
         <TaskNumberLabel number={node.number} />

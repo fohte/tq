@@ -1,20 +1,5 @@
-import type { VisualViewportInsets } from '#hooks/use-visual-viewport-insets'
 import { useVisualViewportInsets } from '#hooks/use-visual-viewport-insets'
 import { cn } from '#lib/utils'
-
-interface VisualViewportStyle extends React.CSSProperties {
-  '--visual-viewport-height': string
-}
-
-function visualViewportInsetStyle(
-  insets: VisualViewportInsets,
-): VisualViewportStyle {
-  return {
-    top: insets.top,
-    height: insets.height,
-    '--visual-viewport-height': `${String(insets.height)}px`,
-  }
-}
 
 function BottomSheetOverlay({
   className,
@@ -30,11 +15,19 @@ function BottomSheetOverlay({
         'pointer-events-none fixed inset-x-0 z-50 flex items-end',
         insets === null && 'inset-y-0',
         className,
+        insets !== null &&
+          'top-(--visual-viewport-top) h-(--visual-viewport-height)',
       )}
       style={
         insets === null
           ? style
-          : { ...style, ...visualViewportInsetStyle(insets) }
+          : ({
+              '--visual-viewport-top': `${String(insets.top)}px`,
+              '--visual-viewport-height': `${String(insets.height)}px`,
+            } as React.CSSProperties & {
+              '--visual-viewport-top': string
+              '--visual-viewport-height': string
+            })
       }
       {...props}
     />

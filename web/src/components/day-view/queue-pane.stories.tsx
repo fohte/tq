@@ -50,10 +50,7 @@ const meta = {
   decorators: [
     (Story) => (
       <Providers>
-        <div
-          className="w-full max-w-96 border border-border"
-          style={{ height: 600 }}
-        >
+        <div className="h-150 w-full max-w-96 border border-border">
           <Story />
         </div>
       </Providers>

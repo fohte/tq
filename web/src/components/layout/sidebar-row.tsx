@@ -7,19 +7,7 @@ import { ActionsMenu } from '#components/ui/actions-menu'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import { cn } from '#lib/utils'
 
-// Row indent cannot be a static Tailwind class because tag depth is
-// unbounded; set via the CSS custom property instead.
 const SIDEBAR_ROW_INDENT_CLASS_NAME = 'pl-(--sidebar-row-indent)'
-
-interface SidebarRowIndentStyle extends React.CSSProperties {
-  '--sidebar-row-indent': string
-}
-
-function sidebarRowIndentStyle(depth: number): SidebarRowIndentStyle {
-  return {
-    '--sidebar-row-indent': `calc(var(--spacing) * ${String(3.5 + depth * 4)})`,
-  }
-}
 
 export function SidebarRowLink({
   search,
@@ -43,7 +31,11 @@ export function SidebarRowLink({
           : 'text-muted-foreground-strong hover:bg-card hover:text-foreground',
         SIDEBAR_ROW_INDENT_CLASS_NAME,
       )}
-      style={sidebarRowIndentStyle(depth)}
+      style={
+        {
+          '--sidebar-row-indent': `calc(var(--spacing) * ${String(3.5 + depth * 4)})`,
+        } as React.CSSProperties & { '--sidebar-row-indent': string }
+      }
     >
       {children}
     </Link>

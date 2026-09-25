@@ -1,6 +1,7 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { useCallback, useState } from 'react'
 
 import { DeleteTaskDialog } from '#components/task/delete-task-dialog'
@@ -67,8 +68,8 @@ export function TreeTaskGridRow({
   )
   const dragStyle = {
     transform: CSS.Transform.toString(transform),
-    opacity: isDragging ? 0.5 : 1,
-  }
+    '--drag-opacity': isDragging ? '0.5' : '1',
+  } as CSSProperties
 
   const sessions = sessionsByTaskId.get(node.id) ?? []
   const expanded = isExpanded(node.id)
@@ -111,6 +112,7 @@ export function TreeTaskGridRow({
       <div
         ref={setDragDropRef}
         style={dragStyle}
+        className="opacity-(--drag-opacity)"
         {...attributes}
         {...listeners}
       >

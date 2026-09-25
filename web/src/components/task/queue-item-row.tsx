@@ -92,7 +92,7 @@ export function QueueItemRowAppearance({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-1 border-b border-border"
+      className="flex items-center gap-1 border-b border-border opacity-(--drag-opacity)"
     >
       <DragHandle
         attributes={attributes}
@@ -152,8 +152,8 @@ export function QueueItemRow({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
+    '--drag-opacity': isDragging ? '0.5' : '1',
+  } as CSSProperties
 
   const commitEstimate = () => {
     if (cancelingRef.current) {

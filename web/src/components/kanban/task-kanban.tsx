@@ -69,6 +69,10 @@ interface CardDragData extends Record<string, unknown> {
   sourceColumnId: string
 }
 
+interface KanbanOverlayStyle extends React.CSSProperties {
+  '--kanban-overlay-width': string
+}
+
 function isCardDragData(
   data: Record<string, unknown> | undefined,
 ): data is CardDragData {
@@ -104,11 +108,13 @@ function TaskKanbanCard({
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.5 : 1,
       }}
       {...attributes}
       {...listeners}
-      className="rounded-md border border-border bg-card"
+      className={cn(
+        'rounded-md border border-border bg-card',
+        isDragging && 'opacity-50',
+      )}
     >
       <TaskRowAppearance task={task} />
     </div>
@@ -134,11 +140,13 @@ function TaskKanbanCandidateCard({
       ref={setNodeRef}
       style={{
         transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0.5 : 1,
       }}
       {...attributes}
       {...listeners}
-      className="flex items-center gap-1 rounded-md border border-border bg-card"
+      className={cn(
+        'flex items-center gap-1 rounded-md border border-border bg-card',
+        isDragging && 'opacity-50',
+      )}
     >
       <div className="min-w-0 flex-1">
         <TaskRowAppearance
@@ -382,8 +390,14 @@ export function TaskKanban({
       <DragOverlay>
         {activeTask != null && (
           <div
-            style={{ width: activeWidth ?? undefined }}
-            className="rounded-md border border-border bg-card shadow-md"
+            style={
+              activeWidth == null
+                ? undefined
+                : ({
+                    '--kanban-overlay-width': `${String(activeWidth)}px`,
+                  } satisfies KanbanOverlayStyle)
+            }
+            className="w-(--kanban-overlay-width) rounded-md border border-border bg-card shadow-md"
           >
             <TaskRowAppearance task={activeTask} />
           </div>

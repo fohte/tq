@@ -257,12 +257,12 @@ function ColorSwatches({
             })
           }}
           className={cn(
-            'size-5 shrink-0 transition-all',
+            'size-5 shrink-0 bg-(--project-color) transition-all',
             color === preset.hex
               ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background'
               : 'hover:scale-110',
           )}
-          style={{ backgroundColor: preset.hex }}
+          style={{ '--project-color': preset.hex }}
           title={preset.name}
         />
       ))}

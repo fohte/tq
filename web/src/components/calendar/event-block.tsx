@@ -15,6 +15,10 @@ import { cn } from '#lib/utils'
 
 type EventKind = NonNullable<CalendarEventProps['type']>
 
+interface EventBlockStyle extends React.CSSProperties {
+  '--event-accent'?: string
+}
+
 const RULE_CLASS: Record<EventKind, string> = {
   schedule: 'border-l-primary',
   manual: 'border-l-foreground',
@@ -120,16 +124,12 @@ export function EventBlock(arg: EventContentArg) {
         RULE_CLASS[type],
         BG_CLASS[type],
         type === 'auto' && 'border-dashed',
+        type === 'auto' && 'border-l-solid!',
+        accentColor != null && 'border-l-(--event-accent)',
         (isCompleted || isPendingResponse) && 'opacity-50',
       )}
       style={
-        // The left rule stays solid regardless of type; only the rest of the
-        // border reads dashed for `auto` events.
-        type === 'auto'
-          ? { borderLeftStyle: 'solid' }
-          : accentColor != null
-            ? { borderLeftColor: accentColor }
-            : undefined
+        accentColor == null ? undefined : { '--event-accent': accentColor }
       }
       title={
         <span
@@ -187,7 +187,7 @@ function EventBlockShell({
 }: {
   isShort: boolean
   className?: string
-  style?: React.CSSProperties | undefined
+  style?: EventBlockStyle | undefined
   title: React.ReactNode
   badge?: string | undefined
   meta: React.ReactNode
