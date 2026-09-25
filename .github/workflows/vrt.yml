@@ -70,6 +70,12 @@ jobs:
       - uses: fohte/storybook-vrt-workflows/vrt-report@691148d6e8e53b86c8f93b5b54cadbd8308b06d3 # v0.1.6
         with:
           package-dir: web
+          report-command: >-
+            pnpm dlx @fohte/vrt-report@0.1.0
+            --input .reg/out.json
+            --assets-dir .reg
+            --output .reg/custom/vrt-report.html
+            --baseline-dir ../../../baseline/actual
           r2-bucket: tq-vrt
           github-token: ${{ secrets.GITHUB_TOKEN }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
