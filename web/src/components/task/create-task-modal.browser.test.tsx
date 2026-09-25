@@ -119,6 +119,20 @@ async function clickDiscardConfirmation(
   await user.click(within(confirmation).getByRole('button', { name: label }))
 }
 
+async function focusDescriptionEditor(user: UserEvent) {
+  const editor = await waitFor(
+    () =>
+      atIndex(
+        Array.from(document.body.querySelectorAll('.milkdown .ProseMirror')),
+        0,
+      ),
+    { timeout: 10_000 },
+  )
+  await user.click(editor)
+  await user.click(editor)
+  return editor
+}
+
 function closeState(
   calls: readonly unknown[][],
   values: Record<string, unknown> = {},
@@ -196,13 +210,7 @@ describe('CreateTaskModal', () => {
       defaultDescription: '',
     })
 
-    const editor = await waitFor(() =>
-      atIndex(
-        Array.from(document.body.querySelectorAll('[contenteditable="true"]')),
-        0,
-      ),
-    )
-    await user.click(editor)
+    const editor = await focusDescriptionEditor(user)
     await user.keyboard('A draft description')
     await user.keyboard('{Escape}')
 
@@ -550,11 +558,7 @@ describe('CreateTaskModal', () => {
       )
       await user.type(titleInput, 'Cmd enter from description')
 
-      const editor = atIndex(
-        Array.from(document.body.querySelectorAll('[contenteditable="true"]')),
-        0,
-      )
-      await user.click(editor)
+      await focusDescriptionEditor(user)
       await user.keyboard('some description text')
       await user.keyboard('{Meta>}{Enter}{/Meta}')
 
