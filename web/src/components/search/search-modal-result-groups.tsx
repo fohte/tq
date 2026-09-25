@@ -1,6 +1,9 @@
 import { useMemo } from 'react'
 
-import { createCommandItems } from '#components/search/search-modal-command-items'
+import {
+  createCommandItems,
+  createTaskCommandItems,
+} from '#components/search/search-modal-command-items'
 import type { SearchMode } from '#components/search/search-modal-mode'
 import { createRecentSearchItems } from '#components/search/search-modal-recent-item'
 import {
@@ -19,6 +22,7 @@ import type {
   SearchResult,
   Suggestion,
 } from '#hooks/use-search'
+import type { TaskDetail } from '#hooks/use-tasks'
 import type { NavKeybinding } from '#lib/keybindings'
 import type { RecentSearchItem } from '#lib/recent-search-items'
 
@@ -28,6 +32,9 @@ interface SearchModalResultGroupsOptions {
   searchMode: SearchMode | undefined
   searchInputValue: string
   context: SearchResult['context'] | undefined
+  currentTask: TaskDetail | undefined
+  parentTask: TaskDetail | undefined
+  currentProject: Project | undefined
   onNewTask: (() => void) | undefined
   openRoute: (to: NavKeybinding['to']) => void
   suggestions: Suggestion[] | undefined
@@ -59,6 +66,9 @@ export function useSearchModalResultGroups({
   searchMode,
   searchInputValue,
   context,
+  currentTask,
+  parentTask,
+  currentProject,
   onNewTask,
   openRoute,
   suggestions,
@@ -151,6 +161,54 @@ export function useSearchModalResultGroups({
       canSearchTasks && hasSearchQuery && taskByNumber != null
         ? [toTaskListItem(taskByNumber, 'number:')]
         : []
+    const taskCommandItems: ListItem[] =
+      searchMode === 'commands' && currentTask != null
+        ? createTaskCommandItems(
+            searchInputValue,
+            parentTask,
+            currentProject,
+            openTask,
+            openProject,
+          )
+        : []
+    const taskScopeItems: ListItem[] =
+      searchMode == null && searchInputValue === '' && currentTask != null
+        ? [
+            createOptionItem(
+              `scope:children:${currentTask.id}`,
+              () => {
+                applyScope(`parent:${currentTask.id}`)
+              },
+              <span className="font-mono text-sm text-foreground">
+                children of #{String(currentTask.number)} {currentTask.title}
+              </span>,
+              {
+                selectOnTab: () => {
+                  applyScope(`parent:${currentTask.id}`)
+                },
+              },
+            ),
+            ...(currentTask.parentId == null || parentTask == null
+              ? []
+              : [
+                  createOptionItem(
+                    `scope:siblings:${parentTask.id}`,
+                    () => {
+                      applyScope(`parent:${parentTask.id}`)
+                    },
+                    <span className="font-mono text-sm text-foreground">
+                      siblings (children of #{String(parentTask.number)}{' '}
+                      {parentTask.title})
+                    </span>,
+                    {
+                      selectOnTab: () => {
+                        applyScope(`parent:${parentTask.id}`)
+                      },
+                    },
+                  ),
+                ]),
+          ]
+        : []
     const pageItems =
       canSearchPages && hasSearchQuery
         ? createPageItems(pages, openPage, onOpenChangeRef)
@@ -168,9 +226,24 @@ export function useSearchModalResultGroups({
 
     return [
       {
+        id: 'current-task-commands',
+        title:
+          currentTask == null
+            ? 'Task navigation'
+            : `#${String(currentTask.number)} ${currentTask.title}`,
+        items: taskCommandItems,
+        isVisible: (_query, itemCount) => itemCount > 0,
+      },
+      {
         id: 'commands',
         title: 'Commands',
         items: commandItems,
+        isVisible: (_query, itemCount) => itemCount > 0,
+      },
+      {
+        id: 'task-navigation',
+        title: 'Task navigation',
+        items: taskScopeItems,
         isVisible: (_query, itemCount) => itemCount > 0,
       },
       {
@@ -222,6 +295,9 @@ export function useSearchModalResultGroups({
     searchMode,
     searchInputValue,
     context,
+    currentTask,
+    parentTask,
+    currentProject,
     onNewTask,
     openRoute,
     suggestions,

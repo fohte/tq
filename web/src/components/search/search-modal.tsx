@@ -20,6 +20,7 @@ import {
 import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPanel } from '#components/search/search-syntax-help-panel'
 import { useCurrentContext } from '#hooks/use-current-context'
+import { useCurrentRoute } from '#hooks/use-current-route'
 import { useDebounce } from '#hooks/use-debounce'
 import { useProjects } from '#hooks/use-projects'
 import { useSavedViews } from '#hooks/use-saved-views'
@@ -31,6 +32,7 @@ import {
   useSearchTasks,
 } from '#hooks/use-search'
 import { useSearchScopeLabels } from '#hooks/use-search-scope-labels'
+import { useTask } from '#hooks/use-tasks'
 import {
   getRecentSearchItems,
   type RecentSearchItem,
@@ -87,6 +89,24 @@ export function SearchModal({
   const { openTask, openProject, openView, openPage, openRoute } =
     useSearchModalNavigation(onOpenChangeRef)
   const currentContext = useCurrentContext()
+  const currentRoute = useCurrentRoute()
+  const currentTaskId =
+    currentRoute.kind === 'task-detail' ? currentRoute.taskId : ''
+  const { data: currentTask } = useTask(currentTaskId, {
+    enabled: open && currentRoute.kind === 'task-detail',
+  })
+  const parentTaskId = currentTask?.parentId ?? ''
+  const { data: parentTaskDetail } = useTask(parentTaskId, {
+    enabled: open && parentTaskId !== '',
+  })
+  const parentTask =
+    currentTask?.parentId == null ? undefined : parentTaskDetail
+  const { data: taskProjects } = useProjects(undefined, {
+    enabled: open && currentTask?.projectId != null,
+  })
+  const currentProject = taskProjects?.find(
+    (project) => project.id === currentTask?.projectId,
+  )
   const configuredContext =
     contextOverride === undefined
       ? currentContext
@@ -181,6 +201,9 @@ export function SearchModal({
     searchMode,
     searchInputValue,
     context,
+    currentTask,
+    parentTask,
+    currentProject,
     onNewTask,
     openRoute,
     suggestions,

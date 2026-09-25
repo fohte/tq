@@ -30,12 +30,6 @@ const searchTask = makeTask({
   title: 'Keyboard shortcuts',
   context: 'work',
 })
-const searchTaskDetail = makeTaskDetail({
-  id: searchTask.id,
-  number: searchTask.number,
-  title: searchTask.title,
-  context: 'work',
-})
 const scrollableTasks = Array.from({ length: 16 }, (_, index) => {
   const resultNumber = index + 1
   const resultLabel = String(resultNumber)
@@ -51,6 +45,21 @@ const searchProject = makeProject({
   id: '00000000-0000-0000-0000-000000000142',
   title: 'Keyboard navigation',
   context: 'work',
+})
+const searchTaskParent = makeTaskDetail({
+  id: '00000000-0000-0000-0000-000000000044',
+  number: 44,
+  title: 'Search improvements',
+  context: 'work',
+})
+const searchTaskDetail = makeTaskDetail({
+  id: searchTask.id,
+  number: searchTask.number,
+  title: searchTask.title,
+  context: 'work',
+  parentId: searchTaskParent.id,
+  parentNumber: searchTaskParent.number,
+  projectId: searchProject.id,
 })
 const projectScopeQuery = `project:${searchProject.id} `
 const projectScopedTask = makeTask({
@@ -116,7 +125,13 @@ const recentItems: RecentSearchItem[] = [
   }),
 ]
 
-function Providers({ children }: { children: ReactNode }) {
+function Providers({
+  children,
+  initialPath,
+}: {
+  children: ReactNode
+  initialPath?: string
+}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -129,6 +144,7 @@ function Providers({ children }: { children: ReactNode }) {
           '/tasks/$taskId/pages/$pageId',
           '/projects/$projectId',
         ]}
+        {...(initialPath == null ? {} : { initialPath })}
       />
     </QueryClientProvider>
   )
@@ -139,15 +155,19 @@ function SearchModalStory({
   defaultQuery,
   defaultHelpOpen,
   defaultRecentItems,
+  currentTaskRoute,
 }: {
   defaultContext?: 'work' | 'personal' | null
   defaultQuery?: string
   defaultHelpOpen?: boolean
   defaultRecentItems?: RecentSearchItem[]
+  currentTaskRoute?: boolean
 } = {}) {
   const [open, setOpen] = useState(true)
+  const initialPath =
+    currentTaskRoute === true ? `/tasks/${searchTask.id}` : undefined
   return (
-    <Providers>
+    <Providers {...(initialPath == null ? {} : { initialPath })}>
       <div className="flex h-screen items-center justify-center bg-background">
         <button
           type="button"
@@ -200,6 +220,9 @@ const meta = {
         ),
         http.get(`/api/tasks/${searchTask.id}`, () =>
           HttpResponse.json(searchTaskDetail),
+        ),
+        http.get(`/api/tasks/${searchTaskParent.id}`, () =>
+          HttpResponse.json(searchTaskParent),
         ),
         http.get(`/api/tasks/${numberedTaskNumber}`, () =>
           HttpResponse.json(numberedTask),
@@ -263,6 +286,22 @@ export const PageMode: Story = {
 
 export const CommandMode: Story = {
   args: { defaultContext: 'work', defaultQuery: '>' },
+}
+
+export const CurrentTaskCommands: Story = {
+  args: {
+    defaultContext: 'work',
+    defaultQuery: '>',
+    currentTaskRoute: true,
+  },
+}
+
+export const CurrentTaskNavigationScopes: Story = {
+  args: {
+    defaultContext: 'work',
+    defaultQuery: projectScopeQuery,
+    currentTaskRoute: true,
+  },
 }
 
 export const RecentlyViewed: Story = {

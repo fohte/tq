@@ -11,10 +11,13 @@ import {
   makePageSearchResult,
   makeSuggestion,
 } from '#components/search/search-test-fixtures'
+import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
+import type { CurrentRoute } from '#hooks/use-current-route'
 import type { Project } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
 import type { PageSearchResult } from '#hooks/use-search'
+import type { TaskDetail } from '#hooks/use-tasks'
 
 interface MockTask {
   id: string
@@ -87,6 +90,24 @@ const personalTask = makeTask({
   estimatedMinutes: 60,
 })
 
+const parentTaskDetail = makeTaskDetail({
+  id: '00000000-0000-0000-0000-000000000030',
+  number: 30,
+  title: 'Prepare product launch',
+})
+const currentTaskDetail = makeTaskDetail({
+  id: '00000000-0000-0000-0000-000000000031',
+  number: 31,
+  title: 'Review launch checklist',
+  parentId: parentTaskDetail.id,
+  parentNumber: parentTaskDetail.number,
+  projectId: '00000000-0000-0000-0000-000000000032',
+})
+const currentTaskProject = makeProject({
+  id: currentTaskDetail.projectId ?? '',
+  title: 'Product launch',
+})
+
 const mockSuggestions = [
   makeSuggestion(),
   makeSuggestion({ value: 'is:completed', display: 'Completed' }),
@@ -101,6 +122,8 @@ let mockSavedViewData: SavedView[] = []
 let mockScopeLabels = new Map<string, string>()
 let mockProjectCalls: Array<{ filter: unknown; options: unknown }> = []
 let mockSavedViewCalls: Array<{ filter: unknown; options: unknown }> = []
+let mockCurrentRoute: CurrentRoute = { kind: 'other' }
+let mockTaskDetails: Record<string, TaskDetail> = {}
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-search')>()
@@ -121,6 +144,18 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
     useSearchSuggestions: () => ({
       data: mockSuggestionData.length > 0 ? mockSuggestionData : undefined,
     }),
+  }
+})
+
+vi.mock('#hooks/use-current-route', () => ({
+  useCurrentRoute: () => mockCurrentRoute,
+}))
+
+vi.mock('#hooks/use-tasks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-tasks')>()
+  return {
+    ...actual,
+    useTask: (id: string) => ({ data: mockTaskDetails[id] }),
   }
 })
 
@@ -231,6 +266,17 @@ function renderSearchModal(
   }
 }
 
+function setCurrentTaskRoute(
+  task: TaskDetail = currentTaskDetail,
+  parent: TaskDetail = parentTaskDetail,
+) {
+  mockCurrentRoute = { kind: 'task-detail', taskId: task.id }
+  mockTaskDetails = {
+    [task.id]: task,
+    ...(task.parentId === parent.id ? { [parent.id]: parent } : {}),
+  }
+}
+
 describe('SearchModal', () => {
   beforeEach(() => {
     mockSearchData = []
@@ -242,6 +288,8 @@ describe('SearchModal', () => {
     mockScopeLabels = new Map()
     mockProjectCalls = []
     mockSavedViewCalls = []
+    mockCurrentRoute = { kind: 'other' }
+    mockTaskDetails = {}
     mockNavigate.mockClear()
   })
 
@@ -743,6 +791,186 @@ describe('SearchModal', () => {
 
     await user.keyboard('{Tab}')
     expect(input).toHaveValue('is:todo ')
+  })
+
+  it('shows current task navigation commands before global commands', () => {
+    setCurrentTaskRoute()
+    mockProjectData = [currentTaskProject]
+
+    renderSearchModal({ defaultQuery: '>' })
+
+    const getOutput = () => ({
+      taskHeading: screen.getByText('#31 Review launch checklist').textContent,
+      globalHeading: screen.getByText('Commands').textContent,
+      options: screen.getAllByRole('option').map((option) =>
+        Array.from(option.children)
+          .map((child) => child.textContent)
+          .join(' ')
+          .trim(),
+      ),
+    })
+    expect(getOutput()).toEqual({
+      taskHeading: '#31 Review launch checklist',
+      globalHeading: 'Commands',
+      options: [
+        'Go to parent: #30 Prepare product launch',
+        'Go to project: Product launch',
+        'go to today g d',
+        'go to calendar g c',
+        'go to inbox g i',
+        'go to tasks g t',
+        'go to projects g p',
+        'go to settings g s',
+      ],
+    })
+  })
+
+  it('navigates to the parent task with Enter', async () => {
+    setCurrentTaskRoute()
+    mockProjectData = [currentTaskProject]
+    const onOpenChange = vi.fn()
+
+    const user = userEvent.setup()
+    renderSearchModal({ defaultQuery: '>', onOpenChange })
+    await user.keyboard('{Enter}')
+
+    const getOutput = () => ({
+      onOpenChange: onOpenChange.mock.calls,
+      navigate: mockNavigate.mock.calls,
+    })
+    expect(getOutput()).toEqual({
+      onOpenChange: [[false]],
+      navigate: [
+        [
+          {
+            to: '/tasks/$taskId',
+            params: { taskId: parentTaskDetail.id },
+          },
+        ],
+      ],
+    })
+  })
+
+  it('navigates to the project with Enter when its command is selected', async () => {
+    setCurrentTaskRoute()
+    mockProjectData = [currentTaskProject]
+    const onOpenChange = vi.fn()
+
+    const user = userEvent.setup()
+    renderSearchModal({ defaultQuery: '>', onOpenChange })
+    await user.keyboard('{ArrowDown}{Enter}')
+
+    const getOutput = () => ({
+      onOpenChange: onOpenChange.mock.calls,
+      navigate: mockNavigate.mock.calls,
+    })
+    expect(getOutput()).toEqual({
+      onOpenChange: [[false]],
+      navigate: [
+        [
+          {
+            to: '/projects/$projectId',
+            params: { projectId: currentTaskProject.id },
+          },
+        ],
+      ],
+    })
+  })
+
+  it('applies the current task scope with Tab while preserving the project scope', async () => {
+    setCurrentTaskRoute()
+    mockProjectData = [currentTaskProject]
+
+    const user = userEvent.setup()
+    renderSearchModal({
+      defaultQuery: `project:${currentTaskProject.id} `,
+    })
+    await user.keyboard('{Tab}')
+
+    const getOutput = () => ({
+      scopes: screen
+        .queryAllByTestId('search-scope-token')
+        .map((element) => element.textContent),
+      options: screen
+        .getAllByRole('option')
+        .map((option) => option.innerText.trim()),
+      inputValue: screen.getByLabelText<HTMLInputElement>('Search tasks').value,
+    })
+    expect(getOutput()).toEqual({
+      scopes: [
+        `project:${currentTaskProject.id}`,
+        `parent:${currentTaskDetail.id}`,
+      ],
+      options: [
+        'children of #31 Review launch checklist',
+        'siblings (children of #30 Prepare product launch)',
+      ],
+      inputValue: '',
+    })
+  })
+
+  it('applies the parent scope with Enter to find sibling tasks', async () => {
+    setCurrentTaskRoute()
+    mockProjectData = [currentTaskProject]
+
+    const user = userEvent.setup()
+    renderSearchModal({
+      defaultQuery: `project:${currentTaskProject.id} `,
+    })
+    await user.keyboard('{ArrowDown}{Enter}')
+
+    const getOutput = () => ({
+      scopes: screen
+        .queryAllByTestId('search-scope-token')
+        .map((element) => element.textContent),
+      options: screen
+        .getAllByRole('option')
+        .map((option) => option.innerText.trim()),
+      inputValue: screen.getByLabelText<HTMLInputElement>('Search tasks').value,
+    })
+    expect(getOutput()).toEqual({
+      scopes: [
+        `project:${currentTaskProject.id}`,
+        `parent:${parentTaskDetail.id}`,
+      ],
+      options: [
+        'children of #31 Review launch checklist',
+        'siblings (children of #30 Prepare product launch)',
+      ],
+      inputValue: '',
+    })
+  })
+
+  it('omits parent and project commands when the current task has neither', () => {
+    const standaloneTask = makeTaskDetail({
+      id: '00000000-0000-0000-0000-000000000033',
+      number: 33,
+      title: 'Standalone task',
+      parentId: null,
+      parentNumber: null,
+      projectId: null,
+    })
+    setCurrentTaskRoute(standaloneTask)
+
+    renderSearchModal({ defaultQuery: '>' })
+
+    const getOutput = () => ({
+      taskHeading:
+        screen.queryByText('#33 Standalone task')?.textContent ?? null,
+      parentCommand:
+        screen.queryByRole('option', {
+          name: 'Go to parent: #30 Prepare product launch',
+        })?.textContent ?? null,
+      projectCommand:
+        screen.queryByRole('option', {
+          name: 'Go to project: Product launch',
+        })?.textContent ?? null,
+    })
+    expect(getOutput()).toEqual({
+      taskHeading: null,
+      parentCommand: null,
+      projectCommand: null,
+    })
   })
 
   it('narrows a selected task to its children with Tab and returns to default mode', async () => {

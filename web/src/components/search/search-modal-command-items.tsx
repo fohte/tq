@@ -2,6 +2,8 @@ import {
   createOptionItem,
   type ListItem,
 } from '#components/search/search-modal-result-items'
+import type { Project } from '#hooks/use-projects'
+import type { TaskDetail } from '#hooks/use-tasks'
 import {
   type Keybinding,
   type NavKeybinding,
@@ -44,4 +46,52 @@ export function createCommandItems(
         </>,
       )
     })
+}
+
+export function createTaskCommandItems(
+  query: string,
+  parentTask: Pick<TaskDetail, 'id' | 'number' | 'title'> | undefined,
+  project: Pick<Project, 'id' | 'title'> | undefined,
+  openTask: (task: Pick<TaskDetail, 'id'>) => void,
+  openProject: (project: Pick<Project, 'id'>) => void,
+): ListItem[] {
+  const normalizedQuery = query.trim().toLowerCase()
+  const commands = [
+    ...(parentTask == null
+      ? []
+      : [
+          {
+            id: 'parent',
+            description: `Go to parent: #${String(parentTask.number)} ${parentTask.title}`,
+            select: () => {
+              openTask(parentTask)
+            },
+          },
+        ]),
+    ...(project == null
+      ? []
+      : [
+          {
+            id: 'project',
+            description: `Go to project: ${project.title}`,
+            select: () => {
+              openProject(project)
+            },
+          },
+        ]),
+  ]
+
+  return commands
+    .filter(({ description }) =>
+      description.toLowerCase().includes(normalizedQuery),
+    )
+    .map(({ id, description, select }) =>
+      createOptionItem(
+        `command:task:${id}`,
+        select,
+        <span className="flex-1 font-mono text-sm text-foreground">
+          {description}
+        </span>,
+      ),
+    )
 }
