@@ -41,4 +41,8 @@ export default config(
     files: ['web/**/*.stories.tsx'],
     rules: { 'fohte/require-story-name': 'error' },
   },
+  {
+    files: ['**/*.stories.tsx'],
+    rules: { 'fohte/require-story-name': 'error' },
+  },
 )
