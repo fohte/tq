@@ -919,16 +919,14 @@ describe('SearchModal', () => {
     expect(getOutput()).toEqual({ searchEverywhere: 'Search everywhere' })
   })
 
-  it('waits for task search debounce before offering Search everywhere', async () => {
+  it('waits for task search debounce before offering Search everywhere', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     mockIsDebouncingTasks = true
 
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const view = renderSearchModal({ defaultContext: 'work' })
 
     const input = screen.getByLabelText<HTMLInputElement>('Search tasks')
-    await user.type(input, 'none')
-    await user.keyboard('{Enter}')
+    fireEvent.change(input, { target: { value: 'none' } })
 
     const getOutput = () => ({
       inputValue: input.value,
