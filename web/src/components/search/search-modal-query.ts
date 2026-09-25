@@ -23,17 +23,83 @@ export function stripSearchScopeTokens(query: string): string {
 }
 
 export function removeLastSearchScopeToken(query: string): string {
-  const lastMatch = Array.from(query.matchAll(scopeTokenPattern)).at(-1)
-  const token = lastMatch?.[1]
-  if (lastMatch?.index == null || token == null) return query
+  return removeSearchScopeToken(
+    query,
+    Array.from(query.matchAll(scopeTokenPattern)).length - 1,
+  )
+}
 
-  const tokenStart = lastMatch.index + lastMatch[0].lastIndexOf(token)
-  const before = query.slice(0, tokenStart)
-  const after = query.slice(tokenStart + token.length)
+export function removeSearchScopeToken(query: string, index: number): string {
+  const match = Array.from(query.matchAll(scopeTokenPattern))[index]
+  const token = match?.[1]
+  if (match?.index == null || token == null) return query
+
+  const tokenStart = match.index + match[0].lastIndexOf(token)
+  return removeQueryTokenAt(query, tokenStart, tokenStart + token.length)
+}
+
+export function removeSearchContextTokens(query: string): string {
+  const ranges = getQueryTokenRanges(query).filter(({ start, end }) => {
+    const token = query.slice(start, end)
+    return token === 'context:work' || token === 'context:personal'
+  })
+
+  return ranges
+    .reverse()
+    .reduce(
+      (result, { start, end }) => removeQueryTokenAt(result, start, end),
+      query,
+    )
+}
+
+function removeQueryTokenAt(query: string, start: number, end: number): string {
+  const before = query.slice(0, start)
+  const after = query.slice(end)
 
   if (before.endsWith(' ')) return before.slice(0, -1) + after
   if (after.startsWith(' ')) return before + after.slice(1)
   return before + after
+}
+
+function getQueryTokenRanges(
+  query: string,
+): Array<{ start: number; end: number }> {
+  const ranges: Array<{ start: number; end: number }> = []
+  let start: number | undefined
+  let quote: '"' | "'" | undefined
+  let escaped = false
+
+  for (let index = 0; index < query.length; index++) {
+    const character = query[index]
+    if (character == null) continue
+
+    if (start == null && /\s/.test(character)) continue
+    start ??= index
+
+    if (escaped) {
+      escaped = false
+      continue
+    }
+    if (quote != null && character === '\\') {
+      escaped = true
+      continue
+    }
+    if (quote === character) {
+      quote = undefined
+      continue
+    }
+    if (quote == null && (character === '"' || character === "'")) {
+      quote = character
+      continue
+    }
+    if (quote == null && /\s/.test(character)) {
+      ranges.push({ start, end: index })
+      start = undefined
+    }
+  }
+
+  if (start != null) ranges.push({ start, end: query.length })
+  return ranges
 }
 
 export function addSearchScope(query: string, scopeToken: string): string {

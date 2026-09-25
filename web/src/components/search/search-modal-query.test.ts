@@ -4,6 +4,8 @@ import {
   addSearchScope,
   extractSearchScopeTokens,
   removeLastSearchScopeToken,
+  removeSearchContextTokens,
+  removeSearchScopeToken,
   stripSearchScopeTokens,
 } from '#components/search/search-modal-query'
 
@@ -28,6 +30,18 @@ describe('search modal query scopes', () => {
     expect(
       removeLastSearchScopeToken('project:"my project" parent:task '),
     ).toBe('project:"my project" ')
+  })
+
+  it('removes the selected scope token while preserving the rest of the query', () => {
+    expect(
+      removeSearchScopeToken('project:alpha is:todo parent:beta search ', 1),
+    ).toBe('project:alpha is:todo search ')
+  })
+
+  it('removes context filters without changing quoted free text', () => {
+    expect(
+      removeSearchContextTokens('search "context:work" context:work is:todo '),
+    ).toBe('search "context:work" is:todo ')
   })
 
   it('drops free text while preserving filters and earlier scopes', () => {

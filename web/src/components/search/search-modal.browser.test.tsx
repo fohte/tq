@@ -98,6 +98,7 @@ let mockPageSearchData: PageSearchResult[] = []
 let mockSuggestionData: typeof mockSuggestions = []
 let mockProjectData: Project[] = []
 let mockSavedViewData: SavedView[] = []
+let mockScopeLabels = new Map<string, string>()
 let mockProjectCalls: Array<{ filter: unknown; options: unknown }> = []
 let mockSavedViewCalls: Array<{ filter: unknown; options: unknown }> = []
 
@@ -144,6 +145,14 @@ vi.mock('#hooks/use-saved-views', async (importOriginal) => {
     },
   }
 })
+
+vi.mock('#hooks/use-search-scope-labels', () => ({
+  useSearchScopeLabels: (tokens: string[]) =>
+    tokens.map((token) => ({
+      token,
+      label: mockScopeLabels.get(token) ?? token,
+    })),
+}))
 
 const mockNavigate = vi.fn()
 vi.mock('@tanstack/react-router', async (importOriginal) => {
@@ -230,6 +239,7 @@ describe('SearchModal', () => {
     mockSuggestionData = []
     mockProjectData = []
     mockSavedViewData = []
+    mockScopeLabels = new Map()
     mockProjectCalls = []
     mockSavedViewCalls = []
     mockNavigate.mockClear()
@@ -257,6 +267,19 @@ describe('SearchModal', () => {
     renderSearchModal()
 
     await user.keyboard('{Backspace}')
+
+    expect(screen.queryByTestId('search-context-scope')).toBeNull()
+  })
+
+  it('clears the current context when its remove button is clicked', async () => {
+    resetSessionOpenSettings({ localContext: 'work' })
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    await user.click(
+      screen.getByRole('button', { name: 'Remove context:work scope' }),
+    )
 
     expect(screen.queryByTestId('search-context-scope')).toBeNull()
   })
@@ -302,6 +325,56 @@ describe('SearchModal', () => {
       scopes: [`project:${projectId}`],
       inputValue: '',
     })
+  })
+
+  it('shows resolved scope names and removes only the clicked scope', async () => {
+    const projectId = '00000000-0000-0000-0000-000000000104'
+    const parentId = '00000000-0000-0000-0000-000000000105'
+    mockScopeLabels = new Map([
+      [`project:${projectId}`, 'project:Roadmap'],
+      [`parent:${parentId}`, 'parent:#7 Implement milestones'],
+    ])
+
+    const user = userEvent.setup()
+    renderSearchModal({
+      defaultQuery: `project:${projectId} parent:${parentId} planning `,
+    })
+
+    const getOutput = () => ({
+      scopes: screen
+        .queryAllByTestId('search-scope-token')
+        .map((element) => element.textContent),
+      inputValue: screen.getByLabelText<HTMLInputElement>('Search tasks').value,
+    })
+    expect(getOutput()).toEqual({
+      scopes: ['project:Roadmap', 'parent:#7 Implement milestones'],
+      inputValue: 'planning ',
+    })
+
+    await user.click(
+      screen.getByRole('button', { name: 'Remove project:Roadmap scope' }),
+    )
+
+    expect(getOutput()).toEqual({
+      scopes: ['parent:#7 Implement milestones'],
+      inputValue: 'planning ',
+    })
+  })
+
+  it('removes an explicit context filter from the query', async () => {
+    const user = userEvent.setup()
+    renderSearchModal({ defaultQuery: 'context:work' })
+
+    await user.click(
+      screen.getByRole('button', { name: 'Remove context:work scope' }),
+    )
+
+    const getOutput = () => ({
+      context:
+        screen.queryByTestId('search-context-scope')?.textContent ?? null,
+      inputValue: screen.getByLabelText<HTMLInputElement>('Search tasks').value,
+    })
+    expect(getOutput()).toEqual({ context: null, inputValue: '' })
   })
 
   it('shows an explicit context token as the active search scope', async () => {
