@@ -24,6 +24,7 @@ import {
   SEARCH_QUERY_DEBOUNCE_MS,
 } from '#hooks/use-search'
 import type { TaskDetail } from '#hooks/use-tasks'
+import { getUrlCopiedFromEvent } from '#hooks/use-url-copied-toast'
 
 interface MockTask {
   id: string
@@ -342,15 +343,6 @@ function getNoResultsOutput(query: string) {
       screen.queryByRole('option', { name: 'Search everywhere' })
         ?.textContent ?? null,
   }
-}
-
-function getCopiedUrl(event: Event): string | null {
-  if (!(event instanceof CustomEvent)) return null
-  const detail: unknown = event.detail
-  if (typeof detail !== 'object' || detail === null || !('url' in detail)) {
-    return null
-  }
-  return typeof detail.url === 'string' ? detail.url : null
 }
 
 describe('SearchModal', () => {
@@ -989,14 +981,16 @@ describe('SearchModal', () => {
   it('copies the current task URL, emits the toast event, and closes the modal', async () => {
     setCurrentTaskRoute()
     const onOpenChange = vi.fn()
+    const user = userEvent.setup()
     const clipboardWriteText = vi
       .spyOn(navigator.clipboard, 'writeText')
       .mockResolvedValue(undefined)
-    const dispatchEvent = vi.spyOn(window, 'dispatchEvent')
+    let copiedUrl: string | null = null
     const copiedEvent = new Promise<void>((resolve) => {
       window.addEventListener(
         'tq:url-copied',
-        () => {
+        (event) => {
+          copiedUrl = getUrlCopiedFromEvent(event)
           resolve()
         },
         { once: true },
@@ -1007,22 +1001,62 @@ describe('SearchModal', () => {
       window.location.origin,
     ).toString()
 
-    const user = userEvent.setup()
     renderSearchModal({ defaultQuery: '>copy', onOpenChange })
     await user.keyboard('{Enter}')
     await copiedEvent
 
     const getOutput = () => ({
       copiedUrls: clipboardWriteText.mock.calls,
-      toastUrls: dispatchEvent.mock.calls
-        .filter(([event]) => event.type === 'tq:url-copied')
-        .map(([event]) => getCopiedUrl(event)),
+      toastUrl: copiedUrl,
       onOpenChange: onOpenChange.mock.calls,
     })
     expect(getOutput()).toEqual({
       copiedUrls: [[taskUrl]],
-      toastUrls: [taskUrl],
+      toastUrl: taskUrl,
       onOpenChange: [[false]],
+    })
+  })
+
+  it('keeps the modal open and skips the toast when copying the URL fails', async () => {
+    setCurrentTaskRoute()
+    const onOpenChange = vi.fn()
+    const user = userEvent.setup()
+    const clipboardError = new Error('Clipboard access denied')
+    const clipboardWriteText = vi
+      .spyOn(navigator.clipboard, 'writeText')
+      .mockRejectedValue(clipboardError)
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const failureLogged = new Promise<void>((resolve) => {
+      consoleError.mockImplementation(() => {
+        resolve()
+      })
+    })
+    const dispatchEvent = vi.spyOn(window, 'dispatchEvent')
+    const taskUrl = new URL(
+      `/tasks/${currentTaskDetail.id}`,
+      window.location.origin,
+    ).toString()
+
+    renderSearchModal({ defaultQuery: '>copy', onOpenChange })
+    await user.keyboard('{Enter}')
+    await failureLogged
+
+    const getOutput = () => ({
+      copiedUrls: clipboardWriteText.mock.calls,
+      errors: consoleError.mock.calls,
+      copiedEventCount: dispatchEvent.mock.calls.filter(
+        ([event]) => event.type === 'tq:url-copied',
+      ).length,
+      onOpenChange: onOpenChange.mock.calls,
+      copyCommand:
+        screen.queryByRole('option', { name: 'Copy URL' })?.textContent ?? null,
+    })
+    expect(getOutput()).toEqual({
+      copiedUrls: [[taskUrl]],
+      errors: [['Failed to copy task URL', clipboardError]],
+      copiedEventCount: 0,
+      onOpenChange: [],
+      copyCommand: 'Copy URL',
     })
   })
 

@@ -7,6 +7,22 @@ export function notifyUrlCopied(url: string): void {
   window.dispatchEvent(new CustomEvent(URL_COPIED_EVENT, { detail: { url } }))
 }
 
+export function getUrlCopiedFromEvent(event: Event): string | null {
+  if (!(event instanceof CustomEvent)) return null
+
+  const detail: unknown = event.detail
+  if (
+    typeof detail !== 'object' ||
+    detail === null ||
+    !('url' in detail) ||
+    typeof detail.url !== 'string'
+  ) {
+    return null
+  }
+
+  return detail.url
+}
+
 export function useUrlCopiedToast(): string | null {
   const [url, setUrl] = useState<string | null>(null)
 
@@ -14,19 +30,9 @@ export function useUrlCopiedToast(): string | null {
     let timeoutId: number | null = null
 
     const handleUrlCopied = (event: Event) => {
-      if (!(event instanceof CustomEvent)) return
+      const copiedUrl = getUrlCopiedFromEvent(event)
+      if (copiedUrl === null) return
 
-      const detail: unknown = event.detail
-      if (
-        typeof detail !== 'object' ||
-        detail === null ||
-        !('url' in detail) ||
-        typeof detail.url !== 'string'
-      ) {
-        return
-      }
-
-      const copiedUrl = detail.url
       setUrl(copiedUrl)
 
       if (timeoutId !== null) window.clearTimeout(timeoutId)

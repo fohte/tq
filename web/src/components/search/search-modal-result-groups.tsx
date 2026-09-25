@@ -177,16 +177,16 @@ export function useSearchModalResultGroups({
         : []
     const taskCommandItems: ListItem[] =
       searchMode === 'commands' && currentTask != null
-        ? createTaskCommandItems(
-            searchInputValue,
+        ? createTaskCommandItems({
+            query: searchInputValue,
             currentTask,
             parentTask,
-            currentProject,
+            project: currentProject,
             openTask,
             openProject,
             completeTask,
             copyTaskUrl,
-          )
+          })
         : []
     const taskScopeItems: ListItem[] =
       searchMode == null && searchInputValue === '' && currentTask != null
@@ -301,6 +301,8 @@ export function useSearchModalResultGroups({
     applyScope,
     openTask,
     openProject,
+    completeTask,
+    copyTaskUrl,
     openView,
     openPage,
     hasAuxiliarySearch,

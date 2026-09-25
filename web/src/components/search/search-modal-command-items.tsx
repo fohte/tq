@@ -48,16 +48,27 @@ export function createCommandItems(
     })
 }
 
-export function createTaskCommandItems(
-  query: string,
-  currentTask: Pick<TaskDetail, 'id' | 'status'>,
-  parentTask: Pick<TaskDetail, 'id' | 'number' | 'title'> | undefined,
-  project: Pick<Project, 'id' | 'title'> | undefined,
-  openTask: (task: Pick<TaskDetail, 'id'>) => void,
-  openProject: (project: Pick<Project, 'id'>) => void,
-  completeTask: (task: Pick<TaskDetail, 'id'>) => void,
-  copyTaskUrl: (task: Pick<TaskDetail, 'id'>) => void,
-): ListItem[] {
+interface TaskCommandItemsOptions {
+  query: string
+  currentTask: Pick<TaskDetail, 'id' | 'status'>
+  parentTask: Pick<TaskDetail, 'id' | 'number' | 'title'> | undefined
+  project: Pick<Project, 'id' | 'title'> | undefined
+  openTask: (task: Pick<TaskDetail, 'id'>) => void
+  openProject: (project: Pick<Project, 'id'>) => void
+  completeTask: (task: Pick<TaskDetail, 'id'>) => void
+  copyTaskUrl: (task: Pick<TaskDetail, 'id'>) => void
+}
+
+export function createTaskCommandItems({
+  query,
+  currentTask,
+  parentTask,
+  project,
+  openTask,
+  openProject,
+  completeTask,
+  copyTaskUrl,
+}: TaskCommandItemsOptions): ListItem[] {
   const normalizedQuery = query.trim().toLowerCase()
   const commands = [
     ...(parentTask == null
