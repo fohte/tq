@@ -12,7 +12,6 @@ import {
   removeSearchScopeToken,
   useSearchModalQuery,
 } from '#components/search/search-modal-query'
-import { removeSearchContextTokens } from '#components/search/search-modal-query-clear-scope'
 import { useSearchModalResultGroups } from '#components/search/search-modal-result-groups'
 import {
   indexResultGroups,
