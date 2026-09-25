@@ -123,7 +123,7 @@ describe('TaskList sort selector', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Sort by/ })).toHaveTextContent(
-        'Updated',
+        'sort:updated',
       )
     })
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
@@ -139,7 +139,7 @@ describe('TaskList sort selector', () => {
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
     expect(screen.getByRole('button', { name: /Sort by/ })).toHaveTextContent(
-      'Created',
+      'sort:created',
     )
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
       { q: 'is:todo sort:created' },
@@ -242,7 +242,7 @@ describe('TaskList tag filter', () => {
       ).toBeInTheDocument()
     })
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { q: 'is:todo sort:updated label:dev:tq' },
+      { q: 'is:todo label:dev:tq sort:updated' },
     ])
   })
 
@@ -329,7 +329,7 @@ describe('TaskList URL query encoding', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Sort by/ })).toHaveTextContent(
-        'Created',
+        'sort:created',
       )
     })
     expect(

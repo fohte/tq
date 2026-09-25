@@ -225,6 +225,6 @@ export const ProjectScoped: Story = {
   args: {
     hideSaveView: true,
     disableProjectFilter: true,
-    parsed: makeParsedQuery({ projectId: 'proj-1' }),
+    parsed: makeParsedQuery({ projectId: 'proj-1', label: 'project-local' }),
   },
 }
