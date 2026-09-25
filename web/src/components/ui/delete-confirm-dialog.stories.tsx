@@ -15,7 +15,7 @@ const meta = {
     title: 'Delete item',
     description:
       'Are you sure you want to delete this item? This action cannot be undone.',
-    onDelete: fn(),
+    onConfirm: fn(),
   },
 } satisfies Meta<typeof DeleteConfirmDialog>
 

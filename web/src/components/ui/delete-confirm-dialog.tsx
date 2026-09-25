@@ -15,7 +15,7 @@ export function DeleteConfirmDialog({
   title,
   description,
   confirmLabel = 'Delete',
-  onDelete,
+  onConfirm,
   open,
   onOpenChange,
   children,
@@ -23,7 +23,7 @@ export function DeleteConfirmDialog({
   title: string
   description: string
   confirmLabel?: string
-  onDelete: () => void
+  onConfirm: () => void
   open?: boolean | undefined
   onOpenChange?: ((open: boolean) => void) | undefined
   // A DialogTrigger, for callers that open the dialog from their own control
@@ -44,7 +44,7 @@ export function DeleteConfirmDialog({
           </DialogClose>
           <DialogClose
             render={<Button variant="destructive" />}
-            onClick={onDelete}
+            onClick={onConfirm}
           >
             {confirmLabel}
           </DialogClose>

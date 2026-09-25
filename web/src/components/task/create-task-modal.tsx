@@ -178,6 +178,10 @@ export function CreateTaskModal({
     open,
   ])
 
+  useEffect(() => {
+    if (!open) setDiscardConfirmationOpen(false)
+  }, [open])
+
   const parsedMinutes = parseDurationToMinutes(estimateInput)
 
   const resetForm = useCallback(() => {
@@ -329,6 +333,7 @@ export function CreateTaskModal({
             },
           )
         }
+        setDiscardConfirmationOpen(false)
         resetForm()
         onOpenChange(false)
         onCreated?.(task)
@@ -483,8 +488,8 @@ export function CreateTaskModal({
         title="Discard task draft?"
         description="The task and its description will be discarded."
         confirmLabel="Discard"
-        onDelete={discardDraft}
-        open={discardConfirmationOpen}
+        onConfirm={discardDraft}
+        open={open && discardConfirmationOpen}
         onOpenChange={setDiscardConfirmationOpen}
       />
     </Dialog>
