@@ -6,9 +6,8 @@ import { fn } from 'storybook/test'
 
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
+import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
-import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
-import { makeParsedQuery } from '#components/task/task-filter-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { Schedule } from '#hooks/use-schedules'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
@@ -246,14 +245,7 @@ const meta = {
     <DayViewPresentation
       {...args}
       kanbanFilterRow={
-        <TaskFilterChipRow
-          onQueryChange={fn()}
-          parsed={makeParsedQuery()}
-          projects={[]}
-          hideStatusFilter
-          hideSortFilter
-          hideSaveView
-        />
+        <KanbanFilterRow onQueryChange={fn()} query="" projects={[]} />
       }
     />
   ),

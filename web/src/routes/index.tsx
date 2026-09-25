@@ -1,6 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
-import { parseSearchQuery } from 'api/search-query-parser'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { CalendarChangeFeedbackPopup } from '#components/calendar/calendar-change-feedback-popup'
@@ -10,8 +9,8 @@ import {
   type DayViewMode,
   DayViewPresentation,
 } from '#components/day-view/day-view'
+import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
 import { buildQueueSections } from '#components/day-view/queue-sections'
-import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { useAutoAssign } from '#hooks/use-auto-assign'
 import { useCalendarChangeFeedback } from '#hooks/use-calendar-change-feedback'
 import { useCurrentContext } from '#hooks/use-current-context'
@@ -43,6 +42,7 @@ import {
 import { classifyGcalEvent } from '#lib/calendar-utils'
 import { matchesContextFilter } from '#lib/context-filter'
 import { formatLocalDate, toLocalDateRange } from '#lib/date-range'
+import { buildKanbanFilterQuery } from '#lib/kanban-filter-query'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { replaceVisibleQueueTaskIds } from '#lib/queue-task-order'
 import { scheduleColorToEventColor } from '#lib/schedule-color'
@@ -55,7 +55,8 @@ interface DayViewSearch {
 }
 
 function validateSearch(search: Record<string, unknown>): DayViewSearch {
-  const q = typeof search['q'] === 'string' ? search['q'] : undefined
+  const rawQ = typeof search['q'] === 'string' ? search['q'] : undefined
+  const q = rawQ == null ? undefined : buildKanbanFilterQuery(rawQ)
   return {
     view: search['view'] === 'kanban' ? 'kanban' : 'queue',
     ...(q == null || q === '' ? {} : { q }),
@@ -80,6 +81,13 @@ function DayView() {
     { ...baseFilter, ...(q === '' ? {} : { q }) },
     { enabled: isKanbanFiltering },
   )
+  useEffect(() => {
+    if (!isKanbanFiltering || filteredTasksQuery.error == null) return
+    console.error(
+      'Failed to fetch filtered tasks for kanban',
+      filteredTasksQuery.error,
+    )
+  }, [filteredTasksQuery.error, isKanbanFiltering])
   const filterTaskIds = useMemo(
     () =>
       isKanbanFiltering
@@ -451,16 +459,11 @@ function DayView() {
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
         kanbanFilterRow={
-          viewMode === 'kanban' ? (
-            <TaskFilterChipRow
-              onQueryChange={handleFilterQueryChange}
-              parsed={parseSearchQuery(q)}
-              projects={projects.data ?? []}
-              hideStatusFilter
-              hideSortFilter
-              hideSaveView
-            />
-          ) : undefined
+          <KanbanFilterRow
+            onQueryChange={handleFilterQueryChange}
+            query={q}
+            projects={projects.data ?? []}
+          />
         }
       />
       <CalendarChangeFeedbackPopup
