@@ -1,6 +1,10 @@
 import { X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import {
+  DEFAULT_TASK_DESCRIPTION,
+  useTaskDescriptionDraft,
+} from '#components/task/create-task-modal-description'
 import { CreateTaskModalDesktop } from '#components/task/create-task-modal-desktop'
 import type {
   CommitmentValue,
@@ -8,6 +12,7 @@ import type {
   PlanValue,
 } from '#components/task/create-task-modal-fields'
 import { CreateTaskModalMobile } from '#components/task/create-task-modal-mobile'
+import { createTaskModalTitleChangeHandler } from '#components/task/create-task-modal-title-change'
 import { GithubRefSummary } from '#components/task/github-ref-summary'
 import { toGithubUrlSummary } from '#components/task/github-url-summary'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
@@ -34,10 +39,7 @@ import { useCreateTask } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
 import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
-import {
-  extractShorthandTokens,
-  type ShorthandRecurrenceRule,
-} from '#lib/task-shorthand'
+import type { ShorthandRecurrenceRule } from '#lib/task-shorthand'
 import { cn } from '#lib/utils'
 
 function estimateInputFor(minutes: number | undefined): string {
@@ -85,7 +87,12 @@ export function CreateTaskModal({
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(
     defaultDiscardConfirmationOpen,
   )
-  const descriptionRef = useRef('')
+  const {
+    getDescription,
+    onChange: onDescriptionChange,
+    onFocusedDocumentChange,
+    reset: resetDescription,
+  } = useTaskDescriptionDraft(defaultDescription)
   const [editorKey, setEditorKey] = useState(0)
   const [startDate, setStartDate] = useState(defaultStartDate ?? '')
   const [dueDate, setDueDate] = useState('')
@@ -186,7 +193,7 @@ export function CreateTaskModal({
 
   const resetForm = useCallback(() => {
     setTitle('')
-    descriptionRef.current = ''
+    resetDescription()
     setEditorKey((k) => k + 1)
     setStartDate(defaultStartDate ?? '')
     setDueDate('')
@@ -203,12 +210,14 @@ export function CreateTaskModal({
     effectiveDefaultContext,
     defaultLabels,
     defaultEstimateMinutes,
+    resetDescription,
   ])
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) {
-        if (title.trim() !== '' || descriptionRef.current.trim() !== '') {
+        const description = getDescription()
+        if (title.trim() !== '' || description.trim() !== '') {
           setDiscardConfirmationOpen(true)
           return
         }
@@ -216,7 +225,7 @@ export function CreateTaskModal({
       }
       onOpenChange(nextOpen)
     },
-    [onOpenChange, resetForm, title],
+    [getDescription, onOpenChange, resetForm, title],
   )
 
   const discardDraft = () => {
@@ -225,45 +234,18 @@ export function CreateTaskModal({
     onOpenChange(false)
   }
 
-  // Stripping a consumed token resets the input's caret to the end of the
-  // (now shorter) title, since the value change isn't a plain append. Fine
-  // for the common case of appending a shorthand token while typing; jarring
-  // if a token is completed with the caret positioned mid-title.
-  const handleTitleChange = (value: string) => {
-    const parsed = extractShorthandTokens(value)
-    setTitle(parsed.title)
-    if (parsed.startDate != null) setStartDate(parsed.startDate)
-    if (parsed.dueDate != null) setDueDate(parsed.dueDate)
-    if (parsed.estimateInput != null) setEstimateInput(parsed.estimateInput)
-    if (parsed.context != null) setContext(parsed.context)
-    if (parsed.labels.length > 0) {
-      setLabels((prev) => [...new Set([...prev, ...parsed.labels])])
-    }
-    if (parsed.parentNumber != null)
-      setParentOverrideNumber(parsed.parentNumber)
-    if (parsed.githubUrl != null) setGithubUrl(parsed.githubUrl)
-    if (parsed.plan != null) setPlan(parsed.plan)
-    if (parsed.recurrenceRule != null) {
-      // Each completed `*` token is stripped from the title before the next
-      // one is typed (see the comment above), so a second `*weekday` token
-      // is parsed from a string that no longer contains the first — merge
-      // with the previous rule instead of replacing it, mirroring labels.
-      const parsedRule = parsed.recurrenceRule
-      setRecurrenceRule((prev) =>
-        prev?.type === 'weekly' && parsedRule.type === 'weekly'
-          ? {
-              ...parsedRule,
-              daysOfWeek: [
-                ...new Set([
-                  ...(prev.daysOfWeek ?? []),
-                  ...(parsedRule.daysOfWeek ?? []),
-                ]),
-              ].sort((a, b) => a - b),
-            }
-          : parsedRule,
-      )
-    }
-  }
+  const handleTitleChange = createTaskModalTitleChangeHandler({
+    setTitle,
+    setStartDate,
+    setDueDate,
+    setEstimateInput,
+    setContext,
+    setLabels,
+    setParentOverrideNumber,
+    setGithubUrl,
+    setPlan,
+    setRecurrenceRule,
+  })
 
   // Blocks submit until the relevant queue's current items have loaded —
   // otherwise the queue-append below would send only the new task's ID,
@@ -290,7 +272,7 @@ export function CreateTaskModal({
   const handleSubmit = () => {
     if (!canSubmit) return
 
-    const desc = descriptionRef.current.trim()
+    const desc = getDescription().trim()
     const input: CreateTaskInput = {
       title: title.trim(),
       ...(desc ? { description: desc } : {}),
@@ -416,11 +398,10 @@ export function CreateTaskModal({
   const descriptionEditor = (
     <MarkdownEditor
       key={editorKey}
-      defaultValue={defaultDescription ?? '## Why\n\n## What'}
+      defaultValue={defaultDescription ?? DEFAULT_TASK_DESCRIPTION}
       placeholder="Add description..."
-      onChange={(md) => {
-        descriptionRef.current = md
-      }}
+      onChange={onDescriptionChange}
+      onFocusedDocumentChange={onFocusedDocumentChange}
       size="compact"
     />
   )
