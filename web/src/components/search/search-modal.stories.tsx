@@ -311,6 +311,7 @@ export const CommandMode: Story = {
 }
 
 export const CurrentTaskCommands: Story = {
+  name: 'the search dialog lists navigation commands for the current task',
   args: {
     defaultContext: 'work',
     defaultQuery: '>',
@@ -319,6 +320,7 @@ export const CurrentTaskCommands: Story = {
 }
 
 export const CurrentTaskNavigationScopes: Story = {
+  name: 'the search dialog offers child and sibling task scopes',
   args: {
     defaultContext: 'work',
     defaultQuery: projectScopeQuery,
@@ -327,6 +329,7 @@ export const CurrentTaskNavigationScopes: Story = {
 }
 
 export const CurrentRootTaskNavigationScopes: Story = {
+  name: 'the search dialog offers only child task scope for a root task',
   args: {
     defaultContext: 'work',
     rootTaskRoute: true,
