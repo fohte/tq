@@ -67,13 +67,15 @@ export function useProjects(
 export function useProject(id: string) {
   return useQuery({
     queryKey: projectKeys.detail(id),
-    queryFn: async () => {
-      const res = await api.api.projects[':id'].$get({
-        param: { id },
-      })
-      return unwrapOrThrow(assertOk(res)).json()
-    },
+    queryFn: () => fetchProjectDetail(id),
   })
+}
+
+export async function fetchProjectDetail(id: string): Promise<ProjectDetail> {
+  const res = await api.api.projects[':id'].$get({
+    param: { id },
+  })
+  return unwrapOrThrow(assertOk(res)).json()
 }
 
 export function useProjectTaskIds(id: string, options?: { enabled?: boolean }) {

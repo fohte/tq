@@ -19,10 +19,12 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the chip displays a status filter',
   args: { onRemove: () => undefined },
 }
 
 export const LabelChip: Story = {
+  name: 'the chip displays a label filter',
   args: {
     icon: Tag,
     attribute: 'label',
@@ -33,6 +35,7 @@ export const LabelChip: Story = {
 }
 
 export const DefaultSort: Story = {
+  name: 'the default sort filter is muted without a remove button',
   args: {
     icon: ArrowDownWideNarrow,
     attribute: 'sort',
@@ -44,6 +47,7 @@ export const DefaultSort: Story = {
 }
 
 export const OpenMenu: Story = {
+  name: 'the filter chip menu is open',
   tags: ['desktop-only'],
   args: {
     defaultOpen: true,

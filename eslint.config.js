@@ -1,4 +1,5 @@
 import { config } from '@fohte/eslint-config'
+import { plugin as shadcn } from '@shadcn/lint'
 import storybook from 'eslint-plugin-storybook'
 
 export default config(
@@ -11,6 +12,10 @@ export default config(
       files: ['web/**/*.ts{,x}'],
       cssConfigPath: 'web/src/index.css',
     },
+  },
+  {
+    // CLI --rule overrides are unscoped, so the plugin must be globally available.
+    plugins: { shadcn },
   },
   {
     ignores: ['**/routeTree.gen.ts'],
@@ -31,5 +36,9 @@ export default config(
     // "imports" field, unlike the Rollup pipeline that bundles the app itself.
     files: ['web/vite.config.ts', 'web/vitest.config.ts'],
     rules: { 'no-restricted-imports': 'off' },
+  },
+  {
+    files: ['web/**/*.stories.tsx'],
+    rules: { 'fohte/require-story-name': 'error' },
   },
 )

@@ -39,12 +39,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows a standard button labeled Button',
   args: {
     children: 'Button',
   },
 }
 
 export const Outline: Story = {
+  name: 'shows an outlined button labeled Outline',
   args: {
     variant: 'outline',
     children: 'Outline',
@@ -52,6 +54,7 @@ export const Outline: Story = {
 }
 
 export const Secondary: Story = {
+  name: 'shows a secondary button labeled Secondary',
   args: {
     variant: 'secondary',
     children: 'Secondary',
@@ -59,6 +62,7 @@ export const Secondary: Story = {
 }
 
 export const Ghost: Story = {
+  name: 'shows a ghost button labeled Ghost',
   args: {
     variant: 'ghost',
     children: 'Ghost',
@@ -66,6 +70,7 @@ export const Ghost: Story = {
 }
 
 export const Destructive: Story = {
+  name: 'shows a delete button with the destructive style',
   args: {
     variant: 'destructive',
     children: 'Delete',
@@ -73,6 +78,7 @@ export const Destructive: Story = {
 }
 
 export const Link: Story = {
+  name: 'shows the Link label in button link styling',
   args: {
     variant: 'link',
     children: 'Link',
@@ -80,6 +86,7 @@ export const Link: Story = {
 }
 
 export const Small: Story = {
+  name: 'shows a compact button labeled Small',
   args: {
     size: 'sm',
     children: 'Small',
@@ -87,6 +94,7 @@ export const Small: Story = {
 }
 
 export const Large: Story = {
+  name: 'shows a large button labeled Large',
   args: {
     size: 'lg',
     children: 'Large',
@@ -94,6 +102,7 @@ export const Large: Story = {
 }
 
 export const WithIcon: Story = {
+  name: 'shows an add task button with a leading plus icon',
   args: {
     children: (
       <>
@@ -105,6 +114,7 @@ export const WithIcon: Story = {
 }
 
 export const IconOnly: Story = {
+  name: 'shows an icon button for the task list',
   args: {
     size: 'icon',
     children: <CheckSquare />,
@@ -113,6 +123,7 @@ export const IconOnly: Story = {
 }
 
 export const Disabled: Story = {
+  name: 'shows a disabled button labeled Disabled',
   args: {
     children: 'Disabled',
     disabled: true,
@@ -120,6 +131,7 @@ export const Disabled: Story = {
 }
 
 export const AllVariants: Story = {
+  name: 'compares default, outline, secondary, ghost, destructive, and link buttons',
   render: () => (
     <div className="flex flex-wrap items-center gap-3">
       <Button variant="default">Default</Button>
@@ -133,6 +145,7 @@ export const AllVariants: Story = {
 }
 
 export const AllSizes: Story = {
+  name: 'compares extra small, small, default, large, and icon button sizes',
   render: () => (
     <div className="flex flex-wrap items-center gap-3">
       <Button size="xs">XS</Button>

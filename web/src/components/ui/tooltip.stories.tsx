@@ -44,18 +44,21 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows the library button without its tooltip',
   args: {
     open: false,
   },
 }
 
 export const Open: Story = {
+  name: 'shows the library action tooltip',
   args: {
     open: true,
   },
 }
 
 export const WithKbd: Story = {
+  name: 'shows the save shortcut inside the library tooltip',
   args: {
     open: true,
     content: (

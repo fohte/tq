@@ -71,6 +71,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const OpenIssue: Story = {
+  name: 'opens an issue preview from an inline GitHub URL',
   args: {
     url: OPEN_ISSUE_URL,
     raw: OPEN_ISSUE_URL,
@@ -87,6 +88,7 @@ export const OpenIssue: Story = {
 }
 
 export const MergedPullRequest: Story = {
+  name: 'shows a merged pull request as an inline chip',
   args: {
     url: MERGED_PR_URL,
     raw: MERGED_PR_URL,
@@ -102,6 +104,7 @@ export const MergedPullRequest: Story = {
 }
 
 export const LinkedToTask: Story = {
+  name: 'opens an issue preview linked to an existing task',
   args: {
     url: LINKED_ISSUE_URL,
     raw: LINKED_ISSUE_URL,
@@ -133,6 +136,7 @@ export const LinkedToTask: Story = {
 // The preview hasn't resolved yet (or resolved to "not a real issue/PR"):
 // the chip falls back to rendering the raw matched text instead of a card.
 export const Unresolved: Story = {
+  name: 'shows the raw URL while GitHub preview details are unavailable',
   args: {
     url: UNRESOLVED_ISSUE_URL,
     raw: UNRESOLVED_ISSUE_URL,

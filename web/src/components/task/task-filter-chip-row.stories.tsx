@@ -60,9 +60,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the row shows the default status and sort filters',
+}
 
 export const SaveViewHidden: Story = {
+  name: 'the row hides the save-view action',
   args: {
     hideSaveView: true,
     parsed: makeParsedQuery({ sortBy: 'created' }),
@@ -70,48 +73,56 @@ export const SaveViewHidden: Story = {
 }
 
 export const NoFilters: Story = {
+  name: 'the row shows no conditions beside the default sort control',
   args: {
     parsed: { freeText: '', sortBy: 'updated' },
   },
 }
 
 export const SortByCreated: Story = {
+  name: 'the row sorts tasks by creation date',
   args: {
     parsed: { ...defaultParsed, sortBy: 'created' },
   },
 }
 
 export const ProjectSelected: Story = {
+  name: 'the row shows a selected project filter',
   args: {
     parsed: { ...defaultParsed, projectId: 'proj-1' },
   },
 }
 
 export const LabelSelected: Story = {
+  name: 'the row shows a selected label filter',
   args: {
     parsed: { ...defaultParsed, label: 'dev:tq' },
   },
 }
 
 export const HasPagesChip: Story = {
+  name: 'the row filters for tasks that have pages',
   args: {
     parsed: { ...defaultParsed, hasPages: true },
   },
 }
 
 export const FreeTextInInput: Story = {
+  name: 'the search input contains a free-text query',
   args: {
     parsed: { ...defaultParsed, freeText: 'foo bar' },
   },
 }
 
 export const SyntaxHelpFocused: Story = {
+  name: 'the focused filter input displays syntax help',
   args: {
     autoFocus: true,
   },
 }
 
 export const ParentIdChip: Story = {
+  name: 'the row shows a parent filter by its task title',
   args: {
     parsed: { ...defaultParsed, parentId: 'parent-abc' },
   },
@@ -119,6 +130,7 @@ export const ParentIdChip: Story = {
 
 // Each applied filter chip opens a menu scoped to that axis.
 export const OpenStatusMenu: Story = {
+  name: 'the status filter menu is open',
   tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, status: ['todo', 'completed'] },
@@ -127,6 +139,7 @@ export const OpenStatusMenu: Story = {
 }
 
 export const OpenProjectMenu: Story = {
+  name: 'the project filter menu is open',
   tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, projectId: 'proj-1' },
@@ -135,6 +148,7 @@ export const OpenProjectMenu: Story = {
 }
 
 export const OpenLabelMenu: Story = {
+  name: 'the label filter menu is open',
   tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, label: 'dev:tq' },
@@ -143,6 +157,7 @@ export const OpenLabelMenu: Story = {
 }
 
 export const OpenPagesMenu: Story = {
+  name: 'the pages filter menu is open',
   tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, hasPages: true },
@@ -151,6 +166,7 @@ export const OpenPagesMenu: Story = {
 }
 
 export const OpenParentMenu: Story = {
+  name: 'the parent filter menu is open',
   tags: ['desktop-only'],
   args: {
     parsed: { ...defaultParsed, parentId: 'parent-abc' },
@@ -159,17 +175,20 @@ export const OpenParentMenu: Story = {
 }
 
 export const OpenSortMenu: Story = {
+  name: 'the sort menu is open',
   tags: ['desktop-only'],
   args: { defaultOpenFilter: 'sort' },
 }
 
 export const ParentAndLabelChips: Story = {
+  name: 'the row shows parent and label filters together',
   args: {
     parsed: { ...defaultParsed, parentId: 'parent-abc', label: 'dev:tq' },
   },
 }
 
 export const ChangedFilters: Story = {
+  name: 'a modified filter row shows the save-view action',
   args: {
     parsed: makeParsedQuery({
       status: ['todo', 'completed'],
@@ -181,6 +200,7 @@ export const ChangedFilters: Story = {
 }
 
 export const ManyFiltersWrap: Story = {
+  name: 'several applied filters wrap across multiple lines',
   decorators: [
     (Story) => (
       <div className="max-w-2xl border border-border bg-background">
@@ -201,6 +221,7 @@ export const ManyFiltersWrap: Story = {
 }
 
 export const ProjectScoped: Story = {
+  name: 'a project-scoped row hides the project filter and save action',
   args: {
     hideSaveView: true,
     disableProjectFilter: true,

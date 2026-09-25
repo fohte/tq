@@ -52,12 +52,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the application shell shows its sidebar on the home route',
   args: {
     currentPath: '/',
   },
 }
 
 export const TasksPage: Story = {
+  name: 'the application shell shows the task route beside its sidebar',
   args: {
     currentPath: '/tasks',
   },

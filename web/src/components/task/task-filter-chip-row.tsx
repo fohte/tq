@@ -48,6 +48,8 @@ interface TaskFilterChipRowProps {
   // list is scoped to a different project than the one the rest of the
   // screen (title, task summary, "Add task") actually targets.
   disableProjectFilter?: boolean
+  disableStatusFilter?: boolean
+  disableSortFilter?: boolean
   defaultOpenFilter?: TaskFilterKind
   autoFocus?: boolean
 }
@@ -58,6 +60,8 @@ export function TaskFilterChipRow({
   projects,
   hideSaveView = false,
   disableProjectFilter = false,
+  disableStatusFilter = false,
+  disableSortFilter = false,
   defaultOpenFilter,
   autoFocus = false,
 }: TaskFilterChipRowProps) {
@@ -108,7 +112,14 @@ export function TaskFilterChipRow({
   })
 
   const setParsed = (next: ParsedQuery) => {
-    onQueryChange(buildSearchQuery(withDefaultSort(next)))
+    const filtered = { ...next }
+    if (disableStatusFilter) delete filtered.status
+    if (disableSortFilter) delete filtered.sortBy
+    onQueryChange(
+      buildSearchQuery(
+        disableSortFilter ? filtered : withDefaultSort(filtered),
+      ),
+    )
   }
 
   // Merges newly typed free text back into the applied query: anything that
@@ -121,7 +132,11 @@ export function TaskFilterChipRow({
   const commitFreeText = (freeText: string) => {
     const typed = parseSearchQuery(freeText)
     let next: ParsedQuery = { ...parsed, freeText: typed.freeText }
-    if (typed.status != null && typed.status.length > 0) {
+    if (
+      !disableStatusFilter &&
+      typed.status != null &&
+      typed.status.length > 0
+    ) {
       next = withStatus(next, [
         ...new Set([...(next.status ?? []), ...typed.status]),
       ])
@@ -143,7 +158,9 @@ export function TaskFilterChipRow({
     if (!disableProjectFilter && typed.projectId != null) {
       next = withProjectId(next, typed.projectId)
     }
-    if (typed.sortBy != null) next.sortBy = typed.sortBy
+    if (!disableSortFilter && typed.sortBy != null) {
+      next.sortBy = typed.sortBy
+    }
     setParsed(next)
   }
 
@@ -151,7 +168,7 @@ export function TaskFilterChipRow({
   // condition sits closest to it — i.e. the last chip rendered before the
   // input, in reverse of the render order below.
   const removeLastChip = () => {
-    if (sortBy !== defaultTaskSort) {
+    if (!disableSortFilter && sortBy !== defaultTaskSort) {
       setParsed({ ...parsed, sortBy: defaultTaskSort })
     } else if (parsed.parentId != null) {
       setParsed(withParentId(parsed, undefined))
@@ -161,7 +178,11 @@ export function TaskFilterChipRow({
       setParsed(withLabel(parsed, undefined))
     } else if (selectedProject != null) {
       setParsed(withProjectId(parsed, ''))
-    } else if (parsed.status != null && parsed.status.length > 0) {
+    } else if (
+      !disableStatusFilter &&
+      parsed.status != null &&
+      parsed.status.length > 0
+    ) {
       setParsed(withStatus(parsed, []))
     }
   }
@@ -183,26 +204,28 @@ export function TaskFilterChipRow({
       </label>
 
       <div className="flex min-w-0 flex-1 flex-wrap items-start gap-x-3 gap-y-2">
-        {parsed.status != null && parsed.status.length > 0 && (
-          <TaskFilterChip
-            icon={taskFilterAxisIcons.is}
-            attribute="is"
-            value={statusValue}
-            menuTitle="Status"
-            ariaLabel={`is ${statusValue}`}
-            defaultOpen={defaultOpenFilter === 'status'}
-            onRemove={() => {
-              setParsed(withStatus(parsed, []))
-            }}
-          >
-            <TaskStatusFilterFields
-              status={parsed.status}
-              onStatusChange={(status) => {
-                setParsed(withStatus(parsed, status))
+        {!disableStatusFilter &&
+          parsed.status != null &&
+          parsed.status.length > 0 && (
+            <TaskFilterChip
+              icon={taskFilterAxisIcons.is}
+              attribute="is"
+              value={statusValue}
+              menuTitle="Status"
+              ariaLabel={`is ${statusValue}`}
+              defaultOpen={defaultOpenFilter === 'status'}
+              onRemove={() => {
+                setParsed(withStatus(parsed, []))
               }}
-            />
-          </TaskFilterChip>
-        )}
+            >
+              <TaskStatusFilterFields
+                status={parsed.status}
+                onStatusChange={(status) => {
+                  setParsed(withStatus(parsed, status))
+                }}
+              />
+            </TaskFilterChip>
+          )}
 
         {selectedProject != null && (
           <TaskFilterChip
@@ -301,40 +324,48 @@ export function TaskFilterChipRow({
           </TaskFilterChip>
         )}
 
-        <TaskFilterChip
-          icon={taskFilterAxisIcons.sort}
-          attribute="sort"
-          value={sortBy}
-          menuTitle="Sort"
-          ariaLabel={`Sort by ${sortBy}`}
-          defaultOpen={defaultOpenFilter === 'sort'}
-          isDefault={sortBy === defaultTaskSort}
-          onRemove={
-            sortBy === defaultTaskSort
-              ? undefined
-              : () => {
-                  setParsed({ ...parsed, sortBy: defaultTaskSort })
-                }
-          }
-        >
-          <TaskSortFilterFields
-            sortBy={pickerSortBy}
-            onSortByChange={(sort) => {
-              setParsed({ ...parsed, sortBy: sort })
-            }}
-          />
-        </TaskFilterChip>
+        {!disableSortFilter && (
+          <TaskFilterChip
+            icon={taskFilterAxisIcons.sort}
+            attribute="sort"
+            value={sortBy}
+            menuTitle="Sort"
+            ariaLabel={`Sort by ${sortBy}`}
+            defaultOpen={defaultOpenFilter === 'sort'}
+            isDefault={sortBy === defaultTaskSort}
+            onRemove={
+              sortBy === defaultTaskSort
+                ? undefined
+                : () => {
+                    setParsed({ ...parsed, sortBy: defaultTaskSort })
+                  }
+            }
+          >
+            <TaskSortFilterFields
+              sortBy={pickerSortBy}
+              onSortByChange={(sort) => {
+                setParsed({ ...parsed, sortBy: sort })
+              }}
+            />
+          </TaskFilterChip>
+        )}
 
         <TaskFilterFreeTextInput
           id={freeTextInputId}
           freeText={parsed.freeText}
           onCommit={commitFreeText}
           onBackspaceEmpty={removeLastChip}
+          disabledSuggestionCategories={[
+            ...(disableStatusFilter ? ['is'] : []),
+            ...(disableSortFilter ? ['sort'] : []),
+          ]}
           placeholder="Filter…"
           autoFocus={autoFocus}
           syntaxHelpSections={getSearchSyntaxHelpSections({
             audience: 'task-filter',
             disableProjectFilter,
+            disableStatusFilter,
+            disableSortFilter,
           })}
         />
       </div>

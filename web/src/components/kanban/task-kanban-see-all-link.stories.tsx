@@ -23,6 +23,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the active column links to the full list of active tasks',
   args: {
     commitment: 'active',
   },

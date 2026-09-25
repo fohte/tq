@@ -7,7 +7,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { DayViewPresentation } from '#components/day-view/day-view'
 import { AppLayout } from '#components/layout/app-layout'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import {
+  makeTask,
+  makeTaskDetail,
+} from '#components/task/task-row-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { assertDefined } from '#lib/test-utils'
@@ -15,7 +18,8 @@ import { createStoryRouter } from '#storybook-config/story-router'
 
 // AppLayout always mounts Sidebar/StatusLine/BottomTabBar/SearchModal/
 // CreateTaskModal, each of which fetches on mount; stub every such call so
-// none of these tests hits the network. CreateTaskModal's queue prefetch is
+// none of these tests hits the network. On task routes, the search scope also
+// loads the active task detail. CreateTaskModal's queue prefetch is
 // `enabled`-gated off at mount (plan starts as ''), and SearchModal's search
 // queries are gated on non-empty input, so neither needs its own stub.
 vi.mock('#lib/api', () => ({
@@ -25,6 +29,12 @@ vi.mock('#lib/api', () => ({
         $get: vi
           .fn()
           .mockResolvedValue({ ok: true, json: () => Promise.resolve([]) }),
+        ':id': {
+          $get: vi.fn().mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve(makeTaskDetail()),
+          }),
+        },
       },
       projects: {
         $get: vi

@@ -149,6 +149,7 @@ export default mainContentMeta
 type Story = StoryObj<typeof mainContentMeta>
 
 export const Default: Story = {
+  name: 'a project overview shows its description, progress, and related tasks',
   args: {
     project: { ...baseProject },
     tasks: sampleTasks,
@@ -156,6 +157,7 @@ export const Default: Story = {
 }
 
 export const NoDescription: Story = {
+  name: 'a project overview shows its tasks without a description',
   args: {
     project: { ...baseProject, description: null },
     tasks: sampleTasks,
@@ -163,6 +165,7 @@ export const NoDescription: Story = {
 }
 
 export const NoTasks: Story = {
+  name: 'a project overview shows an empty task list',
   args: {
     project: {
       ...baseProject,
@@ -174,6 +177,7 @@ export const NoTasks: Story = {
 }
 
 export const Completed: Story = {
+  name: 'a completed project overview shows its finished tasks',
   args: {
     project: {
       ...baseProject,
@@ -191,6 +195,7 @@ export const FullPagePC: StoryObj<{
   project: ProjectDetail
   tasks: ProjectTask[]
 }> = {
+  name: 'a desktop project page fills the screen with project details and tasks',
   args: {
     project: { ...baseProject },
     tasks: sampleTasks,
@@ -229,6 +234,7 @@ export const FullPageSP: StoryObj<{
   project: ProjectDetail
   tasks: ProjectTask[]
 }> = {
+  name: 'a mobile project page fits project details and tasks on screen',
   args: {
     project: { ...baseProject },
     tasks: sampleTasks,

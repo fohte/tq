@@ -26,12 +26,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Active: Story = {
+  name: 'the project toolbar filters the list to active projects',
   args: {
     filter: 'active',
   },
 }
 
 export const All: Story = {
+  name: 'the project toolbar shows every project status',
   args: {
     filter: 'all',
   },

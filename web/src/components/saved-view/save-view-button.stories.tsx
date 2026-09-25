@@ -27,9 +27,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the saved view button offers to save the current search',
+}
 
 export const DialogOpen: Story = {
+  name: 'the saved view button shows its save dialog open',
   args: {
     initialOpen: true,
   },

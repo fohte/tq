@@ -27,23 +27,28 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const NoLinks: Story = {
+  name: 'shows nothing when no GitHub links exist',
   args: { links: [] },
 }
 
 export const SingleLink: Story = {
+  name: 'shows a single GitHub issue link',
   args: { links: [issueLink] },
 }
 
 export const RepresentativeIsLatestPullRequest: Story = {
+  name: 'uses the latest pull request as the representative link',
   args: { links: [issueLink, mergedPrLink, openPrLink] },
 }
 
 export const RepresentativeFallsBackToLatestIssue: Story = {
+  name: 'uses the latest issue when no pull request is linked',
   args: {
     links: [issueLink, makeGithubLink({ id: 'link-issue-2', number: 413 })],
   },
 }
 
 export const PopupOpen: Story = {
+  name: 'opens the list of linked GitHub issues and pull requests',
   args: { links: [issueLink, mergedPrLink, openPrLink], defaultOpen: true },
 }

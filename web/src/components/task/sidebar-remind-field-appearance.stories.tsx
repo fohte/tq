@@ -42,9 +42,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const NoReminder: Story = {}
+export const NoReminder: Story = {
+  name: 'the reminder field has no date set',
+}
 
 export const WithReminder: Story = {
+  name: 'the reminder field shows an existing reminder date',
   args: {
     // Far enough in the past to never collide with "今日"/"明日".
     remindAtLabel: formatReminderSummary(new Date('2026-03-25T09:00:00.000Z')),
@@ -52,12 +55,14 @@ export const WithReminder: Story = {
 }
 
 export const TomorrowReminder: Story = {
+  name: 'the reminder field shows a reminder scheduled for tomorrow',
   args: {
     remindAtLabel: formatReminderSummary(new Date(atOffsetDays(1, 9, 0))),
   },
 }
 
 export const Editing: Story = {
+  name: 'the reminder field is open for date entry',
   args: {
     isEditing: true,
     query: '',
@@ -66,6 +71,7 @@ export const Editing: Story = {
 }
 
 export const TypeAndInterpret: Story = {
+  name: 'the field shows typed reminder text with its interpreted date',
   args: {
     isEditing: true,
     query: '来週月曜10時',
@@ -76,6 +82,7 @@ export const TypeAndInterpret: Story = {
 }
 
 export const UnrecognizedInput: Story = {
+  name: 'the field shows reminder text that cannot be interpreted',
   args: {
     isEditing: true,
     query: 'あいうえお',

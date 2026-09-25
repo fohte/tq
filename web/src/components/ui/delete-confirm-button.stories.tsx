@@ -11,6 +11,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows a delete button for a generic item',
   args: {
     title: 'Delete item',
     description:
@@ -20,6 +21,7 @@ export const Default: Story = {
 }
 
 export const SmallIcon: Story = {
+  name: 'shows a compact delete button for a comment',
   args: {
     title: 'Delete comment',
     description:
@@ -30,6 +32,7 @@ export const SmallIcon: Story = {
 }
 
 export const DialogOpen: Story = {
+  name: 'shows the delete confirmation dialog for an item',
   args: {
     title: 'Delete item',
     description:
@@ -40,6 +43,7 @@ export const DialogOpen: Story = {
 }
 
 export const Disabled: Story = {
+  name: 'shows a disabled delete button',
   args: {
     title: 'Delete item',
     description: 'This action cannot be undone.',

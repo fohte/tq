@@ -44,9 +44,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const WithCandidates: Story = {}
+export const WithCandidates: Story = {
+  name: 'the project task link menu lists tasks available to add',
+}
 
 export const ConfirmDialog: Story = {
+  name: 'the link menu asks for confirmation before moving a task',
   args: {
     confirmCandidate: candidateWithProject,
     currentProjectTitle: 'Website Redesign',

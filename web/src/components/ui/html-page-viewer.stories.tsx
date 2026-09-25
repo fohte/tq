@@ -14,6 +14,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'renders a heading and paragraph from an HTML page',
   args: {
     content:
       '<!doctype html><html><body style="font-family: sans-serif; margin: 0; padding: 16px;"><h1>Hello from HTML page</h1><p>This content is rendered inside a sandboxed iframe.</p></body></html>',
@@ -21,6 +22,7 @@ export const Default: Story = {
 }
 
 export const WithScript: Story = {
+  name: 'renders an HTML page with a click counter button',
   args: {
     content:
       '<!doctype html><html><body style="font-family: sans-serif; margin: 0; padding: 16px;">' +

@@ -25,12 +25,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows the Badge label in the default badge style',
   args: {
     children: 'Badge',
   },
 }
 
 export const Secondary: Story = {
+  name: 'shows a secondary badge labeled Secondary',
   args: {
     variant: 'secondary',
     children: 'Secondary',
@@ -38,6 +40,7 @@ export const Secondary: Story = {
 }
 
 export const Destructive: Story = {
+  name: 'shows a destructive badge labeled Destructive',
   args: {
     variant: 'destructive',
     children: 'Destructive',
@@ -45,6 +48,7 @@ export const Destructive: Story = {
 }
 
 export const Outline: Story = {
+  name: 'shows an outlined badge labeled Outline',
   args: {
     variant: 'outline',
     children: 'Outline',
@@ -52,6 +56,7 @@ export const Outline: Story = {
 }
 
 export const Ghost: Story = {
+  name: 'shows a ghost badge labeled Ghost',
   args: {
     variant: 'ghost',
     children: 'Ghost',
@@ -59,6 +64,7 @@ export const Ghost: Story = {
 }
 
 export const AllVariants: Story = {
+  name: 'compares default, secondary, destructive, outline, ghost, and link badges',
   render: () => (
     <div className="flex flex-wrap items-center gap-3">
       <Badge variant="default">Default</Badge>
@@ -72,6 +78,7 @@ export const AllVariants: Story = {
 }
 
 export const ContextChip: Story = {
+  name: 'shows an outlined badge for a bug label',
   args: {
     variant: 'outline',
     children: '#bug',

@@ -51,9 +51,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the input shows the current free-text query',
+}
 
 export const Empty: Story = {
+  name: 'the empty input shows its placeholder',
   args: {
     freeText: '',
     placeholder: 'Filter…',
@@ -61,6 +64,7 @@ export const Empty: Story = {
 }
 
 export const SyntaxHelpFocused: Story = {
+  name: 'the focused empty input displays syntax help',
   args: {
     freeText: '',
     autoFocus: true,
@@ -81,6 +85,7 @@ suggestionsQueryClient.setQueryData(
 )
 
 export const WithSuggestionsOpen: Story = {
+  name: 'the input shows suggestions for an incomplete filter',
   args: {
     freeText: 'is:',
     autoFocus: true,

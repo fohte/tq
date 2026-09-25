@@ -17,7 +17,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const InlineFieldGroupDefault: Story = {
-  name: 'InlineFieldGroup',
+  name: 'shows the start date inside an inline field group',
   render: () => (
     <InlineFieldGroup
       label="Start"
@@ -29,6 +29,7 @@ export const InlineFieldGroupDefault: Story = {
 }
 
 export const InlineFieldGroupRow: Story = {
+  name: 'shows the start date and context fields in one row',
   render: () => (
     <div className="flex flex-wrap items-end gap-4">
       <InlineFieldGroup
@@ -45,6 +46,7 @@ export const InlineFieldGroupRow: Story = {
 }
 
 export const ExpandableFieldChipInactive: Story = {
+  name: 'shows a collapsed start date chip',
   render: () => (
     <ExpandableFieldChip
       icon={<CalendarPlus className="size-3.5" />}
@@ -55,6 +57,7 @@ export const ExpandableFieldChipInactive: Story = {
 }
 
 export const ExpandableFieldChipActive: Story = {
+  name: 'shows the selected start date in an active chip',
   render: () => (
     <ExpandableFieldChip
       icon={<CalendarPlus className="size-3.5" />}
@@ -65,6 +68,7 @@ export const ExpandableFieldChipActive: Story = {
 }
 
 export const ExpandableFieldChipExpanded: Story = {
+  name: 'shows an expanded start chip with a date input',
   render: () => (
     <ExpandableFieldChip
       icon={<CalendarPlus className="size-3.5" />}
@@ -83,5 +87,6 @@ export const ExpandableFieldChipExpanded: Story = {
 }
 
 export const ExpandableFieldChipExpandedWithSelect: Story = {
+  name: 'shows an expanded context chip with its choices',
   render: () => <ExpandableContextChipDemo defaultOpen />,
 }

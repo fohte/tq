@@ -71,18 +71,21 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const ClosedTrigger: Story = {
+  name: 'shows the task selector without its popup',
   args: {
     open: false,
   },
 }
 
 export const Open: Story = {
+  name: 'shows matching tasks beside the task selector',
   args: {
     open: true,
   },
 }
 
 export const InputAnchorOpen: StoryObj<typeof AnchoredPopupWithInputDemo> = {
+  name: 'shows matching tasks below a task search field',
   render: (args) => <AnchoredPopupWithInputDemo {...args} />,
   args: {
     open: true,

@@ -18,15 +18,19 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the tabs show the available planning periods with none selected',
+}
 
 export const TodaySelected: Story = {
+  name: 'the tabs highlight the day queue',
   args: {
     value: 'day',
   },
 }
 
 export const Disabled: Story = {
+  name: 'the tabs are unavailable for selection',
   args: {
     disabled: true,
   },

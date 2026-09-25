@@ -23,12 +23,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Open: Story = {
+  name: 'shows the delete confirmation dialog and its warning',
   args: {
     open: true,
   },
 }
 
 export const WithTrigger: Story = {
+  name: 'shows a delete item trigger before confirmation',
   args: {
     children: (
       <DialogTrigger render={<Button variant="outline" />}>

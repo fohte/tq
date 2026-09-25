@@ -2,27 +2,19 @@ import { parseSearchQuery } from 'api/search-query-parser'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-import { createCommandItems } from '#components/search/search-modal-command-items'
 import { SearchModalFooter } from '#components/search/search-modal-footer'
 import { useSearchModalHelp } from '#components/search/search-modal-help'
 import { SearchModalInput } from '#components/search/search-modal-input'
 import { useSearchModalNavigation } from '#components/search/search-modal-navigation'
 import {
   removeLastSearchScopeToken,
+  removeSearchContextTokens,
+  removeSearchScopeToken,
   useSearchModalQuery,
 } from '#components/search/search-modal-query'
-import { createRecentSearchItems } from '#components/search/search-modal-recent-item'
-import {
-  createOptionItem,
-  createPageItems,
-  createProjectItems,
-  createViewItems,
-  type ListItem,
-  renderTaskOption,
-} from '#components/search/search-modal-result-items'
+import { useSearchModalResultGroups } from '#components/search/search-modal-result-groups'
 import {
   indexResultGroups,
-  type ResultGroup,
   SearchModalResultList,
 } from '#components/search/search-modal-result-list'
 import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
@@ -33,12 +25,12 @@ import { useProjects } from '#hooks/use-projects'
 import { useSavedViews } from '#hooks/use-saved-views'
 import {
   resolveSearchContext,
-  type SearchResult,
   useSearchPages,
   useSearchSuggestions,
   useSearchTaskByNumber,
   useSearchTasks,
 } from '#hooks/use-search'
+import { useSearchScopeLabels } from '#hooks/use-search-scope-labels'
 import {
   getRecentSearchItems,
   type RecentSearchItem,
@@ -64,6 +56,8 @@ export function SearchModal({
   onNewTask,
 }: SearchModalProps) {
   const [query, setQuery] = useState(defaultQuery)
+  const defaultQueryRef = useRef(defaultQuery)
+  defaultQueryRef.current = defaultQuery
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isContextCleared, setIsContextCleared] = useState(false)
   const [recentItems, setRecentItems] = useState<RecentSearchItem[]>(
@@ -117,6 +111,18 @@ export function SearchModal({
         }
       : undefined
   const hasAuxiliarySearch = freeTextQuery.length > 0
+  const searchScopeLabels = useSearchScopeLabels(searchScopeTokens, open)
+
+  const handleRemoveContext = () => {
+    setQuery(`${modePrefix ?? ''}${removeSearchContextTokens(searchQuery)}`)
+    setIsContextCleared(true)
+    inputRef.current?.focus()
+  }
+
+  const handleRemoveScopeToken = (index: number) => {
+    setQuery(`${modePrefix ?? ''}${removeSearchScopeToken(searchQuery, index)}`)
+    inputRef.current?.focus()
+  }
 
   const canSearchTasks = searchMode == null || searchMode === 'tasks'
   const canSearchProjects = searchMode == null || searchMode === 'projects'
@@ -153,12 +159,12 @@ export function SearchModal({
 
   useEffect(() => {
     if (open) {
-      setQuery(defaultQuery)
+      setQuery(defaultQueryRef.current)
       setSelectedIndex(0)
       setIsContextCleared(false)
       setRecentItems(defaultRecentItems ?? getRecentSearchItems())
     }
-  }, [open, defaultQuery, defaultRecentItems])
+  }, [open, defaultRecentItems])
 
   // Scroll selected item into view
   useEffect(() => {
@@ -169,140 +175,7 @@ export function SearchModal({
     }
   }, [selectedIndex])
 
-  const resultGroups = useMemo((): ResultGroup[] => {
-    const recentListItems =
-      query === ''
-        ? createRecentSearchItems(
-            context == null
-              ? recentItems
-              : recentItems.filter(
-                  (item) => item.context == null || item.context === context,
-                ),
-            openTask,
-            openProject,
-          )
-        : []
-    const commandItems =
-      searchMode === 'commands'
-        ? createCommandItems(
-            searchInputValue,
-            openRoute,
-            onNewTask == null
-              ? undefined
-              : () => {
-                  onOpenChangeRef.current(false)
-                  onNewTask()
-                },
-          )
-        : []
-    const suggestionItems: ListItem[] =
-      suggestions && currentPrefix.length > 0
-        ? suggestions.map((suggestion) => {
-            const select = () => {
-              applySuggestion(suggestion)
-            }
-
-            return createOptionItem(
-              suggestion.value,
-              select,
-              <>
-                <span className="font-mono text-sm text-foreground">
-                  {suggestion.value}
-                </span>
-                <span className="text-2xs text-muted-foreground">
-                  {suggestion.display}
-                </span>
-              </>,
-              { selectOnTab: select },
-            )
-          })
-        : []
-    const toTaskListItem = (task: SearchResult, keyPrefix = ''): ListItem => ({
-      key: `${keyPrefix}${task.id}`,
-      select: () => {
-        openTask(task)
-      },
-      selectOnTab: () => {
-        applyScope(`parent:${task.id}`)
-      },
-      render: renderTaskOption(task, onOpenChangeRef),
-    })
-    const taskItems: ListItem[] =
-      canSearchTasks && hasSearchQuery
-        ? (tasks
-            ?.filter((task) => task.id !== taskByNumber?.id)
-            .map((task) => toTaskListItem(task)) ?? [])
-        : []
-    const taskNumberItems: ListItem[] =
-      canSearchTasks && hasSearchQuery && taskByNumber != null
-        ? [toTaskListItem(taskByNumber, 'number:')]
-        : []
-    const pageItems =
-      canSearchPages && hasSearchQuery
-        ? createPageItems(pages, openPage, onOpenChangeRef)
-        : []
-    const projectItems =
-      canSearchProjects && hasAuxiliarySearch
-        ? createProjectItems(projects, openProject, (project) => {
-            applyScope(`project:${project.id}`)
-          })
-        : []
-    const viewItems =
-      canSearchViews && hasAuxiliarySearch
-        ? createViewItems(savedViews, openView)
-        : []
-
-    return [
-      {
-        id: 'commands',
-        title: 'Commands',
-        items: commandItems,
-        isVisible: (_query, itemCount) => itemCount > 0,
-      },
-      {
-        id: 'recent',
-        title: 'Recently viewed',
-        items: recentListItems,
-        isVisible: (_query, itemCount) => itemCount > 0,
-      },
-      {
-        id: 'task-number',
-        title: 'Task number',
-        items: taskNumberItems,
-        isVisible: (_query, itemCount) => itemCount > 0,
-      },
-      {
-        id: 'suggestions',
-        title: 'Suggestions',
-        items: canSuggest ? suggestionItems : [],
-        isVisible: (_query, itemCount) => itemCount > 0,
-      },
-      {
-        id: 'tasks',
-        title: 'Tasks',
-        items: taskItems,
-        isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
-      },
-      {
-        id: 'projects',
-        title: 'Projects',
-        items: projectItems,
-        isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
-      },
-      {
-        id: 'views',
-        title: 'Views',
-        items: viewItems,
-        isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
-      },
-      {
-        id: 'pages',
-        title: 'Pages',
-        items: pageItems,
-        isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
-      },
-    ]
-  }, [
+  const resultGroups = useSearchModalResultGroups({
     query,
     recentItems,
     searchMode,
@@ -330,7 +203,8 @@ export function SearchModal({
     canSearchViews,
     canSuggest,
     hasSearchQuery,
-  ])
+    onOpenChangeRef,
+  })
 
   const { items, indexedGroups } = useMemo(
     () => indexResultGroups(resultGroups),
@@ -433,11 +307,13 @@ export function SearchModal({
           <SearchModalInput
             modePrefix={modePrefix}
             context={context}
-            searchScopeTokens={searchScopeTokens}
+            searchScopes={searchScopeLabels}
             searchInputValue={searchInputValue}
             searchTarget={searchTarget}
             isFetching={isFetching}
             inputRef={inputRef}
+            onRemoveContext={handleRemoveContext}
+            onRemoveScopeToken={handleRemoveScopeToken}
             onInputValueChange={(value) => {
               closeHelp()
               updateInputValue(value)

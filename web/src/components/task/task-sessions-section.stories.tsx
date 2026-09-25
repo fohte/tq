@@ -78,9 +78,11 @@ export default meta
 type SectionStoryType = StoryObj<typeof meta>
 
 export const WithSessions: SectionStoryType = {
+  name: 'active and ended agent sessions appear together',
   args: { sessions: [activeSession, endedSession] },
 }
 
 export const Empty: SectionStoryType = {
+  name: 'the section shows when no agent sessions are linked',
   args: { sessions: [] },
 }

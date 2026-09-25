@@ -55,15 +55,19 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const WeeklySummary: Story = {}
+export const WeeklySummary: Story = {
+  name: 'the repeat field summarizes a weekly schedule',
+}
 
 export const OpenEditorShowsNextPreview: Story = {
+  name: 'the open weekly editor previews the next scheduled occurrence',
   args: {
     isEditing: true,
   },
 }
 
 export const MonthlySummary: Story = {
+  name: 'the repeat field summarizes a monthly schedule',
   args: {
     recurrenceRule: monthlyRule,
     type: 'monthly',
@@ -72,6 +76,7 @@ export const MonthlySummary: Story = {
 }
 
 export const OpenEditorMonthly: Story = {
+  name: 'the open monthly editor shows its repeat settings and next occurrence',
   args: {
     recurrenceRule: monthlyRule,
     isEditing: true,

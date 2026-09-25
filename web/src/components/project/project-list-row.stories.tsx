@@ -50,12 +50,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Active: Story = {
+  name: 'an active project row shows its progress and target date',
   args: {
     project: baseProject,
   },
 }
 
 export const Paused: Story = {
+  name: 'a paused project row shows its current progress',
   args: {
     project: makeListedProject({
       id: '2',
@@ -70,6 +72,7 @@ export const Paused: Story = {
 }
 
 export const Completed: Story = {
+  name: 'a completed project row shows full progress',
   args: {
     project: makeListedProject({
       id: '3',
@@ -85,6 +88,7 @@ export const Completed: Story = {
 }
 
 export const Archived: Story = {
+  name: 'an archived project row shows its inactive status',
   args: {
     project: makeListedProject({
       id: '4',
@@ -101,6 +105,7 @@ export const Archived: Story = {
 }
 
 export const NoDescription: Story = {
+  name: 'a project row omits the description when none is set',
   args: {
     project: makeListedProject({
       id: '5',
@@ -112,6 +117,7 @@ export const NoDescription: Story = {
 }
 
 export const NoTargetDate: Story = {
+  name: 'a project row shows progress without a target date',
   args: {
     project: makeListedProject({
       id: '6',
@@ -126,6 +132,7 @@ export const NoTargetDate: Story = {
 }
 
 export const AllVariants: Story = {
+  name: 'project rows compare active, paused, completed, and archived states',
   args: { project: baseProject },
   render: () => {
     const projects: Project[] = [

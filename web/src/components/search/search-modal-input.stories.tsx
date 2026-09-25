@@ -6,11 +6,13 @@ const meta = {
   title: 'Search/SearchModalInput',
   component: SearchModalInput,
   args: {
-    searchScopeTokens: [],
+    searchScopes: [],
     searchInputValue: '',
     searchTarget: 'tasks',
     isFetching: false,
     onInputValueChange: () => undefined,
+    onRemoveContext: () => undefined,
+    onRemoveScopeToken: () => undefined,
   },
   parameters: { layout: 'centered' },
   decorators: [
@@ -25,14 +27,20 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the search input is empty and ready for a query',
+}
 
 export const ScopedAndLoading: Story = {
+  name: 'the search input shows task scopes while results are loading',
   tags: ['desktop-only'],
   args: {
     modePrefix: '#',
     context: 'work',
-    searchScopeTokens: ['project:<project-id>', 'parent:<task-id>'],
+    searchScopes: [
+      { token: 'project:<project-id>', label: 'project:Quarterly planning' },
+      { token: 'parent:<task-id>', label: 'parent:#42 Prepare release' },
+    ],
     searchInputValue: 'schedule',
     isFetching: true,
   },
