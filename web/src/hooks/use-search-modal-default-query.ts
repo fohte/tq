@@ -14,11 +14,15 @@ export function useSearchModalDefaultQuery(): string {
 
   switch (currentRoute.kind) {
     case 'project-detail':
-      return `project:${currentRoute.projectId}`
-    case 'task-list':
-      return typeof q === 'string' ? extractSearchScopeTokens(q).join(' ') : ''
+      return `project:${currentRoute.projectId} `
+    case 'task-list': {
+      if (typeof q !== 'string') return ''
+
+      const scopeTokens = extractSearchScopeTokens(`${q} `)
+      return scopeTokens.length === 0 ? '' : `${scopeTokens.join(' ')} `
+    }
     case 'task-detail':
-      return task?.projectId == null ? '' : `project:${task.projectId}`
+      return task?.projectId == null ? '' : `project:${task.projectId} `
     case 'other':
       return ''
   }

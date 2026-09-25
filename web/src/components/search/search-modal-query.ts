@@ -9,7 +9,7 @@ import {
 } from '#hooks/use-search'
 
 const scopeTokenPattern =
-  /(?:^|\s)((?:project|parent|label):(?:"(?:\\.|[^"])*"|'(?:\\.|[^'])*'|\S+))(?=\s|$)/g
+  /(?:^|\s)((?:project|parent|label):(?:"(?:\\.|[^"])*"|'(?:\\.|[^'])*'|\S+))(?=\s)/g
 
 export function extractSearchScopeTokens(query: string): string[] {
   return Array.from(

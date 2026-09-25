@@ -53,6 +53,8 @@ export function SearchModal({
   onNewTask,
 }: SearchModalProps) {
   const [query, setQuery] = useState(defaultQuery)
+  const defaultQueryRef = useRef(defaultQuery)
+  defaultQueryRef.current = defaultQuery
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isContextCleared, setIsContextCleared] = useState(false)
   const [recentItems, setRecentItems] = useState<RecentSearchItem[]>(
@@ -142,12 +144,12 @@ export function SearchModal({
 
   useEffect(() => {
     if (open) {
-      setQuery(defaultQuery)
+      setQuery(defaultQueryRef.current)
       setSelectedIndex(0)
       setIsContextCleared(false)
       setRecentItems(defaultRecentItems ?? getRecentSearchItems())
     }
-  }, [open, defaultQuery, defaultRecentItems])
+  }, [open, defaultRecentItems])
 
   // Scroll selected item into view
   useEffect(() => {
