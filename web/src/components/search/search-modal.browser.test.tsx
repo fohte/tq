@@ -231,6 +231,27 @@ function renderSearchModal(
   }
 }
 
+function mockUnscopedSearchResult(query: string) {
+  mockSearchDataForQuery = (searchQuery, context) =>
+    searchQuery === query && context == null ? [personalTask] : []
+}
+
+function getSearchEverywhereOutput(
+  searchTarget: 'tasks' | 'projects' = 'tasks',
+) {
+  return {
+    inputValue: screen.getByLabelText<HTMLInputElement>(
+      `Search ${searchTarget}`,
+    ).value,
+    context: screen.queryByTestId('search-context-scope')?.textContent ?? null,
+    scopes: screen
+      .queryAllByTestId('search-scope-token')
+      .map((element) => element.textContent),
+    options: screen.queryAllByRole('option').length,
+    result: screen.queryByText('Plan weekend trip')?.textContent ?? null,
+  }
+}
+
 describe('SearchModal', () => {
   beforeEach(() => {
     mockSearchData = []
@@ -759,33 +780,49 @@ describe('SearchModal', () => {
       message: screen.queryByText('no results for "nonexistent"')?.textContent,
       options: screen.queryAllByRole('option').length,
     })
+    await waitFor(() => {
+      expect(getOutput()).toEqual({
+        message: 'no results for "nonexistent"',
+        options: 0,
+      })
+    })
+  })
+
+  it('does not offer Search everywhere while the query is debouncing', async () => {
+    resetSessionOpenSettings({ localContext: 'work' })
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    const input = screen.getByLabelText<HTMLInputElement>('Search tasks')
+    await user.type(input, 'none')
+    await user.keyboard('{Enter}')
+
+    const getOutput = () => ({
+      inputValue: input.value,
+      context:
+        screen.queryByTestId('search-context-scope')?.textContent ?? null,
+      searchEverywhere:
+        screen.queryByRole('option', { name: 'Search everywhere' })
+          ?.textContent ?? null,
+    })
     expect(getOutput()).toEqual({
-      message: 'no results for "nonexistent"',
-      options: 0,
+      inputValue: 'none',
+      context: 'context:work',
+      searchEverywhere: null,
     })
   })
 
   it('clears the active context and preserves the query when Search everywhere is selected with Enter', async () => {
     resetSessionOpenSettings({ localContext: 'work' })
-    mockSearchDataForQuery = (query, context) =>
-      query === 'unmatched' && context == null ? [personalTask] : []
+    mockUnscopedSearchResult('unmatched')
 
     const user = userEvent.setup()
     renderSearchModal({ defaultQuery: 'unmatched' })
 
     await user.keyboard('{Enter}')
 
-    const getOutput = () => ({
-      inputValue: screen.getByLabelText<HTMLInputElement>('Search tasks').value,
-      context:
-        screen.queryByTestId('search-context-scope')?.textContent ?? null,
-      scopes: screen
-        .queryAllByTestId('search-scope-token')
-        .map((element) => element.textContent),
-      options: screen.getAllByRole('option').length,
-      result: screen.queryByText('Plan weekend trip')?.textContent ?? null,
-    })
-    expect(getOutput()).toEqual({
+    expect(getSearchEverywhereOutput()).toEqual({
       inputValue: 'unmatched',
       context: null,
       scopes: [],
@@ -795,8 +832,7 @@ describe('SearchModal', () => {
   })
 
   it('clears project and parent scopes and preserves the query when Search everywhere is clicked', async () => {
-    mockSearchDataForQuery = (query, context) =>
-      query === 'unmatched' && context == null ? [personalTask] : []
+    mockUnscopedSearchResult('unmatched')
 
     const user = userEvent.setup()
     renderSearchModal({
@@ -807,22 +843,60 @@ describe('SearchModal', () => {
 
     await user.click(screen.getByRole('option', { name: 'Search everywhere' }))
 
-    const getOutput = () => ({
-      inputValue: screen.getByLabelText<HTMLInputElement>('Search tasks').value,
-      context:
-        screen.queryByTestId('search-context-scope')?.textContent ?? null,
-      scopes: screen
-        .queryAllByTestId('search-scope-token')
-        .map((element) => element.textContent),
-      options: screen.getAllByRole('option').length,
-      result: screen.queryByText('Plan weekend trip')?.textContent ?? null,
-    })
-    expect(getOutput()).toEqual({
+    expect(getSearchEverywhereOutput()).toEqual({
       inputValue: 'unmatched',
       context: null,
       scopes: [],
       options: 1,
       result: 'Plan weekend trip',
+    })
+  })
+
+  it('removes an inline context token and preserves the search mode', async () => {
+    const user = userEvent.setup()
+    renderSearchModal({
+      defaultContext: null,
+      defaultQuery: '!foo context:work bar',
+    })
+
+    await user.keyboard('{Enter}')
+
+    const getOutput = () => ({
+      ...getSearchEverywhereOutput('projects'),
+      mode: screen.getByTestId('search-mode-indicator').textContent,
+      lastProjectSearch: mockProjectCalls.at(-1),
+    })
+    await waitFor(() => {
+      expect(getOutput()).toEqual({
+        inputValue: 'foo bar',
+        context: null,
+        scopes: [],
+        options: 0,
+        result: null,
+        mode: '!',
+        lastProjectSearch: {
+          filter: { q: 'foo bar' },
+          options: { enabled: true },
+        },
+      })
+    })
+  })
+
+  it('does not offer Search everywhere when the scoped search has results', () => {
+    resetSessionOpenSettings({ localContext: 'work' })
+    mockSearchData = [firstMockTask]
+
+    renderSearchModal({ defaultQuery: 'task' })
+
+    const getOutput = () => ({
+      result: screen.queryByText(firstMockTask.title)?.textContent ?? null,
+      searchEverywhere:
+        screen.queryByRole('option', { name: 'Search everywhere' })
+          ?.textContent ?? null,
+    })
+    expect(getOutput()).toEqual({
+      result: firstMockTask.title,
+      searchEverywhere: null,
     })
   })
 

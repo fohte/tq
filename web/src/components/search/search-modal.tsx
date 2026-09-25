@@ -10,6 +10,7 @@ import {
   removeLastSearchScopeToken,
   useSearchModalQuery,
 } from '#components/search/search-modal-query'
+import { removeSearchContextTokens } from '#components/search/search-modal-query-clear-scope'
 import { useSearchModalResultGroups } from '#components/search/search-modal-result-groups'
 import {
   indexResultGroups,
@@ -99,6 +100,7 @@ export function SearchModal({
   const canClearContext =
     searchInputValue === '' && searchScopeTokens.length === 0 && context != null
   const freeTextQuery = parseSearchQuery(searchQuery).freeText
+  const debouncedSearchQuery = useDebounce(searchQuery, 200)
   const debouncedFreeTextQuery = useDebounce(freeTextQuery, 200)
   const debouncedContext = useDebounce(context, 200)
   const searchFilter =
@@ -145,13 +147,15 @@ export function SearchModal({
     isFetchingPages ||
     isFetchingProjects ||
     isFetchingSavedViews
+  const isSearchPending =
+    isFetching ||
+    debouncedSearchQuery !== searchQuery ||
+    debouncedFreeTextQuery !== freeTextQuery ||
+    debouncedContext !== context
   const { data: suggestions } = useSearchSuggestions(currentPrefix)
 
   const handleSearchEverywhere = useCallback(() => {
-    const unscopedInputValue = searchInputValue
-      .replace(/(^|\s)context:(?:work|personal)(?=\s|$)/gi, '$1')
-      .replace(/\s+/g, ' ')
-      .trim()
+    const unscopedInputValue = removeSearchContextTokens(searchInputValue)
     setQuery(`${modePrefix ?? ''}${unscopedInputValue}`)
     setIsContextCleared(true)
     inputRef.current?.focus()
@@ -175,7 +179,7 @@ export function SearchModal({
     }
   }, [selectedIndex])
 
-  const resultGroups = useSearchModalResultGroups({
+  const { resultGroups, hasVisibleResults } = useSearchModalResultGroups({
     query,
     recentItems,
     searchMode,
@@ -204,7 +208,7 @@ export function SearchModal({
     canSuggest,
     hasSearchQuery,
     hasActiveScope,
-    isFetching,
+    isSearchPending,
     onSearchEverywhere: handleSearchEverywhere,
     onOpenChangeRef,
   })
@@ -274,13 +278,7 @@ export function SearchModal({
   )
 
   const emptyMessage =
-    searchQuery.length > 0 &&
-    !isFetching &&
-    !indexedGroups.some(
-      (group) =>
-        group.id !== 'search-everywhere' &&
-        group.isVisible(searchQuery, group.items.length),
-    )
+    searchQuery.length > 0 && !isSearchPending && !hasVisibleResults
       ? searchInputValue.length === 0
         ? 'no results in this scope'
         : `no results for "${searchInputValue}"`
