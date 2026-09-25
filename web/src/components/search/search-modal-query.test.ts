@@ -46,6 +46,12 @@ describe('search modal query scopes', () => {
     ).toBe('search "context:foo" is:todo ')
   })
 
+  it('preserves quoted text containing context filters', () => {
+    expect(
+      removeSearchContextTokens('"a context:work b" context:work context:WORK'),
+    ).toBe('"a context:work b" context:WORK')
+  })
+
   it('drops free text while preserving filters and earlier scopes', () => {
     const projectId = '00000000-0000-0000-0000-000000000101'
     const taskId = '00000000-0000-0000-0000-000000000102'
