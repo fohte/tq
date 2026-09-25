@@ -437,10 +437,11 @@ height. `BottomSheetOverlay` (`bottom-sheet.tsx`) sets
 ## Native select indicators
 
 Sidebar selects use the `native-select-caret-stroke` utility
-(`stroke-width: 2.5px`) to match the browser's native caret weight. The status
-indicator uses `native-select-status-caret-offset` to shift its SVG path by 3
-user units (about 2 CSS pixels at `size-4`) while keeping the icon's flex box
-within the select trigger.
+(`stroke-width: 2.8px`) to match the browser's native caret weight. The status
+indicator uses `native-select-status-caret-offset` to shift its SVG path by
+4.5 user units (3 CSS pixels at `size-4`) while keeping the icon's flex box
+within the select trigger. The recurring state indicator uses
+`-translate-x-0.5` to align its caret with the native select position.
 
 ## Z-index
 

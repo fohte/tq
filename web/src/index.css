@@ -75,12 +75,12 @@
 
 /* Align select indicators with the browser's native caret. */
 @utility native-select-caret-stroke {
-  stroke-width: 2.5px;
+  stroke-width: 2.8px;
 }
 
 @utility native-select-status-caret-offset {
   & path {
-    translate: 3px 0;
+    translate: 4.5px 0;
   }
 }
 
