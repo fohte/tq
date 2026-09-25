@@ -23,18 +23,21 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Context: Story = {
+  name: 'shows a context chip labeled work',
   args: {
     children: 'work',
   },
 }
 
 export const GhLink: Story = {
+  name: 'shows a GitHub task reference chip',
   args: {
     children: 'tq#212',
   },
 }
 
 export const TagActive: Story = {
+  name: 'shows the active dev:tq label chip',
   args: {
     size: 'md',
     active: true,
@@ -48,6 +51,7 @@ export const TagActive: Story = {
 }
 
 export const StatusBadge: Story = {
+  name: 'shows a chip for active status',
   args: {
     size: 'md',
     children: 'active',
@@ -55,6 +59,7 @@ export const StatusBadge: Story = {
 }
 
 export const Interactive: Story = {
+  name: 'shows a clickable filter chip',
   args: {
     as: 'button',
     size: 'md',
@@ -64,6 +69,7 @@ export const Interactive: Story = {
 }
 
 export const AllVariants: Story = {
+  name: 'compares context, task, tag, status, and filter chips',
   args: {
     children: 'work',
   },

@@ -61,6 +61,7 @@ type Story = StoryObj<typeof meta>
 // the component in its initial isLoading render. The settings request is
 // held open (rather than errored) so the loading state stays visible.
 export const Loading: Story = {
+  name: 'the scheduling settings panel shows loading placeholders',
   args: {},
   parameters: {
     msw: {
@@ -75,6 +76,7 @@ export const Loading: Story = {
 }
 
 export const Default: Story = {
+  name: 'the scheduling settings show the configured work hours and rules',
   args: {
     settings: sampleSettings,
   },
@@ -86,6 +88,7 @@ export const Default: Story = {
 }
 
 export const RescheduleDisabled: Story = {
+  name: 'the scheduling settings show automatic rescheduling disabled',
   args: {
     settings: { ...sampleSettings, autoRescheduleOnGcalChange: false },
   },

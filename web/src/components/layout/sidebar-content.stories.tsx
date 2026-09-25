@@ -129,9 +129,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'the sidebar shows task and label navigation',
+}
 
 export const WithNestedTags: Story = {
+  name: 'the sidebar groups tasks under nested labels',
   args: {
     tasks: tasksWithNestedTags,
     labels: labelsForNestedTags,
@@ -139,6 +142,7 @@ export const WithNestedTags: Story = {
 }
 
 export const WithInboxTasks: Story = {
+  name: 'the sidebar includes a task in the inbox section',
   args: {
     tasks: tasksWithInboxItems,
   },

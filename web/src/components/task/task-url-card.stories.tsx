@@ -78,10 +78,12 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Todo: Story = {
+  name: 'a linked task card previews an open task',
   args: { id: TASK_ID, raw: TASK_URL, task: baseTask },
 }
 
 export const Completed: Story = {
+  name: 'a linked task card previews a completed task',
   args: {
     id: TASK_ID,
     raw: TASK_URL,
@@ -93,5 +95,6 @@ export const Completed: Story = {
 // actual task): the card falls back to rendering the raw matched text while
 // its data is unresolved.
 export const Unresolved: Story = {
+  name: 'an unresolved task URL stays as plain text',
   args: { id: UNRESOLVED_ID, raw: UNRESOLVED_URL, task: null },
 }

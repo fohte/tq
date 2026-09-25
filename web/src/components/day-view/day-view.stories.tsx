@@ -298,6 +298,7 @@ const sampleQueueSections = [
 ]
 
 export const Default: Story = {
+  name: 'the day planner shows a daily calendar beside the task queue',
   args: {
     isLoading: false,
     calendarEvents: sampleEvents,
@@ -322,6 +323,7 @@ export const Default: Story = {
 }
 
 export const Kanban: Story = {
+  name: 'the day planner groups queued tasks into kanban columns',
   // On mobile the initial tab is calendar, so the queue pane's kanban
   // layout isn't visible and this would be pixel-identical to Default
   // there — see KanbanMobile for the mobile-specific coverage.
@@ -350,6 +352,7 @@ const emptyQueueSections = [
 ]
 
 export const Loading: Story = {
+  name: 'the day planner shows loading placeholders for its task queue',
   args: {
     isLoading: true,
     calendarEvents: [],
@@ -370,6 +373,7 @@ export const Loading: Story = {
 }
 
 export const Empty: Story = {
+  name: 'the day planner has no scheduled events or queued tasks',
   args: {
     isLoading: false,
     calendarEvents: [],
@@ -390,6 +394,7 @@ export const Empty: Story = {
 }
 
 export const EmptyQueueWithCandidates: Story = {
+  name: 'an empty task queue still offers unscheduled candidates',
   args: {
     isLoading: false,
     calendarEvents: [],
@@ -414,6 +419,7 @@ export const EmptyQueueWithCandidates: Story = {
 }
 
 export const KanbanMobile: Story = {
+  name: 'the mobile day planner opens its task tab with kanban columns',
   tags: ['mobile-only'],
   args: {
     ...Default.args,

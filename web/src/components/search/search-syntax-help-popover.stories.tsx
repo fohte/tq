@@ -11,8 +11,11 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Closed: Story = {}
+export const Closed: Story = {
+  name: 'the syntax help popover is closed beside the search controls',
+}
 
 export const Open: Story = {
+  name: 'the syntax help popover displays search targets and filters',
   args: { defaultOpen: true },
 }

@@ -64,8 +64,11 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const TaskTabs: Story = {}
+export const TaskTabs: Story = {
+  name: 'shows Today, All, and Backlog task tabs',
+}
 
 export const ScaleTabs: Story = {
+  name: 'shows day, week, and month scale tabs',
   render: () => <ScaleTabStripDemo onChange={fn()} />,
 }

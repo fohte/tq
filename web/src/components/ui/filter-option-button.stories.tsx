@@ -16,15 +16,19 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Inactive: Story = {}
+export const Inactive: Story = {
+  name: 'shows All projects as an inactive filter option',
+}
 
 export const Active: Story = {
+  name: 'shows All projects as the selected filter option',
   args: {
     active: true,
   },
 }
 
 export const Indented: Story = {
+  name: 'shows the tq filter option indented one level',
   args: {
     depth: 1,
     children: 'tq',

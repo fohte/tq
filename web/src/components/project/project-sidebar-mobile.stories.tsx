@@ -54,12 +54,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'the mobile project sidebar shows project details and actions',
   args: {
     project: { ...baseProject },
   },
 }
 
 export const WorkContext: Story = {
+  name: 'the mobile project sidebar shows a work project context',
   args: {
     project: { ...baseProject, context: 'work' },
   },

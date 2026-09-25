@@ -19,6 +19,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
+  name: 'shows a task creation header and content in a bottom sheet',
   args: {
     children: null,
   },

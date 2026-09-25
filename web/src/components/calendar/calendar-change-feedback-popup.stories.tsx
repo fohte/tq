@@ -48,12 +48,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const ShowsUndo: Story = {
+  name: 'a moved calendar item can be restored from the feedback popup',
   args: {
     feedback: { kind: 'undo', onUndo: fn() },
   },
 }
 
 export const ShowsError: Story = {
+  name: 'the feedback popup explains that a calendar change failed',
   args: {
     feedback: { kind: 'error' },
   },

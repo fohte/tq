@@ -164,45 +164,56 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Task: Story = {
+  name: 'a task result shows its title and task number',
   args: { kind: 'task', isSelected: false },
 }
 
 export const Project: Story = {
+  name: 'a project result shows its name',
   args: { kind: 'project', isSelected: false },
 }
 
 export const View: Story = {
+  name: 'a saved view result shows its name',
   args: { kind: 'view', isSelected: false },
 }
 
 export const Page: Story = {
+  name: 'a page result shows its title and matching snippet',
   args: { kind: 'page', isSelected: false },
 }
 
 export const LongTaskTitle: Story = {
+  name: 'a long task title wraps within its search result',
   args: { kind: 'taskLongTitle', isSelected: false },
 }
 
 export const LongProjectTitle: Story = {
+  name: 'a long project name wraps within its search result',
   args: { kind: 'projectLongTitle', isSelected: false },
 }
 
 export const LongPageContent: Story = {
+  name: 'a page result clips a long title and matching snippet',
   args: { kind: 'pageLongContent', isSelected: false },
 }
 
 export const SelectedTask: Story = {
+  name: 'a task result is highlighted for keyboard selection',
   args: { kind: 'task', isSelected: true },
 }
 
 export const SelectedProject: Story = {
+  name: 'a project result is highlighted for keyboard selection',
   args: { kind: 'project', isSelected: true },
 }
 
 export const SelectedView: Story = {
+  name: 'a saved view result is highlighted for keyboard selection',
   args: { kind: 'view', isSelected: true },
 }
 
 export const SelectedPage: Story = {
+  name: 'a page result is highlighted for keyboard selection',
   args: { kind: 'page', isSelected: true },
 }

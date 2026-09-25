@@ -30,6 +30,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const ActiveWeekly: Story = {
+  name: 'an active weekly template row shows its repeat days and next run',
   args: {
     template: makeRecurringTemplate({
       title: 'Water the plants',
@@ -48,6 +49,7 @@ export const ActiveWeekly: Story = {
 }
 
 export const ActiveMonthly: Story = {
+  name: 'an active monthly template row shows its repeat date and next run',
   args: {
     template: makeRecurringTemplate({
       title: 'Pay rent',
@@ -66,6 +68,7 @@ export const ActiveMonthly: Story = {
 }
 
 export const Paused: Story = {
+  name: 'a paused recurring template row shows its disabled state',
   args: {
     template: makeRecurringTemplate({
       title: 'Weekly team sync notes',

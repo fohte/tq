@@ -41,9 +41,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  name: 'no label is selected in the filter fields',
+}
 
 export const NestedLabelSelected: Story = {
+  name: 'a nested label is selected in the filter fields',
   args: {
     selectedLabel: 'dev/tq',
   },

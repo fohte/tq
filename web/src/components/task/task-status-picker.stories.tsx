@@ -18,6 +18,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Todo: Story = {
+  name: 'a task is marked as todo',
   args: {
     status: 'todo',
     statusReason: null,
@@ -25,6 +26,7 @@ export const Todo: Story = {
 }
 
 export const TodoOpen: Story = {
+  name: 'the status picker is open for a todo task',
   args: {
     status: 'todo',
     statusReason: null,
@@ -33,6 +35,7 @@ export const TodoOpen: Story = {
 }
 
 export const Completed: Story = {
+  name: 'a completed task has no completion reason',
   args: {
     status: 'completed',
     statusReason: null,
@@ -40,6 +43,7 @@ export const Completed: Story = {
 }
 
 export const NotPlannedOpen: Story = {
+  name: 'the open picker shows the not-planned reason',
   args: {
     status: 'completed',
     statusReason: 'not_planned',
@@ -48,6 +52,7 @@ export const NotPlannedOpen: Story = {
 }
 
 export const DuplicateOpen: Story = {
+  name: 'the open picker shows the duplicate reason',
   args: {
     status: 'completed',
     statusReason: 'duplicate',
