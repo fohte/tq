@@ -319,5 +319,13 @@ export const Views: Story = {
 
 export const NoResults: Story = {
   name: 'the search dialog explains that the query returned no results',
-  args: { defaultContext: 'work', defaultQuery: 'nothing-matches' },
+  args: { defaultContext: null, defaultQuery: 'nothing-matches' },
+}
+
+export const SearchEverywhere: Story = {
+  name: 'the search dialog offers to search everywhere after a scoped query returns no results',
+  args: {
+    defaultContext: 'work',
+    defaultQuery: `${projectScopeQuery}nothing-matches`,
+  },
 }
