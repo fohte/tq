@@ -6,7 +6,7 @@
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
 @import '@fontsource/ibm-plex-mono/600.css';
-@import '#components/calendar/fullcalendar.css';
+@import './components/calendar/fullcalendar.css';
 
 :root {
   --status-completed: #a371f7;

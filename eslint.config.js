@@ -1,4 +1,6 @@
 import { config } from '@fohte/eslint-config'
+import { plugin as shadcn } from '@shadcn/lint'
+import tsParser from '@typescript-eslint/parser'
 import storybook from 'eslint-plugin-storybook'
 
 export default config(
@@ -10,6 +12,17 @@ export default config(
     tailwind: {
       files: ['web/**/*.ts{,x}'],
       cssConfigPath: 'web/src/index.css',
+    },
+  },
+  {
+    // CLI --rule overrides are unscoped, so the plugin must be globally available.
+    plugins: { shadcn },
+  },
+  {
+    files: ['web/**/*.tsx'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
   {
