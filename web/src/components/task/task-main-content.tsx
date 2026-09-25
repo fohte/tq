@@ -247,7 +247,11 @@ function TaskStatusToggle({
       onClick={handleToggle}
       className="h-auto min-h-0 w-auto gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 mt-1 shrink-0"
     >
-      <StatusIcon status={status} statusReason={statusReason} preserveSvgSize />
+      <StatusIcon
+        status={status}
+        statusReason={statusReason}
+        ignoreAncestorSvgSizing
+      />
     </Button>
   )
 }
@@ -305,7 +309,7 @@ function EditableTitle({
             }
           }}
           autoFocus
-          className="h-auto flex-1 border-0 bg-transparent p-0 text-2xl font-bold text-foreground shadow-none focus-visible:ring-0"
+          className="h-auto flex-1 border-0 bg-transparent dark:bg-transparent p-0 text-2xl md:text-2xl font-bold text-foreground shadow-none focus-visible:ring-0"
         />
       ) : (
         <Button

@@ -124,7 +124,7 @@ export function TemplateRepeatFieldAppearance({
             >
               <SelectTrigger
                 size="sm"
-                className="h-auto data-[size=sm]:h-auto w-full justify-start gap-1 border-0 bg-transparent dark:bg-transparent p-0 font-mono text-xs md:text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
+                className="h-auto data-[size=sm]:h-auto w-full justify-start gap-1 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 font-mono text-xs md:text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
               >
                 <SelectValue />
               </SelectTrigger>

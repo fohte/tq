@@ -187,7 +187,7 @@ function StatusSelect({
     >
       <SelectTrigger
         size="sm"
-        className="h-auto data-[size=sm]:h-auto w-fit border-0 bg-transparent dark:bg-transparent p-0 font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
+        className="h-auto data-[size=sm]:h-auto w-fit border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
       >
         <SelectValue />
       </SelectTrigger>
@@ -225,7 +225,7 @@ function ContextSelect({
     >
       <SelectTrigger
         size="sm"
-        className="h-auto data-[size=sm]:h-auto w-fit border-0 bg-transparent dark:bg-transparent p-0 font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
+        className="h-auto data-[size=sm]:h-auto w-fit border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
       >
         <SelectValue />
       </SelectTrigger>

@@ -72,7 +72,7 @@ export function CalendarHeader({
           onClick={onPrev}
           aria-label="Previous"
         >
-          <ChevronLeft className="h-3.5 w-3.5" />
+          <ChevronLeft className="size-3.5" />
         </Button>
         <Button
           variant="outline"
@@ -88,7 +88,7 @@ export function CalendarHeader({
           onClick={onNext}
           aria-label="Next"
         >
-          <ChevronRight className="h-3.5 w-3.5" />
+          <ChevronRight className="size-3.5" />
         </Button>
       </div>
 

@@ -127,7 +127,7 @@ export function ScheduleModalDesktopPanel({
             >
               <SelectTrigger
                 size="sm"
-                className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
               >
                 <SelectValue placeholder="None" />
               </SelectTrigger>
@@ -173,7 +173,7 @@ export function ScheduleModalDesktopPanel({
             >
               <SelectTrigger
                 size="sm"
-                className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
+                className="h-auto data-[size=sm]:h-auto border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
               >
                 <SelectValue placeholder="—" />
               </SelectTrigger>
