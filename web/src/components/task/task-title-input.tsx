@@ -197,6 +197,7 @@ export function TaskTitleInput({
                   status={item.status}
                   number={item.number}
                   title={item.title}
+                  ignoreAncestorSvgSizing
                 />
               </Button>
             ))

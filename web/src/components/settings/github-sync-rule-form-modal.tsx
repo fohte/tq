@@ -212,7 +212,10 @@ export function GithubSyncRuleFormModal({
               value={targetProjectId}
               onValueChange={selectValueHandler(setTargetProjectId, projectIds)}
             >
-              <SelectTrigger className="h-auto data-[size=default]:h-auto w-full border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 text-sm text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0">
+              <SelectTrigger
+                iconClassName="size-3 text-foreground"
+                className="h-auto data-[size=default]:h-auto w-full border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px text-sm text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
+              >
                 <SelectValue placeholder="選択してください" />
               </SelectTrigger>
               <SelectContent>
@@ -230,7 +233,7 @@ export function GithubSyncRuleFormModal({
               <Checkbox
                 checked={includeExisting}
                 onCheckedChange={setIncludeExisting}
-                className="rounded border-border bg-transparent dark:bg-transparent"
+                className="rounded border-border bg-white dark:bg-white"
               />
               現在アサイン済みの open issue も取り込む
             </label>

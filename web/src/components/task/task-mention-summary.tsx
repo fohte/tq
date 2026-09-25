@@ -7,15 +7,21 @@ export function TaskMentionSummary({
   number,
   title,
   titleClassName,
+  ignoreAncestorSvgSizing = false,
 }: {
   status: Task['status']
   number: number
   title: string
   titleClassName?: string
+  ignoreAncestorSvgSizing?: boolean
 }) {
   return (
     <>
-      <StatusIcon status={status} statusReason={null} />
+      <StatusIcon
+        status={status}
+        statusReason={null}
+        ignoreAncestorSvgSizing={ignoreAncestorSvgSizing}
+      />
       <span className="shrink-0 font-mono text-muted-foreground">
         #{number}
       </span>

@@ -32,7 +32,7 @@ export function GcalCalendarPicker({
       <Button
         type="button"
         variant="ghost"
-        className="h-auto min-h-0 w-fit gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex items-center gap-1 py-1 text-xs text-muted-foreground hover:text-foreground"
+        className="h-auto min-h-0 w-fit gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex items-center gap-1 py-1 text-xs text-muted-foreground hover:text-foreground aria-expanded:bg-transparent aria-expanded:text-muted-foreground"
         onClick={() => {
           setOpen((prev) => !prev)
         }}
