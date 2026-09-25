@@ -35,8 +35,8 @@ import { listIndentKeymap } from '#lib/list-indent-keymap'
 export interface CrepeEditorProps {
   defaultValue?: string
   onChange?: (markdown: string) => void
+  onFocusedDocumentChange?: (readMarkdown: () => string) => void
   placeholder?: string
-  markdownRef?: { current: string | null }
   // Also controls Crepe's readOnly (view => readOnly, edit => editable): the
   // two always move together, since an editable+chip combination would let
   // mid-edit typing form a chip out from under the cursor.
@@ -60,8 +60,8 @@ function findPaddedAncestor(el: HTMLElement): HTMLElement | null {
 function CrepeEditor({
   defaultValue,
   onChange,
+  onFocusedDocumentChange,
   placeholder,
-  markdownRef,
   mode,
 }: CrepeEditorProps) {
   const crepeRef = useRef<Crepe | null>(null)
@@ -177,22 +177,24 @@ function CrepeEditor({
       .use(createImageSourceRevealPlugin(widgetViewFactory, viewModeStore))
       .use(listIndentKeymap)
 
-    if (markdownRef != null) {
+    if (onFocusedDocumentChange != null) {
       crepe.editor.use(
         $prose(
           (ctx) =>
             new Plugin({
-              key: new PluginKey('markdown-snapshot'),
+              key: new PluginKey('focused-markdown-reader'),
               view: (view) => {
                 const serialize = ctx.get(serializerCtx)
-                markdownRef.current = serialize(view.state.doc)
+                let currentDoc = view.state.doc
+                const readMarkdown = () => serialize(currentDoc)
                 return {
                   update: (nextView, previousState) => {
                     if (previousState.doc.eq(nextView.state.doc)) return
-                    markdownRef.current = serialize(nextView.state.doc)
-                  },
-                  destroy: () => {
-                    markdownRef.current = null
+                    currentDoc = nextView.state.doc
+                    // Both responsive modal variants stay mounted, so an inactive editor must not replace the reader for the focused one.
+                    if (nextView.hasFocus()) {
+                      onFocusedDocumentChange(readMarkdown)
+                    }
                   },
                 }
               },

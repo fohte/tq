@@ -1,11 +1,4 @@
-import {
-  forwardRef,
-  lazy,
-  Suspense,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 
 import { cn } from '#lib/utils'
 
@@ -22,6 +15,8 @@ interface ViewEditToggleOptions {
 interface MarkdownEditorProps {
   defaultValue?: string
   onChange?: (markdown: string) => void
+  /** Reports the focused editor after a document change so callers can read its current Markdown. */
+  onFocusedDocumentChange?: (readMarkdown: () => string) => void
   placeholder?: string
   /**
    * Enables the view/edit toggle: read-only by default with inline
@@ -36,10 +31,6 @@ interface MarkdownEditorProps {
    * surface, 'compact' (120px) for a few-lines inline editor.
    */
   size?: 'default' | 'compact'
-}
-
-export interface MarkdownEditorHandle {
-  getMarkdown(): string | null
 }
 
 // Schemes a rendered Markdown link may click through to in view mode without
@@ -76,27 +67,16 @@ function isEventTargetInsideEditorUi(
   )
 }
 
-export const MarkdownEditor = forwardRef<
-  MarkdownEditorHandle,
-  MarkdownEditorProps
->(function MarkdownEditor(
-  { viewEditToggle, size = 'default', ...editorProps },
-  ref,
-) {
+export function MarkdownEditor({
+  viewEditToggle,
+  size = 'default',
+  ...editorProps
+}: MarkdownEditorProps) {
   const isToggleEnabled = viewEditToggle != null
   const [mode, setMode] = useState<'view' | 'edit'>(
     viewEditToggle?.defaultMode ?? 'view',
   )
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const markdownRef = useRef<string | null>(null)
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      getMarkdown: () => markdownRef.current,
-    }),
-    [],
-  )
 
   const exitEditMode = () => {
     if (mode !== 'edit') return
@@ -157,10 +137,9 @@ export const MarkdownEditor = forwardRef<
       <Suspense fallback={null}>
         <CrepeEditorRoot
           {...editorProps}
-          {...(ref == null ? {} : { markdownRef })}
           mode={isToggleEnabled ? mode : 'edit'}
         />
       </Suspense>
     </div>
   )
-})
+}
