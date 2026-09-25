@@ -70,7 +70,7 @@
 }
 
 @utility outline-auto {
-  outline-style: auto;
+  outline: auto;
 }
 
 /*
