@@ -241,7 +241,7 @@ export function PageCardPresentation({
       )}
       {!isExpanded && previewLines != null && (
         <div className="flex flex-col gap-1.5 border-t border-border px-2.5 py-2">
-          <p className="line-clamp-3 whitespace-pre-line font-editor text-xs text-muted-foreground">
+          <p className="line-clamp-3 whitespace-pre-line font-code text-xs text-muted-foreground">
             {previewLines}
           </p>
           {hasMore && (

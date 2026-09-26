@@ -33,8 +33,6 @@
 }
 
 @theme inline {
-  --font-editor: var(--font-code);
-
   /* Overlay viewport-relative sizing — see docs/design-system.md */
   --max-height-sheet: calc(var(--visual-viewport-height, 100vh) * 0.85);
   --max-height-modal-composer: 40vh;

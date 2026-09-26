@@ -19,7 +19,7 @@
 
   --crepe-font-title: var(--font-sans);
   --crepe-font-default: var(--font-sans);
-  --crepe-font-code: var(--font-editor);
+  --crepe-font-code: var(--font-code);
 
   --crepe-shadow-1: none;
   --crepe-shadow-2: none;
@@ -262,5 +262,5 @@
   outline: none;
   white-space: pre-wrap;
   word-break: break-all;
-  font-family: var(--font-editor);
+  font-family: var(--font-code);
 }
