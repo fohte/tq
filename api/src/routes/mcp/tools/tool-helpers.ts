@@ -15,7 +15,7 @@ export const agentArgSchema = z
       'this when you know it.',
   )
 
-export function authorHeaderValue(agent: string | undefined): string {
+function authorHeaderValue(agent: string | undefined): string {
   return `llm:${agent ?? 'mcp'}`
 }
 
