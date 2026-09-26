@@ -1,79 +1,51 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
-import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
+import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
 import { app } from '#app'
+import {
+  callMcpTool,
+  connectMcpClient,
+  normalizeDynamicValues,
+  parseToolJson,
+} from '#routes/mcp/testing'
 import { createTask } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
+let client: Client
 
-function normalizeDynamicValues(value: unknown): unknown {
-  if (typeof value === 'string') {
-    if (UUID_PATTERN.test(value)) return '<uuid>'
-    if (TIMESTAMP_PATTERN.test(value)) return '<timestamp>'
-    return value
-  }
-  if (Array.isArray(value)) return value.map(normalizeDynamicValues)
-  if (value != null && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, nested]) => [
-        key,
-        normalizeDynamicValues(nested),
-      ]),
-    )
-  }
-  return value
-}
+beforeEach(async () => {
+  client = await connectMcpClient()
+})
 
-async function withClient<T>(fn: (client: Client) => Promise<T>): Promise<T> {
-  const client = new Client({ name: 'test-client', version: '1.0.0' })
-  const transport = new StreamableHTTPClientTransport(
-    new URL('http://localhost/api/mcp'),
-    { fetch: async (url, init) => app.request(url, init) },
-  )
-  // `Transport.sessionId` is `sessionId?: string`, which `exactOptionalPropertyTypes`
-  // treats as excluding `undefined`; this class's getter returns `string | undefined`.
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- see comment above
-  await client.connect(transport as Transport)
-  return fn(client).finally(() => client.close())
-}
+afterEach(async () => {
+  await client.close()
+})
 
-async function callTool(
+function callTool(
   name: string,
   args: Record<string, unknown> = {},
 ): Promise<CallToolResult> {
-  const result = await withClient((client) =>
-    client.callTool({ name, arguments: args }),
-  )
-  // The SDK's inferred return type has the same wire shape but does not narrow
-  // `content` to the standalone `CallToolResult` type.
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- same wire shape
-  return result as CallToolResult
-}
-
-function parseJson(result: CallToolResult): unknown {
-  const first = result.content[0]
-  if (first?.type !== 'text') {
-    throw new Error(
-      `Expected text content, got: ${JSON.stringify(result.content)}`,
-    )
-  }
-  return JSON.parse(first.text)
+  return callMcpTool(client, name, args)
 }
 
 function summarizeProjectDeletion(
   result: CallToolResult,
   lookupStatus: number,
 ) {
-  return { result: parseJson(result), lookupStatus }
+  return { result: parseToolJson(result), lookupStatus }
+}
+
+function summarizeTaskPathTraversal(
+  updateIsError: boolean | undefined,
+  deleteIsError: boolean | undefined,
+  updateTask: { status: number; body: unknown },
+  deleteTask: { status: number; body: unknown },
+) {
+  return { updateIsError, deleteIsError, updateTask, deleteTask }
 }
 
 async function createProject(input: {
@@ -91,7 +63,7 @@ async function createProject(input: {
 
 describe('project operation tools', () => {
   it('derives annotations from each project operation kind', async () => {
-    const result = await withClient((client) => client.listTools())
+    const result = await client.listTools()
 
     expect(
       result.tools
@@ -140,7 +112,7 @@ describe('project operation tools', () => {
       context: 'work',
     })
 
-    expect(normalizeDynamicValues(parseJson(result))).toEqual([
+    expect(normalizeDynamicValues(parseToolJson(result))).toEqual([
       {
         id: '<uuid>',
         title: 'Work site',
@@ -165,7 +137,7 @@ describe('project operation tools', () => {
       context: 'work',
     })
 
-    expect(normalizeDynamicValues(parseJson(result))).toEqual({
+    expect(normalizeDynamicValues(parseToolJson(result))).toEqual({
       id: '<uuid>',
       title: 'Planning space',
       description: null,
@@ -184,7 +156,7 @@ describe('project operation tools', () => {
     const project = await createProject({ title: 'Reference space' })
     const result = await callTool('project_get', { id: project.id })
 
-    expect(normalizeDynamicValues(parseJson(result))).toEqual({
+    expect(normalizeDynamicValues(parseToolJson(result))).toEqual({
       id: '<uuid>',
       title: 'Reference space',
       description: null,
@@ -209,7 +181,7 @@ describe('project operation tools', () => {
       status: 'paused',
     })
 
-    expect(normalizeDynamicValues(parseJson(result))).toEqual({
+    expect(normalizeDynamicValues(parseToolJson(result))).toEqual({
       id: '<uuid>',
       title: 'Revised space',
       description: null,
@@ -245,12 +217,118 @@ describe('project operation tools', () => {
       body: JSON.stringify({ projectId: project.id }),
     })
 
-    const expectedResponse = await app.request(
-      `/api/tasks?projectId=${encodeURIComponent(project.id)}`,
-    )
-    const expected = await jsonBody<Record<string, unknown>[]>(expectedResponse)
     const result = await callTool('project_tasks', { id: project.id })
 
-    expect(parseJson(result)).toEqual(expected)
+    expect(
+      normalizeDynamicValues(parseToolJson(result), { taskNumbers: true }),
+    ).toEqual([
+      {
+        id: '<uuid>',
+        number: -1,
+        title: 'Assigned item',
+        description: null,
+        status: 'todo',
+        statusReason: null,
+        context: 'personal',
+        commitment: 'inbox',
+        labels: [],
+        startDate: null,
+        dueDate: null,
+        estimatedMinutes: null,
+        remindAt: null,
+        parentId: null,
+        projectId: '<uuid>',
+        recurrenceRuleId: null,
+        recurrenceRule: null,
+        templateId: null,
+        occurrenceDate: null,
+        githubLinks: [],
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+        parentNumber: null,
+        duplicateOfNumber: null,
+        blockedByNumbers: [],
+        childCompletionCount: { completed: 0, total: 0 },
+      },
+    ])
+  })
+
+  it('rejects invalid project path ids for every id-based operation', async () => {
+    const invalidIds = ['', '.', '..', '\uD800']
+    const toolNames = [
+      'project_get',
+      'project_update',
+      'project_delete',
+      'project_tasks',
+    ]
+    const results = await Promise.all(
+      toolNames.map(async (name) => ({
+        name,
+        errors: await Promise.all(
+          invalidIds.map(
+            async (id) =>
+              (
+                await callTool(
+                  name,
+                  name === 'project_update'
+                    ? { id, title: 'Changed title' }
+                    : { id },
+                )
+              ).isError,
+          ),
+        ),
+      })),
+    )
+
+    expect(results).toEqual([
+      { name: 'project_get', errors: [true, true, true, true] },
+      { name: 'project_update', errors: [true, true, true, true] },
+      { name: 'project_delete', errors: [true, true, true, true] },
+      { name: 'project_tasks', errors: [true, true, true, true] },
+    ])
+  })
+
+  it('does not allow project update or delete to target tasks through path traversal', async () => {
+    const updateTask = await createTask('Protected update item')
+    const deleteTask = await createTask('Protected delete item')
+    const updateResult = await callTool('project_update', {
+      id: `../tasks/${updateTask.id}`,
+      title: 'Changed through project tool',
+    })
+    const deleteResult = await callTool('project_delete', {
+      id: `../tasks/${deleteTask.id}`,
+    })
+    const updateLookup = await app.request(`/api/tasks/${updateTask.id}`)
+    const deleteLookup = await app.request(`/api/tasks/${deleteTask.id}`)
+    const taskStateSchema = z.union([
+      z.object({ title: z.string() }),
+      z.object({ error: z.string() }),
+    ])
+
+    expect(
+      summarizeTaskPathTraversal(
+        updateResult.isError,
+        deleteResult.isError,
+        {
+          status: updateLookup.status,
+          body: await jsonBody(updateLookup, taskStateSchema),
+        },
+        {
+          status: deleteLookup.status,
+          body: await jsonBody(deleteLookup, taskStateSchema),
+        },
+      ),
+    ).toEqual({
+      updateIsError: true,
+      deleteIsError: true,
+      updateTask: {
+        status: 200,
+        body: { title: 'Protected update item' },
+      },
+      deleteTask: {
+        status: 200,
+        body: { title: 'Protected delete item' },
+      },
+    })
   })
 })

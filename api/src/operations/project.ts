@@ -11,15 +11,41 @@ import {
   updateProjectSchema,
 } from '#schemas/project'
 
-const projectIdSchema = z.object({ id: z.string() })
+function isWellFormedUnicode(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index)
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const nextCode = value.charCodeAt(index + 1)
+      if (!(nextCode >= 0xdc00 && nextCode <= 0xdfff)) return false
+      index += 1
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      return false
+    }
+  }
+  return true
+}
+
+const projectId = z
+  .string()
+  .min(1)
+  .refine(
+    (id) =>
+      id !== '.' &&
+      id !== '..' &&
+      !id.includes('/') &&
+      !id.includes('\\') &&
+      isWellFormedUnicode(id),
+    { message: 'Project ID must be a single path segment' },
+  )
+const projectIdSchema = z.object({ id: projectId })
 const createProjectInputSchema = createProjectSchema
-const updateProjectInputSchema = updateProjectSchema.extend({ id: z.string() })
+const updateProjectInputSchema = updateProjectSchema.extend({ id: projectId })
 
 export const projectOperations = [
   defineOperation(listProjectsQuerySchema, {
     path: ['project', 'list'],
     description:
-      "List projects, optionally filtered by title, status, or context. Use this to resolve a project's id before passing it to project_tasks or a task command.",
+      'List projects, optionally filtered by title, status, or context. Use the returned ids to scope project commands and task queries.',
     positionalArgs: [],
     kind: 'read',
     routes: ['GET /api/projects'],
@@ -41,7 +67,11 @@ export const projectOperations = [
     routes: ['GET /api/projects/:id'],
     cli: { output: { kind: 'json' } },
     run: (client, { id }) =>
-      requestJson(client.api.projects[':id'].$get({ param: { id } })),
+      requestJson(
+        client.api.projects[':id'].$get({
+          param: { id: encodeURIComponent(id) },
+        }),
+      ),
   }),
   defineOperation(createProjectInputSchema, {
     path: ['project', 'create'],
@@ -60,7 +90,12 @@ export const projectOperations = [
     routes: ['PATCH /api/projects/:id'],
     cli: { output: { kind: 'json' } },
     run: (client, { id, ...json }) =>
-      requestJson(client.api.projects[':id'].$patch({ param: { id }, json })),
+      requestJson(
+        client.api.projects[':id'].$patch({
+          param: { id: encodeURIComponent(id) },
+          json,
+        }),
+      ),
   }),
   defineOperation(projectIdSchema, {
     path: ['project', 'delete'],
@@ -71,7 +106,9 @@ export const projectOperations = [
     cli: { output: { kind: 'json' } },
     run: (client, { id }) =>
       requestNoContent(
-        client.api.projects[':id'].$delete({ param: { id } }),
+        client.api.projects[':id'].$delete({
+          param: { id: encodeURIComponent(id) },
+        }),
       ).map(() => ({ deleted: true, id })),
   }),
   defineOperation(projectIdSchema, {
@@ -91,8 +128,12 @@ export const projectOperations = [
     // The tasks query does not check project existence, so retain the lookup
     // to preserve the CLI's 404 behavior for unknown project ids.
     run: (client, { id }) =>
-      requestJson(client.api.projects[':id'].$get({ param: { id } })).andThen(
-        () => requestJson(client.api.tasks.$get({ query: { projectId: id } })),
+      requestJson(
+        client.api.projects[':id'].$get({
+          param: { id: encodeURIComponent(id) },
+        }),
+      ).andThen(() =>
+        requestJson(client.api.tasks.$get({ query: { projectId: id } })),
       ),
   }),
 ] as const
