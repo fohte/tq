@@ -1,3 +1,13 @@
+import { Button } from '@fohte/ui/button'
+import { DialogHeaderBar } from '@fohte/ui/dialog'
+import { Input } from '@fohte/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@fohte/ui/select'
 import { Clock, Layers, Palette, Repeat, X } from 'lucide-react'
 
 import type { SchedulePanelProps } from '#components/schedule/create-schedule-modal'
@@ -7,19 +17,9 @@ import {
   recurrenceValues,
   WeekdayToggleRow,
 } from '#components/schedule/create-schedule-modal'
-import { Button } from '#components/ui/button'
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
 import { DesktopModalFrame } from '#components/ui/desktop-modal-frame'
-import { DialogHeaderBar } from '#components/ui/dialog'
-import { Input } from '#components/ui/input'
 import { InlineFieldGroup } from '#components/ui/modal-field'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '#components/ui/select'
 import { selectValueHandler } from '#lib/form-utils'
 import { cn } from '#lib/utils'
 

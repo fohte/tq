@@ -1,3 +1,5 @@
+import { Button } from '@fohte/ui/button'
+import { Input } from '@fohte/ui/input'
 import { useRef, useState } from 'react'
 
 import {
@@ -5,8 +7,6 @@ import {
   sidebarFieldValueButtonClassName,
 } from '#components/task/sidebar-field'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
-import { Button } from '#components/ui/button'
-import { Input } from '#components/ui/input'
 import { useUpdateTask } from '#hooks/use-tasks'
 import {
   formatAbsoluteReminder,

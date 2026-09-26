@@ -1,10 +1,10 @@
+import { Button } from '@fohte/ui/button'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import { GithubSyncRuleFormModal } from '#components/settings/github-sync-rule-form-modal'
 import { GithubSyncRuleRow } from '#components/settings/github-sync-rule-row'
 import { QueryStateMessage } from '#components/settings/query-state-message'
-import { Button } from '#components/ui/button'
 import { useGithubSyncRules } from '#hooks/use-github-sync-rules'
 import { useProjects } from '#hooks/use-projects'
 

@@ -1,4 +1,5 @@
-import { Button } from '#components/ui/button'
+import { Button } from '@fohte/ui/button'
+
 import type { SearchResult } from '#hooks/use-search'
 import { cn } from '#lib/utils'
 

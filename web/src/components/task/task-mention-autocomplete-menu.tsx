@@ -1,7 +1,7 @@
+import { Button } from '@fohte/ui/button'
 import { useEffect, useSyncExternalStore } from 'react'
 
 import { TaskMentionSummary } from '#components/task/task-mention-summary'
-import { Button } from '#components/ui/button'
 import {
   type MentionSuggestion,
   useTaskMentionSuggestions,

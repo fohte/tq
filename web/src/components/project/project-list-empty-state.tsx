@@ -1,6 +1,5 @@
+import { Button } from '@fohte/ui/button'
 import { FolderKanban } from 'lucide-react'
-
-import { Button } from '#components/ui/button'
 
 export function ProjectListEmptyState({ onCreate }: { onCreate: () => void }) {
   return (

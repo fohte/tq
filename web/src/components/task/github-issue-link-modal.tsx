@@ -1,8 +1,4 @@
-import { useNavigate } from '@tanstack/react-router'
-import { CircleDot, ExternalLink, GitPullRequest, Loader2 } from 'lucide-react'
-import { useState } from 'react'
-
-import { Button } from '#components/ui/button'
+import { Button } from '@fohte/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -10,8 +6,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '#components/ui/dialog'
-import { Input } from '#components/ui/input'
+} from '@fohte/ui/dialog'
+import { Input } from '@fohte/ui/input'
+import { useNavigate } from '@tanstack/react-router'
+import { CircleDot, ExternalLink, GitPullRequest, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+
 import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
 import {
   useLinkTaskToGithub,

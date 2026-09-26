@@ -1,8 +1,8 @@
+import { Input } from '@fohte/ui/input'
 import { useEffect, useState } from 'react'
 
 import { QueryStateMessage } from '#components/settings/query-state-message'
 import { SettingsRow } from '#components/settings/settings-row'
-import { Input } from '#components/ui/input'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import { SegmentedControl } from '#components/ui/segmented-control'

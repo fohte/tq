@@ -1,9 +1,9 @@
+import { Button } from '@fohte/ui/button'
+import { Input } from '@fohte/ui/input'
 import { Loader2, X } from 'lucide-react'
 
 import type { SearchMode } from '#components/search/search-modal-mode'
-import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
-import { Input } from '#components/ui/input'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import type { SearchScopeLabel } from '#hooks/use-search-scope-labels'
 

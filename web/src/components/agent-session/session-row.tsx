@@ -1,9 +1,9 @@
+import { Button } from '@fohte/ui/button'
+import { Input } from '@fohte/ui/input'
 import { Check, Terminal, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
-import { Input } from '#components/ui/input'
 import {
   type AgentSession,
   isAgentSessionActive,

@@ -1,14 +1,14 @@
-import { Layers } from 'lucide-react'
-import { useState } from 'react'
-
-import { ExpandableFieldChip } from '#components/ui/modal-field'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '#components/ui/select'
+} from '@fohte/ui/select'
+import { Layers } from 'lucide-react'
+import { useState } from 'react'
+
+import { ExpandableFieldChip } from '#components/ui/modal-field'
 import { selectValueHandler } from '#lib/form-utils'
 
 type ContextValue = 'work' | 'personal' | 'dev'

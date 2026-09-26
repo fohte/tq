@@ -1,3 +1,5 @@
+import { Button } from '@fohte/ui/button'
+import { Input } from '@fohte/ui/input'
 import { parseSearchQuery } from 'api/search-query-parser'
 import { useEffect, useRef, useState } from 'react'
 
@@ -7,8 +9,6 @@ import {
 } from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPopover } from '#components/search/search-syntax-help-popover'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
-import { Button } from '#components/ui/button'
-import { Input } from '#components/ui/input'
 import type { Suggestion } from '#hooks/use-search'
 import {
   applySuggestionToQuery,

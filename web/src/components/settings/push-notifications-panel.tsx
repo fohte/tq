@@ -1,6 +1,7 @@
+import { Button } from '@fohte/ui/button'
+
 import { SettingsRow } from '#components/settings/settings-row'
 import { Badge } from '#components/ui/badge'
-import { Button } from '#components/ui/button'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import type {

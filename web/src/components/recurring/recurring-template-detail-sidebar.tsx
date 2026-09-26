@@ -1,12 +1,13 @@
-import { TemplateRepeatField } from '#components/recurring/template-repeat-field'
-import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '#components/ui/select'
+} from '@fohte/ui/select'
+
+import { TemplateRepeatField } from '#components/recurring/template-repeat-field'
+import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
 import { useProject } from '#hooks/use-projects'
 import type { RecurringTemplate } from '#hooks/use-recurring-templates'
 import { useUpdateRecurringTemplate } from '#hooks/use-recurring-templates'

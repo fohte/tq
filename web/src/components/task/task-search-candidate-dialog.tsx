@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react'
-
-import { Button } from '#components/ui/button'
+import { Button } from '@fohte/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '#components/ui/dialog'
-import { Input } from '#components/ui/input'
+} from '@fohte/ui/dialog'
+import { Input } from '@fohte/ui/input'
+import { useEffect, useState } from 'react'
+
 import { type SearchResult, useSearchTasks } from '#hooks/use-search'
 
 export function TaskSearchCandidateDialogAppearance({

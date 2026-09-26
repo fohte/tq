@@ -1,9 +1,9 @@
+import { Input } from '@fohte/ui/input'
 import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { BackLink } from '#components/ui/back-header-bar'
 import { HtmlPageEditor } from '#components/ui/html-page-editor'
-import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import {

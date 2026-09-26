@@ -1,10 +1,10 @@
+import { Button } from '@fohte/ui/button'
+import { DialogTrigger } from '@fohte/ui/dialog'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { Button } from '#components/ui/button'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
-import { DialogTrigger } from '#components/ui/dialog'
 
 describe('DeleteConfirmDialog', () => {
   it('opens from the trigger and calls onConfirm when confirmed', async () => {

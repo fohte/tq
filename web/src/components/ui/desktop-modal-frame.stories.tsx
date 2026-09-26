@@ -1,9 +1,9 @@
+import { Button } from '@fohte/ui/button'
+import { DialogHeaderBar } from '@fohte/ui/dialog'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { X } from 'lucide-react'
 
-import { Button } from '#components/ui/button'
 import { DesktopModalFrame } from '#components/ui/desktop-modal-frame'
-import { DialogHeaderBar } from '#components/ui/dialog'
 
 const meta = {
   title: 'UI/DesktopModalFrame',

@@ -1,7 +1,7 @@
+import { Button } from '@fohte/ui/button'
 import { Link } from '@tanstack/react-router'
 import { Repeat } from 'lucide-react'
 
-import { Button } from '#components/ui/button'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { newTaskKeybinding } from '#lib/keybindings'
 

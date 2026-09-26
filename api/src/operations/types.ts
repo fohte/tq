@@ -9,13 +9,45 @@ export type OperationClient = ReturnType<typeof hc<AppType>>
 
 export type OperationKind = 'read' | 'write' | 'delete'
 
+export type OperationSurface = {
+  only: 'cli' | 'mcp'
+  reason: string
+}
+
 export type OperationError =
   | { kind: 'input'; message: string }
   | { kind: 'http'; response: Response }
   | { kind: 'request'; error: Error }
 
+export function formatInputIssues(error: z.ZodError): string {
+  return error.issues
+    .map((issue) => {
+      const path = issue.path.map(String).join('.') || 'input'
+      return `${path}: ${issue.message}`
+    })
+    .join('; ')
+}
+
+export type CliFileOutput =
+  | {
+      kind: 'content'
+      option: { name: string; description: string }
+      field: string
+    }
+  | {
+      kind: 'binary'
+      option: { name: string; description: string }
+      urlField: string
+      summaryFields: readonly string[]
+      outputPathField: string
+    }
+
 export type CliOutput =
-  | { kind: 'json' }
+  | {
+      kind: 'json'
+      fields?: readonly string[]
+      fileOutput?: CliFileOutput
+    }
   | { kind: 'json-with-link-sync' }
   | {
       kind: 'list'
@@ -23,17 +55,29 @@ export type CliOutput =
       fullOption?: '--full'
       fullDescription?: string
     }
+  | { kind: 'web-url'; path: string }
+
+export type PositionalArgument<Key extends string = string> =
+  Key | { name: Key; optional?: boolean; variadic?: boolean }
+
+export type CliContentInput = {
+  field: string
+  required?: boolean
+}
 
 export interface OperationDefinition {
   path: readonly [group: string, command: string, ...nestedPath: string[]]
   description: string
   inputSchema: z.ZodObject
-  positionalArgs: readonly string[]
+  positionalArgs: readonly PositionalArgument[]
   kind: OperationKind
   attribution?: 'agent'
   routes: readonly AllRoutes[]
+  surface?: OperationSurface
   cli: {
-    contentInputField?: string
+    contentInput?: CliContentInput
+    envDefaults?: Readonly<Record<string, string>>
+    commaSeparatedOptions?: readonly string[]
     output: CliOutput
   }
   run: (
@@ -45,10 +89,11 @@ export interface OperationDefinition {
 type OperationConfig<Schema extends z.ZodObject, Output> = {
   path: readonly string[]
   description: string
-  positionalArgs: readonly (keyof z.output<Schema> & string)[]
+  positionalArgs: readonly PositionalArgument<keyof z.output<Schema> & string>[]
   kind: OperationKind
   attribution?: OperationDefinition['attribution']
   routes: readonly AllRoutes[]
+  surface?: OperationSurface
   cli: OperationDefinition['cli']
   run: (
     client: OperationClient,
@@ -75,15 +120,9 @@ export function defineOperation<
     run(client, input) {
       const parsed = inputSchema.safeParse(input)
       if (!parsed.success) {
-        const message = parsed.error.issues
-          .map((issue) => {
-            const path = issue.path.map(String).join('.') || 'input'
-            return `${path}: ${issue.message}`
-          })
-          .join('; ')
         return errAsync({
           kind: 'input',
-          message,
+          message: formatInputIssues(parsed.error),
         })
       }
       return definition.run(client, parsed.data)

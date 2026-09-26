@@ -7,7 +7,7 @@ function includes<T extends string>(
 
 /**
  * Create an onValueChange handler for the Base UI `Select` primitive
- * (`#components/ui/select`) that validates the value against a set of valid
+ * (`@fohte/ui/select`) that validates the value against a set of valid
  * options before calling the setter.
  */
 export function selectValueHandler<T extends string>(
