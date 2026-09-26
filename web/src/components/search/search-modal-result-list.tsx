@@ -14,13 +14,13 @@ export type ResultGroup = ResultGroupBase &
     | { items?: never; sections: ResultSubgroup[] }
   )
 
-export interface ResultSubgroup {
+interface ResultSubgroup {
   id: string
   title: string
   items: ListItem[]
 }
 
-export interface IndexedResultSubgroup extends Omit<ResultSubgroup, 'items'> {
+interface IndexedResultSubgroup extends Omit<ResultSubgroup, 'items'> {
   items: IndexedListItem[]
 }
 
