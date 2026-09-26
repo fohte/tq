@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
 import {
   defineOperation,
   requestJson,
@@ -11,32 +12,12 @@ import {
   updateProjectSchema,
 } from '#schemas/project'
 
-function isWellFormedUnicode(value: string): boolean {
-  for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index)
-    if (code >= 0xd800 && code <= 0xdbff) {
-      const nextCode = value.charCodeAt(index + 1)
-      if (!(nextCode >= 0xdc00 && nextCode <= 0xdfff)) return false
-      index += 1
-    } else if (code >= 0xdc00 && code <= 0xdfff) {
-      return false
-    }
-  }
-  return true
-}
-
-const projectId = z
-  .string()
-  .min(1)
-  .refine(
-    (id) =>
-      id !== '.' &&
-      id !== '..' &&
-      !id.includes('/') &&
-      !id.includes('\\') &&
-      isWellFormedUnicode(id),
-    { message: 'Project ID must be a single path segment' },
-  )
+const projectId = pathSegmentSchema('Project ID').refine(
+  (id) => !id.includes('/') && !id.includes('\\'),
+  {
+    message: 'Project ID must be a single path segment',
+  },
+)
 const projectIdSchema = z.object({ id: projectId })
 const createProjectInputSchema = createProjectSchema
 const updateProjectInputSchema = updateProjectSchema.extend({ id: projectId })
@@ -69,7 +50,7 @@ export const projectOperations = [
     run: (client, { id }) =>
       requestJson(
         client.api.projects[':id'].$get({
-          param: { id: encodeURIComponent(id) },
+          param: { id: encodePathSegment(id) },
         }),
       ),
   }),
@@ -92,7 +73,7 @@ export const projectOperations = [
     run: (client, { id, ...json }) =>
       requestJson(
         client.api.projects[':id'].$patch({
-          param: { id: encodeURIComponent(id) },
+          param: { id: encodePathSegment(id) },
           json,
         }),
       ),
@@ -107,7 +88,7 @@ export const projectOperations = [
     run: (client, { id }) =>
       requestNoContent(
         client.api.projects[':id'].$delete({
-          param: { id: encodeURIComponent(id) },
+          param: { id: encodePathSegment(id) },
         }),
       ).map(() => ({ deleted: true, id })),
   }),
@@ -130,7 +111,7 @@ export const projectOperations = [
     run: (client, { id }) =>
       requestJson(
         client.api.projects[':id'].$get({
-          param: { id: encodeURIComponent(id) },
+          param: { id: encodePathSegment(id) },
         }),
       ).andThen(() =>
         requestJson(client.api.tasks.$get({ query: { projectId: id } })),

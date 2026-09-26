@@ -19,7 +19,9 @@ const REGISTERED_TOOL_NAMES = [
   'get_page',
   'get_task',
   'get_today_tasks',
-  'list_labels',
+  'label_delete',
+  'label_list',
+  'label_update',
   'list_tasks',
   'project_create',
   'project_delete',
@@ -129,11 +131,7 @@ describe('MCP endpoint (2026-07-28 protocol)', () => {
   it("returns a tool's result without an initialize handshake", async () => {
     const res = await app.request(
       'http://localhost/api/mcp',
-      modernRequestInit(
-        'tools/call',
-        { name: 'list_labels', arguments: {} },
-        2,
-      ),
+      modernRequestInit('tools/call', { name: 'label_list', arguments: {} }, 2),
     )
 
     expect(res.status).toBe(200)

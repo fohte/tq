@@ -62,7 +62,7 @@ function toPageMetadata(page: PageDetail): Omit<PageDetail, 'content'> {
   }
 }
 
-/** Read-only tools: task/label lookups, search, etc. */
+/** Read-only tools: task lookups, search, etc. */
 export function registerReadTools(server: McpServer): void {
   server.registerTool(
     'list_tasks',
@@ -313,21 +313,5 @@ export function registerReadTools(server: McpServer): void {
           date: date ?? new Date().toISOString().slice(0, 10),
         })}`,
       ),
-  )
-
-  server.registerTool(
-    'list_labels',
-    {
-      description:
-        'List all labels available for tagging tasks, with their id, name, color, and context. Use this to resolve label names before filtering search_tasks by label or attaching labels to a task.',
-      inputSchema: z.object({
-        context: contextEnum
-          .optional()
-          .describe('Only return labels in this context.'),
-      }),
-      annotations: { readOnlyHint: true },
-    },
-    async ({ context }) =>
-      callAsResult(`/api/labels${buildQuery({ context })}`),
   )
 }

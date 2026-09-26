@@ -19,7 +19,7 @@ function operationClient(
   return hc<AppType>('http://localhost', {
     fetch: (input: string | URL | Request, init?: RequestInit) => {
       const headers = new Headers(init?.headers)
-      if (operation.kind !== 'read') {
+      if (operation.attribution === 'agent') {
         for (const [key, value] of Object.entries(authorHeader(agent))) {
           headers.set(key, value)
         }
@@ -30,7 +30,7 @@ function operationClient(
 }
 
 function inputSchemaFor(operation: OperationDefinition) {
-  if (operation.kind === 'read') return operation.inputSchema
+  if (operation.attribution !== 'agent') return operation.inputSchema
   return z.object({ ...operation.inputSchema.shape, agent: agentArgSchema })
 }
 

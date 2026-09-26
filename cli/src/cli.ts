@@ -56,7 +56,7 @@ function buildProgram(
   registerCommentCommands(program, fetchImpl, stdin)
   registerProjectCommands(program, fetchImpl, stdin)
   registerSavedViewCommands(program, fetchImpl)
-  registerLabelCommands(program, fetchImpl)
+  registerLabelCommands(program, fetchImpl, stdin)
   registerImageCommands(program, fetchImpl)
   registerGithubCommands(program, fetchImpl)
   registerQueueCommands(program, fetchImpl)
