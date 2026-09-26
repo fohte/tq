@@ -3,8 +3,41 @@ import { describe, expect, it } from 'vitest'
 import {
   allKeybindings,
   calendarKeybindings,
+  getSearchKeybinding,
   navKeybindings,
 } from '#lib/keybindings'
+
+describe('getSearchKeybinding', () => {
+  it('uses Cmd+K on macOS', () => {
+    expect(getSearchKeybinding('MacIntel')).toEqual({
+      id: 'search',
+      keys: '⌘K',
+      description: 'search tasks',
+      modifier: 'meta',
+    })
+  })
+
+  it('uses Ctrl+K on Windows and Linux', () => {
+    expect(
+      ['Win32', 'Linux x86_64'].map((platform) =>
+        getSearchKeybinding(platform),
+      ),
+    ).toEqual([
+      {
+        id: 'search',
+        keys: 'Ctrl+K',
+        description: 'search tasks',
+        modifier: 'ctrl',
+      },
+      {
+        id: 'search',
+        keys: 'Ctrl+K',
+        description: 'search tasks',
+        modifier: 'ctrl',
+      },
+    ])
+  })
+})
 
 describe('allKeybindings', () => {
   it('has no duplicate key combinations', () => {

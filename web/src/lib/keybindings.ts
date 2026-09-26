@@ -4,6 +4,10 @@ export interface Keybinding {
   description: string
 }
 
+export interface SearchKeybinding extends Keybinding {
+  modifier: 'meta' | 'ctrl'
+}
+
 type NavRoutePath =
   '/today' | '/' | '/inbox' | '/tasks' | '/projects' | '/settings'
 
@@ -11,11 +15,20 @@ export interface NavKeybinding extends Keybinding {
   to: NavRoutePath
 }
 
-export const searchKeybinding: Keybinding = {
-  id: 'search',
-  keys: '⌘K',
-  description: 'search tasks',
+export function getSearchKeybinding(platform: string): SearchKeybinding {
+  const isMac = platform.toLowerCase().startsWith('mac')
+
+  return {
+    id: 'search',
+    keys: isMac ? '⌘K' : 'Ctrl+K',
+    description: 'search tasks',
+    modifier: isMac ? 'meta' : 'ctrl',
+  }
 }
+
+export const searchKeybinding = getSearchKeybinding(
+  typeof navigator === 'undefined' ? '' : navigator.platform,
+)
 
 export const newTaskKeybinding: Keybinding = {
   id: 'new-task',
