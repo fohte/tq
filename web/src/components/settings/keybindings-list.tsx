@@ -2,10 +2,11 @@ import { KeybindHint } from '#components/ui/keybind-hint'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import {
-  allKeybindings,
   calendarKeybindings,
   filterKeybindings,
+  getAllKeybindings,
   type Keybinding,
+  type SearchKeybinding,
 } from '#lib/keybindings'
 
 function KeybindingGrid({ keybindings }: { keybindings: Keybinding[] }) {
@@ -25,12 +26,16 @@ function KeybindingGrid({ keybindings }: { keybindings: Keybinding[] }) {
   )
 }
 
-export function KeybindingsList() {
+export function KeybindingsList({
+  searchKeybinding,
+}: {
+  searchKeybinding: SearchKeybinding
+}) {
   return (
     <div className="flex flex-col gap-2.5">
       <SectionHeading level={3}>keybindings</SectionHeading>
       <Panel>
-        <KeybindingGrid keybindings={allKeybindings} />
+        <KeybindingGrid keybindings={getAllKeybindings(searchKeybinding)} />
       </Panel>
 
       <SectionHeading level={3}>calendar keybindings</SectionHeading>

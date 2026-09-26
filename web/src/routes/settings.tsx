@@ -25,6 +25,7 @@ import {
 } from '#hooks/use-integrations'
 import { usePushNotifications } from '#hooks/use-push-notifications'
 import { reinstallServiceWorker } from '#hooks/use-service-worker-update'
+import { getSearchKeybinding } from '#lib/keybindings'
 
 export const Route = createFileRoute('/settings')({
   component: Settings,
@@ -39,6 +40,7 @@ const INTEGRATION_ICONS: Record<string, ReactNode> = {
 function Settings() {
   const integrationsList = useIntegrationsList()
   const pushNotifications = usePushNotifications()
+  const searchKeybinding = getSearchKeybinding(navigator.platform)
 
   return (
     <div className="flex flex-col">
@@ -86,7 +88,7 @@ function Settings() {
           </div>
 
           <div className="mt-8">
-            <KeybindingsList />
+            <KeybindingsList searchKeybinding={searchKeybinding} />
           </div>
 
           <div className="mt-8">

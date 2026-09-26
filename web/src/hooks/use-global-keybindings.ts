@@ -2,9 +2,9 @@ import { useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
 
 import {
-  getSearchKeybinding,
   type NavKeybinding,
   navKeybindings,
+  type SearchKeybinding,
 } from '#lib/keybindings'
 
 export const CHORD_TIMEOUT_MS = 1000
@@ -45,10 +45,12 @@ export function shouldIgnoreShortcut(e: KeyboardEvent): boolean {
 }
 
 export function useGlobalKeybindings({
+  searchKeybinding,
   searchOpen,
   onSearchOpenChange,
   onNewTask,
 }: {
+  searchKeybinding: SearchKeybinding
   searchOpen: boolean
   onSearchOpenChange: (open: boolean) => void
   onNewTask: () => void
@@ -64,7 +66,6 @@ export function useGlobalKeybindings({
       clearTimeout(chordTimeout)
     }
 
-    const searchKeybinding = getSearchKeybinding(navigator.platform)
     const handleKeyDown = (e: KeyboardEvent) => {
       // macOS reserves Ctrl+K for kill-line, so search uses the platform's
       // primary modifier.
@@ -113,5 +114,5 @@ export function useGlobalKeybindings({
       document.removeEventListener('keydown', handleKeyDown)
       resetChord()
     }
-  }, [navigate, onNewTask, onSearchOpenChange, searchOpen])
+  }, [navigate, onNewTask, onSearchOpenChange, searchKeybinding, searchOpen])
 }

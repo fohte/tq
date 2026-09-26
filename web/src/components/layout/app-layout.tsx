@@ -1,5 +1,5 @@
 import { useMatchRoute } from '@tanstack/react-router'
-import { type ReactNode, useCallback, useState } from 'react'
+import { type ReactNode, useCallback, useMemo, useState } from 'react'
 
 import { BottomTabBar } from '#components/layout/bottom-tab-bar'
 import { Sidebar } from '#components/layout/sidebar'
@@ -12,6 +12,7 @@ import { useSearchModalDefaultQuery } from '#hooks/use-search-modal-default-quer
 import { SearchModalOpenContext } from '#hooks/use-search-modal-open'
 import { useUrlCopiedToast } from '#hooks/use-url-copied-toast'
 import { useVisualViewportInsets } from '#hooks/use-visual-viewport-insets'
+import { getSearchKeybinding } from '#lib/keybindings'
 import { cn } from '#lib/utils'
 
 interface VisualViewportStyle extends React.CSSProperties {
@@ -22,6 +23,10 @@ interface VisualViewportStyle extends React.CSSProperties {
 export function AppLayout({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [newTaskOpen, setNewTaskOpen] = useState(false)
+  const searchKeybinding = useMemo(
+    () => getSearchKeybinding(navigator.platform),
+    [],
+  )
   const copiedUrl = useUrlCopiedToast()
   const defaultSearchQuery = useSearchModalDefaultQuery()
   const openNewTask = useCallback(() => {
@@ -30,6 +35,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const insets = useVisualViewportInsets()
 
   useGlobalKeybindings({
+    searchKeybinding,
     searchOpen,
     onSearchOpenChange: setSearchOpen,
     onNewTask: openNewTask,
@@ -69,7 +75,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             {children}
           </SearchModalOpenContext.Provider>
         </main>
-        <StatusLine />
+        <StatusLine searchKeybinding={searchKeybinding} />
         <BottomTabBar />
       </div>
       <SearchModal

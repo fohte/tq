@@ -9,6 +9,7 @@ import { queueKeys } from '#hooks/use-queues'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
+import { getSearchKeybinding, type SearchKeybinding } from '#lib/keybindings'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const todayStr = formatLocalDate(new Date())
@@ -40,7 +41,11 @@ const queueTasks: QueueItem[] = tasks.map((task, index) => ({
   updatedAt: '2026-03-20T00:00:00.000Z',
 }))
 
-function StatusLineStory() {
+function StatusLineStory({
+  searchKeybinding,
+}: {
+  searchKeybinding: SearchKeybinding
+}) {
   // Pins the context this story's contract depends on, rather than relying
   // on DEFAULT_SETTINGS, so an unrelated change to the hook's default can't
   // silently change which tasks useFilteredTaskList() below matches.
@@ -56,14 +61,28 @@ function StatusLineStory() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StatusLine />
+      <StatusLine searchKeybinding={searchKeybinding} />
     </QueryClientProvider>
   )
 }
 
-function StatusLineWithRouter({ currentPath }: { currentPath: string }) {
-  return <StoryRouter component={StatusLineStory} initialPath={currentPath} />
+function StatusLineWithRouter({
+  currentPath,
+  searchKeybinding,
+}: {
+  currentPath: string
+  searchKeybinding: SearchKeybinding
+}) {
+  return (
+    <StoryRouter
+      component={() => <StatusLineStory searchKeybinding={searchKeybinding} />}
+      initialPath={currentPath}
+    />
+  )
 }
+
+const macSearchKeybinding = getSearchKeybinding('MacIntel')
+const nonMacSearchKeybinding = getSearchKeybinding('Linux x86_64')
 
 const meta = {
   title: 'Layout/StatusLine',
@@ -84,15 +103,25 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  name: 'the status line shows navigation details for the home route',
+  name: 'the status line shows the home route and Cmd+K on macOS',
   args: {
     currentPath: '/',
+    searchKeybinding: macSearchKeybinding,
   },
 }
 
 export const TasksPath: Story = {
-  name: 'the status line shows the current task route',
+  name: 'the status line shows the task route and Cmd+K on macOS',
   args: {
     currentPath: '/tasks',
+    searchKeybinding: macSearchKeybinding,
+  },
+}
+
+export const NonMacOS: Story = {
+  name: 'the status line shows Ctrl+K on non-Mac platforms',
+  args: {
+    currentPath: '/',
+    searchKeybinding: nonMacSearchKeybinding,
   },
 }
