@@ -4,6 +4,10 @@ export interface Keybinding {
   description: string
 }
 
+export interface SearchKeybinding extends Keybinding {
+  modifier: 'meta' | 'ctrl'
+}
+
 type NavRoutePath =
   '/today' | '/' | '/inbox' | '/tasks' | '/projects' | '/settings'
 
@@ -11,10 +15,15 @@ export interface NavKeybinding extends Keybinding {
   to: NavRoutePath
 }
 
-export const searchKeybinding: Keybinding = {
-  id: 'search',
-  keys: '⌘K',
-  description: 'search tasks',
+export function getSearchKeybinding(platform: string): SearchKeybinding {
+  const usesMetaKey = /^(mac|iphone|ipad|ipod)/i.test(platform)
+
+  return {
+    id: 'search',
+    keys: usesMetaKey ? '⌘K' : 'Ctrl+K',
+    description: 'search tasks',
+    modifier: usesMetaKey ? 'meta' : 'ctrl',
+  }
 }
 
 export const newTaskKeybinding: Keybinding = {
@@ -64,11 +73,11 @@ export const navKeybindings = {
 
 // Display order for the settings keybindings list; mirrors the sidebar's nav order
 // (navKeybindings' key insertion order matches it, so Object.values needs no sort).
-export const allKeybindings: Keybinding[] = [
-  searchKeybinding,
-  newTaskKeybinding,
-  ...Object.values(navKeybindings),
-]
+export function getAllKeybindings(
+  searchKeybinding: SearchKeybinding,
+): Keybinding[] {
+  return [searchKeybinding, newTaskKeybinding, ...Object.values(navKeybindings)]
+}
 
 // Only active on the calendar screen; see use-calendar-keybindings.ts.
 export const calendarKeybindings: Keybinding[] = [

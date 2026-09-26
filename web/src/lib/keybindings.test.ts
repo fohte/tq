@@ -1,12 +1,38 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  allKeybindings,
   calendarKeybindings,
+  getAllKeybindings,
+  getSearchKeybinding,
   navKeybindings,
 } from '#lib/keybindings'
 
-describe('allKeybindings', () => {
+describe('getSearchKeybinding', () => {
+  it.each(['MacIntel', 'iPhone', 'iPad', 'iPod'])(
+    'uses Cmd+K on %s',
+    (platform) => {
+      expect(getSearchKeybinding(platform)).toEqual({
+        id: 'search',
+        keys: '⌘K',
+        description: 'search tasks',
+        modifier: 'meta',
+      })
+    },
+  )
+
+  it.each(['Win32', 'Linux x86_64'])('uses Ctrl+K on %s', (platform) => {
+    expect(getSearchKeybinding(platform)).toEqual({
+      id: 'search',
+      keys: 'Ctrl+K',
+      description: 'search tasks',
+      modifier: 'ctrl',
+    })
+  })
+})
+
+describe('getAllKeybindings', () => {
+  const allKeybindings = getAllKeybindings(getSearchKeybinding('MacIntel'))
+
   it('has no duplicate key combinations', () => {
     const keys = allKeybindings.map((keybinding) => keybinding.keys)
     expect(new Set(keys).size).toBe(keys.length)

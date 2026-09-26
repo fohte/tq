@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useGlobalKeybindings } from '#hooks/use-global-keybindings'
+import { getSearchKeybinding } from '#lib/keybindings'
 
 const navigateMock = vi.fn(() => Promise.resolve())
 
@@ -24,55 +25,123 @@ function fireKey(
   return event
 }
 
+function searchShortcutOutcome(calls: unknown[], event: KeyboardEvent) {
+  return { calls, defaultPrevented: event.defaultPrevented }
+}
+
 function setup(searchOpen = false) {
   const onSearchOpenChange = vi.fn()
   const onNewTask = vi.fn()
+  const searchKeybinding = getSearchKeybinding(navigator.platform)
   renderHook(() => {
-    useGlobalKeybindings({ searchOpen, onSearchOpenChange, onNewTask })
+    useGlobalKeybindings({
+      searchKeybinding,
+      searchOpen,
+      onSearchOpenChange,
+      onNewTask,
+    })
   })
   return { onSearchOpenChange, onNewTask }
 }
 
+function setPlatform(platform: string) {
+  vi.stubGlobal(
+    'navigator',
+    Object.create(navigator, { platform: { value: platform } }),
+  )
+}
+
 describe('useGlobalKeybindings', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   beforeEach(() => {
     navigateMock.mockClear()
     document.documentElement.removeAttribute('data-base-ui-scroll-locked')
   })
 
-  it('toggles search open on Cmd+K', () => {
+  it('toggles search open on Cmd+K on macOS', () => {
+    setPlatform('MacIntel')
     const { onSearchOpenChange } = setup(false)
 
-    fireKey('k', { metaKey: true })
+    const event = fireKey('k', { metaKey: true })
 
-    expect(onSearchOpenChange).toHaveBeenCalledWith(true)
+    expect(searchShortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual(
+      { calls: [[true]], defaultPrevented: true },
+    )
   })
 
-  it('toggles search closed on Cmd+K when already open', () => {
+  it('toggles search closed on Cmd+K on macOS when already open', () => {
+    setPlatform('MacIntel')
     const { onSearchOpenChange } = setup(true)
 
     fireKey('k', { metaKey: true })
 
-    expect(onSearchOpenChange).toHaveBeenCalledWith(false)
+    expect(onSearchOpenChange.mock.calls).toEqual([[false]])
   })
 
-  it('leaves Ctrl+K to the OS/browser instead of opening search', () => {
+  it('on macOS, Ctrl+K is left to the OS/browser', () => {
+    setPlatform('MacIntel')
     const { onSearchOpenChange } = setup(false)
 
     const event = fireKey('k', { ctrlKey: true })
 
-    expect(onSearchOpenChange).not.toHaveBeenCalled()
-    expect(event.defaultPrevented).toBe(false)
+    expect(searchShortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual(
+      { calls: [], defaultPrevented: false },
+    )
   })
 
-  it('leaves Ctrl+K to the OS/browser while typing in an input', () => {
+  it('leaves Ctrl+K to the OS/browser on macOS while typing in an input', () => {
+    setPlatform('MacIntel')
     const input = document.createElement('input')
     document.body.appendChild(input)
     const { onSearchOpenChange } = setup(false)
 
     const event = fireKey('k', { ctrlKey: true }, input)
 
-    expect(onSearchOpenChange).not.toHaveBeenCalled()
-    expect(event.defaultPrevented).toBe(false)
+    expect(searchShortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual(
+      { calls: [], defaultPrevented: false },
+    )
+    input.remove()
+  })
+
+  it.each(['Win32', 'Linux x86_64'])(
+    'toggles search open on Ctrl+K on %s',
+    (platform) => {
+      setPlatform(platform)
+      const { onSearchOpenChange } = setup(false)
+
+      const event = fireKey('k', { ctrlKey: true })
+
+      expect(
+        searchShortcutOutcome(onSearchOpenChange.mock.calls, event),
+      ).toEqual({ calls: [[true]], defaultPrevented: true })
+    },
+  )
+
+  it('toggles search closed on Ctrl+K on Linux when already open', () => {
+    setPlatform('Linux x86_64')
+    const { onSearchOpenChange } = setup(true)
+
+    const event = fireKey('k', { ctrlKey: true })
+
+    expect(searchShortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual(
+      { calls: [[false]], defaultPrevented: true },
+    )
+  })
+
+  it('toggles search open on Ctrl+K on Linux while typing in an input', () => {
+    setPlatform('Linux x86_64')
+    const input = document.createElement('input')
+    document.body.appendChild(input)
+    const { onSearchOpenChange } = setup(false)
+
+    const event = fireKey('k', { ctrlKey: true }, input)
+
+    expect(searchShortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual(
+      { calls: [[true]], defaultPrevented: true },
+    )
     input.remove()
   })
 
@@ -152,13 +221,14 @@ describe('useGlobalKeybindings', () => {
   })
 
   it('still handles Cmd+K while typing in an input', () => {
+    setPlatform('MacIntel')
     const input = document.createElement('input')
     document.body.appendChild(input)
     const { onSearchOpenChange } = setup(false)
 
     fireKey('k', { metaKey: true }, input)
 
-    expect(onSearchOpenChange).toHaveBeenCalledWith(true)
+    expect(onSearchOpenChange.mock.calls).toEqual([[true]])
     input.remove()
   })
 })

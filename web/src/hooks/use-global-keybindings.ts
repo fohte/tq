@@ -1,7 +1,11 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
 
-import { type NavKeybinding, navKeybindings } from '#lib/keybindings'
+import {
+  type NavKeybinding,
+  navKeybindings,
+  type SearchKeybinding,
+} from '#lib/keybindings'
 
 export const CHORD_TIMEOUT_MS = 1000
 
@@ -41,10 +45,12 @@ export function shouldIgnoreShortcut(e: KeyboardEvent): boolean {
 }
 
 export function useGlobalKeybindings({
+  searchKeybinding,
   searchOpen,
   onSearchOpenChange,
   onNewTask,
 }: {
+  searchKeybinding: SearchKeybinding
   searchOpen: boolean
   onSearchOpenChange: (open: boolean) => void
   onNewTask: () => void
@@ -61,10 +67,12 @@ export function useGlobalKeybindings({
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+K is intentionally excluded: on macOS it's the standard
-      // kill-line binding in text fields, and stealing it here breaks that
-      // for every input/textarea in the app.
-      if (e.metaKey && e.key.toLowerCase() === 'k') {
+      // macOS reserves Ctrl+K for kill-line, so search uses the platform's
+      // primary modifier.
+      const searchModifierPressed =
+        (searchKeybinding.modifier === 'meta' && e.metaKey) ||
+        (searchKeybinding.modifier === 'ctrl' && e.ctrlKey)
+      if (searchModifierPressed && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         onSearchOpenChange(!searchOpen)
         return
@@ -106,5 +114,5 @@ export function useGlobalKeybindings({
       document.removeEventListener('keydown', handleKeyDown)
       resetChord()
     }
-  }, [navigate, onNewTask, onSearchOpenChange, searchOpen])
+  }, [navigate, onNewTask, onSearchOpenChange, searchKeybinding, searchOpen])
 }

@@ -10,16 +10,14 @@ import { formatMinutes } from '#lib/format'
 import {
   navKeybindings,
   newTaskKeybinding,
-  searchKeybinding,
+  type SearchKeybinding,
 } from '#lib/keybindings'
 
-const shortcuts = [
-  { key: searchKeybinding.keys, label: 'search' },
-  { key: newTaskKeybinding.keys, label: 'new' },
-  { key: navKeybindings.goToTasks.keys, label: 'goto' },
-]
-
-export function StatusLine() {
+export function StatusLine({
+  searchKeybinding,
+}: {
+  searchKeybinding: SearchKeybinding
+}) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
@@ -43,6 +41,11 @@ export function StatusLine() {
       t.status === 'completed' ? total : total + (t.estimatedMinutes ?? 0),
     0,
   )
+  const shortcuts = [
+    { key: searchKeybinding.keys, label: 'search' },
+    { key: newTaskKeybinding.keys, label: 'new' },
+    { key: navKeybindings.goToTasks.keys, label: 'goto' },
+  ]
 
   return (
     <div className="sticky bottom-0 hidden h-6 shrink-0 items-center gap-3 border-t border-border bg-card px-3 font-mono text-2xs text-muted-foreground-faint md:flex">
