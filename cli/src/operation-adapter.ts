@@ -5,7 +5,11 @@ import { toApiError } from '#client'
 import { buildClient } from '#command-context'
 import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
-import { printJson, printJsonList, printJsonWithLinkSync } from '#output'
+import {
+  printJson,
+  printJsonList,
+  printOperationJsonWithLinkSync,
+} from '#output'
 import { fail } from '#result'
 import { addSchemaOptions, pickSchemaFields } from '#schema-options'
 
@@ -15,14 +19,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function registerOperations(
   program: Command,
-  operations: readonly OperationDefinition[],
+  operations: readonly [OperationDefinition, ...OperationDefinition[]],
   groupDescription: string,
   fetchImpl: typeof fetch,
   stdin: ReadableStdin,
 ): void {
-  const groupName = operations[0]?.path[0]
-  if (groupName === undefined) return
-
+  const groupName = operations[0].path[0]
+  if (operations.some((operation) => operation.path[0] !== groupName)) {
+    return fail(
+      program,
+      new Error('An operation group must contain a single root command.'),
+    )
+  }
   const group = program.command(groupName).description(groupDescription)
 
   for (const operation of operations) {
@@ -110,8 +118,7 @@ export function registerOperations(
           return fail(
             actionCommand,
             new Error(
-              operation.cli.contentRequiredMessage ??
-                'Content is required. Provide --file <path> or pipe content via stdin.',
+              'Content is required. Provide --file <path> or pipe content via stdin.',
             ),
           )
         }
@@ -135,19 +142,13 @@ export function registerOperations(
           printJson(result.value)
           break
         case 'json-with-link-sync':
-          printJsonWithLinkSync(result.value)
+          printOperationJsonWithLinkSync(result.value).match(
+            () => undefined,
+            (error) => fail(actionCommand, error),
+          )
           break
         case 'list': {
-          const fullOption = operation.cli.output.fullOption
-          const fullKey =
-            fullOption == null
-              ? undefined
-              : fullOption
-                  .replace(/^--/, '')
-                  .replace(/-([a-z])/g, (_match, letter: string) =>
-                    letter.toUpperCase(),
-                  )
-          const full = fullKey != null && options[fullKey] === true
+          const full = options['full'] === true
           printJsonList(result.value, operation.cli.output.omitKey, { full })
           break
         }

@@ -1,39 +1,18 @@
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import type { CallToolResult, McpServer } from '@modelcontextprotocol/server'
-import { commentOperations, type OperationDefinition } from 'api/operations'
-import type { Hono } from 'hono'
 import { hc } from 'hono/client'
 import { z } from 'zod'
 
-import type { AppType } from '#app'
-import { AUTHOR_HEADER } from '#lib/author'
+import { app, type AppType } from '#app'
+import { commentOperations, type OperationDefinition } from '#operations/index'
 import { toErrorResult } from '#routes/mcp/route-bridge'
-
-const DEFAULT_AGENT = 'mcp'
-
-const agentArgSchema = z
-  .string()
-  .min(1)
-  .regex(/^[^\x00-\x1f\x7f]+$/, 'must not contain control characters')
-  .optional()
-  .describe(
-    'Your own model name (e.g. "example-model"), so this write is ' +
-      'attributed to you specifically in the edit history. Always pass ' +
-      'this when you know it.',
-  )
-
-async function resolveApp(): Promise<Hono> {
-  // `#app` imports the MCP server through `routes/mcp/index.ts`, so importing
-  // it here at module scope would create an initialization cycle.
-  const { app } = await import('#app')
-  return app
-}
-
-function authorHeaderValue(agent: string | undefined): string {
-  return `llm:${agent ?? DEFAULT_AGENT}`
-}
+import {
+  agentArgSchema,
+  authorHeader,
+  toolResult,
+} from '#routes/mcp/tools/tool-helpers'
 
 function operationClient(
-  app: Hono,
   operation: OperationDefinition,
   agent: string | undefined,
 ) {
@@ -41,17 +20,13 @@ function operationClient(
     fetch: (input: string | URL | Request, init?: RequestInit) => {
       const headers = new Headers(init?.headers)
       if (operation.kind !== 'read') {
-        headers.set(AUTHOR_HEADER, authorHeaderValue(agent))
+        for (const [key, value] of Object.entries(authorHeader(agent))) {
+          headers.set(key, value)
+        }
       }
       return app.request(input, { ...init, headers })
     },
   })
-}
-
-function toolResult(data: unknown): CallToolResult {
-  return {
-    content: [{ type: 'text', text: JSON.stringify(data) }],
-  }
 }
 
 function inputSchemaFor(operation: OperationDefinition) {
@@ -77,14 +52,6 @@ function requestErrorResult(message: string): CallToolResult {
   }
 }
 
-function operationInput(
-  parsedInput: Record<string, unknown>,
-): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(parsedInput).filter(([key]) => key !== 'agent'),
-  )
-}
-
 export function registerOperationTools(server: McpServer): void {
   for (const operation of commentOperations) {
     const inputSchema = inputSchemaFor(operation)
@@ -95,20 +62,17 @@ export function registerOperationTools(server: McpServer): void {
         inputSchema,
         annotations: annotationsFor(operation),
       },
-      async (input: unknown) => {
-        const parsed = inputSchema.safeParse(input)
-        if (!parsed.success) {
-          const message = parsed.error.issues[0]?.message ?? 'Invalid request.'
-          return requestErrorResult(`Invalid request: ${message}`)
+      async (input: z.output<typeof inputSchema>) => {
+        let agent: string | undefined
+        let operationValues: object = input
+        if ('agent' in input) {
+          const { agent: providedAgent, ...rest } = input
+          agent = typeof providedAgent === 'string' ? providedAgent : undefined
+          operationValues = rest
         }
-
-        const values = Object.fromEntries(Object.entries(parsed.data))
-        const agent =
-          typeof values['agent'] === 'string' ? values['agent'] : undefined
-        const app = await resolveApp()
         const result = await operation.run(
-          operationClient(app, operation, agent),
-          operationInput(values),
+          operationClient(operation, agent),
+          operationValues,
         )
 
         if (result.isErr()) {
@@ -120,6 +84,11 @@ export function registerOperationTools(server: McpServer): void {
             case 'http':
               return toErrorResult(result.error.response)
             case 'request':
+              captureWithFingerprint(
+                result.error.error,
+                'api.mcp.operation-request-failed',
+                { extras: { operation: operation.path.join('_') } },
+              )
               return requestErrorResult(
                 'An internal error occurred while processing the request.',
               )

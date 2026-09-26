@@ -20,12 +20,12 @@ export type CliOutput =
   | {
       kind: 'list'
       omitKey: string
-      fullOption?: string
+      fullOption?: '--full'
       fullDescription?: string
     }
 
 export interface OperationDefinition {
-  path: readonly string[]
+  path: readonly [group: string, command: string, ...nestedPath: string[]]
   description: string
   inputSchema: z.ZodObject
   positionalArgs: readonly string[]
@@ -33,7 +33,6 @@ export interface OperationDefinition {
   routes: readonly AllRoutes[]
   cli: {
     contentInputField?: string
-    contentRequiredMessage?: string
     output: CliOutput
   }
   run: (
@@ -74,9 +73,15 @@ export function defineOperation<
     run(client, input) {
       const parsed = inputSchema.safeParse(input)
       if (!parsed.success) {
+        const message = parsed.error.issues
+          .map((issue) => {
+            const path = issue.path.map(String).join('.') || 'input'
+            return `${path}: ${issue.message}`
+          })
+          .join('; ')
         return errAsync({
           kind: 'input',
-          message: parsed.error.issues[0]?.message ?? 'Invalid input',
+          message,
         })
       }
       return definition.run(client, parsed.data)

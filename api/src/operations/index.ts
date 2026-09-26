@@ -1,4 +1,8 @@
-export { commentOperations, type OperationRoutes } from '#operations/comment'
+import { commentOperations } from '#operations/comment'
+
+export { commentOperations }
+export const operations = [...commentOperations] as const
+export type OperationRoutes = (typeof operations)[number]['routes'][number]
 export type { AllRoutes } from '#operations/route-types'
 export type {
   CliOutput,

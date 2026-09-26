@@ -7,9 +7,8 @@ import { z } from 'zod'
 import { app } from '#app'
 import { jsonBody, setupTestDb } from '#testing'
 
-// Per-tool schema/description/annotation detail is covered by each tool
-// group's own tests; both protocol-era tests below only pin down that every
-// registered tool is reachable through the wire protocol.
+// Tool-specific schema and annotation details live with their operation or
+// write-tool integration tests; these tests pin down wire-level reachability.
 const REGISTERED_TOOL_NAMES = [
   'comment_create',
   'comment_delete',
@@ -33,14 +32,7 @@ const REGISTERED_TOOL_NAMES = [
 function summarizeTools(
   tools: Awaited<ReturnType<Client['listTools']>>['tools'],
 ) {
-  return {
-    names: tools.map((tool) => tool.name).sort(),
-    commentAnnotations: Object.fromEntries(
-      tools
-        .filter((tool) => tool.name.startsWith('comment_'))
-        .map((tool) => [tool.name, tool.annotations ?? null]),
-    ),
-  }
+  return tools.map((tool) => tool.name).sort()
 }
 
 // `mcpApp` is mounted with `.route()` on the same `app` instance as every
@@ -65,24 +57,7 @@ describe('MCP endpoint', () => {
     try {
       const result = await client.listTools()
 
-      expect(summarizeTools(result.tools)).toEqual({
-        names: REGISTERED_TOOL_NAMES,
-        commentAnnotations: {
-          comment_create: {
-            readOnlyHint: false,
-            destructiveHint: false,
-          },
-          comment_delete: {
-            readOnlyHint: false,
-            destructiveHint: true,
-          },
-          comment_list: { readOnlyHint: true },
-          comment_update: {
-            readOnlyHint: false,
-            destructiveHint: false,
-          },
-        },
-      })
+      expect(summarizeTools(result.tools)).toEqual(REGISTERED_TOOL_NAMES)
     } finally {
       await client.close()
     }

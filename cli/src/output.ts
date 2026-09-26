@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises'
 
-import { ResultAsync } from 'neverthrow'
+import { err, ok, ResultAsync } from 'neverthrow'
 import { z } from 'zod'
 
 import { FileIoError } from '#errors'
@@ -113,10 +113,28 @@ export function printLinkSync(linkSync: LinkSyncSummary | undefined): void {
 // then, if the write triggered a task_links resync, the linkSync summary to
 // stderr — combined here so a future write endpoint can't add the former
 // while forgetting the latter.
-export function printJsonWithLinkSync(data: unknown): void {
+export function printJsonWithLinkSync(data: {
+  linkSync?: LinkSyncSummary | undefined
+}): void {
   printJson(data)
+  printLinkSync(data.linkSync)
+}
+
+export function printOperationJsonWithLinkSync(data: unknown) {
   const result = linkSyncDataSchema.safeParse(data)
-  if (result.success) printLinkSync(result.data.linkSync)
+  if (!result.success) {
+    const message = result.error.issues
+      .map((issue) => {
+        const path = issue.path.map(String).join('.') || 'response'
+        return `${path}: ${issue.message}`
+      })
+      .join('; ')
+    return err(new Error(`Invalid API response: ${message}`))
+  }
+
+  printJson(data)
+  printLinkSync(result.data.linkSync)
+  return ok(undefined)
 }
 
 export function writeContentFile(

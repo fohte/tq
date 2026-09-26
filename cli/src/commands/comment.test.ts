@@ -10,6 +10,7 @@ import {
   apiUrl,
   captureFetch,
   fakeStdin,
+  request,
   spyStderr,
   spyStdout,
 } from '#commands/test-support'
@@ -17,6 +18,20 @@ import {
 afterEach(() => {
   vi.restoreAllMocks()
 })
+
+function cliOutcome(
+  exitCode: number,
+  stderr: ReturnType<typeof spyStderr>,
+  stdout: ReturnType<typeof spyStdout>,
+  details: Record<string, unknown> = {},
+) {
+  return {
+    exitCode,
+    stderr: stderr.mock.calls,
+    stdout: stdout.mock.calls,
+    ...details,
+  }
+}
 
 describe('comment list', () => {
   it('omits comment content from the printed output by default', async () => {
@@ -55,6 +70,91 @@ describe('comment list', () => {
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(comments, null, 2)}\n`],
     ])
+  })
+
+  it('reports the invalid positional field before sending a request', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify([]), { status: 200 }),
+    )
+    const stderr = spyStderr()
+    const stdout = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'comment', 'list', 'not-a-task-id'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    const expected = {
+      exitCode: 1,
+      stderr: [['Error: taskId: Invalid input\n']],
+      stdout: [],
+      requests: [],
+    }
+
+    expect(
+      cliOutcome(exitCode, stderr, stdout, { requests: calls.map(request) }),
+    ).toEqual(expected)
+  })
+
+  it('formats HTTP failures from the comment route', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () =>
+        new Response(JSON.stringify({ error: 'Task not found' }), {
+          status: 404,
+        }),
+    )
+    const stderr = spyStderr()
+    const stdout = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'comment', 'list', '123456789'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    const expected = {
+      exitCode: 1,
+      stderr: [['Error: Task not found (HTTP 404)\n']],
+      stdout: [],
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks/123456789/comments',
+          query: {},
+          body: undefined,
+        },
+      ],
+    }
+
+    expect(
+      cliOutcome(exitCode, stderr, stdout, { requests: calls.map(request) }),
+    ).toEqual(expected)
+  })
+
+  it('formats request failures from the comment route', async () => {
+    const fetchStub = vi.fn(() => Promise.reject(new Error('socket closed')))
+    const stderr = spyStderr()
+    const stdout = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'comment', 'list', '123456789'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    const expected = {
+      exitCode: 1,
+      stderr: [['Error: Failed to reach http://api.test\n']],
+      stdout: [],
+      requestCount: 1,
+    }
+
+    expect(
+      cliOutcome(exitCode, stderr, stdout, {
+        requestCount: fetchStub.mock.calls.length,
+      }),
+    ).toEqual(expected)
   })
 })
 
@@ -132,6 +232,42 @@ describe('comment create', () => {
           "If these aren't tq task numbers, write them as a link or in backticks.\n",
       ],
     ])
+  })
+
+  it('reports a malformed linkSync response instead of ignoring it', async () => {
+    const { fetchStub } = captureFetch(
+      () =>
+        new Response(
+          JSON.stringify({
+            id: 'example-comment',
+            linkSync: {
+              outgoing: [{ number: 'invalid', title: 'Example' }],
+              unresolvedRefs: [],
+            },
+          }),
+          { status: 201 },
+        ),
+    )
+    const stderr = spyStderr()
+    const stdout = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'comment', 'create', '123456789'],
+      fetchStub,
+      Object.assign(Readable.from(['example content']), { isTTY: false }),
+    )
+
+    const expected = {
+      exitCode: 1,
+      stderr: [
+        [
+          'Error: Invalid API response: linkSync.outgoing.0.number: Invalid input: expected number, received string\n',
+        ],
+      ],
+      stdout: [],
+    }
+
+    expect(cliOutcome(exitCode, stderr, stdout)).toEqual(expected)
   })
 
   it('sends piped stdin content as the request body content when --file is not given', async () => {

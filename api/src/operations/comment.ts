@@ -12,14 +12,23 @@ const listCommentsSchema = z.object({ taskId: taskIdOrNumber })
 const createCommentInputSchema = createCommentSchema.extend({
   taskId: taskIdOrNumber,
 })
+const commentIdSchema = z
+  .string()
+  .min(1)
+  .refine((commentId) => commentId !== '.' && commentId !== '..', {
+    message: 'Comment ID must be a valid path segment',
+  })
 const updateCommentInputSchema = updateCommentSchema.extend({
   taskId: taskIdOrNumber,
-  commentId: z.string(),
+  commentId: commentIdSchema,
 })
 const deleteCommentSchema = z.object({
   taskId: taskIdOrNumber,
-  commentId: z.string(),
+  commentId: commentIdSchema,
 })
+function encodePathSegment(value: string): string {
+  return encodeURIComponent(value)
+}
 
 export const commentOperations = [
   defineOperation(listCommentsSchema, {
@@ -51,8 +60,6 @@ export const commentOperations = [
     routes: ['POST /api/tasks/:taskId/comments'],
     cli: {
       contentInputField: 'content',
-      contentRequiredMessage:
-        'Comment content is required. Provide --file <path> or pipe content via stdin.',
       output: { kind: 'json-with-link-sync' },
     },
     run: (client, { taskId, content }) =>
@@ -71,14 +78,15 @@ export const commentOperations = [
     routes: ['PATCH /api/tasks/:taskId/comments/:commentId'],
     cli: {
       contentInputField: 'content',
-      contentRequiredMessage:
-        'Comment content is required. Provide --file <path> or pipe content via stdin.',
       output: { kind: 'json-with-link-sync' },
     },
     run: (client, { taskId, commentId, content }) =>
       requestJson(
         client.api.tasks[':taskId'].comments[':commentId'].$patch({
-          param: { taskId: String(taskId), commentId },
+          param: {
+            taskId: String(taskId),
+            commentId: encodePathSegment(commentId),
+          },
           json: { content },
         }),
       ),
@@ -93,11 +101,11 @@ export const commentOperations = [
     run: (client, { taskId, commentId }) =>
       requestNoContent(
         client.api.tasks[':taskId'].comments[':commentId'].$delete({
-          param: { taskId: String(taskId), commentId },
+          param: {
+            taskId: String(taskId),
+            commentId: encodePathSegment(commentId),
+          },
         }),
       ).map(() => ({ deleted: true, taskId: String(taskId), commentId })),
   }),
 ] as const
-
-export type OperationRoutes =
-  (typeof commentOperations)[number]['routes'][number]
