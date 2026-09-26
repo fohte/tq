@@ -137,6 +137,39 @@ Options:
     expect(command.opts()).toEqual({ labels: ['alpha', 'beta', 'gamma'] })
   })
 
+  it('converts each comma-separated array value with its numeric schema', () => {
+    const schema = z.object({ values: z.array(z.number().int()).optional() })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+      [],
+      {},
+      ['values'],
+    )._unsafeUnwrap()
+
+    command.parse(['--values', '3,5'], { from: 'user' })
+
+    expect(command.opts()).toEqual({ values: [3, 5] })
+  })
+
+  it('rejects a comma-separated array value that fails its numeric schema', () => {
+    const schema = z.object({ values: z.array(z.number().int()).optional() })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+      [],
+      {},
+      ['values'],
+    )._unsafeUnwrap()
+    const error = captureError(() =>
+      command.parse(['--values', '3,nope'], { from: 'user' }),
+    )
+
+    expect(error.message).toBe(
+      "error: option '--values <value>' argument '3,nope' is invalid. Invalid input: expected number, received NaN",
+    )
+  })
+
   it('shows the array description and comma-separated syntax in --help', () => {
     const schema = z.object({
       labels: z.array(z.string()).describe('Label names to attach').optional(),

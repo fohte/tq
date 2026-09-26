@@ -54,7 +54,7 @@ function buildProgram(
   registerPageCommands(program, fetchImpl, stdin)
   registerTaskCommands(program, fetchImpl)
   registerCommentCommands(program, fetchImpl, stdin)
-  registerProjectCommands(program, fetchImpl)
+  registerProjectCommands(program, fetchImpl, stdin)
   registerSavedViewCommands(program, fetchImpl)
   registerLabelCommands(program, fetchImpl, stdin)
   registerImageCommands(program, fetchImpl)

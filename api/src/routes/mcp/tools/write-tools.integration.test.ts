@@ -12,6 +12,7 @@ import { z } from 'zod'
 import { app } from '#app'
 import { db } from '#db/connection'
 import { labels } from '#db/schema'
+import { operations } from '#operations/index'
 import {
   createComment,
   createLabel,
@@ -146,11 +147,16 @@ async function summarizeToolCallOutcome(
   }
 }
 
-function expectedCommentIdValidationError(name: string, commentId: string) {
+function expectedPathSegmentValidationError(
+  name: string,
+  field: string,
+  label: string,
+  value: string,
+) {
   const issue =
-    commentId === ''
+    value === ''
       ? 'Too small: expected string to have >=1 characters'
-      : 'Comment ID must be a valid path segment'
+      : `${label} must be a valid path segment`
   return {
     kind: 'result',
     result: {
@@ -158,26 +164,7 @@ function expectedCommentIdValidationError(name: string, commentId: string) {
       content: [
         {
           type: 'text',
-          text: `Input validation error: Invalid arguments for tool ${name}: commentId: ${issue}`,
-        },
-      ],
-    },
-  }
-}
-
-function expectedLabelIdValidationError(name: string, id: string) {
-  const issue =
-    id === ''
-      ? 'Too small: expected string to have >=1 characters'
-      : 'Label ID must be a valid path segment'
-  return {
-    kind: 'result',
-    result: {
-      isError: true,
-      content: [
-        {
-          type: 'text',
-          text: `Input validation error: Invalid arguments for tool ${name}: id: ${issue}`,
+          text: `Input validation error: Invalid arguments for tool ${name}: ${field}: ${issue}`,
         },
       ],
     },
@@ -770,7 +757,12 @@ describe('comment_update tool', () => {
     expect(outcomes).toEqual(
       ['comment_update', 'comment_delete'].flatMap((name) =>
         ['', '.', '..'].map((commentId) =>
-          expectedCommentIdValidationError(name, commentId),
+          expectedPathSegmentValidationError(
+            name,
+            'commentId',
+            'Comment ID',
+            commentId,
+          ),
         ),
       ),
     )
@@ -967,7 +959,9 @@ describe('label_update tool', () => {
 
     expect(outcomes).toEqual(
       ['label_update', 'label_delete'].flatMap((name) =>
-        ['', '.', '..'].map((id) => expectedLabelIdValidationError(name, id)),
+        ['', '.', '..'].map((id) =>
+          expectedPathSegmentValidationError(name, 'id', 'Label ID', id),
+        ),
       ),
     )
   })
@@ -1048,12 +1042,12 @@ describe('label_delete tool', () => {
 describe('operation tool input schemas', () => {
   it('exposes agent only for operations that support attribution', async () => {
     const tools = await client.listTools()
+    const operationToolNames = operations.map((operation) =>
+      operation.path.join('_'),
+    )
     const agentArguments = Object.fromEntries(
       tools.tools
-        .filter(
-          (tool) =>
-            tool.name.startsWith('comment_') || tool.name.startsWith('label_'),
-        )
+        .filter((tool) => operationToolNames.includes(tool.name))
         .map((tool) => [
           tool.name,
           Object.keys(tool.inputSchema.properties ?? {}).includes('agent'),
@@ -1068,6 +1062,12 @@ describe('operation tool input schemas', () => {
       label_delete: false,
       label_list: false,
       label_update: false,
+      project_create: false,
+      project_delete: false,
+      project_get: false,
+      project_list: false,
+      project_tasks: false,
+      project_update: false,
     })
   })
 })

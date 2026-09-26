@@ -10,6 +10,39 @@ import { expect } from 'vitest'
 
 import { app } from '#app'
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
+
+interface NormalizeDynamicValuesOptions {
+  taskNumbers?: boolean
+}
+
+export function normalizeDynamicValues(
+  value: unknown,
+  options: NormalizeDynamicValuesOptions = {},
+): unknown {
+  if (typeof value === 'string') {
+    if (UUID_PATTERN.test(value)) return '<uuid>'
+    if (TIMESTAMP_PATTERN.test(value)) return '<timestamp>'
+    return value
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeDynamicValues(item, options))
+  }
+  if (value != null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nested]) => [
+        key,
+        options.taskNumbers === true && key === 'number'
+          ? -1
+          : normalizeDynamicValues(nested, options),
+      ]),
+    )
+  }
+  return value
+}
+
 function assertTextContent(
   first: CallToolResult['content'][number] | undefined,
 ): asserts first is TextContent {

@@ -112,12 +112,12 @@ async function printJsonOutput(
   return ok(undefined)
 }
 
-export function printOperationOutput(
-  output: CliOutput,
+export async function printOperationOutput(
+  output: Exclude<CliOutput, { kind: 'web-url' }>,
   value: unknown,
   options: Record<string, unknown>,
   fetchImpl: typeof fetch,
-): Promise<Result<void, Error>> | Result<void, Error> {
+): Promise<Result<void, Error>> {
   switch (output.kind) {
     case 'json':
       return printJsonOutput(output, value, options, fetchImpl)
@@ -126,9 +126,5 @@ export function printOperationOutput(
     case 'list':
       printJsonList(value, output.omitKey, { full: options['full'] === true })
       return ok(undefined)
-    case 'web-url':
-      return err(
-        new Error('Web URL output must be handled before the API request.'),
-      )
   }
 }

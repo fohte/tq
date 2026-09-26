@@ -61,13 +61,6 @@ export const COVERED_ROUTES = [
   'GET /api/tasks/:taskId/agent-sessions',
   'DELETE /api/tasks/:taskId/agent-sessions/:agentSessionId',
 
-  // project
-  'POST /api/projects',
-  'GET /api/projects',
-  'GET /api/projects/:id',
-  'PATCH /api/projects/:id',
-  'DELETE /api/projects/:id',
-
   // saved view
   'POST /api/saved-views',
   'GET /api/saved-views',

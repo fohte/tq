@@ -5,6 +5,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { normalizeDynamicValues } from '#routes/mcp/testing'
 import {
   createComment,
   createLabel,
@@ -22,7 +23,6 @@ const READ_TOOL_NAMES = [
   'get_task',
   'get_today_tasks',
   'label_list',
-  'list_projects',
   'list_tasks',
   'search_pages',
   'search_tasks',
@@ -71,28 +71,6 @@ function parseJson(result: CallToolResult): unknown {
   return JSON.parse(first.text)
 }
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
-
-// Placeholders out ids/timestamps so a test can assert a full known literal
-// (title, content, author, ...) with `toEqual` instead of re-deriving the
-// expected value from the same route under test.
-function normalizeDynamicValues(value: unknown): unknown {
-  if (typeof value === 'string') {
-    if (UUID_PATTERN.test(value)) return '<uuid>'
-    if (TIMESTAMP_PATTERN.test(value)) return '<timestamp>'
-    return value
-  }
-  if (Array.isArray(value)) return value.map((v) => normalizeDynamicValues(v))
-  if (value != null && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value).map(([k, v]) => [k, normalizeDynamicValues(v)]),
-    )
-  }
-  return value
-}
-
 describe('read tools', () => {
   it('declares every read tool as read-only', async () => {
     const result = await withClient((client) => client.listTools())
@@ -110,7 +88,6 @@ describe('read tools', () => {
       { name: 'get_task', readOnlyHint: true },
       { name: 'get_today_tasks', readOnlyHint: true },
       { name: 'label_list', readOnlyHint: true },
-      { name: 'list_projects', readOnlyHint: true },
       { name: 'list_tasks', readOnlyHint: true },
       { name: 'search_pages', readOnlyHint: true },
       { name: 'search_tasks', readOnlyHint: true },
@@ -471,33 +448,6 @@ describe('read tools', () => {
       const toolResult = await callTool('get_today_tasks')
 
       expect(parseJson(toolResult)).toEqual(queued)
-    })
-  })
-
-  describe('list_projects', () => {
-    it('rejects invalid input', async () => {
-      const result = await callTool('list_projects', { status: 'bogus' })
-
-      expect(result.isError).toBe(true)
-    })
-
-    it('returns projects matching the given filter', async () => {
-      const postRes = await app.request('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'Website redesign' }),
-      })
-      const project = await jsonBody<Record<string, unknown>>(postRes)
-
-      const toolResult = await callTool('list_projects')
-
-      expect(parseJson(toolResult)).toEqual([
-        {
-          ...project,
-          completionRate: 0,
-          taskCount: { total: 0, completed: 0 },
-        },
-      ])
     })
   })
 

@@ -9,7 +9,6 @@ import {
   nestTaskListRows,
   type TaskListItemResponse,
 } from '#routes/tasks/shared'
-import { projectStatus } from '#schemas/project'
 import { contextEnum, taskStatus, taskStatusReason } from '#schemas/task'
 
 async function resolveApp(): Promise<Hono> {
@@ -63,7 +62,7 @@ function toPageMetadata(page: PageDetail): Omit<PageDetail, 'content'> {
   }
 }
 
-/** Read-only tools: task/project lookups, search, etc. */
+/** Read-only tools: task lookups, search, etc. */
 export function registerReadTools(server: McpServer): void {
   server.registerTool(
     'list_tasks',
@@ -81,7 +80,7 @@ export function registerReadTools(server: McpServer): void {
           .uuid()
           .optional()
           .describe(
-            'Only return tasks belonging to this project id. Resolve project ids with list_projects.',
+            'Only return tasks belonging to this project id. Resolve project ids with project_list.',
           ),
         parentId: z
           .union([z.literal('root'), z.uuid()])
@@ -314,24 +313,5 @@ export function registerReadTools(server: McpServer): void {
           date: date ?? new Date().toISOString().slice(0, 10),
         })}`,
       ),
-  )
-
-  server.registerTool(
-    'list_projects',
-    {
-      description:
-        "List projects, optionally filtered by status and context. Use this to resolve a project's id before passing projectId to list_tasks or create_task.",
-      inputSchema: z.object({
-        status: projectStatus
-          .optional()
-          .describe('Only return projects in this status.'),
-        context: contextEnum
-          .optional()
-          .describe('Only return projects in this context.'),
-      }),
-      annotations: { readOnlyHint: true },
-    },
-    async ({ status, context }) =>
-      callAsResult(`/api/projects${buildQuery({ status, context })}`),
   )
 }

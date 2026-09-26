@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -61,6 +61,17 @@ function makeImageGetOperation(): OperationDefinition {
 
 async function parse(program: Command, args: string[]): Promise<void> {
   await program.parseAsync(['node', 'tq', ...args], { from: 'node' })
+}
+
+async function withTemporaryDirectory<T>(
+  run: (path: string) => Promise<T>,
+): Promise<T> {
+  const path = await mkdtemp(join(tmpdir(), 'tq-operation-adapter-'))
+  try {
+    return await run(path)
+  } finally {
+    await rm(path, { recursive: true, force: true })
+  }
 }
 
 function adapterOutcome(
@@ -146,7 +157,6 @@ describe('registerOperations', () => {
       inputSchema: z.object({
         context: z.enum(['work', 'personal']).optional(),
       }),
-      positionalArgs: [],
       cli: {
         envDefaults: { context: 'TQ_CONTEXT' },
         output: { kind: 'json' },
@@ -170,7 +180,6 @@ describe('registerOperations', () => {
     const operation = makeOperation({
       path: ['demo', 'list'],
       inputSchema: z.object({ labels: z.array(z.string()).optional() }),
-      positionalArgs: [],
       cli: {
         commaSeparatedOptions: ['labels'],
         output: { kind: 'json' },
@@ -200,7 +209,6 @@ describe('registerOperations', () => {
           .array(z.union([z.number().int(), z.string().regex(/^\d+$/)]))
           .optional(),
       }),
-      positionalArgs: [],
       cli: {
         commaSeparatedOptions: ['blockedBy'],
         output: { kind: 'json' },
@@ -226,7 +234,6 @@ describe('registerOperations', () => {
     const operation = makeOperation({
       path: ['demo', 'update'],
       inputSchema: z.object({ labels: z.array(z.string()).optional() }),
-      positionalArgs: [],
       cli: {
         commaSeparatedOptions: ['labels'],
         output: { kind: 'json' },
@@ -252,7 +259,6 @@ describe('registerOperations', () => {
     const operation = makeOperation({
       path: ['demo', 'page', 'create'],
       inputSchema: z.object({ content: z.string().optional() }),
-      positionalArgs: [],
       cli: {
         contentInput: { field: 'content', required: false },
         output: { kind: 'json' },
@@ -310,8 +316,7 @@ describe('registerOperations', () => {
   })
 
   it('writes text content to a file and prints the remaining response fields', async () => {
-    const tmpDir = await mkdtemp(join(tmpdir(), 'tq-operation-adapter-'))
-    try {
+    await withTemporaryDirectory(async (tmpDir) => {
       const outputPath = join(tmpDir, 'page.md')
       const operation = makeOperation({
         path: ['demo', 'page', 'get'],
@@ -364,14 +369,11 @@ describe('registerOperations', () => {
         stderr: [],
         content: '# Body',
       })
-    } finally {
-      await rm(tmpDir, { recursive: true, force: true })
-    }
+    })
   })
 
   it('downloads binary output and prints the configured file summary', async () => {
-    const tmpDir = await mkdtemp(join(tmpdir(), 'tq-operation-adapter-'))
-    try {
+    await withTemporaryDirectory(async (tmpDir) => {
       const outputPath = join(tmpDir, 'image.bin')
       const fetchImpl = vi.fn<typeof fetch>(() =>
         Promise.resolve(new Response(new Uint8Array([1, 2, 3]))),
@@ -408,9 +410,49 @@ describe('registerOperations', () => {
         bytes: [1, 2, 3],
         downloads: ['https://files.example/signed'],
       })
-    } finally {
-      await rm(tmpDir, { recursive: true, force: true })
-    }
+    })
+  })
+
+  it('does not write binary output when the download request fails', async () => {
+    await withTemporaryDirectory(async (tmpDir) => {
+      const outputPath = join(tmpDir, 'image.bin')
+      const fetchImpl = vi.fn<typeof fetch>(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ error: 'forbidden' }), { status: 403 }),
+        ),
+      )
+      const write = spyStdout()
+      const stderr = spyStderr()
+      const status = await parse(
+        createProgram([makeImageGetOperation()], fetchImpl),
+        [
+          '--api-url',
+          'https://api.example',
+          'demo',
+          'image',
+          'get',
+          'image-example',
+          '--output',
+          outputPath,
+        ],
+      ).then(
+        () => 'resolved',
+        () => 'rejected',
+      )
+
+      expect(
+        adapterOutcome(
+          write.mock.calls,
+          stderr.mock.calls.map(([message]) => String(message).trimEnd()),
+          { files: await readdir(tmpDir), status },
+        ),
+      ).toEqual({
+        stdout: [],
+        stderr: ['Error: forbidden (HTTP 403)'],
+        files: [],
+        status: 'rejected',
+      })
+    })
   })
 
   it('prints only the configured URL field when binary output has no file option', async () => {
@@ -465,18 +507,79 @@ describe('registerOperations', () => {
     })
   })
 
+  it('rejects an invalid web URL input without printing a URL', async () => {
+    const operation = makeOperation({
+      path: ['demo', 'url'],
+      inputSchema: z.object({ id: z.uuid() }),
+      positionalArgs: ['id'],
+      cli: { output: { kind: 'web-url', path: '/tasks/{id}' } },
+    })
+    const write = spyStdout()
+    const stderr = spyStderr()
+    const status = await parse(createProgram([operation]), [
+      '--web-url',
+      'https://web.example',
+      'demo',
+      'url',
+      'not-a-uuid',
+    ]).then(
+      () => 'resolved',
+      () => 'rejected',
+    )
+
+    expect(
+      adapterOutcome(
+        write.mock.calls,
+        stderr.mock.calls.map(([message]) => String(message).trimEnd()),
+        { status },
+      ),
+    ).toEqual({
+      stdout: [],
+      stderr: ['Error: id: Invalid UUID'],
+      status: 'rejected',
+    })
+  })
+
+  it('rejects a web URL with a missing placeholder input without printing a URL', async () => {
+    const operation = makeOperation({
+      path: ['demo', 'url'],
+      inputSchema: z.object({ id: z.uuid().optional() }),
+      positionalArgs: [{ name: 'id', optional: true }],
+      cli: { output: { kind: 'web-url', path: '/tasks/{id}' } },
+    })
+    const write = spyStdout()
+    const stderr = spyStderr()
+    const status = await parse(createProgram([operation]), [
+      '--web-url',
+      'https://web.example',
+      'demo',
+      'url',
+    ]).then(
+      () => 'resolved',
+      () => 'rejected',
+    )
+
+    expect(
+      adapterOutcome(
+        write.mock.calls,
+        stderr.mock.calls.map(([message]) => String(message).trimEnd()),
+        { status },
+      ),
+    ).toEqual({
+      stdout: [],
+      stderr: ['Error: Web URL path refers to a missing input field.'],
+      status: 'rejected',
+    })
+  })
+
   it('does not register operations that are only available to MCP', () => {
     const operations = [
       makeOperation({
         path: ['demo', 'cli'],
-        inputSchema: z.object({}),
-        positionalArgs: [],
         cli: { output: { kind: 'json' } },
       }),
       makeOperation({
         path: ['demo', 'mcp'],
-        inputSchema: z.object({}),
-        positionalArgs: [],
         surface: {
           only: 'mcp',
           reason: 'This operation uses the remote MCP client context.',
