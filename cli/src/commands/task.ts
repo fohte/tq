@@ -11,7 +11,6 @@ import type { InferRequestType } from 'hono/client'
 import type { Client } from '#client'
 import { toApiError } from '#client'
 import { buildClient, resolveWebUrl } from '#command-context'
-import { splitCommaList } from '#commands/split-comma-list'
 import type { RecurrenceFlagOptions } from '#commands/task-recurrence'
 import {
   addRecurrenceOptions,
@@ -20,6 +19,7 @@ import {
 import { printJson, printJsonList, printJsonWithLinkSync } from '#output'
 import { fail } from '#result'
 import { addSchemaOptions, pickSchemaFields } from '#schema-options'
+import { splitCommaList } from '#split-comma-list'
 
 type ListTasksQuery = InferRequestType<Client['api']['tasks']['$get']>['query']
 type CreateTaskJson = InferRequestType<Client['api']['tasks']['$post']>['json']

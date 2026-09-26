@@ -41,6 +41,23 @@ function operationInputError(
   return new Error(formatInputIssues(parsed.error))
 }
 
+function collectInput(
+  operation: OperationDefinition,
+  actionArgs: unknown[],
+  options: Record<string, unknown>,
+  excluded: readonly string[],
+) {
+  const input: Record<string, unknown> = {}
+  operation.positionalArgs.forEach((argument, index) => {
+    const value = actionArgs[index]
+    if (value !== undefined) input[positionalName(argument)] = value
+  })
+
+  return pickSchemaFields(operation.inputSchema, options, excluded).map(
+    (fields) => Object.assign(input, fields),
+  )
+}
+
 function renderWebPath(
   path: string,
   input: Record<string, unknown>,
@@ -57,6 +74,25 @@ function renderWebPath(
     rendered = rendered.replace(placeholder, String(value))
   }
   return rendered
+}
+
+function printWebUrl(
+  actionCommand: Command,
+  output: Extract<OperationDefinition['cli']['output'], { kind: 'web-url' }>,
+  input: Record<string, unknown>,
+): void {
+  const path = renderWebPath(output.path, input)
+  if (path == null) {
+    return fail(
+      actionCommand,
+      new Error('Web URL path refers to a missing input field.'),
+    )
+  }
+  const webUrl = resolveWebUrl(actionCommand).match(
+    (value) => value,
+    (error) => fail(actionCommand, error),
+  )
+  process.stdout.write(`${webUrl}${path}\n`)
 }
 
 export function registerOperations(
@@ -149,31 +185,19 @@ export function registerOperations(
       const optionsValue = actionArgs[operation.positionalArgs.length]
       const options = isRecord(optionsValue) ? optionsValue : {}
 
-      const input: Record<string, unknown> = {}
-      operation.positionalArgs.forEach((argument, index) => {
-        const value = actionArgs[index]
-        if (value !== undefined) input[positionalName(argument)] = value
-      })
-
       if (operation.cli.output.kind === 'web-url') {
-        pickSchemaFields(operation.inputSchema, options, excluded).match(
-          (fields) => Object.assign(input, fields),
+        const input = collectInput(
+          operation,
+          actionArgs,
+          options,
+          excluded,
+        ).match(
+          (value) => value,
           (error) => fail(actionCommand, error),
         )
         const inputError = operationInputError(operation, input)
         if (inputError != null) return fail(actionCommand, inputError)
-        const path = renderWebPath(operation.cli.output.path, input)
-        if (path == null) {
-          return fail(
-            actionCommand,
-            new Error('Web URL path refers to a missing input field.'),
-          )
-        }
-        const webUrl = resolveWebUrl(actionCommand).match(
-          (value) => value,
-          (error) => fail(actionCommand, error),
-        )
-        process.stdout.write(`${webUrl}${path}\n`)
+        printWebUrl(actionCommand, operation.cli.output, input)
         return
       }
 
@@ -182,8 +206,13 @@ export function registerOperations(
         (error) => fail(actionCommand, error),
       )
 
-      pickSchemaFields(operation.inputSchema, options, excluded).match(
-        (fields) => Object.assign(input, fields),
+      const input = collectInput(
+        operation,
+        actionArgs,
+        options,
+        excluded,
+      ).match(
+        (value) => value,
         (error) => fail(actionCommand, error),
       )
 

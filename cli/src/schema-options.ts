@@ -55,6 +55,45 @@ function parseDefaultValue(
   return value
 }
 
+type OptionParser = {
+  leafType?: SupportedLeaf
+  parse: (raw: string) => unknown
+}
+
+function unsupportedSchemaType(key: string): Error {
+  return new Error(
+    `addSchemaOptions: unsupported schema type for field "${key}"`,
+  )
+}
+
+function resolveOptionParser(
+  valueType: unknown,
+  key: string,
+  isArray: boolean,
+): Result<OptionParser, Error> {
+  if (isArray) {
+    if (isSupportedLeaf(valueType)) {
+      return ok({
+        leafType: valueType,
+        parse: (raw) =>
+          splitCommaList(raw).map((value) => parseValue(valueType, value)),
+      })
+    }
+    if (valueType instanceof z.ZodUnion) {
+      return ok({ parse: splitCommaList })
+    }
+    return err(unsupportedSchemaType(key))
+  }
+
+  if (isSupportedLeaf(valueType)) {
+    return ok({
+      leafType: valueType,
+      parse: (raw) => parseValue(valueType, raw),
+    })
+  }
+  return err(unsupportedSchemaType(key))
+}
+
 function isSupportedLeaf(field: unknown): field is SupportedLeaf {
   return (
     field instanceof z.ZodEnum ||
@@ -128,32 +167,9 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
     }
 
     const valueType: unknown = isArray ? inner.element : inner
-    let leafType: SupportedLeaf | undefined
-    let parseOptionValue: (raw: string) => unknown
-    if (isArray) {
-      if (isSupportedLeaf(valueType)) {
-        leafType = valueType
-        parseOptionValue = (raw) =>
-          splitCommaList(raw).map((value) => parseValue(valueType, value))
-      } else if (valueType instanceof z.ZodUnion) {
-        parseOptionValue = (raw) => splitCommaList(raw)
-      } else {
-        return err(
-          new Error(
-            `addSchemaOptions: unsupported schema type for field "${key}"`,
-          ),
-        )
-      }
-    } else if (isSupportedLeaf(valueType)) {
-      leafType = valueType
-      parseOptionValue = (raw) => parseValue(valueType, raw)
-    } else {
-      return err(
-        new Error(
-          `addSchemaOptions: unsupported schema type for field "${key}"`,
-        ),
-      )
-    }
+    const parser = resolveOptionParser(valueType, key, isArray)
+    if (parser.isErr()) return err(parser.error)
+    const { leafType, parse: parseOptionValue } = parser.value
 
     const envVar = envDefaults[key]
     const baseDescription =

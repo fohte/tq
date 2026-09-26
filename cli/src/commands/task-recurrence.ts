@@ -2,8 +2,8 @@ import { recurrenceRuleSchema } from 'api/schemas/recurrence-rule'
 import type { Command } from 'commander'
 import type { z } from 'zod'
 
-import { splitCommaList } from '#commands/split-comma-list'
 import { fail } from '#result'
+import { splitCommaList } from '#split-comma-list'
 
 export interface RecurrenceFlagOptions {
   recurrenceType?: string
