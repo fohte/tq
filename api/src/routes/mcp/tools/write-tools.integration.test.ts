@@ -165,6 +165,25 @@ function expectedCommentIdValidationError(name: string, commentId: string) {
   }
 }
 
+function expectedLabelIdValidationError(name: string, id: string) {
+  const issue =
+    id === ''
+      ? 'Too small: expected string to have >=1 characters'
+      : 'Label ID must be a valid path segment'
+  return {
+    kind: 'result',
+    result: {
+      isError: true,
+      content: [
+        {
+          type: 'text',
+          text: `Input validation error: Invalid arguments for tool ${name}: id: ${issue}`,
+        },
+      ],
+    },
+  }
+}
+
 describe('create_task tool', () => {
   it('creates a task with the given fields', async () => {
     const result = await callTool('create_task', {
@@ -934,6 +953,25 @@ describe('comment_delete tool', () => {
 })
 
 describe('label_update tool', () => {
+  it('rejects empty and dot ids before tool execution', async () => {
+    const outcomes = await Promise.all(
+      ['label_update', 'label_delete'].flatMap((name) =>
+        ['', '.', '..'].map((id) =>
+          summarizeToolCallOutcome(
+            name,
+            name === 'label_update' ? { id, name: 'renamed-label' } : { id },
+          ),
+        ),
+      ),
+    )
+
+    expect(outcomes).toEqual(
+      ['label_update', 'label_delete'].flatMap((name) =>
+        ['', '.', '..'].map((id) => expectedLabelIdValidationError(name, id)),
+      ),
+    )
+  })
+
   it('updates a label by id', async () => {
     const label = await createLabel('operation-label', { context: 'personal' })
 
@@ -951,31 +989,86 @@ describe('label_update tool', () => {
       createdAt: '<timestamp>',
     })
   })
+
+  it('does not route a traversal label id to a project update', async () => {
+    const project = await createProject('Original project')
+
+    const result = await callTool('label_update', {
+      id: `../projects/${project.id}`,
+      name: 'Changed project',
+    })
+
+    expect(summarizeTraversal(result, await projectTitle(project.id))).toEqual({
+      result: {
+        isError: true,
+        content: [{ type: 'text', text: 'Label not found' }],
+      },
+      projectTitle: 'Original project',
+    })
+  })
 })
 
 describe('label_delete tool', () => {
-  async function deleteAndReadLabels(
-    labelId: string,
-    context: 'work' | 'personal',
-  ) {
-    const result = await callTool('label_delete', { id: labelId })
-    const remainingLabelsResponse = await app.request(
-      `/api/labels?context=${context}`,
+  it('returns a confirmation after deleting a label', async () => {
+    const label = await createLabel('label-for-deletion', { context: 'work' })
+    const result = await callTool('label_delete', { id: label.id })
+
+    expect(parseToolData(result, ['id'])).toEqual({
+      deleted: true,
+      id: label.id,
+    })
+  })
+
+  it('removes the label from the label list', async () => {
+    const label = await createLabel('label-for-deletion', { context: 'work' })
+    await callTool('label_delete', { id: label.id })
+
+    const response = await app.request('/api/labels?context=work')
+
+    expect(await jsonBody(response)).toEqual([])
+  })
+
+  it('does not route a traversal label id to a project deletion', async () => {
+    const project = await createProject('Original project')
+
+    const result = await callTool('label_delete', {
+      id: `../projects/${project.id}`,
+    })
+
+    expect(summarizeTraversal(result, await projectTitle(project.id))).toEqual({
+      result: {
+        isError: true,
+        content: [{ type: 'text', text: 'Label not found' }],
+      },
+      projectTitle: 'Original project',
+    })
+  })
+})
+
+describe('operation tool input schemas', () => {
+  it('exposes agent only for operations that support attribution', async () => {
+    const tools = await client.listTools()
+    const agentArguments = Object.fromEntries(
+      tools.tools
+        .filter(
+          (tool) =>
+            tool.name.startsWith('comment_') || tool.name.startsWith('label_'),
+        )
+        .map((tool) => [
+          tool.name,
+          Object.keys(tool.inputSchema.properties ?? {}).includes('agent'),
+        ]),
     )
 
-    return [
-      parseToolData(result, ['id']),
-      await jsonBody(remainingLabelsResponse),
-    ] as const
-  }
-
-  it('deletes a label and returns a confirmation', async () => {
-    const label = await createLabel('label-for-deletion', { context: 'work' })
-
-    expect(await deleteAndReadLabels(label.id, label.context)).toEqual([
-      { deleted: true, id: label.id },
-      [],
-    ])
+    expect(agentArguments).toEqual({
+      comment_create: true,
+      comment_delete: false,
+      comment_list: false,
+      comment_update: true,
+      label_delete: false,
+      label_list: false,
+      label_update: false,
+    })
   })
 })
 

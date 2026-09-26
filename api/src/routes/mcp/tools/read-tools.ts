@@ -63,7 +63,7 @@ function toPageMetadata(page: PageDetail): Omit<PageDetail, 'content'> {
   }
 }
 
-/** Read-only tools: task/project/label lookups, search, etc. */
+/** Read-only tools: task/project lookups, search, etc. */
 export function registerReadTools(server: McpServer): void {
   server.registerTool(
     'list_tasks',
