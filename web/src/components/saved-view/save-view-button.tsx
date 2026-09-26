@@ -1,7 +1,4 @@
-import { Bookmark } from 'lucide-react'
-import { useState } from 'react'
-
-import { Button } from '#components/ui/button'
+import { Button } from '@fohte/ui/button'
 import {
   Dialog,
   DialogClose,
@@ -10,8 +7,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '#components/ui/dialog'
-import { Input } from '#components/ui/input'
+} from '@fohte/ui/dialog'
+import { Input } from '@fohte/ui/input'
+import { Bookmark } from 'lucide-react'
+import { useState } from 'react'
+
 import { useCreateSavedView } from '#hooks/use-saved-views'
 
 export function SaveViewButton({

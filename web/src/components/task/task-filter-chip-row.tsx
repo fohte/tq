@@ -1,3 +1,4 @@
+import { Button } from '@fohte/ui/button'
 import type { ParsedQuery } from 'api/search-query-parser'
 import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
 import { useEffect, useId } from 'react'
@@ -11,7 +12,6 @@ import { TaskLabelFilterFields } from '#components/task/task-label-filter-fields
 import { TaskProjectFilterFields } from '#components/task/task-project-filter-fields'
 import { TaskSortFilterFields } from '#components/task/task-sort-filter-fields'
 import { TaskStatusFilterFields } from '#components/task/task-status-filter-fields'
-import { Button } from '#components/ui/button'
 import { Checkbox } from '#components/ui/checkbox'
 import { shouldIgnoreShortcut } from '#hooks/use-global-keybindings'
 import type { Project } from '#hooks/use-projects'

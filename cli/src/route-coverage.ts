@@ -68,11 +68,6 @@ export const COVERED_ROUTES = [
   'PATCH /api/projects/:id',
   'DELETE /api/projects/:id',
 
-  // label
-  'GET /api/labels',
-  'PATCH /api/labels/:id',
-  'DELETE /api/labels/:id',
-
   // saved view
   'POST /api/saved-views',
   'GET /api/saved-views',

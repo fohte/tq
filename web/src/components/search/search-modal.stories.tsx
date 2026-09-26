@@ -1,3 +1,4 @@
+import { Button } from '@fohte/ui/button'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
@@ -17,7 +18,6 @@ import {
   makeTask,
   makeTaskDetail,
 } from '#components/task/task-row-test-fixtures'
-import { Button } from '#components/ui/button'
 import type { RecentSearchItem } from '#lib/recent-search-items'
 import { StoryRouter } from '#storybook-config/story-router'
 

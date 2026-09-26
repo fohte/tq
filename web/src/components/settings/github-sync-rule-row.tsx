@@ -1,8 +1,8 @@
+import { Button } from '@fohte/ui/button'
 import { ArrowRight } from 'lucide-react'
 import { useState } from 'react'
 
 import { GithubSyncRuleFormModal } from '#components/settings/github-sync-rule-form-modal'
-import { Button } from '#components/ui/button'
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
 import { SegmentedControl } from '#components/ui/segmented-control'
 import type { SyncRule } from '#hooks/use-github-sync-rules'

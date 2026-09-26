@@ -10,7 +10,8 @@ Source of truth for every value in this doc:
 
 - Shared tokens: `@fohte/ui/tokens.css`
 - tq-specific tokens and utilities: `web/src/index.css`
-- Primitives: `web/src/components/ui/{section-heading,screen-header-bar,tab-strip,chip,keybind-hint,panel,progress-bar,button,modal-panel,desktop-modal-frame}.tsx`
+- Shared primitives: `@fohte/ui/{button,dialog,input,select,tooltip}`
+- tq primitives: `web/src/components/ui/{section-heading,screen-header-bar,tab-strip,chip,keybind-hint,panel,progress-bar,modal-panel,desktop-modal-frame}.tsx`
 
 Add tq-specific tokens to `web/src/index.css`. Shared tokens come from the
 `@fohte/ui` dependency; when a dependency update changes their values, update
@@ -456,7 +457,7 @@ within the select trigger. The recurring state indicator uses
 
 Stacking order in the app is ad hoc, not a documented scale: `z-10` marks a
 sticky element within its own scroll container (e.g. `BottomSheetHeader`,
-`select.tsx`'s scroll buttons), `z-50` marks a portal/overlay layer (modals,
+`@fohte/ui/select`'s scroll buttons), `z-50` marks a portal/overlay layer (modals,
 dropdowns, tooltips, the floating action button) — both are Tailwind's own
 default numeric steps, not custom tokens, and neither is meant to rank
 against the other; there's no third tier and no ordering claim between
@@ -518,21 +519,19 @@ UI role:
 
 **Do not introduce new radius exceptions without updating this doc.**
 
-Note: `Button`'s size variants use `rounded-lg` / `rounded-(--btn-radius-xs)`
+Note: `@fohte/ui/button`'s size variants use `rounded-lg` / `rounded-(--btn-radius-xs)`
 / `rounded-(--btn-radius-sm)` etc. — `--btn-radius-xs`/`--btn-radius-sm`
-(defined in `web/src/index.css` as `min(var(--radius-md), 10px)` /
+(defined in `@fohte/ui/tokens.css` as `min(var(--radius-md), 10px)` /
 `min(var(--radius-md), 12px)`) are still driven by the `--radius` token chain
 (they resolve to `0rem` because `--radius` is `0rem`), so they are **not**
 exceptions to this policy.
 
-**shadcn regeneration risk:** `button.tsx`, `dialog.tsx`, `tabs.tsx`,
-`tooltip.tsx`, and `kbd.tsx` are shadcn CLI-managed (`web/components.json`
-points its `ui` alias at `web/src/components/ui/`). Running
-`pnpm dlx shadcn add <component>` on any of these overwrites the file,
-including the `rounded-(--btn-radius-*)` / `rounded-(--keycap-radius)` /
-`max-w-(--dialog-inset)` / `h-(--tabs-trigger-height)` /
-`translate-y-(--tooltip-arrow-offset)` calls documented here — re-apply them
-after a regen.
+**shadcn regeneration risk:** `tabs.tsx` and `kbd.tsx` are shadcn CLI-managed
+(`web/components.json` points its `ui` alias at `web/src/components/ui/`).
+Running `pnpm dlx shadcn add <component>` on either file overwrites its local
+customizations, including `h-(--tabs-trigger-height)` and
+`rounded-(--keycap-radius)`. Button, Dialog, Input, Select, and Tooltip are
+provided by `@fohte/ui` and must be changed there.
 
 ## Status convention
 
@@ -747,7 +746,7 @@ for a dimmer/secondary progress indicator).
 
 ### `Button` (redesigned)
 
-`web/src/components/ui/button.tsx`
+`@fohte/ui/button`
 
 ```ts
 function Button(

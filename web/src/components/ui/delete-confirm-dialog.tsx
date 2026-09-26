@@ -1,6 +1,4 @@
-import type { ReactNode } from 'react'
-
-import { Button } from '#components/ui/button'
+import { Button } from '@fohte/ui/button'
 import {
   Dialog,
   DialogClose,
@@ -9,7 +7,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '#components/ui/dialog'
+} from '@fohte/ui/dialog'
+import type { ReactNode } from 'react'
 
 export function DeleteConfirmDialog({
   title,

@@ -1,14 +1,14 @@
-import { useCallback, useState } from 'react'
-
-import { ScheduleModalDesktopPanel } from '#components/schedule/create-schedule-modal-desktop-panel'
-import { ScheduleModalMobilePanel } from '#components/schedule/create-schedule-modal-mobile-panel'
-import { Button } from '#components/ui/button'
+import { Button } from '@fohte/ui/button'
 import {
   Dialog,
   DialogOverlay,
   DialogPopup,
   DialogPortal,
-} from '#components/ui/dialog'
+} from '@fohte/ui/dialog'
+import { useCallback, useState } from 'react'
+
+import { ScheduleModalDesktopPanel } from '#components/schedule/create-schedule-modal-desktop-panel'
+import { ScheduleModalMobilePanel } from '#components/schedule/create-schedule-modal-mobile-panel'
 import type {
   CreateScheduleInput,
   Schedule,

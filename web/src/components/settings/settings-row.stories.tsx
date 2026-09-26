@@ -1,7 +1,7 @@
+import { Input } from '@fohte/ui/input'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { SettingsRow } from '#components/settings/settings-row'
-import { Input } from '#components/ui/input'
 import { Panel } from '#components/ui/panel'
 
 const meta = {

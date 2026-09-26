@@ -1,8 +1,8 @@
+import { Button } from '@fohte/ui/button'
 import { Loader2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import { Button } from '#components/ui/button'
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import { Panel } from '#components/ui/panel'
 import { ProgressBar } from '#components/ui/progress-bar'

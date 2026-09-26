@@ -1,8 +1,8 @@
+import { Input } from '@fohte/ui/input'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
-import { Input } from '#components/ui/input'
 import { ExpandableFieldChip } from '#components/ui/modal-field'
 import { ExpandableContextChipDemo } from '#components/ui/modal-field-test-fixtures'
 import { clickSelectOption } from '#lib/test-utils'

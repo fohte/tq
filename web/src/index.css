@@ -9,26 +9,20 @@
 /* @shadcn/lint cannot resolve the `#components` package.json import alias in CSS imports. */
 @import './components/calendar/fullcalendar.css';
 
+@source '../node_modules/@fohte/ui/src';
+
 :root {
   --status-completed: #a371f7;
   --github-open: #3fb950;
   --github-closed: #f85149;
   --github-merged: #a371f7;
 
-  --btn-radius-xs: min(var(--radius-md), 10px);
-  --btn-radius-sm: min(var(--radius-md), 12px);
-  --dialog-inset: calc(100% - 2rem);
   --tabs-trigger-height: calc(100% - 1px);
-  --tooltip-arrow-offset: calc(-50% - 2px);
   --width-preview-popup: min(28rem, calc(100vw - 2rem));
 
   --dropdown-menu-min-width: max(
     var(--anchor-width),
     calc(var(--spacing) * 32)
-  );
-  --select-content-min-width: max(
-    var(--anchor-width),
-    calc(var(--spacing) * 36)
   );
 }
 

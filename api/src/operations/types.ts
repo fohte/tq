@@ -71,6 +71,7 @@ export interface OperationDefinition {
   inputSchema: z.ZodObject
   positionalArgs: readonly PositionalArgument[]
   kind: OperationKind
+  attribution?: 'agent'
   routes: readonly AllRoutes[]
   surface?: OperationSurface
   cli: {
@@ -90,6 +91,7 @@ type OperationConfig<Schema extends z.ZodObject, Output> = {
   description: string
   positionalArgs: readonly PositionalArgument<keyof z.output<Schema> & string>[]
   kind: OperationKind
+  attribution?: OperationDefinition['attribution']
   routes: readonly AllRoutes[]
   surface?: OperationSurface
   cli: OperationDefinition['cli']

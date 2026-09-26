@@ -4,9 +4,13 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+import { BASE_UI_OPTIMIZE_DEPS } from './base-ui-optimize-deps'
 import { pwaManifest } from './src/lib/pwa-manifest'
 
 export default defineConfig({
+  optimizeDeps: {
+    include: BASE_UI_OPTIMIZE_DEPS,
+  },
   plugins: [
     tanstackRouter({
       routesDirectory: './src/routes',

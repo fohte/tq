@@ -1,3 +1,12 @@
+import { Button } from '@fohte/ui/button'
+import { Input } from '@fohte/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@fohte/ui/select'
 import { Timer } from 'lucide-react'
 
 import {
@@ -6,16 +15,7 @@ import {
 } from '#components/project/project-detail-utils'
 import { statusLabels } from '#components/project/project-status-badge'
 import { contextLabels } from '#components/task/create-task-modal-fields'
-import { Button } from '#components/ui/button'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
-import { Input } from '#components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '#components/ui/select'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { PROJECT_COLOR_PRESETS, useUpdateProject } from '#hooks/use-projects'
 import { selectValueHandler } from '#lib/form-utils'

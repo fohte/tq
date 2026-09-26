@@ -1,10 +1,11 @@
-import { Button } from '#components/ui/button'
+import { Button } from '@fohte/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '#components/ui/dialog'
+} from '@fohte/ui/dialog'
+
 import type { Project } from '#hooks/use-projects'
 import { useProjects } from '#hooks/use-projects'
 import { useUpdateTask } from '#hooks/use-tasks'

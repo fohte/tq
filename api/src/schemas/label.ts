@@ -4,7 +4,9 @@ import { labelNameSchema } from '#schemas/label-name'
 import { contextEnum } from '#schemas/task'
 
 export const listLabelsQuerySchema = z.object({
-  context: contextEnum.optional(),
+  context: contextEnum
+    .optional()
+    .describe('Only return labels in this context.'),
 })
 
 export const updateLabelSchema = z.object({

@@ -1,7 +1,8 @@
 import { commentOperations } from '#operations/comment'
+import { labelOperations } from '#operations/label'
 
-export { commentOperations }
-export const operations = [...commentOperations] as const
+export { commentOperations, labelOperations }
+export const operations = [...commentOperations, ...labelOperations] as const
 
 type CliOperation<Operation> = Operation extends {
   surface: { only: 'mcp'; reason: string }

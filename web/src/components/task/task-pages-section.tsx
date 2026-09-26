@@ -1,9 +1,9 @@
+import { Button } from '@fohte/ui/button'
 import { Link } from '@tanstack/react-router'
 import { ChevronDown, Code2, ExternalLink, Loader2, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import { LlmAuthorLabel } from '#components/task/llm-author-label'
-import { Button } from '#components/ui/button'
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
 import { HtmlPageEditor } from '#components/ui/html-page-editor'
 import { MarkdownEditor } from '#components/ui/markdown-editor'

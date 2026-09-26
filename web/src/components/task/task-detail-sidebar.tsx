@@ -1,3 +1,15 @@
+import { Button } from '@fohte/ui/button'
+import { Input } from '@fohte/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from '@fohte/ui/select'
 import { useEffect, useRef, useState } from 'react'
 
 import {
@@ -14,20 +26,8 @@ import { SidebarTimeBlocks } from '#components/task/sidebar-time-blocks'
 import { StatusIcon } from '#components/task/status-icon'
 import { SidebarGithubLinkField } from '#components/task/task-github-link-field'
 import { useHandleStatusChange } from '#components/task/task-row-shared'
-import { Button } from '#components/ui/button'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
-import { Input } from '#components/ui/input'
 import { SectionLabel } from '#components/ui/section-label'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from '#components/ui/select'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { useUpdateTask } from '#hooks/use-tasks'
 import { selectValueHandler } from '#lib/form-utils'
