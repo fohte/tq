@@ -21,7 +21,7 @@ const READ_TOOL_NAMES = [
   'get_page',
   'get_task',
   'get_today_tasks',
-  'list_labels',
+  'label_list',
   'list_projects',
   'list_tasks',
   'search_pages',
@@ -109,7 +109,7 @@ describe('read tools', () => {
       { name: 'get_page', readOnlyHint: true },
       { name: 'get_task', readOnlyHint: true },
       { name: 'get_today_tasks', readOnlyHint: true },
-      { name: 'list_labels', readOnlyHint: true },
+      { name: 'label_list', readOnlyHint: true },
       { name: 'list_projects', readOnlyHint: true },
       { name: 'list_tasks', readOnlyHint: true },
       { name: 'search_pages', readOnlyHint: true },
@@ -501,11 +501,11 @@ describe('read tools', () => {
     })
   })
 
-  describe('list_labels', () => {
+  describe('label_list', () => {
     it('returns all labels', async () => {
       const label = await createLabel('urgent')
 
-      const toolResult = await callTool('list_labels')
+      const toolResult = await callTool('label_list')
 
       expect(parseJson(toolResult)).toEqual([
         {
@@ -514,6 +514,23 @@ describe('read tools', () => {
           color: label.color,
           context: label.context,
           createdAt: label.createdAt.toISOString(),
+        },
+      ])
+    })
+
+    it('returns labels in the requested context', async () => {
+      await createLabel('work-label', { context: 'work' })
+      await createLabel('personal-label', { context: 'personal' })
+
+      const toolResult = await callTool('label_list', { context: 'work' })
+
+      expect(normalizeDynamicValues(parseJson(toolResult))).toEqual([
+        {
+          id: '<uuid>',
+          name: 'work-label',
+          color: null,
+          context: 'work',
+          createdAt: '<timestamp>',
         },
       ])
     })

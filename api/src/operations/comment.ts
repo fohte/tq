@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { taskIdOrNumber } from '#lib/numeric-id'
+import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
 import {
   defineOperation,
   requestJson,
@@ -12,12 +13,7 @@ const listCommentsSchema = z.object({ taskId: taskIdOrNumber })
 const createCommentInputSchema = createCommentSchema.extend({
   taskId: taskIdOrNumber,
 })
-const commentIdSchema = z
-  .string()
-  .min(1)
-  .refine((commentId) => commentId !== '.' && commentId !== '..', {
-    message: 'Comment ID must be a valid path segment',
-  })
+const commentIdSchema = pathSegmentSchema('Comment ID')
 const updateCommentInputSchema = updateCommentSchema.extend({
   taskId: taskIdOrNumber,
   commentId: commentIdSchema,
@@ -26,10 +22,6 @@ const deleteCommentSchema = z.object({
   taskId: taskIdOrNumber,
   commentId: commentIdSchema,
 })
-function encodePathSegment(value: string): string {
-  return encodeURIComponent(value)
-}
-
 export const commentOperations = [
   defineOperation(listCommentsSchema, {
     path: ['comment', 'list'],
@@ -57,6 +49,7 @@ export const commentOperations = [
     description: 'Add a comment to a task.',
     positionalArgs: ['taskId'],
     kind: 'write',
+    attribution: 'agent',
     routes: ['POST /api/tasks/:taskId/comments'],
     cli: {
       contentInputField: 'content',
@@ -75,6 +68,7 @@ export const commentOperations = [
     description: 'Update the content of an existing comment.',
     positionalArgs: ['taskId', 'commentId'],
     kind: 'write',
+    attribution: 'agent',
     routes: ['PATCH /api/tasks/:taskId/comments/:commentId'],
     cli: {
       contentInputField: 'content',

@@ -4,7 +4,7 @@ import { hc } from 'hono/client'
 import { z } from 'zod'
 
 import { app, type AppType } from '#app'
-import { commentOperations, type OperationDefinition } from '#operations/index'
+import { type OperationDefinition, operations } from '#operations/index'
 import { toErrorResult } from '#routes/mcp/route-bridge'
 import {
   agentArgSchema,
@@ -19,7 +19,7 @@ function operationClient(
   return hc<AppType>('http://localhost', {
     fetch: (input: string | URL | Request, init?: RequestInit) => {
       const headers = new Headers(init?.headers)
-      if (operation.kind !== 'read') {
+      if (operation.attribution === 'agent') {
         for (const [key, value] of Object.entries(authorHeader(agent))) {
           headers.set(key, value)
         }
@@ -30,7 +30,7 @@ function operationClient(
 }
 
 function inputSchemaFor(operation: OperationDefinition) {
-  if (operation.kind === 'read') return operation.inputSchema
+  if (operation.attribution !== 'agent') return operation.inputSchema
   return z.object({ ...operation.inputSchema.shape, agent: agentArgSchema })
 }
 
@@ -53,7 +53,7 @@ function requestErrorResult(message: string): CallToolResult {
 }
 
 export function registerOperationTools(server: McpServer): void {
-  for (const operation of commentOperations) {
+  for (const operation of operations) {
     const inputSchema = inputSchemaFor(operation)
     server.registerTool(
       operation.path.join('_'),
