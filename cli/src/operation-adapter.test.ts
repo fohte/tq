@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import type { OperationDefinition } from 'api/operations'
+import { makeOperation } from 'api/operations/test-fixtures'
 import { Command } from 'commander'
 import { okAsync } from 'neverthrow'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -16,28 +17,10 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-function makeOperation(
-  config: Pick<
-    OperationDefinition,
-    'path' | 'inputSchema' | 'positionalArgs' | 'cli' | 'surface'
-  >,
-): OperationDefinition {
-  return {
-    path: config.path,
-    description: 'Exercise operation adapter behavior.',
-    inputSchema: config.inputSchema,
-    positionalArgs: config.positionalArgs,
-    kind: 'read',
-    routes: [],
-    ...(config.surface == null ? {} : { surface: config.surface }),
-    cli: config.cli,
-    run: (_client, input) => okAsync(input),
-  }
-}
-
 function createProgram(
   operations: readonly OperationDefinition[],
   fetchImpl: typeof fetch = () => Promise.resolve(new Response()),
+  stdin = fakeStdin(true),
 ): Command {
   const program = new Command()
     .exitOverride()
@@ -48,9 +31,32 @@ function createProgram(
     operations,
     'Exercise operation adapter behavior.',
     fetchImpl,
-    fakeStdin(true),
+    stdin,
   )
   return program
+}
+
+function makeImageGetOperation(): OperationDefinition {
+  return makeOperation({
+    path: ['demo', 'image', 'get'],
+    inputSchema: z.object({ id: z.string() }),
+    positionalArgs: ['id'],
+    cli: {
+      output: {
+        kind: 'json',
+        fields: ['url'],
+        fileOutput: {
+          kind: 'binary',
+          option: { name: 'output', description: 'Download to a file' },
+          urlField: 'url',
+          summaryFields: ['id'],
+          outputPathField: 'output',
+        },
+      },
+    },
+    run: () =>
+      okAsync({ id: 'image-example', url: 'https://files.example/signed' }),
+  })
 }
 
 async function parse(program: Command, args: string[]): Promise<void> {
@@ -63,6 +69,10 @@ function adapterOutcome(
   details: Record<string, unknown> = {},
 ) {
   return { stdout, stderr, ...details }
+}
+
+function stdinOutcome(status: string, reads: unknown, stderr: string[]) {
+  return { status, reads, stderr }
 }
 
 describe('registerOperations', () => {
@@ -85,97 +95,84 @@ describe('registerOperations', () => {
     expect(write.mock.calls).toEqual([[`${JSON.stringify({}, null, 2)}\n`]])
   })
 
-  it('passes a variadic positional argument as an array', async () => {
-    const operation = makeOperation({
-      path: ['demo', 'set'],
-      inputSchema: z.object({
-        key: z.string(),
-        date: z.string(),
-        taskIds: z.array(z.string()).optional(),
-      }),
-      positionalArgs: [
-        'key',
-        'date',
-        { name: 'taskIds', optional: true, variadic: true },
-      ],
-      cli: { output: { kind: 'json' } },
-    })
-    const write = spyStdout()
+  it.each([
+    { label: 'provided values', taskIds: ['task-a', 'task-b'] },
+    { label: 'no values', taskIds: [] },
+  ])(
+    'passes $label for an optional variadic positional argument as an array',
+    async ({ taskIds }) => {
+      const operation = makeOperation({
+        path: ['demo', 'set'],
+        inputSchema: z.object({
+          key: z.string(),
+          date: z.string(),
+          taskIds: z.array(z.string()).optional(),
+        }),
+        positionalArgs: [
+          'key',
+          'date',
+          { name: 'taskIds', optional: true, variadic: true },
+        ],
+        cli: { output: { kind: 'json' } },
+      })
+      const write = spyStdout()
 
-    await parse(createProgram([operation]), [
-      '--api-url',
-      'https://api.example',
-      'demo',
-      'set',
-      'inbox',
-      '2031-04-05',
-      'task-a',
-      'task-b',
-    ])
+      await parse(createProgram([operation]), [
+        '--api-url',
+        'https://api.example',
+        'demo',
+        'set',
+        'inbox',
+        '2031-04-05',
+        ...taskIds,
+      ])
 
-    expect(write.mock.calls).toEqual([
-      [
-        `${JSON.stringify(
-          { key: 'inbox', date: '2031-04-05', taskIds: ['task-a', 'task-b'] },
-          null,
-          2,
-        )}\n`,
-      ],
-    ])
-  })
+      expect(write.mock.calls).toEqual([
+        [
+          `${JSON.stringify(
+            { key: 'inbox', date: '2031-04-05', taskIds },
+            null,
+            2,
+          )}\n`,
+        ],
+      ])
+    },
+  )
 
-  it('omits an optional variadic positional argument when no values are provided', async () => {
-    const operation = makeOperation({
-      path: ['demo', 'set'],
-      inputSchema: z.object({
-        key: z.string(),
-        date: z.string(),
-        taskIds: z.array(z.string()).optional(),
-      }),
-      positionalArgs: [
-        'key',
-        'date',
-        { name: 'taskIds', optional: true, variadic: true },
-      ],
-      cli: { output: { kind: 'json' } },
-    })
-    const write = spyStdout()
-
-    await parse(createProgram([operation]), [
-      '--api-url',
-      'https://api.example',
-      'demo',
-      'set',
-      'inbox',
-      '2031-04-05',
-    ])
-
-    expect(write.mock.calls).toEqual([
-      [
-        `${JSON.stringify(
-          { key: 'inbox', date: '2031-04-05', taskIds: [] },
-          null,
-          2,
-        )}\n`,
-      ],
-    ])
-  })
-
-  it('applies operation env defaults and parses opted-in comma-separated arrays', async () => {
+  it('applies the operation environment default when its flag is omitted', async () => {
     vi.stubEnv('TQ_CONTEXT', 'work')
     const operation = makeOperation({
       path: ['demo', 'list'],
       inputSchema: z.object({
         context: z.enum(['work', 'personal']).optional(),
-        labels: z.array(z.string()).optional(),
-        blockedBy: z
-          .array(z.union([z.number().int(), z.string().regex(/^\d+$/)]))
-          .optional(),
       }),
       positionalArgs: [],
       cli: {
         envDefaults: { context: 'TQ_CONTEXT' },
-        commaSeparatedOptions: ['labels', 'blockedBy'],
+        output: { kind: 'json' },
+      },
+    })
+    const write = spyStdout()
+
+    await parse(createProgram([operation]), [
+      '--api-url',
+      'https://api.example',
+      'demo',
+      'list',
+    ])
+
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify({ context: 'work' }, null, 2)}\n`],
+    ])
+  })
+
+  it('splits an opted-in comma-separated string option into an array', async () => {
+    const operation = makeOperation({
+      path: ['demo', 'list'],
+      inputSchema: z.object({ labels: z.array(z.string()).optional() }),
+      positionalArgs: [],
+      cli: {
+        commaSeparatedOptions: ['labels'],
         output: { kind: 'json' },
       },
     })
@@ -188,22 +185,40 @@ describe('registerOperations', () => {
       'list',
       '--labels',
       'alpha, beta,,gamma',
+    ])
+
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify({ labels: ['alpha', 'beta', 'gamma'] }, null, 2)}\n`],
+    ])
+  })
+
+  it('keeps union array values for full schema validation', async () => {
+    const operation = makeOperation({
+      path: ['demo', 'list'],
+      inputSchema: z.object({
+        blockedBy: z
+          .array(z.union([z.number().int(), z.string().regex(/^\d+$/)]))
+          .optional(),
+      }),
+      positionalArgs: [],
+      cli: {
+        commaSeparatedOptions: ['blockedBy'],
+        output: { kind: 'json' },
+      },
+    })
+    const write = spyStdout()
+
+    await parse(createProgram([operation]), [
+      '--api-url',
+      'https://api.example',
+      'demo',
+      'list',
       '--blocked-by',
       '12,34',
     ])
 
     expect(write.mock.calls).toEqual([
-      [
-        `${JSON.stringify(
-          {
-            context: 'work',
-            labels: ['alpha', 'beta', 'gamma'],
-            blockedBy: ['12', '34'],
-          },
-          null,
-          2,
-        )}\n`,
-      ],
+      [`${JSON.stringify({ blockedBy: ['12', '34'] }, null, 2)}\n`],
     ])
   })
 
@@ -256,6 +271,44 @@ describe('registerOperations', () => {
     expect(write.mock.calls).toEqual([[`${JSON.stringify({}, null, 2)}\n`]])
   })
 
+  it('resolves the API URL before reading required content', async () => {
+    const operation = makeOperation({
+      path: ['demo', 'comment', 'create'],
+      inputSchema: z.object({ taskId: z.string(), content: z.string() }),
+      positionalArgs: ['taskId'],
+      cli: {
+        contentInput: { field: 'content' },
+        output: { kind: 'json' },
+      },
+    })
+    const stdin = fakeStdin(false)
+    const readStdin = vi.spyOn(stdin, Symbol.asyncIterator)
+    const stderr = spyStderr()
+    const status = await parse(createProgram([operation], undefined, stdin), [
+      'demo',
+      'comment',
+      'create',
+      'task-example',
+    ]).then(
+      () => 'resolved',
+      () => 'rejected',
+    )
+
+    expect(
+      stdinOutcome(
+        status,
+        readStdin.mock.calls,
+        stderr.mock.calls.map(([message]) => String(message).trimEnd()),
+      ),
+    ).toEqual({
+      status: 'rejected',
+      reads: [],
+      stderr: [
+        'Error: API URL is not set. Pass --api-url or set the TQ_API_URL environment variable.',
+      ],
+    })
+  })
+
   it('writes text content to a file and prints the remaining response fields', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'tq-operation-adapter-'))
     try {
@@ -277,14 +330,15 @@ describe('registerOperations', () => {
             },
           },
         },
+        run: () =>
+          okAsync({
+            id: 'page-example',
+            title: 'Example page',
+            content: '# Body',
+          }),
       })
-      operation.run = () =>
-        okAsync({
-          id: 'page-example',
-          title: 'Example page',
-          content: '# Body',
-        })
       const write = spyStdout()
+      const stderr = spyStderr()
 
       await parse(createProgram([operation]), [
         '--api-url',
@@ -298,7 +352,7 @@ describe('registerOperations', () => {
       ])
 
       expect(
-        adapterOutcome(write.mock.calls, [], {
+        adapterOutcome(write.mock.calls, stderr.mock.calls, {
           content: await readFile(outputPath, 'utf8'),
         }),
       ).toEqual({
@@ -322,29 +376,7 @@ describe('registerOperations', () => {
       const fetchImpl = vi.fn<typeof fetch>(() =>
         Promise.resolve(new Response(new Uint8Array([1, 2, 3]))),
       )
-      const operation = makeOperation({
-        path: ['demo', 'image', 'get'],
-        inputSchema: z.object({ id: z.string() }),
-        positionalArgs: ['id'],
-        cli: {
-          output: {
-            kind: 'json',
-            fields: ['url'],
-            fileOutput: {
-              kind: 'binary',
-              option: {
-                name: 'output',
-                description: 'Download to a file',
-              },
-              urlField: 'url',
-              summaryFields: ['id'],
-              outputPathField: 'output',
-            },
-          },
-        },
-      })
-      operation.run = () =>
-        okAsync({ id: 'image-example', url: 'https://files.example/signed' })
+      const operation = makeImageGetOperation()
       const write = spyStdout()
       const stderr = spyStderr()
 
@@ -382,26 +414,7 @@ describe('registerOperations', () => {
   })
 
   it('prints only the configured URL field when binary output has no file option', async () => {
-    const operation = makeOperation({
-      path: ['demo', 'image', 'get'],
-      inputSchema: z.object({ id: z.string() }),
-      positionalArgs: ['id'],
-      cli: {
-        output: {
-          kind: 'json',
-          fields: ['url'],
-          fileOutput: {
-            kind: 'binary',
-            option: { name: 'output', description: 'Download to a file' },
-            urlField: 'url',
-            summaryFields: ['id'],
-            outputPathField: 'output',
-          },
-        },
-      },
-    })
-    operation.run = () =>
-      okAsync({ id: 'image-example', url: 'https://files.example/signed' })
+    const operation = makeImageGetOperation()
     const write = spyStdout()
 
     await parse(createProgram([operation]), [

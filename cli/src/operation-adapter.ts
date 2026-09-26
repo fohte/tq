@@ -1,20 +1,17 @@
-import type { OperationDefinition } from 'api/operations'
+import { formatInputIssues, type OperationDefinition } from 'api/operations'
 import { Command } from 'commander'
-import { errAsync, ResultAsync } from 'neverthrow'
 
 import { toApiError } from '#client'
 import { buildClient, resolveWebUrl } from '#command-context'
 import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
-import {
-  printJson,
-  printJsonList,
-  printOperationJsonWithLinkSync,
-  writeBinaryFile,
-  writeContentFile,
-} from '#output'
+import { printOperationOutput } from '#operation-output'
 import { fail } from '#result'
-import { addSchemaOptions, pickSchemaFields } from '#schema-options'
+import {
+  addSchemaOptions,
+  pickSchemaFields,
+  toKebabCase,
+} from '#schema-options'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -35,40 +32,13 @@ function positionalSyntax(
   return argument.optional === true ? `[${name}]` : `<${name}>`
 }
 
-function errorFromCause(cause: unknown): Error {
-  return cause instanceof Error ? cause : new Error(String(cause))
-}
-
-function fetchBinary(
-  url: string,
-  fetchImpl: typeof fetch,
-): ResultAsync<Uint8Array, Error> {
-  return ResultAsync.fromPromise(fetchImpl(url), errorFromCause).andThen(
-    (response) => {
-      if (!response.ok) {
-        return ResultAsync.fromPromise(
-          toApiError(response),
-          errorFromCause,
-        ).andThen((error) => errAsync<Uint8Array, Error>(error))
-      }
-      return ResultAsync.fromPromise(
-        response.arrayBuffer(),
-        errorFromCause,
-      ).map((buffer) => new Uint8Array(buffer))
-    },
-  )
-}
-
-function operationInputError(operation: OperationDefinition, input: unknown) {
+function operationInputError(
+  operation: OperationDefinition,
+  input: Record<string, unknown>,
+): Error | undefined {
   const parsed = operation.inputSchema.safeParse(input)
   if (parsed.success) return undefined
-  const message = parsed.error.issues
-    .map((issue) => {
-      const path = issue.path.map(String).join('.') || 'input'
-      return `${path}: ${issue.message}`
-    })
-    .join('; ')
-  return new Error(message)
+  return new Error(formatInputIssues(parsed.error))
 }
 
 function renderWebPath(
@@ -87,24 +57,6 @@ function renderWebPath(
     rendered = rendered.replace(placeholder, String(value))
   }
   return rendered
-}
-
-function selectRecordFields(
-  value: Record<string, unknown>,
-  fields: readonly string[],
-): Record<string, unknown> {
-  return Object.fromEntries(
-    fields.flatMap((field) => (field in value ? [[field, value[field]]] : [])),
-  )
-}
-
-function selectFields(value: unknown, fields: readonly string[]): unknown {
-  if (!isRecord(value)) return value
-  return selectRecordFields(value, fields)
-}
-
-function toKebabCase(value: string): string {
-  return value.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)
 }
 
 export function registerOperations(
@@ -203,6 +155,33 @@ export function registerOperations(
         if (value !== undefined) input[positionalName(argument)] = value
       })
 
+      if (operation.cli.output.kind === 'web-url') {
+        pickSchemaFields(operation.inputSchema, options, excluded).match(
+          (fields) => Object.assign(input, fields),
+          (error) => fail(actionCommand, error),
+        )
+        const inputError = operationInputError(operation, input)
+        if (inputError != null) return fail(actionCommand, inputError)
+        const path = renderWebPath(operation.cli.output.path, input)
+        if (path == null) {
+          return fail(
+            actionCommand,
+            new Error('Web URL path refers to a missing input field.'),
+          )
+        }
+        const webUrl = resolveWebUrl(actionCommand).match(
+          (value) => value,
+          (error) => fail(actionCommand, error),
+        )
+        process.stdout.write(`${webUrl}${path}\n`)
+        return
+      }
+
+      const client = buildClient(actionCommand, fetchImpl).match(
+        (value) => value,
+        (error) => fail(actionCommand, error),
+      )
+
       pickSchemaFields(operation.inputSchema, options, excluded).match(
         (fields) => Object.assign(input, fields),
         (error) => fail(actionCommand, error),
@@ -228,34 +207,6 @@ export function registerOperations(
         if (content !== undefined) input[contentInput.field] = content
       }
 
-      if (operation.cli.output.kind === 'web-url') {
-        const inputError = operationInputError(operation, input)
-        if (inputError != null) return fail(actionCommand, inputError)
-        if (!isRecord(input)) {
-          return fail(
-            actionCommand,
-            new Error('Operation input must be an object.'),
-          )
-        }
-        const path = renderWebPath(operation.cli.output.path, input)
-        if (path == null) {
-          return fail(
-            actionCommand,
-            new Error('Web URL path refers to a missing input field.'),
-          )
-        }
-        const webUrl = resolveWebUrl(actionCommand).match(
-          (value) => value,
-          (error) => fail(actionCommand, error),
-        )
-        process.stdout.write(`${webUrl}${path}\n`)
-        return
-      }
-
-      const client = buildClient(actionCommand, fetchImpl).match(
-        (value) => value,
-        (error) => fail(actionCommand, error),
-      )
       const result = await operation.run(client, input)
       if (result.isErr()) {
         switch (result.error.kind) {
@@ -268,98 +219,16 @@ export function registerOperations(
         }
       }
 
-      switch (operation.cli.output.kind) {
-        case 'json': {
-          if (fileOutput != null) {
-            const filePath = options[fileOutput.option.name]
-            if (typeof filePath === 'string') {
-              if (fileOutput.kind === 'content') {
-                if (!isRecord(result.value)) {
-                  return fail(
-                    actionCommand,
-                    new Error(
-                      `Operation response must contain string field "${fileOutput.field}".`,
-                    ),
-                  )
-                }
-                const content = result.value[fileOutput.field]
-                if (typeof content !== 'string') {
-                  return fail(
-                    actionCommand,
-                    new Error(
-                      `Operation response must contain string field "${fileOutput.field}".`,
-                    ),
-                  )
-                }
-                await writeContentFile(filePath, content).match(
-                  () => undefined,
-                  (error) => fail(actionCommand, error),
-                )
-                printJson(
-                  Object.fromEntries(
-                    Object.entries(result.value).filter(
-                      ([key]) => key !== fileOutput.field,
-                    ),
-                  ),
-                )
-                return
-              }
-
-              if (!isRecord(result.value)) {
-                return fail(
-                  actionCommand,
-                  new Error(
-                    `Operation response must contain string field "${fileOutput.urlField}".`,
-                  ),
-                )
-              }
-              const summary = selectRecordFields(
-                result.value,
-                fileOutput.summaryFields,
-              )
-              const url = result.value[fileOutput.urlField]
-              if (typeof url !== 'string') {
-                return fail(
-                  actionCommand,
-                  new Error(
-                    `Operation response must contain string field "${fileOutput.urlField}".`,
-                  ),
-                )
-              }
-              const binary = await fetchBinary(url, fetchImpl).match(
-                (value) => value,
-                (error) => fail(actionCommand, error),
-              )
-              await writeBinaryFile(filePath, binary).match(
-                () => undefined,
-                (error) => fail(actionCommand, error),
-              )
-              printJson({
-                ...summary,
-                [fileOutput.outputPathField]: filePath,
-              })
-              return
-            }
-          }
-          printJson(
-            operation.cli.output.fields == null
-              ? result.value
-              : selectFields(result.value, operation.cli.output.fields),
-          )
-          break
-        }
-        case 'json-with-link-sync':
-          printOperationJsonWithLinkSync(result.value).match(
-            () => undefined,
-            (error) => fail(actionCommand, error),
-          )
-          break
-        case 'list': {
-          const full = options['full'] === true
-          printJsonList(result.value, operation.cli.output.omitKey, { full })
-          break
-        }
-      }
+      const printed = await printOperationOutput(
+        operation.cli.output,
+        result.value,
+        options,
+        fetchImpl,
+      )
+      printed.match(
+        () => undefined,
+        (error) => fail(actionCommand, error),
+      )
     })
   }
 }

@@ -24,3 +24,4 @@ export type {
   OperationSurface,
   PositionalArgument,
 } from '#operations/types'
+export { formatInputIssues } from '#operations/types'

@@ -30,6 +30,10 @@ function captureError(run: () => void): Error {
 }
 
 describe('addSchemaOptions', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('shows one flag per optional field in --help — schema description, enum choices, a humanized fallback label, and never the required field', () => {
     expect(buildCommand().helpInformation()).toBe(
       `Usage: test [options]
@@ -91,6 +95,86 @@ Options:
     expect(result._unsafeUnwrapErr().message).toBe(
       'addSchemaOptions: unsupported schema type for field "flag"',
     )
+  })
+
+  it('returns an Err when a comma-separated option is not an array field', () => {
+    const result = addSchemaOptions(
+      new Command(),
+      z.object({ labels: z.string().optional() }),
+      [],
+      {},
+      ['labels'],
+    )
+
+    expect(result._unsafeUnwrapErr().message).toBe(
+      'addSchemaOptions: comma-separated field "labels" must be an array',
+    )
+  })
+
+  it('returns an Err when an array field is not opted into comma-separated input', () => {
+    const result = addSchemaOptions(
+      new Command(),
+      z.object({ labels: z.array(z.string()).optional() }),
+    )
+
+    expect(result._unsafeUnwrapErr().message).toBe(
+      'addSchemaOptions: unsupported schema type for field "labels"',
+    )
+  })
+
+  it('splits a comma-separated array flag into its values', () => {
+    const schema = z.object({ labels: z.array(z.string()).optional() })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+      [],
+      {},
+      ['labels'],
+    )._unsafeUnwrap()
+
+    command.parse(['--labels', 'alpha, beta,,gamma'], { from: 'user' })
+
+    expect(command.opts()).toEqual({ labels: ['alpha', 'beta', 'gamma'] })
+  })
+
+  it('shows the array description and comma-separated syntax in --help', () => {
+    const schema = z.object({
+      labels: z.array(z.string()).describe('Label names to attach').optional(),
+    })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+      [],
+      {},
+      ['labels'],
+    )._unsafeUnwrap()
+
+    expect(command.helpInformation()).toBe(
+      [
+        'Usage: test [options]',
+        '',
+        'Options:',
+        '  --labels <value>  Label names to attach (comma-separated)',
+        '  -h, --help        display help for command',
+        '',
+      ].join('\n'),
+    )
+  })
+
+  it('splits an array environment default into its values', () => {
+    vi.stubEnv('TQ_LABELS', 'alpha,beta')
+    const schema = z.object({ labels: z.array(z.string()).optional() })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+      [],
+      { labels: 'TQ_LABELS' },
+      ['labels'],
+    )._unsafeUnwrap()
+
+    command.parse([], { from: 'user' })
+
+    expect(command.opts()).toEqual({ labels: ['alpha', 'beta'] })
   })
 
   it('shows a z.uuid() field in --help without an enum choices suffix', () => {

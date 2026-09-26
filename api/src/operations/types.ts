@@ -19,6 +19,15 @@ export type OperationError =
   | { kind: 'http'; response: Response }
   | { kind: 'request'; error: Error }
 
+export function formatInputIssues(error: z.ZodError): string {
+  return error.issues
+    .map((issue) => {
+      const path = issue.path.map(String).join('.') || 'input'
+      return `${path}: ${issue.message}`
+    })
+    .join('; ')
+}
+
 export type CliFileOutput =
   | {
       kind: 'content'
@@ -109,15 +118,9 @@ export function defineOperation<
     run(client, input) {
       const parsed = inputSchema.safeParse(input)
       if (!parsed.success) {
-        const message = parsed.error.issues
-          .map((issue) => {
-            const path = issue.path.map(String).join('.') || 'input'
-            return `${path}: ${issue.message}`
-          })
-          .join('; ')
         return errAsync({
           kind: 'input',
-          message,
+          message: formatInputIssues(parsed.error),
         })
       }
       return definition.run(client, parsed.data)

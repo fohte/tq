@@ -2,9 +2,9 @@ import { Command, InvalidArgumentError, Option } from 'commander'
 import { err, ok, Result } from 'neverthrow'
 import { z } from 'zod'
 
-import { splitCommaList } from '#commands/split-comma-list'
+import { splitCommaList } from '#split-comma-list'
 
-function toKebabCase(key: string): string {
+export function toKebabCase(key: string): string {
   return key.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)
 }
 
@@ -17,7 +17,21 @@ function toLabel(key: string): string {
     .join(' ')
 }
 
-function parseValue(inner: z.ZodType, raw: string): unknown {
+function schemaDescription(field: unknown): string | undefined {
+  if (
+    typeof field !== 'object' ||
+    field === null ||
+    !('description' in field)
+  ) {
+    return undefined
+  }
+  const description = field.description
+  return typeof description === 'string' ? description : undefined
+}
+
+type SupportedLeaf = z.ZodEnum | z.ZodString | z.ZodStringFormat | z.ZodNumber
+
+function parseValue(inner: SupportedLeaf, raw: string): unknown {
   const value = inner instanceof z.ZodNumber ? Number(raw) : raw
   const result = inner.safeParse(value)
   if (!result.success) {
@@ -32,9 +46,16 @@ function parseValue(inner: z.ZodType, raw: string): unknown {
   return result.data
 }
 
-function isSupportedLeaf(
-  field: z.core.$ZodType,
-): field is z.ZodEnum | z.ZodString | z.ZodStringFormat | z.ZodNumber {
+function parseDefaultValue(
+  value: string | undefined,
+  isArray: boolean,
+): string | string[] | undefined {
+  if (value == null || value.length === 0) return undefined
+  if (isArray) return splitCommaList(value)
+  return value
+}
+
+function isSupportedLeaf(field: unknown): field is SupportedLeaf {
   return (
     field instanceof z.ZodEnum ||
     field instanceof z.ZodString ||
@@ -77,6 +98,10 @@ function unwrapOptional(field: z.core.$ZodType): z.core.$ZodType | undefined {
  * the field name — a mutating command (e.g. `task update`) can share the
  * same schema field without silently picking up the env default and
  * overwriting an existing value the caller never asked to change.
+ *
+ * `commaSeparatedOptions` opts array fields into a single comma-separated
+ * flag and applies the same split to their environment variable defaults.
+ * Every listed field must be an array, and every array field must be listed.
  */
 export function addSchemaOptions<Shape extends z.core.$ZodShape>(
   command: Command,
@@ -91,24 +116,38 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
     if (inner === undefined) continue
 
     const isArray = inner instanceof z.ZodArray
-    const shouldSplitCommaSeparated = commaSeparatedOptions.includes(key)
-    if (isArray !== shouldSplitCommaSeparated) {
+    const commaSeparated = commaSeparatedOptions.includes(key)
+    if (isArray !== commaSeparated) {
       return err(
         new Error(
-          shouldSplitCommaSeparated
+          commaSeparated
             ? `addSchemaOptions: comma-separated field "${key}" must be an array`
             : `addSchemaOptions: unsupported schema type for field "${key}"`,
         ),
       )
     }
 
-    const valueType = isArray ? inner.element : inner
-    if (
-      (!isArray && !isSupportedLeaf(valueType)) ||
-      (isArray &&
-        !isSupportedLeaf(valueType) &&
-        !(valueType instanceof z.ZodUnion))
-    ) {
+    const valueType: unknown = isArray ? inner.element : inner
+    let leafType: SupportedLeaf | undefined
+    let parseOptionValue: (raw: string) => unknown
+    if (isArray) {
+      if (isSupportedLeaf(valueType)) {
+        leafType = valueType
+        parseOptionValue = (raw) =>
+          splitCommaList(raw).map((value) => parseValue(valueType, value))
+      } else if (valueType instanceof z.ZodUnion) {
+        parseOptionValue = (raw) => splitCommaList(raw)
+      } else {
+        return err(
+          new Error(
+            `addSchemaOptions: unsupported schema type for field "${key}"`,
+          ),
+        )
+      }
+    } else if (isSupportedLeaf(valueType)) {
+      leafType = valueType
+      parseOptionValue = (raw) => parseValue(valueType, raw)
+    } else {
       return err(
         new Error(
           `addSchemaOptions: unsupported schema type for field "${key}"`,
@@ -116,38 +155,31 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
       )
     }
 
-    const leafType = isSupportedLeaf(valueType) ? valueType : undefined
     const envVar = envDefaults[key]
+    const baseDescription =
+      schemaDescription(inner) ??
+      (leafType == null ? undefined : schemaDescription(leafType)) ??
+      toLabel(key)
+    const fieldDescription = isArray
+      ? `${baseDescription} (comma-separated)`
+      : baseDescription
     const description =
       envVar != null
-        ? `${leafType?.description ?? toLabel(key)} (or set ${envVar})`
-        : (leafType?.description ?? toLabel(key))
+        ? `${fieldDescription} (or set ${envVar})`
+        : fieldDescription
     const option = new Option(`--${toKebabCase(key)} <value>`, description)
-    if (!isArray && leafType instanceof z.ZodEnum) {
-      option.choices(leafType.options.map(String))
+    if (!isArray && inner instanceof z.ZodEnum) {
+      option.choices(inner.options.map(String))
     }
 
-    option.argParser((raw: string) => {
-      if (isArray) {
-        return splitCommaList(raw).map((value) =>
-          leafType == null ? value : parseValue(leafType, value),
-        )
-      }
-      return leafType == null ? raw : parseValue(leafType, raw)
-    })
+    option.argParser(parseOptionValue)
     if (envVar != null) {
       const envValue = process.env[envVar]
       // Left unvalidated here (unlike an explicit flag, which goes through
       // parseValue above): pickSchemaFields re-validates the full options
       // object against the schema before it reaches the API, so an invalid
       // env value is still rejected by the CLI rather than sent.
-      option.default(
-        envValue != null && envValue.length > 0
-          ? isArray
-            ? splitCommaList(envValue)
-            : envValue
-          : undefined,
-      )
+      option.default(parseDefaultValue(envValue, isArray))
     }
     command.addOption(option)
   }
