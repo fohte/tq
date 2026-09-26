@@ -12,6 +12,7 @@ import {
   MOBILE_ONLY_TAG,
   MOBILE_VIEWPORT,
 } from './.storybook/screenshot-viewports'
+import { BASE_UI_OPTIMIZE_DEPS } from './base-ui-optimize-deps'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -20,20 +21,22 @@ const alias = {
 }
 
 // @fohte/storybook-addon's createStorybookProject() builds a fixed plugins
-// array with no slot for extra Vite plugins, so Tailwind is spliced in here
-// instead of passed through.
+// array with no slot for extra Vite config, so Tailwind and Base UI dependency
+// optimization are added here.
 //
 // Returns `any`: createStorybookProject()'s inferred return type embeds
 // vitest's `BrowserProviderOption<T>`, a self-referential generic that
 // TypeScript's `exactOptionalPropertyTypes` structural check reports as "two
 // different types... unrelated" as soon as an object literal embeds it.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see comment above
-function withTailwind(project: ReturnType<typeof createStorybookProject>): any {
+function withStorybook(
+  project: ReturnType<typeof createStorybookProject>,
+): any {
   return {
     ...project,
-    optimizeDeps: { include: BASE_UI_ENTRIES },
+    optimizeDeps: { include: BASE_UI_OPTIMIZE_DEPS },
     plugins: [
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- withTailwind casts through `any`, see comment above its definition
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- withStorybook casts through `any`, see comment above its definition
       ...project.plugins,
       tailwindcss(),
     ],
@@ -41,18 +44,11 @@ function withTailwind(project: ReturnType<typeof createStorybookProject>): any {
 }
 
 const BROWSER_TEST_PATTERN = '**/*.browser.test.{ts,tsx}'
-const BASE_UI_ENTRIES = [
-  '@base-ui/react/button',
-  '@base-ui/react/dialog',
-  '@base-ui/react/input',
-  '@base-ui/react/select',
-  '@base-ui/react/tooltip',
-]
 
 export default defineConfig({
   resolve: { alias },
   test: {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- withTailwind casts through `any`, see comment above its definition
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- withStorybook casts through `any`, see comment above its definition
     projects: [
       {
         resolve: { alias },
@@ -67,7 +63,7 @@ export default defineConfig({
         },
       },
       {
-        optimizeDeps: { include: BASE_UI_ENTRIES },
+        optimizeDeps: { include: BASE_UI_OPTIMIZE_DEPS },
         plugins: [tailwindcss()],
         test: {
           name: 'browser',
@@ -81,7 +77,7 @@ export default defineConfig({
           },
         },
       },
-      withTailwind(
+      withStorybook(
         createStorybookProject({
           name: 'storybook',
           rootDir: dirname,
@@ -91,7 +87,7 @@ export default defineConfig({
           excludeTags: [MOBILE_ONLY_TAG],
         }),
       ),
-      withTailwind(
+      withStorybook(
         createStorybookProject({
           name: 'storybook-mobile',
           rootDir: dirname,

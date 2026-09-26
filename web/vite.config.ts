@@ -4,18 +4,12 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+import { BASE_UI_OPTIMIZE_DEPS } from './base-ui-optimize-deps'
 import { pwaManifest } from './src/lib/pwa-manifest'
 
 export default defineConfig({
   optimizeDeps: {
-    // Base UI is reached through source exports in @fohte/ui, so the dependency scanner misses it.
-    include: [
-      '@base-ui/react/button',
-      '@base-ui/react/dialog',
-      '@base-ui/react/input',
-      '@base-ui/react/select',
-      '@base-ui/react/tooltip',
-    ],
+    include: BASE_UI_OPTIMIZE_DEPS,
   },
   plugins: [
     tanstackRouter({
