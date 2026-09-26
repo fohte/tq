@@ -226,6 +226,11 @@ async function getChildCompletionCountsByTaskId(
 export const parentTasks = alias(tasks, 'parent_task')
 
 // Shared response shape for the list-returning endpoint (`/api/tasks`).
+export type TaskSearchMatch =
+  | { field: 'title'; snippet: string }
+  | { field: 'description'; snippet: string }
+  | { field: 'page'; pageTitle: string; snippet: string }
+
 function taskListItemToResponse(
   task: typeof tasks.$inferSelect,
   parentNumber: number | null,
@@ -255,7 +260,9 @@ export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
   }
 }
 
-export type TaskListItemResponse = ReturnType<typeof taskListItemToResponse>
+export type TaskListItemResponse = ReturnType<typeof taskListItemToResponse> & {
+  match?: TaskSearchMatch
+}
 
 // Batch-hydrates list-query rows into `TaskListItemResponse`s in a fixed
 // number of queries regardless of row count.

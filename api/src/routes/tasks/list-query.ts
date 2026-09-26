@@ -1,5 +1,6 @@
 import {
   and,
+  desc,
   eq,
   exists,
   inArray,
@@ -23,7 +24,15 @@ import {
   taskRelations,
   tasks,
 } from '#db/schema'
-import { parentTasks, resolveTaskListOrderBy } from '#routes/tasks/shared'
+import {
+  buildTitleMatchCondition,
+  queryTaskSearchMatches,
+} from '#routes/tasks/search-match-query'
+import {
+  parentTasks,
+  resolveTaskListOrderBy,
+  type TaskSearchMatch,
+} from '#routes/tasks/shared'
 import type { ListTasksQuery } from '#schemas/task'
 import { parseSearchQuery } from '#search-query-parser'
 
@@ -33,6 +42,15 @@ const MAX_FREE_TEXT_WORDS = 20
 
 const childTasks = alias(tasks, 'child_task')
 const blockerTasks = alias(tasks, 'blocker_task')
+
+function freeTextWords(freeText: string | undefined) {
+  return (
+    freeText
+      ?.split(/\s+/)
+      .filter((word) => word !== '')
+      .slice(0, MAX_FREE_TEXT_WORDS) ?? []
+  )
+}
 
 // Extracted so `exists`/`notExists` can both wrap the same predicate for
 // hasBlockers/hasNoBlockers without duplicating the join and where clause.
@@ -247,10 +265,7 @@ function buildConditions(query: ListTasksQuery) {
     // (e.g. `"fix bug"`) therefore matches as separate words rather than
     // an adjacent phrase, and a word with no ASCII whitespace (e.g.
     // Japanese text) matches as a substring.
-    const words = freeText
-      .split(/\s+/)
-      .filter((word) => word !== '')
-      .slice(0, MAX_FREE_TEXT_WORDS)
+    const words = freeTextWords(freeText)
     const numberQuery = freeText.startsWith('#') ? freeText.slice(1) : freeText
     const numberCondition =
       numberQuery !== '' && /^\d+$/.test(numberQuery)
@@ -276,27 +291,53 @@ function buildConditions(query: ListTasksQuery) {
     )
   }
 
-  return { conditions, sortBy: parsed?.sortBy ?? query.sortBy }
+  return {
+    conditions,
+    sortBy: parsed?.sortBy ?? query.sortBy,
+    freeTextWords: freeTextWords(parsed?.freeText),
+  }
 }
 
 const ancestorIdSchema = z.array(z.object({ id: z.string() }))
 
-export async function queryTaskList(query: ListTasksQuery): Promise<{
+export async function queryTaskList(
+  query: ListTasksQuery,
+  options: { includeSearchMatch?: boolean } = {},
+): Promise<{
   rows: TaskListRow[]
   ancestorOnlyIds: Set<string>
+  matchByTaskId?: Map<string, TaskSearchMatch>
 }> {
-  const { conditions, sortBy } = buildConditions(query)
+  const { conditions, sortBy, freeTextWords: words } = buildConditions(query)
+  const prioritizeTitleMatches =
+    options.includeSearchMatch === true && sortBy == null && words.length > 0
 
   let listQuery = selectTaskListRows()
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(...resolveTaskListOrderBy(sortBy))
+    .orderBy(
+      ...(prioritizeTitleMatches
+        ? [
+            desc(buildTitleMatchCondition(words)),
+            desc(tasks.updatedAt),
+            desc(tasks.number),
+          ]
+        : resolveTaskListOrderBy(sortBy)),
+    )
     .$dynamic()
   if (query.limit != null) listQuery = listQuery.limit(query.limit)
   if (query.offset != null) listQuery = listQuery.offset(query.offset)
 
   const matched = await listQuery
+  const matchByTaskId =
+    options.includeSearchMatch === true && words.length > 0
+      ? await queryTaskSearchMatches(matched, words)
+      : undefined
   if (query.includeAncestors !== true || matched.length === 0) {
-    return { rows: matched, ancestorOnlyIds: new Set() }
+    return {
+      rows: matched,
+      ancestorOnlyIds: new Set(),
+      ...(matchByTaskId === undefined ? {} : { matchByTaskId }),
+    }
   }
 
   const matchedIds = matched.map((r) => r.task.id)
@@ -318,7 +359,11 @@ export async function queryTaskList(query: ListTasksQuery): Promise<{
     .filter((id) => !matchedIdSet.has(id))
 
   if (newAncestorIds.length === 0) {
-    return { rows: matched, ancestorOnlyIds: new Set() }
+    return {
+      rows: matched,
+      ancestorOnlyIds: new Set(),
+      ...(matchByTaskId === undefined ? {} : { matchByTaskId }),
+    }
   }
 
   const ancestorRows = await selectTaskListRows().where(
@@ -327,5 +372,6 @@ export async function queryTaskList(query: ListTasksQuery): Promise<{
   return {
     rows: [...matched, ...ancestorRows],
     ancestorOnlyIds: new Set(newAncestorIds),
+    ...(matchByTaskId === undefined ? {} : { matchByTaskId }),
   }
 }

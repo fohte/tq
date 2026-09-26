@@ -6,11 +6,35 @@ export interface ResultGroup {
   id: string
   title: string
   items: ListItem[]
+  sections?: ResultSubgroup[]
   isVisible: (query: string, itemCount: number) => boolean
 }
 
-export interface IndexedResultGroup extends Omit<ResultGroup, 'items'> {
+export interface ResultSubgroup {
+  id: string
+  title: string
+  items: ListItem[]
+}
+
+export interface IndexedResultSubgroup extends Omit<ResultSubgroup, 'items'> {
   items: { item: ListItem; globalIndex: number }[]
+}
+
+export interface IndexedResultGroup extends Omit<
+  ResultGroup,
+  'items' | 'sections'
+> {
+  items: { item: ListItem; globalIndex: number }[]
+  sections?: IndexedResultSubgroup[]
+}
+
+export function resultGroupItemCount(group: {
+  items: readonly unknown[]
+  sections?: { items: readonly unknown[] }[]
+}): number {
+  return group.sections == null
+    ? group.items.length
+    : group.sections.reduce((count, section) => count + section.items.length, 0)
 }
 
 export function indexResultGroups(groups: ResultGroup[]): {
@@ -18,13 +42,27 @@ export function indexResultGroups(groups: ResultGroup[]): {
   indexedGroups: IndexedResultGroup[]
 } {
   let globalIndex = 0
-  const indexedGroups = groups.map((group) => ({
-    ...group,
-    items: group.items.map((item) => ({
+  const indexItems = (items: ListItem[]) =>
+    items.map((item) => ({
       item,
       globalIndex: globalIndex++,
-    })),
-  }))
+    }))
+  const indexedGroups = groups.map(({ sections, ...group }) => {
+    const indexedSections = sections?.map((section) => ({
+      ...section,
+      items: indexItems(section.items),
+    }))
+    const items =
+      indexedSections == null
+        ? indexItems(group.items)
+        : indexedSections.flatMap((section) => section.items)
+
+    return {
+      ...group,
+      items,
+      ...(indexedSections == null ? {} : { sections: indexedSections }),
+    }
+  })
 
   return {
     indexedGroups,
@@ -50,6 +88,28 @@ export function SearchModalResultList({
   initialMessage?: string
 }) {
   const lastMousePos = useRef({ x: 0, y: 0 })
+  const renderItem = ({
+    item,
+    globalIndex,
+  }: IndexedResultGroup['items'][number]) => (
+    <Fragment key={item.key}>
+      {item.render({
+        isSelected: selectedIndex === globalIndex,
+        onMouseMove: (event) => {
+          if (
+            event.clientX !== lastMousePos.current.x ||
+            event.clientY !== lastMousePos.current.y
+          ) {
+            lastMousePos.current = {
+              x: event.clientX,
+              y: event.clientY,
+            }
+            onSelectedIndexChange(globalIndex)
+          }
+        },
+      })}
+    </Fragment>
+  )
 
   return (
     <div
@@ -70,25 +130,20 @@ export function SearchModalResultList({
           <div className="px-4 py-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
             {group.title}
           </div>
-          {group.items.map(({ item, globalIndex }) => (
-            <Fragment key={item.key}>
-              {item.render({
-                isSelected: selectedIndex === globalIndex,
-                onMouseMove: (event) => {
-                  if (
-                    event.clientX !== lastMousePos.current.x ||
-                    event.clientY !== lastMousePos.current.y
-                  ) {
-                    lastMousePos.current = {
-                      x: event.clientX,
-                      y: event.clientY,
-                    }
-                    onSelectedIndexChange(globalIndex)
-                  }
-                },
-              })}
-            </Fragment>
-          ))}
+          {group.sections == null
+            ? group.items.map(renderItem)
+            : group.sections.map((section) => (
+                <Fragment key={section.id}>
+                  {section.items.length > 0 && (
+                    <>
+                      <div className="px-4 pt-2 pb-1 font-mono text-2xs text-muted-foreground-faint">
+                        {section.title}
+                      </div>
+                      {section.items.map(renderItem)}
+                    </>
+                  )}
+                </Fragment>
+              ))}
         </Fragment>
       ))}
 

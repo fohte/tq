@@ -215,15 +215,22 @@ export const tasksCrudApp = new Hono()
   })
   .get('/', zValidator('query', listTasksQuerySchema), async (c) => {
     const query = c.req.valid('query')
-    const { rows, ancestorOnlyIds } = await queryTaskList(query)
+    const { rows, ancestorOnlyIds, matchByTaskId } = await queryTaskList(
+      query,
+      { includeSearchMatch: true },
+    )
 
     const hydratedRows = await hydrateTaskListRows(rows)
 
     return c.json(
-      hydratedRows.map((item) => ({
-        ...item,
-        ...(ancestorOnlyIds.has(item.id) ? { ancestorOnly: true } : {}),
-      })),
+      hydratedRows.map((item) => {
+        const match = matchByTaskId?.get(item.id)
+        return {
+          ...item,
+          ...(match === undefined ? {} : { match }),
+          ...(ancestorOnlyIds.has(item.id) ? { ancestorOnly: true } : {}),
+        }
+      }),
       200,
     )
   })

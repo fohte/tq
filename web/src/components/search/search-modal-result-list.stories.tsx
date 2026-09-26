@@ -4,11 +4,13 @@ import { useRef } from 'react'
 import { createOptionItem } from '#components/search/search-modal-result-items'
 import {
   type IndexedResultGroup,
+  indexResultGroups,
+  type ResultGroup,
   SearchModalResultList,
 } from '#components/search/search-modal-result-list'
 
 type ResultListStoryProps = {
-  state: 'initial' | 'recent' | 'empty'
+  state: 'initial' | 'recent' | 'taskMatches' | 'empty'
 }
 
 const noOp = () => undefined
@@ -40,12 +42,54 @@ const recentGroup: IndexedResultGroup = {
   ],
 }
 
+const taskMatchGroup: ResultGroup = {
+  id: 'tasks',
+  title: 'Tasks',
+  isVisible: () => true,
+  items: [],
+  sections: [
+    {
+      id: 'title-matches',
+      title: 'タイトル一致',
+      items: [
+        createOptionItem(
+          'task:title-match',
+          noOp,
+          <span className="font-mono text-sm text-foreground">
+            Review the release checklist
+          </span>,
+        ),
+      ],
+    },
+    {
+      id: 'body-matches',
+      title: '本文一致',
+      items: [
+        createOptionItem(
+          'task:body-match',
+          noOp,
+          <span className="font-mono text-sm text-foreground">
+            Review deployment notes
+          </span>,
+        ),
+      ],
+    },
+  ],
+}
+const indexedTaskMatchGroup = indexResultGroups([taskMatchGroup]).indexedGroups
+
 function ResultListStory({ state }: ResultListStoryProps) {
   const listRef = useRef<HTMLDivElement>(null)
   return (
     <div className="mx-auto flex h-72 w-full max-w-160 flex-col border border-border bg-popover text-popover-foreground">
       <SearchModalResultList
-        groups={state === 'recent' ? [recentGroup] : []}
+        groups={
+          state === 'recent'
+            ? [recentGroup]
+            : state === 'taskMatches'
+              ? indexedTaskMatchGroup
+              : []
+        }
         listRef={listRef}
         selectedIndex={0}
         onSelectedIndexChange={noOp}
@@ -73,6 +117,11 @@ type Story = StoryObj<typeof meta>
 export const RecentlyViewed: Story = {
   name: 'the result list groups recently viewed tasks and projects',
   args: { state: 'recent' },
+}
+
+export const TaskMatches: Story = {
+  name: 'task results separate title matches from body matches',
+  args: { state: 'taskMatches' },
 }
 
 export const Initial: Story = {

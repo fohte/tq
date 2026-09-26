@@ -15,7 +15,10 @@ import {
   type ListItem,
   renderTaskOption,
 } from '#components/search/search-modal-result-items'
-import type { ResultGroup } from '#components/search/search-modal-result-list'
+import {
+  type ResultGroup,
+  resultGroupItemCount,
+} from '#components/search/search-modal-result-list'
 import type { Project } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
 import type {
@@ -60,6 +63,8 @@ interface SearchModalResultGroupsOptions {
   canSearchViews: boolean
   canSuggest: boolean
   hasSearchQuery: boolean
+  freeTextQuery: string
+  hasExplicitSort: boolean
   hasActiveScope: boolean
   isSearchPending: boolean
   onSearchEverywhere: () => void
@@ -99,6 +104,8 @@ export function useSearchModalResultGroups({
   canSearchViews,
   canSuggest,
   hasSearchQuery,
+  freeTextQuery,
+  hasExplicitSort,
   hasActiveScope,
   isSearchPending,
   onSearchEverywhere,
@@ -163,14 +170,37 @@ export function useSearchModalResultGroups({
       selectOnTab: () => {
         applyScope(`parent:${task.id}`)
       },
-      render: renderTaskOption(task, onOpenChangeRef),
+      render: renderTaskOption(task, onOpenChangeRef, freeTextQuery),
     })
-    const taskItems: ListItem[] =
+    const taskSearchResults =
       canSearchTasks && hasSearchQuery
-        ? (tasks
-            ?.filter((task) => task.id !== taskByNumber?.id)
-            .map((task) => toTaskListItem(task)) ?? [])
+        ? (tasks?.filter((task) => task.id !== taskByNumber?.id) ?? [])
         : []
+    const titleTaskItems = taskSearchResults
+      .filter((task) => task.match == null || task.match.field === 'title')
+      .map((task) => toTaskListItem(task))
+    const bodyTaskItems = taskSearchResults
+      .filter(
+        (task) =>
+          task.match?.field === 'description' || task.match?.field === 'page',
+      )
+      .map((task) => toTaskListItem(task))
+    const taskItems = [...titleTaskItems, ...bodyTaskItems]
+    const taskSections =
+      freeTextQuery.length === 0 || hasExplicitSort
+        ? undefined
+        : [
+            {
+              id: 'title-matches',
+              title: 'タイトル一致',
+              items: titleTaskItems,
+            },
+            {
+              id: 'body-matches',
+              title: '本文一致',
+              items: bodyTaskItems,
+            },
+          ].filter((section) => section.items.length > 0)
     const taskNumberItems: ListItem[] =
       canSearchTasks && hasSearchQuery && taskByNumber != null
         ? [toTaskListItem(taskByNumber, 'number:')]
@@ -251,7 +281,8 @@ export function useSearchModalResultGroups({
       {
         id: 'tasks',
         title: 'Tasks',
-        items: taskItems,
+        items: taskSections == null ? taskItems : [],
+        ...(taskSections == null ? {} : { sections: taskSections }),
         isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
       },
       {
@@ -275,7 +306,7 @@ export function useSearchModalResultGroups({
     ]
 
     const hasVisibleResults = resultGroups.some((group) =>
-      group.isVisible(query, group.items.length),
+      group.isVisible(query, resultGroupItemCount(group)),
     )
 
     return { resultGroups, hasVisibleResults }
@@ -312,6 +343,8 @@ export function useSearchModalResultGroups({
     canSearchViews,
     canSuggest,
     hasSearchQuery,
+    freeTextQuery,
+    hasExplicitSort,
   ])
 
   const resultGroups = useMemo(() => {

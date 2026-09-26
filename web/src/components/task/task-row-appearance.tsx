@@ -33,6 +33,8 @@ export interface TaskRowAppearanceProps {
   selected?: boolean
   leading?: React.ReactNode
   trailing?: React.ReactNode
+  titleContent?: React.ReactNode
+  belowMetadata?: React.ReactNode
   onClick?: (e: React.MouseEvent) => void
   draggable?: boolean
   // Appended after the row's canonical second-line items (labels, project,
@@ -52,6 +54,8 @@ export function TaskRowAppearance({
   selected = false,
   leading,
   trailing,
+  titleContent,
+  belowMetadata,
   onClick,
   draggable = false,
   secondLineExtras = [],
@@ -166,7 +170,7 @@ export function TaskRowAppearance({
                 <span
                   className={cn(rowTitleClassName(isCompleted), 'min-w-16')}
                 >
-                  {task.title}
+                  {titleContent ?? task.title}
                 </span>
                 {task.childCompletionCount.total > 0 && (
                   <span
@@ -183,6 +187,7 @@ export function TaskRowAppearance({
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <DotSeparatedList items={secondLineItems} />
               </div>
+              {belowMetadata}
             </div>
 
             {trailing != null && (

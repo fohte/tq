@@ -181,7 +181,20 @@ export function createPageItems(
 export function renderTaskOption(
   task: SearchResult,
   onOpenChangeRef: { current: (open: boolean) => void },
+  freeTextQuery = '',
 ): ListItem['render'] {
+  const isTitleMatch = task.match == null || task.match.field === 'title'
+  const titleContent =
+    isTitleMatch && freeTextQuery.length > 0
+      ? highlightSearchMatches(task.title, freeTextQuery)
+      : task.title
+  const matchLabel =
+    task.match?.field === 'description'
+      ? '説明'
+      : task.match?.field === 'page'
+        ? `page: ${task.match.pageTitle}`
+        : undefined
+
   return ({ isSelected, onMouseMove }) => (
     <div
       role="option"
@@ -192,6 +205,17 @@ export function renderTaskOption(
     >
       <TaskRowAppearance
         task={task}
+        titleContent={titleContent}
+        belowMetadata={
+          task.match != null && !isTitleMatch && matchLabel != null ? (
+            <div className="flex min-w-0 items-baseline gap-2 text-xs text-muted-foreground">
+              <span className="max-w-40 shrink-0 truncate">{matchLabel}</span>
+              <span className="min-w-0 truncate">
+                {highlightSearchMatches(task.match.snippet, freeTextQuery)}
+              </span>
+            </div>
+          ) : undefined
+        }
         onClick={(e) => {
           // Let the router's own modifier/middle-click handling
           // open a new tab without closing this one's search.
@@ -209,4 +233,43 @@ export function renderTaskOption(
       />
     </div>
   )
+}
+
+function highlightSearchMatches(text: string, query: string) {
+  const terms = query
+    .split(/\s+/)
+    .map((term) => term.trim())
+    .filter(Boolean)
+    .sort((left, right) => right.length - left.length)
+  if (terms.length === 0) return text
+
+  const pattern = new RegExp(terms.map(escapeRegExp).join('|'), 'gi')
+  const parts: ReactNode[] = []
+  let lastIndex = 0
+
+  for (const match of text.matchAll(pattern)) {
+    const matchedText = match[0]
+    const matchIndex = match.index
+
+    if (matchIndex > lastIndex) {
+      parts.push(text.slice(lastIndex, matchIndex))
+    }
+    parts.push(
+      <mark
+        key={`${String(matchIndex)}:${matchedText}`}
+        className="rounded-sm bg-primary/20 text-inherit"
+      >
+        {matchedText}
+      </mark>,
+    )
+    lastIndex = matchIndex + matchedText.length
+  }
+
+  if (lastIndex === 0) return text
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex))
+  return parts
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

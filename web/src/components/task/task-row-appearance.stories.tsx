@@ -40,6 +40,37 @@ function TaskRowAppearanceWithProviders({ task }: { task: Task }) {
   )
 }
 
+function TaskRowAppearanceSearchMatch({ task }: { task: Task }) {
+  return (
+    <Providers>
+      <div className="w-full max-w-3xl">
+        <TaskRowAppearance
+          task={task}
+          titleContent={
+            <>
+              Review the{' '}
+              <mark className="bg-primary/20 text-inherit">deployment</mark>{' '}
+              notes
+            </>
+          }
+          belowMetadata={
+            <div className="flex min-w-0 items-baseline gap-2 text-xs text-muted-foreground">
+              <span className="max-w-40 shrink-0 truncate">
+                page: Connector setup
+              </span>
+              <span className="min-w-0 truncate">
+                Configure the{' '}
+                <mark className="bg-primary/20 text-inherit">connector</mark>{' '}
+                after access is approved.
+              </span>
+            </div>
+          }
+        />
+      </div>
+    </Providers>
+  )
+}
+
 const meta = {
   title: 'Task/TaskRowAppearance',
   component: TaskRowAppearanceWithProviders,
@@ -56,6 +87,14 @@ export const Todo: Story = {
   args: {
     task: { ...baseTask },
   },
+}
+
+export const SearchMatch: Story = {
+  name: 'the row highlights a title and shows a matching page snippet',
+  args: {
+    task: { ...baseTask, title: 'Review the deployment notes' },
+  },
+  render: ({ task }) => <TaskRowAppearanceSearchMatch task={task} />,
 }
 
 export const Completed: Story = {
