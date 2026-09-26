@@ -334,20 +334,4 @@ export function registerReadTools(server: McpServer): void {
     async ({ status, context }) =>
       callAsResult(`/api/projects${buildQuery({ status, context })}`),
   )
-
-  server.registerTool(
-    'list_labels',
-    {
-      description:
-        'List all labels available for tagging tasks, with their id, name, color, and context. Use this to resolve label names before filtering search_tasks by label or attaching labels to a task.',
-      inputSchema: z.object({
-        context: contextEnum
-          .optional()
-          .describe('Only return labels in this context.'),
-      }),
-      annotations: { readOnlyHint: true },
-    },
-    async ({ context }) =>
-      callAsResult(`/api/labels${buildQuery({ context })}`),
-  )
 }

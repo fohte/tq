@@ -933,12 +933,61 @@ describe('comment_delete tool', () => {
   })
 })
 
-describe('comment tool annotations', () => {
+describe('label_update tool', () => {
+  it('updates a label by id', async () => {
+    const label = await createLabel('operation-label', { context: 'personal' })
+
+    const result = await callTool('label_update', {
+      id: label.id,
+      name: 'renamed-operation-label',
+      context: 'work',
+    })
+
+    expect(parseToolData(result, ['id'])).toEqual({
+      id: label.id,
+      name: 'renamed-operation-label',
+      color: null,
+      context: 'work',
+      createdAt: '<timestamp>',
+    })
+  })
+})
+
+describe('label_delete tool', () => {
+  async function deleteAndReadLabels(
+    labelId: string,
+    context: 'work' | 'personal',
+  ) {
+    const result = await callTool('label_delete', { id: labelId })
+    const remainingLabelsResponse = await app.request(
+      `/api/labels?context=${context}`,
+    )
+
+    return [
+      parseToolData(result, ['id']),
+      await jsonBody(remainingLabelsResponse),
+    ] as const
+  }
+
+  it('deletes a label and returns a confirmation', async () => {
+    const label = await createLabel('label-for-deletion', { context: 'work' })
+
+    expect(await deleteAndReadLabels(label.id, label.context)).toEqual([
+      { deleted: true, id: label.id },
+      [],
+    ])
+  })
+})
+
+describe('operation tool annotations', () => {
   it('maps operation kinds to MCP annotations', async () => {
     const tools = await client.listTools()
     const annotations = Object.fromEntries(
       tools.tools
-        .filter((tool) => tool.name.startsWith('comment_'))
+        .filter(
+          (tool) =>
+            tool.name.startsWith('comment_') || tool.name.startsWith('label_'),
+        )
         .map((tool) => [tool.name, tool.annotations ?? null]),
     )
 
@@ -953,6 +1002,15 @@ describe('comment tool annotations', () => {
       },
       comment_list: { readOnlyHint: true },
       comment_update: {
+        readOnlyHint: false,
+        destructiveHint: false,
+      },
+      label_delete: {
+        readOnlyHint: false,
+        destructiveHint: true,
+      },
+      label_list: { readOnlyHint: true },
+      label_update: {
         readOnlyHint: false,
         destructiveHint: false,
       },
