@@ -109,6 +109,10 @@ async function callTool(
   return result as CallToolResult
 }
 
+function summarizeDeletion(result: CallToolResult, comments: unknown) {
+  return { result, comments }
+}
+
 describe('create_task tool', () => {
   it('creates a task with the given fields', async () => {
     const result = await callTool('create_task', {
@@ -624,11 +628,11 @@ describe('update_page tool', () => {
   })
 })
 
-describe('create_comment tool', () => {
+describe('comment_create tool', () => {
   it('creates a comment, attributed to the default mcp agent', async () => {
     const task = await createTask('Has comments')
 
-    const result = await callTool('create_comment', {
+    const result = await callTool('comment_create', {
       taskId: task.id,
       content: 'A comment',
     })
@@ -647,7 +651,7 @@ describe('create_comment tool', () => {
   it('attributes the comment to an explicitly passed agent', async () => {
     const task = await createTask('Has comments')
 
-    const result = await callTool('create_comment', {
+    const result = await callTool('comment_create', {
       taskId: task.id,
       content: 'A comment',
       agent: 'claude-opus-5',
@@ -665,7 +669,7 @@ describe('create_comment tool', () => {
   })
 
   it('rejects a non-existent taskId', async () => {
-    const result = await callTool('create_comment', {
+    const result = await callTool('comment_create', {
       taskId: TEST_UUID,
       content: 'Orphan comment',
     })
@@ -677,12 +681,12 @@ describe('create_comment tool', () => {
   })
 })
 
-describe('update_comment tool', () => {
+describe('comment_update tool', () => {
   it('updates the comment content', async () => {
     const task = await createTask('Has comments')
     const comment = await createComment(task.id, 'Original content')
 
-    const result = await callTool('update_comment', {
+    const result = await callTool('comment_update', {
       taskId: task.id,
       commentId: comment.id,
       content: 'Updated content',
@@ -703,7 +707,7 @@ describe('update_comment tool', () => {
     const task = await createTask('Has comments')
     const comment = await createComment(task.id, 'Original content')
 
-    const result = await callTool('update_comment', {
+    const result = await callTool('comment_update', {
       taskId: task.id,
       commentId: comment.id,
       content: 'Updated content',
@@ -724,7 +728,7 @@ describe('update_comment tool', () => {
   it('rejects a non-existent commentId', async () => {
     const task = await createTask('Has comments')
 
-    const result = await callTool('update_comment', {
+    const result = await callTool('comment_update', {
       taskId: task.id,
       commentId: TEST_UUID,
       content: 'Updated content',
@@ -734,5 +738,56 @@ describe('update_comment tool', () => {
       isError: true,
       content: [{ type: 'text', text: 'Comment not found' }],
     })
+  })
+})
+
+describe('comment_list tool', () => {
+  it('returns comments with their full content', async () => {
+    const task = await createTask('Has comments')
+    await createComment(task.id, 'A long comment body')
+
+    const result = await callTool('comment_list', { taskId: task.id })
+
+    expect(parseToolData(result, ['taskId'])).toEqual([
+      {
+        id: '<uuid>',
+        taskId: task.id,
+        content: 'A long comment body',
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+        author: { kind: 'human', agent: null },
+      },
+    ])
+  })
+})
+
+describe('comment_delete tool', () => {
+  it('deletes a comment and returns a confirmation', async () => {
+    const task = await createTask('Has comments')
+    const comment = await createComment(task.id, 'Delete this comment')
+
+    const result = await callTool('comment_delete', {
+      taskId: task.id,
+      commentId: comment.id,
+    })
+    const commentsResponse = await app.request(`/api/tasks/${task.id}/comments`)
+
+    expect(summarizeDeletion(result, await jsonBody(commentsResponse))).toEqual(
+      {
+        result: {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                deleted: true,
+                taskId: task.id,
+                commentId: comment.id,
+              }),
+            },
+          ],
+        },
+        comments: [],
+      },
+    )
   })
 })

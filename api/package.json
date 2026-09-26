@@ -10,6 +10,7 @@
     "./lib/markdown-parser": "./src/lib/markdown-parser.ts",
     "./lib/test-utils": "./src/lib/test-utils.ts",
     "./lib/text-scan": "./src/lib/text-scan.ts",
+    "./operations": "./src/operations/index.ts",
     "./schemas/agent-session": "./src/schemas/agent-session.ts",
     "./schemas/label": "./src/schemas/label.ts",
     "./schemas/project": "./src/schemas/project.ts",

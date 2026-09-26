@@ -11,7 +11,10 @@ import { jsonBody, setupTestDb } from '#testing'
 // group's own tests; both protocol-era tests below only pin down that every
 // registered tool is reachable through the wire protocol.
 const REGISTERED_TOOL_NAMES = [
-  'create_comment',
+  'comment_create',
+  'comment_delete',
+  'comment_list',
+  'comment_update',
   'create_page',
   'create_task',
   'get_page',
@@ -22,11 +25,23 @@ const REGISTERED_TOOL_NAMES = [
   'list_tasks',
   'search_pages',
   'search_tasks',
-  'update_comment',
   'update_page',
   'update_task',
   'update_task_status',
 ]
+
+function summarizeTools(
+  tools: Awaited<ReturnType<Client['listTools']>>['tools'],
+) {
+  return {
+    names: tools.map((tool) => tool.name).sort(),
+    commentAnnotations: Object.fromEntries(
+      tools
+        .filter((tool) => tool.name.startsWith('comment_'))
+        .map((tool) => [tool.name, tool.annotations ?? null]),
+    ),
+  }
+}
 
 // `mcpApp` is mounted with `.route()` on the same `app` instance as every
 // other route (see api/src/app.ts) instead of a dedicated server or
@@ -50,9 +65,24 @@ describe('MCP endpoint', () => {
     try {
       const result = await client.listTools()
 
-      expect(result.tools.map((tool) => tool.name).sort()).toEqual(
-        REGISTERED_TOOL_NAMES,
-      )
+      expect(summarizeTools(result.tools)).toEqual({
+        names: REGISTERED_TOOL_NAMES,
+        commentAnnotations: {
+          comment_create: {
+            readOnlyHint: false,
+            destructiveHint: false,
+          },
+          comment_delete: {
+            readOnlyHint: false,
+            destructiveHint: true,
+          },
+          comment_list: { readOnlyHint: true },
+          comment_update: {
+            readOnlyHint: false,
+            destructiveHint: false,
+          },
+        },
+      })
     } finally {
       await client.close()
     }

@@ -11,7 +11,6 @@ import {
   taskStatusReason,
   updateTaskSchema,
 } from '#schemas/task'
-import { createCommentSchema, updateCommentSchema } from '#schemas/task-comment'
 import { createPageSchema, updatePageSchema } from '#schemas/task-page'
 
 function toolResult(data: unknown): CallToolResult {
@@ -199,44 +198,6 @@ export function registerWriteTools(server: McpServer): void {
     },
     async ({ taskId, pageId, agent, ...body }) =>
       callRoute(`/api/tasks/${String(taskId)}/pages/${pageId}`, agent, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }),
-  )
-
-  server.registerTool(
-    'create_comment',
-    {
-      description: 'Add a comment to a task.',
-      inputSchema: z.object({
-        taskId: taskIdOrNumber,
-        ...createCommentSchema.shape,
-        agent: agentArgSchema,
-      }),
-    },
-    async ({ taskId, agent, ...body }) =>
-      callRoute(`/api/tasks/${String(taskId)}/comments`, agent, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }),
-  )
-
-  server.registerTool(
-    'update_comment',
-    {
-      description:
-        'Update the content of an existing comment by task id and comment id.',
-      inputSchema: z.object({
-        taskId: taskIdOrNumber,
-        commentId: z.uuid(),
-        ...updateCommentSchema.shape,
-        agent: agentArgSchema,
-      }),
-    },
-    async ({ taskId, commentId, agent, ...body }) =>
-      callRoute(`/api/tasks/${String(taskId)}/comments/${commentId}`, agent, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

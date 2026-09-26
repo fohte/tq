@@ -1,6 +1,7 @@
 import { writeFile } from 'node:fs/promises'
 
 import { ResultAsync } from 'neverthrow'
+import { z } from 'zod'
 
 import { FileIoError } from '#errors'
 
@@ -35,17 +36,29 @@ export function printJsonList(
   printJson(full ? data : omitDeep(data, omitKey))
 }
 
-type RefSource =
-  | { kind: 'description' }
-  | { kind: 'page'; id: string; title: string }
-  | { kind: 'comment'; id: string }
+const refSourceSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('description') }),
+  z.object({ kind: z.literal('page'), id: z.string(), title: z.string() }),
+  z.object({ kind: z.literal('comment'), id: z.string() }),
+])
 
-interface LinkSyncSummary {
-  outgoing: { number: number; title: string }[]
-  unresolvedRefs: ((
-    { kind: 'number'; value: number } | { kind: 'id'; value: string }
-  ) & { sources: RefSource[] })[]
-}
+const unresolvedRefSchema = z
+  .discriminatedUnion('kind', [
+    z.object({ kind: z.literal('number'), value: z.number() }),
+    z.object({ kind: z.literal('id'), value: z.string() }),
+  ])
+  .and(z.object({ sources: z.array(refSourceSchema) }))
+
+const linkSyncSummarySchema = z.object({
+  outgoing: z.array(z.object({ number: z.number(), title: z.string() })),
+  unresolvedRefs: z.array(unresolvedRefSchema),
+})
+
+const linkSyncDataSchema = z.object({
+  linkSync: linkSyncSummarySchema.optional(),
+})
+type LinkSyncSummary = z.infer<typeof linkSyncSummarySchema>
+type RefSource = z.infer<typeof refSourceSchema>
 
 // Task titles are free text (e.g. set via the web UI or MCP), so a title
 // containing a raw control/escape character must not reach the terminal
@@ -100,11 +113,10 @@ export function printLinkSync(linkSync: LinkSyncSummary | undefined): void {
 // then, if the write triggered a task_links resync, the linkSync summary to
 // stderr — combined here so a future write endpoint can't add the former
 // while forgetting the latter.
-export function printJsonWithLinkSync(data: {
-  linkSync?: LinkSyncSummary | undefined
-}): void {
+export function printJsonWithLinkSync(data: unknown): void {
   printJson(data)
-  printLinkSync(data.linkSync)
+  const result = linkSyncDataSchema.safeParse(data)
+  if (result.success) printLinkSync(result.data.linkSync)
 }
 
 export function writeContentFile(

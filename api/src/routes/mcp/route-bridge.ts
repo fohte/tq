@@ -45,7 +45,7 @@ export async function callInternalRoute<T = unknown>(
   return { ok: false, result: await toErrorResult(res) }
 }
 
-async function toErrorResult(res: Response): Promise<CallToolResult> {
+export async function toErrorResult(res: Response): Promise<CallToolResult> {
   if (res.status === 400) {
     return errorResult(await formatValidationMessage(res))
   }

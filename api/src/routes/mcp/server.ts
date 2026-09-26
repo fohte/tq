@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/server'
 
+import { registerOperationTools } from '#routes/mcp/tools/operation-tools'
 import { registerReadTools } from '#routes/mcp/tools/read-tools'
 import { registerWriteTools } from '#routes/mcp/tools/write-tools'
 
@@ -22,6 +23,7 @@ export function createMcpServer(): McpServer {
     .remove()
 
   registerReadTools(server)
+  registerOperationTools(server)
   registerWriteTools(server)
 
   return server
