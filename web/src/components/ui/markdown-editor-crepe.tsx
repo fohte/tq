@@ -15,13 +15,13 @@ import {
 } from '@prosemirror-adapter/react'
 import { useEffect, useRef } from 'react'
 
-import { createImageSourceRevealPlugin } from '#lib/image-source-reveal/plugin'
 import {
-  handleImageLoadError,
-  resolveImageSrc,
-  uploadImageFile,
-  uploadImageFiles,
-} from '#lib/image-upload'
+  handleAssetLoadError,
+  resolveAssetSrc,
+  uploadAssetFile,
+  uploadAssetFiles,
+} from '#lib/asset-upload'
+import { createImageSourceRevealPlugin } from '#lib/image-source-reveal/plugin'
 import { createInlineReferencePlugin } from '#lib/inline-reference/plugin'
 import { githubUrlProvider } from '#lib/inline-reference/providers/github-url'
 import { projectUrlProvider } from '#lib/inline-reference/providers/project-url'
@@ -98,7 +98,7 @@ function CrepeEditor({
         },
         [Crepe.Feature.ImageBlock]: {
           onUpload: (file) =>
-            uploadImageFile(file).match(
+            uploadAssetFile(file).match(
               (src) => src,
               (error) => {
                 // eslint-disable-next-line no-restricted-syntax -- Crepe's onUpload/proxyDomURL callbacks are a throwing contract (external SDK), not Result-aware
@@ -106,14 +106,14 @@ function CrepeEditor({
               },
             ),
           proxyDomURL: (src) =>
-            resolveImageSrc(src).match(
+            resolveAssetSrc(src).match(
               (resolvedSrc) => resolvedSrc,
               (error) => {
                 // eslint-disable-next-line no-restricted-syntax -- Crepe's onUpload/proxyDomURL callbacks are a throwing contract (external SDK), not Result-aware
                 throw error
               },
             ),
-          onImageLoadError: handleImageLoadError,
+          onImageLoadError: handleAssetLoadError,
         },
       },
     })
@@ -133,7 +133,7 @@ function CrepeEditor({
         ctx.update(uploadConfig.key, (prev) => ({
           ...prev,
           uploader: (files, schema) =>
-            uploadImageFiles(files, (src, alt) =>
+            uploadAssetFiles(files, (src, alt) =>
               schema.nodes['image']?.createAndFill({ src, alt }),
             ),
         }))

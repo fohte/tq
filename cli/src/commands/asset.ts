@@ -1,6 +1,6 @@
 import { basename, extname } from 'node:path'
 
-import { ALLOWED_CONTENT_TYPES } from 'api/constants/images'
+import { ALLOWED_CONTENT_TYPES } from 'api/constants/assets'
 import type { Command } from 'commander'
 import { err, ok, Result } from 'neverthrow'
 
@@ -30,15 +30,15 @@ function detectContentType(filePath: string): Result<string, Error> {
   return ok(contentType)
 }
 
-export function registerImageCommands(
+export function registerAssetCommands(
   program: Command,
   fetchImpl: typeof fetch,
 ): void {
-  const image = program.command('image').description('Manage images')
+  const asset = program.command('asset').description('Manage assets')
 
-  image
+  asset
     .command('upload <filePath>')
-    .description('Upload an image')
+    .description('Upload an asset')
     .action(async (filePath: string, _options: unknown, command: Command) => {
       const client = buildClient(command, fetchImpl).match(
         (value) => value,
@@ -55,19 +55,19 @@ export function registerImageCommands(
         ),
       })
 
-      const res = await client.api.images.$post({ form: { file } })
+      const res = await client.api.assets.$post({ form: { file } })
       if (!res.ok) return fail(command, await toApiError(res))
       printJson(await res.json())
     })
 
-  image
+  asset
     .command('get <id>')
     .description(
-      'Get an image (prints its signed URL, or downloads it with --output)',
+      'Get an asset (prints its signed URL, or downloads it with --output)',
     )
     .option(
       '--output <path>',
-      'Download the image to a file instead of printing its URL',
+      'Download the asset to a file instead of printing its URL',
     )
     .action(
       async (id: string, options: { output?: string }, command: Command) => {
@@ -75,7 +75,7 @@ export function registerImageCommands(
           (value) => value,
           (error) => fail(command, error),
         )
-        const res = await client.api.images[':id'].$get({ param: { id } })
+        const res = await client.api.assets[':id'].$get({ param: { id } })
         if (!res.ok) return fail(command, await toApiError(res))
         const { url } = await res.json()
 
@@ -97,15 +97,15 @@ export function registerImageCommands(
       },
     )
 
-  image
+  asset
     .command('delete <id>')
-    .description('Delete an image')
+    .description('Delete an asset')
     .action(async (id: string, _options: unknown, command: Command) => {
       const client = buildClient(command, fetchImpl).match(
         (value) => value,
         (error) => fail(command, error),
       )
-      const res = await client.api.images[':id'].$delete({ param: { id } })
+      const res = await client.api.assets[':id'].$delete({ param: { id } })
       if (!res.ok) return fail(command, await toApiError(res))
       printJson({ deleted: true, id })
     })

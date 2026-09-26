@@ -6,10 +6,10 @@ import { HTTPException } from 'hono/http-exception'
 
 import { authorMiddleware } from '#lib/author'
 import { agentSessionsApp } from '#routes/agent-sessions'
+import { assetsApp } from '#routes/assets'
 import { calendarApp } from '#routes/calendar'
 import { githubApp } from '#routes/github'
 import { githubSyncRulesApp } from '#routes/github-sync-rules'
-import { imagesApp } from '#routes/images'
 import { integrationsApp } from '#routes/integrations'
 import { labelsApp } from '#routes/labels'
 import { mcpApp } from '#routes/mcp/index'
@@ -70,7 +70,7 @@ const app = new Hono()
   .route('/api/calendar', calendarApp)
   .route('/api/github', githubApp)
   .route('/api/github/sync-rules', githubSyncRulesApp)
-  .route('/api/images', imagesApp)
+  .route('/api/assets', assetsApp)
   .route('/api/integrations', integrationsApp)
   .route('/api/labels', labelsApp)
   .route('/api/scheduling-settings', schedulingSettingsApp)

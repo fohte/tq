@@ -309,6 +309,13 @@
       "when": 1790185940713,
       "tag": "0043_uneven_karnak",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1790442380031,
+      "tag": "0044_rename_images_to_assets",
+      "breakpoints": true
     }
   ]
 }

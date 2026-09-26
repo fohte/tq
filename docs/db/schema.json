@@ -2,7 +2,7 @@
   "name": "tq_test",
   "tables": [
     {
-      "name": "public.images",
+      "name": "public.assets",
       "type": "BASE TABLE",
       "columns": [
         {
@@ -34,38 +34,38 @@
       ],
       "indexes": [
         {
-          "name": "images_pkey",
-          "def": "CREATE UNIQUE INDEX images_pkey ON public.images USING btree (id)",
-          "table": "public.images",
+          "name": "assets_pkey",
+          "def": "CREATE UNIQUE INDEX assets_pkey ON public.assets USING btree (id)",
+          "table": "public.assets",
           "columns": ["id"]
         },
         {
-          "name": "images_r2_key_unique",
-          "def": "CREATE UNIQUE INDEX images_r2_key_unique ON public.images USING btree (r2_key)",
-          "table": "public.images",
+          "name": "assets_r2_key_unique",
+          "def": "CREATE UNIQUE INDEX assets_r2_key_unique ON public.assets USING btree (r2_key)",
+          "table": "public.assets",
           "columns": ["r2_key"]
         },
         {
-          "name": "idx_images_r2_key",
-          "def": "CREATE INDEX idx_images_r2_key ON public.images USING btree (r2_key)",
-          "table": "public.images",
+          "name": "idx_assets_r2_key",
+          "def": "CREATE INDEX idx_assets_r2_key ON public.assets USING btree (r2_key)",
+          "table": "public.assets",
           "columns": ["r2_key"]
         }
       ],
       "constraints": [
         {
-          "name": "images_pkey",
+          "name": "assets_pkey",
           "type": "PRIMARY KEY",
           "def": "PRIMARY KEY (id)",
-          "table": "public.images",
+          "table": "public.assets",
           "referenced_table": "",
           "columns": ["id"]
         },
         {
-          "name": "images_r2_key_unique",
+          "name": "assets_r2_key_unique",
           "type": "UNIQUE",
           "def": "UNIQUE (r2_key)",
-          "table": "public.images",
+          "table": "public.assets",
           "referenced_table": "",
           "columns": ["r2_key"]
         }

@@ -1,11 +1,11 @@
 import { Command, CommanderError, Option } from 'commander'
 
+import { registerAssetCommands } from '#commands/asset'
 import { registerCalendarCommands } from '#commands/calendar'
 import { registerCommentCommands } from '#commands/comment'
 import { registerGithubCommands } from '#commands/github'
 import { registerHealthCommand } from '#commands/health'
 import { registerHookCommands } from '#commands/hook'
-import { registerImageCommands } from '#commands/image'
 import { registerLabelCommands } from '#commands/label'
 import { registerLinkCommands } from '#commands/link'
 import { registerPageCommands } from '#commands/page'
@@ -57,7 +57,7 @@ function buildProgram(
   registerProjectCommands(program, fetchImpl, stdin)
   registerSavedViewCommands(program, fetchImpl)
   registerLabelCommands(program, fetchImpl, stdin)
-  registerImageCommands(program, fetchImpl)
+  registerAssetCommands(program, fetchImpl)
   registerGithubCommands(program, fetchImpl)
   registerQueueCommands(program, fetchImpl)
   registerCalendarCommands(program, fetchImpl)

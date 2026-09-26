@@ -1,4 +1,4 @@
-# public.images
+# public.assets
 
 ## Columns
 
@@ -14,16 +14,16 @@
 
 | Name                 | Type        | Definition       |
 | -------------------- | ----------- | ---------------- |
-| images_pkey          | PRIMARY KEY | PRIMARY KEY (id) |
-| images_r2_key_unique | UNIQUE      | UNIQUE (r2_key)  |
+| assets_pkey          | PRIMARY KEY | PRIMARY KEY (id) |
+| assets_r2_key_unique | UNIQUE      | UNIQUE (r2_key)  |
 
 ## Indexes
 
 | Name                 | Definition                                                                     |
 | -------------------- | ------------------------------------------------------------------------------ |
-| images_pkey          | CREATE UNIQUE INDEX images_pkey ON public.images USING btree (id)              |
-| images_r2_key_unique | CREATE UNIQUE INDEX images_r2_key_unique ON public.images USING btree (r2_key) |
-| idx_images_r2_key    | CREATE INDEX idx_images_r2_key ON public.images USING btree (r2_key)           |
+| assets_pkey          | CREATE UNIQUE INDEX assets_pkey ON public.assets USING btree (id)              |
+| assets_r2_key_unique | CREATE UNIQUE INDEX assets_r2_key_unique ON public.assets USING btree (r2_key) |
+| idx_assets_r2_key    | CREATE INDEX idx_assets_r2_key ON public.assets USING btree (r2_key)           |
 
 ## Relations
 
@@ -31,7 +31,7 @@
 erDiagram
 
 
-"public.images" {
+"public.assets" {
   text id
   text r2_key
   text content_type
