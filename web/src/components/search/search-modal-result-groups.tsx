@@ -12,6 +12,8 @@ import {
   createPageItems,
   createProjectItems,
   createViewItems,
+  getBodySearchMatch,
+  isTitleSearchMatch,
   type ListItem,
   renderTaskOption,
 } from '#components/search/search-modal-result-items'
@@ -177,17 +179,17 @@ export function useSearchModalResultGroups({
         ? (tasks?.filter((task) => task.id !== taskByNumber?.id) ?? [])
         : []
     const titleTaskItems = taskSearchResults
-      .filter((task) => task.match == null || task.match.field === 'title')
+      .filter(isTitleSearchMatch)
       .map((task) => toTaskListItem(task))
     const bodyTaskItems = taskSearchResults
-      .filter(
-        (task) =>
-          task.match?.field === 'description' || task.match?.field === 'page',
-      )
+      .filter((task) => getBodySearchMatch(task) != null)
       .map((task) => toTaskListItem(task))
-    const taskItems = [...titleTaskItems, ...bodyTaskItems]
+    const taskItems = taskSearchResults.map((task) => toTaskListItem(task))
+    const hasCompleteMatchMetadata = taskSearchResults.every(
+      (task) => task.match != null,
+    )
     const taskSections =
-      freeTextQuery.length === 0 || hasExplicitSort
+      freeTextQuery.length === 0 || hasExplicitSort || !hasCompleteMatchMetadata
         ? undefined
         : [
             {
@@ -281,8 +283,9 @@ export function useSearchModalResultGroups({
       {
         id: 'tasks',
         title: 'Tasks',
-        items: taskSections == null ? taskItems : [],
-        ...(taskSections == null ? {} : { sections: taskSections }),
+        ...(taskSections == null
+          ? { items: taskItems }
+          : { sections: taskSections }),
         isVisible: (query, itemCount) => query.length > 0 && itemCount > 0,
       },
       {

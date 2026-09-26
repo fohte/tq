@@ -20,6 +20,23 @@ export interface ListItem {
   render: (props: ListItemRenderProps) => ReactNode
 }
 
+type BodySearchMatch = Extract<
+  NonNullable<SearchResult['match']>,
+  { field: 'description' | 'page' }
+>
+
+export function isTitleSearchMatch(task: SearchResult) {
+  return task.match?.field === 'title'
+}
+
+export function getBodySearchMatch(
+  task: SearchResult,
+): BodySearchMatch | undefined {
+  return task.match?.field === 'description' || task.match?.field === 'page'
+    ? task.match
+    : undefined
+}
+
 interface ListItemRenderProps {
   isSelected: boolean
   onMouseMove: (event: MouseEvent<HTMLElement>) => void
@@ -183,16 +200,17 @@ export function renderTaskOption(
   onOpenChangeRef: { current: (open: boolean) => void },
   freeTextQuery = '',
 ): ListItem['render'] {
-  const isTitleMatch = task.match == null || task.match.field === 'title'
+  const isTitleMatch = isTitleSearchMatch(task)
+  const bodyMatch = getBodySearchMatch(task)
   const titleContent =
     isTitleMatch && freeTextQuery.length > 0
       ? highlightSearchMatches(task.title, freeTextQuery)
       : task.title
   const matchLabel =
-    task.match?.field === 'description'
+    bodyMatch?.field === 'description'
       ? '説明'
-      : task.match?.field === 'page'
-        ? `page: ${task.match.pageTitle}`
+      : bodyMatch?.field === 'page'
+        ? `page: ${bodyMatch.pageTitle}`
         : undefined
 
   return ({ isSelected, onMouseMove }) => (
@@ -207,11 +225,11 @@ export function renderTaskOption(
         task={task}
         titleContent={titleContent}
         belowMetadata={
-          task.match != null && !isTitleMatch && matchLabel != null ? (
+          bodyMatch != null && matchLabel != null ? (
             <div className="flex min-w-0 items-baseline gap-2 text-xs text-muted-foreground">
               <span className="max-w-40 shrink-0 truncate">{matchLabel}</span>
               <span className="min-w-0 truncate">
-                {highlightSearchMatches(task.match.snippet, freeTextQuery)}
+                {highlightSearchMatches(bodyMatch.snippet, freeTextQuery)}
               </span>
             </div>
           ) : undefined

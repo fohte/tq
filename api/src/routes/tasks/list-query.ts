@@ -302,15 +302,20 @@ const ancestorIdSchema = z.array(z.object({ id: z.string() }))
 
 export async function queryTaskList(
   query: ListTasksQuery,
-  options: { includeSearchMatch?: boolean } = {},
+  options: {
+    includeSearchMatch?: boolean
+    prioritizeTitleMatches?: boolean
+  } = {},
 ): Promise<{
   rows: TaskListRow[]
   ancestorOnlyIds: Set<string>
-  matchByTaskId?: Map<string, TaskSearchMatch>
+  matchByTaskId: Map<string, TaskSearchMatch> | undefined
 }> {
   const { conditions, sortBy, freeTextWords: words } = buildConditions(query)
   const prioritizeTitleMatches =
-    options.includeSearchMatch === true && sortBy == null && words.length > 0
+    options.prioritizeTitleMatches === true &&
+    sortBy == null &&
+    words.length > 0
 
   let listQuery = selectTaskListRows()
     .where(conditions.length > 0 ? and(...conditions) : undefined)
@@ -336,7 +341,7 @@ export async function queryTaskList(
     return {
       rows: matched,
       ancestorOnlyIds: new Set(),
-      ...(matchByTaskId === undefined ? {} : { matchByTaskId }),
+      matchByTaskId,
     }
   }
 
@@ -362,7 +367,7 @@ export async function queryTaskList(
     return {
       rows: matched,
       ancestorOnlyIds: new Set(),
-      ...(matchByTaskId === undefined ? {} : { matchByTaskId }),
+      matchByTaskId,
     }
   }
 
@@ -372,6 +377,6 @@ export async function queryTaskList(
   return {
     rows: [...matched, ...ancestorRows],
     ancestorOnlyIds: new Set(newAncestorIds),
-    ...(matchByTaskId === undefined ? {} : { matchByTaskId }),
+    matchByTaskId,
   }
 }

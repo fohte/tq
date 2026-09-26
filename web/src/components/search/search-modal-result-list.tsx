@@ -2,13 +2,17 @@ import { Fragment, type RefObject, useRef } from 'react'
 
 import type { ListItem } from '#components/search/search-modal-result-items'
 
-export interface ResultGroup {
+interface ResultGroupBase {
   id: string
   title: string
-  items: ListItem[]
-  sections?: ResultSubgroup[]
   isVisible: (query: string, itemCount: number) => boolean
 }
+
+export type ResultGroup = ResultGroupBase &
+  (
+    | { items: ListItem[]; sections?: never }
+    | { items?: never; sections: ResultSubgroup[] }
+  )
 
 export interface ResultSubgroup {
   id: string
@@ -17,23 +21,26 @@ export interface ResultSubgroup {
 }
 
 export interface IndexedResultSubgroup extends Omit<ResultSubgroup, 'items'> {
-  items: { item: ListItem; globalIndex: number }[]
+  items: IndexedListItem[]
 }
 
-export interface IndexedResultGroup extends Omit<
-  ResultGroup,
-  'items' | 'sections'
-> {
-  items: { item: ListItem; globalIndex: number }[]
-  sections?: IndexedResultSubgroup[]
+export interface IndexedListItem {
+  item: ListItem
+  globalIndex: number
 }
+
+export type IndexedResultGroup = ResultGroupBase &
+  (
+    | { items: IndexedListItem[]; sections?: never }
+    | { items?: never; sections: IndexedResultSubgroup[] }
+  )
 
 export function resultGroupItemCount(group: {
-  items: readonly unknown[]
+  items?: readonly unknown[]
   sections?: { items: readonly unknown[] }[]
 }): number {
   return group.sections == null
-    ? group.items.length
+    ? (group.items?.length ?? 0)
     : group.sections.reduce((count, section) => count + section.items.length, 0)
 }
 
@@ -42,32 +49,31 @@ export function indexResultGroups(groups: ResultGroup[]): {
   indexedGroups: IndexedResultGroup[]
 } {
   let globalIndex = 0
-  const indexItems = (items: ListItem[]) =>
+  const indexItems = (items: ListItem[]): IndexedListItem[] =>
     items.map((item) => ({
       item,
       globalIndex: globalIndex++,
     }))
-  const indexedGroups = groups.map(({ sections, ...group }) => {
-    const indexedSections = sections?.map((section) => ({
-      ...section,
-      items: indexItems(section.items),
-    }))
-    const items =
-      indexedSections == null
-        ? indexItems(group.items)
-        : indexedSections.flatMap((section) => section.items)
-
-    return {
-      ...group,
-      items,
-      ...(indexedSections == null ? {} : { sections: indexedSections }),
-    }
-  })
+  const indexedGroups = groups.map((group): IndexedResultGroup =>
+    group.sections == null
+      ? { ...group, items: indexItems(group.items) }
+      : {
+          ...group,
+          sections: group.sections.map((section) => ({
+            ...section,
+            items: indexItems(section.items),
+          })),
+        },
+  )
 
   return {
     indexedGroups,
     items: indexedGroups.flatMap((group) =>
-      group.items.map(({ item }) => item),
+      group.sections == null
+        ? group.items.map(({ item }) => item)
+        : group.sections.flatMap((section) =>
+            section.items.map(({ item }) => item),
+          ),
     ),
   }
 }
@@ -88,10 +94,7 @@ export function SearchModalResultList({
   initialMessage?: string
 }) {
   const lastMousePos = useRef({ x: 0, y: 0 })
-  const renderItem = ({
-    item,
-    globalIndex,
-  }: IndexedResultGroup['items'][number]) => (
+  const renderItem = ({ item, globalIndex }: IndexedListItem) => (
     <Fragment key={item.key}>
       {item.render({
         isSelected: selectedIndex === globalIndex,

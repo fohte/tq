@@ -217,7 +217,10 @@ export const tasksCrudApp = new Hono()
     const query = c.req.valid('query')
     const { rows, ancestorOnlyIds, matchByTaskId } = await queryTaskList(
       query,
-      { includeSearchMatch: true },
+      {
+        includeSearchMatch: query.includeMatch === true,
+        prioritizeTitleMatches: query.includeMatch === true,
+      },
     )
 
     const hydratedRows = await hydrateTaskListRows(rows)

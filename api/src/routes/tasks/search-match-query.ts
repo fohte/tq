@@ -8,6 +8,7 @@ import type { TaskSearchMatch } from '#routes/tasks/shared'
 type SearchTaskRow = { task: { id: string; title: string } }
 
 function buildAnyWordCondition(content: SQL, words: string[]) {
+  // Keep wildcard semantics aligned with the task-list free-text predicate.
   return (
     or(...words.map((word) => sql`${content} ILIKE ${`%${word}%`}`)) ??
     sql`false`
@@ -94,14 +95,6 @@ export async function queryTaskSearchMatches(
       pageTitle: row.pageTitle,
       snippet: row.snippet,
     })
-  }
-
-  // A task can also match by number prefix. If no searchable text source
-  // matched, keep a stable title-shaped match for the list response.
-  for (const row of rows) {
-    if (!matches.has(row.task.id)) {
-      matches.set(row.task.id, { field: 'title', snippet: row.task.title })
-    }
   }
 
   return matches

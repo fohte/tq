@@ -46,7 +46,6 @@ const taskMatchGroup: ResultGroup = {
   id: 'tasks',
   title: 'Tasks',
   isVisible: () => true,
-  items: [],
   sections: [
     {
       id: 'title-matches',
