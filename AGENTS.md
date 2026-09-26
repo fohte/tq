@@ -89,6 +89,10 @@ Before writing a fixture object literal, check whether a factory for that type a
 
 When a type crosses the 2-file threshold for the first time, add its factory to the closest existing file if the type belongs to that domain, otherwise create a new `<domain>-test-fixtures.ts` colocated with the component directory most associated with the type.
 
+### Give each story a descriptive `name`
+
+Write a short, natural-language sentence describing the rendered state, including the detail that distinguishes it from sibling stories. Splitting the story's export name into words (e.g. `open editor shows next preview`) does not describe the state as a sentence; write something like `the editor shows the next preview` instead. The `name` is displayed in Storybook.
+
 ### Extract route-inline UI that has its own appearance or state
 
 Stories are the only thing the VRT job (`vrt / shard (storybook, N)` / `vrt / shard (storybook-mobile, N)`) renders and screenshots. Route files under `web/src/routes/` are never rendered by a story, so UI written inline in a route — a `<select>`, a checkbox, a column header, an empty state, a full-screen loading/not-found view — has no visual-regression coverage even when the rule above (every presentational component under `web/src/components/` has a story) is fully satisfied.

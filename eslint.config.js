@@ -38,7 +38,7 @@ export default config(
     rules: { 'no-restricted-imports': 'off' },
   },
   {
-    files: ['web/**/*.stories.tsx'],
+    files: ['**/*.stories.tsx'],
     rules: { 'fohte/require-story-name': 'error' },
   },
 )
