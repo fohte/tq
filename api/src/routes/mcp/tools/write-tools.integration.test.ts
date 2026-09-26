@@ -146,11 +146,16 @@ async function summarizeToolCallOutcome(
   }
 }
 
-function expectedCommentIdValidationError(name: string, commentId: string) {
+function expectedPathSegmentValidationError(
+  name: string,
+  field: string,
+  label: string,
+  value: string,
+) {
   const issue =
-    commentId === ''
+    value === ''
       ? 'Too small: expected string to have >=1 characters'
-      : 'Comment ID must be a valid path segment'
+      : `${label} must be a valid path segment`
   return {
     kind: 'result',
     result: {
@@ -158,26 +163,7 @@ function expectedCommentIdValidationError(name: string, commentId: string) {
       content: [
         {
           type: 'text',
-          text: `Input validation error: Invalid arguments for tool ${name}: commentId: ${issue}`,
-        },
-      ],
-    },
-  }
-}
-
-function expectedLabelIdValidationError(name: string, id: string) {
-  const issue =
-    id === ''
-      ? 'Too small: expected string to have >=1 characters'
-      : 'Label ID must be a valid path segment'
-  return {
-    kind: 'result',
-    result: {
-      isError: true,
-      content: [
-        {
-          type: 'text',
-          text: `Input validation error: Invalid arguments for tool ${name}: id: ${issue}`,
+          text: `Input validation error: Invalid arguments for tool ${name}: ${field}: ${issue}`,
         },
       ],
     },
@@ -770,7 +756,12 @@ describe('comment_update tool', () => {
     expect(outcomes).toEqual(
       ['comment_update', 'comment_delete'].flatMap((name) =>
         ['', '.', '..'].map((commentId) =>
-          expectedCommentIdValidationError(name, commentId),
+          expectedPathSegmentValidationError(
+            name,
+            'commentId',
+            'Comment ID',
+            commentId,
+          ),
         ),
       ),
     )
@@ -967,7 +958,9 @@ describe('label_update tool', () => {
 
     expect(outcomes).toEqual(
       ['label_update', 'label_delete'].flatMap((name) =>
-        ['', '.', '..'].map((id) => expectedLabelIdValidationError(name, id)),
+        ['', '.', '..'].map((id) =>
+          expectedPathSegmentValidationError(name, 'id', 'Label ID', id),
+        ),
       ),
     )
   })
