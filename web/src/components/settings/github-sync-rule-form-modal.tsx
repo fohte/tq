@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { Button } from '#components/ui/button'
+import { Checkbox } from '#components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -9,14 +10,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '#components/ui/dialog'
+import { Input } from '#components/ui/input'
 import { SegmentedControl } from '#components/ui/segmented-control'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#components/ui/select'
 import type { SyncRule } from '#hooks/use-github-sync-rules'
 import {
   useCreateGithubSyncRule,
   useUpdateGithubSyncRule,
 } from '#hooks/use-github-sync-rules'
 import { useProjects } from '#hooks/use-projects'
-import { selectHandler } from '#lib/form-utils'
+import { selectValueHandler } from '#lib/form-utils'
 
 export interface GithubSyncRuleFormModalProps {
   open: boolean
@@ -109,7 +118,18 @@ export function GithubSyncRuleFormModal({
     )
   }
 
-  const projectIds = (projects.data ?? []).map((project) => project.id)
+  const projectOptions = (projects.data ?? []).map((project) => ({
+    value: project.id,
+    label: project.title,
+  }))
+  const projectIds = projectOptions.map((project) => project.value)
+  const projectItems = [
+    ...projectOptions,
+    ...(targetProjectId !== '' &&
+    !projectOptions.some((project) => project.value === targetProjectId)
+      ? [{ value: targetProjectId, label: '…' }]
+      : []),
+  ]
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -159,27 +179,27 @@ export function GithubSyncRuleFormModal({
               </FieldRow>
               {scope !== 'all' && (
                 <FieldRow label="Organization">
-                  <input
+                  <Input
                     type="text"
                     value={org}
                     onChange={(e) => {
                       setOrg(e.target.value)
                     }}
                     placeholder="octocat"
-                    className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50"
+                    className="h-auto w-full rounded-md border border-border bg-transparent dark:bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50 focus-visible:border-primary/50 focus-visible:ring-0"
                   />
                 </FieldRow>
               )}
               {scope === 'repo' && (
                 <FieldRow label="リポジトリ">
-                  <input
+                  <Input
                     type="text"
                     value={repo}
                     onChange={(e) => {
                       setRepo(e.target.value)
                     }}
                     placeholder="hello-world"
-                    className="w-full rounded-md border border-border bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50"
+                    className="h-auto w-full rounded-md border border-border bg-transparent dark:bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50 focus-visible:border-primary/50 focus-visible:ring-0"
                   />
                 </FieldRow>
               )}
@@ -187,31 +207,33 @@ export function GithubSyncRuleFormModal({
           )}
 
           <FieldRow label="反映先プロジェクト">
-            <select
+            <Select
+              items={projectItems}
               value={targetProjectId}
-              onChange={selectHandler(setTargetProjectId, projectIds)}
-              className="w-full bg-transparent text-sm text-foreground outline-none"
+              onValueChange={selectValueHandler(setTargetProjectId, projectIds)}
             >
-              <option value="" disabled>
-                選択してください
-              </option>
-              {projects.data?.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger
+                iconClassName="size-4 translate-x-0.5 text-foreground stroke-2"
+                className="h-4.5 data-[size=default]:h-4.5 w-full gap-0.5 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pr-0.5 pl-1 text-sm leading-4 text-foreground data-placeholder:text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
+              >
+                <SelectValue placeholder="選択してください" />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.data?.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FieldRow>
 
           {!rule && (
             <label className="flex items-center gap-2 text-sm text-foreground">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={includeExisting}
-                onChange={(e) => {
-                  setIncludeExisting(e.target.checked)
-                }}
-                className="size-4 rounded border-border"
+                onCheckedChange={setIncludeExisting}
+                className="rounded border-border bg-white dark:bg-white"
               />
               現在アサイン済みの open issue も取り込む
             </label>

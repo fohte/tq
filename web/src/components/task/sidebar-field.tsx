@@ -1,3 +1,6 @@
+export const sidebarFieldValueButtonClassName =
+  'h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 inline-block w-full cursor-text text-left text-xs transition-colors hover:text-muted-foreground-strong'
+
 export function SidebarField({
   label,
   children,

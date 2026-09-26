@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from 'react'
 import { TaskMentionSummary } from '#components/task/task-mention-summary'
 import { TaskShorthandHelp } from '#components/task/task-shorthand-help'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
+import { Button } from '#components/ui/button'
 import { Input } from '#components/ui/input'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useLabels } from '#hooks/use-labels'
@@ -176,11 +177,13 @@ export function TaskTitleInput({
       >
         {isParentTrigger
           ? parentSuggestions.map((item, index) => (
-              <button
+              <Button
                 key={item.id}
                 type="button"
+                variant="ghost"
                 className={cn(
-                  'flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs',
+                  'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
+                  'flex w-full items-center justify-start gap-2 px-3 py-1.5 text-left text-xs',
                   index === selectedIndex
                     ? 'bg-accent text-accent-foreground'
                     : 'text-popover-foreground hover:bg-accent/50',
@@ -194,15 +197,18 @@ export function TaskTitleInput({
                   status={item.status}
                   number={item.number}
                   title={item.title}
+                  ignoreAncestorSvgSizing
                 />
-              </button>
+              </Button>
             ))
           : suggestions.map((item, index) => (
-              <button
+              <Button
                 key={item.value}
                 type="button"
+                variant="ghost"
                 className={cn(
-                  'w-full px-3 py-1.5 text-left text-xs',
+                  'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
+                  'w-full justify-start px-3 py-1.5 text-left text-xs',
                   index === selectedIndex
                     ? 'bg-accent text-accent-foreground'
                     : 'text-popover-foreground hover:bg-accent/50',
@@ -214,7 +220,7 @@ export function TaskTitleInput({
               >
                 {cursorTrigger?.trigger}
                 {item.display}
-              </button>
+              </Button>
             ))}
       </AnchoredPopup>
     </>

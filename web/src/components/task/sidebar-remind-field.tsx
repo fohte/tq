@@ -1,7 +1,11 @@
 import { useRef, useState } from 'react'
 
-import { SidebarField } from '#components/task/sidebar-field'
+import {
+  SidebarField,
+  sidebarFieldValueButtonClassName,
+} from '#components/task/sidebar-field'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
+import { Button } from '#components/ui/button'
 import { Input } from '#components/ui/input'
 import { useUpdateTask } from '#hooks/use-tasks'
 import {
@@ -13,7 +17,7 @@ import {
 import { cn } from '#lib/utils'
 
 const popupRowClassName =
-  'block w-full px-3 py-1.5 text-left text-sm text-popover-foreground hover:bg-accent/50'
+  'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 block w-full px-3 py-1.5 text-left text-sm text-popover-foreground hover:bg-accent/50'
 
 export function SidebarRemindFieldAppearance({
   remindAtLabel,
@@ -66,15 +70,16 @@ export function SidebarRemindFieldAppearance({
           className="h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
         />
       ) : (
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => {
             onOpenChange(true)
           }}
-          className="w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
+          className={`${sidebarFieldValueButtonClassName} min-w-0`}
         >
-          {remindAtLabel}
-        </button>
+          <span className="min-w-0 truncate">{remindAtLabel}</span>
+        </Button>
       )}
       <AnchoredPopup
         open={isEditing}
@@ -87,8 +92,9 @@ export function SidebarRemindFieldAppearance({
         initialFocus={false}
         className="w-64"
       >
-        <button
+        <Button
           type="button"
+          variant="ghost"
           className={popupRowClassName}
           onMouseDown={(e) => {
             e.preventDefault()
@@ -96,13 +102,14 @@ export function SidebarRemindFieldAppearance({
           }}
         >
           なし
-        </button>
+        </Button>
         <div className="mt-1 border-t border-border pt-1">
           {query.trim() === '' ? (
             REMINDER_PRESETS.map((preset) => (
-              <button
+              <Button
                 key={preset}
                 type="button"
+                variant="ghost"
                 className={popupRowClassName}
                 onMouseDown={(e) => {
                   e.preventDefault()
@@ -110,11 +117,12 @@ export function SidebarRemindFieldAppearance({
                 }}
               >
                 {preset}
-              </button>
+              </Button>
             ))
           ) : parsedDate != null ? (
-            <button
+            <Button
               type="button"
+              variant="ghost"
               className={cn(popupRowClassName, 'font-mono')}
               onMouseDown={(e) => {
                 e.preventDefault()
@@ -122,7 +130,7 @@ export function SidebarRemindFieldAppearance({
               }}
             >
               {formatAbsoluteReminder(parsedDate)}
-            </button>
+            </Button>
           ) : (
             <div className="px-3 py-1.5 text-sm text-muted-foreground">
               解釈できません

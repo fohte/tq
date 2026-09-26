@@ -60,12 +60,11 @@ export function IntegrationCard({
               className="ml-auto shrink-0"
               size="sm"
               disabled={authUrl == null}
+              type={authUrl == null ? 'button' : undefined}
               render={
                 authUrl != null ? (
                   <a href={authUrl} target="_blank" rel="noopener noreferrer" />
-                ) : (
-                  <button type="button" />
-                )
+                ) : undefined
               }
             >
               {accounts.length > 0 ? 'アカウントを追加' : '連携する'}

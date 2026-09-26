@@ -96,18 +96,19 @@ function EditableSessionLabel({
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={() => {
         setIsEditing(true)
       }}
       className={cn(
-        'flex-1 truncate text-left font-mono text-xs',
+        'h-auto min-h-0 min-w-0 flex-1 justify-start gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 text-left font-mono text-xs',
         label != null ? 'text-muted-foreground' : 'text-muted-foreground-faint',
       )}
     >
-      {label ?? 'no label'}
-    </button>
+      <span className="min-w-0 truncate">{label ?? 'no label'}</span>
+    </Button>
   )
 }
 

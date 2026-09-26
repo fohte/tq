@@ -1,3 +1,4 @@
+import { Button } from '#components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -29,26 +30,28 @@ export function SetProjectMenuAppearance({
         </DialogHeader>
 
         <div className="max-h-72 overflow-y-auto">
-          <button
+          <Button
             type="button"
-            className="flex min-h-11 w-full items-center px-3 text-left text-sm text-popover-foreground hover:bg-accent/50"
+            variant="ghost"
+            className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center px-3 text-left text-sm text-popover-foreground hover:bg-accent/50 focus:outline-auto focus-visible:ring-0"
             onClick={() => {
               onSelectProject(null)
             }}
           >
             —
-          </button>
+          </Button>
           {projects.map((project) => (
-            <button
+            <Button
               key={project.id}
               type="button"
-              className="flex min-h-11 w-full items-center px-3 text-left text-sm text-popover-foreground hover:bg-accent/50"
+              variant="ghost"
+              className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center px-3 text-left text-sm text-popover-foreground hover:bg-accent/50 focus:outline-auto focus-visible:ring-0"
               onClick={() => {
                 onSelectProject(project.id)
               }}
             >
               {project.title}
-            </button>
+            </Button>
           ))}
         </div>
       </DialogContent>

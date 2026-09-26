@@ -11,7 +11,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeProject } from '#components/project/project-test-fixtures'
-import { assertDefined, atIndex } from '#lib/test-utils'
+import { assertDefined, atIndex, clickSelectOption } from '#lib/test-utils'
 // Import after mocks
 import { Route as ProjectDetailRoute } from '#routes/projects/$projectId'
 
@@ -368,8 +368,12 @@ describe('ProjectDetailPage', () => {
     vi.useRealTimers()
     const user = userEvent.setup()
 
-    const statusSelects = screen.getAllByDisplayValue('Active')
-    await user.selectOptions(atIndex(statusSelects, 0), 'paused')
+    const statusSelects = screen.getAllByRole('combobox')
+    await user.click(atIndex(statusSelects, 0))
+    await clickSelectOption(
+      user,
+      await screen.findByRole('option', { name: 'Paused' }),
+    )
 
     expect(mockUpdateMutate).toHaveBeenCalledWith({
       id: mockProject.id,

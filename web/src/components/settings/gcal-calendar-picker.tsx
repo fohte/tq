@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { GcalCalendarChecklist } from '#components/settings/gcal-calendar-checklist'
 import type { IntegrationAccountView } from '#components/settings/integration-card'
 import { QueryStateMessage } from '#components/settings/query-state-message'
+import { Button } from '#components/ui/button'
 import {
   useGcalCalendarsList,
   useUpdateCalendarContext,
@@ -28,9 +29,10 @@ export function GcalCalendarPicker({
 
   return (
     <div className="pb-2">
-      <button
+      <Button
         type="button"
-        className="flex items-center gap-1 py-1 text-xs text-muted-foreground hover:text-foreground"
+        variant="ghost"
+        className="h-auto min-h-0 w-fit gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex items-center gap-1 py-1 text-xs text-muted-foreground hover:text-foreground aria-expanded:bg-transparent aria-expanded:text-muted-foreground"
         onClick={() => {
           setOpen((prev) => !prev)
         }}
@@ -40,7 +42,7 @@ export function GcalCalendarPicker({
           className={cn('size-3 transition-transform', open && 'rotate-90')}
         />
         カレンダーを選択
-      </button>
+      </Button>
 
       {open &&
         (calendarsQuery.isLoading ? (

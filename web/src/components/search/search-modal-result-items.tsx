@@ -7,6 +7,7 @@ import {
   ProjectStatusMark,
 } from '#components/project/project-status-mark'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
+import { Button } from '#components/ui/button'
 import type { Project } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
 import type { PageSearchResult, SearchResult } from '#hooks/use-search'
@@ -36,21 +37,22 @@ export function createOptionItem(
     select,
     ...listItemOptions,
     render: ({ isSelected, onMouseMove }) => (
-      <button
+      <Button
         type="button"
+        variant="ghost"
         role="option"
         aria-selected={isSelected}
         data-selected={isSelected}
         onClick={select}
         onMouseMove={onMouseMove}
         className={cn(
-          'flex w-full items-center gap-2 px-4 py-2 text-left',
-          isSelected ? 'bg-accent' : 'hover:bg-accent/50',
+          'h-auto min-h-0 w-full justify-start gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 focus-visible:border-transparent focus-visible:ring-0 flex items-center gap-2 px-4 py-2 text-left whitespace-normal',
+          isSelected ? 'bg-accent hover:bg-accent' : 'hover:bg-accent/50',
           className,
         )}
       >
         {content}
-      </button>
+      </Button>
     ),
   }
 }

@@ -5,7 +5,10 @@ import {
   toggleWeekday,
   WeekdayToggleRow,
 } from '#components/schedule/create-schedule-modal'
-import { SidebarField } from '#components/task/sidebar-field'
+import {
+  SidebarField,
+  sidebarFieldValueButtonClassName,
+} from '#components/task/sidebar-field'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
 import { Button } from '#components/ui/button'
 import { Input } from '#components/ui/input'
@@ -120,16 +123,21 @@ export function SidebarRecurrenceFieldAppearance({
 
   return (
     <SidebarField label="RECURRENCE">
-      <button
+      <Button
         ref={anchorRef}
         type="button"
+        variant="ghost"
         onClick={() => {
           onOpenChange(true)
         }}
-        className="w-full cursor-text truncate text-left transition-colors hover:text-muted-foreground-strong"
+        className={`${sidebarFieldValueButtonClassName} min-w-0`}
       >
-        {recurrenceRule != null ? formatRecurrenceSummary(recurrenceRule) : '—'}
-      </button>
+        <span className="min-w-0 truncate">
+          {recurrenceRule != null
+            ? formatRecurrenceSummary(recurrenceRule)
+            : '—'}
+        </span>
+      </Button>
       <AnchoredPopup
         open={isEditing}
         onOpenChange={onOpenChange}

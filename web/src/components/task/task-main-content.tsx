@@ -26,6 +26,7 @@ import {
   TaskSubtasksSection,
 } from '#components/task/task-subtasks-section'
 import { ActionsMenu } from '#components/ui/actions-menu'
+import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
 import { Input } from '#components/ui/input'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
@@ -240,9 +241,18 @@ function TaskStatusToggle({
   }
 
   return (
-    <button type="button" onClick={handleToggle} className="mt-1 shrink-0">
-      <StatusIcon status={status} statusReason={statusReason} />
-    </button>
+    <Button
+      type="button"
+      variant="ghost"
+      onClick={handleToggle}
+      className="h-auto min-h-0 w-auto gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 mt-1 shrink-0"
+    >
+      <StatusIcon
+        status={status}
+        statusReason={statusReason}
+        ignoreAncestorSvgSizing
+      />
+    </Button>
   )
 }
 
@@ -302,15 +312,16 @@ function EditableTitle({
           className="h-auto flex-1 border-0 bg-transparent p-0 text-2xl font-bold text-foreground shadow-none focus-visible:ring-0"
         />
       ) : (
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => {
             setIsEditing(true)
           }}
-          className="flex-1 cursor-text text-left text-2xl font-bold text-foreground"
+          className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex-1 cursor-text text-left text-2xl font-bold text-foreground"
         >
           {value}
-        </button>
+        </Button>
       )}
       <span className="mt-2 shrink-0">
         <LlmAuthorLabel author={author} />

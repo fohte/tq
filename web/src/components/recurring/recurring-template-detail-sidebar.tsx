@@ -1,12 +1,20 @@
 import { TemplateRepeatField } from '#components/recurring/template-repeat-field'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#components/ui/select'
 import { useProject } from '#hooks/use-projects'
 import type { RecurringTemplate } from '#hooks/use-recurring-templates'
 import { useUpdateRecurringTemplate } from '#hooks/use-recurring-templates'
-import { selectHandler } from '#lib/form-utils'
+import { selectValueHandler } from '#lib/form-utils'
 import { formatMinutes } from '#lib/format'
 import { templateNextOccurrence } from '#lib/recurrence'
 import { formatShortDate } from '#lib/task-due-date'
+import { cn } from '#lib/utils'
 
 // --- Sidebar (PC) ---
 
@@ -91,7 +99,11 @@ export function RecurringTemplateSidebarMobile({
           {template.labels.length > 0 ? template.labels.join(', ') : '—'}
         </TemplateFieldRow>
         <TemplateFieldRow label="STATE">
-          <StateSelect templateId={template.id} enabled={template.enabled} />
+          <StateSelect
+            templateId={template.id}
+            enabled={template.enabled}
+            mobileLayout
+          />
         </TemplateFieldRow>
       </div>
     </div>
@@ -160,26 +172,46 @@ function ProjectTitle({ projectId }: { projectId: string }) {
 function StateSelect({
   templateId,
   enabled,
+  mobileLayout = false,
 }: {
   templateId: string
   enabled: boolean
+  mobileLayout?: boolean
 }) {
   const updateTemplate = useUpdateRecurringTemplate()
   const stateValues = ['active', 'paused'] as const
 
   return (
-    <select
+    <Select
+      items={stateValues.map((value) => ({
+        value,
+        label: value === 'active' ? 'Active' : 'Paused',
+      }))}
       value={enabled ? 'active' : 'paused'}
-      onChange={selectHandler((value: (typeof stateValues)[number]) => {
-        updateTemplate.mutate({
-          id: templateId,
-          input: { enabled: value === 'active' },
-        })
-      }, stateValues)}
-      className="border-none bg-transparent px-0 py-0 font-mono text-xs text-foreground outline-none"
+      onValueChange={selectValueHandler(
+        (value: (typeof stateValues)[number]) => {
+          updateTemplate.mutate({
+            id: templateId,
+            input: { enabled: value === 'active' },
+          })
+        },
+        stateValues,
+      )}
     >
-      <option value="active">Active</option>
-      <option value="paused">Paused</option>
-    </select>
+      <SelectTrigger
+        size="sm"
+        iconClassName="size-4 -translate-x-0.5 text-foreground native-select-caret-stroke"
+        className={cn(
+          'h-auto data-[size=sm]:h-auto w-fit min-w-0 gap-0.5 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0',
+          mobileLayout && 'min-h-5 translate-y-px',
+        )}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="active">Active</SelectItem>
+        <SelectItem value="paused">Paused</SelectItem>
+      </SelectContent>
+    </Select>
   )
 }

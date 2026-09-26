@@ -6,10 +6,19 @@ import {
 } from '#components/project/project-detail-utils'
 import { statusLabels } from '#components/project/project-status-badge'
 import { contextLabels } from '#components/task/create-task-modal-fields'
+import { Button } from '#components/ui/button'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
+import { Input } from '#components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#components/ui/select'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { PROJECT_COLOR_PRESETS, useUpdateProject } from '#hooks/use-projects'
-import { selectHandler } from '#lib/form-utils'
+import { selectValueHandler } from '#lib/form-utils'
 import { cn } from '#lib/utils'
 
 // --- Sidebar (PC) ---
@@ -63,10 +72,18 @@ export function ProjectSidebarMobile({ project }: { project: ProjectDetail }) {
       </span>
       <div className="flex flex-col gap-2">
         <ProjectFieldRow label="STATUS">
-          <StatusSelect projectId={project.id} status={project.status} />
+          <StatusSelect
+            projectId={project.id}
+            status={project.status}
+            mobileLayout
+          />
         </ProjectFieldRow>
         <ProjectFieldRow label="CONTEXT">
-          <ContextSelect projectId={project.id} context={project.context} />
+          <ContextSelect
+            projectId={project.id}
+            context={project.context}
+            mobileLayout
+          />
         </ProjectFieldRow>
         <ProjectFieldRow label="START DATE">
           <DateInput
@@ -158,54 +175,88 @@ function ProjectFieldRow({
 function StatusSelect({
   projectId,
   status,
+  mobileLayout = false,
 }: {
   projectId: string
   status: ProjectDetail['status']
+  mobileLayout?: boolean
 }) {
   const updateProject = useUpdateProject()
   const statusValues = ['active', 'paused', 'completed', 'archived'] as const
 
   return (
-    <select
+    <Select
+      items={statusValues.map((value) => ({
+        value,
+        label: statusLabels[value],
+      }))}
       value={status}
-      onChange={selectHandler((value: ProjectDetail['status']) => {
+      onValueChange={selectValueHandler((value: ProjectDetail['status']) => {
         updateProject.mutate({ id: projectId, input: { status: value } })
       }, statusValues)}
-      className="border-none bg-transparent px-0 py-0 font-mono text-xs text-foreground outline-none"
     >
-      {statusValues.map((value) => (
-        <option key={value} value={value}>
-          {statusLabels[value]}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger
+        size="sm"
+        iconClassName="size-4 text-foreground native-select-caret-stroke native-select-status-caret-offset"
+        className={cn(
+          'h-auto data-[size=sm]:h-auto w-fit min-w-20 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0',
+          mobileLayout && 'min-h-5 translate-y-px',
+        )}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {statusValues.map((value) => (
+          <SelectItem key={value} value={value}>
+            {statusLabels[value]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
 
 function ContextSelect({
   projectId,
   context,
+  mobileLayout = false,
 }: {
   projectId: string
   context: ProjectDetail['context']
+  mobileLayout?: boolean
 }) {
   const updateProject = useUpdateProject()
   const contextValues = ['work', 'personal'] as const
 
   return (
-    <select
+    <Select
+      items={contextValues.map((value) => ({
+        value,
+        label: contextLabels[value],
+      }))}
       value={context}
-      onChange={selectHandler((value: ProjectDetail['context']) => {
+      onValueChange={selectValueHandler((value: ProjectDetail['context']) => {
         updateProject.mutate({ id: projectId, input: { context: value } })
       }, contextValues)}
-      className="border-none bg-transparent px-0 py-0 font-mono text-xs text-foreground outline-none"
     >
-      {contextValues.map((value) => (
-        <option key={value} value={value}>
-          {contextLabels[value]}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger
+        size="sm"
+        iconClassName="size-4 -translate-x-1.5 text-foreground native-select-caret-stroke"
+        className={cn(
+          'h-auto data-[size=sm]:h-auto w-fit min-w-20.5 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0',
+          mobileLayout && 'min-h-5 translate-y-px',
+        )}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {contextValues.map((value) => (
+          <SelectItem key={value} value={value}>
+            {contextLabels[value]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
 
@@ -221,7 +272,7 @@ function DateInput({
   const updateProject = useUpdateProject()
 
   return (
-    <input
+    <Input
       type="date"
       value={value ?? ''}
       onChange={(e) => {
@@ -230,7 +281,7 @@ function DateInput({
           input: { [field]: e.target.value || null },
         })
       }}
-      className="w-full border border-border bg-transparent px-2 py-1 font-mono text-xs outline-none focus:border-primary/50"
+      className="h-auto w-full rounded-none border border-border bg-transparent dark:bg-transparent px-2 py-1 font-mono text-xs md:text-xs text-foreground shadow-none outline-none focus-visible:border-primary/50 focus-visible:ring-0"
     />
   )
 }
@@ -247,9 +298,10 @@ function ColorSwatches({
   return (
     <div className="flex flex-wrap gap-1.5">
       {PROJECT_COLOR_PRESETS.map((preset) => (
-        <button
+        <Button
           key={preset.hex}
           type="button"
+          variant="ghost"
           onClick={() => {
             updateProject.mutate({
               id: projectId,
@@ -257,7 +309,7 @@ function ColorSwatches({
             })
           }}
           className={cn(
-            'size-5 shrink-0 bg-(--project-color) transition-all',
+            'size-5 shrink-0 rounded-none border-0 bg-(--project-color) bg-clip-border p-0 transition-all hover:bg-(--project-color) active:translate-y-0',
             color === preset.hex
               ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background'
               : 'hover:scale-110',

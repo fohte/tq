@@ -4,6 +4,7 @@ import { useState } from 'react'
 
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
 import type { StatusPickerValue } from '#components/task/task-status-picker'
+import { Button } from '#components/ui/button'
 import { useProject } from '#hooks/use-projects'
 import type { SearchResult } from '#hooks/use-search'
 import type { Task } from '#hooks/use-tasks'
@@ -106,15 +107,17 @@ export function TagTokens({
   return (
     <div className="flex items-center gap-1.5">
       {labels.map((label) => (
-        <button
+        <Button
           key={label}
           type="button"
+          variant="ghost"
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
             void navigate({ to: '/tasks', search: tagFilterSearch(label) })
           }}
           className={cn(
+            'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
             'font-mono text-xs hover:text-foreground',
             isCompleted
               ? 'text-muted-foreground-faint'
@@ -122,7 +125,7 @@ export function TagTokens({
           )}
         >
           #{label}
-        </button>
+        </Button>
       ))}
     </div>
   )
@@ -210,21 +213,22 @@ export function RecurrenceLabel({
     )
   }
 
-  // A <button>, not a <Link>: this renders inside the row's own outer Link
+  // A <Button>, not a <Link>: this renders inside the row's own outer Link
   // to the task, and nesting an <a> inside another <a> is invalid HTML.
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={(e) => {
         e.preventDefault()
         e.stopPropagation()
         void navigate({ to: '/recurring/$templateId', params: { templateId } })
       }}
-      className="inline-flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground"
+      className="h-auto min-h-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 inline-flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground"
     >
       <Repeat className="size-3" />
       {summary}
-    </button>
+    </Button>
   )
 }
 

@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { SidebarField } from '#components/task/sidebar-field'
+import {
+  SidebarField,
+  sidebarFieldValueButtonClassName,
+} from '#components/task/sidebar-field'
 import { SidebarParentField } from '#components/task/sidebar-parent-field'
 import { SidebarPlanField } from '#components/task/sidebar-plan-field'
 import { SidebarProjectField } from '#components/task/sidebar-project-field'
@@ -11,6 +14,7 @@ import { SidebarTimeBlocks } from '#components/task/sidebar-time-blocks'
 import { StatusIcon } from '#components/task/status-icon'
 import { SidebarGithubLinkField } from '#components/task/task-github-link-field'
 import { useHandleStatusChange } from '#components/task/task-row-shared'
+import { Button } from '#components/ui/button'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
 import { Input } from '#components/ui/input'
 import { SectionLabel } from '#components/ui/section-label'
@@ -302,15 +306,16 @@ function SidebarEstimateField({
           className={fieldValueClassName}
         />
       ) : (
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => {
             setIsEditing(true)
           }}
-          className="w-full cursor-text text-left transition-colors hover:text-muted-foreground-strong"
+          className={sidebarFieldValueButtonClassName}
         >
           {estimatedMinutes != null ? formatMinutes(estimatedMinutes) : '—'}
-        </button>
+        </Button>
       )}
     </SidebarField>
   )

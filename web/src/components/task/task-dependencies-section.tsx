@@ -92,16 +92,17 @@ function BlockedByGroup({
             }
           />
         ))}
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => {
             setDialogOpen(true)
           }}
-          className="flex min-h-11 w-full items-center gap-1.5 border-t border-dashed border-border px-3 font-mono text-xs text-muted-foreground-faint transition-colors hover:text-muted-foreground"
+          className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center gap-1.5 border-t border-dashed border-border px-3 font-mono text-xs text-muted-foreground-faint transition-colors hover:text-muted-foreground"
         >
           <Plus className="size-3" />
           add blocker
-        </button>
+        </Button>
       </Panel>
 
       <TaskSearchCandidateDialog

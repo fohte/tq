@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react'
 
 import { TaskMentionSummary } from '#components/task/task-mention-summary'
+import { Button } from '#components/ui/button'
 import {
   type MentionSuggestion,
   useTaskMentionSuggestions,
@@ -29,10 +30,12 @@ export function TaskMentionAutocompleteMenuAppearance({
       ) : (
         items.map((item, index) => (
           <li key={item.id}>
-            <button
+            <Button
               type="button"
+              variant="ghost"
               className={cn(
-                'flex w-full items-center gap-2 px-2 py-1.5 text-left',
+                'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
+                'flex w-full items-center justify-start gap-2 px-2 py-1.5 text-left',
                 index === highlightedIndex &&
                   'bg-accent text-accent-foreground',
               )}
@@ -47,8 +50,9 @@ export function TaskMentionAutocompleteMenuAppearance({
                 status={item.status}
                 number={item.number}
                 title={item.title}
+                ignoreAncestorSvgSizing
               />
-            </button>
+            </Button>
           </li>
         ))
       )}

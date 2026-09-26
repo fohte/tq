@@ -28,11 +28,13 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
 
 function SelectTrigger({
   className,
+  iconClassName,
   size = 'default',
   children,
   ...props
 }: SelectPrimitive.Trigger.Props & {
   size?: 'sm' | 'default'
+  iconClassName?: string
 }) {
   return (
     <SelectPrimitive.Trigger
@@ -45,11 +47,14 @@ function SelectTrigger({
       {...props}
     >
       {children}
-      <SelectPrimitive.Icon
-        render={
-          <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
-        }
-      />
+      <SelectPrimitive.Icon className="flex shrink-0">
+        <ChevronDownIcon
+          className={cn(
+            'pointer-events-none size-4 text-muted-foreground',
+            iconClassName,
+          )}
+        />
+      </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   )
 }
