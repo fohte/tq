@@ -1,4 +1,4 @@
-import { Button } from '#components/ui/button'
+import { Button } from '@fohte/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -6,7 +6,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '#components/ui/dialog'
+} from '@fohte/ui/dialog'
+
 import type { SearchResult } from '#hooks/use-search'
 
 export function LinkExistingProjectTaskDialog({

@@ -1,9 +1,9 @@
+import { Button } from '@fohte/ui/button'
 import { Plus, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
-import { Button } from '#components/ui/button'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import type { SearchResult } from '#hooks/use-search'

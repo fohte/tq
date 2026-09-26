@@ -1,14 +1,15 @@
-import { SettingsRow } from '#components/settings/settings-row'
-import { Input } from '#components/ui/input'
-import { Panel } from '#components/ui/panel'
-import { SectionHeading } from '#components/ui/section-heading'
+import { Input } from '@fohte/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '#components/ui/select'
+} from '@fohte/ui/select'
+
+import { SettingsRow } from '#components/settings/settings-row'
+import { Panel } from '#components/ui/panel'
+import { SectionHeading } from '#components/ui/section-heading'
 import { useSessionOpenSettings } from '#hooks/use-session-open-settings'
 import { selectValueHandler } from '#lib/form-utils'
 

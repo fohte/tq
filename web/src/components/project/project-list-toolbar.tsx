@@ -1,4 +1,5 @@
-import { Button } from '#components/ui/button'
+import { Button } from '@fohte/ui/button'
+
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { TabStrip } from '#components/ui/tab-strip'

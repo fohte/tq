@@ -1,10 +1,4 @@
-import { useEffect, useState } from 'react'
-
-import {
-  contextLabels,
-  type ContextValue,
-} from '#components/task/create-task-modal-fields'
-import { Button } from '#components/ui/button'
+import { Button } from '@fohte/ui/button'
 import {
   Dialog,
   DialogClose,
@@ -12,15 +6,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '#components/ui/dialog'
-import { Input } from '#components/ui/input'
+} from '@fohte/ui/dialog'
+import { Input } from '@fohte/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '#components/ui/select'
+} from '@fohte/ui/select'
+import { useEffect, useState } from 'react'
+
+import {
+  contextLabels,
+  type ContextValue,
+} from '#components/task/create-task-modal-fields'
 import type { Label } from '#hooks/use-labels'
 import { useUpdateLabel } from '#hooks/use-labels'
 import { selectValueHandler } from '#lib/form-utils'

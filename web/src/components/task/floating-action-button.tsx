@@ -1,6 +1,5 @@
+import { Button } from '@fohte/ui/button'
 import { Plus } from 'lucide-react'
-
-import { Button } from '#components/ui/button'
 
 export function FloatingActionButton({ onClick }: { onClick: () => void }) {
   return (

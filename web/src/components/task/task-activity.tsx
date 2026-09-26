@@ -1,6 +1,6 @@
+import { Button } from '@fohte/ui/button'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
-import { Button } from '#components/ui/button'
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { SectionHeading } from '#components/ui/section-heading'

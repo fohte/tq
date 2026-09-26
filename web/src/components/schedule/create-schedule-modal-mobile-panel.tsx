@@ -1,3 +1,12 @@
+import { Button } from '@fohte/ui/button'
+import { Input } from '@fohte/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@fohte/ui/select'
 import { Clock, Layers, Palette, Repeat, X } from 'lucide-react'
 
 import type { SchedulePanelProps } from '#components/schedule/create-schedule-modal'
@@ -13,17 +22,8 @@ import {
   BottomSheetOverlay,
   BottomSheetPanel,
 } from '#components/ui/bottom-sheet'
-import { Button } from '#components/ui/button'
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
-import { Input } from '#components/ui/input'
 import { ExpandableFieldChip } from '#components/ui/modal-field'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '#components/ui/select'
 import { selectValueHandler } from '#lib/form-utils'
 import { cn } from '#lib/utils'
 

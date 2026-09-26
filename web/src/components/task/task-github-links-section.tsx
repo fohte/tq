@@ -1,9 +1,9 @@
+import { Button } from '@fohte/ui/button'
 import { X } from 'lucide-react'
 import { useState } from 'react'
 
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
 import { GithubRefSummary } from '#components/task/github-ref-summary'
-import { Button } from '#components/ui/button'
 import { SectionHeading } from '#components/ui/section-heading'
 import type { GithubLink } from '#hooks/use-github-link'
 import { useUnlinkTaskFromGithub } from '#hooks/use-github-link'

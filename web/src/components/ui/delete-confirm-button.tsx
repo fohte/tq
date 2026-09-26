@@ -1,7 +1,7 @@
+import { DialogTrigger } from '@fohte/ui/dialog'
 import { Trash2 } from 'lucide-react'
 
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
-import { DialogTrigger } from '#components/ui/dialog'
 import { cn } from '#lib/utils'
 
 export function DeleteConfirmButton({

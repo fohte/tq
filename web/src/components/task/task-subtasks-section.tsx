@@ -1,10 +1,10 @@
+import { Button } from '@fohte/ui/button'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import type { ContextValue } from '#components/task/create-task-modal-fields'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import { Button } from '#components/ui/button'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import { SectionLoadingIndicator } from '#components/ui/section-loading-indicator'

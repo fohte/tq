@@ -1,3 +1,4 @@
+import { Button } from '@fohte/ui/button'
 import { Link, useMatchRoute, useSearch } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
@@ -10,7 +11,6 @@ import {
   ProjectStatusMark,
 } from '#components/project/project-status-mark'
 import { RenameSavedViewDialog } from '#components/saved-view/rename-saved-view-dialog'
-import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { useCurrentContext } from '#hooks/use-current-context'

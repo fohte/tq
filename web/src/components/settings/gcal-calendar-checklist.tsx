@@ -1,3 +1,10 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@fohte/ui/select'
 import { Loader2 } from 'lucide-react'
 
 import {
@@ -5,13 +12,6 @@ import {
   contextValues,
 } from '#components/task/create-task-modal-fields'
 import { Checkbox } from '#components/ui/checkbox'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '#components/ui/select'
 import type { GcalCalendar } from '#hooks/use-gcal-calendars'
 import { selectValueHandler } from '#lib/form-utils'
 import { cn } from '#lib/utils'

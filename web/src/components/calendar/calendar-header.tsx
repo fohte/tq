@@ -1,6 +1,6 @@
+import { Button } from '@fohte/ui/button'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
-import { Button } from '#components/ui/button'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { TabStrip } from '#components/ui/tab-strip'
 import { formatLocalDate } from '#lib/date-range'

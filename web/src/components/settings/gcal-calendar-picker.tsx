@@ -1,10 +1,10 @@
+import { Button } from '@fohte/ui/button'
 import { ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 
 import { GcalCalendarChecklist } from '#components/settings/gcal-calendar-checklist'
 import type { IntegrationAccountView } from '#components/settings/integration-card'
 import { QueryStateMessage } from '#components/settings/query-state-message'
-import { Button } from '#components/ui/button'
 import {
   useGcalCalendarsList,
   useUpdateCalendarContext,

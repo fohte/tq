@@ -1,6 +1,7 @@
+import { Button } from '@fohte/ui/button'
+import { Input } from '@fohte/ui/input'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
-import { Button } from '#components/ui/button'
 import { Checkbox } from '#components/ui/checkbox'
 import {
   Field,
@@ -11,7 +12,6 @@ import {
   FieldLabel,
   FieldSeparator,
 } from '#components/ui/field'
-import { Input } from '#components/ui/input'
 import { Textarea } from '#components/ui/textarea'
 
 const meta = {

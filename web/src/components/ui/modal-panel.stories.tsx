@@ -1,8 +1,8 @@
+import { Button } from '@fohte/ui/button'
+import { DialogHeaderBar } from '@fohte/ui/dialog'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { X } from 'lucide-react'
 
-import { Button } from '#components/ui/button'
-import { DialogHeaderBar } from '#components/ui/dialog'
 import { ModalPanel } from '#components/ui/modal-panel'
 
 const meta = {

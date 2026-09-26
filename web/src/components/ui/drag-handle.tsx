@@ -2,9 +2,8 @@ import type {
   DraggableAttributes,
   DraggableSyntheticListeners,
 } from '@dnd-kit/core'
+import { Button } from '@fohte/ui/button'
 import { GripVertical } from 'lucide-react'
-
-import { Button } from '#components/ui/button'
 
 export function DragHandle({
   attributes,
