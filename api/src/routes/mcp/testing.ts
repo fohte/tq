@@ -16,31 +16,41 @@ const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
 
 interface NormalizeDynamicValuesOptions {
   taskNumbers?: boolean
+  skipKeys?: readonly string[]
+  numberPlaceholder?: boolean
 }
 
 export function normalizeDynamicValues(
   value: unknown,
   options: NormalizeDynamicValuesOptions = {},
 ): unknown {
-  if (typeof value === 'string') {
-    if (UUID_PATTERN.test(value)) return '<uuid>'
-    if (TIMESTAMP_PATTERN.test(value)) return '<timestamp>'
-    return value
+  const normalize = (current: unknown, key?: string): unknown => {
+    const { skipKeys } = options
+    if (key != null && skipKeys?.includes(key) === true) return current
+    if (key === 'number' && typeof current === 'number') {
+      if (options.numberPlaceholder === true) return '<number>'
+      if (options.taskNumbers === true) return -1
+    }
+    if (typeof current === 'string') {
+      if (UUID_PATTERN.test(current)) return '<uuid>'
+      if (TIMESTAMP_PATTERN.test(current)) return '<timestamp>'
+      return current
+    }
+    if (Array.isArray(current)) {
+      return current.map((item) => normalize(item))
+    }
+    if (current != null && typeof current === 'object') {
+      return Object.fromEntries(
+        Object.entries(current).map(([nestedKey, nested]) => [
+          nestedKey,
+          normalize(nested, nestedKey),
+        ]),
+      )
+    }
+    return current
   }
-  if (Array.isArray(value)) {
-    return value.map((item) => normalizeDynamicValues(item, options))
-  }
-  if (value != null && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, nested]) => [
-        key,
-        options.taskNumbers === true && key === 'number'
-          ? -1
-          : normalizeDynamicValues(nested, options),
-      ]),
-    )
-  }
-  return value
+
+  return normalize(value)
 }
 
 function assertTextContent(
@@ -49,6 +59,9 @@ function assertTextContent(
   expect(first?.type, 'expected text content').toBe('text')
 }
 
+// Raw parse, keeping real ids/timestamps as-is. Use this only to pull a
+// value (e.g. a created task's id) needed to drive further calls in the
+// test; use `parseToolData` when asserting on the result itself.
 export function parseToolJson(result: CallToolResult): unknown {
   const [first] = result.content
   assertTextContent(first)
@@ -83,4 +96,21 @@ export async function callMcpTool(
   // guarantees the `content` shape at runtime without narrowing the type.
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- see comment above
   return result as CallToolResult
+}
+
+function normalizeToolData(
+  value: unknown,
+  skipKeys: readonly string[] = [],
+): unknown {
+  return normalizeDynamicValues(value, {
+    skipKeys,
+    numberPlaceholder: true,
+  })
+}
+
+export function parseToolData(
+  result: CallToolResult,
+  skipKeys: readonly string[] = [],
+): unknown {
+  return normalizeToolData(parseToolJson(result), skipKeys)
 }

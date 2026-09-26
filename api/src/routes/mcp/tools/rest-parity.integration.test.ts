@@ -1,5 +1,4 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
@@ -23,18 +22,11 @@ afterEach(async () => {
   await client.close()
 })
 
-async function callTool(
-  name: string,
-  args: Record<string, unknown>,
-): Promise<CallToolResult> {
-  return callMcpTool(client, name, args)
-}
-
 describe('REST/MCP parity', () => {
   it('a comment created via comment_create is visible through GET /api/tasks/:taskId/comments', async () => {
     const task = await createTask('Has comments')
 
-    const created = await callTool('comment_create', {
+    const created = await callMcpTool(client, 'comment_create', {
       taskId: task.id,
       content: 'A comment',
     })
@@ -52,7 +44,7 @@ describe('REST/MCP parity', () => {
 
   it('a comment updated via comment_update with an explicit agent is attributed to that agent through GET /api/tasks/:taskId/comments', async () => {
     const task = await createTask('Has comments')
-    const created = await callTool('comment_create', {
+    const created = await callMcpTool(client, 'comment_create', {
       taskId: task.id,
       content: 'Original content',
     })
@@ -60,7 +52,7 @@ describe('REST/MCP parity', () => {
       parseToolJson(created),
     )
 
-    const updated = await callTool('comment_update', {
+    const updated = await callMcpTool(client, 'comment_update', {
       taskId: task.id,
       commentId: comment.id,
       content: 'Updated content',

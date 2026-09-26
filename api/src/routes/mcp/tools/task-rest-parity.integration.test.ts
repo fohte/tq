@@ -1,5 +1,4 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
@@ -17,6 +16,11 @@ import { jsonBody, passthroughSchema, setupTestDb } from '#testing'
 
 setupTestDb()
 
+// These tests confirm that data written through an MCP write tool is visible,
+// in the same shape, through the plain REST routes the web UI reads from —
+// not the MCP read tools (read-tools.integration.test.ts) and not the write
+// tool's own response (write-tools.integration.test.ts).
+
 let client: Client
 
 beforeEach(async () => {
@@ -27,16 +31,9 @@ afterEach(async () => {
   await client.close()
 })
 
-async function callTool(
-  name: string,
-  args: Record<string, unknown>,
-): Promise<CallToolResult> {
-  return callMcpTool(client, name, args)
-}
-
 describe('REST/MCP parity', () => {
   it('a task created via create_task is visible through GET /api/tasks/:id', async () => {
-    const created = await callTool('create_task', {
+    const created = await callMcpTool(client, 'create_task', {
       title: 'Write and read back',
       context: 'work',
     })
@@ -63,7 +60,7 @@ describe('REST/MCP parity', () => {
   })
 
   it('a task created via create_task with an explicit agent is attributed to that agent through GET /api/tasks/:id', async () => {
-    const created = await callTool('create_task', {
+    const created = await callMcpTool(client, 'create_task', {
       title: 'Attributed via MCP',
       agent: 'claude-opus-5',
     })
@@ -90,7 +87,7 @@ describe('REST/MCP parity', () => {
   })
 
   it('a task created via create_task is visible through GET /api/tasks (list)', async () => {
-    const created = await callTool('create_task', {
+    const created = await callMcpTool(client, 'create_task', {
       title: 'Listed via MCP',
       context: 'work',
     })
@@ -114,7 +111,7 @@ describe('REST/MCP parity', () => {
   it('a title updated via update_task is visible through GET /api/tasks/:id', async () => {
     const task = await createTask('Original title')
 
-    const updated = await callTool('update_task', {
+    const updated = await callMcpTool(client, 'update_task', {
       taskId: task.id,
       title: 'Updated via MCP',
     })
@@ -143,7 +140,7 @@ describe('REST/MCP parity', () => {
   it('labels replaced via update_task, including newly created ones, are visible through GET /api/tasks/:id', async () => {
     const task = await createTask('Needs a label', { labels: ['urgent'] })
 
-    const updated = await callTool('update_task', {
+    const updated = await callMcpTool(client, 'update_task', {
       taskId: task.id,
       labels: ['urgent', 'new-label'],
     })
@@ -175,7 +172,7 @@ describe('REST/MCP parity', () => {
   it('setting a task to completed via update_task_status is visible through GET /api/tasks/:id', async () => {
     const task = await createTask('Complete via MCP')
 
-    const completed = await callTool('update_task_status', {
+    const completed = await callMcpTool(client, 'update_task_status', {
       taskId: task.id,
       status: 'completed',
     })

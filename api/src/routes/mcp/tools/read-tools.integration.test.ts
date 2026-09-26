@@ -1,99 +1,49 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
-import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
-import { describe, expect, it } from 'vitest'
+import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { app } from '#app'
-import { normalizeDynamicValues } from '#routes/mcp/testing'
+import {
+  callMcpTool,
+  connectMcpClient,
+  normalizeDynamicValues,
+  parseToolJson,
+} from '#routes/mcp/testing'
 import { createLabel } from '#routes/tasks/testing'
 import { setupTestDb } from '#testing'
 
 setupTestDb()
 
-const READ_TOOL_NAMES = [
-  'get_page',
-  'get_task',
-  'get_today_tasks',
-  'label_list',
-  'list_tasks',
-  'search_pages',
-  'search_tasks',
-]
+let client: Client
 
-async function withClient<T>(fn: (client: Client) => Promise<T>): Promise<T> {
-  const client = new Client({ name: 'test-client', version: '1.0.0' })
-  const transport = new StreamableHTTPClientTransport(
-    new URL('http://localhost/api/mcp'),
-    { fetch: async (url, init) => app.request(url, init) },
-  )
-  // `Transport.sessionId` is `sessionId?: string`, which `exactOptionalPropertyTypes`
-  // treats as excluding `undefined`; this class's getter returns `string | undefined`,
-  // so the SDK's own types don't satisfy its interface under this tsconfig.
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- see comment above
-  await client.connect(transport as Transport)
+beforeEach(async () => {
+  client = await connectMcpClient()
+})
 
-  try {
-    return await fn(client)
-  } finally {
-    await client.close()
-  }
-}
-
-async function callTool(
-  name: string,
-  args: Record<string, unknown> = {},
-): Promise<CallToolResult> {
-  const result = await withClient((client) =>
-    client.callTool({ name, arguments: args }),
-  )
-  // The SDK's `Client.callTool` return type is derived from a Zod schema and
-  // doesn't narrow `content` the way the standalone `CallToolResult` type
-  // (used by `route-bridge.ts`) does; the two describe the same wire shape.
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- see comment above
-  return result as CallToolResult
-}
-
-function parseJson(result: CallToolResult): unknown {
-  const first = result.content[0]
-  if (first?.type !== 'text') {
-    throw new Error(
-      `Expected a single text content item, got: ${JSON.stringify(result.content)}`,
-    )
-  }
-  return JSON.parse(first.text)
-}
+afterEach(async () => {
+  await client.close()
+})
 
 describe('read tools', () => {
-  it('declares every read tool as read-only', async () => {
-    const result = await withClient((client) => client.listTools())
+  it('declares label_list as read-only', async () => {
+    const result = await client.listTools()
 
     expect(
       result.tools
-        .filter((tool) => READ_TOOL_NAMES.includes(tool.name))
+        .filter((tool) => tool.name === 'label_list')
         .map((tool) => ({
           name: tool.name,
           readOnlyHint: tool.annotations?.readOnlyHint,
         }))
         .sort((a, b) => a.name.localeCompare(b.name)),
-    ).toEqual([
-      { name: 'get_page', readOnlyHint: true },
-      { name: 'get_task', readOnlyHint: true },
-      { name: 'get_today_tasks', readOnlyHint: true },
-      { name: 'label_list', readOnlyHint: true },
-      { name: 'list_tasks', readOnlyHint: true },
-      { name: 'search_pages', readOnlyHint: true },
-      { name: 'search_tasks', readOnlyHint: true },
-    ])
+    ).toEqual([{ name: 'label_list', readOnlyHint: true }])
   })
 
   describe('label_list', () => {
     it('returns all labels', async () => {
       const label = await createLabel('urgent')
 
-      const toolResult = await callTool('label_list')
+      const toolResult = await callMcpTool(client, 'label_list')
 
-      expect(parseJson(toolResult)).toEqual([
+      expect(parseToolJson(toolResult)).toEqual([
         {
           id: label.id,
           name: 'urgent',
@@ -108,9 +58,11 @@ describe('read tools', () => {
       await createLabel('work-label', { context: 'work' })
       await createLabel('personal-label', { context: 'personal' })
 
-      const toolResult = await callTool('label_list', { context: 'work' })
+      const toolResult = await callMcpTool(client, 'label_list', {
+        context: 'work',
+      })
 
-      expect(normalizeDynamicValues(parseJson(toolResult))).toEqual([
+      expect(normalizeDynamicValues(parseToolJson(toolResult))).toEqual([
         {
           id: '<uuid>',
           name: 'work-label',

@@ -5,9 +5,9 @@ import {
   apiUrl,
   captureFetch,
   fakeStdin,
+  request,
   spyStdout,
-} from '#commands/task-test-support'
-import { request } from '#commands/test-support'
+} from '#commands/test-support'
 
 afterEach(() => {
   vi.restoreAllMocks()

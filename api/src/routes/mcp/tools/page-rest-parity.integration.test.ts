@@ -1,5 +1,4 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
@@ -13,6 +12,11 @@ import { jsonBody, passthroughSchema, setupTestDb } from '#testing'
 
 setupTestDb()
 
+// These tests confirm that data written through an MCP write tool is visible,
+// in the same shape, through the plain REST routes the web UI reads from —
+// not the MCP read tools (read-tools.integration.test.ts) and not the write
+// tool's own response (write-tools.integration.test.ts).
+
 let client: Client
 
 beforeEach(async () => {
@@ -22,18 +26,11 @@ afterEach(async () => {
   await client.close()
 })
 
-async function callTool(
-  name: string,
-  args: Record<string, unknown>,
-): Promise<CallToolResult> {
-  return callMcpTool(client, name, args)
-}
-
 describe('REST/MCP parity', () => {
   it('a page created via create_page is visible through GET /api/tasks/:taskId/pages', async () => {
     const task = await createTask('Has pages')
 
-    const created = await callTool('create_page', {
+    const created = await callMcpTool(client, 'create_page', {
       taskId: task.id,
       title: 'Notes',
       content: 'Some content',
@@ -52,7 +49,7 @@ describe('REST/MCP parity', () => {
 
   it('a page updated via update_page with an explicit agent is attributed to that agent through GET /api/tasks/:taskId/pages', async () => {
     const task = await createTask('Has pages')
-    const created = await callTool('create_page', {
+    const created = await callMcpTool(client, 'create_page', {
       taskId: task.id,
       title: 'Notes',
     })
@@ -60,7 +57,7 @@ describe('REST/MCP parity', () => {
       parseToolJson(created),
     )
 
-    const updated = await callTool('update_page', {
+    const updated = await callMcpTool(client, 'update_page', {
       taskId: task.id,
       pageId: page.id,
       content: 'Updated content',

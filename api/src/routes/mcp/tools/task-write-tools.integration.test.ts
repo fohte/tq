@@ -1,441 +1,364 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
-import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
-import {
-  type CallToolResult,
-  CallToolResultSchema,
-} from '@modelcontextprotocol/sdk/types.js'
+import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
 import { labels } from '#db/schema'
+import {
+  callMcpTool,
+  connectMcpClient,
+  parseToolData,
+  parseToolJson,
+} from '#routes/mcp/testing'
 import { createLabel, createTask, TEST_UUID } from '#routes/tasks/testing'
 import { jsonBody, passthroughSchema, setupTestDb } from '#testing'
 
 setupTestDb()
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
-
-// `number` is a per-suite-run sequential value (the sequence isn't rolled
-// back with the surrounding test transaction), so it's normalized like the
-// uuid/timestamp fields rather than asserted on directly. `skipKeys` opts a
-// key out of uuid/timestamp normalization for callers that already know its
-// real value (e.g. a page/comment response's `taskId`, or an updated
-// resource's own `id`) and want to assert on that value directly instead of
-// blurring it into a placeholder.
-function normalizeDynamicValues(
-  value: unknown,
-  key: string | undefined,
-  skipKeys: ReadonlySet<string>,
-): unknown {
-  if (key != null && skipKeys.has(key)) return value
-  if (key === 'number' && typeof value === 'number') return '<number>'
-  if (typeof value === 'string') {
-    if (UUID_PATTERN.test(value)) return '<uuid>'
-    if (TIMESTAMP_PATTERN.test(value)) return '<timestamp>'
-    return value
-  }
-  if (Array.isArray(value)) {
-    return value.map((v) => normalizeDynamicValues(v, undefined, skipKeys))
-  }
-  if (value != null && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value).map(([k, v]) => [
-        k,
-        normalizeDynamicValues(v, k, skipKeys),
-      ]),
-    )
-  }
-  return value
-}
-
-function parseToolJson(result: CallToolResult): unknown {
-  const [first] = result.content
-  if (first?.type !== 'text') throw new Error('expected text content')
-  return JSON.parse(first.text)
-}
-
-function parseToolData(
-  result: CallToolResult,
-  skipKeys: readonly string[] = [],
-): unknown {
-  return normalizeDynamicValues(
-    parseToolJson(result),
-    undefined,
-    new Set(skipKeys),
-  )
-}
-
 let client: Client
 
 beforeEach(async () => {
-  client = new Client({ name: 'test-client', version: '1.0.0' })
-  const transport = new StreamableHTTPClientTransport(
-    new URL('http://localhost/api/mcp'),
-    { fetch: async (url, init) => app.request(url, init) },
-  )
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- see index.integration.test.ts
-  await client.connect(transport as Transport)
+  client = await connectMcpClient()
 })
 
 afterEach(async () => {
   await client.close()
 })
 
-async function callTool(
-  name: string,
-  args: Record<string, unknown>,
-): Promise<CallToolResult> {
-  const result = await client.callTool(
-    { name, arguments: args },
-    CallToolResultSchema,
-  )
-  // `callTool`'s return type is the same content/toolResult union regardless
-  // of which `resultSchema` is passed, so passing `CallToolResultSchema`
-  // guarantees the `content` shape at runtime without narrowing the type.
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- see comment above
-  return result as CallToolResult
-}
-
-describe('task write tools', () => {
-  describe('create_task tool', () => {
-    it('creates a task with the given fields', async () => {
-      const result = await callTool('create_task', {
-        title: 'Write MCP tools',
-        context: 'work',
-      })
-
-      expect(parseToolData(result)).toEqual({
-        id: '<uuid>',
-        number: '<number>',
-        title: 'Write MCP tools',
-        description: null,
-        status: 'todo',
-        statusReason: null,
-        context: 'work',
-        commitment: 'inbox',
-        labels: [],
-        startDate: null,
-        dueDate: null,
-        estimatedMinutes: null,
-        remindAt: null,
-        parentId: null,
-        projectId: null,
-        recurrenceRuleId: null,
-        recurrenceRule: null,
-        templateId: null,
-        occurrenceDate: null,
-        githubLinks: [],
-        createdAt: '<timestamp>',
-        updatedAt: '<timestamp>',
-        linkSync: { outgoing: [], unresolvedRefs: [] },
-      })
+describe('create_task tool', () => {
+  it('creates a task with the given fields', async () => {
+    const result = await callMcpTool(client, 'create_task', {
+      title: 'Write MCP tools',
+      context: 'work',
     })
 
-    it('creates any label names that do not exist yet and attaches all of them', async () => {
-      await db.insert(labels).values({ name: 'urgent' })
-
-      const result = await callTool('create_task', {
-        title: 'Labeled task',
-        labels: ['urgent', 'new-label'],
-      })
-
-      const data = passthroughSchema<{ labels: string[] }>().parse(
-        parseToolJson(result),
-      )
-
-      expect(data.labels.toSorted()).toEqual(['new-label', 'urgent'])
-    })
-
-    it('rejects a non-existent parentId', async () => {
-      const result = await callTool('create_task', {
-        title: 'Orphan',
-        parentId: TEST_UUID,
-      })
-
-      expect(result).toEqual({
-        isError: true,
-        content: [{ type: 'text', text: 'Parent task not found' }],
-      })
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      number: '<number>',
+      title: 'Write MCP tools',
+      description: null,
+      status: 'todo',
+      statusReason: null,
+      context: 'work',
+      commitment: 'inbox',
+      labels: [],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      remindAt: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      templateId: null,
+      occurrenceDate: null,
+      githubLinks: [],
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+      linkSync: { outgoing: [], unresolvedRefs: [] },
     })
   })
 
-  describe('update_task tool', () => {
-    it('partially updates the given fields', async () => {
-      const task = await createTask('Original title', {
-        description: 'Original description',
-      })
+  it('creates any label names that do not exist yet and attaches all of them', async () => {
+    await db.insert(labels).values({ name: 'urgent' })
 
-      const result = await callTool('update_task', {
-        taskId: task.id,
-        title: 'Updated title',
-      })
-
-      expect(parseToolData(result)).toEqual({
-        id: '<uuid>',
-        number: '<number>',
-        title: 'Updated title',
-        description: 'Original description',
-        status: 'todo',
-        statusReason: null,
-        context: 'personal',
-        commitment: 'inbox',
-        labels: [],
-        startDate: null,
-        dueDate: null,
-        estimatedMinutes: null,
-        remindAt: null,
-        parentId: null,
-        projectId: null,
-        recurrenceRuleId: null,
-        recurrenceRule: null,
-        templateId: null,
-        occurrenceDate: null,
-        githubLinks: [],
-        createdAt: '<timestamp>',
-        updatedAt: '<timestamp>',
-      })
+    const result = await callMcpTool(client, 'create_task', {
+      title: 'Labeled task',
+      labels: ['urgent', 'new-label'],
     })
 
-    it('clears a nullable field by passing null', async () => {
-      const task = await createTask('Has description', {
-        description: 'Will be cleared',
-      })
+    const data = passthroughSchema<{ labels: string[] }>().parse(
+      parseToolJson(result),
+    )
 
-      const result = await callTool('update_task', {
-        taskId: task.id,
-        description: null,
-      })
+    expect(data.labels.toSorted()).toEqual(['new-label', 'urgent'])
+  })
 
-      expect(parseToolData(result)).toEqual({
-        id: '<uuid>',
-        number: '<number>',
-        title: 'Has description',
-        description: null,
-        status: 'todo',
-        statusReason: null,
-        context: 'personal',
-        commitment: 'inbox',
-        labels: [],
-        startDate: null,
-        dueDate: null,
-        estimatedMinutes: null,
-        remindAt: null,
-        parentId: null,
-        projectId: null,
-        recurrenceRuleId: null,
-        recurrenceRule: null,
-        templateId: null,
-        occurrenceDate: null,
-        githubLinks: [],
-        createdAt: '<timestamp>',
-        updatedAt: '<timestamp>',
-        linkSync: { outgoing: [], unresolvedRefs: [] },
-      })
+  it('rejects a non-existent parentId', async () => {
+    const result = await callMcpTool(client, 'create_task', {
+      title: 'Orphan',
+      parentId: TEST_UUID,
     })
 
-    it('rejects a non-existent taskId', async () => {
-      const result = await callTool('update_task', {
-        taskId: TEST_UUID,
-        title: 'New title',
-      })
+    expect(result).toEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Parent task not found' }],
+    })
+  })
+})
 
-      expect(result).toEqual({
-        isError: true,
-        content: [{ type: 'text', text: 'Task not found' }],
-      })
+describe('update_task tool', () => {
+  it('partially updates the given fields', async () => {
+    const task = await createTask('Original title', {
+      description: 'Original description',
     })
 
-    it('replaces the labels of a task, creating any that do not exist yet', async () => {
-      const task = await createTask('Has a label', { labels: ['urgent'] })
+    const result = await callMcpTool(client, 'update_task', {
+      taskId: task.id,
+      title: 'Updated title',
+    })
 
-      const result = await callTool('update_task', {
-        taskId: task.id,
-        labels: ['bug'],
-      })
-
-      expect(parseToolData(result)).toEqual({
-        id: '<uuid>',
-        number: '<number>',
-        title: 'Has a label',
-        description: null,
-        status: 'todo',
-        statusReason: null,
-        context: 'personal',
-        commitment: 'inbox',
-        labels: ['bug'],
-        startDate: null,
-        dueDate: null,
-        estimatedMinutes: null,
-        remindAt: null,
-        parentId: null,
-        projectId: null,
-        recurrenceRuleId: null,
-        recurrenceRule: null,
-        templateId: null,
-        occurrenceDate: null,
-        githubLinks: [],
-        createdAt: '<timestamp>',
-        updatedAt: '<timestamp>',
-      })
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      number: '<number>',
+      title: 'Updated title',
+      description: 'Original description',
+      status: 'todo',
+      statusReason: null,
+      context: 'personal',
+      commitment: 'inbox',
+      labels: [],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      remindAt: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      templateId: null,
+      occurrenceDate: null,
+      githubLinks: [],
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
     })
   })
 
-  describe('update_task_status tool', () => {
-    it('sets a task to completed', async () => {
-      const task = await createTask('Start me')
-
-      const result = await callTool('update_task_status', {
-        taskId: task.id,
-        status: 'completed',
-      })
-
-      expect(parseToolData(result)).toEqual({
-        id: '<uuid>',
-        number: '<number>',
-        title: 'Start me',
-        description: null,
-        status: 'completed',
-        statusReason: 'completed',
-        context: 'personal',
-        commitment: 'inbox',
-        labels: [],
-        startDate: null,
-        dueDate: null,
-        estimatedMinutes: null,
-        remindAt: null,
-        parentId: null,
-        projectId: null,
-        recurrenceRuleId: null,
-        recurrenceRule: null,
-        templateId: null,
-        occurrenceDate: null,
-        githubLinks: [],
-        createdAt: '<timestamp>',
-        updatedAt: '<timestamp>',
-      })
+  it('clears a nullable field by passing null', async () => {
+    const task = await createTask('Has description', {
+      description: 'Will be cleared',
     })
 
-    it('keeps the labels of a labeled task', async () => {
-      await createLabel('urgent')
-      const task = await createTask('Start me', { labels: ['urgent'] })
-
-      const result = await callTool('update_task_status', {
-        taskId: task.id,
-        status: 'completed',
-      })
-
-      expect(parseToolData(result)).toEqual({
-        id: '<uuid>',
-        number: '<number>',
-        title: 'Start me',
-        description: null,
-        status: 'completed',
-        statusReason: 'completed',
-        context: 'personal',
-        commitment: 'inbox',
-        labels: ['urgent'],
-        startDate: null,
-        dueDate: null,
-        estimatedMinutes: null,
-        remindAt: null,
-        parentId: null,
-        projectId: null,
-        recurrenceRuleId: null,
-        recurrenceRule: null,
-        templateId: null,
-        occurrenceDate: null,
-        githubLinks: [],
-        createdAt: '<timestamp>',
-        updatedAt: '<timestamp>',
-      })
+    const result = await callMcpTool(client, 'update_task', {
+      taskId: task.id,
+      description: null,
     })
 
-    it('reopens a completed task by moving it back to todo', async () => {
-      const task = await createTask('Reopen me')
-      await callTool('update_task_status', {
-        taskId: task.id,
-        status: 'completed',
-      })
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      number: '<number>',
+      title: 'Has description',
+      description: null,
+      status: 'todo',
+      statusReason: null,
+      context: 'personal',
+      commitment: 'inbox',
+      labels: [],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      remindAt: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      templateId: null,
+      occurrenceDate: null,
+      githubLinks: [],
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+      linkSync: { outgoing: [], unresolvedRefs: [] },
+    })
+  })
 
-      const result = await callTool('update_task_status', {
-        taskId: task.id,
-        status: 'todo',
-      })
-
-      expect(parseToolData(result)).toEqual({
-        id: '<uuid>',
-        number: '<number>',
-        title: 'Reopen me',
-        description: null,
-        status: 'todo',
-        statusReason: null,
-        context: 'personal',
-        commitment: 'inbox',
-        labels: [],
-        startDate: null,
-        dueDate: null,
-        estimatedMinutes: null,
-        remindAt: null,
-        parentId: null,
-        projectId: null,
-        recurrenceRuleId: null,
-        recurrenceRule: null,
-        templateId: null,
-        occurrenceDate: null,
-        githubLinks: [],
-        createdAt: '<timestamp>',
-        updatedAt: '<timestamp>',
-      })
+  it('rejects a non-existent taskId', async () => {
+    const result = await callMcpTool(client, 'update_task', {
+      taskId: TEST_UUID,
+      title: 'New title',
     })
 
-    it('closes a task as a duplicate and records the target', async () => {
-      const target = await createTask('Target')
-      const task = await createTask('Duplicate me')
-
-      const result = await callTool('update_task_status', {
-        taskId: task.id,
-        status: 'completed',
-        statusReason: 'duplicate',
-        duplicateOfTaskId: target.id,
-      })
-
-      expect(parseToolData(result)).toEqual({
-        id: '<uuid>',
-        number: '<number>',
-        title: 'Duplicate me',
-        description: null,
-        status: 'completed',
-        statusReason: 'duplicate',
-        context: 'personal',
-        commitment: 'inbox',
-        labels: [],
-        startDate: null,
-        dueDate: null,
-        estimatedMinutes: null,
-        remindAt: null,
-        parentId: null,
-        projectId: null,
-        recurrenceRuleId: null,
-        recurrenceRule: null,
-        templateId: null,
-        occurrenceDate: null,
-        githubLinks: [],
-        createdAt: '<timestamp>',
-        updatedAt: '<timestamp>',
-      })
-
-      // The tool response itself carries no duplicateOfNumber/duplicateOfTask
-      // field (see TaskResponse) — the detail endpoint is the only way to
-      // confirm `duplicateOfTaskId` actually reached the request body.
-      const detailRes = await app.request(`/api/tasks/${task.id}`)
-      const detailBody = await jsonBody<{ duplicateOfNumber: number | null }>(
-        detailRes,
-      )
-      expect(detailBody.duplicateOfNumber).toBe(target.number)
+    expect(result).toEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Task not found' }],
     })
+  })
+
+  it('replaces the labels of a task, creating any that do not exist yet', async () => {
+    const task = await createTask('Has a label', { labels: ['urgent'] })
+
+    const result = await callMcpTool(client, 'update_task', {
+      taskId: task.id,
+      labels: ['bug'],
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      number: '<number>',
+      title: 'Has a label',
+      description: null,
+      status: 'todo',
+      statusReason: null,
+      context: 'personal',
+      commitment: 'inbox',
+      labels: ['bug'],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      remindAt: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      templateId: null,
+      occurrenceDate: null,
+      githubLinks: [],
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+    })
+  })
+})
+
+describe('update_task_status tool', () => {
+  it('sets a task to completed', async () => {
+    const task = await createTask('Start me')
+
+    const result = await callMcpTool(client, 'update_task_status', {
+      taskId: task.id,
+      status: 'completed',
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      number: '<number>',
+      title: 'Start me',
+      description: null,
+      status: 'completed',
+      statusReason: 'completed',
+      context: 'personal',
+      commitment: 'inbox',
+      labels: [],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      remindAt: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      templateId: null,
+      occurrenceDate: null,
+      githubLinks: [],
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+    })
+  })
+
+  it('keeps the labels of a labeled task', async () => {
+    await createLabel('urgent')
+    const task = await createTask('Start me', { labels: ['urgent'] })
+
+    const result = await callMcpTool(client, 'update_task_status', {
+      taskId: task.id,
+      status: 'completed',
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      number: '<number>',
+      title: 'Start me',
+      description: null,
+      status: 'completed',
+      statusReason: 'completed',
+      context: 'personal',
+      commitment: 'inbox',
+      labels: ['urgent'],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      remindAt: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      templateId: null,
+      occurrenceDate: null,
+      githubLinks: [],
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+    })
+  })
+
+  it('reopens a completed task by moving it back to todo', async () => {
+    const task = await createTask('Reopen me')
+    await callMcpTool(client, 'update_task_status', {
+      taskId: task.id,
+      status: 'completed',
+    })
+
+    const result = await callMcpTool(client, 'update_task_status', {
+      taskId: task.id,
+      status: 'todo',
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      number: '<number>',
+      title: 'Reopen me',
+      description: null,
+      status: 'todo',
+      statusReason: null,
+      context: 'personal',
+      commitment: 'inbox',
+      labels: [],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      remindAt: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      templateId: null,
+      occurrenceDate: null,
+      githubLinks: [],
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+    })
+  })
+
+  it('closes a task as a duplicate and records the target', async () => {
+    const target = await createTask('Target')
+    const task = await createTask('Duplicate me')
+
+    const result = await callMcpTool(client, 'update_task_status', {
+      taskId: task.id,
+      status: 'completed',
+      statusReason: 'duplicate',
+      duplicateOfTaskId: target.id,
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      number: '<number>',
+      title: 'Duplicate me',
+      description: null,
+      status: 'completed',
+      statusReason: 'duplicate',
+      context: 'personal',
+      commitment: 'inbox',
+      labels: [],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      remindAt: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      templateId: null,
+      occurrenceDate: null,
+      githubLinks: [],
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+    })
+
+    // The tool response itself carries no duplicateOfNumber/duplicateOfTask
+    // field (see TaskResponse) — the detail endpoint is the only way to
+    // confirm `duplicateOfTaskId` actually reached the request body.
+    const detailRes = await app.request(`/api/tasks/${task.id}`)
+    const detailBody = await jsonBody<{ duplicateOfNumber: number | null }>(
+      detailRes,
+    )
+    expect(detailBody.duplicateOfNumber).toBe(target.number)
   })
 })
